@@ -1,42 +1,55 @@
-import { gifts, stickers, users } from "@drawing-app/db";
-import { bytes32, insertUser } from "@drawing-app/db/testing";
+import { gifts, stickers } from "@drawing-app/db";
+import { insertUser } from "@drawing-app/db/testing";
+import { fromBase64 } from "@mysten/sui/utils";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
-import type { EscrowGift } from "../deps.ts";
+import type { SignedTransaction, SponsoredTransaction } from "../shapes.ts";
 import { createTestApp } from "../testing/createTestApp.ts";
 import { giverNoticeThrough, type FakeLine } from "../testing/fakeLine.ts";
-import { fakeGiftChain, fakeSmartWallets } from "../testing/fakes.ts";
+import { fakeSuiWallets } from "../testing/fakes.ts";
+import { fakeSui, type FakeSui } from "../testing/fakeSui.ts";
 import { bodyOf } from "../testing/responses.ts";
 import { insertSealedSticker } from "../testing/rows.ts";
 import {
   giftClaimTokenSchema,
   giftResponseSchema,
   packagedGiftSchema,
+  takeOutStartSchema,
   type sharedBodySchema,
 } from "./packaging.ts";
 
-/** A pending gift in the escrow has no recipient yet: the zero address. */
-const NO_RECIPIENT = `0x${"0".repeat(40)}`;
-/** The escrow transfer's hash, as the giver's smart wallet reports it. */
-const DEPOSIT_TX = bytes32("deposit transaction");
+/** A well-formed signed transaction that no gift has: for routes that refuse before looking. */
+export const SOME_SIGNED_TRANSACTION: SignedTransaction = {
+  digest: "1".repeat(44),
+  signature: "AA==",
+};
 
 /**
- * The app for Giving and Receiving: the mock chain, or the escrow chain on the fake gift chain, where
- * everyone has a smart wallet. With `line`, the giver's messages go through it. The clock starts at
- * the real time, since the gifts_expiry CHECK compares expires_at with the database's clock.
+ * The app for Giving and Receiving: on the mock chain, or with `onSui` on the fake Sui chain and gas
+ * station, where everyone has a wallet that signs. With `line`, the giver's messages go through it.
+ * The clock starts at the real time, since the gifts_expiry CHECK compares expires_at with the
+ * database's clock.
  */
 export async function createGiftsTestApp({
-  escrowChain = false,
   line,
-}: { escrowChain?: boolean; line?: FakeLine } = {}) {
-  // The escrow's blocks keep the test's time, so a gift expires on chain as the test's clock moves.
-  const giftChain = fakeGiftChain({ now: () => test.clock.now() });
-  const test = await createTestApp((base) => ({
-    ...(escrowChain && { giftChain, smartWallets: fakeSmartWallets(base.db) }),
-    ...(line && giverNoticeThrough(line)(base)),
-  }));
+  onSui = false,
+}: { line?: FakeLine; onSui?: boolean } = {}) {
+  const made: { chain?: FakeSui; wallets?: ReturnType<typeof fakeSuiWallets> } = {};
+  const test = await createTestApp((base) => {
+    made.chain = fakeSui(base.clock);
+    made.wallets = fakeSuiWallets(base.db);
+    return {
+      ...(onSui && {
+        sui: made.chain.sui,
+        gasStation: made.chain.gasStation,
+        suiWallets: made.wallets,
+      }),
+      ...(line && giverNoticeThrough(line)(base)),
+    };
+  });
+  const { chain, wallets } = made;
+  if (!chain || !wallets) throw new Error("The test app was made without its chain");
   test.clock.set(new Date());
-  let tokenCount = 0;
 
   const post = (userId: string, path: string, body?: unknown) =>
     test.send("POST", `/api/gifts${path}`, { as: userId, body });
@@ -47,12 +60,17 @@ export async function createGiftsTestApp({
     return row;
   };
 
-  /** A sticker `artistId` drew and holds; minted on the escrow chain unless `minted` is false. */
-  const sealSticker = (artistId: string, { minted = escrowChain, nsfw = false } = {}) => {
-    if (!minted) return insertSealedSticker(test.db, artistId, { nsfw });
-    tokenCount += 1;
-    const tokenId = String(tokenCount);
-    return insertSealedSticker(test.db, artistId, { nsfw, tokenId, mintTxHash: bytes32(tokenId) });
+  /** A sticker `artistId` drew and holds; on Sui, minted unless `minted` is false. */
+  const sealSticker = (artistId: string, { nsfw = false, minted = onSui } = {}) => {
+    const stickerId = insertSealedSticker(test.db, artistId, { nsfw });
+    if (minted) {
+      test.db
+        .update(stickers)
+        .set({ objectId: chain.sui.stickerObjectId(stickerId) })
+        .where(eq(stickers.id, stickerId))
+        .run();
+    }
+    return stickerId;
   };
 
   /** POST /api/gifts, answered 201 or 200. */
@@ -61,66 +79,55 @@ export async function createGiftsTestApp({
     return { status: response.status, ...packagedGiftSchema.parse(await response.json()) };
   };
 
+  /** `userId`'s wallet's signature over a sponsored transaction, as the app posts it. */
+  const signed = async (userId: string, tx: SponsoredTransaction): Promise<SignedTransaction> => ({
+    digest: tx.digest,
+    signature: (await wallets.keyOf(userId).signTransaction(fromBase64(tx.txBytes))).signature,
+  });
+
+  const packagedGift = async (giverId = insertUser(test.db), sticker: { nsfw?: boolean } = {}) => {
+    const packed = await packageSticker(giverId, sealSticker(giverId, sticker));
+    const giftClaimToken = giftClaimTokenSchema.parse(packed.giftClaimToken);
+    return { giverId, ...packed, giftClaimToken };
+  };
+
+  const deposit = (userId: string, giftId: string, body: SignedTransaction) =>
+    post(userId, `/${giftId}/deposit`, body);
+
   return {
     ...test,
-    giftChain,
+    chain,
+    wallets,
     post,
     get: (userId: string, path: string) => test.send("GET", `/api/gifts${path}`, { as: userId }),
     giftRow,
     sealSticker,
     packageSticker,
-
+    signed,
     /** A new sticker `giverId` drew, packaged through the route: its answer, with the Gift Claim Token. */
-    packagedGift: async (giverId = insertUser(test.db), sticker: { nsfw?: boolean } = {}) => {
-      const packed = await packageSticker(giverId, sealSticker(giverId, sticker));
-      const giftClaimToken = giftClaimTokenSchema.parse(packed.giftClaimToken);
-      return { giverId, ...packed, giftClaimToken };
+    packagedGift,
+    /** On Sui, a packaged gift whose signed deposit landed, so the escrow holds it. */
+    depositedGift: async (giverId = insertUser(test.db), sticker: { nsfw?: boolean } = {}) => {
+      const packed = await packagedGift(giverId, sticker);
+      if (!packed.deposit) throw new Error("Packaging answered no deposit to sign");
+      const gift = await giftOf(
+        await deposit(giverId, packed.gift.id, await signed(giverId, packed.deposit)),
+      );
+      return { ...packed, gift };
     },
 
     /** Who holds the sticker. */
     ownerOf: (stickerId: string) =>
       test.db.select().from(stickers).where(eq(stickers.id, stickerId)).get()?.ownerId,
 
-    /** The giver reports the gift's deposit, made in DEPOSIT_TX. */
-    deposit: (userId: string, giftId: string) =>
-      post(userId, `/${giftId}/deposit`, { txHash: DEPOSIT_TX }),
+    deposit,
     /** LINE's friend picker answered `outcome` for the gift's message. */
     share: (userId: string, giftId: string, outcome: z.infer<typeof sharedBodySchema>["outcome"]) =>
       post(userId, `/${giftId}/shared`, { outcome }),
-    takeOut: (userId: string, giftId: string) => post(userId, `/${giftId}/take-out`),
-
-    /**
-     * Lands a gift's deposit in the fake escrow as packaging issued it, read back as the chain gives
-     * it: a checksummed sender and the expiry in whole seconds. `changes` makes it another deposit.
-     */
-    landDeposit: (giftId: string, changes: Partial<EscrowGift> = {}) => {
-      const gift = giftRow(giftId);
-      const issued = test.db
-        .select({ sender: users.smartAccountAddress, tokenId: stickers.tokenId })
-        .from(users)
-        .innerJoin(stickers, eq(stickers.id, gift.stickerId))
-        .where(eq(users.id, gift.giverId))
-        .get();
-      if (!issued?.sender || !issued.tokenId) {
-        throw new Error(`Gift ${giftId} wasn't packaged on the escrow chain`);
-      }
-      giftChain.escrow.set(giftId, {
-        sender: `0x${issued.sender.slice(2).toUpperCase()}`,
-        recipient: NO_RECIPIENT,
-        tokenId: issued.tokenId,
-        claimCommitment: gift.claimCommitment,
-        expiresAt: new Date(Math.floor(gift.expiresAt.getTime() / 1000) * 1000),
-        status: "pending",
-        ...changes,
-      });
-    },
-
-    /** A landed deposit's escrow record moves to `status`, as a take-out, return or claim leaves it. */
-    setEscrowStatus: (giftId: string, status: EscrowGift["status"]) => {
-      const record = giftChain.escrow.get(giftId);
-      if (!record) throw new Error(`Gift ${giftId}'s deposit hasn't landed in the fake escrow`);
-      giftChain.escrow.set(giftId, { ...record, status });
-    },
+    /** Take-out's start: on the mock chain, or for a gift the escrow doesn't hold, it closes at once. */
+    takeOut: (userId: string, giftId: string) => post(userId, `/${giftId}/take-out/start`),
+    submitTakeOut: (userId: string, giftId: string, body: SignedTransaction) =>
+      post(userId, `/${giftId}/take-out`, body),
   };
 }
 
@@ -129,3 +136,6 @@ export type GiftsTestApp = Awaited<ReturnType<typeof createGiftsTestApp>>;
 /** The gift a 200 `{ gift }` answers with. */
 export const giftOf = async (response: Response) =>
   (await bodyOf(response, giftResponseSchema)).gift;
+
+/** Take-out's start's 200: the gift, and any take-out to sign. */
+export const takeOutStartOf = (response: Response) => bodyOf(response, takeOutStartSchema);

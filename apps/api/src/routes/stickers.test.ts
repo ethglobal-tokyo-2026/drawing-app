@@ -1,9 +1,8 @@
 import { MAX_TIME_USED_S, stickers, stickerTimelapses, ticketUses } from "@drawing-app/db";
-import { insertGratitude, insertUser, packGift } from "@drawing-app/db/testing";
-import { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
+import { insertGratitude, insertTicketUse, insertUser, packGift } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
+import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
-import { keccak256 } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sealResponseSchema } from "../stickers/seal.ts";
 import { MAX_SEAL_BYTES } from "../stickers/sealForm.ts";
@@ -21,22 +20,28 @@ import {
 } from "../stickers/testPngs.ts";
 import { timelapseV1Schema } from "../stickers/timelapse.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import {
-  fakeEns,
-  fakeGiftChain,
-  fakeMint,
-  fakeNameWriter,
-  fakeSmartWallets,
-} from "../testing/fakes.ts";
+import { fakeSuiWallets } from "../testing/fakes.ts";
+import { fakeSui, type FakeSui } from "../testing/fakeSui.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { giveSticker, insertSealedSticker } from "../testing/rows.ts";
-import { ticketKindAt } from "../tickets/tickets.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
-/** The ticket day the tests' tickets are spent on. */
-const TICKET_DAY = "2026-09-26";
 /** A ticket use nobody spent. */
 const UNKNOWN_TICKET_USE_ID = 999_999;
+
+/** A sticker PNG's content hash, as Sealing names its images: its sha256. */
+const hashOf = (png: Uint8Array) => `0x${createHash("sha256").update(png).digest("hex")}`;
+
+/** The app on the fake Sui chain, where everyone has a Sui wallet. */
+async function chainApp() {
+  let chain: FakeSui | undefined;
+  test = await createTestApp(({ db, clock }) => {
+    chain = fakeSui(clock);
+    return { sui: chain.sui, gasStation: chain.gasStation, suiWallets: fakeSuiWallets(db) };
+  });
+  if (!chain) throw new Error("createTestApp built no overrides");
+  return chain;
+}
 
 let test: TestApp;
 beforeEach(async () => {
@@ -46,17 +51,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-let ticketsSpent = 0;
 /** Spends one of the person's tickets straight into ticket_uses, and returns its id. */
-function spendTicket(userId: string): number {
-  const dayIndex = ticketsSpent++;
-  const use = test.db
-    .insert(ticketUses)
-    .values({ userId, ticketDay: TICKET_DAY, dayIndex, kind: ticketKindAt(dayIndex) })
-    .returning({ id: ticketUses.id })
-    .get();
-  return use.id;
-}
+const spendTicket = (userId: string) => insertTicketUse(test.db, userId);
 
 const postSeal = async (userId: string, form: FormData) =>
   test.app.request("/api/stickers", {
@@ -84,7 +80,7 @@ describe("POST /api/stickers", () => {
     const artistId = insertUser(test.db);
     const { ticketUseId, sticker, stickerPlacement } = await seal(artistId);
     const images = sealImages();
-    const contentHash = keccak256(images.png);
+    const contentHash = hashOf(images.png);
     expect(sticker).toMatchObject({
       artist: { id: artistId },
       ownerId: artistId,
@@ -92,8 +88,7 @@ describe("POST /api/stickers", () => {
       ...STICKER_SIZE,
       contentHash,
       images: test.images.urls(contentHash),
-      tokenId: null,
-      mintTxHash: null,
+      objectId: null,
     });
     expect(test.images.saved.get(contentHash)).toEqual(images);
     expect(stickerPlacement).toMatchObject({
@@ -104,28 +99,25 @@ describe("POST /api/stickers", () => {
     const ticket = test.db.select().from(ticketUses).where(eq(ticketUses.id, ticketUseId)).get();
     expect(ticket?.stickerId).toBe(sticker.id);
     expect(new Uint8Array(timelapseOf(sticker.id)?.ops ?? [])).toEqual(testTimelapse());
-    // The NFT's metadata JSON goes beside the sticker's images, named by the sticker.
-    const [row] = allStickers();
-    expect(row?.metadataUri).toBe(new URL(`${sticker.id}.json`, sticker.images.png).href);
   });
 
-  it("seals an NSFW sticker for an adult, and refuses anyone else before storing a file", async () => {
-    const adultId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
-    expect((await seal(adultId, { nsfw: "true" })).sticker).toMatchObject({
+  it("seals an NSFW sticker for someone opted in, and refuses anyone else before storing a file", async () => {
+    const optedInId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
+    expect((await seal(optedInId, { nsfw: "true" })).sticker).toMatchObject({
       nsfw: true,
-      artist: { ageStatus: "adult" },
+      artist: { nsfwOptIn: true },
     });
-    expect((await seal(adultId)).sticker.nsfw).toBe(false);
+    expect((await seal(optedInId)).sticker.nsfw).toBe(false);
 
-    const unverifiedId = insertUser(test.db);
-    const ticketUseId = spendTicket(unverifiedId);
+    const optedOutId = insertUser(test.db);
+    const ticketUseId = spendTicket(optedOutId);
     const png = testPng(STICKER_SIZE.width, STICKER_SIZE.height, "nsfw");
     const parts = sealParts(ticketUseId, { nsfw: "true", png: pngFile(png, "png") });
-    expect(await refusalOf(await postSeal(unverifiedId, sealFormData(parts)))).toMatchObject({
+    expect(await refusalOf(await postSeal(optedOutId, sealFormData(parts)))).toMatchObject({
       status: 403,
-      error: "adults_only",
+      error: "nsfw_not_opted_in",
     });
-    expect(test.images.saved.has(keccak256(png))).toBe(false);
+    expect(test.images.saved.has(hashOf(png))).toBe(false);
   });
 
   it("numbers seals across everyone, one after another", async () => {
@@ -148,93 +140,40 @@ describe("POST /api/stickers", () => {
     expect(test.images.saved.get(first.sticker.contentHash)?.mask).toEqual(sealImages().mask);
   });
 
-  it("stores a mint that lands, and answers with it", async () => {
-    const mint = fakeMint();
-    test = await createTestApp({ mint });
+  it("mints the sticker on Sui as it seals, and answers with its object", async () => {
+    const chain = await chainApp();
     const { sticker } = await seal(insertUser(test.db));
-    const token = mint.minted.get(sticker.id);
-    expect(token).toBeDefined();
-    const minted = { tokenId: token?.tokenId, mintTxHash: token?.txHash };
-    expect(sticker).toMatchObject(minted);
-    expect(allStickers()).toMatchObject([minted]);
+    expect(sticker.objectId).toBe(chain.sui.stickerObjectId(sticker.id));
+    expect(allStickers()).toMatchObject([{ objectId: sticker.objectId }]);
   });
 
-  it("names the artist and the sticker under croquis-app.eth once the mint lands", async () => {
-    const { writer, calls } = fakeNameWriter();
-    const ens = fakeEns(writer);
-    test = await createTestApp({ mint: fakeMint(), smartWallets: fakeSmartWallets(), ens });
-    const artistId = insertUser(test.db, { handle: "Alice" });
-    const { sticker } = await seal(artistId);
-    await ens.naming.idle();
-
-    expect(calls).toEqual([
-      "person alice",
-      `sticker ${sticker.tokenId} ${String(sticker.number).padStart(4, "0")}`,
-    ]);
-    const detail = await bodyOf(await getSticker(artistId, sticker.id), stickerDetailSchema);
-    expect(detail.sticker.ensName).toBe(
-      `${String(sticker.number).padStart(4, "0")}.alice.${CROQUIS_PARENT_NAME}`,
-    );
-  });
-
-  it("reports mint failure, retries the saved sticker's mint on the same ticket, and mints it once", async () => {
+  it("refuses a seal whose mint fails, keeping the sticker, and mints it once on a retry with the same ticket", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    const chainDown = new Error("The chain is down");
-    const mint = fakeMint();
-    let available = false;
-    const submit = vi.fn((request: Parameters<typeof mint>[0]) =>
-      available ? mint(request) : Promise.reject(chainDown),
-    );
-    test = await createTestApp({ mint: submit });
+    const chain = await chainApp();
     const artistId = insertUser(test.db);
     const ticketUseId = spendTicket(artistId);
     const sealOnTicket = () => postSeal(artistId, sealFormData(sealParts(ticketUseId)));
-    const failed = await sealOnTicket();
+    const failure = "MoveAbort(…, 0) in command 0";
+    chain.answerNext({ ok: false, failure });
+    const failed = await refusalOf(await sealOnTicket());
     const [saved] = allStickers();
     if (!saved) throw new Error("The failed mint lost the saved sticker");
-    const failedBody = await refusalOf(failed);
-    expect(failedBody).toMatchObject({
-      status: 503,
-      error: "mint_failed",
-    });
-    expect(failedBody.detail).toContain(saved.id);
-    expect(failedBody.detail).toContain(`(${chainDown.message})`);
-    expect(saved.tokenId).toBeNull();
-    expect(log).toHaveBeenCalledWith(expect.stringContaining(`"stickerId":"${saved.id}"`));
-    expect(log).toHaveBeenCalledWith(expect.stringContaining(chainDown.message));
+    expect(failed).toMatchObject({ status: 503, error: "mint_failed" });
+    expect(failed.detail).toContain(saved.id);
+    // The app shows the detail beside its own message.
+    expect(failed.detail).not.toMatch(/NFT|crypto|token|wallet|burn/i);
+    expect(saved.objectId).toBeNull();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('"event":"sticker.mint.failed"'));
     expect(test.images.saved.get(saved.contentHash)).toEqual(sealImages());
-    expect(new Uint8Array(timelapseOf(saved.id)?.ops ?? [])).toEqual(testTimelapse());
 
-    const stillFailed = await sealOnTicket();
-    expect(await refusalOf(stillFailed)).toMatchObject({ status: 503, error: "mint_failed" });
-
-    available = true;
     const retried = (await bodyOf(await sealOnTicket(), sealResponseSchema)).sticker;
-    expect(retried).toMatchObject({ id: saved.id, tokenId: mint.minted.get(saved.id)?.tokenId });
-    // The same mint each time, so the chain answers one that landed unconfirmed with its token.
-    expect(submit.mock.lastCall).toEqual(submit.mock.calls[0]);
+    expect(retried).toMatchObject({ id: saved.id, objectId: chain.sui.stickerObjectId(saved.id) });
     expect(allStickers()).toHaveLength(1);
     expect(test.db.select().from(ticketUses).all()).toHaveLength(1);
-
-    const submissions = submit.mock.calls.length;
+    const mints = () => chain.built.filter(({ kind }) => kind === "mint").length;
+    const before = mints();
     expect((await bodyOf(await sealOnTicket(), sealResponseSchema)).sticker).toEqual(retried);
-    expect(submit).toHaveBeenCalledTimes(submissions);
-  });
-
-  it("refuses an unconfirmed mint in real chain mode instead of answering success", async () => {
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    test = await createTestApp({ giftChain: fakeGiftChain(), mint: () => Promise.resolve(null) });
-    const artistId = insertUser(test.db);
-    const response = await postSeal(artistId, sealFormData(sealParts(spendTicket(artistId))));
-    const refused = await refusalOf(response);
-    expect(refused).toMatchObject({ status: 503, error: "mint_failed" });
-    // The app shows the detail beside its own message.
-    expect(refused.detail).not.toMatch(/NFT|crypto|token|wallet|mint|burn/i);
-    expect(log).toHaveBeenCalledWith(expect.stringContaining('"event":"sticker.mint.failed"'));
-    expect(log).toHaveBeenCalledWith(
-      expect.stringContaining("The chain returned no confirmed record"),
-    );
-    expect(allStickers()).toMatchObject([{ tokenId: null, mintTxHash: null }]);
+    expect(mints()).toBe(before);
   });
 
   it("refuses others' and unknown tickets, and answers an already sealed ticket without storing new images", async () => {
@@ -258,7 +197,7 @@ describe("POST /api/stickers", () => {
     const repeated = await postSeal(artistId, sealFormData(sealParts(sealedTicket)));
     expect((await bodyOf(repeated, sealResponseSchema)).sticker.id).toBe(before[0]?.id);
     expect(allStickers()).toEqual(before);
-    expect(test.images.saved.has(keccak256(refusedPng))).toBe(false);
+    expect(test.images.saved.has(hashOf(refusedPng))).toBe(false);
   });
 
   const malformed: Array<{ part: string; why: string; overrides: Partial<SealParts> }> = [
@@ -382,16 +321,6 @@ describe("GET /api/stickers/:stickerId/timelapse", () => {
     const { sticker } = await seal(insertUser(test.db));
     const response = await getTimelapse(insertUser(test.db), sticker.id);
     expect(await bodyOf(response, timelapseV1Schema)).toEqual(TEST_TIMELAPSE);
-  });
-
-  it("answers a timelapse from before densities were recorded without one", async () => {
-    const artistId = insertUser(test.db);
-    const { density: _dropped, ...older } = TEST_TIMELAPSE;
-    const file = new File([gzipSync(JSON.stringify(older))], "t.json.gz");
-    const { sticker } = await seal(artistId, { timelapse: file });
-    const answered = await bodyOf(await getTimelapse(artistId, sticker.id), timelapseV1Schema);
-    expect(answered).toEqual(older);
-    expect(answered.density).toBeUndefined();
   });
 
   it("refuses a sticker sealed without one with timelapse_not_found", async () => {

@@ -1,12 +1,11 @@
 import type { AppDeps } from "../deps.ts";
 
 /**
- * Mock chain mode, for local runs and tests: stickers stay unminted, Giving skips the escrow,
- * Privy isn't asked for smart wallets, and no names resolve under croquis-app.eth.
+ * Mock chain mode, for local runs and tests: stickers stay unminted, a gift lands in the escrow at
+ * once, ticket packs can't be bought, and Privy isn't asked for Sui wallets.
  */
-export const mockChain: Pick<AppDeps, "mint" | "giftChain" | "smartWallets" | "ens"> = {
-  mint: () => Promise.resolve(null),
-  giftChain: null,
-  smartWallets: { addressFor: () => Promise.resolve(null) },
-  ens: null,
+export const mockChain: Pick<AppDeps, "sui" | "gasStation" | "suiWallets"> = {
+  sui: null,
+  gasStation: null,
+  suiWallets: { addressFor: () => Promise.resolve(null) },
 };

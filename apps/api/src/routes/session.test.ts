@@ -1,6 +1,6 @@
 import { stickers, users } from "@drawing-app/db";
 import { insertUser } from "@drawing-app/db/testing";
-import { MAX_ID_TOKEN_LENGTH } from "@drawing-app/sticker-chain/line";
+import { MAX_ID_TOKEN_LENGTH } from "@drawing-app/line-auth/line";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -11,7 +11,7 @@ import { HANDLE_MAX_LENGTH } from "../session/handleLimit.ts";
 import { SESSION_COOKIE, SESSION_MAX_AGE_S } from "../session.ts";
 import { meSchema } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { fakeSmartWallets } from "../testing/fakes.ts";
+import { fakeSuiAddress } from "../testing/fakes.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { insertSealedSticker, sendGratitude } from "../testing/rows.ts";
 import { LINE_USER_ID_MAX_LENGTH } from "./session.ts";
@@ -285,13 +285,44 @@ describe("your language choice", () => {
   });
 });
 
+describe("your NSFW opt-in", () => {
+  const setNsfwOptIn = (headers: Record<string, string>, body: unknown) =>
+    test.send("POST", "/api/me/nsfw-opt-in", { headers, body });
+  const optedInAt = (userId: string) =>
+    test.db.select().from(users).where(eq(users.id, userId)).get()?.nsfwOptedInAt;
+
+  it("is off until you turn it on, shows to everyone, and turns off again", async () => {
+    const userId = insertUser(test.db);
+    const headers = await test.signInAs(userId);
+    expect((await meIn(await getMe(headers))).nsfwOptIn).toBe(false);
+    expect((await meIn(await setNsfwOptIn(headers, { nsfwOptIn: true }))).nsfwOptIn).toBe(true);
+    expect(optedInAt(userId)).toEqual(test.clock.now());
+    expect((await meIn(await setNsfwOptIn(headers, { nsfwOptIn: false }))).nsfwOptIn).toBe(false);
+    expect(optedInAt(userId)).toBeNull();
+  });
+
+  it("refuses a body that doesn't say on or off", async () => {
+    const headers = await test.signInAs(insertUser(test.db));
+    for (const body of [{ nsfwOptIn: "yes" }, {}]) {
+      expect(await refusalOf(await setNsfwOptIn(headers, body))).toMatchObject({
+        status: 400,
+        error: "invalid_request",
+      });
+    }
+  });
+});
+
 describe("deleting your account", () => {
-  it("forgets LINE and the handle, keeps the rest, ends the session, and a new sign-in makes a new person", async () => {
+  it("forgets LINE, the handle and the NSFW opt-in, keeps the rest, ends the session, and a new sign-in makes a new person", async () => {
     const signedIn = await signIn(ALICE);
     const { id } = await meIn(signedIn);
     const headers = sessionCookie(signedIn);
-    const wallet = await fakeSmartWallets().addressFor(id);
-    test.db.update(users).set({ smartAccountAddress: wallet }).where(eq(users.id, id)).run();
+    const wallet = fakeSuiAddress(id);
+    test.db
+      .update(users)
+      .set({ suiAddress: wallet, nsfwOptedInAt: test.clock.now() })
+      .where(eq(users.id, id))
+      .run();
     const stickerId = insertSealedSticker(test.db, id);
 
     const deleted = await test.send("DELETE", "/api/me", { headers });
@@ -305,7 +336,8 @@ describe("deleting your account", () => {
       lineDisplayName: null,
       linePictureUrl: null,
       handle: null,
-      smartAccountAddress: wallet,
+      nsfwOptedInAt: null,
+      suiAddress: wallet,
     });
     expect(test.db.select().from(stickers).where(eq(stickers.id, stickerId)).get()).toMatchObject({
       artistId: id,

@@ -6,6 +6,8 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import { ChainUnavailableError } from "./deps.ts";
 import { failureCause, logFailure, logInfo } from "./diagnostics.ts";
+import { SignatureInvalidError } from "./sui/transactions.ts";
+import { SponsorshipError } from "./sui/types.ts";
 
 /** Every error's body. The code is stable, so clients and mocks can switch on it. */
 export const errorBodySchema = z.object({
@@ -13,8 +15,6 @@ export const errorBodySchema = z.object({
   error: z.string(),
   /** Human-readable; for 400, names the field. */
   detail: z.string().optional(),
-  /** gift_held's gift: the one whose sticker the escrow holds, which its giver can take out. */
-  giftId: z.string().optional(),
 });
 export type ErrorBody = z.infer<typeof errorBodySchema>;
 
@@ -24,16 +24,24 @@ export function apiError<const Status extends ContentfulStatusCode, const Code e
   status: Status,
   error: Code,
   detail?: string,
-  giftId?: string,
 ) {
   logInfo("api.refused", { status, errorCode: error });
-  const body: { error: Code; detail?: string; giftId?: string } = {
+  const body: { error: Code; detail?: string } = {
     error,
     ...(detail !== undefined && { detail }),
-    ...(giftId !== undefined && { giftId }),
   };
   return c.json(body, status);
 }
+
+/**
+ * Shinami's refusals, which any route that sponsors a transaction can meet: its dry run failing
+ * the kind, in its words; its fund running dry; or it being unreachable after its retry.
+ */
+const SPONSORSHIP_REFUSALS = {
+  refused: { status: 422, error: "sponsorship_refused" },
+  fund_empty: { status: 503, error: "sponsor_fund_empty" },
+  unavailable: { status: 503, error: "sponsor_unavailable" },
+} as const satisfies Record<SponsorshipError["reason"], { status: number; error: string }>;
 
 interface Issue {
   path: readonly PropertyKey[];
@@ -81,10 +89,18 @@ export const onError: ErrorHandler = (error, c) => {
   if (error instanceof HTTPException && error.status === 400) {
     return apiError(c, 400, "invalid_request", error.message);
   }
-  // Any route that reads the escrow can meet this, so it's answered here rather than in each.
+  // Any route that reads or writes Sui can meet these, so they're answered here rather than in each.
   if (error instanceof ChainUnavailableError) {
     logFailure("request.failed", error, { status: 502 });
     return apiError(c, 502, "chain_unavailable", `${error.message}: ${failureCause(error)}`);
+  }
+  if (error instanceof SponsorshipError) {
+    const { status, error: code } = SPONSORSHIP_REFUSALS[error.reason];
+    logFailure("request.failed", error, { status });
+    return apiError(c, status, code, error.message);
+  }
+  if (error instanceof SignatureInvalidError) {
+    return apiError(c, 400, "signature_invalid", error.message);
   }
   logFailure("request.failed", error, { status: 500 });
   return apiError(c, 500, "internal_error");

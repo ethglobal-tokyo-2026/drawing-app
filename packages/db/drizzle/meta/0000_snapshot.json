@@ -1,9 +1,65 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "0de98e84-09d1-40a4-a6f2-b5c937d90401",
+  "id": "2d2a5eac-7ba5-4da7-94ce-3b7a734577e9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "chat_menu_batches": {
+      "name": "chat_menu_batches",
+      "columns": {
+        "ticket_day": {
+          "name": "ticket_day",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "line_request_id": {
+          "name": "line_request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "chat_menu_batches_status": {
+          "name": "chat_menu_batches_status",
+          "value": "\"chat_menu_batches\".\"status\" in ('sent', 'done', 'failed')"
+        },
+        "chat_menu_batches_request": {
+          "name": "chat_menu_batches_request",
+          "value": "\"chat_menu_batches\".\"status\" = 'failed' or \"chat_menu_batches\".\"line_request_id\" is not null"
+        }
+      }
+    },
     "gifts": {
       "name": "gifts",
       "columns": {
@@ -86,30 +142,16 @@
           "notNull": false,
           "autoincrement": false
         },
+        "for_user_id": {
+          "name": "for_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "returned_at": {
           "name": "returned_at",
           "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "claim_tx_hash": {
-          "name": "claim_tx_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "reject_tx_hash": {
-          "name": "reject_tx_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "return_tx_hash": {
-          "name": "return_tx_hash",
-          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -141,50 +183,62 @@
       "indexes": {
         "gifts_claim_commitment_unique": {
           "name": "gifts_claim_commitment_unique",
-          "columns": ["claim_commitment"],
+          "columns": [
+            "claim_commitment"
+          ],
           "isUnique": true
         },
         "gifts_one_per_sticker": {
           "name": "gifts_one_per_sticker",
-          "columns": ["sticker_id"],
+          "columns": [
+            "sticker_id"
+          ],
           "isUnique": true,
           "where": "\"gifts\".\"status\" in ('packed', 'sent') or \"gifts\".\"escrow_status\" = 'pending'"
         },
         "gifts_giver": {
           "name": "gifts_giver",
-          "columns": ["giver_id", "status"],
+          "columns": [
+            "giver_id",
+            "status"
+          ],
           "isUnique": false
         },
         "gifts_receiver": {
           "name": "gifts_receiver",
-          "columns": ["receiver_id"],
+          "columns": [
+            "receiver_id"
+          ],
+          "isUnique": false
+        },
+        "gifts_for_user": {
+          "name": "gifts_for_user",
+          "columns": [
+            "for_user_id",
+            "status"
+          ],
           "isUnique": false
         },
         "gifts_transfer_trail": {
           "name": "gifts_transfer_trail",
-          "columns": ["sticker_id", "received_at"],
+          "columns": [
+            "sticker_id",
+            "received_at"
+          ],
           "isUnique": false
         },
         "gifts_received": {
           "name": "gifts_received",
-          "columns": ["received_at"],
+          "columns": [
+            "received_at"
+          ],
           "isUnique": false
-        },
-        "gifts_escrow_open": {
-          "name": "gifts_escrow_open",
-          "columns": ["escrow_status"],
-          "isUnique": false,
-          "where": "\"gifts\".\"escrow_status\" in ('missing', 'pending')"
-        },
-        "gifts_expiring": {
-          "name": "gifts_expiring",
-          "columns": ["expires_at"],
-          "isUnique": false,
-          "where": "\"gifts\".\"status\" in ('packed', 'sent')"
         },
         "gifts_push_due": {
           "name": "gifts_push_due",
-          "columns": ["received_at"],
+          "columns": [
+            "received_at"
+          ],
           "isUnique": false,
           "where": "\"gifts\".\"status\" = 'received' and \"gifts\".\"pushed_to_giver_at\" is null"
         }
@@ -194,8 +248,12 @@
           "name": "gifts_sticker_id_stickers_id_fk",
           "tableFrom": "gifts",
           "tableTo": "stickers",
-          "columnsFrom": ["sticker_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "sticker_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -203,8 +261,12 @@
           "name": "gifts_giver_id_users_id_fk",
           "tableFrom": "gifts",
           "tableTo": "users",
-          "columnsFrom": ["giver_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "giver_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -212,8 +274,25 @@
           "name": "gifts_receiver_id_users_id_fk",
           "tableFrom": "gifts",
           "tableTo": "users",
-          "columnsFrom": ["receiver_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "receiver_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "gifts_for_user_id_users_id_fk": {
+          "name": "gifts_for_user_id_users_id_fk",
+          "tableFrom": "gifts",
+          "tableTo": "users",
+          "columnsFrom": [
+            "for_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -235,15 +314,15 @@
         },
         "gifts_escrow_status": {
           "name": "gifts_escrow_status",
-          "value": "\"gifts\".\"escrow_status\" in ('missing', 'pending', 'claimed', 'rejected', 'expired_returned')"
+          "value": "\"gifts\".\"escrow_status\" in ('missing', 'pending', 'claimed', 'taken_out', 'expired_returned')"
         },
         "gifts_status_dates": {
           "name": "gifts_status_dates",
-          "value": "(\"gifts\".\"status\" = 'packed' and \"gifts\".\"sent_at\" is null and \"gifts\".\"received_at\" is null and \"gifts\".\"taken_out_at\" is null and \"gifts\".\"returned_at\" is null)\n        or (\"gifts\".\"status\" = 'sent' and \"gifts\".\"sent_at\" is not null and \"gifts\".\"received_at\" is null and \"gifts\".\"taken_out_at\" is null and \"gifts\".\"returned_at\" is null)\n        or (\"gifts\".\"status\" = 'received' and \"gifts\".\"received_at\" is not null and \"gifts\".\"taken_out_at\" is null and \"gifts\".\"returned_at\" is null)\n        or (\"gifts\".\"status\" = 'taken_out' and \"gifts\".\"taken_out_at\" is not null and \"gifts\".\"received_at\" is null and \"gifts\".\"returned_at\" is null)\n        or (\"gifts\".\"status\" = 'returned' and \"gifts\".\"returned_at\" is not null and \"gifts\".\"taken_out_at\" is null)"
+          "value": "(\"gifts\".\"status\" = 'packed' and \"gifts\".\"sent_at\" is null and \"gifts\".\"received_at\" is null and \"gifts\".\"taken_out_at\" is null and \"gifts\".\"returned_at\" is null)\n        or (\"gifts\".\"status\" = 'sent' and \"gifts\".\"sent_at\" is not null and \"gifts\".\"received_at\" is null and \"gifts\".\"taken_out_at\" is null and \"gifts\".\"returned_at\" is null)\n        or (\"gifts\".\"status\" = 'received' and \"gifts\".\"received_at\" is not null and \"gifts\".\"taken_out_at\" is null and \"gifts\".\"returned_at\" is null)\n        or (\"gifts\".\"status\" = 'taken_out' and \"gifts\".\"taken_out_at\" is not null and \"gifts\".\"received_at\" is null and \"gifts\".\"returned_at\" is null)\n        or (\"gifts\".\"status\" = 'returned' and \"gifts\".\"returned_at\" is not null and \"gifts\".\"received_at\" is null and \"gifts\".\"taken_out_at\" is null)"
         },
         "gifts_status_escrow": {
           "name": "gifts_status_escrow",
-          "value": "(\"gifts\".\"status\" = 'packed' and \"gifts\".\"escrow_status\" in ('missing', 'pending'))\n        or (\"gifts\".\"status\" = 'sent' and \"gifts\".\"escrow_status\" = 'pending')\n        or (\"gifts\".\"status\" = 'received' and \"gifts\".\"escrow_status\" in ('pending', 'claimed'))\n        or (\"gifts\".\"status\" = 'taken_out' and \"gifts\".\"escrow_status\" in ('missing', 'pending', 'rejected'))\n        or (\"gifts\".\"status\" = 'returned' and \"gifts\".\"escrow_status\" in ('pending', 'expired_returned'))"
+          "value": "(\"gifts\".\"status\" = 'packed' and \"gifts\".\"escrow_status\" in ('missing', 'pending'))\n        or (\"gifts\".\"status\" = 'sent' and \"gifts\".\"escrow_status\" = 'pending')\n        or (\"gifts\".\"status\" = 'received' and \"gifts\".\"escrow_status\" = 'claimed')\n        or (\"gifts\".\"status\" = 'taken_out' and \"gifts\".\"escrow_status\" in ('missing', 'taken_out'))\n        or (\"gifts\".\"status\" = 'returned' and \"gifts\".\"escrow_status\" in ('pending', 'expired_returned'))"
         },
         "gifts_receiver": {
           "name": "gifts_receiver",
@@ -253,13 +332,13 @@
           "name": "gifts_not_to_self",
           "value": "\"gifts\".\"receiver_id\" is null or \"gifts\".\"receiver_id\" <> \"gifts\".\"giver_id\""
         },
+        "gifts_not_for_self": {
+          "name": "gifts_not_for_self",
+          "value": "\"gifts\".\"for_user_id\" is null or \"gifts\".\"for_user_id\" <> \"gifts\".\"giver_id\""
+        },
         "gifts_expiry": {
           "name": "gifts_expiry",
           "value": "\"gifts\".\"expires_at\" > \"gifts\".\"created_at\""
-        },
-        "gifts_transactions": {
-          "name": "gifts_transactions",
-          "value": "(\"gifts\".\"claim_tx_hash\" is null or \"gifts\".\"received_at\" is not null)\n        and (\"gifts\".\"reject_tx_hash\" is null or \"gifts\".\"status\" = 'taken_out')\n        and (\"gifts\".\"return_tx_hash\" is null or \"gifts\".\"status\" = 'returned')"
         },
         "gifts_pushed": {
           "name": "gifts_pushed",
@@ -347,13 +426,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "pushed_to_giver_at": {
-          "name": "pushed_to_giver_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -374,19 +446,17 @@
       "indexes": {
         "gratitude_idempotency_key_unique": {
           "name": "gratitude_idempotency_key_unique",
-          "columns": ["idempotency_key"],
+          "columns": [
+            "idempotency_key"
+          ],
           "isUnique": true
         },
         "gratitude_created": {
           "name": "gratitude_created",
-          "columns": ["created_at"],
+          "columns": [
+            "created_at"
+          ],
           "isUnique": false
-        },
-        "gratitude_push_due": {
-          "name": "gratitude_push_due",
-          "columns": ["created_at"],
-          "isUnique": false,
-          "where": "\"gratitude\".\"pushed_to_giver_at\" is null"
         }
       },
       "foreignKeys": {
@@ -394,8 +464,12 @@
           "name": "gratitude_gift_id_gifts_id_fk",
           "tableFrom": "gratitude",
           "tableTo": "gifts",
-          "columnsFrom": ["gift_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "gift_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -514,8 +588,12 @@
           "name": "sticker_placements_user_id_users_id_fk",
           "tableFrom": "sticker_placements",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -523,15 +601,22 @@
           "name": "sticker_placements_sticker_id_stickers_id_fk",
           "tableFrom": "sticker_placements",
           "tableTo": "stickers",
-          "columnsFrom": ["sticker_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "sticker_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "sticker_placements_user_id_sticker_id_pk": {
-          "columns": ["user_id", "sticker_id"],
+          "columns": [
+            "user_id",
+            "sticker_id"
+          ],
           "name": "sticker_placements_user_id_sticker_id_pk"
         }
       },
@@ -583,8 +668,12 @@
           "name": "sticker_timelapses_sticker_id_stickers_id_fk",
           "tableFrom": "sticker_timelapses",
           "tableTo": "stickers",
-          "columnsFrom": ["sticker_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "sticker_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -652,6 +741,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "nsfw": {
+          "name": "nsfw",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "content_hash": {
           "name": "content_hash",
           "type": "text",
@@ -659,22 +755,15 @@
           "notNull": true,
           "autoincrement": false
         },
-        "metadata_uri": {
-          "name": "metadata_uri",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "token_id": {
-          "name": "token_id",
+        "veiled_hash": {
+          "name": "veiled_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "mint_tx_hash": {
-          "name": "mint_tx_hash",
+        "object_id": {
+          "name": "object_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -700,27 +789,45 @@
       "indexes": {
         "stickers_number_unique": {
           "name": "stickers_number_unique",
-          "columns": ["number"],
+          "columns": [
+            "number"
+          ],
           "isUnique": true
         },
-        "stickers_token_id_unique": {
-          "name": "stickers_token_id_unique",
-          "columns": ["token_id"],
+        "stickers_object_id_unique": {
+          "name": "stickers_object_id_unique",
+          "columns": [
+            "object_id"
+          ],
           "isUnique": true
         },
         "stickers_owner": {
           "name": "stickers_owner",
-          "columns": ["owner_id"],
+          "columns": [
+            "owner_id"
+          ],
+          "isUnique": false
+        },
+        "stickers_content_hash": {
+          "name": "stickers_content_hash",
+          "columns": [
+            "content_hash"
+          ],
           "isUnique": false
         },
         "stickers_artist": {
           "name": "stickers_artist",
-          "columns": ["artist_id", "created_at"],
+          "columns": [
+            "artist_id",
+            "created_at"
+          ],
           "isUnique": false
         },
         "stickers_created": {
           "name": "stickers_created",
-          "columns": ["created_at"],
+          "columns": [
+            "created_at"
+          ],
           "isUnique": false
         }
       },
@@ -729,8 +836,12 @@
           "name": "stickers_artist_id_users_id_fk",
           "tableFrom": "stickers",
           "tableTo": "users",
-          "columnsFrom": ["artist_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "artist_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -738,8 +849,12 @@
           "name": "stickers_owner_id_users_id_fk",
           "tableFrom": "stickers",
           "tableTo": "users",
-          "columnsFrom": ["owner_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -759,9 +874,291 @@
           "name": "stickers_content_hash",
           "value": "length(\"stickers\".\"content_hash\") = 66 and \"stickers\".\"content_hash\" like '0x%'"
         },
-        "stickers_minted": {
-          "name": "stickers_minted",
-          "value": "(\"stickers\".\"token_id\" is null) = (\"stickers\".\"mint_tx_hash\" is null)"
+        "stickers_veiled": {
+          "name": "stickers_veiled",
+          "value": "\"stickers\".\"nsfw\" = (\"stickers\".\"veiled_hash\" is not null)"
+        },
+        "stickers_object_id": {
+          "name": "stickers_object_id",
+          "value": "\"stickers\".\"object_id\" is null or (length(\"stickers\".\"object_id\") = 66 and \"stickers\".\"object_id\" like '0x%')"
+        }
+      }
+    },
+    "sui_transactions": {
+      "name": "sui_transactions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sender": {
+          "name": "sender",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "sticker_id": {
+          "name": "sticker_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "gift_id": {
+          "name": "gift_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "purchase_id": {
+          "name": "purchase_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "digest": {
+          "name": "digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tx_bytes": {
+          "name": "tx_bytes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sponsor_signature": {
+          "name": "sponsor_signature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sender_signature": {
+          "name": "sender_signature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "failure": {
+          "name": "failure",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
+        }
+      },
+      "indexes": {
+        "sui_transactions_digest_unique": {
+          "name": "sui_transactions_digest_unique",
+          "columns": [
+            "digest"
+          ],
+          "isUnique": true
+        },
+        "sui_transactions_open_sticker": {
+          "name": "sui_transactions_open_sticker",
+          "columns": [
+            "sticker_id"
+          ],
+          "isUnique": true,
+          "where": "\"sui_transactions\".\"outcome\" is null and \"sui_transactions\".\"kind\" in ('mint', 'deposit')"
+        },
+        "sui_transactions_open_gift": {
+          "name": "sui_transactions_open_gift",
+          "columns": [
+            "gift_id"
+          ],
+          "isUnique": true,
+          "where": "\"sui_transactions\".\"outcome\" is null"
+        },
+        "sui_transactions_open_purchase": {
+          "name": "sui_transactions_open_purchase",
+          "columns": [
+            "purchase_id"
+          ],
+          "isUnique": true,
+          "where": "\"sui_transactions\".\"outcome\" is null"
+        },
+        "sui_transactions_open_payment": {
+          "name": "sui_transactions_open_payment",
+          "columns": [
+            "sender"
+          ],
+          "isUnique": true,
+          "where": "\"sui_transactions\".\"outcome\" is null and \"sui_transactions\".\"kind\" = 'payment'"
+        },
+        "sui_transactions_open": {
+          "name": "sui_transactions_open",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false,
+          "where": "\"sui_transactions\".\"outcome\" is null"
+        },
+        "sui_transactions_gift": {
+          "name": "sui_transactions_gift",
+          "columns": [
+            "gift_id"
+          ],
+          "isUnique": false
+        },
+        "sui_transactions_sticker": {
+          "name": "sui_transactions_sticker",
+          "columns": [
+            "sticker_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "sui_transactions_user_id_users_id_fk": {
+          "name": "sui_transactions_user_id_users_id_fk",
+          "tableFrom": "sui_transactions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "sui_transactions_sticker_id_stickers_id_fk": {
+          "name": "sui_transactions_sticker_id_stickers_id_fk",
+          "tableFrom": "sui_transactions",
+          "tableTo": "stickers",
+          "columnsFrom": [
+            "sticker_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "sui_transactions_gift_id_gifts_id_fk": {
+          "name": "sui_transactions_gift_id_gifts_id_fk",
+          "tableFrom": "sui_transactions",
+          "tableTo": "gifts",
+          "columnsFrom": [
+            "gift_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "sui_transactions_purchase_id_ticket_purchases_id_fk": {
+          "name": "sui_transactions_purchase_id_ticket_purchases_id_fk",
+          "tableFrom": "sui_transactions",
+          "tableTo": "ticket_purchases",
+          "columnsFrom": [
+            "purchase_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "sui_transactions_kind": {
+          "name": "sui_transactions_kind",
+          "value": "\"sui_transactions\".\"kind\" in ('mint', 'deposit', 'take_out', 'claim', 'return', 'payment')"
+        },
+        "sui_transactions_outcome": {
+          "name": "sui_transactions_outcome",
+          "value": "\"sui_transactions\".\"outcome\" is null or \"sui_transactions\".\"outcome\" in ('succeeded', 'failed', 'dead')"
+        },
+        "sui_transactions_subject": {
+          "name": "sui_transactions_subject",
+          "value": "(\"sui_transactions\".\"kind\" = 'mint' and \"sui_transactions\".\"sticker_id\" is not null and \"sui_transactions\".\"user_id\" is null and \"sui_transactions\".\"gift_id\" is null and \"sui_transactions\".\"purchase_id\" is null)\n        or (\"sui_transactions\".\"kind\" = 'deposit' and \"sui_transactions\".\"user_id\" is not null and \"sui_transactions\".\"sticker_id\" is not null and \"sui_transactions\".\"gift_id\" is not null and \"sui_transactions\".\"purchase_id\" is null)\n        or (\"sui_transactions\".\"kind\" = 'take_out' and \"sui_transactions\".\"user_id\" is not null and \"sui_transactions\".\"gift_id\" is not null and \"sui_transactions\".\"purchase_id\" is null)\n        or (\"sui_transactions\".\"kind\" in ('claim', 'return') and \"sui_transactions\".\"user_id\" is null and \"sui_transactions\".\"gift_id\" is not null and \"sui_transactions\".\"purchase_id\" is null)\n        or (\"sui_transactions\".\"kind\" = 'payment' and \"sui_transactions\".\"user_id\" is not null and \"sui_transactions\".\"purchase_id\" is not null and \"sui_transactions\".\"sticker_id\" is null and \"sui_transactions\".\"gift_id\" is null)"
+        },
+        "sui_transactions_settled": {
+          "name": "sui_transactions_settled",
+          "value": "(\"sui_transactions\".\"outcome\" is null) = (\"sui_transactions\".\"settled_at\" is null)"
+        },
+        "sui_transactions_failure": {
+          "name": "sui_transactions_failure",
+          "value": "case \"sui_transactions\".\"outcome\" when 'failed' then \"sui_transactions\".\"failure\" is not null when 'dead' then 1 else \"sui_transactions\".\"failure\" is null end"
+        },
+        "sui_transactions_submitted": {
+          "name": "sui_transactions_submitted",
+          "value": "\"sui_transactions\".\"submitted_at\" is null or \"sui_transactions\".\"sender_signature\" is not null"
         }
       }
     },
@@ -796,22 +1193,22 @@
           "notNull": true,
           "autoincrement": false
         },
-        "paid_mist": {
-          "name": "paid_mist",
+        "paid_jpyc": {
+          "name": "paid_jpyc",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "tx_digest": {
-          "name": "tx_digest",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "verified_at": {
           "name": "verified_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "given_up_at": {
+          "name": "given_up_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
@@ -835,15 +1232,20 @@
         }
       },
       "indexes": {
-        "ticket_purchases_tx_digest_unique": {
-          "name": "ticket_purchases_tx_digest_unique",
-          "columns": ["tx_digest"],
-          "isUnique": true
-        },
         "ticket_purchases_user": {
           "name": "ticket_purchases_user",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
+        },
+        "ticket_purchases_open": {
+          "name": "ticket_purchases_open",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false,
+          "where": "\"ticket_purchases\".\"verified_at\" is null and \"ticket_purchases\".\"given_up_at\" is null"
         }
       },
       "foreignKeys": {
@@ -851,8 +1253,12 @@
           "name": "ticket_purchases_user_id_users_id_fk",
           "tableFrom": "ticket_purchases",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -863,6 +1269,10 @@
         "ticket_purchases_pack": {
           "name": "ticket_purchases_pack",
           "value": "\"ticket_purchases\".\"tickets\" > 0 and \"ticket_purchases\".\"price_yen\" > 0"
+        },
+        "ticket_purchases_payment": {
+          "name": "ticket_purchases_payment",
+          "value": "(\"ticket_purchases\".\"paid_jpyc\" is null) = (\"ticket_purchases\".\"verified_at\" is null)"
         }
       }
     },
@@ -883,6 +1293,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "ticket_day": {
           "name": "ticket_day",
           "type": "text",
@@ -893,6 +1310,13 @@
         "day_index": {
           "name": "day_index",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -924,12 +1348,26 @@
       "indexes": {
         "ticket_uses_sticker_id_unique": {
           "name": "ticket_uses_sticker_id_unique",
-          "columns": ["sticker_id"],
+          "columns": [
+            "sticker_id"
+          ],
           "isUnique": true
         },
         "ticket_uses_day": {
           "name": "ticket_uses_day",
-          "columns": ["user_id", "ticket_day", "day_index"],
+          "columns": [
+            "user_id",
+            "ticket_day",
+            "day_index"
+          ],
+          "isUnique": true
+        },
+        "ticket_uses_idempotency_key": {
+          "name": "ticket_uses_idempotency_key",
+          "columns": [
+            "user_id",
+            "idempotency_key"
+          ],
           "isUnique": true
         }
       },
@@ -938,8 +1376,12 @@
           "name": "ticket_uses_user_id_users_id_fk",
           "tableFrom": "ticket_uses",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -947,8 +1389,12 @@
           "name": "ticket_uses_sticker_id_stickers_id_fk",
           "tableFrom": "ticket_uses",
           "tableTo": "stickers",
-          "columnsFrom": ["sticker_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "sticker_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -959,6 +1405,10 @@
         "ticket_uses_day_index": {
           "name": "ticket_uses_day_index",
           "value": "\"ticket_uses\".\"day_index\" >= 0"
+        },
+        "ticket_uses_kind": {
+          "name": "ticket_uses_kind",
+          "value": "\"ticket_uses\".\"kind\" = case when \"ticket_uses\".\"day_index\" < 3 then 'daily' else 'reserve' end"
         }
       }
     },
@@ -1000,16 +1450,29 @@
           "notNull": false,
           "autoincrement": false
         },
-        "time_zone": {
-          "name": "time_zone",
+        "language": {
+          "name": "language",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "'Asia/Tokyo'"
+          "autoincrement": false
         },
-        "smart_account_address": {
-          "name": "smart_account_address",
+        "language_choice": {
+          "name": "language_choice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "nsfw_opted_in_at": {
+          "name": "nsfw_opted_in_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "sui_address": {
+          "name": "sui_address",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -1049,17 +1512,23 @@
       "indexes": {
         "users_line_user_id_unique": {
           "name": "users_line_user_id_unique",
-          "columns": ["line_user_id"],
+          "columns": [
+            "line_user_id"
+          ],
           "isUnique": true
         },
-        "users_smart_account_address_unique": {
-          "name": "users_smart_account_address_unique",
-          "columns": ["smart_account_address"],
+        "users_sui_address_unique": {
+          "name": "users_sui_address_unique",
+          "columns": [
+            "sui_address"
+          ],
           "isUnique": true
         },
         "users_handle": {
           "name": "users_handle",
-          "columns": ["lower(\"handle\")"],
+          "columns": [
+            "lower(\"handle\")"
+          ],
           "isUnique": true
         }
       },
@@ -1071,9 +1540,9 @@
           "name": "users_line",
           "value": "(\"users\".\"deleted_at\" is null and \"users\".\"line_user_id\" is not null and \"users\".\"line_display_name\" is not null)\n        or (\"users\".\"deleted_at\" is not null and \"users\".\"line_user_id\" is null and \"users\".\"line_display_name\" is null and \"users\".\"line_picture_url\" is null)"
         },
-        "users_smart_account_address": {
-          "name": "users_smart_account_address",
-          "value": "\"users\".\"smart_account_address\" is null\n        or (length(\"users\".\"smart_account_address\") = 42 and \"users\".\"smart_account_address\" = lower(\"users\".\"smart_account_address\"))"
+        "users_sui_address": {
+          "name": "users_sui_address",
+          "value": "\"users\".\"sui_address\" is null\n        or (length(\"users\".\"sui_address\") = 66 and \"users\".\"sui_address\" like '0x%' and \"users\".\"sui_address\" = lower(\"users\".\"sui_address\"))"
         }
       }
     }

@@ -1,6 +1,6 @@
-import { GIFT_EXPIRY_MS, gifts, stickerPlacements, users } from "@drawing-app/db";
+import { GIFT_EXPIRY_MS, gifts, stickerPlacements, suiTransactions, users } from "@drawing-app/db";
 import { bytes32, insertUser } from "@drawing-app/db/testing";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChainUnavailableError } from "../deps.ts";
 import { giftClaimTokenSchema } from "../gifts/packaging.ts";
@@ -11,6 +11,7 @@ import {
   type ReceiveRefusal,
 } from "../gifts/receiving.ts";
 import { createGiftsTestApp, giftOf, type GiftsTestApp } from "../gifts/testGifts.ts";
+import { SponsorshipError } from "../sui/types.ts";
 import { captureLogLines } from "../testing/logLines.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { SPOT } from "../testing/rows.ts";
@@ -58,6 +59,39 @@ async function expectRefused(
 
 const termsAcceptedAt = (test: GiftsTestApp, userId: string) =>
   test.db.select().from(users).where(eq(users.id, userId)).get()?.termsAcceptedAt;
+
+/** How many claims the server built on Sui. */
+const claimsBuilt = (test: GiftsTestApp) =>
+  test.chain.built.filter(({ kind }) => kind === "claim").length;
+
+/** The digest of the transaction Shinami sponsored last. */
+function lastDigest(test: GiftsTestApp) {
+  const last = test.chain.sponsorships.at(-1);
+  if (!last) throw new Error("Shinami sponsored nothing");
+  return last.sponsorship.digest;
+}
+
+/** On Sui, a gift in the escrow, and a receiver who opened its link, so it waits for them. */
+async function openedOnSui(test: GiftsTestApp) {
+  const deposited = await test.depositedGift();
+  const receiverId = insertUser(test.db);
+  await previewOf(await preview(test, receiverId, deposited.giftClaimToken));
+  return { ...deposited, receiverId };
+}
+
+/** A claim for `receiverId` that ran on Sui while its answer was lost, so nothing recorded it. */
+async function claimLandedUnrecorded(
+  test: GiftsTestApp,
+  receiverId: string,
+  giftClaimToken: string,
+) {
+  test.chain.answerNext("lost");
+  expect(await refusalOf(await receive(test, receiverId, giftClaimToken))).toMatchObject({
+    status: 503,
+    error: "claim_failed",
+  });
+  test.chain.show(lastDigest(test), { ok: true, events: [] });
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -111,66 +145,6 @@ describe("POST /api/gifts/receive", () => {
     expect(test.ownerOf(gift.stickerId)).toBe(first);
   });
 
-  it.each(["link", "board"])(
-    "recovers a completed receive through the %s without repeating the claim or resetting placement",
-    async (entry) => {
-      const test = await createGiftsTestApp({ escrowChain: true });
-      const { gift, giftClaimToken } = await test.packagedGift();
-      test.landDeposit(gift.id);
-      const receiverId = insertUser(test.db);
-      await previewOf(await preview(test, receiverId, giftClaimToken));
-      const claims = vi.spyOn(test.giftChain, "claimGift");
-      const accept = () =>
-        entry === "link"
-          ? receive(test, receiverId, giftClaimToken)
-          : test.post(receiverId, `/${gift.id}/receive`);
-      const first = await receivedOf(await accept());
-      test.clock.advance(GIFT_EXPIRY_MS);
-      const placement = test.db
-        .update(stickerPlacements)
-        .set({ ...SPOT, seenAt: test.clock.now() })
-        .where(
-          and(
-            eq(stickerPlacements.userId, receiverId),
-            eq(stickerPlacements.stickerId, gift.stickerId),
-          ),
-        )
-        .returning()
-        .get();
-      const recorded = test.giftRow(gift.id);
-      const retried = await receivedOf(await accept());
-      expect(retried.gift).toEqual(first.gift);
-      expect(retried.stickerPlacement).toMatchObject({
-        placement: SPOT,
-        seenAt: placement.seenAt?.toISOString(),
-      });
-      expect(test.giftRow(gift.id)).toEqual(recorded);
-      expect(claims).toHaveBeenCalledTimes(1);
-    },
-  );
-
-  it("shares overlapping Accept requests by the same recipient", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { gift, giftClaimToken } = await test.packagedGift();
-    test.landDeposit(gift.id);
-    const receiverId = insertUser(test.db);
-    await previewOf(await preview(test, receiverId, giftClaimToken));
-    const claim = test.giftChain.claimGift;
-    const finishClaim = vi.fn<() => void>();
-    const pending = new Promise<void>((resolve) => finishClaim.mockImplementation(resolve));
-    const claims = vi.spyOn(test.giftChain, "claimGift").mockImplementation(async (request) => {
-      await pending;
-      return claim(request);
-    });
-    const first = receiveGiftForYou(test.deps, receiverId, gift.id);
-    const retry = receiveGiftForYou(test.deps, receiverId, gift.id);
-    finishClaim();
-    const results = await Promise.all([first, retry]);
-    expect(results[0]).toMatchObject({ refusal: null, received: { gift: { receiverId } } });
-    expect(results[1]).toEqual(results[0]);
-    expect(claims).toHaveBeenCalledTimes(1);
-  });
-
   it("does not restore an old receipt after its sticker has been given again", async () => {
     const test = await createGiftsTestApp();
     const { gift, giftClaimToken } = await test.packagedGift();
@@ -214,161 +188,168 @@ describe("POST /api/gifts/receive", () => {
     });
     expect(test.ownerOf(gift.stickerId)).toBe(artistId);
   });
+});
 
-  it("claims the escrowed sticker before recording it as received", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { gift, giftClaimToken } = await test.packagedGift();
-    test.landDeposit(gift.id);
-    const receiverId = insertUser(test.db);
-    const reads = vi.spyOn(test.giftChain, "readEscrowGift");
-    const claims = vi.spyOn(test.giftChain, "claimGift");
+describe("Receiving on Sui", () => {
+  it("claims the gift for the receiver's wallet, and records the receive with the claim", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { gift, giftClaimToken, receiverId } = await openedOnSui(test);
     const received = await receivedOf(await receive(test, receiverId, giftClaimToken));
     expect(received.gift).toMatchObject({
       status: "received",
       escrowStatus: "claimed",
+      receiverId,
     });
-    expect(test.giftRow(gift.id).claimTxHash).toBe(test.giftChain.claimTransactions.get(gift.id));
-    expect(reads).toHaveBeenCalledTimes(1);
-    expect(claims).toHaveBeenCalledWith({
-      giftId: gift.id,
-      giftClaimToken,
-      recipientId: receiverId,
-    });
-    expect(test.giftChain.escrow.get(gift.id)).toMatchObject({
-      status: "claimed",
-      recipient: await test.deps.smartWallets.addressFor(receiverId),
-    });
-  });
-
-  it("reconciles a claim that landed before its database update", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { gift, giftClaimToken } = await test.packagedGift();
-    test.landDeposit(gift.id);
-    const receiverId = insertUser(test.db);
-    await previewOf(await preview(test, receiverId, giftClaimToken));
-    const landed = await test.giftChain.claimGift({
-      giftId: gift.id,
-      giftClaimToken,
-      recipientId: receiverId,
-    });
-    if (!landed.claimed) throw new Error("The fake escrow did not claim the gift");
-
-    const received = await receivedOf(await receive(test, receiverId, giftClaimToken));
-
-    expect(received.gift).toMatchObject({
-      status: "received",
-      escrowStatus: "claimed",
-    });
-    expect(test.giftRow(gift.id).claimTxHash).toBe(landed.txHash);
-  });
-
-  it("answers a claim the chain didn't confirm with claim_failed, then receives the gift once the claim lands", async () => {
-    const logs = captureLogLines();
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { giverId, gift, giftClaimToken } = await test.packagedGift();
-    test.landDeposit(gift.id);
-    const receiverId = insertUser(test.db);
-    const claim = test.giftChain.claimGift;
-    const receiptTimeout = new Error("Timed out waiting for the claim to be confirmed");
-    vi.spyOn(test.giftChain, "claimGift").mockRejectedValueOnce(receiptTimeout);
-
-    const failed = await refusalOf(await receive(test, receiverId, giftClaimToken));
-    expect(failed).toMatchObject({ status: 503, error: "claim_failed" });
-    expect(failed.detail).toContain(gift.id);
-    expect(failed.detail).toContain(`(${receiptTimeout.message})`);
-    logs.expectLogged("gift.claim.failed", { giftId: gift.id, userId: receiverId });
-    expect(logs.raw.join("\n")).toContain(receiptTimeout.message);
-    expect(test.giftRow(gift.id)).toMatchObject({
-      status: "packed",
-      escrowStatus: "pending",
-      receiverId: null,
-    });
-    expect(test.ownerOf(gift.stickerId)).toBe(giverId);
-
-    const landed = await claim({ giftId: gift.id, giftClaimToken, recipientId: receiverId });
-    if (!landed.claimed) throw new Error("The fake escrow did not claim the gift");
-    await receivedOf(await receive(test, receiverId, giftClaimToken));
-    expect(test.giftRow(gift.id)).toMatchObject({ status: "received", claimTxHash: landed.txHash });
+    const recipient = test.wallets.keyOf(receiverId).toSuiAddress();
+    expect(test.chain.built.at(-1)).toEqual({ kind: "claim", giftId: gift.id, recipient });
+    expect(test.chain.escrow.get(gift.id)).toEqual({ status: "claimed", recipient });
     expect(test.ownerOf(gift.stickerId)).toBe(receiverId);
   });
 
-  it("answers the claim's own failure when the check after it can't read the escrow, and logs both", async () => {
+  it.each(["link", "board"])(
+    "recovers a completed receive through the %s without claiming again or resetting placement",
+    async (entry) => {
+      const test = await createGiftsTestApp({ onSui: true });
+      const { gift, giftClaimToken, receiverId } = await openedOnSui(test);
+      const accept = () =>
+        entry === "link"
+          ? receive(test, receiverId, giftClaimToken)
+          : test.post(receiverId, `/${gift.id}/receive`);
+      const first = await receivedOf(await accept());
+      test.clock.advance(GIFT_EXPIRY_MS);
+      const placement = test.db
+        .update(stickerPlacements)
+        .set({ ...SPOT, seenAt: test.clock.now() })
+        .where(
+          and(
+            eq(stickerPlacements.userId, receiverId),
+            eq(stickerPlacements.stickerId, gift.stickerId),
+          ),
+        )
+        .returning()
+        .get();
+      const retried = await receivedOf(await accept());
+      expect(retried.gift).toEqual(first.gift);
+      expect(retried.stickerPlacement).toMatchObject({
+        placement: SPOT,
+        seenAt: placement.seenAt?.toISOString(),
+      });
+      expect(claimsBuilt(test)).toBe(1);
+    },
+  );
+
+  it("shares overlapping Accept requests by the same recipient", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { gift, receiverId } = await openedOnSui(test);
+    const results = await Promise.all([
+      receiveGiftForYou(test.deps, receiverId, gift.id),
+      receiveGiftForYou(test.deps, receiverId, gift.id),
+    ]);
+    expect(results[0]).toMatchObject({ refusal: null, received: { gift: { receiverId } } });
+    expect(results[1]).toEqual(results[0]);
+    expect(claimsBuilt(test)).toBe(1);
+  });
+
+  it("answers a claim Sui hasn't answered with claim_failed, then records it once Sui shows it ran", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { giverId, gift, giftClaimToken, receiverId } = await openedOnSui(test);
+    await claimLandedUnrecorded(test, receiverId, giftClaimToken);
+    expect(test.giftRow(gift.id)).toMatchObject({ status: "packed", receiverId: null });
+    expect(test.ownerOf(gift.stickerId)).toBe(giverId);
+
+    expect((await receivedOf(await receive(test, receiverId, giftClaimToken))).gift).toMatchObject({
+      status: "received",
+      receiverId,
+    });
+    expect(test.ownerOf(gift.stickerId)).toBe(receiverId);
+    expect(claimsBuilt(test)).toBe(1);
+  });
+
+  it("records a claim that landed before the gift expired when Accept comes after, for its receiver only", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { gift, giftClaimToken, receiverId } = await openedOnSui(test);
+    const unclaimed = await test.depositedGift();
+    await claimLandedUnrecorded(test, receiverId, giftClaimToken);
+    test.clock.advance(GIFT_EXPIRY_MS);
+
+    await expectRefused(test, receiverId, unclaimed.giftClaimToken, 410, "gift_expired");
+    const someoneElse = await receive(test, insertUser(test.db), giftClaimToken);
+    expect(await refusalOf(someoneElse)).toMatchObject({ status: 409, error: "already_received" });
+    expect(test.giftRow(gift.id).receiverId).toBeNull();
+    await receivedOf(await receive(test, receiverId, giftClaimToken));
+    expect(test.ownerOf(gift.stickerId)).toBe(receiverId);
+  });
+
+  it.each([
+    { escrow: "taken_out", status: 409, refusal: "taken_back" },
+    { escrow: "expired_returned", status: 410, refusal: "gift_returned" },
+  ] as const)(
+    "answers a claim that failed because the escrow let the gift go ($escrow) with its refusal",
+    async ({ escrow, status, refusal }) => {
+      const test = await createGiftsTestApp({ onSui: true });
+      const { giverId, gift, giftClaimToken, receiverId } = await openedOnSui(test);
+      test.chain.escrow.set(gift.id, { status: escrow, recipient: null });
+      test.chain.answerNext({ ok: false, failure: "MoveAbort(gift, 2)" });
+      expect(await refusalOf(await receive(test, receiverId, giftClaimToken))).toMatchObject({
+        status,
+        error: refusal,
+      });
+      expect(test.ownerOf(gift.stickerId)).toBe(giverId);
+    },
+  );
+
+  it("answers the claim's own failure when the escrow can't be read after it, and logs both", async () => {
     const logs = captureLogLines();
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { gift, giftClaimToken } = await test.packagedGift();
-    test.landDeposit(gift.id);
-    const receiverId = insertUser(test.db);
-    await previewOf(await preview(test, receiverId, giftClaimToken));
-    const claimFailure = new Error("Timed out waiting for the claim to be confirmed");
-    vi.spyOn(test.giftChain, "claimGift").mockRejectedValueOnce(claimFailure);
-    vi.spyOn(test.giftChain, "readEscrowGift").mockRejectedValueOnce(
-      new ChainUnavailableError("Reading the escrow failed", { cause: new Error("fetch failed") }),
+    const test = await createGiftsTestApp({ onSui: true });
+    const { gift, giftClaimToken, receiverId } = await openedOnSui(test);
+    const failure = "MoveAbort(gift, 2) in command 0";
+    test.chain.answerNext({ ok: false, failure });
+    vi.spyOn(test.chain.sui, "readGift").mockRejectedValueOnce(
+      new ChainUnavailableError("Sui couldn't be asked for the gift"),
     );
 
     const failed = await refusalOf(await receive(test, receiverId, giftClaimToken));
-
     expect(failed).toMatchObject({ status: 503, error: "claim_failed" });
-    expect(failed.detail).toContain(claimFailure.message);
-    logs.expectLogged("gift.claim.failed", { giftId: gift.id, userId: receiverId });
+    expect(failed.detail).toContain(failure);
+    logs.expectLogged("sui.tx.failed", { kind: "claim", giftId: gift.id });
     logs.expectLogged("gift.claim.check_failed", { giftId: gift.id, userId: receiverId });
     expect(test.giftRow(gift.id)).toMatchObject({ status: "packed", escrowStatus: "pending" });
   });
 
-  it("answers an escrow the chain can't read with chain_unavailable, and its cause", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { giftClaimToken } = await test.packagedGift();
-    const cause = new Error("fetch failed");
-    vi.spyOn(test.giftChain, "readEscrowGift").mockRejectedValueOnce(
-      new ChainUnavailableError("Reading the escrow failed", { cause }),
+  it("answers Shinami being unreachable with sponsor_unavailable, leaving the gift to receive", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { gift, giftClaimToken, receiverId } = await openedOnSui(test);
+    test.chain.refuseNext(
+      new SponsorshipError("unavailable", "Shinami's gas_sponsorTransactionBlock timed out"),
     );
-
-    const refused = await refusalOf(await preview(test, insertUser(test.db), giftClaimToken));
-    expect(refused).toMatchObject({ status: 502, error: "chain_unavailable" });
-    expect(refused.detail).toContain(cause.message);
-  });
-
-  it("records a claim that landed before the gift expired, when Accept comes only after", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const claimed = await test.packagedGift();
-    const unclaimed = await test.packagedGift();
-    test.landDeposit(claimed.gift.id);
-    test.landDeposit(unclaimed.gift.id);
-    const receiverId = insertUser(test.db);
-    const landed = await test.giftChain.claimGift({
-      giftId: claimed.gift.id,
-      giftClaimToken: claimed.giftClaimToken,
-      recipientId: receiverId,
+    expect(await refusalOf(await receive(test, receiverId, giftClaimToken))).toMatchObject({
+      status: 503,
+      error: "sponsor_unavailable",
     });
-    if (!landed.claimed) throw new Error("The fake escrow did not claim the gift");
-    test.clock.advance(GIFT_EXPIRY_MS);
-
-    await expectRefused(test, receiverId, unclaimed.giftClaimToken, 410, "gift_expired");
-    const someoneElse = await receive(test, insertUser(test.db), claimed.giftClaimToken);
-    expect(await refusalOf(someoneElse)).toMatchObject({ status: 409, error: "already_received" });
-    const opened = await previewOf(await preview(test, receiverId, claimed.giftClaimToken));
-    expect(opened.receivable).toBe(true);
-    await receivedOf(await receive(test, receiverId, claimed.giftClaimToken));
-    expect(test.giftRow(claimed.gift.id)).toMatchObject({
-      status: "received",
-      claimTxHash: landed.txHash,
-    });
-    expect(test.ownerOf(claimed.gift.stickerId)).toBe(receiverId);
-  });
-
-  it("does not give database ownership to a second recipient after another wallet claimed", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { giverId, gift, giftClaimToken } = await test.packagedGift();
-    test.landDeposit(gift.id);
-    const receiverId = insertUser(test.db);
-    await previewOf(await preview(test, receiverId, giftClaimToken));
-    await test.giftChain.claimGift({ giftId: gift.id, giftClaimToken, recipientId: receiverId });
-
-    const loser = await receive(test, insertUser(test.db), giftClaimToken);
-    expect(await refusalOf(loser)).toMatchObject({ status: 409, error: "already_received" });
-    expect(test.ownerOf(gift.stickerId)).toBe(giverId);
-
     await receivedOf(await receive(test, receiverId, giftClaimToken));
-    expect(test.ownerOf(gift.stickerId)).toBe(receiverId);
+    expect(test.giftRow(gift.id).receiverId).toBe(receiverId);
+  });
+
+  it("refuses a receiver without a Sui wallet", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { giftClaimToken, receiverId } = await openedOnSui(test);
+    test.wallets.without.add(receiverId);
+    expect(await refusalOf(await receive(test, receiverId, giftClaimToken))).toMatchObject({
+      status: 409,
+      error: "no_sui_wallet",
+    });
+  });
+
+  it("refuses a gift whose deposit hasn't landed, leaving the giver's deposit to sign", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { gift, giftClaimToken } = await test.packagedGift();
+    await expectRefused(test, insertUser(test.db), giftClaimToken, 409, "not_deposited");
+    const open = test.db
+      .select()
+      .from(suiTransactions)
+      .where(and(eq(suiTransactions.giftId, gift.id), isNull(suiTransactions.outcome)))
+      .get();
+    expect(open?.kind).toBe("deposit");
   });
 });
 
@@ -384,14 +365,16 @@ describe("Receiving refuses", () => {
     expect(test.ownerOf(gift.stickerId)).toBe(giverId);
   });
 
-  it("an NSFW sticker to anyone not adult, and gives it to an adult", async () => {
+  it("an NSFW sticker to anyone not opted in, and gives it to someone opted in", async () => {
     const test = await createGiftsTestApp();
     const { gift, giftClaimToken } = await test.packagedGift(insertUser(test.db), { nsfw: true });
 
-    await expectRefused(test, insertUser(test.db), giftClaimToken, 403, "adults_only");
+    await expectRefused(test, insertUser(test.db), giftClaimToken, 403, "nsfw_not_opted_in");
     expect(test.giftRow(gift.id).forUserId).toBeNull();
-    const adultId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
-    expect((await receivedOf(await receive(test, adultId, giftClaimToken))).sticker).toMatchObject({
+    const optedInId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
+    expect(
+      (await receivedOf(await receive(test, optedInId, giftClaimToken))).sticker,
+    ).toMatchObject({
       id: gift.stickerId,
       nsfw: true,
     });
@@ -418,41 +401,11 @@ describe("Receiving refuses", () => {
     await expectRefused(test, receiverId, returned.giftClaimToken, 410, "gift_returned");
   });
 
-  it.each([
-    { escrow: "rejected", status: 409, refusal: "taken_back", recorded: "taken_out" },
-    { escrow: "expired_returned", status: 410, refusal: "gift_returned", recorded: "returned" },
-  ] as const)(
-    "a gift the escrow let go ($escrow) before the server recorded it, instead of failing the claim",
-    async ({ escrow, status, refusal, recorded }) => {
-      const test = await createGiftsTestApp({ escrowChain: true });
-      const { giverId, gift, giftClaimToken } = await test.packagedGift();
-      test.landDeposit(gift.id);
-      const receiverId = insertUser(test.db);
-      const opened = await previewOf(await preview(test, receiverId, giftClaimToken));
-      expect(opened.receivable).toBe(true);
-      test.setEscrowStatus(gift.id, escrow);
-
-      await expectRefused(test, receiverId, giftClaimToken, status, refusal);
-      expect(test.giftRow(gift.id)).toMatchObject({
-        status: recorded,
-        escrowStatus: escrow,
-        receiverId: null,
-      });
-      expect(test.ownerOf(gift.stickerId)).toBe(giverId);
-    },
-  );
-
   it("a gift past its expiry", async () => {
     const test = await createGiftsTestApp();
     const { giftClaimToken } = await test.packagedGift();
     test.clock.advance(GIFT_EXPIRY_MS);
     await expectRefused(test, insertUser(test.db), giftClaimToken, 410, "gift_expired");
-  });
-
-  it("a gift whose deposit hasn't landed, on the escrow chain", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { giftClaimToken } = await test.packagedGift();
-    await expectRefused(test, insertUser(test.db), giftClaimToken, 409, "not_deposited");
   });
 
   it("an unknown Gift Claim Token, and a malformed one", async () => {

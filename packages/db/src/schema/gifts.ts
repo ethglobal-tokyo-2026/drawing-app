@@ -6,24 +6,24 @@ import { users } from "./users.ts";
 
 /** The app's gift states, Receiving's, and the escrow's return after GIFT_EXPIRY_MS. */
 export const giftStatuses = ["packed", "sent", "received", "taken_out", "returned"] as const;
-/** StickerGiftEscrow's GiftStatus, verbatim. */
+/** The escrow's GiftStatus, and `missing` while the gift's derived ID holds no object. */
 export const escrowStatuses = [
   "missing",
   "pending",
   "claimed",
-  "rejected",
+  "taken_out",
   "expired_returned",
 ] as const;
 
 /**
- * One Giving of one sticker. Inserted at Packaging; the giver's smart wallet then sends the sticker
- * to the escrow. status says where it stands, and each step keeps its own date. The giver can take
- * it back until it's received, expired or not.
+ * One Giving of one sticker. Inserted at Packaging; the giver's Privy Sui wallet then signs the
+ * deposit into the escrow. status says where it stands, and each step keeps its own date. The giver
+ * can take it back until it's received, expired or not.
  */
 export const gifts = sqliteTable(
   "gifts",
   {
-    /** The escrow's giftId: random bytes32 from createGiftClaim. */
+    /** 32 random bytes; the gift's Sui object ID derives from it in the escrow. */
     id: text("id").primaryKey(),
     stickerId: text("sticker_id")
       .notNull()
@@ -32,15 +32,14 @@ export const gifts = sqliteTable(
       .notNull()
       .references(() => users.id),
     /**
-     * keccak256 of the Gift Claim Token, which only the gift link carries. Receiving finds the gift
-     * by it; the escrow holds the same value but can't be searched by it.
+     * sha256 of the Gift Claim Token, which only the gift link carries. Receiving finds the gift by
+     * it; the escrow holds the same value but can't be searched by it.
      */
     claimCommitment: text("claim_commitment").notNull().unique(),
     status: text("status", { enum: giftStatuses }).notNull().default("packed"),
     /**
-     * StickerGiftEscrow.gifts(id).status: `pending` once the deposit is read and checked, `claimed`
-     * once Receiving's claim lands, and `rejected` or `expired_returned` as a take-out or the
-     * expiry sweep reads it.
+     * The gift's Sui object's status: `pending` once the deposit lands, `claimed` once Receiving's
+     * claim lands, and `taken_out` or `expired_returned` once a take-out or a return lands.
      */
     escrowStatus: text("escrow_status", { enum: escrowStatuses }).notNull().default("missing"),
     /**
@@ -52,7 +51,7 @@ export const gifts = sqliteTable(
     sentAt: integer("sent_at", { mode: "timestamp_ms" }),
     /**
      * Taken back before anyone received it, from the bag or after sending; or by the server, for a
-     * deposit that didn't match, or that never landed before the expiry.
+     * deposit that never landed.
      */
     takenOutAt: integer("taken_out_at", { mode: "timestamp_ms" }),
     /** Set with received_at when someone receives it. */
@@ -61,14 +60,11 @@ export const gifts = sqliteTable(
     /**
      * Who it waits for before anyone receives it: the person the giver picked in the app, or else
      * the first person to open its Gift Message's link. It shows on their board, where they can
-     * receive it without the link. A stopgap until smart account permissions can authorize them on
-     * chain.
+     * receive it without the link.
      */
     forUserId: text("for_user_id").references(() => users.id),
     /** The expiry passed before a receive landed on chain, so the escrow returned it to the giver. */
     returnedAt: integer("returned_at", { mode: "timestamp_ms" }),
-    /** Our relayer's claimGift, set with received_at once it lands. */
-    claimTxHash: text("claim_tx_hash"),
     /**
      * The Official account's message telling the giver it was received went out, or was given up
      * on. Its retry key is made from the gift, so a retry can't send it twice; retries stop while
@@ -113,14 +109,13 @@ export const gifts = sqliteTable(
       sql`(${t.status} = 'packed' and ${t.escrowStatus} in ('missing', 'pending'))
         or (${t.status} = 'sent' and ${t.escrowStatus} = 'pending')
         or (${t.status} = 'received' and ${t.escrowStatus} = 'claimed')
-        or (${t.status} = 'taken_out' and ${t.escrowStatus} in ('missing', 'pending', 'rejected'))
+        or (${t.status} = 'taken_out' and ${t.escrowStatus} in ('missing', 'taken_out'))
         or (${t.status} = 'returned' and ${t.escrowStatus} in ('pending', 'expired_returned'))`,
     ),
     check("gifts_receiver", sql`(${t.receiverId} is null) = (${t.receivedAt} is null)`),
     check("gifts_not_to_self", sql`${t.receiverId} is null or ${t.receiverId} <> ${t.giverId}`),
     check("gifts_not_for_self", sql`${t.forUserId} is null or ${t.forUserId} <> ${t.giverId}`),
     check("gifts_expiry", sql`${t.expiresAt} > ${t.createdAt}`),
-    check("gifts_claim_tx_hash", sql`${t.claimTxHash} is null or ${t.receivedAt} is not null`),
     check("gifts_pushed", sql`${t.pushedToGiverAt} is null or ${t.receivedAt} is not null`),
   ],
 );

@@ -41,7 +41,7 @@ const placementOf = (userId: string, stickerId: string) =>
 
 describe("shapes", () => {
   it("show other people only a person's public columns", () => {
-    const row = userRow({ smartAccountAddress: `0x${"a".repeat(40)}` });
+    const row = userRow({ suiAddress: `0x${"a".repeat(64)}` });
     expect(Object.keys(toPerson(row)).sort()).toEqual(Object.keys(personSchema.shape).sort());
   });
 

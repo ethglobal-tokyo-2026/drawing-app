@@ -52,15 +52,14 @@ describe("gifts", () => {
 
   it("can be taken back after it's sent", () => {
     const id = packGift(db, sticker, giver, { ...deposited, ...sent() });
-    expect(() => update(id, takenOut())).not.toThrow();
+    expect(() => update(id, { ...takenOut(), escrowStatus: "taken_out" })).not.toThrow();
   });
 
-  it("gives a sticker one gift at a time, until the escrow lets it go", () => {
+  it("gives a sticker one gift at a time, until its take-out lets it go", () => {
     const first = packGift(db, sticker, giver, deposited);
     expect(refusal(() => packGift(db, sticker, giver))).toMatch(/gifts.sticker_id/);
-    update(first, takenOut());
-    expect(refusal(() => packGift(db, sticker, giver))).toMatch(/gifts.sticker_id/);
-    update(first, { escrowStatus: "rejected" });
+    expect(refusal(() => update(first, takenOut()))).toMatch(/gifts_status_escrow/);
+    update(first, { ...takenOut(), escrowStatus: "taken_out" });
     expect(() => packGift(db, sticker, giver)).not.toThrow();
   });
 

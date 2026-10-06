@@ -1,4 +1,4 @@
-# sticker-auth.service: the LINE → Privy auth server (packages/sticker-chain) on 127.0.0.1:8787, for HAProxy.
+# sticker-auth.service: the LINE → Privy auth server (packages/line-auth) on 127.0.0.1:8787, for HAProxy.
 # deploy/deploy.sh copies it to /etc/systemd/system/ and restarts it whenever it, its config or its code changes.
 [Unit]
 Description=Croquis LINE → Privy auth server

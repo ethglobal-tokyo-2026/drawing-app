@@ -1,14 +1,12 @@
 import { gifts, stickerPlacements, stickers, users, type Db } from "@drawing-app/db";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
-import { keccak256 } from "viem";
 import { z } from "zod";
-import { queueNaming } from "../ens/naming.ts";
-import type { AppDeps, GiftChain } from "../deps.ts";
-import { failureCause, logFailure, logInfo } from "../diagnostics.ts";
+import type { AppDeps } from "../deps.ts";
+import { logFailure, logInfo } from "../diagnostics.ts";
 import {
-  ageStatusOf,
   giftSchema,
   isoTimeSchema,
+  optedIntoNsfw,
   personSchema,
   refuse,
   stickerLookup,
@@ -21,8 +19,22 @@ import {
   toStickerPlacement,
   type Refusal,
 } from "../shapes.ts";
-import { checkDeposit } from "./deposit.ts";
-import { giftClaimTokenSchema, giftHoldingSticker, type GiftRow } from "./packaging.ts";
+import { oneAtATime } from "../sui/oneAtATime.ts";
+import {
+  runAsServer,
+  sponsored,
+  suiDepsOf,
+  type OnSucceeded,
+  type SuiTransactionDeps,
+} from "../sui/transactions.ts";
+import {
+  claimSucceeded,
+  currentGift,
+  openGiftTransaction,
+  settleOpenGiftTransaction,
+  type GiftRow,
+} from "./giftTransactions.ts";
+import { claimCommitmentOf, giftClaimTokenSchema, giftHoldingSticker } from "./packaging.ts";
 
 /** `liff.getContext().type`: where the Gift Message was opened. */
 const liffContextTypeSchema = z.enum(["utou", "room", "group", "square_chat", "external", "none"]);
@@ -44,7 +56,7 @@ const receiveRefusalSchema = z.enum([
   "gift_returned",
   "gift_expired",
   "not_deposited",
-  "adults_only",
+  "nsfw_not_opted_in",
 ]);
 export type ReceiveRefusal = z.infer<typeof receiveRefusalSchema>;
 
@@ -81,8 +93,8 @@ const groupChatRefusal = (liffContextType: LiffContextType) =>
 
 const notFound = () => refuse("gift_not_found", "No gift has this Gift Claim Token");
 
-/** An NSFW sticker goes only to an adult. */
-function adultsOnlyRefusal(db: Pick<Db, "select">, gift: GiftRow, userId: string) {
+/** An NSFW sticker goes only to someone with the NSFW opt-in on. */
+function nsfwOptInRefusal(db: Pick<Db, "select">, gift: GiftRow, userId: string) {
   const sticker = db
     .select({ nsfw: stickers.nsfw })
     .from(stickers)
@@ -90,12 +102,15 @@ function adultsOnlyRefusal(db: Pick<Db, "select">, gift: GiftRow, userId: string
     .get();
   if (!sticker?.nsfw) return null;
   const receiver = db
-    .select({ ageVerifiedAt: users.ageVerifiedAt })
+    .select({ nsfwOptedInAt: users.nsfwOptedInAt })
     .from(users)
     .where(eq(users.id, userId))
     .get();
-  if (receiver && ageStatusOf(receiver) === "adult") return null;
-  return refuse("adults_only", `Gift ${gift.id} is an NSFW sticker, for adults only`);
+  if (receiver && optedIntoNsfw(receiver)) return null;
+  return refuse(
+    "nsfw_not_opted_in",
+    `Gift ${gift.id} is an NSFW sticker, and the receiver has the NSFW opt-in off`,
+  );
 }
 
 const takenBack = (gift: GiftRow) =>
@@ -130,29 +145,25 @@ function receiveRefusal(
   if (gift.escrowStatus !== "pending") {
     return refuse("not_deposited", `Gift ${gift.id}'s deposit hasn't landed in the escrow`);
   }
-  return adultsOnlyRefusal(db, gift, userId);
+  return nsfwOptInRefusal(db, gift, userId);
 }
 
 /**
- * Whether an expired gift's claim landed anyway: after Receiving stopped waiting for it, and before
- * the expiry, since the escrow refuses a claim after it. Accept still has to record that claim.
+ * Whether an expired gift's claim may have landed anyway, before the expiry, since the escrow refuses
+ * a claim after it: one that succeeded, or one submitted whose answer was lost. Accept still has to
+ * follow and record it.
  */
-async function claimLandedBeforeExpiry({ giftChain, clock }: AppDeps, gift: GiftRow) {
-  if (!giftChain || gift.escrowStatus !== "pending") return false;
+function claimLandedBeforeExpiry({ db, clock, sui }: AppDeps, gift: GiftRow) {
+  if (!sui || gift.escrowStatus !== "pending") return false;
   if (clock.now().getTime() < gift.expiresAt.getTime()) return false;
-  return (await giftChain.readEscrowGift(gift.id)).status === "claimed";
+  const open = openGiftTransaction(db, gift.id);
+  return claimSucceeded(db, gift.id) || (open?.kind === "claim" && open.submittedAt !== null);
 }
 
-/**
- * The gift a Gift Claim Token opens. On the escrow chain, a deposit not seen yet is read first, since
- * it may have landed a moment ago.
- */
-async function openGift(deps: AppDeps, giftClaimToken: OpenGiftBody["giftClaimToken"]) {
-  const { db, giftChain } = deps;
-  const commitment = keccak256(giftClaimToken);
-  const gift = db.select().from(gifts).where(eq(gifts.claimCommitment, commitment)).get();
-  if (!gift || !giftChain || gift.escrowStatus !== "missing") return gift;
-  return (await checkDeposit(deps, giftChain, gift)).gift;
+/** The gift a Gift Claim Token opens. */
+function openGift(deps: AppDeps, giftClaimToken: OpenGiftBody["giftClaimToken"]) {
+  const commitment = claimCommitmentOf(giftClaimToken);
+  return deps.db.select().from(gifts).where(eq(gifts.claimCommitment, commitment)).get();
 }
 
 /** The gift, if it waits for this person. */
@@ -193,9 +204,9 @@ export async function previewGift(
   { giftClaimToken, liffContextType }: OpenGiftBody,
 ): Promise<Previewing> {
   const { db, clock } = deps;
-  const gift = await openGift(deps, giftClaimToken);
+  const gift = openGift(deps, giftClaimToken);
   if (!gift) return notFound();
-  const claimLanded = await claimLandedBeforeExpiry(deps, gift);
+  const claimLanded = claimLandedBeforeExpiry(deps, gift);
   const refusal = receiveRefusal(db, gift, userId, liffContextType, clock.now(), claimLanded);
   const preview = previewOf(deps, userId, gift, refusal);
   // The first person to open it becomes who it waits for, so it stays on their board if they leave.
@@ -219,13 +230,13 @@ export async function previewGiftForYou(
 ): Promise<Previewing> {
   const gift = giftWaitingFor(deps.db, userId, giftId);
   if (!gift) return notWaiting(giftId);
-  const claimLanded = await claimLandedBeforeExpiry(deps, gift);
+  const claimLanded = claimLandedBeforeExpiry(deps, gift);
   const refusal = receiveRefusal(deps.db, gift, userId, "none", deps.clock.now(), claimLanded);
-  return { refusal: null, preview: previewOf(deps, userId, gift, refusal) };
+  return Promise.resolve({ refusal: null, preview: previewOf(deps, userId, gift, refusal) });
 }
 
 export type Receiving =
-  | Refusal<ReceiveRefusal | "gift_not_found" | "claim_failed">
+  | Refusal<ReceiveRefusal | "gift_not_found" | "claim_failed" | "no_sui_wallet">
   | { refusal: null; received: ReceivedGift };
 
 /** A lost HTTP response must not repeat the claim or change a placement the recipient already used. */
@@ -245,11 +256,7 @@ function recordedReceive(deps: AppDeps, userId: string, gift: GiftRow): Receivin
     )
     .get();
   if (!placement) throw new Error(`Gift ${gift.id}'s received sticker placement is missing`);
-  logInfo("gift.receive.recovered", {
-    giftId: gift.id,
-    userId,
-    txHash: gift.claimTxHash ?? undefined,
-  });
+  logInfo("gift.receive.recovered", { giftId: gift.id, userId });
   return {
     refusal: null,
     received: { gift: toGift(gift), sticker, stickerPlacement: toStickerPlacement(placement) },
@@ -264,9 +271,9 @@ export async function receiveGift(
 ): Promise<Receiving> {
   const groupChat = groupChatRefusal(liffContextType);
   if (groupChat) return groupChat;
-  const opened = await openGift(deps, giftClaimToken);
+  const opened = openGift(deps, giftClaimToken);
   if (!opened) return notFound();
-  return receiveOpened(deps, userId, opened, liffContextType, giftClaimToken);
+  return receiveOpened(deps, userId, opened, liffContextType);
 }
 
 /** The gifts waiting for this person, which they can receive from their board. */
@@ -311,7 +318,7 @@ export async function receiveGiftForYou(
 ): Promise<Receiving> {
   const gift = giftWaitingFor(deps.db, userId, giftId);
   if (!gift) return notWaiting(giftId);
-  return receiveOpened(deps, userId, gift, "none", null);
+  return receiveOpened(deps, userId, gift, "none");
 }
 
 const receivingNow = new WeakMap<AppDeps["db"], Map<string, Promise<Receiving>>>();
@@ -322,140 +329,62 @@ function receiveOpened(
   userId: string,
   opened: GiftRow,
   liffContextType: LiffContextType,
-  giftClaimToken: OpenGiftBody["giftClaimToken"] | null,
 ): Promise<Receiving> {
   const active = receivingNow.get(deps.db) ?? new Map<string, Promise<Receiving>>();
   receivingNow.set(deps.db, active);
   const key = `${opened.id}/${userId}`;
   const pending = active.get(key);
   if (pending) return pending;
-  const receiving = completeReceive(deps, userId, opened, liffContextType, giftClaimToken).finally(
-    () => active.delete(key),
+  const receiving = completeReceive(deps, userId, opened, liffContextType).finally(() =>
+    active.delete(key),
   );
   active.set(key, receiving);
   return receiving;
 }
 
 /**
- * After a claim failed, the refusal for a gift its giver took out or that went back to them: the
- * escrow let it go before the claim, and no retry changes that. Records what the escrow says. Null
- * while the escrow still holds it, or when it can't be read: this check never replaces the claim's
- * own failure.
+ * The receive: the gift received, the sticker theirs, back in their tray. Written with the claim's
+ * outcome on Sui, and at once on the mock chain.
  */
-async function takenBackOrReturnedRefusal(
-  deps: AppDeps,
-  giftChain: GiftChain,
-  gift: GiftRow,
-  userId: string,
-): Promise<Refusal<"taken_back" | "gift_returned"> | null> {
-  try {
-    const { gift: checked } = await checkDeposit(deps, giftChain, gift);
-    if (checked.status === "taken_out") return takenBack(checked);
-    if (checked.status === "returned") return giftReturned(checked);
-    return null;
-  } catch (error) {
-    logFailure("gift.claim.check_failed", error, { giftId: gift.id, userId });
-    return null;
-  }
-}
+const recordReceive =
+  (gift: GiftRow, userId: string, now: Date): OnSucceeded =>
+  (tx) => {
+    tx.update(gifts)
+      .set({ status: "received", receiverId: userId, receivedAt: now, escrowStatus: "claimed" })
+      .where(eq(gifts.id, gift.id))
+      .run();
+    tx.update(stickers).set({ ownerId: userId }).where(eq(stickers.id, gift.stickerId)).run();
+    // Accept carries the terms line.
+    tx.update(users)
+      .set({ termsAcceptedAt: now })
+      .where(and(eq(users.id, userId), isNull(users.termsAcceptedAt)))
+      .run();
+    tx.insert(stickerPlacements)
+      .values({ userId, stickerId: gift.stickerId })
+      .onConflictDoUpdate({
+        target: [stickerPlacements.userId, stickerPlacements.stickerId],
+        // A sticker coming back returns to the tray at its old spot, and is NEW again. created_at
+        // is kept, so its place in the tray doesn't move.
+        set: {
+          onBoard: sql`case when ${stickerPlacements.onBoard} is null then null else 0 end`,
+          seenAt: null,
+        },
+      })
+      .run();
+  };
 
-/** Receives an opened gift for this person; without its token, they're who it waits for. */
-async function completeReceive(
-  deps: AppDeps,
-  userId: string,
-  opened: GiftRow,
-  liffContextType: LiffContextType,
-  giftClaimToken: OpenGiftBody["giftClaimToken"] | null,
-): Promise<Receiving> {
-  const { db, clock, giftChain } = deps;
-  const now = clock.now();
-  const claimLanded = await claimLandedBeforeExpiry(deps, opened);
-  const beforeClaim = receiveRefusal(db, opened, userId, liffContextType, now, claimLanded);
-  if (beforeClaim) {
-    return beforeClaim.refusal === "already_received"
-      ? (recordedReceive(deps, userId, opened) ?? beforeClaim)
-      : beforeClaim;
-  }
-
-  let claimTxHash: string | undefined;
-  if (giftChain) {
-    let claimed;
-    try {
-      claimed = await giftChain.claimGift({
-        giftId: opened.id,
-        giftClaimToken,
-        recipientId: userId,
-      });
-    } catch (error) {
-      logFailure("gift.claim.failed", error, { giftId: opened.id, userId });
-      const letGo = await takenBackOrReturnedRefusal(deps, giftChain, opened, userId);
-      if (letGo) return letGo;
-      // The claim recorded nothing, so the gift stays receivable. The escrow lets a gift go only
-      // once, so trying again can't claim it twice.
-      return refuse(
-        "claim_failed",
-        `Gift ${opened.id} wasn't received: its claim wasn't confirmed on the chain (${failureCause(error)})`,
-      );
-    }
-    if (!claimed.claimed) {
-      return refuse("already_received", `Gift ${opened.id} was already received`);
-    }
-    claimTxHash = claimed.txHash;
-  }
-
-  const receiving = db.transaction(
-    (tx) => {
-      const gift = tx.select().from(gifts).where(eq(gifts.id, opened.id)).get();
-      if (!gift) return refuse("gift_not_found", `Gift ${opened.id} is gone`);
-      const refusal = receiveRefusal(tx, gift, userId, liffContextType, now, claimLanded);
-      if (refusal) return refusal;
-      const received = tx
-        .update(gifts)
-        .set({
-          status: "received",
-          receiverId: userId,
-          receivedAt: now,
-          escrowStatus: "claimed",
-          claimTxHash,
-        })
-        .where(eq(gifts.id, gift.id))
-        .returning()
-        .get();
-      tx.update(stickers).set({ ownerId: userId }).where(eq(stickers.id, gift.stickerId)).run();
-      // Accept carries the terms line.
-      tx.update(users)
-        .set({ termsAcceptedAt: now })
-        .where(and(eq(users.id, userId), isNull(users.termsAcceptedAt)))
-        .run();
-      const placement = tx
-        .insert(stickerPlacements)
-        .values({ userId, stickerId: gift.stickerId })
-        .onConflictDoUpdate({
-          target: [stickerPlacements.userId, stickerPlacements.stickerId],
-          // A sticker coming back returns to the tray at its old spot, and is NEW again. created_at
-          // is kept, so its place in the tray doesn't move.
-          set: {
-            onBoard: sql`case when ${stickerPlacements.onBoard} is null then null else 0 end`,
-            seenAt: null,
-          },
-        })
-        .returning()
-        .get();
-      return { refusal: null, gift: received, placement };
-    },
-    { behavior: "immediate" },
-  );
-  if (receiving.refusal !== null) {
-    // Another request can finish while this request waits for the chain.
-    if (receiving.refusal === "already_received") {
-      const gift = db.select().from(gifts).where(eq(gifts.id, opened.id)).get();
-      if (gift) return recordedReceive(deps, userId, gift) ?? receiving;
-    }
-    return receiving;
-  }
-  queueNaming(deps, userId);
-  const { gift, placement } = receiving;
-  // Sent off the request, so the giver's message never holds up or fails Receiving.
+/** A recorded receive's answer; the giver's message goes off the request, so it never holds it up. */
+function received(deps: AppDeps, userId: string, giftId: string): Receiving {
+  const { db } = deps;
+  const gift = currentGift(db, giftId);
+  const placement = db
+    .select()
+    .from(stickerPlacements)
+    .where(
+      and(eq(stickerPlacements.userId, userId), eq(stickerPlacements.stickerId, gift.stickerId)),
+    )
+    .get();
+  if (!placement) throw new Error(`Gift ${gift.id}'s received sticker placement is missing`);
   void deps.giverNotice.send(gift.id);
   return {
     refusal: null,
@@ -465,4 +394,136 @@ async function completeReceive(
       stickerPlacement: toStickerPlacement(placement),
     },
   };
+}
+
+const alreadyReceived = (gift: GiftRow) =>
+  refuse("already_received", `Gift ${gift.id} was already received`);
+
+/** Receives an opened gift for this person: the server checked its token, or they're who it waits for. */
+async function completeReceive(
+  deps: AppDeps,
+  userId: string,
+  opened: GiftRow,
+  liffContextType: LiffContextType,
+): Promise<Receiving> {
+  const { db, clock } = deps;
+  const now = clock.now();
+  const claimLanded = claimLandedBeforeExpiry(deps, opened);
+  const beforeClaim = receiveRefusal(db, opened, userId, liffContextType, now, claimLanded);
+  if (beforeClaim) {
+    return beforeClaim.refusal === "already_received"
+      ? (recordedReceive(deps, userId, opened) ?? beforeClaim)
+      : beforeClaim;
+  }
+  const sui = suiDepsOf(deps);
+  if (sui) {
+    return oneAtATime(`gift:${opened.id}`, () =>
+      claimOnSui(deps, sui, userId, opened.id, liffContextType),
+    );
+  }
+
+  const refusal = db.transaction(
+    (tx) => {
+      const gift = tx.select().from(gifts).where(eq(gifts.id, opened.id)).get();
+      if (!gift) return refuse("gift_not_found", `Gift ${opened.id} is gone`);
+      const refused = receiveRefusal(tx, gift, userId, liffContextType, now, claimLanded);
+      if (refused) return refused;
+      recordReceive(gift, userId, now)(tx, []);
+      return null;
+    },
+    { behavior: "immediate" },
+  );
+  if (refusal) {
+    // Another request can finish while this one checks.
+    if (refusal.refusal === "already_received") {
+      return recordedReceive(deps, userId, currentGift(db, opened.id)) ?? refusal;
+    }
+    return refusal;
+  }
+  return received(deps, userId, opened.id);
+}
+
+/**
+ * Receiving on Sui, holding the gift's key: the gift's open transaction settles first. A claim that
+ * already ran is this person's receive only if the escrow sent the sticker to their wallet; else the
+ * server claims the gift for them, and the receive lands with the claim.
+ */
+async function claimOnSui(
+  deps: AppDeps,
+  sui: SuiTransactionDeps,
+  userId: string,
+  giftId: string,
+  liffContextType: LiffContextType,
+): Promise<Receiving> {
+  const { db } = sui;
+  const recipient = await deps.suiWallets.addressFor(userId);
+  if (!recipient) {
+    return refuse(
+      "no_sui_wallet",
+      `Person ${userId} has no Sui wallet to receive the sticker into`,
+    );
+  }
+  const settled = await settleOpenGiftTransaction(sui, currentGift(db, giftId));
+  if (settled?.outcome === null) {
+    return refuse(
+      "claim_failed",
+      `Sui hasn't shown gift ${giftId}'s ${settled.kind} yet; Accept again in a moment`,
+    );
+  }
+  const now = sui.clock.now();
+  const gift = currentGift(db, giftId);
+  if (claimSucceeded(db, giftId)) return reconcileClaim(deps, sui, userId, recipient, gift, now);
+  const refusal = receiveRefusal(db, gift, userId, liffContextType, now);
+  if (refusal) return refusal;
+
+  const claim = await sponsored(
+    sui,
+    { kind: "claim", giftId, stickerId: gift.stickerId },
+    await sui.sui.claimKind(giftId, recipient),
+  );
+  const { row } = await runAsServer(sui, claim, recordReceive(gift, userId, now));
+  if (row.outcome === "succeeded") return received(deps, userId, giftId);
+  if (row.outcome === null) {
+    return refuse(
+      "claim_failed",
+      `Sui hasn't answered gift ${giftId}'s claim yet; Accept again in a moment`,
+    );
+  }
+  const failed = refuse(
+    "claim_failed",
+    `Gift ${giftId} wasn't received: Sui ${row.outcome === "dead" ? "refused" : "failed"} its claim (${row.failure ?? "no reason given"})`,
+  );
+  // It didn't run: the escrow says whether the giver took the gift back, or it went home, first.
+  // When the escrow can't be read, the claim's own failure is the answer.
+  let escrow;
+  try {
+    escrow = await sui.sui.readGift(giftId);
+  } catch (error) {
+    logFailure("gift.claim.check_failed", error, { giftId, userId });
+    return failed;
+  }
+  if (escrow.status === "taken_out") return takenBack(gift);
+  if (escrow.status === "expired_returned") return giftReturned(gift);
+  return failed;
+}
+
+/** A claim of the gift ran: the receive is this person's only if the escrow sent them the sticker. */
+async function reconcileClaim(
+  deps: AppDeps,
+  sui: SuiTransactionDeps,
+  userId: string,
+  recipient: string,
+  gift: GiftRow,
+  now: Date,
+): Promise<Receiving> {
+  if (gift.status === "received") {
+    return (
+      (gift.receiverId === userId && recordedReceive(deps, userId, gift)) || alreadyReceived(gift)
+    );
+  }
+  const escrow = await sui.sui.readGift(gift.id);
+  if (escrow.recipient !== recipient) return alreadyReceived(gift);
+  sui.db.transaction((tx) => recordReceive(gift, userId, now)(tx, []), { behavior: "immediate" });
+  logInfo("gift.receive.reconciled", { giftId: gift.id, userId });
+  return received(deps, userId, gift.id);
 }

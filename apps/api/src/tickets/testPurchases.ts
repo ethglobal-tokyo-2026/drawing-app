@@ -1,57 +1,55 @@
+import { insertUser } from "@drawing-app/db/testing";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { fromBase64 } from "@mysten/sui/utils";
 import { z } from "zod";
-import type { JpycPayment } from "../deps.ts";
-import type { TestApp } from "../testing/createTestApp.ts";
-import { TEST_PAYMENT_TARGET } from "../testing/fakes.ts";
+import { sponsoredTransactionSchema, type SponsoredTransaction } from "../shapes.ts";
+import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
+import { fakeSuiWallets } from "../testing/fakes.ts";
+import { fakeSui, type FakeSui } from "../testing/fakeSui.ts";
 import { bodyOf } from "../testing/responses.ts";
-import { startedTicketPurchaseSchema, type StartedTicketPurchase } from "./tickets.ts";
+import { startedTicketPurchaseSchema } from "./tickets.ts";
 
-const BASE58_DIGITS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-/** Sui prints a transaction's 32-byte digest in base58. */
-export const TX_DIGEST_LENGTH = 44;
+const startedBodySchema = z.object({
+  purchase: startedTicketPurchaseSchema,
+  payment: sponsoredTransactionSchema,
+});
 
-let digests = 0;
-/** A well-formed Sui transaction digest, new each time. */
-export function newTxDigest() {
-  digests += 1;
-  let digest = "";
-  for (let n = digests; n > 0; n = Math.floor(n / BASE58_DIGITS.length)) {
-    digest = BASE58_DIGITS.charAt(n % BASE58_DIGITS.length) + digest;
-  }
-  return digest.padStart(TX_DIGEST_LENGTH, "z");
+/**
+ * The app on the fake Sui chain. `buyer` makes a person whose Privy Sui wallet the test holds the
+ * key to, so it signs their payments as the app's wallet would.
+ */
+export async function purchasesApp() {
+  let chain: FakeSui | undefined;
+  let wallets: ReturnType<typeof fakeSuiWallets> | undefined;
+  const test = await createTestApp(({ db, clock }) => {
+    chain = fakeSui(clock);
+    wallets = fakeSuiWallets(db);
+    return { sui: chain.sui, gasStation: chain.gasStation, suiWallets: wallets };
+  });
+  if (!chain || !wallets) throw new Error("createTestApp built no overrides");
+  const { keyOf, without } = wallets;
+  return { test, chain, buyer: () => insertUser(test.db), walletOf: keyOf, without };
 }
-
-const startedBodySchema = z.object({ purchase: startedTicketPurchaseSchema });
+export type PurchasesApp = Awaited<ReturnType<typeof purchasesApp>>;
 
 /** POST /api/ticket-purchases/start for a pack of `tickets`, as `as`. */
 export const startPurchase = (test: TestApp, as: string, tickets: number) =>
   test.send("POST", "/api/ticket-purchases/start", { as, body: { tickets } });
 
-/** Starts a purchase of a pack of `tickets` as `as`, which must be granted. */
+/** Starts a purchase of a pack of `tickets` as `as`, which must be granted: the purchase and its payment. */
 export const startedPurchase = async (test: TestApp, as: string, tickets: number) =>
-  (await bodyOf(await startPurchase(test, as, tickets), startedBodySchema, 201)).purchase;
+  bodyOf(await startPurchase(test, as, tickets), startedBodySchema, 201);
 
-/** POST /api/ticket-purchases: reports the payment `txDigest` made for `purchaseId`, as `as`. */
-export const reportPayment = (test: TestApp, as: string, purchaseId: number, txDigest: string) =>
-  test.send("POST", "/api/ticket-purchases", { as, body: { purchaseId, txDigest } });
+/** `wallet`'s signature over a payment the server built, as the app posts it. */
+export const signedBy = async (wallet: Ed25519Keypair, payment: SponsoredTransaction) => ({
+  digest: payment.digest,
+  signature: (await wallet.signTransaction(fromBase64(payment.txBytes))).signature,
+});
 
-/**
- * Records on the fake Sui a transaction, new unless named, that pays what `purchase` costs into the
- * ticket vault, naming its reference, but for `change`; returns its digest.
- */
-export function payOnSui(
-  transactions: Map<string, JpycPayment[] | Error>,
-  purchase: StartedTicketPurchase,
-  change: Partial<JpycPayment> = {},
-  txDigest = newTxDigest(),
-) {
-  transactions.set(txDigest, [
-    {
-      vault: TEST_PAYMENT_TARGET.vault,
-      payer: `0x${"d".repeat(64)}`,
-      amount: BigInt(purchase.priceJpyc),
-      reference: purchase.reference,
-      ...change,
-    },
-  ]);
-  return txDigest;
-}
+/** POST /api/ticket-purchases: the signed payment of `purchaseId`, as `as`. */
+export const payPurchase = (
+  test: TestApp,
+  as: string,
+  purchaseId: number,
+  signed: { digest: string; signature: string },
+) => test.send("POST", "/api/ticket-purchases", { as, body: { purchaseId, ...signed } });

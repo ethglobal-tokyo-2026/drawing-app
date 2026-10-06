@@ -11,7 +11,7 @@ import {
   fakeImageStore,
   fakeLineVerifier,
   fakeServerLog,
-  fakeTicketPayments,
+  TEST_PAYMENT_TARGET,
   sequentialIds,
 } from "./fakes.ts";
 
@@ -48,11 +48,10 @@ export async function createTestApp(overrides: Overrides | ((base: TestBase) => 
     line: fakeLineVerifier(),
     images,
     ...mockChain,
-    ticketPayments: fakeTicketPayments().ticketPayments,
+    ticketPayment: TEST_PAYMENT_TARGET,
     serverLog: fakeServerLog(),
     lineChatMenu: chatMenuOff("not_configured"),
     giverNotice: giverNoticeOff,
-    worldId: null,
     ...(typeof overrides === "function" ? overrides({ db, clock }) : overrides),
   };
   const app = createApp(deps);

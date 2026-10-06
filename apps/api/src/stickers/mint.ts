@@ -1,112 +1,188 @@
-import { stickers, users, type Db } from "@drawing-app/db";
-import { and, asc, eq, isNull } from "drizzle-orm";
-import type { AppDeps, MintedToken } from "../deps.ts";
+import { stickers, suiTransactions, users, type Db } from "@drawing-app/db";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import type { AppDeps } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
-import { queueNaming } from "../ens/naming.ts";
 import { startMidnightJob, type Schedule } from "../midnightJob.ts";
-import { publicStickerViewer } from "../shapes.ts";
+import { pngName } from "../services/imageStore.ts";
+import { stickerSealedIn } from "../sui/events.ts";
+import { oneAtATime } from "../sui/oneAtATime.ts";
+import {
+  follow,
+  runAsServer,
+  sponsored,
+  type OnSucceeded,
+  type SuiTransactionDeps,
+} from "../sui/transactions.ts";
+import { SponsorshipError } from "../sui/types.ts";
 
-/**
- * Writes a mint's token unless the sticker has one. Sealing's retry and the mint catch-up can mint
- * the same sticker at once; StickerNFT answers both with its one token, and the first write stays.
- */
-function recordMint(db: Db, stickerId: string, minted: MintedToken) {
-  const recorded = db
-    .update(stickers)
-    .set({ tokenId: minted.tokenId, mintTxHash: minted.txHash })
-    .where(and(eq(stickers.id, stickerId), isNull(stickers.tokenId)))
-    .returning({ id: stickers.id })
-    .get();
-  const fields = { stickerId, tokenId: minted.tokenId, txHash: minted.txHash };
-  logInfo(recorded ? "sticker.mint.recorded" : "sticker.mint.already_recorded", fields);
+/** A sticker that can't be minted yet, and why: the catch-up skips it, and Sealing refuses. */
+class MintBlockedError extends Error {
+  name = "MintBlockedError";
+  readonly status: "no_live_person" | "no_sui_wallet";
+
+  constructor(status: MintBlockedError["status"], message: string) {
+    super(message);
+    this.status = status;
+  }
 }
 
-/**
- * Mints a sealed sticker's NFT unless it has one, records its token, then queues its Original
- * Artist's naming under croquis-app.eth. Sealing, its retry and the mint catch-up all mint through
- * this. Rejects when the chain doesn't confirm the mint: the sticker stays sealed and unminted, and
- * the next attempt reconciles an NFT that landed late.
- */
-export async function mintSticker(deps: AppDeps, stickerId: string): Promise<void> {
-  const sticker = deps.db.select().from(stickers).where(eq(stickers.id, stickerId)).get();
+const stickerOf = (db: Db, stickerId: string) => {
+  const sticker = db.select().from(stickers).where(eq(stickers.id, stickerId)).get();
   if (!sticker) throw new Error(`Sticker ${stickerId} is missing before its mint`);
-  if (sticker.tokenId === null) {
-    const minted = await deps.mint({
+  return sticker;
+};
+
+/** The sticker's latest mint, if one was ever sponsored. */
+const lastMint = (db: Db, stickerId: string) =>
+  db
+    .select()
+    .from(suiTransactions)
+    .where(and(eq(suiTransactions.kind, "mint"), eq(suiTransactions.stickerId, stickerId)))
+    .orderBy(desc(suiTransactions.id))
+    .get();
+
+/** Writes the sticker's object unless it has one: a second writer of the same object changes nothing. */
+const writeObject = (db: Pick<Db, "update">, stickerId: string, objectId: string) =>
+  db
+    .update(stickers)
+    .set({ objectId })
+    .where(and(eq(stickers.id, stickerId), isNull(stickers.objectId)))
+    .run();
+
+/**
+ * A mint's record, in the transaction that settles it: the sticker's object, checked against the
+ * StickerSealed the mint emitted, since a mint that made another object is a bug to stop on.
+ */
+const recordMint =
+  (stickerId: string, objectId: string): OnSucceeded =>
+  (tx, events) => {
+    const sealed = stickerSealedIn(events);
+    if (sealed?.sticker !== objectId) {
+      throw new Error(
+        `Sticker ${stickerId}'s mint emitted ${sealed ? `StickerSealed for ${sealed.sticker}` : "no StickerSealed"}, not for its object ${objectId}`,
+      );
+    }
+    writeObject(tx, stickerId, objectId);
+  };
+
+/**
+ * Mints a sealed sticker's Sui object to its Original Artist unless it has one, and records the
+ * object. Sealing, its retry and the mint catch-up all mint through this, one at a time per sticker.
+ * An open mint is followed before any other, and one that failed or died is checked against the
+ * chain, so a sticker Sui minted is recorded rather than minted again. Rejects when the mint doesn't
+ * land: the sticker stays sealed and unminted for the next attempt. The mock chain mints nothing.
+ */
+export function mintSticker(deps: AppDeps, stickerId: string): Promise<void> {
+  const { db, clock, sui, gasStation } = deps;
+  const sticker = stickerOf(db, stickerId);
+  if (!sui || !gasStation || sticker.objectId !== null) return Promise.resolve();
+  const chain: SuiTransactionDeps = { db, clock, sui, gasStation };
+  const objectId = sui.stickerObjectId(stickerId);
+  const record = recordMint(stickerId, objectId);
+  const recorded = (how: string, txDigest?: string) =>
+    logInfo("sticker.mint.recorded", { stickerId, ...(txDigest && { txDigest }), reason: how });
+
+  return oneAtATime(`sticker:${stickerId}`, async () => {
+    if (stickerOf(db, stickerId).objectId !== null) return;
+    const last = lastMint(db, stickerId);
+    if (last && last.outcome === null) {
+      const { row } = await follow(chain, last, record);
+      if (row.outcome === "succeeded") return recorded("its earlier mint landed", row.digest);
+      if (row.outcome === null) {
+        throw new Error(`Sticker ${stickerId}'s mint ${row.digest} hasn't shown on Sui yet`);
+      }
+    }
+    // A mint that failed or died may have been beaten by one that ran: the object says.
+    if (last && (await sui.stickerMinted(stickerId))) {
+      writeObject(db, stickerId, objectId);
+      return recorded("its object was already on Sui");
+    }
+    const artist = await deps.suiWallets.addressFor(sticker.artistId);
+    if (!artist) {
+      throw new MintBlockedError(
+        "no_sui_wallet",
+        `Sticker ${stickerId}'s Original Artist ${sticker.artistId} has no Sui wallet yet`,
+      );
+    }
+    const kind = await sui.mintKind({
       stickerId,
-      artistId: sticker.artistId,
-      contentHash: sticker.contentHash,
-      metadataUri: sticker.metadataUri,
-      image: publicStickerViewer(deps.images).images(sticker).png,
       number: sticker.number,
+      artist,
+      contentHash: sticker.contentHash,
       width: sticker.width,
       height: sticker.height,
+      nsfw: sticker.nsfw,
+      // What anyone may see, by the image store's naming: an NSFW sticker's veiled image.
+      image: pngName(sticker.veiledHash ?? sticker.contentHash, "png"),
     });
-    if (minted === null && deps.giftChain !== null) {
-      throw new Error("The chain returned no confirmed record");
+    let row;
+    try {
+      row = await sponsored(chain, { kind: "mint", stickerId }, kind);
+    } catch (error) {
+      // Shinami's dry run refuses a mint of a key Sui already minted.
+      if (error instanceof SponsorshipError && (await sui.stickerMinted(stickerId))) {
+        writeObject(db, stickerId, objectId);
+        return recorded("its object was already on Sui");
+      }
+      throw error;
     }
-    // Explicit local mock mode stores stickers without sending a mint transaction.
-    if (minted !== null) recordMint(deps.db, stickerId, minted);
-  }
-  queueNaming(deps, sticker.artistId);
+    const { row: ran } = await runAsServer(chain, row, record);
+    if (ran.outcome === "succeeded") return recorded("minted", ran.digest);
+    if (ran.outcome === null) {
+      throw new Error(
+        `Sui's answer to sticker ${stickerId}'s mint ${ran.digest} was lost; it's followed next`,
+      );
+    }
+    throw new Error(
+      `Sticker ${stickerId}'s mint ${ran.digest} ${ran.outcome === "failed" ? `failed: ${ran.failure}` : "never ran: its sponsorship lapsed"}`,
+    );
+  });
 }
 
 /** What the mint catch-up did with the unminted stickers it found, by how many. */
 type MintCatchUp = Record<"minted" | "skipped" | "failed", number>;
 
-/** Stickers without their NFT, oldest first, with when their Original Artist deleted their account. */
+/** Stickers without their Sui object, oldest first, with when their Original Artist deleted their account. */
 const unmintedStickers = (db: Db) =>
   db
     .select({
       id: stickers.id,
       artistId: stickers.artistId,
-      ownerId: stickers.ownerId,
       artistDeletedAt: users.deletedAt,
     })
     .from(stickers)
     .innerJoin(users, eq(users.id, stickers.artistId))
-    .where(isNull(stickers.tokenId))
+    .where(isNull(stickers.objectId))
     .orderBy(asc(stickers.number))
     .all();
 
 /**
- * Why the catch-up leaves a sticker unminted, or null to mint it. The NFT goes to its Original
- * Artist's smart wallet, so a sticker someone received in mock chain mode would land where its
- * holder can't give it.
- */
-async function skipStatus(
-  { smartWallets }: AppDeps,
-  sticker: ReturnType<typeof unmintedStickers>[number],
-) {
-  if (sticker.artistDeletedAt !== null) return "no_live_person";
-  if (sticker.ownerId !== sticker.artistId) return "not_held_by_artist";
-  if (!(await smartWallets.addressFor(sticker.artistId))) return "no_smart_account";
-  return null;
-}
-
-/**
- * The mint catch-up: mints every sticker still without its NFT, oldest first, as Sealing does: one
- * whose mint failed at Sealing and was never retried, or one sealed before the server reached the
- * chain. One sticker's failure is logged, and the catch-up goes on to the next.
+ * The mint catch-up: mints every sticker still without its Sui object, oldest first, as Sealing does:
+ * one whose mint failed at Sealing and was never retried. It skips a sticker whose Original Artist
+ * deleted their account or has no Sui wallet yet. One sticker's failure is logged, and the catch-up
+ * goes on to the next.
  */
 export async function mintUnminted(deps: AppDeps): Promise<MintCatchUp> {
   const due = unmintedStickers(deps.db);
   const tally: MintCatchUp = { minted: 0, skipped: 0, failed: 0 };
   if (due.length > 0) logInfo("sticker.mint.catch_up.sweep", { count: due.length });
-  // One at a time, so the relayer's transactions never come in a burst.
+  // One at a time, so the server's transactions never come in a burst.
   for (const sticker of due) {
     const fields = { stickerId: sticker.id, artistId: sticker.artistId };
     try {
-      const status = await skipStatus(deps, sticker);
-      if (status) {
-        tally.skipped += 1;
-        logInfo("sticker.mint.catch_up.skipped", { ...fields, status });
-        continue;
+      if (sticker.artistDeletedAt !== null) {
+        throw new MintBlockedError("no_live_person", `${sticker.artistId} deleted their account`);
       }
       await mintSticker(deps, sticker.id);
       tally.minted += 1;
     } catch (error) {
-      tally.failed += 1;
-      logFailure("sticker.mint.catch_up.failed", error, fields);
+      if (error instanceof MintBlockedError) {
+        tally.skipped += 1;
+        logInfo("sticker.mint.catch_up.skipped", { ...fields, status: error.status });
+      } else {
+        tally.failed += 1;
+        logFailure("sticker.mint.catch_up.failed", error, fields);
+      }
     }
   }
   logInfo("sticker.mint.catch_up.swept", { count: due.length, ...tally });
@@ -118,10 +194,9 @@ export async function mintUnminted(deps: AppDeps): Promise<MintCatchUp> {
  * failed is tried again within a day. Null on the mock chain, which mints nothing.
  */
 export function startMintCatchUp(deps: AppDeps & { schedule?: Schedule }) {
-  const { clock, giftChain, schedule } = deps;
-  if (!giftChain) return null;
+  if (!deps.sui) return null;
   return startMidnightJob(
-    { clock, schedule },
+    { clock: deps.clock, schedule: deps.schedule },
     {
       failedEvent: "sticker.mint.catch_up.sweep_failed",
       run: async () => {

@@ -24,10 +24,20 @@ describe("stickers", () => {
     );
   });
 
-  it("sets a token ID only with the mint transaction that made it", () => {
-    expect(refusal(() => insertSticker(db, artist, { tokenId: "1" }))).toMatch(/stickers_minted/);
-    expect(() =>
-      insertSticker(db, artist, { tokenId: "1", mintTxHash: bytes32("mint") }),
-    ).not.toThrow();
+  it("has a veiled image exactly when it's NSFW", () => {
+    expect(() => insertSticker(db, artist, { nsfw: true })).not.toThrow();
+    expect(refusal(() => insertSticker(db, artist, { nsfw: true, veiledHash: null }))).toMatch(
+      /stickers_veiled/,
+    );
+    expect(refusal(() => insertSticker(db, artist, { veiledHash: bytes32("veil") }))).toMatch(
+      /stickers_veiled/,
+    );
+  });
+
+  it("holds a minted sticker's Sui object ID as 0x and 64 hex digits", () => {
+    expect(refusal(() => insertSticker(db, artist, { objectId: "0x1" }))).toMatch(
+      /stickers_object_id/,
+    );
+    expect(() => insertSticker(db, artist, { objectId: bytes32("sticker") })).not.toThrow();
   });
 });

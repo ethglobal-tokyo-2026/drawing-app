@@ -1,1 +1,0 @@
-ALTER TABLE `stickers` ADD `nsfw` integer DEFAULT false NOT NULL;

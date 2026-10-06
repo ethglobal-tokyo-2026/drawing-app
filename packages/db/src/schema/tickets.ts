@@ -18,6 +18,11 @@ export const ticketUses = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id),
+    /**
+     * Made on the device when a spend is first tried, and sent with each retry of it. The same key
+     * again gets this use, not another.
+     */
+    idempotencyKey: text("idempotency_key").notNull(),
     /** YYYY-MM-DD, Tokyo time: ticket days run midnight to midnight there, for everyone. */
     ticketDay: text("ticket_day").notNull(),
     /** Order within the day, from 0. */
@@ -28,12 +33,6 @@ export const ticketUses = sqliteTable(
       .unique()
       .references(() => stickers.id),
     ...timestamps(),
-    // Columns added after the table was made go last, where ALTER TABLE puts them.
-    /**
-     * Made on the device when a spend is first tried, and sent with each retry of it. The same key
-     * again gets this use, not another. Null on uses spent before spends had keys.
-     */
-    idempotencyKey: text("idempotency_key"),
   },
   (t) => [
     uniqueIndex("ticket_uses_day").on(t.userId, t.ticketDay, t.dayIndex),
@@ -49,9 +48,9 @@ export const ticketUses = sqliteTable(
 );
 
 /**
- * A pack of reserve tickets bought with JPYC on Sui. The reserve ticket checkout starts it before the
- * payment is signed, so the server can find the payment on Sui without the phone; its tickets count
- * once verified_at is set.
+ * A pack of reserve tickets bought with JPYC on Sui. The reserve ticket checkout starts it, and the
+ * server builds its payment for the person's wallet to sign; its tickets count once verified_at is
+ * set. Its payment transaction is in sui_transactions.
  */
 export const ticketPurchases = sqliteTable(
   "ticket_purchases",
@@ -65,11 +64,12 @@ export const ticketPurchases = sqliteTable(
     priceYen: integer("price_yen").notNull(),
     /** What the payment carried, in JPYC base units, as decimal text; null until it's paid. */
     paidJpyc: text("paid_jpyc"),
-    /** The Sui transaction that paid it; null until it's paid. One payment counts once. */
-    txDigest: text("tx_digest").unique(),
     /** Set once the server has checked the payment on Sui. */
     verifiedAt: integer("verified_at", { mode: "timestamp_ms" }),
-    /** Set when the sweep stops looking on Sui for a payment; one the app reports later still counts. */
+    /**
+     * Set when its payment never ran: the sponsorship lapsed unsigned, the person started another, or
+     * Sui failed it.
+     */
     givenUpAt: integer("given_up_at", { mode: "timestamp_ms" }),
     ...timestamps(),
   },
@@ -79,9 +79,6 @@ export const ticketPurchases = sqliteTable(
       .on(t.createdAt)
       .where(sql`${t.verifiedAt} is null and ${t.givenUpAt} is null`),
     check("ticket_purchases_pack", sql`${t.tickets} > 0 and ${t.priceYen} > 0`),
-    check(
-      "ticket_purchases_payment",
-      sql`(${t.txDigest} is null) = (${t.paidJpyc} is null) and (${t.verifiedAt} is null or ${t.txDigest} is not null)`,
-    ),
+    check("ticket_purchases_payment", sql`(${t.paidJpyc} is null) = (${t.verifiedAt} is null)`),
   ],
 );

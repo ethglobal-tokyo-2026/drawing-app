@@ -1,39 +1,12 @@
 import { users, type Db } from "@drawing-app/db";
 import { bytes32 } from "@drawing-app/db/testing";
-import { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { eq } from "drizzle-orm";
-import type {
-  Clock,
-  ConfiguredContracts,
-  ContractReads,
-  EnsDeps,
-  EscrowGift,
-  GiftChain,
-  Ids,
-  ImageStore,
-  Mint,
-  MintedToken,
-  NameWriter,
-  ServerLog,
-  SmartWallets,
-  JpycPayment,
-  TicketPayments,
-  TicketPaymentTarget,
-  WorldId,
-  WorldIdVerdict,
-} from "../deps.ts";
+import type { Ids, ImageStore, ServerLog, TicketPaymentTarget } from "../deps.ts";
 import { createDevLineVerifier } from "../services/devSignIn.ts";
 import { stickerImageUrls, veiledImageUrls } from "../services/imageStore.ts";
 import type { StickerPngKind } from "../shapes.ts";
-import { getAddress, isHex, keccak256, toBytes, type Hex } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { sepolia } from "viem/chains";
-import { createNamingQueue } from "../ens/naming.ts";
-
-/** A made-up address, the same for the same seed. */
-const fakeAddress = (seed: string) => bytes32(seed).slice(0, 42);
-/** The smart wallet the fakes give a person, lowercase as Privy's lookup answers it. */
-const fakeSmartWalletAddress = (userId: string) => fakeAddress(`smart wallet ${userId}`);
+import type { SuiWallets } from "../sui/types.ts";
 
 /** A clock that stands still until the test moves it. It starts at noon in Tokyo, far from midnight. */
 export function fakeClock(start = new Date("2026-09-26T03:00:00.000Z")) {
@@ -78,117 +51,31 @@ export function fakeImageStore(cdnBaseUrl = "https://cdn.test") {
   return { ...store, saved };
 }
 
-/** Mints each sticker once, with token IDs counting up from 1. `minted` holds each sticker's token. */
-export function fakeMint() {
-  const minted = new Map<string, MintedToken>();
-  const mint: Mint = ({ stickerId }) => {
-    const token = minted.get(stickerId) ?? {
-      tokenId: String(minted.size + 1),
-      txHash: bytes32(`mint ${stickerId}`),
-    };
-    minted.set(stickerId, token);
-    return Promise.resolve(token);
-  };
-  return Object.assign(mint, { minted });
-}
-
-/** What the escrow's gifts(giftId) returns for a gift it has never held: Solidity's zero values. */
-const missingEscrowGift = (): EscrowGift => ({
-  sender: `0x${"0".repeat(40)}`,
-  recipient: `0x${"0".repeat(40)}`,
-  tokenId: "0",
-  claimCommitment: `0x${"0".repeat(64)}`,
-  expiresAt: new Date(0),
-  status: "missing",
-});
-
-/** A time as a block's timestamp gives it: whole seconds. */
-const blockSeconds = (at: Date) => Math.floor(at.getTime() / 1000);
+/** The Sui wallet the fakes give a person: made from their user id, as Privy's lookup answers it. */
+export const fakeSuiAddress = (userId: string) => bytes32(`sui wallet ${userId}`);
 
 /**
- * Chain mode without a chain. The escrow holds what the test puts in `escrow`; any other gift reads
- * as missing, as before its deposit lands. Its blocks are stamped with `clock`'s time.
+ * Gives everyone a Privy Sui wallet: an Ed25519 key made for them on first use, whose address the
+ * lookup answers and, with the app's database, stores as the real one does. People in `without` have
+ * none yet. `keyOf` signs as a person's wallet.
  */
-export function fakeGiftChain(clock: Clock = { now: () => new Date() }) {
-  const escrow = new Map<string, EscrowGift>();
-  const claimTransactions = new Map<string, string>();
-  let claims = 0;
-  const chain: GiftChain = {
-    createGiftClaim: () => {
-      claims += 1;
-      const giftClaimToken = bytes32(`gift claim token ${claims}`);
-      return {
-        giftId: bytes32(`gift ${claims}`),
-        giftClaimToken,
-        claimCommitment: keccak256(toBytes(giftClaimToken)),
-      };
-    },
-    prepareGiftTransfer: (gift) => ({
-      to: fakeAddress("StickerNFT"),
-      data: bytes32(JSON.stringify(gift)),
-    }),
-    readEscrowGift: (giftId) => Promise.resolve(escrow.get(giftId) ?? missingEscrowGift()),
-    claimGift: ({ giftId, giftClaimToken, recipientId }) => {
-      const gift = escrow.get(giftId) ?? missingEscrowGift();
-      const recipient = fakeSmartWalletAddress(recipientId);
-      if (gift.status === "claimed") {
-        return Promise.resolve(
-          gift.recipient.toLowerCase() === recipient.toLowerCase()
-            ? {
-                claimed: true as const,
-                txHash: claimTransactions.get(giftId) ?? bytes32(giftId),
-              }
-            : { claimed: false as const },
-        );
-      }
-      if (gift.status !== "pending") return Promise.reject(new Error("Gift is not pending"));
-      // Without a token, the API has already checked the recipient is who the gift waits for.
-      if (giftClaimToken !== null) {
-        if (!isHex(giftClaimToken) || giftClaimToken.length !== 66) {
-          return Promise.reject(new Error("Gift claim token is invalid"));
-        }
-        if (keccak256(giftClaimToken).toLowerCase() !== gift.claimCommitment.toLowerCase()) {
-          return Promise.reject(new Error("Gift claim token is invalid"));
-        }
-      }
-      const txHash = bytes32(`claim ${giftId}`);
-      claimTransactions.set(giftId, txHash);
-      escrow.set(giftId, { ...gift, recipient, status: "claimed" });
-      return Promise.resolve({ claimed: true as const, txHash });
-    },
-    returnExpiredGift: (giftId) => {
-      const gift = escrow.get(giftId) ?? missingEscrowGift();
-      // The escrow's own checks: the gift is pending, and this block's second is past its expiry.
-      if (gift.status !== "pending") return Promise.reject(new Error("Gift is not pending"));
-      if (blockSeconds(clock.now()) <= blockSeconds(gift.expiresAt)) {
-        return Promise.reject(new Error("Gift has not expired"));
-      }
-      escrow.set(giftId, { ...gift, status: "expired_returned" });
-      return Promise.resolve({ txHash: bytes32(`return ${giftId}`) });
-    },
+export function fakeSuiWallets(db?: Db) {
+  const keys = new Map<string, Ed25519Keypair>();
+  const without = new Set<string>();
+  const keyOf = (userId: string) => {
+    const key = keys.get(userId) ?? Ed25519Keypair.generate();
+    keys.set(userId, key);
+    return key;
   };
-  return { ...chain, escrow, claimTransactions };
-}
-
-/**
- * Gives everyone a smart wallet, its address made from their user id. With the app's database it
- * answers as Privy's lookup does: the stored address first, else it stores the one it makes.
- */
-export function fakeSmartWallets(db?: Db): SmartWallets {
-  return {
+  const wallets: SuiWallets = {
     addressFor: (userId) => {
-      const byId = eq(users.id, userId);
-      const stored = db
-        ?.select({ address: users.smartAccountAddress })
-        .from(users)
-        .where(byId)
-        .get();
-      if (stored?.address) return Promise.resolve(stored.address);
-      const address = fakeSmartWalletAddress(userId);
-      db?.update(users).set({ smartAccountAddress: address }).where(byId).run();
+      if (without.has(userId)) return Promise.resolve(null);
+      const address = keyOf(userId).toSuiAddress();
+      db?.update(users).set({ suiAddress: address }).where(eq(users.id, userId)).run();
       return Promise.resolve(address);
     },
   };
+  return { ...wallets, keyOf, without };
 }
 
 /** A made-up JPYC payment contract on Sui. */
@@ -200,124 +87,8 @@ export const TEST_PAYMENT_TARGET: TicketPaymentTarget = {
   vault: `0x${"c".repeat(64)}`,
 };
 
-/**
- * Sui's transactions, by digest, in the order they ran: the payments each made, or a rejection for
- * Sui being unreachable. A read of payment events lists every payment, newest first, and is as
- * `events.read` says: whole, stopped short of how far back it was asked, or a rejection.
- */
-export function fakeTicketPayments(transactions = new Map<string, JpycPayment[] | Error>()) {
-  const events: { read: "whole" | "stopped_short" | Error } = { read: "whole" };
-  const ticketPayments: TicketPayments = {
-    target: TEST_PAYMENT_TARGET,
-    paymentsIn: (txDigest) => {
-      const found = transactions.get(txDigest);
-      if (found instanceof Error) return Promise.reject(found);
-      return Promise.resolve(found ?? null);
-    },
-    paymentsSince: () => {
-      if (events.read instanceof Error) return Promise.reject(events.read);
-      const payments = [...transactions]
-        .reverse()
-        .flatMap(([txDigest, made]) =>
-          made instanceof Error ? [] : made.map((payment) => ({ ...payment, txDigest })),
-        );
-      return Promise.resolve({ payments, complete: events.read === "whole" });
-    },
-  };
-  return { ticketPayments, transactions, events };
-}
-
 /** A server log that reads `text`. */
 export const fakeServerLog =
   (text = ""): ServerLog =>
   () =>
     Promise.resolve(new Blob([text]).stream());
-
-/** A name writer that records each call, and throws at `failAt` when that step comes up. */
-export function fakeNameWriter({ failAt }: { failAt?: string } = {}) {
-  const calls: string[] = [];
-  const named = new Set<string>();
-  const step = (call: string) => {
-    if (call === failAt) throw new Error(`Naming failed at ${call}`);
-    calls.push(call);
-  };
-  const writer: NameWriter = {
-    ensurePersonName: (person, label) => {
-      // Like CroquisNames, a person keeps the name they already have.
-      if (named.has(person)) return Promise.resolve({ label, created: false });
-      step(`person ${label}`);
-      named.add(person);
-      return Promise.resolve({ label, created: true });
-    },
-    ensureStickerName: (tokenId, label) => {
-      step(`sticker ${tokenId} ${label}`);
-      return Promise.resolve({ label, created: true });
-    },
-    setAvatar: (_person, avatar) => {
-      step(`avatar ${avatar}`);
-      return Promise.resolve();
-    },
-  };
-  return { writer, calls };
-}
-
-/** The gateway signer's key in tests. */
-export const TEST_GATEWAY_KEY: Hex = `0x${"6a".repeat(32)}`;
-
-/** The contracts a test server is configured with, and the relayer that sends from them. */
-export const TEST_CONTRACTS: ConfiguredContracts = {
-  relayer: getAddress(fakeAddress("relayer")),
-  stickers: getAddress(fakeAddress("StickerNFT")),
-  escrow: getAddress(fakeAddress("StickerGiftEscrow")),
-  names: getAddress(fakeAddress("CroquisNames")),
-  resolver: getAddress(fakeAddress("CroquisResolver")),
-};
-
-/** What TEST_CONTRACTS answer about each other when they were deployed together, but for `change`. */
-export const fakeContractReads = (
-  change: Partial<Omit<ContractReads, "configured">> = {},
-): ContractReads => ({
-  configured: TEST_CONTRACTS,
-  relayerIsNamer: true,
-  namesParent: CROQUIS_PARENT_NAME,
-  namesStickers: TEST_CONTRACTS.stickers,
-  resolverStickers: TEST_CONTRACTS.stickers,
-  escrowSticker: TEST_CONTRACTS.stickers,
-  escrowNames: TEST_CONTRACTS.names,
-  ...change,
-});
-
-/** The names under croquis-app.eth with a fixed gateway signer, writing through `writer`. */
-export const fakeEns = (writer: NameWriter | null = null): EnsDeps => ({
-  resolverAddress: fakeAddress("CroquisResolver"),
-  gatewaySigner: privateKeyToAccount(TEST_GATEWAY_KEY),
-  appLinkBase: "https://liff.line.me/test-liff",
-  chainId: sepolia.id,
-  stickerContract: fakeAddress("StickerNFT"),
-  writer,
-  naming: createNamingQueue(),
-});
-
-/**
- * World ID without World: it signs any request, and gives each proof `verdict`, or rejects with it
- * when it's an Error. `proofs` holds every proof sent to World.
- */
-export function fakeWorldId(verdict: WorldIdVerdict | Error = { verified: true, nullifier: null }) {
-  const proofs: Record<string, unknown>[] = [];
-  const worldId: WorldId = {
-    appId: "app_test",
-    environment: "production",
-    signRequest: () => ({
-      rp_id: "rp_test",
-      nonce: "0x01",
-      created_at: 1,
-      expires_at: 301,
-      signature: "0x02",
-    }),
-    verifyProof: (proof) => {
-      proofs.push(proof);
-      return verdict instanceof Error ? Promise.reject(verdict) : Promise.resolve(verdict);
-    },
-  };
-  return Object.assign(worldId, { proofs });
-}

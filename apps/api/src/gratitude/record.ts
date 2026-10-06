@@ -91,9 +91,6 @@ export const recordGratitudeSchema = createInsertSchema(gratitude, {
         report("switchedAtHit", `${replay.switchedAtHit}, past the combo's ${hits} hits`);
       }
     }
-    if (replay.endReason === "sent" && hits !== 1) {
-      report("endReason", `sent ends a combo of 1 hit, not ${hits}`);
-    }
   });
 export type RecordGratitude = z.infer<typeof recordGratitudeSchema>;
 

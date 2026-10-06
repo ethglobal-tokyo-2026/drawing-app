@@ -12,15 +12,6 @@
     },
     "lint": {},
     "typecheck": {},
-    "test": {},
-    "compile": {
-      "outputs": ["out/**", "cache/**"]
-    },
-    "@drawing-app/sticker-chain#test": {
-      "dependsOn": ["compile"]
-    },
-    "@drawing-app/api#test": {
-      "dependsOn": ["@drawing-app/sticker-chain#compile"]
-    }
+    "test": {}
   }
 }

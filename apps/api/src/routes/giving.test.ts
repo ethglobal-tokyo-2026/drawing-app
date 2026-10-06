@@ -1,13 +1,18 @@
-import { GIFT_EXPIRY_MS, stickers, users } from "@drawing-app/db";
+import { GIFT_EXPIRY_MS } from "@drawing-app/db";
 import { bytes32, insertUser, packGift, receiveGift } from "@drawing-app/db/testing";
-import { eq } from "drizzle-orm";
-import { keccak256 } from "viem";
-import { afterEach, assert, describe, expect, it, vi } from "vitest";
-import type { EscrowGift } from "../deps.ts";
-import { giftClaimTokenSchema, pendingGiftsSchema } from "../gifts/packaging.ts";
-import { createGiftsTestApp, giftOf, type GiftsTestApp } from "../gifts/testGifts.ts";
-import { fakeSmartWallets } from "../testing/fakes.ts";
-import { captureLogLines } from "../testing/logLines.ts";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { fromBase64 } from "@mysten/sui/utils";
+import { describe, expect, it } from "vitest";
+import { claimCommitmentOf, giftClaimTokenSchema, pendingGiftsSchema } from "../gifts/packaging.ts";
+import {
+  createGiftsTestApp,
+  giftOf,
+  SOME_SIGNED_TRANSACTION,
+  takeOutStartOf,
+  type GiftsTestApp,
+} from "../gifts/testGifts.ts";
+import { SPONSORSHIP_MARGIN_MS } from "../sui/transactions.ts";
+import { TransactionRefusedError } from "../sui/types.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -27,10 +32,10 @@ describe("Packaging", () => {
         escrowStatus: "pending",
         expiresAt: new Date(test.clock.now().getTime() + GIFT_EXPIRY_MS).toISOString(),
       },
-      escrowTransfer: null,
+      deposit: null,
     });
     const token = giftClaimTokenSchema.parse(packed.giftClaimToken);
-    expect(test.giftRow(packed.gift.id).claimCommitment).toBe(keccak256(token));
+    expect(test.giftRow(packed.gift.id).claimCommitment).toBe(claimCommitmentOf(token));
     expect(await test.packageSticker(giverId, stickerId)).toEqual({
       ...packed,
       status: 200,
@@ -72,220 +77,142 @@ describe("Packaging", () => {
   });
 });
 
-describe("Packaging on the escrow chain", () => {
-  it("refuses a sticker that isn't minted", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
+describe("Packaging on Sui", () => {
+  it("refuses a sticker that isn't minted, and a giver without a Sui wallet", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
     const giverId = insertUser(test.db);
-    const stickerId = test.sealSticker(giverId, { minted: false });
-    expect(await refusalOf(await test.post(giverId, "", { stickerId }))).toMatchObject({
+    const unminted = test.sealSticker(giverId, { minted: false });
+    expect(await refusalOf(await test.post(giverId, "", { stickerId: unminted }))).toMatchObject({
       status: 409,
       error: "not_minted",
     });
+    test.wallets.without.add(giverId);
+    const minted = test.sealSticker(giverId);
+    expect(await refusalOf(await test.post(giverId, "", { stickerId: minted }))).toMatchObject({
+      status: 409,
+      error: "no_sui_wallet",
+    });
   });
 
-  it("sends the sticker from the giver's smart wallet, and checks the deposit reported", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
+  it("sponsors the deposit of the gift's sticker from the giver's wallet, answers it again until it lands, and none after", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
     const packed = await test.packagedGift();
-    const { giverId, gift } = packed;
+    const { giverId, gift, deposit } = packed;
     expect(packed).toMatchObject({
       status: 201,
       gift: { status: "packed", escrowStatus: "missing" },
     });
-
-    const sender = await fakeSmartWallets().addressFor(giverId);
-    assert(sender !== null, "The fake smart wallets give everyone one");
-    const stored = test.db.select().from(users).where(eq(users.id, giverId)).get();
-    expect(stored?.smartAccountAddress).toBe(sender);
+    if (!deposit) throw new Error("Packaging answered no deposit to sign");
     const row = test.giftRow(gift.id);
-    const minted = test.db.select().from(stickers).where(eq(stickers.id, gift.stickerId)).get();
-    const tokenId = minted?.tokenId;
-    assert(tokenId, "The sticker is minted");
-    expect(packed.escrowTransfer).toEqual(
-      test.giftChain.prepareGiftTransfer({
-        sender,
-        tokenId,
-        giftId: row.id,
-        claimCommitment: row.claimCommitment,
-        expiresAt: row.expiresAt,
-      }),
-    );
-    // In the bag, the same transfer until the deposit lands.
+    expect(test.chain.built).toEqual([
+      {
+        kind: "deposit",
+        deposit: {
+          sender: test.wallets.keyOf(giverId).toSuiAddress(),
+          stickerObjectId: test.chain.sui.stickerObjectId(gift.stickerId),
+          giftId: row.id,
+          claimCommitment: row.claimCommitment,
+          expiresAt: row.expiresAt,
+        },
+      },
+    ]);
     expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({
       status: 200,
-      escrowTransfer: packed.escrowTransfer,
+      giftClaimToken: null,
+      deposit,
     });
 
-    expect(await refusalOf(await test.deposit(giverId, row.id))).toMatchObject({
-      status: 409,
-      error: "deposit_not_landed",
+    const landed = await giftOf(
+      await test.deposit(giverId, gift.id, await test.signed(giverId, deposit)),
+    );
+    expect(landed).toMatchObject({ status: "packed", escrowStatus: "pending" });
+    expect(test.chain.escrow.get(gift.id)?.status).toBe("pending");
+    expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({
+      status: 200,
+      deposit: null,
     });
-    test.landDeposit(row.id);
-    expect(await giftOf(await test.post(giverId, `/${row.id}/deposit`, {}))).toMatchObject({
-      status: "packed",
-      escrowStatus: "pending",
-    });
+    expect(test.chain.sponsorships).toHaveLength(1);
   });
 
-  it("lets the receiver give a claimed sticker on without taking out its previous gift", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { giverId, gift, giftClaimToken } = await test.packagedGift();
-    const { stickerId } = gift;
-    const receiverId = insertUser(test.db);
-    test.landDeposit(gift.id);
-    await giftOf(await test.deposit(giverId, gift.id));
-    await giftOf(await test.share(giverId, gift.id, "sent"));
-    await giftOf(
-      await test.post(receiverId, "/receive", { giftClaimToken, liffContextType: "utou" }),
-    );
-    const received = test.giftRow(gift.id);
-    expect(received).toMatchObject({ status: "received", escrowStatus: "claimed", receiverId });
+  it("sponsors the same gift's deposit again once the last one is about to lapse unsigned", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { giverId, gift, deposit } = await test.packagedGift();
+    if (!deposit) throw new Error("Packaging answered no deposit to sign");
+    test.clock.set(new Date(Date.parse(deposit.expiresAt) - SPONSORSHIP_MARGIN_MS));
 
-    const next = await test.packageSticker(receiverId, stickerId);
-    expect(next).toMatchObject({
-      status: 201,
-      gift: { giverId: receiverId, stickerId, status: "packed", escrowStatus: "missing" },
+    const again = await test.packageSticker(giverId, gift.stickerId);
+    expect(again).toMatchObject({ status: 200, gift: { id: gift.id } });
+    expect(again.deposit?.digest).not.toBe(deposit.digest);
+    expect(
+      await refusalOf(await test.deposit(giverId, gift.id, await test.signed(giverId, deposit))),
+    ).toMatchObject({
+      status: 409,
+      error: "sponsorship_expired",
     });
-    expect(next.gift.id).not.toBe(gift.id);
-    expect(next.escrowTransfer).not.toBeNull();
-    expect(test.giftRow(gift.id)).toEqual(received);
-    expect((await test.giftChain.readEscrowGift(gift.id)).status).toBe("claimed");
   });
 });
 
-/** A packed gift whose deposit landed with `changes` to the one issued, and its report's answer. */
-async function reportedDeposit(test: GiftsTestApp, changes: Partial<EscrowGift>) {
-  const { giverId, gift } = await test.packagedGift();
-  test.landDeposit(gift.id, changes);
-  return { giverId, gift, report: await test.deposit(giverId, gift.id) };
+/** On Sui, a packaged gift and the giver's signature over its deposit. */
+async function signedDeposit(test: GiftsTestApp) {
+  const packed = await test.packagedGift();
+  if (!packed.deposit) throw new Error("Packaging answered no deposit to sign");
+  return { ...packed, signed: await test.signed(packed.giverId, packed.deposit) };
 }
 
-/** Terms other than packaging issued, for the escrow to hold a gift's sticker under. */
-type OtherTerms = (gift: { expiresAt: string }) => Partial<EscrowGift>;
-const anotherCommitment: OtherTerms = () => ({ claimCommitment: bytes32("another commitment") });
-
-/** A gift taken out because the escrow holds its sticker under other terms. */
-async function takenOutForItsTerms(test: GiftsTestApp, otherTerms = anotherCommitment) {
-  const { giverId, gift } = await test.packagedGift();
-  test.landDeposit(gift.id, otherTerms(gift));
-  expect(await refusalOf(await test.deposit(giverId, gift.id))).toMatchObject({
-    status: 409,
-    error: "deposit_held",
-    giftId: gift.id,
+describe("A signed deposit on Sui", () => {
+  it("refuses a signature that isn't the giver's wallet's, and one for a deposit the gift doesn't have", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { giverId, gift, deposit, signed } = await signedDeposit(test);
+    if (!deposit) throw new Error("Packaging answered no deposit to sign");
+    const forged = await Ed25519Keypair.generate().signTransaction(fromBase64(deposit.txBytes));
+    expect(
+      await refusalOf(
+        await test.deposit(giverId, gift.id, { ...signed, signature: forged.signature }),
+      ),
+    ).toMatchObject({ status: 400, error: "signature_invalid" });
+    expect(
+      await refusalOf(await test.deposit(giverId, gift.id, SOME_SIGNED_TRANSACTION)),
+    ).toMatchObject({ status: 409, error: "sponsorship_expired" });
+    expect(test.chain.submissions).toEqual([]);
   });
-  return { giverId, gift };
-}
 
-describe("A deposit checked against the escrow's record", () => {
-  afterEach(() => vi.restoreAllMocks());
+  it("closes a gift whose deposit failed on Sui, in Sui's words, so its sticker packs again", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { giverId, gift, signed } = await signedDeposit(test);
+    const failure = "MoveAbort(MoveLocation { module: gift }, 0) in command 0";
+    test.chain.answerNext({ ok: false, failure });
+    const refused = await refusalOf(await test.deposit(giverId, gift.id, signed));
+    expect(refused).toMatchObject({ status: 409, error: "transaction_failed" });
+    expect(refused.detail).toContain(failure);
+    expect(test.giftRow(gift.id)).toMatchObject({ status: "taken_out", escrowStatus: "missing" });
+    expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({ status: 201 });
+  });
 
-  it.each([
-    ["rejected", "taken_out"],
-    ["expired_returned", "returned"],
-  ] as const)(
-    "records our deposit %s on chain as a gift %s, whose sticker can be given again",
-    async (escrowStatus, status) => {
-      const test = await createGiftsTestApp({ escrowChain: true });
-      const { giverId, gift, report } = await reportedDeposit(test, { status: escrowStatus });
-      expect(await giftOf(report)).toMatchObject({ status, escrowStatus });
-      expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({ status: 201 });
-    },
-  );
-
-  it("records our deposit claimed on chain as landed, and logs it, so Receiving's reconcile records the receive", async () => {
-    const logs = captureLogLines();
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { giverId, gift, giftClaimToken } = await test.packagedGift();
-    test.landDeposit(gift.id);
-    const receiverId = insertUser(test.db);
-    const claimed = await test.giftChain.claimGift({
-      giftId: gift.id,
-      giftClaimToken,
-      recipientId: receiverId,
-    });
-    assert(claimed.claimed, "The fake escrow claims a pending gift");
-
-    expect(await giftOf(await test.deposit(giverId, gift.id))).toMatchObject({
-      status: "packed",
-      escrowStatus: "pending",
-    });
-    logs.expectLogged("gift.deposit.already_claimed", { giftId: gift.id });
-    await giftOf(
-      await test.post(receiverId, "/receive", { giftClaimToken, liffContextType: "utou" }),
+  it("answers a deposit Sui refuses outright as expired, and one whose answer was lost when sent again", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const refused = await signedDeposit(test);
+    test.chain.answerNext(new TransactionRefusedError("Invalid user signature"));
+    const expired = await refusalOf(
+      await test.deposit(refused.giverId, refused.gift.id, refused.signed),
     );
-    expect(test.giftRow(gift.id)).toMatchObject({
-      status: "received",
-      escrowStatus: "claimed",
-      receiverId,
-      claimTxHash: claimed.txHash,
+    expect(expired).toMatchObject({ status: 409, error: "sponsorship_expired" });
+    expect(expired.detail).toContain("Invalid user signature");
+
+    const lost = await signedDeposit(test);
+    test.chain.answerNext("lost");
+    expect(
+      await refusalOf(await test.deposit(lost.giverId, lost.gift.id, lost.signed)),
+    ).toMatchObject({
+      status: 503,
+      error: "deposit_not_landed",
     });
+    test.chain.show(lost.signed.digest, { ok: true, events: [] });
+    expect(await giftOf(await test.deposit(lost.giverId, lost.gift.id, lost.signed))).toMatchObject(
+      {
+        escrowStatus: "pending",
+      },
+    );
   });
-
-  it.each([
-    ["another sticker's token", { tokenId: "7777" }],
-    ["another sender", { sender: bytes32("another sender").slice(0, 42) }],
-  ])(
-    "takes out a gift whose escrow record has %s with nothing in the escrow, so take-out answers it and its sticker packs again",
-    async (_, changes) => {
-      const test = await createGiftsTestApp({ escrowChain: true });
-      const { giverId, gift, report } = await reportedDeposit(test, changes);
-      expect(await refusalOf(report)).toMatchObject({ status: 409, error: "deposit_mismatch" });
-      expect(await giftOf(await test.takeOut(giverId, gift.id))).toMatchObject({
-        status: "taken_out",
-        escrowStatus: "missing",
-      });
-      expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({ status: 201 });
-    },
-  );
-
-  it.each<[string, OtherTerms]>([
-    ["claim commitment", anotherCommitment],
-    ["expiry", ({ expiresAt }) => ({ expiresAt: new Date(Date.parse(expiresAt) + HOUR_MS) })],
-  ])(
-    "takes out a gift the escrow holds its sticker for under another %s, and holds the sticker until its giver takes it out on chain",
-    async (_, otherTerms) => {
-      const test = await createGiftsTestApp({ escrowChain: true });
-      const { giverId, gift } = await takenOutForItsTerms(test, otherTerms);
-      expect(test.giftRow(gift.id)).toMatchObject({ status: "taken_out", escrowStatus: "pending" });
-      expect(
-        await refusalOf(await test.post(giverId, "", { stickerId: gift.stickerId })),
-      ).toMatchObject({ status: 409, error: "gift_held", giftId: gift.id });
-      expect(await refusalOf(await test.takeOut(giverId, gift.id))).toMatchObject({
-        status: 409,
-        error: "take_out_not_landed",
-      });
-    },
-  );
-
-  it.each([
-    ["rejected", "taken_out"],
-    ["expired_returned", "returned"],
-  ] as const)(
-    "records the escrow's %s at the giver's take-out of a gift taken out for its terms, as a gift %s",
-    async (escrowStatus, status) => {
-      const test = await createGiftsTestApp({ escrowChain: true });
-      const { giverId, gift } = await takenOutForItsTerms(test);
-      test.setEscrowStatus(gift.id, escrowStatus);
-      expect(await giftOf(await test.takeOut(giverId, gift.id))).toMatchObject({
-        status,
-        escrowStatus,
-      });
-      expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({ status: 201 });
-    },
-  );
-
-  it.each([
-    ["rejected", "taken_out"],
-    ["expired_returned", "returned"],
-  ] as const)(
-    "packs the sticker of a gift taken out for its terms once the escrow has %s it, recording the gift %s first",
-    async (escrowStatus, status) => {
-      const test = await createGiftsTestApp({ escrowChain: true });
-      const { giverId, gift } = await takenOutForItsTerms(test);
-      test.setEscrowStatus(gift.id, escrowStatus);
-      expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({ status: 201 });
-      expect(test.giftRow(gift.id)).toMatchObject({ status, escrowStatus });
-    },
-  );
 });
 
 describe("The picker's result", () => {
@@ -298,8 +225,8 @@ describe("The picker's result", () => {
     expect(await giftOf(await test.share(giverId, gift.id, "cancelled"))).toEqual(sent);
   });
 
-  it("refuses to send a gift before its deposit lands, on the escrow chain", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
+  it("refuses to send a gift before its deposit lands, on Sui", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
     const { giverId, gift } = await test.packagedGift();
     expect(await refusalOf(await test.share(giverId, gift.id, "sent"))).toMatchObject({
       status: 409,
@@ -319,7 +246,7 @@ describe("The picker's result", () => {
 });
 
 describe("Taking out", () => {
-  it("takes a gift back from the bag, or after sending, and the mock escrow rejects it at once", async () => {
+  it("takes a gift back from the bag, or after sending, at once on the mock chain", async () => {
     const test = await createGiftsTestApp();
     const inTheBag = await test.packagedGift();
     const onItsWay = await test.packagedGift();
@@ -327,13 +254,13 @@ describe("Taking out", () => {
     for (const { giverId, gift } of [inTheBag, onItsWay]) {
       expect(await giftOf(await test.takeOut(giverId, gift.id))).toMatchObject({
         status: "taken_out",
-        escrowStatus: "rejected",
+        escrowStatus: "taken_out",
         takenOutAt: test.clock.now().toISOString(),
       });
     }
   });
 
-  it("refuses a received gift and returns an already taken-out gift on retry", async () => {
+  it("refuses a received gift and answers an already taken-out gift on retry", async () => {
     const test = await createGiftsTestApp();
     const received = await test.packagedGift();
     receiveGift(test.db, received.gift.id, insertUser(test.db));
@@ -342,67 +269,57 @@ describe("Taking out", () => {
       error: "already_received",
     });
     const { giverId, gift } = await test.packagedGift();
-    await giftOf(await test.takeOut(giverId, gift.id));
-    expect(await giftOf(await test.takeOut(giverId, gift.id))).toMatchObject({
-      status: "taken_out",
-      escrowStatus: "rejected",
-    });
+    const takenOut = await giftOf(await test.takeOut(giverId, gift.id));
+    expect(await giftOf(await test.takeOut(giverId, gift.id))).toEqual(takenOut);
   });
+});
 
-  it.each(["missing", "pending"] as const)(
-    "keeps the gift unchanged while the escrow reports %s instead of a confirmed take-out",
-    async (escrowStatus) => {
-      const test = await createGiftsTestApp({ escrowChain: true });
-      const { giverId, gift } = await test.packagedGift();
-      if (escrowStatus === "pending") {
-        test.landDeposit(gift.id);
-        await giftOf(await test.deposit(giverId, gift.id));
-      }
-      const before = test.giftRow(gift.id);
-
-      expect(await refusalOf(await test.takeOut(giverId, gift.id))).toMatchObject({
-        status: 409,
-        error: "take_out_not_landed",
-      });
-      expect(test.giftRow(gift.id)).toEqual(before);
-    },
-  );
-
-  it("refuses to take out a gift claimed on-chain before Receiving is recorded", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { giverId, gift } = await test.packagedGift();
-    test.landDeposit(gift.id);
-    await giftOf(await test.deposit(giverId, gift.id));
-    const before = test.giftRow(gift.id);
-    test.setEscrowStatus(gift.id, "claimed");
-
-    expect(await refusalOf(await test.takeOut(giverId, gift.id))).toMatchObject({
+describe("Taking out on Sui", () => {
+  it("closes a gift whose deposit was never sent, dropping the unsigned deposit", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { giverId, gift, signed } = await signedDeposit(test);
+    const started = await takeOutStartOf(await test.takeOut(giverId, gift.id));
+    expect(started.gift).toMatchObject({ status: "taken_out", escrowStatus: "missing" });
+    expect(started.takeOut).toBeUndefined();
+    expect(await refusalOf(await test.deposit(giverId, gift.id, signed))).toMatchObject({
       status: 409,
-      error: "already_received",
+      error: "sponsorship_expired",
     });
-    expect(test.giftRow(gift.id)).toEqual(before);
+    expect(test.chain.submissions).toEqual([]);
   });
 
-  it.each(["rejected", "expired_returned"] as const)(
-    "confirms %s before closing a chain gift, then lets the sticker be given again",
-    async (escrowStatus) => {
-      const test = await createGiftsTestApp({ escrowChain: true });
-      const { giverId, gift } = await test.packagedGift();
-      test.landDeposit(gift.id);
-      await giftOf(await test.deposit(giverId, gift.id));
-      test.setEscrowStatus(gift.id, escrowStatus);
+  it("answers the take-out of a gift the escrow holds for the giver to sign, then records it once it lands", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { giverId, gift } = await test.depositedGift();
+    const { takeOut } = await takeOutStartOf(await test.takeOut(giverId, gift.id));
+    if (!takeOut) throw new Error("Take-out's start answered no take-out to sign");
+    expect(test.chain.built.at(-1)).toEqual({
+      kind: "take_out",
+      sender: test.wallets.keyOf(giverId).toSuiAddress(),
+      giftId: gift.id,
+    });
+    expect((await takeOutStartOf(await test.takeOut(giverId, gift.id))).takeOut).toEqual(takeOut);
 
-      expect(await giftOf(await test.takeOut(giverId, gift.id))).toMatchObject({
-        status: escrowStatus === "expired_returned" ? "returned" : "taken_out",
-        escrowStatus,
-      });
-      expect(await giftOf(await test.takeOut(giverId, gift.id))).toMatchObject({ escrowStatus });
-      expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({
-        status: 201,
-        gift: { status: "packed" },
-      });
-    },
-  );
+    const takenOut = await giftOf(
+      await test.submitTakeOut(giverId, gift.id, await test.signed(giverId, takeOut)),
+    );
+    expect(takenOut).toMatchObject({ status: "taken_out", escrowStatus: "taken_out" });
+    expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({ status: 201 });
+  });
+
+  it("answers a take-out that failed because the gift was received first as already received", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { giverId, gift } = await test.depositedGift();
+    const { takeOut } = await takeOutStartOf(await test.takeOut(giverId, gift.id));
+    if (!takeOut) throw new Error("Take-out's start answered no take-out to sign");
+    test.chain.escrow.set(gift.id, { status: "claimed", recipient: `0x${"7".repeat(64)}` });
+    test.chain.answerNext({ ok: false, failure: "MoveAbort(gift, 2)" });
+    expect(
+      await refusalOf(
+        await test.submitTakeOut(giverId, gift.id, await test.signed(giverId, takeOut)),
+      ),
+    ).toMatchObject({ status: 409, error: "already_received" });
+  });
 });
 
 describe("A gift's routes", () => {
@@ -412,9 +329,11 @@ describe("A gift's routes", () => {
     const stranger = insertUser(test.db);
     const unknownGift = bytes32("no such gift");
     const steps = [
-      (userId: string, giftId: string) => test.deposit(userId, giftId),
+      (userId: string, giftId: string) => test.deposit(userId, giftId, SOME_SIGNED_TRANSACTION),
       (userId: string, giftId: string) => test.share(userId, giftId, "sent"),
       (userId: string, giftId: string) => test.takeOut(userId, giftId),
+      (userId: string, giftId: string) =>
+        test.submitTakeOut(userId, giftId, SOME_SIGNED_TRANSACTION),
     ];
     for (const step of steps) {
       expect(await refusalOf(await step(stranger, gift.id))).toMatchObject({
@@ -443,7 +362,12 @@ describe("GET /api/gifts/pending", () => {
       packGift(test.db, test.sealSticker(giverId), giverId, { escrowStatus: "pending", ...values });
     const older = pack(me, { createdAt: hoursAgo(3) });
     const sent = pack(me, { createdAt: hoursAgo(2), status: "sent", sentAt: hoursAgo(1) });
-    pack(me, { createdAt: hoursAgo(1), status: "taken_out", takenOutAt: hoursAgo(0) });
+    pack(me, {
+      createdAt: hoursAgo(1),
+      status: "taken_out",
+      takenOutAt: hoursAgo(0),
+      escrowStatus: "taken_out",
+    });
     pack(insertUser(test.db), {});
 
     const { gifts } = await bodyOf(await test.get(me, "/pending"), pendingGiftsSchema);

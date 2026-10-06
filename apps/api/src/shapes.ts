@@ -1,5 +1,4 @@
 import {
-  escrowStatuses,
   gifts,
   gratitude,
   MAX_HITS,
@@ -8,11 +7,11 @@ import {
   MAX_TIME_USED_S,
   stickerPlacements,
   stickers,
+  suiTransactions,
   ticketKinds,
   users,
   type Db,
 } from "@drawing-app/db";
-import { personEnsName, stickerEnsName } from "@drawing-app/sticker-chain/croquis-names";
 import { eq, inArray } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -31,25 +30,60 @@ export function toIsoTime(date: Date | null): IsoTime | null {
   return date === null ? null : date.toISOString();
 }
 
-/** Gift ids, content hashes and transaction hashes: lowercase 0x-prefixed 32-byte hex. */
+/** Gift ids, content hashes and Gift Claim Tokens: lowercase 0x-prefixed 32-byte hex. */
 export const bytes32Schema = z.string().regex(/^0x[0-9a-f]{64}$/);
 
 /** A gift ID that isn't 0x and 64 lowercase hex digits is invalid_request. */
 export const giftIdParam = z.object({ giftId: bytes32Schema });
 
+/** A Sui address or object ID: 0x and 64 lowercase hex digits. */
+export const suiIdSchema = z
+  .string()
+  .regex(/^0x[0-9a-f]{64}$/, "Expected 0x and 64 lowercase hex digits");
+
+/** A Sui transaction digest: 32 bytes in base58. */
+const suiDigestSchema = z
+  .string()
+  .regex(/^[1-9A-HJ-NP-Za-km-z]{43,44}$/, "Expected a base58 Sui transaction digest");
+
+/**
+ * A transaction the server built and Shinami sponsored, for the person's Privy Sui wallet to sign
+ * as its sender.
+ */
+export const sponsoredTransactionSchema = z.object({
+  /** Base64 BCS TransactionData, Shinami's gas included: what the wallet signs. */
+  txBytes: z.base64(),
+  digest: suiDigestSchema,
+  /** When Shinami's sponsorship lapses: a signature posted after it is refused. */
+  expiresAt: z.iso.datetime(),
+});
+export type SponsoredTransaction = z.infer<typeof sponsoredTransactionSchema>;
+
+/** The wallet's signature over a sponsored transaction, which the server checks and submits. */
+export const signedTransactionSchema = z.object({
+  digest: suiDigestSchema,
+  signature: z.base64(),
+});
+export type SignedTransaction = z.infer<typeof signedTransactionSchema>;
+
+export const toSponsoredTransaction = (
+  row: Pick<typeof suiTransactions.$inferSelect, "txBytes" | "digest" | "expiresAt">,
+): SponsoredTransaction => ({
+  txBytes: row.txBytes,
+  digest: row.digest,
+  expiresAt: toIsoTime(row.expiresAt),
+});
+
 /** A refused step: the contract's code, and what failed for which item. */
 export interface Refusal<Code extends string> {
   refusal: Code;
   detail: string;
-  /** The gift the refusal is about, when the app must act on it. */
-  giftId?: string;
 }
 
-export const refuse = <Code extends string>(
-  refusal: Code,
-  detail: string,
-  giftId?: string,
-): Refusal<Code> => ({ refusal, detail, ...(giftId !== undefined && { giftId }) });
+export const refuse = <Code extends string>(refusal: Code, detail: string): Refusal<Code> => ({
+  refusal,
+  detail,
+});
 
 const count = z.number().int().nonnegative();
 const positiveInt = z.number().int().positive();
@@ -57,16 +91,9 @@ const positiveInt = z.number().int().positive();
 const userRow = createSelectSchema(users);
 type UserRow = typeof users.$inferSelect;
 
-/**
- * A person's Age status. Age verification is the only source, and it can prove only adults, so the
- * server says adult or unknown; minor is for a source that can prove it.
- */
-const ageStatusSchema = z.enum(["adult", "minor", "unknown"]);
-export type AgeStatus = z.infer<typeof ageStatusSchema>;
-
-/** Adult once age verification has proven it. */
-export const ageStatusOf = (user: Pick<UserRow, "ageVerifiedAt">): AgeStatus =>
-  user.ageVerifiedAt === null ? "unknown" : "adult";
+/** Whether the person has the NSFW opt-in on. */
+export const optedIntoNsfw = (user: Pick<UserRow, "nsfwOptedInAt">): boolean =>
+  user.nsfwOptedInAt !== null;
 
 /** Anyone, as other signed-in people see them. */
 export const personSchema = userRow
@@ -77,35 +104,30 @@ export const personSchema = userRow
     linePictureUrl: true,
   })
   .extend({
-    /** <label>.croquis-app.eth, which resolves from the moment they have a label. */
-    ensName: z.string().nullable(),
-    /** Only an adult marks, sees plainly or receives NSFW stickers. */
-    ageStatus: ageStatusSchema,
+    /**
+     * Show 18+ stickers, in Settings. Only someone with it on marks, sees unblurred or receives NSFW
+     * stickers, so the give sheet shows it.
+     */
+    nsfwOptIn: z.boolean(),
   });
 export type Person = z.infer<typeof personSchema>;
 
-/**
- * Picks the public columns, so LINE's user ID never reaches other people. The smart wallet is left
- * out too, though it isn't private: the ENS gateway answers it as <label>.croquis-app.eth's
- * address.
- */
+/** Picks the public columns, so LINE's user ID and the person's wallet never reach other people. */
 export const toPerson = ({
   id,
   handle,
   lineDisplayName,
   linePictureUrl,
-  ensLabel,
-  ageVerifiedAt,
+  nsfwOptedInAt,
 }: Pick<
   UserRow,
-  "id" | "handle" | "lineDisplayName" | "linePictureUrl" | "ensLabel" | "ageVerifiedAt"
+  "id" | "handle" | "lineDisplayName" | "linePictureUrl" | "nsfwOptedInAt"
 >): Person => ({
   id,
   handle,
   lineDisplayName,
   linePictureUrl,
-  ensName: ensLabel === null ? null : personEnsName(ensLabel),
-  ageStatus: ageStatusOf({ ageVerifiedAt }),
+  nsfwOptIn: optedIntoNsfw({ nsfwOptedInAt }),
 });
 
 /** You. */
@@ -122,8 +144,6 @@ export const meSchema = personSchema.extend({
   createdAt: isoTimeSchema,
   /** True until the handle prompt is answered. */
   needsHandle: z.boolean(),
-  /** When World ID proved you're 18 or older; null until it has. */
-  ageVerifiedAt: isoTimeSchema.nullable(),
   /** NEW in your sticker tray. */
   newStickerCount: count,
   /** The pink tag. */
@@ -141,11 +161,10 @@ export const toMe = (
   languageChoice: user.languageChoice,
   createdAt: toIsoTime(user.createdAt),
   needsHandle: user.handle === null,
-  ageVerifiedAt: toIsoTime(user.ageVerifiedAt),
   ...counts,
 });
 
-/** The five PNGs a sticker is sealed with. The sticker PNG's hash names it and its NFT. */
+/** The five PNGs a sticker is sealed with. The sticker PNG's hash names them. */
 export const stickerPngsSchema = z.object({
   png: z.url(),
   mask: z.url(),
@@ -170,19 +189,6 @@ export type StickerWebpKind = keyof z.infer<typeof stickerWebpsSchema>;
 const stickerImagesSchema = stickerPngsSchema.extend({ webp: stickerWebpsSchema });
 export type StickerImages = z.infer<typeof stickerImagesSchema>;
 
-/** StickerGiftEscrow's GiftStatus. */
-const escrowStatusSchema = z.enum(escrowStatuses);
-export type EscrowStatus = z.infer<typeof escrowStatusSchema>;
-
-/** Sent from the giver's smart wallet to move the sticker into the escrow. */
-export const escrowTransferSchema = z.object({
-  /** The StickerNFT contract. */
-  to: z.string(),
-  /** Calldata. */
-  data: z.string(),
-});
-export type EscrowTransfer = z.infer<typeof escrowTransferSchema>;
-
 const stickerRow = createSelectSchema(stickers, {
   timeUsed: (schema) => schema.min(0).max(MAX_TIME_USED_S),
   width: (schema) => schema.positive(),
@@ -199,16 +205,13 @@ export const stickerSchema = z.object({
     height: true,
     outline: true,
     contentHash: true,
-    tokenId: true,
-    mintTxHash: true,
+    objectId: true,
     nsfw: true,
   }).shape,
   /** The Original Artist. */
   artist: personSchema,
   images: stickerImagesSchema,
   sealedAt: isoTimeSchema,
-  /** <number>.<artist>.croquis-app.eth, once it's onchain. */
-  ensName: z.string().nullable(),
 });
 export type Sticker = z.infer<typeof stickerSchema>;
 
@@ -281,39 +284,40 @@ export type Gratitude = z.infer<typeof gratitudeSchema>;
 
 type StickerRow = typeof stickers.$inferSelect;
 
-/** What one viewer gets of each sticker: an NSFW sticker is veiled unless they're an adult. */
+/** What one viewer gets of each sticker: an NSFW sticker is veiled unless they've opted in. */
 export interface StickerViewer {
   veils: (sticker: Pick<StickerRow, "nsfw">) => boolean;
   /** Its image URLs: the veiled image in place of each that shows the drawing, when it's veiled. */
   images: (sticker: Pick<StickerRow, "nsfw" | "contentHash" | "veiledHash">) => StickerImages;
 }
 
-function viewerOf(images: AppDeps["images"], adult: boolean): StickerViewer {
-  const veils = (sticker: Pick<StickerRow, "nsfw">) => sticker.nsfw && !adult;
+function viewerOf(images: AppDeps["images"], optedIn: boolean): StickerViewer {
+  const veils = (sticker: Pick<StickerRow, "nsfw">) => sticker.nsfw && !optedIn;
   return {
     veils,
-    images: (sticker) =>
-      veils(sticker)
-        ? images.veiledUrls(sticker.contentHash, sticker.veiledHash)
-        : images.urls(sticker.contentHash),
+    images: (sticker) => {
+      if (!veils(sticker)) return images.urls(sticker.contentHash);
+      // The database holds every NSFW sticker to its veil, so a row without one is a fault.
+      if (sticker.veiledHash === null) {
+        throw new Error(`The NSFW sticker with content hash ${sticker.contentHash} has no veil`);
+      }
+      return images.veiledUrls(sticker.contentHash, sticker.veiledHash);
+    },
   };
 }
 
-/** The sticker viewer `viewerId` is, by their age status now. */
+/** The sticker viewer `viewerId` is, by their NSFW opt-in now. */
 export function stickerViewer(
   { db, images }: Pick<AppDeps, "db" | "images">,
   viewerId: string,
 ): StickerViewer {
   const viewer = db
-    .select({ ageVerifiedAt: users.ageVerifiedAt })
+    .select({ nsfwOptedInAt: users.nsfwOptedInAt })
     .from(users)
     .where(eq(users.id, viewerId))
     .get();
-  return viewerOf(images, viewer !== undefined && ageStatusOf(viewer) === "adult");
+  return viewerOf(images, viewer !== undefined && optedIntoNsfw(viewer));
 }
-
-/** What anyone gets, signed in or not, as an NFT's metadata is: an NSFW sticker veiled. */
-export const publicStickerViewer = (images: AppDeps["images"]) => viewerOf(images, false);
 
 /** A sticker with its Original Artist, and its images as `viewer` gets them. */
 export function toSticker(
@@ -332,14 +336,9 @@ export function toSticker(
     outline: sticker.outline,
     contentHash: sticker.contentHash,
     images: viewer.images(sticker),
-    tokenId: sticker.tokenId,
-    mintTxHash: sticker.mintTxHash,
+    objectId: sticker.objectId,
     nsfw: sticker.nsfw,
     sealedAt: toIsoTime(sticker.createdAt),
-    ensName:
-      sticker.ensNamedAt !== null && artist.ensLabel !== null
-        ? stickerEnsName(sticker.number, artist.ensLabel)
-        : null,
   };
 }
 
@@ -439,9 +438,6 @@ export const ticketsSchema = z.object({
   ),
 });
 export type Tickets = z.infer<typeof ticketsSchema>;
-
-/** A Sui address or object ID: 0x and 64 hex digits. */
-const suiIdSchema = z.string().regex(/^0x[0-9a-f]{64}$/);
 
 export const ticketShopSchema = z.object({
   packs: z.array(

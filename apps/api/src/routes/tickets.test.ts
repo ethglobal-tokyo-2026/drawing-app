@@ -1,32 +1,35 @@
 import { randomUUID } from "node:crypto";
-import { DAILY_TICKETS_PER_DAY, ticketPurchases, ticketUses } from "@drawing-app/db";
-import { bytes32, insertUser } from "@drawing-app/db/testing";
+import {
+  DAILY_TICKETS_PER_DAY,
+  suiTransactions,
+  ticketPurchases,
+  ticketUses,
+} from "@drawing-app/db";
+import { insertUser } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import type { JpycPayment } from "../deps.ts";
-import { ticketShopSchema, ticketsSchema } from "../shapes.ts";
+import { ticketShopSchema, ticketsSchema, type SponsoredTransaction } from "../shapes.ts";
+import { SponsorshipError } from "../sui/types.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { fakeTicketPayments, TEST_PAYMENT_TARGET } from "../testing/fakes.ts";
+import { TEST_PAYMENT_TARGET } from "../testing/fakes.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { insertSealedSticker } from "../testing/rows.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
+import { ticketPaymentReference } from "../tickets/paymentReference.ts";
 import {
-  newTxDigest,
-  payOnSui,
-  reportPayment,
+  payPurchase,
+  purchasesApp,
+  signedBy,
   startedPurchase,
   startPurchase,
-  TX_DIGEST_LENGTH,
+  type PurchasesApp,
 } from "../tickets/testPurchases.ts";
 import { spendBody } from "../tickets/testSpends.ts";
 import {
-  purchaseNamedBy,
   TICKET_PACKS,
   TICKET_PRICE_YEN,
-  ticketPaymentReference,
   ticketUseSchema,
-  type StartedTicketPurchase,
   type TicketKind,
 } from "../tickets/tickets.ts";
 
@@ -46,32 +49,16 @@ const JPYC_PER_YEN = 10n ** BigInt(TEST_PAYMENT_TARGET.decimals);
 /** A pack's price in JPYC base units. */
 const jpycOf = (pack: { priceYen: number }) => BigInt(pack.priceYen) * JPYC_PER_YEN;
 
+let shop: PurchasesApp;
 let test: TestApp;
 let userId: string;
-/** Sui's transactions, by digest. */
-let transactions: Map<string, JpycPayment[] | Error>;
 
-/** A fresh app, and a person signed in to it. */
+/** A fresh app on the fake Sui chain, and a buyer signed in to it. */
 async function start() {
-  const sui = fakeTicketPayments();
-  transactions = sui.transactions;
-  test = await createTestApp({ ticketPayments: sui.ticketPayments });
-  userId = insertUser(test.db);
+  shop = await purchasesApp();
+  test = shop.test;
+  userId = shop.buyer();
 }
-
-/** Starts a purchase of `pack` as `as`, which must be granted. */
-const started = (pack: { tickets: number }, as = userId) => startedPurchase(test, as, pack.tickets);
-
-/** A Sui transaction, new unless named, that pays `purchase` in full, but for `change`. */
-const paid = (
-  purchase: StartedTicketPurchase,
-  change: Partial<JpycPayment> = {},
-  txDigest?: string,
-) => payOnSui(transactions, purchase, change, txDigest);
-
-/** Reports `txDigest` as `purchase`'s payment, as `as`. */
-const report = (purchase: { id: number }, txDigest: string, as = userId) =>
-  reportPayment(test, as, purchase.id, txDigest);
 
 beforeEach(() => start());
 afterEach(() => {
@@ -99,14 +86,17 @@ async function spendTickets(kind: TicketKind, times: number) {
 const getShop = async (as = userId) =>
   (await bodyOf(await test.send("GET", "/api/ticket-shop", { as }), shopBodySchema)).shop;
 
-/** Reports `txDigest` as `purchase`'s payment, which must be granted, and returns the tickets after. */
-const reportPaid = async (purchase: { id: number }, txDigest: string) =>
-  (await bodyOf(await report(purchase, txDigest), ticketsBodySchema, 201)).tickets;
+/** Starts a purchase of `pack` as `as`, which must be granted. */
+const started = (pack: { tickets: number }, as = userId) => startedPurchase(test, as, pack.tickets);
 
-/** Starts a purchase of `pack`, pays it and reports the payment, and returns the tickets after. */
+/** Pays `purchaseId` with `as`'s signature over `payment`. */
+const pay = async (purchaseId: number, payment: SponsoredTransaction, as = userId) =>
+  payPurchase(test, as, purchaseId, await signedBy(shop.walletOf(as), payment));
+
+/** Starts a purchase of `pack`, signs and pays it, and returns the tickets after. */
 async function buyPack(pack: (typeof TICKET_PACKS)[number]) {
-  const purchase = await started(pack);
-  return reportPaid(purchase, paid(purchase));
+  const { purchase, payment } = await started(pack);
+  return (await bodyOf(await pay(purchase.id, payment), ticketsBodySchema, 201)).tickets;
 }
 
 const ticketUseCount = () =>
@@ -115,8 +105,9 @@ const ticketUseCount = () =>
 const purchaseRow = (id: number) =>
   test.db.select().from(ticketPurchases).where(eq(ticketPurchases.id, id)).get();
 
-/** Every purchase recorded for anyone. */
-const allPurchases = () => test.db.select().from(ticketPurchases).all();
+/** The payment row the server stored for `digest`. */
+const paymentRow = (digest: string) =>
+  test.db.select().from(suiTransactions).where(eq(suiTransactions.digest, digest)).get();
 
 describe("tickets", () => {
   it("give a new person the day's daily tickets, and a refill at the next midnight, Tokyo time", async () => {
@@ -262,158 +253,165 @@ describe("tickets", () => {
     expect(shop.payment).toMatchObject(TEST_PAYMENT_TARGET);
   });
 
-  it("start a purchase of a pack, unpaid, with a payment reference that names it and the person", async () => {
-    const purchase = await started(PACK);
-    expect(purchase).toEqual({
-      id: purchase.id,
-      tickets: PACK.tickets,
-      priceYen: PACK.priceYen,
-      priceJpyc: jpycOf(PACK).toString(),
-      reference: ticketPaymentReference(userId, purchase.id),
+  it("start a purchase of a pack, unpaid, with a payment the server built for the buyer's wallet", async () => {
+    const { purchase, payment } = await started(PACK);
+    expect(purchase).toEqual({ id: purchase.id, tickets: PACK.tickets, priceYen: PACK.priceYen });
+    expect(purchaseRow(purchase.id)).toMatchObject({ userId, paidJpyc: null, verifiedAt: null });
+    expect(shop.chain.built.at(-1)).toEqual({
+      kind: "payment",
+      payment: {
+        sender: shop.walletOf(userId).toSuiAddress(),
+        amount: jpycOf(PACK),
+        reference: ticketPaymentReference(userId, purchase.id),
+      },
     });
-    expect(purchaseNamedBy(purchase.reference)).toEqual({ userId, purchaseId: purchase.id });
-    expect(purchaseRow(purchase.id)).toMatchObject({
-      userId,
-      tickets: PACK.tickets,
-      priceYen: PACK.priceYen,
-      paidJpyc: null,
-      txDigest: null,
-      verifiedAt: null,
-    });
-    // Each purchase is paid with a reference of its own.
-    expect((await started(PACK)).reference).not.toBe(purchase.reference);
+    expect(paymentRow(payment.digest)).toMatchObject({ kind: "payment", purchaseId: purchase.id });
   });
 
-  it("count a purchase's tickets only once its payment is checked", async () => {
-    const purchase = await started(PACK);
-    // A payment recorded on a purchase but never checked counts no more than none.
-    const unchecked = await started(PACK);
-    test.db
-      .update(ticketPurchases)
-      .set({ txDigest: newTxDigest(), paidJpyc: jpycOf(PACK).toString() })
-      .where(eq(ticketPurchases.id, unchecked.id))
-      .run();
-    expect((await getTickets()).reserveLeft).toBe(0);
-    expect((await reportPaid(purchase, paid(purchase))).reserveLeft).toBe(PACK.tickets);
-  });
-
-  it("add each pack's tickets, recording the payment on its purchase", async () => {
+  it("add each pack's tickets once its signed payment lands, recording what it paid", async () => {
     let reserveLeft = 0;
     for (const pack of TICKET_PACKS) {
-      const purchase = await started(pack);
-      const txDigest = paid(purchase);
+      const { purchase, payment } = await started(pack);
       reserveLeft += pack.tickets;
-      expect((await reportPaid(purchase, txDigest)).reserveLeft).toBe(reserveLeft);
+      const paid = await bodyOf(await pay(purchase.id, payment), ticketsBodySchema, 201);
+      expect(paid.tickets.reserveLeft).toBe(reserveLeft);
       expect(purchaseRow(purchase.id)).toMatchObject({
-        userId,
-        priceYen: pack.priceYen,
         paidJpyc: jpycOf(pack).toString(),
-        txDigest,
         verifiedAt: test.clock.now(),
       });
+      expect(paymentRow(payment.digest)?.outcome).toBe("succeeded");
     }
   });
 
-  it("refuse a payment short of its pack, into another vault, for another purchase or for someone else", async () => {
-    const purchase = await started(PACK);
-    const another = await started(PACK);
-    const theirs = await started(PACK, insertUser(test.db));
-    const cases = [
-      {
-        txDigest: paid(purchase, { amount: jpycOf(PACK) - 1n }),
-        status: 402,
-        error: "payment_short",
-      },
-      {
-        txDigest: paid(purchase, { vault: `0x${"e".repeat(64)}` }),
-        status: 422,
-        error: "payment_not_found",
-      },
-      { txDigest: paid(another), status: 422, error: "payment_not_found" },
-      { txDigest: paid(theirs), status: 403, error: "payment_not_yours" },
-    ];
-    for (const { txDigest, status, error } of cases) {
-      expect(await refusalOf(await report(purchase, txDigest))).toMatchObject({ status, error });
-    }
-    expect(allPurchases().filter((row) => row.verifiedAt !== null)).toEqual([]);
+  it("send a payment once when its answer was lost, and add its tickets when the same signature comes again", async () => {
+    const { purchase, payment } = await started(PACK);
+    shop.chain.answerNext("lost");
+    expect(await refusalOf(await pay(purchase.id, payment))).toMatchObject({
+      status: 503,
+      error: "payment_not_landed",
+    });
+    expect((await getTickets()).reserveLeft).toBe(0);
+    // Sui ran it after all.
+    shop.chain.show(payment.digest, { ok: true, events: shop.chain.eventsFor(payment.digest) });
+    expect(
+      (await bodyOf(await pay(purchase.id, payment), ticketsBodySchema, 201)).tickets.reserveLeft,
+    ).toBe(PACK.tickets);
+    expect(shop.chain.submissions.map(({ digest }) => digest)).toEqual([payment.digest]);
+  });
+
+  it("give a purchase up when Sui ran its payment and it failed, adding no tickets", async () => {
+    const { purchase, payment } = await started(PACK);
+    shop.chain.answerNext({ ok: false, failure: "MoveAbort(…, 0) in command 1" });
+    expect(await refusalOf(await pay(purchase.id, payment))).toMatchObject({
+      status: 409,
+      error: "transaction_failed",
+    });
+    expect(purchaseRow(purchase.id)).toMatchObject({
+      verifiedAt: null,
+      givenUpAt: test.clock.now(),
+    });
     expect((await getTickets()).reserveLeft).toBe(0);
   });
 
-  it("refuse a payment reported for someone else's purchase, or for one that doesn't exist", async () => {
-    const theirs = await started(PACK, insertUser(test.db));
-    // Paid naming the person reporting it, so only the purchase's owner tells it apart.
-    const txDigest = paid(theirs, { reference: ticketPaymentReference(userId, theirs.id) });
-    expect(await refusalOf(await report(theirs, txDigest))).toMatchObject({
+  it("refuse a payment signed after its sponsorship lapsed, so the app starts the purchase again", async () => {
+    const { purchase, payment } = await started(PACK);
+    test.clock.set(new Date(payment.expiresAt));
+    expect(await refusalOf(await pay(purchase.id, payment))).toMatchObject({
+      status: 409,
+      error: "sponsorship_expired",
+    });
+    expect(shop.chain.submissions).toEqual([]);
+    expect(purchaseRow(purchase.id)?.givenUpAt).toEqual(test.clock.now());
+  });
+
+  it("refuse a signature that isn't the buyer's wallet's, submitting nothing", async () => {
+    const { purchase, payment } = await started(PACK);
+    const forger = shop.buyer();
+    const forged = await signedBy(shop.walletOf(forger), payment);
+    expect(await refusalOf(await payPurchase(test, userId, purchase.id, forged))).toMatchObject({
+      status: 400,
+      error: "signature_invalid",
+    });
+    expect(shop.chain.submissions).toEqual([]);
+    expect(purchaseRow(purchase.id)?.verifiedAt).toBeNull();
+  });
+
+  it("refuse someone else's purchase, one that doesn't exist, and a digest that isn't the purchase's payment", async () => {
+    const { purchase, payment } = await started(PACK);
+    const someoneElse = shop.buyer();
+    const signed = await signedBy(shop.walletOf(someoneElse), payment);
+    expect(
+      await refusalOf(await payPurchase(test, someoneElse, purchase.id, signed)),
+    ).toMatchObject({
       status: 403,
       error: "payment_not_yours",
     });
-    expect(await refusalOf(await report({ id: theirs.id + 1 }, txDigest))).toMatchObject({
-      status: 404,
-      error: "purchase_not_found",
-    });
-    expect(purchaseRow(theirs.id)?.verifiedAt).toBeNull();
-  });
-
-  it("count nothing for a payment Sui doesn't show yet, and add its tickets once Sui does", async () => {
-    const purchase = await started(PACK);
-    const txDigest = newTxDigest();
-    expect(await refusalOf(await report(purchase, txDigest))).toMatchObject({
-      status: 409,
-      error: "payment_not_landed",
-    });
-    expect(purchaseRow(purchase.id)?.verifiedAt).toBeNull();
-
-    paid(purchase, {}, txDigest);
-    expect((await reportPaid(purchase, txDigest)).reserveLeft).toBe(PACK.tickets);
-  });
-
-  it("count a payment once, and a purchase once, whoever reports it again", async () => {
-    const purchase = await started(PACK);
-    const txDigest = paid(purchase);
-    await reportPaid(purchase, txDigest);
-    const someoneElse = insertUser(test.db);
+    expect(await refusalOf(await payPurchase(test, userId, purchase.id + 1, signed))).toMatchObject(
+      {
+        status: 404,
+        error: "purchase_not_found",
+      },
+    );
     const theirs = await started(PACK, someoneElse);
-    const counted = { status: 409, error: "payment_already_counted" };
-    expect(await refusalOf(await report(purchase, txDigest))).toMatchObject(counted);
-    expect(await refusalOf(await report(theirs, txDigest, someoneElse))).toMatchObject(counted);
-    // A second payment for a purchase already paid buys nothing more.
-    expect(await refusalOf(await report(purchase, paid(purchase)))).toMatchObject({
+    const wrong = await signedBy(shop.walletOf(userId), theirs.payment);
+    expect(await refusalOf(await payPurchase(test, userId, purchase.id, wrong))).toMatchObject({
       status: 409,
-      error: "purchase_already_paid",
+      error: "sponsorship_expired",
     });
-    expect((await getTickets()).reserveLeft).toBe(PACK.tickets);
-    expect((await getTickets(someoneElse)).reserveLeft).toBe(0);
+    expect(shop.chain.submissions).toEqual([]);
   });
 
-  it("refuse a count that isn't a pack, and a digest that isn't Sui's", async () => {
+  it("drop an earlier payment never signed when the buyer starts another, giving its purchase up", async () => {
+    const first = await started(PACK);
+    const second = await started(PACK);
+    expect(paymentRow(first.payment.digest)?.outcome).toBe("dead");
+    expect(purchaseRow(first.purchase.id)?.givenUpAt).toEqual(test.clock.now());
+    expect(
+      (await bodyOf(await pay(second.purchase.id, second.payment), ticketsBodySchema, 201)).tickets
+        .reserveLeft,
+    ).toBe(PACK.tickets);
+  });
+
+  it("refuse a buyer without a Sui wallet, and give up a purchase Shinami won't sponsor", async () => {
+    const walletless = insertUser(test.db);
+    shop.without.add(walletless);
+    expect(await refusalOf(await startPurchase(test, walletless, PACK.tickets))).toMatchObject({
+      status: 409,
+      error: "no_sui_wallet",
+    });
+    shop.chain.refuseNext(new SponsorshipError("refused", "The payer holds too little JPYC"));
+    expect(await refusalOf(await startPurchase(test, userId, PACK.tickets))).toMatchObject({
+      status: 422,
+      error: "sponsorship_refused",
+    });
+    const [refused] = test.db.select().from(ticketPurchases).all();
+    expect(refused).toMatchObject({ userId, givenUpAt: test.clock.now(), verifiedAt: null });
+  });
+
+  it("refuse a count that isn't a pack, and a payment whose digest or signature isn't Sui's", async () => {
     expect(await refusalOf(await startPurchase(test, userId, NOT_A_PACK))).toMatchObject({
       status: 400,
       error: "pack_unknown",
     });
-    expect(allPurchases()).toEqual([]);
-    const purchase = await started(PACK);
-    for (const txDigest of [bytes32("an EVM transaction"), "0".repeat(TX_DIGEST_LENGTH)]) {
-      expect(await refusalOf(await report(purchase, txDigest))).toMatchObject({
+    expect(test.db.select().from(ticketPurchases).all()).toEqual([]);
+    const { purchase, payment } = await started(PACK);
+    for (const body of [
+      { digest: "0".repeat(44), signature: "c2lnbmVk" },
+      { digest: payment.digest, signature: "not base64!" },
+    ]) {
+      expect(await refusalOf(await payPurchase(test, userId, purchase.id, body))).toMatchObject({
         status: 400,
         error: "invalid_request",
       });
     }
-    expect((await getTickets()).reserveLeft).toBe(0);
   });
 
-  it("count no tickets while Sui can't be asked, and log it", async () => {
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    const purchase = await started(PACK);
-    const txDigest = newTxDigest();
-    const outage = new Error("fullnode unreachable");
-    transactions.set(txDigest, outage);
-    expect(await refusalOf(await report(purchase, txDigest))).toMatchObject({
-      status: 502,
-      error: "sui_unavailable",
+  it("start and pay nothing in mock chain mode", async () => {
+    const mock = await createTestApp();
+    const someone = insertUser(mock.db);
+    expect(await refusalOf(await startPurchase(mock, someone, PACK.tickets))).toMatchObject({
+      status: 503,
+      error: "chain_unavailable",
     });
-    expect(log).toHaveBeenCalledWith(expect.stringContaining(txDigest));
-    expect(log).toHaveBeenCalledWith(expect.stringContaining(outage.message));
-    expect(purchaseRow(purchase.id)?.verifiedAt).toBeNull();
-    expect((await getTickets()).reserveLeft).toBe(0);
   });
 });

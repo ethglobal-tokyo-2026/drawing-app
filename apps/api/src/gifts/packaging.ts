@@ -1,30 +1,44 @@
+import { createHash, randomBytes } from "node:crypto";
 import { GIFT_EXPIRY_MS, gifts, stickers, users, type Db } from "@drawing-app/db";
-import { createGiftClaim } from "@drawing-app/sticker-chain/gift-sticker";
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import type { AppDeps, GiftChain } from "../deps.ts";
+import type { AppDeps } from "../deps.ts";
 import {
-  ageStatusOf,
   bytes32Schema,
-  escrowTransferSchema,
   giftSchema,
+  optedIntoNsfw,
   personSchema,
   refuse,
+  sponsoredTransactionSchema,
   stickerLookup,
   stickerSchema,
   stickerViewer,
   toGift,
   toPerson,
-  type EscrowTransfer,
+  toSponsoredTransaction,
   type Refusal,
 } from "../shapes.ts";
-import { checkDeposit, closingDates, ownGift } from "./deposit.ts";
+import { oneAtATime } from "../sui/oneAtATime.ts";
+import {
+  isLive,
+  SPONSORSHIP_MARGIN_MS,
+  sponsored,
+  suiDepsOf,
+  type SuiTransaction,
+  type SuiTransactionDeps,
+} from "../sui/transactions.ts";
+import {
+  closeUndeposited,
+  currentGift,
+  openGiftTransaction,
+  ownGift,
+  settleOpenGiftTransaction,
+  type GiftRow,
+  type GiftStep,
+} from "./giftTransactions.ts";
 
-export type GiftRow = typeof gifts.$inferSelect;
-
-/** A step on one gift: the gift after it, or why it was refused. */
-export type GiftStep<Code extends string> = { refusal: null; gift: GiftRow } | Refusal<Code>;
+export type { GiftStep } from "./giftTransactions.ts";
 
 /**
  * The gift that still holds a sticker: in the bag or sent, or in the escrow. gifts_one_per_sticker
@@ -42,8 +56,29 @@ export const giftHoldingSticker = (db: Pick<Db, "select">, stickerId: string) =>
     )
     .get();
 
-/** A Gift Claim Token: `0x` and 64 lowercase hex digits, typed for keccak256. */
+/** A Gift Claim Token: `0x` and 64 lowercase hex digits. */
 export const giftClaimTokenSchema = z.templateLiteral(["0x", z.string().regex(/^[0-9a-f]{64}$/)]);
+
+/** 32 bytes as the database and the escrow take them: 0x and 64 lowercase hex digits. */
+const hexOf = (bytes: Uint8Array) => `0x${Buffer.from(bytes).toString("hex")}`;
+
+/** The Gift Claim Token's commitment, which the escrow and the database keep: its sha256. */
+export const claimCommitmentOf = (giftClaimToken: string) =>
+  hexOf(
+    createHash("sha256")
+      .update(Buffer.from(giftClaimToken.slice(2), "hex"))
+      .digest(),
+  );
+
+/** A new gift's id and Gift Claim Token, each 32 random bytes, and the token's commitment. */
+function newGiftClaim() {
+  const giftClaimToken = hexOf(randomBytes(32));
+  return {
+    giftId: hexOf(randomBytes(32)),
+    giftClaimToken,
+    claimCommitment: claimCommitmentOf(giftClaimToken),
+  };
+}
 
 /** A sticker to give; `forUserId` when the giver picked who it's for in the app. */
 export const packageBodySchema = createInsertSchema(gifts).pick({
@@ -56,12 +91,19 @@ export const packagedGiftSchema = z.object({
   gift: giftSchema,
   /** Only in the 201: the gift link carries it, and the server keeps only its commitment. */
   giftClaimToken: bytes32Schema.nullable(),
-  /** Null on the mock chain, and once the deposit has landed. */
-  escrowTransfer: escrowTransferSchema.nullable(),
+  /** The deposit for the giver's wallet to sign; null on the mock chain, and once it has landed. */
+  deposit: sponsoredTransactionSchema.nullable(),
 });
 export type PackagedGift = z.infer<typeof packagedGiftSchema>;
 
 export const giftResponseSchema = z.object({ gift: giftSchema });
+
+/** Take-out's start: the gift, and the take-out for the giver's wallet to sign while the escrow holds it. */
+export const takeOutStartSchema = z.object({
+  gift: giftSchema,
+  takeOut: sponsoredTransactionSchema.optional(),
+});
+export type TakeOutStart = z.infer<typeof takeOutStartSchema>;
 
 export const sharedBodySchema = z.object({ outcome: z.enum(["sent", "cancelled"]) });
 type SharedOutcome = z.infer<typeof sharedBodySchema>["outcome"];
@@ -78,107 +120,108 @@ export const pendingGiftsSchema = z.object({
 });
 export type PendingGifts = z.infer<typeof pendingGiftsSchema>;
 
-/** The escrow chain's transfer of a gift's sticker from the giver's smart wallet into the escrow. */
-function escrowTransferFor(
-  giftChain: GiftChain,
-  gift: GiftRow,
-  tokenId: string | null,
-  sender: string | null,
-): EscrowTransfer {
-  if (tokenId === null) throw new Error(`Sticker ${gift.stickerId} has no NFT to give`);
-  // Everyone has a smart wallet once minting is on, so the contract has no code for this.
-  if (sender === null) {
-    throw new Error(`Person ${gift.giverId} has no smart wallet to send gift ${gift.id} from`);
-  }
-  return giftChain.prepareGiftTransfer({
-    sender,
-    tokenId,
-    giftId: gift.id,
-    claimCommitment: gift.claimCommitment,
-    expiresAt: gift.expiresAt,
-  });
-}
-
 export type Packaging =
   | Refusal<
       | "sticker_not_found"
       | "not_yours"
       | "gift_in_transit"
-      | "gift_held"
       | "not_minted"
+      | "no_sui_wallet"
       | "user_not_found"
       | "own_gift"
-      | "adults_only"
+      | "nsfw_not_opted_in"
+      | "deposit_not_landed"
     >
   | { refusal: null; created: boolean; packaged: PackagedGift };
 
-/** Packaging: a new gift of a sticker you hold, or the one already in the bag. */
+type Packaged = Extract<Packaging, { refusal: null }>;
+
+/**
+ * The checks every Packaging makes: the sticker is the giver's, and the person it's for can have it.
+ * Answers the sticker, and the gift still in the bag for it, which the giver can package again.
+ */
+function checkPackaging(
+  db: Pick<Db, "select">,
+  userId: string,
+  stickerId: string,
+  forUserId: string | null,
+):
+  | Exclude<Packaging, Packaged>
+  | { refusal: null; sticker: typeof stickers.$inferSelect; bagged: GiftRow | null } {
+  const sticker = db.select().from(stickers).where(eq(stickers.id, stickerId)).get();
+  if (!sticker) return refuse("sticker_not_found", `There's no sticker ${stickerId}`);
+  if (sticker.ownerId !== userId) {
+    return refuse("not_yours", `Sticker ${stickerId} is held by someone else`);
+  }
+  // The table refuses these too; checking here answers with a refusal the app can show.
+  if (forUserId === userId) return refuse("own_gift", "A gift can't be for its own giver");
+  if (forUserId !== null) {
+    const recipient = db.select().from(users).where(eq(users.id, forUserId)).get();
+    if (!recipient) return refuse("user_not_found", `There's no person ${forUserId} to give it to`);
+    if (sticker.nsfw && !optedIntoNsfw(recipient)) {
+      return refuse(
+        "nsfw_not_opted_in",
+        `Sticker ${stickerId} is NSFW, and ${forUserId} has the NSFW opt-in off`,
+      );
+    }
+  }
+  const open = giftHoldingSticker(db, stickerId) ?? null;
+  if (open && !(open.status === "packed" && open.giverId === userId)) {
+    return refuse(
+      "gift_in_transit",
+      `Sticker ${stickerId} is still in gift ${open.id}: ${open.status}, escrow ${open.escrowStatus}`,
+    );
+  }
+  return { refusal: null, sticker, bagged: open };
+}
+
+/** A gift still in the bag is for whoever the giver picked this time. */
+function packFor(db: Pick<Db, "update">, gift: GiftRow, forUserId: string | null): GiftRow {
+  if (gift.forUserId === forUserId) return gift;
+  return db.update(gifts).set({ forUserId }).where(eq(gifts.id, gift.id)).returning().get();
+}
+
+/** A gift packaged again: no token, since only the first answer carries it. */
+const packagedAgain = (gift: GiftRow, deposit: SuiTransaction | null): Packaged => ({
+  refusal: null,
+  created: false,
+  packaged: {
+    gift: toGift(gift),
+    giftClaimToken: null,
+    deposit: deposit && toSponsoredTransaction(deposit),
+  },
+});
+
+/**
+ * Packaging: a new gift of a sticker you hold, or the one already in the bag, with the deposit for
+ * the giver's wallet to sign while the escrow doesn't hold it yet.
+ */
 export async function packageGift(
   deps: AppDeps,
   userId: string,
   { stickerId, forUserId = null }: PackageBody,
 ): Promise<Packaging> {
-  const { db, clock, giftChain, smartWallets } = deps;
-  const sender = giftChain ? await smartWallets.addressFor(userId) : null;
-  if (giftChain) {
-    // A gift the server took out while the escrow held its sticker: the escrow may have let go since.
-    const held = giftHoldingSticker(db, stickerId);
-    if (held?.status === "taken_out" && held.giverId === userId) {
-      await checkDeposit(deps, giftChain, held);
-    }
-  }
+  const sui = suiDepsOf(deps);
+  if (!sui) return packageOnMockChain(deps, userId, stickerId, forUserId);
+  return oneAtATime(`sticker:${stickerId}`, () =>
+    packageOnSui(deps, sui, userId, stickerId, forUserId),
+  );
+}
+
+/** On the mock chain a gift is in the escrow from the start, so it has no deposit to sign. */
+function packageOnMockChain(
+  { db, clock }: AppDeps,
+  userId: string,
+  stickerId: string,
+  forUserId: string | null,
+): Packaging {
   const now = clock.now();
   return db.transaction(
     (tx): Packaging => {
-      const sticker = tx.select().from(stickers).where(eq(stickers.id, stickerId)).get();
-      if (!sticker) return refuse("sticker_not_found", `There's no sticker ${stickerId}`);
-      if (sticker.ownerId !== userId) {
-        return refuse("not_yours", `Sticker ${stickerId} is held by someone else`);
-      }
-      // The table refuses these too; checking here answers with a refusal the app can show.
-      if (forUserId === userId) return refuse("own_gift", "A gift can't be for its own giver");
-      if (forUserId !== null) {
-        const recipient = tx.select().from(users).where(eq(users.id, forUserId)).get();
-        if (!recipient) {
-          return refuse("user_not_found", `There's no person ${forUserId} to give it to`);
-        }
-        if (sticker.nsfw && ageStatusOf(recipient) !== "adult") {
-          return refuse(
-            "adults_only",
-            `Sticker ${stickerId} is NSFW, and ${forUserId} isn't an adult`,
-          );
-        }
-      }
-      const open = giftHoldingSticker(tx, stickerId);
-      if (open?.status === "packed" && open.giverId === userId) {
-        // Still in the bag: it's for whoever the giver picked this time.
-        if (open.forUserId !== forUserId) {
-          tx.update(gifts).set({ forUserId }).where(eq(gifts.id, open.id)).run();
-        }
-        const escrowTransfer =
-          giftChain && open.escrowStatus === "missing"
-            ? escrowTransferFor(giftChain, open, sticker.tokenId, sender)
-            : null;
-        const packaged = { gift: toGift(open), giftClaimToken: null, escrowTransfer };
-        return { refusal: null, created: false, packaged };
-      }
-      if (open?.status === "taken_out" && open.giverId === userId) {
-        return refuse(
-          "gift_held",
-          `The escrow holds sticker ${stickerId} for gift ${open.id} until its giver takes it out on chain`,
-          open.id,
-        );
-      }
-      if (open) {
-        return refuse(
-          "gift_in_transit",
-          `Sticker ${stickerId} is still in gift ${open.id}: ${open.status}, escrow ${open.escrowStatus}`,
-        );
-      }
-      if (giftChain && sticker.tokenId === null) {
-        return refuse("not_minted", `Sticker ${stickerId} has no NFT to give yet`);
-      }
-      const claim = giftChain ? giftChain.createGiftClaim() : createGiftClaim();
+      const checked = checkPackaging(tx, userId, stickerId, forUserId);
+      if (checked.refusal !== null) return checked;
+      if (checked.bagged) return packagedAgain(packFor(tx, checked.bagged, forUserId), null);
+      const claim = newGiftClaim();
       const gift = tx
         .insert(gifts)
         .values({
@@ -188,19 +231,153 @@ export async function packageGift(
           forUserId,
           claimCommitment: claim.claimCommitment,
           expiresAt: new Date(now.getTime() + GIFT_EXPIRY_MS),
-          // The mock chain's deposit counts as landed at once.
-          escrowStatus: giftChain ? "missing" : "pending",
+          escrowStatus: "pending",
         })
         .returning()
         .get();
-      const escrowTransfer = giftChain
-        ? escrowTransferFor(giftChain, gift, sticker.tokenId, sender)
-        : null;
-      const packaged = { gift: toGift(gift), giftClaimToken: claim.giftClaimToken, escrowTransfer };
+      const packaged = { gift: toGift(gift), giftClaimToken: claim.giftClaimToken, deposit: null };
       return { refusal: null, created: true, packaged };
     },
     { behavior: "immediate" },
   );
+}
+
+/** What a gift's deposit moves, and who signs it. */
+interface DepositTerms {
+  sender: string;
+  userId: string;
+  stickerId: string;
+  stickerObjectId: string;
+}
+
+async function packageOnSui(
+  deps: AppDeps,
+  sui: SuiTransactionDeps,
+  userId: string,
+  stickerId: string,
+  forUserId: string | null,
+): Promise<Packaging> {
+  const checked = checkPackaging(deps.db, userId, stickerId, forUserId);
+  if (checked.refusal !== null) return checked;
+  const stickerObjectId = checked.sticker.objectId;
+  if (stickerObjectId === null) {
+    return refuse("not_minted", `Sticker ${stickerId} isn't on Sui yet, so it can't be given`);
+  }
+  const sender = await deps.suiWallets.addressFor(userId);
+  if (!sender) return refuse("no_sui_wallet", `Person ${userId} has no Sui wallet to give from`);
+  const terms = { sender, userId, stickerId, stickerObjectId };
+  const { bagged } = checked;
+  if (bagged) {
+    const again = await oneAtATime(`gift:${bagged.id}`, () =>
+      packageAgain(sui, bagged, forUserId, terms),
+    );
+    if (again) return again;
+  }
+  return packageNew(sui, forUserId, terms);
+}
+
+/**
+ * Packages the gift in the bag again: its deposit answered again while it's live, else once the last
+ * one is settled, a new deposit for it, or none once the escrow holds it. Null when the gift closed
+ * meanwhile, or its expiry is too near for a deposit to land, so the sticker gets a new gift.
+ */
+async function packageAgain(
+  sui: SuiTransactionDeps,
+  bagged: GiftRow,
+  forUserId: string | null,
+  terms: DepositTerms,
+): Promise<Packaging | null> {
+  const { db } = sui;
+  const now = sui.clock.now();
+  const open = openGiftTransaction(db, bagged.id);
+  if (open?.kind === "deposit" && isLive(open, now)) {
+    return packagedAgain(packFor(db, bagged, forUserId), open);
+  }
+  const settled = await settleOpenGiftTransaction(sui, bagged);
+  if (settled?.outcome === null) {
+    return refuse(
+      "deposit_not_landed",
+      `Sui hasn't shown gift ${bagged.id}'s last transaction yet; package it again in a moment`,
+    );
+  }
+  const gift = currentGift(db, bagged.id);
+  if (gift.status !== "packed") return null;
+  if (gift.escrowStatus === "pending") return packagedAgain(packFor(db, gift, forUserId), null);
+  if (gift.expiresAt.getTime() - now.getTime() <= SPONSORSHIP_MARGIN_MS) {
+    closeUndeposited(db, gift, now);
+    return null;
+  }
+  const kind = await sui.sui.depositKind({
+    sender: terms.sender,
+    stickerObjectId: terms.stickerObjectId,
+    giftId: gift.id,
+    claimCommitment: gift.claimCommitment,
+    expiresAt: gift.expiresAt,
+  });
+  const deposit = await sponsored(
+    sui,
+    {
+      kind: "deposit",
+      sender: terms.sender,
+      userId: terms.userId,
+      stickerId: terms.stickerId,
+      giftId: gift.id,
+    },
+    kind,
+  );
+  return packagedAgain(packFor(db, gift, forUserId), deposit);
+}
+
+/**
+ * A new gift: its deposit is sponsored first, then the gift and its deposit's row go in together,
+ * so no gift waits on a deposit Shinami won't pay for.
+ */
+async function packageNew(
+  sui: SuiTransactionDeps,
+  forUserId: string | null,
+  terms: DepositTerms,
+): Promise<Packaging> {
+  const claim = newGiftClaim();
+  const expiresAt = new Date(sui.clock.now().getTime() + GIFT_EXPIRY_MS);
+  const kind = await sui.sui.depositKind({
+    sender: terms.sender,
+    stickerObjectId: terms.stickerObjectId,
+    giftId: claim.giftId,
+    claimCommitment: claim.claimCommitment,
+    expiresAt,
+  });
+  const deposit = await sponsored(
+    sui,
+    {
+      kind: "deposit",
+      sender: terms.sender,
+      userId: terms.userId,
+      stickerId: terms.stickerId,
+      giftId: claim.giftId,
+    },
+    kind,
+    (tx) => {
+      tx.insert(gifts)
+        .values({
+          id: claim.giftId,
+          stickerId: terms.stickerId,
+          giverId: terms.userId,
+          forUserId,
+          claimCommitment: claim.claimCommitment,
+          expiresAt,
+        })
+        .run();
+    },
+  );
+  return {
+    refusal: null,
+    created: true,
+    packaged: {
+      gift: toGift(currentGift(sui.db, claim.giftId)),
+      giftClaimToken: claim.giftClaimToken,
+      deposit: toSponsoredTransaction(deposit),
+    },
+  };
 }
 
 const closed = (gift: GiftRow) =>
@@ -234,91 +411,6 @@ export function reportShared(
         .returning()
         .get();
       return { refusal: null, gift: sent };
-    },
-    { behavior: "immediate" },
-  );
-}
-
-/**
- * A take-out its gift's status already answers: one that landed before, answered again, or a
- * refusal. Null while the gift is packed or sent, so it can still be taken out, and while the server
- * has taken it out but the escrow holds its sticker, so the giver's take-out on chain settles it.
- */
-function takeOutState(gift: GiftRow): GiftStep<"already_received" | "gift_closed"> | null {
-  // Rejected, or never in the escrow.
-  if (gift.status === "taken_out" && gift.escrowStatus !== "pending") {
-    return { refusal: null, gift };
-  }
-  if (gift.status === "returned" && gift.escrowStatus === "expired_returned") {
-    return { refusal: null, gift };
-  }
-  if (gift.status === "received") {
-    return refuse("already_received", `Gift ${gift.id} was already received`);
-  }
-  if (gift.status !== "packed" && gift.status !== "sent" && gift.status !== "taken_out") {
-    return closed(gift);
-  }
-  return null;
-}
-
-/**
- * Takes a gift back before anyone receives it, from the bag or after sending; or records the giver's
- * take-out on chain of one the server took out.
- */
-export async function takeOut(
-  { db, clock, giftChain }: AppDeps,
-  userId: string,
-  giftId: string,
-): Promise<
-  GiftStep<
-    "gift_not_found" | "not_yours" | "already_received" | "gift_closed" | "take_out_not_landed"
-  >
-> {
-  const before = ownGift(db.select().from(gifts).where(eq(gifts.id, giftId)).get(), userId, giftId);
-  if (before.refusal !== null) return before;
-  const answered = takeOutState(before.gift);
-  if (answered) return answered;
-
-  let escrowStatus: "rejected" | "expired_returned" = "rejected";
-  if (giftChain) {
-    const escrow = await giftChain.readEscrowGift(giftId);
-    if (escrow.status === "claimed") {
-      return refuse("already_received", `Gift ${giftId} was already received`);
-    }
-    if (escrow.status !== "rejected" && escrow.status !== "expired_returned") {
-      return refuse(
-        "take_out_not_landed",
-        `Gift ${giftId}'s take-out is not confirmed: escrow is ${escrow.status}`,
-      );
-    }
-    escrowStatus = escrow.status;
-  }
-
-  return db.transaction(
-    (tx) => {
-      const owned = ownGift(
-        tx.select().from(gifts).where(eq(gifts.id, giftId)).get(),
-        userId,
-        giftId,
-      );
-      if (owned.refusal !== null) return owned;
-      const { gift } = owned;
-      // Another request may have settled it while the chain was read.
-      const settled = takeOutState(gift);
-      if (settled) return settled;
-      const status = escrowStatus === "expired_returned" ? "returned" : "taken_out";
-      const takenOut = tx
-        .update(gifts)
-        .set({
-          status,
-          ...closingDates(status, gift, clock.now()),
-          // The mock chain's reject lands at once, so the sticker can be given again.
-          escrowStatus,
-        })
-        .where(eq(gifts.id, giftId))
-        .returning()
-        .get();
-      return { refusal: null, gift: takenOut };
     },
     { behavior: "immediate" },
   );

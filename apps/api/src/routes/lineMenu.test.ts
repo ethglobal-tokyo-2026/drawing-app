@@ -12,9 +12,10 @@ import {
   TEST_CHAT_MENU_IDS,
   type FakeLine,
 } from "../testing/fakeLine.ts";
-import { fakeTicketPayments } from "../testing/fakes.ts";
+import { fakeSuiWallets } from "../testing/fakes.ts";
+import { fakeSui } from "../testing/fakeSui.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
-import { payOnSui, reportPayment, startedPurchase } from "../tickets/testPurchases.ts";
+import { payPurchase, signedBy, startedPurchase } from "../tickets/testPurchases.ts";
 import { spendBody } from "../tickets/testSpends.ts";
 import { TICKET_PACKS, type TicketKind } from "../tickets/tickets.ts";
 
@@ -25,7 +26,8 @@ const LINE_USER_ID = `U${"0123456789abcdef".repeat(2)}`;
 const [ONE_TICKET] = TICKET_PACKS;
 
 let test: TestApp;
-let sui: ReturnType<typeof fakeTicketPayments>;
+/** The fake Privy Sui wallets, whose keys sign the person's payments. */
+let wallets: ReturnType<typeof fakeSuiWallets>;
 let line: FakeLine;
 let userId: string;
 let logged: unknown[][];
@@ -36,11 +38,16 @@ async function start({
   language = "en",
 }: { ids?: ChatMenuIds; language?: "en" | "ja" } = {}) {
   line = createFakeLine();
-  sui = fakeTicketPayments();
-  test = await createTestApp((base) => ({
-    ...chatMenuThrough(line, ids)(base),
-    ticketPayments: sui.ticketPayments,
-  }));
+  test = await createTestApp((base) => {
+    const chain = fakeSui(base.clock);
+    wallets = fakeSuiWallets(base.db);
+    return {
+      ...chatMenuThrough(line, ids)(base),
+      sui: chain.sui,
+      gasStation: chain.gasStation,
+      suiWallets: wallets,
+    };
+  });
   userId = insertUser(test.db, { lineUserId: LINE_USER_ID, language });
 }
 
@@ -164,9 +171,9 @@ describe("the chat menu after a spend or a purchase", () => {
 
   it("shows reserve tickets only once the daily ones are gone, after a purchase", async () => {
     for (let spent = 0; spent < DAILY_TICKETS_PER_DAY; spent++) await spendTicket("daily");
-    const purchase = await startedPurchase(test, userId, ONE_TICKET.tickets);
-    const txDigest = payOnSui(sui.transactions, purchase);
-    expect((await reportPayment(test, userId, purchase.id, txDigest)).status).toBe(201);
+    const { purchase, payment } = await startedPurchase(test, userId, ONE_TICKET.tickets);
+    const signed = await signedBy(wallets.keyOf(userId), payment);
+    expect((await payPurchase(test, userId, purchase.id, signed)).status).toBe(201);
     expect(await menuAfterLinks()).toBe(TEST_CHAT_MENU_IDS.en.reserve);
 
     await spendTicket("reserve");

@@ -24,40 +24,28 @@ export const users = sqliteTable(
      */
     handle: text("handle"),
     /**
-     * The Privy smart wallet on Ethereum Sepolia, lowercase. Stickers are minted and claimed to it, and it
-     * maps chain events back to a person. Set from Privy the first time the server needs it.
+     * The language the server writes to the person in outside the app: set at sign-in, and by a
+     * Settings choice.
      */
-    smartAccountAddress: text("smart_account_address").unique(),
+    language: text("language", { enum: ["en", "ja"] }).notNull(),
+    /** The language picked in Settings, which the app starts in on every device; null follows LINE's. */
+    languageChoice: text("language_choice", { enum: ["en", "ja"] }),
+    /**
+     * When the person turned on Show 18+ stickers in Settings; null while it's off. Only someone
+     * with it on marks, sees unblurred or receives NSFW stickers. Cleared on account deletion.
+     */
+    nsfwOptedInAt: integer("nsfw_opted_in_at", { mode: "timestamp_ms" }),
+    /**
+     * The person's Privy Sui wallet: 0x and 64 lowercase hex digits. Stickers are minted and claimed
+     * to it, and it signs their deposits, take-outs and payments. Set from Privy the first time the
+     * server needs it, and kept on account deletion.
+     */
+    suiAddress: text("sui_address").unique(),
     /** Set on the first action, which carries the terms line. */
     termsAcceptedAt: integer("terms_accepted_at", { mode: "timestamp_ms" }),
     /** Set on account deletion. The row stays, as the Original Artist of their stickers. */
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
     ...timestamps(),
-    // Columns added after the table was made go last, where ALTER TABLE puts them.
-    /**
-     * The language the server writes to the person in outside the app: set at sign-in, and by a
-     * Settings choice.
-     */
-    language: text("language", { enum: ["en", "ja"] })
-      .notNull()
-      .default("en"),
-    /**
-     * The person's ENS label: <ens_label>.croquis-app.eth. Follows the handle until the name is
-     * onchain (ens_named_at), then fixed, since an onchain name is forever. Kept on account
-     * deletion.
-     */
-    ensLabel: text("ens_label").unique(),
-    /** When CroquisNames confirmed the person's name onchain. */
-    ensNamedAt: integer("ens_named_at", { mode: "timestamp_ms" }),
-    /** The language picked in Settings, which the app starts in on every device; null follows LINE's. */
-    languageChoice: text("language_choice", { enum: ["en", "ja"] }),
-    /** When an Orb-verified World ID proved the person is 18 or older. Cleared on account deletion. */
-    ageVerifiedAt: integer("age_verified_at", { mode: "timestamp_ms" }),
-    /**
-     * The age verification's World ID nullifier, in decimal: the same for one World ID on every
-     * account, so one World ID verifies one live account. Cleared on account deletion.
-     */
-    ageVerificationNullifier: text("age_verification_nullifier").unique(),
   },
   (t) => [
     uniqueIndex("users_handle").on(sql`lower(${t.handle})`),
@@ -67,9 +55,9 @@ export const users = sqliteTable(
         or (${t.deletedAt} is not null and ${t.lineUserId} is null and ${t.lineDisplayName} is null and ${t.linePictureUrl} is null)`,
     ),
     check(
-      "users_smart_account_address",
-      sql`${t.smartAccountAddress} is null
-        or (length(${t.smartAccountAddress}) = 42 and ${t.smartAccountAddress} = lower(${t.smartAccountAddress}))`,
+      "users_sui_address",
+      sql`${t.suiAddress} is null
+        or (length(${t.suiAddress}) = 66 and ${t.suiAddress} like '0x%' and ${t.suiAddress} = lower(${t.suiAddress}))`,
     ),
   ],
 );

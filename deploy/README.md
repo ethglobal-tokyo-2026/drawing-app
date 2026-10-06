@@ -4,8 +4,8 @@ One box serves the app behind HAProxy at `DEPLOY_URL`: `/api/` goes to the REST 
 
 ## Settings
 
-- `deploy/.env`, gitignored (copy `deploy/.env.example`): the box's SSH login (`DEPLOY_TARGET`), the Sepolia RPC, keys and contract addresses, and the secrets for Privy, the Messaging API channel and World ID. `DEPLOY_ENV_FILE` points `deploy.sh` and `deploy-api.sh` at another gitignored file.
-- `deploy/drawing-api.env` and `deploy/sticker-auth.env`: the API's and the auth server's settings. They're tracked, so no secret goes in them, and both deploy scripts refuse a `drawing-api.env` that mentions `DEV_SIGN_IN`.
+- `deploy/.env`, gitignored (copy `deploy/.env.example`): the box's SSH login (`DEPLOY_TARGET`), the API's secrets (the Sui server key, Shinami's access key, Privy's app secret and the Messaging API channel's secret), and `SUI_DEPLOYER_PRIVATE_KEY`, which only `publish-sui.mjs` reads. `DEPLOY_ENV_FILE` points the deploy scripts and `publish-sui.mjs` at another gitignored file.
+- `deploy/drawing-api.env` and `deploy/sticker-auth.env`: the API's and the auth server's settings. They're tracked, so no secret goes in them, and both deploy scripts refuse a `drawing-api.env` that mentions `DEV_SIGN_IN`. `drawing-api.env` also holds the IDs of the published stickers package, which `publish-sui.mjs` prints, and `deploy-api.sh` stops while one is blank.
 - The box makes the auth server's signing key and the API's session secret itself, and they never leave it.
 
 ## Main only
@@ -16,14 +16,12 @@ One box serves the app behind HAProxy at `DEPLOY_URL`: `/api/` goes to the REST 
 
 Publishes everything, in order:
 
-1. `deploy-api.sh --preflight-only` checks the chain settings: `deploy/.env` merged with the box's `chain.env`.
-2. Builds the frontend, with the developer slip on, `STICKER_GIFT_ESCROW_ADDRESS` as its escrow and its hashed files on `CDN_ORIGIN` when set, and the auth server.
+1. `deploy-api.sh --preflight-only` checks the stickers package's IDs in `drawing-api.env` and the chain settings in `deploy/.env`.
+2. Builds the frontend, with the developer slip on and its hashed files on `CDN_ORIGIN` when set, and the auth server.
 3. `deploy-api.sh` publishes the API (below).
 4. `install-node.sh` puts the pinned Node on the box for the auth server.
 5. Syncs the site and the auth server, makes the signing key if it's missing, and restarts `sticker-board` and `sticker-auth` when their files changed.
 6. Checks that the box and `DEPLOY_URL` serve the build and the auth server's JWKS, and that `CDN_ORIGIN`, when set, serves the build's entry script with its CORS header.
-
-`VITE_STICKER_RPC_URL`, optional, goes into the browser bundle, so it must be a public RPC; the API's RPC never does.
 
 ## CDN
 
@@ -38,7 +36,7 @@ Everything else stays on the box: index.html, which LIFF opens there, the public
 
 ## `./deploy/deploy-api.sh`
 
-Publishes the API alone; `--preflight-only` stops after checking the chain settings. It builds the API, installs `better-sqlite3` and `sharp` for the pinned Node on the box, and syncs the migrations, `drawing-api.env` and `deploy/line/menus.json`. It makes the session secret if it's missing, and installs the chain settings in the box's mode-600 `chain.env`, keeping values already there that `deploy/.env` leaves out. It restarts `drawing-api` when anything changed, then checks `/api/me` on the box and at `DEPLOY_URL`.
+Publishes the API alone; `--preflight-only` stops after checking the stickers package's IDs and the chain settings. It builds the API, installs `better-sqlite3` and `sharp` for the pinned Node on the box, and syncs the migrations, `drawing-api.env` and `deploy/line/menus.json`. It makes the session secret if it's missing, and writes the box's mode-600 `chain.env` from `deploy/.env`: the Sui server key, Shinami's access key, Privy's app ID and secret, and the Messaging API channel's ID and secret, all required. Nothing else goes in it, so a setting the API stopped reading leaves the box with the next deploy. It restarts `drawing-api` when anything changed, then checks `/api/me` on the box and at `DEPLOY_URL`.
 
 The deployment tests use local temporary files and fake transport/service commands, never SSH or a
 running server: `deployApi.test.ts` runs `deploy-api.sh`, and `installChainEnv.test.ts` the chain
@@ -48,20 +46,26 @@ settings' installer. `pnpm check` runs both:
 pnpm --filter @drawing-app/api exec vitest run scripts/
 ```
 
-## `bash deploy/deploy-contracts.sh`
+## `node deploy/publish-sui.mjs`
 
-Deploys the names under the parent name, `ENS_PARENT_LABEL`.eth, and `StickerGiftEscrow` to Ethereum Sepolia with Foundry's `forge script`, from `packages/sticker-chain` with its submodules initialized. It needs `ETHEREUM_SEPOLIA_RPC_URL`, `DEPLOYER_PRIVATE_KEY`, `STICKER_SEALER_PRIVATE_KEY`, `ENS_GATEWAY_PRIVATE_KEY`, `ENS_GATEWAY_URL` and `ENS_PARENT_LABEL` in `deploy/.env`.
+Publishes the stickers package (`contracts/sui-sticker-contract/stickers`) to the Sui network that `drawing-api.env`'s `SUI_NETWORK` names, names the API's server in it and creates the stickers' Display. It builds with the `sui` CLI, and reads from `deploy/.env`:
 
-- `ENS_PARENT_LABEL` is the parent name's label, `croquis-app` for croquis-app.eth. It must match `CROQUIS_PARENT_NAME` in `packages/sticker-chain/src/croquis-names.ts`, the name the API shows and answers for, so a new parent name changes both.
-- With `STICKER_NFT_ADDRESS` set, it keeps that StickerNFT; otherwise it deploys one.
-- The deployer stays the administrator. The sealer gets mint, claim-signing and naming permissions, and the gateway key's address is the only signer `CroquisResolver` trusts.
-- When the deployer owns the parent name, it points that name at the new registry and resolver; otherwise it prints the two addresses the name's owner sets.
+- `SUI_DEPLOYER_PRIVATE_KEY`: publishes, and keeps the package's `AdminCap`, `UpgradeCap` and `DisplayCap` afterwards. It never goes on the box.
+- `SUI_SERVER_PRIVATE_KEY`: the API's key. Its address becomes the one that mints stickers and claims or returns gifts.
+- `SHINAMI_ACCESS_KEY`, optional: Shinami Gas Station pays the gas when it takes the transaction. Otherwise the deployer pays.
 
-Copy the printed `STICKER_NFT_ADDRESS`, `STICKER_GIFT_ESCROW_ADDRESS`, `CROQUIS_NAMES_ADDRESS` and `CROQUIS_RESOLVER_ADDRESS` into `deploy/.env`, then run `./deploy/deploy.sh`.
+Without `--publish` it only simulates: it builds the package, simulates the publish from a throwaway address when `SUI_DEPLOYER_PRIVATE_KEY` isn't set, and prints the cost, what the publish creates, who would pay and the Display's fields. Nothing is sent.
 
-At boot, and just after each midnight, Tokyo time, the API checks that these agree: the sealer holds `NAMER_ROLE` on `CroquisNames`; `CroquisNames`' `parentName()` is `CROQUIS_PARENT_NAME`; `CroquisNames`, `CroquisResolver` and the escrow read the configured `StickerNFT`; the escrow's `names()` is the configured `CroquisNames`. The server log's `chain.contracts.checked` shows each result, and `chain.contracts.mismatch` names each mismatch with its addresses or names. While the sealer lacks `NAMER_ROLE`, the parent name differs or a `STICKERS()` differs, naming is off; the check that finds them agreeing turns it back on and names everyone still unnamed.
+```sh
+node deploy/publish-sui.mjs --image-host <the API's CDN_BASE_URL>
+node deploy/publish-sui.mjs --image-host <the API's CDN_BASE_URL> --publish
+```
 
-At the same times, the API mints every sealed sticker still without its NFT, oldest first, as Sealing does: one whose mint failed and was never retried, or one sealed in mock chain mode. `sticker.mint.catch_up.swept` tallies each run, and `sticker.mint.catch_up.skipped` says why it left a sticker unminted: its Original Artist has no smart wallet (`no_smart_account`), deleted their account (`no_live_person`), or no longer holds it (`not_held_by_artist`, from Giving in mock chain mode).
+`--image-host` is the https host that Display joins each sticker's image file name to. With `--publish` it sends two transactions, because a transaction can't call the package it publishes: the publish, then `set_server` and `create_display`, which sends the `DisplayCap` to the deployer. When the second fails, the package is published but unusable by the API; run again for a fresh one.
+
+It prints the package's IDs as `KEY=value` lines: `SUI_STICKER_PACKAGE`, `SUI_STICKER_REGISTRY`, `SUI_SERVER_CONFIG` and `SUI_GIFT_ESCROW`. Paste them into `deploy/drawing-api.env` and `apps/api/.env.example`, then run `./deploy/deploy.sh`.
+
+To move the sticker images to another host, run `node deploy/publish-sui.mjs --set-image-host <url> [--publish]`. It sets Display's `image_url` with the deployer's `DisplayCap` (`display_registry::set`), and every sticker follows. It reads `SUI_STICKER_PACKAGE` from `drawing-api.env`.
 
 ## LINE: chat menus and greeting
 

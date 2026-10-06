@@ -1,140 +1,152 @@
 import { ticketPurchases } from "@drawing-app/db";
-import { insertUser } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Schedule } from "../midnightJob.ts";
-import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { fakeTicketPayments } from "../testing/fakes.ts";
+import { SETTLE_GRACE_MS } from "../sui/transactions.ts";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
+import { refusalOf } from "../testing/responses.ts";
 import {
   PURCHASE_PAYMENT_WINDOW_MS,
   PURCHASE_SWEEP_EVERY_MS,
   startTicketPurchaseSweeps,
   sweepTicketPurchases,
 } from "./purchaseSweep.ts";
-import { payOnSui, reportPayment, startedPurchase } from "./testPurchases.ts";
-import { TICKET_PACKS, ticketPaymentReference, ticketsLeftOf } from "./tickets.ts";
+import {
+  payPurchase,
+  purchasesApp,
+  signedBy,
+  startedPurchase,
+  type PurchasesApp,
+} from "./testPurchases.ts";
+import { TICKET_PACKS, ticketsLeftOf } from "./tickets.ts";
 
 const [, PACK] = TICKET_PACKS;
 
-let test: TestApp;
-let sui: ReturnType<typeof fakeTicketPayments>;
+let shop: PurchasesApp;
 let userId: string;
 let log: LogLines;
 
 beforeEach(async () => {
   log = captureLogLines();
-  sui = fakeTicketPayments();
-  test = await createTestApp({ ticketPayments: sui.ticketPayments });
-  userId = insertUser(test.db);
+  shop = await purchasesApp();
+  userId = shop.buyer();
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const start = () => startedPurchase(test, userId, PACK.tickets);
-const sweep = () => sweepTicketPurchases(test.deps);
+const sweep = () => sweepTicketPurchases(shop.test.deps);
 const purchaseRow = (id: number) =>
-  test.db.select().from(ticketPurchases).where(eq(ticketPurchases.id, id)).get();
-const reserveLeft = () => ticketsLeftOf(test.db, userId, test.clock.now()).reserveLeft;
+  shop.test.db.select().from(ticketPurchases).where(eq(ticketPurchases.id, id)).get();
+const reserveLeft = () => ticketsLeftOf(shop.test.db, userId, shop.test.clock.now()).reserveLeft;
+
+/** Starts a purchase, and sends its signed payment with Sui's answer lost on the way back. */
+async function paidWithAnswerLost() {
+  const started = await startedPurchase(shop.test, userId, PACK.tickets);
+  shop.chain.answerNext("lost");
+  const signed = await signedBy(shop.walletOf(userId), started.payment);
+  expect(
+    await refusalOf(await payPurchase(shop.test, userId, started.purchase.id, signed)),
+  ).toMatchObject({ status: 503, error: "payment_not_landed" });
+  return started;
+}
 
 describe("the ticket purchase sweep", () => {
-  it("credits a purchase whose payment the app never reported, from the payment's event, once", async () => {
-    const purchase = await start();
-    const txDigest = payOnSui(sui.transactions, purchase);
+  it("credits a payment whose answer the app never got, once Sui shows it ran, and only once", async () => {
+    const { purchase, payment } = await paidWithAnswerLost();
+    shop.chain.show(payment.digest, { ok: true, events: shop.chain.eventsFor(payment.digest) });
     await sweep();
-    expect(purchaseRow(purchase.id)).toMatchObject({
-      txDigest,
-      paidJpyc: purchase.priceJpyc,
-      verifiedAt: test.clock.now(),
-    });
-    log.expectLogged("ticket_purchase.sweep.credited", {
-      userId,
-      purchaseId: purchase.id,
-      txDigest,
-    });
+    expect(purchaseRow(purchase.id)).toMatchObject({ verifiedAt: shop.test.clock.now() });
+    expect(reserveLeft()).toBe(PACK.tickets);
+    log.expectLogged("ticket_purchase.credited", { userId, purchaseId: purchase.id });
     await sweep();
     expect(reserveLeft()).toBe(PACK.tickets);
-    // The app's own report, coming late, finds it counted.
-    expect((await reportPayment(test, userId, purchase.id, txDigest)).status).toBe(409);
   });
 
-  it("leaves a purchase open past payments into another vault, short of its price, or naming no purchase of its person", async () => {
-    const purchase = await start();
-    const someoneElse = insertUser(test.db);
-    for (const change of [
-      { vault: `0x${"e".repeat(64)}` },
-      { amount: BigInt(purchase.priceJpyc) - 1n },
-      { reference: "order-42" },
-      { reference: ticketPaymentReference(someoneElse, purchase.id) },
-      { reference: ticketPaymentReference(userId, purchase.id + 1) },
-    ]) {
-      payOnSui(sui.transactions, purchase, change);
-    }
+  it("gives a purchase up once Sui shows its payment failed", async () => {
+    const { purchase, payment } = await paidWithAnswerLost();
+    shop.chain.show(payment.digest, { ok: false, failure: "MoveAbort(…, 0) in command 1" });
     await sweep();
     expect(purchaseRow(purchase.id)).toMatchObject({
-      txDigest: null,
       verifiedAt: null,
-      givenUpAt: null,
+      givenUpAt: shop.test.clock.now(),
     });
-    expect(reserveLeft()).toBe(0);
-    log.expectLogged("ticket_purchase.sweep.short", { userId, purchaseId: purchase.id });
+    log.expectLogged("ticket_purchase.given_up", { userId, purchaseId: purchase.id });
   });
 
-  it("gives up a purchase no payment came for within the window, once a read reached back to it, and still counts one the app reports later", async () => {
-    const purchase = await start();
-    // The database stamps when it started.
-    const startedAt = purchaseRow(purchase.id)?.createdAt.getTime() ?? NaN;
-    test.clock.set(new Date(startedAt + PURCHASE_PAYMENT_WINDOW_MS - 1));
-    await sweep();
-    expect(purchaseRow(purchase.id)?.givenUpAt).toBeNull();
-
-    test.clock.advance(1);
-    sui.events.read = "stopped_short";
-    await sweep();
-    expect(purchaseRow(purchase.id)?.givenUpAt).toBeNull();
-
-    sui.events.read = "whole";
-    await sweep();
-    expect(purchaseRow(purchase.id)?.givenUpAt).toEqual(test.clock.now());
-    log.expectLogged("ticket_purchase.sweep.given_up", { userId, purchaseId: purchase.id });
-
-    const txDigest = payOnSui(sui.transactions, purchase);
-    await sweep();
-    expect(purchaseRow(purchase.id)?.verifiedAt).toBeNull();
-    expect((await reportPayment(test, userId, purchase.id, txDigest)).status).toBe(201);
-    expect(reserveLeft()).toBe(PACK.tickets);
-  });
-
-  it("runs at boot and every PURCHASE_SWEEP_EVERY_MS after, logging a failed read or credit and going on", async () => {
-    const purchase = await start();
-    const failing = await start();
-    // Newest first, so the failing purchase comes up before the other.
-    payOnSui(sui.transactions, purchase);
-    payOnSui(sui.transactions, failing);
-    test.sqlite.exec(
-      `CREATE TRIGGER fail_credit BEFORE UPDATE ON ticket_purchases WHEN OLD.id = ${failing.id}
-       BEGIN SELECT RAISE(ABORT, 'disk I/O error'); END`,
+  it("gives up a purchase whose payment was never signed once its sponsorship lapses, and one Sui never showed after the grace", async () => {
+    const unsigned = await startedPurchase(shop.test, userId, PACK.tickets);
+    const other = shop.buyer();
+    const lost = await startedPurchase(shop.test, other, PACK.tickets);
+    shop.chain.answerNext("lost");
+    await payPurchase(
+      shop.test,
+      other,
+      lost.purchase.id,
+      await signedBy(shop.walletOf(other), lost.payment),
     );
-    sui.events.read = new Error("fullnode unreachable");
+
+    shop.test.clock.set(new Date(unsigned.payment.expiresAt));
+    await sweep();
+    expect(purchaseRow(unsigned.purchase.id)?.givenUpAt).toEqual(shop.test.clock.now());
+    // Sent, so it's followed through the grace before it counts as never run.
+    expect(purchaseRow(lost.purchase.id)?.givenUpAt).toBeNull();
+
+    shop.test.clock.advance(SETTLE_GRACE_MS);
+    // Sui still doesn't show it, and won't take it again past its lapse.
+    shop.chain.answerNext("lost");
+    await sweep();
+    expect(purchaseRow(lost.purchase.id)?.givenUpAt).toEqual(shop.test.clock.now());
+  });
+
+  it("gives up a purchase left with no payment once the window has passed", async () => {
+    // The start stopped before its payment was sponsored.
+    const [purchase] = shop.test.db
+      .insert(ticketPurchases)
+      .values({ userId, tickets: PACK.tickets, priceYen: PACK.priceYen })
+      .returning()
+      .all();
+    if (!purchase) throw new Error("no purchase inserted");
+    shop.test.clock.set(new Date(purchase.createdAt.getTime() + PURCHASE_PAYMENT_WINDOW_MS - 1));
+    await sweep();
+    expect(purchaseRow(purchase.id)?.givenUpAt).toBeNull();
+    shop.test.clock.advance(2);
+    await sweep();
+    expect(purchaseRow(purchase.id)?.givenUpAt).toEqual(shop.test.clock.now());
+  });
+
+  it("runs at boot and every PURCHASE_SWEEP_EVERY_MS after, logging a payment it can't follow and going on", async () => {
+    const failing = await paidWithAnswerLost();
+    const other = shop.buyer();
+    const fine = await startedPurchase(shop.test, other, PACK.tickets);
+    shop.chain.answerNext("lost");
+    await payPurchase(
+      shop.test,
+      other,
+      fine.purchase.id,
+      await signedBy(shop.walletOf(other), fine.payment),
+    );
+    shop.chain.show(fine.payment.digest, {
+      ok: true,
+      events: shop.chain.eventsFor(fine.payment.digest),
+    });
+    // Sui answers the first payment with an outcome that names no purchase's event: a credit that can't hold.
+    shop.chain.show(failing.payment.digest, { ok: true, events: [] });
+
     const due: { run: () => void; ms: number }[] = [];
     const schedule: Schedule = (run, ms) => {
       due.push({ run, ms });
       return () => {};
     };
-    const sweeps = startTicketPurchaseSweeps({ ...test.deps, schedule });
+    const sweeps = startTicketPurchaseSweeps({ ...shop.test.deps, schedule });
     await sweeps.idle();
-    log.expectLogged("ticket_purchase.sweep_failed");
+    log.expectLogged("ticket_purchase.sweep.failed", { purchaseId: failing.purchase.id });
+    expect(purchaseRow(failing.purchase.id)?.verifiedAt).toBeNull();
+    expect(purchaseRow(fine.purchase.id)?.verifiedAt).toEqual(shop.test.clock.now());
     expect(due.map(({ ms }) => ms)).toEqual([PURCHASE_SWEEP_EVERY_MS]);
-    expect(purchaseRow(purchase.id)?.verifiedAt).toBeNull();
-
-    sui.events.read = "whole";
     due[0]?.run();
     await sweeps.idle();
-    log.expectLogged("ticket_purchase.sweep.failed", { userId, purchaseId: failing.id });
-    expect(purchaseRow(failing.id)?.verifiedAt).toBeNull();
-    expect(purchaseRow(purchase.id)?.verifiedAt).toEqual(test.clock.now());
     expect(due).toHaveLength(2);
     sweeps.stop();
   });

@@ -1,13 +1,15 @@
+import { createHash } from "node:crypto";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { keccak256 } from "viem";
 import { stickerPngsSchema, stickerWebpsSchema } from "../shapes.ts";
 import { sealImages, STICKER_SIZE } from "../stickers/testPngs.ts";
 import { foilMaskAlpha } from "./foilMask.ts";
 import { createDiskImageStore } from "./imageStore.ts";
+
+const sha256Hex = (bytes: Uint8Array) => `0x${createHash("sha256").update(bytes).digest("hex")}`;
 
 const CDN_FOLDER = "/stickers/";
 const pngKinds = stickerPngsSchema.keyof().options;
@@ -41,7 +43,7 @@ const fileAt = (url: string) => join(imageDir, new URL(url).pathname.slice(CDN_F
 /** A disk image store with `pngs` saved in it under their content hash. */
 async function savedSticker(pngs = sealImages()) {
   const store = createDiskImageStore(imageDir, `https://cdn.test${CDN_FOLDER}`);
-  const contentHash = keccak256(pngs.png);
+  const contentHash = sha256Hex(pngs.png);
   await store.save(contentHash, pngs);
   return { store, pngs, contentHash };
 }

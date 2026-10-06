@@ -12,12 +12,25 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, onTestFinished } from "vitest";
+import { chainEnvInput } from "./chainEnvFixture.ts";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const DEPLOY_URL = "https://croquis.test";
+const PACKAGE_ID_KEYS = [
+  "SUI_STICKER_PACKAGE",
+  "SUI_STICKER_REGISTRY",
+  "SUI_SERVER_CONFIG",
+  "SUI_GIFT_ESCROW",
+];
+/** deploy/drawing-api.env as the box would have it once the stickers package is published. */
+const PUBLISHED_API_ENV = [
+  "IMAGE_DIR=unused",
+  ...PACKAGE_ID_KEYS.map((key, index) => `${key}=0x${String(index + 1).repeat(64)}`),
+  "",
+].join("\n");
 
 /** Runs the real deployment script against folders, never a host: fakes stand in for the box's commands. */
-function setup() {
+function setup(apiEnv = PUBLISHED_API_ENV) {
   const dir = mkdtempSync(join(tmpdir(), "drawing-api-deploy-test-"));
   onTestFinished(() => rmSync(dir, { recursive: true }));
   const repo = join(dir, "repo");
@@ -34,7 +47,7 @@ function setup() {
   write(join(remote, "secrets.env"), "SESSION_SECRET=test-session-secret\n");
   write(join(remote, "chain.env"), "PRIVY_APP_SECRET=test-secret\n");
   write(events, "");
-  write(join(repo, "deploy/drawing-api.env"), "IMAGE_DIR=unused\n");
+  write(join(repo, "deploy/drawing-api.env"), apiEnv);
   write(join(repo, "deploy/drawing-api.service"), "test service\n");
   write(join(repo, "deploy/line/menus.json"), "{}\n");
   write(join(repo, "deploy/install-node.sh"), "#!/usr/bin/env bash\nexit 0\n", true);
@@ -118,15 +131,7 @@ process.exit(result.status ?? 1);
     DEPLOY_TARGET: "local-test",
     DEPLOY_API_DIR: remote,
     DEPLOY_URL,
-    ETHEREUM_SEPOLIA_RPC_URL: "https://rpc.test/sepolia",
-    STICKER_NFT_ADDRESS: `0x${"1".repeat(40)}`,
-    STICKER_GIFT_ESCROW_ADDRESS: `0x${"2".repeat(40)}`,
-    STICKER_SEALER_PRIVATE_KEY: `0x${"3".repeat(64)}`,
-    CROQUIS_NAMES_ADDRESS: `0x${"4".repeat(40)}`,
-    CROQUIS_RESOLVER_ADDRESS: `0x${"5".repeat(40)}`,
-    ENS_GATEWAY_PRIVATE_KEY: `0x${"6".repeat(64)}`,
-    PRIVY_APP_ID: "test-app",
-    PRIVY_APP_SECRET: "test-secret",
+    ...chainEnvInput(),
     TEST_DEPLOY_EVENTS: events,
     TEST_DEPLOY_TEMP: dir,
   };
@@ -169,5 +174,16 @@ describe("deploy-api.sh", () => {
     const second = deploy.run();
     expect(second.status, second.stderr).toBe(0);
     expect(deploy.takeEvents()).toEqual(API_CHECKS);
+  }, 45_000);
+
+  it("stops before replacing anything while an ID from publish-sui.mjs is blank", () => {
+    for (const key of PACKAGE_ID_KEYS) {
+      const deploy = setup(PUBLISHED_API_ENV.replace(new RegExp(`^${key}=.*$`, "m"), `${key}=`));
+      const run = deploy.run();
+      expect(run.status, key).not.toBe(0);
+      expect(run.stderr).toContain(key);
+      expect(deploy.takeEvents()).toEqual([]);
+      expect(deploy.published()).toBe("previous API\n");
+    }
   }, 45_000);
 });

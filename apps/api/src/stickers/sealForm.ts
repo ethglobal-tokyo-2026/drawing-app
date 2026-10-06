@@ -44,7 +44,7 @@ export const sealForm = z.object({
   rim: png,
   flat: png,
   timelapse: z.file().max(MAX_TIMELAPSE_BYTES).optional(),
-  /** An NSFW sticker, which only an adult can seal. */
+  /** An NSFW sticker, which only someone with the NSFW opt-in on can seal. */
   nsfw: z
     .enum(["true", "false"])
     .default("false")

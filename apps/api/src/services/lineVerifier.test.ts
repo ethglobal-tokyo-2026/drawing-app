@@ -1,4 +1,4 @@
-import { MIN_ID_TOKEN_LENGTH } from "@drawing-app/sticker-chain/line";
+import { MIN_ID_TOKEN_LENGTH } from "@drawing-app/line-auth/line";
 import { describe, expect, it, vi } from "vitest";
 import { LineTokenInvalidError, LineUnavailableError, type LineProfile } from "../deps.ts";
 import { createLineVerifier } from "./lineVerifier.ts";

@@ -26,8 +26,7 @@ require_main_checkout() {
     return
   fi
   main="$(git -C "$ROOT" rev-parse --short --verify --quiet refs/heads/main)" || main="none"
-  # The submodules hold the contracts' Solidity libraries, which nothing these scripts build reads.
-  changes="$(git -C "$ROOT" status --porcelain --ignore-submodules)"
+  changes="$(git -C "$ROOT" status --porcelain)"
   if [ "$head" = "$main" ] && [ -z "$changes" ]; then
     echo "→ deploying main at $head"
     return

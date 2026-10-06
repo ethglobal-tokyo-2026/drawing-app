@@ -3,11 +3,11 @@ import { insertUser } from "@drawing-app/db/testing";
 import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 import { AFTER_MIDNIGHT_MS } from "../midnightJob.ts";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
-import { bodyOf } from "../testing/responses.ts";
+import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { nextTokyoTicketDayStart } from "../ticketDays.ts";
-import { CLOSE_UNLANDED_AFTER_MS, returnExpiredGifts, startExpiredGiftReturns } from "./expiry.ts";
+import { returnExpiredGifts, startExpiredGiftReturns, type ExpirySweep } from "./expiry.ts";
 import { receivedGiftSchema } from "./receiving.ts";
-import { createGiftsTestApp, giftOf, type GiftsTestApp } from "./testGifts.ts";
+import { createGiftsTestApp, giftOf, takeOutStartOf, type GiftsTestApp } from "./testGifts.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
 /** From Packaging to an hour past the gift's expiry. */
@@ -23,19 +23,19 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** A new gift whose deposit landed in the escrow and was reported: in the bag, or sent. */
+/** A new gift the escrow holds: in the bag, or sent. */
 async function giftInEscrow(test: GiftsTestApp, status: "packed" | "sent" = "sent") {
-  const packed = await test.packagedGift();
-  test.landDeposit(packed.gift.id);
-  await giftOf(await test.deposit(packed.giverId, packed.gift.id));
-  if (status === "sent") await giftOf(await test.share(packed.giverId, packed.gift.id, "sent"));
-  return packed;
+  const deposited = await test.depositedGift();
+  if (status === "sent") {
+    await giftOf(await test.share(deposited.giverId, deposited.gift.id, "sent"));
+  }
+  return deposited;
 }
 
-const sweep = (test: GiftsTestApp) => returnExpiredGifts(test.deps, test.giftChain);
+const sweep = (test: GiftsTestApp) => returnExpiredGifts(test.deps);
 
 /** The sweep's tally: `counts`, and none of any other outcome. */
-const swept = (counts: Partial<Awaited<ReturnType<typeof returnExpiredGifts>>>) => ({
+const swept = (counts: Partial<ExpirySweep>): ExpirySweep => ({
   returned: 0,
   recorded: 0,
   closed: 0,
@@ -44,16 +44,37 @@ const swept = (counts: Partial<Awaited<ReturnType<typeof returnExpiredGifts>>>) 
   ...counts,
 });
 
+const escrowOf = async (test: GiftsTestApp, giftId: string) =>
+  (await test.chain.sui.readGift(giftId)).status;
+
+const returnsBuilt = (test: GiftsTestApp) =>
+  test.chain.built.filter(({ kind }) => kind === "return").length;
+
+/** Sui ran the transaction Shinami sponsored last, as it shows from now on. */
+function showLastRan(test: GiftsTestApp) {
+  const last = test.chain.sponsorships.at(-1);
+  assert(last, "Shinami sponsored a transaction");
+  test.chain.show(last.sponsorship.digest, { ok: true, events: [] });
+}
+
+/** What a route refused `send` with when Sui's answer was lost; unless `ran` is false, Sui ran it. */
+async function answerLost(test: GiftsTestApp, send: () => Promise<Response>, { ran = true } = {}) {
+  test.chain.answerNext("lost");
+  const refused = await refusalOf(await send());
+  if (ran) showLastRan(test);
+  return refused;
+}
+
 describe("The expiry sweep", () => {
   it.each(["packed", "sent"] as const)(
-    "sends an expired %s gift's sticker back on chain and records the gift returned, so the sticker can be given again",
+    "sends an expired %s gift's sticker back on Sui and records the gift returned, so the sticker can be given again",
     async (status) => {
-      const test = await createGiftsTestApp({ escrowChain: true });
+      const test = await createGiftsTestApp({ onSui: true });
       const { giverId, gift } = await giftInEscrow(test, status);
       test.clock.advance(PAST_EXPIRY_MS);
 
       expect(await sweep(test)).toEqual(swept({ returned: 1 }));
-      expect((await test.giftChain.readEscrowGift(gift.id)).status).toBe("expired_returned");
+      expect(await escrowOf(test, gift.id)).toBe("expired_returned");
       expect(test.giftRow(gift.id)).toMatchObject({
         status: "returned",
         escrowStatus: "expired_returned",
@@ -64,7 +85,7 @@ describe("The expiry sweep", () => {
   );
 
   it("leaves a gift that hasn't expired", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
+    const test = await createGiftsTestApp({ onSui: true });
     const expired = await giftInEscrow(test);
     test.clock.advance(2 * HOUR_MS);
     const waiting = await giftInEscrow(test);
@@ -74,64 +95,76 @@ describe("The expiry sweep", () => {
     expect(await sweep(test)).toEqual(swept({ returned: 1 }));
     expect(test.giftRow(expired.gift.id).status).toBe("returned");
     expect(test.giftRow(waiting.gift.id)).toEqual(before);
-    expect((await test.giftChain.readEscrowGift(waiting.gift.id)).status).toBe("pending");
+    expect(await escrowOf(test, waiting.gift.id)).toBe("pending");
   });
 
-  it.each([
-    ["expired_returned", "returned"],
-    ["rejected", "taken_out"],
-  ] as const)(
-    "records a gift the escrow already shows %s as %s, without sending it back",
-    async (escrowStatus, status) => {
-      const test = await createGiftsTestApp({ escrowChain: true });
-      const { gift } = await giftInEscrow(test);
-      test.setEscrowStatus(gift.id, escrowStatus);
-      test.clock.advance(PAST_EXPIRY_MS);
+  it("follows a return whose answer was lost until Sui shows it ran, sending no second one", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { gift } = await giftInEscrow(test);
+    test.clock.advance(PAST_EXPIRY_MS);
+    test.chain.answerNext("lost");
+    expect(await sweep(test)).toEqual(swept({ failed: 1 }));
+    test.chain.answerNext("lost");
+    expect(await sweep(test)).toEqual(swept({ left: 1 }));
+    logs.expectLogged("gift.expiry.left", { giftId: gift.id });
+    expect(test.giftRow(gift.id).status).toBe("sent");
+    showLastRan(test);
 
-      expect(await sweep(test)).toEqual(swept({ recorded: 1 }));
-      expect(test.giftRow(gift.id)).toMatchObject({ status, escrowStatus });
-    },
-  );
-
-  it("leaves a gift the escrow shows claimed for Receiving to record, and one it doesn't hold, logging each", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const claimed = await giftInEscrow(test);
-    const elsewhere = await giftInEscrow(test);
-    const receiverId = insertUser(test.db);
-    const { giftClaimToken } = claimed;
-    await test.giftChain.claimGift({
-      giftId: claimed.gift.id,
-      giftClaimToken,
-      recipientId: receiverId,
+    expect(await sweep(test)).toEqual(swept({ recorded: 1 }));
+    expect(test.giftRow(gift.id)).toMatchObject({
+      status: "returned",
+      escrowStatus: "expired_returned",
     });
-    // Its deposit is in another escrow, as after the escrow is deployed again.
-    test.giftChain.escrow.delete(elsewhere.gift.id);
+    expect(returnsBuilt(test)).toBe(1);
+  });
+
+  it("records a gift whose take-out ran while its answer was lost as taken out, without sending it back", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { giverId, gift } = await giftInEscrow(test);
+    const { takeOut } = await takeOutStartOf(await test.takeOut(giverId, gift.id));
+    assert(takeOut, "The escrow holds the gift, so its giver signs its take-out");
+    const signed = await test.signed(giverId, takeOut);
+    expect(
+      await answerLost(test, () => test.submitTakeOut(giverId, gift.id, signed)),
+    ).toMatchObject({ error: "take_out_not_landed" });
     test.clock.advance(PAST_EXPIRY_MS);
 
-    expect(await sweep(test)).toEqual(swept({ left: 2 }));
-    for (const { gift } of [claimed, elsewhere]) {
-      expect(test.giftRow(gift.id)).toMatchObject({ status: "sent", escrowStatus: "pending" });
-    }
-    logs.expectLogged("gift.expiry.left", { giftId: claimed.gift.id, status: "claimed" });
-    logs.expectLogged("gift.expiry.left", { giftId: elsewhere.gift.id, status: "missing" });
-    const received = await test.post(receiverId, "/receive", {
-      giftClaimToken,
-      liffContextType: "utou",
-    });
-    expect((await bodyOf(received, receivedGiftSchema)).gift).toMatchObject({
+    expect(await sweep(test)).toEqual(swept({ recorded: 1 }));
+    expect(test.giftRow(gift.id)).toMatchObject({ status: "taken_out", escrowStatus: "taken_out" });
+    expect(returnsBuilt(test)).toBe(0);
+  });
+
+  it("leaves a gift whose claim ran while its answer was lost for Receiving to record, and logs why", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { gift, giftClaimToken } = await giftInEscrow(test);
+    const receiverId = insertUser(test.db);
+    const receive = () =>
+      test.post(receiverId, "/receive", { giftClaimToken, liffContextType: "utou" });
+    expect(await answerLost(test, receive)).toMatchObject({ error: "claim_failed" });
+    test.clock.advance(PAST_EXPIRY_MS);
+
+    expect(await sweep(test)).toEqual(swept({ left: 1 }));
+    expect(test.giftRow(gift.id)).toMatchObject({ status: "sent", escrowStatus: "pending" });
+    expect(returnsBuilt(test)).toBe(0);
+    logs.expectLogged("gift.expiry.left", { giftId: gift.id });
+    expect((await bodyOf(await receive(), receivedGiftSchema)).gift).toMatchObject({
       status: "received",
       receiverId,
     });
   });
 
-  it("sends back and records a packed gift whose deposit landed but was never reported", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { giverId, gift } = await test.packagedGift();
-    test.landDeposit(gift.id);
+  it("sends back a packed gift whose deposit ran while its answer was lost", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { giverId, gift, deposit } = await test.packagedGift();
+    assert(deposit, "Packaging answered the deposit to sign");
+    const signed = await test.signed(giverId, deposit);
+    expect(await answerLost(test, () => test.deposit(giverId, gift.id, signed))).toMatchObject({
+      error: "deposit_not_landed",
+    });
     test.clock.advance(PAST_EXPIRY_MS);
 
     expect(await sweep(test)).toEqual(swept({ returned: 1 }));
-    expect((await test.giftChain.readEscrowGift(gift.id)).status).toBe("expired_returned");
+    expect(await escrowOf(test, gift.id)).toBe("expired_returned");
     expect(test.giftRow(gift.id)).toMatchObject({
       status: "returned",
       escrowStatus: "expired_returned",
@@ -139,40 +172,41 @@ describe("The expiry sweep", () => {
     expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({ status: 201 });
   });
 
-  it("closes a packed gift whose deposit never landed once CLOSE_UNLANDED_AFTER_MS has passed its expiry, so its sticker can be given again", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { giverId, gift } = await test.packagedGift();
-    test.clock.advance(PAST_EXPIRY_MS + CLOSE_UNLANDED_AFTER_MS);
+  it.each([
+    { deposit: "was never signed", sent: false },
+    { deposit: "was sent but never showed on Sui", sent: true },
+  ])(
+    "closes a packed gift whose deposit $deposit, so its sticker can be given again",
+    async ({ sent }) => {
+      const test = await createGiftsTestApp({ onSui: true });
+      const { giverId, gift, deposit } = await test.packagedGift();
+      if (sent) {
+        assert(deposit, "Packaging answered the deposit to sign");
+        const signed = await test.signed(giverId, deposit);
+        await answerLost(test, () => test.deposit(giverId, gift.id, signed), { ran: false });
+      }
+      test.clock.advance(PAST_EXPIRY_MS);
 
-    expect(await sweep(test)).toEqual(swept({ closed: 1 }));
-    expect(test.giftRow(gift.id)).toMatchObject({
-      status: "taken_out",
-      escrowStatus: "missing",
-      takenOutAt: test.clock.now(),
-    });
-    logs.expectLogged("gift.expiry.closed", { giftId: gift.id, status: "taken_out" });
-    expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({ status: 201 });
-  });
-
-  it("leaves a packed gift whose deposit hasn't landed while CLOSE_UNLANDED_AFTER_MS hasn't passed its expiry", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const { gift } = await test.packagedGift();
-    test.clock.advance(GIFT_EXPIRY_MS + CLOSE_UNLANDED_AFTER_MS / 2);
-    const before = test.giftRow(gift.id);
-
-    expect(await sweep(test)).toEqual(swept({ left: 1 }));
-    expect(test.giftRow(gift.id)).toEqual(before);
-    logs.expectLogged("gift.expiry.left", { giftId: gift.id, status: "missing" });
-  });
+      expect(await sweep(test)).toEqual(swept({ closed: 1 }));
+      expect(test.giftRow(gift.id)).toMatchObject({
+        status: "taken_out",
+        escrowStatus: "missing",
+        takenOutAt: test.clock.now(),
+      });
+      expect(returnsBuilt(test)).toBe(0);
+      logs.expectLogged("gift.expiry.closed", { giftId: gift.id, status: "taken_out" });
+      expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({ status: 201 });
+    },
+  );
 
   it("goes on past a gift whose return fails, and logs the failure with its gift ID", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
+    const test = await createGiftsTestApp({ onSui: true });
     const failing = await giftInEscrow(test);
     test.clock.advance(HOUR_MS);
     const next = await giftInEscrow(test);
     test.clock.advance(PAST_EXPIRY_MS);
-    const cause = new Error("Returning the gift reverted");
-    vi.spyOn(test.giftChain, "returnExpiredGift").mockRejectedValueOnce(cause);
+    const failure = "MoveAbort(gift, 4) in command 0";
+    test.chain.answerNext({ ok: false, failure });
 
     expect(await sweep(test)).toEqual(swept({ returned: 1, failed: 1 }));
     expect(test.giftRow(failing.gift.id)).toMatchObject({
@@ -183,17 +217,12 @@ describe("The expiry sweep", () => {
       status: "returned",
       escrowStatus: "expired_returned",
     });
-    expect(logs.entries).toContainEqual(
-      expect.objectContaining({
-        event: "gift.expiry.failed",
-        giftId: failing.gift.id,
-        causes: [expect.objectContaining({ message: cause.message })],
-      }),
-    );
+    logs.expectLogged("gift.expiry.failed", { giftId: failing.gift.id });
+    expect(logs.raw.find((line) => line.includes("gift.expiry.failed"))).toContain(failure);
   });
 
   it("runs at boot, for what downtime left, then just after each midnight, Tokyo time", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
+    const test = await createGiftsTestApp({ onSui: true });
     const { gift } = await giftInEscrow(test);
     test.clock.advance(PAST_EXPIRY_MS);
     const waits: number[] = [];
@@ -204,7 +233,7 @@ describe("The expiry sweep", () => {
         return () => {};
       },
     });
-    assert(job, "The escrow chain has gifts to return");
+    assert(job, "Sui runs the expiry sweep");
     await job.idle();
 
     expect(test.giftRow(gift.id).status).toBe("returned");

@@ -1,128 +1,82 @@
-import { ticketPurchases, type Db } from "@drawing-app/db";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { suiTransactions, ticketPurchases } from "@drawing-app/db";
+import { and, eq, isNull, lt, notExists } from "drizzle-orm";
 import type { AppDeps } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
 import { timer, type Schedule } from "../midnightJob.ts";
-import { creditPurchase, jpycFor, purchaseNamedBy } from "./tickets.ts";
+import { oneAtATime } from "../sui/oneAtATime.ts";
+import { followPayment, giveUp, openPayments } from "./purchases.ts";
 
-/** Between the sweeps that look on Sui for payments the app never reported. */
+/** Between the sweeps that follow open ticket payments on Sui. */
 export const PURCHASE_SWEEP_EVERY_MS = 3 * 60_000;
 /**
- * How long after a purchase starts the sweep looks for its payment. The app signs and sends it
- * within minutes of starting the purchase, so one Sui doesn't show by then was never made.
+ * How long a purchase with no open payment stays open: a Shinami sponsorship lapses within it, so
+ * by then nothing can pay the purchase. It covers one whose start stopped before its payment was
+ * sponsored, or whose failed payment's give-up was lost.
  */
 export const PURCHASE_PAYMENT_WINDOW_MS = 60 * 60_000;
-/** How far before the oldest open purchase the sweep reads, for a server clock ahead of Sui's. */
-const CLOCK_MARGIN_MS = 60_000;
 
-type SweepDeps = Pick<AppDeps, "db" | "clock" | "ticketPayments" | "lineChatMenu">;
-
-/** Purchases neither paid nor given up, oldest first. */
-const openPurchases = (db: Db) =>
+/** Open purchases started before `before` with no open payment. */
+const unpayablePurchases = ({ db }: Pick<AppDeps, "db">, before: Date) =>
   db
-    .select({
-      id: ticketPurchases.id,
-      userId: ticketPurchases.userId,
-      priceYen: ticketPurchases.priceYen,
-      createdAt: ticketPurchases.createdAt,
-    })
+    .select()
     .from(ticketPurchases)
-    .where(and(isNull(ticketPurchases.verifiedAt), isNull(ticketPurchases.givenUpAt)))
-    .orderBy(asc(ticketPurchases.createdAt))
+    .where(
+      and(
+        isNull(ticketPurchases.verifiedAt),
+        isNull(ticketPurchases.givenUpAt),
+        lt(ticketPurchases.createdAt, before),
+        notExists(
+          db
+            .select({ id: suiTransactions.id })
+            .from(suiTransactions)
+            .where(
+              and(
+                eq(suiTransactions.purchaseId, ticketPurchases.id),
+                isNull(suiTransactions.outcome),
+              ),
+            ),
+        ),
+      ),
+    )
     .all();
 
 /**
- * The ticket purchase sweep, for payments the app never reported: reads the payment contract's
- * PaymentReceived events back to the oldest open purchase, and credits each open purchase that an
- * event pays in full into the ticket vault, as the app's report would. Once a read has reached back
- * that far, it gives up on purchases older than PURCHASE_PAYMENT_WINDOW_MS. One purchase's failure is
- * logged, and the sweep goes on to the next. Rejects when Sui can't be read.
+ * The ticket purchase sweep, for payments whose answer the app never got: follows each open
+ * payment, one payer at a time, crediting its purchase once Sui shows it ran, and giving it up once
+ * it failed or can never run. Then it gives up purchases past PURCHASE_PAYMENT_WINDOW_MS that no
+ * payment can pay. One payment's failure is logged, and the sweep goes on to the next.
  */
-export async function sweepTicketPurchases({
-  db,
-  clock,
-  ticketPayments,
-  lineChatMenu,
-}: SweepDeps): Promise<void> {
-  const open = openPurchases(db);
-  const oldest = open[0];
-  if (!oldest) return;
-  const read = await ticketPayments.paymentsSince(
-    new Date(oldest.createdAt.getTime() - CLOCK_MARGIN_MS),
-  );
-  const waiting = new Map(open.map((purchase) => [purchase.id, purchase]));
-  const tally = { events: read.payments.length, credited: 0, short: 0, givenUp: 0, failed: 0 };
-  const { vault, decimals } = ticketPayments.target;
-
-  for (const payment of read.payments) {
-    const named = payment.vault === vault ? purchaseNamedBy(payment.reference) : null;
-    const purchase = named && waiting.get(named.purchaseId);
-    if (!purchase || purchase.userId !== named.userId) continue;
-    const fields = { userId: purchase.userId, purchaseId: purchase.id, txDigest: payment.txDigest };
-    // Short payments leave the purchase open: the payment that covers it may still come.
-    if (payment.amount < jpycFor(purchase.priceYen, decimals)) {
-      tally.short += 1;
-      logInfo("ticket_purchase.sweep.short", fields);
-      continue;
-    }
+export async function sweepTicketPurchases(deps: AppDeps): Promise<void> {
+  if (!deps.sui) return;
+  const open = openPayments(deps.db);
+  const tally = { credited: 0, givenUp: 0, failed: 0 };
+  for (const payment of open) {
+    const fields = { purchaseId: payment.purchaseId ?? undefined, txDigest: payment.digest };
     try {
-      // Anything but credited means a report counted it first.
-      if (creditPurchase(db, purchase.id, payment, clock.now()) !== "credited") continue;
-      waiting.delete(purchase.id);
-      tally.credited += 1;
-      logInfo("ticket_purchase.sweep.credited", fields);
-      void lineChatMenu.relink(purchase.userId);
+      const row = await oneAtATime(`payer:${payment.sender}`, () => followPayment(deps, payment));
+      if (row.outcome === "succeeded") tally.credited += 1;
+      if (row.outcome === "failed" || row.outcome === "dead") tally.givenUp += 1;
     } catch (error) {
       tally.failed += 1;
       logFailure("ticket_purchase.sweep.failed", error, fields);
     }
   }
-
-  if (read.complete) {
-    const cutoff = clock.now().getTime() - PURCHASE_PAYMENT_WINDOW_MS;
-    for (const purchase of waiting.values()) {
-      if (purchase.createdAt.getTime() > cutoff) continue;
-      const fields = { userId: purchase.userId, purchaseId: purchase.id };
-      try {
-        const { changes } = db
-          .update(ticketPurchases)
-          .set({ givenUpAt: clock.now() })
-          .where(
-            and(
-              eq(ticketPurchases.id, purchase.id),
-              isNull(ticketPurchases.verifiedAt),
-              isNull(ticketPurchases.givenUpAt),
-            ),
-          )
-          .run();
-        if (changes === 0) continue;
-        tally.givenUp += 1;
-        logInfo("ticket_purchase.sweep.given_up", { ...fields, status: "payment_window_passed" });
-      } catch (error) {
-        tally.failed += 1;
-        logFailure("ticket_purchase.sweep.failed", error, fields);
-      }
-    }
+  const before = new Date(deps.clock.now().getTime() - PURCHASE_PAYMENT_WINDOW_MS);
+  for (const purchase of unpayablePurchases(deps, before)) {
+    if (giveUp(deps, purchase, "no payment can pay it now")) tally.givenUp += 1;
   }
-  logInfo("ticket_purchase.swept", {
-    count: open.length,
-    ...tally,
-    ...(!read.complete && {
-      reason: `the read stopped at its page limit, short of purchase ${oldest.id}'s start, so none was given up`,
-    }),
-  });
+  logInfo("ticket_purchase.swept", { count: open.length, ...tally });
 }
 
 /**
- * Sweeps at once, for payments made while the server was down, then PURCHASE_SWEEP_EVERY_MS after
- * each sweep ends; a sweep with no purchase open reads nothing from Sui. Sweeps run one at a time,
- * and a failure is logged, never thrown. `stop` cancels the next sweep; `idle` settles when the one
+ * Sweeps at once, then PURCHASE_SWEEP_EVERY_MS after each sweep ends. Sweeps run one at a time, and
+ * a failure is logged, never thrown. `stop` cancels the next sweep; `idle` settles when the one
  * running has.
  */
 export function startTicketPurchaseSweeps({
   schedule = timer,
   ...deps
-}: SweepDeps & { schedule?: Schedule }) {
+}: AppDeps & { schedule?: Schedule }) {
   let cancel = () => {};
   let stopped = false;
   let running = Promise.resolve();

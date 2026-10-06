@@ -5,11 +5,17 @@ import {
   ticketUses,
   type Db,
 } from "@drawing-app/db";
-import { and, asc, count, eq, isNotNull, isNull, sum } from "drizzle-orm";
+import { and, asc, count, eq, isNotNull, sum } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import type { TicketPaymentTarget } from "../deps.ts";
-import { isoTimeSchema, toIsoTime, type Tickets, type TicketShop } from "../shapes.ts";
+import {
+  isoTimeSchema,
+  signedTransactionSchema,
+  toIsoTime,
+  type Tickets,
+  type TicketShop,
+} from "../shapes.ts";
 import { simplifiedOutlineOf } from "../stickers/outline.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
 
@@ -29,22 +35,6 @@ const PERCENT = 100;
 /** `priceYen` in JPYC base units: one JPYC is one yen. */
 export const jpycFor = (priceYen: number, decimals: number): bigint =>
   BigInt(priceYen) * 10n ** BigInt(decimals);
-
-/**
- * What a person passes as `pay`'s reference for one purchase: their id first, so a payment for
- * someone else's purchase is told apart without a lookup, then the purchase's.
- */
-export const ticketPaymentReference = (userId: string, purchaseId: number) =>
-  `tickets:${userId}:${purchaseId}`;
-
-const PURCHASE_REFERENCE = /^tickets:(.+):([1-9][0-9]*)$/;
-
-/** The person and the purchase a payment's reference names; null for one that names none. */
-export function purchaseNamedBy(reference: string): { userId: string; purchaseId: number } | null {
-  const [, userId, id] = PURCHASE_REFERENCE.exec(reference) ?? [];
-  const purchaseId = Number(id);
-  return userId && Number.isSafeInteger(purchaseId) ? { userId, purchaseId } : null;
-}
 
 /** The ticket shop: its packs, and where they're paid. */
 export const ticketShop = (target: TicketPaymentTarget): TicketShop => ({
@@ -165,9 +155,6 @@ export const ticketUseSpentWith = (db: DbOrTx, userId: string, idempotencyKey: s
     .where(and(eq(ticketUses.userId, userId), eq(ticketUses.idempotencyKey, idempotencyKey)))
     .get();
 
-/** A Sui transaction digest: 32 bytes in base58. */
-const SUI_TX_DIGEST = /^[1-9A-HJ-NP-Za-km-z]{43,44}$/;
-
 /**
  * Starting a purchase of a pack. Any positive count passes here, so the route can answer one that
  * isn't a pack with pack_unknown.
@@ -178,63 +165,22 @@ export const startPurchaseRequestSchema = createInsertSchema(ticketPurchases, {
 
 const purchaseRow = createSelectSchema(ticketPurchases, { id: (schema) => schema.positive() });
 
-/** A purchase as starting it answers: what to pay, and the reference to pay it with. */
-export const startedTicketPurchaseSchema = purchaseRow
-  .pick({ id: true, tickets: true, priceYen: true })
-  .extend({
-    /** The price in JPYC base units, as decimal text: one JPYC is one yen. */
-    priceJpyc: z.string().regex(/^[0-9]+$/),
-    /** Passed to `pay` as its reference: it names this purchase and its person. */
-    reference: z.string().min(1),
-  });
+/** A purchase as starting it answers: the pack it buys. The server builds its payment. */
+export const startedTicketPurchaseSchema = purchaseRow.pick({
+  id: true,
+  tickets: true,
+  priceYen: true,
+});
 export type StartedTicketPurchase = z.infer<typeof startedTicketPurchaseSchema>;
 
-export const toStartedTicketPurchase = (
-  purchase: typeof ticketPurchases.$inferSelect,
-  decimals: number,
-): StartedTicketPurchase => ({
-  id: purchase.id,
-  tickets: purchase.tickets,
-  priceYen: purchase.priceYen,
-  priceJpyc: jpycFor(purchase.priceYen, decimals).toString(),
-  reference: ticketPaymentReference(purchase.userId, purchase.id),
+export const toStartedTicketPurchase = ({
+  id,
+  tickets,
+  priceYen,
+}: typeof ticketPurchases.$inferSelect): StartedTicketPurchase => ({ id, tickets, priceYen });
+
+/** Paying a started purchase: the purchase, and the buyer's signature over its payment. */
+export const ticketPurchaseRequestSchema = signedTransactionSchema.extend({
+  purchaseId: purchaseRow.shape.id,
 });
-
-/** Reporting a started purchase's payment: the purchase, and the Sui transaction that paid it. */
-export const ticketPurchaseRequestSchema = createInsertSchema(ticketPurchases, {
-  txDigest: z.string().regex(SUI_TX_DIGEST, "Expected a base58 Sui transaction digest"),
-})
-  .pick({ txDigest: true })
-  .extend({ purchaseId: purchaseRow.shape.id });
 export type TicketPurchasePayment = z.infer<typeof ticketPurchaseRequestSchema>;
-
-/** Whether a Sui payment has already bought tickets: one payment counts once. */
-export const paymentCounted = (db: DbOrTx, txDigest: string) =>
-  db
-    .select({ id: ticketPurchases.id })
-    .from(ticketPurchases)
-    .where(eq(ticketPurchases.txDigest, txDigest))
-    .get() !== undefined;
-
-/**
- * Records `payment` on the purchase, which counts its tickets: unless the payment already bought
- * tickets, or the purchase was already paid. Immediate, so a report and the sweep can't both count.
- */
-export const creditPurchase = (
-  db: Db,
-  purchaseId: number,
-  payment: { txDigest: string; amount: bigint },
-  now: Date,
-): "credited" | "payment_already_counted" | "purchase_already_paid" =>
-  db.transaction(
-    (tx) => {
-      if (paymentCounted(tx, payment.txDigest)) return "payment_already_counted";
-      const { changes } = tx
-        .update(ticketPurchases)
-        .set({ txDigest: payment.txDigest, paidJpyc: payment.amount.toString(), verifiedAt: now })
-        .where(and(eq(ticketPurchases.id, purchaseId), isNull(ticketPurchases.verifiedAt)))
-        .run();
-      return changes === 1 ? "credited" : "purchase_already_paid";
-    },
-    { behavior: "immediate" },
-  );

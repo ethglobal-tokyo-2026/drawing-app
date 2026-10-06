@@ -6,14 +6,14 @@ import {
   users,
   type Db,
 } from "@drawing-app/db";
+import { createHash } from "node:crypto";
 import { and, eq, max } from "drizzle-orm";
-import { keccak256 } from "viem";
 import { z } from "zod";
 import type { AppDeps } from "../deps.ts";
 import { diagnosticStep, failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import {
-  ageStatusOf,
   loadStickers,
+  optedIntoNsfw,
   stickerPlacementSchema,
   stickerPngsSchema,
   stickerSchema,
@@ -36,7 +36,7 @@ export type SealResponse = z.infer<typeof sealResponseSchema>;
 export type SealRefusal =
   | { status: 400; error: "invalid_request"; detail: string }
   | { status: 403; error: "ticket_not_yours"; detail: string }
-  | { status: 403; error: "adults_only"; detail: string }
+  | { status: 403; error: "nsfw_not_opted_in"; detail: string }
   | { status: 404; error: "ticket_not_found"; detail: string }
   | { status: 409; error: "ticket_already_used"; detail: string }
   | { status: 503; error: "mint_failed"; detail: string };
@@ -167,14 +167,13 @@ export async function sealSticker(
 
   if (form.nsfw) {
     const artist = deps.db
-      .select({ ageVerifiedAt: users.ageVerifiedAt })
+      .select({ nsfwOptedInAt: users.nsfwOptedInAt })
       .from(users)
       .where(eq(users.id, userId))
       .get();
-    if (!artist || ageStatusOf(artist) !== "adult") {
-      const detail =
-        "Only a person whose age verification proved them an adult can seal an NSFW sticker";
-      return { refused: { status: 403, error: "adults_only", detail } };
+    if (!artist || !optedIntoNsfw(artist)) {
+      const detail = "Only a person with the NSFW opt-in on can seal an NSFW sticker";
+      return { refused: { status: 403, error: "nsfw_not_opted_in", detail } };
     }
   }
 
@@ -193,11 +192,11 @@ export async function sealSticker(
 
   // Hashed here, never taken from the client: the hash names files other stickers may share. The
   // store keeps a name's first files, so a PNG sealed before keeps its first seal's images.
-  const contentHash = keccak256(pngs.png);
+  const contentHash = `0x${createHash("sha256").update(pngs.png).digest("hex")}`;
   await diagnosticStep("sticker.images.save", { userId }, () =>
     deps.images.save(contentHash, pngs),
   );
-  // What anyone who isn't adult sees in its place, made before any row can name the sticker.
+  // What anyone without the NSFW opt-in sees in its place, made before any row can name the sticker.
   const veiledHash = form.nsfw
     ? await diagnosticStep("sticker.veil.save", { userId }, () =>
         deps.images.saveVeiled(contentHash),
@@ -205,8 +204,6 @@ export async function sealSticker(
     : null;
 
   const stickerId = deps.ids.uuid();
-  // The NFT's metadata JSON sits beside the sticker's images on the CDN; the mint writes it.
-  const metadataUri = new URL(`${stickerId}.json`, deps.images.urls(contentHash).png).href;
   const refused = deps.db.transaction(
     (tx) => {
       const checked = checkTicket(tx, form.ticketUseId, userId);
@@ -230,7 +227,6 @@ export async function sealSticker(
           height: form.height,
           outline: form.outline,
           contentHash,
-          metadataUri,
           nsfw: form.nsfw,
           veiledHash,
         })

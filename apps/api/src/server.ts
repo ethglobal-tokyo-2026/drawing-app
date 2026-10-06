@@ -2,9 +2,7 @@ import { randomUUID } from "node:crypto";
 import { openDb } from "@drawing-app/db";
 import { migrateDatabase } from "@drawing-app/db/migrate";
 import { serve } from "@hono/node-server";
-import type { Hex } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { sepolia } from "viem/chains";
+import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { z } from "zod";
 import { createServer } from "./app.ts";
 import {
@@ -12,29 +10,28 @@ import {
   messagingChannelFromEnvironment,
 } from "./chatMenu/fromEnvironment.ts";
 import { startMidnightBatches } from "./chatMenu/midnight.ts";
-import type { AppDeps, EnsDeps } from "./deps.ts";
+import type { AppDeps } from "./deps.ts";
 import { logInfo } from "./diagnostics.ts";
-import { createNamingQueue, startNamingCatchUp } from "./ens/naming.ts";
 import { startExpiredGiftReturns } from "./gifts/expiry.ts";
 import { giverNoticeFor, startGiverNoticeSweeps } from "./gifts/giverNotice.ts";
 import { chooseLineVerifier } from "./services/devSignIn.ts";
+import { createShinamiGasStation } from "./services/gasStation.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { journalLog } from "./services/journal.ts";
 import { createLineVerifier } from "./services/lineVerifier.ts";
 import { mockChain } from "./services/mockChain.ts";
-import { createJpycPayments } from "./services/jpycPayments.ts";
-import { createPrivySmartWallets } from "./services/privySmartWallets.ts";
-import { createStickerChain } from "./services/stickerChain.ts";
-import { createWorldId } from "./services/worldId.ts";
+import { createPrivySuiWallets } from "./services/privySuiWallets.ts";
+import { createSuiChain } from "./services/suiChain.ts";
 import { startMintCatchUp } from "./stickers/mint.ts";
-import { startVeilCatchUp } from "./stickers/veilCatchUp.ts";
+import { suiIdSchema } from "./shapes.ts";
+import { startChainChecks } from "./sui/chainCheck.ts";
 import { startTicketPurchaseSweeps } from "./tickets/purchaseSweep.ts";
 
-/** A private key as viem takes one: 0x and 64 hexadecimal digits. */
-const privateKeySchema = z.custom<Hex>(
-  (v) => typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v),
-  "Expected 0x and 64 hexadecimal digits",
-);
+/** A secret the examples leave as a placeholder. */
+const secretSchema = z
+  .string()
+  .min(1)
+  .refine((value) => !/^(replace-|placeholder|your[_-])/i.test(value), "Set the real secret");
 
 // DATABASE_URL is read by @drawing-app/db.
 const envSchema = z.object({
@@ -43,7 +40,7 @@ const envSchema = z.object({
   IMAGE_DIR: z.string().min(1),
   CDN_BASE_URL: z.url(),
   PORT: z.coerce.number().int().positive().default(8788),
-  STICKER_CHAIN_MODE: z.enum(["mock", "sepolia"]),
+  STICKER_CHAIN_MODE: z.enum(["mock", "sui"]),
   // Empty is how .env switches off what .env.example switches on.
   DEV_SIGN_IN: z.enum(["on", "off", ""]).optional(),
   // The ticket shop's JPYC and payment contract on Sui.
@@ -57,20 +54,6 @@ const envSchema = z.object({
   LINE_MESSAGING_CHANNEL_ID: z.string().optional(),
   LINE_MESSAGING_CHANNEL_SECRET: z.string().optional(),
   LINE_CHAT_MENUS_FILE: z.string().optional(),
-  // Age verification's World ID app, from the Developer Portal. Without all three, it's off.
-  WORLD_ID_APP_ID: z
-    .custom<`app_${string}`>((v) => typeof v === "string" && /^app_\w+$/.test(v), "Expected app_…")
-    .optional(),
-  WORLD_ID_RP_ID: z
-    .string()
-    .regex(/^rp_\w+$/)
-    .optional(),
-  WORLD_ID_SIGNING_KEY: z
-    .string()
-    .regex(/^(0x)?[0-9a-fA-F]{64}$/)
-    .optional(),
-  // staging takes proofs from World's simulator, https://simulator.worldcoin.org
-  WORLD_ID_ENVIRONMENT: z.enum(["production", "staging"]).default("production"),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -84,82 +67,52 @@ migrateDatabase();
 
 const db = openDb();
 const images = createDiskImageStore(env.IMAGE_DIR, env.CDN_BASE_URL);
+const ticketPayment = {
+  network: env.SUI_NETWORK,
+  coinType: env.JPYC_COIN_TYPE,
+  decimals: env.JPYC_DECIMALS,
+  paymentPackage: env.JPYC_PAYMENT_PACKAGE,
+  vault: env.JPYC_PAYMENT_VAULT,
+};
 const chain = (() => {
   if (env.STICKER_CHAIN_MODE === "mock") {
-    console.warn("Sticker chain mode is mock; NFTs will not be minted or transferred");
-    return { deps: mockChain, readContracts: null };
+    console.warn("Sticker chain mode is mock; nothing is minted or given on Sui");
+    return mockChain;
   }
   const live = z
     .object({
-      // One URL, or several separated by commas, tried in turn.
-      ETHEREUM_SEPOLIA_RPC_URL: z
-        .string()
-        .refine((value) => value.split(",").every((url) => URL.canParse(url.trim())), {
-          message: "Expected a URL, or URLs separated by commas",
-        }),
-      STICKER_NFT_ADDRESS: z.string().min(1),
-      STICKER_GIFT_ESCROW_ADDRESS: z.string().min(1),
-      STICKER_SEALER_PRIVATE_KEY: privateKeySchema,
-      CROQUIS_NAMES_ADDRESS: z.string().min(1),
-      CROQUIS_RESOLVER_ADDRESS: z.string().min(1),
-      ENS_GATEWAY_PRIVATE_KEY: privateKeySchema,
-      // The LIFF app's link, https://liff.line.me/<LIFF ID>: a person's name links to their board.
-      APP_LINK_BASE: z.url(),
+      SUI_SERVER_PRIVATE_KEY: secretSchema.refine((value) => value.startsWith("suiprivkey1"), {
+        message: "Expected a suiprivkey1… key",
+      }),
+      SHINAMI_ACCESS_KEY: secretSchema,
+      SUI_STICKER_PACKAGE: suiIdSchema,
+      SUI_STICKER_REGISTRY: suiIdSchema,
+      SUI_SERVER_CONFIG: suiIdSchema,
+      SUI_GIFT_ESCROW: suiIdSchema,
       PRIVY_APP_ID: z.string().min(1),
-      PRIVY_APP_SECRET: z
-        .string()
-        .min(1)
-        .refine(
-          (value) => !/^(replace-|placeholder|your[_-])/i.test(value),
-          "Set the real Privy app secret",
-        ),
+      PRIVY_APP_SECRET: secretSchema,
     })
     .parse(process.env);
-  const smartWallets = createPrivySmartWallets({
+  const sui = createSuiChain({
+    client: new SuiGrpcClient({
+      network: env.SUI_NETWORK,
+      baseUrl: `https://fullnode.${env.SUI_NETWORK}.sui.io:443`,
+    }),
+    serverPrivateKey: live.SUI_SERVER_PRIVATE_KEY,
+    stickerPackage: live.SUI_STICKER_PACKAGE,
+    stickerRegistry: live.SUI_STICKER_REGISTRY,
+    serverConfig: live.SUI_SERVER_CONFIG,
+    giftEscrow: live.SUI_GIFT_ESCROW,
+    payment: ticketPayment,
+  });
+  const gasStation = createShinamiGasStation({ accessKey: live.SHINAMI_ACCESS_KEY });
+  const suiWallets = createPrivySuiWallets({
     db,
     lineChannelId: env.LINE_CHANNEL_ID,
     privyAppId: live.PRIVY_APP_ID,
     privyAppSecret: live.PRIVY_APP_SECRET,
   });
-  const { mint, giftChain, nameWriter, readContracts } = createStickerChain({
-    rpcUrl: live.ETHEREUM_SEPOLIA_RPC_URL,
-    stickerContract: live.STICKER_NFT_ADDRESS,
-    escrowContract: live.STICKER_GIFT_ESCROW_ADDRESS,
-    namesContract: live.CROQUIS_NAMES_ADDRESS,
-    resolverContract: live.CROQUIS_RESOLVER_ADDRESS,
-    sealerPrivateKey: live.STICKER_SEALER_PRIVATE_KEY,
-    smartWallets,
-    images,
-  });
-  const ens: EnsDeps = {
-    resolverAddress: live.CROQUIS_RESOLVER_ADDRESS,
-    gatewaySigner: privateKeyToAccount(live.ENS_GATEWAY_PRIVATE_KEY),
-    appLinkBase: live.APP_LINK_BASE.replace(/\/$/, ""),
-    chainId: sepolia.id,
-    stickerContract: live.STICKER_NFT_ADDRESS,
-    writer: nameWriter,
-    naming: createNamingQueue(),
-  };
-  return { deps: { mint, giftChain, smartWallets, ens }, readContracts };
-})();
-
-const worldId = (() => {
-  const { WORLD_ID_APP_ID: appId, WORLD_ID_RP_ID: rpId, WORLD_ID_SIGNING_KEY: signingKey } = env;
-  if (!appId && !rpId && !signingKey) {
-    console.warn("No World ID app is configured; age verification is off");
-    return null;
-  }
-  if (!appId || !rpId || !signingKey) {
-    throw new Error(
-      "Age verification needs WORLD_ID_APP_ID, WORLD_ID_RP_ID and WORLD_ID_SIGNING_KEY",
-    );
-  }
-  return createWorldId({
-    appId,
-    rpId,
-    signingKey,
-    environment: env.WORLD_ID_ENVIRONMENT,
-  });
+  return { sui, gasStation, suiWallets };
 })();
 
 const clock = { now: () => new Date() };
@@ -183,18 +136,11 @@ const deps: AppDeps = {
   ids: { uuid: () => randomUUID() },
   line: chooseLineVerifier(env.DEV_SIGN_IN, createLineVerifier(env.LINE_CHANNEL_ID)),
   images,
-  ...chain.deps,
-  ticketPayments: createJpycPayments({
-    network: env.SUI_NETWORK,
-    coinType: env.JPYC_COIN_TYPE,
-    decimals: env.JPYC_DECIMALS,
-    paymentPackage: env.JPYC_PAYMENT_PACKAGE,
-    vault: env.JPYC_PAYMENT_VAULT,
-  }),
+  ...chain,
+  ticketPayment,
   serverLog: journalLog,
   lineChatMenu: chatMenu.lineChatMenu,
   giverNotice,
-  worldId,
 };
 
 logInfo("api.configured", { mode: env.STICKER_CHAIN_MODE });
@@ -211,22 +157,16 @@ if (messaging.line) startGiverNoticeSweeps(giverNotice);
 // left, then just after each midnight, Tokyo time.
 startExpiredGiftReturns(deps);
 
-// Stickers still without their NFT, from a mint that failed at Sealing or a seal before the server
-// reached the chain, are minted to their Original Artists: now, then just after each midnight,
-// Tokyo time.
+// Stickers still without their Sui object, from a mint that failed at Sealing, are minted to their
+// Original Artists: now, then just after each midnight, Tokyo time.
 startMintCatchUp(deps);
 
-// NSFW stickers sealed before Sealing made their veiled images get them, and NFT metadata written
-// before a sticker's veil existed is pointed at it: now, then just after each midnight, Tokyo time.
-startVeilCatchUp({ ...deps, images });
-
-// Reserve ticket payments the app never reported, found on Sui: now, then every few minutes.
+// Ticket payments still open, followed on Sui: now, then every few minutes.
 startTicketPurchaseSweeps(deps);
 
-// The contract check, which turns naming off while the configured contracts can't name, then
-// naming for everyone a failed or skipped job left unnamed: now, then just after each midnight,
-// Tokyo time.
-if (chain.readContracts) startNamingCatchUp(deps, chain.readContracts);
+// The package's objects, the server's address and Shinami's fund, checked: now, then just after each
+// midnight, Tokyo time.
+startChainChecks(deps);
 
 // Only a proxy on this machine reaches it: Vite's in development, HAProxy's on the box.
 serve(

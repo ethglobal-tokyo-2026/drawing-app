@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,7 +8,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createServer, STICKER_IMAGES_PATH } from "./app.ts";
 import { validate } from "./errors.ts";
-import { keccak256 } from "viem";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { setSessionCookie, type AppEnv } from "./session.ts";
 import { sealImages } from "./stickers/testPngs.ts";
@@ -15,6 +15,8 @@ import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
 import { fakeServerLog } from "./testing/fakes.ts";
 import { insertSealedSticker } from "./testing/rows.ts";
 import { bodyOf, refusalOf } from "./testing/responses.ts";
+
+const sha256Hex = (bytes: Uint8Array) => `0x${createHash("sha256").update(bytes).digest("hex")}`;
 
 const probeBodySchema = z.object({ handle: z.string(), placement: z.object({ x: z.number() }) });
 const probeBody = { handle: "alice", placement: { x: 0.5 } };
@@ -36,12 +38,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** The routes anyone can call: signing in and out, and the gateway ENS clients call. */
-const PUBLIC_ROUTES = new Set([
-  "POST /api/session",
-  "DELETE /api/session",
-  "GET /api/ens/gateway/:sender/:request",
-]);
+/** The routes anyone can call: signing in and out. */
+const PUBLIC_ROUTES = new Set(["POST /api/session", "DELETE /api/session"]);
 
 describe("sessions", () => {
   it("guard every route but the public ones", async () => {
@@ -165,7 +163,7 @@ describe("sticker images", () => {
   it("are served where their URLs point, without a session, cached for good", async () => {
     const pngs = sealImages();
     const store = createDiskImageStore(imageDir, `https://sticker.test${STICKER_IMAGES_PATH}`);
-    const contentHash = keccak256(pngs.png);
+    const contentHash = sha256Hex(pngs.png);
     await store.save(contentHash, pngs);
     const urls = store.urls(contentHash);
     const response = await get(new URL(urls.png).pathname);
@@ -178,12 +176,12 @@ describe("sticker images", () => {
     expect(webp.headers.get("cache-control")).toContain("immutable");
   });
 
-  it("show an NSFW sticker's drawing only to an adult's session, never publicly cached", async () => {
+  it("show an NSFW sticker's drawing only to an opted-in session, never publicly cached", async () => {
     const pngs = sealImages();
     const store = createDiskImageStore(imageDir, `https://sticker.test${STICKER_IMAGES_PATH}`);
-    const contentHash = keccak256(pngs.png);
+    const contentHash = sha256Hex(pngs.png);
     await store.save(contentHash, pngs);
-    const artistId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
+    const artistId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
     insertSealedSticker(test.db, artistId, { nsfw: true, contentHash });
     const { png, flat, webp, mask } = store.urls(contentHash);
     const server = createServer(test.deps, imageDir);
@@ -196,29 +194,19 @@ describe("sticker images", () => {
       for (const viewer of [undefined, insertUser(test.db)]) {
         expect(await refusalOf(await getAs(url, viewer))).toMatchObject({
           status: 403,
-          error: "adults_only",
+          error: "nsfw_not_opted_in",
         });
       }
-      const adults = await getAs(url, artistId);
-      expect(adults.status).toBe(200);
-      expect(adults.headers.get("cache-control")).toMatch(/^private,/);
+      const optedIn = await getAs(url, artistId);
+      expect(optedIn.status).toBe(200);
+      expect(optedIn.headers.get("cache-control")).toMatch(/^private,/);
     }
     // The cut's shape shows no drawing, so its mask stays public.
     expect((await getAs(mask)).headers.get("cache-control")).toMatch(/^public,/);
   });
 
-  it("serve a sticker's NFT metadata so that a rewrite of it reaches clients", async () => {
-    const store = createDiskImageStore(imageDir, `https://sticker.test${STICKER_IMAGES_PATH}`);
-    const stickerId = "00000000-0000-4000-8000-000000000001";
-    await store.saveMetadata(stickerId, { image: "https://sticker.test/image.png" });
-    const response = await get(`${STICKER_IMAGES_PATH}/${stickerId}.json`);
-    expect(response.status).toBe(200);
-    expect(response.headers.get("cache-control")).not.toContain("immutable");
-    expect(response.headers.get("cache-control")).toContain("no-cache");
-  });
-
   it("answer a name with no image with 404, not the session check, and uncached", async () => {
-    const response = await get(`${STICKER_IMAGES_PATH}/${keccak256(new Uint8Array([9]))}.png`);
+    const response = await get(`${STICKER_IMAGES_PATH}/${sha256Hex(new Uint8Array([9]))}.png`);
     expect(response.headers.get("cache-control")).toBeNull();
     expect(await refusalOf(response)).toMatchObject({ status: 404, error: "image_not_found" });
   });

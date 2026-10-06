@@ -13,16 +13,21 @@ type ErrorOutput = Extract<
 
 /**
  * Every `error` code a route answers, from the routes' own types: `apiError` keeps each code's literal.
- * internal_error and chain_unavailable come from the app's error handler, which any route can reach.
+ * The rest come from the app's error handler, which any route can reach: Sui and Shinami failing,
+ * and a signature that isn't its wallet's.
  */
 export type ApiErrorCode =
   | (ErrorOutput extends { error: infer Code extends string } ? Code : never)
   | "internal_error"
-  | "chain_unavailable";
-export { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
+  | "chain_unavailable"
+  | "sponsorship_refused"
+  | "sponsor_fund_empty"
+  | "sponsor_unavailable"
+  | "signature_invalid";
 export { HANDLE_MAX_LENGTH } from "./session/handleLimit.ts";
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
 export { TOKYO_UTC_OFFSET_MS, tokyoTicketDay } from "./ticketDays.ts";
+export { purchaseNamedBy } from "./tickets/paymentReference.ts";
 export {
   GIFT_EXPIRY_MS,
   GRATITUDE_PER_HIT,
@@ -32,12 +37,11 @@ export {
 } from "@drawing-app/db/limits";
 
 // The contract's shapes, for the app's screens: each is the type its route's schema checks.
-export type { AgeProof, AgeVerificationRequest } from "./routes/ageVerification.ts";
 export type { ChatMenuLink } from "./chatMenu/menus.ts";
 export type { ErrorBody } from "./errors.ts";
 export type { Explore, PilePage, PileSticker } from "./explore/explore.ts";
 export type { LeaderboardRow } from "./explore/leaderboards.ts";
-export type { PackagedGift, PendingGifts } from "./gifts/packaging.ts";
+export type { PackagedGift, PendingGifts, TakeOutStart } from "./gifts/packaging.ts";
 export type {
   GiftPreview,
   GiftsForYou,
@@ -49,13 +53,14 @@ export type { GratitudeWithReplay, UnseenGratitude } from "./gratitude/feed.ts";
 export type { RecordGratitude } from "./gratitude/record.ts";
 export type { ReplayV1 } from "./gratitude/replay.ts";
 export type {
-  AgeStatus,
   Gift,
   Gratitude,
   IsoTime,
   Me,
   Person,
   Placement,
+  SignedTransaction,
+  SponsoredTransaction,
   Sticker,
   StickerPlacement,
   Tickets,

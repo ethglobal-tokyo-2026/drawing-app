@@ -33,12 +33,6 @@ dist
 # Sui keystores; each Move package's own .gitignore covers its builds
 *.keystore
 
-# Sticker chain Foundry builds, cache and broadcast logs, which can record RPC URLs with API keys, and the lock forge
-# writes from the lib/ submodules, which pin the same commits
-packages/sticker-chain/out/
-packages/sticker-chain/cache/
-packages/sticker-chain/broadcast/
-packages/sticker-chain/foundry.lock
 
 # Python bytecode
 __pycache__/

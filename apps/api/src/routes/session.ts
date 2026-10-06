@@ -1,5 +1,5 @@
 import { users, type Db } from "@drawing-app/db";
-import { MAX_ID_TOKEN_LENGTH } from "@drawing-app/sticker-chain/line";
+import { MAX_ID_TOKEN_LENGTH } from "@drawing-app/line-auth/line";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { Hono } from "hono";
@@ -11,7 +11,6 @@ import {
   type LineVerifier,
 } from "../deps.ts";
 import { failureCause, logFailure } from "../diagnostics.ts";
-import { syncEnsLabel } from "../ens/labels.ts";
 import { apiError, validate } from "../errors.ts";
 import { unseenGratitudeCount } from "../gratitude/feed.ts";
 import { HANDLE_MAX_LENGTH } from "../session/handleLimit.ts";
@@ -43,10 +42,13 @@ const handleBody = userInput.pick({ handle: true });
 // Required, so a body that leaves it out is refused rather than clearing the choice.
 const languageChoiceBody = userInput.pick({ languageChoice: true }).required();
 
+/** Show 18+ stickers, in Settings: on or off. */
+const nsfwOptInBody = z.object({ nsfwOptIn: z.boolean() });
+
 type UserRow = typeof users.$inferSelect;
 
 /** A live account's row; undefined once it's deleted. */
-export const liveUser = (db: Db, userId: string) =>
+const liveUser = (db: Db, userId: string) =>
   db
     .select()
     .from(users)
@@ -54,7 +56,7 @@ export const liveUser = (db: Db, userId: string) =>
     .get();
 
 /** You, with the NEW and pink-tag counts. */
-export const meOf = (db: Db, user: UserRow) =>
+const meOf = (db: Db, user: UserRow) =>
   toMe(user, {
     newStickerCount: newStickerCount(db, user.id),
     unseenGratitudeCount: unseenGratitudeCount(db, user.id),
@@ -108,7 +110,7 @@ export const sessionRoutes = (deps: AppDeps) =>
             .where(eq(users.lineUserId, profile.sub))
             .returning()
             .get();
-          if (returning) return syncEnsLabel(tx, returning);
+          if (returning) return returning;
           const handle = parseHandle(profile.name);
           const created = tx
             .insert(users)
@@ -121,7 +123,7 @@ export const sessionRoutes = (deps: AppDeps) =>
             })
             .returning()
             .get();
-          return syncEnsLabel(tx, created);
+          return created;
         },
         { behavior: "immediate" },
       );
@@ -164,7 +166,7 @@ export const sessionRoutes = (deps: AppDeps) =>
             .where(and(eq(users.id, userId), isNull(users.deletedAt)))
             .returning()
             .get();
-          return updated && syncEnsLabel(tx, updated);
+          return updated;
         },
         { behavior: "immediate" },
       );
@@ -186,6 +188,17 @@ export const sessionRoutes = (deps: AppDeps) =>
       if (languageChoice) void deps.lineChatMenu.relink(user.id);
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
+    .post("/me/nsfw-opt-in", validate("json", nsfwOptInBody), (c) => {
+      const { nsfwOptIn } = c.req.valid("json");
+      const user = deps.db
+        .update(users)
+        .set({ nsfwOptedInAt: nsfwOptIn ? deps.clock.now() : null })
+        .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
+        .returning()
+        .get();
+      if (!user) return apiError(c, 401, "signed_out");
+      return c.json({ me: meOf(deps.db, user) }, 200);
+    })
     .delete("/me", (c) => {
       // Read before the row loses it: their chat menu goes back to LINE's default, in the background.
       const lineUserId = liveUser(deps.db, c.var.userId)?.lineUserId;
@@ -199,9 +212,7 @@ export const sessionRoutes = (deps: AppDeps) =>
           lineDisplayName: null,
           linePictureUrl: null,
           handle: null,
-          // So the same passport can verify the person's next account.
-          ageVerifiedAt: null,
-          ageVerificationNullifier: null,
+          nsfwOptedInAt: null,
         })
         .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
         .run();

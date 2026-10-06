@@ -10,10 +10,11 @@
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "knip": "knip --no-exit-code",
-    "check": "turbo run lint typecheck test && oxfmt --check",
+    "check": "turbo run lint typecheck test && oxfmt --check && pnpm test:move",
     "check:full": "pnpm check && turbo run build && knip --no-exit-code",
     "db:migrate": "pnpm --filter @drawing-app/db db:migrate",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:move": "sui move test --path contracts/sui-payment-contract/jpy_coin && sui move test --path contracts/sui-payment-contract/payment && sui move test --path contracts/sui-sticker-contract/stickers"
   },
   "devDependencies": {
     "husky": "^9.1.7",

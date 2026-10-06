@@ -24,3 +24,28 @@ export function privySmartWallet(
     latest_verified_at: null,
   };
 }
+
+/** The embedded wallet Privy makes on `chainType` at sign-in. */
+export function privyEmbeddedWallet(
+  address: string,
+  chainType: "sui" | "aptos" = "sui",
+): User["linked_accounts"][number] {
+  return {
+    id: null,
+    type: "wallet",
+    address,
+    chain_id: chainType,
+    chain_type: chainType,
+    connector_type: "embedded",
+    delegated: false,
+    imported: false,
+    public_key: "00",
+    recovery_method: "privy",
+    wallet_client: "privy",
+    wallet_client_type: "privy",
+    wallet_index: 0,
+    verified_at: 1,
+    first_verified_at: null,
+    latest_verified_at: null,
+  };
+}

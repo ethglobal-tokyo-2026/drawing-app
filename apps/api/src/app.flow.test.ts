@@ -1,4 +1,3 @@
-import { bytes32 } from "@drawing-app/db/testing";
 import { hc, parseResponse, type ClientResponse } from "hono/client";
 import { describe, expect, it } from "vitest";
 import type { AppType } from "./app.ts";
@@ -21,7 +20,6 @@ const BOB: LineProfile = { sub: "line-bob", name: "Bob" };
 /** A 1:1 chat, where a Gift Message is received. */
 const ONE_TO_ONE = "utou";
 /** The escrow transfer's hash, as Alice's smart wallet reports it. */
-const DEPOSIT_TX = bytes32("deposit transaction");
 /** Alice spends one ticket on the sticker and gives it once; Bob sends gratitude with one combo. */
 const ONE_TICKET = 1;
 const ONE_GIFT = 1;
@@ -105,17 +103,14 @@ describe("the REST API, through the typed client", () => {
       { stickerId: sticker.id, held: true },
     ]);
 
-    // She packages it on the mock chain, reports the deposit, and sends it.
+    // She packages it on the mock chain, where it's in the escrow at once, and sends it.
     const packaged = await answered(
       alice.api.gifts.$post({ json: { stickerId: sticker.id } }),
       CREATED,
     );
+    expect(packaged.deposit).toBeNull();
     const giftId = packaged.gift.id;
     const giftClaimToken = giftClaimTokenSchema.parse(packaged.giftClaimToken);
-    await answered(
-      alice.api.gifts[":giftId"].deposit.$post({ param: { giftId }, json: { txHash: DEPOSIT_TX } }),
-      OK,
-    );
     const shared = await answered(
       alice.api.gifts[":giftId"].shared.$post({ param: { giftId }, json: { outcome: "sent" } }),
       OK,

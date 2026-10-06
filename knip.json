@@ -1,14 +1,15 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignoreBinaries": ["forge", "anvil", "journalctl", "uv"],
+  "ignoreBinaries": ["journalctl", "uv"],
   "workspaces": {
     ".": {
-      "entry": ["deploy/*.mjs"]
+      "entry": ["deploy/*.mjs"],
+      "ignoreBinaries": ["sui"],
+      "ignoreDependencies": ["@mysten/sui"]
     },
-    "packages/sticker-chain": {
-      "entry": ["wagmi.config.ts", "src/start-auth-server.ts"],
-      "project": ["**/*.{js,mjs,cjs,ts,mts,cts}", "!lib/**"],
-      "ignoreDependencies": ["@openzeppelin/contracts"]
+    "packages/line-auth": {
+      "entry": ["src/start-auth-server.ts"],
+      "project": ["**/*.{js,mjs,cjs,ts,mts,cts}"]
     }
   }
 }
