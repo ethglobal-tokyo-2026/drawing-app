@@ -3,7 +3,7 @@ import { decodeQR } from "@paulmillr/qr/decode.js";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { etherscanAddressUrl } from "../identity/explorers";
+import { suiscanAccountUrl } from "../identity/explorers";
 import { clamp } from "./easing";
 import { QrCode } from "./QrCode";
 
@@ -12,7 +12,7 @@ declare global {
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-const ADDRESS = "0x3F2A9C1b7e3d55a091bc04EE6A2F1D3c8b70AE12";
+const ADDRESS = "0x7a1e5b0c9d1e4f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192ab04d";
 
 let host: HTMLDivElement;
 let root: Root;
@@ -68,15 +68,15 @@ afterEach(() => {
 });
 
 describe("QrCode", () => {
-  it.each([ADDRESS, etherscanAddressUrl(ADDRESS)])("scans back to %s as drawn", (value) => {
+  it.each([ADDRESS, suiscanAccountUrl(ADDRESS)])("scans back to %s as drawn", (value) => {
     expect(decodeQR(photograph(draw(value)))).toBe(value);
   });
 
   it("names itself for assistive tech only when given a label", () => {
-    const labeled = draw(ADDRESS, "Board address");
+    const labeled = draw(ADDRESS, "Sui address");
     expect([labeled.getAttribute("role"), labeled.getAttribute("aria-label")]).toEqual([
       "img",
-      "Board address",
+      "Sui address",
     ]);
     expect(draw(ADDRESS).getAttribute("aria-hidden")).toBe("true");
   });

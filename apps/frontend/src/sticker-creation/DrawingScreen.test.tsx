@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { Tickets } from "@drawing-app/api/client";
+import type { Me, Tickets } from "@drawing-app/api/client";
 import { act, forwardRef, useEffect, useImperativeHandle } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
@@ -57,7 +57,6 @@ vi.mock("./TimerDot", () => ({
     <button type="button" className="timer-stub" onClick={onToggle} />
   ),
 }));
-vi.mock("../identity/useMyAgeStatus", () => ({ useMyAgeStatus: () => "unknown" }));
 vi.mock("../identity/privy", () => ({ retryPrivySignIn: () => {} }));
 vi.mock("../tickets/ReserveTicketCheckout", () => ({ ReserveTicketCheckout: () => null }));
 vi.mock("./tools/ColorSheet", () => ({ ColorSheet: () => null }));
@@ -105,8 +104,11 @@ const settle = async (ms = 0) => {
   for (let i = 0; i < 5; i++) await act(() => vi.advanceTimersByTimeAsync(ms / 5));
 };
 
-/** Opens the drawing screen after a reload that kept `session`, with these tickets from the server. */
-function reopen(session: KeptSession, tickets: Partial<Tickets> = {}) {
+/**
+ * Opens the drawing screen after a reload that kept `session`, with these tickets from the server,
+ * for `me`.
+ */
+function reopen(session: KeptSession, tickets: Partial<Tickets> = {}, me: Me = TEST_ME) {
   vi.useFakeTimers();
   kept.session = session;
   view = renderWithApi(
@@ -115,6 +117,7 @@ function reopen(session: KeptSession, tickets: Partial<Tickets> = {}) {
       <SheetProbe />
     </>,
     emptyApi({ tickets: () => Promise.resolve({ ...FRESH_TICKETS, ...tickets }) }),
+    me,
   );
 }
 
@@ -131,6 +134,28 @@ const keptAtTimeUp: KeptSession = {
   steps: [],
 };
 const chip = () => document.querySelector(".seal-chip")?.textContent ?? "";
+
+describe("the drawing screen's 18+ switch", () => {
+  const toggle = () => document.querySelector<HTMLButtonElement>(".nsfw-toggle");
+
+  it("is there for someone with the NSFW opt-in, off until they turn it on", async () => {
+    reopen(keptAtTimeUp, {}, { ...TEST_ME, nsfwOptIn: true });
+    await settle();
+    expect(toggle()?.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("isn't there for someone without it", async () => {
+    reopen(keptAtTimeUp);
+    await settle();
+    expect(toggle()).toBeNull();
+  });
+
+  it("stays on a kept drawing marked 18+ after the opt-in went off, so the mark can come off", async () => {
+    reopen({ ...keptAtTimeUp, nsfw: true });
+    await settle();
+    expect(toggle()?.getAttribute("aria-checked")).toBe("true");
+  });
+});
 
 describe("the drawing screen after a reload", () => {
   it("stops waiting on a sticker in progress whose seal went out once a read that never answers has had a second wait", async () => {

@@ -4,45 +4,22 @@ import {
   useSubscribeToJwtAuthWithFlag,
   useWallets,
   type User,
-  type WalletWithMetadata,
 } from "@privy-io/react-auth";
-import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
 import { useEffect } from "react";
-import { sepolia } from "viem/chains";
 import {
   fetchPrivyJwt,
   onPrivyError,
   PRIVY_APP_ID,
   privyStatus,
+  privySuiWallet,
   setPrivyStatus,
   usePrivyStatus,
 } from "./privy";
 import { MakeSuiWallet } from "./MakeSuiWallet";
-import { SponsorshipCheck } from "./SponsorshipCheck";
-import { SmartWalletBridge } from "./SmartWalletBridge";
 import { SuiWalletBridge } from "./SuiWalletBridge";
 
-// The address of the wallet Privy itself made on a chain, as opposed to one the person connected.
-const privysWallet = (user: User, chainType: "ethereum" | "sui") =>
-  user.linkedAccounts.find(
-    (a): a is WalletWithMetadata =>
-      a.type === "wallet" &&
-      (a.walletClientType === "privy" || a.walletClientType === "privy-v2") &&
-      a.chainType === chainType,
-  )?.address;
-
-const smartAccountOf = (user: User) =>
-  user.linkedAccounts.find((account) => account.type === "smart_wallet")?.address ??
-  user.smartWallet?.address;
-
 const signedIn = (user: User) => {
-  setPrivyStatus({
-    state: "signed-in",
-    userId: user.id,
-    wallet: privysWallet(user, "ethereum"),
-    smartAccount: smartAccountOf(user),
-    suiWallet: privysWallet(user, "sui"),
-  });
+  setPrivyStatus({ state: "signed-in", userId: user.id, suiWallet: privySuiWallet(user)?.address });
 };
 
 const onAuthenticated = ({ user }: { user: User }) => signedIn(user);
@@ -63,7 +40,7 @@ function SyncLineToPrivy() {
     enabled: walletsReady && !failed,
     // Rendered only inside LineGate, so LINE has always logged the person in by now.
     isAuthenticated: true,
-    // Privy makes the wallet right after sign-in, and signs out again if its wallet frame isn't up yet.
+    // The wallet is made right after sign-in, and Privy signs out again if its wallet frame isn't up yet.
     isLoading: !walletsReady,
     getExternalJwt: fetchPrivyJwt,
     onAuthenticated,
@@ -82,17 +59,15 @@ function SyncLineToPrivy() {
 /** Signs the LINE user in to Privy, with no screen of its own. */
 export default function PrivySession() {
   return (
+    // Croquis holds stickers and pays on Sui only, so Privy makes no Ethereum wallet at sign-in,
+    // whatever its dashboard says; MakeSuiWallet makes the Sui one.
     <PrivyProvider
       appId={PRIVY_APP_ID}
-      config={{ defaultChain: sepolia, supportedChains: [sepolia] }}
+      config={{ embeddedWallets: { ethereum: { createOnLogin: "off" } } }}
     >
-      <SmartWalletsProvider>
-        <SyncLineToPrivy />
-        <MakeSuiWallet />
-        <SmartWalletBridge />
-        <SuiWalletBridge />
-        <SponsorshipCheck />
-      </SmartWalletsProvider>
+      <SyncLineToPrivy />
+      <MakeSuiWallet />
+      <SuiWalletBridge />
     </PrivyProvider>
   );
 }

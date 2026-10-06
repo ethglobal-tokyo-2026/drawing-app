@@ -24,11 +24,6 @@ import { markBoardComplete, usePreloadAfterBoard } from "../sticker-board/boardC
 import { forgetBoardUnlessFor } from "../sticker-board/lastBoard";
 import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { preloadReservePacks } from "../tickets/reservePacks";
-import {
-  unaddedPurchaseToShow,
-  useAddUnaddedPurchases,
-  useUnaddedPurchases,
-} from "../tickets/unaddedPurchases";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { MotionPermissionCard } from "./MotionPermissionCard";
@@ -100,9 +95,6 @@ export default function App() {
   // screen; a gift message's link opens its gift over the board.
   const [opened] = useState(() => openedFrom(location.pathname));
   const [view, setView] = useState<View>(opened.view);
-  // A name's link is Explore's to open on this visit; a later visit to Explore is plain Explore.
-  const [boardOf, setBoardOf] = useState(opened.boardOf);
-  if (view !== "explore" && boardOf !== undefined) setBoardOf(undefined);
   const [exploredHere, setExploredHere] = useState(view === "explore");
   if (view === "explore" && !exploredHere) setExploredHere(true);
   // The tab whose screen is settling in after a tab change (App.css), until its animation ends.
@@ -157,10 +149,6 @@ export default function App() {
   useEffect(() => resendGratitudeWhenReachable(api, me.id), [api, me.id]);
   // So does word of a Gift Message that went out while the server couldn't hear it.
   useEffect(() => void reportKeptSends(api, me.id), [api, me.id]);
-  // Paid packs whose tickets the server hadn't added are asked for again too.
-  useAddUnaddedPurchases();
-  // One that still waits, or was refused, puts a pip on the Shop tab, where the Shop says why.
-  const keptPayment = unaddedPurchaseToShow(useUnaddedPurchases());
 
   // Privy's SDK waits for the board to settle, so it doesn't hold up the stickers. A gift needs
   // it at once, and any other screen has no board to wait for.
@@ -249,11 +237,7 @@ export default function App() {
               onClickCapture={(e) => rememberPlace(e.target)}
             >
               <Suspense fallback={null}>
-                <ExploreScreen
-                  boardOf={boardOf}
-                  onOpenArtist={setVisiting}
-                  onOpenMyBoard={() => setView("board")}
-                />
+                <ExploreScreen onOpenArtist={setVisiting} onOpenMyBoard={() => setView("board")} />
               </Suspense>
             </div>
           </Activity>
@@ -272,12 +256,7 @@ export default function App() {
         )}
         {view === "shop" && <ShopScreen onBuyReserveTickets={() => setCheckingOut(true)} />}
       </div>
-      <TabBar
-        active={drawing ? undefined : view}
-        unaddedTickets={keptPayment && (keptPayment.refusal ? "refused" : "waiting")}
-        tucked={drawing}
-        onChange={changeTab}
-      />
+      <TabBar active={drawing ? undefined : view} tucked={drawing} onChange={changeTab} />
       {checkingOut && view === "shop" && (
         <ReserveTicketCheckout
           onDraw={() => {

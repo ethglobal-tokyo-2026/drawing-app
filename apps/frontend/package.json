@@ -16,20 +16,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@drawing-app/sticker-chain": "workspace:*",
     "@line/liff": "^2.31.0",
     "@mysten/sui": "2.31.3",
     "@paulmillr/qr": "0.3.0",
     "@phosphor-icons/react": "2.1.10",
     "@privy-io/react-auth": "3.45.0",
-    "@worldcoin/idkit": "4.3.0",
     "hono": "^4.13.8",
     "i18next": "26.4.2",
-    "permissionless": "0.4.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "react-i18next": "17.0.15",
-    "viem": "2.56.9"
+    "react-i18next": "17.0.15"
   },
   "devDependencies": {
     "@drawing-app/api": "workspace:*",

@@ -14,7 +14,6 @@ import {
   SVG_NS,
   cssUrl,
   dayOf,
-  maskOf,
   px,
   type Box,
   type Size,
@@ -124,17 +123,22 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       if (cut) el.append(cut);
       return el;
     }
-    if (use !== "picture")
-      el.setAttribute(
-        "aria-label",
+    if (use !== "picture") {
+      const name =
         s.state === "used"
           ? isNew
             ? i18next.t(($) => $.stickerBoard.tray.slot.usedNew, no)
             : i18next.t(($) => $.stickerBoard.tray.slot.used, no)
           : isNew
             ? i18next.t(($) => $.stickerBoard.tray.slot.newOnSheet, no)
-            : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no),
+            : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no);
+      // A used sticker silhouette shows no sticker, so nothing on it is blurred.
+      const blurred = s.veiled && s.state !== "used";
+      el.setAttribute(
+        "aria-label",
+        blurred ? `${name}, ${i18next.t(($) => $.stickers.nsfw.veiled)}` : name,
       );
+    }
     const silhouette = make("span", "tray__used-sticker-silhouette", make("i", ""));
     const fit = make(
       "span",
@@ -151,7 +155,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     if (s.state !== "used" && ui.imagesOn) {
       // Drawn by someone else, or NSFW, it wears the sheet's foil under its image, as StickerFoil
       // draws it.
-      if ((s.gift || s.nsfw) && s.urls.mask) {
+      if (s.gift || s.nsfw) {
         const foil = decorative(
           make(
             "span",
@@ -176,10 +180,22 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       img.alt = "";
       img.draggable = false;
       fit.append(img);
+      // Its image is the veiled one: the mark says why it's blurred, as on the board.
+      if (s.veiled) {
+        fit.append(
+          decorative(
+            make(
+              "b",
+              "nsfw-mark tray__mark",
+              i18next.t(($) => $.stickers.nsfw.mark),
+            ),
+          ),
+        );
+      }
     }
     fit.style.width = px(q.w);
     fit.style.height = px(q.h);
-    if (ui.imagesOn) fit.style.setProperty("--m", cssUrl(maskOf(s)));
+    if (ui.imagesOn) fit.style.setProperty("--m", cssUrl(s.urls.mask));
     el.append(fit);
     if (isNew) el.append(decorative(make("span", "tray__new", words.new)));
     return el;

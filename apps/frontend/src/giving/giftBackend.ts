@@ -1,19 +1,11 @@
-import type { Gift } from "@drawing-app/api/client";
+import type { SignedTransaction, SponsoredTransaction } from "@drawing-app/api/client";
 import type { ApiClient } from "../api/apiClient";
 import { ApiError } from "../api/apiClient";
 import { currentLanguage } from "../i18n/i18n";
 import { forgetMyStickerBoard } from "../sticker-board/useMyStickerBoard";
 import { formatNo } from "../stickers/format";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
-import {
-  escrowConfigured,
-  giftTransactions,
-  GiftTransactionRevertedError,
-  GiftTransferError,
-  type GiftTransactions,
-  type TransactionRecorder,
-} from "./giftTransactions";
-import { forgetKeptGift, keepGift, keptGift, type KeptGift } from "./keptGifts";
+import { forgetKeptGift, keepGift, keptGift } from "./keptGifts";
 import { refusedForGood } from "./sentReports";
 
 /** The sticker a gift carries. */
@@ -56,11 +48,35 @@ export class GiftMessageOutError extends GiftPackagingError {
   }
 }
 
+/** Why a packed gift can't go out; the catalog's `giving.transferProblem` says each in plain words. */
+export type GiftTransferProblem = "no_link";
+
+/**
+ * A packed gift can't go out. `problem` is what the screen says; the message is the developer's
+ * English detail, shown as fine print after it.
+ */
+export class GiftTransferError extends Error {
+  readonly problem: GiftTransferProblem;
+
+  constructor(problem: GiftTransferProblem, detail: string) {
+    super(detail);
+    this.name = "GiftTransferError";
+    this.problem = problem;
+  }
+}
+
 /**
  * What packing waits on, for a long wait to say: the app's server, an earlier gift bag that still
- * holds the sticker, the sticker going into the bag, or the bag confirming it's in.
+ * holds the sticker, or the sticker going into the bag.
  */
-export type PackWait = "asking" | "earlier" | "moving" | "confirming";
+export type PackWait = "asking" | "earlier" | "moving";
+
+/** Signs a transaction the server built, as its sender. */
+export type SignSponsored = (tx: SponsoredTransaction) => Promise<SignedTransaction>;
+
+/** The person's Sui wallet. Sui's SDK loads with the first gift it signs, not with the app. */
+const signWithSuiWallet: SignSponsored = async (tx) =>
+  (await import("../identity/suiSigner")).signSponsored(tx);
 
 /** Where gifts are made and settled. */
 export interface GiftBackend {
@@ -87,28 +103,20 @@ export interface GiftBackend {
 
 interface ApiGiftBackendOptions {
   api: ApiClient;
-  /** Whose gifts: what a gift's recovery needs is kept on this device per person. */
+  /** Whose gifts: whether a gift's message went out is kept on this device per person. */
   userId: string;
   /** Printed on the gift message: "From @alice". */
   fromHandle: string;
   liffId: string;
   heroUrl?: string;
-  transactions?: GiftTransactions;
   /** Who the giver picked in the app, so the gift waits on their board too. */
   forUserId?: string;
+  /** Signs the deposits and take-outs the server builds; the person's Sui wallet unless a test gives its own. */
+  sign?: SignSponsored;
 }
 
-/**
- * The raw claim token lives only until the page closes; the rest is kept on this device too, for
- * the recovery after a reload. The server remains authoritative for gifts.
- */
-interface GiftAttempt extends KeptGift {
-  token: string;
-  escrowed: boolean;
-  /** Packed on this page, so every transaction for it went through this attempt. */
-  packedHere: boolean;
-}
-const attempts = new Map<string, GiftAttempt>();
+/** Each gift's Gift Claim Token, from packing it on this page; it's never kept anywhere else. */
+const tokens = new Map<string, string>();
 const packaging = new WeakMap<ApiClient, Map<string, Promise<PackedGift>>>();
 const takingOut = new Map<string, Promise<void>>();
 
@@ -131,9 +139,6 @@ const refusedWith = (code: string) => (error: unknown) =>
 /** No answer, or the server failing: what was sent may not have landed. */
 const unanswered = (error: unknown) =>
   error instanceof ApiError && (error.status === 0 || error.status >= 500);
-/** A take-out may be on chain: the gift must come out, never go back into LINE. */
-const takingOutOnChain = (attempt: KeptGift | undefined) =>
-  attempt?.takeOutSentAt !== undefined || attempt?.takeOutHash !== undefined;
 
 /** Gifts on the app's server: packaging, LINE's outcome, and taking a gift back out. */
 export function createApiGiftBackend({
@@ -142,100 +147,36 @@ export function createApiGiftBackend({
   fromHandle,
   liffId,
   heroUrl,
-  transactions = giftTransactions,
   forUserId,
+  sign = signWithSuiWallet,
 }: ApiGiftBackendOptions): GiftBackend {
   const packing = packaging.get(api) ?? new Map<string, Promise<PackedGift>>();
   packaging.set(api, packing);
 
-  /** The gift's attempt on this page, else one from what this device kept of it. */
-  const attemptOf = (giftId: string): GiftAttempt | undefined => {
-    const current = attempts.get(giftId);
-    if (current) return current;
-    const kept = keptGift(userId, giftId);
-    if (!kept) return undefined;
-    const onChain =
-      kept.depositSentAt !== undefined || kept.depositHash !== undefined || takingOutOnChain(kept);
-    const attempt = {
-      ...kept,
-      token: "",
-      escrowed: onChain || escrowConfigured(),
-      packedHere: false,
-    };
-    attempts.set(giftId, attempt);
-    return attempt;
-  };
-  const update = (giftId: string, attempt: GiftAttempt, change: KeptGift) => {
-    Object.assign(attempt, change);
-    const { depositSentAt, depositHash, takeOutSentAt, takeOutHash, message } = attempt;
-    keepGift(userId, giftId, { depositSentAt, depositHash, takeOutSentAt, takeOutHash, message });
-  };
   const settle = (giftId: string) => {
-    attempts.delete(giftId);
+    tokens.delete(giftId);
     forgetKeptGift(userId, giftId);
   };
-  const recorder = (
-    giftId: string,
-    attempt: GiftAttempt,
-    step: "deposit" | "takeOut",
-    onWait?: (wait: PackWait) => void,
-  ): TransactionRecorder => ({
-    sending: (at) =>
-      update(
-        giftId,
-        attempt,
-        step === "deposit"
-          ? { depositSentAt: at, depositHash: undefined }
-          : { takeOutSentAt: at, takeOutHash: undefined },
-      ),
-    submitted: (hash) => {
-      update(giftId, attempt, step === "deposit" ? { depositHash: hash } : { takeOutHash: hash });
-      if (step === "deposit") onWait?.("confirming");
-    },
-  });
 
+  /** Signs the deposit the server built and reports it: the server submits it and waits for Sui. */
   const deposit = async (
     giftId: string,
-    transfer: { to: string; data: string },
-    attempt: GiftAttempt,
+    sponsored: SponsoredTransaction,
     onWait?: (wait: PackWait) => void,
   ) => {
-    let reported: Gift;
-    try {
-      // A deposit sent before a reload only has its confirmation left to wait for.
-      onWait?.(attempt.depositHash ? "confirming" : "moving");
-      const hash = await transactions.deposit(
-        giftId,
-        transfer,
-        { hash: attempt.depositHash, sentAt: attempt.depositSentAt },
-        recorder(giftId, attempt, "deposit", onWait),
-      );
-      onWait?.("asking");
-      reported = await retrying(
-        () => api.reportDeposit(giftId, hash ?? undefined),
-        refusedWith("deposit_not_landed"),
-      );
-    } catch (error) {
-      if (error instanceof GiftTransactionRevertedError) {
-        update(giftId, attempt, { depositSentAt: undefined, depositHash: undefined });
-      }
-      // The escrow's record isn't this sticker's: the gift closed, and a take-out would revert.
-      if (refusedWith("deposit_mismatch")(error)) attempt.escrowed = false;
-      throw error;
-    }
-    // Its sticker came back out on chain before the report, so this gift can't go out.
+    onWait?.("moving");
+    const signed = await sign(sponsored);
+    onWait?.("asking");
+    const reported = await api.reportDeposit(giftId, signed);
+    // Taken out elsewhere before its deposit landed, so this gift can't go out.
     if (reported.status !== "packed") {
-      throw new GiftTransferError(
-        "deposit_came_back",
-        `The gift was ${reported.status} after its deposit landed, not packed`,
-      );
+      throw new Error(`Gift ${giftId} was ${reported.status} once its deposit landed, not packed`);
     }
   };
 
   const markSent = async (giftId: string) => {
-    const attempt = attemptOf(giftId);
     // Kept until the server hears it, so giving the sticker again reports it, not takes it out.
-    if (attempt) update(giftId, attempt, { message: "sent" });
+    keepGift(userId, giftId, { message: "sent" });
     try {
       await retrying(() => api.reportShared(giftId, "sent"), unanswered);
     } catch (error) {
@@ -246,130 +187,70 @@ export function createApiGiftBackend({
     settle(giftId);
   };
 
-  const takeOut = (giftId: string, escrowed?: boolean) => {
+  const takeOut = (giftId: string) => {
     const pending = takingOut.get(giftId);
     if (pending) return pending;
     const operation = (async () => {
-      const attempt = attemptOf(giftId) ?? {
-        token: "",
-        escrowed: escrowed ?? escrowConfigured(),
-        packedHere: false,
-      };
-      attempts.set(giftId, attempt);
-      if (attempt.escrowed) {
-        const neverSent =
-          attempt.packedHere &&
-          attempt.depositSentAt === undefined &&
-          attempt.depositHash === undefined;
-        let result: "takenOut" | "neverDeposited" = "neverDeposited";
-        try {
-          if (!neverSent) {
-            result = await transactions.takeOut(
-              giftId,
-              { hash: attempt.takeOutHash, sentAt: attempt.takeOutSentAt },
-              recorder(giftId, attempt, "takeOut"),
-              { hash: attempt.depositHash, sentAt: attempt.depositSentAt },
-            );
-          }
-        } catch (error) {
-          if (error instanceof GiftTransactionRevertedError) {
-            update(giftId, attempt, { takeOutSentAt: undefined, takeOutHash: undefined });
-          }
-          throw error;
-        }
-        if (result === "neverDeposited") {
-          // The sticker never left the wallet, and the server keeps open a gift whose deposit might
-          // still land, so the gift stays packed until it's given again.
-          console.info("Gift taken out before its deposit landed", { giftId });
-          update(giftId, attempt, { depositSentAt: undefined });
-          return;
-        }
-      }
-      await retrying(() => api.takeOutGift(giftId), refusedWith("take_out_not_landed"));
+      // The server answers a take-out for the giver's wallet to sign, or none when the sticker
+      // never went into the escrow.
+      const { takeOut: sponsored } = await api.startTakeOut(giftId);
+      if (sponsored) await api.takeOutGift(giftId, await sign(sponsored));
       settle(giftId);
     })().finally(() => takingOut.delete(giftId));
     takingOut.set(giftId, operation);
     return operation;
   };
 
-  /** POST /api/gifts; an earlier gift that still holds the sticker in the escrow comes out first. */
-  const packageGift = async (sticker: GiftSticker, onWait?: (wait: PackWait) => void) => {
-    onWait?.("asking");
-    try {
-      return await api.packageGift(sticker.id, forUserId);
-    } catch (error) {
-      if (!(error instanceof ApiError) || error.code !== "gift_held" || !error.giftId) throw error;
-      const held = error.giftId;
-      console.info("Taking out the gift that holds the sticker", {
-        giftId: held,
-        stickerId: sticker.id,
-      });
-      onWait?.("earlier");
-      try {
-        await takeOut(held, true);
-      } catch (failure) {
-        // Take it out tries that gift again.
-        throw new GiftPackagingError(held, failure);
-      }
-      onWait?.("asking");
-      return api.packageGift(sticker.id, forUserId);
-    }
-  };
-
+  /** `again`: the deposit's sponsorship may lapse once more before the pack gives up. */
   const pack = async (
     sticker: GiftSticker,
-    onWait?: (wait: PackWait) => void,
+    onWait: ((wait: PackWait) => void) | undefined,
+    again: boolean,
   ): Promise<PackedGift> => {
-    let packaged = await packageGift(sticker, onWait);
+    onWait?.("asking");
+    let packaged = await api.packageGift(sticker.id, forUserId);
     forgetMyStickerBoard();
     try {
-      const previousAttempt = attemptOf(packaged.gift.id);
-      if (previousAttempt?.message) {
+      const sent = keptGift(userId, packaged.gift.id)?.message;
+      if (sent) {
         const recordError =
-          previousAttempt.message === "sent"
+          sent === "sent"
             ? await markSent(packaged.gift.id).then(
                 () => undefined,
                 (error: unknown) => error,
               )
             : undefined;
-        throw new GiftMessageOutError(packaged.gift.id, previousAttempt.message, recordError);
+        throw new GiftMessageOutError(packaged.gift.id, sent, recordError);
       }
-      // Already in the bag from an earlier visit: its Gift Claim Token left with that page, so the
+      // Already in the bag from an earlier page: its Gift Claim Token left with that page, so the
       // gift comes out and goes back in with a new one.
-      const outOnChain = takingOutOnChain(previousAttempt);
-      if (outOnChain || (packaged.giftClaimToken === null && !previousAttempt?.token)) {
+      if (packaged.giftClaimToken === null && !tokens.has(packaged.gift.id)) {
         console.info("Gift packaging recovery started", {
           giftId: packaged.gift.id,
           stickerId: sticker.id,
         });
-        if (packaged.escrowTransfer !== null && !outOnChain) {
-          const recovery = previousAttempt ?? { token: "", escrowed: true, packedHere: false };
-          attempts.set(packaged.gift.id, recovery);
-          // The old deposit lands before it comes out, and one sent before a reload is waited for:
-          // closing a missing deposit in the database could strand a transaction that lands later.
-          await deposit(packaged.gift.id, packaged.escrowTransfer, recovery, onWait);
-        }
         onWait?.("earlier");
-        await takeOut(packaged.gift.id, packaged.escrowTransfer !== null || escrowConfigured());
-        packaged = await packageGift(sticker, onWait);
+        await takeOut(packaged.gift.id);
+        onWait?.("asking");
+        packaged = await api.packageGift(sticker.id, forUserId);
       }
-      const { gift, giftClaimToken, escrowTransfer } = packaged;
-      const previous = attempts.get(gift.id);
-      const token = giftClaimToken ?? previous?.token;
+      const { gift } = packaged;
+      const token = packaged.giftClaimToken ?? tokens.get(gift.id);
       if (!token) {
         throw new GiftTransferError(
           "no_link",
           `${formatNo(sticker.no)} is in a gift the server gave no link for`,
         );
       }
-      const attempt = previous ?? {
-        token,
-        escrowed: escrowTransfer !== null,
-        packedHere: giftClaimToken !== null,
-      };
-      attempts.set(gift.id, attempt);
-      if (escrowTransfer !== null) {
-        await deposit(gift.id, escrowTransfer, attempt, onWait);
+      tokens.set(gift.id, token);
+      if (packaged.deposit) {
+        try {
+          await deposit(gift.id, packaged.deposit, onWait);
+        } catch (error) {
+          // Signed after its sponsorship lapsed: the server sponsors a fresh deposit for the gift.
+          if (!again || !refusedWith("sponsorship_expired")(error)) throw error;
+          return await pack(sticker, onWait, false);
+        }
       }
       const message = buildGiftMessage({
         liffId,
@@ -391,21 +272,17 @@ export function createApiGiftBackend({
     pack: (sticker, onWait) => {
       const pending = packing.get(sticker.id);
       if (pending) return pending;
-      const operation = pack(sticker, onWait).finally(() => packing.delete(sticker.id));
+      const operation = pack(sticker, onWait, true).finally(() => packing.delete(sticker.id));
       packing.set(sticker.id, operation);
       return operation;
     },
     markSent,
     markCancelled: async (giftId) => {
       // Nothing went out, so the same gift message can go into LINE again.
-      const attempt = attemptOf(giftId);
-      if (attempt?.message === "maybeSent") update(giftId, attempt, { message: undefined });
+      if (keptGift(userId, giftId)?.message === "maybeSent") forgetKeptGift(userId, giftId);
       await api.reportShared(giftId, "cancelled");
     },
-    markMaybeSent: (giftId) => {
-      const attempt = attemptOf(giftId);
-      if (attempt) update(giftId, attempt, { message: "maybeSent" });
-    },
+    markMaybeSent: (giftId) => keepGift(userId, giftId, { message: "maybeSent" }),
     takeOut,
   };
 }

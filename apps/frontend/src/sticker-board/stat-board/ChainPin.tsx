@@ -1,22 +1,12 @@
-import { BRAND_MARKS as MARK } from "../../icons/brandMarks";
+import { BRAND_MARKS } from "../../icons/brandMarks";
 import "./address-papers.css";
 
-// The top-left light's glint, laid along each mark's upper-left edge, inside the plastic.
-const GLINT = {
-  ethereum: { cx: 10.2, cy: 5.8, rx: 2.1, ry: 0.85, turn: -59 },
-  sui: { cx: 8.6, cy: 5.8, rx: 1.8, ry: 0.75, turn: -51 },
-} as const;
+// The top-left light's glint, laid along the mark's upper-left edge, inside the plastic.
+const GLINT = { cx: 8.6, cy: 5.8, rx: 1.8, ry: 0.75, turn: -51 };
 
-type Chain = keyof typeof MARK;
-
-interface Props {
-  chain: Chain;
-  className?: string;
-}
-
-/** A push pin whose plastic head is the chain's mark, holding that chain's address paper to the cork. */
-export function ChainPin({ chain, className }: Props) {
-  const g = GLINT[chain];
+/** A push pin whose plastic head is Sui's mark, holding the Sui address paper to the cork. */
+export function ChainPin({ className }: { className?: string }) {
+  const g = GLINT;
   return (
     <svg
       className={["chain-pin", className].filter(Boolean).join(" ")}
@@ -26,7 +16,7 @@ export function ChainPin({ chain, className }: Props) {
       aria-hidden
       focusable="false"
     >
-      <path className="chain-pin__head" d={MARK[chain]} />
+      <path className="chain-pin__head" d={BRAND_MARKS.sui} />
       <ellipse
         className="chain-pin__glint"
         cx={g.cx}

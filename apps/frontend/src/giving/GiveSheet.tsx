@@ -1,7 +1,6 @@
 import { GiveIcon, X } from "../icons";
 import { Suspense, useRef, useState } from "react";
 import { useMe } from "../api/meContext";
-import type { AgeStatus } from "@drawing-app/api/client";
 import { Trans, useTranslation } from "../i18n/react";
 import { LIFF_ID } from "../line/liff";
 import { formatHandle, formatNo } from "../stickers/format";
@@ -27,8 +26,8 @@ interface Props {
   to: string;
   /** The board's owner: the gift waits on their board as well as in the LINE chat. */
   toId: string;
-  /** The board's owner's age status: an NSFW sticker goes only to an adult. */
-  toAgeStatus: AgeStatus;
+  /** Whether the board's owner has the NSFW opt-in: an NSFW sticker goes only to someone who does. */
+  toNsfwOptIn: boolean;
   onClose: () => void;
   /**
    * Where focus goes once the flow ends: the key that opened it. This sheet and Giving each mount as
@@ -41,7 +40,7 @@ interface Props {
  * Giving from someone else's board: pick one of yours, then it goes into a gift bag and out through
  * a LINE chat, as every gift does.
  */
-export function GiveSheet({ to, toId, toAgeStatus, onClose, returnFocus }: Props) {
+export function GiveSheet({ to, toId, toNsfwOptIn, onClose, returnFocus }: Props) {
   const { t } = useTranslation();
   const { stickers, error: loadError } = useKeptStickers();
   const [picked, setPicked] = useState<string | null>(null);
@@ -108,13 +107,13 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose, returnFocus }: Props
               picked={picked}
               onPick={setPicked}
               label={t(($) => $.giving.giveSheet.yourStickers)}
-              blocked={(s) => !canGiveTo(s, toAgeStatus)}
+              blocked={(s) => !canGiveTo(s, toNsfwOptIn)}
             />
           )}
-          {stickers?.some((s) => !canGiveTo(s, toAgeStatus)) && (
+          {stickers?.some((s) => !canGiveTo(s, toNsfwOptIn)) && (
             <p className="fine giving__nsfw-note keep-phrases">
               <Trans
-                i18nKey={($) => $.giving.nsfw.adultsOnly}
+                i18nKey={($) => $.giving.nsfw.notOptedIn}
                 components={{ name: <Handle name={name} /> }}
               />
             </p>

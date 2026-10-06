@@ -45,18 +45,18 @@ export const receiving = {
    * text is for a refusal that came without the giver, so it says "the giver".
    */
   refusals: {
-    adultsOnly: {
-      /** Gift refusal screen, when the gift holds an NSFW sticker and you aren't verified as an adult: the title */
-      title: { en: "This gift is for adults", ja: "このギフトは成人向けです" },
-      /** Gift refusal screen, when the gift holds an NSFW sticker and you aren't verified as an adult: the line under the title; {{name}} is the giver */
+    nsfwNotOptedIn: {
+      /** Gift refusal screen, when the gift holds an NSFW sticker and you haven't turned on Show 18+ stickers: the title */
+      title: { en: "This gift is 18+", ja: "このギフトは18+です" },
+      /** Gift refusal screen, when the gift holds an NSFW sticker and you haven't turned on Show 18+ stickers: the line under the title; {{name}} is the giver */
       line: {
-        en: "{{name}} sent an 18+ sticker. Only adults verified with World ID can open it.",
-        ja: "{{name}}さんが18+のシールを送りました。World IDで年齢確認済みの成人だけがひらけます。",
+        en: "{{name}} sent an 18+ sticker. To open it, tap your name on My board and turn on Show 18+ stickers in Settings.",
+        ja: "{{name}}さんが18+のシールを送りました。ひらくには、マイボードで自分の名前をタップし、設定の「18+のシールを表示する」をオンにしてください。",
       },
       /** Gift refusal screen, for an NSFW sticker, when the refusal came without the giver: the line under the title */
       line_unknownGiver: {
-        en: "This is an 18+ sticker. Only adults verified with World ID can open it.",
-        ja: "18+のシールです。World IDで年齢確認済みの成人だけがひらけます。",
+        en: "This is an 18+ sticker. To open it, tap your name on My board and turn on Show 18+ stickers in Settings.",
+        ja: "18+のシールです。ひらくには、マイボードで自分の名前をタップし、設定の「18+のシールを表示する」をオンにしてください。",
       },
     },
     groupChat: {
@@ -145,15 +145,6 @@ export const receiving = {
       line: {
         en: "Open it again from the gift message in your chat.",
         ja: "トークのギフトメッセージから、もう一度ひらいてください。",
-      },
-    },
-    needsServer: {
-      /** Gift refusal screen, when the app is running without its server: the title */
-      title: { en: "Gifts can’t be opened yet", ja: "ギフトはまだひらけません" },
-      /** Gift refusal screen, when the app is running without its server: the line under the title */
-      line: {
-        en: "Opening a gift needs a connection to Croquis, which isn’t set up here yet.",
-        ja: "ギフトをひらくにはクロッキーとの接続が必要ですが、ここではまだ使えません。",
       },
     },
   },

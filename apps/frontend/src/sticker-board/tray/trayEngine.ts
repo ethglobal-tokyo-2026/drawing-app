@@ -37,6 +37,7 @@ import {
   type TrayState,
 } from "./trayModel";
 import { createZipper, mouthRange, showsFrom } from "./zipper";
+import "../../stickers/nsfw-mark.css";
 import "../../stickers/sticker-foil.css";
 import "./sticker-tray.css";
 

@@ -15,7 +15,10 @@ interface Props {
   /** Degrees the sticker is turned on screen, which the glint undoes so the light falls alike on all. */
   turn?: number;
   tone?: FoilTone;
-  /** The band's mask, made on the server; without one, the band is dilated from `--m` here. */
+  /**
+   * The band's mask, made on the server; the Shop's bundled sample has none, so its band is dilated
+   * from `--m` here.
+   */
   mask?: string;
 }
 

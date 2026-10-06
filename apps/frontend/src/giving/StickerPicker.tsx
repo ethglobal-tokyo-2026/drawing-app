@@ -11,13 +11,14 @@ interface Props {
   picked: string | null;
   onPick: (id: string) => void;
   label: string;
-  /** Stickers that can't go to this recipient, such as an NSFW sticker for someone not adult. */
+  /** Stickers that can't go to this recipient, such as an NSFW sticker for someone without the NSFW opt-in. */
   blocked?: (sticker: KeptSticker) => boolean;
 }
 
 /**
  * Your stickers as a grid to choose one from; the picked one sits on an aqua tile with a check. NSFW
- * stickers wear a pink edge; a blocked one can't be picked and wears the 18+ mark.
+ * stickers wear a pink edge; a blocked one can't be picked and wears the 18+ mark, as does one
+ * blurred for you.
  */
 export function StickerPicker({ stickers, picked, onPick, label, blocked = () => false }: Props) {
   const { t } = useTranslation();
@@ -25,6 +26,10 @@ export function StickerPicker({ stickers, picked, onPick, label, blocked = () =>
     <div className="sticker-picker" role="radiogroup" aria-label={label}>
       {stickers.map((s) => {
         const off = blocked(s);
+        const named = [
+          off && t(($) => $.giving.nsfw.blocked),
+          s.veiled && t(($) => $.stickers.nsfw.veiled),
+        ].filter(Boolean);
         return (
           <button
             key={s.id}
@@ -32,7 +37,7 @@ export function StickerPicker({ stickers, picked, onPick, label, blocked = () =>
             role="radio"
             aria-checked={picked === s.id}
             aria-disabled={off || undefined}
-            aria-label={off ? `${formatNo(s.no)}, ${t(($) => $.giving.nsfw.blocked)}` : undefined}
+            aria-label={named.length > 0 ? [formatNo(s.no), ...named].join(", ") : undefined}
             className={`pick ${picked === s.id ? "picked" : ""} ${off ? "is-blocked" : ""}`}
             onClick={() => {
               if (!off) onPick(s.id);
@@ -45,7 +50,7 @@ export function StickerPicker({ stickers, picked, onPick, label, blocked = () =>
               style={{ aspectRatio: `${s.width} / ${s.height}` }}
             />
             <span className="fine">{formatNo(s.no)}</span>
-            {off && (
+            {(off || s.veiled) && (
               <span className="nsfw-mark pick-mark" aria-hidden>
                 {t(($) => $.stickers.nsfw.mark)}
               </span>

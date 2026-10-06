@@ -120,15 +120,6 @@ describe("createReplayFeed", () => {
     expect(move).toEqual({ ...start, kind: "strokeMove", fastPass: true });
   });
 
-  it("says nothing of passes for a replay recorded before them", () => {
-    const { strokePasses: _recorded, ...older } = strokeStartedCombo().replay;
-    const moves = createReplayFeed(older, RECORDED_HEART).inputs.flatMap((input) =>
-      input.kind === "strokeMove" ? [input.fastPass] : [],
-    );
-    expect(moves.length).toBeGreaterThan(0);
-    expect(moves.every((fastPass) => fastPass === null)).toBe(true);
-  });
-
   it("gives each input once, when its time comes", () => {
     const s = session();
     [1000, 1100, 1200].forEach((t) => s.tap(t));

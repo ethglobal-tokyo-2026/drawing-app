@@ -9,6 +9,8 @@ import { TicketPurchases } from "./TicketPurchases";
 vi.mock("../payments/jpyc", () => ({ getTicketPayments: vi.fn() }));
 
 const OWNER = `0x${"1".repeat(64)}`;
+/** The list's button carries the owner's address, shortened. */
+const SHORT_ADDRESS = "0x1111…1111";
 const SHOP: Shop = {
   packs: [],
   payment: {
@@ -50,7 +52,7 @@ const rows = () => document.querySelectorAll(".ticket-purchases a").length;
 /** The list, opened: its first read has been asked for and has answered. */
 async function openList() {
   view = renderWithApi(<TicketPurchases owner={OWNER} shop={SHOP} />);
-  click("you.croquis-app.eth");
+  click(SHORT_ADDRESS);
   await settle();
 }
 
@@ -99,7 +101,7 @@ describe("the ticket purchases list's Try again", () => {
 
     click("Try again");
     await settle();
-    expect(document.activeElement).toBe(buttonNamed("you.croquis-app.eth"));
+    expect(document.activeElement).toBe(buttonNamed(SHORT_ADDRESS));
   });
 
   it("reads an older page again from where it failed, with the pages already listed still there", async () => {

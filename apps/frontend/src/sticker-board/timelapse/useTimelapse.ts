@@ -135,8 +135,7 @@ export function useTimelapse({
     session.current?.player?.setReduced(reduced);
   }, [reduced]);
 
-  // Every sticker sealed with a timelapse has a mask, which the layer is cut to.
-  const shown = sticker && hasTimelapse && sticker.urls.mask ? sticker : null;
+  const shown = sticker && hasTimelapse ? sticker : null;
   const current = shown && view.stickerId === shown.id ? view : IDLE;
 
   const end = (s: Session, next: View) => {

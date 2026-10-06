@@ -38,13 +38,13 @@ export function knownShape(sticker: ShapeSource): Shape | undefined {
 /** A sticker's shape: its stored outline, or else its mask, traced once. */
 export function stickerShape(
   sticker: ShapeSource,
-  urls: Pick<StickerUrls, "png" | "mask">,
+  urls: Pick<StickerUrls, "mask">,
 ): Promise<Shape> {
   const shape = knownShape(sticker);
   if (shape) return Promise.resolve(shape);
   let trace = tracing.get(sticker.id);
   if (!trace) {
-    trace = traceMask(urls.mask ?? urls.png, sticker.width, sticker.height).then(
+    trace = traceMask(urls.mask, sticker.width, sticker.height).then(
       (traced) => {
         known.set(sticker.id, traced);
         tracing.delete(sticker.id);

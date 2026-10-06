@@ -184,7 +184,7 @@ describe("ArtistBoard's Give key", () => {
       Promise.resolve({
         gift: gift({ stickerId, status: "packed" }),
         giftClaimToken: `0x${"ab".repeat(32)}`,
-        escrowTransfer: null,
+        deposit: null,
       }),
     reportShared: (giftId: string) => Promise.resolve(gift({ id: giftId, status: "sent" })),
   });

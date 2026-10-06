@@ -88,8 +88,6 @@ describe("createReplayDriver", () => {
       }).map((calls) => calls.filter(([name]) => name === "endAt"));
     expect(endsBy("hidden")).toEqual([[], [["endAt", 1750, "hidden"]], []]);
     expect(endsBy("closed")).toEqual([[], [["endAt", 1750, "closed"]], []]);
-    // An older combo's one-tap send ended it from outside too.
-    expect(endsBy("sent")).toEqual([[], [["endAt", 1750, "closed"]], []]);
     expect(endsBy("empty").flat()).toEqual([]);
     expect(endsBy("cap").flat()).toEqual([]);
   });

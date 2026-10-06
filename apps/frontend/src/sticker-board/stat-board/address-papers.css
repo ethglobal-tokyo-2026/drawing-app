@@ -1,12 +1,9 @@
-/* ---------- Your addresses as QR codes on white label stock: the board address and your Sui address ---------- */
+/* ---------- Your Sui address as a QR code on white label stock ---------- */
 
-/* A row under Settings. Two papers side by side fit a 360px phone. */
+/* Under Settings, centered. */
 .address-papers {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  align-items: flex-start;
-  gap: 26px 20px;
   margin-top: 30px;
 }
 
@@ -27,16 +24,8 @@
   background: var(--canvas);
   color: var(--ink);
   text-align: center;
-  transform: rotate(var(--tilt));
+  transform: rotate(1.6deg);
   touch-action: manipulation;
-}
-
-.address-papers__note--ethereum > .address-papers__face {
-  --tilt: -2deg;
-}
-
-.address-papers__note--sui > .address-papers__face {
-  --tilt: 1.6deg;
 }
 
 /* Held up in the dialog, whose card covers this spot from the same frame; the pin stays on the cork. */
@@ -150,15 +139,15 @@
   margin-left: -11px;
 }
 
-/* A push pin whose plastic head is a chain's mark: Liner Lift plastic in the drawings' ink line, a
-   glint of the top-left light, and a cast on the paper. */
+/* A push pin whose plastic head is Sui's mark: Liner Lift plastic in the drawings' ink line, a glint
+   of the top-left light, and a cast on the paper. */
 .chain-pin {
   overflow: visible;
   filter: drop-shadow(2px 3px 2px rgba(28, 24, 36, 0.32));
 }
 
 /* The fill covers the stroke's inner half, so the line shows about 1.1px outside the mark, near the
-   round pins' ring, and fills the Ethereum mark's split as the line between its two parts. */
+   round pins' ring. */
 .chain-pin__head {
   fill: var(--liner-lift);
   stroke: var(--ink);

@@ -8,6 +8,7 @@ import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
 import { TUG_VISITS, type TrayBoard } from "./trayEngine";
 import { SHEET, STACK_FOOT, TOP } from "./trayModel";
+import { testStickerUrls } from "../../stickers/testStickerUrls";
 import { NUDGE_AFTER } from "./trayNudge";
 import type { TrayProblem } from "./trayProblem";
 import { countVisit } from "./traySeen";
@@ -41,9 +42,9 @@ const sticker = (
   height: 80,
   // A stored cut line, so its shape is known without reading an image.
   outline: "M10.0 10.0L90.0 10.0L90.0 70.0L10.0 70.0Z",
-  urls: { png: `${id}.png`, mask: `${id}-mask.png` },
+  urls: testStickerUrls(id),
   placement: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
-  artist: { id: "me", handle: "you", name: "You", ageStatus: "adult" },
+  artist: { id: "me", handle: "you", name: "You", nsfwOptIn: false },
   held: true,
   givenTo: null,
   openGift: null,
@@ -159,8 +160,8 @@ const pageDown = () =>
 /** Enough stickers for more than one sheet. */
 const manyStickers = (n: number) =>
   Array.from({ length: n }, (_, i) => sticker(`s${i}`, i + 1, false));
-const friend = { id: "friend", handle: "friend", name: "Friend", ageStatus: "adult" as const };
-const bob = { id: "bob", handle: "bob", name: "Bob", ageStatus: "adult" as const };
+const friend = { id: "friend", handle: "friend", name: "Friend", nsfwOptIn: false };
+const bob = { id: "bob", handle: "bob", name: "Bob", nsfwOptIn: false };
 /** A sticker someone has received: no longer held, its spot left on its sheet. */
 const givenSticker = (id: string, arrivedAt: number) =>
   sticker(id, arrivedAt, false, {

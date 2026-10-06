@@ -217,7 +217,7 @@ export function useBoardGestures(options: Options) {
     /** The backing shows for a moment where a sticker was peeled up. */
     const peelMark = (sticker: BoardSticker, live: Live) => {
       const mask = sticker.urls.mask;
-      if (!mask || latest.current.reduced) return;
+      if (latest.current.reduced) return;
       const { w, h } = sizeOf(latest.current.size?.W ?? 0, live.s, sticker);
       const mark = document.createElement("span");
       mark.className = "peel-mark";

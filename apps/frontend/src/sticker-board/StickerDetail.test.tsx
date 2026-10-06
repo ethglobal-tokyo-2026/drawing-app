@@ -19,6 +19,7 @@ import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_OWNER } from "../api/t
 import { toPerson, toSticker } from "../api/views";
 import { resendPendingGratitude, sendGratitude } from "../gratitude/gratitudeOutbox";
 import { errorDetail } from "../i18n/errorMessage";
+import { testStickerUrls } from "../stickers/testStickerUrls";
 import type { BoardStickerView } from "./boardSticker";
 import { StickerDetail } from "./StickerDetail";
 import { fakeTimelapsePlayers, TEST_TIMELAPSE } from "./timelapse/testTimelapse";
@@ -36,7 +37,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 /** Midday, so the day reads the same in every time zone. */
 const day = (d: number) => new Date(2026, 8, d, 12).getTime();
 
-const you = { id: "me", handle: "alice", name: "Alice", ageStatus: "adult" as const };
+const you = { id: "me", handle: "alice", name: "Alice", nsfwOptIn: false };
 const sticker = (
   no: number,
   createdAt: number,
@@ -50,7 +51,7 @@ const sticker = (
   width: 120,
   height: 100,
   nsfw: false,
-  urls: { png: `blob:${no}` },
+  urls: testStickerUrls(`blob:${no}`),
   placement: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: no },
   artist: you,
   held: true,
@@ -234,7 +235,7 @@ describe("StickerDetail", () => {
       id: "artist-bob",
       handle: "bob",
       name: "Bob Tanaka",
-      ageStatus: "adult" as const,
+      nsfwOptIn: false,
     };
     const given = sticker(133, day(14), {
       held: false,
@@ -377,7 +378,7 @@ describe("StickerDetail", () => {
       id: "artist-mika",
       handle: "Mika_draws_every_day_in_tokyo_32",
       name: "Mika",
-      ageStatus: "adult" as const,
+      nsfwOptIn: false,
     };
     open({ ownerId: TEST_OWNER.id, stickers: [sticker(133, day(14), { artist })] });
     const chip = document.querySelector(".sticker-detail__artist .artist-chip");
@@ -424,7 +425,7 @@ describe("StickerDetail", () => {
               id: people.mika.id,
               handle: "mika",
               name: "Mika",
-              ageStatus: "adult" as const,
+              nsfwOptIn: false,
             },
           }
         : s,
@@ -462,17 +463,6 @@ describe("StickerDetail", () => {
     expect(document.querySelectorAll(".transfer-trail__row.is-open")).toHaveLength(1);
   });
 
-  it("links the sticker's name under croquis-app.eth to the ENS app once it's onchain", () => {
-    const named = sticker(133, day(14), { ensName: "0133.alice.croquis-app.eth" });
-    open({ stickers: [named] });
-    const link = document.querySelector<HTMLAnchorElement>(".sticker-detail__ens a");
-    expect(link?.textContent).toBe("0133.alice.croquis-app.eth");
-    expect(link?.href).toBe("https://sepolia.app.ens.domains/0133.alice.croquis-app.eth");
-
-    open({ stickers: [sticker(133, day(14))] });
-    expect(document.querySelector(".sticker-detail__ens")).toBeNull();
-  });
-
   it("keeps focus in the detail when Try again goes as it checks the sticker again", async () => {
     open();
     await settle();
@@ -493,8 +483,7 @@ describe("StickerDetail", () => {
       timelapsePlayer.create.mockImplementation(players.create);
     });
 
-    /** The stickers with their masks; only No.0133 was sealed with its timelapse. */
-    const masked = stickers.map((s) => ({ ...s, urls: { ...s.urls, mask: `blob:${s.no}-mask` } }));
+    /** Only No.0133 was sealed with its timelapse. */
     const withTimelapse = () =>
       emptyApi({
         stickerDetail: (id) =>
@@ -511,7 +500,7 @@ describe("StickerDetail", () => {
 
     /** Opens No.0133 and plays its timelapse. */
     async function playing() {
-      open({ stickers: masked }, withTimelapse());
+      open({}, withTimelapse());
       await settle();
       act(() => timelapseButton()?.click());
       await settle();
@@ -524,7 +513,7 @@ describe("StickerDetail", () => {
     it.each(["yours", "given"] as const)(
       "offers Timelapse in %s mode, only for a sticker sealed with one",
       async (mode) => {
-        open({ mode, stickers: masked }, withTimelapse());
+        open({ mode }, withTimelapse());
         await settle();
         expect(timelapseButton()).not.toBeNull();
         press("Next sticker");
@@ -548,7 +537,7 @@ describe("StickerDetail", () => {
     });
 
     it("keeps focus in the dialog when paging from Timelapse takes the button away", async () => {
-      open({ stickers: masked }, withTimelapse());
+      open({}, withTimelapse());
       await settle();
       act(() => timelapseButton()?.focus());
       expect(document.activeElement).toBe(timelapseButton());

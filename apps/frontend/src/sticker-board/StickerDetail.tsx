@@ -13,12 +13,12 @@ import {
 import { refusalNote } from "../gratitude/refusalNote";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
-import { EnsNameLink } from "../identity/EnsNameLink";
 import { CaretLeft, CaretRight, GiveIcon, GratitudeIcon, StickerBoardIcon } from "../icons";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { ArtistChip } from "../stickers/ArtistChip";
+import { useMyNsfwOptIn, veiledFor } from "../stickers/nsfw";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
@@ -129,6 +129,7 @@ export function StickerDetail({
 }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
+  const optedIn = useMyNsfwOptIn();
   useLight();
   const [shownId, setShownId] = useState(startId);
   const index = Math.max(
@@ -299,6 +300,7 @@ export function StickerDetail({
                   height={sticker.height}
                   foil={byOther ? "detail" : undefined}
                   nsfw={sticker.nsfw}
+                  veiled={veiledFor(sticker, optedIn)}
                   no={sticker.no}
                 />
                 <TimelapseLayer timelapse={timelapse} />
@@ -350,11 +352,6 @@ export function StickerDetail({
                   }}
                 />
               </h2>
-              {sticker.ensName && (
-                <p className="sticker-detail__ens">
-                  <EnsNameLink name={sticker.ensName} />
-                </p>
-              )}
               {/* Its own line, so a long handle wraps rather than being cut short. */}
               {byOther && (
                 <p className="sticker-detail__artist">

@@ -22,6 +22,8 @@ export interface TraySticker extends TraySlot {
   gift: boolean;
   /** An NSFW sticker: it wears pink foil, whoever drew it. */
   nsfw: boolean;
+  /** An NSFW sticker for someone without the NSFW opt-in: its image is the veiled one, so it wears the 18+ mark. */
+  veiled: boolean;
   /** Shown in the open tray before, so it isn't NEW. */
   seen: boolean;
   /** Given away and received: who has it, printed. Its spot opens it among the stickers you gave. */
@@ -271,7 +273,6 @@ export const SVG_NS = "http://www.w3.org/2000/svg";
 export const cssUrl = (url: string) => `url("${url}")`;
 export const px = (v: number) => `${v.toFixed(1)}px`;
 const isShape = (s: Shape | undefined): s is Shape => s !== undefined;
-export const maskOf = (s: Slot) => s.urls.mask ?? s.urls.png;
 export const dayOf = (t: number) => tokyoTicketDay(new Date(t));
 export const matchesFilter = (s: Slot, f: Filter) =>
   f === "all" || (f === "mine" ? !s.gift : s.gift);

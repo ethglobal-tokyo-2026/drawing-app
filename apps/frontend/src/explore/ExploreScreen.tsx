@@ -1,13 +1,7 @@
-import {
-  CROQUIS_PARENT_NAME,
-  type Explore,
-  type LeaderboardRow,
-  type Person,
-} from "@drawing-app/api/client";
+import type { Explore, LeaderboardRow, Person } from "@drawing-app/api/client";
 import type { TFunction } from "i18next";
 import {
   useEffect,
-  useEffectEvent,
   useId,
   useLayoutEffect,
   useMemo,
@@ -42,11 +36,6 @@ import { LoadingHeap, StickerPile } from "./StickerPile";
 import "./ExploreScreen.css";
 
 interface Props {
-  /**
-   * A name's link opened the app: <boardOf>.croquis-app.eth's Sticker Board opens once it's found.
-   * App lets go of it as Explore is left, so a later visit doesn't open that board again.
-   */
-  boardOf?: string;
   onOpenArtist: (person: Person) => void;
   onOpenMyBoard: () => void;
 }
@@ -607,28 +596,7 @@ function Stickers({ explore, meId, open }: { explore: Explore; meId: string; ope
   );
 }
 
-/** Finds whoever a name's link names and opens their board, once; says so when there's nobody. */
-function OpenBoardOf({ label, open }: { label: string; open: Open }) {
-  const { t } = useTranslation();
-  const person = useApiQuery(`ens-person/${label}`, (api) => api.personByEnsLabel(label));
-  const opened = useRef(false);
-  const openPerson = useEffectEvent(open);
-  useEffect(() => {
-    if (person.state !== "ready" || opened.current) return;
-    opened.current = true;
-    openPerson(person.data);
-  }, [person]);
-  return (
-    <Failed
-      said={(reason) =>
-        t(($) => $.explore.failed.ensName, { name: `${label}.${CROQUIS_PARENT_NAME}`, reason })
-      }
-      query={person}
-    />
-  );
-}
-
-export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
+export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
   const { t } = useTranslation();
   const me = useMe();
   const [query, setQuery] = useState("");
@@ -663,7 +631,6 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
 
   return (
     <div className="explore">
-      {boardOf && <OpenBoardOf label={boardOf} open={open} />}
       <label className="artist-search">
         <At size={20} aria-hidden />
         <input

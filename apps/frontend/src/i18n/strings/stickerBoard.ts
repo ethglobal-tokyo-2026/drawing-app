@@ -1,11 +1,6 @@
 import type { Section } from "../catalog";
 
 export const stickerBoard = {
-  /** A name under croquis-app.eth, which opens in the ENS app. */
-  ensName: {
-    /** Sticker detail, under the title, and the stat board's label-maker tape: screen readers' name for the croquis-app.eth name's link, which opens it in the ENS app; {{name}} is the whole name */
-    open: { en: "Open {{name}} in the ENS app", ja: "{{name}}をENSアプリでひらく" },
-  },
   /** The Sticker Board's cork back: your own, or someone else's. */
   statBoard: {
     /** Stat board (a sticker board's cork back, yours or someone else's): screen readers' name for the dialog; {{name}} is the board owner's LINE name */
@@ -101,55 +96,18 @@ export const stickerBoard = {
     /** Your stat board, opened outside LINE's app: the button under Flip back that logs out of LINE */
     logOut: { en: "Log out of LINE", ja: "LINEからログアウト" },
   },
-  /** Your addresses as QR codes on the cork, and the dialog that holds one up. */
+  /** Your Sui address as a QR code on the cork, and the dialog that holds it up. */
   addresses: {
-    ethereum: {
-      /** Your stat board: the caption on the board address's QR code paper */
-      caption: { en: "Board address", ja: "ボードアドレス" },
-      /** Your stat board: the network's name under the board address paper's caption */
-      network: { en: "Ethereum Sepolia", ja: "Ethereum Sepolia" },
-      /** Your stat board: fine print on the board address paper, under its network, saying what the address is for */
-      gloss: { en: "Keeps your stickers", ja: "シールの保管先" },
-      /** Your stat board: screen readers' name for the board address paper, a button that holds its QR code up in the address dialog */
-      open: { en: "Show your board address as a QR code", ja: "ボードアドレスをQRコードで表示" },
-      /** Your stat board: on the board address paper while the address loads */
-      loading: { en: "Getting your board address…", ja: "ボードアドレスを<wbr/>取得しています…" },
-      /** Your stat board: on the board address paper when the address didn't load, over Try again */
-      didntLoad: {
-        en: "Board address didn’t load",
-        ja: "ボードアドレスを<wbr/>読み込めませんでした",
-      },
-      /** Address dialog for the board address: its heading, under the large QR code */
-      title: { en: "Your board address", ja: "あなたのボードアドレス" },
-      /** Address dialog for the board address: screen readers' name for the large QR code */
-      qrCode: { en: "QR code of your board address", ja: "ボードアドレスのQRコード" },
-      /** Address dialog for the board address: the note under the address */
-      note: {
-        en: "Your stickers are kept at this address on Ethereum Sepolia.",
-        ja: "あなたのシールは、Ethereum Sepoliaのこのアドレスに保管されています。",
-      },
-      /** Address dialog for the board address: the toast after Copy address copies it */
-      copied: { en: "Board address copied", ja: "ボードアドレスをコピーしました" },
-      /** Address dialog for the board address: the line under Copy address when it can't copy the address, which stays until the next try */
-      notCopied: {
-        en: "Couldn’t copy the board address. Touch and hold it to copy it yourself.",
-        ja: "ボードアドレスをコピーできませんでした。アドレスを長押しして、ご自身でコピーしてください。",
-      },
-      /** Address dialog for the board address: the link under Copy address that opens the address on Etherscan */
-      viewOnExplorer: { en: "View on Etherscan", ja: "Etherscanで見る" },
-      /** Address dialog for the board address: screen readers' name for the Etherscan link */
-      viewOnExplorerLabel: {
-        en: "View on Etherscan: your board address",
-        ja: "ボードアドレスをEtherscanで見る",
-      },
-    },
     sui: {
       /** Your stat board: the caption on the Sui address's QR code paper */
       caption: { en: "Sui address", ja: "Suiアドレス" },
       /** Your stat board: the network's name under the Sui address paper's caption */
       network: { en: "Sui Testnet", ja: "Sui Testnet" },
       /** Your stat board: fine print on the Sui address paper, under its network, saying what the address is for */
-      gloss: { en: "For reserve tickets", ja: "有償チケット用" },
+      gloss: {
+        en: "Keeps your stickers and pays for reserve tickets",
+        ja: "シールの保管・<wbr/>有償チケットの<wbr/>支払い用",
+      },
       /** Your stat board: screen readers' name for the Sui address paper, a button that holds its QR code up in the address dialog */
       open: { en: "Show your Sui address as a QR code", ja: "SuiアドレスをQRコードで表示" },
       /** Your stat board: on the Sui address paper while the address loads */
@@ -161,7 +119,10 @@ export const stickerBoard = {
       /** Address dialog for the Sui address: screen readers' name for the large QR code */
       qrCode: { en: "QR code of your Sui address", ja: "SuiアドレスのQRコード" },
       /** Address dialog for the Sui address: the note under the address */
-      note: { en: "Your address on Sui Testnet.", ja: "Sui Testnetでのあなたのアドレスです。" },
+      note: {
+        en: "Your stickers are kept at this address on Sui Testnet, and reserve tickets are paid from it.",
+        ja: "あなたのシールは、<wbr/>Sui Testnetの<wbr/>このアドレスに<wbr/>保管されます。<wbr/>有償チケットも、<wbr/>このアドレスから<wbr/>支払います。",
+      },
       /** Address dialog for the Sui address: the toast after Copy address copies it */
       copied: { en: "Sui address copied", ja: "Suiアドレスをコピーしました" },
       /** Address dialog for the Sui address: the line under Copy address when it can't copy the address, which stays until the next try */
@@ -177,7 +138,7 @@ export const stickerBoard = {
         ja: "SuiアドレスをSuiscanで見る",
       },
     },
-    /** Your stat board: the link on an address paper whose address didn't load */
+    /** Your stat board: the link on the Sui address paper when its address didn't load */
     tryAgain: { en: "Try again", ja: "もう一度" },
     /** Address dialog: screen readers' name for the X button that puts the paper back on the cork */
     close: { en: "Close", ja: "閉じる" },
@@ -188,6 +149,8 @@ export const stickerBoard = {
   settings: {
     /** Your stat board: the title of the Settings note, the first paper under the stats on the cork, which peeks up from the cork's foot until it's scrolled into view */
     title: { en: "Settings", ja: "設定" },
+    /** Settings note: the status line while a setting saves, which screen readers announce */
+    saving: { en: "Saving…", ja: "保存しています…" },
     language: {
       /** Settings note: the heading over the language choices */
       title: { en: "Language", ja: "言語" },
@@ -205,8 +168,6 @@ export const stickerBoard = {
         en: "Choosing a language restarts Croquis.",
         ja: "言語を選ぶと、クロッキーが再起動します。",
       },
-      /** Settings note: the status line while a language choice saves, which screen readers announce */
-      saving: { en: "Saving…", ja: "保存しています…" },
       /** Settings note: the alert when the language choice didn't save to your account, with the reason */
       notSaved: {
         en: "Your language couldn’t be saved, so it hasn’t changed: {{reason}}",
@@ -218,41 +179,27 @@ export const stickerBoard = {
         ja: "言語は保存しましたが、この端末には残せませんでした。次にアプリをひらいたときに切り替わります。",
       },
     },
-  },
-  /** Your stat board's Age verification paper, where an Orb-verified World ID proves you're 18 or older. */
-  ageVerification: {
-    /** Your stat board, Age verification paper: its title */
-    title: { en: "Age verification", ja: "年齢確認" },
-    /** Your stat board, Age verification paper, before you've verified: what verifying does, over the Verify your age button */
-    lead: {
-      en: "Prove you’re 18 or older with a World ID verified at an Orb, which World gives only to people 18 or older. Croquis learns nothing else about you.",
-      ja: "Orbで認証したWorld IDで、18歳以上であることを証明します。Orbでの認証は18歳以上の人しか受けられません。クロッキーには、それ以外の情報は伝わりません。",
-    },
-    /** Your stat board, Age verification paper, before you've verified: fine print under what verifying does, saying what an Orb is */
-    orb: {
-      en: "An Orb: World’s in-person verification device",
-      ja: "Orb：Worldが対面で本人確認をする装置",
-    },
-    /** Your stat board, Age verification paper: the button that opens World ID to verify your age */
-    verify: { en: "Verify your age", ja: "年齢を確認する" },
-    /** Your stat board, Age verification paper: the button's text while World ID opens, after tapping Verify your age */
-    opening: { en: "Opening World ID…", ja: "World IDをひらいています…" },
-    /** Your stat board, Age verification paper, once World ID proved your age: in place of the button */
-    verified: { en: "Verified 18+ with World ID", ja: "World IDで18歳以上を確認済み" },
-    /** Your stat board, Age verification paper: the alert when verifying failed, with the reason */
-    failed: {
-      en: "Your age couldn’t be verified: {{reason}}",
-      ja: "年齢を確認できませんでした：{{reason}}",
-    },
-    /** Your stat board, Age verification paper: the reason in “couldn’t be verified” when World App sent a proof that isn't for verifying your age */
-    otherProof: {
-      en: "World App sent a different kind of proof. Update World App, then try again.",
-      ja: "World Appから別の種類の証明が届きました。World Appを更新してから、もう一度お試しください。",
-    },
-    /** Your stat board, Age verification paper: the reason in “couldn’t be verified” when World App failed; World ID's error code, such as credential_unavailable, follows as details for a report */
-    worldAppFailed: {
-      en: "World App couldn’t finish.",
-      ja: "World Appで確認を完了できませんでした。",
+    /** The NSFW opt-in, a second setting under Language. */
+    nsfw: {
+      /** Settings note: the heading over the NSFW opt-in's switch */
+      title: { en: "18+ stickers", ja: "18+のシール" },
+      /** Settings note: the NSFW opt-in's switch, off until you turn it on; on, 18+ stickers show unblurred and you can seal and receive them */
+      show: { en: "Show 18+ stickers", ja: "18+のシールを表示する" },
+      /** Settings note: the fine print under the NSFW opt-in's switch, saying who it's for and what it changes */
+      about: {
+        en: "For people 18 or older. On, 18+ stickers show unblurred, and you can seal your own as 18+ and receive them. Off, they’re blurred, yours too.",
+        ja: "18歳以上の方向けです。オンにすると、18+のシールがぼかしなしで表示され、自分のシールを18+として仕上げたり、18+のシールを受け取ったりできます。オフにすると、自分のものも含めてぼかして表示されます。",
+      },
+      /** Settings note: the fine print saying that changing the NSFW opt-in restarts the app */
+      restarts: {
+        en: "Changing it restarts Croquis.",
+        ja: "切り替えると、クロッキーが再起動します。",
+      },
+      /** Settings note: the alert when the NSFW opt-in didn't save to your account, with the reason */
+      notSaved: {
+        en: "Your 18+ setting couldn’t be saved, so it hasn’t changed: {{reason}}",
+        ja: "18+の設定を保存できなかったため、変更していません：{{reason}}",
+      },
     },
   },
   /** The developer slip: English only, so the Japanese catalog never translates it. */

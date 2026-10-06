@@ -1,6 +1,4 @@
 import type {
-  AgeProof,
-  AgeVerificationRequest,
   ApiErrorCode,
   ErrorBody,
   Explore,
@@ -19,11 +17,14 @@ import type {
   ReceivedGift,
   RecordGratitude,
   SealResponse,
+  SignedTransaction,
   SpendTicket,
+  SponsoredTransaction,
   StartedTicketPurchase,
   StickerBoard,
   StickerDetail,
   StickerPlacement,
+  TakeOutStart,
   TicketPurchasePayment,
   TicketShop,
   Tickets,
@@ -47,21 +48,25 @@ interface SealRequest {
   flat: Blob;
   /** The gzipped TimelapseV1; a seal without one still seals. */
   timelapse?: Blob;
-  /** Seals an NSFW sticker, which the server takes only from an adult. */
+  /** Seals an NSFW sticker, which the server takes only from someone with the NSFW opt-in. */
   nsfw: boolean;
 }
 
 /** Opening a Gift Message's link: its token as the link carries it, which the client checks. */
 export type GiftOpening = Omit<OpenGiftBody, "giftClaimToken"> & { giftClaimToken: string };
 
+/** A purchase started: the purchase, and its payment for the person's wallet to sign. */
+interface StartedPurchase {
+  purchase: StartedTicketPurchase;
+  payment: SponsoredTransaction;
+}
+
 /** The REST API, one method per route the app calls. */
 export interface ApiClient {
   /** POST /api/me/language-choice: Settings' language, or null to follow LINE's. */
   setLanguageChoice: (languageChoice: Me["languageChoice"]) => Promise<Me>;
-  /** POST /api/me/age-verification/request: IDKit's settings for asking World App for the proof. */
-  ageVerificationRequest: () => Promise<AgeVerificationRequest>;
-  /** POST /api/me/age-verification: World App's proof that you're 18 or older. */
-  verifyAge: (proof: AgeProof) => Promise<Me>;
+  /** POST /api/me/nsfw-opt-in: Show 18+ stickers, in Settings. */
+  setNsfwOptIn: (nsfwOptIn: boolean) => Promise<Me>;
 
   /** GET /api/sticker-boards/:userId; `me` for your own. */
   stickerBoard: (userId?: string) => Promise<StickerBoard>;
@@ -85,9 +90,9 @@ export interface ApiClient {
   spendTicket: (spend: SpendTicket) => Promise<{ ticketUse: TicketUse; tickets: Tickets }>;
   /** GET /api/ticket-shop */
   ticketShop: () => Promise<TicketShop>;
-  /** POST /api/ticket-purchases/start: records a purchase of the pack of `tickets`, before it's paid. */
-  startTicketPurchase: (tickets: number) => Promise<StartedTicketPurchase>;
-  /** POST /api/ticket-purchases: a started purchase's payment, which adds its tickets. */
+  /** POST /api/ticket-purchases/start: records a purchase of the pack of `tickets`, and builds its payment. */
+  startTicketPurchase: (tickets: number) => Promise<StartedPurchase>;
+  /** POST /api/ticket-purchases: a started purchase's signed payment, which the server runs and adds tickets for. */
   buyTickets: (payment: TicketPurchasePayment) => Promise<Tickets>;
 
   /**
@@ -95,12 +100,14 @@ export interface ApiClient {
    * giver picked who it's for in the app, so it waits on their board.
    */
   packageGift: (stickerId: string, forUserId?: string) => Promise<PackagedGift>;
-  /** POST /api/gifts/:giftId/deposit */
-  reportDeposit: (giftId: string, txHash?: string) => Promise<Gift>;
+  /** POST /api/gifts/:giftId/deposit: the signed deposit, which the server runs. */
+  reportDeposit: (giftId: string, signed: SignedTransaction) => Promise<Gift>;
   /** POST /api/gifts/:giftId/shared */
   reportShared: (giftId: string, outcome: "sent" | "cancelled") => Promise<Gift>;
-  /** POST /api/gifts/:giftId/take-out */
-  takeOutGift: (giftId: string) => Promise<Gift>;
+  /** POST /api/gifts/:giftId/take-out/start */
+  startTakeOut: (giftId: string) => Promise<TakeOutStart>;
+  /** POST /api/gifts/:giftId/take-out: the signed take-out, which the server runs. */
+  takeOutGift: (giftId: string, signed: SignedTransaction) => Promise<Gift>;
   /** GET /api/gifts/pending */
   pendingGifts: () => Promise<PendingGifts>;
   /** POST /api/gifts/preview */
@@ -129,19 +136,16 @@ export interface ApiClient {
   explorePile: (before: string) => Promise<PilePage>;
   /** GET /api/users?handle= */
   searchUsers: (handle: string) => Promise<Person[]>;
-  /** GET /api/ens/people/:label: whoever is <label>.croquis-app.eth. */
-  personByEnsLabel: (label: string) => Promise<Person>;
 }
 
 /**
  * Codes the app makes itself: no answer, no LINE ID token to sign in with, a LINE reconnect that
- * failed, no smart account from Privy in time for a chain action, and no Sui signer for a payment.
+ * failed, and no Sui wallet or signer from Privy in time for a chain action or a payment.
  */
 type ClientErrorCode =
   | "network"
   | "no_line_token"
   | "line_reconnect_failed"
-  | "smart_account_not_ready"
   | "sui_wallet_not_ready";
 export type ErrorCode = ApiErrorCode | ClientErrorCode;
 
@@ -151,8 +155,6 @@ export class ApiError extends Error {
   /** The body's `error`: stable, so screens switch on it. */
   readonly code: string;
   readonly detail?: string;
-  /** gift_held's gift: the one to take out before the sticker can be given again. */
-  readonly giftId?: string;
 
   constructor(status: number, body: ErrorBody) {
     super(body.detail ? `${body.error}: ${body.detail}` : body.error);
@@ -160,7 +162,6 @@ export class ApiError extends Error {
     this.status = status;
     this.code = body.error;
     this.detail = body.detail;
-    this.giftId = body.giftId;
   }
 }
 

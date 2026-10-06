@@ -1,4 +1,5 @@
 import liff from "@line/liff";
+import type { User, WalletWithMetadata } from "@privy-io/react-auth";
 import { useSyncExternalStore } from "react";
 import { ApiError } from "../api/apiClient";
 import { liffMockActive } from "../line/liff";
@@ -7,16 +8,21 @@ import { reconnectLine } from "../line/reconnectLine";
 // The Privy app. It isn't secret: Privy's SDK sends it with every request.
 export const PRIVY_APP_ID = "cmuh4s0lz01fn0cl143lomlzj";
 
+/** The Sui wallet Privy itself made for the person, as opposed to one they connected. */
+export const privySuiWallet = (user: User | null) =>
+  user?.linkedAccounts.find(
+    (a): a is WalletWithMetadata =>
+      a.type === "wallet" &&
+      (a.walletClientType === "privy" || a.walletClientType === "privy-v2") &&
+      a.chainType === "sui",
+  );
+
 export type PrivyStatus =
   | { state: "signing-in" }
   | {
       state: "signed-in";
       userId: string;
-      /** The Ethereum address Privy made at sign-in; it signs for the smart account. */
-      wallet?: string;
-      /** Once smart wallets are on: the account that holds the person's stickers. */
-      smartAccount?: string;
-      /** The Sui address, which MakeSuiWallet asks Privy for once the Ethereum one exists. */
+      /** The Sui address, which MakeSuiWallet asks Privy for once the person is signed in. */
       suiWallet?: string;
     }
   | { state: "failed"; reason: string; reconnectLine?: boolean }
@@ -85,8 +91,8 @@ export function resetPrivySignIn() {
   setPrivyStatus({ state: "signing-in" });
 }
 
-// Privy makes a new user's wallet right after sign-in, and signs out if its wallet frame is still starting.
-// Waiting for useWallets().ready makes that rarer, not impossible; by a second try the frame is up.
+// A new user's wallet is made right after sign-in, and Privy signs out if its wallet frame is still
+// starting. Waiting for useWallets().ready makes that rarer, not impossible; by a second try it's up.
 const WALLET_FRAME_RACE = "User must be authenticated before creating a Privy wallet";
 const RACE_RETRY_MS = 1000;
 // Spent once per page load, so a race that keeps happening ends on the failure instead of a loop.

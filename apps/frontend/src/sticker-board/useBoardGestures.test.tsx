@@ -7,6 +7,7 @@ import { fieldOf, sizeOf, toPx, transformAt } from "./placement";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import { STEP_SAVE_IDLE_MS, useBoardGestures } from "./useBoardGestures";
 import { yoursHeld } from "./testBoardSticker";
+import { testStickerUrls } from "../stickers/testStickerUrls";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -24,7 +25,7 @@ const sticker: BoardSticker = {
   width: 100,
   height: 80,
   nsfw: false,
-  urls: { png: "a.png" },
+  urls: testStickerUrls("a"),
   placement: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
 };
 
@@ -319,7 +320,9 @@ describe("useBoardGestures", () => {
       const [, saved] = onCommit.mock.calls[0];
       const { x, y } = toPx(fieldOf(390, 657), saved);
       const { w, h } = sizeOf(390, saved.s, sticker);
-      const [frames] = vi.spyOn(Element.prototype, "animate").mock.calls[0];
+      // The sticker's own peel, after the mark it leaves behind.
+      const { calls, contexts } = vi.spyOn(Element.prototype, "animate").mock;
+      const [frames] = calls[contexts.indexOf(el)] ?? [];
       const first = Array.isArray(frames) ? frames[0]?.transform : undefined;
       expect(first).toContain(transformAt(x, y, w, h, saved.r));
     });

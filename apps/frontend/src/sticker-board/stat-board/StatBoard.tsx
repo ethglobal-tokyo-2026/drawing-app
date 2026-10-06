@@ -13,9 +13,8 @@ import { SendTestMessage } from "../../line/SendTestMessage";
 import { LabelButton } from "../../ui/LabelButton";
 import { QuietLink } from "../../ui/QuietLink";
 import { AddressDialog } from "./AddressDialog";
-import { AgeVerificationNote } from "./AgeVerificationNote";
 import { AddressPapers } from "./AddressPapers";
-import { useBoardAddress, useSuiAddress, type Chain } from "./addresses";
+import { useSuiAddress } from "./addresses";
 import { DeveloperSlip } from "./DeveloperSlip";
 import { GratitudeDemoControls } from "./GratitudeDemoControls";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
@@ -58,7 +57,6 @@ export function StatBoard({
   const figures: CorkFigures = {
     name: me.displayName,
     handle: account.handle ?? me.displayName,
-    ensName: account.ensName,
     own: true,
     loading: stats.state === "loading",
     failure: stats.state === "failed" ? { ...problemOf(stats.error), retry: stats.retry } : null,
@@ -66,17 +64,13 @@ export function StatBoard({
     since: Date.parse(stats.state === "ready" ? stats.data.since : account.createdAt),
   };
 
-  const board = useBoardAddress();
   const sui = useSuiAddress();
-  const boardPaper = useRef<HTMLButtonElement>(null);
   const suiPaper = useRef<HTMLButtonElement>(null);
-  const papers = { ethereum: boardPaper, sui: suiPaper };
-  const [open, setOpen] = useState<Chain | null>(null);
-  const opened = open && { ethereum: board, sui }[open];
-  const held = open && opened?.state === "ready" ? { chain: open, address: opened.address } : null;
-  // An address lost while its dialog is up, as when Privy signs you out, takes the dialog with it for
+  const [open, setOpen] = useState(false);
+  const held = open && sui.state === "ready" ? sui.address : null;
+  // The address lost while its dialog is up, as when Privy signs you out, takes the dialog with it for
   // good, so it doesn't reopen by itself when the address comes back.
-  if (open && !held) setOpen(null);
+  if (open && !held) setOpen(false);
 
   return (
     <>
@@ -102,13 +96,11 @@ export function StatBoard({
         {/* Settings first, since it's the paper people come back to. */}
         <SettingsNote openedInView={reopenedOnSettings} />
         <AddressPapers
-          board={board}
           sui={sui}
-          lifted={held?.chain ?? null}
-          paperRefs={papers}
-          onOpen={setOpen}
+          lifted={held !== null}
+          paperRef={suiPaper}
+          onOpen={() => setOpen(true)}
         />
-        <AgeVerificationNote />
         {DEV_SLIP && (
           <DeveloperSlip>
             <SendTestMessage senderName={me.displayName} />
@@ -121,15 +113,7 @@ export function StatBoard({
         )}
       </StatCork>
       {/* Beside the cork rather than in it, so its taps and Escape never reach the cork's own. */}
-      {held && (
-        <AddressDialog
-          key={held.chain}
-          chain={held.chain}
-          address={held.address}
-          from={papers[held.chain]}
-          onClose={() => setOpen(null)}
-        />
-      )}
+      {held && <AddressDialog address={held} from={suiPaper} onClose={() => setOpen(false)} />}
     </>
   );
 }

@@ -1,14 +1,17 @@
-import { waitForSmartWallet } from "../identity/smartWallet";
+import { waitForSuiAddress } from "../identity/suiWallet";
 import { ApiError, type ApiClient } from "./apiClient";
 
-/** The backend resolves the wallet from Privy; don't race its automatic creation at sign-in. */
-export function withSmartWallet(api: ApiClient): ApiClient {
+/**
+ * Holds what the server does with the person's Sui wallet until Privy has made it: the server reads
+ * the wallet from Privy, so asking sooner would find none.
+ */
+export function withSuiWallet(api: ApiClient): ApiClient {
   return {
     ...api,
     seal: async (request) => {
-      await waitForSmartWallet();
+      await waitForSuiAddress();
       const sealed = await api.seal(request);
-      if (sealed.sticker.tokenId === null || sealed.sticker.mintTxHash === null) {
+      if (sealed.sticker.objectId === null) {
         // The server's own code for this, so the person reads its catalog message.
         throw new ApiError(0, {
           error: "mint_failed",
@@ -19,16 +22,20 @@ export function withSmartWallet(api: ApiClient): ApiClient {
       return sealed;
     },
     packageGift: async (stickerId, forUserId) => {
-      await waitForSmartWallet();
+      await waitForSuiAddress();
       return api.packageGift(stickerId, forUserId);
     },
     receiveGift: async (request) => {
-      await waitForSmartWallet();
+      await waitForSuiAddress();
       return api.receiveGift(request);
     },
     receiveGiftForYou: async (giftId) => {
-      await waitForSmartWallet();
+      await waitForSuiAddress();
       return api.receiveGiftForYou(giftId);
+    },
+    startTicketPurchase: async (tickets) => {
+      await waitForSuiAddress();
+      return api.startTicketPurchase(tickets);
     },
   };
 }

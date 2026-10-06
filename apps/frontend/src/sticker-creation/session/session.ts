@@ -120,19 +120,19 @@ export function transition(session: Session, event: SessionEvent): Result {
  */
 const SEAL_REFUSALS: ReadonlySet<string> = new Set([
   "invalid_request",
-  "adults_only",
+  "nsfw_not_opted_in",
   "ticket_not_found",
 ] satisfies ErrorCode[]);
 
 /**
  * What a failed seal request says about the server. "refused": it answered that it holds no seal for
- * this ticket, so the sheet may change. "unsent": the wait for the board address stopped it before it
+ * this ticket, so the sheet may change. "unsent": the wait for the Sui address stopped it before it
  * left the phone. "unknown": anything else, no answer above all, after which the server may hold it.
  */
 export function sealFailure(error: unknown): "refused" | "unsent" | "unknown" {
   if (!(error instanceof ApiError)) return "unknown";
   if (error.status >= 400 && error.status < 500 && SEAL_REFUSALS.has(error.code)) return "refused";
-  const unsent = error.code === "line_token_expired" || error.code === "smart_account_not_ready";
+  const unsent = error.code === "line_token_expired" || error.code === "sui_wallet_not_ready";
   return error.status === 0 && unsent ? "unsent" : "unknown";
 }
 
@@ -144,7 +144,7 @@ export type SealProblem =
         | "noAnswer"
         | "serverProblem"
         | "notOnChain"
-        | "boardAddress"
+        | "suiAddress"
         | "signInExpired";
     }
   /** The server's own answer, worded by its error message. */
@@ -155,7 +155,7 @@ export function describeSealFailure(error: unknown, sent: boolean): SealProblem 
   // An answer that can't be read is no answer; a failure before the request left is the phone's.
   if (!(error instanceof ApiError)) return { kind: sent ? "noAnswer" : "onThisPhone" };
   if (error.code === "line_token_expired") return { kind: "signInExpired" };
-  if (error.code === "smart_account_not_ready") return { kind: "boardAddress" };
+  if (error.code === "sui_wallet_not_ready") return { kind: "suiAddress" };
   if (error.code === "mint_failed") return { kind: "notOnChain" };
   if (error.status === 0) return { kind: "noAnswer" };
   return error.status >= 500 ? { kind: "serverProblem" } : { kind: "refused", error };

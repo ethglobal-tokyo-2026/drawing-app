@@ -87,7 +87,6 @@ export {
   Plus,
   Question,
   Receipt,
-  SealCheck,
   SignOut,
   SkipForward,
   StarFour,

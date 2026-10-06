@@ -140,10 +140,7 @@ const REFUSED_IN_THE_PREVIEW: ReceiveRefusal[] = [
   "gift_expired",
   "not_deposited",
 ];
-const REFUSED_AS_ERRORS: Array<[number, RefusalKind]> = [
-  [404, "gift_not_found"],
-  [501, "needs_server"],
-];
+const REFUSED_AS_ERRORS: Array<[number, RefusalKind]> = [[404, "gift_not_found"]];
 
 describe("ReceiveGiftDialog", () => {
   it.each(REFUSED_IN_THE_PREVIEW)("says why a %s gift can't be received", async (refusal) => {

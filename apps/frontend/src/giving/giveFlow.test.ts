@@ -4,12 +4,12 @@ import { errors } from "../i18n/strings/errors";
 import {
   GiftMessageOutError,
   GiftPackagingError,
+  GiftTransferError,
   type GiftBackend,
   type PackWait,
 } from "./giftBackend";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import type { GiftSendOutcome } from "./giftSender";
-import { GiftTransactionRevertedError } from "./giftTransactions";
 import {
   createGiveFlow,
   PICKER_ANSWER_MS,
@@ -220,8 +220,8 @@ describe("giving through a LINE chat", () => {
     expect(t.state()).toEqual({ step: "preparing", wait: "moving" });
 
     await wait(PREPARING_SLOW_MS - PICKER_DELAY);
-    heard("confirming");
-    expect(t.state()).toEqual({ step: "preparing", wait: "confirming", slow: true });
+    heard("asking");
+    expect(t.state()).toEqual({ step: "preparing", wait: "asking", slow: true });
 
     packing.resolve(await server.backend.pack(STICKER));
     await wait();
@@ -251,14 +251,17 @@ describe("giving through a LINE chat", () => {
 
   it("names why a gift couldn't be packed in plain words, and keeps the developer's detail apart", async () => {
     const server = fakeBackend();
-    const reverted = new GiftPackagingError("gift-1", new GiftTransactionRevertedError("deposit"));
-    const t = setup({ backend: { ...server.backend, pack: () => Promise.reject(reverted) } });
+    const noLink = new GiftPackagingError(
+      "gift-1",
+      new GiftTransferError("no_link", "No.0147 is in a gift the server gave no link for"),
+    );
+    const t = setup({ backend: { ...server.backend, pack: () => Promise.reject(noLink) } });
     t.flow.chooseLineChat();
     await wait(PICKER_DELAY);
     expect(t.failure().message).toMatch(
-      /^No\.0147 couldn’t be packed: .*didn’t make it into the gift bag/,
+      /^No\.0147 couldn’t be packed: This gift came without a link to send\./,
     );
-    expect(t.failure().detail).toBe("The deposit transaction reverted");
+    expect(t.failure().detail).toBe("No.0147 is in a gift the server gave no link for");
   });
 
   it("sends the same gift again, straight away, after a cancel", async () => {

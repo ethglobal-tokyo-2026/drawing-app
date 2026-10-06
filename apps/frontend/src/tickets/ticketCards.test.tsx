@@ -5,26 +5,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
 import { setPrivyStatus } from "../identity/privy";
-import { getJpycBalance, getTicketPayments, signTicketPayment } from "../payments/jpyc";
-import { PaymentFailed } from "../payments/paymentErrors";
+import { signSponsored } from "../identity/suiSigner";
+import { getJpycBalance, getTicketPayments } from "../payments/jpyc";
 import { OutOfTickets } from "./OutOfTickets";
 import { formatRefillTime } from "./refill";
 import { ReserveTicketCheckout } from "./ReserveTicketCheckout";
 import { StartDrawing } from "./StartDrawing";
-import {
-  addUnaddedPurchases,
-  keepUnaddedPurchase,
-  readUnaddedPurchasesAgain,
-  unaddedPurchasesFor,
-} from "./unaddedPurchases";
 import { useTickets } from "./useTickets";
 
 vi.mock("../payments/jpyc", () => ({
   getJpycBalance: vi.fn(),
   getTicketPayments: vi.fn(),
-  signTicketPayment: vi.fn(),
 }));
-vi.mock("../identity/suiSigner", () => ({ waitForSuiSigner: () => Promise.resolve({}) }));
+vi.mock("../identity/suiSigner", () => ({
+  waitForSuiSigner: () => Promise.resolve({}),
+  signSponsored: vi.fn(),
+}));
 
 const onBoard = vi.fn();
 const onShop = vi.fn();
@@ -269,113 +265,168 @@ const purchaseFor = (tickets: number): StartedTicketPurchase => {
     id,
     tickets,
     priceYen: pack.priceYen,
-    priceJpyc: pack.priceJpyc,
-    reference: `tickets:me:${id}`,
   };
 };
+
+/** The payment the server builds for a purchase, which the wallet signs. */
+const PAYMENT = { txBytes: "AAAA", digest: TX_DIGEST, expiresAt: "2026-09-25T13:04:00.000Z" };
+const SIGNATURE = "c2lnbmVk";
+/** The signed payment the checkout sends for a pack of `tickets`. */
+const paidFor = (tickets: number) => ({
+  purchaseId: purchaseFor(tickets).id,
+  digest: TX_DIGEST,
+  signature: SIGNATURE,
+});
 
 /** An API serving SHOP that starts each purchase as purchaseFor does, but for `overrides`. */
 const checkoutApi = (overrides: Partial<ApiClient> = {}) =>
   emptyApi({
     ticketShop: () => Promise.resolve(SHOP),
-    startTicketPurchase: (tickets) => Promise.resolve(purchaseFor(tickets)),
+    startTicketPurchase: (tickets) =>
+      Promise.resolve({ purchase: purchaseFor(tickets), payment: PAYMENT }),
     ...overrides,
   });
 
-/** The payment signed with TX_DIGEST, which Sui answers as `send` does: by default, it ran. */
-const signed = (send: () => Promise<void> = () => Promise.resolve()) => ({
-  digest: TX_DIGEST,
-  send: vi.fn(send),
-});
-
 describe("ReserveTicketCheckout", () => {
   const checkout = () => <ReserveTicketCheckout onDraw={onDraw} onClose={onBoard} />;
-
-  /** The payments this phone keeps for you until their tickets are added. */
-  const kept = () => unaddedPurchasesFor("me").map((p) => p.digest);
-
-  it("keeps a payment whose answer from Sui never came, and asks the server for its tickets all the same", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    const payment = signed(() => {
-      // Kept before Sui is asked to run it.
-      expect(kept()).toEqual([TX_DIGEST]);
-      return Promise.reject(new TypeError("Failed to fetch"));
-    });
-    vi.mocked(signTicketPayment).mockResolvedValue(payment);
-    const bought = vi.fn(() => Promise.resolve(tickets(3, 1)));
-    const api = checkoutApi({ buyTickets: bought });
+  /** Renders the checkout over `api`, with its packs and balance in. */
+  const open = async (api = checkoutApi()) => {
     await render(checkout(), api);
     await settle(500);
+  };
+
+  beforeEach(() => {
+    localStorage.clear();
+    setPrivyStatus({ state: "signed-in", userId: "privy-me", suiWallet: SUI_WALLET });
+    vi.mocked(getJpycBalance).mockResolvedValue(1000n * JPYC);
+    vi.mocked(signSponsored).mockResolvedValue({ digest: TX_DIGEST, signature: SIGNATURE });
+  });
+
+  it("starts a purchase of the chosen pack, signs the payment the server built, and shows the tickets the server added", async () => {
+    const steps: string[] = [];
+    const started = vi.fn((count: number) => {
+      steps.push("start");
+      return Promise.resolve({ purchase: purchaseFor(count), payment: PAYMENT });
+    });
+    vi.mocked(signSponsored).mockImplementation(() => {
+      steps.push("sign");
+      return Promise.resolve({ digest: TX_DIGEST, signature: SIGNATURE });
+    });
+    const bought = vi.fn(() => Promise.resolve(tickets(3, 4)));
+    await open(
+      checkoutApi({
+        tickets: () => Promise.resolve(tickets(3, 1)),
+        startTicketPurchase: started,
+        buyTickets: bought,
+      }),
+    );
+    click("3 tickets");
     click("Pay");
-    await settle(500);
-    expect(payment.send).toHaveBeenCalledOnce();
-    expect(bought).toHaveBeenCalledWith({ purchaseId: purchaseFor(1).id, txDigest: TX_DIGEST });
-    expect(title()).toBe("1 reserve ticket added");
-    expect(kept()).toEqual([]);
+    await settle(2000);
+    expect(title()).toBe("3 reserve tickets added");
+    // One reserve ticket, its badge on the new total.
+    expect(document.querySelectorAll(".ticket-stub")).toHaveLength(1);
+    expect(document.querySelector(".ticket-stub__badge")?.textContent).toBe("×4");
+    expect(steps).toEqual(["start", "sign"]);
+    expect(started).toHaveBeenCalledExactlyOnceWith(3);
+    expect(signSponsored).toHaveBeenCalledExactlyOnceWith(PAYMENT);
+    expect(bought).toHaveBeenCalledExactlyOnceWith(paidFor(3));
+    expect(buttonNamed("Draw")?.getAttribute("aria-label")).toContain("4 reserve tickets");
+    click("Draw");
+    expect(onDraw).toHaveBeenCalledOnce();
   });
 
   it("says nothing was paid when the purchase can't be started, and signs nothing", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const api = checkoutApi({
-      startTicketPurchase: () => Promise.reject(new ApiError(0, { error: "network" })),
-    });
-    await render(checkout(), api);
-    await settle(500);
+    await open(
+      checkoutApi({
+        startTicketPurchase: () => Promise.reject(new ApiError(0, { error: "network" })),
+      }),
+    );
     click("Pay");
     await settle(500);
     expect(title()).toBe("Payment didn’t go through");
     expect(document.querySelector("[role=alert]")?.textContent).toBe(
       "Couldn’t connect. Check your connection, then try again.",
     );
-    expect(signTicketPayment).not.toHaveBeenCalled();
-    expect(kept()).toEqual([]);
+    expect(signSponsored).not.toHaveBeenCalled();
   });
 
-  it("opens Tickets not added yet, never a failed payment, when Sui's confirmation is slow and the server doesn't see the payment yet", async () => {
+  it("goes back to the packs when signing fails", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.mocked(signTicketPayment).mockResolvedValue(
-      signed(() => Promise.reject(new DOMException("The operation timed out.", "TimeoutError"))),
-    );
-    const bought = vi.fn(() => Promise.reject(new ApiError(409, { error: "payment_not_landed" })));
-    await render(checkout(), checkoutApi({ buyTickets: bought }));
-    await settle(500);
-    click("Pay");
-    await settle(500);
-    expect(title()).toBe("Tickets not added yet");
-    expect(document.body.textContent).not.toContain("Payment didn’t go through");
-    // Kept, so asking again later can still add them.
-    expect(kept()).toEqual([TX_DIGEST]);
-  });
-
-  it("lets go of a payment Sui ran and failed, and says nothing was spent", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.mocked(signTicketPayment).mockResolvedValue(
-      signed(() => Promise.reject(new PaymentFailed(TX_DIGEST, "Sui ran it, and it failed."))),
-    );
+    vi.mocked(signSponsored).mockRejectedValue(new Error("The wallet closed."));
     const bought = vi.fn();
-    await render(checkout(), checkoutApi({ buyTickets: bought }));
-    await settle(500);
+    await open(checkoutApi({ buyTickets: bought }));
     click("Pay");
     await settle(500);
     expect(title()).toBe("Payment didn’t go through");
-    // One catalog line for the known failure; Sui's own words are fine print, copyable.
     expect(document.querySelector("[role=alert]")?.textContent).toBe(
-      "Sui ran the payment, but it failed, so no JPYC was spent.",
+      "Something went wrong, so nothing was paid. Try again.",
     );
     expect(document.querySelector(".copyable-fine-print__text")?.textContent).toBe(
-      "Sui ran it, and it failed.",
+      "The wallet closed.",
     );
     expect(bought).not.toHaveBeenCalled();
-    expect(kept()).toEqual([]);
+    click("Back to the packs");
+    expect(title()).toBe("Pick a pack");
   });
 
-  beforeEach(() => {
-    localStorage.clear();
-    readUnaddedPurchasesAgain();
-    setPrivyStatus({ state: "signed-in", userId: "privy-me", suiWallet: SUI_WALLET });
-    vi.mocked(getJpycBalance).mockResolvedValue(1000n * JPYC);
-    vi.mocked(signTicketPayment).mockResolvedValue(signed());
+  it("says why when Sui ran the payment and it failed, with Sui's words as fine print", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const failed = new ApiError(409, {
+      error: "transaction_failed",
+      detail: "MoveAbort(MoveLocation {}, 3)",
+    });
+    await open(checkoutApi({ buyTickets: () => Promise.reject(failed) }));
+    click("Pay");
+    await settle(500);
+    expect(title()).toBe("Payment didn’t go through");
+    expect(document.querySelector("[role=alert]")?.textContent).toBe(
+      "Sui ran it, but it failed, so nothing moved.",
+    );
+    expect(document.querySelector(".copyable-fine-print__text")?.textContent).toBe(
+      "MoveAbort(MoveLocation {}, 3)",
+    );
+    expect(buttonNamed("Add the tickets")).toBeUndefined();
+  });
+
+  it("keeps the signed payment when its answer never came, and sends the same one again, never paying twice", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const bought = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError(503, { error: "payment_not_landed" }))
+      .mockResolvedValueOnce(tickets(3, 1));
+    const started = vi.fn((count: number) =>
+      Promise.resolve({ purchase: purchaseFor(count), payment: PAYMENT }),
+    );
+    await open(checkoutApi({ buyTickets: bought, startTicketPurchase: started }));
+    click("Pay");
+    await settle(500);
+    expect(title()).toBe("Tickets not added yet");
+    expect(document.querySelector("[role=alert]")?.textContent).toBe(
+      "Adding the tickets again won’t charge you twice. Sui hasn’t answered about the payment yet.",
+    );
+    // The way back to the packs is only a quiet link, under the key that sends it again.
+    expect(buttonNamed("Back to the packs")?.classList.contains("label-btn--quiet")).toBe(true);
+    click("Add the tickets");
+    await settle(500);
+    expect(title()).toBe("1 reserve ticket added");
+    expect(bought.mock.calls).toEqual([[paidFor(1)], [paidFor(1)]]);
+    expect(started).toHaveBeenCalledOnce();
+    expect(signSponsored).toHaveBeenCalledOnce();
+  });
+
+  it("leaves a payment whose answer never came for the packs, so it never blocks buying", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await open(
+      checkoutApi({ buyTickets: () => Promise.reject(new ApiError(0, { error: "network" })) }),
+    );
+    click("Pay");
+    await settle(500);
+    expect(title()).toBe("Tickets not added yet");
+    click("Back to the packs");
+    expect(title()).toBe("Pick a pack");
+    expect(buttonNamed("Pay ¥100")?.disabled).toBe(false);
   });
 
   it("outlines the balance and the packs until the JPYC and the packs are in", async () => {
@@ -394,41 +445,6 @@ describe("ReserveTicketCheckout", () => {
     expect(document.querySelector(".reserve-checkout__balance strong")?.textContent).toBe("¥1,000");
   });
 
-  it("starts a purchase of the chosen pack before signing, pays it with the purchase's reference, and shows the tickets the server added", async () => {
-    const steps: string[] = [];
-    const started = vi.fn((count: number) => {
-      steps.push("start");
-      return Promise.resolve(purchaseFor(count));
-    });
-    vi.mocked(signTicketPayment).mockImplementation(() => {
-      steps.push("sign");
-      return Promise.resolve(signed());
-    });
-    const bought = vi.fn(() => Promise.resolve(tickets(3, 4)));
-    const api = checkoutApi({
-      tickets: () => Promise.resolve(tickets(3, 1)),
-      startTicketPurchase: started,
-      buyTickets: bought,
-    });
-    await render(checkout(), api);
-    await settle(500);
-    click("3 tickets");
-    click("Pay");
-    await settle(2000);
-    expect(title()).toBe("3 reserve tickets added");
-    // One reserve ticket, its badge on the new total.
-    expect(document.querySelectorAll(".ticket-stub")).toHaveLength(1);
-    expect(document.querySelector(".ticket-stub__badge")?.textContent).toBe("×4");
-    expect(steps).toEqual(["start", "sign"]);
-    expect(started).toHaveBeenCalledExactlyOnceWith(3);
-    expect(signTicketPayment).toHaveBeenCalledWith(expect.anything(), SHOP.payment, purchaseFor(3));
-    expect(bought).toHaveBeenCalledWith({ purchaseId: purchaseFor(3).id, txDigest: TX_DIGEST });
-    expect(kept()).toEqual([]);
-    expect(buttonNamed("Draw")?.getAttribute("aria-label")).toContain("4 reserve tickets");
-    click("Draw");
-    expect(onDraw).toHaveBeenCalledOnce();
-  });
-
   it("won't pay a pack the wallet's JPYC can't cover, and says what to do instead", async () => {
     vi.mocked(getJpycBalance).mockResolvedValue(150n * JPYC);
     await render(checkout(), checkoutApi());
@@ -441,7 +457,7 @@ describe("ReserveTicketCheckout", () => {
       "Not enough balance for this pack. Pick a smaller one, or add JPYC to your Sui account.",
     );
     click("Pay");
-    expect(signTicketPayment).not.toHaveBeenCalled();
+    expect(signSponsored).not.toHaveBeenCalled();
   });
 
   it("says to add JPYC when the balance covers no pack at all", async () => {
@@ -496,13 +512,9 @@ describe("ReserveTicketCheckout", () => {
   });
 
   it("keeps Pay's face and focus while paying, says what it waits on, and lets the scrim close the card only after", async () => {
-    let confirm = () => {};
-    vi.mocked(signTicketPayment).mockResolvedValue(
-      signed(() => new Promise<void>((resolve) => (confirm = resolve))),
-    );
-    const api = checkoutApi({ buyTickets: () => Promise.resolve(tickets(3, 1)) });
-    await render(checkout(), api);
-    await settle(500);
+    let answer = (_: Tickets) => {};
+    const bought = () => new Promise<Tickets>((resolve) => (answer = resolve));
+    await open(checkoutApi({ buyTickets: bought }));
     act(() => buttonNamed("Pay")?.focus());
     click("Pay");
     await settle(0);
@@ -512,20 +524,20 @@ describe("ReserveTicketCheckout", () => {
     expect(paying?.disabled).toBe(false);
     expect(paying?.getAttribute("aria-busy")).toBe("true");
     expect(paying?.getAttribute("aria-disabled")).toBe("true");
-    expect(document.querySelector(".reserve-checkout__foot [role=status]")?.textContent).toContain(
-      "Waiting for Sui to confirm",
+    expect(document.querySelector(".reserve-checkout__foot [role=status]")?.textContent).toBe(
+      "Adding your tickets…",
     );
     const scrim = () => document.querySelector<HTMLElement>(".out-of-tickets__scrim");
     act(() => scrim()?.click());
     expect(onBoard).not.toHaveBeenCalled();
-    confirm();
+    answer(tickets(3, 1));
     await settle(500);
     expect(title()).toBe("1 reserve ticket added");
     act(() => scrim()?.click());
     expect(onBoard).toHaveBeenCalledOnce();
   });
 
-  it("opens the ticket purchases Sui lists under the ENS name, a page at a time", async () => {
+  it("opens the ticket purchases Sui lists under the short Sui address, a page at a time", async () => {
     const OLDER = "E".repeat(44);
     vi.mocked(getTicketPayments)
       .mockResolvedValueOnce({
@@ -540,8 +552,8 @@ describe("ReserveTicketCheckout", () => {
     await settle(500);
     expect(getTicketPayments).not.toHaveBeenCalled();
     // The button says what it opens, not only whose name it carries.
-    expect(buttonNamed("you.croquis-app.eth")?.textContent).toContain("Purchases");
-    click("you.croquis-app.eth");
+    expect(buttonNamed("0x1111…1111")?.textContent).toContain("Purchases");
+    click("0x1111…1111");
     await settle(500);
     expect(getTicketPayments).toHaveBeenCalledWith(SUI_WALLET, SHOP.payment, null);
     click("Older purchases");
@@ -557,195 +569,5 @@ describe("ReserveTicketCheckout", () => {
     expect(rows.some((a) => a.hasAttribute("aria-label"))).toBe(false);
     expect(rows[0]?.textContent).toMatch(/3 tickets.*¥270.*Opens Suiscan/);
     expect(buttonNamed("Older purchases")).toBeUndefined();
-  });
-
-  it("goes back to the packs when the payment itself fails", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.mocked(signTicketPayment).mockRejectedValue(
-      new Error("Sui didn’t answer the payment in time."),
-    );
-    await render(checkout(), checkoutApi());
-    await settle(500);
-    click("Pay");
-    await settle(500);
-    expect(title()).toBe("Payment didn’t go through");
-    expect(document.querySelector("[role=alert]")?.textContent).toBe(
-      "Something went wrong, so nothing was paid. Try again.",
-    );
-    expect(document.querySelector(".copyable-fine-print__text")?.textContent).toBe(
-      "Sui didn’t answer the payment in time.",
-    );
-    click("Back to the packs");
-    expect(title()).toBe("Pick a pack");
-  });
-
-  it("asks again for the tickets a payment bought when the server didn't add them, and never pays twice", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    const write = vi.fn(() => Promise.resolve());
-    Object.defineProperty(navigator, "clipboard", {
-      value: { writeText: write },
-      configurable: true,
-    });
-    const bought = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("Sui didn’t answer."))
-      .mockResolvedValueOnce(tickets(3, 1));
-    const api = checkoutApi({ buyTickets: bought });
-    await render(checkout(), api);
-    await settle(500);
-    click("Pay");
-    await settle(500);
-    expect(title()).toBe("Tickets not added yet");
-    expect(kept()).toEqual([TX_DIGEST]);
-    // The payment's ID is fine print under the key, never in the alert.
-    expect(document.querySelector("[role=alert]")?.textContent).not.toContain(TX_DIGEST);
-    expect(document.querySelector(".reserve-checkout__digest")?.textContent).toBe(TX_DIGEST);
-    // The way back to the packs is only a quiet link, under the key that asks again.
-    expect(buttonNamed("Back to the packs")?.classList.contains("label-btn--quiet")).toBe(true);
-    // The reason's own words, which aren't the server's, are fine print above it, with a Copy of their own.
-    expect(document.body.textContent).toContain("Error: Sui didn’t answer.");
-    const copies = [...document.querySelectorAll<HTMLButtonElement>("button")].filter(
-      (b) => b.textContent === "Copy",
-    );
-    act(() => copies.at(-1)?.click());
-    await settle(0);
-    expect(write).toHaveBeenCalledWith(TX_DIGEST);
-    expect(buttonNamed("Copied")).toBeDefined();
-    click("Add the tickets");
-    await settle(500);
-    expect(title()).toBe("1 reserve ticket added");
-    expect(bought).toHaveBeenCalledTimes(2);
-    expect(bought).toHaveBeenLastCalledWith({ purchaseId: purchaseFor(1).id, txDigest: TX_DIGEST });
-    expect(signTicketPayment).toHaveBeenCalledOnce();
-    expect(kept()).toEqual([]);
-  });
-
-  it("opens on a kept payment whose tickets weren't added, after the card was closed, and asks for them at once", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    const bought = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("Sui didn’t answer."))
-      .mockRejectedValueOnce(new ApiError(502, { error: "sui_unavailable" }))
-      .mockResolvedValueOnce(tickets(3, 3));
-    const api = checkoutApi({ buyTickets: bought });
-    await render(checkout(), api);
-    await settle(500);
-    click("3 tickets");
-    click("Pay");
-    await settle(500);
-    expect(title()).toBe("Tickets not added yet");
-    click("Not now");
-    expect(onBoard).toHaveBeenCalledOnce();
-    view?.unmount();
-
-    // The app opens again, and the checkout with it: on the payment, never on the packs.
-    readUnaddedPurchasesAgain();
-    view = renderWithApi(checkout(), api);
-    expect(title()).toBe("Tickets not added yet");
-    expect(document.querySelector(".reserve-checkout__digest")?.textContent).toBe(TX_DIGEST);
-    expect(buttonNamed("Adding…")?.getAttribute("aria-busy")).toBe("true");
-    await settle(500);
-    expect(bought).toHaveBeenCalledTimes(2);
-    expect(document.querySelector("[role=alert]")?.textContent).toContain(
-      "Sui didn’t answer. Your tickets weren’t added yet; try again.",
-    );
-    expect(kept()).toEqual([TX_DIGEST]);
-
-    click("Add the tickets");
-    await settle(500);
-    expect(title()).toBe("3 reserve tickets added");
-    // The phone kept what it cost, too.
-    expect(document.body.textContent).toContain("Paid ¥270 in JPYC.");
-    expect(bought).toHaveBeenCalledTimes(3);
-    expect(bought).toHaveBeenLastCalledWith({ purchaseId: purchaseFor(3).id, txDigest: TX_DIGEST });
-    expect(signTicketPayment).toHaveBeenCalledOnce();
-    expect(kept()).toEqual([]);
-  });
-
-  it("leaves a payment whose tickets weren't added for the packs, still kept, so it never blocks buying", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    const api = checkoutApi({
-      buyTickets: () => Promise.reject(new ApiError(502, { error: "sui_unavailable" })),
-    });
-    await render(checkout(), api);
-    await settle(500);
-    click("Pay");
-    await settle(500);
-    expect(title()).toBe("Tickets not added yet");
-    click("Back to the packs");
-    expect(title()).toBe("Pick a pack");
-    expect(buttonNamed("Pay ¥100")?.disabled).toBe(false);
-    expect(kept()).toEqual([TX_DIGEST]);
-  });
-
-  it("says once, with the server's reason and the payment's ID, when the server refuses a payment for good", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    const refusal = new ApiError(402, {
-      error: "payment_short",
-      detail: `txDigest: ${TX_DIGEST}`,
-    });
-    const bought = vi
-      .fn()
-      .mockRejectedValueOnce(new ApiError(502, { error: "sui_unavailable" }))
-      .mockRejectedValueOnce(refusal);
-    const api = checkoutApi({ buyTickets: bought });
-    await render(checkout(), api);
-    await settle(500);
-    click("Pay");
-    await settle(500);
-    expect(title()).toBe("Tickets not added yet");
-    click("Add the tickets");
-    await settle(500);
-    expect(title()).toBe("Tickets can’t be added");
-    // The card turned over under the key that was pressed, so its own key takes focus.
-    expect(document.activeElement?.textContent).toBe("Back to the packs");
-    expect(document.querySelector("[role=alert]")?.textContent).toBe(
-      "Asking again won’t add them. The payment was less than the pack’s price.",
-    );
-    expect(document.querySelector(".reserve-checkout__digest")?.textContent).toBe(TX_DIGEST);
-    expect(buttonNamed("Copy")).toBeDefined();
-    // Names who to send the ID to.
-    expect(document.querySelector(".out-of-tickets__note")?.textContent).toContain(
-      "Croquis Official account",
-    );
-    expect(buttonNamed("Add the tickets")).toBeUndefined();
-    // Refused for good, so it's no longer kept or asked for again.
-    expect(kept()).toEqual([]);
-    click("Back to the packs");
-    expect(title()).toBe("Pick a pack");
-    expect(bought).toHaveBeenCalledTimes(2);
-  });
-
-  it("says once, as it opens, why the server refused a kept payment while it was closed", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    keepUnaddedPurchase("me", {
-      purchaseId: purchaseFor(3).id,
-      digest: TX_DIGEST,
-      tickets: 3,
-      priceYen: 270,
-      paidAt: 0,
-    });
-    const bought = vi.fn(() =>
-      Promise.reject(
-        new ApiError(422, { error: "payment_not_found", detail: "no such transaction" }),
-      ),
-    );
-    const api = checkoutApi({ buyTickets: bought });
-    // The app's own ask, as it opened, met the refusal.
-    await addUnaddedPurchases(api, "me");
-    await render(checkout(), api);
-    expect(title()).toBe("Tickets can’t be added");
-    expect(document.querySelector("[role=alert]")?.textContent).toContain(
-      "The Shop didn’t receive that payment.",
-    );
-    expect(kept()).toEqual([]);
-    view?.unmount();
-
-    await render(checkout(), api);
-    expect(title()).toBe("Pick a pack");
-    expect(bought).toHaveBeenCalledOnce();
   });
 });

@@ -170,22 +170,17 @@ export const tickets = {
     address: {
       /** Reserve ticket checkout, under the not-enough-balance line: the label that opens your Sui address in place; it reads the same whether open or shut */
       show: { en: "Show my Sui address", ja: "Suiアドレスを表示" },
-      /** Reserve ticket checkout, once “Show my Sui address” is open: the line above the address, on where JPYC goes and what the network fee takes */
+      /** Reserve ticket checkout, once “Show my Sui address” is open: the line above the address, on where JPYC goes */
       how: {
-        en: "To add JPYC, send it to this address on the Sui network. Paying also needs a little SUI in the account for the network fee.",
-        ja: "JPYCを追加するには、Suiネットワークでこのアドレスに送ってください。支払いには、ネットワーク手数料として少額のSUIも必要です。",
+        en: "To add JPYC, send it to this address on the Sui network.",
+        ja: "JPYCを追加するには、Suiネットワークでこのアドレスに送ってください。",
       },
     },
     /** Reserve ticket checkout, after tapping Pay: what the payment in flight waits on, in a line above the Pay key, read aloud as it changes. */
     waiting: {
       /** Reserve ticket checkout, after tapping Pay: while the server starts the purchase, and its payment is built and signed */
       signing: { en: "Signing the payment…", ja: "支払いに署名しています…" },
-      /** Reserve ticket checkout, after tapping Pay: while Sui runs the signed payment, which can take a minute; the payment is already kept on this phone */
-      confirming: {
-        en: "Waiting for Sui to confirm the payment. If you close Croquis, the payment is kept and its tickets are added when you’re back.",
-        ja: "Suiが支払いを確認するのを待っています。クロッキーを閉じても支払いは保管され、戻ったときにチケットが追加されます。",
-      },
-      /** Reserve ticket checkout, after tapping Pay: while the server adds the tickets Sui confirmed */
+      /** Reserve ticket checkout, after tapping Pay: while the server runs the signed payment on Sui and adds its tickets */
       adding: { en: "Adding your tickets…", ja: "チケットを追加しています…" },
     },
     /** Reserve ticket checkout after a purchase: the title, when one reserve ticket was added */
@@ -195,33 +190,18 @@ export const tickets = {
       en: "{{count}} reserve tickets added",
       ja: "有償チケットを{{count}}枚追加しました",
     },
-    /** Reserve ticket checkout after a purchase, or once a payment kept on this phone gets its tickets: the quiet line under the title with the price paid, in yen */
+    /** Reserve ticket checkout after a purchase: the quiet line under the title with the price paid, in yen */
     paid: { en: "Paid {{price}} in JPYC.", ja: "{{price}}をJPYCで支払いました。" },
     /** Reserve ticket checkout after a purchase: the button under Draw that goes back to the packs */
     buyMore: { en: "Buy more tickets", ja: "チケットをもっと買う" },
     /** Reserve ticket checkout when a payment fails: the title, above the reason */
     paymentFailed: { en: "Payment didn’t go through", ja: "支払いが完了しませんでした" },
-    /** Reserve ticket checkout, under “Payment didn’t go through”: one bold line per known reason, then Sui's or the phone's own words as fine print beside Copy. No JPYC moved in any of them. */
+    /** Reserve ticket checkout, under “Payment didn’t go through”: one bold line per known reason, then the phone's own words as fine print beside Copy. No JPYC moved in any of them. */
     paymentFailure: {
       /** Reserve ticket checkout, payment failed: when building and signing the payment took too long, so it was never sent */
       timedOut: {
         en: "Signing the payment took too long, so it wasn’t sent. Nothing was paid.",
         ja: "支払いの署名に時間がかかったため、送信されませんでした。支払いは行われていません。",
-      },
-      /** Reserve ticket checkout, payment failed: when Sui ran the payment and it failed */
-      rejected: {
-        en: "Sui ran the payment, but it failed, so no JPYC was spent.",
-        ja: "Suiで支払いが失敗したため、JPYCは使われていません。",
-      },
-      /** Reserve ticket checkout, payment failed: when the Sui account has no SUI to pay the network fee with */
-      noNetworkFee: {
-        en: "Your Sui account needs a little SUI to pay the network fee. Nothing was paid.",
-        ja: "ネットワーク手数料を支払うには、Suiアカウントに少額のSUIが必要です。支払いは行われていません。",
-      },
-      /** Reserve ticket checkout, payment failed: when the phone couldn't reach Sui */
-      offline: {
-        en: "Couldn’t reach Sui, so nothing was paid. Check your connection and try again.",
-        ja: "Suiに接続できなかったため、支払いは行われていません。接続を確認して、もう一度お試しください。",
       },
       /** Reserve ticket checkout, payment failed: for any other reason */
       other: {
@@ -229,48 +209,21 @@ export const tickets = {
         ja: "問題が発生したため、支払いは行われていません。もう一度お試しください。",
       },
     },
-    /** When a payment was sent but the server didn't add its tickets: asking the server again never pays again. The phone keeps the payment from the moment it's signed until they're added or refused for good, and the checkout opens on it. */
+    /** When the answer to a signed payment never came: its key sends the same payment again, which never pays twice, and the server adds a landed payment's tickets by itself too. */
     notAdded: {
-      /** Reserve ticket checkout after paying, when the payment was sent but the tickets weren't added, or as it opens while this phone keeps such a payment: the title */
+      /** Reserve ticket checkout, after paying, when the answer to the signed payment never came: the title */
       title: { en: "Tickets not added yet", ja: "チケットが未追加です" },
-      /** Reserve ticket checkout, tickets not added, when Sui showed this phone the payment go through: the line under the title, in bold, then why in quiet type; `reason` is the server's or Sui's words */
+      /** Reserve ticket checkout, tickets not added: the line under the title, in bold, then why in quiet type; `reason` is the server's or the phone's words for the lost answer */
       line: {
-        en: "<strong>Your payment went through. Adding the tickets again won’t charge you twice.</strong> <why>{{reason}}</why>",
-        ja: "<strong>支払いは完了しています。チケットをもう一度追加しても、二重に請求されることはありません。</strong><why>{{reason}}</why>",
-      },
-      /** Reserve ticket checkout, tickets not added, when Sui's answer to the payment never reached this phone, or as it opens on a kept payment: the line under the title, in bold, then why in quiet type; `reason` is the server's or Sui's words, and empty as it opens until asking again fails */
-      unconfirmedLine: {
         en: "<strong>Adding the tickets again won’t charge you twice.</strong> <why>{{reason}}</why>",
         ja: "<strong>チケットをもう一度追加しても、二重に請求されることはありません。</strong><why>{{reason}}</why>",
       },
-      /** Reserve ticket checkout, tickets not added: the blue key that asks again for the tickets the payment bought */
+      /** Reserve ticket checkout, tickets not added: the blue key that sends the same signed payment again */
       add: { en: "Add the tickets", ja: "チケットを追加する" },
-      /** Reserve ticket checkout, tickets not added: that key while it asks, which it does at once as the checkout opens on a kept payment */
+      /** Reserve ticket checkout, tickets not added: that key while it asks */
       adding: { en: "Adding…", ja: "追加中…" },
-      /** Reserve ticket checkout, tickets not added or refused: fine print under the key naming the payment; `<id>` holds its Sui transaction ID, cut short on screen */
-      payment: { en: "Payment <id>{{digest}}</id>", ja: "支払い<id>{{digest}}</id>" },
     },
-    /** When the server refused a payment's tickets for good, or Sui never showed the payment: said once, and the phone stops keeping the payment. */
-    refused: {
-      /** Reserve ticket checkout, once, when the server refused for good to add the tickets a payment bought (after paying, after asking again, or as it opens on a kept payment refused since): the title */
-      title: { en: "Tickets can’t be added", ja: "チケットを追加できません" },
-      /** Reserve ticket checkout, tickets refused: the line under the title, in bold, then why in quiet type; `reason` is the server's words, or neverLanded */
-      line: {
-        en: "<strong>Asking again won’t add them.</strong> <why>{{reason}}</why>",
-        ja: "<strong>もう一度追加しても、チケットは追加されません。</strong><why>{{reason}}</why>",
-      },
-      /** Reserve ticket checkout, tickets refused, in quiet type after “Asking again won’t add them.”: why, when Sui still didn't show the payment long after it was signed */
-      neverLanded: {
-        en: "Sui never showed this payment, so it didn’t go through.",
-        ja: "Suiでこの支払いが確認できなかったため、支払いは完了していません。",
-      },
-      /** Reserve ticket checkout, tickets refused: the note under the line, saying where to send the payment ID shown below the key */
-      help: {
-        en: "Need help? Copy the payment ID below and send it in your LINE chat with the Croquis Official account.",
-        ja: "お困りの場合は、下の支払いIDをコピーして、LINEのクロッキー公式アカウントとのトークに送ってください。",
-      },
-    },
-    /** Reserve ticket checkout: the key that goes back to the packs when a payment fails or its tickets are refused, and the quiet link above Not now when its tickets weren't added */
+    /** Reserve ticket checkout: the key that goes back to the packs when a payment fails, and the quiet link above Not now when its answer never came */
     backToPacks: { en: "Back to the packs", ja: "パック選びに戻る" },
     /** Reserve ticket checkout: the balance row, in the balance's place, when your Sui account can't be used; the signer's own words follow as fine print beside Copy */
     walletBroken: {
@@ -288,9 +241,9 @@ export const tickets = {
       ja: "支払いにはLINEでのサインインが必要ですが、LIFF Mockでは省略されます。",
     },
   },
-  /** Shop, under the reserve tickets, and reserve ticket checkout, under the Pay key: your ENS name, which opens your ticket purchases read from Sui */
+  /** Shop, under the reserve tickets, and reserve ticket checkout, under the Pay key: your short Sui address, which opens your ticket purchases read from Sui */
   purchases: {
-    /** Shop and reserve ticket checkout: the button that opens your ticket purchases, before your ENS name or short Sui address */
+    /** Shop and reserve ticket checkout: the button that opens your ticket purchases, before your short Sui address */
     label: { en: "Purchases", ja: "購入履歴" },
     /** Shop and reserve ticket checkout, purchases list: screen-reader status while Sui is read */
     reading: {

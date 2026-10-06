@@ -9,13 +9,13 @@ import {
   type Ref,
 } from "react";
 import { retryPrivySignIn } from "../identity/privy";
-import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import type { Sticker, TicketUse } from "@drawing-app/api/client";
 import { apiError, type ApiClient } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import { errorDetail, errorMessage, problemOf, type Problem } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
+import { useMyNsfwOptIn } from "../stickers/nsfw";
 import { OutOfTickets } from "../tickets/OutOfTickets";
 import { StartDrawing } from "../tickets/StartDrawing";
 import { nextKind, ticketsLeft, type TicketKind, type Tickets } from "../tickets/tickets";
@@ -189,7 +189,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // The 18+ switch; the seal reads the ref, since it runs from the clock's time-up too.
   const [nsfwOn, setNsfwOn] = useState(false);
   const nsfw = useRef(false);
-  const adult = useMyAgeStatus() === "adult";
+  const optedIn = useMyNsfwOptIn();
   const keepNsfw = (on: boolean) => {
     nsfw.current = on;
     setNsfwOn(on);
@@ -974,7 +974,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         onUndo={() => canvas.current?.undo()}
         onRedo={() => canvas.current?.redo()}
       />
-      {adult && (
+      {/* Still shown for a kept drawing's mark after opting out, so it can be switched off. */}
+      {(optedIn || nsfwOn) && (
         <NsfwToggle
           shown={history.hasInk && !sealing && !retrying}
           on={nsfwOn}

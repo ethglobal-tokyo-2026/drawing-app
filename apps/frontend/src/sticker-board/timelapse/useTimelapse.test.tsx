@@ -9,6 +9,7 @@ import { emptyApi } from "../../api/testing";
 import { StickerFigure } from "../../stickers/StickerFigure";
 import { errorMessage } from "../../i18n/errorMessage";
 import { deferred, fakeTimelapsePlayers, handFrames, TEST_TIMELAPSE } from "./testTimelapse";
+import { testStickerUrls } from "../../stickers/testStickerUrls";
 import { TimelapseButton, TimelapseFailure } from "./TimelapseButton";
 import { TimelapseLayer } from "./TimelapseLayer";
 import {
@@ -29,7 +30,7 @@ const STICKER: TimelapseSticker = {
   no: 147,
   width: 240,
   height: 200,
-  urls: { png: "blob:png", mask: "blob:mask" },
+  urls: testStickerUrls("blob:s-147"),
 };
 
 let host: HTMLDivElement;

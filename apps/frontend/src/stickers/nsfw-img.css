@@ -1,5 +1,5 @@
 /* An NSFW sticker drawn as a plain image, where no StickerFigure wears its foil: a pink edge. When the
-   viewer isn't adult, the image is the veiled one the API sends, already blurred. */
+   viewer has no NSFW opt-in, the image is the veiled one the API sends, already blurred. */
 .nsfw-img {
   filter: drop-shadow(0 0 1.5px var(--foil-rose)) drop-shadow(0 0 3px var(--foil-blush));
 }

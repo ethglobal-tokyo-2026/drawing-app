@@ -4,7 +4,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../../ui/ToastProvider";
 import { AddressDialog } from "./AddressDialog";
-import type { Chain } from "./addresses";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -14,10 +13,8 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const liff = vi.hoisted(() => ({ isInClient: vi.fn(() => false), openWindow: vi.fn() }));
 vi.mock("@line/liff", () => ({ default: liff }));
 
-const ADDRESS = "0x3F2a5B0c9d1E4f6A7b8C9d0E1f2A3b4C5d6E9c1B";
-const ETHERSCAN_PAGE = `https://sepolia.etherscan.io/address/${ADDRESS}`;
-const SUI_ADDRESS = "0x7a1e5b0c9d1e4f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192ab04d";
-const SUISCAN_PAGE = `https://suiscan.xyz/testnet/account/${SUI_ADDRESS}`;
+const ADDRESS = "0x7a1e5b0c9d1e4f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192ab04d";
+const SUISCAN_PAGE = `https://suiscan.xyz/testnet/account/${ADDRESS}`;
 
 let host: HTMLDivElement;
 let root: Root;
@@ -27,18 +24,17 @@ const writeText = vi.fn<(text: string) => Promise<void>>();
 let flights: Animation[] = [];
 
 /** The stat board's side of it: the paper on the cork, and the dialog it opens beside the cork. */
-function Board({ chain = "ethereum", address = ADDRESS }: { chain?: Chain; address?: string }) {
+function Board() {
   const paper = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   return (
     <ToastProvider>
       <button ref={paper} type="button" onClick={() => setOpen(true)}>
-        Board address paper
+        Sui address paper
       </button>
       {open && (
         <AddressDialog
-          chain={chain}
-          address={address}
+          address={ADDRESS}
           from={paper}
           onClose={() => {
             onClose();
@@ -64,10 +60,10 @@ const toastText = () => find('[role="status"]')?.textContent;
 const land = () => act(async () => flights.forEach((a) => a.finish()));
 
 /** Opens the dialog from the focused paper, as a tap on the cork does. */
-async function open(chain?: Chain, address?: string) {
-  act(() => root.render(<Board chain={chain} address={address} />));
-  button("Board address paper").focus();
-  await act(async () => button("Board address paper").click());
+async function open() {
+  act(() => root.render(<Board />));
+  button("Sui address paper").focus();
+  await act(async () => button("Sui address paper").click());
   await land();
 }
 
@@ -95,21 +91,12 @@ afterEach(() => {
 });
 
 describe("AddressDialog", () => {
-  it("copies the board address and says so", async () => {
+  it("copies the Sui address and says so", async () => {
     writeText.mockResolvedValue();
     await open();
+    expect(find("h2")?.textContent).toBe("Your Sui address");
     await act(async () => button("Copy address").click());
     expect(writeText).toHaveBeenCalledWith(ADDRESS);
-    expect(toastText()).toBe("Board address copied");
-  });
-
-  it("copies a Sui address and links to its page on Suiscan", async () => {
-    writeText.mockResolvedValue();
-    await open("sui", SUI_ADDRESS);
-    expect(find("h2")?.textContent).toBe("Your Sui address");
-    expect(find<HTMLAnchorElement>("a[href]")?.getAttribute("href")).toBe(SUISCAN_PAGE);
-    await act(async () => button("Copy address").click());
-    expect(writeText).toHaveBeenCalledWith(SUI_ADDRESS);
     expect(toastText()).toBe("Sui address copied");
   });
 
@@ -119,31 +106,31 @@ describe("AddressDialog", () => {
     await open();
     await act(async () => button("Copy address").click());
     const problem = () => find('[role="alert"]')?.textContent;
-    expect(problem()).toContain("Couldn’t copy the board address");
+    expect(problem()).toContain("Couldn’t copy the Sui address");
     expect(toastText()).toBe("");
-    expect(error).toHaveBeenCalledWith("Couldn't copy the board address", expect.any(DOMException));
+    expect(error).toHaveBeenCalledWith("Couldn't copy the Sui address", expect.any(DOMException));
 
     writeText.mockResolvedValueOnce();
     await act(async () => button("Copy address").click());
     expect(problem()).toBeUndefined();
-    expect(toastText()).toBe("Board address copied");
+    expect(toastText()).toBe("Sui address copied");
   });
 
-  it("links to the board address's page on Etherscan", async () => {
+  it("links to the Sui address's page on Suiscan", async () => {
     await open();
     const link = find<HTMLAnchorElement>("a[href]");
-    expect(link?.getAttribute("href")).toBe(ETHERSCAN_PAGE);
+    expect(link?.getAttribute("href")).toBe(SUISCAN_PAGE);
     expect(link?.target).toBe("_blank");
     expect(link?.rel).toBe("noopener noreferrer");
   });
 
-  it("opens Etherscan in LINE's own browser inside LINE's app", async () => {
+  it("opens Suiscan in LINE's own browser inside LINE's app", async () => {
     liff.isInClient.mockReturnValue(true);
     await open();
     const tap = new MouseEvent("click", { bubbles: true, cancelable: true });
     act(() => void find("a[href]")?.dispatchEvent(tap));
     expect(tap.defaultPrevented).toBe(true);
-    expect(liff.openWindow).toHaveBeenCalledWith({ url: ETHERSCAN_PAGE, external: false });
+    expect(liff.openWindow).toHaveBeenCalledWith({ url: SUISCAN_PAGE, external: false });
   });
 
   it.each([
@@ -170,7 +157,7 @@ describe("AddressDialog", () => {
 
   it("turns the paper around mid-flight rather than starting the way back over", async () => {
     act(() => root.render(<Board />));
-    await act(async () => button("Board address paper").click());
+    await act(async () => button("Sui address paper").click());
     const opening = [...flights];
     act(() => button("Close").click());
     expect(opening.every((a) => a.playbackRate < 0)).toBe(true);
@@ -184,6 +171,6 @@ describe("AddressDialog", () => {
     expect(dialog()?.contains(document.activeElement)).toBe(true);
     act(() => button("Close").click());
     await land();
-    expect(document.activeElement).toBe(button("Board address paper"));
+    expect(document.activeElement).toBe(button("Sui address paper"));
   });
 });

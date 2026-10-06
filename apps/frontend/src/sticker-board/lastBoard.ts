@@ -6,7 +6,7 @@ import type { BoardStickerView } from "./boardSticker";
 
 /**
  * The last board this phone showed, kept in its storage for the person signed in, so the next open
- * draws it at once and swaps in the fresh board when that lands. It can be one refresh out of date
+ * draws it at once and swaps in the fresh board when that lands. It can be one refresh out of date.
  * One board, for one person: signing in as someone else forgets it.
  *
  * It's kept for one build of the app, since the next may read a board's fields differently, and
@@ -58,7 +58,11 @@ function read(): Kept | null {
 const removeKept = () =>
   writeStored(KEY, null, "The board kept on this phone couldn't be forgotten");
 
-function forget() {
+/**
+ * Forgets the kept board, whoever's it is: its images are the other kind once the NSFW opt-in
+ * changes, so the next open waits for the board from the server.
+ */
+export function forget() {
   kept = null;
   removeKept();
 }

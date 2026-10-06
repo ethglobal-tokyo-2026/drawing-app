@@ -1,26 +1,31 @@
 // @vitest-environment happy-dom
-import type { Hash } from "viem";
+import type { SponsoredTransaction } from "@drawing-app/api/client";
 import { act, createElement, useLayoutEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError } from "../api/apiClient";
+import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, renderWithApi } from "../api/testing";
 import { gift } from "../api/testFixtures";
 import { onMyStickerBoardChanged, useMyStickerBoard } from "../sticker-board/useMyStickerBoard";
-import { createApiGiftBackend, GiftPackagingError, type PackWait } from "./giftBackend";
-import type { GiftSendOutcome } from "./giftSender";
 import {
-  GiftTransactionRevertedError,
-  GiftTransactionUnconfirmedError,
-  type GiftTransactions,
-} from "./giftTransactions";
+  createApiGiftBackend,
+  GiftPackagingError,
+  type PackWait,
+  type SignSponsored,
+} from "./giftBackend";
+import type { GiftSendOutcome } from "./giftSender";
 import { createGiveFlow } from "./giveFlow";
 import { reportKeptSends } from "./sentReports";
 
-const hash: Hash = `0x${"ab".repeat(32)}`;
-const takeOutHash: Hash = `0x${"ef".repeat(32)}`;
 const token = `0x${"cd".repeat(32)}`;
-const transfer = { to: `0x${"12".repeat(20)}`, data: "0x1234" };
 const userId = "user-giver";
+/** A transaction the server built for the giver's wallet to sign. */
+const sponsored = (digest: string): SponsoredTransaction => ({
+  txBytes: "AAAA",
+  digest,
+  expiresAt: "2026-10-07T01:00:00.000Z",
+});
+const firstDeposit = sponsored("deposit-1");
+const takeOutTx = sponsored("take-out-1");
 /** No answer from the server. */
 const noAnswer = () => new ApiError(0, { error: "network", detail: "POST got no answer" });
 
@@ -28,25 +33,24 @@ function setup() {
   const packed = gift({ status: "packed", escrowStatus: "missing" });
   const packageGift = vi
     .fn()
-    .mockResolvedValueOnce({ gift: packed, giftClaimToken: token, escrowTransfer: transfer })
-    .mockResolvedValue({ gift: packed, giftClaimToken: null, escrowTransfer: transfer });
-  const reportDeposit = vi.fn(async () => packed);
+    .mockResolvedValueOnce({ gift: packed, giftClaimToken: token, deposit: firstDeposit })
+    .mockResolvedValue({ gift: packed, giftClaimToken: null, deposit: null });
+  const reportDeposit = vi.fn<ApiClient["reportDeposit"]>(async () => ({
+    ...packed,
+    escrowStatus: "pending",
+  }));
   const reportShared = vi.fn(async () => ({ ...packed, status: "sent" as const }));
+  const startTakeOut = vi.fn<ApiClient["startTakeOut"]>(async () => ({
+    gift: packed,
+    takeOut: takeOutTx,
+  }));
   const takeOutGift = vi.fn(async () => ({ ...packed, status: "taken_out" as const }));
-  const transactions: GiftTransactions = {
-    deposit: vi.fn<GiftTransactions["deposit"]>(async (_id, _transfer, _sent, record) => {
-      record.sending(Date.now());
-      record.submitted(hash);
-      return hash;
-    }),
-    takeOut: vi.fn<GiftTransactions["takeOut"]>(async (_id, _sent, record) => {
-      record.sending(Date.now());
-      record.submitted(takeOutHash);
-      return "takenOut";
-    }),
-  };
-  const api = emptyApi({ packageGift, reportDeposit, reportShared, takeOutGift });
-  const options = { api, transactions, userId, fromHandle: "alice", liffId: "123-abc" };
+  const sign = vi.fn<SignSponsored>(async (tx) => ({
+    digest: tx.digest,
+    signature: `signed-${tx.digest}`,
+  }));
+  const api = emptyApi({ packageGift, reportDeposit, reportShared, startTakeOut, takeOutGift });
+  const options = { api, sign, userId, fromHandle: "alice", liffId: "123-abc" };
   const backend = createApiGiftBackend(options);
   const sticker = { id: packed.stickerId, no: 147, timeUsed: 12 };
   return {
@@ -54,9 +58,10 @@ function setup() {
     backend,
     options,
     sticker,
-    transactions,
+    sign,
     reportDeposit,
     reportShared,
+    startTakeOut,
     takeOutGift,
     packageGift,
     api,
@@ -99,7 +104,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe("Giving through the smart account", () => {
+describe("Giving through the Sui wallet", () => {
   it("forgets your board's kept answer once the sticker is in a gift, so the give sheet can't offer it", async () => {
     const t = setup();
     const seen: string[] = [];
@@ -124,133 +129,147 @@ describe("Giving through the smart account", () => {
     view.unmount();
   });
 
-  it("says what packing waits on as it goes: the server, the sticker going in, the bag confirming, the server again", async () => {
+  it("says what packing waits on as it goes: the server, the sticker going in, the server again", async () => {
     const t = setup();
     const heard: PackWait[] = [];
     await t.backend.pack(t.sticker, (wait) => heard.push(wait));
-    expect(heard).toEqual(["asking", "moving", "confirming", "asking"]);
+    expect(heard).toEqual(["asking", "moving", "asking"]);
   });
 
-  it("confirms the escrow deposit before returning a Gift Message", async () => {
+  it("signs the deposit the server built and reports it once before returning a Gift Message", async () => {
     const t = setup();
     const packed = await t.backend.pack(t.sticker);
-    expect(t.transactions.deposit).toHaveBeenCalledWith(
-      t.packed.id,
-      transfer,
-      { hash: undefined, sentAt: undefined },
-      expect.anything(),
-    );
-    expect(t.reportDeposit).toHaveBeenCalledWith(t.packed.id, hash);
+    expect(t.sign).toHaveBeenCalledExactlyOnceWith(firstDeposit);
+    expect(t.reportDeposit).toHaveBeenCalledExactlyOnceWith(t.packed.id, {
+      digest: firstDeposit.digest,
+      signature: `signed-${firstDeposit.digest}`,
+    });
     expect(packed.giftId).toBe(t.packed.id);
-    await t.backend.takeOut(packed.giftId);
-    expect(t.transactions.takeOut).toHaveBeenCalledWith(
-      packed.giftId,
-      { hash: undefined, sentAt: undefined },
-      expect.anything(),
-      expect.objectContaining({ hash }),
-    );
-    expect(t.takeOutGift).toHaveBeenCalledWith(packed.giftId);
+    expect(packed.message).toBeDefined();
   });
 
-  it("retains the claim token and submitted hash when deposit reporting fails", async () => {
+  it("gives a gift with nothing to sign when the server answers no deposit", async () => {
     const t = setup();
-    t.reportDeposit.mockRejectedValueOnce(new Error("Server unavailable"));
-    await expect(t.backend.pack(t.sticker)).rejects.toThrow("Server unavailable");
+    t.packageGift
+      .mockReset()
+      .mockResolvedValue({ gift: t.packed, giftClaimToken: token, deposit: null });
     await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: t.packed.id });
-    expect(t.transactions.deposit).toHaveBeenLastCalledWith(
-      t.packed.id,
-      transfer,
-      expect.objectContaining({ hash }),
-      expect.anything(),
-    );
+    expect(t.sign).not.toHaveBeenCalled();
+    expect(t.reportDeposit).not.toHaveBeenCalled();
+  });
+
+  it("takes a gift out by signing the take-out the server builds", async () => {
+    const t = setup();
+    await t.backend.pack(t.sticker);
+    await t.backend.takeOut(t.packed.id);
+    expect(t.startTakeOut).toHaveBeenCalledExactlyOnceWith(t.packed.id);
+    expect(t.sign).toHaveBeenLastCalledWith(takeOutTx);
+    expect(t.takeOutGift).toHaveBeenCalledExactlyOnceWith(t.packed.id, {
+      digest: takeOutTx.digest,
+      signature: `signed-${takeOutTx.digest}`,
+    });
+  });
+
+  it("takes out a gift whose sticker never went in without signing anything", async () => {
+    const t = setup();
+    t.startTakeOut.mockResolvedValueOnce({ gift: { ...t.packed, status: "taken_out" } });
+    await t.backend.takeOut(t.packed.id);
+    expect(t.sign).not.toHaveBeenCalled();
     expect(t.takeOutGift).not.toHaveBeenCalled();
   });
 
-  it("keeps the allocated gift identifiable for Taking out after deposit reporting fails", async () => {
+  it("shares a take-out under way rather than starting a second", async () => {
     const t = setup();
-    const failure = new ApiError(502, { error: "internal_error", detail: "Server unavailable" });
-    t.reportDeposit.mockRejectedValueOnce(failure);
-    await expect(t.backend.pack(t.sticker)).rejects.toMatchObject({
-      giftId: t.packed.id,
-      cause: failure,
-    });
-    await t.backend.takeOut(t.packed.id);
-    expect(t.transactions.takeOut).toHaveBeenCalledWith(
-      t.packed.id,
-      { hash: undefined, sentAt: undefined },
-      expect.anything(),
-      expect.objectContaining({ hash }),
-    );
-    expect(t.packageGift).toHaveBeenCalledTimes(1);
-    expect(t.transactions.deposit).toHaveBeenCalledTimes(1);
+    await t.backend.pack(t.sticker);
+    await Promise.all([t.backend.takeOut(t.packed.id), t.backend.takeOut(t.packed.id)]);
+    expect(t.startTakeOut).toHaveBeenCalledOnce();
+    expect(t.takeOutGift).toHaveBeenCalledOnce();
   });
 
-  it("clears a failed deposit hash so a retry can submit a new transaction", async () => {
+  it("keeps the gift and its Gift Claim Token when the deposit's answer is lost, and signs the same deposit again", async () => {
     const t = setup();
-    vi.mocked(t.transactions.deposit).mockImplementationOnce(
-      async (_id, _transfer, _sent, record) => {
-        record.sending(Date.now());
-        record.submitted(hash);
-        throw new GiftTransactionRevertedError("deposit");
-      },
-    );
+    const lost = new ApiError(503, {
+      error: "deposit_not_landed",
+      detail: "Sui's answer was lost",
+    });
+    t.reportDeposit.mockRejectedValueOnce(lost);
     await expect(t.backend.pack(t.sticker)).rejects.toMatchObject({
-      cause: { problem: "deposit_reverted" },
+      giftId: t.packed.id,
+      cause: lost,
+    });
+    t.packageGift.mockResolvedValue({
+      gift: t.packed,
+      giftClaimToken: null,
+      deposit: firstDeposit,
     });
     await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: t.packed.id });
-    expect(t.transactions.deposit).toHaveBeenLastCalledWith(
-      t.packed.id,
-      transfer,
-      { hash: undefined, sentAt: undefined },
-      expect.anything(),
+    expect(t.sign.mock.calls).toEqual([[firstDeposit], [firstDeposit]]);
+    expect(t.startTakeOut).not.toHaveBeenCalled();
+  });
+
+  it("packages again for a fresh deposit when its sponsorship lapsed before Sui took it", async () => {
+    const t = setup();
+    const fresh = sponsored("deposit-2");
+    t.reportDeposit.mockRejectedValueOnce(
+      new ApiError(409, { error: "sponsorship_expired", detail: "The sponsorship lapsed" }),
     );
-    expect(t.transactions.takeOut).not.toHaveBeenCalled();
+    t.packageGift.mockResolvedValue({ gift: t.packed, giftClaimToken: null, deposit: fresh });
+    await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: t.packed.id });
+    expect(t.reportDeposit).toHaveBeenLastCalledWith(t.packed.id, {
+      digest: fresh.digest,
+      signature: `signed-${fresh.digest}`,
+    });
+    expect(t.startTakeOut).not.toHaveBeenCalled();
+  });
+
+  it("gives up after a second lapsed sponsorship, keeping the gift identifiable for Taking out", async () => {
+    const t = setup();
+    const lapsed = new ApiError(409, {
+      error: "sponsorship_expired",
+      detail: "The sponsorship lapsed",
+    });
+    t.reportDeposit.mockRejectedValue(lapsed);
+    t.packageGift.mockResolvedValue({
+      gift: t.packed,
+      giftClaimToken: null,
+      deposit: sponsored("deposit-2"),
+    });
+    await expect(t.backend.pack(t.sticker)).rejects.toMatchObject({
+      giftId: t.packed.id,
+      cause: lapsed,
+    });
+    expect(t.reportDeposit).toHaveBeenCalledTimes(2);
   });
 
   it("reuses the gift and token after closing and reopening Giving on the same page", async () => {
     const t = setup();
     const firstGift = await t.backend.pack(t.sticker);
-    t.packageGift.mockResolvedValue({ gift: t.packed, giftClaimToken: null, escrowTransfer: null });
     const reopened = createApiGiftBackend(t.options);
     await expect(reopened.pack(t.sticker)).resolves.toEqual(firstGift);
-    expect(t.transactions.deposit).toHaveBeenCalledTimes(1);
-    expect(t.transactions.takeOut).not.toHaveBeenCalled();
+    expect(t.sign).toHaveBeenCalledOnce();
+    expect(t.startTakeOut).not.toHaveBeenCalled();
   });
 
-  it("does not record a taken-out Sticker when the chain fails", async () => {
-    const t = setup();
-    await t.backend.pack(t.sticker);
-    vi.mocked(t.transactions.takeOut).mockRejectedValueOnce(new Error("Paymaster refused"));
-    await expect(t.backend.takeOut(t.packed.id)).rejects.toThrow("Paymaster refused");
-    expect(t.takeOutGift).not.toHaveBeenCalled();
-  });
-
-  it("settles and takes out a previous deposit before replacing a lost Gift Claim Token", async () => {
+  it("replaces a Gift Claim Token an earlier page took with it: takes the gift out, then packs it again", async () => {
     const t = setup();
     const replacement = gift({ status: "packed", escrowStatus: "missing" });
+    const replacementDeposit = sponsored("deposit-2");
     t.packageGift
       .mockReset()
-      .mockResolvedValueOnce({ gift: t.packed, giftClaimToken: null, escrowTransfer: transfer })
+      .mockResolvedValueOnce({ gift: t.packed, giftClaimToken: null, deposit: null })
       .mockResolvedValueOnce({
         gift: replacement,
         giftClaimToken: token,
-        escrowTransfer: transfer,
+        deposit: replacementDeposit,
       });
-    await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: replacement.id });
-    expect(t.transactions.deposit).toHaveBeenCalledTimes(2);
-    expect(t.transactions.takeOut).toHaveBeenCalledWith(
-      t.packed.id,
-      { hash: undefined, sentAt: undefined },
-      expect.anything(),
-      expect.objectContaining({ hash }),
-    );
-    expect(t.takeOutGift).toHaveBeenCalledWith(t.packed.id);
-    expect(t.transactions.deposit).toHaveBeenLastCalledWith(
-      replacement.id,
-      transfer,
-      { hash: undefined, sentAt: undefined },
-      expect.anything(),
-    );
+    const heard: PackWait[] = [];
+    await expect(t.backend.pack(t.sticker, (wait) => heard.push(wait))).resolves.toMatchObject({
+      giftId: replacement.id,
+    });
+    expect(t.startTakeOut).toHaveBeenCalledExactlyOnceWith(t.packed.id);
+    expect(t.takeOutGift).toHaveBeenCalledWith(t.packed.id, expect.anything());
+    expect(t.reportDeposit).toHaveBeenCalledExactlyOnceWith(replacement.id, expect.anything());
+    expect(heard).toEqual(["asking", "earlier", "asking", "moving", "asking"]);
   });
 
   it("shares an in-progress pack across Giving instances instead of replacing its token", async () => {
@@ -261,110 +280,14 @@ describe("Giving through the smart account", () => {
       second.pack(t.sticker),
     ]);
     expect(firstGift).toEqual(secondGift);
-    expect(t.packageGift).toHaveBeenCalledTimes(1);
-    expect(t.transactions.deposit).toHaveBeenCalledTimes(1);
-    expect(t.transactions.takeOut).not.toHaveBeenCalled();
+    expect(t.packageGift).toHaveBeenCalledOnce();
+    expect(t.sign).toHaveBeenCalledOnce();
   });
 
-  it("resumes an uncertain take-out without depositing again during token recovery", async () => {
-    const t = setup();
-    const replacement = gift({ status: "packed", escrowStatus: "missing" });
-    t.packageGift
-      .mockReset()
-      .mockResolvedValueOnce({ gift: t.packed, giftClaimToken: null, escrowTransfer: transfer })
-      .mockResolvedValueOnce({ gift: t.packed, giftClaimToken: null, escrowTransfer: transfer })
-      .mockResolvedValueOnce({
-        gift: replacement,
-        giftClaimToken: token,
-        escrowTransfer: transfer,
-      });
-    vi.mocked(t.transactions.takeOut).mockImplementationOnce(async (_id, _sent, record) => {
-      record.sending(Date.now());
-      record.submitted(takeOutHash);
-      throw new GiftTransactionUnconfirmedError("takeOut");
-    });
-    await expect(t.backend.pack(t.sticker)).rejects.toBeInstanceOf(GiftPackagingError);
-    expect(t.takeOutGift).not.toHaveBeenCalled();
-    await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: replacement.id });
-    expect(t.transactions.takeOut).toHaveBeenLastCalledWith(
-      t.packed.id,
-      expect.objectContaining({ hash: takeOutHash }),
-      expect.anything(),
-      expect.objectContaining({ hash }),
-    );
-    expect(t.transactions.deposit).toHaveBeenCalledTimes(2);
-    expect(t.takeOutGift).toHaveBeenCalledTimes(1);
-  });
-
-  it("retries API confirmation without requesting another take-out approval", async () => {
-    vi.useFakeTimers();
-    const t = setup();
-    await t.backend.pack(t.sticker);
-    t.takeOutGift.mockRejectedValueOnce(
-      new ApiError(409, { error: "take_out_not_landed", detail: "Still pending" }),
-    );
-    const first = t.backend.takeOut(t.packed.id);
-    const second = t.backend.takeOut(t.packed.id);
-    await vi.runAllTimersAsync();
-    await Promise.all([first, second]);
-    expect(t.transactions.takeOut).toHaveBeenCalledTimes(1);
-    expect(t.takeOutGift).toHaveBeenCalledTimes(2);
-  });
-
-  it("takes out a gift whose deposit never reached the wallet, and sends it as it is after", async () => {
-    const t = setup();
-    vi.mocked(t.transactions.deposit).mockRejectedValueOnce(
-      new ApiError(0, { error: "smart_account_not_ready" }),
-    );
-    // The escrow has nothing of this gift, so a take-out on chain can't be confirmed.
-    vi.mocked(t.transactions.takeOut).mockRejectedValue(
-      new GiftTransactionUnconfirmedError("takeOut"),
-    );
-    await expect(t.backend.pack(t.sticker)).rejects.toBeInstanceOf(GiftPackagingError);
-    await t.backend.takeOut(t.packed.id);
-    await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: t.packed.id });
-    expect(t.transactions.takeOut).not.toHaveBeenCalled();
-    expect(t.takeOutGift).not.toHaveBeenCalled();
-  });
-
-  it("takes a gift whose escrow record isn't this sticker's out without the chain", async () => {
-    const t = setup();
-    t.reportDeposit.mockRejectedValueOnce(
-      new ApiError(409, { error: "deposit_mismatch", detail: "Another sticker's record" }),
-    );
-    await expect(t.backend.pack(t.sticker)).rejects.toBeInstanceOf(GiftPackagingError);
-    await t.backend.takeOut(t.packed.id);
-    expect(t.transactions.takeOut).not.toHaveBeenCalled();
-    expect(t.takeOutGift).toHaveBeenCalledWith(t.packed.id);
-  });
-
-  it("stops before LINE when the deposit came back before it was reported", async () => {
+  it("stops before LINE when the gift was taken out before its deposit landed", async () => {
     const t = setup();
     t.reportDeposit.mockResolvedValueOnce({ ...t.packed, status: "taken_out" });
     await expect(t.backend.pack(t.sticker)).rejects.toBeInstanceOf(GiftPackagingError);
-  });
-
-  it("takes out the earlier gift that holds the sticker, then packs it again", async () => {
-    const t = setup();
-    const held = gift({ status: "taken_out", escrowStatus: "pending" });
-    t.packageGift
-      .mockReset()
-      .mockRejectedValueOnce(
-        new ApiError(409, { error: "gift_held", detail: "Held in the escrow", giftId: held.id }),
-      );
-    t.packageGift.mockResolvedValue({
-      gift: t.packed,
-      giftClaimToken: token,
-      escrowTransfer: transfer,
-    });
-    await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: t.packed.id });
-    expect(t.transactions.takeOut).toHaveBeenCalledWith(
-      held.id,
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-    );
-    expect(t.takeOutGift).toHaveBeenCalledWith(held.id);
   });
 
   it("tries the sent report again when it gets no answer", async () => {
@@ -417,17 +340,12 @@ describe("Giving through the smart account", () => {
       await t.backend.pack(t.sticker);
       await mark(t);
       const { createApiGiftBackend: afterReload } = await reload();
-      t.packageGift.mockResolvedValue({
-        gift: t.packed,
-        giftClaimToken: null,
-        escrowTransfer: null,
-      });
+      t.packageGift.mockResolvedValue({ gift: t.packed, giftClaimToken: null, deposit: null });
       expect(await failureOf(afterReload(t.options).pack(t.sticker))).toMatchObject({
         giftId: t.packed.id,
         outcome,
       });
-      expect(t.transactions.takeOut).not.toHaveBeenCalled();
-      expect(t.takeOutGift).not.toHaveBeenCalled();
+      expect(t.startTakeOut).not.toHaveBeenCalled();
       if (outcome === "sent") expect(t.reportShared).toHaveBeenLastCalledWith(t.packed.id, "sent");
     },
   );
@@ -463,38 +381,9 @@ describe("Giving through the smart account", () => {
     const t = setup();
     const flow = await giveInLine(t, Promise.resolve("cancelled"));
     expect(flow.getState().step).toBe("notSent");
-    t.packageGift.mockResolvedValue({ gift: t.packed, giftClaimToken: null, escrowTransfer: null });
     await expect(createApiGiftBackend(t.options).pack(t.sticker)).resolves.toMatchObject({
       giftId: t.packed.id,
     });
-  });
-
-  it("waits on a deposit sent before a reload instead of sending another", async () => {
-    const t = setup();
-    const sentAt = Date.now();
-    // The page closes while the wallet waits on the deposit.
-    vi.mocked(t.transactions.deposit).mockImplementationOnce((_id, _transfer, _sent, record) => {
-      record.sending(sentAt);
-      return new Promise(() => {});
-    });
-    void t.backend.pack(t.sticker);
-    await vi.waitFor(() => expect(t.transactions.deposit).toHaveBeenCalledOnce());
-    const { createApiGiftBackend: afterReload } = await reload();
-    const replacement = gift({ status: "packed", escrowStatus: "missing" });
-    t.packageGift
-      .mockResolvedValueOnce({ gift: t.packed, giftClaimToken: null, escrowTransfer: transfer })
-      .mockResolvedValueOnce({
-        gift: replacement,
-        giftClaimToken: token,
-        escrowTransfer: transfer,
-      });
-    await afterReload(t.options).pack(t.sticker);
-    expect(t.transactions.deposit).toHaveBeenNthCalledWith(
-      2,
-      t.packed.id,
-      transfer,
-      { hash: undefined, sentAt },
-      expect.anything(),
-    );
+    expect(t.startTakeOut).not.toHaveBeenCalled();
   });
 });

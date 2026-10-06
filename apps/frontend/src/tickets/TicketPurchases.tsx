@@ -1,6 +1,5 @@
 import type { TicketShop as Shop } from "@drawing-app/api/client";
 import { useEffect, useId, useRef, useState } from "react";
-import { useMe } from "../api/meContext";
 import { problemOf } from "../i18n/errorMessage";
 import { formatDateTime } from "../i18n/format";
 import { useTranslation } from "../i18n/react";
@@ -77,18 +76,17 @@ function useTicketPayments(owner: string, payment: Shop["payment"]) {
 }
 
 /**
- * The person's ENS name, under the Shop's reserve tickets and the checkout's Pay key; it opens their
- * ticket purchases, read straight from Sui rather than the server, so they can check every payment
- * their wallet made.
+ * The person's short Sui address, under the Shop's reserve tickets and the checkout's Pay key; it
+ * opens their ticket purchases, read straight from Sui rather than the server, so they can check every
+ * payment their wallet made.
  */
 export function TicketPurchases({ owner, shop, className }: Props) {
   const { t } = useTranslation();
-  const me = useMe();
   const [open, setOpen] = useState(false);
   const toggle = useRef<HTMLButtonElement>(null);
   const history = useTicketPayments(owner, shop.payment);
   const id = useId();
-  const name = me.ensName ?? shortAddress(owner);
+  const name = shortAddress(owner);
 
   const packFor = (amount: bigint) => shop.packs.find((p) => p.priceJpyc === amount.toString());
 

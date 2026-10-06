@@ -23,35 +23,10 @@ export const errors = {
     en: "Couldn’t reconnect with LINE. Try again, or reopen the app from LINE.",
     ja: "LINEで<wbr/>再ログインできませんでした。<wbr/>もう一度<wbr/>試すか、<wbr/>LINEから<wbr/>アプリを<wbr/>ひらき直してください。",
   },
-  /** Drawing screen, Giving and Receiving: sealing an 18+ sticker (POST /api/stickers) when you aren't a verified adult, giving one from a board (POST /api/gifts) to someone who isn't, or receiving one (POST /api/gifts/receive) when you aren't; in the seal chip, “couldn’t be packed” or the gift's refusal, through problemOf */
-  adults_only: {
-    en: "Only adults verified with World ID can seal, give or receive 18+ stickers.",
-    ja: "18+のシールは、World IDで年齢確認した成人だけが仕上げたり、贈ったり、受け取ったりできます。",
-  },
-  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when it isn't an Orb-verified World ID's, or came from World's other environment, in “Your age couldn’t be verified” through problemOf */
-  age_not_proven: {
-    en: "This World ID isn’t verified at an Orb.",
-    ja: "このWorld IDは、Orbで認証されていません。",
-  },
-  /** Your stat board, Age verification paper: tapping Verify your age (POST /api/me/age-verification/request) when this server has no World ID app, in “Your age couldn’t be verified” through problemOf */
-  age_verification_not_configured: {
-    en: "Age verification isn’t available yet.",
-    ja: "年齢確認は、まだ利用できません。",
-  },
-  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when World refuses it, in “Your age couldn’t be verified” through problemOf */
-  age_verification_refused: {
-    en: "World ID didn’t accept the proof.",
-    ja: "World IDが証明を受け付けませんでした。",
-  },
-  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when the same World ID already verified another account, in “Your age couldn’t be verified” through problemOf */
-  age_verification_used: {
-    en: "This World ID already verified another account.",
-    ja: "このWorld IDは、すでに別のアカウントの年齢確認に使われています。",
-  },
-  /** Your stat board, Age verification paper: tapping Verify your age (POST /api/me/age-verification/request) after your age was already verified, in “Your age couldn’t be verified” through problemOf */
-  already_age_verified: {
-    en: "Your age is already verified.",
-    ja: "年齢確認は、すでに済んでいます。",
+  /** Drawing screen, Giving and Receiving: sealing an 18+ sticker (POST /api/stickers) without Show 18+ stickers on, giving one from a board (POST /api/gifts) to someone without it, or receiving one (POST /api/gifts/receive) without it; in the seal chip, “couldn’t be packed” or the gift's refusal, through problemOf */
+  nsfw_not_opted_in: {
+    en: "Only people who turned on Show 18+ stickers in Settings can seal or receive 18+ stickers.",
+    ja: "18+のシールを仕上げたり受け取ったりできるのは、設定で「18+のシールを表示する」をオンにした人だけです。",
   },
   /** Giving, In the bag: taking a gift back out (POST /api/gifts/:giftId/take-out) that its receiver already received, in “couldn’t be taken out” through problemOf; the Receive gift dialog shows its own Already opened screen instead */
   already_received: {
@@ -68,35 +43,15 @@ export const errors = {
     en: "It couldn’t be confirmed. Trying again is safe, since a gift is only ever received once, but it may not work.",
     ja: "確認できませんでした。受け取りは一度きりなので、やり直しても大丈夫ですが、うまくいかないこともあります。",
   },
-  /** Not shown in the app: the ENS gateway's answer to an outside ENS app looking up a croquis-app.eth name, when this server has no ENS set up */
-  ens_not_configured: {
-    en: "Names aren’t set up on this server yet.",
-    ja: "このサーバーでは、まだ名前が使えません。",
-  },
-  /** Giving, In the bag: packing a sticker when the escrow's deposit (POST /api/gifts/:giftId/deposit) isn't this sticker's, so the gift closed and the sticker can be given again, in “couldn’t be packed” through problemOf */
-  deposit_mismatch: {
-    en: "The gift bag didn’t get your sticker. Give it again.",
-    ja: "ギフト袋にシールが入りませんでした。もう一度贈ってください。",
-  },
-  /** Giving, In the bag: packing a sticker when the escrow holds it under terms packaging didn't issue (POST /api/gifts/:giftId/deposit), so only taking it out frees it, in “couldn’t be packed” through problemOf */
-  deposit_held: {
-    en: "Your sticker went into the gift bag the wrong way. Take it out, then give it again.",
-    ja: "シールが正しくギフト袋に入りませんでした。取り出してから、もう一度贈ってください。",
-  },
-  /** Giving, In the bag: packing a sticker when the escrow still has no deposit after the app's retries (POST /api/gifts/:giftId/deposit), in “couldn’t be packed” through problemOf */
+  /** Giving, In the bag: packing a sticker when Sui's answer to its signed deposit (POST /api/gifts/:giftId/deposit) never came, in “couldn’t be packed” through problemOf; Send in LINE sends the same deposit again */
   deposit_not_landed: {
-    en: "Your sticker hasn’t reached the gift bag yet. Wait a moment, then tap Send in LINE to check again.",
-    ja: "シールがまだギフト袋に届いていません。少し待ってから、「LINEで送る」をタップして、もう一度確認してください。",
+    en: "Sui hasn’t answered about your sticker yet. Tap Send in LINE to check again; it won’t move twice.",
+    ja: "シールについてSuiからの応答がまだありません。「LINEで送る」をタップして、もう一度確認してください。二重に動くことはありません。",
   },
   /** Giving, In the bag: recording LINE's picker outcome (POST /api/gifts/:giftId/shared) for a gift that's no longer packed or sent, or taking out a gift already returned, in “couldn’t record” or “couldn’t be taken out” through problemOf */
   gift_closed: {
     en: "This gift is already closed. Go back to your board, and if your sticker is there, give it again.",
     ja: "このギフトはすでに閉じられています。ボードに戻って、シールがあればもう一度贈ってください。",
-  },
-  /** Giving, In the bag: packing a sticker (POST /api/gifts) that an earlier gift still holds in the escrow until it's taken out, in “couldn’t be packed” through problemOf */
-  gift_held: {
-    en: "This sticker is still in an earlier gift bag. Take it out, then give it again.",
-    ja: "このシールは、前のギフト袋に入ったままです。取り出してから、もう一度贈ってください。",
   },
   /** Receiving: opening a gift message's link (POST /api/gifts/preview or /receive) after the gift expired unopened; the Receive gift dialog shows its own returned-gift screen instead, so this is errorMessage's fallback */
   gift_expired: {
@@ -203,35 +158,15 @@ export const errors = {
   own_gift: { en: "You can’t open your own gift.", ja: "自分が贈ったギフトは、ひらけません。" },
   /** Reserve ticket checkout, after tapping Pay: starting the purchase (POST /api/ticket-purchases/start) for a pack size the shop doesn't sell, under “Payment didn’t go through” through errorMessage; nothing was paid */
   pack_unknown: { en: "That ticket pack doesn’t exist.", ja: "そのチケットパックはありません。" },
-  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a Sui payment that already bought tickets, in “The payment went through, but the tickets weren’t added” through problemOf */
-  payment_already_counted: {
-    en: "That payment was already counted.",
-    ja: "その支払いは、すでに反映されています。",
-  },
-  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a Sui transaction that paid no JPYC into the ticket vault for that purchase, in “Tickets can’t be added” through errorReason */
-  payment_not_found: {
-    en: "The Shop didn’t receive that payment.",
-    ja: "ショップでこの支払いを確認できませんでした。",
-  },
-  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) while Sui doesn't show the payment yet, in “Tickets not added yet” through problemOf, under the key that asks again */
+  /** Reserve ticket checkout, after paying: the reason in “Tickets not added yet” when Sui's answer to the signed payment (POST /api/ticket-purchases) never came, under the key that sends it again */
   payment_not_landed: {
-    en: "Sui doesn’t show this payment yet. Try again in a moment.",
-    ja: "Suiでこの支払いがまだ確認できません。少し待ってから、もう一度お試しください。",
+    en: "Sui hasn’t answered about the payment yet.",
+    ja: "支払いについてSuiからの応答がまだありません。",
   },
   /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for someone else's purchase, or for a payment into the ticket vault that names someone else, in “Tickets not added yet” through errorReason */
   payment_not_yours: {
     en: "That payment was made for someone else’s tickets.",
     ja: "この支払いは別の人のチケットのものです。",
-  },
-  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) when the payment is below the purchase's price, in “Tickets can’t be added” through errorReason */
-  payment_short: {
-    en: "The payment was less than the pack’s price.",
-    ja: "支払い額がパックの価格に足りませんでした。",
-  },
-  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a purchase another payment already paid, in “Tickets not added yet” through errorReason */
-  purchase_already_paid: {
-    en: "Another payment already paid for this purchase.",
-    ja: "この購入は、別の支払いですでに支払われています。",
   },
   /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a purchase the server has no record of, in “Tickets can’t be added” through errorReason */
   purchase_not_found: {
@@ -248,11 +183,6 @@ export const errors = {
     en: "You’re signed out. Reopen Croquis from LINE to sign in again.",
     ja: "ログアウトされました。<wbr/>LINEから<wbr/>クロッキーを<wbr/>ひらき直して、<wbr/>もう一度<wbr/>ログインしてください。",
   },
-  /** Giving and Receiving: a chain action waited 30 s for the Sepolia account that holds the stickers and Privy never readied it, or Privy failed again after one fresh try; the reason follows in brackets (made by the app itself, shown through problemOf); the drawing screen's seal chip words this failure itself */
-  smart_account_not_ready: {
-    en: "Your board address is taking too long to get ready. Try again.",
-    ja: "ボードアドレスの準備に時間がかかっています。もう一度お試しください。",
-  },
   /** Sticker detail: loading where it's been (GET /api/stickers/:stickerId), in “Couldn’t load where it’s been…”, or Giving: packing it (POST /api/gifts), in “couldn’t be packed”, through problemOf */
   sticker_not_found: {
     en: "Couldn’t find this sticker. Go back to your board and try again.",
@@ -263,22 +193,17 @@ export const errors = {
     en: "That sticker isn’t on your sticker board.",
     ja: "そのシールは、あなたのシールボードにありません。",
   },
-  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) when the server couldn't read the payment from Sui, in “…the tickets weren’t added” through problemOf */
-  sui_unavailable: {
-    en: "Sui didn’t answer. Your tickets weren’t added yet; try again.",
-    ja: "Suiから応答がありません。チケットはまだ追加されていません。もう一度お試しください。",
-  },
-  /** Reserve ticket checkout, after tapping Pay, under “Payment didn’t go through”: the Sui account you pay from wasn't ready in time, Privy couldn't make it or start its signer, or Privy failed again after one fresh try; the reason follows in brackets, and no JPYC was spent (made by the app itself, shown through problemOf) */
+  /** Giving, Receiving and the reserve ticket checkout: your Sui address, which keeps your stickers and pays, wasn't ready in time, Privy couldn't make it or start its signer, or Privy failed again after one fresh try; the reason follows in brackets, and nothing moved (made by the app itself, shown through problemOf); the drawing screen's seal chip words this failure itself */
   sui_wallet_not_ready: {
-    en: "Your Sui account isn’t ready yet. Try again.",
-    ja: "Suiアカウントの準備がまだできていません。もう一度お試しください。",
+    en: "Your Sui address isn’t ready yet. Try again.",
+    ja: "Suiアドレスの準備がまだできていません。もう一度お試しください。",
   },
   /** Receiving: opening a gift message's link (POST /api/gifts/preview or /receive) after the giver took the gift back; the Receive gift dialog shows its own “took this one back” screen instead */
   taken_back: { en: "The giver took this gift back.", ja: "贈り主がこのギフトを取り消しました。" },
-  /** Giving, In the bag: confirming a take-out (POST /api/gifts/:giftId/take-out) before the escrow confirms it, through problemOf */
+  /** Giving, In the bag: taking a sticker out when Sui's answer to its signed take-out (POST /api/gifts/:giftId/take-out) never came, in “couldn’t be taken out” through problemOf; Take it out sends the same take-out again */
   take_out_not_landed: {
-    en: "Taking this sticker out hasn’t been confirmed yet. Wait a moment, then try again.",
-    ja: "シールを取り出せたか、まだ確認できていません。少し待ってから、もう一度お試しください。",
+    en: "Sui hasn’t answered about taking your sticker out yet. Try again; it won’t move twice.",
+    ja: "シールの取り出しについてSuiからの応答がまだありません。もう一度お試しください。二重に動くことはありません。",
   },
   /** Drawing screen, after tapping the check to seal: the seal chip's reason when the drawing's ticket already became a sticker (POST /api/stickers), through errorMessage */
   ticket_already_used: {
@@ -305,25 +230,45 @@ export const errors = {
     en: "This sticker was sealed without its timelapse.",
     ja: "このシールは、タイムラプスなしで仕上げられました。",
   },
-  /** Not shown in the app: the ENS gateway's answer to an outside ENS app that asks through a resolver other than croquis-app.eth's */
-  unknown_resolver: {
-    en: "That name belongs to another app.",
-    ja: "この名前は別のアプリのものです。",
-  },
-  /** Not shown in the app: the ENS gateway's answer to an outside ENS app whose name lookup it can't read or doesn't answer */
-  unsupported_request: {
-    en: "That name lookup isn’t one this app answers.",
-    ja: "この名前の問い合わせには答えられません。",
-  },
   /** An artist's sticker board: loading their board or stats (GET /api/sticker-boards/:userId, …/user-stats) for a person who doesn't exist, in “Couldn’t load …’s board” or “Their stats didn’t load” through problemOf */
   user_not_found: {
     en: "Couldn’t find that artist. Search for them in Explore to check the handle.",
     ja: "そのアーティストが見つかりませんでした。さがすでユーザー名を確認してください。",
   },
-  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when World's verify service doesn't answer, in “Your age couldn’t be verified” through problemOf */
-  world_id_unavailable: {
-    en: "World ID didn’t answer. Try again in a moment.",
-    ja: "World IDから応答がありませんでした。少し待ってから、もう一度お試しください。",
+  /** Giving and the reserve ticket checkout: a deposit, take-out or payment (POST /api/gifts/…, /api/ticket-purchases) signed after the server's sponsorship of it lapsed, so it was never sent; Giving packs again by itself first, so it shows only when that fails too, through problemOf */
+  sponsorship_expired: {
+    en: "That took too long, so it wasn’t sent, and nothing moved. Try again.",
+    ja: "時間がかかりすぎたため送信されず、何も動いていません。もう一度お試しください。",
+  },
+  /** Giving and the reserve ticket checkout: a deposit, take-out or payment (POST /api/gifts/…, /api/ticket-purchases) whose signature isn't your Sui account's, through problemOf */
+  signature_invalid: {
+    en: "Your Sui account’s signature didn’t match, so nothing moved. Try again.",
+    ja: "Suiアカウントの署名が一致しなかったため、何も動いていません。もう一度お試しください。",
+  },
+  /** Giving and the reserve ticket checkout: a deposit, take-out or payment (POST /api/gifts/…, /api/ticket-purchases) that Sui ran and failed; Sui's own words follow as fine print, through problemOf */
+  transaction_failed: {
+    en: "Sui ran it, but it failed, so nothing moved.",
+    ja: "Suiで実行されましたが失敗したため、何も動いていません。",
+  },
+  /** Giving and the reserve ticket checkout: packing a sticker or starting a purchase (POST /api/gifts, /api/ticket-purchases/start) that Sui would refuse, such as a payment the balance can't cover, through problemOf */
+  sponsorship_refused: {
+    en: "Sui wouldn’t accept this, so it wasn’t sent, and nothing moved.",
+    ja: "Suiで受け付けられない内容だったため送信されず、何も動いていません。",
+  },
+  /** Giving and the reserve ticket checkout: packing, taking out or paying when Croquis can't get Sui's network fee paid just now, through problemOf */
+  sponsor_unavailable: {
+    en: "Croquis can’t send this to Sui just now. Try again in a moment.",
+    ja: "いまSuiに送信できません。少し待ってから、もう一度お試しください。",
+  },
+  /** Giving and the reserve ticket checkout: packing, taking out or paying when the funds Croquis pays Sui's network fee from have run out, through problemOf */
+  sponsor_fund_empty: {
+    en: "Croquis can’t pay Sui’s fee just now. Try again later, and tell the Croquis Official account in LINE if it keeps happening.",
+    ja: "いまSuiの手数料を支払えません。時間をおいてもう一度お試しください。続く場合は、LINEのクロッキー公式アカウントにお知らせください。",
+  },
+  /** Sealing, Giving, Receiving and the reserve ticket checkout: the server found no Sui address for you yet (POST /api/stickers, /api/gifts, /api/gifts/receive, /api/ticket-purchases/start), through problemOf */
+  no_sui_wallet: {
+    en: "Your Sui address isn’t ready yet. Try again in a moment.",
+    ja: "Suiアドレスの準備がまだできていません。少し待ってから、もう一度お試しください。",
   },
   /** Any error line, when what failed isn't the server's answer but something on this phone or in a library, such as LINE's picker; its own English words follow as details for a report (made by the app itself, shown through problemOf) */
   unexpected: {

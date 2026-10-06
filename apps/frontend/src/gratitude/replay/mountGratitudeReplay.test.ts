@@ -84,6 +84,7 @@ const replayOf = (record: ComboRecord, endReason: ReplayV1["endReason"] = "empty
   hits: [],
   strokes: [],
   shakes: [],
+  strokePasses: [],
 });
 
 const storedOf = (record: ComboRecord): GratitudeReplayOptions["gratitude"] => ({

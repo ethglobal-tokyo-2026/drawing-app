@@ -1,8 +1,12 @@
 import { Signer } from "@mysten/sui/cryptography";
 import { Ed25519PublicKey } from "@mysten/sui/keypairs/ed25519";
 import { fromBase58, fromBase64, fromHex, normalizeSuiAddress, toHex } from "@mysten/sui/utils";
-import { onSuiWalletFailure, suiWalletFailure } from "./suiWallet";
+import { SigningTimedOut } from "./signingTimedOut";
+import { onSuiWalletFailure, suiWalletFailure, waitForSuiAddress } from "./suiWallet";
 import { waitForPrivy } from "./waitForPrivy";
+
+/** How long signing a sponsored transaction may take, the wait for the signer included. */
+export const SIGNING_TIMEOUT_MS = 60_000;
 
 let signer: Signer | null = null;
 const signerListeners = new Set<() => void>();
@@ -14,11 +18,12 @@ export function setSuiSigner(next: Signer | null) {
 }
 
 /**
- * Paying for reserve tickets waits here, as chain actions wait for the Sepolia client. A Sui wallet
- * that Privy couldn't make, or whose signer didn't start, ends the wait: it's asked for once a visit.
+ * Signing waits here: first for the wallet, which gets a fresh try when Privy couldn't make it, then
+ * for its signer, which starts as the wallet arrives. A signer that didn't start ends the wait.
  */
-export const waitForSuiSigner = (): Promise<Signer> =>
-  waitForPrivy({
+export async function waitForSuiSigner(): Promise<Signer> {
+  await waitForSuiAddress();
+  return waitForPrivy({
     current: () => signer,
     failure: () => suiWalletFailure() ?? null,
     subscribe: (listener) => {
@@ -29,8 +34,32 @@ export const waitForSuiSigner = (): Promise<Signer> =>
         stopFailures();
       };
     },
-    notReady: "sui_wallet_not_ready",
   });
+}
+
+/** A transaction the server built and Shinami sponsored, for the person's wallet to sign as sender. */
+interface Sponsored {
+  /** Base64 BCS TransactionData. */
+  txBytes: string;
+  digest: string;
+}
+
+/**
+ * The person's signature over a sponsored transaction, which the server checks and submits. Rejects
+ * with SigningTimedOut past SIGNING_TIMEOUT_MS: a signature that comes later is never posted.
+ */
+export async function signSponsored(tx: Sponsored): Promise<{ digest: string; signature: string }> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new SigningTimedOut()), SIGNING_TIMEOUT_MS);
+  });
+  const signing = (async () => {
+    const wallet = await waitForSuiSigner();
+    const { signature } = await wallet.signTransaction(fromBase64(tx.txBytes));
+    return { digest: tx.digest, signature };
+  })();
+  return Promise.race([signing, timedOut]).finally(() => clearTimeout(timer));
+}
 
 /** Privy's public key for a Sui wallet: hex or base64, bare or behind Sui's Ed25519 flag byte. */
 function publicKeyCandidates(encoded: string): Uint8Array[] {

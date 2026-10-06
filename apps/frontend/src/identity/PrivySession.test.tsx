@@ -50,17 +50,12 @@ vi.mock("@privy-io/react-auth", () => ({
   useWallets: () => ({ ready: sdk.walletsReady }),
   useSubscribeToJwtAuthWithFlag: (input: JwtAuthInput) => useJwtSubscription(input),
 }));
-vi.mock("@privy-io/react-auth/smart-wallets", () => ({
-  SmartWalletsProvider: ({ children }: { children: ReactNode }) => children,
-}));
 vi.mock("@line/liff", () => ({ default: {} }));
 vi.mock("./privy", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./privy")>()),
   fetchPrivyJwt: sdk.fetchJwt,
 }));
 vi.mock("./MakeSuiWallet", () => ({ MakeSuiWallet: () => null }));
-vi.mock("./SponsorshipCheck", () => ({ SponsorshipCheck: () => null }));
-vi.mock("./SmartWalletBridge", () => ({ SmartWalletBridge: () => null }));
 vi.mock("./SuiWalletBridge", () => ({ SuiWalletBridge: () => null }));
 
 const { privyStatus, retryPrivySignIn, setPrivyStatus } = await import("./privy");
@@ -169,20 +164,19 @@ describe("LINE sign-in to Privy", () => {
     expect(privyStatus()).toMatchObject({ state: "signed-in", userId: person.id });
   });
 
-  it("publishes the authenticated user before wallet addresses arrive and keeps later addresses", async () => {
+  it("publishes the authenticated user before the Sui wallet arrives, then its address", async () => {
     await walletsReady(true);
-    expect(privyStatus()).toMatchObject({
-      state: "signed-in",
-      userId: person.id,
-      wallet: undefined,
-    });
+    expect(privyStatus()).toEqual({ state: "signed-in", userId: person.id, suiWallet: undefined });
 
-    const ethereum = `0x${"12".repeat(20)}`;
+    // An Ethereum wallet from before Croquis was Sui only is no Sui address.
     const sui = `0x${"34".repeat(32)}`;
     sdk.authenticated = true;
-    sdk.user = { ...person, linkedAccounts: [wallet("ethereum", ethereum), wallet("sui", sui)] };
+    sdk.user = {
+      ...person,
+      linkedAccounts: [wallet("ethereum", `0x${"12".repeat(20)}`), wallet("sui", sui)],
+    };
     await render();
-    expect(privyStatus()).toMatchObject({ state: "signed-in", wallet: ethereum, suiWallet: sui });
+    expect(privyStatus()).toEqual({ state: "signed-in", userId: person.id, suiWallet: sui });
     expect(sdk.authenticate).toHaveBeenCalledOnce();
   });
 });

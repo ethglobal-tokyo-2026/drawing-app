@@ -9,14 +9,15 @@ const REQUEST_TIMEOUT_MS = 15_000;
 /** Sealing uploads five images, which takes longer on a phone's connection. */
 const SEAL_TIMEOUT_MS = 60_000;
 const RECEIVE_TIMEOUT_MS = 120_000;
+/** A signed transaction's answer waits on the server sending it and Sui running it. */
+const SIGNED_TIMEOUT_MS = 60_000;
 
 const isErrorBody = (v: unknown): v is ErrorBody =>
   typeof v === "object" &&
   v !== null &&
   "error" in v &&
   typeof v.error === "string" &&
-  (!("detail" in v) || v.detail === undefined || typeof v.detail === "string") &&
-  (!("giftId" in v) || v.giftId === undefined || typeof v.giftId === "string");
+  (!("detail" in v) || v.detail === undefined || typeof v.detail === "string");
 
 const urlOf = (input: RequestInfo | URL) =>
   typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -152,14 +153,9 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, "POST /api/me/language-choice");
       return (await response.json()).me;
     },
-    ageVerificationRequest: async () => {
-      const response = await api.me["age-verification"].request.$post();
-      if (!response.ok) throw await refusal(response, "POST /api/me/age-verification/request");
-      return response.json();
-    },
-    verifyAge: async (proof) => {
-      const response = await api.me["age-verification"].$post({ json: proof });
-      if (!response.ok) throw await refusal(response, "POST /api/me/age-verification");
+    setNsfwOptIn: async (nsfwOptIn) => {
+      const response = await api.me["nsfw-opt-in"].$post({ json: { nsfwOptIn } });
+      if (!response.ok) throw await refusal(response, "POST /api/me/nsfw-opt-in");
       return (await response.json()).me;
     },
 
@@ -255,10 +251,13 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
     startTicketPurchase: async (tickets) => {
       const response = await api["ticket-purchases"].start.$post({ json: { tickets } });
       if (!response.ok) throw await refusal(response, "POST /api/ticket-purchases/start");
-      return (await response.json()).purchase;
+      return response.json();
     },
     buyTickets: async (payment) => {
-      const response = await api["ticket-purchases"].$post({ json: payment });
+      const response = await api["ticket-purchases"].$post(
+        { json: payment },
+        { init: { signal: AbortSignal.timeout(SIGNED_TIMEOUT_MS) } },
+      );
       if (!response.ok) throw await refusal(response, "POST /api/ticket-purchases");
       return (await response.json()).tickets;
     },
@@ -270,11 +269,11 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, "POST /api/gifts");
       return response.json();
     },
-    reportDeposit: async (giftId, txHash) => {
-      const response = await api.gifts[":giftId"].deposit.$post({
-        ...gift(giftId),
-        json: { txHash },
-      });
+    reportDeposit: async (giftId, signed) => {
+      const response = await api.gifts[":giftId"].deposit.$post(
+        { ...gift(giftId), json: signed },
+        { init: { signal: AbortSignal.timeout(SIGNED_TIMEOUT_MS) } },
+      );
       if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/deposit`);
       return (await response.json()).gift;
     },
@@ -286,8 +285,16 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/shared`);
       return (await response.json()).gift;
     },
-    takeOutGift: async (giftId) => {
-      const response = await api.gifts[":giftId"]["take-out"].$post(gift(giftId));
+    startTakeOut: async (giftId) => {
+      const response = await api.gifts[":giftId"]["take-out"].start.$post(gift(giftId));
+      if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/take-out/start`);
+      return response.json();
+    },
+    takeOutGift: async (giftId, signed) => {
+      const response = await api.gifts[":giftId"]["take-out"].$post(
+        { ...gift(giftId), json: signed },
+        { init: { signal: AbortSignal.timeout(SIGNED_TIMEOUT_MS) } },
+      );
       if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/take-out`);
       return (await response.json()).gift;
     },
@@ -362,11 +369,6 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       const response = await api.users.$get({ query: { handle } });
       if (!response.ok) throw await refusal(response, `GET /api/users?handle=${handle}`);
       return (await response.json()).users;
-    },
-    personByEnsLabel: async (label) => {
-      const response = await api.ens.people[":label"].$get({ param: { label } });
-      if (!response.ok) throw await refusal(response, `GET /api/ens/people/${label}`);
-      return (await response.json()).person;
     },
   };
 }

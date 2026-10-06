@@ -98,10 +98,10 @@ function foldFor(stickerId: string, maskUrl: string): Promise<Fold | null> {
 }
 
 /** The fold for a sticker whose corner is lifted, once it's known; null while it's stuck flat. */
-export function useFold(stickerId: string, maskUrl: string | undefined, lifted: boolean) {
+export function useFold(stickerId: string, maskUrl: string, lifted: boolean) {
   const [found, setFound] = useState<{ stickerId: string; fold: Fold | null }>();
   useEffect(() => {
-    if (!lifted || !maskUrl) return;
+    if (!lifted) return;
     let current = true;
     void foldFor(stickerId, maskUrl).then((fold) => {
       if (current) setFound({ stickerId, fold });

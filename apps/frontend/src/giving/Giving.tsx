@@ -46,7 +46,7 @@ interface GivingSticker {
   createdAt: number;
   /** Its image, as an object URL. */
   url: string;
-  /** An NSFW sticker: it goes in the pink bag, and only an adult can open it. */
+  /** An NSFW sticker: it goes in the pink bag, and only someone with the NSFW opt-in can open it. */
   nsfw: boolean;
 }
 

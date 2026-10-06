@@ -128,12 +128,12 @@ export const stickerCreation = {
         en: "Your sticker is saved, but isn’t sealed on-chain yet. Tap the check to try again.",
         ja: "シールは<wbr/>保存されましたが、<wbr/>ブロックチェーン<wbr/>上では<wbr/>まだ<wbr/>仕上がって<wbr/>いません。<wbr/>チェックを<wbr/>もう一度<wbr/>タップして<wbr/>ください。",
       },
-      /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing waited on the board address (the Ethereum Sepolia account that holds the stickers) and it never got ready */
-      boardAddress: {
-        en: "Couldn’t seal: your board address isn’t ready. Tap the check to try again.",
-        ja: "仕上げられ<wbr/>ませんでした：<wbr/>ボードアドレスの<wbr/>準備が<wbr/>できていません。<wbr/>チェックを<wbr/>もう一度<wbr/>タップして<wbr/>ください。",
+      /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing waited on your Sui address (the Privy wallet your stickers are kept in) and it never got ready */
+      suiAddress: {
+        en: "Couldn’t seal: your Sui address isn’t ready. Tap the check to try again.",
+        ja: "仕上げられ<wbr/>ませんでした：<wbr/>Suiアドレスの<wbr/>準備が<wbr/>できていません。<wbr/>チェックを<wbr/>もう一度<wbr/>タップして<wbr/>ください。",
       },
-      /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing waited on the board address and LINE's sign-in had expired, so Privy couldn't sign in; tapping the check reconnects with LINE and comes back to the drawing screen, which picks the drawing back up */
+      /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing waited on your Sui address and LINE's sign-in had expired, so Privy couldn't sign in; tapping the check reconnects with LINE and comes back to the drawing screen, which picks the drawing back up */
       signInExpired: {
         en: "Couldn’t seal: your LINE sign-in expired. Tap the check to reconnect with LINE.",
         ja: "仕上げられ<wbr/>ませんでした：<wbr/>LINEの<wbr/>ログイン情報の<wbr/>有効期限が<wbr/>切れました。<wbr/>チェックを<wbr/>タップして<wbr/>LINEで<wbr/>再ログイン<wbr/>してください。",
@@ -159,14 +159,14 @@ export const stickerCreation = {
       ja: "シールを<wbr/>仕上げている<wbr/>途中でした。<wbr/>チェックを<wbr/>タップして<wbr/>仕上げてください。",
     },
   },
-  /** The 18+ switch over the seal key, shown only to adults verified with World ID. */
+  /** The 18+ switch over the seal key, shown only to someone with Show 18+ stickers on. */
   nsfw: {
     /** Drawing screen, bottom right, over the seal key: the switch's words; on, the sticker seals as 18+ */
     mark: { en: "18+", ja: "18+" },
     /** Drawing screen, bottom right, over the seal key: the 18+ switch's name for screen readers */
     label: {
-      en: "18+: seal as sensitive content, blurred for anyone not verified as an adult",
-      ja: "18+：センシティブな内容として仕上げる（年齢確認済みの成人以外にはぼかして表示）",
+      en: "18+: seal as sensitive content, blurred for anyone who hasn’t turned on 18+ stickers",
+      ja: "18+：センシティブな内容として仕上げる（18+のシールをオンにしていない人にはぼかして表示）",
     },
   },
   /** The tool strip's tiles, named for assistive tech. */

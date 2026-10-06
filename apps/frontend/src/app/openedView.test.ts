@@ -13,13 +13,6 @@ describe("what a link opens", () => {
     expect(openedFrom("/g/abc")).toEqual({ view: "board", giftClaimToken: "abc" });
   });
 
-  it("opens a name's board over Explore from its url record", () => {
-    expect(openedFrom("/@alice")).toEqual({ view: "explore", boardOf: "alice" });
-    expect(openedFrom("/@%E3%81%82%E3%81%8D")).toEqual({ view: "explore", boardOf: "あき" });
-    expect(openedFrom("/@")).toEqual({ view: "board" });
-    expect(openedFrom("/@%E3")).toEqual({ view: "board" });
-  });
-
   it("opens the board for the root and any other path", () => {
     expect(openedFrom("/")).toEqual({ view: "board" });
     expect(openedFrom("")).toEqual({ view: "board" });

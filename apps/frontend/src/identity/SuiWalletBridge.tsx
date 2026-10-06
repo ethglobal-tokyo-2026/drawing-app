@@ -1,19 +1,15 @@
-import { usePrivy, type WalletWithMetadata } from "@privy-io/react-auth";
+import { usePrivy } from "@privy-io/react-auth";
 import { useSignRawHash } from "@privy-io/react-auth/extended-chains";
 import { useEffect } from "react";
+import { privySuiWallet } from "./privy";
 import { PrivySuiSigner, setSuiSigner, suiPublicKeyFor } from "./suiSigner";
 import { setSuiWalletFailure } from "./suiWallet";
 
-/** Shares a signer for the person's Privy Sui wallet with the ticket shop, outside Privy's provider. */
+/** Shares a signer for the person's Privy Sui wallet with what signs, outside Privy's provider. */
 export function SuiWalletBridge() {
   const { user } = usePrivy();
   const { signRawHash } = useSignRawHash();
-  const wallet = user?.linkedAccounts.find(
-    (a): a is WalletWithMetadata =>
-      a.type === "wallet" &&
-      (a.walletClientType === "privy" || a.walletClientType === "privy-v2") &&
-      a.chainType === "sui",
-  );
+  const wallet = privySuiWallet(user);
   const address = wallet?.address;
   const publicKey = wallet?.publicKey;
 

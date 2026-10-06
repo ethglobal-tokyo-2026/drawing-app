@@ -36,23 +36,6 @@ export const shop = {
     /** Reserve tickets section: the blue key that opens the reserve ticket checkout */
     buy: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
   },
-  /** The strip under the Shop's title for a paid pack whose tickets weren't added, which opens the reserve ticket checkout on that payment */
-  unadded: {
-    /** Shop, the strip under the title while this phone keeps a payment whose tickets aren't added yet: its title; the Shop tab's pip is described by it too, for screen readers */
-    title: { en: "Tickets not added yet", ja: "チケットが未追加です" },
-    /** Shop, that strip: the line under its title; `pack` is what was paid for, such as "3 tickets", and `price` is what it cost in yen */
-    line: {
-      en: "{{pack}}, {{price}}. Tap to add them; it won’t charge you twice.",
-      ja: "{{pack}}（{{price}}）。タップして追加できます。二重に請求されることはありません。",
-    },
-    /** Shop, the strip once the server refused that payment for good: its title; the Shop tab's pip is described by it too, for screen readers */
-    refusedTitle: { en: "Tickets can’t be added", ja: "チケットを追加できません" },
-    /** Shop, that strip: the line under its title, since the checkout says why once; `pack` and `price` as above */
-    refusedLine: {
-      en: "{{pack}}, {{price}}. Tap to see why.",
-      ja: "{{pack}}（{{price}}）。タップして理由を確認できます。",
-    },
-  },
   /** The Sui credit, under the checkout's Pay key and at the foot of the reserve tickets section; `<logo/>` is Sui's logo, which Japanese puts first */
   paymentsOn: { en: "Payments on <logo/>", ja: "<logo/>で決済" },
   /** Beside each coming-soon shelf's name: nothing on it is on sale yet */

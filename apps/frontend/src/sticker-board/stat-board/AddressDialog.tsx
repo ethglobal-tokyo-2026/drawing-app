@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { problemOf, type Problem } from "../../i18n/errorMessage";
 import { useTranslation } from "../../i18n/react";
 import { ArrowSquareOut, Copy, X } from "../../icons";
-import { etherscanAddressUrl, suiscanAccountUrl } from "../../identity/explorers";
+import { suiscanAccountUrl } from "../../identity/explorers";
 import { openLinkInLine } from "../../line/openLink";
 import { cubicBezier, EASE_OUT, EASE_OUT_POINTS, EASE_PEEL } from "../../ui/easing";
 import { ErrorLine } from "../../ui/ErrorLine";
@@ -14,11 +14,11 @@ import { useFocusTrap } from "../../ui/useFocusTrap";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { useToast } from "../../ui/useToast";
 import { splitEasing } from "../detailLift";
-import { addressGroups, type Chain } from "./addresses";
+import { addressGroups } from "./addresses";
 import "./address-dialog.css";
 
 interface Props {
-  chain: Chain;
+  /** Your Sui address. */
   address: string;
   /** The paper on the cork that the dialog lifts off and puts back. */
   from: RefObject<HTMLElement | null>;
@@ -26,11 +26,8 @@ interface Props {
   onClose: () => void;
 }
 
-/** Each chain's name in the log, its explorer, and how many fours of its address fit a line. */
-const CHAINS = {
-  ethereum: { logName: "board address", explorer: etherscanAddressUrl, foursPerLine: 5 },
-  sui: { logName: "Sui address", explorer: suiscanAccountUrl, foursPerLine: 4 },
-} as const;
+/** How many fours of a Sui address's 64 hex digits fit a line of the card. */
+const FOURS_PER_LINE = 4;
 
 // Motion tokens spelled out: Web Animations can't read CSS variables.
 /** The flight off the cork, on --ease-out. */
@@ -229,16 +226,15 @@ function putBack(parts: Parts, paper: HTMLElement | null, reduced: boolean): Ani
 // Unmounting cancels the flights, which rejects `finished`; anything else is a real failure.
 function reportUnlessCancelled(error: unknown) {
   if (error instanceof DOMException && error.name === "AbortError") return;
-  console.error("The board address paper's flight failed", error);
+  console.error("The Sui address paper's flight failed", error);
 }
 
 /**
- * An address held up off the cork: its paper lifts off the pin and grows into this card, with the QR
- * code big, the address in full, Copy and its explorer. Closing flies it back under its pin.
+ * Your Sui address held up off the cork: its paper lifts off the pin and grows into this card, with
+ * the QR code big, the address in full, Copy and Suiscan. Closing flies it back under its pin.
  */
-export function AddressDialog({ chain, address, from, onClose }: Props) {
+export function AddressDialog({ address, from, onClose }: Props) {
   const { t } = useTranslation();
-  const { logName, explorer, foursPerLine } = CHAINS[chain];
   const reduced = useReducedMotion();
   const toast = useToast();
   const titleId = useId();
@@ -298,17 +294,15 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
     setCopyProblem(null);
     try {
       await navigator.clipboard.writeText(address);
-      toast(t(($) => $.stickerBoard.addresses[chain].copied));
+      toast(t(($) => $.stickerBoard.addresses.sui.copied));
     } catch (error) {
-      console.error(`Couldn't copy the ${logName}`, error);
+      console.error("Couldn't copy the Sui address", error);
       setCopyProblem({
-        message: t(($) => $.stickerBoard.addresses[chain].notCopied),
+        message: t(($) => $.stickerBoard.addresses.sui.notCopied),
         detail: problemOf(error).detail,
       });
     }
   };
-
-  // Inside LINE's app, the explorer opens in LINE's own browser rather than leaving LINE.
 
   // Resolved once, so the dialog never moves between the page and the phone, which would remount it.
   const [phone] = useState(() => document.querySelector<HTMLElement>(".phone"));
@@ -339,11 +333,11 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
             <QrCode
               value={address}
               size={232}
-              label={t(($) => $.stickerBoard.addresses[chain].qrCode)}
+              label={t(($) => $.stickerBoard.addresses.sui.qrCode)}
               className="address-dialog__qr"
             />
             <h2 className="address-dialog__title address-dialog__rise" id={titleId}>
-              {t(($) => $.stickerBoard.addresses[chain].title)}
+              {t(($) => $.stickerBoard.addresses.sui.title)}
             </h2>
             <p className="address-dialog__address address-dialog__rise">
               {/* The address's own 0x, set apart from the digits that tell it apart. */}
@@ -354,7 +348,7 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
                   className={[
                     "address-dialog__four",
                     (i === 0 || i === fours.length - 1) && "is-compared",
-                    i > 0 && i % foursPerLine === 0 && "is-line-start",
+                    i > 0 && i % FOURS_PER_LINE === 0 && "is-line-start",
                   ]
                     .filter(Boolean)
                     .join(" ")}
@@ -363,8 +357,8 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
                 </span>
               ))}
             </p>
-            <p className="address-dialog__note address-dialog__rise">
-              {t(($) => $.stickerBoard.addresses[chain].note)}
+            <p className="address-dialog__note address-dialog__rise keep-phrases">
+              {t(($) => $.stickerBoard.addresses.sui.note)}
             </p>
           </div>
           <div className="address-dialog__acts">
@@ -384,14 +378,14 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
             )}
             <a
               className="label-btn label-btn--block address-dialog__rise"
-              href={explorer(address)}
+              href={suiscanAccountUrl(address)}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={t(($) => $.stickerBoard.addresses[chain].viewOnExplorerLabel)}
+              aria-label={t(($) => $.stickerBoard.addresses.sui.viewOnExplorerLabel)}
               onClick={openLinkInLine}
             >
               <ArrowSquareOut />
-              {t(($) => $.stickerBoard.addresses[chain].viewOnExplorer)}
+              {t(($) => $.stickerBoard.addresses.sui.viewOnExplorer)}
             </a>
           </div>
         </div>

@@ -368,7 +368,7 @@ export function SealCeremony({
           <span className="seal-ceremony__pour">
             <b style={boxStyle(pour)} />
           </span>
-          <LiveResin highlights />
+          <LiveResin />
         </div>
       </div>
     </div>

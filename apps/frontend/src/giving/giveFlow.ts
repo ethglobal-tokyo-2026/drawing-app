@@ -4,13 +4,13 @@ import { formatNo } from "../stickers/format";
 import {
   GiftMessageOutError,
   GiftPackagingError,
+  GiftTransferError,
   type GiftBackend,
   type GiftSticker,
   type PackedGift,
   type PackWait,
 } from "./giftBackend";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
-import { GiftTransferError } from "./giftTransactions";
 
 /** A wait for the gift bag that runs this long is a slow one: the screen says what it waits on and offers Take it out. */
 export const PREPARING_SLOW_MS = 10_000;

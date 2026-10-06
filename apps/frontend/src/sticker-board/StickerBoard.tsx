@@ -9,8 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useMyAgeStatus } from "../identity/useMyAgeStatus";
-import { veiledFor } from "../stickers/nsfw";
+import { useMyNsfwOptIn, veiledFor } from "../stickers/nsfw";
 import { flushSync } from "react-dom";
 import { tokyoTicketDay } from "@drawing-app/api/client";
 import { apiError } from "../api/apiClient";
@@ -239,7 +238,6 @@ const receivedGiftsOf = (stickers: readonly BoardStickerView[]) =>
             receivedAt: s.givenTo.receivedAt,
             sticker: viewOf(s),
             receiver: s.givenTo.receiver,
-            ...(s.urls.mask && { mask: s.urls.mask }),
           },
         ]
       : [],
@@ -341,7 +339,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const me = useIdentity();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
-  const myAge = useMyAgeStatus();
+  const optedIn = useMyNsfwOptIn();
   const hints = useId();
   const idle = usePreloadAfterBoard(OPENED_FROM_BOARD);
   // The gratitude mini-game covers the board, so the tilt and its sheen sweeps rest while it plays.
@@ -839,7 +837,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                 setSize={order.length}
                 hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
                 foil={byOther(s)}
-                veiled={veiledFor(s, myAge)}
+                veiled={veiledFor(s, optedIn)}
                 by={byOther(s) ? printedArtist(s) : undefined}
               />
               {/* Right after its sticker, so Tab reaches it next. */}
@@ -987,7 +985,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
           sticker={notice.sticker}
           receiver={notice.receiver}
           receivedAt={notice.receivedAt}
-          {...(notice.mask && { mask: notice.mask })}
           onClose={() => {
             markNoticed([notice]);
             setNoticesClosed((was) => new Set(was).add(receiveOf(notice)));

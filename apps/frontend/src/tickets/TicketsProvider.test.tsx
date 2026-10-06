@@ -6,12 +6,6 @@ import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import type { TicketsValue } from "./ticketsContext";
 import { REFILL_RETRY_MAX_MS, REFILL_RETRY_MS } from "./TicketsProvider";
-import {
-  keepUnaddedPurchase,
-  readUnaddedPurchasesAgain,
-  useAddUnaddedPurchases,
-  type UnaddedPurchase,
-} from "./unaddedPurchases";
 import { useTickets } from "./useTickets";
 
 type Spender = Pick<TicketsValue, "spend" | "forgetKeptSpend">;
@@ -81,7 +75,6 @@ afterEach(() => {
   view = undefined;
   spendTicket.mockReset();
   localStorage.clear();
-  readUnaddedPurchasesAgain();
   vi.useRealTimers();
 });
 
@@ -202,16 +195,13 @@ describe("answers that carry your tickets", () => {
     expect(shown().tickets?.dailyLeft).toBe(2);
   });
 
-  /** A payment kept on this phone, whose tickets the app asks for again as it opens. */
-  const KEPT: UnaddedPurchase = {
-    purchaseId: 1,
-    digest: "D".repeat(44),
-    tickets: 3,
-    priceYen: 270,
-    paidAt: Date.now(),
-  };
-  function AppOpen() {
-    useAddUnaddedPurchases();
+  /** A pack the checkout paid for, whose signed payment it sends as it opens. */
+  const PACK_TICKETS = 3;
+  function Checkout() {
+    const { buyer } = useTickets();
+    useEffect(() => {
+      void buyer.buyTickets({ purchaseId: 1, digest: "D".repeat(44), signature: "c2lnbmVk" });
+    }, [buyer]);
     return null;
   }
 
@@ -222,7 +212,7 @@ describe("answers that carry your tickets", () => {
       const addPack = () =>
         (server.tickets = {
           ...server.tickets,
-          reserveLeft: server.tickets.reserveLeft + KEPT.tickets,
+          reserveLeft: server.tickets.reserveLeft + PACK_TICKETS,
         });
       spendTicket.mockImplementation(() => {
         server.tickets = { ...server.tickets, dailyLeft: server.tickets.dailyLeft - 1 };
@@ -236,11 +226,10 @@ describe("answers that carry your tickets", () => {
           const answer = counted === "before" ? addPack() : null;
           answerPurchase = () => resolve(answer ?? addPack());
         });
-      keepUnaddedPurchase(TEST_ME.id, KEPT);
       const shown = await openWith(
         () => Promise.resolve(server.tickets),
         { buyTickets },
-        <AppOpen />,
+        <Checkout />,
       );
       await act(() => shown().spend("daily"));
       await act(async () => {

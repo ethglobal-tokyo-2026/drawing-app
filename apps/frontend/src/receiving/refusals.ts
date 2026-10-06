@@ -78,19 +78,13 @@ export function refusalScreen(kind: RefusalKind, giver: PersonView | null): EndS
         bag: null,
         action: "backToLine",
       };
-    case "adults_only":
+    case "nsfw_not_opted_in":
       return {
-        title: t(($) => $.receiving.refusals.adultsOnly.title),
-        line: t(($) => $.receiving.refusals.adultsOnly.line, giverOptions),
-        bag: { state: "closed", stamp: "adults-only", nsfw: true },
-        action: "backToLine",
-      };
-    case "needs_server":
-      return {
-        title: t(($) => $.receiving.refusals.needsServer.title),
-        line: t(($) => $.receiving.refusals.needsServer.line),
-        bag: null,
-        action: "backToLine",
+        title: t(($) => $.receiving.refusals.nsfwNotOptedIn.title),
+        line: t(($) => $.receiving.refusals.nsfwNotOptedIn.line, giverOptions),
+        bag: { state: "closed", stamp: "nsfw", nsfw: true },
+        // Its way forward is Settings, on your board.
+        action: "board",
       };
   }
 }

@@ -41,10 +41,10 @@ function giftsApi() {
       const packed = gift({ stickerId, status: "packed" });
       byGift.set(packed.id, stickerId);
       giftStatus.set(stickerId, "packed");
-      return Promise.resolve({ gift: packed, giftClaimToken: token, escrowTransfer: null });
+      return Promise.resolve({ gift: packed, giftClaimToken: token, deposit: null });
     },
     reportShared: (giftId, outcome) => settle(giftId, outcome === "sent" ? "sent" : "packed"),
-    takeOutGift: (giftId) => settle(giftId, "taken_out"),
+    startTakeOut: (giftId) => settle(giftId, "taken_out").then((gift) => ({ gift })),
   });
 }
 

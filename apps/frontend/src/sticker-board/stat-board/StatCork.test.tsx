@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
 import type { UserStats } from "@drawing-app/api/client";
-import { act, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StatCork } from "./StatCork";
@@ -34,11 +33,7 @@ let root: Root;
 
 const render = (
   stats: UserStats | null,
-  {
-    onFlipBack = () => {},
-    children,
-    loading = false,
-  }: { onFlipBack?: () => void; children?: ReactNode; loading?: boolean } = {},
+  { onFlipBack = () => {}, loading = false }: { onFlipBack?: () => void; loading?: boolean } = {},
 ) =>
   act(() =>
     root.render(
@@ -46,7 +41,6 @@ const render = (
         figures={{
           name: "Mika",
           handle: "mika",
-          ensName: null,
           own: false,
           loading,
           failure: stats || loading ? null : FAILURE,
@@ -55,9 +49,7 @@ const render = (
         }}
         onFlipBack={onFlipBack}
         flipBackRef={null}
-      >
-        {children}
-      </StatCork>,
+      />,
     ),
   );
 
@@ -145,7 +137,6 @@ function Reloading({ onFlipBack }: { onFlipBack: () => void }) {
       figures={{
         name: "Mika",
         handle: "mika",
-        ensName: null,
         own: false,
         loading,
         failure: loading ? null : { ...FAILURE, retry: () => setLoading(true) },
@@ -214,20 +205,9 @@ describe("StatCork's Bests", () => {
 });
 
 describe("StatCork's bare cork", () => {
-  it("turns the board back, but not for a tap or Escape in a window a paper opened over it", () => {
+  it("turns the board back for a tap on it", () => {
     const onFlipBack = vi.fn();
-    // World ID's window is a paper's, drawn in the page's body rather than on the cork.
-    render(NEW_ARTIST, {
-      onFlipBack,
-      children: createPortal(<div className="window-over-cork" />, document.body),
-    });
-    const over = document.querySelector(".window-over-cork");
-    act(() => {
-      over?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      over?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    });
-    expect(onFlipBack).not.toHaveBeenCalled();
-
+    render(NEW_ARTIST, { onFlipBack });
     act(() => host.querySelector<HTMLElement>(".stat-board__cork")?.click());
     expect(onFlipBack).toHaveBeenCalledOnce();
   });

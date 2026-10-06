@@ -15,7 +15,7 @@ let host: HTMLDivElement;
 let root: Root;
 const onPick = vi.fn();
 
-const kept = (no: number, nsfw: boolean): KeptSticker => ({
+const kept = (no: number, nsfw: boolean, veiled = false): KeptSticker => ({
   id: `s-${no}`,
   no,
   createdAt: 0,
@@ -24,9 +24,10 @@ const kept = (no: number, nsfw: boolean): KeptSticker => ({
   height: 100,
   url: `blob:${no}`,
   nsfw,
+  veiled,
 });
 
-const pickFor = (recipient: "adult" | "unknown") => {
+const pickFor = (recipientOptedIn: boolean) => {
   act(() =>
     root.render(
       <StickerPicker
@@ -34,7 +35,7 @@ const pickFor = (recipient: "adult" | "unknown") => {
         picked={null}
         onPick={onPick}
         label="Your stickers"
-        blocked={(s) => !canGiveTo(s, recipient)}
+        blocked={(s) => !canGiveTo(s, recipientOptedIn)}
       />,
     ),
   );
@@ -54,13 +55,32 @@ afterEach(() => {
 });
 
 describe("StickerPicker", () => {
-  it("won't pick an NSFW sticker for someone not verified adult, but picks their others", () => {
-    pickFor("unknown");
+  it("won't pick an NSFW sticker for someone without the NSFW opt-in, but picks their others", () => {
+    pickFor(false);
     expect(onPick.mock.calls).toEqual([["s-1"]]);
   });
 
-  it("picks an NSFW sticker for an adult", () => {
-    pickFor("adult");
+  it("picks an NSFW sticker for someone with it", () => {
+    pickFor(true);
     expect(onPick.mock.calls).toEqual([["s-1"], ["s-2"]]);
+  });
+
+  it("marks a sticker that's blurred for you with 18+, and still picks it", () => {
+    act(() =>
+      root.render(
+        <StickerPicker
+          stickers={[kept(1, false), kept(2, true, true)]}
+          picked={null}
+          onPick={onPick}
+          label="Your stickers"
+        />,
+      ),
+    );
+    const [plain, blurred] = [...host.querySelectorAll("button")];
+    expect(plain?.querySelector(".nsfw-mark")).toBeNull();
+    expect(blurred?.querySelector(".nsfw-mark")?.textContent).toBe("18+");
+    expect(blurred?.getAttribute("aria-label")).toContain("Blurred: 18+ sticker");
+    act(() => blurred?.click());
+    expect(onPick.mock.calls).toEqual([["s-2"]]);
   });
 });

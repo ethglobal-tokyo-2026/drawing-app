@@ -1,6 +1,5 @@
 import type { Person, Sticker } from "@drawing-app/api/client";
-import { useMyAgeStatus } from "../identity/useMyAgeStatus";
-import { veiledFor } from "../stickers/nsfw";
+import { useMyNsfwOptIn, veiledFor } from "../stickers/nsfw";
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMe } from "../api/meContext";
@@ -107,7 +106,7 @@ export function LiftedSticker({
   const { t } = useTranslation();
   const me = useMe();
   const reduced = useReducedMotion();
-  const myAge = useMyAgeStatus();
+  const optedIn = useMyNsfwOptIn();
   useLight();
   const root = useRef<HTMLDivElement>(null);
   const count = stickers.length;
@@ -176,7 +175,7 @@ export function LiftedSticker({
               width={sticker.width}
               height={sticker.height}
               nsfw={sticker.nsfw}
-              veiled={veiledFor(sticker, myAge)}
+              veiled={veiledFor(sticker, optedIn)}
               no={sticker.no}
             />
           </div>

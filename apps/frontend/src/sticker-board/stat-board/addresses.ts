@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
 import { retryPrivySignIn, usePrivyStatus } from "../../identity/privy";
-import { useSuiWalletFailure } from "../../identity/suiWallet";
-import { checksumAddress } from "./checksumAddress";
+import { askForSuiWalletAgain, useSuiWalletFailure } from "../../identity/suiWallet";
 
 /** How long Privy may take to make an address after its sign-in before it counts as failed. */
 const ARRIVE_MS = 15_000;
 
-export type Chain = "ethereum" | "sui";
-
 export type ChainAddress =
   | { state: "loading" }
-  /** `retry` is there when signing in to Privy again can bring the address. */
+  /** `retry` is there when asking Privy again can bring the address. */
   | { state: "failed"; retry?: () => void }
   | { state: "ready"; address: string };
 
@@ -32,19 +29,9 @@ function useLate(waiting: boolean, what: string) {
 }
 
 /**
- * Your board address: the Privy smart account on Ethereum Sepolia that your stickers are minted and
- * given to. Privy signs in after the board shows, and makes the address just after that.
+ * Your Sui address, which keeps your stickers and pays for reserve tickets. Privy signs in after the
+ * board shows, and MakeSuiWallet has it make the address just after that.
  */
-export function useBoardAddress(): ChainAddress {
-  const privy = usePrivyStatus();
-  const address = privy.state === "signed-in" ? privy.smartAccount : undefined;
-  const late = useLate(privy.state === "signed-in" && !address, "The board address");
-  if (privy.state === "failed" || late) return { state: "failed", retry: () => retryPrivySignIn() };
-  if (address) return { state: "ready", address: checksumAddress(address) };
-  return { state: "loading" };
-}
-
-/** Your Sui address, which Privy makes once your Ethereum one exists. */
 export function useSuiAddress(): ChainAddress {
   const privy = usePrivyStatus();
   const refused = useSuiWalletFailure() !== undefined;
@@ -52,8 +39,9 @@ export function useSuiAddress(): ChainAddress {
   const late = useLate(privy.state === "signed-in" && !address && !refused, "The Sui address");
   if (privy.state === "failed") return { state: "failed", retry: () => retryPrivySignIn() };
   if (address) return { state: "ready", address };
-  // Privy is asked for it once per page load, so only a reload asks again.
-  if (refused || late) return { state: "failed" };
+  if (refused) return { state: "failed", retry: askForSuiWalletAgain };
+  // Privy may still answer, and asking it twice at once could make two wallets.
+  if (late) return { state: "failed" };
   return { state: "loading" };
 }
 

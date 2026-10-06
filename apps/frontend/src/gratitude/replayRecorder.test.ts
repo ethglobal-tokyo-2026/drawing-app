@@ -9,7 +9,7 @@ import { endOf, session, strokeStartedCombo, strokeUpAndDown } from "./testCombo
 /** The server's MAX_COMBO_MS, and the most a keepalive request carries. */
 const MAX_COMBO_MS = 8000;
 const MAX_BODY_BYTES = 64 * 1024;
-// The server still reads "sent" in replays stored before the first tap started the bar; a new one never has it.
+/** Every way a combo ends, as its replay records it. */
 const END_REASONS: readonly ReplayV1["endReason"][] = ["empty", "cap", "hidden", "closed"];
 
 /** Rows of `size` values from a flat list, the first `summed` of each added to the row before's. */
@@ -50,10 +50,7 @@ function readReplay(replay: ReplayV1, record: ComboRecord) {
   );
   rule(replay.shakes.length % 2 === 0 && replay.shakes.every(int), "shakes");
   const { strokePasses } = replay;
-  rule(
-    strokePasses === undefined || strokePasses.length === replay.strokes.length,
-    "one list of stroke passes per stroke",
-  );
+  rule(strokePasses?.length === replay.strokes.length, "one list of stroke passes per stroke");
   rule(
     (strokePasses ?? []).every((passes, stroke) =>
       passes.every(
@@ -168,6 +165,7 @@ describe("createReplayRecorder", () => {
       hits: [0, 5000, 5398, 1],
       strokes: [],
       shakes: [],
+      strokePasses: [],
     });
   });
 

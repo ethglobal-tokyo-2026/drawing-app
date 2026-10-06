@@ -2,19 +2,13 @@
 import type { GiftPreview } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { ApiError, type ApiClient } from "../api/apiClient";
 import { gift, people, sticker } from "../api/testFixtures";
-import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
+import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { SEARCH_AFTER_MS } from "../explore/ExploreScreen";
 import { keepGift } from "../giving/keptGifts";
 import { PULL } from "../receiving/pullTab";
 import { forgetBoardComplete } from "../sticker-board/boardComplete";
 import { readKeptBoardAgain } from "../sticker-board/lastBoard";
-import {
-  addUnaddedPurchases,
-  keepUnaddedPurchase,
-  readUnaddedPurchasesAgain,
-} from "../tickets/unaddedPurchases";
 import App from "./App";
 
 vi.mock("@line/liff", () => ({
@@ -61,7 +55,6 @@ beforeEach(() => {
   vi.setSystemTime(new Date("2026-09-26T12:00:00.000Z"));
   localStorage.clear();
   readKeptBoardAgain();
-  readUnaddedPurchasesAgain();
   forgetBoardComplete();
   history.replaceState(null, "", "/g/test-claim-token");
 });
@@ -127,24 +120,6 @@ it("refreshes waiting gifts after Not now without reloading the sticker board", 
   expect(stickerBoard).toHaveBeenCalledTimes(1);
 });
 
-it("opens a name's link once: a later visit to Explore is plain Explore", async () => {
-  history.replaceState(null, "", "/@mika");
-  const personByEnsLabel = vi.fn(async () => people.mika);
-  const view = renderWithApi(<App />, emptyApi({ personByEnsLabel }));
-  unmount = view.unmount;
-  await act(() => vi.dynamicImportSettled());
-  await settle();
-  expect(personByEnsLabel).toHaveBeenCalledTimes(1);
-
-  tapTab(view.host, "board");
-  await settle();
-  tapTab(view.host, "explore");
-  await act(() => vi.dynamicImportSettled());
-  await settle();
-  expect(view.host.querySelector(".explore")).not.toBeNull();
-  expect(personByEnsLabel).toHaveBeenCalledTimes(1);
-});
-
 it("keeps Explore's search while another tab shows, asks nothing for it then, and refreshes it on a return", async () => {
   history.replaceState(null, "", "/explore");
   const explore = vi.fn(async () => ({
@@ -184,53 +159,4 @@ it("keeps Explore's search while another tab shows, asks nothing for it then, an
   await settle();
   expect(explore).toHaveBeenCalledTimes(2);
   expect(searchUsers).toHaveBeenCalledTimes(2);
-});
-
-/** The App with a paid pack kept on the phone, whose tickets the server answers with `buyTickets`. */
-async function renderWithKeptPayment(buyTickets: ApiClient["buyTickets"]) {
-  history.replaceState(null, "", "/");
-  vi.spyOn(console, "warn").mockImplementation(() => {});
-  vi.spyOn(console, "error").mockImplementation(() => {});
-  keepUnaddedPurchase(TEST_ME.id, {
-    purchaseId: 1,
-    digest: "D".repeat(44),
-    tickets: 3,
-    priceYen: 270,
-    paidAt: Date.now(),
-  });
-  const api = emptyApi({ buyTickets });
-  const view = renderWithApi(<App />, api);
-  unmount = view.unmount;
-  await act(() => vi.dynamicImportSettled());
-  await settle();
-  const shopTab = () => view.host.querySelector<HTMLElement>(".tab-shop");
-  /** What the Shop tab's pip tells screen readers; null when the tab wears none. */
-  const pipSaid = () => {
-    const note = shopTab()?.getAttribute("aria-describedby");
-    const pipShown = shopTab()?.querySelector(".tab-pip") != null;
-    return pipShown && note ? document.getElementById(note)?.textContent : null;
-  };
-  return { api, pipSaid, shopTabName: () => shopTab()?.textContent };
-}
-
-it("puts a pip on the Shop tab while a paid pack's tickets wait, until the server adds them", async () => {
-  const buyTickets = vi
-    .fn<ApiClient["buyTickets"]>()
-    .mockRejectedValue(new ApiError(502, { error: "sui_unavailable" }));
-  const { api, pipSaid, shopTabName } = await renderWithKeptPayment(buyTickets);
-  expect(pipSaid()).toBe("Tickets not added yet");
-  // The description sits beside the tab's name, not in it.
-  expect(shopTabName()).toBe("Shop");
-
-  buyTickets.mockResolvedValue({ ...FRESH_TICKETS, reserveLeft: 3 });
-  await act(() => addUnaddedPurchases(api, TEST_ME.id));
-  expect(pipSaid()).toBeNull();
-});
-
-it("keeps the Shop tab's pip once the server has refused the payment, and says so", async () => {
-  const buyTickets = vi
-    .fn<ApiClient["buyTickets"]>()
-    .mockRejectedValue(new ApiError(422, { error: "payment_not_found" }));
-  const { pipSaid } = await renderWithKeptPayment(buyTickets);
-  expect(pipSaid()).toBe("Tickets can’t be added");
 });

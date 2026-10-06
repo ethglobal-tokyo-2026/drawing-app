@@ -36,14 +36,14 @@ afterEach(() => {
 });
 
 async function openApp() {
-  const [{ PrivySignIn }, privyStart, smartWallet] = await Promise.all([
+  const [{ PrivySignIn }, privyStart, suiWallet] = await Promise.all([
     import("./PrivySignIn"),
     import("./privyStart"),
-    import("./smartWallet"),
+    import("./suiWallet"),
   ]);
   await act(async () => root.render(<PrivySignIn />));
   const settle = () => act(() => vi.dynamicImportSettled());
-  return { ...privyStart, ...smartWallet, settle };
+  return { ...privyStart, ...suiWallet, settle };
 }
 
 /** How many times Privy started for `why`, as the performance recording saw it. */
@@ -70,7 +70,7 @@ describe("PrivySignIn", () => {
 
   it("starts at once when sealing, giving or receiving waits for the wallet", async () => {
     const app = await openApp();
-    void app.waitForSmartWallet().catch(() => {});
+    void app.waitForSuiAddress().catch(() => {});
     await app.settle();
     expect(startsFor("wallet-needed")).toBe(1);
     expect(host.textContent).toBe("privy");

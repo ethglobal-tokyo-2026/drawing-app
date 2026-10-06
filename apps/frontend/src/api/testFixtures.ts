@@ -1,11 +1,10 @@
-import {
-  CROQUIS_PARENT_NAME,
-  type BoardSticker,
-  type Gift,
-  type Gratitude,
-  type Person,
-  type Sticker,
-  type TransferTrailEntry,
+import type {
+  BoardSticker,
+  Gift,
+  Gratitude,
+  Person,
+  Sticker,
+  TransferTrailEntry,
 } from "@drawing-app/api/client";
 
 /** People, stickers and gifts for tests, in the API's shapes. All of it is made up. */
@@ -15,8 +14,7 @@ const person = (handle: string, lineDisplayName: string): Person => ({
   handle,
   lineDisplayName,
   linePictureUrl: null,
-  ensName: `${handle}.${CROQUIS_PARENT_NAME}`,
-  ageStatus: "adult",
+  nsfwOptIn: false,
 });
 
 export const people = {
@@ -37,8 +35,7 @@ export const markupLikePerson: Person = {
   handle: null,
   lineDisplayName: MARKUP_LIKE_NAME,
   linePictureUrl: null,
-  ensName: null,
-  ageStatus: "adult",
+  nsfwOptIn: false,
 };
 
 const ART_PX = 224;
@@ -71,10 +68,8 @@ export function sticker(overrides: Partial<Sticker> = {}): Sticker {
     outline: `M0 0L${ART_PX} 0L${ART_PX} ${ART_PX}L0 ${ART_PX}Z`,
     contentHash: `0x${made.toString(16).padStart(64, "0")}`,
     images: imagesOf(`https://cdn.test/${made}.png`),
-    tokenId: null,
-    mintTxHash: null,
+    objectId: null,
     sealedAt: "2026-09-23T11:52:00.000Z",
-    ensName: null,
     nsfw: false,
     ...overrides,
   };

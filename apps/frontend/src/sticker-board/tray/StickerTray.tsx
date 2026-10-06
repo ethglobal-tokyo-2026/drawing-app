@@ -1,4 +1,5 @@
 import { useImperativeHandle, useLayoutEffect, useRef, type Ref } from "react";
+import { useMyNsfwOptIn, veiledFor } from "../../stickers/nsfw";
 import { handleOf, type BoardStickerView } from "../boardSticker";
 import {
   createTrayEngine,
@@ -38,7 +39,11 @@ interface Props {
 }
 
 /** Every sticker in its slot, with what the tray draws it from. */
-function trayStickers(stickers: readonly BoardStickerView[], ownerId: string): TraySticker[] {
+function trayStickers(
+  stickers: readonly BoardStickerView[],
+  ownerId: string,
+  optedIn: boolean,
+): TraySticker[] {
   const byId = new Map(stickers.map((s) => [s.id, s]));
   return traySlots(stickers).flatMap((slot) => {
     const s = byId.get(slot.id);
@@ -51,6 +56,7 @@ function trayStickers(stickers: readonly BoardStickerView[], ownerId: string): T
       urls: s.urls,
       gift: s.artist.id !== ownerId,
       nsfw: s.nsfw,
+      veiled: veiledFor(s, optedIn),
       seen: s.seenAt !== null,
     };
     if (s.outline !== undefined) sticker.outline = s.outline;
@@ -62,15 +68,16 @@ function trayStickers(stickers: readonly BoardStickerView[], ownerId: string): T
 /** The sticker tray on the board: its engine, fed the board's stickers and asked through `ref`. */
 export function StickerTray({ board, stickers, ownerId, api, onSeen, onProblem, ref }: Props) {
   const engine = useRef<TrayEngine | null>(null);
-  const latest = useRef({ stickers, ownerId, api, onSeen, onProblem });
+  const optedIn = useMyNsfwOptIn();
+  const latest = useRef({ stickers, ownerId, optedIn, api, onSeen, onProblem });
   useLayoutEffect(() => {
-    latest.current = { stickers, ownerId, api, onSeen, onProblem };
+    latest.current = { stickers, ownerId, optedIn, api, onSeen, onProblem };
   });
 
   // Before the engine's own effect, so a new engine doesn't redraw what it has just drawn.
   useLayoutEffect(() => {
     engine.current?.refresh();
-  }, [stickers]);
+  }, [stickers, optedIn]);
 
   useLayoutEffect(() => {
     if (!board) return;
@@ -85,8 +92,8 @@ export function StickerTray({ board, stickers, ownerId, api, onSeen, onProblem, 
     };
     const tray = createTrayEngine(board, {
       slots: () => {
-        const { stickers: list, ownerId: owner } = latest.current;
-        return trayStickers(list, owner);
+        const { stickers: list, ownerId: owner, optedIn: viewerOptedIn } = latest.current;
+        return trayStickers(list, owner, viewerOptedIn);
       },
       api: side,
       markSeen: (ids) => latest.current.onSeen(ids),

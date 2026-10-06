@@ -7,7 +7,7 @@ import { giftTag, type GiftTag } from "./giftTag";
 import "./GiftBag.css";
 
 /** A rubber stamp inked on the tag. */
-export type GiftStamp = "one-to-one" | "opened" | "taken-back" | "returned" | "adults-only";
+export type GiftStamp = "one-to-one" | "opened" | "taken-back" | "returned" | "nsfw";
 
 /** The pull tab as the receiver works it. */
 export interface PullTab {
@@ -57,7 +57,7 @@ interface Props {
 
 const STAMP_TONES: Record<GiftStamp, "ink" | "grape" | "pink" | "plain"> = {
   "one-to-one": "ink",
-  "adults-only": "pink",
+  nsfw: "pink",
   opened: "grape",
   "taken-back": "plain",
   returned: "plain",

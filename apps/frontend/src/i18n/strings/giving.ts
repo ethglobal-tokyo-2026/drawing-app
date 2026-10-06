@@ -7,53 +7,8 @@ export const giving = {
     /** The gift tag's small label over the recipient's handle, on the gift bag in Giving when the giver picked the person from their sticker board ("For @bob") */
     for: { en: "For", ja: "贈り先" },
   },
-  /** Why a gift's sticker couldn't go into or out of its bag, by cause: the reason in “couldn’t be packed” or “couldn’t be taken out” on Giving's “Not sent yet” screen, with the developer's English detail after it in brackets */
+  /** Why a packed gift can't go out, by cause: the reason in “couldn’t be packed” on Giving's “Not sent yet” screen, with the developer's English detail after it in brackets */
   transferProblem: {
-    /** Giving's “Not sent yet” screen, in “couldn’t be packed”: the move into the gift bag was refused; Send in LINE tries it again */
-    deposit_reverted: {
-      en: "Your sticker didn’t make it into the gift bag. Tap Send in LINE to try again.",
-      ja: "シールがギフト袋に入りませんでした。「LINEで送る」をタップして、もう一度お試しください。",
-    },
-    /** Giving's “Not sent yet” screen, in “couldn’t be taken out”: the move out of the gift bag was refused; Take it out tries it again */
-    take_out_reverted: {
-      en: "Your sticker didn’t come back out of the gift bag. Tap Take it out to try again.",
-      ja: "シールをギフト袋から取り出せませんでした。「取り出す」をタップして、もう一度お試しください。",
-    },
-    /** Giving's “Not sent yet” screen, in “couldn’t be packed”: the move into the gift bag wasn't confirmed in time; Send in LINE checks again */
-    deposit_unconfirmed: {
-      en: "We couldn’t confirm that your sticker reached the gift bag. Tap Send in LINE to check again.",
-      ja: "シールがギフト袋に入ったか確認できませんでした。「LINEで送る」をタップして、もう一度確認してください。",
-    },
-    /** Giving's “Not sent yet” screen, in “couldn’t be taken out”: the move out of the gift bag wasn't confirmed in time; Take it out checks again */
-    take_out_unconfirmed: {
-      en: "We couldn’t confirm that your sticker came out of the gift bag. Wait a moment, then tap Take it out to check again.",
-      ja: "シールが袋から出たか確認できませんでした。少し待ってから、「取り出す」をタップして確認してください。",
-    },
-    /** Giving's “Not sent yet” screen, in “couldn’t be packed”: the sticker came back out of the gift bag before the gift went out; Send in LINE packs it again */
-    deposit_came_back: {
-      en: "Your sticker came back out of the gift bag before it went out. Tap Send in LINE to pack it again.",
-      ja: "送る前に、シールがギフト袋から戻ってきました。「LINEで送る」をタップして、もう一度袋に入れてください。",
-    },
-    /** Giving's “Not sent yet” screen, in “couldn’t be packed”: the gift bag was already closed when the sticker was going in */
-    gift_closed: {
-      en: "This gift bag was already closed. Take the sticker out, then give it again.",
-      ja: "このギフト袋はすでに閉じられています。シールを取り出してから、もう一度贈ってください。",
-    },
-    /** Giving's “Not sent yet” screen, in “couldn’t be taken out”: its receiver got the sticker first */
-    already_received: {
-      en: "Someone already received this sticker, so it can’t be taken out.",
-      ja: "このシールはすでに受け取られているため、取り出せません。",
-    },
-    /** Giving's “Not sent yet” screen, in “couldn’t be packed” or “couldn’t be taken out”: this version of the app has no gift bag to move stickers into */
-    not_set_up: {
-      en: "Gift bags aren’t set up in this version of Croquis yet.",
-      ja: "このバージョンのクロッキーでは、ギフト袋がまだ使えません。",
-    },
-    /** Giving's “Not sent yet” screen, in “couldn’t be packed” or “couldn’t be taken out”: what the app was told about the gift bag didn't look right, so nothing moved */
-    unreadable: {
-      en: "The gift bag’s details didn’t look right, so nothing was moved. Try again.",
-      ja: "ギフト袋の情報が正しくなかったため、何も動かしていません。もう一度お試しください。",
-    },
     /** Giving's “Not sent yet” screen, in “couldn’t be packed”: the gift has no link to send; taking the sticker out and giving it again makes a new one */
     no_link: {
       en: "This gift came without a link to send. Take the sticker out, then give it again.",
@@ -101,22 +56,22 @@ export const giving = {
     /** The give sheet on someone else's sticker board: its key, disabled, until you pick a sticker */
     pick: { en: "Pick a sticker", ja: "シールを選ぶ" },
   },
-  /** Giving an NSFW sticker, which only adults can receive. */
+  /** Giving an NSFW sticker, which only someone with Show 18+ stickers on can receive. */
   nsfw: {
-    /** The give sheet on someone else's sticker board: said by assistive tech on an NSFW sticker that can't be picked because they aren't verified as an adult */
+    /** The give sheet on someone else's sticker board: said by assistive tech on an NSFW sticker that can't be picked because they haven't turned on Show 18+ stickers */
     blocked: {
-      en: "for adults only, can’t be given to them",
-      ja: "成人向けのため、この人には贈れません",
+      en: "18+, can’t be given to them",
+      ja: "18+のため、この人には贈れません",
     },
-    /** The give sheet on someone else's sticker board: fine print under the grid when some of your stickers are NSFW and <name/> isn't verified as an adult; <name/> is their handle, which keeps its own case in the capitals */
-    adultsOnly: {
-      en: "18+ stickers can only go to adults verified with World ID, and <name/> isn’t.",
-      ja: "18+のシールは、<wbr/>World IDで<wbr/>年齢確認済みの<wbr/>成人にだけ<wbr/>贈れます。<wbr/><name/>さんは<wbr/>まだ<wbr/>確認されていません。",
+    /** The give sheet on someone else's sticker board: fine print under the grid when some of your stickers are NSFW and <name/> hasn't turned on Show 18+ stickers; <name/> is their handle, which keeps its own case in the capitals */
+    notOptedIn: {
+      en: "18+ stickers only go to people who turned on Show 18+ stickers, and <name/> hasn’t.",
+      ja: "18+のシールは、<wbr/>「18+のシールを表示する」を<wbr/>オンにした人にだけ<wbr/>贈れます。<wbr/><name/>さんは<wbr/>オンにしていません。",
     },
     /** Giving's first screen, for an NSFW sticker: fine print on who can open the gift */
     whoCanOpen: {
-      en: "18+ sticker: only an adult verified with World ID can open this gift.",
-      ja: "18+のシール：<wbr/>World IDで<wbr/>年齢確認済みの<wbr/>成人だけが<wbr/>このギフトを<wbr/>ひらけます。",
+      en: "18+ sticker: only someone who turned on Show 18+ stickers can open this gift.",
+      ja: "18+のシール：<wbr/>「18+のシールを表示する」を<wbr/>オンにした人だけが<wbr/>このギフトを<wbr/>ひらけます。",
     },
   },
   /** Giving: the sticker's fine print over the sheet, its number, drawing time, seal day and the giver's handle */
@@ -189,11 +144,6 @@ export const giving = {
       moving: {
         en: "This is taking longer than usual. Your sticker is still going into the gift bag.",
         ja: "いつもより<wbr/>時間が<wbr/>かかっています。<wbr/>シールを<wbr/>ギフト袋に<wbr/>入れているところです。",
-      },
-      /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the gift bag confirms the sticker is in */
-      confirming: {
-        en: "This is taking longer than usual. Waiting for the gift bag to confirm your sticker is in, which can take a couple of minutes.",
-        ja: "いつもより<wbr/>時間が<wbr/>かかっています。<wbr/>シールが<wbr/>ギフト袋に<wbr/>入ったか、<wbr/>確認を<wbr/>待っています。<wbr/>数分<wbr/>かかることも<wbr/>あります。",
       },
       /** Giving's “Preparing your gift” screen, after about ten seconds: the sentence after what it waits on, since Take it out is offered now */
       leave: {
@@ -333,8 +283,8 @@ export const giving = {
         /** The rubber stamp on the tag of a gift that went back to its giver, unopened in time */
         big: { en: "Returned", ja: "返送済み" },
       },
-      "adults-only": {
-        /** The rubber stamp on the tag of an NSFW sticker's gift, opened by someone not verified as an adult */
+      nsfw: {
+        /** The rubber stamp on the tag of an NSFW sticker's gift, opened by someone who hasn't turned on Show 18+ stickers */
         big: { en: "18+ only", ja: "18歳以上" },
       },
     },

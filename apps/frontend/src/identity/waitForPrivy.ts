@@ -5,7 +5,7 @@ import { startPrivy } from "./privyStart";
 // A cold start downloads Privy's SDK, starts its wallet frame and signs in before a wallet exists.
 const READY_TIMEOUT_MS = 30_000;
 
-/** Something Privy makes once the person is signed in: the Sepolia client, or the Sui signer. */
+/** Something Privy makes once the person is signed in: the Sui wallet, or its signer. */
 export interface PrivyMade<T> {
   current: () => T | null;
   /** Why it didn't start, apart from Privy's sign-in. */
@@ -14,21 +14,23 @@ export interface PrivyMade<T> {
   askAgain?: () => void;
   /** Calls the listener whenever `current` or `failure` changes; returns the unsubscribe. */
   subscribe: (listener: () => void) => () => void;
-  /** The app's own code for it not being ready, so the person reads its catalog message. */
-  notReady: Extract<ErrorCode, "smart_account_not_ready" | "sui_wallet_not_ready">;
 }
 
 /**
  * Chain actions and payments wait here, and start Privy if the board hasn't yet. A Privy sign-in, or
  * what it makes, that failed gets one fresh try per wait; a second failure ends the wait at once, and
- * so does a LINE sign-in that has expired, since only reconnecting LINE renews it.
+ * so does a LINE sign-in that has expired, since only reconnecting LINE renews it. Not being ready is
+ * the app's own sui_wallet_not_ready, so the person reads its catalog message.
  */
 export function waitForPrivy<T>(made: PrivyMade<T>): Promise<T> {
   startPrivy("wallet-needed");
   const ready = made.current();
   if (ready) return Promise.resolve(ready);
   const notReady = (detail?: string) =>
-    new ApiError(0, { error: made.notReady, ...(detail && { detail }) });
+    new ApiError(0, {
+      error: "sui_wallet_not_ready" satisfies ErrorCode,
+      ...(detail && { detail }),
+    });
   return new Promise((resolve, reject) => {
     let retried = false;
     // The fresh try's own changes aren't its outcome: those come after it has started.

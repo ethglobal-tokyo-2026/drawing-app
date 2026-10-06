@@ -1,18 +1,12 @@
-import type { StartedTicketPurchase, TicketShop } from "@drawing-app/api/client";
-import type { Signer } from "@mysten/sui/cryptography";
+import type { TicketShop } from "@drawing-app/api/client";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { SuiGraphQLClient } from "@mysten/sui/graphql";
-import { coinWithBalance, Transaction, TransactionDataBuilder } from "@mysten/sui/transactions";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
-import { PaymentFailed, SigningTimedOut } from "./paymentErrors";
 
 /** Where the ticket shop's packs are paid, as the server names it. */
 export type JpycPayment = TicketShop["payment"];
 
 const BALANCE_TIMEOUT_MS = 10_000;
-const PAYMENT_TIMEOUT_MS = 60_000;
-/** How long the phone waits for Sui to serve a payment it just ran; the server waits for it too. */
-const SERVED_TIMEOUT_MS = 10_000;
 const HISTORY_TIMEOUT_MS = 15_000;
 const HISTORY_PAGE = 20;
 
@@ -34,88 +28,6 @@ export async function getJpycBalance(owner: string, payment: JpycPayment): Promi
     signal: AbortSignal.timeout(BALANCE_TIMEOUT_MS),
   });
   return BigInt(balance.balance);
-}
-
-function withTimeout<T>(work: Promise<T>, ms: number, timedOut: () => Error): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(timedOut()), ms);
-  });
-  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
-}
-
-/** A ticket payment signed and not yet sent, so its digest can be kept before Sui is asked to run it. */
-export interface SignedTicketPayment {
-  digest: string;
-  /**
-   * Asks Sui to run it, and resolves once Sui has. Rejects with PaymentFailed when it ran and failed;
-   * any other rejection leaves unknown whether it ran.
-   */
-  send: () => Promise<void>;
-}
-
-/**
- * Builds and signs a payment of `purchase`'s price into the ticket vault, with the payment
- * contract's `pay` naming the purchase's reference. Gas is paid in SUI. Rejects with SigningTimedOut
- * when building and signing take too long: a signature that comes later is never sent.
- */
-export async function signTicketPayment(
-  signer: Signer,
-  payment: JpycPayment,
-  purchase: Pick<StartedTicketPurchase, "priceJpyc" | "reference">,
-): Promise<SignedTicketPayment> {
-  const client = clientFor(payment.network);
-  const amount = BigInt(purchase.priceJpyc);
-  const tx = new Transaction();
-  tx.setSender(signer.toSuiAddress());
-  const coin = tx.add(coinWithBalance({ type: payment.coinType, balance: amount }));
-  tx.moveCall({
-    target: `${payment.paymentPackage}::payment::pay`,
-    arguments: [
-      tx.object(payment.vault),
-      coin,
-      tx.pure.u64(amount),
-      tx.pure.vector("u8", Array.from(new TextEncoder().encode(purchase.reference))),
-    ],
-  });
-  // `pay` takes the whole amount, so the coin is left empty, and a coin can't be dropped.
-  tx.moveCall({
-    target: "0x2::coin::destroy_zero",
-    typeArguments: [payment.coinType],
-    arguments: [coin],
-  });
-
-  const { bytes, signature } = await withTimeout(
-    tx.build({ client }).then(async (built) => ({
-      bytes: built,
-      signature: (await signer.signTransaction(built)).signature,
-    })),
-    PAYMENT_TIMEOUT_MS,
-    () => new SigningTimedOut(),
-  );
-  const digest = TransactionDataBuilder.getDigestFromBytes(bytes);
-  return {
-    digest,
-    send: async () => {
-      const result = await client.executeTransaction({
-        transaction: bytes,
-        signatures: [signature],
-        signal: AbortSignal.timeout(PAYMENT_TIMEOUT_MS),
-      });
-      if (result.$kind === "FailedTransaction") {
-        throw new PaymentFailed(
-          digest,
-          result.FailedTransaction.status.error?.message ?? "no reason given",
-        );
-      }
-      // It ran, so Sui being slow to serve it is no failure: the server waits for Sui itself.
-      await client
-        .waitForTransaction({ digest, timeout: SERVED_TIMEOUT_MS })
-        .catch((error: unknown) => {
-          console.warn(`Sui ran the payment ${digest} but didn't serve it in time`, error);
-        });
-    },
-  };
 }
 
 // GraphQL gives each event's time, which gRPC's list of events leaves out, and public fullnodes no

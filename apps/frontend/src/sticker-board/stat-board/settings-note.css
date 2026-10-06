@@ -119,3 +119,45 @@
   right: -12px;
   transform: rotate(27deg);
 }
+
+/* Under the first setting, a second one: set off by a dashed rule, as the rows are. */
+.settings-note__setting + .settings-note__setting {
+  margin-top: 12px;
+  border-top: 1px dashed var(--rule);
+}
+
+/* The NSFW opt-in's one row: its words, then a switch at the row's end, filled Bonbon Pink when on.
+   The thumb is a gradient so it needs no pseudo-element, which a checkbox may not carry. */
+.settings-note__switch {
+  justify-content: space-between;
+}
+
+.settings-note__switch input {
+  width: 46px;
+  height: 28px;
+  border-radius: 999px;
+  background-color: var(--canvas);
+  background-image: radial-gradient(circle, var(--graphite) 0 8px, transparent 8.5px);
+  background-repeat: no-repeat;
+  background-size: 22px 22px;
+  background-position: 2px 50%;
+}
+
+.settings-note__switch input:checked {
+  border-color: var(--ink);
+  background-color: var(--pink);
+  background-image: radial-gradient(circle, var(--ink) 0 8px, transparent 8.5px);
+  background-position: calc(100% - 2px) 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .settings-note__switch input {
+    transition:
+      background-color 160ms var(--ease-out),
+      background-position 160ms var(--ease-out);
+  }
+}
+
+.settings-note__about {
+  margin: 4px 0 0;
+}
