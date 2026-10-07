@@ -25,16 +25,16 @@ Publishes everything, in order:
 
 ## CDN
 
-With `CDN_ORIGIN` set in `deploy/.env`, the build's hashed files, under `/assets/`, load from a CloudFront distribution in front of the box, from edges near the people using the app; the box is far from Japan. `deploy.sh` passes it to the build (`apps/frontend/vite.config.ts`), then checks the distribution serves the entry script with its CORS header. Set it empty and deploy again to load everything from the box.
+With `CDN_ORIGIN` set in `deploy/.env`, the build's hashed files, under `/assets/`, load from Fastly in front of the box, from edges near the people using the app; the box is far from Japan. `deploy.sh` passes it to the build (`apps/frontend/vite.config.ts`), then checks Fastly serves the entry script with its CORS header. Set it empty and deploy again to load everything from the box.
 
-The sticker images load from it too once `CDN_BASE_URL` in `drawing-api.env` is the distribution's `/api/images`, with the API deployed. An NSFW sticker's drawing still loads from `IMAGE_BASE_URL`, the box's own, which checks the session cookie for it and marks it private, so no CDN keeps a copy.
+The sticker images load from it too once `CDN_BASE_URL` in `drawing-api.env` is Fastly's `/api/images`, with the API deployed and Display's image host moved to it (`publish-sui.mjs --set-image-host`). An NSFW sticker's drawing still loads from `IMAGE_BASE_URL`, the box's own, which checks the session cookie for it and marks it private, so no CDN keeps a copy.
 
 Everything else stays on the box: index.html, which LIFF opens there, the public folder's files, which LINE fetches by their fixed paths, and the API and the auth server, since the session cookie goes only to the box.
 
-- Scripts, fonts and the sticker images the app reads on canvases and as CSS masks load from another origin only with CORS, so `serve.py` sends `Access-Control-Allow-Origin: *` with every hashed file, and the API with every public sticker image, and the distribution keeps it in its copies. Deploy them before setting `CDN_ORIGIN` or `CDN_BASE_URL`, so no copy is made without it.
+- Scripts, fonts and the sticker images the app reads on canvases and as CSS masks load from another origin only with CORS, so `serve.py` sends `Access-Control-Allow-Origin: *` with every hashed file, and the API with every public sticker image, and Fastly keeps it in its copies. Deploy them before setting `CDN_ORIGIN` or `CDN_BASE_URL`, so no copy is made without it.
 - The sealing worker's script must come from the page's own origin, so it starts through a module of the page's own that imports the CDN's copy (`apps/frontend/src/ui/startWorker.ts`). Where the CDN's copy won't load, the cut runs on the main thread.
-- The distribution: its origin is `DEPLOY_URL`'s host over HTTPS. It answers GET and HEAD with the CachingOptimized cache policy, so no cookie or query string reaches the box, and the SimpleCORS response headers policy, and it compresses. It's on CloudFront's flat-rate Free plan, which needs a web ACL; this one has no rules.
-- A copy cached without the CORS header breaks the app until it expires, a year on. Clear it with `aws cloudfront create-invalidation --distribution-id <id> --paths '/assets/*' '/api/images/*'`.
+- Fastly's service "Croquis's website" (`nKXNm4mB3I2iYnrEbsobML`) answers at `stickeroo.global.ssl.fastly.net`, Fastly's shared TLS domain, with the box at `stickeroo.art` over HTTPS as its one backend. Its `croquis-recv` VCL snippet passes only GET and HEAD for `/assets/` and `/api/images/`, with no cookie or query string, and answers everything else 404; `croquis-fetch` keeps errors only briefly. It caches by the box's `Cache-Control`. `FASTLY_API_TOKEN` in `deploy/.env` manages it through Fastly's API.
+- A copy cached without the CORS header breaks the app until it expires, a year on. Clear it with `curl -X POST -H "Fastly-Key: $FASTLY_API_TOKEN" https://api.fastly.com/service/nKXNm4mB3I2iYnrEbsobML/purge_all`.
 
 ## `./deploy/deploy-api.sh`
 
