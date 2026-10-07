@@ -84,3 +84,10 @@ To move the sticker images to another host, run `node deploy/publish-sui.mjs --s
 | `sticker-board` | The web app, through `serve.py`, on 127.0.0.1:3003 | `/srv/sticker-board`: `serve.py` and the build in `site/`                                                                                                                     |
 
 Each unit's file is `deploy/<unit>.service`, which the deploy scripts install in `/etc/systemd/system/`. `drawing-api` and `sticker-auth` run on the Node that the root `package.json` pins, under `/usr/local/lib/nodejs/`. Their logs: `journalctl -u <unit>` on the box, or `/api/logs` for both.
+
+## Domain
+
+- `stickeroo.art` is at Namecheap, on its own DNS: an A record for `@` to the box and a CNAME for `www`. Namecheap's API `setHosts` replaces every record at once, so a change sends both, with `EmailType=FWD`.
+- The box serves other sites through the same HAProxy, in `/etc/haproxy/haproxy.cfg`; Croquis's part routes `stickeroo.art` by host and redirects `www` to it.
+- acme.sh in `bawler`'s home issues the certificate, answering Let's Encrypt on port 8888 behind HAProxy's `/.well-known/acme-challenge/` route, and its `haproxy` deploy hook installs each renewal in `/etc/haproxy/certs/`.
+- LINE opens the LIFF app's endpoint URL, set in the Login channel's LIFF tab, and Privy reads the auth server's keys from the JWKS URL in its dashboard; both name the domain.
