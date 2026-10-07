@@ -6,7 +6,7 @@ import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { coinWithBalance, Transaction } from "@mysten/sui/transactions";
 import { deriveObjectID, fromBase64, fromHex, normalizeSuiAddress } from "@mysten/sui/utils";
 import { ChainUnavailableError, type TicketPaymentTarget } from "../deps.ts";
-import { readLanded, SUI_READ_TIMEOUT_MS } from "../sui/readLanded.ts";
+import { NOT_LANDED_RETRY_MS, readLanded, SUI_READ_TIMEOUT_MS } from "../sui/readLanded.ts";
 import {
   SponsorshipError,
   TransactionRefusedError,
@@ -60,6 +60,16 @@ const isRpcError = (error: unknown): error is Error & { code: string } =>
   error.name === "RpcError" &&
   "code" in error &&
   typeof error.code === "string";
+
+/**
+ * Whether `error` says Sui doesn't show an object: the SDK's ObjectError, or gRPC's NOT_FOUND, which
+ * a transaction's build wraps in an Error of its own.
+ */
+function objectNotFound(error: unknown): boolean {
+  if (error instanceof ObjectError) return error.reason === "notFound";
+  if (isRpcError(error)) return error.code === "NOT_FOUND";
+  return error instanceof Error && error.cause !== undefined && objectNotFound(error.cause);
+}
 
 /** A transaction's result, in the words the flows read. */
 function outcomeFrom(result: SuiClientTypes.TransactionResult<{ events: true }>): SuiOutcome {
@@ -132,12 +142,24 @@ export function createSuiChain(settings: SuiChainSettings): SuiChain {
       late.signal.addEventListener("abort", () => reject(late.signal.reason), { once: true });
     });
     try {
-      const built = Promise.resolve(compose(late.signal)).then((tx) =>
-        tx.build({ client, onlyTransactionKind: true }),
-      );
-      return await Promise.race([built, deadline]);
+      for (;;) {
+        try {
+          const built = Promise.resolve(compose(late.signal)).then((tx) =>
+            tx.build({ client, onlyTransactionKind: true }),
+          );
+          return await Promise.race([built, deadline]);
+        } catch (error) {
+          if (!objectNotFound(error)) throw error;
+          // The public fullnode is load-balanced: the node answering can lag the one that ran the
+          // transaction that made the object, such as a gift's deposit just before its claim.
+          await Promise.race([
+            new Promise((resolve) => setTimeout(resolve, NOT_LANDED_RETRY_MS)),
+            deadline,
+          ]);
+        }
+      }
     } catch (error) {
-      if (isRpcError(error)) {
+      if (isRpcError(error) || objectNotFound(error)) {
         throw new ChainUnavailableError(`Sui couldn't be read to build ${what}`, { cause: error });
       }
       throw error;
@@ -330,7 +352,7 @@ export function createSuiChain(settings: SuiChainSettings): SuiChain {
           .getObject({ objectId, signal })
           .then(({ object }) => object)
           .catch((error: unknown) => {
-            if (error instanceof ObjectError && error.reason === "notFound") return null;
+            if (objectNotFound(error)) return null;
             throw error;
           }),
       );
@@ -338,14 +360,17 @@ export function createSuiChain(settings: SuiChainSettings): SuiChain {
     },
 
     readGift: async (giftId): Promise<EscrowGift> => {
-      const object = await read(`gift ${giftId}`, (signal) =>
-        client
-          .getObject({ objectId: giftObjectId(giftId), include: { content: true }, signal })
-          .then(({ object }) => object)
-          .catch((error: unknown) => {
-            if (error instanceof ObjectError && error.reason === "notFound") return null;
-            throw error;
-          }),
+      // A gift deposited a moment ago can be missing from a lagging node, so missing waits out readLanded.
+      const object = await read(`gift ${giftId}`, () =>
+        readLanded((signal) =>
+          client
+            .getObject({ objectId: giftObjectId(giftId), include: { content: true }, signal })
+            .then(({ object }) => object)
+            .catch((error: unknown) => {
+              if (objectNotFound(error)) return null;
+              throw error;
+            }),
+        ),
       );
       if (object === null) return { status: "missing", recipient: null };
       const gift = giftObject.parse(object.content);
@@ -371,7 +396,7 @@ export function createSuiChain(settings: SuiChainSettings): SuiChain {
       for (const [index, name] of Object.keys(named).entries()) {
         const object = objects[index];
         if (!(object instanceof Error)) continue;
-        if (!(object instanceof ObjectError && object.reason === "notFound")) {
+        if (!objectNotFound(object)) {
           throw new ChainUnavailableError(`Sui couldn't be asked for ${name}`, { cause: object });
         }
         missing.push(name);
