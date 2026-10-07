@@ -33,7 +33,7 @@ for key in SUI_STICKER_PACKAGE SUI_STICKER_REGISTRY SUI_SERVER_CONFIG SUI_GIFT_E
   }
 done
 DIR="${DEPLOY_API_DIR:-/srv/drawing-api}"
-URL="${DEPLOY_URL:-https://sticker.195-201-8-147.sslip.io}"
+URL="${DEPLOY_URL:-https://stickeroo.art}"
 STAGE="$(mktemp -d)"
 REMOTE_STAGE=""
 cleanup() {

@@ -2,7 +2,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 // The live site, where the LINE → Privy auth server runs.
-const LIVE_ORIGIN = "https://sticker.195-201-8-147.sslip.io";
+const LIVE_ORIGIN = "https://stickeroo.art";
 
 // The CDN in front of the box, which deploy/deploy.sh passes in: the build loads its hashed files from there.
 // index.html and the public folder's files stay on the page's own origin, where LIFF and LINE open them by fixed paths.

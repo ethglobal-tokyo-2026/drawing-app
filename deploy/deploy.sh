@@ -10,7 +10,7 @@ require_main_checkout
 
 DIR=/srv/sticker-board
 AUTH_DIR=/srv/sticker-auth
-URL="${DEPLOY_URL:-https://sticker.195-201-8-147.sslip.io}"
+URL="${DEPLOY_URL:-https://stickeroo.art}"
 DIST="$ROOT/apps/frontend/dist"
 AUTH_BUILD="$ROOT/packages/line-auth/dist/auth-server"
 KEY_ID="$(sed -n 's/^AUTH_KEY_ID=//p' "$ROOT/deploy/sticker-auth.env")"
