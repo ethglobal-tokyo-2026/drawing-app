@@ -1,5 +1,7 @@
 # iPad Foundations Implementation Plan
 
+> **On hold (2026-10-08):** being reworked with its spec; don't build from it.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** The base every other iPad plan builds on: LIFF's security update, size classes that mark the app's frame, sheets and cards that stop at one content width in regular width, two bug fixes, device-neutral words, and the developer slip's Device paper and Pencil summary for the device session.

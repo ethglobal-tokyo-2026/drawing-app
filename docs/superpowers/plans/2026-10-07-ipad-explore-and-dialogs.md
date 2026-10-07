@@ -1,5 +1,7 @@
 # iPad Explore and Dialogs Implementation Plan
 
+> **On hold (2026-10-08):** being reworked with its spec; don't build from it.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** On an iPad, Explore's pile keeps its size with This week beside it; the sticker detail, Giving, Receiving and the Shop sit in a centered column; the Gratitude Mini-game and its replay scale with their stage; and a rotation loses neither Explore's place nor the sealing sticker. LINE's short sheet holds all of them.

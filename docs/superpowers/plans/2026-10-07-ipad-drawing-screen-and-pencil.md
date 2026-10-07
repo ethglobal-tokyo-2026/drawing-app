@@ -1,5 +1,7 @@
 # iPad: the Drawing Screen and Apple Pencil Implementation Plan
 
+> **On hold (2026-10-08):** being reworked with its spec; don't build from it.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** In a regular window the drawing screen stacks its size rail, undo, redo and seal check down the edge opposite the drawing hand around a centered sheet, and the color sheet becomes a popover; the screen fits LINE's short sheet; Settings gains a Drawing group (drawing hand, Pencil only, pen pressure with a strip to try it); and the Pencil gets a visible Pencil only tile, a hover ring, prediction ahead of the nib, palm rules, light starts and a speed fallback for flat pressure.

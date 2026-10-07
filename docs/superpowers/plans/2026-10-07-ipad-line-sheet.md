@@ -1,5 +1,7 @@
 # iPad: LINE's Sheet, Safari and the Finish Implementation Plan
 
+> **On hold (2026-10-08):** being reworked with its spec; don't build from it.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Croquis holds together in LINE's phone-size sheet on an iPad and offers a way out to the full-screen layout in the browser; the sign-in gates stay usable above the on-screen keyboard; every surface passes a check at LINE's sheet sizes and in Safari; a real iPad settles what only it can; and the iPad work is finished: critique, polish, audit, durable docs, and its plans, spec and scratch purged.

@@ -1,6 +1,6 @@
 # iPad layout and Apple Pencil: design
 
-**Status:** proposal for ad0ll's review, 2026-10-07. Nothing is built. Each numbered decision carries a recommendation for a yes, a no or a pick.
+**Status:** on hold, being reworked after ad0ll's review (2026-10-08). Several decisions rest on research that is being redone, and sticker boards will split by device class. Don't build from this spec or its plans.
 
 **Made with:** impeccable `shape` (this is its brief) and superpowers brainstorming. The plans that build it are listed in [Plans](#plans).
 

@@ -1,5 +1,7 @@
 # iPad Drawing Sheet Implementation Plan
 
+> **On hold (2026-10-08):** being reworked with its spec; don't build from it.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A drawing keeps one sheet for its whole life, measured in sheet units and shown scaled to fit, so turning the iPad or resizing its window never moves, hides or drops a stroke, and a sticker comes out the same from any device.

@@ -1,5 +1,7 @@
 # iPad Board Implementation Plan
 
+> **On hold (2026-10-08):** being reworked with its spec; don't build from it.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Every device draws the sticker board as one panel, the target phone's board scaled uniformly to fit, so a board reads the same everywhere. Only the stickers scale; every control and word keeps its own size. Where the board has room, the sticker tray opens beside the panel. The cork back turns in a box the size of the panel, with its papers at their phone sizes.
