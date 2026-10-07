@@ -1,6 +1,6 @@
 # iPad: LINE's Sheet, Safari and the Finish Implementation Plan
 
-> **On hold (2026-10-08):** being reworked with its spec; don't build from it.
+> **On hold (2026-10-08):** being reworked with its spec; don't build from it. Its scratch paths under `~/.cache` are out of date: a task's scratch goes in its worktree's gitignored `data/scratch/`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
