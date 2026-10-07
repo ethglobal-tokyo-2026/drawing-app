@@ -63,8 +63,11 @@ interface StartedPurchase {
 
 /** The REST API, one method per route the app calls. */
 export interface ApiClient {
-  /** POST /api/me/language-choice: Settings' language, or null to follow LINE's. */
-  setLanguageChoice: (languageChoice: Me["languageChoice"]) => Promise<Me>;
+  /** POST /api/me/language-choice: Settings' language, or null to follow LINE's, whose `language` the account then takes. */
+  setLanguageChoice: (
+    languageChoice: Me["languageChoice"],
+    language: Me["language"],
+  ) => Promise<Me>;
   /** POST /api/me/nsfw-opt-in: Show 18+ stickers, in Settings. */
   setNsfwOptIn: (nsfwOptIn: boolean) => Promise<Me>;
 

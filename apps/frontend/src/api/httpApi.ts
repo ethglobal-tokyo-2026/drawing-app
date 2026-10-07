@@ -148,8 +148,10 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
   const gift = (giftId: string) => ({ param: { giftId } });
 
   return {
-    setLanguageChoice: async (languageChoice) => {
-      const response = await api.me["language-choice"].$post({ json: { languageChoice } });
+    setLanguageChoice: async (languageChoice, language) => {
+      const response = await api.me["language-choice"].$post({
+        json: { languageChoice, language },
+      });
       if (!response.ok) throw await refusal(response, "POST /api/me/language-choice");
       return (await response.json()).me;
     },

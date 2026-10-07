@@ -39,8 +39,9 @@ const meHeaders = z.object({
 
 const handleBody = userInput.pick({ handle: true });
 
-// Required, so a body that leaves it out is refused rather than clearing the choice.
-const languageChoiceBody = userInput.pick({ languageChoice: true }).required();
+// Required, so a body that leaves either out is refused rather than clearing the choice.
+// `language` is LINE's on the device, which the account takes while the choice follows LINE's.
+const languageChoiceBody = userInput.pick({ languageChoice: true, language: true }).required();
 
 /** Show 18+ stickers, in Settings: on or off. */
 const nsfwOptInBody = z.object({ nsfwOptIn: z.boolean() });
@@ -175,17 +176,16 @@ export const sessionRoutes = (deps: AppDeps) =>
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
     .post("/me/language-choice", validate("json", languageChoiceBody), (c) => {
-      const { languageChoice } = c.req.valid("json");
-      // A choice is the person's language outside the app too, such as their chat menu's, from now
-      // on. Clearing it leaves that language to their next sign-in, which brings the device's.
+      const { languageChoice, language } = c.req.valid("json");
+      // The person's language outside the app too, such as their chat menu's, from now on.
       const user = deps.db
         .update(users)
-        .set({ languageChoice, ...(languageChoice && { language: languageChoice }) })
+        .set({ languageChoice, language: languageChoice ?? language })
         .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
         .returning()
         .get();
       if (!user) return apiError(c, 401, "signed_out");
-      if (languageChoice) void deps.lineChatMenu.relink(user.id);
+      void deps.lineChatMenu.relink(user.id);
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
     .post("/me/nsfw-opt-in", validate("json", nsfwOptInBody), (c) => {

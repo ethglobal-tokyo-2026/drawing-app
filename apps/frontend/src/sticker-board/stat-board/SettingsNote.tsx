@@ -145,7 +145,7 @@ export function SettingsNote({
     if (status.step === "saving") return;
     setStatus({ step: "saving", setting: "language", choice });
     try {
-      await api.setLanguageChoice(choice);
+      await api.setLanguageChoice(choice, lineLanguage());
     } catch (error) {
       const failure = apiError(error);
       console.error("The language choice wasn't saved", failure);

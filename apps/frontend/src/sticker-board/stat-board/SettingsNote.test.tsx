@@ -61,7 +61,7 @@ describe("the Settings note's language", () => {
     const setLanguageChoice = saving();
     const host = render(setLanguageChoice);
     await choose(host, "日本語");
-    expect(setLanguageChoice).toHaveBeenCalledExactlyOnceWith("ja");
+    expect(setLanguageChoice).toHaveBeenCalledExactlyOnceWith("ja", "en");
     expect(readChosenLanguage()).toBe("ja");
     expect(restart).toHaveBeenCalledOnce();
   });
@@ -79,7 +79,7 @@ describe("the Settings note's language", () => {
     const host = render(setLanguageChoice, "ja");
     expect(option(host, "日本語").checked).toBe(true);
     await choose(host, "Same as LINE (English)");
-    expect(setLanguageChoice).toHaveBeenCalledExactlyOnceWith(null);
+    expect(setLanguageChoice).toHaveBeenCalledExactlyOnceWith(null, "en");
     expect(readChosenLanguage()).toBeNull();
     expect(restart).toHaveBeenCalledOnce();
   });
@@ -108,7 +108,7 @@ describe("the Settings note's language", () => {
     const setLanguageChoice = saving();
     const host = render(setLanguageChoice);
     await choose(host, "日本語");
-    expect(setLanguageChoice).toHaveBeenCalledWith("ja");
+    expect(setLanguageChoice).toHaveBeenCalledWith("ja", "en");
     expect(alert(host)).toContain("couldn’t keep it");
     expect(host.textContent).toContain("The storage is full");
     expect(restart).not.toHaveBeenCalled();
