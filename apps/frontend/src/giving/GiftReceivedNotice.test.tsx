@@ -34,8 +34,8 @@ describe("GiftReceivedNotice", () => {
         <GiftReceivedNotice
           sticker={toSticker(sticker({ number: 147 }))}
           receiver={toPerson(people.bob)}
-          // Midday, so the day reads the same in every time zone.
-          receivedAt={new Date(2026, 8, 23, 12).getTime()}
+          // Noon in Tokyo, whose day the caption prints whatever the phone's zone.
+          receivedAt={Date.UTC(2026, 8, 23, 3)}
           onClose={onClose}
         />,
       ),
