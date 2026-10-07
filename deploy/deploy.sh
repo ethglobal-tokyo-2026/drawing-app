@@ -79,8 +79,8 @@ if [ -n "$CDN_ORIGIN" ]; then
   fi
   rm -rf "$got"
   echo "✓ $CDN_ORIGIN"
-  # Every hashed file through the CDN once, so its shield holds the build before anyone opens it: a first visit from
-  # Japan then waits on Frankfurt, not on the box behind it.
+  # Every hashed file through the CDN once, so its shield in Tokyo holds the build before anyone opens it: a first visit
+  # from Japan is then a cache hit.
   warmed="$(cd "$DIST/assets" && ls | xargs -P 8 -I{} curl -fsS -o /dev/null --compressed --max-time 30 -w '%{http_code}\n' \
     "$CDN_ORIGIN/assets/{}" | grep -c '^200$' || true)"
   echo "✓ $warmed of $(ls "$DIST/assets" | wc -l | tr -d ' ') hashed files cached on the CDN"
