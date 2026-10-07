@@ -77,11 +77,24 @@ seal, and do it again, ten times a day.
     down to ×1, plus reserve and none) lets the midnight reset move practice-mode people to ×10 and
     everyone else to ×3 (below).
 
+19. **The mode's name on screen hides one character of the university's, like a manga censor bar:**
+    「京都█華大学 入試モード」 / "Kyoto ███ka University Entrance Exam Mode", so it's plainly a censor and
+    plainly Seika. A help button beside the switch opens a short note: what the mode does, and one line in
+    its maker's voice that they added it for their own application and that Croquis has no connection with
+    the university (Settings, below). No legal language.
+20. **Anyone can mark a sticker 18+, at seal or after:** its own spec, `docs/superpowers/specs/2026-10-07-mark-18-plus-anytime-design.md`.
+21. **The upper balloon deals from an evocative tier:** 618 subjects a student can picture a scene for at
+    once (夜, 再会, 秘密基地, 怪獣, タイムマシン), picked by hand from every kept one. The lower balloon deals
+    from the whole list, and each die re-rolls within its own balloon's pool, so every pair has at least one
+    strong word and the rest of the list still turns up.
+
 ### Recommended
 
 19. **Vocabulary for AGENTS.MD:**
-    - _Kyoto Seika Manga Expression Practice Mode_ (decision 1). Code and data use the stem `kyotoSeika`
-      (`kyoto_seika` in SQL, `kyoto-seika/` for the folder), as Residual is `residual` in code.
+    - _Kyoto Seika Manga Expression Practice Mode_ (decision 1), Kyoto Seika Practice Mode for short, as in
+      the foil's name. Never "practice mode", and no nouns coined from it ("practice sticker"): a sticker
+      drawn in Kyoto Seika Practice Mode. Code and data use the stem `kyotoSeika` (`kyoto_seika` in SQL,
+      `kyoto-seika/` for the folder), as Residual is `residual` in code.
     - _Kyoto Seika Subject_ (題材): one of the two words dealt for a practice sticker. The guide's word is
       題材, in Japanese only: Seika publishes no English version of this test's rules, and its English
       brochure names only the test, "Manga Expression". On screen: 題材 in Japanese, "subject" in English
@@ -91,14 +104,6 @@ seal, and do it again, ten times a day.
       ten in Kyoto Seika Manga Expression Practice Mode (decision 2).
 
     The balloons, dice, Begin key and corner print are screen elements and get code names only.
-
-20. **The mode's name on screen blacks out the university, like a manga censor bar:** "Kyoto ████
-    University Entrance Exam Mode" / 「京都██大学 入試モード」 (Parody name, below).
-21. **Anyone can mark a sticker 18+, at seal or after:** its own spec, `docs/superpowers/specs/2026-10-07-mark-18-plus-anytime-design.md`.
-22. **The upper balloon deals from an evocative tier:** 618 subjects a student can picture a scene for at
-    once (夜, 再会, 秘密基地, 怪獣, タイムマシン), picked by hand from every kept one. The lower balloon deals
-    from the whole list, and each die re-rolls within its own balloon's pool, so every pair has at least one
-    strong word and the rest of the list still turns up.
 
 ## Design brief
 
