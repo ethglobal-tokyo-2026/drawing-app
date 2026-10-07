@@ -51,6 +51,7 @@ vite.config.ts.timestamp-*
 **/.impeccable/hook.cache.json
 **/.impeccable/critique/
 **/.impeccable/live/
+**/.impeccable/questions/
 
 # Claude Code's and Serena's local files, in any folder a session starts in (deploy/ has its own)
 .claude/data

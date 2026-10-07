@@ -9,7 +9,7 @@ const LIVE_ORIGIN = "https://stickeroo.art";
 const CDN_ORIGIN = process.env.CDN_ORIGIN || undefined;
 if (CDN_ORIGIN && !(URL.canParse(CDN_ORIGIN) && new URL(CDN_ORIGIN).origin === CDN_ORIGIN)) {
   throw new Error(
-    `CDN_ORIGIN must be an origin, such as https://example.global.ssl.fastly.net, not ${CDN_ORIGIN}`,
+    `CDN_ORIGIN must be an origin, such as https://example.freetls.fastly.net, not ${CDN_ORIGIN}`,
   );
 }
 
