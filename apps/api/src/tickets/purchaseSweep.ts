@@ -2,7 +2,8 @@ import { suiTransactions, ticketPurchases } from "@drawing-app/db";
 import { and, eq, isNull, lt, notExists } from "drizzle-orm";
 import type { AppDeps } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
-import { timer, type Schedule } from "../midnightJob.ts";
+import type { Schedule } from "../midnightJob.ts";
+import { startRepeatingJob } from "../repeatingJob.ts";
 import { oneAtATime } from "../sui/oneAtATime.ts";
 import { followPayment, giveUp, openPayments } from "./purchases.ts";
 
@@ -73,29 +74,11 @@ export async function sweepTicketPurchases(deps: AppDeps): Promise<void> {
  * a failure is logged, never thrown. `stop` cancels the next sweep; `idle` settles when the one
  * running has.
  */
-export function startTicketPurchaseSweeps({
-  schedule = timer,
+export const startTicketPurchaseSweeps = ({
+  schedule,
   ...deps
-}: AppDeps & { schedule?: Schedule }) {
-  let cancel = () => {};
-  let stopped = false;
-  let running = Promise.resolve();
-
-  function runNext() {
-    running = running
-      .then(() => sweepTicketPurchases(deps))
-      .catch((error: unknown) => logFailure("ticket_purchase.sweep_failed", error))
-      .then(() => {
-        if (!stopped) cancel = schedule(runNext, PURCHASE_SWEEP_EVERY_MS);
-      });
-  }
-
-  runNext();
-  return {
-    stop() {
-      stopped = true;
-      cancel();
-    },
-    idle: () => running,
-  };
-}
+}: AppDeps & { schedule?: Schedule }) =>
+  startRepeatingJob(
+    { everyMs: PURCHASE_SWEEP_EVERY_MS, failedEvent: "ticket_purchase.sweep_failed", schedule },
+    () => sweepTicketPurchases(deps),
+  );
