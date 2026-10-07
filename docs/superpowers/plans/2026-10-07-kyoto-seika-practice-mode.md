@@ -6,14 +6,16 @@
 
 **Order:**
 
-1. Part A first: B and C build on its contract and its updated test fixtures.
+1. Part A first: B and C build on its contract and its updated test fixtures. Part A merges to main only after
+   its migration has run on a copy of the box's database.
 2. Then B and C as parallel lanes, each in its own worktree. B merges as a whole, once B13 is in (B's decision 9).
-3. C6 waits for the Settings-without-restart plan (`docs/superpowers/plans/2026-10-07-settings-without-restart.md`), which brings the Settings note's `save`.
+3. C6 builds on Settings without a restart, now on main: the Settings note's `save`.
 4. A7's LINE calls and the deploy are run by the coordinator, not a lane.
 
-**Pending sign-off; don't build until approved:** B16, the evocative tier (decision 22). C7's AGENTS.MD vocabulary (decision 19). C6's censor-bar name (decision 20).
+**Pending sign-off; don't build until approved:** C7's AGENTS.MD vocabulary (decision 22). Decided: B16, the
+evocative tier (decision 21), and C6's one-character censor bar and help note (decision 19).
 
-**Not in this plan:** Settings without a restart (its own plan). Marking a sticker 18+ after sealing (`docs/superpowers/specs/2026-10-07-mark-18-plus-anytime-design.md`).
+**Not in this plan:** Marking a sticker 18+ after sealing (`docs/superpowers/specs/2026-10-07-mark-18-plus-anytime-design.md`).
 
 **The subject list:** built in gitignored scratch (`data/scratch/wordlist/` in the `seika-exam` worktree; decision 17). B1 copies it into the repo as JSON. Copy `subjects-next.tsv` and `to_subjects_json.mjs` somewhere safe before that worktree goes.
 
@@ -225,7 +227,7 @@ describe("your Kyoto Seika Practice Mode switches", () => {
     const { kyotoSeikaPractice, kyotoSeikaDarkSubjects } = await meIn(response);
     return { kyotoSeikaPractice, kyotoSeikaDarkSubjects };
   };
-  const practiceOnAt = (userId: string) =>
+  const kyotoSeikaPracticeOnAt = (userId: string) =>
     test.db.select().from(users).where(eq(users.id, userId)).get()?.kyotoSeikaPracticeOnAt;
 
   it("are off until turned on, and each turns on and off without moving the other", async () => {
@@ -236,7 +238,7 @@ describe("your Kyoto Seika Practice Mode switches", () => {
       kyotoSeikaDarkSubjects: false,
     });
     await setSwitches(headers, { kyotoSeikaPractice: true });
-    expect(practiceOnAt(userId)).toEqual(test.clock.now());
+    expect(kyotoSeikaPracticeOnAt(userId)).toEqual(test.clock.now());
     expect(await switchesIn(await setSwitches(headers, { kyotoSeikaDarkSubjects: true }))).toEqual({
       kyotoSeikaPractice: true,
       kyotoSeikaDarkSubjects: true,
@@ -245,7 +247,7 @@ describe("your Kyoto Seika Practice Mode switches", () => {
       kyotoSeikaPractice: false,
       kyotoSeikaDarkSubjects: true,
     });
-    expect(practiceOnAt(userId)).toBeNull();
+    expect(kyotoSeikaPracticeOnAt(userId)).toBeNull();
   });
 
   it("refuses a body that turns nothing on or off", async () => {
@@ -341,7 +343,7 @@ Import `KYOTO_SEIKA_DAILY_TICKETS_PER_DAY`, then:
 
 ```ts
 /** Turns Kyoto Seika Manga Expression Practice Mode on or off, as Settings does. */
-async function setPractice(kyotoSeikaPractice: boolean) {
+async function setKyotoSeikaPractice(kyotoSeikaPractice: boolean) {
   const body = { kyotoSeikaPractice };
   expect(
     (await test.send("POST", "/api/me/kyoto-seika-practice", { as: userId, body })).status,
@@ -350,7 +352,7 @@ async function setPractice(kyotoSeikaPractice: boolean) {
 
 describe("tickets in Kyoto Seika Manga Expression Practice Mode", () => {
   it("give the mode's allowance while it's on, and mark each spend with the mode", async () => {
-    await setPractice(true);
+    await setKyotoSeikaPractice(true);
     expect(await getTickets()).toMatchObject({
       dailyPerDay: KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
       dailyLeft: KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
@@ -368,14 +370,14 @@ describe("tickets in Kyoto Seika Manga Expression Practice Mode", () => {
   it("follow the switch at each spend, and never refill", async () => {
     const [standard] = await spendTickets("daily", DAILY_TICKETS_PER_DAY);
     expect(standard.ticketUse.kyotoSeikaPractice).toBe(false);
-    await setPractice(true);
+    await setKyotoSeikaPractice(true);
     expect((await getTickets()).dailyLeft).toBe(
       KYOTO_SEIKA_DAILY_TICKETS_PER_DAY - DAILY_TICKETS_PER_DAY,
     );
     await spendTicket("daily");
-    await setPractice(false);
+    await setKyotoSeikaPractice(false);
     expect(await getTickets()).toMatchObject({ dailyPerDay: DAILY_TICKETS_PER_DAY, dailyLeft: 0 });
-    await setPractice(true);
+    await setKyotoSeikaPractice(true);
     expect((await getTickets()).dailyLeft).toBe(
       KYOTO_SEIKA_DAILY_TICKETS_PER_DAY - DAILY_TICKETS_PER_DAY - 1,
     );
@@ -388,7 +390,7 @@ describe("tickets in Kyoto Seika Manga Expression Practice Mode", () => {
       dayIndex: DAILY_TICKETS_PER_DAY,
       kind: "reserve",
     });
-    await setPractice(true);
+    await setKyotoSeikaPractice(true);
     expect(await refusalOf(await spend("reserve"))).toMatchObject({
       status: 409,
       error: "ticket_kind_changed",
@@ -481,13 +483,13 @@ In "GET /api/stickers/:stickerId" (import `TEST_KYOTO_SEIKA_SUBJECTS` from `@dra
 ```ts
 it("shows a sticker's Kyoto Seika Subjects, and none on any other", async () => {
   const artistId = insertUser(test.db);
-  const practiced = insertSealedSticker(test.db, artistId, {
+  const kyotoSeikaSticker = insertSealedSticker(test.db, artistId, {
     kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS,
   });
   const subjectsOf = async (stickerId: string) =>
     (await bodyOf(await getSticker(insertUser(test.db), stickerId), stickerDetailSchema)).sticker
       .kyotoSeikaSubjects;
-  expect(await subjectsOf(practiced)).toEqual(TEST_KYOTO_SEIKA_SUBJECTS);
+  expect(await subjectsOf(kyotoSeikaSticker)).toEqual(TEST_KYOTO_SEIKA_SUBJECTS);
   expect(await subjectsOf(insertSealedSticker(test.db, artistId))).toBeNull();
 });
 ```
@@ -580,37 +582,41 @@ describe("POST /api/stickers on a ticket spent in Kyoto Seika Practice Mode", ()
   });
 
   const one = JSON.stringify(TEST_KYOTO_SEIKA_SUBJECTS.slice(0, 1));
-  const refused: Array<{ why: string; practice: boolean; overrides: Partial<SealParts> }> = [
+  const refused: Array<{ why: string; kyotoSeika: boolean; overrides: Partial<SealParts> }> = [
     {
       why: "a sticker drawn in Kyoto Seika Practice Mode without its subjects",
-      practice: true,
+      kyotoSeika: true,
       overrides: {},
     },
     {
       why: "subjects on a standard ticket's sticker",
-      practice: false,
+      kyotoSeika: false,
       overrides: { kyotoSeikaSubjects: SUBJECTS_PART },
     },
     {
       why: "time past Kyoto Seika Practice Mode's clock",
-      practice: true,
+      kyotoSeika: true,
       overrides: {
         timeUsed: String(KYOTO_SEIKA_TIME_USED_S + 1),
         kyotoSeikaSubjects: SUBJECTS_PART,
       },
     },
-    { why: "subjects that aren't a pair", practice: true, overrides: { kyotoSeikaSubjects: one } },
+    {
+      why: "subjects that aren't a pair",
+      kyotoSeika: true,
+      overrides: { kyotoSeikaSubjects: one },
+    },
     {
       why: "subjects that aren't JSON",
-      practice: true,
+      kyotoSeika: true,
       overrides: { kyotoSeikaSubjects: "風 × 再会" },
     },
   ];
 
   it.each(refused)(
     "refuses $why with invalid_request, naming the part and storing nothing",
-    async ({ practice, overrides }) => {
-      const answer = await refusalOf(await sealOn(insertUser(test.db), practice, overrides));
+    async ({ kyotoSeika, overrides }) => {
+      const answer = await refusalOf(await sealOn(insertUser(test.db), kyotoSeika, overrides));
       expect(answer).toMatchObject({ status: 400, error: "invalid_request" });
       expect(answer.detail).toMatch(/timeUsed|kyotoSeikaSubjects/);
       expect(allStickers()).toEqual([]);
@@ -764,16 +770,16 @@ const afterMidnight = (ids: ChatMenuIds, menu: string) =>
   midnightMoves(ids).find(({ from }) => from === menu)?.to ?? menu;
 
 it("gives Kyoto Seika Practice Mode a menu of its own for each count of its allowance, then reserve and none", () => {
-  const practice = familyOf(true);
-  expect(new Set(practice).size).toBe(KYOTO_SEIKA_DAILY_TICKETS_PER_DAY + 2);
-  expect(practice.filter((menu) => familyOf(false).includes(menu))).toEqual([]);
+  const kyotoSeika = familyOf(true);
+  expect(new Set(kyotoSeika).size).toBe(KYOTO_SEIKA_DAILY_TICKETS_PER_DAY + 2);
+  expect(kyotoSeika.filter((menu) => familyOf(false).includes(menu))).toEqual([]);
 });
 
 it("moves each family back to its full count at midnight, in each language", () => {
   for (const menus of [TEST_CHAT_MENU_IDS.en, TEST_CHAT_MENU_IDS.ja]) {
-    for (const practice of [false, true]) {
-      const [full, ...rest] = familyOf(practice);
-      for (const menu of practice ? rest : [...rest, "plain" as const]) {
+    for (const kyotoSeika of [false, true]) {
+      const [full, ...rest] = familyOf(kyotoSeika);
+      for (const menu of kyotoSeika ? rest : [...rest, "plain" as const]) {
         expect(afterMidnight(TEST_CHAT_MENU_IDS, menus[menu])).toBe(menus[full]);
       }
     }
@@ -791,10 +797,10 @@ it("refuses a map where a Kyoto Seika Practice Mode menu shares its rich menu wi
 
 ```ts
 it("moves the Kyoto Seika Practice Mode menus to their full count and the rest to 3, in one batch", async () => {
-  const practiceMenu = (dailyLeft: number) => chatMenuFor({ dailyLeft, reserveLeft: 0 }, true);
-  const full = practiceMenu(KYOTO_SEIKA_DAILY_TICKETS_PER_DAY);
-  person(ANN, en[practiceMenu(1)]);
-  person(BEN, ja[practiceMenu(0)], "ja");
+  const kyotoSeikaMenu = (dailyLeft: number) => chatMenuFor({ dailyLeft, reserveLeft: 0 }, true);
+  const full = kyotoSeikaMenu(KYOTO_SEIKA_DAILY_TICKETS_PER_DAY);
+  person(ANN, en[kyotoSeikaMenu(1)]);
+  person(BEN, ja[kyotoSeikaMenu(0)], "ja");
   person(CHO, en["2"]);
   await runChatMenuBatch(jobDeps(), today());
   expect(line.batches).toHaveLength(1);
@@ -810,18 +816,18 @@ it("moves the Kyoto Seika Practice Mode menus to their full count and the rest t
 
 ```ts
 describe("the chat menu in Kyoto Seika Manga Expression Practice Mode", () => {
-  const setPractice = async (kyotoSeikaPractice: boolean) =>
+  const setKyotoSeikaPractice = async (kyotoSeikaPractice: boolean) =>
     expect((await post("/api/me/kyoto-seika-practice", { kyotoSeikaPractice })).status).toBe(200);
-  const menuFor = (dailyLeft: number, practice: boolean) =>
-    TEST_CHAT_MENU_IDS.en[chatMenuFor({ dailyLeft, reserveLeft: 0 }, practice)];
+  const menuFor = (dailyLeft: number, kyotoSeika: boolean) =>
+    TEST_CHAT_MENU_IDS.en[chatMenuFor({ dailyLeft, reserveLeft: 0 }, kyotoSeika)];
 
   it("moves to the Kyoto Seika Practice Mode menus as the mode turns on, follows its spends, and moves back as it turns off", async () => {
     await spendTicket("daily");
-    await setPractice(true);
+    await setKyotoSeikaPractice(true);
     expect(await menuAfterLinks()).toBe(menuFor(KYOTO_SEIKA_DAILY_TICKETS_PER_DAY - 1, true));
     await spendTicket("daily");
     expect(await menuAfterLinks()).toBe(menuFor(KYOTO_SEIKA_DAILY_TICKETS_PER_DAY - 2, true));
-    await setPractice(false);
+    await setKyotoSeikaPractice(false);
     expect(await menuAfterLinks()).toBe(menuFor(DAILY_TICKETS_PER_DAY - 2, false));
   });
 });
@@ -854,11 +860,11 @@ const CHAT_MENUS = [...STANDARD_MENUS, ...KYOTO_SEIKA_MENUS] as const;
 // languageMenusSchema lists every ChatMenu key (`satisfies Record<ChatMenu, typeof menuIdSchema>`
 // catches a missing one), then:
   .superRefine((menus, ctx) => {
-    for (const practice of KYOTO_SEIKA_MENUS) {
-      const shared = STANDARD_MENUS.find((menu) => menus[practice] && menus[menu] === menus[practice]);
+    for (const kyotoSeikaMenu of KYOTO_SEIKA_MENUS) {
+      const shared = STANDARD_MENUS.find((menu) => menus[kyotoSeikaMenu] && menus[menu] === menus[kyotoSeikaMenu]);
       if (shared) {
         const message = `shares its rich menu with ${shared}: the midnight batch moves people by the menu they're on`;
-        ctx.addIssue({ code: "custom", path: [practice], message });
+        ctx.addIssue({ code: "custom", path: [kyotoSeikaMenu], message });
       }
     }
   });
@@ -905,18 +911,18 @@ export function midnightMoves(ids: ChatMenuIds) {
 Frontend `line.ts`, `developer.chatMenu.menus`, after `none` (developer strings: English only, no comment):
 
 ```ts
-        "kyoto-seika-10": { en: "Kyoto Seika practice: draw with 10 daily tickets left" },
-        "kyoto-seika-9": { en: "Kyoto Seika practice: draw with 9 daily tickets left" },
-        "kyoto-seika-8": { en: "Kyoto Seika practice: draw with 8 daily tickets left" },
-        "kyoto-seika-7": { en: "Kyoto Seika practice: draw with 7 daily tickets left" },
-        "kyoto-seika-6": { en: "Kyoto Seika practice: draw with 6 daily tickets left" },
-        "kyoto-seika-5": { en: "Kyoto Seika practice: draw with 5 daily tickets left" },
-        "kyoto-seika-4": { en: "Kyoto Seika practice: draw with 4 daily tickets left" },
-        "kyoto-seika-3": { en: "Kyoto Seika practice: draw with 3 daily tickets left" },
-        "kyoto-seika-2": { en: "Kyoto Seika practice: draw with 2 daily tickets left" },
-        "kyoto-seika-1": { en: "Kyoto Seika practice: draw with 1 daily ticket left" },
-        "kyoto-seika-reserve": { en: "Kyoto Seika practice: draw with reserve tickets" },
-        "kyoto-seika-none": { en: "Kyoto Seika practice: draw with no tickets left" },
+        "kyoto-seika-10": { en: "Kyoto Seika Manga Expression Practice Mode: draw with 10 daily tickets left" },
+        "kyoto-seika-9": { en: "Kyoto Seika Manga Expression Practice Mode: draw with 9 daily tickets left" },
+        "kyoto-seika-8": { en: "Kyoto Seika Manga Expression Practice Mode: draw with 8 daily tickets left" },
+        "kyoto-seika-7": { en: "Kyoto Seika Manga Expression Practice Mode: draw with 7 daily tickets left" },
+        "kyoto-seika-6": { en: "Kyoto Seika Manga Expression Practice Mode: draw with 6 daily tickets left" },
+        "kyoto-seika-5": { en: "Kyoto Seika Manga Expression Practice Mode: draw with 5 daily tickets left" },
+        "kyoto-seika-4": { en: "Kyoto Seika Manga Expression Practice Mode: draw with 4 daily tickets left" },
+        "kyoto-seika-3": { en: "Kyoto Seika Manga Expression Practice Mode: draw with 3 daily tickets left" },
+        "kyoto-seika-2": { en: "Kyoto Seika Manga Expression Practice Mode: draw with 2 daily tickets left" },
+        "kyoto-seika-1": { en: "Kyoto Seika Manga Expression Practice Mode: draw with 1 daily ticket left" },
+        "kyoto-seika-reserve": { en: "Kyoto Seika Manga Expression Practice Mode: draw with reserve tickets" },
+        "kyoto-seika-none": { en: "Kyoto Seika Manga Expression Practice Mode: draw with no tickets left" },
 ```
 
 Until Task A7's IDs are in `menus.json`, someone in Kyoto Seika Practice Mode gets their language's plain menu (`menuToLink`'s fallback), which the midnight batch moves to 3.
@@ -1006,7 +1012,7 @@ The API reads `menus.json` at boot and refuses one where a Kyoto Seika Practice 
 
 - [ ] **Step 7 (operator): Check it live**
 
-Turn the mode on from the dev slip's account and reopen the app: the dev slip's Chat menu row reads "Kyoto Seika practice: draw with N daily tickets left", and `/api/logs` shows `chat_menu.relinked` with `menu: "kyoto-seika-N"`; after the next midnight, `chat_menu.batch_done`.
+Turn the mode on from the dev slip's account and reopen the app: the dev slip's Chat menu row reads "Kyoto Seika Manga Expression Practice Mode: draw with N daily tickets left", and `/api/logs` shows `chat_menu.relinked` with `menu: "kyoto-seika-N"`; after the next midnight, `chat_menu.batch_done`.
 
 ---
 
@@ -1039,7 +1045,7 @@ run `pnpm check` before the part's last commit.
 7. **Pure and tested:** the list's parse, dealing, the die's mood, balloon geometry, the pair's layout and
    tightening, word sizes, `hasKanji`, a line's placement. **Browser-checked only:** keyframes, the burst's
    jagged points, puffs and chips (random by design).
-8. `strings/kyotoSeika.ts` is created here; Part C adds `mark` and `censor` to it. `SubjectWord` (group
+8. `strings/kyotoSeika.ts` is created here; Part C adds `tag` and `censor` to it. `SubjectWord` (group
    ruby) is created here for Part C's detail mark.
 9. The part merges as a whole: from B7 to B13 the sheet of a ticket spent in Kyoto Seika Practice Mode waits
    for a Begin that isn't built yet. Every commit's tests pass.
@@ -1557,20 +1563,20 @@ success calls `clock.setLength(sessionMs(use.kyotoSeikaPractice))` before `send`
 **Files:** Modify `sticker-creation/session/session.ts:9-113`. Test: `sticker-creation/session/session.test.ts`.
 
 - [ ] **Step 1: Failing tests.** `start` becomes `{ type: "start", kyotoSeika: false }`; add
-      `practice = { type: "start", kyotoSeika: true }`, `begin = { type: "begin" }`, and `restored(drawn, sealSent,
+      `kyotoSeikaStart = { type: "start", kyotoSeika: true }`, `begin = { type: "begin" }`, and `restored(drawn, sealSent,
 dealt = false)`:
 
 ```ts
 it("deals the pair of a ticket spent in Kyoto Seika Practice Mode and waits, sheet locked, for Begin, which starts the clock at once", () => {
-  expect(run(practice)).toEqual({ phase: "dealt", effects: ["keep-session"] });
-  expect(run(practice, ink)).toEqual({ phase: "dealt", effects: [] });
-  expect(run(practice, begin)).toEqual({
+  expect(run(kyotoSeikaStart)).toEqual({ phase: "dealt", effects: ["keep-session"] });
+  expect(run(kyotoSeikaStart, ink)).toEqual({ phase: "dealt", effects: [] });
+  expect(run(kyotoSeikaStart, begin)).toEqual({
     phase: "drawing",
     effects: ["start-clock", "lock-subjects"],
   });
   expect(run(start, begin)).toEqual({ phase: "primed", effects: [] });
-  expect(run(practice, begin, ink)).toEqual({ phase: "drawing", effects: [] });
-  expect(run(practice, tap(1000))).toEqual({ phase: "dealt", effects: [] });
+  expect(run(kyotoSeikaStart, begin, ink)).toEqual({ phase: "drawing", effects: [] });
+  expect(run(kyotoSeikaStart, tap(1000))).toEqual({ phase: "dealt", effects: [] });
 });
 
 it("brings a sheet in Kyoto Seika Practice Mode back dealt until Begin, and drawing after it", () => {
@@ -1891,7 +1897,7 @@ bottom: 150px; pointer-events: none`. `DrawingCanvas` gains `under?: ReactNode` 
 
 ```tsx
 it("deals the pair of a ticket spent in Kyoto Seika Practice Mode, hides the tools and holds the sheet until Begin", async () => {
-  const host = await openPracticeSheet();
+  const host = await openKyotoSeikaSheet();
   expect(dice(host)).toHaveLength(2);
   expect(host.querySelector(".drawing-screen")?.classList).toContain("is-dealt");
   expect(sheetCalls.settings?.paused).toBe(true);
@@ -1902,7 +1908,7 @@ it("deals the pair of a ticket spent in Kyoto Seika Practice Mode, hides the too
 });
 
 it("brings a reload back to the same balloons, its charred die still charred", async () => {
-  kept.session = foundPractice({ rolls: [CHARRED_AT_ROLL, 2], begun: false });
+  kept.session = foundKyotoSeika({ rolls: [CHARRED_AT_ROLL, 2], begun: false });
   const host = await renderScreen();
   expect(dice(host)[0].getAttribute("aria-disabled")).toBe("true");
 });
@@ -1912,7 +1918,7 @@ it("shows why the subjects didn't load, and deals once they do", async () => {
 });
 
 it("names Begin by what it does", async () => {
-  const host = await openPracticeSheet();
+  const host = await openKyotoSeikaSheet();
   expect(beginKey(host).getAttribute("aria-label")).toBe("Begin: start the 30-minute timer");
 });
 ```
@@ -2037,9 +2043,9 @@ it("keeps fills' reveals within MAX_FILL_REVEAL_MS in the longer timelapse of a 
       drawing with many fills (it gives up after 30 s): spec, Checks during the build.
 - [ ] **Step 5: Commit:** `feat(frontend): the timelapse of a sticker drawn in Kyoto Seika Practice Mode plays up to 20 seconds`
 
-### Task B16 (pending sign-off): The upper balloon deals from the evocative tier
+### Task B16: The upper balloon deals from the evocative tier
 
-Only once the owner signs off (spec decision 22). `subjects-next.tsv`'s `tier` column reads `tier` for the
+Approved (spec decision 21). `subjects-next.tsv`'s `tier` column reads `tier` for the
 618 tier subjects and is empty otherwise.
 
 **Files:** Modify `data/scratch/wordlist/to_subjects_json.mjs`, `kyoto-seika/subjects/subjects.json`,
@@ -2240,9 +2246,9 @@ comment.
       of the tone faces the pointer, and the sparkles slide. Then the tray's 3 px band.
 - [ ] **Step 6: Commit:** `feat(frontend): the Kyoto Seika Practice Mode foil, manga tone that turns with the light`
 
-### Task C3: The mark beside Timelapse
+### Task C3: The tag beside Timelapse
 
-**Files:** Create `kyoto-seika/KyotoSeikaMark.tsx`, `kyoto-seika/kyoto-seika-mark.css`. Modify
+**Files:** Create `kyoto-seika/KyotoSeikaTag.tsx`, `kyoto-seika/kyoto-seika-tag.css`. Modify
 `sticker-board/StickerDetail.tsx:346-399`, `i18n/strings/kyotoSeika.ts` (created in Part B).
 Test: `sticker-board/StickerDetail.test.tsx`.
 
@@ -2255,19 +2261,19 @@ it("marks a sticker drawn in Kyoto Seika Practice Mode, with its pair and their 
     { ja: "再会", reading: "さいかい", en: "reunion" },
   ];
   const host = await openDetail(boardSticker({ sticker: sticker({ kyotoSeikaSubjects: pair }) }));
-  const mark = host.querySelector(".kyoto-seika-mark");
-  expect(mark?.textContent).toContain(kyotoSeika.mark.tag.en);
+  const mark = host.querySelector(".kyoto-seika-tag");
+  expect(mark?.textContent).toContain(kyotoSeika.tag.tag.en);
   expect([...(mark?.querySelectorAll("rt") ?? [])].map((rt) => rt.textContent)).toEqual([
     "かぜ",
     "さいかい",
   ]);
   expect(mark?.querySelector(".visually-hidden")?.textContent).toBe(
-    i18next.t(($) => $.kyotoSeika.mark.spoken, { first: "風", second: "再会" }),
+    i18next.t(($) => $.kyotoSeika.tag.spoken, { first: "風", second: "再会" }),
   );
 });
 
 it("shows no mark on an ordinary sticker", async () => {
-  expect((await openDetail(boardSticker())).querySelector(".kyoto-seika-mark")).toBeNull();
+  expect((await openDetail(boardSticker())).querySelector(".kyoto-seika-tag")).toBeNull();
 });
 ```
 
@@ -2277,17 +2283,17 @@ it("shows no mark on an ordinary sticker", async () => {
 - [ ] **Step 3: Implement.**
 
 ```tsx
-// KyotoSeikaMark.tsx
+// KyotoSeikaTag.tsx
 import type { KyotoSeikaSubject } from "@drawing-app/api/client";
 import { useTranslation } from "../i18n/react";
 import { SubjectWord } from "./SubjectWord"; // Part B's ruby word: group ruby over kanji, plain kana otherwise
-import "./kyoto-seika-mark.css";
+import "./kyoto-seika-tag.css";
 
 /**
- * The mark on the detail of a sticker drawn in Kyoto Seika Practice Mode, beside Timelapse: an ink
+ * The tag on the detail of a sticker drawn in Kyoto Seika Practice Mode, beside Timelapse: an ink
  * label-tape tag with a tone swatch like its foil, and the pair it was drawn from, with their readings.
  */
-export function KyotoSeikaMark({
+export function KyotoSeikaTag({
   subjects,
 }: {
   subjects: readonly [KyotoSeikaSubject, KyotoSeikaSubject];
@@ -2295,17 +2301,17 @@ export function KyotoSeikaMark({
   const { t } = useTranslation();
   const [first, second] = subjects;
   return (
-    <p className="kyoto-seika-mark">
-      <span className="kyoto-seika-mark__tag" aria-hidden="true">
-        {t(($) => $.kyotoSeika.mark.tag)}
+    <p className="kyoto-seika-tag">
+      <span className="kyoto-seika-tag__label" aria-hidden="true">
+        {t(($) => $.kyotoSeika.tag.tag)}
       </span>
-      <span className="kyoto-seika-mark__pair" lang="ja" aria-hidden="true">
+      <span className="kyoto-seika-tag__pair" lang="ja" aria-hidden="true">
         <SubjectWord subject={first} />
         <i>×</i>
         <SubjectWord subject={second} />
       </span>
       <span className="visually-hidden">
-        {t(($) => $.kyotoSeika.mark.spoken, { first: first.ja, second: second.ja })}
+        {t(($) => $.kyotoSeika.tag.spoken, { first: first.ja, second: second.ja })}
       </span>
     </p>
   );
@@ -2313,15 +2319,15 @@ export function KyotoSeikaMark({
 ```
 
 ```css
-/* kyoto-seika-mark.css: the tag is label tape at the house tilt, its swatch the foil's tone. */
-.kyoto-seika-mark {
+/* kyoto-seika-tag.css: the tag is label tape at the house tilt, its swatch the foil's tone. */
+.kyoto-seika-tag {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
   margin: 12px 0 2px;
 }
-.kyoto-seika-mark__tag {
+.kyoto-seika-tag__label {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -2337,12 +2343,12 @@ export function KyotoSeikaMark({
   box-shadow: var(--shadow-label);
   clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 50%, 100% 100%, 0 100%);
 }
-.kyoto-seika-mark__tag:lang(ja) {
+.kyoto-seika-tag__label:lang(ja) {
   font-family: var(--font-jp);
   letter-spacing: 0.1em;
   text-transform: none;
 }
-.kyoto-seika-mark__tag::before {
+.kyoto-seika-tag__label::before {
   content: "";
   position: absolute;
   left: 6px;
@@ -2354,18 +2360,18 @@ export function KyotoSeikaMark({
     radial-gradient(closest-side, var(--ink) 46%, transparent 52%) 0 0 / 3.4px 3.4px,
     var(--canvas);
 }
-.kyoto-seika-mark__pair {
+.kyoto-seika-tag__pair {
   font: 800 20px/1 var(--font-jp);
   color: var(--ink);
   font-feature-settings: "palt";
   white-space: nowrap;
 }
-.kyoto-seika-mark__pair rt {
+.kyoto-seika-tag__pair rt {
   font: 700 var(--fs-fine) / 1 var(--font-jp);
   color: var(--graphite);
   letter-spacing: 0.06em;
 }
-.kyoto-seika-mark__pair i {
+.kyoto-seika-tag__pair i {
   font: 500 15px/1 var(--font-ui);
   font-style: normal;
   color: var(--graphite);
@@ -2373,11 +2379,11 @@ export function KyotoSeikaMark({
 }
 ```
 
-In `StickerDetail.tsx`, after the first fine print: `{sticker.kyotoSeikaSubjects && <KyotoSeikaMark
+In `StickerDetail.tsx`, after the first fine print: `{sticker.kyotoSeikaSubjects && <KyotoSeikaTag
 subjects={sticker.kyotoSeikaSubjects} />}`. Strings in `kyotoSeika.ts` under `mark`:
 
 ```ts
-/** The mark on the detail of a sticker drawn in Kyoto Seika Practice Mode. */
+/** The tag on the detail of a sticker drawn in Kyoto Seika Practice Mode. */
 mark: {
   /** Sticker detail of a sticker drawn in Kyoto Seika Practice Mode: the ink tag beside Timelapse */
   tag: { en: "Entrance exam practice", ja: "入試練習" },
@@ -2513,9 +2519,9 @@ and `observe` wrapping a `ResizeObserver` on the card. Each frame of the flight 
       "Sealed", in Chromium and WebKit.
 - [ ] **Step 6: Commit:** `fix(frontend): the sealed sticker lands in its slot when the card grows under it`
 
-### Task C6: The Kyoto Seika Practice Mode switches on the Settings note, with a censor-bar name
+### Task C6: The Kyoto Seika Practice Mode switches on the Settings note, a censor-bar name and a help note
 
-Builds on the Settings-without-restart plan's `save(setting, to, request, apply)` in `SettingsNote.tsx`.
+Builds on `save(setting, to, request, apply)` in `SettingsNote.tsx`, from Settings without a restart (on main).
 
 **Files:** Create `kyoto-seika/CensorBar.tsx`, `kyoto-seika/censor-bar.css`. Modify
 `api/apiClient.ts`, `api/httpApi.ts`, `sticker-board/stat-board/SettingsNote.tsx`,
@@ -2534,18 +2540,32 @@ it("turns Kyoto Seika Practice Mode on in place: it saves, your tickets reload, 
   const tickets = vi.fn<ApiClient["tickets"]>(() => Promise.resolve(TEST_TICKETS));
   const view = renderNote({ setKyotoSeikaPractice, tickets });
   expect(view.host.querySelector('[data-setting="kyoto-seika-dark"]')).toBeNull();
-  await act(async () => practiceSwitch(view.host).click());
+  await act(async () => kyotoSeikaSwitch(view.host).click());
   expect(setKyotoSeikaPractice).toHaveBeenCalledExactlyOnceWith({ kyotoSeikaPractice: true });
-  expect(practiceSwitch(view.host).checked).toBe(true);
+  expect(kyotoSeikaSwitch(view.host).checked).toBe(true);
   expect(tickets).toHaveBeenCalledTimes(2);
   expect(view.host.querySelector('[data-setting="kyoto-seika-dark"] input')).not.toBeNull();
 });
 
 it("names the mode for screen readers without its censor bar", () => {
   const view = renderNote({});
-  expect(practiceSwitch(view.host).getAttribute("aria-label")).toBe(
+  expect(kyotoSeikaSwitch(view.host).getAttribute("aria-label")).toBe(
     stickerBoard.settings.kyotoSeika.spokenName.en,
   );
+});
+
+it("opens the mode's note under its legend, and closes it", async () => {
+  const view = renderNote({});
+  const help = view.host.querySelector<HTMLButtonElement>(
+    '[data-setting="kyoto-seika"] .settings-note__help',
+  );
+  const note = () => document.getElementById(help?.getAttribute("aria-controls") ?? "");
+  expect(note()?.hidden).toBe(true);
+  await act(async () => help?.click());
+  expect(help?.getAttribute("aria-expanded")).toBe("true");
+  expect(note()?.hidden).toBe(false);
+  await act(async () => help?.click());
+  expect(note()?.hidden).toBe(true);
 });
 ```
 
@@ -2555,7 +2575,7 @@ it("shows why the name is blacked out when it's tapped, and doesn't let the tap 
   const outer = vi.fn();
   const host = render(
     <label onClick={outer}>
-      <CensorBar hidden="Seika" />
+      <CensorBar hidden="Sei" />
     </label>,
   );
   await act(async () => host.querySelector<HTMLElement>(".censor-bar")?.click());
@@ -2574,7 +2594,7 @@ kyotoSeikaDarkSubjects?: boolean }) => Promise<Me>`, documented as `POST /api/me
 
 ```tsx
 const { refresh: refreshTickets } = useTickets();
-const switchPractice = (kyotoSeikaPractice: boolean) =>
+const switchKyotoSeika = (kyotoSeikaPractice: boolean) =>
   save(
     "kyotoSeika",
     { kyotoSeikaPractice },
@@ -2598,11 +2618,29 @@ const switchDark = (kyotoSeikaDarkSubjects: boolean) =>
 <fieldset
   className="settings-note__setting"
   data-setting="kyoto-seika"
+  aria-labelledby={`${id}-kyoto-seika-title`}
   aria-busy={saving("kyotoSeika")}
 >
-  <legend className="fine settings-note__legend">
-    {t(($) => $.stickerBoard.settings.kyotoSeika.title)}
+  {/* The group is named by the legend's words alone, not its help button too. */}
+  <legend className="fine settings-note__legend settings-note__legend--help">
+    <span id={`${id}-kyoto-seika-title`}>{t(($) => $.stickerBoard.settings.kyotoSeika.title)}</span>
+    <button
+      type="button"
+      className="settings-note__help"
+      aria-expanded={aboutOpen}
+      aria-controls={`${id}-kyoto-seika-note`}
+      aria-label={t(($) => $.stickerBoard.settings.kyotoSeika.help)}
+      onClick={() => setAboutOpen((open) => !open)}
+    >
+      <Question weight={aboutOpen ? "fill" : "bold"} aria-hidden focusable="false" />
+    </button>
   </legend>
+  <div className="settings-note__note" id={`${id}-kyoto-seika-note`} hidden={!aboutOpen}>
+    <p>
+      {t(($) => $.stickerBoard.settings.kyotoSeika.how, { minutes: KYOTO_SEIKA_TIME_USED_S / 60 })}
+    </p>
+    <p>{t(($) => $.stickerBoard.settings.kyotoSeika.maker)}</p>
+  </div>
   <label className="settings-note__option settings-note__switch">
     <span>
       <Trans
@@ -2617,11 +2655,11 @@ const switchDark = (kyotoSeikaDarkSubjects: boolean) =>
       role="switch"
       checked={shown.kyotoSeikaPractice}
       aria-label={t(($) => $.stickerBoard.settings.kyotoSeika.spokenName)}
-      aria-describedby={`${id}-practice-about`}
-      onChange={() => void switchPractice(!shown.kyotoSeikaPractice)}
+      aria-describedby={`${id}-kyoto-seika-about`}
+      onChange={() => void switchKyotoSeika(!shown.kyotoSeikaPractice)}
     />
   </label>
-  <p className="fine settings-note__about" id={`${id}-practice-about`}>
+  <p className="fine settings-note__about" id={`${id}-kyoto-seika-about`}>
     {t(($) => $.stickerBoard.settings.kyotoSeika.about, {
       minutes: KYOTO_SEIKA_TIME_USED_S / 60,
       tickets: KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
@@ -2665,6 +2703,7 @@ const switchDark = (kyotoSeikaDarkSubjects: boolean) =>
 ```
 
 `statusLine` gains: `kyotoSeika` → `shown.kyotoSeikaPractice ? settings.kyotoSeika.on : settings.kyotoSeika.off`.
+The note's open state is `const [aboutOpen, setAboutOpen] = useState(false)`; `Question` comes from `../../icons`.
 
 ```tsx
 // CensorBar.tsx
@@ -2762,7 +2801,69 @@ export function CensorBar({ hidden }: { hidden: string }) {
 }
 ```
 
-`settings-note.css`: `.settings-note__nested { margin: 10px 0 0; padding-left: 14px; border-left: 2px solid var(--rule); }`
+`settings-note.css`, the help button and the note, as mocked (`data/scratch/mockups/help-note.cjs` in the
+`seika-exam` worktree):
+
+```css
+/* The legend's help button: its glyph sits in the caps line, its touch area is 44 px. */
+.settings-note__legend--help {
+  display: flex;
+  align-items: center;
+}
+.settings-note__help {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 -10px 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--graphite);
+}
+.settings-note__help::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+}
+.settings-note__help svg {
+  width: 18px;
+  height: 18px;
+}
+.settings-note__help[aria-expanded="true"] {
+  color: var(--ink);
+}
+.settings-note__help:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+/* The mode's note opens in place under the legend, ruled off like a row: no container. */
+.settings-note__note {
+  clear: both;
+  padding: 4px 0 10px;
+  border-bottom: 1px dashed var(--rule);
+  font: 500 14px/1.5 var(--font-ui);
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.settings-note__note:lang(ja) {
+  font-family: var(--font-jp);
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+.settings-note__note p {
+  margin: 0;
+}
+.settings-note__note p + p {
+  margin-top: 6px;
+  color: var(--graphite);
+}
+```
+
+Also `.settings-note__nested { margin: 10px 0 0; padding-left: 14px; border-left: 2px solid var(--rule); }`
 and `.settings-note__credit a { color: inherit; }`.
 
 - **Strings,** `stickerBoard.ts` under `settings` (each with its `/** where */` comment, as below):
@@ -2772,14 +2873,23 @@ and `.settings-note__credit a { color: inherit; }`.
 kyotoSeika: {
   /** Settings note: the legend over Kyoto Seika Practice Mode's switch */
   title: { en: "Entrance exam", ja: "入試" },
-  /** Settings note: Kyoto Seika Practice Mode's switch, its university blacked out by <bar/> */
-  name: { en: "Kyoto <bar/> University Entrance Exam Mode", ja: "京都<bar/>大学<wbr/>入試モード" },
-  /** Settings note: the word under the censor bar in Kyoto Seika Practice Mode's name, never shown */
-  hidden: { en: "Seika", ja: "精華" },
-  /** Settings note: what screen readers hear as the name of Kyoto Seika Practice Mode's switch, with no censor bar */
-  spokenName: {
-    en: "A famous art university in Kyoto: entrance exam mode",
-    ja: "京都の有名な美術大学 入試モード",
+  /** Settings note: Kyoto Seika Practice Mode's switch, one character of its university blacked out by <bar/> */
+  name: { en: "Kyoto <bar/>ka University Entrance Exam Mode", ja: "京都<bar/>華大学<wbr/>入試モード" },
+  /** Settings note: the characters under the censor bar in Kyoto Seika Practice Mode's name, never shown */
+  hidden: { en: "Sei", ja: "精" },
+  /** Settings note: what screen readers hear as the name of Kyoto Seika Practice Mode's switch; the bar is a sight gag */
+  spokenName: { en: "Kyoto Seika University Entrance Exam Mode", ja: "京都精華大学 入試モード" },
+  /** Settings note: the help button after the legend of Kyoto Seika Practice Mode, which opens its note */
+  help: { en: "About this mode", ja: "このモードについて" },
+  /** Settings note, the note under Kyoto Seika Practice Mode's legend: how a sheet works; {{minutes}} is its clock */
+  how: {
+    en: "Each new sticker deals two subjects to combine, and the die beside each deals another. Begin starts the {{minutes}} minutes at once, as in the real test.",
+    ja: "シールをかくたびに題材が2つ配られ、横のサイコロで別の題材にできます。「はじめ」を押すと、試験の「始め」と同じく{{minutes}}分のタイマーが動きだします。",
+  },
+  /** Settings note, the note under Kyoto Seika Practice Mode's legend: who made the mode, and that neither Croquis nor its maker is connected with the university */
+  maker: {
+    en: "Croquis’s maker is applying to Kyoto Seika too, and built this mode to practice. Neither Croquis nor its maker has any connection with the university.",
+    ja: "クロッキーの作者も京都精華大学の受験生で、自分の練習のためにこのモードを作りました。クロッキーも作者も、大学とは関係ありません。",
   },
   /** Settings note: the line under Kyoto Seika Practice Mode's switch */
   about: {
@@ -2789,9 +2899,9 @@ kyotoSeika: {
   /** Settings note: the credit under Kyoto Seika Practice Mode's switch, linking the subject list's sources */
   credit: { en: "Subjects from JMdict, WordNet and Wiktionary. <sources>Sources</sources>", ja: "題材：JMdict、WordNet、ウィクショナリー　<sources>出典</sources>" },
   /** Settings note: the status line once Kyoto Seika Practice Mode is on */
-  on: { en: "Practice mode is on: your next sheet deals two subjects.", ja: "練習モードをオンにしました。次のキャンバスから題材が出ます。" },
+  on: { en: "On: your next sticker deals two subjects.", ja: "オンにしました。次のシールから題材が2つ出ます。" },
   /** Settings note: the status line once Kyoto Seika Practice Mode is off */
-  off: { en: "Practice mode is off.", ja: "練習モードをオフにしました。" },
+  off: { en: "Off: your next sticker has the usual clock.", ja: "オフにしました。次のシールはいつもの時間です。" },
   /** Settings note, under Kyoto Seika Practice Mode's switch while it's on */
   dark: {
     /** Settings note: the switch that also deals dark subjects */
@@ -2819,8 +2929,9 @@ kyotoSeika: {
   list itself is shared under CC BY-SA 4.0.
 
 - [ ] **Step 4: Run `stat-board/` and `kyoto-seika/CensorBar.test.tsx`; they pass. Run `pnpm --filter frontend i18n:export /tmp/strings.csv` to check the catalog's comments.**
-- [ ] **Step 5: Check it by eye** in both languages: the bar, a tap on it (the label, and the switch
-      unchanged), the switch on (the Draw key's ticket reads ×10), the dark switch.
+- [ ] **Step 5: Check it by eye** in both languages, in Chromium and WebKit: the bar over 精 / "Sei", a tap on
+      it (the label, and the switch unchanged), the help button and its note open and closed, the switch on
+      (the Draw key's ticket reads ×10), the dark switch.
 - [ ] **Step 6: Commit:** `feat(frontend): Kyoto Seika Practice Mode's switches on the Settings note, its name behind a censor bar, and the subject list's sources`
 
 ### Task C7: Docs (vocabulary pending sign-off)
@@ -2840,7 +2951,7 @@ kyotoSeika: {
     each worn whoever drew the sticker, pink first.
   - Draw screen: the deal (balloons, dice, Begin), the easter egg, the corner note, the 56 px dot.
   - Tickets: a ten-ticket day's rows of five.
-  - Settings and the sticker detail: the censor-bar name, the mark beside Timelapse.
+  - Settings and the sticker detail: the censor-bar name, the tag beside Timelapse.
 - [ ] **glossary.md:** 題材 (subject), はじめ (Begin), 伏せ字 (the censor bar), if Part B hasn't added
       them.
 - [ ] **Commit:** `docs: Kyoto Seika Manga Expression Practice Mode in AGENTS.MD, PRODUCT.md and DESIGN.md`

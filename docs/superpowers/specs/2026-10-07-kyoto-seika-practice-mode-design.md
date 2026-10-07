@@ -60,7 +60,7 @@ seal, and do it again, ten times a day.
     main deal as manga staples. The dark switch keeps its state while the mode is off; dark subjects are
     dealt only while both are on.
 12. **Settings apply without restarting the app:** Language and Show 18+ stickers today, and the two new
-    switches. Its own plan: `docs/superpowers/plans/2026-10-07-settings-without-restart.md`.
+    switches. Built (Settings without a restart, below).
 
 13. **Proctor's time calls** at 10 and 5 minutes left, as the timer's white label ("10 minutes left" /
     残り10分), besides today's 30 s and 10 s warnings.
@@ -90,7 +90,7 @@ seal, and do it again, ten times a day.
 
 ### Recommended
 
-19. **Vocabulary for AGENTS.MD:**
+22. **Vocabulary for AGENTS.MD:**
     - _Kyoto Seika Manga Expression Practice Mode_ (decision 1), Kyoto Seika Practice Mode for short, as in
       the foil's name. Never "practice mode", and no nouns coined from it ("practice sticker"): a sticker
       drawn in Kyoto Seika Practice Mode. Code and data use the stem `kyotoSeika` (`kyoto_seika` in SQL,
@@ -223,18 +223,23 @@ stays readable.
 
 ### Settings
 
-- A third setting on the Settings note, under 18+: the legend "Entrance exam" / 入試, the switch, the line
-  under it, and a credit line linking to a Sources page.
-- The switch's name is the parody (decision 20): "Kyoto ████ University Entrance Exam Mode" / 「京都██大学
-  入試モード」, the university blacked out with an ink bar like a manga censor bar (伏せ字). A tap on the bar
-  lifts its corner, and a white label peels on under it: "Redacted for grown-up reasons" / 「大人の事情により
-  伏せています」 (大人の事情, "grown-up circumstances", is what Japanese TV and manga say when they can't name
-  something).
+- A third setting on the Settings note, under 18+: the legend "Entrance exam" / 入試 with a help button after
+  it, the switch, the line under it, and a credit line linking to a Sources page.
+- The switch's name is the parody (decision 19): "Kyoto ███ka University Entrance Exam Mode" / 「京都█華大学
+  入試モード」, 精 ("Sei") blacked out with an ink bar like a manga censor bar (伏せ字). A tap on the bar lifts its
+  corner, and a white label peels on under it: "Redacted for grown-up reasons" / 「大人の事情により伏せています」
+  (大人の事情, "grown-up circumstances", is what Japanese TV and manga say when they can't name something).
+  Screen readers hear the name uncensored: the bar is a sight gag.
+- The help button is Phosphor's Question after the legend, Graphite and bold at rest, Ink and fill while
+  open, 44 px to touch, named "About this mode". It opens the setting's note in place under the legend, a
+  disclosure rather than a dialog, with a dashed rule under it as the card's rows have: how a sheet works in
+  Ink, then the maker's line in Graphite, in 14 px body type (13.5 px Japanese). Mocked in English and
+  Japanese, in Chromium and WebKit (`data/scratch/mockups/out/help-*.png` in the `seika-exam` worktree).
 - While the mode is on, "Dark subjects too" sits under it, indented with a rule at its left, with its own
   line: "Death, war, crime, alcohol and tobacco." It has no divider above it; the mockup's clone of the 18+
   setting drew one through the credit line.
 
-### The mark on the sticker
+### The tag beside Timelapse
 
 Where the detail offers Timelapse, a sticker drawn in Kyoto Seika Practice Mode says what it is: under the
 drawing time and Timelapse, an ink label-tape tag, tilted −2°, with a tone swatch matching its foil,
@@ -243,7 +248,7 @@ over each kanji word.
 
 ### Furigana
 
-Every kanji word shows its reading: over it in the balloons and on the detail, to its right in the vertical
+Only Kyoto Seika Subjects get furigana, nowhere else in the app. Every kanji word shows its reading: over it in the balloons and on the detail, to its right in the vertical
 corner note. Group ruby (the whole word's reading, spaced over it), as JMdict gives a word's reading, not
 each kanji's. Furigana never goes under the 11 px floor, so the words it sits on are set at 20 px or more.
 A word whose kanji are rare is printed in kana and needs none (the review's 24 respellings).
@@ -257,11 +262,20 @@ A word whose kanji are rare is printed in kana and needs none (the review's 24 r
 
 ### Copy (catalog, English and Japanese)
 
-- Settings legend "Entrance exam" / 入試. Switch "Kyoto no Yuumei na Bijutsu Daigaku Entrance Exam Mode" /
-  京都の有名な美術大学<wbr/>入試モード (two lines in English, one in Japanese). Under it: "Practice for the
-  manga expression test: a {{minutes}}‑minute timer, {{tickets}} daily tickets a day, and two subjects to
-  combine." / マンガ表現の練習に。タイマー{{minutes}}分、無償チケット1日{{tickets}}枚、題材を2つ組み合わせて
-  かきます。 Credit: "Subjects from JMdict and WordNet. Sources" / 題材：JMdict、WordNet 出典.
+- Settings legend "Entrance exam" / 入試. Switch "Kyoto ███ka University Entrance Exam Mode" / 京都█華大学<wbr/>入試モード
+  (two lines in English, one in Japanese). Under it: "Practice for the manga expression test: a
+  {{minutes}}‑minute timer, {{tickets}} daily tickets a day, and two subjects to combine." / マンガ表現の練習に。
+  タイマー{{minutes}}分、無償チケット1日{{tickets}}枚、題材を2つ組み合わせてかきます。 Credit: "Subjects from
+  JMdict, WordNet and Wiktionary. Sources" / 題材：JMdict、WordNet、ウィクショナリー 出典. Status lines: "On:
+  your next sticker deals two subjects." / オンにしました。次のシールから題材が2つ出ます。, and "Off: your next
+  sticker has the usual clock." / オフにしました。次のシールはいつもの時間です。
+- Help button "About this mode" / このモードについて. Its note: "Each new sticker deals two subjects to
+  combine, and the die beside each deals another. Begin starts the {{minutes}} minutes at once, as in the
+  real test." / シールをかくたびに題材が2つ配られ、横のサイコロで別の題材にできます。「はじめ」を押すと、試験の
+  「始め」と同じく{{minutes}}分のタイマーが動きだします。 Then: "Croquis’s maker is applying to Kyoto Seika too,
+  and built this mode to practice. Neither Croquis nor its maker has any connection with the university." /
+  クロッキーの作者も京都精華大学の受験生で、自分の練習のためにこのモードを作りました。クロッキーも作者も、大学とは
+  関係ありません。
 - Dark switch: "Dark subjects too" / 重い題材も出す; "Death, war, crime, alcohol and tobacco." / 死、戦争、
   犯罪、お酒、たばこなど。
 - Begin / はじめ. Timer label: "Starts when you press Begin" / はじめを押すとスタート.
@@ -270,7 +284,7 @@ A word whose kanji are rare is printed in kana and needs none (the review's 24 r
   {{second}}.
 - The glossary gains subject → 題材, and Begin → はじめ.
 
-## Kyoto Seika foil
+## Kyoto Seika Practice Mode foil
 
 A sticker drawn in Kyoto Seika Practice Mode wears a foil of its own that reads as manga (decision 10).
 
@@ -403,38 +417,8 @@ none (`deploy/line/menus.json`), and the midnight batch moves everyone on a coun
 
 ## Settings without a restart
 
-Today, saving Language or Show 18+ stickers restarts the whole app (`location.reload()` in `SettingsNote.tsx`),
-then opens on Settings again. The new switches would add two more restarts. Instead, all four apply in place.
-
-What the restart covers today, and the change that replaces it:
-
-- **The account isn't updatable.** `me` is read once at sign-in, and the setter was removed with the Sui
-  move. Bring back a setter, so a saved setting updates `me` and everything that reads it.
-- **Language:** most of the app already follows `i18next.changeLanguage`: `<html lang>`, the page title,
-  LIFF's text, the Japanese font, CSS `:lang(ja)` and every React string. The gaps:
-  - the sticker tray, built outside React, reads its words once. Rebuild it, or relabel it, when the
-    language changes;
-  - error lines kept in state, and the "Someone" name kept in the board's data, stay in the old language
-    until cleared or reloaded;
-  - with "Same as LINE", only the next sign-in updates the account's language, which picks the chat menu's
-    and the Official account's messages. The choice route should take the phone's language and relink the
-    chat menu at once.
-- **Show 18+ stickers:** the server picks each drawing's image for the viewer: the drawing, or its veiled
-  copy. Every copy of those URLs in memory has to go: the board, the tray, pending gifts and Explore's
-  loaded pages, and the board kept on the phone.
-  - **Turning it off must fail closed.** The browser keeps a drawing it has shown, and the blur is baked into
-    the veiled copy, not drawn by the app. Until the board is loaded again under the new setting, NSFW
-    stickers show no image at all, and the kept board isn't written back. If that load fails, they stay
-    hidden.
-- **Kyoto Seika Manga Expression Practice Mode:** the tickets reload, so the Draw key shows ×10 at once.
-  The next fresh sheet takes the mode.
-- Settings says the change took in its status line ("Croquis is now in English"), in place of opening on
-  Settings after a restart.
-- Removed: `reopenOnSettings.ts` and its uses, and the "restarts Croquis" lines in the catalog and in
-  DESIGN.md.
-
-Sizes are rough estimates from reading the code, not measured: language about a day, Show 18+ stickers two
-to three days, most of it the fail-closed part and its tests.
+Built and on main: Language and Show 18+ stickers apply in place, Show 18+ stickers failing closed. The two
+new switches use the same `save` path (Settings, above).
 
 ## Subject list
 
@@ -475,7 +459,7 @@ Every one of the draft's 2,206 nouns was read by hand: `2026-10-07-kyoto-seika-s
   旅立ち), from a read of the 1,692 most common such nouns in JMdict, and 1 more behind the dark switch.
 
 **The list: 1,507 subjects,** 41 of them dark: moments 378, things 429, phenomena 235, people 181,
-loanwords 284; 618 in the evocative tier (decision 22).
+loanwords 284; 618 in the evocative tier (decision 21).
 
 **Meanings.** Every meaning is quoted from its source, with the entry and sense in its row:
 
@@ -513,7 +497,7 @@ loanwords 284; 618 in the evocative tier (decision 22).
 - The ink engine over 30 minutes of strokes: undo history and the kept session's size. A long synthetic
   session, then the performance recorder.
 - The sealed card with two rows of stubs (above).
-- The Kyoto Seika foil at the tray sheet's 3 px band, and on a board full of stickers drawn in
+- The Kyoto Seika Practice Mode foil at the tray sheet's 3 px band, and on a board full of stickers drawn in
   Kyoto Seika Practice Mode with the performance recorder.
 - Turning Show 18+ stickers off in place: no NSFW drawing shows from memory or the browser's cache, and a
   failed reload keeps them hidden.
@@ -530,12 +514,12 @@ loanwords 284; 618 in the evocative tier (decision 22).
 4. The Settings switches and the Sources page.
 5. The balloons, dice, Begin and corner print: impeccable build with its craft floor, then `animate` and
    `delight` for the motion, `harden` for long words, short phones and both languages.
-6. The Kyoto Seika foil and the sticker detail's 題材 line: impeccable build, `overdrive` for the foil's
+6. The Kyoto Seika Practice Mode foil and the sticker detail's 題材 line: impeccable build, `overdrive` for the foil's
    light.
 7. Ten stubs and the sealed card's slot.
 8. The 56 px timer dot.
 9. Settings without a restart: language, then Show 18+ stickers with its fail-closed hiding. Its own
    branch, since it touches Settings everywhere; it can land before Kyoto Seika Practice Mode.
 10. Docs: AGENTS.MD vocabulary, PRODUCT.md, DESIGN.md (balloons, Begin, non-repro blue, the timer, ten
-    stubs, and the foil rules: pink and Kyoto Seika foil beside the Other Hand Rule).
+    stubs, and the foil rules: pink and Kyoto Seika Practice Mode foil beside the Other Hand Rule).
 11. Verification: the checks above, `impeccable detect`, and the finish reviewer.

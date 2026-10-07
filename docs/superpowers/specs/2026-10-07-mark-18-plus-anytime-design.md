@@ -1,6 +1,6 @@
 # Marking a sticker 18+, by anyone, at seal or after
 
-Proposal for review, 2026-10-07. Nothing is built. Your request: "let anyone optionally (deselected by
+Approved 2026-10-07. Nothing is built yet. Your request: "let anyone optionally (deselected by
 default) choose to say an image is 18+ before or after the seal."
 
 Today only someone with the NSFW opt-in sees the 18+ switch on the drawing screen, the seal route refuses
@@ -9,7 +9,7 @@ Sui.
 
 ## Decisions
 
-### Recommended
+### Decided
 
 1. **At seal, for everyone.** The 18+ switch shows for everyone, off by default; the seal route stops
    asking for the opt-in. Seeing and receiving NSFW stickers stay behind the opt-in.
