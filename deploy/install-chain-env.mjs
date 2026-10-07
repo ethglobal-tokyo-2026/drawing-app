@@ -19,6 +19,7 @@ const required = {
   PRIVY_APP_SECRET: /./,
   LINE_MESSAGING_CHANNEL_ID: /^\d+$/,
   LINE_MESSAGING_CHANNEL_SECRET: /^[0-9a-f]{32}$/,
+  FASTLY_API_TOKEN: /./,
 };
 /** @type {Record<string, string>} */
 const values = { STICKER_CHAIN_MODE: "sui" };

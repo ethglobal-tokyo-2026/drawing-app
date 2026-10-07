@@ -9,5 +9,6 @@ export function chainEnvInput(): Record<string, string> {
     PRIVY_APP_SECRET: "test-privy-secret",
     LINE_MESSAGING_CHANNEL_ID: "2000000001",
     LINE_MESSAGING_CHANNEL_SECRET: "ab".repeat(16),
+    FASTLY_API_TOKEN: "test-fastly-token",
   };
 }

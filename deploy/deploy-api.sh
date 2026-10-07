@@ -52,9 +52,9 @@ NPM_INSTALL_TIMEOUT=10m
 REMOTE_STAGE="$(ssh "$TARGET" "mktemp -d /tmp/drawing-api-deploy.XXXXXXXX")"
 rsync -c "$ROOT/deploy/install-chain-env.mjs" "$TARGET:$REMOTE_STAGE/install-chain-env.mjs"
 chain_config() {
-  printf 'SUI_SERVER_PRIVATE_KEY=%s\nSHINAMI_ACCESS_KEY=%s\nPRIVY_APP_ID=%s\nPRIVY_APP_SECRET=%s\nLINE_MESSAGING_CHANNEL_ID=%s\nLINE_MESSAGING_CHANNEL_SECRET=%s\n' \
+  printf 'SUI_SERVER_PRIVATE_KEY=%s\nSHINAMI_ACCESS_KEY=%s\nPRIVY_APP_ID=%s\nPRIVY_APP_SECRET=%s\nLINE_MESSAGING_CHANNEL_ID=%s\nLINE_MESSAGING_CHANNEL_SECRET=%s\nFASTLY_API_TOKEN=%s\n' \
     "${SUI_SERVER_PRIVATE_KEY:-}" "${SHINAMI_ACCESS_KEY:-}" "${PRIVY_APP_ID:-}" "${PRIVY_APP_SECRET:-}" \
-    "${LINE_MESSAGING_CHANNEL_ID:-}" "${LINE_MESSAGING_CHANNEL_SECRET:-}"
+    "${LINE_MESSAGING_CHANNEL_ID:-}" "${LINE_MESSAGING_CHANNEL_SECRET:-}" "${FASTLY_API_TOKEN:-}"
 }
 chain_config | ssh "$TARGET" "node '$REMOTE_STAGE/install-chain-env.mjs' '$DIR/chain.env' check"
 if [ "$PREFLIGHT_ONLY" = true ]; then exit 0; fi
