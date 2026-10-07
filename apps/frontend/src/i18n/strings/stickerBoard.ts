@@ -529,10 +529,10 @@ export const stickerBoard = {
     },
     /** Sticker detail: the sticker's heading under the pager; <no/> is its number, such as "No.0012" */
     title: { en: "sticker <no/>", ja: "シール<no/>" },
-    /** Sticker detail, a sticker the board's owner drew: the fine print naming its Original Artist, first on the line; <artist/> is their handle, which keeps its own case in the capitals */
-    by: { en: "by <artist/>", ja: "作者：<artist/>" },
-    /** Sticker detail: the fine print after the artist, with how long it took to draw, such as "4m 52s" */
-    drawnIn: { en: "· drawn in <duration/>", ja: "・制作時間<duration/>" },
+    /** Sticker detail, a sticker the board's owner drew: the fine print naming its Original Artist, first on the line and ending in the separator before the drawing time; <artist/> is their handle, which keeps its own case in the capitals */
+    by: { en: "by <artist/> ·", ja: "作者：<artist/>・" },
+    /** Sticker detail: the fine print with how long it took to draw, such as "4m 52s", after the artist or first on the line when the artist chip names them */
+    drawnIn: { en: "drawn in <duration/>", ja: "制作時間<duration/>" },
     /** Sticker detail: the fine print ending the artist line, the day it was sealed, such as "2026.09.23" */
     sealedOn: { en: "· {{day}}", ja: "・{{day}}" },
     /** Sticker detail, a sticker you gave: the fine print naming who received it and when, until its Transfer Trail loads; <receiver/> is their handle, which keeps its own case in the capitals */

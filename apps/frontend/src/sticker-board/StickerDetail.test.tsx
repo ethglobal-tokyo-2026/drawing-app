@@ -34,8 +34,8 @@ declare global {
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-/** Midday, so the day reads the same in every time zone. */
-const day = (d: number) => new Date(2026, 8, d, 12).getTime();
+/** Midday in Tokyo, where the app's days turn over, so the day reads the same in any machine's time zone. */
+const day = (d: number) => Date.UTC(2026, 8, d, 3);
 
 const you = { id: "me", handle: "alice", name: "Alice", nsfwOptIn: false };
 const sticker = (
