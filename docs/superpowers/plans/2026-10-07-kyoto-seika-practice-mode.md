@@ -21,7 +21,7 @@
 
 ## Part A: server and data
 
-**Goal:** The mode's server side: two switches on `me`, 10 daily tickets while it's on, each ticket use keeping its mode, the seal holding a sticker to its ticket's clock and subject pair, the pair on every sticker response, and the chat menus' practice family.
+**Goal:** The mode's server side: two switches on `me`, 10 daily tickets while it's on, each ticket use keeping its mode, the seal holding a sticker to its ticket's clock and subject pair, the pair on every sticker response, and the Kyoto Seika Practice Mode chat menus.
 
 **Architecture:** `users`, `ticket_uses` and `stickers` gain last columns; two CHECKs change, so one generated migration rebuilds `ticket_uses` and `stickers`. Each spend reads the person's mode inside its transaction; the seal reads the mode from the ticket use, never the person. The chat menu picks a family by mode, and the one midnight batch moves each family to its own full count.
 
@@ -60,7 +60,7 @@
 `testDb.ts`, after `insertSticker`, a pair the API's tests share:
 
 ```ts
-/** A practice sticker's Kyoto Seika Subject pair, from the test's first sitting. */
+/** A sticker's Kyoto Seika Subject pair, from the test's first sitting. */
 export const TEST_KYOTO_SEIKA_SUBJECTS: [KyotoSeikaSubject, KyotoSeikaSubject] = [
   { ja: "風", reading: "かぜ", en: "wind" },
   { ja: "再会", reading: "さいかい", en: "reunion" },
@@ -76,7 +76,7 @@ it("never spends a reserve ticket among a day's first DAILY_TICKETS_PER_DAY uses
   expect(refusal(spend(DAILY_TICKETS_PER_DAY - 1, "reserve"))).toMatch(
     /CHECK constraint failed: ticket_uses_kind/,
   );
-  // A mixed day: the standard allowance, a reserve ticket, then practice mode's daily ones.
+  // A mixed day: the standard allowance, a reserve ticket, then Kyoto Seika Practice Mode's daily ones.
   for (let dayIndex = 0; dayIndex < DAILY_TICKETS_PER_DAY; dayIndex++) spend(dayIndex, "daily")();
   spend(DAILY_TICKETS_PER_DAY, "reserve")();
   expect(spend(DAILY_TICKETS_PER_DAY + 1, "daily")).not.toThrow();
@@ -93,7 +93,7 @@ it("keeps time used within the longest drawing clock", () => {
   ).toMatch(/stickers_time_used/);
 });
 
-it("holds a practice sticker's subjects as a pair", () => {
+it("holds a sticker's Kyoto Seika Subjects as a pair", () => {
   const id = insertSticker(db, artist, { kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS });
   const one = JSON.stringify(TEST_KYOTO_SEIKA_SUBJECTS.slice(0, 1));
   const setOne = () =>
@@ -130,21 +130,21 @@ Every new column goes after `...timestamps()`: ALTER TABLE adds `users`' after `
 // users.ts
     /**
      * When the person turned on Kyoto Seika Manga Expression Practice Mode in Settings; null while
-     * it's off. A ticket spent while it's on is a practice ticket.
+     * it's off. A ticket spent while it's on is spent in that mode.
      */
     kyotoSeikaPracticeOnAt: integer("kyoto_seika_practice_on_at", { mode: "timestamp_ms" }),
     /** When they turned on "Dark subjects too", under it; null while it's off. */
     kyotoSeikaDarkSubjectsOnAt: integer("kyoto_seika_dark_subjects_on_at", { mode: "timestamp_ms" }),
 
 // tickets.ts: `kind`'s comment becomes "Daily tickets go first, under the allowance of the mode in force at each spend."
-    /** Spent with the mode on: its sheet runs the practice clock and its sticker keeps a subject pair. */
+    /** Spent with the mode on: its sheet runs the mode's clock and its sticker keeps a subject pair. */
     kyotoSeikaPractice: integer("kyoto_seika_practice", { mode: "boolean" }).notNull().default(false),
   // the CHECK, replacing the old one and its comment:
-    // Practice mode's daily tickets can follow a reserve one, so only the smaller allowance holds.
+    // Kyoto Seika Practice Mode's daily tickets can follow a reserve one, so only the smaller allowance holds.
     check("ticket_uses_kind", sql`${t.kind} = 'daily' or ${t.dayIndex} >= ${literal(DAILY_TICKETS_PER_DAY)}`),
 
 // stickers.ts: imports KYOTO_SEIKA_TIME_USED_S in place of MAX_TIME_USED_S
-/** One of a practice sticker's two Kyoto Seika Subjects: the word as the test prints it, its
+/** One of a sticker's two Kyoto Seika Subjects: the word as the test prints it, its
  * reading (empty when it has no kanji), and its English. */
 export interface KyotoSeikaSubject {
   ja: string;
@@ -152,7 +152,7 @@ export interface KyotoSeikaSubject {
   en: string;
 }
     // timeUsed's comment: "Seconds on the drawing clock, which pauses: at most its ticket's clock. …"
-    /** A practice sticker's subject pair, fixed at seal; null on any other. Not on Sui. */
+    /** A sticker's Kyoto Seika Subject pair, fixed at seal; null unless drawn in Kyoto Seika Practice Mode. Not on Sui. */
     kyotoSeikaSubjects: text("kyoto_seika_subjects", { mode: "json" }).$type<[KyotoSeikaSubject, KyotoSeikaSubject]>(),
   // CHECKs:
     // The longest clock; the seal route holds each sticker to its own ticket's.
@@ -201,7 +201,7 @@ Expected: the same counts before and after, no foreign key rows, `0`.
 
 ```bash
 git add packages/db apps/api/src/client.ts
-git commit -m "feat(db): practice mode's columns and limits, a ticket CHECK that allows a practice day, and the longer clock"
+git commit -m "feat(db): Kyoto Seika Practice Mode's columns and limits, a ticket CHECK that lets a daily ticket follow a reserve one, and the longer clock"
 ```
 
 ---
@@ -218,7 +218,7 @@ git commit -m "feat(db): practice mode's columns and limits, a ticket CHECK that
 After "your NSFW opt-in":
 
 ```ts
-describe("your Kyoto Seika practice switches", () => {
+describe("your Kyoto Seika Practice Mode switches", () => {
   const setSwitches = (headers: Record<string, string>, body: unknown) =>
     test.send("POST", "/api/me/kyoto-seika-practice", { headers, body });
   const switchesIn = async (response: Response) => {
@@ -274,7 +274,7 @@ Expected: FAIL: `me` has no `kyotoSeikaPractice`; the route answers 404 `route_n
 export const kyotoSeikaPracticeOn = (user: Pick<UserRow, "kyotoSeikaPracticeOnAt">): boolean =>
   user.kyotoSeikaPracticeOnAt !== null;
 // meSchema.extend:
-  /** Kyoto Seika Manga Expression Practice Mode, in Settings: the next ticket spent is a practice one. */
+  /** Kyoto Seika Manga Expression Practice Mode, in Settings: the next ticket is spent in it. */
   kyotoSeikaPractice: z.boolean(),
   /** "Dark subjects too", under it: the deal may bring the dark Kyoto Seika Subjects. */
   kyotoSeikaDarkSubjects: z.boolean(),
@@ -310,7 +310,7 @@ const kyotoSeikaPracticeBody = z
     })
 ```
 
-The switches stay independent: turning practice off keeps "Dark subjects too" for the next time. Frontend: `TEST_ME` and `SessionGate.test.tsx`'s `me` gain `kyotoSeikaPractice: false, kyotoSeikaDarkSubjects: false`.
+The switches stay independent: turning Kyoto Seika Practice Mode off keeps "Dark subjects too" for the next time. Frontend: `TEST_ME` and `SessionGate.test.tsx`'s `me` gain `kyotoSeikaPractice: false, kyotoSeikaDarkSubjects: false`.
 
 - [ ] **Step 4: Run the tests and typecheck**
 
@@ -321,7 +321,7 @@ Expected: PASS.
 
 ```bash
 git add apps/api/src/shapes.ts apps/api/src/routes/session.ts apps/api/src/routes/session.test.ts apps/frontend/src/api
-git commit -m "feat(api): the Kyoto Seika practice switches on me, and the route that sets them"
+git commit -m "feat(api): the Kyoto Seika Practice Mode switches on me, and the route that sets them"
 ```
 
 ---
@@ -349,7 +349,7 @@ async function setPractice(kyotoSeikaPractice: boolean) {
 }
 
 describe("tickets in Kyoto Seika Manga Expression Practice Mode", () => {
-  it("give the practice allowance while it's on, and mark each spend with the mode", async () => {
+  it("give the mode's allowance while it's on, and mark each spend with the mode", async () => {
     await setPractice(true);
     expect(await getTickets()).toMatchObject({
       dailyPerDay: KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
@@ -459,7 +459,7 @@ Expected: PASS: the chat menu still follows spends, and the purchase sweep still
 
 ```bash
 git add apps/api/src/tickets/tickets.ts apps/api/src/routes/tickets.ts apps/api/src/routes/tickets.test.ts apps/frontend/src/tickets/TicketsProvider.test.tsx
-git commit -m "feat(api): spending follows the practice allowance, and each ticket use keeps its mode"
+git commit -m "feat(api): spending follows Kyoto Seika Practice Mode's allowance, and each ticket use keeps its mode"
 ```
 
 ---
@@ -479,7 +479,7 @@ Every sticker the API answers is built by `toSticker`, on the board directly and
 In "GET /api/stickers/:stickerId" (import `TEST_KYOTO_SEIKA_SUBJECTS` from `@drawing-app/db/testing`):
 
 ```ts
-it("shows a practice sticker's subjects, and none on any other", async () => {
+it("shows a sticker's Kyoto Seika Subjects, and none on any other", async () => {
   const artistId = insertUser(test.db);
   const practiced = insertSealedSticker(test.db, artistId, {
     kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS,
@@ -516,11 +516,11 @@ const kyotoSeikaSubjectSchema = z.object({
   en: text.min(1),
 }) satisfies z.ZodType<KyotoSeikaSubject>;
 
-/** The pair dealt for a practice sticker and fixed at seal. */
+/** The pair dealt for a sticker drawn in Kyoto Seika Practice Mode and fixed at seal. */
 export const kyotoSeikaSubjectsSchema = z.tuple([kyotoSeikaSubjectSchema, kyotoSeikaSubjectSchema]);
 ```
 
-`shapes.ts`: `stickerSchema` gains `/** A practice sticker's subject pair, fixed at seal; null on any other. It marks a practice sticker. */ kyotoSeikaSubjects: kyotoSeikaSubjectsSchema.nullable(),` and `toSticker` sets `kyotoSeikaSubjects: sticker.kyotoSeikaSubjects`. `client.ts`: `export type { KyotoSeikaSubject } from "@drawing-app/db";` (type-only, so the app bundles nothing of the database package). Frontend: `sticker()` gains `kyotoSeikaSubjects: null`.
+`shapes.ts`: `stickerSchema` gains `/** A sticker's Kyoto Seika Subject pair, fixed at seal; null unless drawn in Kyoto Seika Practice Mode, which it marks. */ kyotoSeikaSubjects: kyotoSeikaSubjectsSchema.nullable(),` and `toSticker` sets `kyotoSeikaSubjects: sticker.kyotoSeikaSubjects`. `client.ts`: `export type { KyotoSeikaSubject } from "@drawing-app/db";` (type-only, so the app bundles nothing of the database package). Frontend: `sticker()` gains `kyotoSeikaSubjects: null`.
 
 - [ ] **Step 4: Run the tests and typecheck**
 
@@ -536,7 +536,7 @@ git commit -m "feat(api): every sticker the API answers carries its Kyoto Seika 
 
 ---
 
-### Task A5: Sealing on a practice ticket
+### Task A5: Sealing on a ticket spent in Kyoto Seika Practice Mode
 
 `stickers_time_used` holds only the longest clock and can't see the ticket, so the seal route holds each sticker to its own ticket's clock, and requires or refuses the pair by the ticket's mode.
 
@@ -553,8 +553,8 @@ git commit -m "feat(api): every sticker the API answers carries its Kyoto Seika 
 /** The pair as the seal form sends it. */
 const SUBJECTS_PART = JSON.stringify(TEST_KYOTO_SEIKA_SUBJECTS);
 
-describe("POST /api/stickers on a practice ticket", () => {
-  /** Seals with `overrides` on a new ticket of the person's, spent in practice mode or not. */
+describe("POST /api/stickers on a ticket spent in Kyoto Seika Practice Mode", () => {
+  /** Seals with `overrides` on a new ticket of the person's, spent in Kyoto Seika Practice Mode or not. */
   const sealOn = (artistId: string, kyotoSeikaPractice: boolean, overrides: Partial<SealParts>) =>
     postSeal(
       artistId,
@@ -563,7 +563,7 @@ describe("POST /api/stickers on a practice ticket", () => {
       ),
     );
 
-  it("keeps the subject pair and the practice clock", async () => {
+  it("keeps the subject pair and the mode's clock", async () => {
     const overrides = {
       timeUsed: String(KYOTO_SEIKA_TIME_USED_S),
       kyotoSeikaSubjects: SUBJECTS_PART,
@@ -581,14 +581,18 @@ describe("POST /api/stickers on a practice ticket", () => {
 
   const one = JSON.stringify(TEST_KYOTO_SEIKA_SUBJECTS.slice(0, 1));
   const refused: Array<{ why: string; practice: boolean; overrides: Partial<SealParts> }> = [
-    { why: "a practice sticker without its subjects", practice: true, overrides: {} },
+    {
+      why: "a sticker drawn in Kyoto Seika Practice Mode without its subjects",
+      practice: true,
+      overrides: {},
+    },
     {
       why: "subjects on a standard ticket's sticker",
       practice: false,
       overrides: { kyotoSeikaSubjects: SUBJECTS_PART },
     },
     {
-      why: "time past the practice clock",
+      why: "time past Kyoto Seika Practice Mode's clock",
       practice: true,
       overrides: {
         timeUsed: String(KYOTO_SEIKA_TIME_USED_S + 1),
@@ -647,14 +651,14 @@ const jsonField = <Schema extends z.ZodType>(schema: Schema) =>
     .pipe(schema);
 
   // In sealForm:
-  /** A practice ticket's subject pair, as JSON: required on a practice ticket, refused on any other. */
+  /** The sticker's Kyoto Seika Subject pair, as JSON: required on a ticket spent in Kyoto Seika Practice Mode, refused on any other. */
   kyotoSeikaSubjects: jsonField(kyotoSeikaSubjectsSchema).optional(),
 ```
 
 `seal.ts`: `checkTicket` also selects `kyotoSeikaPractice: ticketUses.kyotoSeikaPractice` and returns `{ stickerId, kyotoSeikaPractice }`. Add:
 
 ```ts
-/** A sticker keeps to its ticket's clock, and has a subject pair exactly when its ticket is a practice one. */
+/** A sticker keeps to its ticket's clock, and has a subject pair exactly when its ticket was spent in Kyoto Seika Practice Mode. */
 function checkTicketMode(form: SealForm, kyotoSeikaPractice: boolean): SealRefusal | null {
   const ticket = `ticket use ${form.ticketUseId}`;
   const clock = kyotoSeikaPractice ? KYOTO_SEIKA_TIME_USED_S : MAX_TIME_USED_S;
@@ -662,12 +666,12 @@ function checkTicketMode(form: SealForm, kyotoSeikaPractice: boolean): SealRefus
     return invalid(`timeUsed: ${form.timeUsed} s is past ${ticket}'s ${clock} s clock`);
   if (kyotoSeikaPractice && !form.kyotoSeikaSubjects) {
     return invalid(
-      `kyotoSeikaSubjects: ${ticket} was spent in Kyoto Seika practice mode, so its sticker needs its pair`,
+      `kyotoSeikaSubjects: ${ticket} was spent in Kyoto Seika Practice Mode, so its sticker needs its pair`,
     );
   }
   if (!kyotoSeikaPractice && form.kyotoSeikaSubjects) {
     return invalid(
-      `kyotoSeikaSubjects: ${ticket} wasn't spent in Kyoto Seika practice mode, so its sticker has none`,
+      `kyotoSeikaSubjects: ${ticket} wasn't spent in Kyoto Seika Practice Mode, so its sticker has none`,
     );
   }
   return null;
@@ -685,14 +689,14 @@ Expected: PASS: the flow test uploads through the typed client, where the new pa
 
 ```bash
 git add apps/api/src/stickers apps/api/src/shapes.ts apps/api/src/routes/stickers.test.ts
-git commit -m "feat(api): the seal holds a sticker to its ticket's clock, and a practice ticket's to its subject pair"
+git commit -m "feat(api): the seal holds a sticker to its ticket's clock, and one drawn in Kyoto Seika Practice Mode to its subject pair"
 ```
 
 ---
 
-### Task A6: The chat menus' practice family
+### Task A6: The Kyoto Seika Practice Mode chat menus
 
-LINE's midnight batch moves people by the menu they're on, so practice needs menus of its own, with their own IDs, even where one shows a standard menu's image (counts 1–3, reserve, none).
+LINE's midnight batch moves people by the menu they're on, so the mode needs menus of its own, with their own IDs, even where one shows a standard menu's image (counts 1–3, reserve, none).
 
 **Files:**
 
@@ -759,7 +763,7 @@ function familyOf(kyotoSeikaPractice: boolean) {
 const afterMidnight = (ids: ChatMenuIds, menu: string) =>
   midnightMoves(ids).find(({ from }) => from === menu)?.to ?? menu;
 
-it("gives practice mode a menu of its own for each count of its allowance, then reserve and none", () => {
+it("gives Kyoto Seika Practice Mode a menu of its own for each count of its allowance, then reserve and none", () => {
   const practice = familyOf(true);
   expect(new Set(practice).size).toBe(KYOTO_SEIKA_DAILY_TICKETS_PER_DAY + 2);
   expect(practice.filter((menu) => familyOf(false).includes(menu))).toEqual([]);
@@ -776,7 +780,7 @@ it("moves each family back to its full count at midnight, in each language", () 
   }
 });
 
-it("refuses a map where a practice menu shares its rich menu with a standard one", () => {
+it("refuses a map where a Kyoto Seika Practice Mode menu shares its rich menu with a standard one", () => {
   const { en } = TEST_CHAT_MENU_IDS;
   const path = menusFile({ en: { "3": en["3"], "kyoto-seika-3": en["3"] } });
   expect(() => readChatMenuIds(path)).toThrow(/kyoto-seika-3/);
@@ -786,7 +790,7 @@ it("refuses a map where a practice menu shares its rich menu with a standard one
 `midnight.test.ts` (import `chatMenuFor`, `KYOTO_SEIKA_DAILY_TICKETS_PER_DAY`):
 
 ```ts
-it("moves practice menus to the practice family's full count and the rest to 3, in one batch", async () => {
+it("moves the Kyoto Seika Practice Mode menus to their full count and the rest to 3, in one batch", async () => {
   const practiceMenu = (dailyLeft: number) => chatMenuFor({ dailyLeft, reserveLeft: 0 }, true);
   const full = practiceMenu(KYOTO_SEIKA_DAILY_TICKETS_PER_DAY);
   person(ANN, en[practiceMenu(1)]);
@@ -811,7 +815,7 @@ describe("the chat menu in Kyoto Seika Manga Expression Practice Mode", () => {
   const menuFor = (dailyLeft: number, practice: boolean) =>
     TEST_CHAT_MENU_IDS.en[chatMenuFor({ dailyLeft, reserveLeft: 0 }, practice)];
 
-  it("moves to the practice family as the mode turns on, follows its spends, and moves back as it turns off", async () => {
+  it("moves to the Kyoto Seika Practice Mode menus as the mode turns on, follows its spends, and moves back as it turns off", async () => {
     await spendTicket("daily");
     await setPractice(true);
     expect(await menuAfterLinks()).toBe(menuFor(KYOTO_SEIKA_DAILY_TICKETS_PER_DAY - 1, true));
@@ -915,7 +919,7 @@ Frontend `line.ts`, `developer.chatMenu.menus`, after `none` (developer strings:
         "kyoto-seika-none": { en: "Kyoto Seika practice: draw with no tickets left" },
 ```
 
-Until Task A7's IDs are in `menus.json`, someone in practice mode gets their language's plain menu (`menuToLink`'s fallback), which the midnight batch moves to 3.
+Until Task A7's IDs are in `menus.json`, someone in Kyoto Seika Practice Mode gets their language's plain menu (`menuToLink`'s fallback), which the midnight batch moves to 3.
 
 - [ ] **Step 5: Run the tests and typecheck**
 
@@ -926,12 +930,12 @@ Expected: PASS.
 
 ```bash
 git add apps/api/src/chatMenu apps/api/src/routes/session.ts apps/api/src/routes/lineMenu.test.ts apps/api/src/testing/fakeLine.ts apps/frontend/src/i18n/strings/line.ts
-git commit -m "feat(api): the chat menu's practice family, linked by mode and moved to its full count at midnight"
+git commit -m "feat(api): the Kyoto Seika Practice Mode chat menus, linked by mode and moved to their full count at midnight"
 ```
 
 ---
 
-### Task A7: The practice menus' images, and the menus in LINE (deploy step)
+### Task A7: The Kyoto Seika Practice Mode menus' images, and the menus in LINE (deploy step)
 
 Steps 1–4 are code a subagent can do. Steps 5–7 call LINE's production Messaging API with `deploy/.env`: the operator runs them, from main once A1–A6 are merged.
 
@@ -942,14 +946,14 @@ Steps 1–4 are code a subagent can do. Steps 5–7 call LINE's production Messa
 
 - [ ] **Step 1: The page draws counts up to 10**
 
-`returning-menu.html`: `const COUNTS = ["10", "9", "8", "7", "6", "5", "4", "3", "2", "1"];` replaces the count list in the state check (`["plain", ...COUNTS, "reserve", "none"]`) and in the daily ticket's condition (`COUNTS.includes(state)`), whose shape becomes `state.length > 1 ? dailyTwoDigits : daily`; the header comment lists `?state=plain|10…1|reserve|none`. `renderChatMenus.tsx`: `STATES = ["plain", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1", "reserve", "none"] as const` ("4–10 show only on the practice family's menus"), and `content.tickets` gains `dailyTwoDigits: ticket(76)` (76 is an unverified guess, set by eye in Step 2).
+`returning-menu.html`: `const COUNTS = ["10", "9", "8", "7", "6", "5", "4", "3", "2", "1"];` replaces the count list in the state check (`["plain", ...COUNTS, "reserve", "none"]`) and in the daily ticket's condition (`COUNTS.includes(state)`), whose shape becomes `state.length > 1 ? dailyTwoDigits : daily`; the header comment lists `?state=plain|10…1|reserve|none`. `renderChatMenus.tsx`: `STATES = ["plain", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1", "reserve", "none"] as const` ("4–10 show only on the Kyoto Seika Practice Mode menus"), and `content.tickets` gains `dailyTwoDigits: ticket(76)` (76 is an unverified guess, set by eye in Step 2).
 
 - [ ] **Step 2: Look at ×10 before rendering**
 
 Run: `pnpm --filter frontend chat-menus --serve`; open `…/returning-menu.html?lang=en&state=10&areas` and `?lang=ja&state=10`.
 Expected: "×10" sits in its ticket with the margins "×3" has in its own; adjust `dailyTwoDigits` until it does.
 
-- [ ] **Step 3: The script makes practice menus**
+- [ ] **Step 3: The script makes the Kyoto Seika Practice Mode menus**
 
 `create-returning-menu.sh`:
 
@@ -959,11 +963,11 @@ Expected: "×10" sits in its ticket with the margins "×3" has in its own; adjus
       plain | 3 | 2 | 1 | reserve | none) ;;
       kyoto-seika-[1-9] | kyoto-seika-10 | kyoto-seika-reserve | kyoto-seika-none) ;;
 # after it:
-# A practice menu shows the standard image for its count; 4–10 are drawn for practice alone.
+# A Kyoto Seika Practice Mode menu shows the standard image for its count; 4–10 are drawn for that mode alone.
 SHOWS="${STATE#kyoto-seika-}"
 ```
 
-The label cases switch on `$SHOWS`: English `1) DRAW="Draw, 1 ticket left"`, `2 | 3 | 4 | 5 | 6 | 7 | 8 | 9) DRAW="Draw, $SHOWS tickets left"`, `10) DRAW="Draw, 10 left"` (the long form is 21 characters, over LINE's 20, which the script refuses); Japanese `1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10) DRAW="かく（のこり${SHOWS}枚）"`. `IMAGE="$ROOT/deploy/line/images/returning-$MENU-$SHOWS.png"`. The header comment names the practice family; `deploy/README.md`'s line for the script lists the practice states, 12 menus per language.
+The label cases switch on `$SHOWS`: English `1) DRAW="Draw, 1 ticket left"`, `2 | 3 | 4 | 5 | 6 | 7 | 8 | 9) DRAW="Draw, $SHOWS tickets left"`, `10) DRAW="Draw, 10 left"` (the long form is 21 characters, over LINE's 20, which the script refuses); Japanese `1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10) DRAW="かく（のこり${SHOWS}枚）"`. `IMAGE="$ROOT/deploy/line/images/returning-$MENU-$SHOWS.png"`. The header comment names the Kyoto Seika Practice Mode menus; `deploy/README.md`'s line for the script lists their states, 12 menus per language.
 
 - [ ] **Step 4: Render, check and commit**
 
@@ -972,7 +976,7 @@ Expected: every menu renders under 1 MB (the render script checks); the printed 
 
 ```bash
 git add deploy/line/returning-menu.html deploy/line/create-returning-menu.sh deploy/line/images apps/frontend/scripts/renderChatMenus.tsx deploy/README.md
-git commit -m "chore(line): chat menu images for counts up to 10, and the script makes the practice family"
+git commit -m "chore(line): chat menu images for counts up to 10, and the script makes the Kyoto Seika Practice Mode menus"
 ```
 
 - [ ] **Step 5 (operator): Create the 24 menus**
@@ -994,11 +998,11 @@ Expected: 24 "✓ created" lines, then `18` and `18`.
 
 ```bash
 git add deploy/line/menus.json
-git commit -m "chore(line): the practice family's chat menus in LINE"
+git commit -m "chore(line): the Kyoto Seika Practice Mode chat menus in LINE"
 ./deploy/deploy.sh
 ```
 
-The API reads `menus.json` at boot and refuses one where a practice menu shares a standard menu's ID (Task A6).
+The API reads `menus.json` at boot and refuses one where a Kyoto Seika Practice Mode menu shares a standard menu's ID (Task A6).
 
 - [ ] **Step 7 (operator): Check it live**
 
@@ -1018,16 +1022,17 @@ run `pnpm check` before the part's last commit.
 **Decisions this part takes**
 
 1. The phase before `primed` is `dealt`. `start` carries `kyotoSeika: boolean` (the spent ticket's mode); a
-   practice ticket goes to `dealt`, Begin (`{ type: "begin" }`) goes straight to `drawing` with `start-clock`.
+   ticket spent in Kyoto Seika Practice Mode goes to `dealt`, Begin (`{ type: "begin" }`) goes straight to
+   `drawing` with `start-clock`.
 2. `SESSION_MS` goes. `sessionMs(kyotoSeika)` in `session.ts` is the one place a sheet's length comes from;
    the clock holds its own `length`, and the drawing screen reads `clock.length` where it read `SESSION_MS`.
 3. The dealt sheet is the paused sheet's path in the ink engine (`paused: true`, not `locked`), so a touch
    fires `onBlocked`, which nudges Begin instead of the timer.
-4. The kept record gains `kyotoSeika` (present = the ticket's mode is practice): the pair as full list
-   entries (so a list change in a later build can't lose it), each die's rolls, and `begun`. A die with
-   `CHARRED_AT_ROLL` rolls is charred; nothing else marks it.
-5. The practice state lives in `kyoto-seika/useKyotoSeikaSheet.ts`, so `DrawingScreen.tsx` (1,091 lines)
-   grows only by the calls into it.
+4. The kept record gains `kyotoSeika` (present = the ticket was spent in Kyoto Seika Practice Mode): the pair
+   as full list entries (so a list change in a later build can't lose it), each die's rolls, and `begun`. A
+   die with `CHARRED_AT_ROLL` rolls is charred; nothing else marks it.
+5. Kyoto Seika Practice Mode's state lives in `kyoto-seika/useKyotoSeikaSheet.ts`, so `DrawingScreen.tsx`
+   (1,091 lines) grows only by the calls into it.
 6. Motion uses the Web Animations API with the prototype's values as named constants in
    `kyoto-seika/dealMotion.ts`, like `TimerDot`'s `NUDGE`. Bumps use `ui/seededRandom` (the app's one
    seeded source), so they jitter differently from the prototype's Park–Miller source: check the look.
@@ -1036,8 +1041,8 @@ run `pnpm check` before the part's last commit.
    jagged points, puffs and chips (random by design).
 8. `strings/kyotoSeika.ts` is created here; Part C adds `mark` and `censor` to it. `SubjectWord` (group
    ruby) is created here for Part C's detail mark.
-9. The part merges as a whole: from B7 to B13 a practice ticket's sheet waits for a Begin that isn't
-   built yet. Every commit's tests pass.
+9. The part merges as a whole: from B7 to B13 the sheet of a ticket spent in Kyoto Seika Practice Mode waits
+   for a Begin that isn't built yet. Every commit's tests pass.
 
 ---
 
@@ -1093,7 +1098,7 @@ import raw from "./subjects.json";
 import notices from "./NOTICES.txt?raw";
 import { parseSubjectList } from "../subjectList";
 
-/** The Kyoto Seika Subjects and their licence and notices, in one chunk loaded for a practice sheet. */
+/** The Kyoto Seika Subjects and their licence and notices, in one chunk loaded for a sheet in Kyoto Seika Practice Mode. */
 export const SUBJECTS = parseSubjectList(raw);
 export const NOTICES = notices;
 ```
@@ -1126,7 +1131,7 @@ describe("the subject list", () => {
       load so the next call tries again, as `lazyWithPreload` does, and logs `The Kyoto Seika Subjects didn't
 load` with the error.
 - [ ] **Step 6: Run; they pass.** Check `pnpm --filter frontend build` puts `subjects.json` in its own chunk.
-- [ ] **Step 7: Commit:** `git commit -m "feat(frontend): the Kyoto Seika Subjects ship as data with their notices, loaded only for a practice sheet" -- apps/frontend/src/kyoto-seika`
+- [ ] **Step 7: Commit:** `git commit -m "feat(frontend): the Kyoto Seika Subjects ship as data with their notices, loaded only for a sheet in Kyoto Seika Practice Mode" -- apps/frontend/src/kyoto-seika`
 
 ### Task B2: A die's mood: lines, marks, countdown, charred
 
@@ -1433,7 +1438,7 @@ describe("a subject's word", () => {
 ```ts
 export const kyotoSeika = {
   balloons: {
-    /** Drawing screen, a practice sheet before Begin: the two thought balloons' group name for screen readers */
+    /** Drawing screen, in Kyoto Seika Practice Mode before Begin: the two thought balloons' group name for screen readers */
     label: { en: "Your subjects", ja: "題材" },
     roll: {
       en: "Roll another subject: {{word}}, {{english}}",
@@ -1464,9 +1469,9 @@ export const kyotoSeika = {
     boom: { en: "KA-BOOM!", ja: "ドカーン！" },
   },
   print: {
-    /** Drawing screen, a practice sheet: the boxed word heading the corner print, in both languages */
+    /** Drawing screen, in Kyoto Seika Practice Mode: the boxed word heading the corner print, in both languages */
     heading: { en: "題材", ja: "題材" },
-    /** Drawing screen, a practice sheet once begun: the canvas's name for screen readers, with the pair */
+    /** Drawing screen, in Kyoto Seika Practice Mode once begun: the canvas's name for screen readers, with the pair */
     canvas: {
       en: "Canvas, subjects {{first}} and {{second}}",
       ja: "キャンバス、題材は{{first}}と{{second}}",
@@ -1479,7 +1484,7 @@ In `stickerCreation.timer`: `status.dealt` ("{{time}} left, starts when you pres
 「残り{{time}}、はじめを押すとスタート」), `note.startsWhenYouPressBegin` ("Starts when you press Begin" /
 「はじめを押すとスタート」), `note.minutesLeft` ("{{minutes}} minutes left" / 「残り{{minutes}}分」, the
 proctor's time call). `glossary.md` gains two rows: "subject (Kyoto Seika Subject) | 題材 | The guide's word;
-'subject' in English" and "Begin (the practice sheet's key) | はじめ | The proctor's word".
+'subject' in English" and "Begin (Kyoto Seika Practice Mode's key) | はじめ | The proctor's word".
 
 - [ ] **Step 2: Typecheck:** `pnpm --filter frontend exec tsc --noEmit`; `pnpm --filter frontend i18n:export /tmp/strings.csv` lists them with their comments.
 - [ ] **Step 3: Commit:** `feat(frontend): the deal, Begin, the teasing and the corner print in English and Japanese`
@@ -1507,7 +1512,7 @@ it("runs as long as its sheet's ticket says, and sets a waiting clock to another
   expect(clock.length).toBe(sessionMs(true));
 });
 
-it("calls the time at 10 and 5 minutes left on a practice sheet's clock, and never on a regular one", () => {
+it("calls the time at 10 and 5 minutes left on the clock of a sheet in Kyoto Seika Practice Mode, and never on a regular one", () => {
   const heard = (length: number) => {
     const { clock, advance } = setup({ length });
     const calls: number[] = [];
@@ -1532,7 +1537,8 @@ export const sessionMs = (kyotoSeika: boolean) =>
 ```
 
 `useSessionClock.ts`: `WARN_AT_SECONDS` becomes exported `[10 * 60, 5 * 60, 30, 10]` ("the proctor's time
-calls, which only a practice sheet's clock is long enough to reach, then the last 30 and 10 seconds");
+calls, which only the clock of a sheet in Kyoto Seika Practice Mode is long enough to reach, then the last
+30 and 10 seconds");
 `private lengthMs`, `get length()`, the constructor's `lengthMs = sessionMs(false)`, `setLength(ms)` (only
 while `idle`, then `changed()`), `reset(lengthMs = this.lengthMs)`; every `SESSION_MS` reads `this.lengthMs`.
 `useSessionClock(onTimeUp, lengthMs)` builds it with the length the first sheet will take.
@@ -1555,7 +1561,7 @@ success calls `clock.setLength(sessionMs(use.kyotoSeikaPractice))` before `send`
 dealt = false)`:
 
 ```ts
-it("deals a practice ticket's pair and waits, sheet locked, for Begin, which starts the clock at once", () => {
+it("deals the pair of a ticket spent in Kyoto Seika Practice Mode and waits, sheet locked, for Begin, which starts the clock at once", () => {
   expect(run(practice)).toEqual({ phase: "dealt", effects: ["keep-session"] });
   expect(run(practice, ink)).toEqual({ phase: "dealt", effects: [] });
   expect(run(practice, begin)).toEqual({
@@ -1567,7 +1573,7 @@ it("deals a practice ticket's pair and waits, sheet locked, for Begin, which sta
   expect(run(practice, tap(1000))).toEqual({ phase: "dealt", effects: [] });
 });
 
-it("brings a practice sheet back dealt until Begin, and drawing after it", () => {
+it("brings a sheet in Kyoto Seika Practice Mode back dealt until Begin, and drawing after it", () => {
   expect(run(restored(false, false, true)).phase).toBe("dealt");
   expect(run(restored(true, false, false)).phase).toBe("drawing");
   expect(run(restored(false, true, true)).phase).toBe("retry");
@@ -1575,12 +1581,13 @@ it("brings a practice sheet back dealt until Begin, and drawing after it", () =>
 ```
 
 - [ ] **Step 2: Run; they fail.**
-- [ ] **Step 3: Implement.** `Phase` gains `"dealt"`, documented: "dealt: a practice ticket was spent; its
-      two subjects wait in their balloons for Begin, the sheet takes no ink and the tools are hidden."
+- [ ] **Step 3: Implement.** `Phase` gains `"dealt"`, documented: "dealt: a ticket was spent in
+      Kyoto Seika Practice Mode; its two subjects wait in their balloons for Begin, the sheet takes no ink and
+      the tools are hidden."
       `primed`'s line says "a regular ticket". Events: `start` gains `kyotoSeika: boolean`; `{ type: "begin" }`
       ("Begin locked the pair in: the clock starts at once, as a proctor's 始め does"); `restored` gains `dealt:
-boolean` ("a practice sheet still waiting for Begin"). Effect `"lock-subjects"`: "Keep the pair as begun;
-      the balloons tuck into the corner print."
+boolean` ("a sheet in Kyoto Seika Practice Mode still waiting for Begin"). Effect `"lock-subjects"`:
+      "Keep the pair as begun; the balloons tuck into the corner print."
 
 ```ts
 case "start":
@@ -1597,7 +1604,7 @@ case "restored":
 `begin`.
 
 - [ ] **Step 4: Run `session.test.ts` and `DrawingScreen.test.tsx`; they pass.**
-- [ ] **Step 5: Commit:** `feat(frontend): a practice sheet waits dealt for Begin, which starts its clock at once`
+- [ ] **Step 5: Commit:** `feat(frontend): a sheet in Kyoto Seika Practice Mode waits dealt for Begin, which starts its clock at once`
 
 ### Task B8: The kept session keeps the mode, the pair, the rolls and Begin
 
@@ -1606,7 +1613,7 @@ case "restored":
 - [ ] **Step 1: Failing tests** (beside the existing record tests, through `SessionKeeper` and `loadKeptSession`):
 
 ```ts
-it("keeps a practice sheet's pair, rolls and Begin with its ticket, and reads them back", async () => {
+it("keeps the pair, rolls and Begin of a sheet in Kyoto Seika Practice Mode with its ticket, and reads them back", async () => {
   const keeper = new SessionKeeper(USER);
   keeper.start(7, { subjects: null, rolls: [0, 0], begun: false });
   keeper.keepKyotoSeika({ subjects: [WIND, REUNION], rolls: [CHARRED_AT_ROLL, 3], begun: true });
@@ -1618,11 +1625,11 @@ it("keeps a practice sheet's pair, rolls and Begin with its ticket, and reads th
   });
 });
 
-it("keeps no practice part for a regular sheet, and reads a record whose part is unreadable as a regular sheet's, logged", async () => {
+it("keeps no Kyoto Seika Practice Mode part for a regular sheet, and reads a record whose part is unreadable as a regular sheet's, logged", async () => {
   // a record written with kyotoSeika: { subjects: "x" } reads back with kyotoSeika null and one console.error
 });
 
-it("carries a practice ticket's part with it when the drawing isn't read", async () => {
+it("carries a ticket's Kyoto Seika Practice Mode part with it when the drawing isn't read", async () => {
   // readSteps fails: the unread result still has the record's kyotoSeika
 });
 ```
@@ -1633,7 +1640,7 @@ it("carries a practice ticket's part with it when the drawing isn't read", async
 - [ ] **Step 3: Implement.**
 
 ```ts
-/** A practice sheet's part of the record: present only when its ticket was spent in practice mode. */
+/** The Kyoto Seika Practice Mode part of the record: present only when its ticket was spent in that mode. */
 export interface KeptKyotoSeika {
   /** Null until the list loads and deals. */
   subjects: readonly [KyotoSeikaSubjectEntry, KyotoSeikaSubjectEntry] | null;
@@ -1646,12 +1653,12 @@ export interface KeptKyotoSeika {
 `SessionRecord.kyotoSeika: KeptKyotoSeika | null`; `start(ticket, kyotoSeika = null)`; `resume(…, kyotoSeika)`;
 `carry(ticket, kyotoSeika)`; `keepKyotoSeika(part)` writes the record unless `carried` (as `keepNsfw`
 does); `wipe` clears it. `readRecord` reads it with `readKyotoSeika(v)` (entries checked by
-`subjectList.ts`'s guard, rolls as two counts); unreadable logs "The practice sheet's part of the drawing
-in progress is unreadable, so it comes back as a regular sheet" and reads null. `KeptDrawing`'s `unread`
-and `lost` (with a ticket) carry `kyotoSeika` too, so a carried ticket keeps its mode.
+`subjectList.ts`'s guard, rolls as two counts); unreadable logs "The Kyoto Seika Practice Mode part of the
+drawing in progress is unreadable, so it comes back as a regular sheet" and reads null. `KeptDrawing`'s
+`unread` and `lost` (with a ticket) carry `kyotoSeika` too, so a carried ticket keeps its mode.
 
 - [ ] **Step 4: Run; they pass.**
-- [ ] **Step 5: Commit:** `feat(frontend): the kept session keeps a practice sheet's pair, rolls and Begin, so a reload can't fix a die`
+- [ ] **Step 5: Commit:** `feat(frontend): the kept session keeps the pair, rolls and Begin of a sheet in Kyoto Seika Practice Mode, so a reload can't fix a die`
 
 ### Task B9: The timer dot: 56 px from 10:00, Begin's notes, and the time calls
 
@@ -1870,9 +1877,9 @@ bottom: 150px; pointer-events: none`. `DrawingCanvas` gains `under?: ReactNode` 
       before the canvas, so ink covers it) and `label?: string` (the canvas's name, default the catalog's
       `canvas`).
 - [ ] **Step 4: Run it and `DrawingScreen.test.tsx`; they pass.**
-- [ ] **Step 5: Commit:** `feat(frontend): the practice sheet's pair as a vertical margin note in non-repro blue, under the ink`
+- [ ] **Step 5: Commit:** `feat(frontend): the sheet's Kyoto Seika Subjects as a vertical margin note in non-repro blue, under the ink`
 
-### Task B13: Begin, and the practice sheet on the drawing screen
+### Task B13: Begin, and Kyoto Seika Practice Mode on the drawing screen
 
 **Files:** Create `kyoto-seika/BeginKey.tsx`, `kyoto-seika/begin-key.css`, `kyoto-seika/KyotoSeikaDeal.tsx`,
 `kyoto-seika/useKyotoSeikaSheet.ts`. Modify `sticker-creation/DrawingScreen.tsx`, `sticker-creation/DrawingScreen.css`,
@@ -1883,7 +1890,7 @@ bottom: 150px; pointer-events: none`. `DrawingCanvas` gains `under?: ReactNode` 
       make the `DrawingCanvas` mock record its last `settings` and `label` in the hoisted `sheetCalls`.
 
 ```tsx
-it("deals a practice ticket's pair, hides the tools and holds the sheet until Begin", async () => {
+it("deals the pair of a ticket spent in Kyoto Seika Practice Mode, hides the tools and holds the sheet until Begin", async () => {
   const host = await openPracticeSheet();
   expect(dice(host)).toHaveLength(2);
   expect(host.querySelector(".drawing-screen")?.classList).toContain("is-dealt");
@@ -1915,10 +1922,10 @@ it("names Begin by what it does", async () => {
 - [ ] **Step 2: Run; they fail.**
 - [ ] **Step 3: Implement.**
   - `useKyotoSeikaSheet({ userId, dark, keeper })` → `{ list, deal, begun, open(part), roll(balloon), begin(),
-close() }`. `open` (a practice ticket landed, or a kept part came back) loads the list, deals with
-    `firstDeal` unless the part holds a pair, keeps the dealt words with `keepDealt` and the part with
-    `keeper.keepKyotoSeika`; `roll` runs `rollDie` and keeps both; `begin` keeps `begun: true`. A failed
-    load is `list.status === "failed"` with its error and `retry`, logged once.
+close() }`. `open` (a ticket spent in Kyoto Seika Practice Mode landed, or a kept part came back) loads the
+    list, deals with `firstDeal` unless the part holds a pair, keeps the dealt words with `keepDealt` and the
+    part with `keeper.keepKyotoSeika`; `roll` runs `rollDie` and keeps both; `begin` keeps `begun: true`. A
+    failed load is `list.status === "failed"` with its error and `retry`, logged once.
   - `BeginKey`: `Key` with `DrawIcon`, `begin.key`, `aria-label` `begin.label` with the clock's minutes,
     196 px wide, centered at the sheet's foot (46 px up); `nudge()` plays `TimerDot`'s `NUDGE`.
   - `KyotoSeikaDeal`: measures the timer's label (or dot) and Begin's top with a `ResizeObserver` on the
@@ -1937,7 +1944,7 @@ const kyotoSeika = useKyotoSeikaSheet({
 const dealt = session.phase === "dealt";
 // start()'s success keeps the ticket's mode beside its id: ticketKyotoSeika.current = use.kyotoSeikaPractice.
 // run(): "keep-session" → keeper.start(ticket.current, ticketKyotoSeika.current ? { subjects: null, rolls: [0, 0], begun: false } : null)
-//        then kyotoSeika.open(null) for a practice ticket; "lock-subjects" → kyotoSeika.begin();
+//        then kyotoSeika.open(null) for a ticket spent in Kyoto Seika Practice Mode; "lock-subjects" → kyotoSeika.begin();
 //        "reset-sheet" → kyotoSeika.close().
 // putBack/carryOver: clock.setLength(sessionMs(part !== null)); kyotoSeika.open(part);
 //   send({ type: "restored", drawn: drawn || part?.begun === true, sealSent, dealt: part?.begun === false })
@@ -1954,7 +1961,7 @@ const dealt = session.phase === "dealt";
 - [ ] **Step 4: Run `DrawingScreen.test.tsx` and `kyoto-seika/`; they pass.** Check in Chromium and WebKit at
       360, 390, 430 and 375 × 640, both languages, reduced motion: the pair tightens without text under 11 px,
       a touch on the sheet nudges Begin, Begin tucks and the clock reads 29:59 a second later.
-- [ ] **Step 5: Commit:** `feat(frontend): Begin locks the practice sheet's pair into its corner and starts the clock`
+- [ ] **Step 5: Commit:** `feat(frontend): Begin locks the Kyoto Seika Subjects into the sheet's corner and starts the clock`
 
 ### Task B14: Sealing sends the pair
 
@@ -1964,7 +1971,7 @@ const dealt = session.phase === "dealt";
 - [ ] **Step 1: Failing tests.**
 
 ```ts
-it("sends a practice sticker's pair as JSON, and no such part for any other", async () => {
+it("sends a sticker's Kyoto Seika Subject pair as JSON, and no such part for a sticker without one", async () => {
   const pair = [
     { ja: "風", reading: "かぜ", en: "wind" },
     { ja: "再会", reading: "さいかい", en: "reunion" },
@@ -1979,18 +1986,19 @@ it("sends a practice sticker's pair as JSON, and no such part for any other", as
 ```
 
 In `DrawingScreen.test.tsx`, turn the `makeSticker` mock into `vi.fn` rejecting by default; one test
-resolves a cut sticker for a begun practice sheet and expects `api.seal`'s request to carry the pair's
-`{ ja, reading, en }` only.
+resolves a cut sticker for a begun sheet in Kyoto Seika Practice Mode and expects `api.seal`'s request to
+carry the pair's `{ ja, reading, en }` only.
 
 - [ ] **Step 2: Run; they fail.**
 - [ ] **Step 3: Implement.** `SealRequest.kyotoSeikaSubjects?: readonly [KyotoSeikaSubject, KyotoSeikaSubject]`
-      ("a practice sticker's pair, which the server requires for a practice ticket and refuses for any other");
+      ("a sticker's pair, which the server requires for a ticket spent in Kyoto Seika Practice Mode and
+      refuses for any other");
       `httpApi` adds `...(request.kyotoSeikaSubjects && { kyotoSeikaSubjects: JSON.stringify(request.kyotoSeikaSubjects) })`.
       `cutFromSheet` reads the pair with the ink's copy, as it reads the 18+ switch.
 - [ ] **Step 4: Run; they pass.**
-- [ ] **Step 5: Commit:** `feat(frontend): a practice sticker seals with its pair`
+- [ ] **Step 5: Commit:** `feat(frontend): a sticker drawn in Kyoto Seika Practice Mode seals with its pair`
 
-### Task B15: A practice sticker's timelapse plays up to 20 s
+### Task B15: The timelapse of a sticker drawn in Kyoto Seika Practice Mode plays up to 20 s
 
 **Files:** Modify `sticker-board/timelapse/timelapseSchedule.ts:14-17,78-95`, `timelapsePlayer.ts:23-33,63`,
 `useTimelapse.ts:36-45`, `sticker-board/StickerDetail.tsx:189-190`. Test: `timelapseSchedule.test.ts`.
@@ -2001,15 +2009,15 @@ resolves a cut sticker for a begun practice sheet and expects `api.seal`'s reque
 ```ts
 it.each([
   ["a regular sticker", false, MAX_LENGTH_MS],
-  ["a practice sticker", true, KYOTO_SEIKA_MAX_LENGTH_MS],
-])("plays %s's longest drawing in at most its length", (_, kyotoSeika, length) => {
+  ["a sticker drawn in Kyoto Seika Practice Mode", true, KYOTO_SEIKA_MAX_LENGTH_MS],
+])("plays the longest drawing of %s in at most its length", (_, kyotoSeika, length) => {
   const drawnMs = KYOTO_SEIKA_TIME_USED_S * 1000;
   expect(
     schedule([stroke(0, steady(drawnMs, MAX_POINT_STEP_MS))], false, kyotoSeika).length,
   ).toBeCloseTo(length, 6);
 });
 
-it("keeps fills' reveals within MAX_FILL_REVEAL_MS in a practice sticker's longer timelapse", () => {
+it("keeps fills' reveals within MAX_FILL_REVEAL_MS in the longer timelapse of a sticker drawn in Kyoto Seika Practice Mode", () => {
   const s = schedule(
     [stroke(0, steady(KYOTO_SEIKA_TIME_USED_S * 1000, MAX_POINT_STEP_MS)), fill(2e6)],
     false,
@@ -2020,13 +2028,14 @@ it("keeps fills' reveals within MAX_FILL_REVEAL_MS in a practice sticker's longe
 ```
 
 - [ ] **Step 2: Run; they fail.**
-- [ ] **Step 3: Implement.** `export const KYOTO_SEIKA_MAX_LENGTH_MS = 20_000;` ("…or this long for a practice
-      sticker, whose clock runs ten times longer"); `scheduleTimelapse(ops, { reduced, kyotoSeika })` clamps to
-      it; `fillRevealMs` clamps its pace to 1. `TimelapsePlayerOptions.kyotoSeika`, `useTimelapse`'s option, and
-      `StickerDetail` passes `kyotoSeika: Boolean(loaded?.sticker.kyotoSeikaSubjects)`.
+- [ ] **Step 3: Implement.** `export const KYOTO_SEIKA_MAX_LENGTH_MS = 20_000;` ("…or this long for a sticker
+      drawn in Kyoto Seika Practice Mode, whose clock runs ten times longer");
+      `scheduleTimelapse(ops, { reduced, kyotoSeika })` clamps to it; `fillRevealMs` clamps its pace to 1.
+      `TimelapsePlayerOptions.kyotoSeika`, `useTimelapse`'s option, and `StickerDetail` passes
+      `kyotoSeika: Boolean(loaded?.sticker.kyotoSeikaSubjects)`.
 - [ ] **Step 4: Run the timelapse folder's tests; they pass.** Time the fills' preparation on a 30-minute
-      practice drawing with many fills (it gives up after 30 s): spec, Checks during the build.
-- [ ] **Step 5: Commit:** `feat(frontend): a practice sticker's timelapse plays up to 20 seconds`
+      drawing with many fills (it gives up after 30 s): spec, Checks during the build.
+- [ ] **Step 5: Commit:** `feat(frontend): the timelapse of a sticker drawn in Kyoto Seika Practice Mode plays up to 20 seconds`
 
 ### Task B16 (pending sign-off): The upper balloon deals from the evocative tier
 
@@ -2075,7 +2084,7 @@ Depends on Part A (the `kyotoSeikaSubjects` field on every sticker, the `me` swi
 Paths are under `apps/frontend/src/` unless they start with `apps/`, `DESIGN.md`, `PRODUCT.md` or
 `AGENTS.MD`. Run tests with `pnpm --filter frontend exec vitest run <files>`.
 
-### Task C1: Stickers carry whether they're practice stickers
+### Task C1: Stickers carry whether they were drawn in Kyoto Seika Practice Mode
 
 **Files:** Modify `api/views.ts:20-67`, `sticker-board/boardSticker.ts:8-23,55-82`,
 `sticker-board/StickerBoard.tsx:218-229`, `sticker-board/tray/trayModel.ts:14-31`,
@@ -2089,7 +2098,7 @@ import { toSticker } from "./views";
 import { sticker } from "./testFixtures";
 
 describe("toSticker", () => {
-  it("carries a practice sticker's pair, and none for any other", () => {
+  it("carries a sticker's Kyoto Seika Subject pair, and none for a sticker without one", () => {
     const pair = [
       { ja: "風", reading: "かぜ", en: "wind" },
       { ja: "再会", reading: "さいかい", en: "reunion" },
@@ -2102,10 +2111,11 @@ describe("toSticker", () => {
 
 - [ ] **Step 2: Run it; it fails** (`kyotoSeikaSubjects` is undefined).
 - [ ] **Step 3: Implement.**
-  - `StickerView` gains `/** A Kyoto Seika practice sticker's pair, fixed at seal; null on any other. */
+  - `StickerView` gains `/** A sticker's Kyoto Seika Subject pair, fixed at seal; null unless drawn in
+Kyoto Seika Practice Mode. */
 kyotoSeikaSubjects: Sticker["kyotoSeikaSubjects"];`, filled by `toSticker`.
   - `BoardSticker` gains the same field; `toBoardSticker` and `viewOf` copy it.
-  - `TraySticker` gains `/** A Kyoto Seika practice sticker: it wears that foil, whoever drew it. */
+  - `TraySticker` gains `/** Drawn in Kyoto Seika Practice Mode: it wears that foil, whoever drew it. */
 kyotoSeika: boolean;`, set in `trayStickers` as `s.kyotoSeikaSubjects !== null`.
   - The fixtures default it to `null`.
 - [ ] **Step 4: Run `api/`, `sticker-board/` and `sticker-board/tray/`; they pass.**
@@ -2130,12 +2140,12 @@ const urls = { png: "p.webp", mask: "m.webp", spec: "s.webp", rim: "r.webp", foi
 const foilOf = (host: HTMLElement) => host.querySelector(".sticker-foil")?.className ?? "";
 
 describe("StickerFigure's foil", () => {
-  it("wears the Kyoto Seika Practice Mode foil on a practice sticker, whoever drew it", () => {
+  it("wears the Kyoto Seika Practice Mode foil on a sticker drawn in the mode, whoever drew it", () => {
     expect(
       foilOf(render(<StickerFigure urls={urls} width={10} height={10} kyotoSeika />)),
     ).toContain("sticker-foil--kyoto-seika");
   });
-  it("wears pink on an 18+ practice sticker", () => {
+  it("wears pink on an 18+ sticker drawn in Kyoto Seika Practice Mode", () => {
     const host = render(<StickerFigure urls={urls} width={10} height={10} kyotoSeika nsfw />);
     expect(foilOf(host)).toContain("sticker-foil--pink");
   });
@@ -2148,8 +2158,8 @@ describe("StickerFigure's foil", () => {
 });
 ```
 
-In `StickerTray.test.tsx`, add a practice sticker of your own to the board and expect its slot's
-`.sticker-foil` to carry `sticker-foil--sheet sticker-foil--kyoto-seika`.
+In `StickerTray.test.tsx`, add a sticker of your own drawn in Kyoto Seika Practice Mode to the board and
+expect its slot's `.sticker-foil` to carry `sticker-foil--sheet sticker-foil--kyoto-seika`.
 
 - [ ] **Step 2: Run both; they fail.**
 - [ ] **Step 3: Implement.**
@@ -2225,12 +2235,12 @@ Each call site passes `kyotoSeika={sticker.kyotoSeikaSubjects !== null}`. `trayS
 comment.
 
 - [ ] **Step 4: Run both test files; they pass.**
-- [ ] **Step 5: Check it by eye** on the dev server: a practice sticker on your board, on someone else's
-      and in the detail; tilt (Playwright's pointer moves the light): the open side of the tone faces the
-      pointer, and the sparkles slide. Then the tray's 3 px band.
+- [ ] **Step 5: Check it by eye** on the dev server: a sticker drawn in Kyoto Seika Practice Mode on your
+      board, on someone else's and in the detail; tilt (Playwright's pointer moves the light): the open side
+      of the tone faces the pointer, and the sparkles slide. Then the tray's 3 px band.
 - [ ] **Step 6: Commit:** `feat(frontend): the Kyoto Seika Practice Mode foil, manga tone that turns with the light`
 
-### Task C3: The practice mark beside Timelapse
+### Task C3: The mark beside Timelapse
 
 **Files:** Create `kyoto-seika/KyotoSeikaMark.tsx`, `kyoto-seika/kyoto-seika-mark.css`. Modify
 `sticker-board/StickerDetail.tsx:346-399`, `i18n/strings/kyotoSeika.ts` (created in Part B).
@@ -2239,7 +2249,7 @@ Test: `sticker-board/StickerDetail.test.tsx`.
 - [ ] **Step 1: Failing test.**
 
 ```tsx
-it("says a practice sticker is one, with its pair and their readings, beside Timelapse", async () => {
+it("marks a sticker drawn in Kyoto Seika Practice Mode, with its pair and their readings, beside Timelapse", async () => {
   const pair = [
     { ja: "風", reading: "かぜ", en: "wind" },
     { ja: "再会", reading: "さいかい", en: "reunion" },
@@ -2256,7 +2266,7 @@ it("says a practice sticker is one, with its pair and their readings, beside Tim
   );
 });
 
-it("shows no practice mark on an ordinary sticker", async () => {
+it("shows no mark on an ordinary sticker", async () => {
   expect((await openDetail(boardSticker())).querySelector(".kyoto-seika-mark")).toBeNull();
 });
 ```
@@ -2274,8 +2284,8 @@ import { SubjectWord } from "./SubjectWord"; // Part B's ruby word: group ruby o
 import "./kyoto-seika-mark.css";
 
 /**
- * A Kyoto Seika practice sticker's mark on its detail, beside Timelapse: an ink label-tape tag with a
- * tone swatch like its foil, and the pair it was drawn from, with their readings.
+ * The mark on the detail of a sticker drawn in Kyoto Seika Practice Mode, beside Timelapse: an ink
+ * label-tape tag with a tone swatch like its foil, and the pair it was drawn from, with their readings.
  */
 export function KyotoSeikaMark({
   subjects,
@@ -2367,11 +2377,11 @@ In `StickerDetail.tsx`, after the first fine print: `{sticker.kyotoSeikaSubjects
 subjects={sticker.kyotoSeikaSubjects} />}`. Strings in `kyotoSeika.ts` under `mark`:
 
 ```ts
-/** The practice mark on a Kyoto Seika practice sticker's detail. */
+/** The mark on the detail of a sticker drawn in Kyoto Seika Practice Mode. */
 mark: {
-  /** Sticker detail, a practice sticker: the ink tag beside Timelapse */
+  /** Sticker detail of a sticker drawn in Kyoto Seika Practice Mode: the ink tag beside Timelapse */
   tag: { en: "Entrance exam practice", ja: "入試練習" },
-  /** Sticker detail, a practice sticker: what screen readers hear for the tag and the pair, such as "風 and 再会" */
+  /** Sticker detail of a sticker drawn in Kyoto Seika Practice Mode: what screen readers hear for the tag and the pair, such as "風 and 再会" */
   spoken: {
     en: "Entrance exam practice. Subjects: {{first}} and {{second}}.",
     ja: "入試練習。題材：{{first}}と{{second}}。",
@@ -2380,7 +2390,7 @@ mark: {
 ```
 
 - [ ] **Step 4: Run `StickerDetail.test.tsx`; it passes.**
-- [ ] **Step 5: Commit:** `feat(frontend): a practice sticker's detail shows its mark and pair beside Timelapse`
+- [ ] **Step 5: Commit:** `feat(frontend): the detail of a sticker drawn in Kyoto Seika Practice Mode shows its mark and pair beside Timelapse`
 
 ### Task C4: Ten daily stubs, in rows of five
 
@@ -2416,7 +2426,7 @@ glyph: 13, edge: 1.5, star: 12 }`.
   - `TicketArt` uses `size={view.stubs.length > 3 ? "medium" : "large"}`.
 
 ```css
-/* A practice day's ten: rows of five, like a strip of 回数券. Tossed tilts stay with the large stubs. */
+/* A ten-ticket day's stubs: rows of five, like a strip of 回数券. Tossed tilts stay with the large stubs. */
 .ticket-stubs--rows {
   display: grid;
   grid-template-columns: repeat(5, auto);
@@ -2499,11 +2509,11 @@ and `observe` wrapping a `ResizeObserver` on the card. Each frame of the flight 
 `tracker.stop()`.
 
 - [ ] **Step 4: Run `sticker-creation/sealing/`; it passes.**
-- [ ] **Step 5: Check it by eye:** a practice day with ten tickets, seal: the sticker lands in its slot
-      above "Sealed", in Chromium and WebKit.
+- [ ] **Step 5: Check it by eye:** a day with ten tickets, seal: the sticker lands in its slot above
+      "Sealed", in Chromium and WebKit.
 - [ ] **Step 6: Commit:** `fix(frontend): the sealed sticker lands in its slot when the card grows under it`
 
-### Task C6: The practice switches on the Settings note, with a censor-bar name
+### Task C6: The Kyoto Seika Practice Mode switches on the Settings note, with a censor-bar name
 
 Builds on the Settings-without-restart plan's `save(setting, to, request, apply)` in `SettingsNote.tsx`.
 
@@ -2517,7 +2527,7 @@ Test: `sticker-board/stat-board/SettingsNote.test.tsx`, `kyoto-seika/CensorBar.t
 
 ```tsx
 // SettingsNote.test.tsx
-it("turns practice mode on in place: it saves, your tickets reload, and the dark subjects switch shows", async () => {
+it("turns Kyoto Seika Practice Mode on in place: it saves, your tickets reload, and the dark subjects switch shows", async () => {
   const setKyotoSeikaPractice = vi.fn<ApiClient["setKyotoSeikaPractice"]>((change) =>
     Promise.resolve({ ...TEST_ME, kyotoSeikaPractice: true, ...change }),
   );
@@ -2760,44 +2770,44 @@ and `.settings-note__credit a { color: inherit; }`.
 ```ts
 /** Kyoto Seika Manga Expression Practice Mode, on the Settings note. */
 kyotoSeika: {
-  /** Settings note: the legend over the practice mode's switch */
+  /** Settings note: the legend over Kyoto Seika Practice Mode's switch */
   title: { en: "Entrance exam", ja: "入試" },
-  /** Settings note: the practice mode's switch, its university blacked out by <bar/> */
+  /** Settings note: Kyoto Seika Practice Mode's switch, its university blacked out by <bar/> */
   name: { en: "Kyoto <bar/> University Entrance Exam Mode", ja: "京都<bar/>大学<wbr/>入試モード" },
-  /** Settings note: the word under the censor bar in the practice mode's name, never shown */
+  /** Settings note: the word under the censor bar in Kyoto Seika Practice Mode's name, never shown */
   hidden: { en: "Seika", ja: "精華" },
-  /** Settings note: what screen readers hear as the practice mode switch's name, with no censor bar */
+  /** Settings note: what screen readers hear as the name of Kyoto Seika Practice Mode's switch, with no censor bar */
   spokenName: {
     en: "A famous art university in Kyoto: entrance exam mode",
     ja: "京都の有名な美術大学 入試モード",
   },
-  /** Settings note: the line under the practice mode's switch */
+  /** Settings note: the line under Kyoto Seika Practice Mode's switch */
   about: {
     en: "Practice for the manga expression test: a {{minutes}}‑minute timer, {{tickets}} daily tickets a day, and two subjects to combine.",
     ja: "マンガ表現の練習に。タイマー{{minutes}}分、無償チケット1日{{tickets}}枚、題材を2つ組み合わせてかきます。",
   },
-  /** Settings note: the credit under the practice mode, linking the subject list's sources */
+  /** Settings note: the credit under Kyoto Seika Practice Mode's switch, linking the subject list's sources */
   credit: { en: "Subjects from JMdict, WordNet and Wiktionary. <sources>Sources</sources>", ja: "題材：JMdict、WordNet、ウィクショナリー　<sources>出典</sources>" },
-  /** Settings note: the status line once practice mode is on */
+  /** Settings note: the status line once Kyoto Seika Practice Mode is on */
   on: { en: "Practice mode is on: your next sheet deals two subjects.", ja: "練習モードをオンにしました。次のキャンバスから題材が出ます。" },
-  /** Settings note: the status line once practice mode is off */
+  /** Settings note: the status line once Kyoto Seika Practice Mode is off */
   off: { en: "Practice mode is off.", ja: "練習モードをオフにしました。" },
-  /** Settings note, under the practice mode's switch while it's on */
+  /** Settings note, under Kyoto Seika Practice Mode's switch while it's on */
   dark: {
     /** Settings note: the switch that also deals dark subjects */
     label: { en: "Dark subjects too", ja: "重い題材も出す" },
     /** Settings note: the line under the dark subjects switch */
     about: { en: "Death, war, crime, alcohol and tobacco.", ja: "死、戦争、犯罪、お酒、たばこなど。" },
   },
-  /** Settings note: when a practice switch didn't save, before the reason */
+  /** Settings note: when a Kyoto Seika Practice Mode switch didn't save, before the reason */
   notSaved: { en: "Couldn’t save it: {{reason}}", ja: "保存できませんでした：{{reason}}" },
 },
 ```
 
-`kyotoSeika.ts` under `censor`: `/** Settings note: the label that peels on under the practice mode name's censor bar when it's tapped */
+`kyotoSeika.ts` under `censor`: `/** Settings note: the label that peels on under the censor bar in Kyoto Seika Practice Mode's name when it's tapped */
   why: { en: "Redacted for grown-up reasons", ja: "大人の事情により伏せています" }`.
 
-`pages.ts`: `/** Settings note, practice mode: where the credit's Sources link goes, opened in LINE's in-app browser */
+`pages.ts`: `/** Settings note, Kyoto Seika Practice Mode: where the credit's Sources link goes, opened in LINE's in-app browser */
   sources: { en: "/sources.html", ja: "/ja/sources.html" }`.
 
 - **`sources.html`** and its Japanese copy, styled like `terms.html`: the subject list's sources and
@@ -2811,15 +2821,16 @@ kyotoSeika: {
 - [ ] **Step 4: Run `stat-board/` and `kyoto-seika/CensorBar.test.tsx`; they pass. Run `pnpm --filter frontend i18n:export /tmp/strings.csv` to check the catalog's comments.**
 - [ ] **Step 5: Check it by eye** in both languages: the bar, a tap on it (the label, and the switch
       unchanged), the switch on (the Draw key's ticket reads ×10), the dark switch.
-- [ ] **Step 6: Commit:** `feat(frontend): the practice mode's switches on the Settings note, its name behind a censor bar, and the subject list's sources`
+- [ ] **Step 6: Commit:** `feat(frontend): Kyoto Seika Practice Mode's switches on the Settings note, its name behind a censor bar, and the subject list's sources`
 
 ### Task C7: Docs (vocabulary pending sign-off)
 
 **Files:** `AGENTS.MD`, `PRODUCT.md`, `DESIGN.md`, `apps/frontend/src/i18n/glossary.md`.
 
 - [ ] **AGENTS.MD vocabulary** (the owner approves entries): Kyoto Seika Manga Expression Practice Mode;
-      Kyoto Seika Subject (題材); Kyoto Seika Practice Mode foil. Daily ticket: "Three a day, ten in practice
-      mode". The NSFW sticker and Pink foil entries say pink wins over the practice foil.
+      Kyoto Seika Subject (題材); Kyoto Seika Practice Mode foil. Daily ticket: "Three a day, ten in
+      Kyoto Seika Manga Expression Practice Mode". The NSFW sticker and Pink foil entries say pink wins
+      over the Kyoto Seika Practice Mode foil.
 - [ ] **PRODUCT.md:** Operating Context gains the mode (Settings, the deal, Begin, 30 minutes, ten
       tickets, the pair kept on the sticker); Capabilities gains the foil rule; Settings lists the switches.
 - [ ] **DESIGN.md:**
@@ -2829,7 +2840,7 @@ kyotoSeika: {
     each worn whoever drew the sticker, pink first.
   - Draw screen: the deal (balloons, dice, Begin), the easter egg, the corner note, the 56 px dot.
   - Tickets: a ten-ticket day's rows of five.
-  - Settings and the sticker detail: the censor-bar name, the practice mark.
+  - Settings and the sticker detail: the censor-bar name, the mark beside Timelapse.
 - [ ] **glossary.md:** 題材 (subject), はじめ (Begin), 伏せ字 (the censor bar), if Part B hasn't added
       them.
 - [ ] **Commit:** `docs: Kyoto Seika Manga Expression Practice Mode in AGENTS.MD, PRODUCT.md and DESIGN.md`

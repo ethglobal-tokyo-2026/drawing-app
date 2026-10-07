@@ -23,7 +23,7 @@
 5. **The tray is rebuilt on a language change and carries its `seen` set**, so stickers already shown don't come back as NEW.
 6. **"Someone" (a deleted account) follows the language** by adopting the board's last answer again on a language change. No other holder keeps it past a remount.
 7. **Errors on the note and on the board's alerts are kept raw and translated at render.**
-8. **Room for later switches:** `save(setting, to, request, apply)` is general. The practice-mode switches add a `Setting`, a `Shown` field, and an `apply` that calls `tickets.refresh()`.
+8. **Room for later switches:** `save(setting, to, request, apply)` is general. The Kyoto Seika Practice Mode switches add a `Setting`, a `Shown` field, and an `apply` that calls `tickets.refresh()`.
 
 Each task lists its files. A path that doesn't start with `apps/` or name `DESIGN.md` is under `apps/frontend/src/sticker-board/`, and a test file sits beside the file it tests. Test commands: `pnpm --filter @drawing-app/api exec vitest run <files>`, `pnpm --filter frontend exec vitest run <files>`.
 
@@ -749,4 +749,4 @@ Reviewers: check that every new reader of the board's state takes `stickers`.
 
 - **Error text kept translated in state on other screens:** the drawing screen's seal and ticket chips (`sealProblem`, `startProblem`), and the Giving, Receiving and address dialogs. The dialogs are modal and can't be open while Settings is. The drawing screen stays mounted, so its chip keeps its reason in the old language until its next try. Fix it with the same raw-error pattern when that screen is next touched.
 - **A tray rebuilt for a new language** closes if it was open, and may play its tug hint once more.
-- **The two practice-mode switches:** their spec adds them on this save path.
+- **The two Kyoto Seika Practice Mode switches:** their spec adds them on this save path.

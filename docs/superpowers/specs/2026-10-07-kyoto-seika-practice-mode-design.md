@@ -52,8 +52,8 @@ seal, and do it again, ten times a day.
    DESIGN.md (proposed #8CC8E8), a print on paper like Cork, not a coded hue.
 9. **The sealed sticker keeps its pair,** fixed at seal like the drawing time. Its detail shows
    「題材 風 × 再会」 under the seal date, to you and to anyone you give it to.
-10. **A practice sticker wears a foil of its own that reads as manga** (Kyoto Seika Practice Mode foil,
-    below).
+10. **A sticker drawn in Kyoto Seika Practice Mode wears a foil of its own that reads as manga**
+    (Kyoto Seika Practice Mode foil, below).
 11. **Dark Kyoto Seika Subjects stay, behind a second switch.** 41 subjects (death, war and its machines,
     crime against people, alcohol, tobacco, gambling, drugs, the tsunami) are dealt only with "Dark subjects
     too" on, a switch under the mode's, off by default. Ghosts, devils, thieves, swords and poison stay in the
@@ -67,15 +67,15 @@ seal, and do it again, ten times a day.
 14. **The mode belongs to the ticket.** A sheet keeps the clock and allowance its ticket was spent with, so
     flipping the switch mid-drawing neither cuts a 30-minute drawing to 3 minutes nor stretches a 3-minute
     one; it changes the next sheet.
-15. **A practice sticker's timelapse plays up to 20 s.** A practice sticker records its timelapse like any
-    other; today a timelapse plays at most 6 s. Its detail marks it as a practice sticker beside Timelapse
+15. **A timelapse plays up to 20 s on a sticker drawn in Kyoto Seika Practice Mode.** Such a sticker records
+    its timelapse like any other; today a timelapse plays at most 6 s. Its detail says so beside Timelapse
     (below).
 16. **The Kyoto Seika Practice Mode foil is direction A, tone,** and reacts to tilt (below). Pink foil wins on
     an 18+ sticker.
 17. **The list is data in the repo; its build isn't.** The Python build goes once the list is final.
-18. **Chat menus count to 10, for practice mode too.** Not a hard limit: a practice family of menus (×10
-    down to ×1, plus reserve and none) lets the midnight reset move practice-mode people to ×10 and
-    everyone else to ×3 (below).
+18. **Chat menus count to 10, for Kyoto Seika Practice Mode too.** Not a hard limit: menus of its own (×10
+    down to ×1, plus reserve and none) let the midnight reset move people in the mode to ×10 and everyone
+    else to ×3 (below).
 
 19. **The mode's name on screen hides one character of the university's, like a manga censor bar:**
     「京都█華大学 入試モード」 / "Kyoto ███ka University Entrance Exam Mode", so it's plainly a censor and
@@ -95,11 +95,12 @@ seal, and do it again, ten times a day.
       the foil's name. Never "practice mode", and no nouns coined from it ("practice sticker"): a sticker
       drawn in Kyoto Seika Practice Mode. Code and data use the stem `kyotoSeika` (`kyoto_seika` in SQL,
       `kyoto-seika/` for the folder), as Residual is `residual` in code.
-    - _Kyoto Seika Subject_ (題材): one of the two words dealt for a practice sticker. The guide's word is
-      題材, in Japanese only: Seika publishes no English version of this test's rules, and its English
-      brochure names only the test, "Manga Expression". On screen: 題材 in Japanese, "subject" in English
-      (JMdict's first gloss for 題材).
-    - _Kyoto Seika Practice Mode foil_: the foil a practice sticker wears (decision 10).
+    - _Kyoto Seika Subject_ (題材): one of the two words dealt for a sticker drawn in Kyoto Seika Practice Mode.
+      The guide's word is 題材, in Japanese only: Seika publishes no English version of this test's rules, and
+      its English brochure names only the test, "Manga Expression". On screen: 題材 in Japanese, "subject" in
+      English (JMdict's first gloss for 題材).
+    - _Kyoto Seika Practice Mode foil_: the foil a sticker drawn in Kyoto Seika Practice Mode wears
+      (decision 10).
     - _Daily ticket_ changes: "one of the three free tickets each user gets per day" becomes three a day,
       ten in Kyoto Seika Manga Expression Practice Mode (decision 2).
 
@@ -115,7 +116,7 @@ visual world. Operate mode; the delight is in the deal and in Begin.
   thought balloons bob over the blank sheet, a roll puffs one word out and the next in, Begin tucks them
   into the margin as a note in manga paper's non-repro blue, and the clock starts.
 
-### The deal (a fresh practice sheet)
+### The deal (a fresh sheet in Kyoto Seika Practice Mode)
 
 - **On screen:** the timer dot reading 30:00, the two balloons with their dice, and the Begin key at the
   sheet's foot. The tool strip, size rail, undo and redo are hidden until Begin, as in an exam where you
@@ -233,11 +234,12 @@ stays readable.
   line: "Death, war, crime, alcohol and tobacco." It has no divider above it; the mockup's clone of the 18+
   setting drew one through the credit line.
 
-### The practice mark on the sticker
+### The mark on the sticker
 
-Where the detail offers Timelapse, a practice sticker says what it is: under the drawing time and
-Timelapse, an ink label-tape tag, tilted −2°, with a tone swatch matching its foil, "Entrance exam practice"
-/ 「入試練習」, and beside it the pair, 「風 × 再会」, at 20 px with 11 px furigana over each kanji word.
+Where the detail offers Timelapse, a sticker drawn in Kyoto Seika Practice Mode says what it is: under the
+drawing time and Timelapse, an ink label-tape tag, tilted −2°, with a tone swatch matching its foil,
+"Entrance exam practice" / 「入試練習」, and beside it the pair, 「風 × 再会」, at 20 px with 11 px furigana
+over each kanji word.
 
 ### Furigana
 
@@ -270,7 +272,7 @@ A word whose kanji are rare is printed in kana and needs none (the review's 24 r
 
 ## Kyoto Seika foil
 
-A practice sticker wears a foil of its own that reads as manga (decision 10).
+A sticker drawn in Kyoto Seika Practice Mode wears a foil of its own that reads as manga (decision 10).
 
 ### What real special foils say
 
@@ -320,10 +322,10 @@ one light.
 
 - **Whoever drew it,** everywhere pink foil shows today (boards, tray sheets, the detail, the receive
   dialog, the View dialog and Explore's lifted sticker): it marks how the sticker was made, not whose hands
-  it's in. On a practice sticker someone else drew, it takes holo's place, and the artist chip still names
-  who drew it.
-- **Pink wins:** an 18+ practice sticker wears pink foil, which protects people. Its detail still shows its
-  pair.
+  it's in. On a sticker drawn in Kyoto Seika Practice Mode by someone else, it takes holo's place, and the
+  artist chip still names who drew it.
+- **Pink wins:** an 18+ sticker drawn in Kyoto Seika Practice Mode wears pink foil, which protects people.
+  Its detail still shows its pair.
 - **Like holo and pink, not on** the sealed card, the gift bag, the Gratitude mini-game or Explore's pile.
 - DESIGN.md has no rule for pink foil today, and its Other Hand Rule says foil never shows on your own
   stickers. The build writes both exceptions into it.
@@ -341,8 +343,8 @@ one light.
   when the light moves, at most every 45 ms.
 - Reduced motion: the sparkles hold where the light last was. A board resting behind its cork pauses
   them, as it pauses the holo's flow.
-- Check on a phone with the performance recorder: a board full of practice stickers, and the contrast
-  filter on the tray's sheets.
+- Check on a phone with the performance recorder: a board full of stickers drawn in
+  Kyoto Seika Practice Mode, and the contrast filter on the tray's sheets.
 
 ## Server and data
 
@@ -362,9 +364,9 @@ one light.
 - `stickers_time_used` CHECK rises to `KYOTO_SEIKA_TIME_USED_S`; the seal route refuses a `timeUsed` over its
   ticket's limit, since the CHECK can't see the ticket.
 - `stickers.kyoto_seika_subjects` (JSON, the two words and their English, null on any other sticker; the
-  table's new last column), sent with the seal, required for a practice ticket and refused for any other. It
-  reaches every sticker the API answers as `kyotoSeikaSubjects`, which marks the sticker for its foil too.
-  The sticker's object on Sui doesn't carry it.
+  table's new last column), sent with the seal, required for a ticket spent in Kyoto Seika Practice Mode and
+  refused for any other. It reaches every sticker the API answers as `kyotoSeikaSubjects`, which marks the
+  sticker for its foil too. The sticker's object on Sui doesn't carry it.
 - Changing CHECKs rebuilds both tables: a generated migration with their `updated_at` triggers appended.
 
 ## Chat menus (decision 18)
@@ -373,10 +375,11 @@ The Official account's chat menu shows Draw with the tickets left, as one fixed 
 change a menu's image, so each count is its own menu. Today each language has plain, 3, 2, 1, reserve and
 none (`deploy/line/menus.json`), and the midnight batch moves everyone on a counted menu back to 3.
 
-- **A practice family per language:** practice 10 down to 1, plus practice reserve and practice none: 12
-  more menus per language. Counts 4–10 are new images (7 per language, from the existing `chat-menus`
-  render); 1–3, reserve and none reuse today's images under their own menu IDs.
-- **Midnight:** one batch, two sets of moves: everyone on a practice menu to practice 10, everyone else to 3. LINE's batch moves people by the menu they're on, which is why practice needs menus of its own.
+- **Kyoto Seika Practice Mode menus per language:** 10 down to 1, plus reserve and none: 12 more menus per
+  language. Counts 4–10 are new images (7 per language, from the existing `chat-menus` render); 1–3,
+  reserve and none reuse today's images under their own menu IDs.
+- **Midnight:** one batch, two sets of moves: everyone on a Kyoto Seika Practice Mode menu to ×10, everyone
+  else to 3. LINE's batch moves people by the menu they're on, which is why the mode needs menus of its own.
 - **Switching the mode** relinks the person at once (the relink after a spend already exists).
 - **Limits:** LINE allows 1,000 rich menus per Official Account; this brings Croquis to 37. Creating
   menus is limited to 100 an hour and batches to 3 an hour, which the one midnight batch stays within.
@@ -388,10 +391,10 @@ none (`deploy/line/menus.json`), and the midnight batch moves everyone on a coun
 
 - New feature folder `apps/frontend/src/kyoto-seika/`: the subject list and its loader, dealing, the
   balloon's geometry and the pair's layout (pure, tested), the balloons, the Begin key, the corner print.
-- The subject list is a JSON module loaded only when a practice sheet opens, with its licence and notices
-  beside it.
-- The session gains a phase before `primed` for a practice sheet: dealt, waiting for Begin, the sheet locked.
-  Begin starts the clock, so the clock's "waits for the first stroke" doesn't apply.
+- The subject list is a JSON module loaded only when a sheet opens in Kyoto Seika Practice Mode, with its
+  licence and notices beside it.
+- The session gains a phase before `primed` for a sheet in Kyoto Seika Practice Mode: dealt, waiting for
+  Begin, the sheet locked. Begin starts the clock, so the clock's "waits for the first stroke" doesn't apply.
 - The clock's length comes from the sheet's ticket, not the `SESSION_MS` constant; the start card's
   "{{minutes}}-minute" line and the warnings follow it.
 - The kept session stores the ticket's mode and the pair, so a reload brings back the same balloons, or the
@@ -502,16 +505,16 @@ loanwords 284; 618 in the evocative tier (decision 22).
 
 ## Checks during the build
 
-- The timelapse, which every practice sticker records like any other: a synthetic 30-minute session through
-  the app's own encoding gzips to 136 KB at 60 Hz, 258 KB at 120 Hz and 478 KB at 240 Hz (Apple Pencil), far
-  under the 2 MB cap; confirm with a real one.
+- The timelapse, which every sticker drawn in Kyoto Seika Practice Mode records like any other: a synthetic
+  30-minute session through the app's own encoding gzips to 136 KB at 60 Hz, 258 KB at 120 Hz and 478 KB at
+  240 Hz (Apple Pencil), far under the 2 MB cap; confirm with a real one.
   Playback per decision 15. The pass that prepares a timelapse's fills gives up after 30 s: time it on a
   30-minute drawing with many fills.
 - The ink engine over 30 minutes of strokes: undo history and the kept session's size. A long synthetic
   session, then the performance recorder.
 - The sealed card with two rows of stubs (above).
-- The Kyoto Seika foil at the tray sheet's 3 px band, and on a board full of practice stickers with the
-  performance recorder.
+- The Kyoto Seika foil at the tray sheet's 3 px band, and on a board full of stickers drawn in
+  Kyoto Seika Practice Mode with the performance recorder.
 - Turning Show 18+ stickers off in place: no NSFW drawing shows from memory or the browser's cache, and a
   failed reload keeps them hidden.
 - The balloons on short phones without going under 11 px (above).
@@ -532,7 +535,7 @@ loanwords 284; 618 in the evocative tier (decision 22).
 7. Ten stubs and the sealed card's slot.
 8. The 56 px timer dot.
 9. Settings without a restart: language, then Show 18+ stickers with its fail-closed hiding. Its own
-   branch, since it touches Settings everywhere; it can land before the practice mode.
+   branch, since it touches Settings everywhere; it can land before Kyoto Seika Practice Mode.
 10. Docs: AGENTS.MD vocabulary, PRODUCT.md, DESIGN.md (balloons, Begin, non-repro blue, the timer, ten
     stubs, and the foil rules: pink and Kyoto Seika foil beside the Other Hand Rule).
 11. Verification: the checks above, `impeccable detect`, and the finish reviewer.
