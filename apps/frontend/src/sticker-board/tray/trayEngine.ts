@@ -90,6 +90,7 @@ export function createTrayEngine(
     api,
     markSeen,
     problem,
+    seen = new Set<string>(),
   }: {
     slots: () => readonly TraySticker[];
     api: TrayBoard;
@@ -97,6 +98,11 @@ export function createTrayEngine(
     markSeen: (ids: readonly string[]) => void;
     /** Something the tray couldn't do, for the board to say. */
     problem: (problem: TrayProblem) => void;
+    /**
+     * Shown in the open tray: the stickers' own marks, and what this visit's trays have shown,
+     * carried across a rebuilt engine.
+     */
+    seen?: Set<string>;
   },
 ): TrayEngine {
   const doc = board.ownerDocument;
@@ -214,8 +220,6 @@ export function createTrayEngine(
   const w1 = make("div", "tray__w1", c1, deepTop);
   zip.slot.append(w1);
 
-  /** Shown in the open tray: the stickers' own marks, and this visit's. */
-  const seen = new Set<string>();
   const ui: TrayState = {
     filter: "all",
     order: [],

@@ -1,5 +1,5 @@
 import { currentLanguage, i18next } from "./i18n";
-import { requestJapaneseFont } from "./japaneseFont";
+import { releaseJapaneseFont, requestJapaneseFont } from "./japaneseFont";
 import {
   keepChosenLanguage,
   languageOf,
@@ -28,6 +28,10 @@ export function startInLineLanguage(lineTag: string): void {
   void switchTo(startLanguage(readChosenLanguage(), line));
 }
 
+/** Switches the app to the language `choice` picks: the choice, else LINE's. */
+export const followLanguageChoice = (choice: Language | null): Promise<void> =>
+  switchTo(startLanguage(choice, line));
+
 /**
  * After sign-in, the account's language choice wins over this device's: the device keeps it for the
  * next start, and the app switches to it before it opens.
@@ -41,12 +45,12 @@ export async function followAccountLanguage(choice: Language | null): Promise<vo
     // screen, before sign-in, is in the old language.
     console.error("The account's language choice couldn't be kept on this device", error);
   }
-  await switchTo(startLanguage(choice, line));
+  await followLanguageChoice(choice);
 }
 
 /**
  * Keeps `<html lang>`, the page's title and LIFF's own text in the app's language, and asks for the
- * Japanese face the first time it's Japanese.
+ * Japanese face while it's Japanese.
  */
 export function followLanguageOnPage(setLiffLanguage: (language: Language) => Promise<void>): void {
   const apply = () => {
@@ -54,6 +58,7 @@ export function followLanguageOnPage(setLiffLanguage: (language: Language) => Pr
     document.documentElement.lang = language;
     document.title = i18next.t(($) => $.app.title);
     if (language === "ja") requestJapaneseFont();
+    else releaseJapaneseFont();
     setLiffLanguage(language).catch((error: unknown) =>
       console.error(`LIFF's own text didn't switch to ${language}`, error),
     );

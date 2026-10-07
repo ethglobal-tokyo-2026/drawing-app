@@ -20,3 +20,9 @@ export function requestJapaneseFont(doc: Document = document): void {
   link.addEventListener("load", () => (link.rel = "stylesheet"), { once: true });
   doc.head.append(link);
 }
+
+/** Takes the Japanese face off the page, so English sets the odd Japanese glyph as an English start does. */
+export function releaseJapaneseFont(doc: Document = document): void {
+  for (const link of doc.head.querySelectorAll("link"))
+    if (link.href === JAPANESE_FONT_CSS) link.remove();
+}

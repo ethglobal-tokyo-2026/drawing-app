@@ -1,23 +1,16 @@
-import {
-  useEffect,
-  useEffectEvent,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type RefObject,
-} from "react";
+import type { Me } from "@drawing-app/api/client";
+import { useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { apiError } from "../../api/apiClient";
-import { useMe } from "../../api/meContext";
+import { useMe, useSetMe } from "../../api/meContext";
 import { useApi } from "../../api/useApi";
-import { problemOf, type Problem } from "../../i18n/errorMessage";
+import { problemOf } from "../../i18n/errorMessage";
+import { currentLanguage } from "../../i18n/i18n";
 import { keepChosenLanguage, type Language } from "../../i18n/language";
-import { lineLanguage } from "../../i18n/pageLanguage";
+import { followLanguageChoice, lineLanguage } from "../../i18n/pageLanguage";
 import { useTranslation } from "../../i18n/react";
 import { ErrorLine } from "../../ui/ErrorLine";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { forget as forgetKeptBoard } from "../lastBoard";
-import { reopenOnSettingsNextStart } from "./reopenOnSettings";
 import { statsClearPeek } from "./settingsPeek";
 import "./settings-note.css";
 
@@ -29,14 +22,17 @@ const CHOICES: readonly Choice[] = [null, "en", "ja"];
 /** How much of the paper under its title peeks above the cork's foot, in px. */
 const PEEK_UNDER_TITLE = 10;
 
-/** The settings on the note; one saves at a time, since each restarts the app once it has. */
+/** The settings on the note, each saved to your account and applied in place; one saves at a time. */
 type Setting = "language" | "nsfw";
-
+/** The account's settings as the note shows them: a saving one shows its new value. */
+type Shown = Pick<Me, "languageChoice" | "nsfwOptIn">;
+/** Why a setting didn't take: kept as it failed, so its words follow the app's language. */
+type Failure = { kind: "notSaved" | "notKept"; error: unknown };
 type Status =
   | { step: "idle" }
-  | { step: "saving"; setting: "language"; choice: Choice }
-  | { step: "saving"; setting: "nsfw"; nsfwOptIn: boolean }
-  | { step: "failed"; setting: Setting; problem: Problem };
+  | { step: "saving"; setting: Setting; to: Partial<Shown> }
+  | { step: "applied"; setting: Setting }
+  | { step: "failed"; setting: Setting; failure: Failure };
 
 /**
  * Sticks the note to the cork's foot with only its title showing, until it scrolls into view: CSS
@@ -89,119 +85,108 @@ function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLEleme
 }
 
 /**
- * The app restarted for a language change, so the note comes into view as the cork shows and stays
- * there while the figures above it load and change height, until the person touches the cork.
+ * Your Settings, the first paper under the stats on your cork back. Each setting saves to your account
+ * and applies in place: `me` takes the server's answer, and every screen follows it. A language is
+ * also kept on this phone for the first screens of the next start.
  */
-function useOpenInView(
-  note: RefObject<HTMLElement | null>,
-  reveal: (behavior?: ScrollBehavior) => void,
-  opened: boolean,
-) {
-  const revealNow = useEffectEvent(() => reveal("instant"));
-  useEffect(() => {
-    const cork = note.current?.parentElement;
-    const above = cork?.querySelector(".stat-board__stats");
-    if (!opened || !cork || !above) return;
-    revealNow();
-    const resized = new ResizeObserver(revealNow);
-    resized.observe(above);
-    const letGo = () => resized.disconnect();
-    const touches = ["pointerdown", "wheel", "keydown"] as const;
-    for (const type of touches) cork.addEventListener(type, letGo, { once: true, passive: true });
-    return () => {
-      resized.disconnect();
-      for (const type of touches) cork.removeEventListener(type, letGo);
-    };
-  }, [note, opened]);
-}
-
-/**
- * Your Settings, the first paper under the stats on your cork back. A language is saved to your
- * account, then kept on this phone for the first screen of the next start, and the app restarts in
- * it, so text built outside React follows too. The NSFW opt-in is saved to your account the same
- * way, and the board kept on this phone goes, since its images were the other kind. The start after
- * either change opens on this note, so the person sees their pick took (`openedInView`).
- */
-export function SettingsNote({
-  restart = () => location.reload(),
-  openedInView = false,
-}: {
-  restart?: () => void;
-  openedInView?: boolean;
-}) {
+export function SettingsNote() {
   const { t } = useTranslation();
   const api = useApi();
   const me = useMe();
+  const setMe = useSetMe();
   const id = useId();
   const note = useRef<HTMLElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
-  const [saved, setSaved] = useState<Choice>(me.languageChoice);
-  const [savedOptIn, setSavedOptIn] = useState(me.nsfwOptIn);
   const [status, setStatus] = useState<Status>({ step: "idle" });
   const reveal = usePeek(note, title);
-  useOpenInView(note, reveal, openedInView);
 
-  const choose = async (choice: Choice) => {
+  /** Saves a setting, then applies it: `me` takes the answer, and `apply` does what it changes on this phone. */
+  const save = async (
+    setting: Setting,
+    to: Partial<Shown>,
+    request: () => Promise<Me>,
+    apply: () => Promise<Failure | null> | Failure | null,
+  ) => {
     if (status.step === "saving") return;
-    setStatus({ step: "saving", setting: "language", choice });
+    setStatus({ step: "saving", setting, to });
+    let saved: Me;
     try {
-      await api.setLanguageChoice(choice, lineLanguage());
+      saved = await request();
     } catch (error) {
       const failure = apiError(error);
-      console.error("The language choice wasn't saved", failure);
-      const { message, detail } = problemOf(failure);
-      const problem = {
-        message: t(($) => $.stickerBoard.settings.language.notSaved, { reason: message }),
-        detail,
-      };
-      setStatus({ step: "failed", setting: "language", problem });
+      console.error(`The ${setting} setting wasn't saved`, failure);
+      setStatus({ step: "failed", setting, failure: { kind: "notSaved", error: failure } });
       return;
     }
-    setSaved(choice);
-    try {
-      keepChosenLanguage(choice);
-    } catch (error) {
-      console.error("The saved language choice couldn't be kept on this phone", error);
-      const { detail } = problemOf(error);
-      const message = t(($) => $.stickerBoard.settings.language.notKept);
-      setStatus({ step: "failed", setting: "language", problem: { message, detail } });
-      return;
-    }
-    reopenOnSettingsNextStart();
-    restart();
+    setMe(saved);
+    const failure = await apply();
+    setStatus(failure ? { step: "failed", setting, failure } : { step: "applied", setting });
   };
 
-  const switchNsfw = async (nsfwOptIn: boolean) => {
-    if (status.step === "saving") return;
-    setStatus({ step: "saving", setting: "nsfw", nsfwOptIn });
-    try {
-      await api.setNsfwOptIn(nsfwOptIn);
-    } catch (error) {
-      const failure = apiError(error);
-      console.error("The NSFW opt-in wasn't saved", failure);
-      const { message, detail } = problemOf(failure);
-      const problem = {
-        message: t(($) => $.stickerBoard.settings.nsfw.notSaved, { reason: message }),
-        detail,
-      };
-      setStatus({ step: "failed", setting: "nsfw", problem });
-      return;
-    }
-    setSavedOptIn(nsfwOptIn);
-    forgetKeptBoard();
-    reopenOnSettingsNextStart();
-    restart();
-  };
+  const choose = (choice: Choice) =>
+    save(
+      "language",
+      { languageChoice: choice },
+      () => api.setLanguageChoice(choice, lineLanguage()),
+      async () => {
+        let failure: Failure | null = null;
+        try {
+          keepChosenLanguage(choice);
+        } catch (error) {
+          // The app switches anyway: only the next start's screens before sign-in are in the old language.
+          console.error("The saved language choice couldn't be kept on this phone", error);
+          failure = { kind: "notKept", error };
+        }
+        await followLanguageChoice(choice);
+        return failure;
+      },
+    );
+
+  const switchNsfw = (nsfwOptIn: boolean) =>
+    save(
+      "nsfw",
+      { nsfwOptIn },
+      () => api.setNsfwOptIn(nsfwOptIn),
+      () => {
+        // Its images were picked for the other setting; screens follow `me` themselves.
+        forgetKeptBoard();
+        return null;
+      },
+    );
 
   const named = (language: Language) => t(($) => $.stickerBoard.settings.language.names[language]);
   const label = (choice: Choice) =>
     choice === null
       ? t(($) => $.stickerBoard.settings.language.sameAsLine, { language: named(lineLanguage()) })
       : named(choice);
-  const savingLanguage = status.step === "saving" && status.setting === "language";
-  const savingNsfw = status.step === "saving" && status.setting === "nsfw";
-  const checked = savingLanguage ? status.choice : saved;
-  const optedIn = savingNsfw ? status.nsfwOptIn : savedOptIn;
+  const shown: Shown = status.step === "saving" ? { ...me, ...status.to } : me;
+  const saving = (setting: Setting) => status.step === "saving" && status.setting === setting;
+  /** A setting's status line: saving, then what took, in the app's language now. */
+  const statusLine = (setting: Setting) => {
+    if (saving(setting)) return t(($) => $.stickerBoard.settings.saving);
+    if (status.step !== "applied" || status.setting !== setting) return "";
+    if (setting === "language")
+      return t(($) => $.stickerBoard.settings.language.applied, {
+        language: named(currentLanguage()),
+      });
+    return me.nsfwOptIn
+      ? t(($) => $.stickerBoard.settings.nsfw.shown)
+      : t(($) => $.stickerBoard.settings.nsfw.blurred);
+  };
+  /** Why a setting didn't take, in the app's language now. */
+  const problem = (setting: Setting) => {
+    if (status.step !== "failed" || status.setting !== setting) return null;
+    const { message, detail } = problemOf(status.failure.error);
+    const words =
+      status.failure.kind === "notKept"
+        ? t(($) => $.stickerBoard.settings.language.notKept)
+        : t(($) => $.stickerBoard.settings[setting].notSaved, { reason: message });
+    return (
+      <ErrorLine className="settings-note__problem" detail={detail}>
+        {words}
+      </ErrorLine>
+    );
+  };
 
   return (
     <section
@@ -215,7 +200,7 @@ export function SettingsNote({
         <h3 ref={title} className="settings-note__title" id={`${id}-title`}>
           {t(($) => $.stickerBoard.settings.title)}
         </h3>
-        <fieldset className="settings-note__setting" aria-busy={savingLanguage}>
+        <fieldset className="settings-note__setting" aria-busy={saving("language")}>
           <legend className="fine settings-note__legend">
             {t(($) => $.stickerBoard.settings.language.title)}
           </legend>
@@ -224,26 +209,19 @@ export function SettingsNote({
               <input
                 type="radio"
                 name={`${id}-language`}
-                checked={checked === choice}
+                checked={shown.languageChoice === choice}
                 onChange={() => void choose(choice)}
               />
               {/* A language's own name is in that language, for screen readers too. */}
               <span lang={choice ?? undefined}>{label(choice)}</span>
             </label>
           ))}
-          <p className="fine settings-note__restarts">
-            {t(($) => $.stickerBoard.settings.language.restarts)}
-          </p>
           <p className="fine settings-note__status" role="status">
-            {savingLanguage ? t(($) => $.stickerBoard.settings.saving) : ""}
+            {statusLine("language")}
           </p>
-          {status.step === "failed" && status.setting === "language" && (
-            <ErrorLine className="settings-note__problem" detail={status.problem.detail}>
-              {status.problem.message}
-            </ErrorLine>
-          )}
+          {problem("language")}
         </fieldset>
-        <fieldset className="settings-note__setting" aria-busy={savingNsfw}>
+        <fieldset className="settings-note__setting" aria-busy={saving("nsfw")}>
           <legend className="fine settings-note__legend">
             {t(($) => $.stickerBoard.settings.nsfw.title)}
           </legend>
@@ -252,25 +230,18 @@ export function SettingsNote({
             <input
               type="checkbox"
               role="switch"
-              checked={optedIn}
+              checked={shown.nsfwOptIn}
               aria-describedby={`${id}-nsfw-about`}
-              onChange={() => void switchNsfw(!optedIn)}
+              onChange={() => void switchNsfw(!shown.nsfwOptIn)}
             />
           </label>
           <p className="fine settings-note__about" id={`${id}-nsfw-about`}>
             {t(($) => $.stickerBoard.settings.nsfw.about)}
           </p>
-          <p className="fine settings-note__restarts">
-            {t(($) => $.stickerBoard.settings.nsfw.restarts)}
-          </p>
           <p className="fine settings-note__status" role="status">
-            {savingNsfw ? t(($) => $.stickerBoard.settings.saving) : ""}
+            {statusLine("nsfw")}
           </p>
-          {status.step === "failed" && status.setting === "nsfw" && (
-            <ErrorLine className="settings-note__problem" detail={status.problem.detail}>
-              {status.problem.message}
-            </ErrorLine>
-          )}
+          {problem("nsfw")}
         </fieldset>
       </div>
       <i

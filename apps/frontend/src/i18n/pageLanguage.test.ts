@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
 import type { Window as HappyWindow } from "happy-dom";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { i18next } from "./i18n";
+import { currentLanguage, i18next } from "./i18n";
 import { JAPANESE_FONT_CSS } from "./japaneseFont";
-import { followLanguageOnPage } from "./pageLanguage";
+import { keepChosenLanguage } from "./language";
+import { followLanguageChoice, followLanguageOnPage } from "./pageLanguage";
 
 const japaneseFontLinks = () =>
   [...document.head.querySelectorAll("link")].filter((l) => l.href === JAPANESE_FONT_CSS);
@@ -19,6 +20,7 @@ beforeAll(() => {
 afterEach(async () => {
   await i18next.changeLanguage("en");
   for (const link of japaneseFontLinks()) link.remove();
+  localStorage.clear();
 });
 
 describe("the page's language", () => {
@@ -33,12 +35,23 @@ describe("the page's language", () => {
     expect(setLiffLanguage).toHaveBeenLastCalledWith("ja");
   });
 
-  it("asks for the Japanese face only once the app is in Japanese, and only once", async () => {
+  it("asks for the Japanese face while the app is in Japanese, once, and lets it go in English", async () => {
     followLanguageOnPage(() => Promise.resolve());
     expect(japaneseFontLinks()).toHaveLength(0);
     await i18next.changeLanguage("ja");
-    await i18next.changeLanguage("en");
     await i18next.changeLanguage("ja");
     expect(japaneseFontLinks()).toHaveLength(1);
+    await i18next.changeLanguage("en");
+    expect(japaneseFontLinks()).toHaveLength(0);
+    await i18next.changeLanguage("ja");
+    expect(japaneseFontLinks()).toHaveLength(1);
+  });
+
+  it("switches to a language choice, or to LINE's for none, even when this phone kept it already", async () => {
+    keepChosenLanguage("ja");
+    await followLanguageChoice("ja");
+    expect(currentLanguage()).toBe("ja");
+    await followLanguageChoice(null);
+    expect(currentLanguage()).toBe("en");
   });
 });

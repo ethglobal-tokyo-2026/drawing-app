@@ -1,10 +1,10 @@
 import type { Gratitude, Me, Person, RecordGratitude, Tickets } from "@drawing-app/api/client";
-import { act, type ReactNode } from "react";
+import { act, createRef, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { ApiError, type ApiClient } from "./apiClient";
 import { ApiProvider } from "./ApiProvider";
 import { TicketsProvider } from "../tickets/TicketsProvider";
-import { MeContext } from "./meContext";
+import { MeHolder } from "./MeHolder";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -147,12 +147,13 @@ export function renderWithApi(ui: ReactNode, client: ApiClient = emptyApi(), me:
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
+  const replace = createRef<(me: Me) => void>();
   const wrap = (node: ReactNode) => (
-    <MeContext value={me}>
+    <MeHolder me={me} replace={replace}>
       <ApiProvider client={client}>
         <TicketsProvider>{node}</TicketsProvider>
       </ApiProvider>
-    </MeContext>
+    </MeHolder>
   );
   act(() => root.render(wrap(ui)));
   return {
@@ -160,6 +161,8 @@ export function renderWithApi(ui: ReactNode, client: ApiClient = emptyApi(), me:
     root,
     client,
     rerender: (next: ReactNode) => act(() => root.render(wrap(next))),
+    /** Replaces you, as a setting saved on the Settings note does. */
+    setMe: (next: Me) => act(() => replace.current?.(next)),
     unmount: () => {
       act(() => root.unmount());
       host.remove();

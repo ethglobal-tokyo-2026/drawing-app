@@ -1,6 +1,7 @@
 import type { StickerBoard } from "@drawing-app/api/client";
 import { QueryAnswers, useApiQuery, type Query } from "../api/useApiQuery";
 import { noteBootMilestone } from "../performance/bootMilestones";
+import { useNsfwOptInKey } from "../stickers/nsfw";
 
 const answers = new QueryAnswers<StickerBoard>();
 const changes = new Set<() => void>();
@@ -30,7 +31,7 @@ export function onMyStickerBoardChanged(changed: () => void): () => void {
  */
 export const useMyStickerBoard = ({ ownLoadOnly = false } = {}): Query<StickerBoard> =>
   useApiQuery(
-    "sticker-board/me",
+    useNsfwOptInKey("sticker-board/me"),
     async (api) => {
       const board = await api.stickerBoard();
       noteBootMilestone("board JSON", `${board.boardStickers.length} stickers`);

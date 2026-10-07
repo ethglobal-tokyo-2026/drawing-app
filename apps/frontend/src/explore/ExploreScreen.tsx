@@ -18,6 +18,7 @@ import { formatCount, formatTimeOfDay, formatWeekday } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
 import { At, StreakIcon, X } from "../icons";
 import { formatHandle } from "../stickers/format";
+import { useNsfwOptInKey } from "../stickers/nsfw";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
@@ -611,7 +612,9 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
     return () => clearTimeout(id);
   }, [q]);
   const [view, setView] = useState<View>("stickers");
-  const explore = useApiQuery("explore", (api) => api.explore());
+  // The pile's images are picked by your NSFW opt-in: a change loads it from its first page again,
+  // and the old pages go with <Stickers>, which the loading state unmounts.
+  const explore = useApiQuery(useNsfwOptInKey("explore"), (api) => api.explore());
   const open: Open = (person) => (person.id === me.id ? onOpenMyBoard() : onOpenArtist(person));
 
   const shown =

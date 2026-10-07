@@ -6,18 +6,20 @@ import type {
 } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { boardSticker, people, sticker, trailEntry } from "../api/testFixtures";
+import { boardSticker, gift, people, sticker, trailEntry } from "../api/testFixtures";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toApiPlacement, toPerson } from "../api/views";
 import { forgetNoticedHere, markNoticed, noticeReceivesFromNow } from "../giving/noticedGifts";
+import { i18next, withBreakHints } from "../i18n/i18n";
+import { api as apiStrings } from "../i18n/strings/api";
+import { errors } from "../i18n/strings/errors";
 import { stickerBoard } from "../i18n/strings/stickerBoard";
-import { forgetGreetings, owesGreeting } from "./artistChipGreeting";
+import { forgetGreetings } from "./artistChipGreeting";
 import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
 import { forgetSelectionHints } from "./selectionHint";
-import { keepBoard, keptBoardFor, readKeptBoardAgain } from "./lastBoard";
-import { reopenOnSettingsNextStart } from "./stat-board/reopenOnSettings";
+import { forget, keepBoard, keptBoardFor, readKeptBoardAgain } from "./lastBoard";
 import { StickerBoard } from "./StickerBoard";
 import { myStickerBoardChanged } from "./useMyStickerBoard";
 import { STEP_SAVE_IDLE_MS } from "./useBoardGestures";
@@ -263,20 +265,6 @@ describe("StickerBoard's artist chips", () => {
       { timeout: 4000 },
     );
     expect(chipped(view.host)).toEqual(["@bob"]);
-  });
-
-  it("wait for the front when the board opens turned over, and aren't spent behind the stat board", () => {
-    keep(TEST_ME.id, byMika());
-    // A language change restarts the app onto the stat board.
-    reopenOnSettingsNextStart();
-    const view = openBoard();
-    unmount = view.unmount;
-    expect(chipped(view.host)).toEqual([]);
-    expect(owesGreeting(TEST_ME.id)).toBe(true);
-
-    flip(view.host);
-    expect(chipped(view.host)).toEqual(["@mika"]);
-    expect(owesGreeting(TEST_ME.id)).toBe(false);
   });
 
   it("end with a turn of the board while they play, and don't start over when it turns back", () => {
@@ -684,5 +672,162 @@ describe("StickerBoard while it loads", () => {
 
     await act(async () => answer({ owner: TEST_OWNER, boardStickers: [] }));
     expect(shapes()).toBe(0);
+  });
+});
+
+describe("StickerBoard when the app's language changes", () => {
+  afterEach(async () => {
+    await i18next.changeLanguage("en");
+  });
+
+  it("names a deleted account's sticker in the new language", async () => {
+    const gone: Person = { ...people.ken, handle: null, lineDisplayName: null };
+    const theirs = boardSticker({ placement: at(0.5), sticker: sticker({ artist: gone }) });
+    const view = await visitBoard(theirs);
+    const label = () =>
+      view.host
+        .querySelector(`[data-sticker-id="${theirs.stickerId}"]`)
+        ?.getAttribute("aria-label");
+    expect(label()).toContain(apiStrings.person.unnamed.en);
+    await act(() => i18next.changeLanguage("ja"));
+    expect(label()).toContain(apiStrings.person.unnamed.ja);
+  });
+
+  it("says why a spot didn't save in the new language", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const view = renderWithApi(
+      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
+      emptyApi({
+        // The board gives an unplaced sticker a spot, and saves it.
+        stickerBoard: () =>
+          Promise.resolve({
+            owner: TEST_OWNER,
+            boardStickers: [boardSticker({ placement: null })],
+          }),
+        saveStickerPlacement: () =>
+          Promise.reject(new ApiError(0, { error: "network", detail: "Failed to fetch" })),
+      }),
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    const alert = () => view.host.querySelector(".board-alerts")?.textContent;
+    expect(alert()).toContain(withBreakHints(errors.network.en));
+    await act(() => i18next.changeLanguage("ja"));
+    expect(alert()).toContain(withBreakHints(errors.network.ja));
+  });
+});
+
+describe("StickerBoard when your NSFW opt-in changes", () => {
+  const DRAWING = "https://box.test/drawing.webp";
+  const VEILED = "https://cdn.test/veiled.webp";
+  /** Your NSFW sticker as the server sends it to you opted in, or not. */
+  const nsfwSticker = (optedIn: boolean) => {
+    const s = sticker({ id: "nsfw", number: 7, nsfw: true, artist: TEST_OWNER });
+    return {
+      ...s,
+      images: { ...s.images, webp: { ...s.images.webp, sticker: optedIn ? DRAWING : VEILED } },
+    };
+  };
+  const boardFor = (optedIn: boolean): LoadedBoard => ({
+    owner: { ...TEST_OWNER, nsfwOptIn: optedIn },
+    boardStickers: [boardSticker({ placement: at(0.5), sticker: nsfwSticker(optedIn) })],
+  });
+  const sentFor = (optedIn: boolean) => ({
+    gifts: [{ gift: gift(), sticker: nsfwSticker(optedIn), for: null }],
+  });
+
+  /** Your board opted in, its drawing on the board and on the badge; `later` answers each load after the first. */
+  async function optedInBoard(later: ApiClient["stickerBoard"]) {
+    onAPhone();
+    const stickerBoard = vi
+      .fn<ApiClient["stickerBoard"]>()
+      .mockResolvedValueOnce(boardFor(true))
+      .mockImplementation(later);
+    const pendingGifts = vi
+      .fn<ApiClient["pendingGifts"]>()
+      .mockResolvedValueOnce(sentFor(true))
+      .mockResolvedValue(sentFor(false));
+    const view = renderWithApi(
+      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
+      emptyApi({ stickerBoard, pendingGifts }),
+      { ...TEST_ME, nsfwOptIn: true },
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    expect(view.host.innerHTML).toContain(DRAWING);
+    return { view, stickerBoard };
+  }
+  const optOut = (view: ReturnType<typeof renderWithApi>) =>
+    view.setMe({ ...TEST_ME, nsfwOptIn: false });
+  afterEach(() => vi.useRealTimers());
+
+  it("shows no NSFW drawing from the moment you opt out, until your board loads under the new setting", async () => {
+    let answer: (board: LoadedBoard) => void = () => {};
+    const { view, stickerBoard } = await optedInBoard(
+      () => new Promise((resolve) => (answer = resolve)),
+    );
+    optOut(view);
+    expect(view.host.innerHTML).not.toContain(DRAWING);
+    expect(stickerBoard).toHaveBeenCalledTimes(2);
+    await act(async () => answer(boardFor(false)));
+    expect(view.host.innerHTML).toContain(VEILED);
+    expect(view.host.innerHTML).not.toContain(DRAWING);
+  });
+
+  it("keeps them hidden, and says the board didn't load, when that load fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { view } = await optedInBoard(() =>
+      Promise.reject(new ApiError(0, { error: "network", detail: "Failed to fetch" })),
+    );
+    optOut(view);
+    await act(async () => {});
+    expect(view.host.querySelector(".board-problem")).not.toBeNull();
+    expect(view.host.innerHTML).not.toContain(DRAWING);
+  });
+
+  it("doesn't keep the board on this phone until it has loaded under the new setting", async () => {
+    // A key's step is committed, which changes the board's stickers, once the keys go quiet.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { view } = await optedInBoard(() => new Promise(() => {}));
+    optOut(view);
+    forget();
+    selectByKeys(view.host, "nsfw")("ArrowLeft");
+    act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    expect(keptBoardFor(TEST_ME.id)).toBeNull();
+  });
+
+  it("hides them in the board kept on this phone when the setting changed after it was kept", () => {
+    keepBoard(TEST_ME.id, {
+      owner: toPerson({ ...TEST_OWNER, nsfwOptIn: true }),
+      stickers: placeUnplaced(boardFor(true).boardStickers.map(toBoardSticker)).stickers,
+    });
+    onAPhone();
+    const view = renderWithApi(
+      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
+      emptyApi({ stickerBoard: () => new Promise(() => {}) }),
+    );
+    unmount = view.unmount;
+    expect(view.host.innerHTML).not.toContain(DRAWING);
+  });
+
+  it("shows no NSFW drawing in a received gift's notice from a board kept under the other setting", () => {
+    // This device has shown a notice before, so a gift received since gets one.
+    noticeReceivesFromNow([]);
+    const given = boardSticker({
+      sticker: nsfwSticker(true),
+      held: false,
+      givenTo: { receiver: people.bob, receivedAt: "2026-09-23T11:52:00.000Z" },
+    });
+    keepBoard(TEST_ME.id, {
+      owner: toPerson({ ...TEST_OWNER, nsfwOptIn: true }),
+      stickers: placeUnplaced([toBoardSticker(given)]).stickers,
+    });
+    const view = renderWithApi(
+      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
+      emptyApi({ stickerBoard: () => new Promise(() => {}) }),
+    );
+    unmount = view.unmount;
+    expect(document.querySelector(".gift-received-notice")).not.toBeNull();
+    expect(document.body.innerHTML).not.toContain(DRAWING);
   });
 });

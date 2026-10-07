@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { act, useState } from "react";
+import { act, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { errorMessage } from "../i18n/errorMessage";
@@ -11,7 +11,7 @@ import { ApiError } from "./apiClient";
 import type { Me } from "@drawing-app/api/client";
 import { openEarly, type EarlySession } from "./earlySession";
 import type { SessionApi } from "./httpApi";
-import { useMe } from "./meContext";
+import { useMe, useSetMe } from "./meContext";
 import { RECOVERY_HOLD_MS, SessionGate } from "./SessionGate";
 import { reportSessionLost } from "./sessionLoss";
 import { emptyApi } from "./testing";
@@ -37,6 +37,17 @@ function Board() {
   return <p lang={language}>Board of @{useMe().handle}</p>;
 }
 
+/** Turns your NSFW opt-in on in place, as a setting saved on the Settings note does. */
+function OptInSwitch() {
+  const you = useMe();
+  const setMe = useSetMe();
+  return (
+    <button type="button" onClick={() => setMe({ ...you, nsfwOptIn: true })}>
+      {you.nsfwOptIn ? "18+ on" : "18+ off"}
+    </button>
+  );
+}
+
 const settle = () => act(() => Promise.resolve());
 let cleanup = () => {};
 afterEach(() => cleanup());
@@ -52,7 +63,8 @@ function render(
   {
     early = null,
     claims = ALICE_CLAIMS,
-  }: { early?: EarlySession | null; claims?: LineClaims } = {},
+    app = <Board />,
+  }: { early?: EarlySession | null; claims?: LineClaims; app?: ReactNode } = {},
 ) {
   const host = document.createElement("div");
   document.body.append(host);
@@ -67,7 +79,7 @@ function render(
         early={early}
         reconnect={reconnect}
       >
-        <Board />
+        {app}
       </SessionGate>,
     ),
   );
@@ -447,6 +459,22 @@ describe("SessionGate with the cookie from the last visit", () => {
     await settle();
     expect(host.querySelector("form")).toBeNull();
     expect(host.textContent).toContain("Board of @alice2");
+  });
+
+  it("keeps a setting saved in place when an earlier profile refresh finishes afterward", async () => {
+    const { signIn, finish } = pendingSignIn({ ...me, lineDisplayName: "Alice B" });
+    const host = render(session({ signIn }), undefined, undefined, {
+      early: earlyAs(me),
+      claims: { ...ALICE_CLAIMS, name: "Alice B" },
+      app: <OptInSwitch />,
+    });
+    await settle();
+    expect(signIn).toHaveBeenCalledOnce();
+    await act(async () => host.querySelector("button")?.click());
+    expect(host.textContent).toBe("18+ on");
+    finish();
+    await settle();
+    expect(host.textContent).toBe("18+ on");
   });
 });
 

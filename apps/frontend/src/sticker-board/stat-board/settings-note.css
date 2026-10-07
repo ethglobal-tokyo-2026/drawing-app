@@ -86,13 +86,9 @@
   outline-offset: 3px;
 }
 
-.settings-note__restarts {
+.settings-note__status {
   clear: both;
   margin: 8px 0 0;
-}
-
-.settings-note__status {
-  margin: 0;
 }
 
 .settings-note__status:empty {

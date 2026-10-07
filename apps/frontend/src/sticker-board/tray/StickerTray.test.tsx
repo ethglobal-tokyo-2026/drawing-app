@@ -1,16 +1,27 @@
 // @vitest-environment happy-dom
 import { act, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+  type MockInstance,
+} from "vitest";
 import { forgetBoardComplete, markBoardComplete, QUIET_MS } from "../boardComplete";
+import { i18next } from "../../i18n/i18n";
 import { errors } from "../../i18n/strings/errors";
+import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
 import { TUG_VISITS, type TrayBoard } from "./trayEngine";
 import { SHEET, STACK_FOOT, TOP } from "./trayModel";
 import { testStickerUrls } from "../../stickers/testStickerUrls";
 import { NUDGE_AFTER } from "./trayNudge";
-import type { TrayProblem } from "./trayProblem";
+import { trayProblemWords, type TrayProblem } from "./trayProblem";
 import { countVisit } from "./traySeen";
 
 declare global {
@@ -596,7 +607,7 @@ describe("StickerTray", () => {
     it("when the board can't take a sticker, which goes back to its sheet", async () => {
       render(manyStickers(8), {}, undefined, (p) => problems.push(p));
       const id = await stickOnFirst();
-      expect(problems.map((p) => [p.kind, p.nos, Boolean(p.reason)])).toEqual([
+      expect(problems.map((p) => [p.kind, p.nos, trayProblemWords(p).reason !== ""])).toEqual([
         ["place", [1], true],
       ]);
       expect(stateOf(id ?? "")).toBe("here");
@@ -606,13 +617,8 @@ describe("StickerTray", () => {
       const place = () => Promise.reject(new Error("the connection is asleep"));
       render(manyStickers(8), { place }, undefined, (p) => problems.push(p));
       await stickOnFirst();
-      expect(problems).toEqual([
-        {
-          kind: "place",
-          nos: [1],
-          reason: errors.unexpected.en,
-          detail: "Error: the connection is asleep",
-        },
+      expect(problems.map(trayProblemWords)).toEqual([
+        { reason: errors.unexpected.en, detail: "Error: the connection is asleep" },
       ]);
     });
 
@@ -888,6 +894,23 @@ describe("StickerTray", () => {
     act(() => tab("gifts")?.click());
     expect(tab("gifts")?.getAttribute("aria-pressed")).toBe("true");
     expect(tab("all")?.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("renames its Zipper and folder tabs when the app's language changes, keeping what it has shown", async () => {
+    onTestFinished(async () => {
+      await i18next.changeLanguage("en");
+    });
+    // Arrived today, so each is NEW until a tray has shown it.
+    render(stickersWithGifts(6).map((s) => ({ ...s, arrivedAt: Date.now() })));
+    await openAndShut();
+    await act(() => i18next.changeLanguage("ja"));
+    expect(board.querySelectorAll(".tray")).toHaveLength(1);
+    expect(board.querySelector(".zip__slider")?.getAttribute("aria-label")).toBe(
+      stickerBoard.tray.zipper.ja,
+    );
+    expect(board.querySelector('.tray__tab[data-filter="gifts"]')?.textContent).toBe(
+      stickerBoard.tray.filters.gifts.ja,
+    );
   });
 
   it("marks a sticker that just landed on the board as new, on its hole and on the pull, until the tray shows it", async () => {

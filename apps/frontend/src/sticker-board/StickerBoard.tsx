@@ -9,10 +9,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { useMyNsfwOptIn, veiledFor } from "../stickers/nsfw";
+import { useMyNsfwOptIn, useNsfwOptInKey, veiledFor, withoutNsfwDrawings } from "../stickers/nsfw";
 import { flushSync } from "react-dom";
 import { tokyoTicketDay } from "@drawing-app/api/client";
-import { apiError } from "../api/apiClient";
+import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
 import {
@@ -33,13 +33,7 @@ import { PendingGiftsNotificationBadge } from "../giving/PendingGiftsNotificatio
 import { useGiftSender } from "../giving/useGiftSender";
 import { FEEL_CONFIG } from "../gratitude/gameConfig";
 import { readMiniGameDemoSettings } from "../gratitude/miniGameDemoSettings";
-import {
-  errorDetail,
-  errorMessage,
-  joinedDetails,
-  problemOf,
-  type Problem,
-} from "../i18n/errorMessage";
+import { errorDetail, errorMessage, joinedDetails } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { DrawIcon } from "../icons/DrawIcon";
 import { useMe } from "../api/meContext";
@@ -96,7 +90,6 @@ import { markGreeted, owesGreeting } from "./artistChipGreeting";
 import { markChipsPlayed } from "./boardSettled";
 import { keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
-import { takeReopenOnSettings } from "./stat-board/reopenOnSettings";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { arrangeLeftOpen, keepArrangeOpen } from "./arrangeOpen";
 import { markSelectionHintShown, owesSelectionHint } from "./selectionHint";
@@ -107,7 +100,7 @@ import { GiftsForYouBadge, type GiftForYou } from "../receiving/GiftsForYouBadge
 import { ArtistChipLayer } from "./ArtistChipLayer";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
-import { reasonOf, trayProblemKey, type TrayProblem } from "./tray/trayProblem";
+import { trayProblemKey, trayProblemWords, type TrayProblem } from "./tray/trayProblem";
 import { useBoardGestures, type SettledStep } from "./useBoardGestures";
 import { useBoardSize } from "./useBoardSize";
 import { onMyStickerBoardChanged, useMyStickerBoard } from "./useMyStickerBoard";
@@ -278,9 +271,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       el.textContent = words;
     });
   };
+  const optedIn = useMyNsfwOptIn();
   /** The last board this phone showed you, drawn at once while the fresh one loads. */
   const [fromPhone] = useState(() => keptBoardFor(account.id));
-  const [stickers, setStickers] = useState<BoardStickerView[] | null>(
+  /** The board's stickers as loaded and moved; `stickers` is how they show. */
+  const [loaded, setStickers] = useState<BoardStickerView[] | null>(
     () => fromPhone?.stickers ?? null,
   );
   /** The load the stickers came from, and whose board it is: a sticker someone else drew wears foil. */
@@ -288,8 +283,16 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     () => fromPhone && { ...fromPhone, fromPhone: true },
   );
   const owner = adopted?.owner ?? null;
+  // A load's owner is you, with the opt-in its images were picked for: the browser keeps a drawing
+  // it has shown, so until a load under your opt-in now is adopted, NSFW stickers show none, and the
+  // board isn't kept on this phone.
+  const imagesCurrent = owner === null || owner.nsfwOptIn === optedIn;
+  const stickers = useMemo(
+    () => (loaded && !imagesCurrent ? withoutNsfwDrawings(loaded) : loaded),
+    [loaded, imagesCurrent],
+  );
   /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
-  const [unsaved, setUnsaved] = useState<ReadonlyMap<string, Problem>>(() => new Map());
+  const [unsaved, setUnsaved] = useState<ReadonlyMap<string, ApiError>>(() => new Map());
   /** What the sticker tray couldn't do, said in an alert until it's dismissed. */
   const [trayProblems, setTrayProblems] = useState<readonly TrayProblem[]>([]);
   const addTrayProblem = useCallback(
@@ -317,12 +320,10 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
   const openYours = (id: string) => setOpen({ id, mode: "yours" });
   const [giving, setGiving] = useState<BoardSticker | null>(null);
-  /** The app restarted for a language change, so it opens on the stat board, at Settings. */
-  const [reopenedOnSettings] = useState(takeReopenOnSettings);
   /** The board is turned over to its stat board. */
-  const [turned, setTurned] = useState(reopenedOnSettings);
+  const [turned, setTurned] = useState(false);
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
-  const [wasTurned, setWasTurned] = useState(reopenedOnSettings);
+  const [wasTurned, setWasTurned] = useState(false);
   const { tickets, error: ticketsError, refresh: refreshTickets } = useTickets();
   // Draw spends a daily ticket at once, its ticket peeling off the key; with none at all, a card says when.
   const drawKey = useDrawFromBoard(onDraw);
@@ -339,7 +340,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const me = useIdentity();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
-  const optedIn = useMyNsfwOptIn();
   const hints = useId();
   const idle = usePreloadAfterBoard(OPENED_FROM_BOARD);
   // The gratitude mini-game covers the board, so the tilt and its sheen sweeps rest while it plays.
@@ -379,7 +379,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
           (error: unknown) => {
             const failure = apiError(error);
             console.error(`Saving where ${formatNo(sticker.no)} sits failed`, failure);
-            settled(() => setUnsaved((was) => new Map(was).set(sticker.id, problemOf(failure))));
+            settled(() => setUnsaved((was) => new Map(was).set(sticker.id, failure)));
           },
         );
       };
@@ -394,11 +394,14 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const answer = board.state === "ready" ? board.data : null;
   /** The server's answer the stickers were last adopted from. */
   const [adoptedAnswer, setAdoptedAnswer] = useState<typeof answer>(null);
+  /** The language the board's names were made in: "Someone", a deleted account's, is the app's word. */
+  const [namedIn, setNamedIn] = useState(i18n.language);
   /** Stickers the board had never placed, given a spot as their answer was adopted. */
   const [newlyPlaced, setNewlyPlaced] = useState<readonly BoardStickerView[]>([]);
-  if (answer && answer !== adoptedAnswer) {
+  if (answer && (answer !== adoptedAnswer || namedIn !== i18n.language)) {
     setAdoptedAnswer(answer);
-    // Moves made while it loaded stay.
+    setNamedIn(i18n.language);
+    // Moves made while it loaded stay, and a language change holds every spot over.
     const { stickers: next, placed } = placeUnplaced(
       answer.boardStickers.map(toBoardSticker),
       heldOver(stickers, adopted),
@@ -427,9 +430,9 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   }, [fromPhone]);
   // Once the fresh board is in, the board as it shows is kept for your next open.
   useEffect(() => {
-    if (adopted && !adopted.fromPhone && stickers)
-      keepBoard(account.id, { owner: adopted.owner, stickers });
-  }, [account.id, adopted, stickers]);
+    if (adopted && !adopted.fromPhone && imagesCurrent && loaded)
+      keepBoard(account.id, { owner: adopted.owner, stickers: loaded });
+  }, [account.id, adopted, imagesCurrent, loaded]);
   const failed = board.state === "failed";
   useEffect(() => {
     if (failed) markBoardComplete();
@@ -445,7 +448,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     else board.retry();
   }
 
-  const pending = useApiQuery("pending-gifts", (client) => client.pendingGifts());
+  const pending = useApiQuery(useNsfwOptInKey("pending-gifts"), (client) => client.pendingGifts());
   // The gifts on their way load again the same way, after a load that may have read them too early.
   const [reloadPending, setReloadPending] = useState(false);
   if (reloadPending && pending.state !== "loading") {
@@ -477,7 +480,9 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       : [];
 
   // Each gift someone received since this device last said so, newest first, one notice at a time.
-  const receivedGifts = receivedGiftsOf(adopted?.stickers ?? []);
+  // From the stickers as they show: the same given stickers as the load's, with no NSFW drawing
+  // loaded under the other opt-in.
+  const receivedGifts = receivedGiftsOf(stickers ?? []);
   // Closed ones stay closed on this visit even when the device can't save that they were noticed.
   const notice = newestUnnoticed(receivedGifts.filter((g) => !noticesClosed.has(receiveOf(g))));
 
@@ -489,7 +494,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
 
   // A sticker that just reached you asks about gratitude, when its newest gift to you has none. When
   // the check fails, the ask can't come, so the board says so, with a way to check again.
-  const [checkFailure, setCheckFailure] = useState<Problem | null>(null);
+  const [checkFailure, setCheckFailure] = useState<ApiError | null>(null);
   const [checks, setChecks] = useState(0);
   useEffect(() => {
     if (!freshId || askedForGratitude.has(freshId)) return;
@@ -505,7 +510,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       (error: unknown) => {
         const failure = apiError(error);
         console.error(`Checking whether ${freshId} has gratitude failed`, failure);
-        if (current) setCheckFailure(problemOf(failure));
+        if (current) setCheckFailure(failure);
       },
     );
     return () => {
@@ -529,7 +534,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       addTrayProblem({
         kind: "seen",
         nos: (stickers ?? []).filter((s) => ids.includes(s.id)).map((s) => s.no),
-        ...reasonOf(failure),
+        error: failure,
       });
     });
   };
@@ -738,6 +743,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // An empty board that still has stickers in the sticker tray points to the tray, not to Draw.
   const inTray = (stickers ?? []).some((s) => s.held && !onTheBoard(s));
   const unsavedStickers = (stickers ?? []).filter((s) => unsaved.has(s.id));
+  const unsavedErrors = unsavedStickers.flatMap((s) => unsaved.get(s.id) ?? []);
 
   const front = (
     <div className="board" ref={setFace} data-resting={turned || gratitudeFor ? "" : undefined}>
@@ -915,7 +921,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
           )}
           {unsavedStickers.length > 0 && (
             <ErrorLine
-              detail={joinedDetails(unsavedStickers.map((s) => unsaved.get(s.id)?.detail))}
+              detail={joinedDetails(unsavedErrors.map(errorDetail))}
               onRetry={() => unsavedStickers.forEach((s) => save(s, s.placement))}
             >
               {t(($) => $.stickerBoard.board.unsaved, {
@@ -923,15 +929,13 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                 stickers: new Intl.ListFormat(i18n.language).format(
                   unsavedStickers.map((s) => formatNo(s.no)),
                 ),
-                reasons: [...new Set(unsavedStickers.map((s) => unsaved.get(s.id)?.message))].join(
-                  "; ",
-                ),
+                reasons: [...new Set(unsavedErrors.map(errorMessage))].join("; "),
               })}
             </ErrorLine>
           )}
           {trayProblems.length > 0 && (
             <ErrorLine
-              detail={joinedDetails(trayProblems.map((p) => p.detail))}
+              detail={joinedDetails(trayProblems.map((p) => trayProblemWords(p).detail))}
               action={{
                 label: t(($) => $.stickerBoard.tray.problem.dismiss),
                 onClick: () => setTrayProblems([]),
@@ -941,16 +945,16 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                 <span className="board-alerts__sentence" key={trayProblemKey(p)}>
                   {t(($) => $.stickerBoard.tray.problem[p.kind], {
                     stickers: new Intl.ListFormat(i18n.language).format(p.nos.map(formatNo)),
-                    reason: p.reason ?? "",
+                    reason: trayProblemWords(p).reason,
                   })}
                 </span>
               ))}
             </ErrorLine>
           )}
           {checkFailure && unsavedStickers.length === 0 && (
-            <ErrorLine detail={checkFailure.detail} onRetry={() => setChecks((n) => n + 1)}>
+            <ErrorLine detail={errorDetail(checkFailure)} onRetry={() => setChecks((n) => n + 1)}>
               {t(($) => $.stickerBoard.board.gratitudeCheckFailed, {
-                reason: checkFailure.message,
+                reason: errorMessage(checkFailure),
               })}
             </ErrorLine>
           )}
@@ -1083,7 +1087,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
               ref={statBoard}
               onFlipBack={() => turn(false)}
               flipBackRef={flipBack}
-              reopenedOnSettings={reopenedOnSettings}
               onTryGratitudeMiniGame={
                 newest
                   ? () =>

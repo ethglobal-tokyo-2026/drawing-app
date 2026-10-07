@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { currentLanguage } from "../i18n/i18n";
 import { followAccountLanguage } from "../i18n/pageLanguage";
@@ -12,7 +12,7 @@ import type { Me } from "@drawing-app/api/client";
 import { earlySession, type EarlySession } from "./earlySession";
 import { HandlePrompt } from "./HandlePrompt";
 import type { SessionApi } from "./httpApi";
-import { MeContext } from "./meContext";
+import { MeContext, SetMeContext } from "./meContext";
 import { onSessionLost } from "./sessionLoss";
 import "../line/LineGate.css";
 
@@ -79,6 +79,7 @@ export function SessionGate({
   /** A sign-in that answers a lost session is under way, and when the last one opened the app. */
   const recovering = useRef(false);
   const recoveredAt = useRef<number | null>(null);
+  const setReadyMe = useCallback((me: Me) => setState({ step: "ready", me }), []);
 
   useEffect(() => {
     let current = true;
@@ -218,13 +219,11 @@ export function SessionGate({
 
   if (state.step === "ready") {
     return state.me.needsHandle ? (
-      <HandlePrompt
-        me={state.me}
-        setHandle={session.setHandle}
-        onChosen={(me) => setState({ step: "ready", me })}
-      />
+      <HandlePrompt me={state.me} setHandle={session.setHandle} onChosen={setReadyMe} />
     ) : (
-      <MeContext value={state.me}>{children}</MeContext>
+      <MeContext value={state.me}>
+        <SetMeContext value={setReadyMe}>{children}</SetMeContext>
+      </MeContext>
     );
   }
   return (

@@ -26,7 +26,7 @@ import {
   type Tray,
   type TrayModel,
 } from "./trayModel";
-import { BoardNotReady, reasonOf } from "./trayProblem";
+import { BoardNotReady } from "./trayProblem";
 import type { TraySheets } from "./traySheets";
 
 /** A sticker in hand comes free of its sheet this far from where it was pressed. */
@@ -257,7 +257,7 @@ export function createTrayPeel(
   /** Its placing failed, so it stays in the tray. */
   const reportPlace = (s: Slot, error: unknown) => {
     console.error(`Sticking ${formatNo(s.no)} on the board failed; it's back in its sheet`, error);
-    problem({ kind: "place", nos: [s.no], ...reasonOf(error) });
+    problem({ kind: "place", nos: [s.no], error });
   };
   /** The board answers with nothing when it couldn't take the sticker, such as before it has a size. */
   function placedOrThrow(placed: HTMLElement | null): HTMLElement {

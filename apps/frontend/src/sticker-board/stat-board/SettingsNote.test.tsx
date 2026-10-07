@@ -6,14 +6,13 @@ import { ApiError, type ApiClient } from "../../api/apiClient";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../../api/testing";
 import { toPerson } from "../../api/views";
 import { errors } from "../../i18n/strings/errors";
-import { i18next } from "../../i18n/i18n";
+import { stickerBoard } from "../../i18n/strings/stickerBoard";
+import { currentLanguage, i18next } from "../../i18n/i18n";
 import { keepChosenLanguage, readChosenLanguage } from "../../i18n/language";
 import { keepBoard, keptBoardFor, readKeptBoardAgain } from "../lastBoard";
-import { takeReopenOnSettings } from "./reopenOnSettings";
 import { SettingsNote } from "./SettingsNote";
 import { statsClearPeek } from "./settingsPeek";
 
-const restart = vi.fn();
 let unmount = () => {};
 
 afterEach(async () => {
@@ -21,15 +20,13 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   localStorage.clear();
   readKeptBoardAgain();
-  sessionStorage.clear();
-  restart.mockReset();
   vi.restoreAllMocks();
   await i18next.changeLanguage("en");
 });
 
 /** The note, for `me`, saving through the methods `overrides` give. */
 function renderNote(overrides: Partial<ApiClient>, me: Me = TEST_ME) {
-  const view = renderWithApi(<SettingsNote restart={restart} />, emptyApi(overrides), me);
+  const view = renderWithApi(<SettingsNote />, emptyApi(overrides), me);
   unmount = view.unmount;
   return view.host;
 }
@@ -56,32 +53,34 @@ const choose = (host: HTMLElement, label: string) => act(async () => option(host
 
 const alert = (host: HTMLElement) => host.querySelector('[role="alert"]')?.textContent;
 
+/** Each setting's status line, language first. */
+const statuses = (host: HTMLElement) =>
+  [...host.querySelectorAll('[role="status"]')].map((p) => p.textContent);
+
 describe("the Settings note's language", () => {
-  it("saves a choice to your account, keeps it on this phone, then restarts in it", async () => {
+  it("saves a choice to your account, keeps it on this phone, and switches the app to it in place", async () => {
     const setLanguageChoice = saving();
     const host = render(setLanguageChoice);
     await choose(host, "日本語");
     expect(setLanguageChoice).toHaveBeenCalledExactlyOnceWith("ja", "en");
     expect(readChosenLanguage()).toBe("ja");
-    expect(restart).toHaveBeenCalledOnce();
+    expect(currentLanguage()).toBe("ja");
+    expect(option(host, "日本語").checked).toBe(true);
+    expect(statuses(host)[0]).toBe(
+      i18next.t(($) => $.stickerBoard.settings.language.applied, { language: "日本語" }),
+    );
   });
 
-  it("has the restart reopen on Settings, once, so the person sees their pick took", async () => {
-    const host = render(saving());
-    await choose(host, "日本語");
-    expect(takeReopenOnSettings()).toBe(true);
-    expect(takeReopenOnSettings()).toBe(false);
-  });
-
-  it("clears both with Same as LINE", async () => {
+  it("goes back to following LINE", async () => {
     keepChosenLanguage("ja");
+    await i18next.changeLanguage("ja");
     const setLanguageChoice = saving();
     const host = render(setLanguageChoice, "ja");
     expect(option(host, "日本語").checked).toBe(true);
-    await choose(host, "Same as LINE (English)");
+    await choose(host, "LINEと同じ（English）");
     expect(setLanguageChoice).toHaveBeenCalledExactlyOnceWith(null, "en");
     expect(readChosenLanguage()).toBeNull();
-    expect(restart).toHaveBeenCalledOnce();
+    expect(currentLanguage()).toBe("en");
   });
 
   it("says why a choice wasn't saved, and leaves this phone's choice and the app as they were", async () => {
@@ -93,11 +92,10 @@ describe("the Settings note's language", () => {
     expect(host.textContent).toContain("Failed to fetch");
     expect(readChosenLanguage()).toBeNull();
     expect(option(host, "Same as LINE (English)").checked).toBe(true);
-    expect(restart).not.toHaveBeenCalled();
-    expect(takeReopenOnSettings()).toBe(false);
+    expect(currentLanguage()).toBe("en");
   });
 
-  it("says why this phone couldn't keep a saved choice, and doesn't restart", async () => {
+  it("switches even when this phone can't keep the choice, and says so in the new language", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     // A stand-in storage: spying on happy-dom's own leaves it unable to write for later tests.
     vi.stubGlobal("localStorage", {
@@ -105,13 +103,11 @@ describe("the Settings note's language", () => {
         throw new DOMException("The storage is full", "QuotaExceededError");
       },
     });
-    const setLanguageChoice = saving();
-    const host = render(setLanguageChoice);
+    const host = render(saving());
     await choose(host, "日本語");
-    expect(setLanguageChoice).toHaveBeenCalledWith("ja", "en");
-    expect(alert(host)).toContain("couldn’t keep it");
+    expect(currentLanguage()).toBe("ja");
+    expect(alert(host)).toContain(stickerBoard.settings.language.notKept.ja);
     expect(host.textContent).toContain("The storage is full");
-    expect(restart).not.toHaveBeenCalled();
   });
 
   it("reads in Japanese, naming each language in its own language", async () => {
@@ -141,31 +137,29 @@ describe("the Settings note's 18+ switch", () => {
     expect(switchOf(host).checked).toBe(false);
     expect(switchOf(host).closest("label")?.textContent).toBe("Show 18+ stickers");
     expect(host.textContent).toContain("For people 18 or older.");
-    expect(host.textContent).toContain("Changing it restarts Croquis.");
   });
 
-  it("saves it to your account, forgets the board kept on this phone, then restarts on Settings", async () => {
+  it("saves it to your account, forgets the board kept on this phone, and says the stickers show", async () => {
     const setNsfwOptIn = savingOptIn();
     const host = renderNote({ setNsfwOptIn });
     keepABoard();
     await flip(host);
     expect(setNsfwOptIn).toHaveBeenCalledExactlyOnceWith(true);
-    expect(keptBoardFor(TEST_ME.id)).toBeNull();
-    expect(takeReopenOnSettings()).toBe(true);
-    expect(restart).toHaveBeenCalledOnce();
     expect(switchOf(host).checked).toBe(true);
+    expect(keptBoardFor(TEST_ME.id)).toBeNull();
+    expect(statuses(host)).toEqual(["", stickerBoard.settings.nsfw.shown.en]);
   });
 
-  it("turns it off the same way", async () => {
+  it("turns it off the same way, and says they're blurred now", async () => {
     const setNsfwOptIn = savingOptIn();
     const host = renderNote({ setNsfwOptIn }, { ...TEST_ME, nsfwOptIn: true });
     expect(switchOf(host).checked).toBe(true);
     await flip(host);
     expect(setNsfwOptIn).toHaveBeenCalledExactlyOnceWith(false);
-    expect(restart).toHaveBeenCalledOnce();
+    expect(statuses(host)).toEqual(["", stickerBoard.settings.nsfw.blurred.en]);
   });
 
-  it("says why it wasn't saved, and leaves the switch, the kept board and the app as they were", async () => {
+  it("says why it wasn't saved, and leaves the switch and the kept board as they were", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const offline = new ApiError(0, { error: "network", detail: "Failed to fetch" });
     const host = renderNote({ setNsfwOptIn: () => Promise.reject(offline) });
@@ -176,8 +170,6 @@ describe("the Settings note's 18+ switch", () => {
     expect(host.textContent).toContain("Failed to fetch");
     expect(switchOf(host).checked).toBe(false);
     expect(keptBoardFor(TEST_ME.id)).not.toBeNull();
-    expect(restart).not.toHaveBeenCalled();
-    expect(takeReopenOnSettings()).toBe(false);
   });
 
   it("reads in Japanese", async () => {

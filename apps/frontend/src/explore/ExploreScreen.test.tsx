@@ -4,7 +4,7 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { people, sticker } from "../api/testFixtures";
-import { emptyApi, renderWithApi, TEST_OWNER } from "../api/testing";
+import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { i18next } from "../i18n/i18n";
 import { ExploreScreen } from "./ExploreScreen";
 
@@ -284,6 +284,23 @@ describe("ExploreScreen's older days", () => {
       "Yesterday",
       "September 24",
     ]);
+  });
+
+  it("starts the pile over from a fresh first page when your NSFW opt-in changes, showing none of it meanwhile", async () => {
+    const explore = vi
+      .fn<ApiClient["explore"]>()
+      .mockResolvedValueOnce(firstPage)
+      .mockReturnValue(new Promise(() => {}));
+    const host = await openExplore(firstPage, {
+      explore,
+      explorePile: () => Promise.resolve(lastPage),
+    });
+    await reachEnd();
+    expect(layersOf(host)).toHaveLength(3);
+    view?.setMe({ ...TEST_ME, nsfwOptIn: true });
+    await wait(0);
+    expect(explore).toHaveBeenCalledTimes(2);
+    expect(layersOf(host)).toEqual([]);
   });
 });
 

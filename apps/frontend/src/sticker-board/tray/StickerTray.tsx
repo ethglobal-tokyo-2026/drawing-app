@@ -1,4 +1,5 @@
 import { useImperativeHandle, useLayoutEffect, useRef, type Ref } from "react";
+import { useTranslation } from "../../i18n/react";
 import { useMyNsfwOptIn, veiledFor } from "../../stickers/nsfw";
 import { handleOf, type BoardStickerView } from "../boardSticker";
 import {
@@ -68,6 +69,9 @@ function trayStickers(
 /** The sticker tray on the board: its engine, fed the board's stickers and asked through `ref`. */
 export function StickerTray({ board, stickers, ownerId, api, onSeen, onProblem, ref }: Props) {
   const engine = useRef<TrayEngine | null>(null);
+  const { i18n } = useTranslation();
+  /** What this visit's trays have shown, so a tray rebuilt for a new language shows none of it as NEW. */
+  const seen = useRef(new Set<string>());
   const optedIn = useMyNsfwOptIn();
   const latest = useRef({ stickers, ownerId, optedIn, api, onSeen, onProblem });
   useLayoutEffect(() => {
@@ -98,13 +102,15 @@ export function StickerTray({ board, stickers, ownerId, api, onSeen, onProblem, 
       api: side,
       markSeen: (ids) => latest.current.onSeen(ids),
       problem: (p) => latest.current.onProblem(p),
+      seen: seen.current,
     });
     engine.current = tray;
     return () => {
       tray.destroy();
       engine.current = null;
     };
-  }, [board]);
+    // The engine reads its words once, so a new language builds a new one.
+  }, [board, i18n.language]);
 
   useImperativeHandle(
     ref,

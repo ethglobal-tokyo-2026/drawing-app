@@ -1,11 +1,13 @@
-import { describe, expect, it } from "vitest";
-import { trayProblemKey, type TrayProblem } from "./trayProblem";
+import { describe, expect, it, onTestFinished } from "vitest";
+import { ApiError } from "../../api/apiClient";
+import { i18next, withBreakHints } from "../../i18n/i18n";
+import { errors } from "../../i18n/strings/errors";
+import { trayProblemKey, trayProblemWords, type TrayProblem } from "./trayProblem";
 
 const problem = (overrides: Partial<TrayProblem> = {}): TrayProblem => ({
-  kind: "cut",
+  kind: "place",
   nos: [143],
-  reason: "Couldn't read it",
-  detail: "Canvas 2D context unavailable",
+  error: new Error("Canvas 2D context unavailable"),
   ...overrides,
 });
 
@@ -16,11 +18,25 @@ describe("trayProblemKey", () => {
 
     // A failure that isn't the API's has one reason for every cause, so only its detail tells two apart.
     const differing: Partial<TrayProblem>[] = [
-      { kind: "place" },
+      { kind: "cut" },
       { nos: [143, 144] },
-      { reason: "Not now" },
-      { detail: "Another English" },
+      { error: new Error("Another English") },
+      { error: new ApiError(0, { error: "network" }) },
     ];
     for (const change of differing) expect(trayProblemKey(problem(change))).not.toBe(key);
+  });
+});
+
+describe("trayProblemWords", () => {
+  it("says why in the app's language at the time it's read", async () => {
+    onTestFinished(async () => {
+      await i18next.changeLanguage("en");
+    });
+    const offline = problem({
+      error: new ApiError(0, { error: "network", detail: "Failed to fetch" }),
+    });
+    expect(trayProblemWords(offline).reason).toBe(withBreakHints(errors.network.en));
+    await i18next.changeLanguage("ja");
+    expect(trayProblemWords(offline).reason).toBe(withBreakHints(errors.network.ja));
   });
 });

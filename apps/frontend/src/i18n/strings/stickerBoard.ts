@@ -163,20 +163,20 @@ export const stickerBoard = {
         /** Settings note: the Japanese choice, named in Japanese; also LINE's language in Same as LINE */
         ja: { en: "日本語", ja: "日本語" },
       },
-      /** Settings note: the fine print under the language choices, saying that choosing one restarts the app */
-      restarts: {
-        en: "Choosing a language restarts Croquis.",
-        ja: "言語を選ぶと、クロッキーが再起動します。",
+      /** Settings note: the status line once a language choice has saved and the app has switched to it; {{language}} is that language's own name, such as "日本語" */
+      applied: {
+        en: "Croquis is now in {{language}}.",
+        ja: "表示を{{language}}に切り替えました。",
       },
       /** Settings note: the alert when the language choice didn't save to your account, with the reason */
       notSaved: {
         en: "Your language couldn’t be saved, so it hasn’t changed: {{reason}}",
         ja: "言語を保存できなかったため、変更していません：{{reason}}",
       },
-      /** Settings note: the alert when the language saved to your account but this phone couldn't keep it for the next start, over the phone's own words for a report */
+      /** Settings note: the alert when the language saved and the app switched, but this phone couldn't keep it for its next start, over the phone's own words for a report */
       notKept: {
-        en: "Your language is saved, but this phone couldn’t keep it. It changes the next time you open the app.",
-        ja: "言語は保存しましたが、この端末には残せませんでした。次にアプリをひらいたときに切り替わります。",
+        en: "Your language is saved, but this phone couldn’t keep it: the next time you open Croquis, it may start in the old one for a moment.",
+        ja: "言語は保存しましたが、この端末には残せませんでした。次にクロッキーをひらいたとき、少しのあいだ前の言語で表示されることがあります。",
       },
     },
     /** The NSFW opt-in, a second setting under Language. */
@@ -190,10 +190,15 @@ export const stickerBoard = {
         en: "For people 18 or older. On, 18+ stickers show unblurred, and you can seal your own as 18+ and receive them. Off, they’re blurred, yours too.",
         ja: "18歳以上の方向けです。オンにすると、18+のシールがぼかしなしで表示され、自分のシールを18+として仕上げたり、18+のシールを受け取ったりできます。オフにすると、自分のものも含めてぼかして表示されます。",
       },
-      /** Settings note: the fine print saying that changing the NSFW opt-in restarts the app */
-      restarts: {
-        en: "Changing it restarts Croquis.",
-        ja: "切り替えると、クロッキーが再起動します。",
+      /** Settings note: the status line once Show 18+ stickers has been turned on and saved */
+      shown: {
+        en: "18+ stickers now show unblurred.",
+        ja: "18+のシールをぼかしなしで表示します。",
+      },
+      /** Settings note: the status line once Show 18+ stickers has been turned off and saved */
+      blurred: {
+        en: "18+ stickers are blurred now, yours too.",
+        ja: "18+のシールを、自分のものも含めてぼかして表示します。",
       },
       /** Settings note: the alert when the NSFW opt-in didn't save to your account, with the reason */
       notSaved: {
