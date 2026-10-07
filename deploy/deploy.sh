@@ -90,11 +90,14 @@ if [ -n "$CDN_ORIGIN" ] && [ -z "${cdn_capped:-}" ]; then
   fi
   rm -rf "$got"
   echo "✓ $CDN_ORIGIN"
-  # Every hashed file through the CDN once, so its shield in Tokyo holds the build before anyone opens it: a first visit
-  # from Japan is then a cache hit.
-  warmed="$(cd "$DIST/assets" && ls | xargs -P 8 -I{} curl -fsS -o /dev/null --compressed --max-time 30 -w '%{http_code}\n' \
-    "$CDN_ORIGIN/assets/{}" | grep -c '^200$' || true)"
-  echo "✓ $warmed of $(ls "$DIST/assets" | wc -l | tr -d ' ') hashed files cached on the CDN"
+  # Every hashed file through both of the CDN's shields for the build, Tokyo's and Chicago's, so a first visit in Japan or
+  # the US is a cache hit nearby. X-Croquis-Fill names the shield and skips the cache of the POP the fill enters by.
+  hashed="$(ls "$DIST/assets" | wc -l | tr -d ' ')"
+  for shield in tokyo:Tokyo us:Chicago; do
+    filled="$(cd "$DIST/assets" && ls | xargs -P 8 -I{} curl -fsS -o /dev/null --compressed --max-time 30 \
+      -H "X-Croquis-Fill: ${shield%%:*}" -w '%{http_code}\n' "$CDN_ORIGIN/assets/{}" | grep -c '^200$' || true)"
+    echo "✓ $filled of $hashed hashed files cached in the CDN's ${shield#*:} shield"
+  done
 fi
 
 # The auth server's JWKS must carry its key ID: serve.py answers unknown paths with the app, also with a 200.
