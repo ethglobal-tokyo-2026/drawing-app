@@ -130,13 +130,14 @@ export function menuToLink(ids: ChatMenuIds, language: Language, wanted: ChatMen
 
 /**
  * The midnight batch's moves: in each language, everyone on one of a mode's menus moves to its
- * full count, since everyone has a full day's daily tickets again. The plain menu moves with the
- * standard menus: it stands in for a count menu missing from menus.json.
+ * full count, since everyone has a full day's daily tickets again. The plain menu stays: it stands
+ * in for a menu missing from menus.json in either mode, and the batch moves people by the menu
+ * they're on, so it can't tell which count they'd want. Plain shows none, so it suits both.
  */
 export function midnightMoves(ids: ChatMenuIds) {
   const moves: { from: string; to: string }[] = [];
   const families = [
-    [STANDARD_MENUS, false],
+    [STANDARD_MENUS.filter((menu) => menu !== "plain"), false],
     [KYOTO_SEIKA_MENUS, true],
   ] as const;
   for (const menus of [ids.en, ids.ja]) {

@@ -1,6 +1,7 @@
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { DAILY_TICKETS_PER_DAY, KYOTO_SEIKA_DAILY_TICKETS_PER_DAY } from "@drawing-app/db";
 import { describe, expect, it } from "vitest";
 import { TEST_CHAT_MENU_IDS } from "../testing/fakeLine.ts";
@@ -11,6 +12,11 @@ import {
   readChatMenuIds,
   type ChatMenuIds,
 } from "./menus.ts";
+
+/** The chat menus the box links people to. */
+const DEPLOYED_MENU_IDS = readChatMenuIds(
+  fileURLToPath(new URL("../../../../deploy/line/menus.json", import.meta.url)),
+);
 
 /** Writes `contents` to a menus.json of its own and returns its path. */
 function menusFile(contents: unknown) {
@@ -81,17 +87,39 @@ describe("the chat menu map", () => {
     expect(menuToLink(ids, "ja", "2")).toBeNull();
   });
 
-  it("moves each family back to its full count at midnight, in each language", () => {
+  it("moves each family back to its full count at midnight, in each language, and leaves the plain menu", () => {
     const { en, ja } = TEST_CHAT_MENU_IDS;
     for (const menus of [en, ja]) {
       for (const kyotoSeika of [false, true]) {
         const [full, ...rest] = familyOf(kyotoSeika);
-        for (const menu of kyotoSeika ? rest : [...rest, "plain" as const]) {
+        for (const menu of rest) {
           expect(afterMidnight(TEST_CHAT_MENU_IDS, menus[menu])).toBe(menus[full]);
         }
       }
+      expect(afterMidnight(TEST_CHAT_MENU_IDS, menus.plain)).toBe(menus.plain);
     }
     // A language without a full-count menu has nothing to move to.
     expect(midnightMoves({ en: { plain: en.plain }, ja })).toEqual(midnightMoves({ ja }));
   });
+
+  it.each([
+    { which: "deploy/line/menus.json", ids: DEPLOYED_MENU_IDS },
+    { which: "every menu made", ids: TEST_CHAT_MENU_IDS },
+  ])(
+    "leaves everyone, after midnight, on their mode's full count or on a menu that shows none, with $which",
+    ({ ids }) => {
+      for (const language of ["en", "ja"] as const) {
+        const menus = ids[language];
+        for (const kyotoSeika of [false, true]) {
+          const family = familyOf(kyotoSeika);
+          for (const wanted of family) {
+            const linked = menuToLink(ids, language, wanted);
+            if (!linked) continue;
+            const after = afterMidnight(ids, linked.richMenuId);
+            expect([menus?.[family[0]], menus?.plain], `${language} ${wanted}`).toContain(after);
+          }
+        }
+      }
+    },
+  );
 });
