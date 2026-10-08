@@ -27,7 +27,7 @@
 
 - **Phase 0,** `2026-10-08-small-fixes.md`: Settings' choice row CSS (`settings-note__choice`, `settings-note__picked`, `settings-note__select`). It may reshape `SettingsNote.test.tsx`.
 - **Foundations,** `2026-10-08-ipad-foundations.md`: `ui/largeScreen.ts` (`LARGE_SCREEN`, `useLargeScreen()`), whose query CSS spells `(min-width: 600px) and (min-height: 600px) and (any-pointer: coarse)`; TabBar importing `useLargeScreen`, with a large-screen `@media` block in `TabBar.css`; the desktop frame.
-- **Built on by** `2026-10-08-ipad-pencil.md`, with these names: `canvas/sheetFrame.ts`; the engine's `fit`, `frame`, `screenToSheet`, private `place()` and `origin`; DrawingCanvas's `.ink-area` > `.ink-sheet` > (`under`, `.ink-canvas`), its `onFit(scale)`, its handle's `frame()` and `screenToSheet()`; DrawingScreen's `sheetScale`; `ui/deviceSetting.ts` (`deviceSetting(key, { parse, serialize, name })` → `{ get, set, subscribe }`); `drawingSettings.ts` (`DRAWING_HANDS`, `DrawingHand`, `useDrawingHand`, `keepDrawingHand`); `stat-board/DrawingSettings.tsx`, `stat-board/ChoiceRow.tsx` (the Pencil plan's Task 6 Step 4 API); `stickerBoard.settings.drawing.notKept` (the Pencil plan's `pencil.notKept` words, so it can reuse it); `.drawing-screen[data-hand]`.
+- **Built on by** `2026-10-08-ipad-pencil.md`, with these names: `canvas/sheetFrame.ts`; the engine's `fit`, `frame`, `screenToSheet`, private `place()` and `origin`; DrawingCanvas's `.ink-area` > `.ink-sheet` > (`under`, `.ink-canvas`), its `onFit(scale)`, its handle's `frame()` and `screenToSheet()`; DrawingScreen's `sheetScale`; `ui/deviceSetting.ts` (`deviceSetting(key, { parse, serialize, name })` → `{ get, set, subscribe }`); `drawingSettings.ts` (`DRAWING_HANDS`, `DrawingHand`, `useDrawingHand`, `keepDrawingHand`); `stat-board/DrawingSettings.tsx`, whose one status line and error line (`kept`, `setKept`) the Pencil rows report through; `stat-board/ChoiceRow.tsx` (Task 11 Step 4's API); `stickerBoard.settings.drawing.kept` and `notKept`; `.drawing-screen[data-hand]`.
 
 ## Files
 
@@ -52,7 +52,7 @@ git cat-file -e 609020e0 && git cat-file -e c34494ea && echo "spike objects pres
 
 - [ ] **Step 3: A green start.** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation src/sticker-board src/app src/ui` → passes. Every test run sets `TZ=Asia/Tokyo`: some date tests assume Tokyo.
 
-**How a port runs.** `git show <sha> -- <paths> | git apply -3` (the spike's objects are in this repository). A conflict leaves markers: resolve as the task says, `git add`, run the task's test, commit with the task's message. Every port was tried in order on a scratch clone of main at `ed18a266` (before Phase 0 and foundations): typecheck, lint, format and `src/sticker-creation src/sticker-board src/app src/ui` passed. The conflicts listed are the ones it met; Phase 0 or foundations can add others in the files named.
+**How a port runs.** `git show <sha> -- <paths> | git apply -3` (the spike's objects are in this repository). A conflict leaves markers: resolve as the task says, `git add`, run the task's test, commit with the task's message. Every port was tried in order on a scratch clone of main at `ed18a266` (before Phase 0 and foundations): typecheck, lint, format and `src/sticker-creation src/sticker-board src/app src/ui` passed. The conflicts listed are the ones it met, and Tasks 1–3 met the same ones again at `6e20e09e`; Phase 0 or foundations can add others in the files named. `git apply --check -3` passes even where `-3` will leave markers, so read the apply's "with conflicts" lines instead.
 
 **UI tasks (8, 11, 12):** read the impeccable skill's `reference/craft-floor.md` first and work with `/impeccable adapt` as the lens.
 
@@ -728,7 +728,8 @@ Scratch only, in `data/scratch/ipad-drawing/`. The scripts were run in Chromium 
 3. **Language's row onto `ChoiceRow`:** done in Task 11 only if Phase 0's markup matches; otherwise Phase 0's row stays inline.
 4. **E2E coverage:** `sameSize.js` and `rotate.js` check the sheet's core promise; whether they become specs in `apps/frontend/e2e/` (Chromium only today) or stay scratch.
 5. **WebKit:** it couldn't open pages on this Mac on 2026-10-08; the trial's WebKit capture (390×844 Left) predates that. Task 13 owes both engines.
-6. **Left's top right corner:** the wide timer and its PAUSED tag sit a few px from the screen's right edge at 1180×734 (seen in a trial capture, not measured); check the captures, and pull the top bar in if the tag clips.
+6. **The seal ceremony's sheet through a turn:** the Shop and cards plan hands it here (`measureSheet`, Task 11 of `git show 22de7791:docs/superpowers/plans/2026-10-07-ipad-explore-and-dialogs.md`): while the seal is on its way, a turn moves the sheet but not the cut sticker, its dim or its cut line. Not in this plan: ad0ll to place it here or in the dialogs plan.
+7. **Left's top right corner:** the wide timer and its PAUSED tag sit a few px from the screen's right edge at 1180×734 (seen in a trial capture, not measured); check the captures, and pull the top bar in if the tag clips.
 
 ## Self-review
 

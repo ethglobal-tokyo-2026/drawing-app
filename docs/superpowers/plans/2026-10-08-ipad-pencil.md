@@ -37,7 +37,7 @@ On main before Task 1 (the brief's order: Phase 0, foundations, then `2026-10-08
   - `canvas/sheetFrame.ts`; on the engine, `fit(area, devicePixelRatio)`, `frame`, `screenToSheet`, and the private `place()` returning `{ left, top, scale }` (CSS px a sheet unit spans) and `origin`.
   - DrawingCanvas's root `.ink-area`, holding the paper `.ink-sheet` (main's `under`, then the ink canvas `.ink-canvas`); its `onFit(scale)`; `InkSurface.setFrame` and `density`.
   - `canvas/inkEngine.test.ts`: `setup()` calls `engine.fit(AREA, 1)`, so test pointers land one CSS px to the unit; `FakeLayer.setFrame`; `paperAt`, `framed`.
-- **Settings' Drawing group,** the same plan's Tasks 10–11: `ui/deviceSetting.ts`, `deviceSetting(key, { parse, serialize, name })` returning `{ get, set, subscribe }`, where `set` says whether the device kept the value and a refused value holds until the page goes; `sticker-creation/drawingSettings.ts` with the drawing hand (`DRAWING_HANDS`, `useDrawingHand`, `keepDrawingHand`); `sticker-board/stat-board/DrawingSettings.tsx`, the group, rendered on your Settings card; `stat-board/ChoiceRow.tsx`, with Task 6 Step 4's API; `stickerBoard.settings.drawing.notKept`.
+- **Settings' Drawing group,** the same plan's Tasks 10–11: `ui/deviceSetting.ts`, `deviceSetting(key, { parse, serialize, name })` returning `{ get, set, subscribe }`, where `set` says whether the device kept the value and a refused value holds until the page goes; `sticker-creation/drawingSettings.ts` with the drawing hand (`DRAWING_HANDS`, `useDrawingHand`, `keepDrawingHand`); `sticker-board/stat-board/DrawingSettings.tsx`, the group, rendered on your Settings card, with one status line and one error line set from `const [kept, setKept] = useState<boolean | null>(null)`; `stat-board/ChoiceRow.tsx` (`label`, `choices`, `value`, `nameOf`, `onChoose`, `describedBy`); `stickerBoard.settings.drawing.kept` and `notKept`.
 - **Phase 0,** `2026-10-08-small-fixes.md`: Settings' choice row CSS (`settings-note__choice`, `settings-note__picked`, `settings-note__select`).
 - **The e2e suite** (on main since 056d3cfa): `apps/frontend/e2e/helpers.ts` (`signIn`, `openSettings`, `canvas`, `drawKeyName`, `say`), `pnpm --filter frontend test:e2e`.
 
@@ -45,11 +45,11 @@ Where the drawing plan named something differently, use its name: Setup Step 2 f
 
 ## Files
 
-- Modify `apps/frontend/src/sticker-creation/drawingSettings.ts`, `drawingSettings.test.ts`
+- Modify `apps/frontend/src/sticker-creation/drawingSettings.ts`; create `drawingSettings.test.ts` (the drawing plan has none)
 - Modify `apps/frontend/src/sticker-creation/canvas/`: `inkEngine.ts`, `inkEngine.test.ts`, `brush.ts`, `brush.test.ts`, `gestures.ts`, `gestures.test.ts`, `lazyBrush.ts`, `DrawingCanvas.tsx`, `DrawingCanvas.css`; create `predictionCanvas.ts`
 - Modify `apps/frontend/src/sticker-creation/DrawingScreen.tsx`, `DrawingScreen.test.tsx`, `tools/ToolStrip.tsx`
 - Modify `apps/frontend/src/icons/index.tsx` (`PencilOnlyIcon`)
-- Create `apps/frontend/src/sticker-board/stat-board/PencilSettings.tsx`, `PencilSettings.test.tsx`, `TryPenPressure.tsx`, `pencil-settings.css`; one line in `DrawingSettings.tsx`
+- Create `apps/frontend/src/sticker-board/stat-board/PencilSettings.tsx`, `PencilSettings.test.tsx`, `TryPenPressure.tsx`, `pencil-settings.css`; one line in `DrawingSettings.tsx`, which shows the Pencil rows' status and error lines as its own
 - Modify `apps/frontend/src/shop/brushSamples.ts`
 - Modify `apps/frontend/src/performance/performanceRecorder.ts`, `performanceRecorder.test.ts`, `performanceReport.ts`, `performanceReport.test.ts`
 - Modify `apps/frontend/src/i18n/strings/stickerCreation.ts`, `stickerBoard.ts`; `apps/frontend/src/i18n/glossary.md`
@@ -81,11 +81,17 @@ If any prints nothing, read `docs/superpowers/plans/2026-10-08-ipad-drawing.md` 
 
 ### Task 1: Input mode and pen pressure, kept on the device
 
-**Files:** Modify `apps/frontend/src/sticker-creation/canvas/inkEngine.ts`, `canvas/brush.ts`, `drawingSettings.ts`, `drawingSettings.test.ts`
+**Files:** Modify `apps/frontend/src/sticker-creation/canvas/inkEngine.ts`, `canvas/brush.ts`, `drawingSettings.ts`; create `drawingSettings.test.ts`
 
-- [ ] **Step 1: Write the failing test.** In `drawingSettings.test.ts` (it runs under happy-dom and clears `localStorage` after each test; add either if missing), `keepInputMode`, `penDrew` and `readInputMode` join the import from `./drawingSettings`, and it gains:
+- [ ] **Step 1: Write the failing test,** `drawingSettings.test.ts`:
 
 ```ts
+// @vitest-environment happy-dom
+import { afterEach, describe, expect, it } from "vitest";
+import { keepInputMode, penDrew, readInputMode } from "./drawingSettings";
+
+afterEach(() => localStorage.clear());
+
 describe("the input mode", () => {
   it("starts every sheet in Pencil only once a pen first draws on this device, and a later pen never undoes the person's choice", () => {
     expect(readInputMode()).toBeNull();
@@ -98,7 +104,7 @@ describe("the input mode", () => {
 });
 ```
 
-- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation/drawingSettings.test.ts` → fails: no `penDrew`.
+- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation/drawingSettings.test.ts` → fails: no `penDrew`. (`penDrew` setting Pencil only whatever is kept turns it red later.)
 - [ ] **Step 3: The input modes,** in `canvas/inkEngine.ts` after the constants:
 
 ```ts
@@ -896,10 +902,10 @@ import {
   readPenPressure,
 } from "../../sticker-creation/drawingSettings";
 import { refusingStorage } from "../../ui/testing";
-import { PencilSettings } from "./PencilSettings";
+import { DrawingSettings } from "./DrawingSettings";
 
 const words = stickerBoard.settings.pencil;
-const notKept = stickerBoard.settings.drawing.notKept;
+const { kept, notKept } = stickerBoard.settings.drawing;
 let unmount = () => {};
 afterEach(() => {
   unmount();
@@ -911,16 +917,20 @@ afterEach(() => {
   localStorage.clear();
 });
 
+/** The Drawing group as Settings shows it, the Pencil rows under the drawing hand. */
 function render() {
-  const view = renderWithApi(<PencilSettings />);
+  const view = renderWithApi(<DrawingSettings />);
   unmount = view.unmount;
   return view.host;
 }
-/** The select laid over the row named `label`. */
+/** The select laid over the row named `label`, if the group shows it. */
+const rowNamed = (host: HTMLElement, label: string) =>
+  [...host.querySelectorAll("select")].find(
+    (select) =>
+      document.getElementById(select.getAttribute("aria-labelledby") ?? "")?.textContent === label,
+  );
 function row(host: HTMLElement, label: string) {
-  const named = (select: HTMLSelectElement) =>
-    document.getElementById(select.getAttribute("aria-labelledby") ?? "")?.textContent;
-  const select = [...host.querySelectorAll("select")].find((each) => named(each) === label);
+  const select = rowNamed(host, label);
   if (!select) throw new Error(`No row named ${label}`);
   return select;
 }
@@ -933,18 +943,19 @@ const choose = (select: HTMLSelectElement, value: string) =>
 describe("Settings' Pencil rows", () => {
   it("show once a pen has drawn on this device, starting from Pencil only and Normal", () => {
     const host = render();
-    expect(host.querySelector("select")).toBeNull();
+    expect(rowNamed(host, words.input.title.en)).toBeUndefined();
     act(() => penDrew());
     expect(row(host, words.input.title.en).value).toBe("pencilOnly");
     expect(row(host, words.pressure.title.en).value).toBe("normal");
   });
 
-  it("keep each choice on this device at once", () => {
+  it("keep each choice on this device at once, and the group's status line says so", () => {
     penDrew();
     const host = render();
     choose(row(host, words.input.title.en), "pencilAndFinger");
     choose(row(host, words.pressure.title.en), "light");
     expect([readInputMode(), readPenPressure()]).toEqual(["pencilAndFinger", "light"]);
+    expect(host.querySelector('[role="status"]')?.textContent).toBe(kept.en);
   });
 
   it("say when this device couldn't keep a choice, which still applies until Croquis closes", () => {
@@ -959,7 +970,7 @@ describe("Settings' Pencil rows", () => {
 });
 ```
 
-- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-board/stat-board/PencilSettings.test.tsx` → fails: no `PencilSettings`.
+- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-board/stat-board/PencilSettings.test.tsx` → fails: the group shows no Pencil rows. (A row's `onChoose` that doesn't call `onKept` turns the second and third red.)
 - [ ] **Step 3: The strings.** `stickerBoard.ts`, in `settings` after the drawing plan's Drawing group strings:
 
 ```ts
@@ -990,7 +1001,7 @@ describe("Settings' Pencil rows", () => {
     },
 ```
 
-A choice the device couldn't keep says the Drawing group's `drawing.notKept`. `glossary.md`, rows after "two fingers":
+A choice says the Drawing group's `drawing.kept` or `drawing.notKept`. `glossary.md`, rows after "two fingers":
 
 ```
 | Pencil only / Pencil and finger    | ペンのみ / ペンと指                    | The two inputs: Settings' Input (入力), and the drawing screen's pen tile           |
@@ -998,12 +1009,9 @@ A choice the device couldn't keep says the Drawing group's `drawing.notKept`. `g
 | Try it (under Pen pressure)        | ためしがき                             | In hiragana, as かく is                                                               |
 ```
 
-- [x] **Step 4: One choice row: skipped.** The drawing plan's Task 11 Step 4 creates `stat-board/ChoiceRow.tsx` with this API (`label`, `choices`, `value`, `nameOf`, `onChoose`, `describedBy`); the rows below use it.
-
-- [ ] **Step 5: The rows,** `stat-board/PencilSettings.tsx`:
+- [ ] **Step 4: The rows,** `stat-board/PencilSettings.tsx` (`ChoiceRow` is the drawing plan's):
 
 ```tsx
-import { useState } from "react";
 import { useTranslation } from "../../i18n/react";
 import { PEN_PRESSURES } from "../../sticker-creation/canvas/brush";
 import { INPUT_MODES } from "../../sticker-creation/canvas/inkEngine";
@@ -1013,23 +1021,19 @@ import {
   useInputMode,
   usePenPressure,
 } from "../../sticker-creation/drawingSettings";
-import { ErrorLine } from "../../ui/ErrorLine";
 import { ChoiceRow } from "./ChoiceRow";
 import { TryPenPressure } from "./TryPenPressure";
 import "./pencil-settings.css";
 
 /**
  * The Drawing group's Pencil rows, once a pen has drawn on this device: the input each new drawing
- * starts in, and how the pen's pressure sets its width, with a strip to try it. They're this
- * device's own, so each applies at once; one the device couldn't keep says so and lasts until
- * Croquis closes.
+ * starts in, and how the pen's pressure sets its width, with a strip to try it. Each applies at once,
+ * and `onKept` hands the group whether the device kept it, for its status and error lines.
  */
-export function PencilSettings() {
+export function PencilSettings({ onKept }: { onKept: (kept: boolean) => void }) {
   const { t } = useTranslation();
   const inputMode = useInputMode();
   const pressure = usePenPressure();
-  const [notKept, setNotKept] = useState(false);
-  const kept = (done: boolean) => setNotKept(!done);
   // No pen draws on a phone, so a phone shows none of this.
   if (inputMode === null) return null;
   return (
@@ -1039,27 +1043,22 @@ export function PencilSettings() {
         choices={INPUT_MODES}
         value={inputMode}
         nameOf={(mode) => t(($) => $.stickerBoard.settings.pencil.input[mode])}
-        onChoose={(mode) => kept(keepInputMode(mode))}
+        onChoose={(mode) => onKept(keepInputMode(mode))}
       />
       <ChoiceRow
         label={t(($) => $.stickerBoard.settings.pencil.pressure.title)}
         choices={PEN_PRESSURES}
         value={pressure}
         nameOf={(each) => t(($) => $.stickerBoard.settings.pencil.pressure[each])}
-        onChoose={(each) => kept(keepPenPressure(each))}
+        onChoose={(each) => onKept(keepPenPressure(each))}
       />
       <TryPenPressure response={pressure} fingersDraw={inputMode === "pencilAndFinger"} />
-      {notKept && (
-        <ErrorLine className="settings-note__problem">
-          {t(($) => $.stickerBoard.settings.drawing.notKept)}
-        </ErrorLine>
-      )}
     </>
   );
 }
 ```
 
-- [ ] **Step 6: Try it,** `stat-board/TryPenPressure.tsx`:
+- [ ] **Step 5: Try it,** `stat-board/TryPenPressure.tsx`:
 
 ```tsx
 import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react";
@@ -1252,9 +1251,9 @@ export function TryPenPressure({
 }
 ```
 
-- [ ] **Step 7: Into the group.** In `stat-board/DrawingSettings.tsx`, import `PencilSettings` from `./PencilSettings` and render `<PencilSettings />` right after the drawing hand's row, inside the group's element. Its doc comment gains "Once a pen has drawn on the device, the Pencil rows follow (`PencilSettings`)."
-- [ ] **Step 8:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-board/stat-board` and `pnpm -C apps/frontend typecheck` → pass. A test that lists the card's rows in Japanese still passes: on a fresh device the Pencil rows render nothing.
-- [ ] **Step 9:** Commit: `feat(frontend): Settings' Input and Pen pressure, with a strip to try the pen`
+- [ ] **Step 6: Into the group.** In `stat-board/DrawingSettings.tsx`, import `PencilSettings` from `./PencilSettings` and render `<PencilSettings onKept={setKept} />` right after the drawing hand's row, so the group's one status line and one error line serve every row. Its doc comment gains "Once a pen has drawn on the device, the Pencil rows follow (`PencilSettings`)."
+- [ ] **Step 7:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-board/stat-board` and `pnpm -C apps/frontend typecheck` → pass. A test that lists the card's rows in Japanese still passes: on a fresh device the Pencil rows render nothing.
+- [ ] **Step 8:** Commit: `feat(frontend): Settings' Input and Pen pressure, with a strip to try the pen`
 
 ### Task 7: The hover ring
 
@@ -2422,7 +2421,7 @@ test("Settings shows Input and Pen pressure once a pen has drawn on the device, 
 
 Scratch only, in `data/scratch/ipad-pencil/`; nothing here is committed. WebKit is the iPad's engine, and Playwright's has no CDP, so it takes synthetic `PointerEvent`s dispatched on the paper.
 
-- [ ] **Step 1: Can WebKit open a page here?** `pnpm --filter frontend exec playwright install webkit`, then `(cd apps/frontend && node -e 'import("@playwright/test").then(async ({ webkit }) => { const b = await webkit.launch(); const p = await b.newPage(); await p.goto("data:text/html,<p>ok"); console.log(await p.textContent("p")); await b.close(); })')` prints `ok`. If it can't (on 2026-10-08 Playwright's WebKit on this Mac couldn't load even a `data:` URL, and a restart is the likely fix), tell the coordinator at once, do Task 13 meanwhile, and come back once the probe prints `ok`. If it still can't by the merge, merge without the captures and list them as owed.
+- [ ] **Step 1: Can WebKit open a page here?** `pnpm --filter frontend exec playwright install webkit`, then `(cd apps/frontend && node -e 'import("@playwright/test").then(async ({ webkit }) => { const b = await webkit.launch(); const p = await b.newPage(); await p.goto("data:text/html,<p>ok"); console.log(await p.textContent("p")); await b.close(); })')` prints `ok`. If it can't, tell the coordinator at once, do Task 13 meanwhile, and come back once the probe prints `ok`. If it still can't by the merge, merge without the captures and list them as owed.
 - [ ] **Step 2: Servers of its own,** on 5196 and 8796, in the background, from the worktree's root. The API: `D="$PWD/data/scratch/ipad-pencil" && mkdir -p "$D/images" && (cd apps/api && PORT=8796 DATABASE_URL="$D/drawing-app.db" IMAGE_DIR="$D/images" IMAGE_BASE_URL=http://localhost:5196/api/images DEV_SIGN_IN=on STICKER_CHAIN_MODE=mock node --env-file=.env.example src/server.ts)`. Vite: `(cd apps/frontend && VITE_LIFF_MOCK=on VITE_DEV_SLIP=on node_modules/.bin/vite --config vite.ipad-pencil.config.ts)`, with an untracked `apps/frontend/vite.ipad-pencil.config.ts`:
 
 ```ts
@@ -2555,7 +2554,7 @@ Only a real iPad and Pencil settle these. Setup: an iPad and Pencil that hover, 
 
 ## Self-review
 
-- **Brief coverage** (`2026-10-08-ipad-design-brief.md`, "Apple Pencil"): input mode with Settings' default and a quick switch, shown only where a pen has drawn (Tasks 1–3, 6); two- and three-finger taps either way (Task 2's test, Task 11); pen pressure Off, Light, Normal, Firm with a strip to try it (Tasks 5, 6); the hover ring at the stroke's width (Task 7); prediction, redrawn each frame and never kept, named as Smoothing's opposite (Task 9); palms never draw or count toward undo, heavy starts, flat-pressure pens (Tasks 4, 5). The old plan's layout, drawing hand, color popover, short heights and Escape-disarms-the-seal tasks are left to `2026-10-08-ipad-drawing.md` and the small-windows plan.
+- **Brief coverage** (`2026-10-08-ipad-design-brief.md`, "Apple Pencil"): input mode with Settings' default and a quick switch, shown only where a pen has drawn (Tasks 1–3, 6); two- and three-finger taps either way (Task 2's test, Task 11); pen pressure Off, Light, Normal, Firm with a strip to try it (Tasks 5, 6); the hover ring at the stroke's width (Task 7); prediction, redrawn each frame and never kept, named as Smoothing's opposite (Task 9); palms never draw or count toward undo, heavy starts, flat-pressure pens (Tasks 4, 5).
 - **Placeholder scan:** no TBD, no "similar to". One choice is made at run time, with its rule: Task 11 Step 2 (whether Chromium predicts for CDP moves). Setup Step 2 maps the drawing plan's names.
 - **Names across tasks:** `INPUT_MODES` and `InputMode` (`inkEngine.ts`); `PEN_PRESSURES`, `PenPressure`, `previewWidth` (`brush.ts`); `useInputMode`, `readInputMode`, `keepInputMode`, `penDrew`, `usePenPressure`, `readPenPressure`, `keepPenPressure` (`drawingSettings.ts`); `InkSettings.inputMode` and `penPressure`; `InkEvents.onPen` and `onHover`; `HoverRing`; `PredictionLayer`, `PredictionCanvas`; `INK_WORK`; `isPalm`, `PALM_CONTACT_PX`, `YOUNG_MS`; `ChoiceRow`, `PencilSettings`, `TryPenPressure`; `PointerKindSummary`, `PointerSample`, `Span`, `SampleCount`; CSS `.nib-ring`, `.ink-prediction`, `.try-pen-pressure__ink`; storage keys `draw.inputMode`, `draw.penPressure`.
 - **Test helpers in `inkEngine.test.ts`** change in order: Task 2 (`inputMode`, `onPen`), Task 4 (`width`, `height`, `runFrame`), Task 5 (`penPressure`, `at`'s and `stroke`'s pressure), Task 7 (`buttons`, `onHover`), Task 8 (the recorder mock), Task 9 (`FakePrediction`, `setup`'s second parameter).
