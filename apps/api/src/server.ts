@@ -9,14 +9,12 @@ import {
   chatMenuFromEnvironment,
   messagingChannelFromEnvironment,
 } from "./chatMenu/fromEnvironment.ts";
-import { startCdnCap } from "./cdn/cdnCap.ts";
 import { startMidnightBatches } from "./chatMenu/midnight.ts";
 import type { AppDeps } from "./deps.ts";
 import { logInfo } from "./diagnostics.ts";
 import { startExpiredGiftReturns } from "./gifts/expiry.ts";
 import { giverNoticeFor, startGiverNoticeSweeps } from "./gifts/giverNotice.ts";
 import { chooseLineVerifier } from "./services/devSignIn.ts";
-import { createFastlyCdn } from "./services/fastly.ts";
 import { createShinamiGasStation } from "./services/gasStation.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { journalLog } from "./services/journal.ts";
@@ -123,26 +121,6 @@ const chain = (() => {
   return { sui, gasStation, suiWallets };
 })();
 
-// The CDN cap, with Fastly's token and the IDs of its service and the croquis_cdn dictionary; without
-// any of them, as in development, it's off.
-const cdn = (() => {
-  const keys = ["FASTLY_API_TOKEN", "FASTLY_SERVICE_ID", "FASTLY_CAP_DICTIONARY_ID"];
-  if (keys.every((key) => !process.env[key])) return null;
-  const fastlyIdSchema = z.string().regex(/^[A-Za-z0-9]{22}$/, "Expected a Fastly ID");
-  const fastly = z
-    .object({
-      FASTLY_API_TOKEN: secretSchema,
-      FASTLY_SERVICE_ID: fastlyIdSchema,
-      FASTLY_CAP_DICTIONARY_ID: fastlyIdSchema,
-    })
-    .parse(process.env);
-  return createFastlyCdn({
-    token: fastly.FASTLY_API_TOKEN,
-    serviceId: fastly.FASTLY_SERVICE_ID,
-    dictionaryId: fastly.FASTLY_CAP_DICTIONARY_ID,
-  });
-})();
-
 const clock = { now: () => new Date() };
 const messaging = messagingChannelFromEnvironment({
   devSignIn: env.DEV_SIGN_IN,
@@ -195,11 +173,6 @@ startTicketPurchaseSweeps(deps);
 // The package's objects, the server's address and Shinami's fund, checked: now, then just after each
 // midnight, Tokyo time.
 startChainChecks(deps);
-
-// Fastly's usage this month, checked now and then every few minutes: at the cap, every request to the
-// CDN goes to the box instead.
-if (cdn) startCdnCap({ cdn, clock });
-else logInfo("cdn.cap.off", { reason: "no Fastly settings" });
 
 // Only a proxy on this machine reaches it: Vite's in development, HAProxy's on the box.
 serve(

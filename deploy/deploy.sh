@@ -69,17 +69,6 @@ if [ -n "$CDN_ORIGIN" ]; then
   # module script from another origin needs, or the app doesn't start.
   entry="$(grep -o "$CDN_ORIGIN/assets/index-[A-Za-z0-9_-]*\.js" "$DIST/index.html" | head -1 || true)"
   [ -n "$entry" ] || { echo "✗ index.html doesn't load its entry script from $CDN_ORIGIN" >&2; exit 1; }
-  box_entry="$URL/assets/${entry##*/}"
-  # With the CDN cap on, the CDN sends every request to the same file on the box until next month.
-  if [ "$(curl -sS --max-time 15 -H "Origin: $URL" -o /dev/null -w '%{http_code} %{redirect_url}' "$entry")" \
-    = "307 $box_entry" ]; then
-    curl -fsS --max-time 15 "$box_entry" | cmp -s - "$DIST/assets/${entry##*/}" \
-      || { echo "✗ $URL doesn't serve the build's entry script, which the CDN cap sends the app to" >&2; exit 1; }
-    echo "⚠ the CDN cap is on: $CDN_ORIGIN sends the app to $URL until next month (deploy/README.md's CDN)"
-    cdn_capped=on
-  fi
-fi
-if [ -n "$CDN_ORIGIN" ] && [ -z "${cdn_capped:-}" ]; then
   got="$(mktemp -d)"
   if ! { curl -fsS --max-time 15 -H "Origin: $URL" -D "$got/headers" -o "$got/body" "$entry" \
     && cmp -s "$got/body" "$DIST/assets/${entry##*/}" \
