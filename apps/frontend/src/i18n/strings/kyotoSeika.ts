@@ -5,11 +5,15 @@ export const kyotoSeika = {
   balloons: {
     /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the two thought balloons' group name for screen readers */
     label: { en: "Your subjects", ja: "題材" },
-    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: a balloon's die, named for screen readers by the subject it would replace, such as "Roll another subject: 風, wind" */
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: a cloud's reroll, named for screen readers by the lettering it shows and the subject it would replace, such as "Reroll: 風, wind" */
     roll: {
-      en: "Roll another subject: {{word}}, {{english}}",
-      ja: "別の題材にする：{{word}}、{{english}}",
+      en: "Reroll: {{word}}, {{english}}",
+      ja: "振り直す：{{word}}、{{english}}",
     },
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the hand lettering beside the inked die under each cloud, which deals that cloud another subject; screen readers hear the die's name instead */
+    reroll: { en: "Reroll", ja: "振り直す" },
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the sound effect lettered beside a die as it lands, hidden from screen readers; Japanese in both languages, as a drawn manga sound effect */
+    rollSound: { en: "コロッ", ja: "コロッ" },
     /** Drawing screen, a sheet in Kyoto Seika Practice Mode: a subject as screen readers hear it, such as "風, wind": read out politely as a balloon is dealt it, and in English in the canvas's name once begun */
     subject: { en: "{{word}}, {{english}}", ja: "{{word}}、{{english}}" },
     /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: a die's name for screen readers once it blew up from rolling too often, and read out as it does; its balloon's subject can't change */
@@ -46,8 +50,6 @@ export const kyotoSeika = {
     breakTheButton: { en: "You’ll break the button!", ja: "ボタンが壊れちゃう！" },
     /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: hand lettering beside a balloon whose die keeps rolling, its last warning before the countdown to the bang; also read out */
     warned: { en: "Don’t say I didn’t warn you", ja: "もう知らないよ？" },
-    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the sound effect in the burst as a die rolled too often blows up */
-    boom: { en: "KA-BOOM!", ja: "ドカーン！" },
   },
   /** The pair as a margin note in the sheet's corner once Begin locked it in. */
   print: {

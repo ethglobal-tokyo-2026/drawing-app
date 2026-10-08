@@ -4,15 +4,13 @@ import { useTranslation } from "../i18n/react";
 import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { pairLayout, type PairLayout } from "./balloonGeometry";
+import { pairLayout, ROOM_PX, type PairLayout } from "./balloonGeometry";
 import { BeginKey, type BeginKeyHandle } from "./BeginKey";
 import type { Balloon, Deal } from "./deal";
 import { SubjectBalloons } from "./SubjectBalloons";
 import type { SubjectListState } from "./useKyotoSeikaSheet";
 import "./kyoto-seika-deal.css";
 
-/** The room kept between the pair and the timer's label above it, and the task over Begin below it, in px. */
-const CLEARANCE_PX = 14;
 /** Begin leaves: the key drops this far and fades, as the balloons tuck into the corner print. */
 const LEAVE = { keyDropPx: 56, keyMs: 220, balloonsMs: 360 };
 
@@ -64,8 +62,8 @@ export function KyotoSeikaDeal({
       setLayout(
         pairLayout({
           width: box.width,
-          top: above.getBoundingClientRect().bottom - box.top + CLEARANCE_PX,
-          bottom: below.getBoundingClientRect().top - box.top - CLEARANCE_PX,
+          top: above.getBoundingClientRect().bottom - box.top + ROOM_PX,
+          bottom: below.getBoundingClientRect().top - box.top - ROOM_PX,
         }),
       );
     };

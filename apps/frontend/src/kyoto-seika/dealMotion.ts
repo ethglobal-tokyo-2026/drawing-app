@@ -1,8 +1,79 @@
 import { EASE_SPRING } from "../ui/easing";
+import { seededRandom } from "../ui/seededRandom";
 
 // The deal's motion, from its prototype: tunable values, played through the Web Animations API.
 
 export const SPRING = EASE_SPRING;
+
+/** How far a drift reaches: px across and down, and degrees of tilt. */
+export interface DriftReach {
+  x: number;
+  y: number;
+  deg: number;
+}
+
+/**
+ * Each cloud drifts on its own, its bubbles a little more on their own: slow seeded noise in sway, rise
+ * and tilt, each over its own loop, so the two clouds never fall in step.
+ */
+export const FLOAT = {
+  seeds: [11, 47] as const,
+  cloud: { x: 1.8, y: 2.6, deg: 0.7 },
+  periodMs: [23_000, 29_000] as const,
+  beads: { x: 1.1, y: 1.1, deg: 0 },
+  beadsPeriodMs: [13_000, 17_000] as const,
+  /** Keyframes in one loop: enough that the straight runs between them never show. */
+  keyframes: 96,
+};
+
+/**
+ * The ink boils: the line shows one of a few frames drawn ahead, the next every `frameMs`. The CSS's
+ * ink-boil keyframes hold each of the three frames for a third of the cycle.
+ */
+export const BOIL = { frames: 3, frameMs: 180 };
+
+const TAU = Math.PI * 2;
+/** Each axis mixes one slow wave, one middling and one quick, as harmonics of its loop. */
+const WAVES = [
+  [1, 2],
+  [3, 4],
+  [5, 6, 7],
+] as const;
+
+/**
+ * A drift through one loop (t from 0 to 1, and round again): seeded waves that come back where they
+ * began, peaking at exactly `reach` on each axis.
+ */
+export function driftAt(seed: number, reach: DriftReach) {
+  const random = seededRandom(seed);
+  const axis = (amp: number) => {
+    const waves = WAVES.map((choices) => {
+      const harmonic = choices[Math.floor(random() * choices.length)];
+      return { harmonic, weight: (0.6 + 0.8 * random()) / harmonic ** 0.45, phase: random() * TAU };
+    });
+    const raw = (u: number) =>
+      waves.reduce((s, w) => s + w.weight * Math.sin(TAU * w.harmonic * u + w.phase), 0);
+    let peak = 0;
+    for (let i = 0; i < 4096; i++) peak = Math.max(peak, Math.abs(raw(i / 4096)));
+    return (u: number) => (amp * raw(u)) / peak;
+  };
+  const x = axis(reach.x);
+  const y = axis(reach.y);
+  const deg = axis(reach.deg);
+  return (t: number) => {
+    const u = t - Math.floor(t);
+    return { x: x(u), y: y(u), deg: deg(u) };
+  };
+}
+
+/** A drift as Web Animations keyframes for one loop. */
+export function driftKeyframes(seed: number, reach: DriftReach): Keyframe[] {
+  const drift = driftAt(seed, reach);
+  return Array.from({ length: FLOAT.keyframes + 1 }, (_, i) => {
+    const { x, y, deg } = drift(i / FLOAT.keyframes);
+    return { translate: `${x.toFixed(2)}px ${y.toFixed(2)}px`, rotate: `${deg.toFixed(3)}deg` };
+  });
+}
 
 /** Each balloon's beads pop in from the thinker's side, then the cloud puffs out and the word stamps in. */
 export const ARRIVE = {
@@ -30,21 +101,29 @@ export const WORD_STAMP: Keyframe[] = [
   { opacity: 1, scale: 1, rotate: "0deg" },
 ];
 
-/** A roll: the die tumbles with a hop, the cloud squashes and puffs, and the word swaps. */
+/**
+ * A roll: the die tumbles once over an edge onto its new pips with a hop, its コロッ pops beside it, the
+ * cloud squashes and puffs, and the word swaps.
+ */
 export const ROLL = {
-  dieMs: 420,
-  hopPx: 9,
-  turns: 2,
+  dieMs: 250,
+  hopPx: 7,
+  /** How far round the die starts, so it lands square on its new face. */
+  tumbleDeg: 90,
+  soundMs: 640,
   cloudMs: 300,
   wordOutMs: 120,
   wordInMs: 220,
   puffs: 5,
   puffMs: 420,
 };
+/** A tumble's easing: gentle enough that the turn shows across its quarter second, not just its start. */
+export const TUMBLE_EASE = "cubic-bezier(0.3, 0.6, 0.45, 1)";
 export const DIE_TUMBLE: Keyframe[] = [
-  { rotate: "0deg", translate: "0 0" },
-  { rotate: `${ROLL.turns * 180}deg`, translate: `0 -${ROLL.hopPx}px`, offset: 0.45 },
-  { rotate: `${ROLL.turns * 360}deg`, translate: "0 0" },
+  { rotate: `-${ROLL.tumbleDeg}deg`, translate: "0 0", scale: "1" },
+  { rotate: `-${ROLL.tumbleDeg * 0.4}deg`, translate: `0 -${ROLL.hopPx}px`, offset: 0.45 },
+  { rotate: "0deg", translate: "0 0", scale: "1.08 0.92", offset: 0.82 },
+  { rotate: "0deg", translate: "0 0", scale: "1" },
 ];
 export const CLOUD_SQUASH: Keyframe[] = [
   { scale: "1 1" },
@@ -62,11 +141,16 @@ export const WORD_IN: Keyframe[] = [
   { opacity: 1, scale: 1 },
 ];
 
+/**
+ * A die rolled too often shakes, harder as dieMood's shake builds from 0 to 1: this far and this many
+ * degrees at its worst, each jolt quicker as it builds.
+ */
+export const SHAKE = { maxPx: 2.6, maxDeg: 10, slowMs: 260, fastMs: 70 };
+
 /** Rolling too much: each line peels off after this long, a countdown number sooner. */
 export const TEASE_MS = 1600;
 export const COUNT_MS = 800;
-/** The bang goes off this long after the roll that chars the die, and is gone after BOOM_MS. */
-export const BOOM_DELAY_MS = 520;
+/** The bang goes off with the roll that blows the die up, and is gone after this long. */
 export const BOOM_MS = 1800;
 /** A line pops in tilted, holds, and peels off; a countdown number does the same untilted. */
 export const teaseIn = (tilt: number): Keyframe[] => [

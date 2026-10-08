@@ -1,0 +1,180 @@
+/* Each cloud's reroll: a die inked in the clouds' own G-pen (a white face, a tapered ink line and inked
+   pips, with no key, lip or shadow) beside hand lettering, as one button fixed on the sheet under the
+   cloud's right edge, so it never moves while the cloud drifts. */
+.subject-reroll {
+  position: absolute;
+  z-index: 33;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 44 px to touch round the die and its lettering. */
+.subject-reroll::before {
+  content: "";
+  position: absolute;
+  inset: -7px -6px;
+}
+
+.subject-reroll:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* Hand lettering in the deal's 書き文字 voice, written beside the die at a slant. */
+.subject-reroll__label {
+  font-family: var(--font-puffy);
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  rotate: -4deg;
+}
+
+.subject-reroll__die {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 32px;
+  height: 32px;
+}
+
+.subject-reroll__die svg {
+  display: block;
+  overflow: visible;
+}
+
+.subject-reroll__face {
+  fill: var(--canvas);
+}
+
+.subject-reroll__ink,
+.subject-reroll__pips {
+  fill: var(--ink);
+}
+
+.subject-reroll[aria-disabled="true"] {
+  cursor: default;
+}
+
+/* Rolled too often, the die shakes, harder and quicker as the rolls build toward the bang. The drawing
+   shakes inside its box, so a tumble on the box plays over it. */
+.subject-reroll.is-shaking .subject-reroll__die svg {
+  animation: die-shake var(--shake-ms) linear infinite;
+}
+
+@keyframes die-shake {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  20% {
+    translate: calc(var(--shake-px) * -1) calc(var(--shake-px) * 0.4);
+    rotate: calc(var(--shake-deg) * -1);
+  }
+  40% {
+    translate: calc(var(--shake-px) * 0.8) calc(var(--shake-px) * -0.6);
+    rotate: calc(var(--shake-deg) * 0.7);
+  }
+  60% {
+    translate: calc(var(--shake-px) * -0.5) calc(var(--shake-px) * -0.3);
+    rotate: calc(var(--shake-deg) * 0.4);
+  }
+  80% {
+    translate: calc(var(--shake-px) * 0.6) calc(var(--shake-px) * 0.5);
+    rotate: calc(var(--shake-deg) * -0.6);
+  }
+}
+
+/* A roll's sound effect, lettered small just over the die as it lands: it pops, rises a little and
+   fades. Decorative: screen readers never hear it. */
+.subject-reroll__sound {
+  position: absolute;
+  z-index: 34;
+  font-family: var(--font-puffy);
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: var(--ink);
+  rotate: 8deg;
+  transform-origin: 0 100%;
+  pointer-events: none;
+  animation: reroll-sound ease-out forwards;
+}
+
+@keyframes reroll-sound {
+  0% {
+    opacity: 0;
+    scale: 0.4;
+    translate: 0 4px;
+  }
+  22% {
+    opacity: 1;
+    scale: 1.15;
+    translate: 0 0;
+  }
+  38% {
+    scale: 1;
+  }
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 1;
+    translate: 0 -7px;
+  }
+}
+
+/* Blown up: a broken, disabled button. The face is soot-dark with white cracks running from its chipped
+   corner, the pips faint under the soot, two shards beside it, and its lettering knocked askew and
+   greyed out. */
+.subject-reroll.is-broken {
+  --soot: color-mix(in srgb, var(--ink) 86%, var(--canvas));
+}
+
+.subject-reroll.is-broken .subject-reroll__face {
+  fill: var(--soot);
+}
+
+.subject-reroll.is-broken .subject-reroll__pips {
+  fill: var(--canvas);
+  opacity: 0.28;
+}
+
+.subject-reroll__cracks {
+  fill: var(--canvas);
+  opacity: 0.9;
+}
+
+.subject-reroll__shards {
+  fill: var(--soot);
+  stroke: var(--ink);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+}
+
+.subject-reroll.is-broken .subject-reroll__label {
+  color: var(--graphite);
+  rotate: -9deg;
+}
+
+/* The die smokes through the countdown, and harder once it has blown up. */
+.subject-reroll__smoke {
+  position: absolute;
+  left: 50%;
+  bottom: 72%;
+  pointer-events: none;
+}

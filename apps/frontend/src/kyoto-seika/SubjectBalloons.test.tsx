@@ -9,7 +9,6 @@ import { seededRandom } from "../ui/seededRandom";
 import { pairLayout } from "./balloonGeometry";
 import { rollDie, type Balloon, type Deal } from "./deal";
 import { CHARRED_AT_ROLL, TEASE_LINES } from "./dieMood";
-import { BOOM_DELAY_MS } from "./dealMotion";
 import { SubjectBalloons } from "./SubjectBalloons";
 import { DEAL, SPORTS, TEST_SUBJECTS, WIND } from "./testSubjects";
 
@@ -55,23 +54,36 @@ function Harness() {
   return <SubjectBalloons deal={deal} layout={LAYOUT} onRoll={roll} />;
 }
 
-const dice = (host: HTMLElement) => [...host.querySelectorAll<HTMLButtonElement>(".subject-die")];
+const dice = (host: HTMLElement) => [
+  ...host.querySelectorAll<HTMLButtonElement>(".subject-reroll"),
+];
 const said = (subject: KyotoSeikaSubject) =>
   strings.kyotoSeika.balloons.subject.en
     .replace("{{word}}", subject.ja)
     .replace("{{english}}", subject.en);
 
 describe("the Kyoto Seika balloons", () => {
-  it("names the pair as a group, and each die by the subject it would replace", () => {
+  it("names the pair as a group", () => {
     const host = render(<SubjectBalloons deal={DEAL} onRoll={() => {}} layout={LAYOUT} />);
     expect(host.querySelector('[role="group"]')?.getAttribute("aria-label")).toBe(
       strings.kyotoSeika.balloons.label.en,
     );
-    const roll = (subject: KyotoSeikaSubject) =>
-      strings.kyotoSeika.balloons.roll.en
-        .replace("{{word}}", subject.ja)
-        .replace("{{english}}", subject.en);
-    expect(dice(host).map((d) => d.getAttribute("aria-label"))).toEqual(DEAL.subjects.map(roll));
+  });
+
+  it("gives each cloud one reroll: its die and its hand lettering in one button, named by the subject it would replace", async () => {
+    const host = render(<SubjectBalloons deal={DEAL} onRoll={() => {}} layout={LAYOUT} />);
+    for (const language of ["en", "ja"] as const) {
+      await act(() => i18next.changeLanguage(language));
+      const { roll, reroll } = strings.kyotoSeika.balloons;
+      const named = (subject: KyotoSeikaSubject) =>
+        roll[language].replace("{{word}}", subject.ja).replace("{{english}}", subject.en);
+      expect(dice(host).map((d) => d.getAttribute("aria-label"))).toEqual(DEAL.subjects.map(named));
+      expect(dice(host).map((d) => d.textContent)).toEqual([reroll[language], reroll[language]]);
+      expect(dice(host).every((d) => d.querySelector("svg"))).toBe(true);
+      // Its name starts with the words it shows, so speech control finds it by them.
+      for (const d of dice(host))
+        expect(d.getAttribute("aria-label")?.startsWith(d.textContent ?? "-")).toBe(true);
+    }
   });
 
   it("reads each new subject out politely", () => {
@@ -83,7 +95,7 @@ describe("the Kyoto Seika balloons", () => {
     expect(status?.textContent).toBe(said(dealtNow.subjects[1]));
   });
 
-  it("shows each subject's word, with its reading over kanji only, and its English, and nothing more", async () => {
+  it("shows each subject's word with its reading over kanji only, and no English, in either language", async () => {
     const deal: Deal = { subjects: [WIND, SPORTS], rolls: [0, 0] };
     const host = render(<SubjectBalloons deal={deal} onRoll={() => {}} layout={LAYOUT} />);
     const [upper, lower] = [...host.querySelectorAll(".subject-balloon")];
@@ -91,8 +103,8 @@ describe("the Kyoto Seika balloons", () => {
     expect(lower.querySelector("rt")).toBeNull();
     for (const language of ["en", "ja"]) {
       await act(() => i18next.changeLanguage(language));
-      expect(upper.textContent).toBe(`${WIND.ja}${WIND.reading}${WIND.en}`);
-      expect(lower.textContent).toBe(`${SPORTS.ja}${SPORTS.en}`);
+      expect(upper.textContent).toBe(`${WIND.ja}${WIND.reading}`);
+      expect(lower.textContent).toBe(SPORTS.ja);
     }
   });
 
@@ -114,8 +126,54 @@ describe("the Kyoto Seika balloons", () => {
   });
 });
 
+/** Has the page ask for reduced motion, as the person's setting would, until the test ends. */
+function reduceMotion() {
+  vi.spyOn(window, "matchMedia").mockImplementation((query: string) => ({
+    matches: query.includes("reduce"),
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  }));
+}
+
+describe("a roll", () => {
+  afterEach(() => vi.restoreAllMocks());
+  const pips = (host: HTMLElement) =>
+    dice(host).map((d) => d.querySelector(".subject-reroll__pips")?.getAttribute("d"));
+
+  it("lands its die on new pips, and pops a lettered コロッ beside it that screen readers skip", () => {
+    const host = render(<Harness />);
+    const before = pips(host);
+    act(() => dice(host)[0].click());
+    expect(pips(host)[0]).not.toBe(before[0]);
+    expect(pips(host)[1]).toBe(before[1]);
+    const sound = host.querySelector(".subject-reroll__sound");
+    expect(sound?.textContent).toBe(strings.kyotoSeika.balloons.rollSound.en);
+    expect(sound?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("under reduced motion only changes the die's pips and the cloud's word", () => {
+    reduceMotion();
+    const host = render(<Harness />);
+    const word = () => host.querySelector(".subject-balloon__word")?.textContent;
+    const before = { pips: pips(host), word: word() };
+    act(() => dice(host)[0].click());
+    expect(pips(host)[0]).not.toBe(before.pips[0]);
+    expect(word()).not.toBe(before.word);
+    expect(host.querySelector(".subject-reroll__sound")).toBeNull();
+    expect(host.querySelector(".subject-puff")).toBeNull();
+  });
+});
+
 describe("a die rolled too often", () => {
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
 
   /**
    * The balloons over a deal, then over the deal after the upper die's roll number `rolls`;
@@ -140,10 +198,6 @@ describe("a die rolled too often", () => {
     return { host, renderAgain };
   }
   const status = (host: HTMLElement) => host.querySelector('[role="status"]')?.textContent ?? "";
-  const wait = (ms: number) =>
-    act(() => {
-      vi.advanceTimersByTime(ms);
-    });
 
   it("teases at the first line's roll, in hand lettering, and reads it out", () => {
     const [firstRoll] = TEASE_LINES.keys();
@@ -153,25 +207,52 @@ describe("a die rolled too often", () => {
     expect(status(host)).toContain(line);
   });
 
-  it("chars at the last roll, and says the subject stays once the bang has gone off", () => {
+  it("blows up at once on the last roll: the bang, the broken die and smoke, and says the subject stays, with no wait and no count", () => {
     vi.useFakeTimers();
     const { host } = rollUpperTo(CHARRED_AT_ROLL);
-    const charred = strings.kyotoSeika.balloons.charred.en;
-    expect(dice(host)[0].getAttribute("aria-disabled")).toBe("true");
-    wait(BOOM_DELAY_MS - 1);
-    expect(status(host)).not.toContain(charred);
-    wait(1);
-    expect(status(host)).toContain(charred);
+    const [upper] = dice(host);
+    expect(host.querySelector(".die-bang__burst")).not.toBeNull();
+    expect(upper.getAttribute("aria-disabled")).toBe("true");
+    expect(upper.getAttribute("aria-label")).toBe(strings.kyotoSeika.balloons.charred.en);
+    expect(upper.classList.contains("is-broken")).toBe(true);
+    expect(upper.classList.contains("is-shaking")).toBe(false);
+    expect(status(host)).toContain(strings.kyotoSeika.balloons.charred.en);
+    expect(host.querySelector(".die-tease")).toBeNull();
+    expect(host.querySelector(".die-bang__words")).toBeNull();
+    expect(host.querySelector(".subject-balloon__smoke")).not.toBeNull();
+    expect(upper.querySelector(".subject-reroll__smoke")).not.toBeNull();
+  });
+
+  it("under reduced motion, leaves only the broken die, with no bang or smoke", () => {
+    reduceMotion();
+    const { host } = rollUpperTo(CHARRED_AT_ROLL);
+    const [upper] = dice(host);
+    expect(upper.classList.contains("is-broken")).toBe(true);
+    expect(status(host)).toContain(strings.kyotoSeika.balloons.charred.en);
+    expect(host.querySelector(".die-bang")).toBeNull();
+    expect(host.querySelector(".subject-balloon__smoke")).toBeNull();
+    expect(upper.querySelector(".subject-reroll__smoke")).toBeNull();
   });
 
   it("plays the bang once, as the die blows up, however often the balloons render after", () => {
     vi.useFakeTimers();
     const { host, renderAgain } = rollUpperTo(CHARRED_AT_ROLL);
-    wait(BOOM_DELAY_MS);
     const burst = host.querySelector(".die-bang__burst");
     if (!burst) throw new Error("No bang");
     const played = vi.spyOn(burst, "animate");
     renderAgain();
     expect(played).not.toHaveBeenCalled();
+  });
+
+  it("comes back from a reload broken, with no bang", () => {
+    const host = render(
+      <SubjectBalloons
+        deal={{ ...DEAL, rolls: [CHARRED_AT_ROLL, 0] }}
+        onRoll={() => {}}
+        layout={LAYOUT}
+      />,
+    );
+    expect(dice(host)[0].classList.contains("is-broken")).toBe(true);
+    expect(host.querySelector(".die-bang")).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
-/* The two thought balloons over a fresh sheet in Kyoto Seika Manga Expression Practice Mode: bumps round
-   an ellipse in Canvas white with an Ink edge, beads trailing toward the thinker off the page, and a die
-   on each balloon's lower-right edge. Placed from the drawing screen's corner by their centers. */
+/* The two thought clouds over a fresh sheet in Kyoto Seika Manga Expression Practice Mode, inked with a
+   G-pen on the sheet's own white, as a manga page draws a balloon: no shadow, the pen line alone sets
+   each apart from the paper. Bubbles trail toward the thinker off the page, and a die waits under each
+   cloud's right edge. Placed from the drawing screen's corner by their centers. */
 .subject-balloons {
   position: absolute;
   inset: 0;
@@ -14,17 +15,8 @@
   height: 0;
 }
 
-/* Each balloon bobs on its own period, so the two never sync. */
-.subject-balloon__float {
-  position: absolute;
-  inset: 0;
-  animation: subject-bob var(--bob) ease-in-out infinite alternate;
-}
-
-.subject-balloons.is-still .subject-balloon__float {
-  animation-play-state: paused;
-}
-
+/* Each cloud drifts on its own seeded track, played from SubjectBalloons. */
+.subject-balloon__float,
 .subject-balloon__cloud,
 .subject-balloon__beads {
   position: absolute;
@@ -37,22 +29,33 @@
   overflow: visible;
 }
 
-/* The Lift shadow, as drop shadows, since the balloons float over the sheet. */
-.subject-balloon__cloud svg {
-  filter: drop-shadow(1px 3px 4px rgba(28, 24, 36, 0.12))
-    drop-shadow(3px 10px 22px rgba(28, 24, 36, 0.14));
-}
-
-.subject-balloon__beads svg {
-  filter: drop-shadow(1px 2px 2px rgba(28, 24, 36, 0.12));
-}
-
-.subject-balloon .shape-edge {
-  fill: var(--ink);
-}
-
 .subject-balloon .shape-fill {
   fill: var(--canvas);
+}
+
+/* The ink boils: of the three frames drawn ahead (BOIL in dealMotion), each shows for a third of the
+   cycle, staggered by its own delay, and a hair longer, so the hand-over never leaves a frame with no
+   line at all. With no animation the first frame alone shows. */
+.subject-balloon .shape-ink {
+  fill: var(--ink);
+  animation: ink-boil calc(var(--boil-frame) * 3) step-end infinite;
+}
+
+.subject-balloon .shape-ink + .shape-ink {
+  visibility: hidden;
+}
+
+.subject-balloons.is-still .shape-ink {
+  animation-play-state: paused;
+}
+
+@keyframes ink-boil {
+  0% {
+    visibility: visible;
+  }
+  33.34% {
+    visibility: hidden;
+  }
 }
 
 .subject-balloon__words {
@@ -81,108 +84,59 @@
   color: var(--graphite);
 }
 
-.subject-balloon__english {
-  font-family: var(--font-ui);
-  font-size: var(--english);
-  font-weight: 750;
-  line-height: 1.1;
-}
-
-/* A small label-stock die: a 32 px face over a 3 px lip, with a 44 px touch. */
-.subject-die {
-  position: absolute;
-  z-index: 33;
-  width: 32px;
-  height: 35px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  translate: -50% -50%;
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-.subject-die::before {
-  content: "";
-  position: absolute;
-  inset: -5px -6px -4px;
-}
-
-.subject-die__face {
-  position: absolute;
-  inset: 0 0 3px;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  background: var(--liner-lift);
-  box-shadow:
-    0 0 0 1px var(--rule-strong),
-    0 3px 0 var(--label-deep),
-    0 3px 0 1px var(--rule-strong),
-    1px 5px 6px rgba(28, 24, 36, 0.16);
-}
-
-.subject-die__pips {
-  width: 21px;
-  height: 21px;
-  color: var(--ink);
-}
-
-.subject-die[aria-disabled="true"] {
-  cursor: default;
-}
-
-/* Charred: soot over the label stock, thickest at its middle, with an ash rim where the edge burned
-   and its lip burnt black. The pips still show faintly through the soot, so it reads as the same die,
-   burnt, rather than a black square. */
-.subject-die.is-charred .subject-die__face {
-  background:
-    radial-gradient(
-      circle at 42% 40%,
-      rgba(28, 24, 36, 0.97) 0 36%,
-      rgba(28, 24, 36, 0.9) 64%,
-      rgba(28, 24, 36, 0.8) 100%
-    ),
-    var(--liner-lift);
-  box-shadow:
-    inset 0 0 0 1px var(--ink),
-    inset 0 0 4px 1px rgba(255, 255, 255, 0.2),
-    0 3px 0 var(--ink-deep),
-    0 3px 0 1px var(--ink),
-    1px 5px 6px rgba(28, 24, 36, 0.25);
-}
-
-.subject-die.is-charred .subject-die__pips {
-  color: var(--liner-lift);
-  opacity: 0.34;
-}
-
-/* A puff of smoke from a rolled balloon. */
+/* A puff from a rolled cloud, inked like its bubbles. */
 .subject-puff {
   position: absolute;
-  width: 18px;
-  height: 18px;
-  margin: -9px 0 0 -9px;
-  border-radius: 50%;
-  background: var(--canvas);
-  box-shadow: 0 0 0 1.5px var(--ink);
+  overflow: visible;
   pointer-events: none;
 }
 
-@keyframes subject-bob {
-  from {
-    translate: 0 -3px;
-    rotate: -0.6deg;
+.subject-puff__white {
+  fill: var(--canvas);
+}
+
+.subject-puff__ink {
+  fill: var(--ink);
+}
+
+/* Once a die blows up, smoke rises from its cloud's top edge and from the die: pen-drawn wisps that
+   rise, swell and fade on a loop. */
+.subject-balloon__smoke {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.smoke-wisp {
+  position: absolute;
+  bottom: 0;
+  overflow: visible;
+  /* The smoke's own grey: a 漫符 color, not a token. */
+  fill: #9a96a3;
+  opacity: 0;
+  transform-origin: 50% 100%;
+  animation: smoke-rise 2.2s ease-out infinite;
+}
+
+@keyframes smoke-rise {
+  0% {
+    opacity: 0;
+    scale: 0.7;
+    translate: 0 4px;
   }
-  to {
-    translate: 0 3px;
-    rotate: 0.6deg;
+  25% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.25;
+    translate: 3px -16px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .subject-balloon__float {
+  .subject-balloon .shape-ink {
     animation: none;
   }
 }

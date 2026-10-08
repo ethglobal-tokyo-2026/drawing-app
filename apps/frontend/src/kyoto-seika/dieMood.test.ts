@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  ANGER_FROM_ROLL,
   CHARRED_AT_ROLL,
   COUNTDOWN_FROM_ROLL,
   dieMood,
-  SHIVER_FROM_ROLL,
-  SWEAT_FROM_ROLL,
+  SHAKE_FROM_ROLL,
   TEASE_LINES,
 } from "./dieMood";
 
@@ -20,21 +18,29 @@ describe("a die's mood", () => {
     expect(said).toEqual([...TEASE_LINES]);
   });
 
-  it("sweats from SWEAT_FROM_ROLL, angers from ANGER_FROM_ROLL, shivers from SHIVER_FROM_ROLL", () => {
-    for (const r of rollsUpTo(CHARRED_AT_ROLL))
-      expect(dieMood(r)).toMatchObject({
-        sweat: r >= SWEAT_FROM_ROLL,
-        anger: r >= ANGER_FROM_ROLL,
-        shiver: r >= SHIVER_FROM_ROLL,
-      });
+  it("barely shakes until about roll 10, then harder with every roll toward the bang, and stops once it blows up", () => {
+    const shakes = rollsUpTo(CHARRED_AT_ROLL).map((r) => dieMood(r).shake);
+    expect(shakes.slice(0, SHAKE_FROM_ROLL).every((s) => s === 0)).toBe(true);
+    const building = shakes.slice(SHAKE_FROM_ROLL, CHARRED_AT_ROLL - 1);
+    expect(building.every((s, i) => i === 0 || s > building[i - 1])).toBe(true);
+    expect(dieMood(SHAKE_FROM_ROLL + 1).shake).toBeLessThan(0.02);
+    expect(dieMood(CHARRED_AT_ROLL - 1).shake).toBe(1);
+    // Escalating: each roll adds more shake than the one before it did.
+    const steps = building.slice(1).map((s, i) => s - building[i]);
+    expect(steps.every((d, i) => i === 0 || d > steps[i - 1])).toBe(true);
+    expect(dieMood(CHARRED_AT_ROLL).shake).toBe(0);
   });
 
-  it("counts down by one from COUNTDOWN_FROM_ROLL to 1 as it's charred, smoking all the while", () => {
+  it("counts down by one from COUNTDOWN_FROM_ROLL to 1 on the roll before the bang, smoking all the while, and blows up on the last with no count", () => {
     const counts = rollsUpTo(CHARRED_AT_ROLL).flatMap((r) => dieMood(r).countdown ?? []);
-    expect(counts.at(-1)).toBe(1);
+    expect(dieMood(CHARRED_AT_ROLL - 1).countdown).toBe(1);
     expect(counts).toEqual(counts.map((_, i) => counts[0] - i));
-    expect(counts).toHaveLength(CHARRED_AT_ROLL - COUNTDOWN_FROM_ROLL + 1);
-    expect(dieMood(CHARRED_AT_ROLL)).toMatchObject({ charred: true, smoking: true });
+    expect(counts).toHaveLength(CHARRED_AT_ROLL - COUNTDOWN_FROM_ROLL);
+    expect(dieMood(CHARRED_AT_ROLL)).toMatchObject({
+      countdown: null,
+      charred: true,
+      smoking: true,
+    });
     expect(dieMood(CHARRED_AT_ROLL - 1).charred).toBe(false);
   });
 });

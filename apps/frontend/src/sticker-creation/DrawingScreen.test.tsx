@@ -513,7 +513,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     );
     await settle();
   }
-  const dice = () => [...document.querySelectorAll<HTMLButtonElement>(".subject-die")];
+  const dice = () => [...document.querySelectorAll<HTMLButtonElement>(".subject-reroll")];
   const beginKey = () => document.querySelector<HTMLButtonElement>(".begin-key button");
   /** The sheet still waits for Begin: it takes no ink and its tools are put away. */
   const stillDealt = () =>

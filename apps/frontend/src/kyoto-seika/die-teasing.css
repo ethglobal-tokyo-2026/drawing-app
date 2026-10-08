@@ -1,5 +1,4 @@
-/* Rolling too much: a die's lines in manga hand lettering (書き文字), its countdown, the bang, and the
-   balloon's emotion marks (漫符). */
+/* Rolling too much: a die's lines in manga hand lettering (書き文字), its countdown, and the bang. */
 .die-tease {
   position: absolute;
   z-index: 40;
@@ -62,155 +61,18 @@
   stroke-width: 2;
 }
 
-/* The die's chips: label stock, flying off. */
+/* The die's shards, flying off: white, inked round in the clouds' pen. */
 .die-bang__chip {
   position: absolute;
-  left: -3px;
-  top: -3px;
-  width: 7px;
-  height: 7px;
-  border-radius: 1.5px;
-  background: var(--liner-lift);
-  box-shadow: 0 0 0 1px var(--ink);
+  left: -7px;
+  top: -7px;
+  overflow: visible;
 }
 
-.die-bang__words {
-  font-size: 34px;
+.die-bang__chip-white {
+  fill: var(--canvas);
 }
 
-.balloon-mark {
-  position: absolute;
-  z-index: 2;
-  transform-origin: 50% 100%;
-  pointer-events: none;
-}
-
-.balloon-mark svg {
-  display: block;
-}
-
-.balloon-mark__drop {
-  /* The sweat drop's own pale blue: a 漫符 color, not a token. */
-  fill: #c9e7f8;
-  stroke: var(--ink);
-  stroke-width: 1.8;
-  stroke-linejoin: round;
-}
-
-.balloon-mark__shine {
-  fill: none;
-  stroke: var(--canvas);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-}
-
-.balloon-mark--anger path {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 2.6;
-  stroke-linecap: round;
-}
-
-.balloon-mark--sweat {
-  animation: balloon-drip 1.8s ease-in-out infinite;
-}
-
-.balloon-mark--anger {
-  animation: balloon-throb 0.7s ease-in-out infinite;
-}
-
-/* From the shiver's roll, the balloon shakes as it floats. */
-.subject-balloon.is-shivering .subject-balloon__float {
-  animation:
-    subject-bob var(--bob) ease-in-out infinite alternate,
-    balloon-shiver 120ms linear infinite;
-}
-
-/* The die smokes through the countdown and after; held still, the wisp stays where it rose. Once
-   charred, its cracks show white through the soot. */
-.subject-die__wisp {
-  position: absolute;
-  left: 50%;
-  bottom: 100%;
-  width: 14px;
-  height: 30px;
-  margin-left: -7px;
-  fill: none;
-  /* The smoke's own grey: a 漫符 color, not a token. */
-  stroke: #9a96a3;
-  stroke-width: 2;
-  stroke-linecap: round;
-  opacity: 0.8;
-  pointer-events: none;
-  animation: die-wisp 1.6s ease-in-out infinite;
-}
-
-.subject-die__crack {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  fill: none;
-  stroke: var(--canvas);
-  stroke-width: 1.3;
-  stroke-linecap: round;
-  opacity: 0.75;
-}
-
-@keyframes balloon-drip {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 3px;
-  }
-}
-
-@keyframes balloon-throb {
-  0%,
-  100% {
-    scale: 1;
-  }
-  50% {
-    scale: 1.18;
-  }
-}
-
-@keyframes balloon-shiver {
-  0% {
-    margin-left: -1px;
-  }
-  50% {
-    margin-left: 1px;
-  }
-  100% {
-    margin-left: -1px;
-  }
-}
-
-@keyframes die-wisp {
-  0% {
-    translate: 0 4px;
-    opacity: 0;
-  }
-  30% {
-    opacity: 0.9;
-  }
-  100% {
-    translate: 3px -10px;
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .balloon-mark--sweat,
-  .balloon-mark--anger,
-  .subject-die__wisp {
-    animation: none;
-  }
-
-  .subject-balloon.is-shivering .subject-balloon__float {
-    animation: none;
-  }
+.die-bang__chip-ink {
+  fill: var(--ink);
 }
