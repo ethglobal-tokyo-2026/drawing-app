@@ -5,7 +5,19 @@
     "2": "richmenu-ca25421a6ede90c9e4d0c320e96fef3b",
     "1": "richmenu-f20000f678bc16dbc130f1ddc3f3e6c8",
     "reserve": "richmenu-906db70eea772f5a7727274cf14d3a35",
-    "none": "richmenu-38dc55e9eb7c3154369b6e55fad9a3f0"
+    "none": "richmenu-38dc55e9eb7c3154369b6e55fad9a3f0",
+    "kyoto-seika-10": "richmenu-b571cdb1ddabe207750bc8893b7a4a83",
+    "kyoto-seika-9": "richmenu-2f1896127a448f90daf22793a9a2772b",
+    "kyoto-seika-8": "richmenu-3f6ef31625568c5e0119dd5f9aff4eca",
+    "kyoto-seika-7": "richmenu-b98cc294aa49c96e3a92069850ff6ad4",
+    "kyoto-seika-6": "richmenu-15cad5f663c143186b1c819cdfbbe323",
+    "kyoto-seika-5": "richmenu-256bdfff7551becbbac0822e48629d0a",
+    "kyoto-seika-4": "richmenu-07dc6b811c799da150dc555768f71efd",
+    "kyoto-seika-3": "richmenu-570e605ba231c64ef54ebe00f9302fa5",
+    "kyoto-seika-2": "richmenu-d46d7e6a80b484135b2298bd05edae8e",
+    "kyoto-seika-1": "richmenu-20f788461329c6250a7ada44d098988c",
+    "kyoto-seika-reserve": "richmenu-ebc897a25413d944348262c1a9511d9f",
+    "kyoto-seika-none": "richmenu-61eeddc31372348045f7633283bc89e5"
   },
   "ja": {
     "plain": "richmenu-4b96e2034b20c2c0a0bc89db329cd669",
@@ -13,7 +25,19 @@
     "2": "richmenu-6b5233c117cc983447e7caf2b8fba2bc",
     "1": "richmenu-406ca901f1a641a057cd66d7c8429675",
     "reserve": "richmenu-6fecc4001985343df0b0c120d8163732",
-    "none": "richmenu-a1f62883b5ebd9b1a29e0c9e525b2fb9"
+    "none": "richmenu-a1f62883b5ebd9b1a29e0c9e525b2fb9",
+    "kyoto-seika-10": "richmenu-70124159b1361b128988c82a2987bff6",
+    "kyoto-seika-9": "richmenu-3ab027dfe9f22e690637d4e44238355f",
+    "kyoto-seika-8": "richmenu-5d2290b62e2f75fdd71dc54154ac92a7",
+    "kyoto-seika-7": "richmenu-9e64e8d096c3dee2e5b7849e2223c62c",
+    "kyoto-seika-6": "richmenu-f7162c08e3e637a513317fdf44cd6b0d",
+    "kyoto-seika-5": "richmenu-83014a97d285d6474ef477e781771428",
+    "kyoto-seika-4": "richmenu-55e565e525a1bb0fbb876c8ed6097926",
+    "kyoto-seika-3": "richmenu-01e49c6af43b78ad527649a920aa95ec",
+    "kyoto-seika-2": "richmenu-04e872b8be2388f375d57c9f54d70170",
+    "kyoto-seika-1": "richmenu-379f861ec4f82ecbc37daa5411e452b6",
+    "kyoto-seika-reserve": "richmenu-f693445d7e7d5a42e425eccb0fdccc94",
+    "kyoto-seika-none": "richmenu-1d7965c1c7015817949c4e94cff1eecb"
   },
   "default": "richmenu-a2a3e803b4e4dc01e9c54dd932afd511"
 }
