@@ -1,4 +1,4 @@
-import { useRef, useState, type Ref } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
 import { logOut } from "../../api/logOut";
 import { useMe } from "../../api/meContext";
 import { useApiQuery } from "../../api/useApiQuery";
@@ -31,6 +31,8 @@ const DEV_SLIP = import.meta.env.VITE_DEV_SLIP
 export type StatBoardHandle = StatCorkHandle;
 
 interface Props {
+  /** The board is turned over, showing this side. */
+  turned: boolean;
   onFlipBack: () => void;
   flipBackRef: Ref<HTMLButtonElement>;
   /** Opens the gratitude mini-game for the newest sticker, from the developer slip; null with none. */
@@ -39,12 +41,18 @@ interface Props {
 }
 
 /** Your stat board: the Sticker Board's back, with your User Stats pinned on the cork. */
-export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref }: Props) {
+export function StatBoard({ turned, onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref }: Props) {
   const { t } = useTranslation();
   const me = useIdentity();
   const account = useMe();
-  // Loaded each time the board mounts, so a turn after drawing or giving shows the new counts.
   const stats = useApiQuery("user-stats/me", (api) => api.userStats());
+  // The board stays mounted between turns, so each turn reloads the counts: gratitude, a gift received
+  // or a seal may have come in since. The last counts show until the new ones land.
+  const shown = useRef(turned);
+  useEffect(() => {
+    if (turned && !shown.current && stats.state === "ready") stats.refresh();
+    shown.current = turned;
+  }, [turned, stats]);
 
   const figures: CorkFigures = {
     name: me.displayName,

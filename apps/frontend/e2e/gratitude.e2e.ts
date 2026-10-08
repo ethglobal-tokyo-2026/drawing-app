@@ -17,7 +17,7 @@ import {
   unpackageAndAccept,
 } from "./helpers.ts";
 
-const { giving, gratitude, receiving, stickerBoard, ui } = strings;
+const { gratitude, receiving, stickerBoard, ui } = strings;
 const language = "en";
 
 /**
@@ -48,6 +48,10 @@ async function tapHeart(heart: Locator, taps: number) {
   }
 }
 
+/** Your stat board's Gratitude received paper. */
+const gratitudeReceived = (page: Page) =>
+  page.getByRole("region", { name: say(stickerBoard.statBoard.gratitude.title, language) });
+
 test("Gratitude: Bob plays a combo for Alice's gift, its receipt says sent, and it lands on Alice's stat board as Direct, once", async ({
   page: alice,
   friend: bob,
@@ -58,7 +62,13 @@ test("Gratitude: Bob plays a combo for Alice's gift, its receipt says sent, and 
   const giftClaimToken = giftClaimTokenFrom(alice);
   await sendInLineChat(alice, language, no);
 
-  const bobHandle = handleOf(await signIn(bob, "bob", language));
+  // Alice looks at her stat board while her gift is on its way, then turns back to her stickers. The
+  // board stays mounted, so the later turn has to load her User Stats again to show the gratitude.
+  await flipToStatBoard(alice, language);
+  await expect(gratitudeReceived(alice).getByRole("term")).toHaveCount(0);
+  await alice.getByRole("button", { name: say(stickerBoard.statBoard.flipBack, language) }).click();
+
+  await signIn(bob, "bob", language);
   await bob.goto(`/g/${await giftClaimToken}`);
   await unpackageAndAccept(bob, language, aliceHandle);
   await gratitudeAsk(bob, language, aliceHandle)
@@ -84,22 +94,13 @@ test("Gratitude: Bob plays a combo for Alice's gift, its receipt says sent, and 
   await receipt.getByRole("button", { name: say(ui.backToBoard, language) }).click();
   await expect(receipt).toBeHidden();
 
-  // Alice opens Croquis again, as LINE's word that her gift was received brings her: her board loads
-  // her User Stats as it mounts. She gave a sticker she drew, so the whole combo is hers, as Direct.
-  await alice.reload();
-  const received = alice.getByRole("dialog", {
-    name: say(giving.receivedNotice.title, language, { name: bobHandle }),
-  });
-  await received.getByRole("button", { name: say(ui.backToBoard, language) }).click();
-  await expect(received).toBeHidden();
+  // Alice, still in the app, turns her board over again: her stat board shows the combo. She gave a
+  // sticker she drew, so the whole combo is hers, as Direct.
   await flipToStatBoard(alice, language);
-  const gratitudeReceived = alice.getByRole("region", {
-    name: say(stickerBoard.statBoard.gratitude.title, language),
-  });
-  await expect(gratitudeReceived.getByRole("term")).toHaveText([
+  await expect(gratitudeReceived(alice).getByRole("term")).toHaveText([
     say(stickerBoard.statBoard.gratitude.direct, language),
   ]);
-  await expect(gratitudeReceived.getByRole("definition").first()).toHaveText(amount);
+  await expect(gratitudeReceived(alice).getByRole("definition").first()).toHaveText(amount);
 
   // The gift has its gratitude: once the Transfer Trail has loaded, Send gratitude isn't offered.
   const detail = await openDetail(bob, language, no);

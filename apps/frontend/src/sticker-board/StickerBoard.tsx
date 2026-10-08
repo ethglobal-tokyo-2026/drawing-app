@@ -1086,6 +1086,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
           <Suspense fallback={null}>
             <StatBoard
               ref={statBoard}
+              turned={turned}
               onFlipBack={() => turn(false)}
               flipBackRef={flipBack}
               onTryGratitudeMiniGame={

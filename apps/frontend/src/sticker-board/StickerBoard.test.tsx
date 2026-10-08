@@ -267,6 +267,39 @@ describe("StickerBoard's artist chips", () => {
     expect(chipped(view.host)).toEqual(["@bob"]);
   });
 
+  it("reload your User Stats each time the board turns over", async () => {
+    const stats = (direct: number) => ({
+      since: "2026-10-01T00:00:00.000Z",
+      made: 1,
+      received: 0,
+      given: 1,
+      gratitude: { direct, residual: 0, total: direct },
+      bests: { bestCombo: 0, mostGratitudeInADay: direct, longestStreak: 1 },
+      streak: 1,
+    });
+    const userStats = vi
+      .fn<ApiClient["userStats"]>()
+      .mockResolvedValueOnce(stats(0))
+      .mockResolvedValueOnce(stats(120));
+    const view = openBoard(
+      undefined,
+      emptyApi({ stickerBoard: () => new Promise(() => {}), userStats }),
+    );
+    unmount = view.unmount;
+
+    flip(view.host);
+    await vi.waitFor(async () => {
+      await act(async () => {});
+      expect(userStats).toHaveBeenCalledTimes(1);
+    });
+    flip(view.host);
+    flip(view.host);
+    await vi.waitFor(async () => {
+      await act(async () => {});
+      expect(userStats).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it("end with a turn of the board while they play, and don't start over when it turns back", () => {
     keep(TEST_ME.id, byMika());
     const view = openBoard();
