@@ -78,8 +78,82 @@
   transform: none;
 }
 
-/* A problem, the hint or the 18+ prompt can run longer than the prompt; it wraps short of the undo
-   and redo tiles. */
+/* The armed chip's 18+ box: a row over its words, at the chip's end away from the key, so a tap meant
+   for one never lands on the other. A chip that opens right of the key sets --chip-away: flex-end. */
+.seal-chip__row {
+  display: flex;
+  justify-content: var(--chip-away, flex-start);
+}
+
+/* Its label reaches past the row to a 44px touch area. */
+.seal-chip__nsfw {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: -11px -10px -3px;
+  padding: 11px 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.seal-chip.is-on .seal-chip__nsfw {
+  pointer-events: auto;
+}
+
+.seal-chip__box {
+  display: grid;
+  flex: none;
+}
+
+.seal-chip__box > * {
+  grid-area: 1 / 1;
+}
+
+/* Unticked, a quiet Graphite outline; ticked, Bonbon Pink under an Ink check. */
+.seal-chip__box input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  border: 1.5px solid var(--graphite);
+  border-radius: var(--r-label);
+  background: var(--canvas);
+  appearance: none;
+  cursor: pointer;
+  transition:
+    background-color 160ms var(--ease-out),
+    border-color 160ms var(--ease-out);
+}
+
+.seal-chip__box input:checked {
+  border-color: var(--ink);
+  background-color: var(--pink);
+}
+
+.seal-chip__box input:focus-visible {
+  outline-offset: 3px;
+}
+
+.seal-chip__box svg {
+  place-self: center;
+  width: 16px;
+  height: 16px;
+  color: var(--ink);
+  pointer-events: none;
+  opacity: 0;
+  scale: 0.6;
+  transition:
+    opacity 120ms var(--ease-out),
+    scale 220ms var(--ease-spring);
+}
+
+.seal-chip__box input:checked + svg {
+  opacity: 1;
+  scale: 1;
+}
+
+/* A problem can run longer than the prompt; it wraps short of the undo and redo tiles. */
 .seal-chip.is-long {
   max-width: calc(100% - 226px);
   line-height: 1.25;

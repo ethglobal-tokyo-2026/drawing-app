@@ -5,7 +5,15 @@ import {
   type Me,
   type Tickets,
 } from "@drawing-app/api/client";
-import { act, forwardRef, useEffect, useImperativeHandle, useRef, type Ref } from "react";
+import {
+  act,
+  createRef,
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  type Ref,
+} from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
 import type { ApiClient } from "../api/apiClient";
@@ -16,12 +24,13 @@ import { strings } from "../i18n/strings";
 import { useTickets } from "../tickets/useTickets";
 import { personKey } from "../ui/deviceStorage";
 import type { HistoryState } from "./canvas/inkEngine";
-import { DrawingScreen } from "./DrawingScreen";
+import type { Op } from "./canvas/ops";
+import { DrawingScreen, type DrawingScreenHandle } from "./DrawingScreen";
 import { CHARRED_AT_ROLL } from "../kyoto-seika/dieMood";
 import { REUNION, TEST_SUBJECTS, WIND } from "../kyoto-seika/testSubjects";
 import { LOAD_TIMEOUT_MS, SessionKeeper, type KeptSession } from "./session/keptSession";
 import { keepSentSeal, sealWentOut } from "./session/sentSeal";
-import { sessionMs } from "./session/session";
+import { ARM_WINDOW_MS, sessionMs } from "./session/session";
 import type { TimerDotHandle } from "./TimerDot";
 import type { Panel } from "./tools/ToolStrip";
 
@@ -34,6 +43,8 @@ const sheetCalls = vi.hoisted(() => ({
   label: undefined as string | undefined,
   /** A touch met the sheet while it takes no ink. */
   blocked: () => {},
+  /** A stroke landed on the sheet. */
+  stroke: () => {},
 }));
 const subjectList = vi.hoisted(() => ({ load: vi.fn() }));
 const sealing = vi.hoisted(() => ({ cut: vi.fn() }));
@@ -46,11 +57,13 @@ vi.mock("./canvas/DrawingCanvas", () => ({
   DrawingCanvas: forwardRef(function Sheet(
     {
       onHistory,
+      onCommit,
       onBlocked,
       settings,
       label,
     }: {
       onHistory: (state: HistoryState) => void;
+      onCommit: (op: Op) => void;
       onBlocked: () => void;
       settings: { paused: boolean; sessionMs: () => number };
       label?: string;
@@ -61,6 +74,10 @@ vi.mock("./canvas/DrawingCanvas", () => ({
       sheetCalls.settings = settings;
       sheetCalls.label = label;
       sheetCalls.blocked = onBlocked;
+      sheetCalls.stroke = () => {
+        onHistory({ canUndo: true, canRedo: false, hasInk: true });
+        onCommit({ tool: "brush", color: "#1C1824", pts: [], T: 0 });
+      };
     });
     useImperativeHandle(ref, () => ({
       undo() {},
@@ -185,22 +202,69 @@ const settle = async (ms = 0) => {
   for (let i = 0; i < 5; i++) await act(() => vi.advanceTimersByTimeAsync(ms / 5));
 };
 
+/** The drawing screen `reopen` rendered. */
+const drawingScreen = createRef<DrawingScreenHandle>();
+
 /**
  * Opens the drawing screen after a reload that kept `session`, with these tickets from the server,
- * for `me`.
+ * for `me`; `api` replaces any of the client's other methods.
  */
-function reopen(session: KeptSession, tickets: Partial<Tickets> = {}, me: Me = TEST_ME) {
+function reopen(
+  session: KeptSession,
+  tickets: Partial<Tickets> = {},
+  me: Me = TEST_ME,
+  api: Partial<ApiClient> = {},
+) {
   vi.useFakeTimers();
   kept.session = session;
   view = renderWithApi(
     <>
-      <DrawingScreen active onSealed={() => {}} onNewSticker={() => {}} onGoToBoard={() => {}} />
+      <DrawingScreen
+        ref={drawingScreen}
+        active
+        onSealed={() => {}}
+        onNewSticker={() => {}}
+        onGoToBoard={() => {}}
+      />
       <SheetProbe />
     </>,
-    emptyApi({ tickets: () => Promise.resolve({ ...FRESH_TICKETS, ...tickets }) }),
+    emptyApi({ tickets: () => Promise.resolve({ ...FRESH_TICKETS, ...tickets }), ...api }),
     me,
   );
 }
+
+/** The server's answer to a daily ticket spent, in Kyoto Seika Practice Mode or not. */
+const spentDaily = (kyotoSeikaPractice: boolean) =>
+  ({
+    ticketUse: {
+      id: 9,
+      ticketDay: FRESH_TICKETS.ticketDay,
+      dayIndex: 0,
+      kind: "daily",
+      kyotoSeikaPractice,
+      spentAt: "2026-09-26T00:00:00.000Z",
+    },
+    tickets: FRESH_TICKETS,
+  }) as const;
+
+/** A sticker the phone cuts from the sheet, so its seal goes out. */
+const cutSticker = () => ({
+  png: new Blob(["png"]),
+  mask: new Blob(["mask"]),
+  spec: new Blob(["spec"]),
+  rim: new Blob(["rim"]),
+  flat: new Blob(["flat"]),
+  outline: "M0 0L1 1Z",
+  width: 10,
+  height: 10,
+  pad: 0,
+  inkWidth: 10,
+  place: { x: 0, y: 0, w: 10, h: 10 },
+  contour: [],
+  layers: {},
+  maskImage: document.createElement("canvas"),
+  dispose: () => {},
+});
 
 const startOver = () =>
   [...document.querySelectorAll("button")].find(
@@ -216,37 +280,6 @@ const keptAtTimeUp: KeptSession = {
   steps: [],
 };
 const chip = () => document.querySelector(".seal-chip")?.textContent ?? "";
-
-describe("the drawing screen's 18+ switch", () => {
-  const toggle = () => document.querySelector<HTMLButtonElement>(".nsfw-toggle");
-  const words = strings.stickerCreation.nsfw;
-  /** Opens a kept drawing as `me` and turns the switch on. */
-  async function turnOn(me: Me) {
-    reopen(keptAtTimeUp, {}, me);
-    await settle();
-    expect(toggle()?.getAttribute("aria-checked")).toBe("false");
-    act(() => toggle()?.click());
-    expect(toggle()?.getAttribute("aria-checked")).toBe("true");
-  }
-
-  it("is there for someone without the NSFW opt-in, and says once on that they'll see the sticker blurred too", async () => {
-    await turnOn(TEST_ME);
-    expect(toggle()?.textContent).toBe(words.markBlurredForYou.en);
-    expect(toggle()?.getAttribute("aria-label")).toBe(words.labelBlurredForYou.en);
-  });
-
-  it("says only 18+ to someone with the opt-in, who sees it unblurred", async () => {
-    await turnOn({ ...TEST_ME, nsfwOptIn: true });
-    expect(toggle()?.textContent).toBe(words.mark.en);
-    expect(toggle()?.getAttribute("aria-label")).toBe(words.label.en);
-  });
-
-  it("comes back on for a kept drawing marked 18+", async () => {
-    reopen({ ...keptAtTimeUp, nsfw: true });
-    await settle();
-    expect(toggle()?.getAttribute("aria-checked")).toBe("true");
-  });
-});
 
 describe("the drawing screen after a reload", () => {
   it("stops waiting on a sticker in progress whose seal went out once a read that never answers has had a second wait", async () => {
@@ -349,6 +382,65 @@ const putToolsDown = () => {
   rail.hold(false);
 };
 
+describe("the armed seal chip's 18+ box", () => {
+  const sealKey = () => document.querySelector<HTMLButtonElement>(".seal-key");
+  const tapSealKey = () => act(() => sealKey()?.click());
+  const armed = () =>
+    sealKey()?.getAttribute("aria-label") === strings.stickerCreation.seal.tapAgain.en;
+  const box = () =>
+    [...document.querySelectorAll<HTMLInputElement>("input[type='checkbox']")].find(
+      (input) => input.getAttribute("aria-label") === strings.stickerCreation.nsfw.label.en,
+    );
+  const tick = () => act(() => box()?.click());
+  const seal = vi.fn<ApiClient["seal"]>(() => new Promise(() => {}));
+
+  /** Opens `session`, a drawing in progress that the phone cuts, and taps the seal key once. */
+  async function openArmed(session: KeptSession = keptHalfway) {
+    sealing.cut.mockResolvedValue(cutSticker());
+    reopen(session, {}, TEST_ME, { seal, spendTicket: () => Promise.resolve(spentDaily(false)) });
+    await settle();
+    tapSealKey();
+    expect(armed()).toBe(true);
+  }
+
+  it.each([false, true])("seals the sticker 18+ only when ticked: ticked %s", async (ticked) => {
+    await openArmed();
+    expect(box()?.checked).toBe(false);
+    if (ticked) tick();
+    tapSealKey();
+    await settle(1000);
+    expect(seal).toHaveBeenCalledOnce();
+    expect(seal.mock.calls[0]?.[0].nsfw).toBe(ticked);
+  });
+
+  it("neither seals nor disarms when ticked, and is still ticked when the chip comes back", async () => {
+    await openArmed();
+    await settle(ARM_WINDOW_MS - 500);
+    tick();
+    // Past the first tap's window: the tick gave the key a window of its own.
+    await settle(1000);
+    expect(armed()).toBe(true);
+    expect(seal).not.toHaveBeenCalled();
+
+    await settle(ARM_WINDOW_MS);
+    expect(armed()).toBe(false);
+    tapSealKey();
+    expect(box()?.checked).toBe(true);
+  });
+
+  it("comes back ticked on a kept drawing marked 18+, and starts unticked on a new sheet", async () => {
+    await openArmed({ ...keptHalfway, nsfw: true });
+    expect(box()?.checked).toBe(true);
+
+    act(() => drawingScreen.current?.startNewSticker());
+    await settle();
+    act(() => sheetCalls.stroke());
+    tapSealKey();
+    expect(armed()).toBe(true);
+    expect(box()?.checked).toBe(false);
+  });
+});
+
 describe("the drawing screen's clock", () => {
   it("holds while a tool is in hand, and pauses at a tap on the timer", async () => {
     reopen(keptHalfway);
@@ -397,18 +489,6 @@ describe("clearing the sheet", () => {
 
 describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
   const KYOTO_SEIKA_ME: Me = { ...TEST_ME, kyotoSeikaPractice: true };
-  /** The server's answer to a daily ticket spent in the mode. */
-  const SPENT = {
-    ticketUse: {
-      id: 9,
-      ticketDay: FRESH_TICKETS.ticketDay,
-      dayIndex: 0,
-      kind: "daily",
-      kyotoSeikaPractice: true,
-      spentAt: "2026-09-26T00:00:00.000Z",
-    },
-    tickets: FRESH_TICKETS,
-  } as const;
 
   // The kept session's IndexedDB connections last the page's life, so a test that reads back what
   // this device keeps draws as someone new.
@@ -428,7 +508,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     kept.session = session;
     view = renderWithApi(
       <DrawingScreen active onSealed={() => {}} onNewSticker={() => {}} onGoToBoard={() => {}} />,
-      emptyApi({ spendTicket: () => Promise.resolve(SPENT), ...api }),
+      emptyApi({ spendTicket: () => Promise.resolve(spentDaily(true)), ...api }),
       me,
     );
     await settle();
@@ -445,24 +525,6 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     "{{minutes}}",
     String(KYOTO_SEIKA_TIME_USED_S / 60),
   );
-  /** A sticker the phone cuts from the sheet, so its seal goes out. */
-  const cutSticker = () => ({
-    png: new Blob(["png"]),
-    mask: new Blob(["mask"]),
-    spec: new Blob(["spec"]),
-    rim: new Blob(["rim"]),
-    flat: new Blob(["flat"]),
-    outline: "M0 0L1 1Z",
-    width: 10,
-    height: 10,
-    pad: 0,
-    inkWidth: 10,
-    place: { x: 0, y: 0, w: 10, h: 10 },
-    contour: [],
-    layers: {},
-    maskImage: document.createElement("canvas"),
-    dispose: () => {},
-  });
   const pick = ({ ja, reading, en }: KyotoSeikaSubject) => ({ ja, reading, en });
 
   it("deals the pair of a ticket spent in Kyoto Seika Practice Mode, hides the tools and holds the sheet until Begin", async () => {

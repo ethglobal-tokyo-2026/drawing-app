@@ -20,7 +20,6 @@ import { useKyotoSeikaSheet } from "../kyoto-seika/useKyotoSeikaSheet";
 import { useApi } from "../api/useApi";
 import { errorDetail, errorMessage, problemOf, type Problem } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
-import { useMyNsfwOptIn } from "../stickers/nsfw";
 import { OutOfTickets } from "../tickets/OutOfTickets";
 import { StartDrawing } from "../tickets/StartDrawing";
 import { nextKind, ticketsLeft, type TicketKind, type Tickets } from "../tickets/tickets";
@@ -36,7 +35,6 @@ import type { HistoryState } from "./canvas/inkEngine";
 import { isFirstVisit } from "./drawVisits";
 import { lazyRadius } from "./canvas/lazyBrush";
 import type { Op, Tool } from "./canvas/ops";
-import { NsfwToggle } from "./NsfwToggle";
 import { SealKey } from "./SealKey";
 import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
 import { SealCeremony } from "./sealing/SealCeremony";
@@ -80,8 +78,6 @@ const FIRST_SIZES = { brush: 0.34, eraser: 0.52 };
 const FIRST_SMOOTHING = 30;
 /** How far [ and ] move the size rail. */
 const SIZE_STEP = 0.04;
-/** How long the seal key's hint stays, on the first visits, after the first stroke brings the key in. */
-const KEY_HINT_MS = 7_000;
 
 const afterPaint = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
@@ -202,10 +198,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   );
   // Until a session kept across a reload is back, or known lost, Draw doesn't ask for a ticket.
   const [restoring, setRestoring] = useState(true);
-  // The 18+ switch; the seal reads the ref, since it runs from the clock's time-up too.
+  // The sheet's 18+ mark, from the armed chip's box; the seal reads the ref, since it runs from the
+  // clock's time-up too.
   const [nsfwOn, setNsfwOn] = useState(false);
   const nsfw = useRef(false);
-  const optedIn = useMyNsfwOptIn();
   const keepNsfw = (on: boolean) => {
     nsfw.current = on;
     setNsfwOn(on);
@@ -213,14 +209,6 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const [pickedUp, setPickedUp] = useState<"restored" | "lost" | "carried" | "sealed" | null>(null);
   // A tap on the waiting timer puts "Starts when you draw" under it, until the first stroke.
   const [startsNote, setStartsNote] = useState(false);
-  // On the first few visits the seal key says how it works, once, as the first stroke brings it in.
-  const [keyHint, setKeyHint] = useState(false);
-  const keyHinted = useRef(false);
-  useEffect(() => {
-    if (!keyHint) return;
-    const id = setTimeout(() => setKeyHint(false), KEY_HINT_MS);
-    return () => clearTimeout(id);
-  }, [keyHint]);
 
   const clock = useSessionClock(() => send({ type: "time-up" }), sessionMs(me.kyotoSeikaPractice));
   // A blank sheet shows the length its ticket will be spent with, so Settings apply to it in place.
@@ -325,7 +313,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
 
   /**
    * Cuts the sticker from the sheet as it is now, and makes its seal request once the timelapse is
-   * gzipped; null when nothing is drawn. The ops and the 18+ switch are read with the ink's copy, so
+   * gzipped; null when nothing is drawn. The ops and the 18+ mark are read with the ink's copy, so
    * nothing on the sheet after it reaches the sticker or its timelapse.
    */
   async function cutFromSheet(timeUsed: number) {
@@ -942,7 +930,6 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     canvas.current?.clear();
     send({ type: "clear" });
     setSealProblem(null);
-    setKeyHint(false);
   };
 
   useShortcuts({
@@ -999,10 +986,6 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         }}
         onCommit={(op: Op) => {
           if (sealProblem) setSealProblem(null);
-          if (!keyHinted.current && isFirstVisit()) {
-            keyHinted.current = true;
-            setKeyHint(true);
-          }
           send({ type: "ink" });
           if (op.tool === "brush") setRecent((r) => withRecent(r, op.color));
         }}
@@ -1084,30 +1067,20 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         onUndo={() => canvas.current?.undo()}
         onRedo={() => canvas.current?.redo()}
       />
-      <NsfwToggle
-        shown={history.hasInk && !sealing && !retrying}
-        on={nsfwOn}
-        optedIn={optedIn}
-        brief={
-          session.phase !== "armed" &&
-          (sealProblem !== null || (keyHint && session.phase === "drawing"))
-        }
-        onChange={(on) => {
-          keepNsfw(on);
-          keeper.keepNsfw(on);
-        }}
-      />
       <SealKey
         shown={retrying || (history.hasInk && !sealing)}
         armed={session.phase === "armed"}
         nsfw={nsfwOn}
+        onNsfwChange={(on) => {
+          keepNsfw(on);
+          keeper.keepNsfw(on);
+          send({ type: "nsfw-box", now: performance.now() });
+        }}
         problem={
           sealProblem?.message ?? (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)
         }
         detail={sealProblem?.detail}
-        hint={keyHint && session.phase === "drawing" ? t(($) => $.stickerCreation.seal.hint) : null}
         onTap={() => {
-          setKeyHint(false);
           setSealProblem(null);
           if (sealProblem && reconnectOnTap.current) {
             // The drawing is kept on this device, and the drawing screen picks it back up.

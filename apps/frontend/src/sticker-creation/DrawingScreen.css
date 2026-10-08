@@ -58,7 +58,7 @@
 
 /* A sheet in Kyoto Seika Practice Mode waits for Begin with its tools put away, as an exam waits for
    始め: only the timer, the balloons and Begin show. */
-.drawing-screen.is-dealt :is(.tool-strip, .size-rail, .history-buttons, .seal-key, .nsfw-toggle) {
+.drawing-screen.is-dealt :is(.tool-strip, .size-rail, .history-buttons, .seal-key) {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;

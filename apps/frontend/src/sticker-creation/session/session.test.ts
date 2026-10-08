@@ -98,6 +98,22 @@ describe("transition", () => {
     ).toBe("armed");
   });
 
+  it("stays armed when the armed chip's 18+ box is ticked, for a full window from the tick", () => {
+    const box = (now: number) => ({ type: "nsfw-box", now }) as const;
+    const ticked = [start, ink, tap(1000), box(3000)] as const;
+    expect(run(...ticked)).toEqual({ phase: "armed", effects: [] });
+    expect(run(...ticked, { type: "arm-expired", now: 1000 + ARM_WINDOW_MS }).phase).toBe("armed");
+    expect(run(...ticked, tap(3000 + ARM_WINDOW_MS - 1))).toEqual({
+      phase: "sealing",
+      effects: ["seal"],
+    });
+    expect(run(...ticked, { type: "arm-expired", now: 3000 + ARM_WINDOW_MS }).phase).toBe(
+      "drawing",
+    );
+    // Only the key arms.
+    expect(run(start, ink, box(3000)).phase).toBe("drawing");
+  });
+
   it("disarms on any touch of the canvas", () => {
     expect(run(start, ink, tap(1000), { type: "canvas-touch" }).phase).toBe("drawing");
   });

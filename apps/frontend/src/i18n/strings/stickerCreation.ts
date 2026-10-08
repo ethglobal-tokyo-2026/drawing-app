@@ -98,18 +98,8 @@ export const stickerCreation = {
   seal: {
     /** Drawing screen, bottom right: the seal key's name for screen readers until its first tap arms it; the key shows a check mark */
     label: { en: "Seal: tap twice", ja: "仕上げ：2回タップ" },
-    /** Drawing screen, bottom right: the chip beside the seal key after its first tap, announced to screen readers and the key's name until the second tap, which seals */
+    /** Drawing screen, bottom right: the chip beside the seal key after its first tap, under its 18+ box, announced to screen readers and the key's name until the second tap, which seals */
     tapAgain: { en: "Tap again to seal", ja: "もう一度タップで仕上げ" },
-    /** Drawing screen, bottom right: the chip beside the seal key after its first tap while the 18+ switch is on, announced to screen readers and the key's name until the second tap, which seals the sticker as 18+ */
-    tapAgainNsfw: {
-      en: "Tap again to seal as 18+",
-      ja: "もう一度<wbr/>タップで<wbr/>18+として<wbr/>仕上げ",
-    },
-    /** Drawing screen, bottom right: the chip beside the seal key, announced, for a few seconds after the first stroke on each of your first few visits; it says how the key works, and that two fingers tap to undo */
-    hint: {
-      en: "Tap the check twice to seal. Tap with two fingers to undo.",
-      ja: "チェックを<wbr/>2回タップで<wbr/>仕上げ。<wbr/>2本指で<wbr/>タップすると<wbr/>元に戻せます。",
-    },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when it's tapped but everything drawn was erased or undone */
     empty: {
       en: "The sheet is empty, so there’s nothing to seal.",
@@ -173,21 +163,14 @@ export const stickerCreation = {
       ja: "シールを<wbr/>仕上げている<wbr/>途中でした。<wbr/>チェックを<wbr/>タップして<wbr/>仕上げてください。",
     },
   },
-  /** The 18+ switch over the seal key, for everyone, off until it's turned on. */
+  /** The 18+ box in the chip beside the armed seal key, for everyone, unticked on every new sheet. */
   nsfw: {
-    /** Drawing screen, bottom right, over the seal key: the switch's words; on, the sticker seals as 18+ */
+    /** Drawing screen, bottom right, in the chip beside the seal key after its first tap: the 18+ box's only words; ticked, the second tap seals the sticker as 18+. Also the tag after Sealed on the sealed card of a sticker sealed as 18+ */
     mark: { en: "18+", ja: "18+" },
-    /** Drawing screen, bottom right, over the seal key, for someone without Show 18+ stickers on: the switch's words while it's on, saying they'll see the sticker blurred too */
-    markBlurredForYou: { en: "18+ · Blurred for you too", ja: "18+・自分にもぼかして表示" },
-    /** Drawing screen, bottom right, over the seal key: the 18+ switch's name for screen readers */
+    /** Drawing screen, bottom right, in the chip beside the seal key after its first tap: the 18+ box's name for screen readers */
     label: {
       en: "18+: seal as sensitive content, blurred for anyone who hasn’t turned on 18+ stickers",
       ja: "18+：センシティブな内容として仕上げる（18+のシールをオンにしていない人にはぼかして表示）",
-    },
-    /** Drawing screen, bottom right, over the seal key, for someone without Show 18+ stickers on: the 18+ switch's name for screen readers, saying they'll see the sticker blurred too */
-    labelBlurredForYou: {
-      en: "18+: seal as sensitive content, blurred for anyone who hasn’t turned on 18+ stickers, you too",
-      ja: "18+：センシティブな内容として仕上げる（18+のシールをオンにしていない人には、自分も含めてぼかして表示）",
     },
   },
   /** The tool strip's tiles, named for assistive tech. */

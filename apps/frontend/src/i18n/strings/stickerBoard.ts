@@ -632,15 +632,10 @@ export const stickerBoard = {
       open: { en: "Mark 18+…", ja: "18+にする…" },
       /** Sticker detail, Mark 18+'s confirm: its title; {{no}} is the sticker's number, such as "No.0147" */
       title: { en: "Mark {{no}} 18+?", ja: "{{no}}を18+にしますか？" },
-      /** Sticker detail, Mark 18+'s confirm, for someone with Show 18+ stickers on: what marking does */
+      /** Sticker detail, Mark 18+'s confirm: what marking does */
       does: {
         en: "From now on it wears pink foil, and anyone who hasn’t turned on Show 18+ stickers sees it blurred and can’t receive it.",
         ja: "これからはピンクのホイルがつき、「18+のシールを表示する」をオンにしていない人にはぼかして表示され、受け取ることもできなくなります。",
-      },
-      /** Sticker detail, Mark 18+'s confirm, for someone without Show 18+ stickers on: what marking does, which blurs it for them too */
-      doesYouToo: {
-        en: "From now on it wears pink foil, and anyone who hasn’t turned on Show 18+ stickers sees it blurred and can’t receive it. You haven’t, so you’ll see it blurred too.",
-        ja: "これからはピンクのホイルがつき、「18+のシールを表示する」をオンにしていない人にはぼかして表示され、受け取ることもできなくなります。あなたもオンにしていないので、ぼかして表示されます。",
       },
       /** Sticker detail, Mark 18+'s confirm: the bold line saying the mark can't be taken off */
       cantUndo: { en: "You can’t undo this.", ja: "元に戻すことはできません。" },

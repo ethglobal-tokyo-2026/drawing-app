@@ -1,8 +1,9 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 
 type KeyTone = "seal" | "aqua" | "pink" | "grape" | "blue";
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
+  ref?: Ref<HTMLButtonElement>;
   tone?: KeyTone;
   size?: "md" | "lg" | "compact" | "round";
   icon?: ReactNode;

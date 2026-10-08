@@ -46,7 +46,7 @@ export interface KeptKyotoSeika {
 interface SessionRecord {
   ticket: number;
   elapsedMs: number;
-  /** The 18+ switch: it seals as an NSFW sticker. */
+  /** The armed chip's 18+ box was left ticked: it seals as an NSFW sticker. */
   nsfw: boolean;
   /** Absent when what's kept holds none, or none that can be read: the drawing still comes back. */
   tools?: KeptTools;
@@ -239,7 +239,7 @@ export class SessionKeeper {
     this.carried = true;
   }
 
-  /** Keeps the 18+ switch; on a carried session's blank sheet, it waits for the first save. */
+  /** Keeps the 18+ mark; on a carried session's blank sheet, it waits for the first save. */
   keepNsfw(nsfw: boolean): void {
     this.nsfw = nsfw;
     if (!this.carried) this.keepRecord();

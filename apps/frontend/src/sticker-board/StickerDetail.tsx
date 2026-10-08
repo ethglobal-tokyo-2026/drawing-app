@@ -614,11 +614,7 @@ export function StickerDetail({
                     {t(($) => $.stickerBoard.detail.markNsfw.title, { no: formatNo(sticker.no) })}
                   </p>
                   <div className="sticker-detail__mark-lines" id={`${markId}-lines`}>
-                    <p>
-                      {optedIn
-                        ? t(($) => $.stickerBoard.detail.markNsfw.does)
-                        : t(($) => $.stickerBoard.detail.markNsfw.doesYouToo)}
-                    </p>
+                    <p>{t(($) => $.stickerBoard.detail.markNsfw.does)}</p>
                     <p className="sticker-detail__mark-undo">
                       {t(($) => $.stickerBoard.detail.markNsfw.cantUndo)}
                     </p>

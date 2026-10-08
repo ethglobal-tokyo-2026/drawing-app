@@ -50,6 +50,8 @@ export type SessionEvent =
    */
   | { type: "restored"; drawn: boolean; sealSent: boolean; dealt: boolean }
   | { type: "seal-tap"; now: number; hasInk: boolean }
+  /** The armed chip's 18+ box was ticked or unticked: the key stays armed, its window starting over. */
+  | { type: "nsfw-box"; now: number }
   | { type: "arm-expired"; now: number }
   | { type: "canvas-touch" }
   /** The sheet was cleared: the seal key disarms, as at a touch on the sheet, and nothing else changes. */
@@ -111,6 +113,8 @@ export function transition(session: Session, event: SessionEvent): Result {
       if ((phase === "drawing" || phase === "armed") && event.hasInk)
         return to("armed", [], event.now);
       return unchanged;
+    case "nsfw-box":
+      return phase === "armed" ? to("armed", [], event.now) : unchanged;
     case "arm-expired":
       return phase === "armed" && event.now - session.armedAt >= ARM_WINDOW_MS
         ? to("drawing")
