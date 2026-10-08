@@ -44,9 +44,10 @@ seal, and do it again, ten times a day.
 5. **Deal two, each with its own die,** always from two different kinds. A roll never brings back either
    balloon's word or one of the last 40 dealt on this phone, and never pairs two words that share their
    English (泉 and 春 are both "spring").
-6. **Both languages on every balloon:** the word as the test prints it, its reading as furigana when it has
-   kanji, and its English. No meaning line: the words are high-school level, and a meaning would force a
-   pick among a word's senses (owner's call, 2026-10-07).
+6. **The word on every balloon:** as the test prints it, with its reading as furigana when it has kanji.
+   No English on the balloons (owner's call, 2026-10-08): the people practicing read the test's Japanese,
+   and screen readers in English still hear each subject's English. No meaning line either: a meaning
+   would force a pick among a word's senses (owner's call, 2026-10-07).
 7. **Nouns only, up to six characters**, as the test gives them; six lets in プレゼント, クリスマス, ランドセル
    and 宇宙飛行士. Action nouns (散歩, 料理, 再会) carry the verbs.
 8. **The corner print, in non-repro blue:** a vertical margin note (below). A new material color for
@@ -192,10 +193,10 @@ stays readable.
 
 ### The corner print (drawing)
 
-- A vertical margin note (縦書き), like the notes on a manga page's margin, in non-repro blue: a small boxed
-  題材 label, then each subject top to bottom with its reading as furigana on its right, as vertical text
-  carries it, and its English set sideways on its left. 24 px words, 20 px for four characters or more;
-  11 px furigana; 11.5 px English.
+- A faint vertical margin note (縦書き), like the notes on a manga page's margin: a small boxed 題材 label,
+  then each word alone, with no furigana or English, in its own column, right to left. 15 px words in
+  non-repro blue at half strength, so it reminds without competing with the drawing (owner's call,
+  2026-10-08: the full-size print was far too bright and large).
 - Inside the sheet, under the transparent ink canvas, so ink covers it. 16 px from the sheet's right edge,
   its foot 150 px above the sheet's: clear of the seal key, the 18+ switch above it, and the first visits'
   seal hint beside it. It takes no touches. A short pair stands about 130 px tall; the longest about 240.
