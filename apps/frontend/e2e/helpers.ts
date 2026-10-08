@@ -67,10 +67,15 @@ export async function signIn(page: Page, who: string, language: Language) {
 /** Someone's handle as Croquis prints it: it starts as the LINE name LIFF Mock gives their `?as=` name. */
 export const handleOf = (name: string) => `@${name.charAt(0).toUpperCase()}${name.slice(1)}`;
 
-/** Your stat board's Settings note: flips the board over and brings the note into view. */
-export async function openSettings(page: Page, language: Language) {
+/** Flips your own sticker board over to its stat board. */
+export async function flipToStatBoard(page: Page, language: Language) {
   const yourStats = say(stickerBoard.board.yourStats, language, { name: "" });
   await page.getByRole("button", { name: new RegExp(`${yourStats}$`) }).click();
+}
+
+/** Your stat board's Settings note: flips the board over and brings the note into view. */
+export async function openSettings(page: Page, language: Language) {
+  await flipToStatBoard(page, language);
   const settings = page.getByRole("region", { name: say(stickerBoard.settings.title, language) });
   await settings.scrollIntoViewIfNeeded();
   return settings;
