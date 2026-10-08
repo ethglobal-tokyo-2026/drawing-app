@@ -18,12 +18,12 @@ Each is the spec's recommendation with the values this plan picks. Every number 
 
 **Spec 5. The regular drawing screen.** In regular width `.drawing-screen` is a grid.
 
-- **Edge column**, 134px wide, opposite the drawing hand. Top to bottom: a 76px band under the timer; the size rail, centered between that band and the foot, 120px at least and `clamp(222px, 45%, 480px)` at most, so the thumb's travel grows from 160px to as much as 418px; undo and redo 16px under it; the 18+ switch 19px over the seal check; the seal check centered in the column (about 38px in from the side), 32px above the screen's foot, clear of the Pencil's corner swipe. The pieces are in flow, so under about 700px tall the rail shortens and the column starts under the top row.
+- **Edge column**, 134px wide, opposite the drawing hand. Top to bottom: a 76px band under the timer; the size rail, centered between that band and the foot, 120px at least and `clamp(222px, 45%, 480px)` at most, so the thumb's travel grows from 160px to as much as 418px; undo and redo 16px under it; the seal check centered in the column (about 38px in from the side), 32px above the screen's foot, clear of the Pencil's corner swipe. The pieces are in flow, so under about 700px tall the rail shortens and the column starts under the top row.
 - **Top row:** the timer, and the tool strip on the drawing hand's side, as today. **The sheet's area:** DrawingCanvas's own `.ink-area` (the drawing sheet plan's), which this plan places in the grid beside the column and under the band; that plan centers and scales the sheet inside it.
 - **Color popover:** in regular width the color sheet opens under the tool strip, so under the color tile, aligned to the strip's outer edge: top 66px, 14px in, 360px wide, 16px corners, the Lift shadow, fading in over 220ms. Its perforation, Escape, Back and a tap anywhere outside it close it; the clock holds while it's open, as today. The seal chip opens from the check toward the sheet, at most 340px wide.
 - **Smoothing and Clear** stay bars under the tools. **Compact** keeps today's layout.
 
-**Spec 6. Drawing hand.** Right or Left in Settings' Drawing group, kept on the device (`draw.hand`; Right when nothing is kept). Left is the full mirror, on phones and iPads: the rail, undo and redo, the check, the 18+ switch and the chip go right; the tool strip goes top left and the timer top right; the bars and the popover open under the strip on its side; the paused hint's arrow becomes Phosphor's arrow-bend-right-up.
+**Spec 6. Drawing hand.** Right or Left in Settings' Drawing group, kept on the device (`draw.hand`; Right when nothing is kept). Left is the full mirror, on phones and iPads: the rail, undo and redo, the check and its chip (with its 18+ checkbox) go right; the tool strip goes top left and the timer top right; the bars and the popover open under the strip on its side; the paused hint's arrow becomes Phosphor's arrow-bend-right-up.
 
 **Spec 7. Pencil only, visible.** Replaces the engine's private `penSeen` latch. Kept on the device (`draw.pencilOnly`: on, off, or nothing before a pen has drawn there). A pen touching the sheet turns it on only while nothing is kept, so after the first time only the person changes it, from the tile or from Settings. The tile leads the tool strip past a hairline (Phosphor's pen-nib; fill, reversed out of Ink, when on) and shows only once a pen has drawn on the device, so phones never see it. Two- and three-finger taps work either way.
 
@@ -1805,11 +1805,8 @@ and the hint renders `<HintArrow className="timer-hint-arrow" size={28} />`.
   right: auto;
 }
 .drawing-screen[data-hand="left"] .seal-chip {
+  --chip-away: flex-end;
   left: 88px;
-  right: auto;
-}
-.drawing-screen[data-hand="left"] .nsfw-toggle {
-  left: 26px;
   right: auto;
 }
 ```
@@ -1830,8 +1827,8 @@ UI task. The layout is checked in the browser (Task 15); there's no unit test.
 /**
  * The drawing screen: a white sheet on the Liner, the timer and the tools in one row across the top.
  * On a phone the size rail runs down one edge, with undo and redo at its foot and the seal key at the
- * other; in a regular window the rail, undo and redo, the 18+ switch and the seal key stack down the
- * edge opposite the drawing hand, and the sheet sits centered in the rest. A left hand mirrors it. It
+ * other; in a regular window the rail, undo and redo and the seal key stack down the edge opposite
+ * the drawing hand, and the sheet sits centered in the rest. A left hand mirrors it. It
  * owns the session (tickets, the clock and the seal step); the ink engine owns the drawing.
  */
 ```
@@ -1840,7 +1837,7 @@ UI task. The layout is checked in the browser (Task 15); there's no unit test.
 
 ```css
 /* ---------- Regular width: an edge column opposite the drawing hand carries the size rail, undo and
-   redo under it, the 18+ switch and the seal check at its foot; the sheet's area is the rest, under
+   redo under it, and the seal check at its foot; the sheet's area is the rest, under
    the top row. The column's pieces are in flow, so a short window shrinks the rail first. */
 .phone[data-width="regular"] .drawing-screen {
   --chip-from: -6px;
@@ -1848,14 +1845,14 @@ UI task. The layout is checked in the browser (Task 15); there's no unit test.
   grid-template-columns: 134px minmax(0, 1fr);
   grid-template-rows:
     76px minmax(0, 1fr) minmax(120px, clamp(222px, 45%, 480px)) auto minmax(16px, 1fr)
-    auto auto 32px;
-  grid-template-areas: ". ." ". sheet" "rail sheet" "history sheet" ". sheet" "nsfw sheet" "seal sheet" ". sheet";
+    auto 32px;
+  grid-template-areas: ". ." ". sheet" "rail sheet" "history sheet" ". sheet" "seal sheet" ". sheet";
 }
 
 .phone[data-width="regular"] .drawing-screen[data-hand="left"] {
   --chip-from: 6px;
   grid-template-columns: minmax(0, 1fr) 134px;
-  grid-template-areas: ". ." "sheet ." "sheet rail" "sheet history" "sheet ." "sheet nsfw" "sheet seal" "sheet .";
+  grid-template-areas: ". ." "sheet ." "sheet rail" "sheet history" "sheet ." "sheet seal" "sheet .";
 }
 
 .phone[data-width="regular"] .drawing-screen > :is(.ink-area, .size-ghost, .sealing-status) {
@@ -1863,7 +1860,7 @@ UI task. The layout is checked in the browser (Task 15); there's no unit test.
 }
 .phone[data-width="regular"]
   .drawing-screen
-  > :is(.size-rail, .history-buttons, .nsfw-toggle, .key.seal-key, .drawing-start-over) {
+  > :is(.size-rail, .history-buttons, .key.seal-key, .drawing-start-over) {
   position: relative;
   inset: auto;
   justify-self: center;
@@ -1882,22 +1879,20 @@ UI task. The layout is checked in the browser (Task 15); there's no unit test.
   justify-content: center;
   text-align: center;
 }
-.phone[data-width="regular"] .drawing-screen > .nsfw-toggle {
-  grid-area: nsfw;
-  margin-bottom: 19px;
-}
 .phone[data-width="regular"] .drawing-screen > .key.seal-key {
   grid-area: seal;
 }
 
-/* The chip opens from the check toward the sheet. */
+/* The chip opens from the check toward the sheet, its 18+ box at the end away from the check. */
 .phone[data-width="regular"] .drawing-screen > .seal-chip {
+  --chip-away: flex-end;
   grid-area: seal;
   right: auto;
   bottom: 14px;
   left: calc(50% + 41px);
 }
 .phone[data-width="regular"] .drawing-screen[data-hand="left"] > .seal-chip {
+  --chip-away: flex-start;
   right: calc(50% + 41px);
   left: auto;
 }
@@ -2118,7 +2113,7 @@ run as `VITE_LIFF_MOCK=on VITE_DEV_SLIP=on pnpm -C apps/frontend exec vite --con
 
 - [ ] **Step 2: Helpers.** Copy `~/.cache/drawing-app-ipad/scripts/drawing/lib.js` into the scratch folder, with `BASE` `http://localhost:5192`, and `OUT` and `LOG` there. Its `openContext` signs in from Node and adds the session cookie back without `Secure` (WebKit drops it on http://localhost; see `~/.cache/drawing-app-ipad/seed.txt`) and routes WebKit's HTTPS through Node; `openCanvas` taps Draw. Sign each run in as a fresh `?as=draw-<check>-<n>` (three daily tickets each). For a left hand, `context.addInitScript(() => localStorage.setItem("draw.hand", "left"))`. `measure()` gains `sheetArea: box(".ink-area")`, `nib: box(".nib-ring")` and `pencilTile: box('[aria-label="Pencil only"]')`.
 - [ ] **Step 3: Layout, WebKit, both hands,** one stroke drawn so the check shows. Regular at 744×1133, 1133×690, 820×1180, 1180×820 and 1376×1032 (iPad UA, DPR 2); compact at 390×844 and 375×591 (iPhone UA, DPR 3), and 540×620 and 540×564 (iPad UA). Capture `draw-<hand>-<w>x<h>.png`, log `measure()`, and log `RULE <what failed>` for each of these that fails:
-  - Regular: the rail, undo and redo, the 18+ switch and the check lie inside the 134px column on the side away from the hand, none overlapping another; the rail at least 300px tall, and its center within 15% of the screen's height of the screen's middle, at 820×1180 and taller; the check at least 24px from the screen's side and 32px above its foot; `.ink-area` fills the rest under 76px, and the sheet sits inside it; the tool strip at the top on the hand's side, the timer opposite.
+  - Regular: the rail, undo and redo and the check lie inside the 134px column on the side away from the hand, none overlapping another; the rail at least 300px tall, and its center within 15% of the screen's height of the screen's middle, at 820×1180 and taller; the check at least 24px from the screen's side and 32px above its foot; `.ink-area` fills the rest under 76px, and the sheet sits inside it; the tool strip at the top on the hand's side, the timer opposite.
   - 1133×690, regular and short: the rail shorter than at 1180×820 and at least 120px, the column starting under the top row, and every piece of it on screen.
   - Compact, right hand, at 390×844: today's offsets (rail left 0, top 104, 222 tall; undo left 18, bottom 22; the check right 18, bottom 16). Left hand: the same from the other side.
   - 375×591, 540×620 and 540×564, compact and short: the rail ends at least 24px above undo.
@@ -2155,7 +2150,7 @@ This plan updates the sentences its own work makes false (the spec's docs rule, 
   - **Foot:** "flat undo and redo at the bottom left, the seal check at the bottom right" becomes "flat undo and redo at the foot of the rail's edge, the seal check at the other; in a regular window both stack under the rail, the check at the column's foot".
   - **Paused hint:** after "arrow-bend-left-up (bold, 28px)" add "(arrow-bend-right-up for a left hand)".
   - New after Size rail: "**Pencil hover:** a hovering Pencil shows a ring at its nib as wide as a mid-pressure stroke, in the brush's color with a thin white edge, or an Ink line for the eraser. It never draws, and goes on contact."
-  - And: "**Drawing hand:** Left mirrors the screen: the rail, undo and redo, the check and the 18+ switch go right, the tool strip to the top left and the timer to the top right."
+  - And: "**Drawing hand:** Left mirrors the screen: the rail, undo and redo, the check and its chip go right, the tool strip to the top left and the timer to the top right."
 - [ ] **Step 2: DESIGN.md's cork back, Settings:** append "Under them, Drawing: Drawing hand's radio rows (Right, Left), and once a pen has drawn on the device, Pencil only's switch and Pen pressure's four choices (Off, Light, Normal, Firm) as sliding tabs with a Seal Yellow label, over Try it, a strip of drawing paper where the pen tries the choice in Ink, which fades. Fine print says they're kept on this device; they change drawing at once and restart nothing."
 - [ ] **Step 3: PRODUCT.md's Operating Context.** Tools: "The brush follows pen pressure, or speed under a finger." becomes "The brush follows pen pressure, through the response chosen in Settings (Off, Light, Normal, Firm), or speed under a finger or a pen that reports no pressure." and after "with undo and redo buttons too." add "Once a pen draws on a device, fingers stop drawing there (Pencil only), and a tile in the tool strip, or Settings, turns that off." The stat board: "with Language and Show 18+ stickers" becomes "with Language, Show 18+ stickers and Drawing (the drawing hand, and on a device a pen has drawn on, Pencil only and pen pressure)".
 - [ ] **Step 4:** Commit: `docs: the drawing screen's Pencil only, hover ring, drawing hand and pen pressure`

@@ -84,7 +84,7 @@ seal, and do it again, ten times a day.
     plainly Seika. A help button beside the switch opens a short note: what the mode does, and one line in
     its maker's voice that they added it for their own application and that Croquis has no connection with
     the university (Settings, below). No legal language.
-20. **Anyone can mark a sticker 18+, at seal or after:** its own spec, `docs/superpowers/specs/2026-10-07-mark-18-plus-anytime-design.md`.
+20. **Anyone can mark a sticker 18+, at seal or after:** built; DESIGN.md's 18+ checkbox and Mark 18+.
 21. **The upper balloon deals from an evocative tier:** 618 subjects a student can picture a scene for at
     once (夜, 再会, 秘密基地, 怪獣, タイムマシン), picked by hand from every kept one. The lower balloon deals
     from the whole list, and each die re-rolls within its own balloon's pool, so every pair has at least one
@@ -193,13 +193,12 @@ stays readable.
 
 ### The corner print (drawing)
 
-- A faint vertical margin note (縦書き), like the notes on a manga page's margin: a small boxed 題材 label,
-  then each word alone, with no furigana or English, in its own column, right to left. 15 px words in
-  non-repro blue at half strength, so it reminds without competing with the drawing (owner's call,
-  2026-10-08: the full-size print was far too bright and large).
-- Inside the sheet, under the transparent ink canvas, so ink covers it. 16 px from the sheet's right edge,
-  its foot 150 px above the sheet's: clear of the seal key, the 18+ switch above it, and the first visits'
-  seal hint beside it. It takes no touches. A short pair stands about 130 px tall; the longest about 240.
+- A faint vertical margin note (縦書き), like the notes on a manga page's margin: the two words alone,
+  with no heading, furigana or English, each in its own column, right to left, Latin letters upright.
+  15 px words in non-repro blue at 30%, so they sink into the paper (owner's call, 2026-10-08: the
+  print was too bright and too high, and should show just the characters).
+- Inside the sheet, under the transparent ink canvas, so ink covers it. Centered over the seal key, just
+  above it; the armed chip opens left of the key, so it never covers it. It takes no touches.
 - Mockups compared it with a two-line horizontal print, which ran 216 px into the drawing with long words.
 
 ### The clock
