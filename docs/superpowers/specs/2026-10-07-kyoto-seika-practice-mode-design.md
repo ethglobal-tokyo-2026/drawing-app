@@ -45,7 +45,8 @@ seal, and do it again, ten times a day.
    balloon's word or one of the last 40 dealt on this phone, and never pairs two words that share their
    English (泉 and 春 are both "spring").
 6. **Both languages on every balloon:** the word as the test prints it, its reading as furigana when it has
-   kanji, the English, and a one-line meaning in the app's language.
+   kanji, and its English. No meaning line: the words are high-school level, and a meaning would force a
+   pick among a word's senses (owner's call, 2026-10-07).
 7. **Nouns only, up to six characters**, as the test gives them; six lets in プレゼント, クリスマス, ランドセル
    and 宇宙飛行士. Action nouns (散歩, 料理, 再会) carry the verbs.
 8. **The corner print, in non-repro blue:** a vertical margin note (below). A new material color for
@@ -87,10 +88,7 @@ seal, and do it again, ten times a day.
     once (夜, 再会, 秘密基地, 怪獣, タイムマシン), picked by hand from every kept one. The lower balloon deals
     from the whole list, and each die re-rolls within its own balloon's pool, so every pair has at least one
     strong word and the rest of the list still turns up.
-
-### Recommended
-
-22. **Vocabulary for AGENTS.MD:**
+22. **Vocabulary, in AGENTS.MD:**
     - _Kyoto Seika Manga Expression Practice Mode_ (decision 1), Kyoto Seika Practice Mode for short, as in
       the foil's name. Never "practice mode", and no nouns coined from it ("practice sticker"): a sticker
       drawn in Kyoto Seika Practice Mode. Code and data use the stem `kyotoSeika` (`kyoto_seika` in SQL,
@@ -129,11 +127,9 @@ visual world. Operate mode; the delight is in the deal and in Begin.
   to fill that space was tried at 430 × 932 and left them looking unrelated.
 - **Inside, top to bottom:** the reading (12 px Graphite, ruby, only over kanji), the word (`--font-jp` 800:
   46 px for one or two characters, 42 for three, 36 for four, 32 for five, 28 for six, 40 for a Latin
-  acronym), the English (16 px, 750), the meaning (12.5 px Graphite, at most two lines, 150 px wide). The
-  meaning is in the app's language.
-- **Short phones:** the balloons tighten (word 36 px, meaning 11.5 px, less padding) rather than scaling
-  down, so nothing goes under the 11 px floor. Found in the mockup: at 375 × 640, scaling the pair to fit
-  put the reading and meaning at 9 px.
+  acronym), the English (16 px, 750).
+- **Short phones:** the balloons tighten (word 36 px, less padding) rather than scaling down, so nothing goes
+  under the 11 px floor; where even that doesn't fit, they draw closer.
 - **Dice:** small label stock (32 px face over a 3 px lip, 44 px touch) on each balloon's lower-right edge,
   holding Phosphor's die (bold).
 - **Begin:** the screen's one key, Seal Yellow ("yellow is now"), with the Draw icon: "Begin" / 「はじめ」,
@@ -426,15 +422,15 @@ new switches use the same `save` path (Settings, above).
 
 Every one allows commercial use; the shipped list is CC BY-SA 4.0.
 
-| Source                                                                                                                         | Gives                                                        | Licence                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| JMdict, EDRDG: https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project                                            | the word, reading, part of speech, English gloss and meaning | CC BY-SA 4.0: https://www.edrdg.org/edrdg/licence.html                   |
-| Princeton WordNet 3.0                                                                                                          | the English meaning, the category                            | WordNet License (BSD-style notice)                                       |
-| Japanese Wiktionary, through kaikki.org: https://kaikki.org/jawiktionary/                                                      | the Japanese meaning                                         | CC BY-SA 4.0                                                             |
-| Japanese WordNet 1.1, NICT: https://bond-lab.github.io/wnja/                                                                   | the link from a word to WordNet's sense, for choosing only   | NICT's notice on every copy: https://bond-lab.github.io/wnja/license.txt |
-| JLPT lists, Jonathan Waller (http://www.tanos.co.uk/jlpt/), keyed to JMdict by https://github.com/stephenmk/yomitan-jlpt-vocab | the level, for choosing only                                 | CC BY; the keyed set CC BY-SA 4.0                                        |
-| wordfreq: https://github.com/rspeer/wordfreq                                                                                   | frequency, for choosing only                                 | data CC BY-SA 4.0                                                        |
-| KANJIDIC2, EDRDG                                                                                                               | the school grade of each kanji, for choosing only            | CC BY-SA 4.0                                                             |
+| Source                                                                                                                         | Gives                                                      | Licence                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
+| JMdict, EDRDG: https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project                                            | the word, reading, part of speech and English gloss        | CC BY-SA 4.0: https://www.edrdg.org/edrdg/licence.html                   |
+| Princeton WordNet 3.0                                                                                                          | the category, for sorting kinds only                       | WordNet License (BSD-style notice)                                       |
+| Japanese Wiktionary, through kaikki.org: https://kaikki.org/jawiktionary/                                                      | a check of each word's sense, for choosing only            | CC BY-SA 4.0                                                             |
+| Japanese WordNet 1.1, NICT: https://bond-lab.github.io/wnja/                                                                   | the link from a word to WordNet's sense, for choosing only | NICT's notice on every copy: https://bond-lab.github.io/wnja/license.txt |
+| JLPT lists, Jonathan Waller (http://www.tanos.co.uk/jlpt/), keyed to JMdict by https://github.com/stephenmk/yomitan-jlpt-vocab | the level, for choosing only                               | CC BY; the keyed set CC BY-SA 4.0                                        |
+| wordfreq: https://github.com/rspeer/wordfreq                                                                                   | frequency, for choosing only                               | data CC BY-SA 4.0                                                        |
+| KANJIDIC2, EDRDG                                                                                                               | the school grade of each kanji, for choosing only          | CC BY-SA 4.0                                                             |
 
 Japanese WordNet's own definitions read as machine translation (別れ 「礼儀正しく出発する行為」), so none is
 shown. Ruled out: 日本語教育語彙表 (research use only, no redistribution), BCCWJ frequency lists (research and
@@ -461,24 +457,17 @@ Every one of the draft's 2,206 nouns was read by hand: `2026-10-07-kyoto-seika-s
 **The list: 1,507 subjects,** 41 of them dark: moments 378, things 429, phenomena 235, people 181,
 loanwords 284; 618 in the evocative tier (decision 21).
 
-**Meanings.** Every meaning is quoted from its source, with the entry and sense in its row:
-
-- English from WordNet (534) or JMdict (696), respelled American (colour → color). None where it would only
-  repeat the English word (277: テニス, 雲).
-- Japanese from Japanese Wiktionary (1,054, 60 of them a synonym checked by hand, such as ライバル
-  「競争相手、好敵手」). None where no source fits (453); Japanese readers know the word.
-- A second read of every row caught meanings in the wrong sense (雲 "any collection of particles or gases
-  that is visible", 初恋 "temporary love of an adolescent") and English words that missed (感動 excitement →
-  deep emotion, ネット network → Internet, 言葉 language → words); each now comes from the right sense.
-- Nothing is written by hand: the hand choices are which sense, recorded per word, plus one character a
-  source dropped, put back (度忘れ, 知っ**て**いる).
+**What ships:** the word, its reading and its English, all from JMdict, with the kind, tier and dark mark
+the review gave it. English is respelled American (colour → color). A second read of every row caught English
+words that missed the sense (感動 excitement → deep emotion, ネット network → Internet, 言葉 language →
+words); each now comes from the right sense. Meaning lines were built and then dropped (decision 6).
 
 ### What's left
 
 - Your critique of the cuts and of the tier.
 - Known gaps: words newer than the JLPT lists and JMdict's commonness marks (推し) come in only by hand, and
   nouns WordNet lacks beyond the 1,692 most common weren't read.
-- The list ships as a JSON module (word, reading, English, the two meanings, kind, tier, dark); the build
+- The list ships as a JSON module (word, reading, English, kind, tier, dark); the build
   that made it stays outside the repo (decision 17).
 
 ## Out of scope for now
