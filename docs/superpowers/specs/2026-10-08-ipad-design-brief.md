@@ -6,7 +6,7 @@
 
 Changes ad0ll asked for that apply to phones too. One plan, landing on main first.
 
-- **Settings:** Language is one row showing its choice, the select laid unseen over the row; Show 18+ stickers is one switch row, with no heading and no fine print.
+- **Settings:** Language is one row showing its choice, the select laid unseen over the row, with two choices, English and 日本語: "Same as LINE" goes, and a new account starts in LINE's language (the device's, outside LINE). Show 18+ stickers is one switch row, with no heading and no fine print.
 - **Receipt:** "Gratitude received" and the total only. On your own stat board a link under it, "See where it came from", opens your gratitude events (newest first: the sticker, who sent it, the day, Residual on Original Artist shares, the amount), through a new `GET /api/gratitude/events`. Someone else's receipt shows only the total.
 - **Bests:** "Best day" (1日の最多感謝), its figure led by the gratitude heart; every best fits one line.
 - **Sui address:** someone else's stat board shows theirs, through `GET /api/sticker-boards/:userId/sui-address` (the server keeps a wallet it looks up). The paper drops "Sui Testnet" and says "Holds your stickers".
@@ -18,7 +18,7 @@ Changes ad0ll asked for that apply to phones too. One plan, landing on main firs
 - **One text field:** DESIGN.md's `text-field` component, one shared class for Explore's search and the handle prompt.
 - **Words:** "stat board", never "cork back", in AGENTS.MD and every doc; Direct and Residual's vocabulary as built.
 
-**Open, not in Phase 0 until decided:** the My board icon's replacement; the My board tab's pink beside the gifts badge's pink; whether Settings keeps "Same as LINE"; gifts on their way shown in the sticker detail instead of the board's badge (needs a design).
+**Open, not in Phase 0 until decided:** the My board icon's replacement; the My board tab's pink beside the gifts badge's pink; gifts on their way shown in the sticker detail instead of the board's badge (needs a design).
 
 ## The iPad layout
 
