@@ -103,7 +103,7 @@ function claimOf(body: GiftOpening) {
 
 /** Signing in and your account, which the app needs before any screen can load. */
 export interface SessionApi {
-  /** POST /api/session */
+  /** POST /api/session: LINE's ID token, and LINE's language, which the account takes while it follows LINE's. */
   signIn: (
     request: InferRequestType<ServerClient["session"]["$post"]>["json"],
   ) => Promise<{ me: Me }>;
@@ -240,6 +240,11 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
     timelapse: async (stickerId) => {
       const response = await api.stickers[":stickerId"].timelapse.$get({ param: { stickerId } });
       if (!response.ok) throw await refusal(response, `GET /api/stickers/${stickerId}/timelapse`);
+      return response.json();
+    },
+    markStickerNsfw: async (stickerId) => {
+      const response = await api.stickers[":stickerId"].nsfw.$post({ param: { stickerId } });
+      if (!response.ok) throw await refusal(response, `POST /api/stickers/${stickerId}/nsfw`);
       return response.json();
     },
 

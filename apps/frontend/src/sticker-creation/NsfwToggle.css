@@ -1,5 +1,6 @@
-/* The 18+ switch, over the seal key: clear label stock off, pink on. It springs in with the key. It sits
-   a thumb's width above the key, so a tap on the key can't land on it, and carries a 44px touch band. */
+/* The 18+ switch, over the seal key: a quiet Graphite outline off, so it stays out of the drawing's
+   way, and stuck on in pink when on. It springs in with the key. It sits a thumb's width above the key,
+   so a tap on the key can't land on it, and carries a 44px touch band. */
 .nsfw-toggle {
   position: absolute;
   right: 26px;
@@ -10,12 +11,11 @@
   border: 0;
   border-radius: 999px;
   background: var(--liner-lift);
-  box-shadow:
-    inset 0 0 0 1.5px var(--pink),
-    var(--shadow-label);
-  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--graphite);
+  color: var(--graphite);
   font: 800 13px/1 var(--font-ui);
   letter-spacing: 0.03em;
+  white-space: nowrap;
   opacity: 0;
   transform: scale(0.6);
   visibility: hidden;
@@ -24,6 +24,8 @@
     opacity var(--t-pop) var(--ease-out),
     transform var(--t-pop) var(--ease-spring),
     background 160ms var(--ease-out),
+    color 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out),
     visibility 0s linear var(--t-pop);
 }
 
@@ -43,11 +45,17 @@
     opacity var(--t-pop) var(--ease-out),
     transform 320ms var(--ease-spring),
     background 160ms var(--ease-out),
+    color 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out),
     visibility 0s;
 }
 
 .nsfw-toggle.is-on {
   background: var(--pink);
+  box-shadow:
+    inset 0 0 0 1.5px var(--pink),
+    var(--shadow-label);
+  color: var(--ink);
 }
 
 .nsfw-toggle:focus-visible {

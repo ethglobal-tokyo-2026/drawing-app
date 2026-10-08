@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "../i18n/react";
 import { EASE_OUT } from "../ui/easing";
 import { balloonShapes, shapesBox, type BalloonSpec, type PairLayout } from "./balloonGeometry";
@@ -111,7 +111,8 @@ export function DieBang({ balloon, layout, reduced, balloonEl }: BangProps) {
   const chips = useRef<HTMLDivElement>(null);
   const { cloud, die } = anchorOf(layout, balloon);
 
-  useEffect(() => {
+  // The bang plays once, as it goes off: renders after it, with a new `balloonEl`, never replay it.
+  const goOff = useEffectEvent(() => {
     if (reduced) {
       burst.current?.animate(FADE_IN_OUT, { duration: BURST_MS, fill: "forwards" });
       words.current?.animate(FADE_IN_OUT, { duration: BOOM_MS, fill: "forwards" });
@@ -135,8 +136,8 @@ export function DieBang({ balloon, layout, reduced, balloonEl }: BangProps) {
         { duration: 700 + Math.random() * 300, easing: EASE_OUT, fill: "forwards" },
       );
     }
-    // The bang plays once, as it goes off.
-  }, [reduced, balloonEl]);
+  });
+  useEffect(() => goOff(), []);
 
   const wordsTop = balloon === 0 ? cloud.top - 50 : cloud.bottom + 4;
   return (

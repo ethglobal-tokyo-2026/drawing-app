@@ -22,7 +22,7 @@ function run(...events: SessionEvent[]) {
 
 const start = { type: "start", kyotoSeika: false } as const;
 const kyotoSeikaStart = { type: "start", kyotoSeika: true } as const;
-const begin = { type: "begin" } as const;
+const begin = { type: "begin", hasPair: true } as const;
 const ink = { type: "ink" } as const;
 const tap = (now: number, hasInk = true) => ({ type: "seal-tap", now, hasInk }) as const;
 const failed = ({ mayHaveSealed = false, timeUp = false, refused = false } = {}) =>
@@ -51,6 +51,13 @@ describe("transition", () => {
     expect(run(start, begin)).toEqual({ phase: "primed", effects: [] });
     expect(run(kyotoSeikaStart, begin, ink)).toEqual({ phase: "drawing", effects: [] });
     expect(run(kyotoSeikaStart, tap(1000))).toEqual({ phase: "dealt", effects: [] });
+  });
+
+  it("won't begin before the pair is dealt, since the sheet couldn't seal without it", () => {
+    expect(run(kyotoSeikaStart, { ...begin, hasPair: false })).toEqual({
+      phase: "dealt",
+      effects: [],
+    });
   });
 
   it("brings a sheet in Kyoto Seika Practice Mode back dealt until Begin, and drawing after it", () => {
@@ -176,7 +183,6 @@ describe("sealFailure", () => {
   const answered = (status: number, error: string) => sealFailure(new ApiError(status, { error }));
 
   it("lets the sheet change only once the server has refused the seal itself", () => {
-    expect(answered(403, "nsfw_not_opted_in")).toBe("refused");
     expect(answered(400, "invalid_request")).toBe("refused");
     expect(answered(404, "ticket_not_found")).toBe("refused");
     // Turned away before the ticket was looked at: an earlier try may still have sealed.
@@ -205,7 +211,7 @@ describe("describeSealFailure", () => {
     expect(problem(0, "sui_wallet_not_ready")).toBe("suiAddress");
     expect(problem(0, "line_token_expired")).toBe("signInExpired");
     // A refusal is worded by its own message.
-    expect(problem(403, "nsfw_not_opted_in")).toBe("refused");
+    expect(problem(404, "ticket_not_found")).toBe("refused");
   });
 
   it("blames the phone only for a failure before the request left it", () => {

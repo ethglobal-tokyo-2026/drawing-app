@@ -5,11 +5,13 @@ import {
   type Me,
   type Tickets,
 } from "@drawing-app/api/client";
-import { act, forwardRef, useEffect, useImperativeHandle } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, forwardRef, useEffect, useImperativeHandle, useRef, type Ref } from "react";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
 import type { ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
+import { openedFrom } from "../app/openedView";
+import { i18next } from "../i18n/i18n";
 import { strings } from "../i18n/strings";
 import { useTickets } from "../tickets/useTickets";
 import { personKey } from "../ui/deviceStorage";
@@ -17,30 +19,40 @@ import type { HistoryState } from "./canvas/inkEngine";
 import { DrawingScreen } from "./DrawingScreen";
 import { CHARRED_AT_ROLL } from "../kyoto-seika/dieMood";
 import { REUNION, TEST_SUBJECTS, WIND } from "../kyoto-seika/testSubjects";
-import { LOAD_TIMEOUT_MS, type KeptSession } from "./session/keptSession";
+import { LOAD_TIMEOUT_MS, SessionKeeper, type KeptSession } from "./session/keptSession";
 import { keepSentSeal, sealWentOut } from "./session/sentSeal";
 import { sessionMs } from "./session/session";
+import type { TimerDotHandle } from "./TimerDot";
+import type { Panel } from "./tools/ToolStrip";
 
 const kept = vi.hoisted(() => ({
   session: { status: "none" } as unknown,
 }));
 const sheetCalls = vi.hoisted(() => ({
   cleared: 0,
-  settings: null as { paused: boolean } | null,
+  settings: null as { paused: boolean; sessionMs: () => number } | null,
   label: undefined as string | undefined,
+  /** A touch met the sheet while it takes no ink. */
+  blocked: () => {},
 }));
 const subjectList = vi.hoisted(() => ({ load: vi.fn() }));
 const sealing = vi.hoisted(() => ({ cut: vi.fn() }));
+/** What the drawing screen asked the timer to say. */
+const timerCalls = vi.hoisted(() => ({ hints: 0, clockRuns: 0 }));
+/** The size rail's hold, as the drawing screen handed it over. */
+const rail = vi.hoisted(() => ({ hold: (_held: boolean) => {} }));
 
 vi.mock("./canvas/DrawingCanvas", () => ({
   DrawingCanvas: forwardRef(function Sheet(
     {
       onHistory,
+      onBlocked,
       settings,
       label,
     }: {
       onHistory: (state: HistoryState) => void;
-      settings: { paused: boolean };
+      onBlocked: () => void;
+      settings: { paused: boolean; sessionMs: () => number };
       label?: string;
     },
     ref,
@@ -48,6 +60,7 @@ vi.mock("./canvas/DrawingCanvas", () => ({
     useEffect(() => {
       sheetCalls.settings = settings;
       sheetCalls.label = label;
+      sheetCalls.blocked = onBlocked;
     });
     useImperativeHandle(ref, () => ({
       undo() {},
@@ -71,10 +84,15 @@ vi.mock("./canvas/DrawingCanvas", () => ({
     return <div className="ink-sheet" />;
   }),
 }));
-vi.mock("./session/keptSession", async (original) => ({
-  ...(await original<object>()),
-  loadKeptSession: () => Promise.resolve(kept.session),
-}));
+vi.mock("./session/keptSession", async (original) => {
+  const actual = await original<typeof import("./session/keptSession")>();
+  return {
+    ...actual,
+    // A test's own session, or with none, what this device keeps.
+    loadKeptSession: (userId: string) =>
+      kept.session === null ? actual.loadKeptSession(userId) : Promise.resolve(kept.session),
+  };
+});
 vi.mock("../kyoto-seika/subjectList", async (original) => ({
   ...(await original<object>()),
   loadSubjectList: subjectList.load,
@@ -87,30 +105,53 @@ beforeEach(() => {
   vi.stubGlobal("indexedDB", new FakeIndexedDB());
 });
 vi.mock("./TimerDot", () => ({
-  TimerDot: ({ onToggle }: { onToggle: () => void }) => (
-    <button type="button" className="timer-stub" onClick={onToggle} />
-  ),
+  TimerDot: ({ ref, onToggle }: { ref?: Ref<TimerDotHandle>; onToggle: () => void }) => {
+    const button = useRef<HTMLButtonElement>(null);
+    useImperativeHandle(ref, () => ({
+      showHint() {
+        timerCalls.hints++;
+      },
+      showClockRuns() {
+        timerCalls.clockRuns++;
+      },
+      focus() {
+        button.current?.focus();
+      },
+    }));
+    return <button ref={button} type="button" className="timer-stub" onClick={onToggle} />;
+  },
 }));
 vi.mock("../identity/privy", () => ({ retryPrivySignIn: () => {} }));
 vi.mock("../tickets/ReserveTicketCheckout", () => ({ ReserveTicketCheckout: () => null }));
 vi.mock("./tools/ColorSheet", () => ({ ColorSheet: () => null }));
-vi.mock("./tools/SizeRail", () => ({ SizeRail: () => null }));
+vi.mock("./tools/SizeRail", () => ({
+  SizeRail: ({ onHold }: { onHold: (held: boolean) => void }) => {
+    useEffect(() => {
+      rail.hold = onHold;
+    });
+    return null;
+  },
+}));
 vi.mock("./tools/SmoothingBar", () => ({ SmoothingBar: () => null }));
-// The tool strip's clear tile, which controls the clear bar as the real one does.
+// The tool strip's panel tiles; the clear tile controls the clear bar as the real one does.
 vi.mock("./tools/ToolStrip", () => ({
   ToolStrip: ({
     clearBarId,
     onPanel,
   }: {
     clearBarId: string;
-    onPanel: (panel: "clear") => void;
+    onPanel: (panel: Exclude<Panel, null>) => void;
   }) => (
-    <button
-      type="button"
-      className="clear-tile"
-      aria-controls={clearBarId}
-      onClick={() => onPanel("clear")}
-    />
+    <>
+      <button type="button" className="color-tile" onClick={() => onPanel("color")} />
+      <button type="button" className="smoothing-tile" onClick={() => onPanel("smoothing")} />
+      <button
+        type="button"
+        className="clear-tile"
+        aria-controls={clearBarId}
+        onClick={() => onPanel("clear")}
+      />
+    </>
   ),
 }));
 
@@ -124,7 +165,7 @@ function SheetProbe() {
   return null;
 }
 
-let view: { unmount: () => void } | undefined;
+let view: ReturnType<typeof renderWithApi> | undefined;
 afterEach(() => {
   view?.unmount();
   view = undefined;
@@ -132,6 +173,8 @@ afterEach(() => {
   sheetCalls.cleared = 0;
   sheetCalls.settings = null;
   sheetCalls.label = undefined;
+  timerCalls.hints = 0;
+  timerCalls.clockRuns = 0;
   subjectList.load.mockReset();
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -176,20 +219,29 @@ const chip = () => document.querySelector(".seal-chip")?.textContent ?? "";
 
 describe("the drawing screen's 18+ switch", () => {
   const toggle = () => document.querySelector<HTMLButtonElement>(".nsfw-toggle");
-
-  it("is there for someone with the NSFW opt-in, off until they turn it on", async () => {
-    reopen(keptAtTimeUp, {}, { ...TEST_ME, nsfwOptIn: true });
+  const words = strings.stickerCreation.nsfw;
+  /** Opens a kept drawing as `me` and turns the switch on. */
+  async function turnOn(me: Me) {
+    reopen(keptAtTimeUp, {}, me);
     await settle();
     expect(toggle()?.getAttribute("aria-checked")).toBe("false");
+    act(() => toggle()?.click());
+    expect(toggle()?.getAttribute("aria-checked")).toBe("true");
+  }
+
+  it("is there for someone without the NSFW opt-in, and says once on that they'll see the sticker blurred too", async () => {
+    await turnOn(TEST_ME);
+    expect(toggle()?.textContent).toBe(words.markBlurredForYou.en);
+    expect(toggle()?.getAttribute("aria-label")).toBe(words.labelBlurredForYou.en);
   });
 
-  it("isn't there for someone without it", async () => {
-    reopen(keptAtTimeUp);
-    await settle();
-    expect(toggle()).toBeNull();
+  it("says only 18+ to someone with the opt-in, who sees it unblurred", async () => {
+    await turnOn({ ...TEST_ME, nsfwOptIn: true });
+    expect(toggle()?.textContent).toBe(words.mark.en);
+    expect(toggle()?.getAttribute("aria-label")).toBe(words.label.en);
   });
 
-  it("stays on a kept drawing marked 18+ after the opt-in went off, so the mark can come off", async () => {
+  it("comes back on for a kept drawing marked 18+", async () => {
     reopen({ ...keptAtTimeUp, nsfw: true });
     await settle();
     expect(toggle()?.getAttribute("aria-checked")).toBe("true");
@@ -274,6 +326,43 @@ function keptRecord() {
     : null;
 }
 
+/** How much the sheet's clock counts in the second after `action`. */
+async function countedAfter(action: () => void) {
+  const drawn = () => sheetCalls.settings?.sessionMs() ?? 0;
+  act(action);
+  const before = drawn();
+  await settle(1000);
+  return drawn() - before;
+}
+const tapTimer = () => document.querySelector<HTMLButtonElement>(".timer-stub")?.click();
+const openPanel = (panel: Exclude<Panel, null>) => () =>
+  document.querySelector<HTMLButtonElement>(`.${panel}-tile`)?.click();
+/** Each tool in hand: the color sheet, the Smoothing bar, the clear bar and a finger on the size rail. */
+const TOOLS_IN_HAND = [
+  openPanel("color"),
+  openPanel("smoothing"),
+  openPanel("clear"),
+  () => rail.hold(true),
+];
+const putToolsDown = () => {
+  window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  rail.hold(false);
+};
+
+describe("the drawing screen's clock", () => {
+  it("holds while a tool is in hand, and pauses at a tap on the timer", async () => {
+    reopen(keptHalfway);
+    await settle();
+    // A reload brings the drawing back paused; a tap on the timer runs it again.
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    for (const takeTool of TOOLS_IN_HAND) {
+      expect(await countedAfter(takeTool)).toBe(0);
+      expect(await countedAfter(putToolsDown)).toBeGreaterThan(0);
+    }
+    expect(await countedAfter(tapTimer)).toBe(0);
+  });
+});
+
 describe("clearing the sheet", () => {
   it("keeps the sticker's ticket and its time, and leaves focus on Undo, the way back", async () => {
     reopen(keptHalfway);
@@ -321,30 +410,70 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     tickets: FRESH_TICKETS,
   } as const;
 
-  /** Opens a fresh sheet whose daily ticket is spent in the mode, once the subject list `load`s. */
+  // The kept session's IndexedDB connections last the page's life, so a test that reads back what
+  // this device keeps draws as someone new.
+  let people = 0;
+  const someoneNew = (): Me => ({ ...KYOTO_SEIKA_ME, id: `kyoto-seika-${++people}` });
+
+  /**
+   * Opens a fresh sheet whose daily ticket is spent in the mode, once the subject list `load`s; with
+   * `session` null, the sheet this device keeps.
+   */
   async function openKyotoSeikaSheet(
-    session: KeptSession = { status: "none" },
+    session: KeptSession | null = { status: "none" },
     api: Partial<ApiClient> = {},
+    me: Me = KYOTO_SEIKA_ME,
   ) {
     vi.useFakeTimers();
     kept.session = session;
     view = renderWithApi(
       <DrawingScreen active onSealed={() => {}} onNewSticker={() => {}} onGoToBoard={() => {}} />,
       emptyApi({ spendTicket: () => Promise.resolve(SPENT), ...api }),
-      KYOTO_SEIKA_ME,
+      me,
     );
     await settle();
   }
   const dice = () => [...document.querySelectorAll<HTMLButtonElement>(".subject-die")];
   const beginKey = () => document.querySelector<HTMLButtonElement>(".begin-key button");
+  /** The sheet still waits for Begin: it takes no ink and its tools are put away. */
+  const stillDealt = () =>
+    sheetCalls.settings?.paused === true &&
+    document.querySelector(".drawing-screen")?.classList.contains("is-dealt") === true;
   const loads = () => subjectList.load.mockResolvedValue({ subjects: TEST_SUBJECTS, notices: "" });
+  /** Begin's name, which says the clock it starts: the mode's. */
+  const BEGIN_LABEL = strings.kyotoSeika.begin.label.en.replace(
+    "{{minutes}}",
+    String(KYOTO_SEIKA_TIME_USED_S / 60),
+  );
+  /** A sticker the phone cuts from the sheet, so its seal goes out. */
+  const cutSticker = () => ({
+    png: new Blob(["png"]),
+    mask: new Blob(["mask"]),
+    spec: new Blob(["spec"]),
+    rim: new Blob(["rim"]),
+    flat: new Blob(["flat"]),
+    outline: "M0 0L1 1Z",
+    width: 10,
+    height: 10,
+    pad: 0,
+    inkWidth: 10,
+    place: { x: 0, y: 0, w: 10, h: 10 },
+    contour: [],
+    layers: {},
+    maskImage: document.createElement("canvas"),
+    dispose: () => {},
+  });
+  const pick = ({ ja, reading, en }: KyotoSeikaSubject) => ({ ja, reading, en });
 
   it("deals the pair of a ticket spent in Kyoto Seika Practice Mode, hides the tools and holds the sheet until Begin", async () => {
     loads();
     await openKyotoSeikaSheet();
     expect(dice()).toHaveLength(2);
-    expect(document.querySelector(".drawing-screen")?.classList).toContain("is-dealt");
-    expect(sheetCalls.settings?.paused).toBe(true);
+    expect(stillDealt()).toBe(true);
+    // Above Begin, the task: one sticker with both subjects in it.
+    expect(document.querySelector(".drawing-screen")?.textContent).toContain(
+      strings.kyotoSeika.begin.task.en,
+    );
     const upper = TEST_SUBJECTS.find((s) =>
       dice()[0].getAttribute("aria-label")?.includes(`: ${s.ja},`),
     );
@@ -370,35 +499,84 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     expect(dice()[1].getAttribute("aria-label")).toContain(REUNION.ja);
   });
 
-  it("shows why the subjects didn't load, and deals once they do", async () => {
+  it("shows why the subjects didn't load, and tries again on a fresh page, which picks the sheet up and deals", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
+    const navigate = vi.spyOn(location, "replace").mockImplementation(() => {});
+    onTestFinished(() => navigate.mockRestore());
     subjectList.load.mockRejectedValueOnce(new Error("The chunk didn't load"));
     loads();
-    await openKyotoSeikaSheet();
+    const me = someoneNew();
+    await openKyotoSeikaSheet(undefined, {}, me);
     expect(dice()).toHaveLength(0);
-    act(() => buttonSaying(strings.ui.errorLine.tryAgain.en)?.click());
+    act(() => beginKey()?.click());
     await settle();
+    expect(stillDealt()).toBe(true);
+    act(() => buttonSaying(strings.ui.errorLine.tryAgain.en)?.click());
+    // A browser keeps a failed module fetch for the page's life, so the list loads only on a fresh page.
+    expect(subjectList.load).toHaveBeenCalledOnce();
+    const to = navigate.mock.calls[0]?.[0];
+    expect(to && openedFrom(new URL(to).pathname).view).toBe("draw");
+
+    // The fresh page reads the sheet this one kept on the device, once its writes land.
+    await settle(1000);
+    view?.unmount();
+    await openKyotoSeikaSheet(null, {}, me);
+    await settle(1000);
     expect(dice()).toHaveLength(2);
   });
 
+  it("hands focus to the clock Begin started, since Begin leaves with the deal", async () => {
+    loads();
+    await openKyotoSeikaSheet();
+    beginKey()?.focus();
+    act(() => beginKey()?.click());
+    await settle(1000);
+    expect(document.activeElement?.className).toBe("timer-stub");
+  });
+
+  it("lets the deal go for good once begun, though the board covers the screen as it leaves", async () => {
+    loads();
+    await openKyotoSeikaSheet();
+    act(() => beginKey()?.click());
+    const screen = (active: boolean) => (
+      <DrawingScreen
+        active={active}
+        onSealed={() => {}}
+        onNewSticker={() => {}}
+        onGoToBoard={() => {}}
+      />
+    );
+    view?.rerender(screen(false));
+    await settle(1000);
+    view?.rerender(screen(true));
+    expect(document.querySelector(".kyoto-seika-deal")).toBeNull();
+    expect(beginKey()).toBeNull();
+  });
+
+  it("brings the timer's word on what starts it at a touch on the sheet before Begin", async () => {
+    loads();
+    await openKyotoSeikaSheet();
+    act(() => sheetCalls.blocked());
+    expect(timerCalls.hints).toBe(1);
+  });
+
+  it("won't begin while the subjects load, since the sheet couldn't seal without its pair", async () => {
+    let deliver = (_list: unknown) => {};
+    subjectList.load.mockReturnValue(new Promise((resolve) => (deliver = resolve)));
+    await openKyotoSeikaSheet();
+    act(() => beginKey()?.click());
+    await settle(1000);
+    expect(stillDealt()).toBe(true);
+
+    await act(async () => deliver({ subjects: TEST_SUBJECTS, notices: "" }));
+    act(() => beginKey()?.click());
+    await settle(1000);
+    expect(stillDealt()).toBe(false);
+    expect(keptRecord()).toMatchObject({ kyotoSeika: { begun: true } });
+  });
+
   it("seals a begun sheet with its pair, each subject as the sticker keeps it", async () => {
-    sealing.cut.mockResolvedValue({
-      png: new Blob(["png"]),
-      mask: new Blob(["mask"]),
-      spec: new Blob(["spec"]),
-      rim: new Blob(["rim"]),
-      flat: new Blob(["flat"]),
-      outline: "M0 0L1 1Z",
-      width: 10,
-      height: 10,
-      pad: 0,
-      inkWidth: 10,
-      place: { x: 0, y: 0, w: 10, h: 10 },
-      contour: [],
-      layers: {},
-      maskImage: document.createElement("canvas"),
-      dispose: () => {},
-    });
+    sealing.cut.mockResolvedValue(cutSticker());
     vi.spyOn(console, "error").mockImplementation(() => {});
     const seal = vi.fn<ApiClient["seal"]>(() => new Promise(() => {}));
     const part = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
@@ -410,19 +588,78 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     );
     act(() => document.querySelector<HTMLButtonElement>(".timer-stub")?.click());
     await settle(1000);
-    const pick = ({ ja, reading, en }: KyotoSeikaSubject) => ({ ja, reading, en });
     expect(seal).toHaveBeenCalledOnce();
     expect(seal.mock.calls[0]?.[0].kyotoSeikaSubjects).toEqual([pick(WIND), pick(REUNION)]);
+  });
+
+  it("puts a drawing whose pair a later build can't read back at its deal, on its 30-minute clock, and seals it with the pair dealt again", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    sealing.cut.mockResolvedValue(cutSticker());
+    loads();
+    const me = someoneNew();
+    // Halfway through a begun sheet, kept by a build whose subjects this one can't read.
+    vi.useFakeTimers();
+    const halfway = sessionMs(true) / 2;
+    new SessionKeeper(me.id).save([{ tool: "brush", color: "#1C1824", pts: [], T: 0 }], halfway);
+    await settle(1000);
+    const pair = [{ word: WIND.ja }, { word: REUNION.ja }];
+    localStorage.setItem(
+      personKey("draw.session", me.id),
+      JSON.stringify({
+        ticket: 9,
+        elapsedMs: halfway,
+        nsfw: false,
+        kyotoSeika: { subjects: pair, rolls: [0, 0], begun: true },
+      }),
+    );
+    const seal = vi.fn<ApiClient["seal"]>(() => new Promise(() => {}));
+    await openKyotoSeikaSheet(null, { seal }, me);
+    await settle(1000);
+    expect(stillDealt()).toBe(true);
+    expect(dice()).toHaveLength(2);
+    expect(beginKey()?.getAttribute("aria-label")).toBe(BEGIN_LABEL);
+
+    act(() => beginKey()?.click());
+    await settle(1000);
+    const sealKey = () => document.querySelector<HTMLButtonElement>(".seal-key");
+    act(() => sealKey()?.click());
+    act(() => sealKey()?.click());
+    await settle(1000);
+    expect(seal).toHaveBeenCalledOnce();
+    expect(seal.mock.calls[0]?.[0].kyotoSeikaSubjects).toHaveLength(2);
+  });
+
+  it("runs a begun sheet's clock on, as the real test's: no tool in hand holds it, and a tap on the timer only says why", async () => {
+    const begun = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
+    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: begun });
+    // A reload's pause still lets go at a tap.
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    for (const takeTool of TOOLS_IN_HAND) expect(await countedAfter(takeTool)).toBeGreaterThan(0);
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    expect(timerCalls.clockRuns).toBe(1);
+  });
+
+  it("names a begun canvas by its pair: each word with its English in English, the words alone in Japanese", async () => {
+    const begun = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
+    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: begun });
+    for (const { ja, en } of begun.subjects) {
+      expect(sheetCalls.label).toContain(ja);
+      expect(sheetCalls.label).toContain(en);
+    }
+    await act(() => i18next.changeLanguage("ja"));
+    try {
+      for (const { ja, en } of begun.subjects) {
+        expect(sheetCalls.label).toContain(ja);
+        expect(sheetCalls.label).not.toContain(en);
+      }
+    } finally {
+      await act(() => i18next.changeLanguage("en"));
+    }
   });
 
   it("names Begin by what it does", async () => {
     loads();
     await openKyotoSeikaSheet();
-    expect(beginKey()?.getAttribute("aria-label")).toBe(
-      strings.kyotoSeika.begin.label.en.replace(
-        "{{minutes}}",
-        String(KYOTO_SEIKA_TIME_USED_S / 60),
-      ),
-    );
+    expect(beginKey()?.getAttribute("aria-label")).toBe(BEGIN_LABEL);
   });
 });

@@ -11,7 +11,7 @@ import { SubjectBalloons } from "./SubjectBalloons";
 import type { SubjectListState } from "./useKyotoSeikaSheet";
 import "./kyoto-seika-deal.css";
 
-/** The room kept between the pair and the timer's label above it, and Begin below it, in px. */
+/** The room kept between the pair and the timer's label above it, and the task over Begin below it, in px. */
 const CLEARANCE_PX = 14;
 /** Begin leaves: the key drops this far and fades, as the balloons tuck into the corner print. */
 const LEAVE = { keyDropPx: 56, keyMs: 220, balloonsMs: 360 };
@@ -33,7 +33,7 @@ interface Props {
 
 /**
  * A fresh sheet's deal in Kyoto Seika Manga Expression Practice Mode: the two balloons between the
- * timer's label and Begin, Begin at the sheet's foot, or why the subjects didn't load.
+ * timer's label and the task over Begin, Begin at the sheet's foot, or why the subjects didn't load.
  */
 export function KyotoSeikaDeal({
   screen,
@@ -56,9 +56,9 @@ export function KyotoSeikaDeal({
     if (!el) return;
     const measure = () => {
       const box = el.getBoundingClientRect();
-      // The timer's label when it shows, or else the row the timer sits in.
-      const above =
-        el.querySelector(".timer-hint.is-on .timer-hint-label") ?? el.querySelector(".drawing-top");
+      // The timer's label, which keeps the start note's room while off, since a touch brings it.
+      const above = el.querySelector(".timer-hint-label") ?? el.querySelector(".drawing-top");
+      // Begin with the task line over it.
       const below = el.querySelector(".begin-key");
       if (!above || !below) return;
       setLayout(
@@ -124,7 +124,12 @@ export function KyotoSeikaDeal({
           )
         )}
       </div>
-      <BeginKey ref={begin} minutes={minutes} onBegin={onBegin} />
+      <BeginKey
+        ref={begin}
+        minutes={minutes}
+        ready={deal !== null && list.status === "loaded"}
+        onBegin={onBegin}
+      />
     </>
   );
 }

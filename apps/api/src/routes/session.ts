@@ -28,6 +28,7 @@ const userInput = createInsertSchema(users, {
   handle: z.string(),
 });
 
+// `language` is LINE's on the device, which the account takes while its choice follows LINE's.
 const signInBody = userInput
   .pick({ language: true })
   .required()

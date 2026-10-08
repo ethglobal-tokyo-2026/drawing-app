@@ -5,7 +5,7 @@ export const stickerCreation = {
   canvas: { en: "Canvas", ja: "キャンバス" },
   /** The timer dot, and the white label under it. */
   timer: {
-    /** Drawing screen, top left: the timer dot's name for screen readers before the first stroke starts the clock */
+    /** Drawing screen, top left: the timer dot's name for screen readers before the first stroke starts the clock, and on a begun sheet in Kyoto Seika Practice Mode, whose clock never pauses */
     label: { en: "Timer", ja: "タイマー" },
     /** Drawing screen, top left: the timer dot's name for screen readers while the clock runs; a tap pauses it */
     pause: { en: "Pause timer", ja: "タイマーを一時停止" },
@@ -65,6 +65,11 @@ export const stickerCreation = {
       startsWhenYouPressBegin: { en: "Starts when you press Begin", ja: "はじめを押すとスタート" },
       /** Drawing screen, top left, a sheet in Kyoto Seika Practice Mode: the white label under the timer for a few seconds at 10 and at 5 minutes left, as a proctor calls the time; also announced */
       minutesLeft: { en: "{{minutes}} minutes left", ja: "残り{{minutes}}分" },
+      /** Drawing screen, top left, a sheet in Kyoto Seika Practice Mode once begun: the white label under the timer for a few seconds when it's tapped, since its clock never pauses; also announced */
+      clockRuns: {
+        en: "The clock runs, as in the real test",
+        ja: "本番と同じく、時計は止まりません",
+      },
       /** Drawing screen, top left: the white label under the timer when a reload brings back your drawing in progress, paused, until the clock runs again; also announced */
       pickedUp: { en: "Picked up where you left off", ja: "続きから再開しました" },
       /** Drawing screen, top left: the white label under the timer when a reload couldn't bring back your drawing, so a fresh sheet uses the same ticket, until the first stroke; also announced; the label never wraps by itself */
@@ -168,14 +173,21 @@ export const stickerCreation = {
       ja: "シールを<wbr/>仕上げている<wbr/>途中でした。<wbr/>チェックを<wbr/>タップして<wbr/>仕上げてください。",
     },
   },
-  /** The 18+ switch over the seal key, shown only to someone with Show 18+ stickers on. */
+  /** The 18+ switch over the seal key, for everyone, off until it's turned on. */
   nsfw: {
     /** Drawing screen, bottom right, over the seal key: the switch's words; on, the sticker seals as 18+ */
     mark: { en: "18+", ja: "18+" },
+    /** Drawing screen, bottom right, over the seal key, for someone without Show 18+ stickers on: the switch's words while it's on, saying they'll see the sticker blurred too */
+    markBlurredForYou: { en: "18+ · Blurred for you too", ja: "18+・自分にもぼかして表示" },
     /** Drawing screen, bottom right, over the seal key: the 18+ switch's name for screen readers */
     label: {
       en: "18+: seal as sensitive content, blurred for anyone who hasn’t turned on 18+ stickers",
       ja: "18+：センシティブな内容として仕上げる（18+のシールをオンにしていない人にはぼかして表示）",
+    },
+    /** Drawing screen, bottom right, over the seal key, for someone without Show 18+ stickers on: the 18+ switch's name for screen readers, saying they'll see the sticker blurred too */
+    labelBlurredForYou: {
+      en: "18+: seal as sensitive content, blurred for anyone who hasn’t turned on 18+ stickers, you too",
+      ja: "18+：センシティブな内容として仕上げる（18+のシールをオンにしていない人には、自分も含めてぼかして表示）",
     },
   },
   /** The tool strip's tiles, named for assistive tech. */

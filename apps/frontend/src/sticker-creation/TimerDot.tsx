@@ -16,7 +16,7 @@ import { NUDGE, NUDGE_MS } from "./nudge";
 import type { SessionClock } from "./session/useSessionClock";
 import "./TimerDot.css";
 
-/** How long the paused hint stays after a stroke meets a paused sheet. */
+/** How long the paused hint stays after a stroke meets a paused sheet, as does a tap's word on a clock that never pauses. */
 const HINT_MS = 2600;
 /** A time warning stays in its live region this long, then the region empties so no stale one is read later. */
 const WARNING_MS = 6000;
@@ -43,8 +43,11 @@ const clockText = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
 export interface TimerDotHandle {
-  /** A stroke met the paused sheet: nudge the dot and point at it. */
+  /** A stroke met a paused sheet, or one waiting for Begin: point at what goes on, and nudge a paused dot. */
   showHint: () => void;
+  /** A tap met a clock that never pauses: the label says why, for a moment. */
+  showClockRuns: () => void;
+  focus: () => void;
 }
 
 interface Props {
@@ -56,54 +59,77 @@ interface Props {
   note: string | null;
   /** What starts a waiting clock: the first stroke, or Begin on a sheet in Kyoto Seika Practice Mode. */
   waitsFor: "stroke" | "begin";
+  /** A tap pauses the running clock; a begun sheet in Kyoto Seika Practice Mode's never pauses. */
+  pausable: boolean;
   onToggle: () => void;
 }
 
 /**
  * The timer: a Seal Yellow dot slapped on at the world's tilt, with puffy numerals in fixed cells.
- * Once the first stroke starts it, tapping it pauses. Every hold wears the same white PAUSED tag, the
- * page being hidden also lifts a corner, and the last ten seconds turn Tomato. A white label under it
- * points up at it: the paused hint, or the drawing screen's note.
+ * Once the first stroke starts it, tapping it pauses, unless its clock never pauses. Every hold wears
+ * the same white PAUSED tag, the page being hidden also lifts a corner, and the last ten seconds turn
+ * Tomato. A white label under it points up at it: the paused hint, or the drawing screen's note.
  */
-export function TimerDot({ ref, clock, paused, note, waitsFor, onToggle }: Props) {
+export function TimerDot({ ref, clock, paused, note, waitsFor, pausable, onToggle }: Props) {
   const { t } = useTranslation();
   const view = useSyncExternalStore(clock.subscribe, clock.getView);
   const reduced = useReducedMotion();
   const dot = useRef<HTMLButtonElement>(null);
+  // The dot's face and tag, which a nudge turns: the button itself holds the wide dot's scale.
+  const body = useRef<HTMLSpanElement>(null);
   const face = useRef<HTMLSpanElement>(null);
-  const hintTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const [hint, setHint] = useState(false);
+  const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // What the label says for a moment: the paused hint, or why a clock that never pauses runs on.
+  const [flash, setFlash] = useState<"hint" | "clockRuns" | null>(null);
   const describedBy = useId();
 
   // A proctor's time call, in minutes, while it shows.
   const [call, setCall] = useState<number | null>(null);
 
-  // The hint only ever speaks to a paused sheet.
-  if (hint && !paused) setHint(false);
-  const label = hint
-    ? t(($) => $.stickerCreation.timer.note.tapToKeepDrawing)
-    : call !== null
-      ? t(($) => $.stickerCreation.timer.note.minutesLeft, { minutes: call })
-      : note;
-  // The label keeps its words while it peels off.
+  // What starts a sheet waiting for Begin, which a touch on it brings, as a paused sheet's hint.
+  const startsAtBegin =
+    view.waiting && waitsFor === "begin"
+      ? t(($) => $.stickerCreation.timer.note.startsWhenYouPressBegin)
+      : null;
+  // The hint only ever speaks to a paused sheet or one waiting for Begin, and the clock's word only
+  // to a running one.
+  const flashWords =
+    flash === "hint"
+      ? paused
+        ? t(($) => $.stickerCreation.timer.note.tapToKeepDrawing)
+        : startsAtBegin
+      : flash === "clockRuns" && !paused && !view.waiting
+        ? t(($) => $.stickerCreation.timer.note.clockRuns)
+        : null;
+  if (flash && !flashWords) setFlash(null);
+  const label =
+    flashWords ??
+    (call !== null ? t(($) => $.stickerCreation.timer.note.minutesLeft, { minutes: call }) : note);
+  // The label keeps its words while it peels off. Waiting for Begin, it holds the start note's even
+  // while off, so the balloons are laid out clear of the room a touch's note takes.
   const [words, setWords] = useState(label);
   if (label && label !== words) setWords(label);
+  const held = !label && startsAtBegin ? startsAtBegin : words;
 
-  useImperativeHandle(
-    ref,
-    () => ({
+  useImperativeHandle(ref, () => {
+    const flashFor = (what: "hint" | "clockRuns") => {
+      setFlash(what);
+      clearTimeout(flashTimer.current);
+      flashTimer.current = setTimeout(() => setFlash(null), HINT_MS);
+    };
+    return {
       showHint() {
-        setHint(true);
-        clearTimeout(hintTimer.current);
-        hintTimer.current = setTimeout(() => setHint(false), HINT_MS);
-        const el = dot.current;
-        if (el && !reduced) el.animate(NUDGE, { duration: NUDGE_MS, easing: EASE_OUT });
+        flashFor("hint");
+        // Waiting for Begin, Begin nudges instead.
+        const el = body.current;
+        if (el && paused && !reduced) el.animate(NUDGE, { duration: NUDGE_MS, easing: EASE_OUT });
       },
-    }),
-    [reduced],
-  );
+      showClockRuns: () => flashFor("clockRuns"),
+      focus: () => dot.current?.focus({ preventScroll: true }),
+    };
+  }, [paused, reduced]);
 
-  useEffect(() => () => clearTimeout(hintTimer.current), []);
+  useEffect(() => () => clearTimeout(flashTimer.current), []);
 
   // The dot turns Tomato in the last ten seconds, which a screen reader never sees: it hears them. A
   // warning of a minute or more is a proctor's time call, which the label shows and reads out.
@@ -152,27 +178,29 @@ export function TimerDot({ ref, clock, paused, note, waitsFor, onToggle }: Props
         type="button"
         className={classes.join(" ")}
         aria-label={
-          view.waiting
-            ? t(($) => $.stickerCreation.timer.label)
-            : paused
-              ? t(($) => $.stickerCreation.timer.resume)
-              : t(($) => $.stickerCreation.timer.pause)
+          paused && !view.waiting
+            ? t(($) => $.stickerCreation.timer.resume)
+            : pausable && !view.waiting
+              ? t(($) => $.stickerCreation.timer.pause)
+              : t(($) => $.stickerCreation.timer.label)
         }
         aria-describedby={describedBy}
         onClick={onToggle}
       >
-        <span ref={face} className="timer-face">
-          <span className="timer-time" aria-hidden="true">
-            {time.split("").map((c, i) => (
-              <i key={i} className={c === ":" ? "timer-colon" : undefined}>
-                {c}
-              </i>
-            ))}
+        <span ref={body} className="timer-body">
+          <span ref={face} className="timer-face">
+            <span className="timer-time" aria-hidden="true">
+              {time.split("").map((c, i) => (
+                <i key={i} className={c === ":" ? "timer-colon" : undefined}>
+                  {c}
+                </i>
+              ))}
+            </span>
           </span>
-        </span>
-        <span className="timer-tag" aria-hidden="true">
-          <Pause weight="fill" />
-          <b>{t(($) => $.stickerCreation.timer.paused)}</b>
+          <span className="timer-tag" aria-hidden="true">
+            <Pause weight="fill" />
+            <b>{t(($) => $.stickerCreation.timer.paused)}</b>
+          </span>
         </span>
         <span className="visually-hidden" id={describedBy}>
           {t(($) => $.stickerCreation.timer.status[status], { time })}
@@ -183,7 +211,7 @@ export function TimerDot({ ref, clock, paused, note, waitsFor, onToggle }: Props
         aria-hidden="true"
       >
         <ArrowBendLeftUp className="timer-hint-arrow" size={28} />
-        <span className="timer-hint-label">{words}</span>
+        <span className="timer-hint-label">{held}</span>
       </div>
       <span className="visually-hidden" role="status">
         {label ?? ""}

@@ -1,0 +1,20 @@
+/* A sticker's pair, 「風 × 再会」, at 20px with 11px furigana over each kanji word. */
+.subject-pair {
+  font: 800 20px/1 var(--font-jp);
+  color: var(--ink);
+  font-feature-settings: "palt";
+  white-space: nowrap;
+}
+
+.subject-pair rt {
+  font: 700 var(--fs-fine) / 1 var(--font-jp);
+  color: var(--graphite);
+  letter-spacing: 0.06em;
+}
+
+.subject-pair i {
+  margin: 0 6px;
+  color: var(--graphite);
+  font: 500 15px/1 var(--font-ui);
+  font-style: normal;
+}

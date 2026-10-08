@@ -1,3 +1,4 @@
+import type { KyotoSeikaSubject } from "@drawing-app/api/client";
 import {
   useEffect,
   useMemo,
@@ -38,7 +39,6 @@ import {
 } from "./dealMotion";
 import { BalloonMarks, DieBang, TeaseLine } from "./DieTeasing";
 import { CHARRED_AT_ROLL, dieMood } from "./dieMood";
-import type { KyotoSeikaSubjectEntry } from "./subjectList";
 import { SubjectWord } from "./SubjectWord";
 import "./subject-balloons.css";
 
@@ -105,7 +105,7 @@ function puff(layer: HTMLElement) {
 
 interface BalloonProps {
   balloon: Balloon;
-  subject: KyotoSeikaSubjectEntry;
+  subject: KyotoSeikaSubject;
   rolls: number;
   wrap: (el: HTMLDivElement | null) => void;
   layout: PairLayout;
@@ -211,7 +211,7 @@ function SubjectBalloon({ balloon, subject, rolls, wrap, layout, reduced }: Ball
 
 interface DieProps {
   balloon: Balloon;
-  subject: KyotoSeikaSubjectEntry;
+  subject: KyotoSeikaSubject;
   rolls: number;
   layout: PairLayout;
   reduced: boolean;
@@ -248,7 +248,7 @@ function SubjectDie({ balloon, subject, rolls, layout, reduced, onRoll }: DiePro
       }}
     >
       <span ref={face} className="subject-die__face">
-        <Die weight="bold" aria-hidden focusable="false" />
+        <Die className="subject-die__pips" weight="bold" aria-hidden focusable="false" />
         {charred && (
           <svg className="subject-die__crack" viewBox="0 0 34 34" aria-hidden="true">
             <path d="M9 6 L14 13 L11 18 L17 24" />

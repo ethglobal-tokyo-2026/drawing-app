@@ -123,7 +123,7 @@
     1px 5px 6px rgba(28, 24, 36, 0.16);
 }
 
-.subject-die svg {
+.subject-die__pips {
   width: 21px;
   height: 21px;
   color: var(--ink);
@@ -133,15 +133,29 @@
   cursor: default;
 }
 
+/* Charred: soot over the label stock, thickest at its middle, with an ash rim where the edge burned
+   and its lip burnt black. The pips still show faintly through the soot, so it reads as the same die,
+   burnt, rather than a black square. */
 .subject-die.is-charred .subject-die__face {
-  background: var(--ink);
+  background:
+    radial-gradient(
+      circle at 42% 40%,
+      rgba(28, 24, 36, 0.97) 0 36%,
+      rgba(28, 24, 36, 0.9) 64%,
+      rgba(28, 24, 36, 0.8) 100%
+    ),
+    var(--liner-lift);
   box-shadow:
-    0 0 0 1px var(--ink),
-    1px 4px 6px rgba(28, 24, 36, 0.25);
+    inset 0 0 0 1px var(--ink),
+    inset 0 0 4px 1px rgba(255, 255, 255, 0.2),
+    0 3px 0 var(--ink-deep),
+    0 3px 0 1px var(--ink),
+    1px 5px 6px rgba(28, 24, 36, 0.25);
 }
 
-.subject-die.is-charred svg {
-  opacity: 0;
+.subject-die.is-charred .subject-die__pips {
+  color: var(--liner-lift);
+  opacity: 0.34;
 }
 
 /* A puff of smoke from a rolled balloon. */

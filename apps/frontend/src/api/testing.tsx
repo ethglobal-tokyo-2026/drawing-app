@@ -110,6 +110,7 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
       Promise.reject(new ApiError(404, { error: "sticker_not_found", detail: stickerId })),
     timelapse: (stickerId) =>
       Promise.reject(new ApiError(404, { error: "timelapse_not_found", detail: stickerId })),
+    markStickerNsfw: unanswered("markStickerNsfw"),
     tickets: () => Promise.resolve(FRESH_TICKETS),
     spendTicket: unanswered("spendTicket"),
     ticketShop: unanswered("ticketShop"),

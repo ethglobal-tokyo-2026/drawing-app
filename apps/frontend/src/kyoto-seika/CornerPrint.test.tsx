@@ -26,11 +26,12 @@ function render(node: React.ReactNode) {
 }
 
 describe("the corner print", () => {
-  it("prints the pair down the sheet's corner, hidden from screen readers, with furigana over kanji words only", () => {
+  it("prints each subject's word alone, without its furigana or English, hidden from screen readers", () => {
     const print = render(<CornerPrint subjects={[WIND, SPORTS]} />).querySelector(".corner-print");
     if (!print) throw new Error("No corner print");
     expect(print.getAttribute("aria-hidden")).toBe("true");
-    expect([...print.querySelectorAll("rt")].map((rt) => rt.textContent)).toEqual([WIND.reading]);
-    expect(print.textContent).toContain(SPORTS.en);
+    const words = [...print.querySelectorAll(".corner-print__word")].map((w) => w.textContent);
+    expect(words).toEqual([WIND.ja, SPORTS.ja]);
+    expect(print.textContent).not.toContain(SPORTS.en);
   });
 });

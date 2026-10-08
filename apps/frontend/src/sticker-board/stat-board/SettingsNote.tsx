@@ -14,6 +14,7 @@ import { followLanguageChoice, lineLanguage } from "../../i18n/pageLanguage";
 import { Trans, useTranslation } from "../../i18n/react";
 import { Question } from "../../icons";
 import { CensorBar } from "../../kyoto-seika/CensorBar";
+import { openLinkInLine } from "../../line/openLink";
 import { useTickets } from "../../tickets/useTickets";
 import { ErrorLine } from "../../ui/ErrorLine";
 import { useReducedMotion } from "../../ui/useReducedMotion";
@@ -29,7 +30,10 @@ const CHOICES: readonly Choice[] = [null, "en", "ja"];
 /** How much of the paper under its title peeks above the cork's foot, in px. */
 const PEEK_UNDER_TITLE = 10;
 
-/** The settings on the note, each saved to your account and applied in place; one saves at a time. */
+/**
+ * The settings on the note, each saved to your account and applied in place. One saves at a time, in
+ * the order they were changed, so each answer is the account as it then is.
+ */
 type Setting = "language" | "nsfw" | "kyotoSeika" | "kyotoSeikaDark";
 /** The account's settings as the note shows them: a saving one shows its new value. */
 type Shown = Pick<
@@ -38,11 +42,11 @@ type Shown = Pick<
 >;
 /** Why a setting didn't take: kept as it failed, so its words follow the app's language. */
 type Failure = { kind: "notSaved" | "notKept"; error: unknown };
+/** A setting's last change, until it's changed again: saving, waiting its turn included, then in place or why not. */
 type Status =
-  | { step: "idle" }
-  | { step: "saving"; setting: Setting; to: Partial<Shown> }
-  | { step: "applied"; setting: Setting }
-  | { step: "failed"; setting: Setting; failure: Failure };
+  | { step: "saving"; to: Partial<Shown> }
+  | { step: "applied" }
+  | { step: "failed"; failure: Failure };
 
 /**
  * Sticks the note to the cork's foot with only its title showing, until it scrolls into view: CSS
@@ -107,32 +111,46 @@ export function SettingsNote() {
   const id = useId();
   const note = useRef<HTMLElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
-  const [status, setStatus] = useState<Status>({ step: "idle" });
+  const [statuses, setStatuses] = useState<Partial<Record<Setting, Status>>>({});
+  /** The saves, each run once the ones changed before it have. */
+  const saves = useRef(Promise.resolve());
+  /** Each setting's latest change: only its outcome is that setting's status. */
+  const latestChanges = useRef(new Map<Setting, object>());
   const [aboutOpen, setAboutOpen] = useState(false);
   const { refresh: refreshTickets } = useTickets();
   const reveal = usePeek(note, title);
 
-  /** Saves a setting, then applies it: `me` takes the answer, and `apply` does what it changes on this phone. */
-  const save = async (
+  /**
+   * Saves a setting after the changes before it, then applies it: `me` takes the answer, and `apply`
+   * does what it changes on this phone, returning what it couldn't do rather than throwing.
+   */
+  const save = (
     setting: Setting,
     to: Partial<Shown>,
     request: () => Promise<Me>,
     apply: () => Promise<Failure | null> | Failure | null,
   ) => {
-    if (status.step === "saving") return;
-    setStatus({ step: "saving", setting, to });
-    let saved: Me;
-    try {
-      saved = await request();
-    } catch (error) {
-      const failure = apiError(error);
-      console.error(`The ${setting} setting wasn't saved`, failure);
-      setStatus({ step: "failed", setting, failure: { kind: "notSaved", error: failure } });
-      return;
-    }
-    setMe(saved);
-    const failure = await apply();
-    setStatus(failure ? { step: "failed", setting, failure } : { step: "applied", setting });
+    const change = {};
+    latestChanges.current.set(setting, change);
+    const settle = (status: Status) => {
+      if (latestChanges.current.get(setting) === change)
+        setStatuses((all) => ({ ...all, [setting]: status }));
+    };
+    settle({ step: "saving", to });
+    saves.current = saves.current.then(async () => {
+      let saved: Me;
+      try {
+        saved = await request();
+      } catch (error) {
+        const failure = apiError(error);
+        console.error(`The ${setting} setting wasn't saved`, failure);
+        settle({ step: "failed", failure: { kind: "notSaved", error: failure } });
+        return;
+      }
+      setMe(saved);
+      const failure = await apply();
+      settle(failure ? { step: "failed", failure } : { step: "applied" });
+    });
   };
 
   const choose = (choice: Choice) =>
@@ -191,12 +209,15 @@ export function SettingsNote() {
     choice === null
       ? t(($) => $.stickerBoard.settings.language.sameAsLine, { language: named(lineLanguage()) })
       : named(choice);
-  const shown: Shown = status.step === "saving" ? { ...me, ...status.to } : me;
-  const saving = (setting: Setting) => status.step === "saving" && status.setting === setting;
+  const shown: Shown = Object.values(statuses).reduce<Shown>(
+    (all, status) => (status?.step === "saving" ? { ...all, ...status.to } : all),
+    me,
+  );
+  const saving = (setting: Setting) => statuses[setting]?.step === "saving";
   /** A setting's status line: saving, then what took, in the app's language now. */
   const statusLine = (setting: Setting) => {
     if (saving(setting)) return t(($) => $.stickerBoard.settings.saving);
-    if (status.step !== "applied" || status.setting !== setting) return "";
+    if (statuses[setting]?.step !== "applied") return "";
     if (setting === "language")
       return t(($) => $.stickerBoard.settings.language.applied, {
         language: named(currentLanguage()),
@@ -212,7 +233,8 @@ export function SettingsNote() {
   };
   /** Why a setting didn't take, in the app's language now. */
   const problem = (setting: Setting) => {
-    if (status.step !== "failed" || status.setting !== setting) return null;
+    const status = statuses[setting];
+    if (status?.step !== "failed") return null;
     const { message, detail } = problemOf(status.failure.error);
     // Both Kyoto Seika Practice Mode switches say it in the mode's words.
     const strings = setting === "kyotoSeikaDark" ? "kyotoSeika" : setting;
@@ -249,7 +271,7 @@ export function SettingsNote() {
                 type="radio"
                 name={`${id}-language`}
                 checked={shown.languageChoice === choice}
-                onChange={() => void choose(choice)}
+                onChange={() => choose(choice)}
               />
               {/* A language's own name is in that language, for screen readers too. */}
               <span lang={choice ?? undefined}>{label(choice)}</span>
@@ -271,10 +293,10 @@ export function SettingsNote() {
               role="switch"
               checked={shown.nsfwOptIn}
               aria-describedby={`${id}-nsfw-about`}
-              onChange={() => void switchNsfw(!shown.nsfwOptIn)}
+              onChange={() => switchNsfw(!shown.nsfwOptIn)}
             />
           </label>
-          <p className="fine settings-note__about" id={`${id}-nsfw-about`}>
+          <p className="settings-note__about" id={`${id}-nsfw-about`}>
             {t(($) => $.stickerBoard.settings.nsfw.about)}
           </p>
           <p className="fine settings-note__status" role="status">
@@ -327,10 +349,10 @@ export function SettingsNote() {
               checked={shown.kyotoSeikaPractice}
               aria-label={t(($) => $.stickerBoard.settings.kyotoSeika.spokenName)}
               aria-describedby={`${id}-kyoto-seika-about`}
-              onChange={() => void switchKyotoSeika(!shown.kyotoSeikaPractice)}
+              onChange={() => switchKyotoSeika(!shown.kyotoSeikaPractice)}
             />
           </label>
-          <p className="fine settings-note__about" id={`${id}-kyoto-seika-about`}>
+          <p className="settings-note__about" id={`${id}-kyoto-seika-about`}>
             {t(($) => $.stickerBoard.settings.kyotoSeika.about, {
               minutes: KYOTO_SEIKA_TIME_USED_S / 60,
               tickets: KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
@@ -353,10 +375,10 @@ export function SettingsNote() {
                   role="switch"
                   checked={shown.kyotoSeikaDarkSubjects}
                   aria-describedby={`${id}-kyoto-seika-dark-about`}
-                  onChange={() => void switchDark(!shown.kyotoSeikaDarkSubjects)}
+                  onChange={() => switchDark(!shown.kyotoSeikaDarkSubjects)}
                 />
               </label>
-              <p className="fine settings-note__about" id={`${id}-kyoto-seika-dark-about`}>
+              <p className="settings-note__about" id={`${id}-kyoto-seika-dark-about`}>
                 {t(($) => $.stickerBoard.settings.kyotoSeika.dark.about)}
               </p>
               {problem("kyotoSeikaDark")}
@@ -366,7 +388,14 @@ export function SettingsNote() {
             <Trans
               i18nKey={($) => $.stickerBoard.settings.kyotoSeika.credit}
               components={{
-                sources: <a href={t(($) => $.pages.sources)} target="_blank" rel="noreferrer" />,
+                sources: (
+                  <a
+                    href={t(($) => $.pages.sources)}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={openLinkInLine}
+                  />
+                ),
               }}
             />
           </p>

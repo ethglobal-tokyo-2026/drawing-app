@@ -183,12 +183,12 @@ export const stickerBoard = {
     nsfw: {
       /** Settings note: the heading over the NSFW opt-in's switch */
       title: { en: "18+ stickers", ja: "18+のシール" },
-      /** Settings note: the NSFW opt-in's switch, off until you turn it on; on, 18+ stickers show unblurred and you can seal and receive them */
+      /** Settings note: the NSFW opt-in's switch, off until you turn it on; on, 18+ stickers show unblurred and you can receive them */
       show: { en: "Show 18+ stickers", ja: "18+のシールを表示する" },
-      /** Settings note: the fine print under the NSFW opt-in's switch, saying who it's for and what it changes */
+      /** Settings note: the note under the NSFW opt-in's switch, saying who it's for and what it changes */
       about: {
-        en: "For people 18 or older. On, 18+ stickers show unblurred, and you can seal your own as 18+ and receive them. Off, they’re blurred, yours too.",
-        ja: "18歳以上の方向けです。オンにすると、18+のシールがぼかしなしで表示され、自分のシールを18+として仕上げたり、18+のシールを受け取ったりできます。オフにすると、自分のものも含めてぼかして表示されます。",
+        en: "For people 18 or older. On, 18+ stickers show unblurred, and you can receive them. Off, they’re blurred, yours too.",
+        ja: "18歳以上の方向けです。オンにすると、18+のシールがぼかしなしで表示され、受け取れるようになります。オフにすると、自分のものも含めてぼかして表示されます。",
       },
       /** Settings note: the status line once Show 18+ stickers has been turned on and saved */
       shown: {
@@ -234,7 +234,7 @@ export const stickerBoard = {
         en: "Croquis’s maker is applying to Kyoto Seika too, and built this mode to practice. Neither Croquis nor its maker has any connection with the university.",
         ja: "クロッキーの作者も京都精華大学の受験生で、自分の練習のためにこのモードを作りました。クロッキーも作者も、大学とは関係ありません。",
       },
-      /** Settings note: the fine print under Kyoto Seika Practice Mode's switch; {{minutes}} is its clock and {{tickets}} its daily tickets */
+      /** Settings note: the note under Kyoto Seika Practice Mode's switch; {{minutes}} is its clock and {{tickets}} its daily tickets */
       about: {
         en: "Practice for the manga expression test: a {{minutes}}‑minute timer, {{tickets}} daily tickets a day, and two subjects to combine.",
         ja: "マンガ表現の練習に。タイマー{{minutes}}分、無償チケット1日{{tickets}}枚、題材を2つ組み合わせてかきます。",
@@ -258,7 +258,7 @@ export const stickerBoard = {
       dark: {
         /** Settings note, under Kyoto Seika Practice Mode's switch while it's on: the switch that also deals dark subjects */
         label: { en: "Dark subjects too", ja: "重い題材も出す" },
-        /** Settings note: the fine print under the dark subjects switch */
+        /** Settings note: the note under the dark subjects switch, naming what it adds */
         about: {
           en: "Death, war, crime, alcohol and tobacco.",
           ja: "死、戦争、犯罪、お酒、たばこなど。",
@@ -597,7 +597,7 @@ export const stickerBoard = {
       ja: "{{no}}、{{setSize}}枚中{{position}}枚目",
     },
     /** Sticker detail: the sticker's heading under the pager; <no/> is its number, such as "No.0012" */
-    title: { en: "sticker <no/>", ja: "シール<no/>" },
+    title: { en: "Sticker <no/>", ja: "シール<no/>" },
     /** Sticker detail, a sticker the board's owner drew: the fine print naming its Original Artist, first on the line and ending in the separator before the drawing time; <artist/> is their handle, which keeps its own case in the capitals */
     by: { en: "by <artist/> ·", ja: "作者：<artist/>・" },
     /** Sticker detail: the fine print with how long it took to draw, such as "4m 52s", after the artist or first on the line when the artist chip names them */
@@ -626,6 +626,48 @@ export const stickerBoard = {
     dismiss: { en: "Dismiss", ja: "閉じる" },
     /** Sticker detail: in place of the sticker when there's none to show */
     none: { en: "No sticker here yet.", ja: "まだシールがありません。" },
+    /** Mark 18+, at the foot of the detail of a sticker you drew that isn't 18+ yet, and the confirm it opens. */
+    markNsfw: {
+      /** Sticker detail, a sticker you drew that isn't 18+: the quiet link at the detail's foot that opens the confirm to mark it 18+ */
+      open: { en: "Mark 18+…", ja: "18+にする…" },
+      /** Sticker detail, Mark 18+'s confirm: its title; {{no}} is the sticker's number, such as "No.0147" */
+      title: { en: "Mark {{no}} 18+?", ja: "{{no}}を18+にしますか？" },
+      /** Sticker detail, Mark 18+'s confirm, for someone with Show 18+ stickers on: what marking does */
+      does: {
+        en: "From now on it wears pink foil, and anyone who hasn’t turned on Show 18+ stickers sees it blurred and can’t receive it.",
+        ja: "これからはピンクのホイルがつき、「18+のシールを表示する」をオンにしていない人にはぼかして表示され、受け取ることもできなくなります。",
+      },
+      /** Sticker detail, Mark 18+'s confirm, for someone without Show 18+ stickers on: what marking does, which blurs it for them too */
+      doesYouToo: {
+        en: "From now on it wears pink foil, and anyone who hasn’t turned on Show 18+ stickers sees it blurred and can’t receive it. You haven’t, so you’ll see it blurred too.",
+        ja: "これからはピンクのホイルがつき、「18+のシールを表示する」をオンにしていない人にはぼかして表示され、受け取ることもできなくなります。あなたもオンにしていないので、ぼかして表示されます。",
+      },
+      /** Sticker detail, Mark 18+'s confirm: the bold line saying the mark can't be taken off */
+      cantUndo: { en: "You can’t undo this.", ja: "元に戻すことはできません。" },
+      /** Sticker detail, Mark 18+'s confirm: the line saying the mark can't call back copies of the drawing people already saw */
+      copies: {
+        en: "Anyone who has already seen it may have kept a copy.",
+        ja: "すでに見た人の手元に、コピーが残っているかもしれません。",
+      },
+      /** Sticker detail, Mark 18+'s confirm: the quiet link that closes it with nothing marked */
+      cancel: { en: "Cancel", ja: "キャンセル" },
+      /** Sticker detail, Mark 18+'s confirm: the red button that marks the sticker 18+ */
+      confirm: { en: "Mark 18+", ja: "18+にする" },
+      /** Sticker detail, Mark 18+'s confirm: the red button's words while the mark is on its way to the server */
+      sending: { en: "Marking…", ja: "18+にしています…" },
+      /** Sticker detail, Mark 18+'s confirm: the alert under it when the mark failed or was refused, before the reason */
+      failed: {
+        en: "Couldn’t mark it 18+: {{reason}}",
+        ja: "18+にできませんでした：{{reason}}",
+      },
+      /** Sticker detail: the status line at its foot once the mark lands, for someone with Show 18+ stickers on; {{no}} is the sticker's number */
+      done: { en: "{{no}} is marked 18+.", ja: "{{no}}を18+にしました。" },
+      /** Sticker detail: the status line at its foot once the mark lands, for someone without Show 18+ stickers on, who now sees it blurred; {{no}} is the sticker's number */
+      doneBlurred: {
+        en: "{{no}} is marked 18+. Show 18+ stickers in Settings shows it unblurred.",
+        ja: "{{no}}を18+にしました。設定の「18+のシールを表示する」をオンにすると、ぼかしなしで表示されます。",
+      },
+    },
   },
   /** The sticker detail's timelapse, which plays how the sticker was drawn. */
   timelapse: {

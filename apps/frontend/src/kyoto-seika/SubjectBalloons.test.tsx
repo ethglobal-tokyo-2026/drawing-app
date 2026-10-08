@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import type { KyotoSeikaSubject } from "@drawing-app/api/client";
 import { act, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -10,7 +11,6 @@ import { rollDie, type Balloon, type Deal } from "./deal";
 import { CHARRED_AT_ROLL, TEASE_LINES } from "./dieMood";
 import { BOOM_DELAY_MS } from "./dealMotion";
 import { SubjectBalloons } from "./SubjectBalloons";
-import type { KyotoSeikaSubjectEntry } from "./subjectList";
 import { DEAL, SPORTS, TEST_SUBJECTS, WIND } from "./testSubjects";
 
 declare global {
@@ -56,7 +56,7 @@ function Harness() {
 }
 
 const dice = (host: HTMLElement) => [...host.querySelectorAll<HTMLButtonElement>(".subject-die")];
-const said = (subject: KyotoSeikaSubjectEntry) =>
+const said = (subject: KyotoSeikaSubject) =>
   strings.kyotoSeika.balloons.subject.en
     .replace("{{word}}", subject.ja)
     .replace("{{english}}", subject.en);
@@ -67,7 +67,7 @@ describe("the Kyoto Seika balloons", () => {
     expect(host.querySelector('[role="group"]')?.getAttribute("aria-label")).toBe(
       strings.kyotoSeika.balloons.label.en,
     );
-    const roll = (subject: KyotoSeikaSubjectEntry) =>
+    const roll = (subject: KyotoSeikaSubject) =>
       strings.kyotoSeika.balloons.roll.en
         .replace("{{word}}", subject.ja)
         .replace("{{english}}", subject.en);
@@ -117,7 +117,10 @@ describe("the Kyoto Seika balloons", () => {
 describe("a die rolled too often", () => {
   afterEach(() => vi.useRealTimers());
 
-  /** The balloons over a deal, then over the deal after the upper die's roll number `rolls`. */
+  /**
+   * The balloons over a deal, then over the deal after the upper die's roll number `rolls`;
+   * `renderAgain` renders that deal once more, as the drawing screen does whenever it renders.
+   */
   function rollUpperTo(rolls: number) {
     const before: Deal = { ...DEAL, rolls: [rolls - 1, 0] };
     const host = document.createElement("div");
@@ -131,14 +134,20 @@ describe("a die rolled too often", () => {
     const spring = TEST_SUBJECTS.find((s) => s.ja === "春");
     if (!spring) throw new Error("the test list has no 春");
     const after: Deal = { subjects: [spring, DEAL.subjects[1]], rolls: [rolls, 0] };
-    act(() => root.render(<SubjectBalloons deal={after} onRoll={() => {}} layout={LAYOUT} />));
-    return host;
+    const renderAgain = () =>
+      act(() => root.render(<SubjectBalloons deal={after} onRoll={() => {}} layout={LAYOUT} />));
+    renderAgain();
+    return { host, renderAgain };
   }
   const status = (host: HTMLElement) => host.querySelector('[role="status"]')?.textContent ?? "";
+  const wait = (ms: number) =>
+    act(() => {
+      vi.advanceTimersByTime(ms);
+    });
 
   it("teases at the first line's roll, in hand lettering, and reads it out", () => {
     const [firstRoll] = TEASE_LINES.keys();
-    const host = rollUpperTo(firstRoll);
+    const { host } = rollUpperTo(firstRoll);
     const line = strings.kyotoSeika.tease.again.en;
     expect(host.querySelector(".die-tease")?.textContent).toBe(line);
     expect(status(host)).toContain(line);
@@ -146,16 +155,23 @@ describe("a die rolled too often", () => {
 
   it("chars at the last roll, and says the subject stays once the bang has gone off", () => {
     vi.useFakeTimers();
-    const host = rollUpperTo(CHARRED_AT_ROLL);
+    const { host } = rollUpperTo(CHARRED_AT_ROLL);
     const charred = strings.kyotoSeika.balloons.charred.en;
     expect(dice(host)[0].getAttribute("aria-disabled")).toBe("true");
-    const wait = (ms: number) =>
-      act(() => {
-        vi.advanceTimersByTime(ms);
-      });
     wait(BOOM_DELAY_MS - 1);
     expect(status(host)).not.toContain(charred);
     wait(1);
     expect(status(host)).toContain(charred);
+  });
+
+  it("plays the bang once, as the die blows up, however often the balloons render after", () => {
+    vi.useFakeTimers();
+    const { host, renderAgain } = rollUpperTo(CHARRED_AT_ROLL);
+    wait(BOOM_DELAY_MS);
+    const burst = host.querySelector(".die-bang__burst");
+    if (!burst) throw new Error("No bang");
+    const played = vi.spyOn(burst, "animate");
+    renderAgain();
+    expect(played).not.toHaveBeenCalled();
   });
 });

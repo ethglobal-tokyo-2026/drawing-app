@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { errorMessage } from "../i18n/errorMessage";
 import { currentLanguage, i18next } from "../i18n/i18n";
 import { keepChosenLanguage, readChosenLanguage } from "../i18n/language";
+import { startInLineLanguage } from "../i18n/pageLanguage";
 import { STILL_OPENING_MS } from "../line/GateParts";
 import type { LineClaims } from "../line/liff";
 import { ApiError } from "./apiClient";
@@ -39,12 +40,18 @@ function Board() {
   return <p lang={language}>Board of @{useMe().handle}</p>;
 }
 
-/** Turns your NSFW opt-in on in place, as a setting saved on the Settings note does. */
-function OptInSwitch() {
+/**
+ * Turns your NSFW opt-in on in place, as a setting saved on the Settings note does: once `answered`
+ * lands, when given, as the server's answer would.
+ */
+function OptInSwitch({ answered = Promise.resolve() }: { answered?: Promise<void> }) {
   const you = useMe();
   const setMe = useSetMe();
   return (
-    <button type="button" onClick={() => setMe({ ...you, nsfwOptIn: true })}>
+    <button
+      type="button"
+      onClick={() => void answered.then(() => setMe({ ...you, nsfwOptIn: true }))}
+    >
       {you.nsfwOptIn ? "18+ on" : "18+ off"}
     </button>
   );
@@ -143,18 +150,29 @@ describe("SessionGate", () => {
     expect(host.textContent).toContain("Board of @alice");
   });
 
-  it("signs in with LINE's token and the app's language, then opens the app as you", async () => {
-    await i18next.changeLanguage("ja");
-    onTestFinished(async () => {
-      await i18next.changeLanguage("en");
-    });
-    const signIn = vi.fn(() => Promise.resolve({ me }));
-    const host = render(session({ signIn }));
-    expect(host.textContent).not.toContain("Board");
-    await settle();
-    expect(signIn).toHaveBeenCalledWith({ idToken: "token", language: "ja" });
-    expect(host.textContent).toContain("Board of @alice");
-  });
+  it.each([
+    ["ja", "en"],
+    ["en", "ja"],
+  ] as const)(
+    "signs in with LINE's token and LINE's language (%s), not the one this phone kept (%s), then opens the app as you",
+    async (line, kept) => {
+      keepChosenLanguage(kept);
+      startInLineLanguage(line);
+      await i18next.changeLanguage(kept);
+      onTestFinished(async () => {
+        localStorage.clear();
+        startInLineLanguage("en");
+        await i18next.changeLanguage("en");
+      });
+      const signIn = vi.fn(() => Promise.resolve({ me }));
+      const host = render(session({ signIn }));
+      expect(host.textContent).not.toContain("Board");
+      await settle();
+      // An account that follows LINE takes it, so a choice this phone kept can't stand in for LINE's.
+      expect(signIn).toHaveBeenCalledWith({ idToken: "token", language: line });
+      expect(host.textContent).toContain("Board of @alice");
+    },
+  );
 
   it.each([
     ["ja", "en", "ja"],
@@ -484,13 +502,13 @@ describe("SessionGate when a request finds the session gone", () => {
   const gone = () => new ApiError(401, { error: "signed_out" });
 
   /** The gate open on Alice, whose session then ends: every check of the cookie after the first says so. */
-  function openThenLose(signIn: SessionApi["signIn"]) {
+  function openThenLose(signIn: SessionApi["signIn"], app?: ReactNode) {
     const resume = vi
       .fn<SessionApi["me"]>()
       .mockResolvedValueOnce({ me })
       .mockRejectedValue(gone());
     const reconnect = vi.fn<() => Promise<void>>().mockResolvedValue();
-    const host = render(session({ me: resume, signIn }), () => "token", reconnect);
+    const host = render(session({ me: resume, signIn }), () => "token", reconnect, { app });
     return { host, reconnect };
   }
   const lose = async () => {
@@ -514,6 +532,30 @@ describe("SessionGate when a request finds the session gone", () => {
     await settle();
     expect(signIn).toHaveBeenCalledExactlyOnceWith({ idToken: "token", language: "en" });
     expect(host.textContent).toContain("Board of @alice");
+  });
+
+  it("opens only on the new session when a setting saved before the loss answers while it signs in again", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { signIn, finish } = pendingSignIn({ ...me, handle: "alice-again" });
+    let answerSave = () => {};
+    const saveAnswered = new Promise<void>((resolve) => (answerSave = resolve));
+    const { host } = openThenLose(
+      signIn,
+      <>
+        <Board />
+        <OptInSwitch answered={saveAnswered} />
+      </>,
+    );
+    await settle();
+    act(() => host.querySelector("button")?.click());
+    await lose();
+    expect(signIn).toHaveBeenCalledOnce();
+
+    await act(async () => answerSave());
+    expect(host.textContent).not.toContain("Board");
+    finish();
+    await settle();
+    expect(host.textContent).toContain("Board of @alice-again");
   });
 
   it("asks to reconnect LINE when LINE's ID token has expired too, and doesn't resubmit it", async () => {

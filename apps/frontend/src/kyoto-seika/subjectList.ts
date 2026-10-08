@@ -20,22 +20,43 @@ export type KyotoSeikaSubjectEntry = KyotoSeikaSubject & {
   dark: boolean;
 };
 
+/**
+ * One Kyoto Seika Subject as a sheet holds it: what the seal sends of it, and the rest of its list
+ * entry, which a sheet kept by an earlier build may hold in a shape this one can't read.
+ */
+export type DealtSubject = KyotoSeikaSubject &
+  Partial<Pick<KyotoSeikaSubjectEntry, "kind" | "tier" | "dark">>;
+
 /** Whether `word` has kanji, which take furigana. */
 export const hasKanji = (word: string) => /\p{Script=Han}/u.test(word);
 
 const isKind = (v: unknown): v is SubjectKind => KINDS.some((kind) => kind === v);
 
-/** A list entry, or undefined when it can't be read. */
-export function readSubjectEntry(v: unknown): KyotoSeikaSubjectEntry | undefined {
-  if (typeof v !== "object" || v === null) return undefined;
-  if (!("ja" in v && "reading" in v && "en" in v) || !("kind" in v && "tier" in v && "dark" in v))
+/** What the seal sends of a subject, or undefined when it can't be read. */
+function readSubject(v: unknown): KyotoSeikaSubject | undefined {
+  if (typeof v !== "object" || v === null || !("ja" in v && "reading" in v && "en" in v))
     return undefined;
-  const { ja, reading, en, kind, tier, dark } = v;
+  const { ja, reading, en } = v;
   if (typeof ja !== "string" || ja === "" || typeof en !== "string" || en === "") return undefined;
-  if (typeof reading !== "string") return undefined;
-  if (!isKind(kind) || typeof tier !== "boolean" || typeof dark !== "boolean") return undefined;
-  return { ja, reading, en, kind, tier, dark };
+  return typeof reading === "string" ? { ja, reading, en } : undefined;
 }
+
+/** A list entry, or undefined when it can't be read. */
+function readSubjectEntry(v: unknown): KyotoSeikaSubjectEntry | undefined {
+  const subject = readSubject(v);
+  if (!subject || typeof v !== "object" || v === null) return undefined;
+  if (!("kind" in v && "tier" in v && "dark" in v)) return undefined;
+  const { kind, tier, dark } = v;
+  if (!isKind(kind) || typeof tier !== "boolean" || typeof dark !== "boolean") return undefined;
+  return { ...subject, kind, tier, dark };
+}
+
+/**
+ * A subject a sheet kept, or undefined when what the seal sends of it can't be read: the rest of its
+ * entry is kept only when this build reads it.
+ */
+export const readDealtSubject = (v: unknown): DealtSubject | undefined =>
+  readSubjectEntry(v) ?? readSubject(v);
 
 /** The list as `subjects.json` holds it. Throws on the first entry it can't read, naming it. */
 export function parseSubjectList(raw: unknown): KyotoSeikaSubjectEntry[] {

@@ -958,4 +958,20 @@ describe("StickerTray", () => {
     await openAndShut();
     expect(onSeen).toHaveBeenCalledTimes(1);
   });
+
+  it("reports what the open tray showed as seen when a new language rebuilds it open, as shutting does", async () => {
+    onTestFinished(async () => {
+      await i18next.changeLanguage("en");
+    });
+    const onSeen = vi.fn();
+    render([sticker("new", Date.now(), false)], {}, onSeen);
+    await openTray();
+    expect(onSeen).not.toHaveBeenCalled();
+    await act(() => i18next.changeLanguage("ja"));
+    expect(onSeen).toHaveBeenCalledExactlyOnceWith(["new"]);
+    // The rebuilt tray shows it as seen, and has nothing more to report.
+    expect(slotOf("new")?.querySelector(".tray__new")).toBeNull();
+    await openAndShut();
+    expect(onSeen).toHaveBeenCalledTimes(1);
+  });
 });

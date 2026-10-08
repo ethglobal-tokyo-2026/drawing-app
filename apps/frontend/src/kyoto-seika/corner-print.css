@@ -1,15 +1,17 @@
-/* The pair as a vertical margin note (縦書き) in the sheet's lower right, in non-repro blue: a boxed
-   題材, then each subject top to bottom, its furigana on its right as vertical text carries it and its
-   English set sideways on its left. Under the ink, clear of the seal key and the 18+ switch above it. */
+/* The pair as a faint vertical margin note (縦書き) in the sheet's lower right: a boxed 題材, then each
+   word alone in its own column, right to left. Non-repro blue at half strength, so it reminds without
+   competing with the ink drawn over it. Clear of the seal key and the 18+ switch above it. */
 .corner-print {
   position: absolute;
   right: 16px;
   bottom: 150px;
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: 6px;
   writing-mode: vertical-rl;
-  color: var(--non-repro-blue);
+  color: color-mix(in srgb, var(--non-repro-blue) 50%, transparent);
+  font-family: var(--font-jp);
   pointer-events: none;
   user-select: none;
   /* It prints as the balloons tuck away. */
@@ -30,43 +32,15 @@
 
 .corner-print__heading {
   padding: 3px 1px;
-  border: 1.5px solid currentColor;
+  border: 1px solid currentColor;
   border-radius: 2px;
-  font-family: var(--font-jp);
   font-size: var(--fs-fine);
   font-weight: 700;
   line-height: 1;
 }
 
-/* In vertical text a column runs right to left: the word, then its English on its left. */
-.corner-print__subject {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
-
 .corner-print__word {
-  font-family: var(--font-jp);
-  font-size: 24px;
-  font-weight: 800;
-  line-height: 1.1;
-}
-
-.corner-print__word ruby {
-  ruby-position: over;
-}
-
-.corner-print__word rt {
-  font-size: var(--fs-fine);
-  font-weight: 700;
-}
-
-.corner-print__english {
-  font-family: var(--font-ui);
-  font-size: 11.5px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.1;
-  writing-mode: vertical-rl;
-  white-space: nowrap;
 }

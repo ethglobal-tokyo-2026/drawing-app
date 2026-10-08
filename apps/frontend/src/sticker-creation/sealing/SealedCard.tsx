@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState, type MouseEvent, type RefObject } from "react";
 import { Trans, useTranslation } from "../../i18n/react";
 import { BuyTicketsIcon, DrawIcon, StickerBoardIcon } from "../../icons";
+import { spokenSubject } from "../../kyoto-seika/spokenSubject";
+import { SubjectPair } from "../../kyoto-seika/SubjectPair";
 import { Duration } from "../../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../../stickers/format";
 import type { Sticker } from "@drawing-app/api/client";
@@ -133,6 +135,18 @@ export function SealedCard({
           <span className="sealed-card__nsfw">{t(($) => $.stickerCreation.nsfw.mark)}</span>
         )}
       </h2>
+      {/* A sticker drawn in Kyoto Seika Practice Mode names its pair over the time it took. */}
+      {sealed.kyotoSeikaSubjects && (
+        <p className="sealed-card__pair" data-card-line>
+          <SubjectPair subjects={sealed.kyotoSeikaSubjects} />
+          <span className="visually-hidden">
+            {t(($) => $.kyotoSeika.pair.spoken, {
+              first: spokenSubject(sealed.kyotoSeikaSubjects[0]),
+              second: spokenSubject(sealed.kyotoSeikaSubjects[1]),
+            })}
+          </span>
+        </p>
+      )}
       <p className="fine sealed-card__fine" data-card-line>
         <Trans
           i18nKey={($) => $.stickerCreation.sealedCard.finePrint}

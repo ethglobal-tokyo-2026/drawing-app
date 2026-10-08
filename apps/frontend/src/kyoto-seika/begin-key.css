@@ -1,10 +1,23 @@
-/* Begin, centered at the sheet's foot in the thumb's reach, while the pair waits for it. */
+/* Begin, centered at the sheet's foot in the thumb's reach, while the pair waits for it, under one
+   quiet Graphite line saying what the test asks of the pair. */
 .begin-key {
   position: absolute;
   left: 50%;
   bottom: 46px;
   z-index: 32;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
   translate: -50% 0;
+}
+
+.begin-key__task {
+  margin: 0;
+  color: var(--graphite);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .begin-key .key {

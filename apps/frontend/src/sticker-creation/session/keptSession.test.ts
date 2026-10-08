@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import type { KyotoSeikaSubject } from "@drawing-app/api/client";
 import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { personKey } from "../../ui/deviceStorage";
@@ -215,18 +216,39 @@ describe("the drawing kept on this device", () => {
     });
   });
 
-  it("keeps no Kyoto Seika Practice Mode part for a regular sheet, and reads a record whose part is unreadable as a regular sheet's, logged", async () => {
+  it("keeps no Kyoto Seika Practice Mode part for a regular sheet", async () => {
     const userId = someone();
     draw(userId, [stroke("a")]);
     expect(await loadKeptSession(userId)).toMatchObject({ status: "found", kyotoSeika: null });
-    const key = personKey("draw.session", userId);
-    const record: unknown = JSON.parse(localStorage.getItem(key) ?? "null");
-    if (typeof record !== "object" || record === null) throw new Error("No record is kept");
+    const record: unknown = JSON.parse(
+      localStorage.getItem(personKey("draw.session", userId)) ?? "null",
+    );
     expect(record).not.toHaveProperty("kyotoSeika");
+  });
+
+  it("brings a sheet in Kyoto Seika Practice Mode back in the mode, whatever of its part a later build can read", async () => {
+    const userId = someone();
+    new SessionKeeper(userId).start(7, { subjects: [WIND, REUNION], rolls: [2, 0], begun: true });
+    /** The record as a build that wrote `kyotoSeika` differently would have kept it. */
+    const keptAs = (kyotoSeika: unknown) =>
+      localStorage.setItem(
+        personKey("draw.session", userId),
+        JSON.stringify({ ticket: 7, elapsedMs: 0, nsfw: false, kyotoSeika }),
+      );
+    const sent = ({ ja, reading, en }: KyotoSeikaSubject) => ({ ja, reading, en });
+
+    // Each subject needs only what the seal sends of it: a kind or flag this build can't read is let go.
+    keptAs({ subjects: [{ ...WIND, kind: "weather" }, sent(REUNION)], rolls: [2, 0], begun: true });
+    expect(await loadKeptSession(userId)).toMatchObject({
+      kyotoSeika: { subjects: [sent(WIND), sent(REUNION)], rolls: [2, 0], begun: true },
+    });
+
+    // A pair that can't be read at all is dealt again, so the sheet waits for Begin.
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    const unreadable = { subjects: "x", rolls: [0, 0], begun: false };
-    localStorage.setItem(key, JSON.stringify({ ...record, kyotoSeika: unreadable }));
-    expect(await loadKeptSession(userId)).toMatchObject({ status: "found", kyotoSeika: null });
+    keptAs({ subjects: [{ word: WIND.ja }, REUNION], rolls: [2, 0], begun: true });
+    expect(await loadKeptSession(userId)).toMatchObject({
+      kyotoSeika: { subjects: null, rolls: [0, 0], begun: false },
+    });
     expect(error).toHaveBeenCalledOnce();
   });
 

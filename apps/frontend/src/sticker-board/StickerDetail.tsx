@@ -1,6 +1,8 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
+import { apiError, type ApiError } from "../api/apiClient";
+import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
 import { isGratitudeWaiting, onGratitudeLeftOutbox } from "../gratitude/gratitudeOutbox";
@@ -19,18 +21,21 @@ import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/f
 import { useLight } from "../stickers/light";
 import { KyotoSeikaTag } from "../kyoto-seika/KyotoSeikaTag";
 import { ArtistChip } from "../stickers/ArtistChip";
-import { useMyNsfwOptIn, veiledFor } from "../stickers/nsfw";
+import { useMyNsfwOptIn, veiledFor, withoutNsfwDrawings } from "../stickers/nsfw";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
+import { QuietLink } from "../ui/QuietLink";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { handleOf, onItsWay, type BoardStickerView } from "./boardSticker";
 import { useDetailLift, type LiftView } from "./detailLift";
 import { useSwipePaging } from "./detailPaging";
+import { forget as forgetKeptBoard } from "./lastBoard";
+import { myStickerBoardChanged } from "./useMyStickerBoard";
 import { TimelapseButton, TimelapseFailure } from "./timelapse/TimelapseButton";
 import { TimelapseLayer } from "./timelapse/TimelapseLayer";
 import { useTimelapse } from "./timelapse/useTimelapse";
@@ -101,6 +106,14 @@ function owedGratitude({ sticker, owner, transferTrail }: StickerDetailResponse)
     : null;
 }
 
+/** Marking a sticker 18+: its confirm up, the mark on its way, or why it didn't take. */
+type Marking =
+  | { stickerId: string; step: "asking" | "sending" }
+  | { stickerId: string; step: "failed"; error: ApiError };
+
+/** What a sticker marked 18+ here shows: its images for you now, and the mark. */
+type MarkedView = Pick<StickerView, "urls" | "nsfw">;
+
 /** The newest gift on the trail whose gratitude the server refused, and who gave it. */
 function refusedGratitude(
   { transferTrail }: StickerDetailResponse,
@@ -129,6 +142,7 @@ export function StickerDetail({
   ownerId,
 }: Props) {
   const { t } = useTranslation();
+  const api = useApi();
   const reduced = useReducedMotion();
   const optedIn = useMyNsfwOptIn();
   useLight();
@@ -137,8 +151,18 @@ export function StickerDetail({
     0,
     stickers.findIndex((s) => s.id === shownId),
   );
-  const sticker: BoardStickerView | undefined = stickers[index];
+  // Each sticker marked 18+ here, as the server shows it to you, until the board's reload lists it marked.
+  const [marked, setMarked] = useState<ReadonlyMap<string, MarkedView>>(() => new Map());
+  const withMark = (s: BoardStickerView): BoardStickerView => {
+    const answer = marked.get(s.id);
+    return answer && !s.nsfw ? { ...s, urls: answer.urls, nsfw: answer.nsfw } : s;
+  };
+  const listed: BoardStickerView | undefined = stickers[index];
+  const sticker = listed && withMark(listed);
   const last = stickers.length - 1;
+  const [marking, setMarking] = useState<Marking | null>(null);
+  // What the status line at the foot says about a mark that landed, under that sticker only.
+  const [markedSaid, setMarkedSaid] = useState<{ stickerId: string; words: string } | null>(null);
   // Gratitude kept on this phone that the server has since recorded or refused: counted, whatever
   // the read of the detail is doing, so a read that went out before one left can be told apart.
   const [combosLeft, setCombosLeft] = useState(0);
@@ -187,7 +211,10 @@ export function StickerDetail({
     reduced,
     onClose,
   });
-  const hasTimelapse = loaded?.hasTimelapse === true;
+  // A sticker veiled for you plays no timelapse, which shows its drawing: the server says so, and a
+  // mark landing here says so at once.
+  const hasTimelapse =
+    loaded?.hasTimelapse === true && !(sticker !== undefined && veiledFor(sticker, optedIn));
   const kyotoSeika = Boolean(loaded?.sticker.kyotoSeikaSubjects);
   const timelapse = useTimelapse({ sticker, hasTimelapse, figure, reduced, kyotoSeika });
   // The timelapse's layer goes first: the lift clones the figure and flies it back to the board.
@@ -195,8 +222,89 @@ export function StickerDetail({
     timelapse.stop();
     lift();
   };
+
+  // Mark 18+: only the Original Artist can, once. Its confirm opens on Cancel, so Enter alone never
+  // marks, and closing it with nothing marked puts focus back on Mark 18+.
+  const markId = useId();
+  const markButton = useRef<HTMLButtonElement>(null);
+  const cancelMark = useRef<HTMLButtonElement>(null);
+  const canMark = Boolean(ownerId && sticker && sticker.artist.id === ownerId && !sticker.nsfw);
+  const mark = marking && marking.stickerId === sticker?.id ? marking : null;
+  const asking = mark !== null;
+  const backToMark = useRef(false);
+  useEffect(() => {
+    if (asking) cancelMark.current?.focus({ preventScroll: true });
+    else if (backToMark.current) markButton.current?.focus({ preventScroll: true });
+    backToMark.current = false;
+  }, [asking]);
+  const stopAsking = () => {
+    backToMark.current = true;
+    setMarking(null);
+  };
+  // Only the mark that's still this sticker's: another may have been asked for since.
+  const settleMark = (stickerId: string, next: Marking | null) =>
+    setMarking((m) => (m?.stickerId === stickerId ? next : m));
+  /** A sticker the server already has marked, as it shows it to you; unread, marked as listed. */
+  const readBackMarked = async (target: BoardStickerView): Promise<MarkedView> => {
+    try {
+      return toSticker((await api.stickerDetail(target.id)).sticker);
+    } catch (error) {
+      console.error(
+        `Sticker ${target.id} is marked 18+, but couldn't be read back`,
+        apiError(error),
+      );
+      // Without the opt-in, its drawing goes until the board's reload brings its veiled image.
+      const listedMarked = { urls: target.urls, nsfw: true };
+      return optedIn ? listedMarked : withoutNsfwDrawings([listedMarked])[0];
+    }
+  };
+  const markNsfw = async (target: BoardStickerView) => {
+    setMarking({ stickerId: target.id, step: "sending" });
+    let answer: MarkedView;
+    try {
+      const { sticker: markedSticker, cdnPurged } = await api.markStickerNsfw(target.id);
+      answer = toSticker(markedSticker);
+      if (!cdnPurged)
+        console.warn(`Sticker ${target.id} is marked 18+, but the CDN's copies weren't cleared`);
+    } catch (error) {
+      const failure = apiError(error);
+      if (failure.code !== "already_nsfw") {
+        console.error(`Sticker ${target.id} wasn't marked 18+`, failure);
+        settleMark(target.id, { stickerId: target.id, step: "failed", error: failure });
+        return;
+      }
+      // The mark is in: an earlier answer was lost on its way, or another window marked it first.
+      console.warn(`Sticker ${target.id} was already marked 18+`, failure);
+      answer = await readBackMarked(target);
+    }
+    // The board kept on this phone, and the board's answers, show it unmarked.
+    forgetKeptBoard();
+    myStickerBoardChanged();
+    timelapse.stop();
+    setMarked((m) => new Map(m).set(target.id, answer));
+    settleMark(target.id, null);
+    // Without the opt-in your own sticker goes blurred too: the line says what shows it.
+    const no = formatNo(target.no);
+    setMarkedSaid({
+      stickerId: target.id,
+      words: optedIn
+        ? t(($) => $.stickerBoard.detail.markNsfw.done, { no })
+        : t(($) => $.stickerBoard.detail.markNsfw.doneBlurred, { no }),
+    });
+    // Mark 18+ goes with its confirm; the dialog holds the keys that page and close.
+    root.current?.focus({ preventScroll: true });
+  };
+
   useBackToClose(true, close);
-  useFocusTrap(root, { onEscape: close, returnFocus });
+  useFocusTrap(root, {
+    // Escape steps back out of Mark 18+'s confirm first, unless the mark is on its way.
+    onEscape: () => {
+      if (marking?.step === "sending") return;
+      if (marking) stopAsking();
+      else close();
+    },
+    returnFocus,
+  });
 
   // LINE's header shows the page title.
   const no = sticker?.no;
@@ -220,6 +328,7 @@ export function StickerDetail({
     onPage: (next) => {
       const target = stickers[next];
       if (target) setShownId(target.id);
+      setMarking((m) => (m?.step === "sending" ? m : null));
     },
   });
 
@@ -284,7 +393,7 @@ export function StickerDetail({
             aria-current={i === index ? "true" : undefined}
             onClick={() => go(i)}
           >
-            <img src={s.urls.png} alt="" draggable={false} />
+            <img src={withMark(s).urls.png} alt="" draggable={false} />
           </button>
         ))}
       </nav>
@@ -490,6 +599,79 @@ export function StickerDetail({
                 artist={sticker.artist}
               />
             )}
+
+            {/* At the very foot, quiet until asked: only its confirm carries the tomato. */}
+            {canMark &&
+              (mark ? (
+                <div
+                  className="sticker-detail__mark-ask"
+                  role="group"
+                  aria-labelledby={`${markId}-title`}
+                  aria-describedby={`${markId}-lines`}
+                  aria-busy={mark.step === "sending"}
+                >
+                  <p className="sticker-detail__mark-title" id={`${markId}-title`}>
+                    {t(($) => $.stickerBoard.detail.markNsfw.title, { no: formatNo(sticker.no) })}
+                  </p>
+                  <div className="sticker-detail__mark-lines" id={`${markId}-lines`}>
+                    <p>
+                      {optedIn
+                        ? t(($) => $.stickerBoard.detail.markNsfw.does)
+                        : t(($) => $.stickerBoard.detail.markNsfw.doesYouToo)}
+                    </p>
+                    <p className="sticker-detail__mark-undo">
+                      {t(($) => $.stickerBoard.detail.markNsfw.cantUndo)}
+                    </p>
+                    <p>{t(($) => $.stickerBoard.detail.markNsfw.copies)}</p>
+                  </div>
+                  <div className="sticker-detail__mark-actions">
+                    <QuietLink
+                      ref={cancelMark}
+                      aria-disabled={mark.step === "sending"}
+                      onClick={() => {
+                        if (mark.step !== "sending") stopAsking();
+                      }}
+                    >
+                      {t(($) => $.stickerBoard.detail.markNsfw.cancel)}
+                    </QuietLink>
+                    <LabelButton
+                      tone="tomato"
+                      size="sm"
+                      aria-busy={mark.step === "sending"}
+                      aria-disabled={mark.step === "sending"}
+                      onClick={() => {
+                        if (mark.step !== "sending") void markNsfw(sticker);
+                      }}
+                    >
+                      {mark.step === "sending"
+                        ? t(($) => $.stickerBoard.detail.markNsfw.sending)
+                        : t(($) => $.stickerBoard.detail.markNsfw.confirm)}
+                    </LabelButton>
+                  </div>
+                  {mark.step === "failed" && (
+                    <ErrorLine
+                      className="sticker-detail__mark-failed"
+                      detail={errorDetail(mark.error)}
+                    >
+                      {t(($) => $.stickerBoard.detail.markNsfw.failed, {
+                        reason: errorMessage(mark.error),
+                      })}
+                    </ErrorLine>
+                  )}
+                </div>
+              ) : (
+                <div className="sticker-detail__mark">
+                  <QuietLink
+                    ref={markButton}
+                    onClick={() => setMarking({ stickerId: sticker.id, step: "asking" })}
+                  >
+                    {t(($) => $.stickerBoard.detail.markNsfw.open)}
+                  </QuietLink>
+                </div>
+              ))}
+            <p className="sticker-detail__marked" role="status">
+              {markedSaid?.stickerId === sticker.id ? markedSaid.words : ""}
+            </p>
           </>
         ) : (
           <p className="sticker-detail__none">{t(($) => $.stickerBoard.detail.none)}</p>

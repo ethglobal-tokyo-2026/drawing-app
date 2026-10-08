@@ -22,6 +22,7 @@ import type {
   SpendTicket,
   SponsoredTransaction,
   StartedTicketPurchase,
+  Sticker,
   StickerBoard,
   StickerDetail,
   StickerPlacement,
@@ -49,7 +50,7 @@ interface SealRequest {
   flat: Blob;
   /** The gzipped TimelapseV1; a seal without one still seals. */
   timelapse?: Blob;
-  /** Seals an NSFW sticker, which the server takes only from someone with the NSFW opt-in. */
+  /** Seals an NSFW sticker. */
   nsfw: boolean;
   /**
    * The sticker's Kyoto Seika Subject pair, which the server requires for a ticket spent in Kyoto
@@ -97,6 +98,12 @@ export interface ApiClient {
   stickerDetail: (stickerId: string) => Promise<StickerDetail>;
   /** GET /api/stickers/:stickerId/timelapse: how it was drawn; 404 timelapse_not_found without one. */
   timelapse: (stickerId: string) => Promise<TimelapseV1>;
+  /**
+   * POST /api/stickers/:stickerId/nsfw: marks a sealed sticker 18+, which only its Original Artist
+   * can, once. `sticker` as GET /api/stickers/:stickerId answers it for you; `cdnPurged` is false
+   * when the CDN's copies of the drawing couldn't be cleared.
+   */
+  markStickerNsfw: (stickerId: string) => Promise<{ sticker: Sticker; cdnPurged: boolean }>;
 
   /** GET /api/tickets */
   tickets: () => Promise<Tickets>;

@@ -13,6 +13,9 @@ import { keepBoard, keptBoardFor, readKeptBoardAgain } from "../lastBoard";
 import { SettingsNote } from "./SettingsNote";
 import { statsClearPeek } from "./settingsPeek";
 
+const liff = vi.hoisted(() => ({ isInClient: vi.fn(() => false), openWindow: vi.fn() }));
+vi.mock("@line/liff", () => ({ default: liff }));
+
 let unmount = () => {};
 
 afterEach(async () => {
@@ -21,6 +24,8 @@ afterEach(async () => {
   localStorage.clear();
   readKeptBoardAgain();
   vi.restoreAllMocks();
+  liff.isInClient.mockReset().mockReturnValue(false);
+  liff.openWindow.mockReset();
   await i18next.changeLanguage("en");
 });
 
@@ -50,6 +55,14 @@ const option = (host: HTMLElement, label: string) => {
 };
 
 const choose = (host: HTMLElement, label: string) => act(async () => option(host, label).click());
+
+/** Show 18+ stickers, the note's first switch. */
+const switchOf = (host: HTMLElement) => {
+  const found = host.querySelector<HTMLInputElement>('input[role="switch"]');
+  if (!found) throw new Error("No switch on the note");
+  return found;
+};
+const flip = (host: HTMLElement) => act(async () => switchOf(host).click());
 
 const alert = (host: HTMLElement) => host.querySelector('[role="alert"]')?.textContent;
 
@@ -124,12 +137,6 @@ describe("the Settings note's language", () => {
 describe("the Settings note's 18+ switch", () => {
   const savingOptIn = () =>
     vi.fn<ApiClient["setNsfwOptIn"]>((nsfwOptIn) => Promise.resolve({ ...TEST_ME, nsfwOptIn }));
-  const switchOf = (host: HTMLElement) => {
-    const found = host.querySelector<HTMLInputElement>('input[role="switch"]');
-    if (!found) throw new Error("No switch on the note");
-    return found;
-  };
-  const flip = (host: HTMLElement) => act(async () => switchOf(host).click());
   const keepABoard = () => keepBoard(TEST_ME.id, { owner: toPerson(TEST_OWNER), stickers: [] });
 
   it("is off until turned on, and says what it does", () => {
@@ -240,6 +247,85 @@ describe("the Settings note's Kyoto Seika Practice Mode", () => {
     expect(note()?.hidden).toBe(false);
     await act(async () => help?.click());
     expect(note()?.hidden).toBe(true);
+  });
+
+  it("opens its credit's Sources in LINE's own browser inside LINE's app", () => {
+    liff.isInClient.mockReturnValue(true);
+    const host = renderNote({});
+    const sources = host.querySelector<HTMLAnchorElement>(".settings-note__credit a[href]");
+    if (!sources) throw new Error("No Sources link in the credit");
+    const tap = new MouseEvent("click", { bubbles: true, cancelable: true });
+    act(() => void sources.dispatchEvent(tap));
+    expect(tap.defaultPrevented).toBe(true);
+    expect(liff.openWindow).toHaveBeenCalledExactlyOnceWith({ url: sources.href, external: false });
+  });
+});
+
+describe("the Settings note's saves", () => {
+  /** A server that keeps your settings, so each save answers with the account as it then is. */
+  function keepingServer() {
+    let account = TEST_ME;
+    const keep = (change: Partial<Me>) => {
+      account = { ...account, ...change };
+      return Promise.resolve(account);
+    };
+    return {
+      setLanguageChoice: vi.fn<ApiClient["setLanguageChoice"]>((languageChoice, language) =>
+        keep({ languageChoice, language: languageChoice ?? language }),
+      ),
+      setNsfwOptIn: vi.fn<ApiClient["setNsfwOptIn"]>((nsfwOptIn) => keep({ nsfwOptIn })),
+    };
+  }
+  /** The 18+ setting's alert, under its switch. */
+  const nsfwProblem = (host: HTMLElement) =>
+    switchOf(host).closest("fieldset")?.querySelector('[role="alert"]')?.textContent;
+
+  it("keeps a setting's failure while another setting saves, until that setting saves", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const server = keepingServer();
+    server.setNsfwOptIn.mockRejectedValueOnce(
+      new ApiError(0, { error: "network", detail: "Failed to fetch" }),
+    );
+    const host = renderNote(server);
+    await flip(host);
+    expect(nsfwProblem(host)).toContain("Your 18+ setting couldn’t be saved");
+
+    await choose(host, "English");
+    expect(nsfwProblem(host)).toContain("Your 18+ setting couldn’t be saved");
+    expect(switchOf(host).checked).toBe(false);
+
+    await flip(host);
+    expect(nsfwProblem(host)).toBeUndefined();
+    expect(switchOf(host).checked).toBe(true);
+  });
+
+  it("saves a setting changed while another saves once that one has, rather than dropping it", async () => {
+    const server = keepingServer();
+    let answerLanguage = () => {};
+    const { setLanguageChoice } = server;
+    server.setLanguageChoice = vi.fn<ApiClient["setLanguageChoice"]>(
+      (...choice) =>
+        new Promise((resolve) => {
+          answerLanguage = () => resolve(setLanguageChoice(...choice));
+        }),
+    );
+    const host = renderNote(server);
+    await choose(host, "English");
+    await flip(host);
+    // It shows the change, says it's saving, and waits for the language's answer.
+    expect(switchOf(host).checked).toBe(true);
+    expect(statuses(host)[1]).toBe(stickerBoard.settings.saving.en);
+    expect(server.setNsfwOptIn).not.toHaveBeenCalled();
+
+    await act(async () => answerLanguage());
+    expect(server.setNsfwOptIn).toHaveBeenCalledExactlyOnceWith(true);
+    expect(option(host, "English").checked).toBe(true);
+    expect(switchOf(host).checked).toBe(true);
+    expect(statuses(host)).toEqual([
+      i18next.t(($) => $.stickerBoard.settings.language.applied, { language: "English" }),
+      stickerBoard.settings.nsfw.shown.en,
+      "",
+    ]);
   });
 });
 

@@ -58,16 +58,35 @@
   --band-6: #fbfbfd;
 }
 
+/* The tone measures itself against the band. */
+.sticker-foil--kyoto-seika .sticker-foil__band {
+  container-type: size;
+}
+
+/* The screen turns 45° in a box past each of the band's edges, grown for a long sticker until it
+   reaches the band's corners. The shading keeps the length the ungrown box gives it, so growing the
+   box only fills the corners. */
 .sticker-foil--kyoto-seika .sticker-foil__sheen {
-  inset: -30%;
+  /* Half the side of the smallest square, turned 45°, round the band. */
+  --tone-reach: calc((100cqw + 100cqh) / 2.8284);
+  --tone-angle: calc(
+    atan2(calc(-1 * var(--lx, -0.6)), var(--ly, -0.6)) - 45deg - var(--foil-turn, 0) * 1deg
+  );
+  /* The gradient line's length in the ungrown box. */
+  --tone-length: calc(
+    160cqw * max(sin(var(--tone-angle)), -1 * sin(var(--tone-angle))) + 160cqh *
+      max(cos(var(--tone-angle)), -1 * cos(var(--tone-angle)))
+  );
+  inset: calc(-1 * max(30cqh, var(--tone-reach) - 50cqh))
+    calc(-1 * max(30cqw, var(--tone-reach) - 50cqw));
   rotate: 45deg;
   animation: none;
   background:
     radial-gradient(closest-side, #000, #fff) 0 0 / 3.2px 3.2px,
     linear-gradient(
-      calc(atan2(calc(-1 * var(--lx, -0.6)), var(--ly, -0.6)) - 45deg - var(--foil-turn, 0) * 1deg),
-      #fff 18%,
-      #4d4d4d 100%
+      var(--tone-angle),
+      #fff calc(50% - 0.32 * var(--tone-length)),
+      #4d4d4d calc(50% + 0.5 * var(--tone-length))
     );
   background-blend-mode: multiply;
   filter: contrast(16);

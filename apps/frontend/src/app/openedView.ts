@@ -20,3 +20,10 @@ export function openedFrom(pathname: string): Opened {
   if (first === "g" && token) return { view: "board", giftClaimToken: token };
   return { view: "board" };
 }
+
+/** This page's link to the drawing screen, as the chat menu's Draw tile opens it. */
+export function drawingScreenLink(): URL {
+  const link = new URL(location.href);
+  link.pathname = "/draw";
+  return link;
+}

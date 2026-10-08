@@ -94,7 +94,7 @@ export function createTrayEngine(
   }: {
     slots: () => readonly TraySticker[];
     api: TrayBoard;
-    /** Stickers the open tray showed that it hadn't before, once it zips shut. */
+    /** Stickers the open tray showed that it hadn't before, once it zips shut or is torn down. */
     markSeen: (ids: readonly string[]) => void;
     /** Something the tray couldn't do, for the board to say. */
     problem: (problem: TrayProblem) => void;
@@ -389,13 +389,17 @@ export function createTrayEngine(
       zip.slider.focus({ preventScroll: true });
     if (ui.pulled) void sendHome({ quick: true });
   });
-  zip.on("closed", () => {
-    // What was on show in the open tray is no longer new.
+  /** What was on show in the open tray is no longer new: whether any of it was. */
+  function seeShown(): boolean {
     const fresh = [...ui.shown].filter((id) => !seen.has(id));
     ui.shown.clear();
-    if (fresh.length === 0) return;
+    if (fresh.length === 0) return false;
     for (const id of fresh) seen.add(id);
     markSeen(fresh);
+    return true;
+  }
+  zip.on("closed", () => {
+    if (!seeShown()) return;
     renderStack();
     updateBadge();
   });
@@ -520,6 +524,8 @@ export function createTrayEngine(
     destroy() {
       if (ui.destroyed) return;
       ui.destroyed = true;
+      // Torn down open, as for a new language, it was seen all the same: it never shuts to say so.
+      seeShown();
       for (const t of timers) win.clearTimeout(t);
       timers.clear();
       const peel = ui.g?.peel;

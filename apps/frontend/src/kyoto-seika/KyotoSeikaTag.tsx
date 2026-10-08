@@ -1,6 +1,7 @@
 import type { KyotoSeikaSubject } from "@drawing-app/api/client";
 import { useTranslation } from "../i18n/react";
-import { SubjectWord } from "./SubjectWord";
+import { spokenSubject } from "./spokenSubject";
+import { SubjectPair } from "./SubjectPair";
 import "./kyoto-seika-tag.css";
 
 /**
@@ -19,13 +20,12 @@ export function KyotoSeikaTag({
       <span className="kyoto-seika-tag__label" aria-hidden="true">
         {t(($) => $.kyotoSeika.tag.label)}
       </span>
-      <span className="kyoto-seika-tag__pair" lang="ja" aria-hidden="true">
-        <SubjectWord subject={first} />
-        <i>{"×"}</i>
-        <SubjectWord subject={second} />
-      </span>
+      <SubjectPair subjects={subjects} />
       <span className="visually-hidden">
-        {t(($) => $.kyotoSeika.tag.spoken, { first: first.ja, second: second.ja })}
+        {t(($) => $.kyotoSeika.tag.spoken, {
+          first: spokenSubject(first),
+          second: spokenSubject(second),
+        })}
       </span>
     </p>
   );

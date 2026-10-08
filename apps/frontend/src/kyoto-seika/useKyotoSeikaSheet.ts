@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { drawingScreenLink } from "../app/openedView";
 import type { KeptKyotoSeika, SessionKeeper } from "../sticker-creation/session/keptSession";
 import { firstDeal, rollDie, type Balloon, type Deal } from "./deal";
 import { keepDealt, readDealtRecently } from "./dealtRecently";
@@ -52,10 +53,12 @@ export function useKyotoSeikaSheet({ userId, dark, keeper }: Options) {
         );
         keep({ subjects: fresh.subjects, rolls: fresh.rolls, begun: false });
       },
-      // loadSubjectList logs the failure; the sheet shows it, with a way to try again.
+      // loadSubjectList logs the failure; the sheet shows it, with a way to try again. A browser keeps
+      // a failed module fetch for the page's life, so only a fresh page loads the list: one on the
+      // drawing screen, which picks this sheet back up from the device.
       (error: unknown) => {
         if (sheet === opened.current)
-          setList({ status: "failed", error, retry: () => load(sheet) });
+          setList({ status: "failed", error, retry: () => location.replace(drawingScreenLink()) });
       },
     );
   };

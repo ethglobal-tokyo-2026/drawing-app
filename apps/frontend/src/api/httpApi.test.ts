@@ -3,6 +3,7 @@ import { ApiError } from "./apiClient";
 import { createHttpApi, createServerClient, createSessionApi } from "./httpApi";
 import { startNftRequest } from "./httpDiagnostics";
 import { onSessionLost } from "./sessionLoss";
+import { sticker } from "./testFixtures";
 
 const me = {
   id: "u1",
@@ -360,6 +361,27 @@ describe("NFT request diagnostics", () => {
     }
     expect(logs.info).not.toHaveBeenCalled();
     expect(logs.error).not.toHaveBeenCalled();
+  });
+});
+
+describe("marking a sticker 18+", () => {
+  const mark = (fetch: typeof globalThis.fetch) =>
+    createHttpApi(createServerClient(fetch)).markStickerNsfw("s1");
+
+  it("posts the mark with the session cookie, and answers the marked sticker", async () => {
+    const answer = { sticker: sticker({ id: "s1", nsfw: true }), cdnPurged: true };
+    const fetch = answering(200, answer);
+    await expect(mark(fetch)).resolves.toEqual(answer);
+    const [input, init] = fetch.mock.calls[0] ?? [];
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input?.url;
+    expect(url).toMatch(/\/api\/stickers\/s1\/nsfw$/);
+    expect(init?.method).toBe("POST");
+    expect(init?.credentials).toBe("same-origin");
+  });
+
+  it("turns the server's refusal into an ApiError with its code", async () => {
+    const error = await refusalOf(mark(answering(404, { error: "sticker_not_found" })));
+    expect(error).toMatchObject({ status: 404, code: "sticker_not_found" });
   });
 });
 

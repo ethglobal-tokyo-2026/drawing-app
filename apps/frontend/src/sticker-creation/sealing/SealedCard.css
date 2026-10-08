@@ -49,6 +49,12 @@
   vertical-align: middle;
 }
 
+/* A Kyoto Seika Practice Mode sticker's pair, its furigana clear of "Sealed" above. */
+.sealed-card__pair {
+  margin: 10px 0 0;
+  line-height: 1;
+}
+
 /* A long name wraps the line evenly rather than leaving an orphan. */
 .sealed-card__fine {
   margin: 9px 0 0;

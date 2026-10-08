@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
-import { currentLanguage } from "../i18n/i18n";
-import { followAccountLanguage } from "../i18n/pageLanguage";
+import { followAccountLanguage, lineLanguage } from "../i18n/pageLanguage";
 import { useTranslation } from "../i18n/react";
 import { GateNotice, GateOpening } from "../line/GateParts";
 import { lineClaims, lineIdToken, lineUserId, type LineClaims } from "../line/liff";
@@ -38,12 +37,15 @@ const needsLine = (error: ApiError) =>
   error.code === "line_reconnect_failed" ||
   error.code === "signed_out";
 
-/** What signing in with LINE would change on your account: LINE's name and picture, and the language. */
+/**
+ * What signing in with LINE would change on your account: LINE's name and picture, and LINE's
+ * language while your choice follows LINE's.
+ */
 const outOfDate = (me: Me, claims: LineClaims | null) =>
   claims !== null &&
   (me.lineDisplayName !== (claims.name ?? me.lineDisplayName) ||
     me.linePictureUrl !== (claims.picture ?? null) ||
-    (me.languageChoice === null && me.language !== currentLanguage()));
+    (me.languageChoice === null && me.language !== lineLanguage()));
 
 /**
  * Signs you in to the app's server, inside LineGate, and holds the app until it has, it's in your
@@ -79,7 +81,11 @@ export function SessionGate({
   /** A sign-in that answers a lost session is under way, and when the last one opened the app. */
   const recovering = useRef(false);
   const recoveredAt = useRef<number | null>(null);
-  const setReadyMe = useCallback((me: Me) => setState({ step: "ready", me }), []);
+  // Only an open app takes a newer you: a save that answers while signing in again never reopens it.
+  const setReadyMe = useCallback(
+    (me: Me) => setState((state) => (state.step === "ready" ? { step: "ready", me } : state)),
+    [],
+  );
 
   useEffect(() => {
     let current = true;
@@ -96,7 +102,8 @@ export function SessionGate({
           detail: "LINE gave no ID token, though it's logged in",
         });
       }
-      return session.signIn({ idToken: token, language: currentLanguage() });
+      // LINE's language, never a choice this phone kept: the account takes it while it follows LINE's.
+      return session.signIn({ idToken: token, language: lineLanguage() });
     };
     /** A session resumed without LINE's token; signing in again, behind it, brings LINE's news. */
     const resumed = async (me: Me) => {

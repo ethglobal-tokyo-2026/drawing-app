@@ -154,8 +154,18 @@
   }
 }
 
+/* What a switch does: a supporting note in sentence case, since caps fine print is for metadata. */
 .settings-note__about {
   margin: 4px 0 0;
+  color: var(--graphite);
+  font: 500 13px/1.45 var(--font-ui);
+  text-wrap: pretty;
+}
+
+.settings-note__about:lang(ja) {
+  font-family: var(--font-jp);
+  line-height: 1.6;
+  word-break: auto-phrase;
 }
 
 /* Kyoto Seika Practice Mode's name runs to two lines in English: it keeps clear of its switch. */

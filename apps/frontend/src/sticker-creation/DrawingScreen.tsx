@@ -14,6 +14,7 @@ import { apiError, type ApiClient } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import type { BeginKeyHandle } from "../kyoto-seika/BeginKey";
 import { CornerPrint } from "../kyoto-seika/CornerPrint";
+import { useCanvasName } from "../kyoto-seika/useCanvasName";
 import { KyotoSeikaDeal } from "../kyoto-seika/KyotoSeikaDeal";
 import { useKyotoSeikaSheet } from "../kyoto-seika/useKyotoSeikaSheet";
 import { useApi } from "../api/useApi";
@@ -252,6 +253,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       case "lock-subjects":
         kyotoSeikaSheet.begin();
         setDealLeaving(true);
+        // Begin leaves with the deal, so focus goes to the clock it started rather than to the page.
+        timer.current?.focus();
         return;
       case "seal":
         clock.stop();
@@ -582,9 +585,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
 
   /** Puts a kept drawing back on the sheet, on its own ticket and in its own color, paused. */
   function putBack(found: Extract<KeptDrawing, { status: "found" }>) {
-    // Nothing drawn and no time counted: Start spent the ticket and the clock still waits. Begin started it.
+    // Nothing drawn and no time counted: Start spent the ticket and the clock still waits. In Kyoto
+    // Seika Practice Mode only Begin starts it: a sheet whose pair is dealt again waits at its deal,
+    // drawing and all.
     const part = found.kyotoSeika;
-    const drawn = found.steps.length > 0 || found.elapsedMs > 0 || part?.begun === true;
+    const drawn = part ? part.begun : found.steps.length > 0 || found.elapsedMs > 0;
     clock.setLength(sessionMs(part !== null));
     ticketKyotoSeika.current = part !== null;
     if (part) kyotoSeikaSheet.open(part);
@@ -598,7 +603,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     keeper.resume(
       found.ticket,
       found.steps,
-      found.elapsedMs,
+      // A sheet back at its deal draws on a clock Begin starts afresh.
+      drawn ? found.elapsedMs : 0,
       found.nsfw,
       found.tools,
       found.kyotoSeika,
@@ -798,6 +804,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const dealt = session.phase === "dealt";
   // Begin locked the pair in: it prints in the sheet's corner, under the ink.
   const lockedPair = kyotoSeikaSheet.begun ? (kyotoSeikaSheet.deal?.subjects ?? null) : null;
+  const canvasName = useCanvasName(lockedPair);
   const waiting = session.phase === "blank" || session.phase === "primed" || dealt;
   if (pickedUp === "restored" && !paused) setPickedUp(null);
   if (pickedUp !== null && pickedUp !== "restored" && !waiting) setPickedUp(null);
@@ -805,14 +812,18 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // Undo can take the sheet back to blank under an open clear bar, which then has nothing to clear.
   if (panel === "clear" && !history.hasInk) setPanel(null);
 
-  // Before the first stroke there's nothing to pause: a tap on the timer says when it starts.
+  // As in the real test, a begun sheet in Kyoto Seika Practice Mode never pauses: neither a tap nor a
+  // tool in hand holds its clock, only an interruption: a hidden page, the board over it, a reload.
+  const pausable = !kyotoSeikaSheet.begun;
+
+  // Before the first stroke there's nothing to pause: a tap on the timer says when it starts. A clock
+  // that never pauses says why, though a reload's pause still lets go at a tap.
   const onTimerTap = () => {
-    if (!clock.getView().waiting) {
-      setPaused((p) => !p);
-      return;
-    }
-    setPickedUp(null);
-    setStartsNote(true);
+    if (clock.getView().waiting) {
+      setPickedUp(null);
+      setStartsNote(true);
+    } else if (!pausable && !paused) timer.current?.showClockRuns();
+    else setPaused((p) => !p);
   };
 
   // Every hold stops the clock: the person's pause, the board covering the screen, a tool in hand.
@@ -820,12 +831,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     clock.setHolds({
       paused,
       away: !active,
-      color: panel === "color",
-      smoothing: panel === "smoothing",
-      clear: panel === "clear",
-      size: sizing,
+      color: pausable && panel === "color",
+      smoothing: pausable && panel === "smoothing",
+      clear: pausable && panel === "clear",
+      size: pausable && sizing,
     });
-  }, [clock, paused, active, panel, sizing]);
+  }, [clock, paused, active, panel, sizing, pausable]);
 
   const expireArm = useEffectEvent(() => send({ type: "arm-expired", now: performance.now() }));
   useEffect(() => {
@@ -965,14 +976,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         ref={canvas}
         active={active}
         under={lockedPair && <CornerPrint subjects={lockedPair} />}
-        label={
-          lockedPair
-            ? t(($) => $.kyotoSeika.print.canvas, {
-                first: lockedPair[0].ja,
-                second: lockedPair[1].ja,
-              })
-            : undefined
-        }
+        label={canvasName}
         settings={{
           tool,
           color,
@@ -1002,7 +1006,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           send({ type: "ink" });
           if (op.tool === "brush") setRecent((r) => withRecent(r, op.color));
         }}
-        onBlocked={() => (dealt ? begin.current?.nudge() : timer.current?.showHint())}
+        onBlocked={() => {
+          if (dealt) begin.current?.nudge();
+          timer.current?.showHint();
+        }}
         onDismissPanel={() => setPanel(null)}
         onDisarm={() => send({ type: "canvas-touch" })}
       />
@@ -1013,6 +1020,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           paused={paused}
           note={active ? timerNote : null}
           waitsFor={session.phase === "dealt" ? "begin" : "stroke"}
+          pausable={pausable}
           onToggle={onTimerTap}
         />
         <ToolStrip
@@ -1026,7 +1034,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           onPanel={setPanel}
         />
       </div>
-      {active && (dealt || dealLeaving) && (
+      {/* A deal on its way out finishes leaving even under the board, so it never plays again. */}
+      {((active && dealt) || dealLeaving) && (
         <KyotoSeikaDeal
           screen={root}
           list={kyotoSeikaSheet.list}
@@ -1034,7 +1043,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           minutes={clock.length / 60_000}
           begin={begin}
           onRoll={kyotoSeikaSheet.roll}
-          onBegin={() => send({ type: "begin" })}
+          onBegin={() => send({ type: "begin", hasPair: kyotoSeikaSheet.deal !== null })}
           leaving={dealLeaving}
           onLeft={() => setDealLeaving(false)}
         />
@@ -1075,17 +1084,19 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         onUndo={() => canvas.current?.undo()}
         onRedo={() => canvas.current?.redo()}
       />
-      {/* Still shown for a kept drawing's mark after opting out, so it can be switched off. */}
-      {(optedIn || nsfwOn) && (
-        <NsfwToggle
-          shown={history.hasInk && !sealing && !retrying}
-          on={nsfwOn}
-          onChange={(on) => {
-            keepNsfw(on);
-            keeper.keepNsfw(on);
-          }}
-        />
-      )}
+      <NsfwToggle
+        shown={history.hasInk && !sealing && !retrying}
+        on={nsfwOn}
+        optedIn={optedIn}
+        brief={
+          session.phase !== "armed" &&
+          (sealProblem !== null || (keyHint && session.phase === "drawing"))
+        }
+        onChange={(on) => {
+          keepNsfw(on);
+          keeper.keepNsfw(on);
+        }}
+      />
       <SealKey
         shown={retrying || (history.hasInk && !sealing)}
         armed={session.phase === "armed"}

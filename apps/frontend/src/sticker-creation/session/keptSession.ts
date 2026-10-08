@@ -1,5 +1,5 @@
 import { personKey, parseStored, readStored, writeStored } from "../../ui/deviceStorage";
-import { readSubjectEntry, type KyotoSeikaSubjectEntry } from "../../kyoto-seika/subjectList";
+import { readDealtSubject, type DealtSubject } from "../../kyoto-seika/subjectList";
 import { STRIDE, type Op, type Step } from "../canvas/ops";
 
 /*
@@ -29,10 +29,13 @@ export interface KeptTools {
   smoothing: number;
 }
 
-/** The Kyoto Seika Practice Mode part of the record: present only when its ticket was spent in that mode. */
+/**
+ * The Kyoto Seika Practice Mode part of the record: present exactly when its ticket was spent in that
+ * mode, so the sheet keeps its mode whatever of the part a later build can read.
+ */
 export interface KeptKyotoSeika {
   /** Null until the list loads and deals. Whole list entries, so a later build's list can't lose them. */
-  subjects: readonly [KyotoSeikaSubjectEntry, KyotoSeikaSubjectEntry] | null;
+  subjects: readonly [DealtSubject, DealtSubject] | null;
   /** Each die's rolls; one at CHARRED_AT_ROLL is charred. */
   rolls: readonly [number, number];
   /** Begin locked the pair in, and started the clock. */
@@ -47,7 +50,7 @@ interface SessionRecord {
   nsfw: boolean;
   /** Absent when what's kept holds none, or none that can be read: the drawing still comes back. */
   tools?: KeptTools;
-  /** Null for a ticket spent outside Kyoto Seika Practice Mode, or a part that can't be read. */
+  /** Null exactly for a ticket spent outside Kyoto Seika Practice Mode. */
   kyotoSeika: KeptKyotoSeika | null;
 }
 
@@ -465,17 +468,17 @@ const isBetween = (v: unknown, min: number, max: number): v is number =>
   isFiniteNumber(v) && v >= min && v <= max;
 
 /**
- * The record's Kyoto Seika Practice Mode part, or null when it has none. One that can't be read is
- * logged, and the drawing comes back as a regular sheet's.
+ * The record's Kyoto Seika Practice Mode part, its pair read only as far as the seal needs it. One that
+ * can't be read is logged and deals again, so its sheet waits for Begin once more.
  */
-function readKyotoSeika(v: unknown): KeptKyotoSeika | null {
+function readKyotoSeika(v: unknown): KeptKyotoSeika {
   const part = readKyotoSeikaPart(v);
   if (part) return part;
   console.error(
-    "The Kyoto Seika Practice Mode part of the drawing in progress is unreadable, so it comes back as a regular sheet:",
+    "The Kyoto Seika Practice Mode part of the drawing in progress is unreadable, so its sheet deals again:",
     v,
   );
-  return null;
+  return { subjects: null, rolls: [0, 0], begun: false };
 }
 
 function readKyotoSeikaPart(v: unknown): KeptKyotoSeika | undefined {
@@ -487,12 +490,13 @@ function readKyotoSeikaPart(v: unknown): KeptKyotoSeika | undefined {
   const [upperRolls, lowerRolls] = rollCounts;
   if (!isCount(upperRolls) || !isCount(lowerRolls)) return undefined;
   const counts = [upperRolls, lowerRolls] as const;
-  if (subjects === null) return { subjects: null, rolls: counts, begun };
+  // Begin locks a pair in, so a sheet without one hasn't begun.
+  if (subjects === null) return begun ? undefined : { subjects: null, rolls: counts, begun };
   if (!Array.isArray(subjects) || subjects.length !== 2) return undefined;
   const entries: readonly unknown[] = subjects;
   const [upper, lower] = entries;
-  const first = readSubjectEntry(upper);
-  const second = readSubjectEntry(lower);
+  const first = readDealtSubject(upper);
+  const second = readDealtSubject(lower);
   return first && second ? { subjects: [first, second], rolls: counts, begun } : undefined;
 }
 

@@ -1,12 +1,12 @@
 import { dieMood } from "./dieMood";
-import type { KyotoSeikaSubjectEntry } from "./subjectList";
+import type { DealtSubject, KyotoSeikaSubjectEntry } from "./subjectList";
 
 /** 0: the upper balloon, 1: the lower. */
 export type Balloon = 0 | 1;
 
 /** The pair on screen, and how often each balloon's die has rolled. */
 export interface Deal {
-  subjects: readonly [KyotoSeikaSubjectEntry, KyotoSeikaSubjectEntry];
+  subjects: readonly [DealtSubject, DealtSubject];
   rolls: readonly [number, number];
 }
 
@@ -29,7 +29,7 @@ type List = readonly KyotoSeikaSubjectEntry[];
 function poolFor(
   list: List,
   balloon: Balloon,
-  shown: readonly (KyotoSeikaSubjectEntry | null)[],
+  shown: readonly (DealtSubject | null)[],
   { recent, dark }: Pick<DealOptions, "recent" | "dark">,
 ): KyotoSeikaSubjectEntry[] {
   const other = shown[balloon === 0 ? 1 : 0];
@@ -51,7 +51,7 @@ function poolFor(
 function dealSubject(
   list: List,
   balloon: Balloon,
-  shown: readonly (KyotoSeikaSubjectEntry | null)[],
+  shown: readonly (DealtSubject | null)[],
   options: DealOptions,
 ): KyotoSeikaSubjectEntry {
   const pool = poolFor(list, balloon, shown, options);

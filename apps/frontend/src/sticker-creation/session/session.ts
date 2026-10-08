@@ -34,8 +34,11 @@ export const FRESH_SESSION: Session = { phase: "blank", armedAt: 0 };
 export type SessionEvent =
   /** A ticket was spent on this sheet, or carried over to it, in Kyoto Seika Practice Mode or not. */
   | { type: "start"; kyotoSeika: boolean }
-  /** Begin locked the pair in: the clock starts at once, as a proctor's 始め does. */
-  | { type: "begin" }
+  /**
+   * Begin locked the pair in: the clock starts at once, as a proctor's 始め does. `hasPair`: the pair
+   * is dealt; a sheet begun without one could never seal.
+   */
+  | { type: "begin"; hasPair: boolean }
   /** A stroke or fill landed on the sheet. */
   | { type: "ink" }
   /**
@@ -90,7 +93,9 @@ export function transition(session: Session, event: SessionEvent): Result {
         ? to(event.kyotoSeika ? "dealt" : "primed", ["keep-session"])
         : unchanged;
     case "begin":
-      return phase === "dealt" ? to("drawing", ["start-clock", "lock-subjects"]) : unchanged;
+      return phase === "dealt" && event.hasPair
+        ? to("drawing", ["start-clock", "lock-subjects"])
+        : unchanged;
     case "ink":
       return phase === "primed" ? to("drawing", ["start-clock"]) : unchanged;
     case "restored":
@@ -137,7 +142,6 @@ export function transition(session: Session, event: SessionEvent): Result {
  */
 const SEAL_REFUSALS: ReadonlySet<string> = new Set([
   "invalid_request",
-  "nsfw_not_opted_in",
   "ticket_not_found",
 ] satisfies ErrorCode[]);
 

@@ -12,7 +12,7 @@ export interface PersonView {
   /** The LINE name; the handle when LINE's is gone. */
   name: string;
   pictureUrl?: string;
-  /** Only someone with the NSFW opt-in marks, sees plainly or receives NSFW stickers. */
+  /** Only someone with the NSFW opt-in sees NSFW stickers unblurred or receives them. */
   nsfwOptIn: boolean;
 }
 

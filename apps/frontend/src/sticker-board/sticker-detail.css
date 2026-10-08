@@ -280,6 +280,65 @@
   margin: 18px 0 0;
 }
 
+/* Mark 18+, a quiet link at the very foot, and the confirm it opens in its place: a label lifted off
+   the liner. */
+.sticker-detail__mark,
+.sticker-detail__mark-ask {
+  margin-top: 22px;
+}
+
+/* Once a mark lands, a supporting note where Mark 18+ was. */
+.sticker-detail__marked {
+  margin: 22px 0 0;
+  color: var(--graphite);
+  font-size: 13px;
+  line-height: 1.42;
+  text-wrap: pretty;
+}
+
+.sticker-detail__marked:empty {
+  display: none;
+}
+
+.sticker-detail__mark-ask {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--r-label);
+  background: var(--liner-lift);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    var(--shadow-label);
+  color: var(--ink);
+}
+
+.sticker-detail__mark-title {
+  margin: 0;
+  font: 700 15px/1.25 var(--font-ui);
+}
+
+.sticker-detail__mark-lines {
+  display: grid;
+  gap: 4px;
+}
+
+.sticker-detail__mark-lines p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.42;
+}
+
+.sticker-detail__mark-lines .sticker-detail__mark-undo {
+  font-weight: 700;
+}
+
+.sticker-detail__mark-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
 /* A sent sticker's note, on a label lifted off the liner: its sleeve, then "On its way". */
 .sticker-detail__on-its-way {
   display: flex;

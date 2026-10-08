@@ -23,10 +23,20 @@ export const errors = {
     en: "Couldn’t reconnect with LINE. Try again, or reopen the app from LINE.",
     ja: "LINEで<wbr/>再ログインできませんでした。<wbr/>もう一度<wbr/>試すか、<wbr/>LINEから<wbr/>アプリを<wbr/>ひらき直してください。",
   },
-  /** Drawing screen, Giving and Receiving: sealing an 18+ sticker (POST /api/stickers) without Show 18+ stickers on, giving one from a board (POST /api/gifts) to someone without it, or receiving one (POST /api/gifts/receive) without it; in the seal chip, “couldn’t be packed” or the gift's refusal, through problemOf */
+  /** Giving and Receiving: giving an 18+ sticker from a board (POST /api/gifts) to someone without Show 18+ stickers on, or receiving one (POST /api/gifts/receive) without it; in “couldn’t be packed” or the gift's refusal, through problemOf */
   nsfw_not_opted_in: {
-    en: "Only people who turned on Show 18+ stickers in Settings can seal or receive 18+ stickers.",
-    ja: "18+のシールを仕上げたり受け取ったりできるのは、設定で「18+のシールを表示する」をオンにした人だけです。",
+    en: "Only people who turned on Show 18+ stickers in Settings can receive 18+ stickers.",
+    ja: "18+のシールを受け取れるのは、設定で「18+のシールを表示する」をオンにした人だけです。",
+  },
+  /** Sticker detail, Mark 18+: marking a sticker (POST /api/stickers/:stickerId/nsfw) that someone else drew, in the detail's error line */
+  not_original_artist: {
+    en: "Only the person who drew this sticker can mark it 18+.",
+    ja: "18+にできるのは、このシールの作者だけです。",
+  },
+  /** Sticker detail, Mark 18+: marking a sticker (POST /api/stickers/:stickerId/nsfw) that's already marked, such as from another window, in the detail's error line */
+  already_nsfw: {
+    en: "This sticker is already marked 18+.",
+    ja: "このシールは、すでに18+です。",
   },
   /** Giving, In the bag: taking a gift back out (POST /api/gifts/:giftId/take-out) that its receiver already received, in “couldn’t be taken out” through problemOf; the Receive gift dialog shows its own Already opened screen instead */
   already_received: {

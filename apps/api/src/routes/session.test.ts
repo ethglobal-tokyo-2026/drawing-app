@@ -93,7 +93,7 @@ describe("signing in", () => {
     });
   });
 
-  it("keeps the app's language, and takes a returning sign-in's new one", async () => {
+  it("keeps LINE's language as the sign-in sends it, and takes a returning sign-in's new one", async () => {
     expect((await meIn(await signIn(ALICE, "ja"))).language).toBe("ja");
     expect((await meIn(await signIn(ALICE, "en"))).language).toBe("en");
   });

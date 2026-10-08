@@ -2,7 +2,11 @@
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyApi, FRESH_TICKETS, renderWithApi, shownText } from "../../api/testing";
-import { MARKUP_LIKE_NAME, sticker as apiSticker } from "../../api/testFixtures";
+import {
+  MARKUP_LIKE_NAME,
+  sticker as apiSticker,
+  TEST_KYOTO_SEIKA_SUBJECTS,
+} from "../../api/testFixtures";
 import type { Sticker, Tickets } from "@drawing-app/api/client";
 import { formatDay, formatDuration, formatNo } from "../../stickers/format";
 import { formatRefillTime } from "../../tickets/refill";
@@ -470,6 +474,32 @@ describe("SealCeremony", () => {
     expect(root()?.classList.contains("is-failed")).toBe(true);
     expect(root()?.hasAttribute("data-lifted")).toBe(false);
     expect(card()).toBeNull();
+  });
+
+  it("names the pair a sticker drawn in Kyoto Seika Practice Mode was dealt, under Sealed, as a line of the card", async () => {
+    const [first, second] = TEST_KYOTO_SEIKA_SUBJECTS;
+    const kyotoSeika = { ...sealed, kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS };
+    await seal(1, "alice", { answer: kyotoSeika });
+    const pair = host.querySelector(".sealed-card__pair");
+    if (!pair) throw new Error("The sealed card names no pair");
+    expect([...pair.querySelectorAll("rt")].map((rt) => rt.textContent)).toEqual([
+      first.reading,
+      second.reading,
+    ]);
+    // Between Sealed and the fine print with the time used, fading up in its turn.
+    const title = host.querySelector(".sealed-card__title");
+    const fine = host.querySelector(".sealed-card__fine");
+    expect(title?.compareDocumentPosition(pair)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(fine?.compareDocumentPosition(pair)).toBe(Node.DOCUMENT_POSITION_PRECEDING);
+    expect(lineOf(pair)).toBeGreaterThan(-1);
+    // The words show only in Japanese: screen readers hear their English too.
+    expect(pair.querySelector(".visually-hidden")?.textContent).toContain(
+      `${first.ja}, ${first.en}, and ${second.ja}, ${second.en}`,
+    );
+    view?.unmount();
+
+    await seal(1);
+    expect(host.querySelector(".sealed-card__pair")).toBeNull();
   });
 
   it("prints a handle that reads as markup as it is, in the card's fine print", async () => {

@@ -16,11 +16,16 @@ interface Props {
   ref?: Ref<BeginKeyHandle>;
   /** The clock's length, which Begin starts. */
   minutes: number;
+  /** The pair is dealt and showing. Until then Begin stays sunk: a sheet begun without its pair could never seal. */
+  ready: boolean;
   onBegin: () => void;
 }
 
-/** Begin, the proctor's 始め: the screen's one key while the pair waits, at the sheet's foot. */
-export function BeginKey({ ref, minutes, onBegin }: Props) {
+/**
+ * Begin, the proctor's 始め: the screen's one key while the pair waits, at the sheet's foot, under one
+ * quiet line saying what the test asks of the pair.
+ */
+export function BeginKey({ ref, minutes, ready, onBegin }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const holder = useRef<HTMLDivElement>(null);
@@ -34,14 +39,21 @@ export function BeginKey({ ref, minutes, onBegin }: Props) {
     [reduced],
   );
   return (
-    <div ref={holder} className="begin-key">
-      <Key
-        icon={<DrawIcon />}
-        aria-label={t(($) => $.kyotoSeika.begin.label, { minutes })}
-        onClick={onBegin}
-      >
-        {t(($) => $.kyotoSeika.begin.key)}
-      </Key>
+    <div className="begin-key">
+      <p className="begin-key__task">{t(($) => $.kyotoSeika.begin.task)}</p>
+      {/* Only the key nudges; the line stays put. */}
+      <div ref={holder}>
+        <Key
+          icon={<DrawIcon />}
+          aria-label={t(($) => $.kyotoSeika.begin.label, { minutes })}
+          disabled={!ready}
+          onClick={() => {
+            if (ready) onBegin();
+          }}
+        >
+          {t(($) => $.kyotoSeika.begin.key)}
+        </Key>
+      </div>
     </div>
   );
 }
