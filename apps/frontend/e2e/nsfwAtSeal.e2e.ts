@@ -32,7 +32,11 @@ test("18+ at seal: the ticked box marks the sticker, and the next sheet starts u
   await plain.card.getByRole("button", { name: say(ui.backToBoard, language) }).click();
 
   // Without the NSFW opt-in, the Original Artist sees their own 18+ sticker blurred too.
-  await expect(boardSticker(page, marked.no).getByRole("img", blurredMark(language))).toBeVisible();
-  await expect(boardSticker(page, plain.no)).toBeVisible();
-  await expect(boardSticker(page, plain.no).getByRole("img", blurredMark(language))).toHaveCount(0);
+  await expect(
+    boardSticker(page, language, marked.no).getByRole("img", blurredMark(language)),
+  ).toBeVisible();
+  await expect(boardSticker(page, language, plain.no)).toBeVisible();
+  await expect(
+    boardSticker(page, language, plain.no).getByRole("img", blurredMark(language)),
+  ).toHaveCount(0);
 });
