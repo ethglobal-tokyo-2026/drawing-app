@@ -1,16 +1,20 @@
-/* The pair as a faint vertical margin note (縦書き) in the sheet's lower right: a boxed 題材, then each
-   word alone in its own column, right to left. Non-repro blue at half strength, so it reminds without
-   competing with the ink drawn over it. Clear of the seal key and the 18+ switch above it. */
+/* The pair as a faint vertical margin note (縦書き) in the sheet's corner, just above the seal key:
+   each word alone in its own column, right to left. Non-repro blue, pale enough to sink into the
+   paper under the ink drawn over it. The armed chip opens left of the key, so it never covers it. */
 .corner-print {
   position: absolute;
-  right: 16px;
-  bottom: 150px;
+  /* Centered over the seal key, whatever the words' face measures, a little above it. */
+  right: 39px;
+  bottom: 82px;
+  translate: 50% 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
   writing-mode: vertical-rl;
-  color: color-mix(in srgb, var(--non-repro-blue) 50%, transparent);
+  /* Latin letters stand upright too, as in a handwritten note: BGM, Tシャツ. */
+  text-orientation: upright;
+  color: color-mix(in srgb, var(--non-repro-blue) 30%, transparent);
   font-family: var(--font-jp);
   pointer-events: none;
   user-select: none;
@@ -28,15 +32,6 @@
   .corner-print {
     animation: none;
   }
-}
-
-.corner-print__heading {
-  padding: 3px 1px;
-  border: 1px solid currentColor;
-  border-radius: 2px;
-  font-size: var(--fs-fine);
-  font-weight: 700;
-  line-height: 1;
 }
 
 .corner-print__word {

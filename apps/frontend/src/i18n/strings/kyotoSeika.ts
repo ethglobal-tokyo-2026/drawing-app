@@ -51,8 +51,6 @@ export const kyotoSeika = {
   },
   /** The pair as a margin note in the sheet's corner once Begin locked it in. */
   print: {
-    /** Drawing screen, a sheet in Kyoto Seika Practice Mode once begun: the small boxed word heading the pair in the sheet's corner, in Japanese in both languages, as the test's own word */
-    heading: { en: "題材", ja: "題材" },
     /** Drawing screen, a sheet in Kyoto Seika Practice Mode once begun: the canvas's name for screen readers, with the pair, since the faint corner print says nothing to them; in English each subject comes with its English, such as "遊園地, amusement park", and in Japanese it's the word alone */
     canvas: {
       en: "Canvas, subjects {{first}}, and {{second}}",
