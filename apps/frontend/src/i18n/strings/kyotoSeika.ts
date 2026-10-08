@@ -8,10 +8,10 @@ export const kyotoSeika = {
     /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: a cloud's reroll, named for screen readers by the lettering it shows and the subject it would replace, such as "Reroll: 風, wind" */
     roll: {
       en: "Reroll: {{word}}, {{english}}",
-      ja: "振り直す：{{word}}、{{english}}",
+      ja: "振り直し：{{word}}、{{english}}",
     },
     /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the hand lettering beside the inked die under each cloud, which deals that cloud another subject; screen readers hear the die's name instead */
-    reroll: { en: "Reroll", ja: "振り直す" },
+    reroll: { en: "Reroll", ja: "振り直し" },
     /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the sound effect lettered beside a die as it lands, hidden from screen readers; Japanese in both languages, as a drawn manga sound effect */
     rollSound: { en: "コロッ", ja: "コロッ" },
     /** Drawing screen, a sheet in Kyoto Seika Practice Mode: a subject as screen readers hear it, such as "風, wind": read out politely as a balloon is dealt it, and in English in the canvas's name once begun */

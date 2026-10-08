@@ -19,7 +19,7 @@ const { kyotoSeika, stickerBoard, stickerCreation, ui } = strings;
 const language = "ja";
 test.use({ locale: "ja-JP" });
 
-/** What a cloud's reroll is named before its subject, such as "振り直す：". */
+/** What a cloud's reroll is named before its subject, such as "振り直し：". */
 const rollPrefix = say(kyotoSeika.balloons.roll, language).replace(/、$/, "");
 
 /** The pair dealt to the sheet, as each cloud's reroll names it: "word、english". */

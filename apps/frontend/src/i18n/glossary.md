@@ -50,7 +50,7 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | NSFW opt-in (Settings)             | 18+のシールを表示する                  | The switch's label; on and off are オン / オフ                                        |
 | subject (Kyoto Seika Subject)      | 題材                                   | The guide's word; "subject" in English                                                |
 | Begin (the drawing screen's key)   | はじめ                                 | The proctor's word                                                                    |
-| Reroll (a subject's die)           | 振り直す                               | The lettering beside each die, and the start of its name for screen readers           |
+| Reroll (a subject's die)           | 振り直し                               | The lettering beside each die, and the start of its name for screen readers           |
 | entrance exam (Settings' legend)   | 入試                                   | Kyoto Seika Practice Mode's setting; its tag on a sticker's detail is 入試練習        |
 | censor bar                         | 伏せ字                                 | The bar over the university's name; its label says 大人の事情により伏せています       |
 
