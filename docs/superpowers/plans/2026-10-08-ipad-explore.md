@@ -16,15 +16,15 @@ Source of truth: `docs/superpowers/specs/2026-10-08-ipad-design-brief.md`, "Expl
 
 1. **The split view only held sideways:** two columns when the screen is large and Explore's box is wider than tall and at least `TWO_COLUMNS_MIN_WIDTH` (960px). The draft split any large screen 960px wide, so a 13-inch iPad upright got the split view, against the brief's "three columns in portrait".
 2. **A turn keeps the reader's place in the pile** (Task 6). Beyond the brief: the split view moves the pile between Explore's scroller and its own column and lays it out at a new width, so without it every turn lands at the pile's top. Tried in Chromium: the sticker nearest the view's top came back within 0.5% of its height through a turn and back. Drop Task 6 if declined.
-3. **The lifted sticker on an iPad** stays a full-width bottom sheet, its paging carets at the screen's far edges (the draft left it; the deleted 2026-10-07 plan made it a centered card at the content width). Needs a design call; not in this plan.
+3. **The lifted sticker on an iPad** stays a full-width bottom sheet, its paging carets at the screen's far edges (the draft left it; the deleted 2026-10-07 plan made it a centered card at the content width). Needs a design call; `2026-10-08-ipad-dialogs.md` (to write) takes it.
 4. **As drafted:** `LARGE_PILE_SCALE` 1.25 (a phone's is its width over 360, 1.083 at 390px); the search, view switch and results 540px wide upright; This week upright 1040px wide at most, its three boards' rows a size down; This week's column 300–380px sideways.
 
-From the deleted `2026-10-07-ipad-explore-and-dialogs.md` (`git show 22de7791:docs/superpowers/plans/2026-10-07-ipad-explore-and-dialogs.md`): its pile that stopped growing at 1.5px a unit and its This week beside the pile from 960px are superseded by the brief; its place kept through a turn (its Task 5) comes back as Task 6; its dialogs are listed in the Shop and cards plan's "Left for later".
+From the deleted `2026-10-07-ipad-explore-and-dialogs.md` (`git show 22de7791:docs/superpowers/plans/2026-10-07-ipad-explore-and-dialogs.md`): its pile that stopped growing at 1.5px a unit and its This week beside the pile from 960px are superseded by the brief; its place kept through a turn (its Task 5) comes back as Task 6; its dialogs are listed in the Shop and cards plan's "Left for later", for `2026-10-08-ipad-dialogs.md` (to write).
 
 ## Base
 
 - Branch from `origin/main` once Phase 0 (`2026-10-08-small-fixes.md`) and foundations (`2026-10-08-ipad-foundations.md`) have merged. The board, Shop and cards, and drawing plans can run beside this one.
-- From foundations: `apps/frontend/src/ui/largeScreen.ts` exports `LARGE_SCREEN`, `"(min-width: 600px) and (min-height: 600px) and (any-pointer: coarse)"`, and `useLargeScreen()`; the CSS uses the same query.
+- From foundations: `apps/frontend/src/ui/largeScreen.ts` exports `LARGE_SCREEN`, `"(min-width: 600px) and (min-height: 600px) and (any-pointer: coarse)"`, and `useLargeScreen()`; the CSS uses the same query; `ui/testing.ts` has `onLargeScreen()`.
 - From Phase 0: Explore's search is the text field (`<label className="text-field artist-search">`, `styles/text-field.css`), and Most gratitude's figure leads with `GratitudeIcon` (`figure--gratitude`), the draft's `911d56e4` and `890a78d0`.
 - Overlaps: a plan that moved `SlidingTabs` and the `.sliding-tabs` rules into `ui/` keeps their new home; this plan changes only where the view switch renders. The Shop and cards plan adds the same `stubResizeObservers` to `ui/testing.ts`: whichever lands second keeps one copy.
 - Ports: this plan's dev server takes 5184 and its API 8784; if either is taken, use a free pair throughout.
@@ -59,16 +59,17 @@ Test commands run from the worktree root. `TZ=Asia/Tokyo` because some frontend 
 
 ```bash
 rg -n 'export const (LARGE_SCREEN|useLargeScreen)' apps/frontend/src/ui/largeScreen.ts
+rg -n 'export function onLargeScreen' apps/frontend/src/ui/testing.ts
 rg -n 'text-field artist-search|figure--gratitude' apps/frontend/src/explore/ExploreScreen.tsx
 rg -n 'function SlidingTabs' apps/frontend/src
 git cat-file -t afa10768
 ```
 
-Expected: both exports with the query above; both Phase 0 hits; where `SlidingTabs` lives; `commit`. No Phase 0 or foundations on main, or `afa10768` missing: stop and report. Foundations keys the large layout another way (a class or data attribute on `.phone`): write every large-screen rule here in its form.
+Expected: both exports with the query above; `onLargeScreen`; both Phase 0 hits; where `SlidingTabs` lives; `commit`. No Phase 0 or foundations on main, or `afa10768` missing: stop and report. Foundations keys the large layout another way (a class or data attribute on `.phone`): write every large-screen rule here in its form.
 
 - [ ] **Step 3: Test helpers** in `apps/frontend/src/ui/testing.ts`, each unless already there:
   - `stubResizeObservers()`: copy it from the Shop and cards plan's Task 1 Step 3 (identical): a stand-in `ResizeObserver` that records each observer's targets; `resize(el)` calls back every observer watching `el`, `resize()` every observer watching anything; `globalThis.ResizeObserver` restored by `onTestFinished`.
-  - `onLargeScreen()`, unless foundations added one: `vi.spyOn(window, "matchMedia")` answering `LARGE_SCREEN` as `matchMedia("(min-width: 1px)")` (happy-dom's window matches that; it has no touch screen, so `LARGE_SCREEN` never matches there) and every other query as before; `mockRestore` in `onTestFinished`. Imports: `onTestFinished`, `vi` from `vitest`; `LARGE_SCREEN` from `./largeScreen`.
+  - `onLargeScreen()` is foundations' (it spies `window.matchMedia` and returns the switch); the iPad `describe` restores mocks after each test (`vi.restoreAllMocks()`).
 - [ ] **Step 4:** `pnpm -C apps/frontend typecheck` → passes. Commit: `test(frontend): a large screen and ResizeObservers a test can report to`
 
 ### Task 2: The pile at about a phone's size, showing more stickers
@@ -152,4 +153,4 @@ From `00f17212`'s end state (`git show 00f17212:apps/frontend/src/explore/Explor
 - **Brief coverage:** search across the top, pile left, This week right (Task 4); results in the pile's column with This week staying (Task 4's test, Task 8); each column scrolling on its own (Task 4's CSS, Task 8's scroll line); reading order (Task 4's test of `.explore`'s children); three boards at once, side by side upright and stacked sideways, phones keeping the tabs (Task 5, Task 8); phone-size stickers, more of them (Task 2, Task 8's `--k` lines); phones unchanged (`display: contents` wrappers, rules behind the large-screen query or `data-columns="2"`, Task 8's 390×844 lines).
 - **Ports:** each draft commit has its paths, how it's applied and its conflicts; `890a78d0` and `911d56e4`'s text field stay Phase 0's.
 - **Tests:** each named test fails under the change it guards against (tried: tabs on a large screen, This week before the pile, the view unmounted by a search, the view remounted by a turn).
-- **Open:** split view by orientation, the kept place, the lifted sticker; the deleted plan's dialogs are in the Shop and cards plan.
+- **Open:** split view by orientation, the kept place; the lifted sticker and the deleted plan's dialogs go to `2026-10-08-ipad-dialogs.md` (to write).

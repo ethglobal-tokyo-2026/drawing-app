@@ -79,4 +79,5 @@ Phase 0 lands first; then foundations, before the screens, which can run in para
 | `2026-10-08-ipad-explore.md`              | the split view, search, three leaderboards                                                                                      |
 | `2026-10-08-ipad-drawing.md`              | one sheet for every device, the drawing screen's layout, My board key, drawing hand                                             |
 | `2026-10-08-ipad-pencil.md`               | input mode, pen pressure, hover, prediction, palm fixes                                                                         |
+| `2026-10-08-ipad-dialogs.md`              | the sticker detail, giving, receiving, the Mini-game and its replay, and Explore's lifted sticker on an iPad (to write)         |
 | `2026-10-08-ipad-small-windows.md`        | Split View, LINE's sheet, short heights, the finish                                                                             |

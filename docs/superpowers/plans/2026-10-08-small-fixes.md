@@ -27,7 +27,7 @@
 | Marking 18+ (`2026-10-08-mark-18-plus-anytime.md`)                    | built, plan deleted (4021bd80); the 18+ box in the armed seal chip, no first-visit tip (5629756a, `fix/seal-step-18-plus`), Mark 18+ on the detail | builds on it: Show 18+ stickers keeps its switch and status lines; the Sealed card keeps its 18+ mark                                                                      |
 | Kyoto Seika Practice Mode (`2026-10-07-kyoto-seika-practice-mode.md`) | built; one phone check left                                                                                                                        | no shared files; run the check any time. Phase 0 keeps Kyoto Seika's Settings group (legend, help, note, switch, Dark subjects, credit) and the Sealed card's subject pair |
 | e2e suite (056d3cfa)                                                  | `pnpm test:e2e`, 4 specs                                                                                                                           | keeps every name it reads; Task 15 runs it                                                                                                                                 |
-| iPad plans (84eed5b8, 4cd9f5bf, more coming)                          | written against Phase 0's names                                                                                                                    | see Open 1 for the tray's names                                                                                                                                            |
+| iPad plans (84eed5b8, 4cd9f5bf, more coming)                          | written against Phase 0's names                                                                                                                    | the board plan's Task 9 brings the draft's tray names (`trayFitFor`, `TrayFit`, `trayTop()`, `--scale`) with the stack's growth; Task 10 keeps main's phone structure      |
 
 ## Task 0: Worktree and hand-port files
 
@@ -2546,14 +2546,13 @@ Names across tasks: `onShowGratitude`, `side`, `.stat-board__head`, `.stat-board
 
 ## Open
 
-1. **Tray names for the iPad board plan.** 84eed5b8 lists Phase 0 as landing the draft's `trayFitFor`, `TrayFit`, `trayTop()` and `--scale`. Task 10 keeps main's phone structure (`TOP`, `ui.shrink`, `--shrink`, `fitStack`) and adds `stopShort`, `openWindow(short).slider`, `reshape`, `pouchFoot`: on a phone the stack only shrinks. Either the board plan brings those four with the stack's growth, or Task 10 renames to them now.
-2. **Japanese "Gifts for you": 届いたギフト.** あなたへのギフト wrapped to two lines and pushed the chip over the zipper's top. A native read is pending for the whole catalog anyway.
-3. **"Holds their stickers"** on someone else's paper; the brief gives only "Holds your stickers".
-4. **"Sui Testnet" stays in the address dialog's note;** the brief drops it from the paper only.
-5. **Log out of LINE** (outside LINE's app) moves up beside Flip back, as on the draft's large screens, rather than staying alone at the column's foot.
-6. **One gift keeps "A gift for you"** (no count badge for one); several read "Gifts for you" beside the badge.
-7. **A long handle still truncates** in the chip's from line; showing it whole would wrap the chip past the tray's 72px top.
-8. **Both gift badges at once:** the second, gifts on their way, still meets the zipper's top on a phone, until the open "On its way" item moves it.
-9. **Fewer than four sheets:** the room kept for the edges and +N still shows as lining in the open pouch, as in the draft.
-10. **The "For people 18 or older" line** goes with the 18+ fine print, as the brief says; the draft session flagged it and ad0ll didn't answer.
-11. **Task 7's details:** the users table rebuild and its migration, which tests insert users without a choice, and where the chat menu relink runs were read, not run.
+1. **Japanese "Gifts for you": 届いたギフト.** あなたへのギフト wrapped to two lines and pushed the chip over the zipper's top. A native read is pending for the whole catalog anyway.
+2. **"Holds their stickers"** on someone else's paper; the brief gives only "Holds your stickers".
+3. **"Sui Testnet" stays in the address dialog's note;** the brief drops it from the paper only.
+4. **Log out of LINE** (outside LINE's app) moves up beside Flip back, as on the draft's large screens, rather than staying alone at the column's foot.
+5. **One gift keeps "A gift for you"** (no count badge for one); several read "Gifts for you" beside the badge.
+6. **A long handle still truncates** in the chip's from line; showing it whole would wrap the chip past the tray's 72px top.
+7. **Both gift badges at once:** the second, gifts on their way, still meets the zipper's top on a phone, until the open "On its way" item moves it.
+8. **Fewer than four sheets:** the room kept for the edges and +N still shows as lining in the open pouch, as in the draft.
+9. **The "For people 18 or older" line** goes with the 18+ fine print, as the brief says; the draft session flagged it and ad0ll didn't answer.
+10. **Task 7's details:** the users table rebuild and its migration, which tests insert users without a choice, and where the chat menu relink runs were read, not run.

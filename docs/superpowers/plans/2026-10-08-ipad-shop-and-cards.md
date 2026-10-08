@@ -21,13 +21,13 @@ Source of truth: `docs/superpowers/specs/2026-10-08-ipad-design-brief.md`, "Shop
 
 ## Left for later
 
-From `2026-10-07-ipad-explore-and-dialogs.md`, which this plan's commit deletes. Its full code: `git show 22de7791:docs/superpowers/plans/2026-10-07-ipad-explore-and-dialogs.md`.
+From `2026-10-07-ipad-explore-and-dialogs.md`, which this plan's commit deletes. Its full code: `git show 22de7791:docs/superpowers/plans/2026-10-07-ipad-explore-and-dialogs.md`. Each goes to `2026-10-08-ipad-dialogs.md` (to write) unless it names another plan.
 
 - **The seal ceremony's sheet through a turn** (its Task 11, `measureSheet`): while the seal is on its way, a turn moves the sheet but not the cut sticker, its dim or its cut line. The drawing plan (`2026-10-08-ipad-drawing.md`) owns the sheet's box, so it belongs there. Task 4 here covers the card.
-- **The Gratitude replay** (its Tasks 8 and 10): the replay's scale is its card's width over a phone's, so a wide, short Transfer Trail card on an iPad magnifies its lettering across the heart. Its fix: scale by the replay heart's width over a phone's live heart (`replayScale`), place each input relative to the heart, drawn in alike to stay on the stage, and lay out again on resize. No plan in the brief covers the sticker detail.
-- **The Mini-game's scale** (its Tasks 8–9): the live game grows with an iPad's stage up to 1.5×, its touch rules with it; the speed lines cover any stage; the top band, HUD and receipt keep a phone's width. Not in the brief.
+- **The Gratitude replay** (its Tasks 8 and 10): the replay's scale is its card's width over a phone's, so a wide, short Transfer Trail card on an iPad magnifies its lettering across the heart. Its fix: scale by the replay heart's width over a phone's live heart (`replayScale`), place each input relative to the heart, drawn in alike to stay on the stage, and lay out again on resize.
+- **The Mini-game's scale** (its Tasks 8–9): the live game grows with an iPad's stage up to 1.5×, its touch rules with it; the speed lines cover any stage; the top band, HUD and receipt keep a phone's width.
 - **Device tilt in the screen's axes** (its Tasks 1–2, `toScreenAxes`): held sideways, the shared light, the heart's sway and the zipper's swing read the device's axes, not the screen's. Fits the board-and-stat-board plan (the zipper) or foundations.
-- **The sticker detail's column, Giving's and Receiving's phone page, the gift received notice, the give sheet's picker** (its Tasks 7, 12–13): not in the brief; each needs a design call.
+- **The sticker detail's column, Giving's and Receiving's phone page, the gift received notice, the give sheet's picker** (its Tasks 7, 12–13): each needs a design call.
 
 ## Base
 

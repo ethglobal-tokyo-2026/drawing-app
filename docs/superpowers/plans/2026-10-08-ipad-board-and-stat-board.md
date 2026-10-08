@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** written 2026-10-08; waiting on ad0ll's answers to the decisions marked **Open**. Replaces `2026-10-07-ipad-board.md`.
+**Status:** written 2026-10-08; decisions 2, 3, 6, 8 and 11 settled by ad0ll on 2026-10-08. Replaces `2026-10-07-ipad-board.md`.
 
 **Goal:** On a large screen, stickers keep their phone size on a large layout of the board's own, stored beside the phone's; Draw stands in the tab row, the header is one row, the sticker tray grows into its pouch, and the stat board is one centered cluster. Phones are unchanged.
 
@@ -16,33 +16,33 @@
 
 ## Decisions
 
-**Open** marks one the brief leaves open, for ad0ll.
+2, 3, 6, 8 and 11 are ad0ll's (2026-10-08); none is open.
 
 1. **Storage.** Six columns on `sticker_placements`, after `updated_at`: `large_on_board`, `large_x`, `large_y`, `large_scale`, `large_rotation`, `large_z`, with the CHECK `sticker_placements_large_placement` (whole or none, the phone's ranges). One row per sticker keeps `seen_at` and the tray's order (`created_at`) in one place. The API sends `largePlacement` beside `placement`.
-2. **A layout is a whole arrangement:** spot, size, turn, stacking, and on the board or in the tray. Remove on an iPad leaves the sticker on the phone's board. **Open:** on/off per layout (the alternative: one on/off for both, only the geometry separate).
-3. **Derived once.** The first time a large screen shows your board from a load of its own, every sticker you hold gets a large spot: the phone's arrangement at the stickers' own size, centered on the large board's field, fitted to a side too short for it. The phone's layout is read against the 390×651 board of DESIGN.md's iPhone in LINE (844 less its 47px status bar, LINE's 56px header and the 90px tab strip: derived, not measured on a device). `POST /api/sticker-boards/me/large-layout` writes a spot only where none is saved, so a large layout another device saved first stays; the board on screen keeps its own derivation until its next load. **Open:** centered both ways (the alternative: top-aligned under the header, as on a phone).
+2. **A layout is a whole arrangement:** spot, size, turn, stacking, and on the board or in the tray. Each layout keeps its own stickers on or off: Remove on an iPad leaves the sticker on the phone's board.
+3. **Derived once.** The first time a large screen shows your board from a load of its own, every sticker you hold gets a large spot: the phone's arrangement at the stickers' own size, centered on the large board's field, fitted to a side too short for it. The phone's layout is read against the 390×651 board of DESIGN.md's iPhone in LINE (844 less its 47px status bar, LINE's 56px header and the 90px tab strip: derived, not measured on a device). `POST /api/sticker-boards/me/large-layout` writes a spot only where none is saved, so a large layout another device saved first stays; the board on screen keeps its own derivation until its next load. The derived layout sits centered on the board, both ways.
 4. **A new sticker lands on both.** A sticker with no phone spot lands on top in the phone's layout and, once the board has a large layout, in the large one, saved in one request. A sticker you hold that the large layout is missing (received back, a failed save) gets a free large spot, on the board or in the tray as on the phone. A sticker you gave gets none.
 5. **Visitors** get every sticker on the owner's board in either layout, with both spots, and see the layout for their own size class. With no large layout saved, a large screen derives it as in 3, without saving.
-6. **The unit.** In the large layout a sticker's size is a share of the phone board's width, 390px, on every large screen either way up. **Open:** the draft used 0.56 × the board's short side, kept to 360–460px, which grows stickers a quarter as an 11-inch iPad in Safari turns upright (371 → 459px, computed for 1180×734 and 820×1094 less a 72px tab strip).
+6. **The unit.** In the large layout a sticker's size is a share of the phone board's width, 390px, on every large screen either way up: stickers are exactly phone size. Not the draft's 0.56 × the board's short side (kept to 360–460px), which grew stickers a quarter as an iPad turned upright.
 7. **Turning** keeps each sticker's share of the field and its size; nothing is derived again.
-8. **The stat papers zoom; controls don't.** The draft zoomed the whole cork up to 1.3×, Settings and Flip back included; the brief keeps controls at phone sizes, so only the stat papers and your address paper zoom. **Open.**
+8. **The stat papers zoom; controls don't.** The draft zoomed the whole cork up to 1.3×, Settings and Flip back included; the brief keeps controls at phone sizes, so only the stat papers and your address paper zoom.
 9. **The gratitude events card** centers on a large screen in `2026-10-08-ipad-shop-and-cards.md` (its Task 5, the draft's 8ba750b3), as the brief's plan table has it; Task 11 here checks it once that plan has landed.
 10. **A kept board** (the last one this device showed) is drawn at once on a large screen only if it has a large layout; otherwise the board waits for the server's.
-11. **Words.** Code says "large layout", the brief's words: `BoardLayout = "phone" | "large"`. **Open:** add "Large layout" to AGENTS.md's vocabulary.
+11. **Words.** Code says "large layout", the brief's words: `BoardLayout = "phone" | "large"`. "Large layout" joins AGENTS.MD's vocabulary (Task 12 Step 4).
 
 ## Base
 
 - Branch from `origin/main` once `2026-10-08-small-fixes.md` (Phase 0) and `2026-10-08-ipad-foundations.md` have merged.
 - Names this plan takes from them, as the draft named them. Task 0 checks each; where a landed name differs, use it wherever this plan writes the draft's.
 
-| From        | Names                                                                                                                      | For                                                  |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| Foundations | `ui/largeScreen.ts`: `LARGE_SCREEN`, `useLargeScreen()`                                                                    | the 600×600 touch-screen query                       |
-| Foundations | `ui/tabsLead.ts`: `registerTabsLead`, `useTabsLead()`; `.tabs-lead`; `--gutter-large`, `--tabs-lead-w`                     | the tab row's lead slot                              |
-| Foundations | TabBar's `visiting` and the lit Explore tab's caret                                                                        | the way back from someone's board                    |
-| Phase 0     | StatCork's `.stat-board__head` holding Flip back, first in the cork; someone else's address paper in `.stat-board__col--b` | Flip back at the top left, their Sui address         |
-| Phase 0     | tray: `stopShort`, `openWindow(short)` answering `slider`, `pouchFoot`, `trayFitFor`, `TrayFit`, `trayTop()`, `--scale`    | the zipper to the foot, opening as far as its sheets |
-| Phase 0     | no first-selection hint (`hintSpot`, `hintRoom`, `selectionHint.ts` gone)                                                  |                                                      |
+| From        | Names                                                                                                                                                                                                                                                | For                                                  |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Foundations | `ui/largeScreen.ts`: `LARGE_SCREEN`, `useLargeScreen()`; `ui/testing.ts`: `onLargeScreen()`, which returns the switch                                                                                                                                | the 600×600 touch-screen query                       |
+| Foundations | `ui/TabsLead.tsx`: `<TabsLead>`, `<TabsLeadSlot />`; `.tabs-lead`, under the strip's scrim while the out-of-tickets card is up; `--gutter-large`, `--tabs-lead-w`                                                                                    | the tab row's lead slot                              |
+| Foundations | TabBar's `visiting` and the lit Explore tab's caret                                                                                                                                                                                                  | the way back from someone's board                    |
+| Phase 0     | StatCork's `.stat-board__head` holding Flip back, first in the cork; someone else's address paper in `.stat-board__col--b`                                                                                                                           | Flip back at the top left, their Sui address         |
+| Phase 0     | tray, on main's phone structure (`TOP`, `ui.shrink`, `--shrink`, `fitStack`): `stopShort`, `openWindow(short)` answering `slider`, `reshape({ stopShort })`, `pouchFoot`. Task 9 adds the draft's `trayFitFor`, `TrayFit`, `trayTop()` and `--scale` | the zipper to the foot, opening as far as its sheets |
+| Phase 0     | no first-selection hint (`hintSpot`, `hintRoom`, `selectionHint.ts` gone)                                                                                                                                                                            |                                                      |
 
 - Large-screen CSS uses the literal query `(min-width: 600px) and (min-height: 600px) and (any-pointer: coarse)`, as the draft does, unless foundations named it another way (Task 0).
 
@@ -53,7 +53,7 @@ Under `apps/frontend/src/sticker-board/` unless shown.
 - **DB:** `packages/db/src/schema/stickerPlacements.ts` and its test; a generated migration in `packages/db/drizzle/`.
 - **API:** create `apps/api/src/stickerBoards/largeLayoutLimit.ts`; modify `apps/api/src/shapes.ts`, `stickerBoards/board.ts`, `routes/stickerBoards.ts`, `gifts/receiving.ts`, `client.ts`, `testing/rows.ts`; tests `routes/stickerBoards.test.ts`, `routes/receiving.test.ts`, `shapes.test.ts`.
 - **App client:** `apps/frontend/src/api/apiClient.ts`, `httpApi.ts`, `views.ts`, `testing.tsx`, `testFixtures.ts`; the StickerPlacement literals in `api/suiWalletApi.test.ts`, `receiving/receiveFlow.test.ts`, `receiving/ReceiveGiftDialog.test.tsx`.
-- **Board:** create `largeLayout.ts` and `largeLayout.test.ts`; modify `placement.ts`, `useBoardSize.ts`, `boardSticker.ts`, `lastBoard.ts`, `PlacedSticker.tsx`, `useBoardGestures.ts`, `StickerBoard.tsx`/`.css`, `ArtistBoard.tsx`, `apps/frontend/src/ui/testing.ts`; tests `boardSticker.test.ts`, `lastBoard.test.ts`, `useBoardGestures.test.tsx`, `StickerBoard.test.tsx`, `ArtistBoard.test.tsx`.
+- **Board:** create `largeLayout.ts` and `largeLayout.test.ts`; modify `placement.ts`, `useBoardSize.ts`, `boardSticker.ts`, `lastBoard.ts`, `PlacedSticker.tsx`, `useBoardGestures.ts`, `StickerBoard.tsx`/`.css`, `ArtistBoard.tsx`; tests `boardSticker.test.ts`, `lastBoard.test.ts`, `useBoardGestures.test.tsx`, `StickerBoard.test.tsx`, `ArtistBoard.test.tsx`.
 - **Tray:** `tray/trayModel.ts`, `trayEngine.ts`, `zipper.ts`, `traySheets.ts`, `trayPresses.ts`, `trayPeel.ts`, `traySpread.ts`, `trayPaging.ts`, `sticker-tray.css`, `StickerTray.test.tsx`.
 - **Stat board:** `stat-board/stat-board.css`, `settings-note.css`, `StatCork.tsx`.
 - **Docs:** `DESIGN.md`, `PRODUCT.md`.
@@ -63,7 +63,7 @@ Under `apps/frontend/src/sticker-board/` unless shown.
 - [ ] `git -C <main checkout> fetch`, then `git -C <main checkout> worktree add -b feat/ipad-board-and-stat-board .claude/worktrees/ipad-board-and-stat-board origin/main`, and `pnpm install` in it. Every command below runs from that worktree's root.
 - Scratch goes in the worktree's gitignored `data/scratch/board-and-stat-board/`. This plan's dev server takes ports 5194 (Vite) and 8794 (API).
 - Frontend tests run with `TZ=Asia/Tokyo`.
-- Order: 0–6 in order. 7 and 8 after 6 (they edit `StickerBoard.tsx` and `ArtistBoard.tsx`). 9 and 10 touch only their own files and can run beside 4–8, but 9 waits for 4 when its item 10 reaches `useBoardGestures.ts`. A lane in its own worktree starts with `git switch -c <branch> <commit>` and restores any tracked file the fresh worktree lacks. Then 11, 12, 13.
+- Order: 0–6 in order. 7 and 8 after 6 (they edit `StickerBoard.tsx` and `ArtistBoard.tsx`). 9 and 10 touch only their own files and can run beside 4–8, but 9 waits for 4 when its item 11 reaches `useBoardGestures.ts`. A lane in its own worktree starts with `git switch -c <branch> <commit>` and restores any tracked file the fresh worktree lacks. Then 11, 12, 13.
 
 ### Task 0: The base, the dev server and the phone's baseline
 
@@ -71,14 +71,14 @@ Under `apps/frontend/src/sticker-board/` unless shown.
 - [ ] **Step 2:** Find the names in the Base table:
 
 ```bash
-rg -n "export (const|function) (LARGE_SCREEN|useLargeScreen|isLargeScreen|registerTabsLead|useTabsLead|onLargeScreen)" apps/frontend/src/ui
+rg -n "export (const|function) (LARGE_SCREEN|useLargeScreen|TabsLead|TabsLeadSlot|onLargeScreen)\b" apps/frontend/src/ui
 rg -n "gutter-large|tabs-lead-w" apps/frontend/src/styles/tokens.css
 rg -n "stat-board__head|stat-board--own|side\?: ReactNode" apps/frontend/src/sticker-board/stat-board
-rg -n "stopShort|openWindow|pouchFoot|trayFitFor|TrayFit|trayTop|reshape" apps/frontend/src/sticker-board/tray apps/frontend/src/sticker-board/useBoardGestures.ts
+rg -n "stopShort|openWindow|pouchFoot|reshape|fitStack" apps/frontend/src/sticker-board/tray apps/frontend/src/sticker-board/useBoardGestures.ts
 rg -n "hintSpot|hintRoom" apps/frontend/src/sticker-board
 ```
 
-Expected: each name in the Base table is found (`onLargeScreen` may not be: Task 4 adds it), and the last search finds nothing. Note every difference in this plan's file, beside the task that uses the name, before starting Task 1. If foundations' CSS names the large screen some other way (a custom media, a class or data attribute on `.phone`), this plan's CSS uses that.
+Expected: each name in the Base table is found, but the tray's `trayFitFor`, `TrayFit`, `trayTop()` and `--scale`, which Task 9 adds; the last search finds nothing. Note every difference in this plan's file, beside the task that uses the name, before starting Task 1. If foundations' CSS names the large screen some other way (a custom media, a class or data attribute on `.phone`), this plan's CSS uses that.
 
 - [ ] **Step 3: Data.** If the research database still exists, copy it; the API migrates it as it starts.
 
@@ -705,20 +705,9 @@ git show 5cfbbe97 -- apps/frontend/src/sticker-board/placement.ts
 
 Conflicts to expect: Phase 0 removed the first-selection hint's helpers from `placement.ts`; if Phase 0 brought `pouchFoot` into `useBoardGestures.ts`'s `stow`, keep its line. Every other hunk applies by hand at the call sites below.
 
-**Files:** Modify `placement.ts`, `useBoardSize.ts`, `PlacedSticker.tsx`, `useBoardGestures.ts`, `StickerBoard.tsx`, `ArtistBoard.tsx`, `apps/frontend/src/ui/testing.ts`. Test: `useBoardGestures.test.tsx`.
+**Files:** Modify `placement.ts`, `useBoardSize.ts`, `PlacedSticker.tsx`, `useBoardGestures.ts`, `StickerBoard.tsx`, `ArtistBoard.tsx`. Test: `useBoardGestures.test.tsx`.
 
-- [ ] **Step 1: A large screen for tests**, unless foundations brought one (Task 0). In `apps/frontend/src/ui/testing.ts`, add `import { vi } from "vitest";` and `import { LARGE_SCREEN } from "./largeScreen";`, then:
-
-```ts
-/** A large screen for a test: LARGE_SCREEN matches, and every other query answers as before. */
-export function onLargeScreen() {
-  const matchMedia = window.matchMedia.bind(window);
-  const large = matchMedia("all");
-  vi.spyOn(window, "matchMedia").mockImplementation((query) =>
-    query === LARGE_SCREEN ? large : matchMedia(query),
-  );
-}
-```
+- [ ] **Step 1: A large screen for tests** is foundations' `onLargeScreen()` (`ui/testing.ts`): it spies `window.matchMedia` and returns the switch, so a test file that calls it restores mocks after each test (`vi.restoreAllMocks()`).
 
 - [ ] **Step 2: Write the failing test.** `unitOf` alone answers a constant in the large layout, so it gets no test of its own: the gesture test below and Task 11's checks cover what it does. In `useBoardGestures.test.tsx`, each `size={{ W: 390, H: 657 }}` becomes `size={{ W: 390, H: 657, U: 390 }}`, and import `PHONE_BOARD` from `./placement`. Add, in `describe("useBoardGestures")`:
 
@@ -1666,34 +1655,29 @@ git show 09cfc89e -- apps/frontend/src/sticker-board/StickerBoard.tsx apps/front
 git show 810cc081 -- apps/frontend/src/sticker-board/StickerBoard.css
 ```
 
-Take only the lead-slot hunks: `useTabsLead`, `createPortal`, `drawKeyGroup` and `giveKeyGroup`, `setDraw`/`setGive` to null in the slot with `lead` in the effect's deps, `is-away` with `inert` while turned, and the CSS below. Leave `size.U` (Task 4), 09cfc89e's `visit-head` (5cfbbe97 removed it) and its `.board-gifts` CSS (Task 8 takes 5cfbbe97's). If foundations didn't bring the draft's `.phone:has(.out-of-tickets--over-board) .tabs-lead::after` dim or `.phone.has-tucked-tabs .tabs-lead { display: none; }` (`git show 696123ba:apps/frontend/src/app/TabBar.css`), add them to `TabBar.css` here.
+Take only the lead-slot hunks, in foundations' names: the draft's `useTabsLead()` and `createPortal(group, lead)` become `<TabsLead>{group}</TabsLead>`, and `lead`'s truthiness becomes `useLargeScreen()` (`is-away`, `inert`, `setDraw`/`setGive` to null, effect deps `[size, large]`); `drawKeyGroup` and `giveKeyGroup`; the CSS below. Leave `size.U` (Task 4), 09cfc89e's `visit-head` (5cfbbe97 removed it) and its `.board-gifts` CSS (Task 8 takes 5cfbbe97's). Add neither the draft's `.tabs-lead::after` dim nor `.phone.has-tucked-tabs .tabs-lead`: foundations drops the lead under the strip's scrim while the out-of-tickets card is up, and no board is mounted while drawing.
 
 Conflicts to expect: Phase 0 removed the first-selection hint's lines near Draw in `StickerBoard.tsx`; Phase 0's Sui address query sits among `ArtistBoard.tsx`'s state.
 
 **Files:** Modify `StickerBoard.tsx`, `ArtistBoard.tsx`, `StickerBoard.css`. Test: `StickerBoard.test.tsx`.
 
-- [ ] **Step 1: Write the failing test** (import `registerTabsLead` from `../ui/tabsLead`, `onTestFinished` from `vitest`):
+- [ ] **Step 1: Write the failing test** (import `TabsLeadSlot` from `../ui/TabsLead`, `onTestFinished` from `vitest`). The slot renders first, as TabBar's would, or the key never mounts:
 
 ```tsx
 describe("StickerBoard's Draw on a large screen", () => {
   it("stands at the tab row's left end, in the slot the tab strip keeps, and leaves the board", async () => {
-    const slot = document.createElement("div");
-    document.body.append(slot);
-    registerTabsLead(slot);
-    onTestFinished(() => {
-      registerTabsLead(null);
-      slot.remove();
-    });
     onLargeScreen();
+    const tabs = renderWithApi(<TabsLeadSlot />);
+    onTestFinished(tabs.unmount);
     const { host } = await show(emptyApi());
-    expect(slot.querySelector(".board-draw")).not.toBeNull();
+    expect(tabs.host.querySelector(".tabs-lead .board-draw")).not.toBeNull();
     expect(host.querySelector(".board-draw")).toBeNull();
   });
 });
 ```
 
 - [ ] **Step 2:** `TZ=Asia/Tokyo pnpm --filter frontend exec vitest run src/sticker-board/StickerBoard.test.tsx -t "Draw on a large screen"` → FAIL: Draw is on the board.
-- [ ] **Step 3: `StickerBoard.tsx`.** `import { createPortal, flushSync } from "react-dom";` and `import { useTabsLead } from "../ui/tabsLead";`. After `size`: `/** The tab strip's left end, where Draw stands on a large screen. */ const lead = useTabsLead();`. In the effect that measures the name and Draw, `setDraw((was) => (lead ? null : kept(was, boxOf(key))));`, its comment ending `In the tabs' row it's off the board.`, deps `[size, lead]`. Before `front`:
+- [ ] **Step 3: `StickerBoard.tsx`.** `import { TabsLead } from "../ui/TabsLead";` and `import { useLargeScreen } from "../ui/largeScreen";`. After `size`: `/** On a large screen Draw stands at the tab strip's left end (ui/TabsLead.tsx). */ const large = useLargeScreen();`. In the effect that measures the name and Draw, `setDraw((was) => (large ? null : kept(was, boxOf(key))));`, its comment ending `In the tabs' row it's off the board.`, deps `[size, large]`; it measures the name without waiting for Draw, which mounts after it on a large screen. Before `front`:
 
 ```tsx
 // The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. The tickets
@@ -1703,8 +1687,8 @@ const drawKeyGroup = (
   <>
     <span
       ref={drawSlot}
-      className={`board-draw ${firstVisit ? "is-fresh" : ""} ${lead && turned ? "is-away" : ""}`}
-      inert={Boolean(lead) && turned}
+      className={`board-draw ${firstVisit ? "is-fresh" : ""} ${large && turned ? "is-away" : ""}`}
+      inert={large && turned}
     >
       <Key
         size="compact"
@@ -1731,9 +1715,9 @@ const drawKeyGroup = (
 );
 ```
 
-The Key and its tickets are main's as they stand (if Phase 0 changed them, keep Phase 0's). In `front`, the Draw span, its comment and the nudge give way to `{lead ? createPortal(drawKeyGroup, lead) : drawKeyGroup}`, before `{drawKey.overBoard}`.
+The Key and its tickets are main's as they stand (if Phase 0 changed them, keep Phase 0's). In `front`, the Draw span, its comment and the nudge give way to `<TabsLead>{drawKeyGroup}</TabsLead>`, before `{drawKey.overBoard}`.
 
-- [ ] **Step 4: `ArtistBoard.tsx`,** the same for Give: `createPortal`, `useTabsLead`, `setGive((was) => (lead ? null : kept(was, boxOf(key))))` with `[size, lead]`, and:
+- [ ] **Step 4: `ArtistBoard.tsx`,** the same for Give: `TabsLead`, `useLargeScreen`, `setGive((was) => (large ? null : kept(was, boxOf(key))))` with `[size, large]`, and:
 
 ```tsx
 // Give takes Draw's slot as the board's one key; on a large screen it stands in the tabs' row, where
@@ -1741,8 +1725,8 @@ The Key and its tickets are main's as they stand (if Phase 0 changed them, keep 
 const giveKeyGroup = (
   <span
     ref={giveSlot}
-    className={`board-draw ${lead && turned ? "is-away" : ""}`}
-    inert={Boolean(lead) && turned}
+    className={`board-draw ${large && turned ? "is-away" : ""}`}
+    inert={large && turned}
   >
     <Key
       size="compact"
@@ -1760,7 +1744,7 @@ const giveKeyGroup = (
 );
 ```
 
-In `front`, `{lead ? createPortal(giveKeyGroup, lead) : giveKeyGroup}` replaces the Give span and its comment.
+In `front`, `<TabsLead>{giveKeyGroup}</TabsLead>` replaces the Give span and its comment.
 
 - [ ] **Step 5: `StickerBoard.css`,** at its end:
 
@@ -2001,18 +1985,19 @@ git show 810cc081 -- apps/frontend/src/sticker-board/tray
 git diff HEAD spike/ipad-board -- apps/frontend/src/sticker-board/tray
 ```
 
-The last shows what's left between this branch and the draft's tray. Apply every hunk in the list below and leave the rest: hunks Phase 0 wrote its own way for phones keep Phase 0's, and 911d56e4's folder-tab radius isn't this plan's.
+The last shows what's left between this branch and the draft's tray. Phase 0 kept main's phone structure (`TOP`, `ui.shrink`, `--shrink`, `MIN_SHRINK`, `fitStack`), since on a phone the stack only shrinks; this task brings the draft's names with the stack's growth. Apply every hunk in the list below and leave the rest: hunks Phase 0 wrote its own way for phones keep Phase 0's behavior, and 911d56e4's folder-tab radius isn't this plan's.
 
-1. `trayModel.ts`: `MAX_SCALE` exported as `MAX_STACK_SCALE` (1.5), with its comment; `TrayFit.grow`; `trayFitFor(large, windowFoot)`'s `large` branch (`large && fills > 1 ? Math.min(fills, MAX_STACK_SCALE) : …`, `grow: large ? Math.max(1, scale) : 1`); `trayTop()` answering 80 on a large screen.
-2. `trayEngine.ts`: `const large = win.matchMedia(LARGE_SCREEN)` passed to `trayFitFor`, its `change` listener and its removal in `destroy`; `colLeft = () => Wb() - COL * ui.fit.grow`; in `fitTray`, the `grow` branch (a pulled-out sheet goes home at once, `--tray-col`) and `zip.reshape({ chainAt: COL * fit.grow - 15, maxGap: GMAX * fit.grow, stopShort })`; in `onFrame`, `open` over `GMAX * grow` and `bx = lerp(-58 * grow, …)`.
-3. `zipper.ts`: `reshape` takes `chainAt` and `maxGap` too, and `o` is the zipper's own copy.
-4. `traySheets.ts`: `stackInset()` with `grow` (`SHEET.w * (grow - scale) / 2`), and `stackHome()`.
-5. `trayPresses.ts`: `liftOf`; the pulled-out sheet at `grow` (its `--scale`, `pulledAt` × grow, `pulledSize()` in `releasePull` and `settlePulled`, `full = ui.fit.grow` in `movePull`).
-6. `trayPeel.ts`: `rectOfFit`'s `k` (the stack's scale on the stack, `grow` pulled out); `slotHome` through `stackHome()`.
-7. `traySpread.ts`: `spreadCells(n, W, H, grow)`; `closeSpread` home at `stackHome()`.
-8. `trayPaging.ts`: the page drop by `ui.fit.scale`.
-9. `sticker-tray.css`: the large-screen block below.
-10. Whatever of 44e77a72's every-screen parts Phase 0 didn't bring (Task 0's list): `stopShort`, `openWindow(short)`'s `slider`, `pouchFoot` in the engine, `StickerTray.tsx`'s handle and `useBoardGestures.ts`'s `stow` (09cfc89e's `foot` line).
+1. `trayModel.ts`, the draft's names: `TOP` becomes `trayTop()`, 72 or 80 on a large screen; `TrayFit` (`scale`, `grow`, `stopShort`), `PHONE_FIT` and `trayFitFor(large, windowFoot)` take over `fitStack`'s math, `MIN_SHRINK` as `MIN_SCALE` and `POUCH_LINING` moving in from the engine, with the `large` branch (`large && fills > 1 ? Math.min(fills, MAX_STACK_SCALE) : …`, `grow: large ? Math.max(1, scale) : 1`); `MAX_STACK_SCALE` (1.5) exported, with the draft's `MAX_SCALE` comment; `TrayState.shrink` becomes `fit: TrayFit`.
+2. `trayEngine.ts`: `fitStack`, run from `onFrame`, gives way to the draft's `fitTray()`, run at the start, on a `ResizeObserver` of the board and on `large`'s `change` (`const large = win.matchMedia(LARGE_SCREEN)`; the observer and the listener go in `destroy`). It reads `trayFitFor(large.matches, (short) => zip.openWindow(short)?.bot ?? null)` into `ui.fit`; on a change it sends a pulled-out sheet home at once and sets `--tray-col` when `grow` moved, calls `zip.reshape({ chainAt: COL * fit.grow - 15, maxGap: GMAX * fit.grow, stopShort })`, sets `--scale` on the stack, re-renders the stack and redraws the frame; then `openFoot = trayTop() + slider`. `colLeft = () => Wb() - COL * ui.fit.grow`; in `onFrame`, `open` over `GMAX * grow` and `bx = lerp(-58 * grow, …)`.
+3. `zipper.ts`: `reshape` takes `chainAt` and `maxGap` beside Phase 0's `stopShort`.
+4. `traySheets.ts`: `shrunkInset()` becomes `stackInset()` with `grow` (`SHEET.w * (grow - scale) / 2`), and `stackHome()`.
+5. The rest of the renames: every other `ui.shrink` reads `ui.fit.scale`, `sticker-tray.css`'s `--shrink` becomes `--scale`, and every `TOP` `trayTop()` (`trayPeel.ts`, `trayPresses.ts`, `traySpread.ts`, `trayBoardDrop.ts`, `trayPaging.ts`, the test). `rg -n '\bTOP\b|ui\.shrink|--shrink|shrunkInset|MIN_SHRINK' apps/frontend/src/sticker-board/tray` → nothing.
+6. `trayPresses.ts`: `liftOf`; the pulled-out sheet at `grow` (its `--scale`, `pulledAt` × grow, `pulledSize()` in `releasePull` and `settlePulled`, `full = ui.fit.grow` in `movePull`).
+7. `trayPeel.ts`: `rectOfFit`'s `k` (the stack's scale on the stack, `grow` pulled out); `slotHome` through `stackHome()`.
+8. `traySpread.ts`: `spreadCells(n, W, H, grow)`; `closeSpread` home at `stackHome()`.
+9. `trayPaging.ts`: the page drop by `ui.fit.scale`.
+10. `sticker-tray.css`: the large-screen block below.
+11. Whatever of 44e77a72's every-screen parts Phase 0 didn't bring (Task 0's list): `stopShort`, `openWindow(short)`'s `slider`, `pouchFoot` in the engine, `StickerTray.tsx`'s handle and `useBoardGestures.ts`'s `stow` (09cfc89e's `foot` line).
 
 **Files:** the tray files above, `StickerTray.test.tsx`.
 
@@ -2028,7 +2013,7 @@ const media = (motion: MediaQueryList, large = false) => {
 };
 ```
 
-`holdAnimations`' `vi.spyOn(window, "matchMedia").mockReturnValue(motion);` becomes `media(motion);`, and `beforeEach`'s becomes `media(window.matchMedia("all"));`. In `describe("on a board of this height")`, `openOn` measures the column from `trayTop()`, and if Phase 0 didn't bring the draft's `openStack`, add it after `numbersIn`:
+`holdAnimations`' `vi.spyOn(window, "matchMedia").mockReturnValue(motion);` becomes `media(motion);`, and `beforeEach`'s becomes `media(window.matchMedia("all"));`. `trayTop` takes `TOP`'s place in the `./trayModel` import, and `openOn` and Phase 0's tests measure the column from `trayTop()`. In `describe("on a board of this height")`, add the draft's `openStack` after `numbersIn`:
 
 ```ts
 /**
@@ -2070,7 +2055,7 @@ it("keeps a short large screen's stack about the phone's size", async () => {
 });
 ```
 
-- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm --filter frontend exec vitest run src/sticker-board/tray` → the three new tests FAIL (no growth on a large screen); the rest pass.
+- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm --filter frontend exec vitest run src/sticker-board/tray` → FAIL: `trayModel.ts` has no `trayTop` or `MAX_STACK_SCALE` yet.
 - [ ] **Step 3:** Apply the list. `sticker-tray.css`, at its end:
 
 ```css
@@ -2089,7 +2074,7 @@ it("keeps a short large screen's stack about the phone's size", async () => {
 }
 ```
 
-- [ ] **Step 4:** Step 2's command → PASS. `TZ=Asia/Tokyo pnpm --filter frontend exec vitest run src/sticker-board` and `pnpm --filter frontend typecheck` → pass.
+- [ ] **Step 4:** Step 2's command → PASS, Phase 0's phone tests unchanged but for `trayTop()`. Red check: `trayFitFor` without its `large` branch (`clamp(fills, MIN_SCALE, 1)` alone) fails the three new tests; put it back. `TZ=Asia/Tokyo pnpm --filter frontend exec vitest run src/sticker-board` and `pnpm --filter frontend typecheck` → pass.
 - [ ] **Step 5: Commit.** `git add apps/frontend/src && git commit -m "feat(frontend): on a large screen the tray's sheets grow up to 1.5x to fill its pouch, and it starts under the header row"`
 
 ### Task 10: The stat board on a large screen
@@ -2154,7 +2139,7 @@ Judge the captures through `/impeccable adapt`, after reading DESIGN.md. Restart
   - **The board:** bob sees her large layout at large sizes and her phone's at 390×844, sticker for sticker. No `.placed-sticker` box leaves the board.
   - **Turning:** 820×1094 to 1180×734 (`setViewportSize`): each sticker's center keeps its share of the field within 0.5%, and its size within 0.5px.
   - **A new sticker:** alice seals one at 390×844 (Draw, a stroke, the seal check twice about 700ms apart); `GET` shows it on the board in both layouts, and at 820×1094 it's on her board.
-  - **The tab row:** `.tabs-lead .board-draw` holds Draw (Give on bob's view), its center level with the tabs' within 4px; Draw's first-sticker nudge shows above it for a new person (`?as=board-fresh`). On bob's view there's no `.explore-chip`, and the lit Explore tab leads back to Explore.
+  - **The tab row:** `.tabs-lead .board-draw` holds Draw (Give on bob's view), its center level with the tabs' within 4px, and at 600×800 Draw with its tickets ends left of the first tab; Draw's first-sticker nudge shows above it for a new person (`?as=board-fresh`). On bob's view there's no `.explore-chip`, and the lit Explore tab leads back to Explore.
   - **The header:** with a gift waiting for alice and one of hers on its way, her name and both badges share one row: their tops within 4px, the badges side by side at one height, clear of the zipper's rail. At 744×1047 with a long name (`?as=board-a-very-long-line-name`), the name gives way and the badges stay whole.
   - **The knob:** select the sticker nearest her name; where its knob would sit under the name, it hangs below the sticker.
   - **The tray:** open it (`page.touchscreen.tap` on `.zip__tab--front`). The rail runs from 80px to the board's foot; the stack's scale is above 1 where the board is tall and at most 1.5; the open mouth ends under the stack's foot with less lining than `STACK_FOOT`; `.tray__new` is its 390×844 size. Peel a sticker onto the board, pull a sheet out (its X at its phone size), and drag a board sticker to the Zipper: each works as on a phone.
@@ -2173,15 +2158,15 @@ Judge the captures through `/impeccable adapt`, after reading DESIGN.md. Restart
   - **Sticker tray,** after **The sheets:**'s sentence on a short phone: "On a large screen the rail runs the board's height from under the header row, 80px down, and the stack grows up to 1.5× to fill the pouch, its column and the mouth's travel growing with it; its NEW dots and a pulled-out sheet's X keep their size."
   - **The stat board,** a bullet after **Controls:**: "**On a large screen:** the papers in the phone's order as one centered cluster: the receipt over Bests over the SINCE tape, the leaf over the stamps, then the address paper. Your own puts Settings under the cluster, centered, no wider than 460px. Flip back stays at the top left; turned, it rides over the cork's corner. The stat papers are pinned a size up as far as the cluster fits; controls keep their phone size."
 - [ ] **Step 3: PRODUCT.md,** in **The sticker board** bullet, after its first sentence: "On an iPad the board has a layout of its own: the first time, your phone's arrangement at the same size; from then on, arranging one leaves the other as it was. Visitors see the layout for their own screen."
-- [ ] **Step 4:** If ad0ll has approved decision 11, add "Large layout" to AGENTS.md's vocabulary in their words.
-- [ ] **Step 5: Commit.** `git add DESIGN.md PRODUCT.md AGENTS.md && git commit -m "docs: the large layout, the iPad board's header and tray, and the stat board's cluster"`
+- [ ] **Step 4: AGENTS.MD's vocabulary** (decision 11), one row after Sticker Board's: `| Large layout | A sticker board's arrangement on large screens, stored beside the phone's: derived from it the first time it's shown, then edited on its own. Each layout keeps its own stickers on or off. |`
+- [ ] **Step 5: Commit.** `git add DESIGN.md PRODUCT.md AGENTS.MD && git commit -m "docs: the large layout, the iPad board's header and tray, and the stat board's cluster"`
 
 ### Task 13: Check and merge
 
 - [ ] **Step 1:** `TZ=Asia/Tokyo pnpm check:full` → lint, typecheck, tests, the format check, the Move tests, the build and knip's report pass. `pnpm --filter frontend test:e2e` (the phone's core loop) passes.
 - [ ] **Step 2:** Squash the branch into `feat: the iPad board keeps a large layout of its own beside the phone's, with its tray and stat board` and the docs commit, with no AI attribution lines.
 - [ ] **Step 3:** In the main checkout, in one command: fetch, fast-forward main, merge the branch, push. A conflicting migration number means rebasing, deleting this branch's migration and generating it again (Task 1, Step 4).
-- [ ] **Step 4:** Delete the worktree, the branch, `data/scratch/board-and-stat-board/` and `apps/frontend/vite.board.config.ts`, and this plan in a `docs:` commit; the brief stays for the plans still open. Report the decisions still **Open** to ad0ll, and the tuned values.
+- [ ] **Step 4:** Delete the worktree, the branch, `data/scratch/board-and-stat-board/` and `apps/frontend/vite.board.config.ts`, and this plan in a `docs:` commit; the brief stays for the plans still open. Report the tuned values to ad0ll.
 
 ## Self-review
 
@@ -2199,6 +2184,6 @@ Judge the captures through `/impeccable adapt`, after reading DESIGN.md. Restart
   - The stat board in the phone's order, one centered cluster, Settings under it, Flip back at the top left: Task 10 (Flip back's phone place is Phase 0's). Gratitude events as a centered card: `2026-10-08-ipad-shop-and-cards.md`'s Task 5, checked in Task 11.
   - Phones unchanged: Task 0's baseline against Task 11 Step 1, and the e2e core loop.
 - **Placeholders:** none. Code for main's own parts that move (Draw's and Give's keys, the name and gifts, the Explore chip) is main's as it stands today; where Phase 0 changed one, its version moves instead. Ports name their commits, the hunks to take and the hunks to leave.
-- **Names, as defined and used:** db `largeOnBoard`…`largeZ`; API `placementsRequestSchema`/`PlacementsRequest`, `largeLayoutRequestSchema`/`LargeLayoutEntry`, `MAX_LARGE_LAYOUT_BATCH`, `largeColumns`, `savePlacements`, `neverReached`, `saveDerivedLargeLayout`, `LARGE_SPOT`; client `saveStickerPlacement(stickerId, spots)`, `saveLargeLayout(entries)`, `toApiSpots`; board `BoardLayout`, `BOARD_LAYOUTS`, `Spots`, `spotsIn`, `layoutsIn`, `PHONE_BOARD`, `BoardSize`, `unitOf`, `useBoardLayout`, `boardLayoutNow`, `useBoardSize(ref, layout)`, `Placements`, `PlacedBoardSticker`, `UnplacedBoardSticker`, `GivenSpots`, `hasLargeLayout`, `movedIn`, `placeUnplaced`, `shownIn`, `largeSpotFrom`, `LargeSpot`, `deriveLargeLayout`, `laidOutForVisitor`, `saveDerivedLayout`; tray `MAX_STACK_SCALE`; tests `onLargeScreen`, `onAnIpad`, `boardServer`, `show`.
+- **Names, as defined and used:** db `largeOnBoard`…`largeZ`; API `placementsRequestSchema`/`PlacementsRequest`, `largeLayoutRequestSchema`/`LargeLayoutEntry`, `MAX_LARGE_LAYOUT_BATCH`, `largeColumns`, `savePlacements`, `neverReached`, `saveDerivedLargeLayout`, `LARGE_SPOT`; client `saveStickerPlacement(stickerId, spots)`, `saveLargeLayout(entries)`, `toApiSpots`; board `BoardLayout`, `BOARD_LAYOUTS`, `Spots`, `spotsIn`, `layoutsIn`, `PHONE_BOARD`, `BoardSize`, `unitOf`, `useBoardLayout`, `boardLayoutNow`, `useBoardSize(ref, layout)`, `Placements`, `PlacedBoardSticker`, `UnplacedBoardSticker`, `GivenSpots`, `hasLargeLayout`, `movedIn`, `placeUnplaced`, `shownIn`, `largeSpotFrom`, `LargeSpot`, `deriveLargeLayout`, `laidOutForVisitor`, `saveDerivedLayout`; tray `MAX_STACK_SCALE`, `TrayFit`, `trayFitFor`, `trayTop`, `fitTray`, `--scale`; lead `TabsLead`, `TabsLeadSlot`; tests `onLargeScreen`, `onAnIpad`, `boardServer`, `show`.
 - **Risks:** Phase 0's and foundations' names (Task 0 checks them first); Phase 0's tray port, which decides how much of Task 9's list is left; a migration number taken on main meanwhile (Task 13, Step 3).
 - **Not in this plan:** a sticker held mid-drag while the iPad turns keeps the draft's behavior (it moves by the finger's travel in px from where it started) and settles on the turned board when let go.
