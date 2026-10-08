@@ -1,6 +1,6 @@
 # Deployment
 
-One box serves the app behind HAProxy at `DEPLOY_URL`: `/api/` goes to the REST API, `/v1/auth/` and `/.well-known/jwks.json` to the LINE → Privy auth server, and everything else to the web app. Run the scripts from the repository root.
+One box serves the app behind HAProxy, with Fastly in front of it at `DEPLOY_URL` (CDN, below): `/api/` goes to the REST API, `/v1/auth/` and `/.well-known/jwks.json` to the LINE → Privy auth server, and everything else to the web app. Run the scripts from the repository root.
 
 ## Settings
 
@@ -17,26 +17,25 @@ One box serves the app behind HAProxy at `DEPLOY_URL`: `/api/` goes to the REST 
 Publishes everything, in order:
 
 1. `deploy-api.sh --preflight-only` checks the stickers package's IDs in `drawing-api.env` and the chain settings in `deploy/.env`.
-2. Builds the frontend, with the developer slip on and its hashed files on `CDN_ORIGIN` when set, and the auth server.
+2. Builds the frontend, with the developer slip on, and the auth server.
 3. `deploy-api.sh` publishes the API (below).
 4. `install-node.sh` puts the pinned Node on the box for the auth server.
 5. Syncs the site and the auth server, makes the signing key if it's missing, and restarts `sticker-board` and `sticker-auth` when their files changed.
-6. Checks that the box and `DEPLOY_URL` serve the build and the auth server's JWKS, and that `CDN_ORIGIN`, when set, serves the build's entry script with its CORS header; then fills both of the CDN's build shields (below).
+6. Checks that the box serves the build, purges the page Fastly keeps (CDN, below), then checks that `DEPLOY_URL` serves the build and both serve the auth server's JWKS.
 
 ## CDN
 
-With `CDN_ORIGIN` set in `deploy/.env`, the build's hashed files, under `/assets/`, load from Fastly in front of the box, from edges near the people using the app; the box is far from Japan. `deploy.sh` passes it to the build (`apps/frontend/vite.config.ts`), then checks Fastly serves the entry script with its CORS header. Set it empty and deploy again to load everything from the box.
+Fastly serves all of stickeroo.art. People connect to the Fastly location nearest them, which answers the build's files, the public sticker images and the page from its cache and passes the rest to the box, so the app loads everything from its own origin.
 
-The sticker images load from it too once `CDN_BASE_URL` in `drawing-api.env` is Fastly's `/api/images`, with the API deployed and Display's image host moved to it (`publish-sui.mjs --set-image-host`). An NSFW sticker's drawing still loads from `IMAGE_BASE_URL`, the box's own, which checks the session cookie for it and marks it private, so no CDN keeps a copy.
-
-Everything else stays on the box: index.html, which LIFF opens there, the public folder's files, which LINE fetches by their fixed paths, and the API and the auth server, since the session cookie goes only to the box.
-
-- Scripts, fonts and the sticker images the app reads on canvases and as CSS masks load from another origin only with CORS, so `serve.py` sends `Access-Control-Allow-Origin: *` with every hashed file, and the API with every public sticker image, and Fastly keeps it in its copies. Deploy them before setting `CDN_ORIGIN` or `CDN_BASE_URL`, so no copy is made without it.
-- The sealing worker's script must come from the page's own origin, so it starts through a module of the page's own that imports the CDN's copy (`apps/frontend/src/ui/startWorker.ts`). Where the CDN's copy won't load, the cut runs on the main thread.
-- Fastly's service "Croquis's website" (`nKXNm4mB3I2iYnrEbsobML`) answers at `stickeroo.freetls.fastly.net`, Fastly's HTTP/2 name for the service's `stickeroo.global.ssl.fastly.net` domain, which speaks only HTTP/1.1 but must stay on the service for the other to answer, with three backends, all the box at `stickeroo.art` over HTTPS. `/assets/` goes to `box`, shielded in Tokyo (`nrt-tokyo-jp`), from POPs whose `server.region` is APAC, Asia or Asia-South, and to `box-us`, shielded in Chicago (`chi-il-us`), from everywhere else. `deploy.sh` requests every hashed file through both shields after each deploy, naming each in an `X-Croquis-Fill` header, so a first visit in Japan or the US is a cache hit at the shield nearby; the `croquis-hash` snippet gives a fill its own cache key at the POP it enters by, so it reaches its shield even when that POP holds the file. `box-images` takes `/api/images/` and is shielded in Frankfurt (`frankfurt-de`), near the box: a sticker image is new when it's first opened, and Frankfurt fetches it from the box faster than Tokyo or Chicago can. Misses stream as they arrive. Its `croquis-recv` VCL snippet passes only GET and HEAD for `/assets/` and `/api/images/`, with no cookie or query string, and answers everything else 404; `croquis-fetch` streams misses, keeps errors only briefly, and keeps no copy of a fill at the POP it entered by. A new version takes a minute or two to reach every POP. Fastly can evict a file nobody requests long before its TTL, and a shield then fetches it from the box again, which from Tokyo is slower than a shield beside the box would be, so deploy shortly before a demo to refill both shields. It caches by the box's `Cache-Control`. `FASTLY_API_TOKEN` in `deploy/.env` manages it through Fastly's API.
+- The service is "Croquis's website" (`nKXNm4mB3I2iYnrEbsobML`), with stickeroo.art and www.stickeroo.art on a Fastly-managed Let's Encrypt certificate in the TLS configuration "HTTP/3 & TLS v1.3", the one without 0-RTT, which can replay a request. At Namecheap, stickeroo.art has that configuration's A and AAAA records and www its CNAME; the `_acme-challenge` CNAMEs stay for Fastly's renewals.
+- Its backend is the box as `origin.stickeroo.art`, an A record with its own certificate from acme.sh in HAProxy, sent Host stickeroo.art so the box's usual routes apply, through one shield in Frankfurt (`frankfurt-de`) beside the box, as Fastly recommends.
+- `croquis-recv`: URL purges need the API key and skip the rest; then the cap's pause (below); www redirects to stickeroo.art; build files drop cookies and queries; `/api/` and `/v1/`, the API, sign-in and the server log but not `/api/images/`, are passed, never cached, through the Frankfurt shield, which keeps connections to the box open where a far location rarely has one. HTTP/3 is offered.
+- `croquis-hash`: every app route (`/`, `/g/…`, `/draw`, `/explore`) shares one cache entry, so no gift claim token or LIFF query becomes a cache key.
+- `croquis-fetch`: build files and public sticker images keep the year their `Cache-Control` gives; an 18+ drawing is private, which Fastly passes, and no image error is kept; the page and the public folder's files are kept 5 minutes under surrogate key `page`, which `deploy.sh` purges after each deploy; other errors are kept 10 seconds. Each time is also set in `Surrogate-Control`, since Fastly keeps anything without a max-age for an hour.
+- `croquis-pass`: a passed request waits up to 130 seconds for the box, since receiving a gift waits on Sui; Fastly's default is 15. `croquis-error` answers the cap's pause (607) and the www redirect (601).
 - The CDN cap keeps Fastly free. Every `CDN_CAP_EVERY_MS` the API (`apps/api/src/cdn/cdnCap.ts`) adds up the service's requests and bytes since the month began, in UTC as Fastly bills, from Fastly's hourly stats, which trail by a few minutes. At `CDN_WARN_SHARE` of the free allowance it tells the operator (`OPERATOR_LINE_USER_ID`) in LINE, once a month. At `CDN_PAUSE_SHARE` it sets `cap`, in the service's `croquis_cdn` edge dictionary, to the month, such as `2026-10`, and Fastly answers every request with `croquis-error`'s 503 page, "paused until next month", in Japanese and English; once a later month starts, the API sets `cap` back to `serve`. `keep` serves past the allowance, and Fastly bills; `stop` pauses by hand; the API changes neither: `curl -X PUT -H "Fastly-Key: $FASTLY_API_TOKEN" https://api.fastly.com/service/nKXNm4mB3I2iYnrEbsobML/dictionary/i2D4jijJ2M9v9JlGENCYW3/item/cap -d item_value=keep`. A paused request still counts as a request. The API logs `cdn.cap.checked` with the month's usage at boot, then `cdn.cap.warned`, `cdn.cap.paused`, `cdn.cap.lifted`, `cdn.cap.warn_failed` and `cdn.cap.check_failed`. It counts this service alone.
 - Fastly's spend alert (Account > Billing > Spend alerts in its control panel) emails the account's superusers when a month's charges reach 80% and 100% of the amount set there; Fastly checks once a day.
-- A copy cached without the CORS header breaks the app until it expires, a year on. Clear it with `curl -X POST -H "Fastly-Key: $FASTLY_API_TOKEN" https://api.fastly.com/service/nKXNm4mB3I2iYnrEbsobML/purge_all`, then deploy again a few minutes later so both build shields hold the build again.
+- `curl -X POST -H "Fastly-Key: $FASTLY_API_TOKEN" https://api.fastly.com/service/nKXNm4mB3I2iYnrEbsobML/purge/page` clears the cached page; `…/purge_all` clears everything. A new version takes a minute or two to reach every location, and a request sent with `Fastly-Debug: 1` gets `Fastly-Debug-Path`, the locations it went through.
 
 ## `./deploy/deploy-api.sh`
 
@@ -65,7 +64,7 @@ node deploy/publish-sui.mjs --image-host <the API's public image URL>
 node deploy/publish-sui.mjs --image-host <the API's public image URL> --publish
 ```
 
-`--image-host` is the https host that Display joins each sticker's image file name to: the API's `CDN_BASE_URL`, or its `IMAGE_BASE_URL` without a CDN. Display names only public images, an NSFW sticker's veiled one included. With `--publish` it sends two transactions, because a transaction can't call the package it publishes: the publish, then `set_server` and `create_display`, which sends the `DisplayCap` to the deployer. When the second fails, the package is published but unusable by the API; run again for a fresh one.
+`--image-host` is the https host that Display joins each sticker's image file name to: the API's `IMAGE_BASE_URL`. Display names only public images, an NSFW sticker's veiled one included. With `--publish` it sends two transactions, because a transaction can't call the package it publishes: the publish, then `set_server` and `create_display`, which sends the `DisplayCap` to the deployer. When the second fails, the package is published but unusable by the API; run again for a fresh one.
 
 It prints the package's IDs as `KEY=value` lines: `SUI_STICKER_PACKAGE`, `SUI_STICKER_REGISTRY`, `SUI_SERVER_CONFIG` and `SUI_GIFT_ESCROW`. Paste them into `deploy/drawing-api.env` and `apps/api/.env.example`, then run `./deploy/deploy.sh`.
 

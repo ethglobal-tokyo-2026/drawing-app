@@ -14,12 +14,10 @@ URL="${DEPLOY_URL:-https://stickeroo.art}"
 DIST="$ROOT/apps/frontend/dist"
 AUTH_BUILD="$ROOT/packages/line-auth/dist/auth-server"
 KEY_ID="$(sed -n 's/^AUTH_KEY_ID=//p' "$ROOT/deploy/sticker-auth.env")"
+FASTLY_SERVICE_ID="$(sed -n 's/^FASTLY_SERVICE_ID=//p' "$ROOT/deploy/drawing-api.env")"
 # The checks on the box retry: a server that just restarted refuses connections until it has started.
 BOX_CURL="curl --retry 10 --retry-connrefused --retry-delay 1 --max-time 5"
 
-# The CDN in front of the box, which the build loads its hashed files from (deploy/README.md); unset, they come from
-# the box.
-export CDN_ORIGIN="${CDN_ORIGIN:-}"
 "$ROOT/deploy/deploy-api.sh" --preflight-only
 
 # The live app shows the stat board's developer slip, so its test tools (the gratitude mini-game,
@@ -62,33 +60,16 @@ if [ -n "$auth_changed" ]; then install_and_restart_unit sticker-auth "$AUTH_DIR
 ssh "$TARGET" "$BOX_CURL -fsS http://127.0.0.1:3003/" | cmp -s - "$DIST/index.html" \
   || { echo "✗ the server on the box doesn't serve the build" >&2; exit 1; }
 echo "✓ 127.0.0.1:3003 on the box"
+# Fastly keeps the page a few minutes at each location (deploy/README.md's CDN): the new one replaces it now.
+if [ -n "${FASTLY_API_TOKEN:-}" ]; then
+  curl -fsS --max-time 30 -X POST -H "Fastly-Key: $FASTLY_API_TOKEN" \
+    "https://api.fastly.com/service/$FASTLY_SERVICE_ID/purge/page" > /dev/null \
+    || { echo "✗ Fastly didn't purge the cached page; see deploy/README.md's CDN" >&2; exit 1; }
+  sleep 2
+  echo "✓ purged the cached page from Fastly"
+fi
 curl -fsS --max-time 15 "$URL/" | cmp -s - "$DIST/index.html" || { echo "✗ $URL/ doesn't match the build" >&2; exit 1; }
 echo "✓ $URL/"
-if [ -n "$CDN_ORIGIN" ]; then
-  # The entry script through the CDN, asked for as the app's page asks: the build's own bytes, with the CORS header a
-  # module script from another origin needs, or the app doesn't start.
-  entry="$(grep -o "$CDN_ORIGIN/assets/index-[A-Za-z0-9_-]*\.js" "$DIST/index.html" | head -1 || true)"
-  [ -n "$entry" ] || { echo "✗ index.html doesn't load its entry script from $CDN_ORIGIN" >&2; exit 1; }
-  got="$(mktemp -d)"
-  if ! { curl -fsS --max-time 15 -H "Origin: $URL" -D "$got/headers" -o "$got/body" "$entry" \
-    && cmp -s "$got/body" "$DIST/assets/${entry##*/}" \
-    && grep -qi '^access-control-allow-origin: \*' "$got/headers"; }; then
-    rm -rf "$got"
-    echo "✗ $CDN_ORIGIN doesn't serve the build's entry script with CORS ($entry); see deploy/README.md's CDN" >&2
-    exit 1
-  fi
-  rm -rf "$got"
-  echo "✓ $CDN_ORIGIN"
-  # Every hashed file through both of the CDN's shields for the build, Tokyo's and Chicago's, so a first visit in Japan or
-  # the US is a cache hit nearby. X-Croquis-Fill names the shield and skips the cache of the POP the fill enters by.
-  hashed="$(ls "$DIST/assets" | wc -l | tr -d ' ')"
-  for shield in tokyo:Tokyo us:Chicago; do
-    filled="$(cd "$DIST/assets" && ls | xargs -P 8 -I{} curl -fsS -o /dev/null --compressed --max-time 30 \
-      -H "X-Croquis-Fill: ${shield%%:*}" -w '%{http_code}\n' "$CDN_ORIGIN/assets/{}" | grep -c '^200$' || true)"
-    echo "✓ $filled of $hashed hashed files cached in the CDN's ${shield#*:} shield"
-  done
-fi
-
 # The auth server's JWKS must carry its key ID: serve.py answers unknown paths with the app, also with a 200.
 ssh "$TARGET" "$BOX_CURL -fsS http://127.0.0.1:8787/.well-known/jwks.json" | grep -q "\"kid\":\"$KEY_ID\"" \
   || { echo "✗ the auth server on the box doesn't serve its JWKS; see: journalctl -u sticker-auth" >&2; exit 1; }

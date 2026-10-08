@@ -3,7 +3,7 @@
 // names the REST API's server address in its ServerConfig and creates the stickers' Display, or later
 // points the Display at another image host. Without --publish it only simulates and sends nothing.
 //
-//   node deploy/publish-sui.mjs --image-host <the API's CDN_BASE_URL, or its IMAGE_BASE_URL> [--publish]
+//   node deploy/publish-sui.mjs --image-host <the API's IMAGE_BASE_URL> [--publish]
 //   node deploy/publish-sui.mjs --set-image-host <url> [--publish]
 //
 // Shinami Gas Station pays the gas when SHINAMI_ACCESS_KEY is set and it takes the transaction;
