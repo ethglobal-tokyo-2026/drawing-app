@@ -88,7 +88,7 @@ Each unit's file is `deploy/<unit>.service`, which the deploy scripts install in
 
 ## Domain
 
-- `stickeroo.art` is at Namecheap, on its own DNS: an A record for `@` to the box and a CNAME for `www`. Namecheap's API `setHosts` replaces every record at once, so a change sends both, with `EmailType=FWD`.
-- The box serves other sites through the same HAProxy, in `/etc/haproxy/haproxy.cfg`; Croquis's part routes `stickeroo.art` by host and redirects `www` to it.
-- acme.sh in `bawler`'s home issues the certificate, answering Let's Encrypt on port 8888 behind HAProxy's `/.well-known/acme-challenge/` route, and its `haproxy` deploy hook installs each renewal in `/etc/haproxy/certs/`.
+- `stickeroo.art` is at Namecheap, on its own DNS: `@` has the A and AAAA records of Fastly's TLS configuration, `www` a CNAME to Fastly, `origin` an A record to the box, and `_acme-challenge` and `_acme-challenge.www` CNAMEs to Fastly, which renews the site's certificate through them (CDN, above). Namecheap's API `setHosts` replaces every record at once, so a change sends them all, with `EmailType=FWD`.
+- The box serves other sites through the same HAProxy, in `/etc/haproxy/haproxy.cfg`; Croquis's part routes `stickeroo.art` by host, the Host Fastly sends; Fastly redirects `www`.
+- acme.sh in `bawler`'s home issues `origin.stickeroo.art`'s certificate, the one Fastly checks, answering Let's Encrypt on port 8888 behind HAProxy's `/.well-known/acme-challenge/` route, and its `haproxy` deploy hook installs each renewal in `/etc/haproxy/certs/`.
 - LINE opens the LIFF app's endpoint URL, set in the Login channel's LIFF tab, and Privy reads the auth server's keys from the JWKS URL in its dashboard; both name the domain.
