@@ -17,6 +17,7 @@ import { CaretLeft, CaretRight, GiveIcon, GratitudeIcon, StickerBoardIcon } from
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
+import { KyotoSeikaTag } from "../kyoto-seika/KyotoSeikaTag";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { useMyNsfwOptIn, veiledFor } from "../stickers/nsfw";
 import { StickerFigure } from "../stickers/StickerFigure";
@@ -187,7 +188,8 @@ export function StickerDetail({
     onClose,
   });
   const hasTimelapse = loaded?.hasTimelapse === true;
-  const timelapse = useTimelapse({ sticker, hasTimelapse, figure, reduced });
+  const kyotoSeika = Boolean(loaded?.sticker.kyotoSeikaSubjects);
+  const timelapse = useTimelapse({ sticker, hasTimelapse, figure, reduced, kyotoSeika });
   // The timelapse's layer goes first: the lift clones the figure and flies it back to the board.
   const close = () => {
     timelapse.stop();
@@ -300,6 +302,7 @@ export function StickerDetail({
                   height={sticker.height}
                   foil={byOther ? "detail" : undefined}
                   nsfw={sticker.nsfw}
+                  kyotoSeika={sticker.kyotoSeikaSubjects !== null}
                   veiled={veiledFor(sticker, optedIn)}
                   no={sticker.no}
                 />
@@ -382,6 +385,9 @@ export function StickerDetail({
                 </span>
                 <TimelapseButton timelapse={timelapse} />
               </p>
+              {sticker.kyotoSeikaSubjects && (
+                <KyotoSeikaTag subjects={sticker.kyotoSeikaSubjects} />
+              )}
               {/* The Transfer Trail says it too, once it's in. */}
               {mode === "given" && sticker.givenTo && trail.length === 0 && (
                 <p className="fine sticker-detail__fine-print">

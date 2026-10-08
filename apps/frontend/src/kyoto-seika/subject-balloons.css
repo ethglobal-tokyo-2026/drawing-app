@@ -1,0 +1,174 @@
+/* The two thought balloons over a fresh sheet in Kyoto Seika Manga Expression Practice Mode: bumps round
+   an ellipse in Canvas white with an Ink edge, beads trailing toward the thinker off the page, and a die
+   on each balloon's lower-right edge. Placed from the drawing screen's corner by their centers. */
+.subject-balloons {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.subject-balloon {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+/* Each balloon bobs on its own period, so the two never sync. */
+.subject-balloon__float {
+  position: absolute;
+  inset: 0;
+  animation: subject-bob var(--bob) ease-in-out infinite alternate;
+}
+
+.subject-balloons.is-still .subject-balloon__float {
+  animation-play-state: paused;
+}
+
+.subject-balloon__cloud,
+.subject-balloon__beads {
+  position: absolute;
+  inset: 0;
+}
+
+.subject-balloon svg {
+  position: absolute;
+  display: block;
+  overflow: visible;
+}
+
+/* The Lift shadow, as drop shadows, since the balloons float over the sheet. */
+.subject-balloon__cloud svg {
+  filter: drop-shadow(1px 3px 4px rgba(28, 24, 36, 0.12))
+    drop-shadow(3px 10px 22px rgba(28, 24, 36, 0.14));
+}
+
+.subject-balloon__beads svg {
+  filter: drop-shadow(1px 2px 2px rgba(28, 24, 36, 0.12));
+}
+
+.subject-balloon .shape-edge {
+  fill: var(--ink);
+}
+
+.subject-balloon .shape-fill {
+  fill: var(--canvas);
+}
+
+.subject-balloon__words {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--gap);
+  text-align: center;
+  color: var(--ink);
+}
+
+.subject-balloon__word {
+  font-family: var(--font-jp);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  font-feature-settings: "palt";
+}
+
+.subject-balloon__word rt {
+  padding-bottom: 3px;
+  font-size: var(--reading);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--graphite);
+}
+
+.subject-balloon__english {
+  font-family: var(--font-ui);
+  font-size: var(--english);
+  font-weight: 750;
+  line-height: 1.1;
+}
+
+/* A small label-stock die: a 32 px face over a 3 px lip, with a 44 px touch. */
+.subject-die {
+  position: absolute;
+  z-index: 33;
+  width: 32px;
+  height: 35px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  translate: -50% -50%;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.subject-die::before {
+  content: "";
+  position: absolute;
+  inset: -5px -6px -4px;
+}
+
+.subject-die__face {
+  position: absolute;
+  inset: 0 0 3px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--liner-lift);
+  box-shadow:
+    0 0 0 1px var(--rule-strong),
+    0 3px 0 var(--label-deep),
+    0 3px 0 1px var(--rule-strong),
+    1px 5px 6px rgba(28, 24, 36, 0.16);
+}
+
+.subject-die svg {
+  width: 21px;
+  height: 21px;
+  color: var(--ink);
+}
+
+.subject-die[aria-disabled="true"] {
+  cursor: default;
+}
+
+.subject-die.is-charred .subject-die__face {
+  background: var(--ink);
+  box-shadow:
+    0 0 0 1px var(--ink),
+    1px 4px 6px rgba(28, 24, 36, 0.25);
+}
+
+.subject-die.is-charred svg {
+  opacity: 0;
+}
+
+/* A puff of smoke from a rolled balloon. */
+.subject-puff {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: var(--canvas);
+  box-shadow: 0 0 0 1.5px var(--ink);
+  pointer-events: none;
+}
+
+@keyframes subject-bob {
+  from {
+    translate: 0 -3px;
+    rotate: -0.6deg;
+  }
+  to {
+    translate: 0 3px;
+    rotate: 0.6deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .subject-balloon__float {
+    animation: none;
+  }
+}

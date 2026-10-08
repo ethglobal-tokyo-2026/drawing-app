@@ -1,5 +1,12 @@
 import type { BoardSticker as ApiBoardSticker } from "@drawing-app/api/client";
-import { toMs, toPerson, toRecordPlacement, toSticker, type PersonView } from "../api/views";
+import {
+  toMs,
+  toPerson,
+  toRecordPlacement,
+  toSticker,
+  type PersonView,
+  type StickerView,
+} from "../api/views";
 import { formatHandle } from "../stickers/format";
 import type { StickerUrls } from "../stickers/stickerUrls";
 import { freeSpot, nextZ, type Placement } from "./placement";
@@ -20,6 +27,8 @@ export interface BoardSticker {
   placement: Placement;
   /** An NSFW sticker: pink foil, and blurred for anyone without the NSFW opt-in. */
   nsfw: boolean;
+  /** Drawn in Kyoto Seika Practice Mode: the pair it was drawn from; null on any other. */
+  kyotoSeikaSubjects: StickerView["kyotoSeikaSubjects"];
 }
 
 /** Who received a sticker you gave, and when, in milliseconds. */
@@ -64,6 +73,7 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
     outline: s.outline,
     urls: s.urls,
     nsfw: s.nsfw,
+    kyotoSeikaSubjects: s.kyotoSeikaSubjects,
     placement: b.placement && toRecordPlacement(b.placement),
     artist: s.artist,
     held: b.held,

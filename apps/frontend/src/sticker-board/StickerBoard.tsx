@@ -216,6 +216,7 @@ const viewOf = (s: BoardStickerView): StickerView => ({
   width: s.width,
   height: s.height,
   nsfw: s.nsfw,
+  kyotoSeikaSubjects: s.kyotoSeikaSubjects,
   outline: s.outline ?? "",
   urls: s.urls,
   sealedAt: s.createdAt,

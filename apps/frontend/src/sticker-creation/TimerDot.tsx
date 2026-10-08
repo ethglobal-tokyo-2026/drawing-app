@@ -12,6 +12,7 @@ import { useTranslation } from "../i18n/react";
 import { EASE_OUT } from "../ui/easing";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import type { Hold } from "./session/session";
+import { NUDGE, NUDGE_MS } from "./nudge";
 import type { SessionClock } from "./session/useSessionClock";
 import "./TimerDot.css";
 
@@ -19,14 +20,11 @@ import "./TimerDot.css";
 const HINT_MS = 2600;
 /** A time warning stays in its live region this long, then the region empties so no stale one is read later. */
 const WARNING_MS = 6000;
+/** A proctor's time call stays on the label this long: an unverified guess, to tune by feel. */
+const CALL_MS = 4000;
+/** "30:00" doesn't fit the dot's usual size, so it's wider while the clock reads this many seconds or more. */
+export const WIDE_FROM_SECONDS = 10 * 60;
 
-/** A stroke on a paused sheet: the dot turns toward the hint and back, on top of its tilt. */
-const NUDGE: Keyframe[] = [
-  { rotate: "0deg", scale: "1" },
-  { rotate: "-9deg", scale: "1.08", offset: 0.28 },
-  { rotate: "5deg", scale: "1.03", offset: 0.58 },
-  { rotate: "0deg", scale: "1" },
-];
 /** Each second of the last ten lands with a small pulse. */
 const TICK: Keyframe[] = [{ scale: "1.08" }, { scale: "1" }];
 
@@ -54,8 +52,10 @@ interface Props {
   clock: SessionClock;
   /** The person's own pause. */
   paused: boolean;
-  /** Said on the white label under the timer while there's no paused hint to show; null for none. */
+  /** Said on the white label under the timer while there's no paused hint or time call to show; null for none. */
   note: string | null;
+  /** What starts a waiting clock: the first stroke, or Begin on a sheet in Kyoto Seika Practice Mode. */
+  waitsFor: "stroke" | "begin";
   onToggle: () => void;
 }
 
@@ -65,7 +65,7 @@ interface Props {
  * page being hidden also lifts a corner, and the last ten seconds turn Tomato. A white label under it
  * points up at it: the paused hint, or the drawing screen's note.
  */
-export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
+export function TimerDot({ ref, clock, paused, note, waitsFor, onToggle }: Props) {
   const { t } = useTranslation();
   const view = useSyncExternalStore(clock.subscribe, clock.getView);
   const reduced = useReducedMotion();
@@ -75,9 +75,16 @@ export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
   const [hint, setHint] = useState(false);
   const describedBy = useId();
 
+  // A proctor's time call, in minutes, while it shows.
+  const [call, setCall] = useState<number | null>(null);
+
   // The hint only ever speaks to a paused sheet.
   if (hint && !paused) setHint(false);
-  const label = hint ? t(($) => $.stickerCreation.timer.note.tapToKeepDrawing) : note;
+  const label = hint
+    ? t(($) => $.stickerCreation.timer.note.tapToKeepDrawing)
+    : call !== null
+      ? t(($) => $.stickerCreation.timer.note.minutesLeft, { minutes: call })
+      : note;
   // The label keeps its words while it peels off.
   const [words, setWords] = useState(label);
   if (label && label !== words) setWords(label);
@@ -90,7 +97,7 @@ export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
         clearTimeout(hintTimer.current);
         hintTimer.current = setTimeout(() => setHint(false), HINT_MS);
         const el = dot.current;
-        if (el && !reduced) el.animate(NUDGE, { duration: 480, easing: EASE_OUT });
+        if (el && !reduced) el.animate(NUDGE, { duration: NUDGE_MS, easing: EASE_OUT });
       },
     }),
     [reduced],
@@ -98,18 +105,27 @@ export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
 
   useEffect(() => () => clearTimeout(hintTimer.current), []);
 
-  // The dot turns Tomato in the last ten seconds, which a screen reader never sees: it hears them.
+  // The dot turns Tomato in the last ten seconds, which a screen reader never sees: it hears them. A
+  // warning of a minute or more is a proctor's time call, which the label shows and reads out.
   const [warning, setWarning] = useState<number | null>(null);
   useEffect(() => {
-    let clear: ReturnType<typeof setTimeout> | undefined;
+    let clearWarning: ReturnType<typeof setTimeout> | undefined;
+    let clearCall: ReturnType<typeof setTimeout> | undefined;
     const stopListening = clock.onWarning((seconds) => {
+      if (seconds >= 60) {
+        setCall(seconds / 60);
+        clearTimeout(clearCall);
+        clearCall = setTimeout(() => setCall(null), CALL_MS);
+        return;
+      }
       setWarning(seconds);
-      clearTimeout(clear);
-      clear = setTimeout(() => setWarning(null), WARNING_MS);
+      clearTimeout(clearWarning);
+      clearWarning = setTimeout(() => setWarning(null), WARNING_MS);
     });
     return () => {
       stopListening();
-      clearTimeout(clear);
+      clearTimeout(clearWarning);
+      clearTimeout(clearCall);
     };
   }, [clock]);
 
@@ -119,9 +135,12 @@ export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
   }, [view.late, view.secondsLeft, reduced]);
 
   const time = clockText(view.secondsLeft);
-  const status = view.waiting ? "waiting" : view.held ? HELD_STATUS[view.held] : "running";
+  const waiting = waitsFor === "begin" ? "dealt" : "waiting";
+  const status = view.waiting ? waiting : view.held ? HELD_STATUS[view.held] : "running";
+  const wide = view.secondsLeft >= WIDE_FROM_SECONDS;
   const classes = [
     "timer-dot",
+    wide && "is-wide",
     view.held && "is-held",
     view.late && "is-late",
     view.lifted && "is-lifted",
@@ -159,7 +178,10 @@ export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
           {t(($) => $.stickerCreation.timer.status[status], { time })}
         </span>
       </button>
-      <div className={`timer-hint ${label ? "is-on" : ""}`} aria-hidden="true">
+      <div
+        className={`timer-hint ${label ? "is-on" : ""} ${wide ? "is-wide" : ""}`}
+        aria-hidden="true"
+      >
         <ArrowBendLeftUp className="timer-hint-arrow" size={28} />
         <span className="timer-hint-label">{words}</span>
       </div>

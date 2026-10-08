@@ -29,6 +29,8 @@ export interface TimelapsePlayerOptions {
   /** The sealed image's size, px: estimates the sticker's density when the timelapse has none. */
   image: { width: number; height: number };
   reduced: boolean;
+  /** A sticker drawn in Kyoto Seika Manga Expression Practice Mode, whose timelapse may play longer. */
+  kyotoSeika: boolean;
   frames?: FrameSource;
 }
 
@@ -60,7 +62,10 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
   const { canvas, frames = browserFrames } = options;
   const timelapse = decodeTimelapse(options.timelapse);
   const { place } = timelapse;
-  const schedule = scheduleTimelapse(timelapse.ops, { reduced: options.reduced });
+  const schedule = scheduleTimelapse(timelapse.ops, {
+    reduced: options.reduced,
+    kyotoSeika: options.kyotoSeika,
+  });
   // Turned on mid-play, fills appear whole but keep their beats, so the strokes' pace never jumps.
   let reduced = options.reduced;
   const display = displayCanvas(place, options.width, Math.min(devicePixelRatio || 1, MAX_DPR));

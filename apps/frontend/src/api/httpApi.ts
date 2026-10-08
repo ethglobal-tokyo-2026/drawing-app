@@ -160,6 +160,11 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, "POST /api/me/nsfw-opt-in");
       return (await response.json()).me;
     },
+    setKyotoSeikaPractice: async (change) => {
+      const response = await api.me["kyoto-seika-practice"].$post({ json: change });
+      if (!response.ok) throw await refusal(response, "POST /api/me/kyoto-seika-practice");
+      return (await response.json()).me;
+    },
 
     stickerBoard: async (userId = "me") => {
       const response = await boards[":userId"].$get({ param: { userId } });
@@ -212,6 +217,9 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
             rim: png(request.rim, "rim.png"),
             flat: png(request.flat, "flat.png"),
             nsfw: request.nsfw ? "true" : "false",
+            ...(request.kyotoSeikaSubjects && {
+              kyotoSeikaSubjects: JSON.stringify(request.kyotoSeikaSubjects),
+            }),
             ...(request.timelapse && {
               timelapse: new File([request.timelapse], "timelapse.json.gz", {
                 type: "application/gzip",

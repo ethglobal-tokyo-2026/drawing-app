@@ -2,10 +2,12 @@ import type {
   BoardSticker,
   Gift,
   Gratitude,
+  KyotoSeikaSubject,
   Person,
   Sticker,
   TransferTrailEntry,
 } from "@drawing-app/api/client";
+import { REUNION, WIND } from "../kyoto-seika/testSubjects";
 
 /** People, stickers and gifts for tests, in the API's shapes. All of it is made up. */
 
@@ -37,6 +39,15 @@ export const markupLikePerson: Person = {
   linePictureUrl: null,
   nsfwOptIn: false,
 };
+
+/** A Kyoto Seika Subject as a sticker keeps it: its list entry's word, reading and English. */
+const kept = ({ ja, reading, en }: KyotoSeikaSubject): KyotoSeikaSubject => ({ ja, reading, en });
+
+/** The Kyoto Seika Subjects of a sticker drawn in Kyoto Seika Practice Mode, from the test's first sitting. */
+export const TEST_KYOTO_SEIKA_SUBJECTS: [KyotoSeikaSubject, KyotoSeikaSubject] = [
+  kept(WIND),
+  kept(REUNION),
+];
 
 const ART_PX = 224;
 

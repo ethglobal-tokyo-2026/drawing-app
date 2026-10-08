@@ -2,6 +2,8 @@
 import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { personKey } from "../../ui/deviceStorage";
+import { CHARRED_AT_ROLL } from "../../kyoto-seika/dieMood";
+import { REUNION, WIND } from "../../kyoto-seika/testSubjects";
 import type { Op, Step } from "../canvas/ops";
 import {
   firstChanged,
@@ -126,7 +128,7 @@ describe("the drawing kept on this device", () => {
     before.keepNsfw(true);
     // After a reload whose read was too slow, the screen carries the ticket and sets its tools.
     const after = new SessionKeeper(userId);
-    after.carry(7);
+    after.carry(7, null);
     after.keepTools({ brushSize: 0.7, eraserSize: 0.2, smoothing: 55 });
     after.keepNsfw(false);
     expect(await loadKeptSession(userId)).toMatchObject({
@@ -163,7 +165,7 @@ describe("the drawing kept on this device", () => {
     const kept = await loading;
     if (kept.status !== "unread") throw new Error(`A slow read came back ${kept.status}`);
     // The drawing screen carries the ticket over to a fresh sheet while the read goes on.
-    new SessionKeeper(userId).carry(kept.ticket);
+    new SessionKeeper(userId).carry(kept.ticket, kept.kyotoSeika);
     release();
     vi.useRealTimers();
     expect(await kept.later).toMatchObject({ status: "found", steps: ops });
@@ -198,5 +200,48 @@ describe("the drawing kept on this device", () => {
     keeper.save([a, b, c], 4000);
     await vi.waitFor(() => expect(onKept).toHaveBeenLastCalledWith(true));
     expect(await keptSteps(userId)).toEqual([a, b, c]);
+  });
+
+  it("keeps the pair, rolls and Begin of a sheet in Kyoto Seika Practice Mode with its ticket, and reads them back", async () => {
+    const userId = someone();
+    const keeper = new SessionKeeper(userId);
+    keeper.start(7, { subjects: null, rolls: [0, 0], begun: false });
+    const part = { subjects: [WIND, REUNION], rolls: [CHARRED_AT_ROLL, 3], begun: true } as const;
+    keeper.keepKyotoSeika(part);
+    expect(await loadKeptSession(userId)).toMatchObject({
+      status: "found",
+      ticket: 7,
+      kyotoSeika: part,
+    });
+  });
+
+  it("keeps no Kyoto Seika Practice Mode part for a regular sheet, and reads a record whose part is unreadable as a regular sheet's, logged", async () => {
+    const userId = someone();
+    draw(userId, [stroke("a")]);
+    expect(await loadKeptSession(userId)).toMatchObject({ status: "found", kyotoSeika: null });
+    const key = personKey("draw.session", userId);
+    const record: unknown = JSON.parse(localStorage.getItem(key) ?? "null");
+    if (typeof record !== "object" || record === null) throw new Error("No record is kept");
+    expect(record).not.toHaveProperty("kyotoSeika");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const unreadable = { subjects: "x", rolls: [0, 0], begun: false };
+    localStorage.setItem(key, JSON.stringify({ ...record, kyotoSeika: unreadable }));
+    expect(await loadKeptSession(userId)).toMatchObject({ status: "found", kyotoSeika: null });
+    expect(error).toHaveBeenCalledOnce();
+  });
+
+  it("carries a ticket's Kyoto Seika Practice Mode part with it when the drawing isn't read", async () => {
+    const userId = someone();
+    const part = { subjects: [WIND, REUNION], rolls: [2, 0], begun: false };
+    const record = { ticket: 7, elapsedMs: 0, nsfw: false, kyotoSeika: part };
+    localStorage.setItem(personKey("draw.session", userId), JSON.stringify(record));
+    vi.spyOn(indexedDB, "open").mockImplementation(() => {
+      throw new DOMException("Connection to Indexed Database server lost", "UnknownError");
+    });
+    expect(await loadKeptSession(userId)).toMatchObject({
+      status: "unread",
+      ticket: 7,
+      kyotoSeika: part,
+    });
   });
 });

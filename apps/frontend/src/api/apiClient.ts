@@ -7,6 +7,7 @@ import type {
   GiftsForYou,
   Gratitude,
   GratitudeWithReplay,
+  KyotoSeikaSubject,
   Me,
   OpenGiftBody,
   PackagedGift,
@@ -50,6 +51,11 @@ interface SealRequest {
   timelapse?: Blob;
   /** Seals an NSFW sticker, which the server takes only from someone with the NSFW opt-in. */
   nsfw: boolean;
+  /**
+   * The sticker's Kyoto Seika Subject pair, which the server requires for a ticket spent in Kyoto
+   * Seika Manga Expression Practice Mode and refuses for any other.
+   */
+  kyotoSeikaSubjects?: readonly [KyotoSeikaSubject, KyotoSeikaSubject];
 }
 
 /** Opening a Gift Message's link: its token as the link carries it, which the client checks. */
@@ -70,6 +76,11 @@ export interface ApiClient {
   ) => Promise<Me>;
   /** POST /api/me/nsfw-opt-in: Show 18+ stickers, in Settings. */
   setNsfwOptIn: (nsfwOptIn: boolean) => Promise<Me>;
+  /** POST /api/me/kyoto-seika-practice: Kyoto Seika Practice Mode and its dark subjects, in Settings; a switch left out stays. */
+  setKyotoSeikaPractice: (change: {
+    kyotoSeikaPractice?: boolean;
+    kyotoSeikaDarkSubjects?: boolean;
+  }) => Promise<Me>;
 
   /** GET /api/sticker-boards/:userId; `me` for your own. */
   stickerBoard: (userId?: string) => Promise<StickerBoard>;

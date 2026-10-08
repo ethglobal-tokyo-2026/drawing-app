@@ -1,15 +1,26 @@
 .timer-dot {
+  --timer-dot: 48px;
   position: relative;
   flex: none;
-  width: 48px;
-  height: 48px;
+  width: var(--timer-dot);
+  height: var(--timer-dot);
   margin: 0;
   padding: 0;
   border: 0;
   border-radius: 50%;
   background: none;
   transform: rotate(var(--tilt));
-  transition: transform var(--t-stick) var(--ease-peel);
+  transition:
+    transform var(--t-stick) var(--ease-peel),
+    width var(--t-stick) var(--ease-peel),
+    height var(--t-stick) var(--ease-peel);
+}
+
+/* "30:00" takes more than the usual dot, so the dot is wider while the clock reads 10:00 or more, and
+   the label under it moves down with it. */
+.timer-dot.is-wide,
+.timer-hint.is-wide {
+  --timer-dot: 56px;
 }
 
 /* It presses like a dot sticker. */
@@ -146,9 +157,10 @@
 /* The paused hint, or a note: a label stuck just under the timer, with an arrow pointing up at it.
    The hint sticks on as the dot nudges and peels off by itself. Placed from the top row's corner. */
 .timer-hint {
+  --timer-dot: 48px;
   position: absolute;
   left: 4px;
-  top: 61px;
+  top: calc(var(--timer-dot) + 13px);
   z-index: 6;
   display: flex;
   align-items: flex-start;
@@ -158,13 +170,14 @@
   transform-origin: 14px 0;
   transition:
     opacity 260ms var(--ease-out),
-    transform 260ms var(--ease-out);
+    transform 260ms var(--ease-out),
+    top var(--t-stick) var(--ease-peel);
 }
 
 .timer-hint.is-on {
   opacity: 1;
   transform: none;
-  transition-duration: 120ms, 220ms;
+  transition-duration: 120ms, 220ms, var(--t-stick);
 }
 
 .timer-hint-arrow {

@@ -40,6 +40,8 @@ interface Options {
   /** Its figure: the ink covers its box, and its resin sheens at the end. */
   figure: RefObject<HTMLElement | null>;
   reduced: boolean;
+  /** The sticker was drawn in Kyoto Seika Manga Expression Practice Mode: its timelapse may play longer. */
+  kyotoSeika: boolean;
   createPlayer?: CreateTimelapsePlayer;
   frames?: FrameSource;
 }
@@ -105,6 +107,7 @@ export function useTimelapse({
   hasTimelapse,
   figure,
   reduced,
+  kyotoSeika,
   createPlayer = createTimelapsePlayer,
   frames = browserFrames,
 }: Options): Timelapse {
@@ -193,6 +196,7 @@ export function useTimelapse({
         width: box.offsetWidth,
         image: { width: target.width, height: target.height },
         reduced: still,
+        kyotoSeika,
         frames: clock,
       });
       await s.player.prepare();

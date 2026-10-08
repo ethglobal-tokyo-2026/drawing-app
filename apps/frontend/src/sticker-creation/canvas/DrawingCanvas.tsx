@@ -4,6 +4,7 @@ import {
   useImperativeHandle,
   useLayoutEffect,
   useRef,
+  type ReactNode,
   type Ref,
 } from "react";
 import { useTranslation } from "../../i18n/react";
@@ -38,13 +39,17 @@ interface Props extends InkEvents {
   settings: InkSettings;
   /** The drawing screen shows, not covered by another screen. */
   active: boolean;
+  /** Printed on the paper under the ink, so ink covers it. */
+  under?: ReactNode;
+  /** The canvas's name for screen readers, when the sheet has more to say than the catalog's. */
+  label?: string;
 }
 
 /**
  * The white sheet and the ink on it. Pointer input goes straight to the ink engine and never through
  * React state; the engine reads the settings as each pointer lands and reports back through the events.
  */
-export function DrawingCanvas({ ref, settings, active, ...events }: Props) {
+export function DrawingCanvas({ ref, settings, active, under, label, ...events }: Props) {
   const { t } = useTranslation();
   const sheetRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -123,10 +128,11 @@ export function DrawingCanvas({ ref, settings, active, ...events }: Props) {
 
   return (
     <div ref={sheetRef} className="ink-sheet" data-tool={settings.tool}>
+      {under}
       <canvas
         ref={canvasRef}
         className="ink-canvas"
-        aria-label={t(($) => $.stickerCreation.canvas)}
+        aria-label={label ?? t(($) => $.stickerCreation.canvas)}
       />
     </div>
   );

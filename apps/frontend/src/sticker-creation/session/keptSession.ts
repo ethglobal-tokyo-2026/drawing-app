@@ -1,4 +1,5 @@
 import { personKey, parseStored, readStored, writeStored } from "../../ui/deviceStorage";
+import { readSubjectEntry, type KyotoSeikaSubjectEntry } from "../../kyoto-seika/subjectList";
 import { STRIDE, type Op, type Step } from "../canvas/ops";
 
 /*
@@ -28,6 +29,16 @@ export interface KeptTools {
   smoothing: number;
 }
 
+/** The Kyoto Seika Practice Mode part of the record: present only when its ticket was spent in that mode. */
+export interface KeptKyotoSeika {
+  /** Null until the list loads and deals. Whole list entries, so a later build's list can't lose them. */
+  subjects: readonly [KyotoSeikaSubjectEntry, KyotoSeikaSubjectEntry] | null;
+  /** Each die's rolls; one at CHARRED_AT_ROLL is charred. */
+  rolls: readonly [number, number];
+  /** Begin locked the pair in, and started the clock. */
+  begun: boolean;
+}
+
 /** The ticket use the session spent (the server's id), the time drawn, 18+, and the tools' settings. */
 interface SessionRecord {
   ticket: number;
@@ -36,18 +47,26 @@ interface SessionRecord {
   nsfw: boolean;
   /** Absent when what's kept holds none, or none that can be read: the drawing still comes back. */
   tools?: KeptTools;
+  /** Null for a ticket spent outside Kyoto Seika Practice Mode, or a part that can't be read. */
+  kyotoSeika: KeptKyotoSeika | null;
 }
 
 /** What's kept of a drawing that was in progress. */
 export type KeptDrawing =
   | ({ status: "found"; steps: Step[] } & SessionRecord)
   /** What's kept of it can't be read back. */
-  | { status: "lost"; ticket: number | null; error: unknown }
+  | { status: "lost"; ticket: number | null; kyotoSeika: KeptKyotoSeika | null; error: unknown }
   /**
    * Its steps weren't read: IndexedDB failed, or hadn't answered in time, and then `later` is what the
    * read still finds. Nothing kept is cleared, since the drawing may still be there.
    */
-  | { status: "unread"; ticket: number; error: unknown; later: Promise<KeptDrawing> | null };
+  | {
+      status: "unread";
+      ticket: number;
+      kyotoSeika: KeptKyotoSeika | null;
+      error: unknown;
+      later: Promise<KeptDrawing> | null;
+    };
 
 export type KeptSession = { status: "none" } | KeptDrawing;
 
@@ -148,6 +167,7 @@ export class SessionKeeper {
   private readonly onKept: (kept: boolean) => void;
   private ticket: number | null = null;
   private nsfw = false;
+  private kyotoSeika: KeptKyotoSeika | null = null;
   private elapsedMs = 0;
   /** The tools as the artist last set them: they outlast a sheet, so a new session keeps them too. */
   private tools: KeptTools | undefined;
@@ -169,10 +189,11 @@ export class SessionKeeper {
     this.onKept = onKept;
   }
 
-  /** A new session: the ticket it spent, and nothing drawn yet. */
-  start(ticket: number | null): void {
+  /** A new session: the ticket it spent, its Kyoto Seika Practice Mode part if any, and nothing drawn yet. */
+  start(ticket: number | null, kyotoSeika: KeptKyotoSeika | null = null): void {
     this.ticket = ticket;
     this.nsfw = false;
+    this.kyotoSeika = kyotoSeika;
     this.elapsedMs = 0;
     this.written = [];
     this.carried = false;
@@ -190,10 +211,12 @@ export class SessionKeeper {
     elapsedMs: number,
     nsfw: boolean,
     tools: KeptTools | undefined,
+    kyotoSeika: KeptKyotoSeika | null,
   ): void {
     this.ticket = ticket;
     this.elapsedMs = elapsedMs;
     this.nsfw = nsfw;
+    this.kyotoSeika = kyotoSeika;
     this.tools = tools ?? this.tools;
     this.written = [...steps];
     this.carried = false;
@@ -203,9 +226,10 @@ export class SessionKeeper {
    * A session whose kept drawing couldn't be read yet: its ticket goes on to a fresh sheet, and what's
    * kept stays as it is until that sheet is drawn on, so a later read can still pick the drawing up.
    */
-  carry(ticket: number): void {
+  carry(ticket: number, kyotoSeika: KeptKyotoSeika | null): void {
     this.ticket = ticket;
     this.nsfw = false;
+    this.kyotoSeika = kyotoSeika;
     this.elapsedMs = 0;
     // The steps kept are the unread drawing's, so the first save writes every step.
     this.written = null;
@@ -215,6 +239,12 @@ export class SessionKeeper {
   /** Keeps the 18+ switch; on a carried session's blank sheet, it waits for the first save. */
   keepNsfw(nsfw: boolean): void {
     this.nsfw = nsfw;
+    if (!this.carried) this.keepRecord();
+  }
+
+  /** Keeps the pair, the rolls and Begin; on a carried session's blank sheet, it waits for the first save. */
+  keepKyotoSeika(kyotoSeika: KeptKyotoSeika): void {
+    this.kyotoSeika = kyotoSeika;
     if (!this.carried) this.keepRecord();
   }
 
@@ -248,6 +278,7 @@ export class SessionKeeper {
     this.carried = false;
     this.ticket = null;
     this.nsfw = false;
+    this.kyotoSeika = null;
     this.elapsedMs = 0;
     this.written = [];
     removeRecord(this.userId);
@@ -264,6 +295,7 @@ export class SessionKeeper {
         elapsedMs: this.elapsedMs,
         nsfw: this.nsfw,
         ...(this.tools && { tools: this.tools }),
+        ...(this.kyotoSeika && { kyotoSeika: this.kyotoSeika }),
       });
     this.changed();
   }
@@ -307,17 +339,29 @@ export async function loadKeptSession(userId: string): Promise<KeptSession> {
   const record = readRecord(userId);
   if (record === null) return { status: "none" };
   if (record === "unreadable")
-    return { status: "lost", ticket: null, error: new Error("Its record is unreadable") };
+    return {
+      status: "lost",
+      ticket: null,
+      kyotoSeika: null,
+      error: new Error("Its record is unreadable"),
+    };
   const read = readSteps(userId).then(
     (steps): KeptDrawing => ({ status: "found", steps, ...record }),
     (error: unknown): KeptDrawing =>
       error instanceof UnreadableDrawing
-        ? { status: "lost", ticket: record.ticket, error }
-        : { status: "unread", ticket: record.ticket, error, later: null },
+        ? { status: "lost", ticket: record.ticket, kyotoSeika: record.kyotoSeika, error }
+        : {
+            status: "unread",
+            ticket: record.ticket,
+            kyotoSeika: record.kyotoSeika,
+            error,
+            later: null,
+          },
   );
   return within(read, LOAD_TIMEOUT_MS, () => ({
     status: "unread",
     ticket: record.ticket,
+    kyotoSeika: record.kyotoSeika,
     error: new Error(`Its steps didn't load within ${LOAD_TIMEOUT_MS / 1000}s`),
     later: read,
   }));
@@ -410,6 +454,7 @@ function readRecord(userId: string): SessionRecord | "unreadable" | null {
       elapsedMs: value.elapsedMs,
       nsfw: value.nsfw,
       ...(tools && { tools }),
+      kyotoSeika: "kyotoSeika" in value ? readKyotoSeika(value.kyotoSeika) : null,
     };
   }
   console.error("The record of the drawing in progress is unreadable:", raw);
@@ -418,6 +463,38 @@ function readRecord(userId: string): SessionRecord | "unreadable" | null {
 
 const isBetween = (v: unknown, min: number, max: number): v is number =>
   isFiniteNumber(v) && v >= min && v <= max;
+
+/**
+ * The record's Kyoto Seika Practice Mode part, or null when it has none. One that can't be read is
+ * logged, and the drawing comes back as a regular sheet's.
+ */
+function readKyotoSeika(v: unknown): KeptKyotoSeika | null {
+  const part = readKyotoSeikaPart(v);
+  if (part) return part;
+  console.error(
+    "The Kyoto Seika Practice Mode part of the drawing in progress is unreadable, so it comes back as a regular sheet:",
+    v,
+  );
+  return null;
+}
+
+function readKyotoSeikaPart(v: unknown): KeptKyotoSeika | undefined {
+  if (typeof v !== "object" || v === null) return undefined;
+  if (!("subjects" in v && "rolls" in v && "begun" in v)) return undefined;
+  const { subjects, rolls, begun } = v;
+  if (typeof begun !== "boolean" || !Array.isArray(rolls) || rolls.length !== 2) return undefined;
+  const rollCounts: readonly unknown[] = rolls;
+  const [upperRolls, lowerRolls] = rollCounts;
+  if (!isCount(upperRolls) || !isCount(lowerRolls)) return undefined;
+  const counts = [upperRolls, lowerRolls] as const;
+  if (subjects === null) return { subjects: null, rolls: counts, begun };
+  if (!Array.isArray(subjects) || subjects.length !== 2) return undefined;
+  const entries: readonly unknown[] = subjects;
+  const [upper, lower] = entries;
+  const first = readSubjectEntry(upper);
+  const second = readSubjectEntry(lower);
+  return first && second ? { subjects: [first, second], rolls: counts, begun } : undefined;
+}
 
 /** The tools' settings a record holds, or undefined when it holds none it can read. */
 function readTools(v: unknown): KeptTools | undefined {
@@ -429,8 +506,11 @@ function readTools(v: unknown): KeptTools | undefined {
     : undefined;
 }
 
-/** Whether it's written. */
-const writeRecord = (userId: string, record: SessionRecord) =>
+/** Whether it's written. A regular sheet's record holds no Kyoto Seika Practice Mode part. */
+const writeRecord = (
+  userId: string,
+  record: Omit<SessionRecord, "kyotoSeika"> & { kyotoSeika?: KeptKyotoSeika },
+) =>
   writeStored(
     recordKey(userId),
     JSON.stringify(record),

@@ -1,21 +1,27 @@
-import { MAX_TIME_USED_S } from "@drawing-app/api/client";
+import { KYOTO_SEIKA_TIME_USED_S, MAX_TIME_USED_S } from "@drawing-app/api/client";
 import { ApiError, type ErrorCode } from "../../api/apiClient";
 
-/** How long a sticker gets on the drawing clock; the server refuses a seal that used more. */
-export const SESSION_MS = MAX_TIME_USED_S * 1000;
+/**
+ * How long a sheet gets on the drawing clock, by its ticket's mode: Kyoto Seika Manga Expression
+ * Practice Mode's or not. The server refuses a seal that used more.
+ */
+export const sessionMs = (kyotoSeika: boolean) =>
+  (kyotoSeika ? KYOTO_SEIKA_TIME_USED_S : MAX_TIME_USED_S) * 1000;
 /** After the first tap on the seal key, a second tap within this long seals. */
 export const ARM_WINDOW_MS = 2_500;
 
 /**
  * blank: a fresh sheet asks before a ticket is spent; the sheet takes no ink yet.
- * primed: Start spent a ticket; the clock waits at 3:00 for the first stroke.
+ * dealt: a ticket was spent in Kyoto Seika Practice Mode; its two subjects wait in their balloons for
+ * Begin, the sheet takes no ink and the tools are hidden.
+ * primed: Start spent a regular ticket; the clock waits for the first stroke.
  * drawing: the first stroke or fill started the clock.
  * armed: the seal key took its first tap. sealing: building the sticker. sealed: done.
  * retry: a seal failed where the sheet mustn't take ink again, since time is up or the server may
  * already hold the seal: the sheet stays locked, and the seal key only tries the seal again. A seal
  * the server refuses at 0:00 gives way to a fresh sheet instead.
  */
-type Phase = "blank" | "primed" | "drawing" | "armed" | "sealing" | "sealed" | "retry";
+type Phase = "blank" | "dealt" | "primed" | "drawing" | "armed" | "sealing" | "sealed" | "retry";
 
 export interface Session {
   phase: Phase;
@@ -26,17 +32,20 @@ export interface Session {
 export const FRESH_SESSION: Session = { phase: "blank", armedAt: 0 };
 
 export type SessionEvent =
-  /** A ticket was spent on this sheet, or carried over to it. */
-  | { type: "start" }
+  /** A ticket was spent on this sheet, or carried over to it, in Kyoto Seika Practice Mode or not. */
+  | { type: "start"; kyotoSeika: boolean }
+  /** Begin locked the pair in: the clock starts at once, as a proctor's 始め does. */
+  | { type: "begin" }
   /** A stroke or fill landed on the sheet. */
   | { type: "ink" }
   /**
    * A session kept across a reload is back, its ticket spent before the reload: drawn on, or only
    * started, with the clock still waiting for the first stroke. One read late comes back onto the
    * sheet its ticket carried over to, before anything is drawn there. `sealSent`: its seal had gone
-   * out with no answer, so the server may hold it.
+   * out with no answer, so the server may hold it. `dealt`: a sheet in Kyoto Seika Practice Mode still
+   * waiting for Begin.
    */
-  | { type: "restored"; drawn: boolean; sealSent: boolean }
+  | { type: "restored"; drawn: boolean; sealSent: boolean; dealt: boolean }
   | { type: "seal-tap"; now: number; hasInk: boolean }
   | { type: "arm-expired"; now: number }
   | { type: "canvas-touch" }
@@ -57,10 +66,12 @@ export type SessionEffect =
   /** Keep the new session on this device, with its ticket. */
   | "keep-session"
   | "start-clock"
+  /** Keep the pair as begun; the balloons tuck into the corner print. */
+  | "lock-subjects"
   /** Stop the clock and build the sticker. */
   | "seal"
   | "resume-clock"
-  /** Clear the sheet and set the clock back to 3:00. */
+  /** Clear the sheet and set the clock back to its full length. */
   | "reset-sheet";
 
 type Result = { session: Session; effects: SessionEffect[] };
@@ -75,12 +86,18 @@ export function transition(session: Session, event: SessionEvent): Result {
   const unchanged = { session, effects: [] };
   switch (event.type) {
     case "start":
-      return phase === "blank" ? to("primed", ["keep-session"]) : unchanged;
+      return phase === "blank"
+        ? to(event.kyotoSeika ? "dealt" : "primed", ["keep-session"])
+        : unchanged;
+    case "begin":
+      return phase === "dealt" ? to("drawing", ["start-clock", "lock-subjects"]) : unchanged;
     case "ink":
       return phase === "primed" ? to("drawing", ["start-clock"]) : unchanged;
     case "restored":
-      if (phase !== "blank" && phase !== "primed") return unchanged;
-      return to(event.sealSent ? "retry" : event.drawn ? "drawing" : "primed");
+      if (phase !== "blank" && phase !== "primed" && phase !== "dealt") return unchanged;
+      return to(
+        event.sealSent ? "retry" : event.drawn ? "drawing" : event.dealt ? "dealt" : "primed",
+      );
     case "seal-tap":
       // The sheet can't change any more, so there's no second tap to wait for.
       if (phase === "retry") return to("sealing", ["seal"]);

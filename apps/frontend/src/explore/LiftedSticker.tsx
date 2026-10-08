@@ -175,6 +175,7 @@ export function LiftedSticker({
               width={sticker.width}
               height={sticker.height}
               nsfw={sticker.nsfw}
+              kyotoSeika={sticker.kyotoSeikaSubjects !== null}
               veiled={veiledFor(sticker, optedIn)}
               no={sticker.no}
             />

@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useState } from "react";
 import { browserFrames, type FrameSource } from "../../ui/frameSource";
 import { useReducedMotion } from "../../ui/useReducedMotion";
-import { heldBy, SESSION_MS, type Hold } from "./session";
+import { heldBy, sessionMs, type Hold } from "./session";
 
 /** A frame can count at most this much, so a stalled or throttled page never eats the session. */
 const MAX_FRAME_MS = 5_000;
@@ -9,8 +9,12 @@ const MAX_FRAME_MS = 5_000;
 const HIDDEN_RESUME_MS = 420;
 /** The timer turns Tomato for this last stretch. */
 const LATE_MS = 10_000;
-/** The clock warns, once each, as it counts down through these many seconds left. */
-const WARN_AT_SECONDS = [30, 10] as const;
+/**
+ * The clock warns, once each, as it counts down through these many seconds left: the proctor's time
+ * calls, which only Kyoto Seika Manga Expression Practice Mode's clock is long enough to reach, then
+ * the last 30 and 10 seconds.
+ */
+export const WARN_AT_SECONDS = [10 * 60, 5 * 60, 30, 10] as const;
 
 /** What the timer dot shows. A new object only when one of these changes. */
 export interface ClockView {
@@ -38,13 +42,14 @@ const SCREEN_HOLDS = [
 ] as const satisfies readonly (keyof ScreenHolds)[];
 
 /**
- * The session's three minutes. Frames run only while it counts, or while a hidden page's resume is
- * due; each frame adds its delta unless something holds the clock. Stopped while sealing, it can
- * resume if the seal fails; at 0:00 it's done for good.
+ * The sheet's drawing clock, as long as its ticket gives. Frames run only while it counts, or while a
+ * hidden page's resume is due; each frame adds its delta unless something holds the clock. Stopped
+ * while sealing, it can resume if the seal fails; at 0:00 it's done for good.
  */
 export class SessionClock {
   private readonly frames: FrameSource;
   private state: "idle" | "running" | "stopped" | "done" = "idle";
+  private lengthMs: number;
   private elapsedMs = 0;
   private last: number | null = null;
   private holds: ScreenHolds = {
@@ -63,14 +68,20 @@ export class SessionClock {
   private readonly listeners = new Set<() => void>();
   private readonly warnings = new Set<(secondsLeft: number) => void>();
 
-  constructor(frames: FrameSource = browserFrames) {
+  constructor(frames: FrameSource = browserFrames, lengthMs = sessionMs(false)) {
     this.frames = frames;
+    this.lengthMs = lengthMs;
     this.view = this.computeView();
   }
 
   /** Time drawn so far, in ms. */
   get elapsed(): number {
     return this.elapsedMs;
+  }
+
+  /** How long the sheet gets, in ms. */
+  get length(): number {
+    return this.lengthMs;
   }
 
   getView = (): ClockView => this.view;
@@ -112,15 +123,27 @@ export class SessionClock {
     if (this.state === "stopped") this.setState("running");
   }
 
-  reset(): void {
+  /** A fresh sheet: nothing drawn, waiting at `lengthMs`. */
+  reset(lengthMs = this.lengthMs): void {
+    this.lengthMs = lengthMs;
     this.elapsedMs = 0;
     this.setState("idle");
+  }
+
+  /**
+   * Gives a clock that hasn't started another length, as a spent ticket's mode decides. A started one
+   * keeps its own: a sheet keeps the clock its ticket was spent with.
+   */
+  setLength(lengthMs: number): void {
+    if (this.state !== "idle") return;
+    this.lengthMs = lengthMs;
+    this.changed();
   }
 
   /** Picks a drawing kept across a reload back up: started, with the time it had drawn. */
   restore(elapsedMs: number): void {
     if (this.state !== "idle") return;
-    this.elapsedMs = Math.min(SESSION_MS, Math.max(0, elapsedMs));
+    this.elapsedMs = Math.min(this.lengthMs, Math.max(0, elapsedMs));
     this.setState("running");
   }
 
@@ -165,11 +188,11 @@ export class SessionClock {
       if (this.last !== null) {
         const delta = Math.min(MAX_FRAME_MS, Math.max(0, t - this.last));
         const before = this.elapsedMs;
-        this.elapsedMs = Math.min(SESSION_MS, before + delta);
+        this.elapsedMs = Math.min(this.lengthMs, before + delta);
         this.warn(before, this.elapsedMs);
       }
       this.last = t;
-      if (this.elapsedMs >= SESSION_MS) {
+      if (this.elapsedMs >= this.lengthMs) {
         this.state = "done";
         this.onTimeUp?.();
       }
@@ -180,7 +203,7 @@ export class SessionClock {
   /** Tells the listeners which warning, if any, the time from `before` to `after` counted through. */
   private warn(before: number, after: number): void {
     const crossed = WARN_AT_SECONDS.find((seconds) => {
-      const at = SESSION_MS - seconds * 1000;
+      const at = this.lengthMs - seconds * 1000;
       return before < at && after >= at;
     });
     if (crossed !== undefined) this.warnings.forEach((listener) => listener(crossed));
@@ -215,7 +238,7 @@ export class SessionClock {
   }
 
   private computeView(): ClockView {
-    const left = SESSION_MS - this.elapsedMs;
+    const left = this.lengthMs - this.elapsedMs;
     return {
       secondsLeft: Math.ceil(left / 1000),
       late: left <= LATE_MS,
@@ -226,9 +249,12 @@ export class SessionClock {
   }
 }
 
-/** The drawing screen's clock: runs on animation frames and holds while the page is hidden. */
-export function useSessionClock(onTimeUp: () => void): SessionClock {
-  const [clock] = useState(() => new SessionClock());
+/**
+ * The drawing screen's clock: runs on animation frames and holds while the page is hidden. It starts
+ * at `lengthMs`, the length the first sheet will take.
+ */
+export function useSessionClock(onTimeUp: () => void, lengthMs: number): SessionClock {
+  const [clock] = useState(() => new SessionClock(browserFrames, lengthMs));
   const reduced = useReducedMotion();
   const timeUp = useEffectEvent(onTimeUp);
 

@@ -48,6 +48,10 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | Terms / Privacy Policy             | 利用規約 / プライバシーポリシー        |                                                                                       |
 | NSFW sticker / 18+                 | 18+のシール / 18+                      | The toggle at sealing reads 18+ in both languages                                     |
 | NSFW opt-in (Settings)             | 18+のシールを表示する                  | The switch's label; on and off are オン / オフ                                        |
+| subject (Kyoto Seika Subject)      | 題材                                   | The guide's word; "subject" in English                                                |
+| Begin (the drawing screen's key)   | はじめ                                 | The proctor's word                                                                    |
+| entrance exam (Settings' legend)   | 入試                                   | Kyoto Seika Practice Mode's setting; its tag on a sticker's detail is 入試練習        |
+| censor bar                         | 伏せ字                                 | The bar over the university's name; its label says 大人の事情により伏せています       |
 
 ## Style
 

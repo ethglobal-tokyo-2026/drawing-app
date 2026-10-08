@@ -157,3 +157,98 @@
 .settings-note__about {
   margin: 4px 0 0;
 }
+
+/* Kyoto Seika Practice Mode's name runs to two lines in English: it keeps clear of its switch. */
+.settings-note__setting[data-setting="kyoto-seika"] > .settings-note__switch > span:first-child {
+  padding-right: 12px;
+}
+
+/* The legend's help button: its glyph sits in the caps line, its touch area is 44px. */
+.settings-note__legend--help {
+  display: flex;
+  align-items: center;
+}
+
+.settings-note__help {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 -10px 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--graphite);
+}
+
+.settings-note__help::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+}
+
+.settings-note__help svg {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-note__help[aria-expanded="true"] {
+  color: var(--ink);
+}
+
+.settings-note__help:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* The mode's note opens in place under the legend, ruled off like a row: no container. */
+.settings-note__note {
+  clear: both;
+  padding: 4px 0 10px;
+  border-bottom: 1px dashed var(--rule);
+  color: var(--ink);
+  font: 500 14px/1.5 var(--font-ui);
+  text-wrap: pretty;
+}
+
+.settings-note__note:lang(ja) {
+  font-family: var(--font-jp);
+  font-size: 13.5px;
+  line-height: 1.65;
+  word-break: auto-phrase;
+}
+
+.settings-note__note p {
+  margin: 0;
+}
+
+.settings-note__note p + p {
+  margin-top: 6px;
+  color: var(--graphite);
+}
+
+/* Dark subjects, under the mode's switch while it's on: indented behind a rule, with no divider. */
+.settings-note__nested {
+  margin: 10px 0 0 2px;
+  padding-left: 12px;
+  border-left: 1px solid var(--rule-strong);
+}
+
+.settings-note__nested .settings-note__option {
+  min-height: 40px;
+  font-size: 14px;
+}
+
+/* The subject list's credit, in its own case: names and a link, not caps metadata. */
+.settings-note__credit {
+  margin: 8px 0 4px;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.settings-note__credit a {
+  color: inherit;
+}

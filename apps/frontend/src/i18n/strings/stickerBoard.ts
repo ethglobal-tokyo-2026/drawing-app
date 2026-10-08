@@ -206,6 +206,70 @@ export const stickerBoard = {
         ja: "18+の設定を保存できなかったため、変更していません：{{reason}}",
       },
     },
+    /** Kyoto Seika Manga Expression Practice Mode, a third setting under 18+. */
+    kyotoSeika: {
+      /** Settings note: the legend over Kyoto Seika Practice Mode's switch */
+      title: { en: "Entrance exam", ja: "入試" },
+      /** Settings note: Kyoto Seika Practice Mode's switch, one character of its university blacked out by <bar/> */
+      name: {
+        en: "Kyoto <bar/>ka University Entrance Exam Mode",
+        ja: "京都<bar/>華大学<wbr/>入試モード",
+      },
+      /** Settings note: the characters under the censor bar in Kyoto Seika Practice Mode's name, never shown */
+      hidden: { en: "Sei", ja: "精" },
+      /** Settings note: what screen readers hear as the name of Kyoto Seika Practice Mode's switch, since the bar is a sight gag */
+      spokenName: {
+        en: "Kyoto Seika University Entrance Exam Mode",
+        ja: "京都精華大学 入試モード",
+      },
+      /** Settings note: the help button after the legend of Kyoto Seika Practice Mode, which opens its note */
+      help: { en: "About this mode", ja: "このモードについて" },
+      /** Settings note, the note under Kyoto Seika Practice Mode's legend: how a sheet works; {{minutes}} is its clock */
+      how: {
+        en: "Each new sticker deals two subjects to combine, and the die beside each deals another. Begin starts the {{minutes}} minutes at once, as in the real test.",
+        ja: "シールをかくたびに題材が2つ配られ、横のサイコロで別の題材にできます。「はじめ」を押すと、試験の「始め」と同じく{{minutes}}分のタイマーが動きだします。",
+      },
+      /** Settings note, the note under Kyoto Seika Practice Mode's legend: who made the mode, and that neither Croquis nor its maker is connected with the university */
+      maker: {
+        en: "Croquis’s maker is applying to Kyoto Seika too, and built this mode to practice. Neither Croquis nor its maker has any connection with the university.",
+        ja: "クロッキーの作者も京都精華大学の受験生で、自分の練習のためにこのモードを作りました。クロッキーも作者も、大学とは関係ありません。",
+      },
+      /** Settings note: the fine print under Kyoto Seika Practice Mode's switch; {{minutes}} is its clock and {{tickets}} its daily tickets */
+      about: {
+        en: "Practice for the manga expression test: a {{minutes}}‑minute timer, {{tickets}} daily tickets a day, and two subjects to combine.",
+        ja: "マンガ表現の練習に。タイマー{{minutes}}分、無償チケット1日{{tickets}}枚、題材を2つ組み合わせてかきます。",
+      },
+      /** Settings note: the credit at the foot of Kyoto Seika Practice Mode's setting, its link opening the subject list's sources */
+      credit: {
+        en: "Subjects from JMdict. <sources>Sources</sources>",
+        ja: "題材：JMdict　<sources>出典</sources>",
+      },
+      /** Settings note: the status line once Kyoto Seika Practice Mode has been turned on and saved */
+      on: {
+        en: "On: your next sticker deals two subjects.",
+        ja: "オンにしました。次のシールから題材が2つ出ます。",
+      },
+      /** Settings note: the status line once Kyoto Seika Practice Mode has been turned off and saved */
+      off: {
+        en: "Off: your next sticker has the usual clock.",
+        ja: "オフにしました。次のシールはいつもの時間です。",
+      },
+      /** Under Kyoto Seika Practice Mode's switch while it's on. */
+      dark: {
+        /** Settings note, under Kyoto Seika Practice Mode's switch while it's on: the switch that also deals dark subjects */
+        label: { en: "Dark subjects too", ja: "重い題材も出す" },
+        /** Settings note: the fine print under the dark subjects switch */
+        about: {
+          en: "Death, war, crime, alcohol and tobacco.",
+          ja: "死、戦争、犯罪、お酒、たばこなど。",
+        },
+      },
+      /** Settings note: the alert when a Kyoto Seika Practice Mode switch didn't save to your account, with the reason */
+      notSaved: {
+        en: "Your entrance exam setting couldn’t be saved, so it hasn’t changed: {{reason}}",
+        ja: "入試の設定を保存できなかったため、変更していません：{{reason}}",
+      },
+    },
   },
   /** The developer slip: English only, so the Japanese catalog never translates it. */
   developer: {

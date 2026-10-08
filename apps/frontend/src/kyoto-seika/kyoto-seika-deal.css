@@ -1,0 +1,17 @@
+/* The deal over a fresh sheet: it fills the drawing screen so the balloons place by the screen's own
+   coordinates, and tucks toward the corner print as Begin locks the pair in. */
+.kyoto-seika-deal {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  transform-origin: calc(100% - 40px) calc(100% - 270px);
+}
+
+.kyoto-seika-deal__failure {
+  position: absolute;
+  top: 38%;
+  left: 24px;
+  right: 24px;
+  pointer-events: auto;
+}

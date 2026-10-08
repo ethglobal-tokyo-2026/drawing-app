@@ -25,6 +25,7 @@ const sticker: BoardSticker = {
   width: 100,
   height: 80,
   nsfw: false,
+  kyotoSeikaSubjects: null,
   urls: testStickerUrls("a"),
   placement: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
 };

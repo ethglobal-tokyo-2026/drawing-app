@@ -20,15 +20,17 @@ function run(...events: SessionEvent[]) {
   return { phase: session.phase, effects };
 }
 
-const start = { type: "start" } as const;
+const start = { type: "start", kyotoSeika: false } as const;
+const kyotoSeikaStart = { type: "start", kyotoSeika: true } as const;
+const begin = { type: "begin" } as const;
 const ink = { type: "ink" } as const;
 const tap = (now: number, hasInk = true) => ({ type: "seal-tap", now, hasInk }) as const;
 const failed = ({ mayHaveSealed = false, timeUp = false, refused = false } = {}) =>
   ({ type: "seal-failed", mayHaveSealed, timeUp, refused }) as const;
 /** The seal key's second tap started a seal. */
 const sealing = [start, ink, tap(1000), tap(1500)] as const;
-const restored = (drawn: boolean, sealSent = false) =>
-  ({ type: "restored", drawn, sealSent }) as const;
+const restored = (drawn: boolean, sealSent = false, dealt = false) =>
+  ({ type: "restored", drawn, sealSent, dealt }) as const;
 
 describe("transition", () => {
   it("spends a ticket only at Start, and starts the clock only at the first stroke", () => {
@@ -37,6 +39,24 @@ describe("transition", () => {
     expect(run(start, start)).toEqual({ phase: "primed", effects: [] });
     expect(run(start, ink)).toEqual({ phase: "drawing", effects: ["start-clock"] });
     expect(run(start, ink, ink)).toEqual({ phase: "drawing", effects: [] });
+  });
+
+  it("deals the pair of a ticket spent in Kyoto Seika Practice Mode and waits, sheet locked, for Begin, which starts the clock at once", () => {
+    expect(run(kyotoSeikaStart)).toEqual({ phase: "dealt", effects: ["keep-session"] });
+    expect(run(kyotoSeikaStart, ink)).toEqual({ phase: "dealt", effects: [] });
+    expect(run(kyotoSeikaStart, begin)).toEqual({
+      phase: "drawing",
+      effects: ["start-clock", "lock-subjects"],
+    });
+    expect(run(start, begin)).toEqual({ phase: "primed", effects: [] });
+    expect(run(kyotoSeikaStart, begin, ink)).toEqual({ phase: "drawing", effects: [] });
+    expect(run(kyotoSeikaStart, tap(1000))).toEqual({ phase: "dealt", effects: [] });
+  });
+
+  it("brings a sheet in Kyoto Seika Practice Mode back dealt until Begin, and drawing after it", () => {
+    expect(run(restored(false, false, true)).phase).toBe("dealt");
+    expect(run(restored(true, false, false)).phase).toBe("drawing");
+    expect(run(restored(false, true, true)).phase).toBe("retry");
   });
 
   it("picks a session kept across a reload back up without spending another ticket", () => {

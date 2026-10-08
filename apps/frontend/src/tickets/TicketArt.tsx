@@ -1,6 +1,6 @@
 import { useTranslation } from "../i18n/react";
 import { spentIndex, type TicketView } from "./tickets";
-import { TicketStubs, type Spend } from "./TicketStubs";
+import { ONE_ROW, TicketStubs, type Spend } from "./TicketStubs";
 
 /**
  * A ticket card's art, by the one rule (ticketView): while daily tickets are left, the day's stubs, with any reserve
@@ -34,7 +34,7 @@ export function TicketArt({
     <>
       <TicketStubs
         className="out-of-tickets__art"
-        size="large"
+        size={view.stubs.length > ONE_ROW ? "medium" : "large"}
         stubs={view.stubs}
         spending={spend && { index: spentIndex(view.stubs), state: spend }}
       />

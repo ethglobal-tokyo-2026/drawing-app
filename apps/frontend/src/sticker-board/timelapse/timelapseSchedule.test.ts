@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { STRIDE, type FillOp, type Op, type StrokeOp } from "../../sticker-creation/canvas/ops";
+import { KYOTO_SEIKA_TIME_USED_S } from "@drawing-app/api/client";
 import {
+  KYOTO_SEIKA_MAX_LENGTH_MS,
   MAX_FILL_REVEAL_MS,
   MAX_FILL_SHARE,
   MAX_IDLE_MS,
@@ -31,7 +33,8 @@ const steady = (ms: number, step = 16) =>
 const fill = (T: number): FillOp => ({ tool: "fill", color: "#ff7eb6", x: 5, y: 5, T });
 const pointCount = (op: StrokeOp) => op.pts.length / STRIDE;
 
-const schedule = (ops: Op[], reduced = false) => scheduleTimelapse(ops, { reduced });
+const schedule = (ops: Op[], reduced = false, kyotoSeika = false) =>
+  scheduleTimelapse(ops, { reduced, kyotoSeika });
 const strokes = (s: TimelapseSchedule) =>
   s.ops.filter((o): o is ScheduledStroke => o.kind === "stroke");
 const fills = (s: TimelapseSchedule) => s.ops.filter((o): o is ScheduledFill => o.kind === "fill");
@@ -134,6 +137,25 @@ describe("a timelapse's schedule", () => {
     const [f] = fills(s);
     expect(strokes(s)[0].at).toEqual([0]);
     expect(s.length).toBe(f.end - f.start);
+  });
+
+  it.each([
+    ["a regular sticker", false, MAX_LENGTH_MS],
+    ["a sticker drawn in Kyoto Seika Practice Mode", true, KYOTO_SEIKA_MAX_LENGTH_MS],
+  ])("plays the longest drawing of %s in at most its length", (_, kyotoSeika, length) => {
+    const drawnMs = KYOTO_SEIKA_TIME_USED_S * 1000;
+    expect(
+      schedule([stroke(0, steady(drawnMs, MAX_POINT_STEP_MS))], false, kyotoSeika).length,
+    ).toBeCloseTo(length, 6);
+  });
+
+  it("keeps fills' reveals within MAX_FILL_REVEAL_MS in the longer timelapse of a sticker drawn in Kyoto Seika Practice Mode", () => {
+    const s = schedule(
+      [stroke(0, steady(KYOTO_SEIKA_TIME_USED_S * 1000, MAX_POINT_STEP_MS)), fill(2e6)],
+      false,
+      true,
+    );
+    expect(fills(s)[0].end - fills(s)[0].start).toBeLessThanOrEqual(MAX_FILL_REVEAL_MS);
   });
 });
 

@@ -5,8 +5,11 @@ import "./sticker-foil.css";
 /** Where a foil sticker shows, which sets how wide its band is. */
 export type FoilSize = "board" | "detail" | "sheet";
 
-/** Holo, for a sticker someone other than the board's owner drew; pink, for an NSFW sticker. */
-type FoilTone = "holo" | "pink";
+/**
+ * Holo, for a sticker someone other than the board's owner drew; pink, for an NSFW sticker; Kyoto
+ * Seika, for a sticker drawn in Kyoto Seika Manga Expression Practice Mode.
+ */
+type FoilTone = "holo" | "pink" | "kyoto-seika";
 
 interface Props {
   size: FoilSize;
@@ -23,10 +26,11 @@ interface Props {
 }
 
 /**
- * Foil round a sticker, holo or pink: its silhouette grown into a band just past the white edge,
- * from the server's mask when the sticker has one, else dilated in CSS from the `--m` the container
- * sets. The band is the sticker's edge, so its cut and cast shadow fall from the band's outer edge.
- * Bands of light flow under a fine, still grating, and a glint sits where the app's one light falls,
+ * Foil round a sticker, holo, pink or Kyoto Seika: its silhouette grown into a band just past the
+ * white edge, from the server's mask when the sticker has one, else dilated in CSS from the `--m` the
+ * container sets. The band is the sticker's edge, so its cut and cast shadow fall from the band's
+ * outer edge. Holo and pink flow under a fine, still grating; Kyoto Seika is manga tone shaded away
+ * from the light, with sparkles that slide with it. A glint sits where the app's one light falls,
  * holding where the last tilt left it. It goes under the image, which shows only inside its own cut.
  */
 export function StickerFoil({ size, no, turn = 0, tone = "holo", mask }: Props) {

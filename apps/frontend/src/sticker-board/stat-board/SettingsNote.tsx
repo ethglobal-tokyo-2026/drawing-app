@@ -1,4 +1,8 @@
-import type { Me } from "@drawing-app/api/client";
+import {
+  KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
+  KYOTO_SEIKA_TIME_USED_S,
+  type Me,
+} from "@drawing-app/api/client";
 import { useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { apiError } from "../../api/apiClient";
 import { useMe, useSetMe } from "../../api/meContext";
@@ -7,7 +11,10 @@ import { problemOf } from "../../i18n/errorMessage";
 import { currentLanguage } from "../../i18n/i18n";
 import { keepChosenLanguage, type Language } from "../../i18n/language";
 import { followLanguageChoice, lineLanguage } from "../../i18n/pageLanguage";
-import { useTranslation } from "../../i18n/react";
+import { Trans, useTranslation } from "../../i18n/react";
+import { Question } from "../../icons";
+import { CensorBar } from "../../kyoto-seika/CensorBar";
+import { useTickets } from "../../tickets/useTickets";
 import { ErrorLine } from "../../ui/ErrorLine";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { forget as forgetKeptBoard } from "../lastBoard";
@@ -23,9 +30,12 @@ const CHOICES: readonly Choice[] = [null, "en", "ja"];
 const PEEK_UNDER_TITLE = 10;
 
 /** The settings on the note, each saved to your account and applied in place; one saves at a time. */
-type Setting = "language" | "nsfw";
+type Setting = "language" | "nsfw" | "kyotoSeika" | "kyotoSeikaDark";
 /** The account's settings as the note shows them: a saving one shows its new value. */
-type Shown = Pick<Me, "languageChoice" | "nsfwOptIn">;
+type Shown = Pick<
+  Me,
+  "languageChoice" | "nsfwOptIn" | "kyotoSeikaPractice" | "kyotoSeikaDarkSubjects"
+>;
 /** Why a setting didn't take: kept as it failed, so its words follow the app's language. */
 type Failure = { kind: "notSaved" | "notKept"; error: unknown };
 type Status =
@@ -98,6 +108,8 @@ export function SettingsNote() {
   const note = useRef<HTMLElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
   const [status, setStatus] = useState<Status>({ step: "idle" });
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const { refresh: refreshTickets } = useTickets();
   const reveal = usePeek(note, title);
 
   /** Saves a setting, then applies it: `me` takes the answer, and `apply` does what it changes on this phone. */
@@ -154,6 +166,26 @@ export function SettingsNote() {
       },
     );
 
+  const switchKyotoSeika = (kyotoSeikaPractice: boolean) =>
+    save(
+      "kyotoSeika",
+      { kyotoSeikaPractice },
+      () => api.setKyotoSeikaPractice({ kyotoSeikaPractice }),
+      () => {
+        // The day's allowance follows the mode at the next spend, so the Draw key's ticket shows it now.
+        refreshTickets();
+        return null;
+      },
+    );
+
+  const switchDark = (kyotoSeikaDarkSubjects: boolean) =>
+    save(
+      "kyotoSeikaDark",
+      { kyotoSeikaDarkSubjects },
+      () => api.setKyotoSeikaPractice({ kyotoSeikaDarkSubjects }),
+      () => null,
+    );
+
   const named = (language: Language) => t(($) => $.stickerBoard.settings.language.names[language]);
   const label = (choice: Choice) =>
     choice === null
@@ -169,6 +201,11 @@ export function SettingsNote() {
       return t(($) => $.stickerBoard.settings.language.applied, {
         language: named(currentLanguage()),
       });
+    if (setting === "kyotoSeika")
+      return me.kyotoSeikaPractice
+        ? t(($) => $.stickerBoard.settings.kyotoSeika.on)
+        : t(($) => $.stickerBoard.settings.kyotoSeika.off);
+    if (setting === "kyotoSeikaDark") return "";
     return me.nsfwOptIn
       ? t(($) => $.stickerBoard.settings.nsfw.shown)
       : t(($) => $.stickerBoard.settings.nsfw.blurred);
@@ -177,10 +214,12 @@ export function SettingsNote() {
   const problem = (setting: Setting) => {
     if (status.step !== "failed" || status.setting !== setting) return null;
     const { message, detail } = problemOf(status.failure.error);
+    // Both Kyoto Seika Practice Mode switches say it in the mode's words.
+    const strings = setting === "kyotoSeikaDark" ? "kyotoSeika" : setting;
     const words =
       status.failure.kind === "notKept"
         ? t(($) => $.stickerBoard.settings.language.notKept)
-        : t(($) => $.stickerBoard.settings[setting].notSaved, { reason: message });
+        : t(($) => $.stickerBoard.settings[strings].notSaved, { reason: message });
     return (
       <ErrorLine className="settings-note__problem" detail={detail}>
         {words}
@@ -242,6 +281,95 @@ export function SettingsNote() {
             {statusLine("nsfw")}
           </p>
           {problem("nsfw")}
+        </fieldset>
+        <fieldset
+          className="settings-note__setting"
+          data-setting="kyoto-seika"
+          aria-labelledby={`${id}-kyoto-seika-title`}
+          aria-busy={saving("kyotoSeika")}
+        >
+          {/* The group is named by the legend's words alone, not its help button too. */}
+          <legend className="fine settings-note__legend settings-note__legend--help">
+            <span id={`${id}-kyoto-seika-title`}>
+              {t(($) => $.stickerBoard.settings.kyotoSeika.title)}
+            </span>
+            <button
+              type="button"
+              className="settings-note__help"
+              aria-expanded={aboutOpen}
+              aria-controls={`${id}-kyoto-seika-note`}
+              aria-label={t(($) => $.stickerBoard.settings.kyotoSeika.help)}
+              onClick={() => setAboutOpen((open) => !open)}
+            >
+              <Question weight={aboutOpen ? "fill" : "bold"} aria-hidden focusable="false" />
+            </button>
+          </legend>
+          <div className="settings-note__note" id={`${id}-kyoto-seika-note`} hidden={!aboutOpen}>
+            <p>
+              {t(($) => $.stickerBoard.settings.kyotoSeika.how, {
+                minutes: KYOTO_SEIKA_TIME_USED_S / 60,
+              })}
+            </p>
+            <p>{t(($) => $.stickerBoard.settings.kyotoSeika.maker)}</p>
+          </div>
+          <label className="settings-note__option settings-note__switch">
+            <span>
+              <Trans
+                i18nKey={($) => $.stickerBoard.settings.kyotoSeika.name}
+                components={{
+                  bar: <CensorBar hidden={t(($) => $.stickerBoard.settings.kyotoSeika.hidden)} />,
+                }}
+              />
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              checked={shown.kyotoSeikaPractice}
+              aria-label={t(($) => $.stickerBoard.settings.kyotoSeika.spokenName)}
+              aria-describedby={`${id}-kyoto-seika-about`}
+              onChange={() => void switchKyotoSeika(!shown.kyotoSeikaPractice)}
+            />
+          </label>
+          <p className="fine settings-note__about" id={`${id}-kyoto-seika-about`}>
+            {t(($) => $.stickerBoard.settings.kyotoSeika.about, {
+              minutes: KYOTO_SEIKA_TIME_USED_S / 60,
+              tickets: KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
+            })}
+          </p>
+          <p className="fine settings-note__status" role="status">
+            {statusLine("kyotoSeika")}
+          </p>
+          {problem("kyotoSeika")}
+          {shown.kyotoSeikaPractice && (
+            <div
+              className="settings-note__nested"
+              data-setting="kyoto-seika-dark"
+              aria-busy={saving("kyotoSeikaDark")}
+            >
+              <label className="settings-note__option settings-note__switch">
+                <span>{t(($) => $.stickerBoard.settings.kyotoSeika.dark.label)}</span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={shown.kyotoSeikaDarkSubjects}
+                  aria-describedby={`${id}-kyoto-seika-dark-about`}
+                  onChange={() => void switchDark(!shown.kyotoSeikaDarkSubjects)}
+                />
+              </label>
+              <p className="fine settings-note__about" id={`${id}-kyoto-seika-dark-about`}>
+                {t(($) => $.stickerBoard.settings.kyotoSeika.dark.about)}
+              </p>
+              {problem("kyotoSeikaDark")}
+            </div>
+          )}
+          <p className="fine settings-note__credit">
+            <Trans
+              i18nKey={($) => $.stickerBoard.settings.kyotoSeika.credit}
+              components={{
+                sources: <a href={t(($) => $.pages.sources)} target="_blank" rel="noreferrer" />,
+              }}
+            />
+          </p>
         </fieldset>
       </div>
       <i

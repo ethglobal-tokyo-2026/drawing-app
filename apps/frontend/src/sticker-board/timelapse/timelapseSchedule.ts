@@ -13,8 +13,10 @@ export const MAX_POINT_STEP_MS = 150;
 export const SPEEDUP = 15;
 /** A timelapse plays at least this long, however quickly the sticker was drawn… */
 export const MIN_LENGTH_MS = 2500;
-/** …and at most this long, however slowly. */
+/** …and at most this long, however slowly… */
 export const MAX_LENGTH_MS = 6000;
+/** …or this long for a sticker drawn in Kyoto Seika Manga Expression Practice Mode, whose clock runs ten times longer. */
+export const KYOTO_SEIKA_MAX_LENGTH_MS = 20_000;
 /** A fill's reveal in the shortest timelapse, and in the longest. */
 export const MIN_FILL_REVEAL_MS = 150;
 export const MAX_FILL_REVEAL_MS = 200;
@@ -75,9 +77,12 @@ function gapsBefore(ops: readonly Op[]): number[] {
   });
 }
 
-/** Each fill's reveal: paced with the length, and shorter when there are too many to fit. */
+/**
+ * Each fill's reveal: paced with the length, up to its longest in a timelapse of MAX_LENGTH_MS or
+ * more, and shorter when there are too many to fit.
+ */
 function fillRevealMs(length: number, fills: number): number {
-  const pace = (length - MIN_LENGTH_MS) / (MAX_LENGTH_MS - MIN_LENGTH_MS);
+  const pace = Math.min(1, (length - MIN_LENGTH_MS) / (MAX_LENGTH_MS - MIN_LENGTH_MS));
   const paced = MIN_FILL_REVEAL_MS + (MAX_FILL_REVEAL_MS - MIN_FILL_REVEAL_MS) * pace;
   return Math.min(paced, (MAX_FILL_SHARE * length) / fills);
 }
@@ -85,13 +90,14 @@ function fillRevealMs(length: number, fills: number): number {
 /** When every op plays. Fills' reveals come out of the length rather than adding to it. */
 export function scheduleTimelapse(
   ops: readonly Op[],
-  { reduced }: { reduced: boolean },
+  { reduced, kyotoSeika = false }: { reduced: boolean; kyotoSeika?: boolean },
 ): TimelapseSchedule {
   const held = ops.map((op) => (op.tool === "fill" ? [] : heldPointMs(op)));
   const idle = gapsBefore(ops).map(idleMs);
   const drawn =
     held.reduce((sum, times) => sum + (times.at(-1) ?? 0), 0) + idle.reduce((a, b) => a + b, 0);
-  const length = Math.min(MAX_LENGTH_MS, Math.max(MIN_LENGTH_MS, drawn / SPEEDUP));
+  const longest = kyotoSeika ? KYOTO_SEIKA_MAX_LENGTH_MS : MAX_LENGTH_MS;
+  const length = Math.min(longest, Math.max(MIN_LENGTH_MS, drawn / SPEEDUP));
   const fills = ops.filter((op) => op.tool === "fill").length;
   const reveal = reduced || fills === 0 ? 0 : fillRevealMs(length, fills);
   // Nothing drawn over time (a dot, or fills alone) has nothing to speed up.

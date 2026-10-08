@@ -55,6 +55,7 @@ function setup(ops: Op[], { reduced = false } = {}) {
     width: BOX.width,
     image: { width: PLACE.w, height: PLACE.h },
     reduced,
+    kyotoSeika: false,
     frames: clock.source,
   });
   const display = contextOf(canvas);

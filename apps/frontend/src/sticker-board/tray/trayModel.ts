@@ -22,6 +22,8 @@ export interface TraySticker extends TraySlot {
   gift: boolean;
   /** An NSFW sticker: it wears pink foil, whoever drew it. */
   nsfw: boolean;
+  /** Drawn in Kyoto Seika Practice Mode: it wears that foil, whoever drew it. */
+  kyotoSeika: boolean;
   /** An NSFW sticker for someone without the NSFW opt-in: its image is the veiled one, so it wears the 18+ mark. */
   veiled: boolean;
   /** Shown in the open tray before, so it isn't NEW. */

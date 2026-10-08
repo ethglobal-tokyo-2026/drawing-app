@@ -346,6 +346,7 @@ function Gift({
                 height={sticker.height}
                 foil="detail"
                 nsfw={sticker.nsfw}
+                kyotoSeika={sticker.kyotoSeikaSubjects !== null}
                 no={sticker.no}
               />
             </span>

@@ -29,7 +29,8 @@ export function nextKind(t: Tickets): TicketKind | null {
 
 /**
  * The day's daily tickets, fresh first, then the used ones newest first. A spend turns the last fresh stub into a used
- * one where it lies, so no stub moves.
+ * one where it lies, so no stub moves. Turning Kyoto Seika Practice Mode off can leave more daily uses than the day's
+ * allowance; only the newest show, so the stubs never outnumber it.
  */
 function dailyStubs(t: Tickets): DailyTicket[] {
   const used = t.usedToday
@@ -39,7 +40,10 @@ function dailyStubs(t: Tickets): DailyTicket[] {
     )
     .reverse();
   const fresh = Math.max(0, t.dailyPerDay - used.length);
-  return [...Array.from({ length: fresh }, (): DailyTicket => ({ used: false })), ...used];
+  return [
+    ...Array.from({ length: fresh }, (): DailyTicket => ({ used: false })),
+    ...used.slice(0, t.dailyPerDay - fresh),
+  ];
 }
 
 /** The one rule for the ticket art: see TicketView. */

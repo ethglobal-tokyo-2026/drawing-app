@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boardSticker, people, sticker } from "../api/testFixtures";
+import { boardSticker, people, sticker, TEST_KYOTO_SEIKA_SUBJECTS } from "../api/testFixtures";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
 import { LAID_OUT_SPOTS, TAKEN_WITHIN } from "./placement";
@@ -7,7 +7,11 @@ import { LAID_OUT_SPOTS, TAKEN_WITHIN } from "./placement";
 describe("toBoardSticker", () => {
   it("draws the API's board sticker with the app's names and milliseconds", () => {
     const placement = { onBoard: false, x: 0.3, y: 0.6, scale: 0.25, rotation: -8, z: 4 };
-    const drawn = sticker({ number: 147, artist: people.ken });
+    const drawn = sticker({
+      number: 147,
+      artist: people.ken,
+      kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS,
+    });
     const view = toBoardSticker(
       boardSticker({
         sticker: drawn,
@@ -31,6 +35,7 @@ describe("toBoardSticker", () => {
       Date.UTC(2026, 8, 22, 9),
     ]);
     expect(view.outline).toBe(drawn.outline);
+    expect(view.kyotoSeikaSubjects).toEqual(TEST_KYOTO_SEIKA_SUBJECTS);
   });
 });
 

@@ -99,6 +99,7 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
     setLanguageChoice: unanswered("setLanguageChoice"),
     setNsfwOptIn: unanswered("setNsfwOptIn"),
+    setKyotoSeikaPractice: unanswered("setKyotoSeikaPractice"),
     stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [] }),
     userStats: unanswered("userStats"),
     saveStickerPlacement: (stickerId, placement) =>

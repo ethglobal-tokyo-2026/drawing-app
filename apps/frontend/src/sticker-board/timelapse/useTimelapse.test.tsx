@@ -47,6 +47,7 @@ function Detail({ reduced }: { reduced: boolean }) {
     hasTimelapse: true,
     figure,
     reduced,
+    kyotoSeika: false,
     createPlayer: players.create,
     frames: frames.source,
   });

@@ -1,0 +1,93 @@
+Kyoto Seika Subjects (subjects.json)
+
+The list of subjects, with their readings and English words, is licensed under the
+Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0):
+https://creativecommons.org/licenses/by-sa/4.0/
+
+It is built from:
+
+- JMdict, by the Electronic Dictionary Research and Development Group (EDRDG): words, readings and
+  English words. CC BY-SA 4.0.
+  https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project
+  https://www.edrdg.org/edrdg/licence.html
+- Japanese Wiktionary, through kaikki.org: to check each word's sense while choosing; nothing
+  from it ships. CC BY-SA 4.0.
+  https://kaikki.org/jawiktionary/
+- Princeton WordNet 3.0: categories, to sort the subjects into kinds; nothing from it ships. Its
+  licence follows.
+- Japanese WordNet 1.1, NICT: links from words to WordNet's senses, for choosing only. Its notice
+  follows. https://bond-lab.github.io/wnja/
+- The JLPT lists by Jonathan Waller (http://www.tanos.co.uk/jlpt/, CC BY), keyed to JMdict by
+  https://github.com/stephenmk/yomitan-jlpt-vocab (CC BY-SA 4.0): levels, for choosing only.
+- KANJIDIC2, EDRDG: the school grade of each kanji, for choosing only. CC BY-SA 4.0.
+- wordfreq (https://github.com/rspeer/wordfreq): word frequency, for choosing only. Data CC BY-SA 4.0.
+
+
+WordNet Release 3.0
+
+This software and database is being provided to you, the LICENSEE, by
+Princeton University under the following license.  By obtaining, using
+and/or copying this software and database, you agree that you have
+read, understood, and will comply with these terms and conditions.:
+
+Permission to use, copy, modify and distribute this software and
+database and its documentation for any purpose and without fee or
+royalty is hereby granted, provided that you agree to comply with
+the following copyright notice and statements, including the disclaimer,
+and that the same appear on ALL copies of the software, database and
+documentation, including modifications that you make for internal
+use or for distribution.
+
+WordNet 3.0 Copyright 2006 by Princeton University.  All rights reserved.
+
+THIS SOFTWARE AND DATABASE IS PROVIDED "AS IS" AND PRINCETON
+UNIVERSITY MAKES NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR
+IMPLIED.  BY WAY OF EXAMPLE, BUT NOT LIMITATION, PRINCETON
+UNIVERSITY MAKES NO REPRESENTATIONS OR WARRANTIES OF MERCHANT-
+ABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR THAT THE USE
+OF THE LICENSED SOFTWARE, DATABASE OR DOCUMENTATION WILL NOT
+INFRINGE ANY THIRD PARTY PATENTS, COPYRIGHTS, TRADEMARKS OR
+OTHER RIGHTS.
+
+The name of Princeton University or Princeton may not be used in
+advertising or publicity pertaining to distribution of the software
+and/or database.  Title to copyright in this software, database and
+any associated documentation shall at all times remain with
+Princeton University and LICENSEE agrees to preserve same.
+
+
+Japanese WordNet
+
+Copyright: 2021-2024 Francis Bond, Takayuki Kuribayashi
+Copyright: 2018-2020 Francis Bond
+Copyright: 2016-2017 Francis Bond, Takayuki Kuribayashi
+Copyright: 2012-2015 Francis Bond
+Copyright: 2009-2011 NICT
+
+This software and database is being provided to you, the LICENSEE, by
+the National Institute of Information and Communications Technology
+under the following license.  By obtaining, using and/or copying this
+software and database, you agree that you have read, understood, and
+will comply with these terms and conditions:
+
+  Permission to use, copy, modify and distribute this software and
+  database and its documentation for any purpose and without fee or
+  royalty is hereby granted, provided that you agree to comply with
+  the following copyright notice and statements, including the
+  disclaimer, and that the same appear on ALL copies of the software,
+  database and documentation, including modifications that you make
+  for internal use or for distribution.
+
+THIS SOFTWARE AND DATABASE IS PROVIDED "AS IS" AND NICT MAKES NO
+REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED.  BY WAY OF EXAMPLE,
+BUT NOT LIMITATION, NICT MAKES NO REPRESENTATIONS OR WARRANTIES OF
+MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR THAT THE USE
+OF THE LICENSED SOFTWARE, DATABASE OR DOCUMENTATION WILL NOT INFRINGE
+ANY THIRD PARTY PATENTS, COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.
+
+The name of the National Institute of Information and Communications
+Technology may not be used in advertising or publicity pertaining to
+distribution of the software and/or database.  Title to copyright in
+this software, database and any associated documentation shall at all
+times remain with National Institute of Information and Communications
+Technology and LICENSEE agrees to preserve same.

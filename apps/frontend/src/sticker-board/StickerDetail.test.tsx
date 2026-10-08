@@ -13,12 +13,15 @@ import {
   gratitude as gratitudeFixture,
   people,
   sticker as apiSticker,
+  TEST_KYOTO_SEIKA_SUBJECTS,
   trailEntry,
 } from "../api/testFixtures";
 import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_OWNER } from "../api/testing";
 import { toPerson, toSticker } from "../api/views";
 import { resendPendingGratitude, sendGratitude } from "../gratitude/gratitudeOutbox";
 import { errorDetail } from "../i18n/errorMessage";
+import { i18next } from "../i18n/i18n";
+import { kyotoSeika } from "../i18n/strings/kyotoSeika";
 import { testStickerUrls } from "../stickers/testStickerUrls";
 import type { BoardStickerView } from "./boardSticker";
 import { StickerDetail } from "./StickerDetail";
@@ -51,6 +54,7 @@ const sticker = (
   width: 120,
   height: 100,
   nsfw: false,
+  kyotoSeikaSubjects: null,
   urls: testStickerUrls(`blob:${no}`),
   placement: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: no },
   artist: you,
@@ -403,6 +407,29 @@ describe("StickerDetail", () => {
     await settle();
     expect(button("Send gratitude")).toBeUndefined();
     expect(giveIsTheKey()).toBe(true);
+  });
+
+  describe("beside Timelapse", () => {
+    const openOn = (shown: BoardStickerView) => open({ stickers: [shown], startId: shown.id });
+    const tag = () => host.querySelector(".kyoto-seika-tag");
+
+    it("tags a sticker drawn in Kyoto Seika Practice Mode, with its pair and their readings", () => {
+      openOn(sticker(150, day(20), { kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS }));
+      const [first, second] = TEST_KYOTO_SEIKA_SUBJECTS;
+      expect(tag()?.textContent).toContain(kyotoSeika.tag.label.en);
+      expect([...(tag()?.querySelectorAll("rt") ?? [])].map((rt) => rt.textContent)).toEqual([
+        first.reading,
+        second.reading,
+      ]);
+      expect(tag()?.querySelector(".visually-hidden")?.textContent).toBe(
+        i18next.t(($) => $.kyotoSeika.tag.spoken, { first: first.ja, second: second.ja }),
+      );
+    });
+
+    it("tags no other sticker", () => {
+      openOn(sticker(151, day(20)));
+      expect(tag()).toBeNull();
+    });
   });
 
   it("shows where it's been, the most recent gratitude open with its artist's share", async () => {

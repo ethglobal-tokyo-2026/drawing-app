@@ -62,6 +62,21 @@ describe("tickets", () => {
     });
   });
 
+  it("draws no more stubs than the day allows, the newest, once Kyoto Seika Practice Mode is off after more daily spends", () => {
+    const perDay = FRESH_TICKETS.dailyPerDay;
+    const usedToday = Array.from({ length: perDay + 2 }, (_, i) => use(i, "daily", `M${i} 0Z`));
+    const newestFirst = usedToday
+      .slice(-perDay)
+      .reverse()
+      .map((u) => ({ used: true, outline: u.sticker?.outline }));
+    expect(ticketView({ ...FRESH_TICKETS, dailyLeft: 0, usedToday })).toEqual({
+      show: "none",
+      stubs: newestFirst,
+      reserve: 0,
+      refillAt: new Date(FRESH_TICKETS.nextRefillAt),
+    });
+  });
+
   it("names only the tickets there are", () => {
     const usedToday = [0, 1].map((i) => use(i, "daily"));
     const one = { ...FRESH_TICKETS, dailyLeft: 1, usedToday };

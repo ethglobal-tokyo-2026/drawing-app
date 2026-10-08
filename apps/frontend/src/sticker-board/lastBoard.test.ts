@@ -22,6 +22,7 @@ const sticker = (id: string): BoardStickerView => ({
   width: 600,
   height: 600,
   nsfw: false,
+  kyotoSeikaSubjects: null,
   outline: "M0 0L600 0L600 600Z",
   urls: testStickerUrls(`/api/images/${id}`),
   placement: { on: true, x: 0.5, y: 0.5, s: 1, r: 0, z: 1 },

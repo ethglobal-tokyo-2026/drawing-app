@@ -1,0 +1,12 @@
+/* Begin, centered at the sheet's foot in the thumb's reach, while the pair waits for it. */
+.begin-key {
+  position: absolute;
+  left: 50%;
+  bottom: 46px;
+  z-index: 32;
+  translate: -50% 0;
+}
+
+.begin-key .key {
+  min-width: 196px;
+}

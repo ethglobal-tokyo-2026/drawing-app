@@ -9,9 +9,13 @@ import {
   type Ref,
 } from "react";
 import { retryPrivySignIn } from "../identity/privy";
-import type { Sticker, TicketUse } from "@drawing-app/api/client";
+import type { KyotoSeikaSubject, Sticker, TicketUse } from "@drawing-app/api/client";
 import { apiError, type ApiClient } from "../api/apiClient";
 import { useMe } from "../api/meContext";
+import type { BeginKeyHandle } from "../kyoto-seika/BeginKey";
+import { CornerPrint } from "../kyoto-seika/CornerPrint";
+import { KyotoSeikaDeal } from "../kyoto-seika/KyotoSeikaDeal";
+import { useKyotoSeikaSheet } from "../kyoto-seika/useKyotoSeikaSheet";
 import { useApi } from "../api/useApi";
 import { errorDetail, errorMessage, problemOf, type Problem } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
@@ -44,6 +48,7 @@ import {
   LOAD_TIMEOUT_MS,
   SessionKeeper,
   type KeptDrawing,
+  type KeptKyotoSeika,
   type KeptSession,
 } from "./session/keptSession";
 import { forgetSentSeal, keepSentSeal, sealWentOut, sentSealOutcome } from "./session/sentSeal";
@@ -52,7 +57,7 @@ import {
   describeSealFailure,
   FRESH_SESSION,
   sealFailure,
-  SESSION_MS,
+  sessionMs,
   transition,
   type SessionEffect,
   type SessionEvent,
@@ -179,6 +184,16 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // Whether this device keeps the drawing in progress; the timer's note says so while it can't.
   const [kept, setKept] = useState(true);
   const [keeper] = useState(() => new SessionKeeper(me.id, setKept));
+  // The deal of a ticket spent in Kyoto Seika Manga Expression Practice Mode, and whether this sheet's was.
+  const kyotoSeikaSheet = useKyotoSeikaSheet({
+    userId: me.id,
+    dark: me.kyotoSeikaPractice && me.kyotoSeikaDarkSubjects,
+    keeper,
+  });
+  const ticketKyotoSeika = useRef(false);
+  const begin = useRef<BeginKeyHandle>(null);
+  // Begin was pressed: the deal tucks away before it goes.
+  const [dealLeaving, setDealLeaving] = useState(false);
   // The rail's sizes and Smoothing are kept with the drawing, so a reload brings them back too.
   useEffect(
     () => keeper.keepTools({ brushSize: sizes.brush, eraserSize: sizes.eraser, smoothing }),
@@ -206,7 +221,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     return () => clearTimeout(id);
   }, [keyHint]);
 
-  const clock = useSessionClock(() => send({ type: "time-up" }));
+  const clock = useSessionClock(() => send({ type: "time-up" }), sessionMs(me.kyotoSeikaPractice));
+  // A blank sheet shows the length its ticket will be spent with, so Settings apply to it in place.
+  useEffect(() => {
+    if (session.phase === "blank") clock.setLength(sessionMs(me.kyotoSeikaPractice));
+  }, [clock, session.phase, me.kyotoSeikaPractice]);
 
   function send(event: SessionEvent) {
     const { session: next, effects } = transition(latest.current, event);
@@ -219,12 +238,20 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   function run(effect: SessionEffect) {
     switch (effect) {
       case "keep-session":
-        keeper.start(ticket.current);
+        keeper.start(
+          ticket.current,
+          ticketKyotoSeika.current ? { subjects: null, rolls: [0, 0], begun: false } : null,
+        );
+        if (ticketKyotoSeika.current) kyotoSeikaSheet.open(null);
         // The ticket use is kept with this sheet now, so the spend's key can go.
         tickets.forgetKeptSpend();
         return;
       case "start-clock":
         clock.start();
+        return;
+      case "lock-subjects":
+        kyotoSeikaSheet.begin();
+        setDealLeaving(true);
         return;
       case "seal":
         clock.stop();
@@ -235,8 +262,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         return;
       case "reset-sheet": {
         canvas.current?.reset();
-        clock.reset();
+        // The next ticket is spent in the mode the person has on now.
+        clock.reset(sessionMs(me.kyotoSeikaPractice));
         keeper.wipe();
+        kyotoSeikaSheet.close();
+        ticketKyotoSeika.current = false;
+        setDealLeaving(false);
         forgetSentSeal(me.id);
         ticket.current = null;
         setPickedUp(null);
@@ -301,6 +332,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     keeper.save(canvas.current?.steps() ?? [], clock.elapsed);
     const density = canvas.current?.inkDensity() ?? 1;
     const marked = nsfw.current;
+    // The pair Begin locked in, each subject as the sticker keeps it.
+    const pair = kyotoSeikaSheet.begun ? kyotoSeikaSheet.deal?.subjects : undefined;
+    const kept = ({ ja, reading, en }: KyotoSeikaSubject) => ({ ja, reading, en });
+    const subjects = pair && ([kept(pair[0]), kept(pair[1])] as const);
     const ink = canvas.current?.inkForReading();
     if (!ink) return null;
     const size = { width: ink.width, height: ink.height };
@@ -333,6 +368,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       flat: cut.flat,
       ...(timelapse && { timelapse }),
       nsfw: marked,
+      ...(subjects && { kyotoSeikaSubjects: subjects }),
     }));
     return { sticker: cut, request };
   }
@@ -374,7 +410,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
    */
   async function seal() {
     setPanel(null);
-    const timeUsed = Math.min(SESSION_MS / 1000, Math.max(1, Math.round(clock.elapsed / 1000)));
+    const timeUsed = Math.min(clock.length / 1000, Math.max(1, Math.round(clock.elapsed / 1000)));
     let sticker: SealedSticker | null = null;
     let request: SealRequest | null = null;
     let shown: Ceremony | null = null;
@@ -392,7 +428,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         const cut = await cutFromSheet(timeUsed);
         if (!cut) {
           // Everything drawn was erased or undone. At 0:00 the sheet is spent; before that, draw on.
-          if (clock.elapsed >= SESSION_MS) {
+          if (clock.elapsed >= clock.length) {
             send({ type: "reset" });
             // The fresh sheet says so in the chip, since the reset just cleared it.
             setSealProblem({ message: t(($) => $.stickerCreation.seal.emptyAtTimeUp) });
@@ -445,7 +481,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       const problem = describeSealFailure(error, sent);
       // Only reconnecting LINE renews its sign-in, and that leaves the page: the check does it.
       reconnectOnTap.current = problem.kind === "signInExpired";
-      const timeUp = clock.elapsed >= SESSION_MS;
+      const timeUp = clock.elapsed >= clock.length;
       const refused = failure === "refused";
       setCanStartOver(timeUp && !mayHaveSealed);
       // A refusal at 0:00 resets the sheet, which clears the chip, so the chip is set after it.
@@ -493,7 +529,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         setSpending(false);
         setRightAway(false);
         ticket.current = use.id;
-        send({ type: "start" });
+        ticketKyotoSeika.current = use.kyotoSeikaPractice;
+        // The sheet keeps the clock its ticket was spent with, whatever the switch says later.
+        clock.setLength(sessionMs(use.kyotoSeikaPractice));
+        send({ type: "start", kyotoSeika: use.kyotoSeikaPractice });
       },
       (error: unknown) => {
         const failure = apiError(error);
@@ -543,8 +582,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
 
   /** Puts a kept drawing back on the sheet, on its own ticket and in its own color, paused. */
   function putBack(found: Extract<KeptDrawing, { status: "found" }>) {
-    // Nothing drawn and no time counted: Start spent the ticket and the clock still waits.
-    const drawn = found.steps.length > 0 || found.elapsedMs > 0;
+    // Nothing drawn and no time counted: Start spent the ticket and the clock still waits. Begin started it.
+    const part = found.kyotoSeika;
+    const drawn = found.steps.length > 0 || found.elapsedMs > 0 || part?.begun === true;
+    clock.setLength(sessionMs(part !== null));
+    ticketKyotoSeika.current = part !== null;
+    if (part) kyotoSeikaSheet.open(part);
     canvas.current?.load(found.steps);
     // It keeps its own color rather than the one a fresh sheet would start in.
     const own = keptColor(found.steps);
@@ -552,14 +595,26 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       setColor(own);
       startedIn.current = own;
     }
-    keeper.resume(found.ticket, found.steps, found.elapsedMs, found.nsfw, found.tools);
+    keeper.resume(
+      found.ticket,
+      found.steps,
+      found.elapsedMs,
+      found.nsfw,
+      found.tools,
+      found.kyotoSeika,
+    );
     keepNsfw(found.nsfw);
     if (found.tools) {
       setSizes({ brush: found.tools.brushSize, eraser: found.tools.eraserSize });
       setSmoothing(found.tools.smoothing);
     }
     ticket.current = found.ticket;
-    send({ type: "restored", drawn, sealSent: sealWentOut(me.id, found.ticket) });
+    send({
+      type: "restored",
+      drawn,
+      sealSent: sealWentOut(me.id, found.ticket),
+      dealt: part?.begun === false,
+    });
     if (!drawn) {
       setPickedUp(null);
       return;
@@ -572,20 +627,31 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   /**
    * A drawing that can't be put back gives its ticket, which never became a sticker, to a fresh sheet,
    * which seals on it without spending another. `clear`: what's kept of it can't be read back, so it
-   * goes; a drawing that wasn't read stays kept, for a read that answers late or the next reload.
+   * goes; a drawing that wasn't read stays kept, for a read that answers late or the next reload. Its
+   * Kyoto Seika Practice Mode part goes with the ticket, which keeps its mode.
    */
-  function carryOver(ticketUseId: number, clear: boolean) {
+  function carryOver(ticketUseId: number, clear: boolean, kyotoSeika: KeptKyotoSeika | null) {
     ticket.current = ticketUseId;
-    if (clear) keeper.start(ticketUseId);
-    else keeper.carry(ticketUseId);
-    send({ type: "restored", drawn: false, sealSent: false });
+    if (clear) keeper.start(ticketUseId, kyotoSeika);
+    else keeper.carry(ticketUseId, kyotoSeika);
+    clock.setLength(sessionMs(kyotoSeika !== null));
+    ticketKyotoSeika.current = kyotoSeika !== null;
+    if (kyotoSeika) kyotoSeikaSheet.open(kyotoSeika);
+    // A begun pair stays locked in on the fresh sheet, whose clock waits for the first stroke.
+    const dealt = kyotoSeika !== null && !kyotoSeika.begun;
+    send({ type: "restored", drawn: false, sealSent: false, dealt });
     setPickedUp("carried");
   }
 
   // A drawing not read whose seal went out: the server may hold the seal, so a new drawing on its
   // ticket could be answered with the old sticker. The sheet stays locked until the drawing is read
   // or the tickets show what became of the seal. `reading`: a late read may still bring the drawing.
-  const unsettled = useRef<{ ticket: number; reading: boolean; clear: boolean } | null>(null);
+  const unsettled = useRef<{
+    ticket: number;
+    reading: boolean;
+    clear: boolean;
+    kyotoSeika: KeptKyotoSeika | null;
+  } | null>(null);
   const [sealUnsettled, setSealUnsettled] = useState(false);
   const unsettle = (next: typeof unsettled.current) => {
     unsettled.current = next;
@@ -604,7 +670,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         kept.error,
       );
       const reading = kept.status === "unread" && kept.later !== null;
-      unsettle({ ticket: kept.ticket, reading, clear: kept.status === "lost" });
+      unsettle({
+        ticket: kept.ticket,
+        reading,
+        clear: kept.status === "lost",
+        kyotoSeika: kept.kyotoSeika,
+      });
       if (tickets.tickets) settleSentSeal(tickets.tickets);
       // A read that never answers mustn't hold the sheet for good: past a second wait, the tickets say.
       if (reading) {
@@ -624,12 +695,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         "The drawing in progress wasn't read after a reload, so its ticket carries over and it stays kept",
         kept.error,
       );
-      carryOver(kept.ticket, false);
+      carryOver(kept.ticket, false, kept.kyotoSeika);
       return;
     }
     console.error("The drawing in progress couldn't be picked up after a reload", kept.error);
     if (kept.ticket !== null) {
-      carryOver(kept.ticket, true);
+      carryOver(kept.ticket, true, kept.kyotoSeika);
       return;
     }
     keeper.wipe();
@@ -644,7 +715,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     setRestoring(false);
     forgetSentSeal(me.id);
     if (outcome === "unsealed") {
-      carryOver(waiting.ticket, waiting.clear);
+      carryOver(waiting.ticket, waiting.clear, waiting.kyotoSeika);
       return;
     }
     // Sealed, the sticker is on the board. Not one of today's uses, the tickets can't say whether it
@@ -704,7 +775,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     if (late.status === "found") putBack(late);
     else if (late.status === "lost") {
       console.error("The drawing in progress can't be picked up", late.error);
-      keeper.start(late.ticket);
+      keeper.start(late.ticket, late.kyotoSeika);
     } else console.error("The drawing in progress couldn't be read", late.error);
   });
   useEffect(() => {
@@ -724,7 +795,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
 
   // "Picked up" stays until the clock runs again; word of a lost drawing, or of a carried-over
   // ticket, until the first stroke.
-  const waiting = session.phase === "blank" || session.phase === "primed";
+  const dealt = session.phase === "dealt";
+  // Begin locked the pair in: it prints in the sheet's corner, under the ink.
+  const lockedPair = kyotoSeikaSheet.begun ? (kyotoSeikaSheet.deal?.subjects ?? null) : null;
+  const waiting = session.phase === "blank" || session.phase === "primed" || dealt;
   if (pickedUp === "restored" && !paused) setPickedUp(null);
   if (pickedUp !== null && pickedUp !== "restored" && !waiting) setPickedUp(null);
   if (startsNote && !waiting) setStartsNote(false);
@@ -810,7 +884,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const locked = !active || session.phase === "blank" || sealing || retrying;
 
   // On the first few visits, a started sheet says the timer waits for the first stroke, which peels it off.
-  const startsLabel = startsNote || (active && session.phase === "primed" && isFirstVisit());
+  const startsLabel =
+    startsNote || (active && (session.phase === "primed" || dealt) && isFirstVisit());
   const timerNote = !kept
     ? t(($) => $.stickerCreation.timer.note.notKept)
     : pickedUp === "restored"
@@ -822,7 +897,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           : pickedUp === "lost"
             ? t(($) => $.stickerCreation.timer.note.lost)
             : startsLabel
-              ? t(($) => $.stickerCreation.timer.note.startsWhenYouDraw)
+              ? dealt
+                ? t(($) => $.stickerCreation.timer.note.startsWhenYouPressBegin)
+                : t(($) => $.stickerCreation.timer.note.startsWhenYouDraw)
               : null;
 
   // Tells the sticker board what Draw means for this sheet: a fresh one spends a ticket (after a seal,
@@ -858,7 +935,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   };
 
   useShortcuts({
-    enabled: !locked,
+    enabled: !locked && !dealt,
     undo: () => canvas.current?.undo(),
     redo: () => canvas.current?.redo(),
     setTool: pickTool,
@@ -878,7 +955,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   return (
     <div
       ref={root}
-      className={`drawing-screen ${sealing ? "is-sealing" : ""} ${retrying ? "is-retrying" : ""}`}
+      className={`drawing-screen ${sealing ? "is-sealing" : ""} ${retrying ? "is-retrying" : ""} ${dealt ? "is-dealt" : ""} ${dealLeaving ? "is-deal-leaving" : ""}`}
       style={{ "--draw-color": color }}
       // It stays mounted under the board so a sticker in progress survives; covered, it takes no focus.
       inert={!active}
@@ -887,13 +964,23 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       <DrawingCanvas
         ref={canvas}
         active={active}
+        under={lockedPair && <CornerPrint subjects={lockedPair} />}
+        label={
+          lockedPair
+            ? t(($) => $.kyotoSeika.print.canvas, {
+                first: lockedPair[0].ja,
+                second: lockedPair[1].ja,
+              })
+            : undefined
+        }
         settings={{
           tool,
           color,
           size: sizePx(sizes[sizeKey]),
           lazyRadius: lazyRadius(smoothing),
           locked,
-          paused,
+          // The dealt sheet takes the paused sheet's path, so a touch nudges Begin.
+          paused: paused || dealt,
           panelOpen: panel !== null,
           armed: session.phase === "armed",
           sessionMs: () => clock.elapsed,
@@ -915,7 +1002,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           send({ type: "ink" });
           if (op.tool === "brush") setRecent((r) => withRecent(r, op.color));
         }}
-        onBlocked={() => timer.current?.showHint()}
+        onBlocked={() => (dealt ? begin.current?.nudge() : timer.current?.showHint())}
         onDismissPanel={() => setPanel(null)}
         onDisarm={() => send({ type: "canvas-touch" })}
       />
@@ -925,6 +1012,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           clock={clock}
           paused={paused}
           note={active ? timerNote : null}
+          waitsFor={session.phase === "dealt" ? "begin" : "stroke"}
           onToggle={onTimerTap}
         />
         <ToolStrip
@@ -938,6 +1026,19 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           onPanel={setPanel}
         />
       </div>
+      {active && (dealt || dealLeaving) && (
+        <KyotoSeikaDeal
+          screen={root}
+          list={kyotoSeikaSheet.list}
+          deal={kyotoSeikaSheet.deal}
+          minutes={clock.length / 60_000}
+          begin={begin}
+          onRoll={kyotoSeikaSheet.roll}
+          onBegin={() => send({ type: "begin" })}
+          leaving={dealLeaving}
+          onLeft={() => setDealLeaving(false)}
+        />
+      )}
       <ColorSheet
         id={colorSheetId}
         open={panel === "color"}
@@ -1051,7 +1152,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       {askShown && (
         <StartDrawing
           tickets={askShown}
-          minutes={SESSION_MS / 60_000}
+          minutes={sessionMs(me.kyotoSeikaPractice) / 60_000}
           followsSealedCard={ceremony?.leaving === true}
           leaving={!ask}
           onLeft={() => setAskShown(null)}

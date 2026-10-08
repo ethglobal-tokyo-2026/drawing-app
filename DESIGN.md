@@ -33,6 +33,7 @@ colors:
   foil-sky: "#6FA8FF"
   foil-lilac: "#A98BFF"
   cork: "#CFA476"
+  non-repro-blue: "#8CC8E8"
 typography:
   display:
     fontFamily: "Dela Gothic One, Croquis Sans, Zen Kaku Gothic New, system-ui, sans-serif"
@@ -296,7 +297,7 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 - **Blue** (blue): the Shop and reserve tickets. The Shop tab, the Pay key and picked pack, reserve tickets, and the Use a reserve ticket key. Opposite daily tickets' yellow, so the two kinds of ticket can't be confused.
 - **Tangerine** (tangerine): the streak. The streak leaf's band on the cork back, with the Fire icon, and the streak's figures elsewhere: Streak's selected leaderboard tab, and the fire before each of its figures, whose numerals stay Ink.
 - **Tomato** (tomato): can't undo. Stopped states and warnings. It's never a key.
-- **Foil** (foil-pink, foil-peach, foil-lemon, foil-aqua, foil-sky, foil-lilac): six iridescent bands, one 96px period, that flow along a sticker's foil band and turn in the ring round the artist chip's picture. It isn't a fill color. It's a material worn only by a sticker drawn by someone other than the board's owner. It has no green.
+- **Foil** (foil-pink, foil-peach, foil-lemon, foil-aqua, foil-sky, foil-lilac): six iridescent bands, one 96px period, that flow along a sticker's foil band and turn in the ring round the artist chip's picture. It isn't a fill color. It's a material worn only by a sticker drawn by someone other than the board's owner, with the two exceptions in the Other Hand Rule. It has no green.
 
 ### Lips (deep partners)
 
@@ -313,6 +314,10 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 ### The cork back
 
 - **Cork** (cork): the back of the sticker board, warm with granules and darker where the frame meets it. Paper, pins, tape and stamps sit on it; nothing is printed on it directly.
+
+### Manga paper
+
+- **Non-repro Blue** (non-repro-blue): manga manuscript paper's blue, the color that doesn't print. A print material, like Cork, not a coded hue: only the corner print of a sheet in Kyoto Seika Manga Expression Practice Mode uses it.
 
 ### Neutral
 
@@ -331,7 +336,7 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 
 **The One Meaning Rule.** Each hue means one thing: yellow is now, aqua is giving, pink is gratitude and you, grape is received, blue is the Shop and reserve tickets, tangerine is the streak, and tomato is can't-undo. Don't pick a hue for looks.
 
-**The Other Hand Rule.** Foil appears only on a sticker drawn by someone other than the board's owner (on your tray's sheets, someone other than you). Your own stickers keep the plain white die-cut edge; the pearl rim is retired. Surfaces that aren't a board (Explore's sticker pile, the leaderboard) show no foil. It's never a rarity grade.
+**The Other Hand Rule.** Foil appears only on a sticker drawn by someone other than the board's owner (on your tray's sheets, someone other than you). Your own stickers keep the plain white die-cut edge; the pearl rim is retired. Surfaces that aren't a board (Explore's sticker pile, the leaderboard) show no foil. It's never a rarity grade. Two foils are the exceptions: they mark how a sticker was made, not whose hands it's in, so they show whoever drew it, your own stickers included. Pink foil marks an NSFW sticker, and the Kyoto Seika Practice Mode foil a sticker drawn in Kyoto Seika Manga Expression Practice Mode; pink wins on a sticker that's both.
 
 **The Platform Green Rule.** The world has no green. LINE's green appears only inside LINE's own mocked UI (the chat, the Gift Message, the consent and share screens, and the app badge).
 
@@ -404,7 +409,7 @@ Stickers and the gratitude heart also respond to the app's one moving light. The
 
 ### Named Rules
 
-**The One Light Rule.** There's one light for the whole app. Static shadows fall down and to the right from the top-left light, and every moving highlight (the sticker specular and sheen, the foil's glint, the heart's gloss) reads the shared light variables. Don't add a second light source. The foil's glint sits where the light falls, the same way on every sticker whatever its turn, and holds where the last tilt left it; before any tilt it rests top-left. Only the foil's bands run on their own clock, flowing on a 7s loop staggered per sticker, under a grating that never moves. They hold still under reduced motion.
+**The One Light Rule.** There's one light for the whole app. Static shadows fall down and to the right from the top-left light, and every moving highlight (the sticker specular and sheen, the foil's glint, the Kyoto Seika Practice Mode foil's shading and sparkles, the heart's gloss) reads the shared light variables. Don't add a second light source. The foil's glint sits where the light falls, the same way on every sticker whatever its turn, and holds where the last tilt left it; before any tilt it rests top-left. Only the foil's bands run on their own clock, flowing on a 7s loop staggered per sticker, under a grating that never moves. They hold still under reduced motion.
 
 **The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted. The one exception is the cork back: paper, stamps and pins cast a cork-brown throw (rgba(58,36,16,…)) over an Ink contact line, because a shadow on cork is darker cork. The one colored light is kept for a sticker's gratitude glow (see Designed, not built yet): faint pink (#FF7EB6) warming toward amber (#FFB13B); those two hues belong to the glow alone.
 
@@ -485,7 +490,7 @@ The board's back, where a person's figures are pinned up as paper. It's the only
 - **Bests:** a torn notebook scrap ruled in Ink at 14% every 24px, held by washi. Its heading and each row take whole 24px lines with no gaps between them, and each line's rule runs a pixel under the baseline, so the words sit on the rules the way handwriting sits on a notebook's lines. Best combo on it is the hit counter, with no note, and it fits inside its line.
 - **About:** the joined date, on a strip of Ink label-maker tape with raised letters.
 - **Controls:** Flip back is label stock at the foot of the right column. Bare cork, Escape and LINE's Back also flip back. The back has no key.
-- **Settings:** your own back's first paper under the stats, above your Sui address paper, since it's the one people come back to. It's a clean-cut index card taped at both top corners, its Title-type heading over an Ink rule. Until it scrolls into view its heading peeks above the cork's foot, unless the stats would run into it (a short phone), when it waits below them; a tap or focus scrolls it in. Language is ruled 44px radio rows (Same as LINE, English, 日本語) with an Ink dot in a ring for the pick; a failed save shows the error line. Under it, 18+ stickers is one switch row, Show 18+ stickers, filled Bonbon Pink when on, over fine print on who it's for. A saved setting applies at once, and the setting's status line says so; a failed save changes nothing and says why.
+- **Settings:** your own back's first paper under the stats, above your Sui address paper, since it's the one people come back to. It's a clean-cut index card taped at both top corners, its Title-type heading over an Ink rule. Until it scrolls into view its heading peeks above the cork's foot, unless the stats would run into it (a short phone), when it waits below them; a tap or focus scrolls it in. Language is ruled 44px radio rows (Same as LINE, English, 日本語) with an Ink dot in a ring for the pick; a failed save shows the error line. Under it, 18+ stickers is one switch row, Show 18+ stickers, filled Bonbon Pink when on, over fine print on who it's for. Under that, Entrance exam is Kyoto Seika Manga Expression Practice Mode's switch row. Its name blacks out one character of the university with a hand-inked bar, like a manga censor bar (伏せ字); a tap on the bar lifts its corner and a white label peels on under it ("Redacted for grown-up reasons"), and never flips the switch. Screen readers hear the full name. A help button after the legend, Phosphor's question (bold at rest, fill while open), opens a note under the legend, ruled off like a row: how the mode works, and that its maker isn't connected with the university. While the mode is on, Dark subjects too sits under it, indented behind a rule, with no divider above it. A credit line closes the setting, linking the subject list's Sources page. A saved setting applies at once, and the setting's status line says so; a failed save changes nothing and says why.
 - **The Sui address paper:** one line of fine print says what it's for ("Keeps your stickers and pays for reserve tickets").
 - **Developer slip:** LINE's and Privy's details on a torn-top slip, lying collapsed under the cork's end, after the last paper, in every build that has it. Pulling up past the end meets iOS's rubber band: the cork and its papers ride up together as the slip's top shows, and past 150px of travel the release brings it out and the cork glides up to it; short of that it settles back. Only a touch that starts at the end pulls, and the cork doesn't bounce there. A visually hidden "Developer tools" button, shown as label tape when focused, brings it out for keyboards and screen readers. Reduced motion: nothing moves, and it fades in. It goes back under once the board rests on its front.
 - **Empty values** read in words: "No gratitude yet", "Not started", "None yet" (a best at 0).
@@ -505,7 +510,8 @@ The same board, read only, opened from Explore. Their stickers sit where they st
 
 The canvas is just for drawing.
 
-- **Top row:** the timer dot and the tool strip share one row. The timer is a 48px yellow dot at -4° with puffy numerals; tapping it pauses.
+- **Top row:** the timer dot and the tool strip share one row. The timer is a 48px yellow dot at -4° with puffy numerals, 56px while it reads 10:00 or more so 30:00 fits; tapping it pauses.
+- **Time calls:** a clock long enough to reach them, as a sheet in Kyoto Seika Manga Expression Practice Mode has, calls the time at 10 and 5 minutes left, as a proctor does: the white label under the timer reads "10 minutes left" / 残り10分 for a few seconds, and screen readers hear it.
 - **Paused:** the dot stays whole and bright, and a white label-stock tag reading PAUSED, with Phosphor's pause (fill), sticks across its lower edge at a counter-angle of 8°. It sticks on when the clock holds and peels off when it runs. There's one paused look for every hold: tapped, the page hidden, the color sheet open, the Smoothing panel open, or a finger on the size rail. Only the tap is the person's pause; the other holds release on their own.
 - **Paused hint:** while paused the canvas takes no marks. A stroke nudges the dot and sticks a white label under it, turned -2°, reading "Tap the timer to keep drawing", with Phosphor's arrow-bend-left-up (bold, 28px) pointing up at the timer. It peels off by itself. Tools can still switch.
 - **Tools:** brush, eraser, fill, a color control (a Phosphor dot inked in the current color on a thin ring; each new drawing starts in a random starting color) and Smoothing, as flat 38px tiles padded to 44px. The current tool is an Ink tile with the fill-weight icon.
@@ -518,6 +524,20 @@ The canvas is just for drawing.
 - **Sealed card:** the sticker lands in its slot with the card's 18px padding above it, never against the card's top edge. Under "Sealed", the fine print keeps the handle's own case. With tickets left, Keep drawing is the key and Back to My board the label under it. Once the sticker used the day's last daily ticket, the line under the ticket row leads with the refill, "New daily tickets at 12:00 AM", in Ink. On the last ticket of all, Back to My board becomes the key and Buy reserve tickets drops to small label stock with the ticket icon under that line: the day's peak is no sales pitch.
 - **Keep drawing:** the hand-over overlaps rather than running in turn. On the press, the fresh sheet and the clock (3:00) are set up under the veil, and the day's next daily ticket is spent without asking. The sealed card carries the sticker down toward the Board grabber, 70% of the screen, over 280ms on the peel curve, fading over its last half, while the veil lifts linearly. The timer, tools, size rail and undo fade back in 120ms later, so the sheet is never bare. No card shows during that spend; one comes up only if the spend fails, with the reason. When the sticker used the last daily ticket and reserve ones are left, the reserve ask rises 120ms into the card's exit, its scrim taking over from the lifting veil. The shop from the last ticket's card leaves the same way. The fresh sheet takes ink as soon as the spend lands, even while the card is still leaving. Under reduced motion it's the same order in one frame.
 
+### The deal (Kyoto Seika Manga Expression Practice Mode)
+
+A sheet whose ticket was spent in the mode deals two Kyoto Seika Subjects (題材) before the clock starts. An extension of the draw screen, not a new world: the delight is in the deal and in Begin.
+
+- **Before Begin:** the timer dot reads 30:00 with "Starts when you press Begin" under it on the first visits, and the tool strip, size rail, undo and redo are hidden, as an exam waits for 「始め」. The sheet takes no ink: a touch on it nudges Begin, as a stroke on a paused sheet nudges the timer.
+- **Balloons:** manga thought balloons (もくもく), bumps round an ellipse in Canvas white with a 2.25px Ink edge and the Lift shadow. Three beads trail toward the sheet's left edge, the thinker off the page. The upper sits left at -3°, the lower right at +2.5°, overlapping, centered between the timer's label and Begin. Inside, top to bottom: the reading as group ruby over a word with kanji (12px Graphite), the word in the Japanese face at 800 (46px for one or two characters down to 28px for six, 40px for a Latin acronym) and the English (16px, 750). They bob ±3px and ±0.6° on periods of 3.4s and 4.1s, so they never sync.
+- **Short phones:** the balloons tighten rather than scale (word at most 36px, less room between lines), and where even that doesn't fit they draw closer, never so close their words meet. Nothing goes under the 11px floor.
+- **Dice:** small label stock (a 32px face over a 3px lip, 44px touch) on each balloon's lower-right edge, with Phosphor's die (bold): five pips upper, four lower. A roll tumbles the die twice with a hop, squashes the cloud, puffs five wisps of smoke from it, and swaps the word out and in.
+- **Begin:** the screen's one key, Seal Yellow with the Draw icon, "Begin" / 「はじめ」, centered at the sheet's foot, 196px wide. The press starts the clock at once; the key drops 56px and fades, the balloons tuck toward the corner and fade, and the tools come back 120ms later, as after Keep drawing.
+- **The corner print:** once begun, the pair stays as a vertical margin note (縦書き) in Non-repro Blue under the ink, 16px from the sheet's right edge and 150px above its foot, clear of the seal key and the 18+ switch: a small boxed 題材, then each subject top to bottom with its furigana on its right and its English set sideways on its left. 24px words, 20px from four characters, 11px furigana, 11.5px English. It fades in over 200ms and takes no touches.
+- **Rolling too much:** each die counts its own rolls. From the tenth, every third roll earns a line in manga hand lettering (書き文字: white Dela Gothic One with a 5px Ink outline, tilted -6°) above the upper balloon or below the lower, popping in and peeling off after 1.6s. The balloon sweats from roll 10, an anger vein throbs from 19, and it shivers from 22. From 26 a big Seal Yellow number counts down over the smoking die, and the 30th roll blows it up: a burst of white, Tomato and Seal Yellow stars, ink outlined, with KA-BOOM! / ドカーン！ and a spray of label-stock chips, while the balloon jolts. The die is left charred, cracked and smoking, and its subject stays.
+- **Reduced motion:** the balloons are simply there and a roll swaps the word; lines, numbers and the burst fade in and out in place; the marks hold still; Begin's hand-over and the corner print take one frame.
+- **Screen readers:** the balloons are a group named "Your subjects"; each die is named by the subject it would replace ("Roll another subject: 風, wind"), and a polite line reads each new subject and any line it earned. Begin reads "Begin: start the 30-minute timer". A charred die reads "The die blew up. This subject stays." Once begun, the canvas's name carries the pair.
+
 ### Tickets
 
 **The Ticket Rule.** Every picture of tickets shows the tickets your next drawing can use, drawn from one helper (`ticketView`). While daily tickets are left they lead: the day's three stubs, fresh first and then the used ones newest first, so a spend turns a stub over where it lies; reserve tickets held show as one reserve ticket with its count. Once the daily tickets are used, the three slots go and one reserve ticket with its count takes their place; only the refill line says when daily tickets come back. With neither left, the used day shows. A zero never shows, and reserve tickets never fill daily slots.
@@ -528,6 +548,7 @@ Tickets aren't controls: daily tickets are matte ticket stock; reserve tickets w
 - **Reserve:** Blue stock under the stickers' baked resin: a highlight from the top-left light over its top third (white 62% fading to 12%, then a clean edge), a rim of light just inside its top edge, and the print pooling Blue Deep at the foot. A full Ink outline (1.5px small, 2px large), and Phosphor's four-point star (fill), white with an Ink edge, over its top-right corner. The star pops in once, on the peel curve, when a reserve ticket first shows on a surface (bought, or come to the front), and never loops; reduced motion shows it still. A count's dot badge takes the corner, and the star sits just short of it.
 - **Used:** the backing a ticket leaves: Liner Lift with a 26% edge and its perforation, carrying the kiss-cut outline of the sticker it became.
 - **Marks:** at 18px (the checkout's pack rows) a ticket is a mark with an Ink edge; the reserve mark keeps only its rim of light.
+- **A ten-ticket day:** in Kyoto Seika Manga Expression Practice Mode, more than three stubs lie in rows of five, like a strip of 回数券: small stubs as they are on the sealed card, and the ticket cards' stubs at a medium size that fits five across a 360px phone, without the large stubs' tossed tilts. A day never shows more stubs than its allowance.
 
 ### Out of tickets
 
@@ -572,6 +593,9 @@ The one card that sells reserve tickets, in the out-of-tickets card's stock. The
 - **Baked resin:** the gloss is baked into the image, with the print darker and more saturated where resin pools at the edge, a refraction band inside the cut edge, a rim light and a meniscus at the foot.
 - **Live resin:** on stickers that are showing, a live layer adds a specular along the top edge, a rim light and a sheen that sweeps when the sticker is placed, dragged or tilted.
 - **Foil:** a sticker drawn by someone other than the board's owner wears a foil band just outside its white edge, 4% of the sticker's long side: about 5px on the board, wider on the detail's big sticker, narrower on tray sheets. It's the silhouette grown by that distance on the server, one mask per sticker, so it follows the cut at an even width round curves and points; a sticker without that mask dilates its silhouette in sixteen directions instead, 5px on the board, 6px on the detail, 3px on sheets. The band is the sticker's edge: the white edge runs straight into it, the image shows only inside its own cut, and the kiss-cut and cast shadow fall from the band's outer edge. A fine diffraction grating lies over it and never moves: diagonal hairlines on a 2px period, lit white and shaded Ink at low alpha. The six foil bands flow under the grating, so the band glitters rather than crawls, and a white glint sits where the one light falls; holes hide it; it's decorative, and the sticker's own label names the artist. The seal ceremony adds nothing: a freshly sealed sticker is yours and plain.
+- **Pink foil:** the same band in pinks only, on an NSFW sticker, whoever drew it.
+- **Kyoto Seika Practice Mode foil:** manga screentone, ink on paper white, on a sticker drawn in Kyoto Seika Manga Expression Practice Mode, whoever drew it. A dot screen over a gradient shaded away from the one light: open dots on the lit side, closing to solid ink on the far one, turning as the light moves. White sparkles scraped out of the tone slide with the light in place of the grating; under reduced motion they rest where the light last was. It shows wherever pink foil does, and pink wins.
+- **Kyoto Seika Practice Mode tag:** on the detail of a sticker drawn in Kyoto Seika Practice Mode, under the fine print and Timelapse: an Ink label-tape tag at -2° with a tone swatch like its foil ("Entrance exam practice", 入試練習), and beside it the pair it was drawn from, 「風 × 再会」, at 20px with 11px furigana over each kanji word. Screen readers hear the tag and the pair as one line.
 - **Peel and stick:** a sticker peels with a 3D lift toward the top right and sticks with a short settle from 1.06 scale.
 
 ### Artist chip
@@ -655,7 +679,7 @@ The sticker detail plays how a sticker was drawn, stroke by stroke, in the stick
 
 - **The button:** a small label-stock button, "Timelapse" with Phosphor's play, at the end of the fine print ("by @mika · drawn in 2:51 · 9.26"). It shows in your stickers and the ones you gave, only for a sticker sealed with its timelapse, once the detail's answer is in. Every state's label shares one cell, so it never changes width: Loading…, Preparing… while the fills get ready, then Skip (Phosphor's skip-forward) while it plays.
 - **Where it plays:** white paper cut to the sticker's silhouette covers the figure, the same size in the same spot, and the ink comes back inside it as it was drawn, eraser included. The silhouette, cast shadow, kiss-cut and foil stay put around it, and ink outside the final cut never shows. Fills spread in a circle from where they were tapped.
-- **Length:** 2.5–6s, longer for a sticker that took longer. Every stroke keeps its own pace; only the pauses between them shrink.
+- **Length:** 2.5–6s, longer for a sticker that took longer; up to 20s for a sticker drawn in Kyoto Seika Manga Expression Practice Mode, whose clock runs ten times longer. A fill's reveal never takes more than its longest. Every stroke keeps its own pace; only the pauses between them shrink.
 - **The end:** the finished ink holds 300ms, the paper fades out over 400ms onto the real sticker's resin, and the sheen sweeps once, as when it was sealed.
 - **Skip and stop:** Skip, or a tap on the sticker, jumps to the finished ink and the reveal. Paging, Escape, Back and closing stop it at once, and the paper goes before the sticker flies back to the board.
 - **Failure:** the paper goes, and the error line under the fine print says "Couldn't load the timelapse: {reason}" in the app's language, with Try again and the player's own words as details.
@@ -780,7 +804,7 @@ Designs the app doesn't show yet. PRODUCT.md's Not built yet lists them too.
 - **Don't** use green anywhere in the world. LINE's #06C755 belongs only inside LINE's own mocked UI.
 - **Don't** put gloss, a highlight line or a sheen on any control.
 - **Don't** restyle a key's or label's face or base, or add your own pressed transform to them.
-- **Don't** put foil on the board owner's own stickers, on surfaces that aren't a board, or use it as a rarity grade. The pearl rim is retired.
+- **Don't** put holo foil on the board owner's own stickers, put foil on surfaces that aren't a board, or use it as a rarity grade. Pink foil and the Kyoto Seika Practice Mode foil are the only foils your own stickers wear. The pearl rim is retired.
 - **Don't** set headings or body text in Dela Gothic One.
 - **Don't** put a second key on a screen, or give a key to a tomato (can't-undo) action.
 - **Don't** put a zipper on anything but the tray. The gift bag tears open along its tape.

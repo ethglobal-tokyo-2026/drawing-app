@@ -32,6 +32,8 @@ export interface StickerView {
   sealedAt: number;
   /** An NSFW sticker: pink foil, and blurred for anyone without the NSFW opt-in. */
   nsfw: boolean;
+  /** Drawn in Kyoto Seika Practice Mode: the pair it was drawn from, fixed at seal; null on any other. */
+  kyotoSeikaSubjects: Sticker["kyotoSeikaSubjects"];
 }
 
 export const toMs = (t: IsoTime): number => Date.parse(t);
@@ -64,6 +66,7 @@ export const toSticker = (s: Sticker): StickerView => ({
   },
   sealedAt: toMs(s.sealedAt),
   nsfw: s.nsfw,
+  kyotoSeikaSubjects: s.kyotoSeikaSubjects,
 });
 
 /** The app's placement names: `on`, `s` and `r` for `onBoard`, `scale` and `rotation`. */

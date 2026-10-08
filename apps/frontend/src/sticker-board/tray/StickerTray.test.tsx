@@ -11,6 +11,7 @@ import {
   vi,
   type MockInstance,
 } from "vitest";
+import { TEST_KYOTO_SEIKA_SUBJECTS } from "../../api/testFixtures";
 import { forgetBoardComplete, markBoardComplete, QUIET_MS } from "../boardComplete";
 import { i18next } from "../../i18n/i18n";
 import { errors } from "../../i18n/strings/errors";
@@ -49,6 +50,7 @@ const sticker = (
   seenAt: null,
   timeUsed: 120,
   nsfw: false,
+  kyotoSeikaSubjects: null,
   width: 100,
   height: 80,
   // A stored cut line, so its shape is known without reading an image.
@@ -629,6 +631,24 @@ describe("StickerTray", () => {
       expect(problems.filter((p) => p.kind === "cut")).toHaveLength(1);
       expect(problems[0]?.nos).toEqual([1]);
     });
+  });
+
+  it("puts the Kyoto Seika Practice Mode foil on a sticker drawn in Kyoto Seika Practice Mode, your own too, and pink foil on an NSFW one", async () => {
+    const kyotoSeikaSubjects = TEST_KYOTO_SEIKA_SUBJECTS;
+    render([
+      sticker("kyoto-seika", 1, false, { kyotoSeikaSubjects }),
+      sticker("nsfw", 2, false, { kyotoSeikaSubjects, nsfw: true }),
+      sticker("plain", 3, false),
+    ]);
+    await openTray();
+    const foilOn = (id: string) => slotOf(id)?.querySelector(".sticker-foil");
+    expect(foilOn("kyoto-seika")?.matches(".sticker-foil--sheet.sticker-foil--kyoto-seika")).toBe(
+      true,
+    );
+    expect(foilOn("nsfw")?.matches(".sticker-foil--pink:not(.sticker-foil--kyoto-seika)")).toBe(
+      true,
+    );
+    expect(foilOn("plain")).toBeNull();
   });
 
   describe("asks for its sticker images", () => {

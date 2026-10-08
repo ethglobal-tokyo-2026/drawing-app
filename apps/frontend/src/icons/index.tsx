@@ -75,6 +75,8 @@ export {
   Circle,
   Clock,
   Copy,
+  DiceFive,
+  DiceFour,
   Eraser,
   HandHeart,
   HandPointing,

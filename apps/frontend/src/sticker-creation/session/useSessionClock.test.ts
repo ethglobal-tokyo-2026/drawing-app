@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
-import { SESSION_MS, type Hold } from "./session";
-import type { FrameSource } from "../../ui/frameSource";
-import { SessionClock } from "./useSessionClock";
+import { describe, expect, it } from "vitest";
+import { KYOTO_SEIKA_TIME_USED_S, MAX_TIME_USED_S } from "@drawing-app/api/client";
+import { sessionMs, type Hold } from "./session";
+import { clockOnFrames } from "./testClock";
+import { WARN_AT_SECONDS } from "./useSessionClock";
 
 const NO_HOLDS = {
   paused: false,
@@ -12,46 +13,13 @@ const NO_HOLDS = {
   size: false,
 };
 
-/** A clock on hand-driven frames; `advance(ms)` runs a frame every `step` ms up to `ms` later. */
-function setup({ started = true } = {}) {
-  let time = 1000;
-  let pending: ((t: number) => void) | null = null;
-  const frames: FrameSource = {
-    now: () => time,
-    request(cb) {
-      pending = cb;
-      return () => {
-        if (pending === cb) pending = null;
-      };
-    },
-  };
-  const clock = new SessionClock(frames);
-  const onTimeUp = vi.fn();
-  clock.connect(onTimeUp);
-  if (started) clock.start();
-  const advance = (ms: number, step = 16) => {
-    const end = time + ms;
-    while (time < end) {
-      time = Math.min(end, time + step);
-      const frame = pending;
-      pending = null;
-      frame?.(time);
-    }
-  };
-  /** How much of the next `ms` the clock counts. */
-  const counted = (ms: number, step?: number) => {
-    const before = clock.elapsed;
-    advance(ms, step);
-    return clock.elapsed - before;
-  };
-  return { clock, onTimeUp, advance, counted, hasFrame: () => pending !== null };
-}
+const setup = clockOnFrames;
 
 describe("SessionClock", () => {
   it("waits at 3:00 until the first stroke starts it", () => {
     const { clock, counted } = setup({ started: false });
     expect(counted(5000)).toBe(0);
-    expect(clock.getView().secondsLeft).toBe(SESSION_MS / 1000);
+    expect(clock.getView().secondsLeft).toBe(sessionMs(false) / 1000);
     clock.start();
     expect(counted(1000)).toBe(1000);
   });
@@ -96,7 +64,7 @@ describe("SessionClock", () => {
 
   it("turns late for the last ten seconds", () => {
     const { clock, advance } = setup();
-    advance(SESSION_MS - 10_001);
+    advance(sessionMs(false) - 10_001);
     expect(clock.getView()).toMatchObject({ secondsLeft: 11, late: false });
     advance(1);
     expect(clock.getView()).toMatchObject({ secondsLeft: 10, late: true });
@@ -106,7 +74,7 @@ describe("SessionClock", () => {
     const { clock, advance } = setup();
     const warned: number[] = [];
     clock.onWarning((secondsLeft) => warned.push(secondsLeft));
-    advance(SESSION_MS - 30_000 - 1);
+    advance(sessionMs(false) - 30_000 - 1);
     expect(warned).toEqual([]);
     advance(1);
     expect(warned).toEqual([30]);
@@ -120,7 +88,7 @@ describe("SessionClock", () => {
     const { clock, advance } = setup({ started: false });
     const warned: number[] = [];
     clock.onWarning((secondsLeft) => warned.push(secondsLeft));
-    clock.restore(SESSION_MS - 25_000);
+    clock.restore(sessionMs(false) - 25_000);
     advance(5_000);
     expect(warned).toEqual([]);
     advance(10_000);
@@ -129,9 +97,9 @@ describe("SessionClock", () => {
 
   it("calls time at 0:00, once, and stops asking for frames", () => {
     const { clock, onTimeUp, advance, hasFrame } = setup();
-    advance(SESSION_MS + 1000);
+    advance(sessionMs(false) + 1000);
     expect(onTimeUp).toHaveBeenCalledOnce();
-    expect(clock.elapsed).toBe(SESSION_MS);
+    expect(clock.elapsed).toBe(sessionMs(false));
     expect(clock.getView().secondsLeft).toBe(0);
     expect(hasFrame()).toBe(false);
     clock.resume();
@@ -141,7 +109,7 @@ describe("SessionClock", () => {
 
   it("picks a kept drawing back up with the time it had drawn", () => {
     const { clock, counted } = setup({ started: false });
-    clock.restore(SESSION_MS - 30_000);
+    clock.restore(sessionMs(false) - 30_000);
     expect(clock.getView().secondsLeft).toBe(30);
     expect(counted(1000)).toBe(1000);
   });
@@ -149,7 +117,7 @@ describe("SessionClock", () => {
   it("calls time on a kept drawing whose time had run out once it runs again", () => {
     const { clock, onTimeUp, advance } = setup({ started: false });
     clock.setHolds({ ...NO_HOLDS, paused: true });
-    clock.restore(SESSION_MS);
+    clock.restore(sessionMs(false));
     advance(1000);
     expect(onTimeUp).not.toHaveBeenCalled();
     clock.setHolds(NO_HOLDS);
@@ -170,7 +138,44 @@ describe("SessionClock", () => {
     const { clock, counted } = setup();
     counted(20_000);
     clock.reset();
-    expect(clock.getView().secondsLeft).toBe(SESSION_MS / 1000);
+    expect(clock.getView().secondsLeft).toBe(sessionMs(false) / 1000);
     expect(counted(1000)).toBe(0);
+  });
+
+  it("runs as long as its sheet's ticket says, and sets a waiting clock to another length", () => {
+    const { clock, counted, onTimeUp } = setup({ started: false, length: sessionMs(true) });
+    expect(clock.getView().secondsLeft).toBe(KYOTO_SEIKA_TIME_USED_S);
+    clock.setLength(sessionMs(false));
+    expect(clock.getView().secondsLeft).toBe(MAX_TIME_USED_S);
+    clock.setLength(sessionMs(true));
+    clock.start();
+    counted(sessionMs(true) - 1000, 1000);
+    expect(onTimeUp).not.toHaveBeenCalled();
+    clock.setLength(sessionMs(false));
+    expect(clock.length).toBe(sessionMs(true));
+  });
+
+  it("calls the time at 10 and 5 minutes left only on a clock long enough to reach them", () => {
+    const heard = (length: number) => {
+      const { clock, advance } = setup({ length });
+      const calls: number[] = [];
+      clock.onWarning((s) => calls.push(s));
+      advance(length, 250);
+      return calls;
+    };
+    const long = heard(sessionMs(true));
+    // The proctor's calls are in whole minutes, before the last seconds' warnings.
+    expect(long.filter((s) => s >= 60)).not.toEqual([]);
+    expect(long).toEqual(WARN_AT_SECONDS);
+    expect(heard(sessionMs(false))).toEqual(
+      WARN_AT_SECONDS.filter((s) => s * 1000 < sessionMs(false)),
+    );
+  });
+
+  it("goes back to a fresh sheet at the length its next ticket gives", () => {
+    const { clock, counted } = setup({ length: sessionMs(true) });
+    counted(20_000);
+    clock.reset(sessionMs(false));
+    expect(clock.getView().secondsLeft).toBe(MAX_TIME_USED_S);
   });
 });

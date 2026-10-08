@@ -28,6 +28,7 @@ import {
   type Flight,
   type SealFrame,
 } from "./sealTimeline";
+import { trackSlot } from "./slotTracker";
 import "./SealCeremony.css";
 
 /** Once the seal is recorded, the cutter fades as the resin starts to pour. */
@@ -170,21 +171,29 @@ export function SealCeremony({
     paintUsedStickerSilhouette(parts.usedStickerSilhouette, box, sticker.maskImage, r);
     const cutLine = makeCutLine(parts.cut, size, contour, r);
 
-    // The card comes with the sealed sticker, so the flight to its slot is measured once it's there.
-    let path: Flight | null = null;
+    // The card comes with the sealed sticker, so its slot is measured once the card is there, and
+    // again whenever the card changes size: it grows upward from its foot, moving the slot.
+    let slotAt: ReturnType<typeof trackSlot> | null = null;
     let cardEl: HTMLElement | null = null;
     const cardReady = () => {
-      if (path) return true;
+      if (slotAt) return true;
       const c = card.current;
       const s = slot.current;
       if (!c || !s) return false;
       cardEl = c;
-      path = flight(box, body, {
-        x: c.offsetLeft + s.offsetLeft,
-        y: c.offsetTop + s.offsetTop,
-        w: s.offsetWidth,
-        h: s.offsetHeight,
-      });
+      slotAt = trackSlot(
+        () => ({
+          x: c.offsetLeft + s.offsetLeft,
+          y: c.offsetTop + s.offsetTop,
+          w: s.offsetWidth,
+          h: s.offsetHeight,
+        }),
+        (onResize) => {
+          const resizes = new ResizeObserver(onResize);
+          resizes.observe(c);
+          return () => resizes.disconnect();
+        },
+      );
       return true;
     };
     const recorded = () => isSealed() && cardReady();
@@ -211,7 +220,8 @@ export function SealCeremony({
       // Found every frame: a line the card mounts or swaps mid-fade, as a tickets refresh can, fades
       // up in its turn.
       const lines = cardEl ? [...cardEl.querySelectorAll<HTMLElement>("[data-card-line]")] : [];
-      const f: SealFrame = sealFrame(t, path ?? ON_BACKING, lines.length);
+      const path: Flight = slotAt ? flight(box, body, slotAt.box()) : ON_BACKING;
+      const f: SealFrame = sealFrame(t, path, lines.length);
       cutLine.draw(f.cut.progress, f.cut.alpha, cutter());
       opacity(parts.dim, f.dim);
       opacity(parts.veil, f.veil);
@@ -292,6 +302,7 @@ export function SealCeremony({
     return () => {
       cancelAnimationFrame(raf);
       stopKeys();
+      slotAt?.stop();
       host.removeAttribute("data-lifted");
       [parts.dim, parts.usedStickerSilhouette, parts.cut].forEach(releaseCanvas);
     };

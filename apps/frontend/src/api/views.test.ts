@@ -1,10 +1,16 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { i18next } from "../i18n/i18n";
 import { strings } from "../i18n/strings";
-import { people, sticker } from "./testFixtures";
+import { people, sticker, TEST_KYOTO_SEIKA_SUBJECTS } from "./testFixtures";
 import { toPerson, toSticker } from "./views";
 
 describe("toSticker", () => {
+  it("carries the Kyoto Seika Subjects of a sticker drawn in Kyoto Seika Practice Mode, and none on any other", () => {
+    const drawn = sticker({ kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS });
+    expect(toSticker(drawn).kyotoSeikaSubjects).toEqual(TEST_KYOTO_SEIKA_SUBJECTS);
+    expect(toSticker(sticker()).kyotoSeikaSubjects).toBeNull();
+  });
+
   it("draws the API's sticker with the app's names and milliseconds", () => {
     const view = toSticker(sticker({ number: 147, sealedAt: "2026-09-23T11:52:00.000Z" }));
     expect(view.no).toBe(147);

@@ -20,6 +20,11 @@ interface Props {
   /** An NSFW sticker: pink foil in place of holo, at `foil`'s size or the board's, and a pink gloss. */
   nsfw?: boolean;
   /**
+   * Drawn in Kyoto Seika Manga Expression Practice Mode: that foil in place of holo, whoever drew it,
+   * at `foil`'s size or the board's.
+   */
+  kyotoSeika?: boolean;
+  /**
    * For a viewer without the NSFW opt-in, whose `urls` name the veiled image the API sends: shown as it
    * comes, with the 18+ mark over it; its outline and foil stay sharp.
    */
@@ -37,9 +42,9 @@ interface Props {
 const cssUrl = (url: string) => `url("${url}")`;
 
 /**
- * A sticker as material, filling its box: its foil when someone else drew it or it's NSFW, the image with its
- * kiss-cut and cast shadow, live resin under the one light, a lifted corner, and the gloss sweep that
- * plays when it sticks.
+ * A sticker as material, filling its box: its foil when someone else drew it, it's NSFW or it was drawn in
+ * Kyoto Seika Practice Mode, the image with its kiss-cut and cast shadow, live resin under the one light,
+ * a lifted corner, and the gloss sweep that plays when it sticks.
  */
 export function StickerFigure({
   urls,
@@ -48,6 +53,7 @@ export function StickerFigure({
   fold,
   foil,
   nsfw = false,
+  kyotoSeika = false,
   veiled = false,
   no = 0,
   turn = 0,
@@ -57,7 +63,9 @@ export function StickerFigure({
 }: Props) {
   const { t } = useTranslation();
   const { mask, spec, rim } = urls;
-  const foilSize = foil ?? (nsfw ? "board" : undefined);
+  // Pink protects people, so it wins over Kyoto Seika; either marks the sticker whoever drew it.
+  const foilSize = foil ?? (nsfw || kyotoSeika ? "board" : undefined);
+  const tone = nsfw ? "pink" : kyotoSeika ? "kyoto-seika" : "holo";
   const style: CSSProperties = {
     "--ar": (width / height).toFixed(4),
     "--m": cssUrl(mask),
@@ -81,15 +89,7 @@ export function StickerFigure({
   ].filter(Boolean);
   return (
     <span ref={ref} className={classes.join(" ")} style={style}>
-      {foilSize && (
-        <StickerFoil
-          size={foilSize}
-          no={no}
-          turn={turn}
-          tone={nsfw ? "pink" : "holo"}
-          mask={urls.foil}
-        />
-      )}
+      {foilSize && <StickerFoil size={foilSize} no={no} turn={turn} tone={tone} mask={urls.foil} />}
       <span className="sticker-figure__spot" aria-hidden="true" />
       <img
         ref={

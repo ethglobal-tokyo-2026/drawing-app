@@ -5,6 +5,7 @@ import { explore } from "./explore";
 import { giving } from "./giving";
 import { gratitude } from "./gratitude";
 import { identity } from "./identity";
+import { kyotoSeika } from "./kyotoSeika";
 import { line } from "./line";
 import { pages } from "./pages";
 import { receiving } from "./receiving";
@@ -24,6 +25,7 @@ export const strings = {
   giving,
   gratitude,
   identity,
+  kyotoSeika,
   line,
   pages,
   receiving,

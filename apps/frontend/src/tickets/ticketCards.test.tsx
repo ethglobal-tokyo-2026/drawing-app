@@ -1,5 +1,10 @@
 // @vitest-environment happy-dom
-import type { StartedTicketPurchase, Tickets, TicketShop as Shop } from "@drawing-app/api/client";
+import {
+  KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
+  type StartedTicketPurchase,
+  type Tickets,
+  type TicketShop as Shop,
+} from "@drawing-app/api/client";
 import { act, useState, type ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
@@ -31,10 +36,15 @@ const EVENING = new Date(Date.UTC(2026, 8, 25, 12, 4));
 /** Tokyo's next midnight after EVENING. */
 const REFILL = new Date(Date.UTC(2026, 8, 25, 15));
 
-/** Tickets with `dailyUsed` of the day's daily tickets used and `reserve` held. */
-const tickets = (dailyUsed: number, reserve: number): Tickets => ({
+/** Tickets with `dailyUsed` of the day's `dailyPerDay` daily tickets used and `reserve` held. */
+const tickets = (
+  dailyUsed: number,
+  reserve: number,
+  dailyPerDay = FRESH_TICKETS.dailyPerDay,
+): Tickets => ({
   ...FRESH_TICKETS,
-  dailyLeft: FRESH_TICKETS.dailyPerDay - dailyUsed,
+  dailyPerDay,
+  dailyLeft: dailyPerDay - dailyUsed,
   reserveLeft: reserve,
   nextRefillAt: REFILL.toISOString(),
   usedToday: Array.from({ length: dailyUsed }, (_, i) => ({
@@ -117,6 +127,26 @@ describe("OutOfTickets", () => {
       );
     });
     expect(onBoard).toHaveBeenCalledOnce();
+  });
+
+  describe("lays out the day's stubs", () => {
+    const card = (state: Tickets) => (
+      <OutOfTickets tickets={state} onShop={onShop} onStartDrawing={onDraw} onBoard={onBoard} />
+    );
+    const art = () => document.querySelector(".out-of-tickets__art");
+
+    it("in rows of five, at a size the card holds, on a day of Kyoto Seika Practice Mode's daily tickets", async () => {
+      await render(card(tickets(6, 0, KYOTO_SEIKA_DAILY_TICKETS_PER_DAY)));
+      expect(art()?.matches(".ticket-stubs--rows.ticket-stubs--medium")).toBe(true);
+      expect(art()?.querySelectorAll(".ticket-stub")).toHaveLength(
+        KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
+      );
+    });
+
+    it("large, in one row, on a day of the standard daily tickets", async () => {
+      await render(card(tickets(FRESH_TICKETS.dailyPerDay, 0)));
+      expect(art()?.matches(".ticket-stubs--large:not(.ticket-stubs--rows)")).toBe(true);
+    });
   });
 });
 

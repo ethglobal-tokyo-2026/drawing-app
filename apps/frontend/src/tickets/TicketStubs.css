@@ -30,6 +30,20 @@
   gap: 6px;
 }
 
+/* A ten-ticket day's stubs: rows of five, like a strip of 回数券. Tossed tilts stay with the large
+   stubs. The rows sit together in the middle of a card's art, however tall it is. */
+.ticket-stubs--rows {
+  display: grid;
+  grid-template-columns: repeat(5, auto);
+  justify-content: center;
+  align-content: center;
+  gap: 6px;
+}
+
+.ticket-stubs--medium.ticket-stubs--rows {
+  gap: 8px 6px;
+}
+
 /* The one ticket a card is about, at the house tilt. */
 .ticket-stubs--hero .ticket-stub {
   rotate: var(--tilt);
@@ -157,6 +171,10 @@
   stroke-dasharray: 3 2.4;
 }
 
+.ticket-stubs--medium .ticket-stub__outline {
+  stroke-dasharray: 2.4 2;
+}
+
 @keyframes ticket-stub-outline-in {
   from {
     opacity: 0;
@@ -175,6 +193,12 @@
 .ticket-stubs--large {
   --lift: 0 -4px;
   --peel-to: 10px -36px;
+  --peel-time: var(--t-peel);
+}
+
+.ticket-stubs--medium {
+  --lift: 0 -3px;
+  --peel-to: 7px -24px;
   --peel-time: var(--t-peel);
 }
 

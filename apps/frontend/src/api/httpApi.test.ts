@@ -179,6 +179,24 @@ describe("sealing", () => {
     await createHttpApi(createServerClient(fetch)).seal(sealRequest);
     expect(formOf(fetch).has("timelapse")).toBe(false);
   });
+
+  it("sends a sticker's Kyoto Seika Subject pair as JSON, and no such part for a sticker without one", async () => {
+    const pair = [
+      { ja: "風", reading: "かぜ", en: "wind" },
+      { ja: "再会", reading: "さいかい", en: "reunion" },
+    ] as const;
+    const fetch = answering(201, {});
+    await createHttpApi(createServerClient(fetch)).seal({
+      ...sealRequest,
+      kyotoSeikaSubjects: pair,
+    });
+    const part = formOf(fetch).get("kyotoSeikaSubjects");
+    if (typeof part !== "string") throw new Error("expected the pair as a text part");
+    expect(JSON.parse(part)).toEqual(pair);
+    const plain = answering(201, {});
+    await createHttpApi(createServerClient(plain)).seal(sealRequest);
+    expect(formOf(plain).has("kyotoSeikaSubjects")).toBe(false);
+  });
 });
 
 describe("NFT request diagnostics", () => {

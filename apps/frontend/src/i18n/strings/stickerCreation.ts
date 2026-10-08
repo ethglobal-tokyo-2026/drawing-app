@@ -24,6 +24,11 @@ export const stickerCreation = {
         en: "{{time}} left, starts when you draw",
         ja: "残り{{time}}、かき始めるとスタート",
       },
+      /** Drawing screen, top left, a sheet in Kyoto Seika Practice Mode: read by screen readers after the timer dot's name while its two subjects wait for Begin, which starts the clock */
+      dealt: {
+        en: "{{time}} left, starts when you press Begin",
+        ja: "残り{{time}}、はじめを押すとスタート",
+      },
       /** Drawing screen, top left: read by screen readers after the timer dot's name while the clock is stopped by a tap on the timer, by the app going to the background, or by another screen covering the drawing screen */
       paused: { en: "{{time}} left, paused", ja: "残り{{time}}、一時停止中" },
       /** Drawing screen, top left: read by screen readers after the timer dot's name while the color sheet is open, which stops the clock */
@@ -56,6 +61,10 @@ export const stickerCreation = {
       },
       /** Drawing screen, top left: the white label under the timer after Start on your first few visits, or when you tap the timer before the first stroke; also announced */
       startsWhenYouDraw: { en: "Starts when you draw", ja: "かき始めるとスタート" },
+      /** Drawing screen, top left, a sheet in Kyoto Seika Practice Mode: the white label under the timer while its two subjects wait for Begin, on your first few visits or when you tap the timer; also announced */
+      startsWhenYouPressBegin: { en: "Starts when you press Begin", ja: "はじめを押すとスタート" },
+      /** Drawing screen, top left, a sheet in Kyoto Seika Practice Mode: the white label under the timer for a few seconds at 10 and at 5 minutes left, as a proctor calls the time; also announced */
+      minutesLeft: { en: "{{minutes}} minutes left", ja: "残り{{minutes}}分" },
       /** Drawing screen, top left: the white label under the timer when a reload brings back your drawing in progress, paused, until the clock runs again; also announced */
       pickedUp: { en: "Picked up where you left off", ja: "続きから再開しました" },
       /** Drawing screen, top left: the white label under the timer when a reload couldn't bring back your drawing, so a fresh sheet uses the same ticket, until the first stroke; also announced; the label never wraps by itself */

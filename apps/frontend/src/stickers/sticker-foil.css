@@ -50,6 +50,38 @@
   --band-6: var(--foil-magenta);
 }
 
+/* Kyoto Seika Practice Mode foil: manga tone. A dot screen over a gradient that darkens away from the
+   app's one light; contrast() turns the blurred dots into crisp ones that grow toward the shadow.
+   The shading turns with the light, and white sparkles scraped out of the tone slide with it. The
+   tone itself doesn't move, so it's painted only when the light does. */
+.sticker-foil--kyoto-seika {
+  --band-6: #fbfbfd;
+}
+
+.sticker-foil--kyoto-seika .sticker-foil__sheen {
+  inset: -30%;
+  rotate: 45deg;
+  animation: none;
+  background:
+    radial-gradient(closest-side, #000, #fff) 0 0 / 3.2px 3.2px,
+    linear-gradient(
+      calc(atan2(calc(-1 * var(--lx, -0.6)), var(--ly, -0.6)) - 45deg - var(--foil-turn, 0) * 1deg),
+      #fff 18%,
+      #4d4d4d 100%
+    );
+  background-blend-mode: multiply;
+  filter: contrast(16);
+}
+
+/* The sparkles scraped out of the tone, in place of the holo's grating. */
+.sticker-foil--kyoto-seika .sticker-foil__band::after {
+  inset: -40px;
+  background: var(--kyoto-seika-sparkles) 0 0 / 60px 60px;
+  translate: calc(var(--lx, -0.6) * 18px) calc(var(--ly, -0.6) * 18px);
+  transition: translate 280ms var(--ease-out);
+  filter: drop-shadow(0 0 0.6px rgba(150, 200, 255, 0.9));
+}
+
 /* The band's mask made on the server: the silhouette grown by an even distance, at the image's size.
    One copy in the center copy's place stands in for them all, with a crisp edge. */
 .sticker-foil.sticker-foil--baked {
@@ -188,7 +220,8 @@
     animation: none;
   }
 
-  .sticker-foil__glint::before {
+  .sticker-foil__glint::before,
+  .sticker-foil--kyoto-seika .sticker-foil__band::after {
     transition: none;
   }
 }

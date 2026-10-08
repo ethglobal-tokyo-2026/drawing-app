@@ -135,6 +135,7 @@ export const PlacedSticker = memo(function PlacedSticker({
           fold={fold}
           foil={foil ? "board" : undefined}
           nsfw={sticker.nsfw}
+          kyotoSeika={sticker.kyotoSeikaSubjects !== null}
           veiled={veiled}
           no={sticker.no}
           turn={sticker.placement.r}

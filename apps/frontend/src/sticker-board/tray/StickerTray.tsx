@@ -57,6 +57,7 @@ function trayStickers(
       urls: s.urls,
       gift: s.artist.id !== ownerId,
       nsfw: s.nsfw,
+      kyotoSeika: s.kyotoSeikaSubjects !== null,
       veiled: veiledFor(s, optedIn),
       seen: s.seenAt !== null,
     };

@@ -153,13 +153,14 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     // A used sticker silhouette shows no sticker, so it loads none; nor does any slot before its
     // images are let load.
     if (s.state !== "used" && ui.imagesOn) {
-      // Drawn by someone else, or NSFW, it wears the sheet's foil under its image, as StickerFoil
-      // draws it.
-      if (s.gift || s.nsfw) {
+      // Drawn by someone else, NSFW, or drawn in Kyoto Seika Practice Mode, it wears the sheet's foil
+      // under its image, in the tone StickerFigure picks: pink, then Kyoto Seika, then holo.
+      if (s.gift || s.nsfw || s.kyotoSeika) {
+        const tone = s.nsfw ? "pink" : s.kyotoSeika ? "kyoto-seika" : "holo";
         const foil = decorative(
           make(
             "span",
-            `sticker-foil sticker-foil--sheet sticker-foil--${s.nsfw ? "pink" : "holo"}${s.urls.foil ? " sticker-foil--baked" : ""}`,
+            `sticker-foil sticker-foil--sheet sticker-foil--${tone}${s.urls.foil ? " sticker-foil--baked" : ""}`,
             make("span", "sticker-foil__cast"),
             make(
               "span",

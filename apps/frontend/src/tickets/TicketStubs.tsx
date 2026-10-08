@@ -18,13 +18,17 @@ export interface TicketStub {
   count?: number;
 }
 
-type Size = "hero" | "large" | "small";
+type Size = "hero" | "large" | "medium" | "small";
+
+/** More stubs than this lie in rows of five, so a ten-ticket day fits its card. */
+export const ONE_ROW = 3;
 
 interface Props {
   stubs: readonly TicketStub[];
   /**
-   * "hero": the one reserve ticket a card is about. "large": the out-of-tickets card's tossed stubs. "small": the
-   * strip under the sealed card's key, and the reserve ticket beside a count.
+   * "hero": the one reserve ticket a card is about. "large": the out-of-tickets card's tossed stubs. "medium": those
+   * stubs on a ten-ticket day, five to a row. "small": the strip under the sealed card's key, and the reserve ticket
+   * beside a count.
    */
   size: Size;
   /** What the row says, such as "2 daily tickets left". Without it the row is decorative and hidden from screen readers. */
@@ -78,6 +82,18 @@ const GEOMETRY: Record<Size, Geometry> = {
     glyph: 22,
     edge: 2,
     star: 20,
+  },
+  // The large stub scaled to fit five across a card on a 360px phone.
+  medium: {
+    w: 52,
+    h: 33,
+    corner: 3.5,
+    notch: 5,
+    perf: 15.5,
+    outline: { x: 19, y: 4, w: 27, h: 25 },
+    glyph: 13,
+    edge: 1.5,
+    star: 12,
   },
   small: {
     w: 40,
@@ -193,11 +209,14 @@ export function TicketStubs({
 }: Props) {
   const geometry = GEOMETRY[size];
   const a11y = label ? { role: "img", "aria-label": label } : { "aria-hidden": true };
+  const classes = [
+    "ticket-stubs",
+    `ticket-stubs--${size}`,
+    stubs.length > ONE_ROW && "ticket-stubs--rows",
+    className,
+  ];
   return (
-    <div
-      className={["ticket-stubs", `ticket-stubs--${size}`, className].filter(Boolean).join(" ")}
-      {...a11y}
-    >
+    <div className={classes.filter(Boolean).join(" ")} {...a11y}>
       {stubs.map((stub, i) => (
         <Stub
           key={i}

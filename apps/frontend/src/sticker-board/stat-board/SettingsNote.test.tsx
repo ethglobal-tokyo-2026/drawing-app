@@ -3,7 +3,7 @@ import type { Me } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../../api/apiClient";
-import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../../api/testing";
+import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../../api/testing";
 import { toPerson } from "../../api/views";
 import { errors } from "../../i18n/strings/errors";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
@@ -147,7 +147,7 @@ describe("the Settings note's 18+ switch", () => {
     expect(setNsfwOptIn).toHaveBeenCalledExactlyOnceWith(true);
     expect(switchOf(host).checked).toBe(true);
     expect(keptBoardFor(TEST_ME.id)).toBeNull();
-    expect(statuses(host)).toEqual(["", stickerBoard.settings.nsfw.shown.en]);
+    expect(statuses(host)).toEqual(["", stickerBoard.settings.nsfw.shown.en, ""]);
   });
 
   it("turns it off the same way, and says they're blurred now", async () => {
@@ -156,7 +156,7 @@ describe("the Settings note's 18+ switch", () => {
     expect(switchOf(host).checked).toBe(true);
     await flip(host);
     expect(setNsfwOptIn).toHaveBeenCalledExactlyOnceWith(false);
-    expect(statuses(host)).toEqual(["", stickerBoard.settings.nsfw.blurred.en]);
+    expect(statuses(host)).toEqual(["", stickerBoard.settings.nsfw.blurred.en, ""]);
   });
 
   it("says why it wasn't saved, and leaves the switch and the kept board as they were", async () => {
@@ -178,10 +178,68 @@ describe("the Settings note's 18+ switch", () => {
     expect([...host.querySelectorAll("legend")].map((l) => l.textContent)).toEqual([
       "言語",
       "18+のシール",
+      "入試",
     ]);
     expect(host.querySelector("label:has(input[role='switch'])")?.textContent).toBe(
       "18+のシールを表示する",
     );
+  });
+});
+
+describe("the Settings note's Kyoto Seika Practice Mode", () => {
+  const switchIn = (host: HTMLElement, setting: "kyoto-seika" | "kyoto-seika-dark") => {
+    const found = host.querySelector<HTMLInputElement>(
+      `[data-setting="${setting}"] > label input[role="switch"]`,
+    );
+    if (!found) throw new Error(`No ${setting} switch on the note`);
+    return found;
+  };
+  const savingSwitches = () =>
+    vi.fn<ApiClient["setKyotoSeikaPractice"]>((change) =>
+      Promise.resolve({ ...TEST_ME, kyotoSeikaPractice: true, ...change }),
+    );
+
+  it("turns on in place: it saves, your tickets reload, it says so, and the dark subjects switch shows", async () => {
+    const setKyotoSeikaPractice = savingSwitches();
+    const tickets = vi.fn<ApiClient["tickets"]>(() => Promise.resolve(FRESH_TICKETS));
+    const host = renderNote({ setKyotoSeikaPractice, tickets });
+    expect(host.querySelector('[data-setting="kyoto-seika-dark"]')).toBeNull();
+    await act(async () => switchIn(host, "kyoto-seika").click());
+    expect(setKyotoSeikaPractice).toHaveBeenCalledExactlyOnceWith({ kyotoSeikaPractice: true });
+    expect(switchIn(host, "kyoto-seika").checked).toBe(true);
+    expect(tickets).toHaveBeenCalledTimes(2);
+    expect(statuses(host)[2]).toBe(stickerBoard.settings.kyotoSeika.on.en);
+    expect(switchIn(host, "kyoto-seika-dark").checked).toBe(false);
+  });
+
+  it("turns dark subjects on under it, leaving the mode as it is", async () => {
+    const setKyotoSeikaPractice = savingSwitches();
+    const host = renderNote({ setKyotoSeikaPractice }, { ...TEST_ME, kyotoSeikaPractice: true });
+    await act(async () => switchIn(host, "kyoto-seika-dark").click());
+    expect(setKyotoSeikaPractice).toHaveBeenCalledExactlyOnceWith({ kyotoSeikaDarkSubjects: true });
+    expect(switchIn(host, "kyoto-seika-dark").checked).toBe(true);
+    expect(switchIn(host, "kyoto-seika").checked).toBe(true);
+  });
+
+  it("names the mode for screen readers without its censor bar", () => {
+    const host = renderNote({});
+    expect(switchIn(host, "kyoto-seika").getAttribute("aria-label")).toBe(
+      stickerBoard.settings.kyotoSeika.spokenName.en,
+    );
+  });
+
+  it("opens the mode's note under its legend, and closes it", async () => {
+    const host = renderNote({});
+    const help = host.querySelector<HTMLButtonElement>(
+      '[data-setting="kyoto-seika"] .settings-note__help',
+    );
+    const note = () => document.getElementById(help?.getAttribute("aria-controls") ?? "");
+    expect(note()?.hidden).toBe(true);
+    await act(async () => help?.click());
+    expect(help?.getAttribute("aria-expanded")).toBe("true");
+    expect(note()?.hidden).toBe(false);
+    await act(async () => help?.click());
+    expect(note()?.hidden).toBe(true);
   });
 });
 
