@@ -15,6 +15,11 @@ export const CDN_WARN_SHARE = 0.8;
 export const CDN_PAUSE_SHARE = 0.95;
 /** Between the cap's checks of the month's usage. */
 export const CDN_CAP_EVERY_MS = 5 * 60_000;
+/**
+ * The days before Fastly's API token expires on which the operator hears about it in LINE: past its
+ * expiry the cap can't read Fastly, so it can't pause the site.
+ */
+export const TOKEN_REMINDER_DAYS: readonly number[] = [14, 7, 3, 1];
 
 /** What the CDN answered over a time. */
 export interface CdnUsage {
@@ -40,6 +45,13 @@ export interface Cdn {
   usageSince: (from: Date) => Promise<CdnUsage>;
   readSwitch: () => Promise<CdnSwitch>;
   setSwitch: (item: keyof CdnSwitch, value: string) => Promise<void>;
+  /** When the API token the cap uses expires; null when it never does. */
+  tokenExpiresAt: () => Promise<Date | null>;
+}
+
+/** Fastly refused the cap's API token: it expired, or was revoked or replaced. */
+export class CdnTokenRefusedError extends Error {
+  name = "CdnTokenRefusedError";
 }
 
 /** Sends the operator a LINE message; the same `key` again within a day sends nothing more. */
@@ -114,9 +126,35 @@ export async function checkCdnCap({
   return { usage, cap };
 }
 
+const dayOf = (time: Date) => time.toISOString().slice(0, 10);
+const DAY_MS = 86_400_000;
+
+/** Tells the operator in LINE when Fastly's API token expires, on each of TOKEN_REMINDER_DAYS before. */
+export async function remindTokenExpiry({
+  cdn,
+  clock,
+  tellOperator,
+}: {
+  cdn: Cdn;
+  clock: Clock;
+  tellOperator: TellOperator;
+}) {
+  const expiresAt = await cdn.tokenExpiresAt();
+  if (!expiresAt) return;
+  const on = dayOf(expiresAt);
+  const days = Math.round((Date.parse(on) - Date.parse(dayOf(clock.now()))) / DAY_MS);
+  if (!TOKEN_REMINDER_DAYS.includes(days)) return;
+  await tellOperator(
+    `Croquis's Fastly API token expires on ${on}, in ${days} day${days === 1 ? "" : "s"}. After that the CDN cap can't read Fastly or pause the site. Make a new token for the Croquis service in Fastly, set it as FASTLY_API_TOKEN in deploy/.env, and deploy the API (deploy/README.md's CDN).`,
+    `cdn token expires ${on} ${days}`,
+  );
+  logInfo("cdn.cap.token_expiring", { reason: `the token expires ${on}`, count: days });
+}
+
 /**
  * The CDN cap: checks at once, logging the month's usage, then CDN_CAP_EVERY_MS after each check
- * ends. A failed check is logged and changes nothing.
+ * ends. A failed check is logged and changes nothing; while Fastly refuses the token, the operator
+ * hears it in LINE once a day. Once a day it also looks at when the token expires.
  */
 export function startCdnCap({
   schedule,
@@ -128,12 +166,34 @@ export function startCdnCap({
   schedule?: Schedule;
 }) {
   let checked = false;
+  let expiryLookedOn = "";
+  let refusalToldOn = "";
   return startRepeatingJob(
     { everyMs: CDN_CAP_EVERY_MS, failedEvent: "cdn.cap.check_failed", schedule },
     async () => {
-      const { usage, cap } = await checkCdnCap(deps);
-      if (!checked) logInfo("cdn.cap.checked", { ...usage, cap });
-      checked = true;
+      const today = dayOf(deps.clock.now());
+      if (expiryLookedOn !== today) {
+        expiryLookedOn = today;
+        await remindTokenExpiry(deps).catch((error: unknown) =>
+          logFailure("cdn.cap.token_check_failed", error),
+        );
+      }
+      try {
+        const { usage, cap } = await checkCdnCap(deps);
+        if (!checked) logInfo("cdn.cap.checked", { ...usage, cap });
+        checked = true;
+      } catch (error) {
+        if (error instanceof CdnTokenRefusedError && refusalToldOn !== today) {
+          refusalToldOn = today;
+          await deps
+            .tellOperator(
+              `Fastly refuses the CDN cap's API token (${error.message}), so the cap can't pause the site before Fastly bills. Make a new token for the Croquis service in Fastly, set it as FASTLY_API_TOKEN in deploy/.env, and deploy the API (deploy/README.md's CDN).`,
+              `cdn token refused ${today}`,
+            )
+            .catch((told: unknown) => logFailure("cdn.cap.warn_failed", told));
+        }
+        throw error;
+      }
     },
   );
 }

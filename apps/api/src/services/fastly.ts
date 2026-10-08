@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Cdn, CdnSwitch } from "../cdn/cdnCap.ts";
+import { CdnTokenRefusedError, type Cdn, type CdnSwitch } from "../cdn/cdnCap.ts";
 import type { CdnPurge } from "../deps.ts";
 import { failureCause, logFailure, logInfo } from "../diagnostics.ts";
 
@@ -43,6 +43,8 @@ const hourlyBandwidthSchema = z.object({
   data: z.array(z.object({ bandwidth: z.number().nonnegative() })),
 });
 const itemSchema = z.object({ item_key: z.string(), item_value: z.string() });
+/** The token a call is made with, as /tokens/self answers: expires_at is null when it never expires. */
+const tokenSchema = z.object({ expires_at: z.iso.datetime().nullish() });
 /** A purge Fastly took, with the ID it gave it. */
 const purgeSchema = z.object({ status: z.literal("ok"), id: z.string().min(1) });
 /** How Fastly's API says what failed: its older endpoints in msg and detail, newer ones in title. */
@@ -98,6 +100,9 @@ async function callFastly<T>(
   } catch (error) {
     throw new Error(`${what} couldn't be reached: ${failureCause(error)}`, { cause: error });
   }
+  if (status === 401 || status === 403) {
+    throw new CdnTokenRefusedError(`${what} answered HTTP ${status}: ${fastlyWords(text)}`);
+  }
   if (status < 200 || status >= 300) {
     throw new Error(`${what} answered HTTP ${status}: ${fastlyWords(text)}`);
   }
@@ -148,6 +153,10 @@ export function createFastlyCdn({
     setSwitch: async (item, value) => {
       const body = new URLSearchParams({ item_value: value });
       await callFastly(api, "PUT", `${dictionary}/item/${item}`, itemSchema, { body });
+    },
+    tokenExpiresAt: async () => {
+      const { expires_at } = await callFastly(api, "GET", "/tokens/self", tokenSchema);
+      return expires_at ? new Date(expires_at) : null;
     },
   };
 }

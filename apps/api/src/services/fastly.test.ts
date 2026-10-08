@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CdnTokenRefusedError } from "../cdn/cdnCap.ts";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
 import {
   CDN_PURGE_AGAIN_AFTER_MS,
@@ -93,13 +94,27 @@ describe("Fastly's CDN", () => {
     expect(await cdn.readSwitch()).toEqual({ cap: "stop", warned: "" });
   });
 
-  it("rejects with what Fastly says when it refuses a call", async () => {
+  it("rejects a refused token as such, in Fastly's words", async () => {
     const { cdn } = fakeFastly(() =>
       Response.json({ msg: "Provided credentials are missing or invalid" }, { status: 401 }),
     );
-    await expect(cdn.readSwitch()).rejects.toThrow(
+    const refused = cdn.readSwitch();
+    await expect(refused).rejects.toBeInstanceOf(CdnTokenRefusedError);
+    await expect(refused).rejects.toThrow(
       /answered HTTP 401: Provided credentials are missing or invalid/,
     );
+  });
+
+  it("reads when its token expires, and null for one that never does", async () => {
+    let expiresAt: string | null = "2027-01-05T17:48:08Z";
+    const { cdn } = fakeFastly((method, path) =>
+      method === "GET" && path === "/tokens/self"
+        ? Response.json({ id: "token", scope: "global", expires_at: expiresAt })
+        : new Response(null, { status: 404 }),
+    );
+    expect(await cdn.tokenExpiresAt()).toEqual(new Date("2027-01-05T17:48:08Z"));
+    expiresAt = null;
+    expect(await cdn.tokenExpiresAt()).toBeNull();
   });
 });
 
