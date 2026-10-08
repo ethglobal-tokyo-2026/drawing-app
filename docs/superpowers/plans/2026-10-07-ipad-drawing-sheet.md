@@ -1,6 +1,6 @@
 # iPad Drawing Sheet Implementation Plan
 
-> **On hold (2026-10-08):** being reworked with its spec; don't build from it. Its scratch paths under `~/.cache` are out of date: a task's scratch goes in its worktree's gitignored `data/scratch/`.
+> **Approved (ad0ll, 2026-10-08): decision 4, one sheet for every device.** Being built on `spike/ipad-board`, over that branch's drawing screen layout rather than main's. Its scratch paths under `~/.cache` are out of date: a task's scratch goes in its worktree's gitignored `data/scratch/`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -16,7 +16,7 @@
 
 ---
 
-## Decisions (awaiting ad0ll's sign-off)
+## Decisions (4 approved by ad0ll, 2026-10-08)
 
 **4. One sheet for every device,** as the spec has it: a 374-unit short side; the long side following the screen's shape at the drawing's first mark (1 to 2.2 times the short side), a blank sheet following its area until then; shown scaled to fit, so turning or resizing only rescales; strokes, brush sizes, Smoothing, the fill's reach and tap slop, the speed-to-width model and the die-cut border (23 units) in sheet units, the multi-finger tap recognizer in CSS px; the ink's resolution fixed per drawing, matched to the screen and capped at about 4 MP, so a small iPad drawing keeps more pixels until its cut reaches the 640 px cap; fills replaying at their recorded density; drawings already kept opening as drawn on the device's own sheet.
 

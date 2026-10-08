@@ -129,7 +129,7 @@ Research from 2026-10-07: LINE's and Apple's docs, WebKit's source, and captures
 - **Drawings already kept on a phone** open as drawn on that phone's sheet.
 - **Alternative:** lock the sheet's size at the first stroke and let an iPad hold finer detail. iPad stickers would then look thinner than phone ones, and iPad memory and fill time stay high.
 
-**Recommend.**
+**Approved (ad0ll, 2026-10-08).**
 
 **5. The regular drawing screen** (right hand shown; decision 6 mirrors it):
 
@@ -162,7 +162,7 @@ Research from 2026-10-07: LINE's and Apple's docs, WebKit's source, and captures
   - a floating tool palette (more to build, and it lies over the sheet);
   - the seal check at the bottom right as on phones (in a right-hander's palm).
 
-**Recommend the opposite edge.**
+**Recommend the opposite edge.** ad0ll (2026-10-08): the structure is right, but slimmer, as Procreate is: a smaller size control, less room at the top, and the sheet as large as the screen allows.
 
 **6. Drawing hand.** A "Drawing hand: Right / Left" setting on your Settings card mirrors the whole drawing screen on phones and iPads. With Left:
 
