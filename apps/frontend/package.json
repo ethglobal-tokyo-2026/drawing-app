@@ -9,6 +9,7 @@
     "lint": "oxlint --type-check",
     "typecheck": "tsc -b",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "i18n:export": "tsx scripts/i18nExport.ts",
     "i18n:import": "tsx scripts/i18nImport.ts",
     "chat-menus": "tsx --tsconfig tsconfig.scripts.json scripts/renderChatMenus.tsx",
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@drawing-app/api": "workspace:*",
     "@line/liff-mock": "1.0.4",
+    "@playwright/test": "1.63.0",
     "@types/node": "^24.13.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

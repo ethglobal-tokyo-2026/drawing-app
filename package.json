@@ -7,6 +7,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "test:e2e": "pnpm --filter frontend test:e2e",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "knip": "knip --no-exit-code",

@@ -1,0 +1,57 @@
+import { fileURLToPath } from "node:url";
+import { defineConfig } from "@playwright/test";
+import { phone } from "./e2e/phone.ts";
+import { E2E_API_PORT, E2E_APP_PORT } from "./e2e/ports.ts";
+
+// The suite's own database and sticker images, made fresh by each run; data/ is gitignored.
+const dataDir = fileURLToPath(new URL("../../data/e2e", import.meta.url));
+const appOrigin = `http://localhost:${E2E_APP_PORT}`;
+
+export default defineConfig({
+  testDir: "e2e",
+  testMatch: "**/*.e2e.ts",
+  outputDir: fileURLToPath(new URL("../../data/e2e-results", import.meta.url)),
+  fullyParallel: true,
+  forbidOnly: true,
+  reporter: "list",
+  timeout: 60_000,
+  expect: { timeout: 15_000 },
+  use: {
+    baseURL: appOrigin,
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+  },
+  projects: [
+    { name: "chromium", use: { ...phone, browserName: "chromium" } },
+    // Off unless E2E_WEBKIT=on: WebKit can't open pages on this Mac yet.
+    ...(process.env.E2E_WEBKIT === "on"
+      ? [{ name: "webkit", use: { ...phone, browserName: "webkit" as const } }]
+      : []),
+  ],
+  // Each server is exec'd rather than run through pnpm, whose children leave Playwright's process
+  // group and outlive the run.
+  webServer: [
+    {
+      // The API as its dev script runs it, minus a developer's private .env, on a database and image
+      // folder wiped first, with LIFF Mock's dev ID tokens trusted and nothing sent to Sui.
+      command: `rm -rf "${dataDir}" && mkdir -p "${dataDir}/images" && exec node --env-file=.env.example src/server.ts`,
+      cwd: fileURLToPath(new URL("../api", import.meta.url)),
+      url: `http://127.0.0.1:${E2E_API_PORT}/api/me`,
+      reuseExistingServer: false,
+      env: {
+        PORT: String(E2E_API_PORT),
+        DATABASE_URL: `${dataDir}/drawing-app.db`,
+        IMAGE_DIR: `${dataDir}/images`,
+        IMAGE_BASE_URL: `${appOrigin}/api/images`,
+        DEV_SIGN_IN: "on",
+        STICKER_CHAIN_MODE: "mock",
+      },
+    },
+    {
+      command: "exec node_modules/.bin/vite --config e2e/vite.config.ts",
+      url: appOrigin,
+      reuseExistingServer: false,
+      env: { VITE_LIFF_MOCK: "on" },
+    },
+  ],
+});

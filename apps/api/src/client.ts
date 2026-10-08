@@ -29,6 +29,7 @@ export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
 export { TOKYO_UTC_OFFSET_MS, tokyoTicketDay } from "./ticketDays.ts";
 export { purchaseNamedBy } from "./tickets/paymentReference.ts";
 export {
+  DAILY_TICKETS_PER_DAY,
   GIFT_EXPIRY_MS,
   GRATITUDE_PER_HIT,
   KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,

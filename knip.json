@@ -7,6 +7,9 @@
       "ignoreBinaries": ["sui"],
       "ignoreDependencies": ["@mysten/sui"]
     },
+    "apps/frontend": {
+      "vite": { "config": ["vite.config.ts", "e2e/vite.config.ts"] }
+    },
     "packages/line-auth": {
       "entry": ["src/start-auth-server.ts"],
       "project": ["**/*.{js,mjs,cjs,ts,mts,cts}"]
