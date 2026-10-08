@@ -1925,7 +1925,7 @@ git -C "$R" worktree prune
 `git -C "$R" worktree list` and `git -C "$R" branch --list '*ipad*'`: any other iPad worktree or branch is another session's; ask the coordinator before removing it.
 
 - [ ] **Step 3: The brief and plans go,** on main with explicit paths: `git -C "$R" rm docs/superpowers/specs/2026-10-08-ipad-design-brief.md` plus every iPad plan still there (`git -C "$R" ls-files 'docs/superpowers/plans/*ipad*' docs/superpowers/plans/2026-10-08-small-fixes.md`, this one included), then `git -C "$R" commit -m "docs: the iPad work is built, so its brief and plans go" -- <those paths>` and `git -C "$R" push origin main`. `2026-10-08-board-feedback-backlog.md` is ad0ll's backlog and stays.
-- [ ] **Step 4: Closing summary** for ad0ll: what each check found and fixed; the critique and audit findings left, with reasons; Open items 1–7 and the brief's open items (the My board icon, the My board tab's pink beside the gifts badge's, "Same as LINE", gifts on their way in the sticker detail); what no check here reaches: LINE's sheet on a real iPad (its size and header), 320px windows, and how a wide, short window looks.
+- [ ] **Step 4: Closing summary** for ad0ll: what each check found and fixed; the critique and audit findings left, with reasons; Open items 1–7 and the brief's open items (the My board icon, the My board tab's pink beside the gifts badge's, gifts on their way in the sticker detail); what no check here reaches: LINE's sheet on a real iPad (its size and header), 320px windows, and how a wide, short window looks.
 
 ## Self-review
 
