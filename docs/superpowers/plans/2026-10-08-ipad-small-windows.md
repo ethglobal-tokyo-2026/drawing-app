@@ -21,10 +21,11 @@ Unsettled until ad0ll signs off; tasks build each recommendation unless ad0ll pi
 5. **320px windows** (Split View's narrow pane and Slide Over on smaller iPads under older iPadOS) aren't checked, as PRODUCT.md says of 320px phones.
 6. **Full screen in the browser,** the Oct 7 plan's link out of LINE's sheet, is dropped: the brief has none.
 7. **Deploying** isn't in this plan; it ends at the push.
+8. **The sign-in gates** (Task 1) are beyond the brief, whose short-height pass names only the size rail and the color sheet: under about 600px tall a gate's stack and the handle prompt's field with the keyboard up don't fit, so they scroll and pad by what the keyboard hides (`ui/visibleArea.ts`, `GatePaper`). Drop Task 1 if declined.
 
 ## Depends on
 
-Every other plan in the brief's table merged to main: `2026-10-08-small-fixes.md`, `ipad-foundations`, `ipad-board-and-stat-board`, `ipad-shop-and-cards`, `ipad-explore`, `ipad-drawing`, `ipad-pencil`. Names this plan reads, as the draft `spike/ipad-board` has them (where a plan landed another name or shape, apply the change to the symbol as it landed and note the landed name here):
+Every other plan in the brief's table merged to main: `2026-10-08-small-fixes.md`, `ipad-foundations`, `ipad-board-and-stat-board`, `ipad-shop-and-cards`, `ipad-explore`, `ipad-drawing`, `ipad-pencil`, and `ipad-dialogs` (still to write: the sticker detail, giving, receiving, the Mini-game and Explore's lifted sticker on an iPad, which this plan's check list reads "as built"; if ad0ll drops it, those rows check only that nothing is cut off). Names this plan reads, as the draft `spike/ipad-board` has them (where a plan landed another name or shape, apply the change to the symbol as it landed and note the landed name here):
 
 - Foundations: the large-screen query, `LARGE_SCREEN` and `useLargeScreen()` in `apps/frontend/src/ui/largeScreen.ts`, repeated in CSS; the desktop frame in `app/App.css`.
 - Board (its plan, `2026-10-08-ipad-board-and-stat-board.md`): `BoardLayout`, `PHONE_BOARD` and `unitOf(layout, boardWidth)` in `sticker-board/placement.ts`, read by `useBoardSize.ts` with `useBoardLayout()`.
@@ -907,12 +908,13 @@ In `pileLayout.test.ts`, `LARGE_PILE_SCALE` in the import becomes `MAX_PILE_SCAL
 ```ts
 describe("pileFit", () => {
   it("scales a phone's 360-unit pile to its width, and past MAX_PILE_SCALE keeps that scale across more units", () => {
-    for (const px of [375, 390, 440])
+    const widest = PILE_WIDTH * MAX_PILE_SCALE;
+    for (const px of [PILE_WIDTH, widest])
       expect(pileFit(px)).toEqual({ k: px / PILE_WIDTH, units: PILE_WIDTH });
-    const [sheet, wide] = [pileFit(540), pileFit(1180)];
-    expect([sheet.k, wide.k]).toEqual([MAX_PILE_SCALE, MAX_PILE_SCALE]);
-    expect(wide.units).toBeGreaterThan(sheet.units);
-    expect(sheet.units).toBeGreaterThan(PILE_WIDTH);
+    const [wider, wide] = [pileFit(widest * 1.2), pileFit(widest * 3)];
+    expect([wider.k, wide.k]).toEqual([MAX_PILE_SCALE, MAX_PILE_SCALE]);
+    expect(wide.units).toBeGreaterThan(wider.units);
+    expect(wider.units).toBeGreaterThan(PILE_WIDTH);
   });
 });
 ```

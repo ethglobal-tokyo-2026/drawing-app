@@ -39,14 +39,14 @@ From `2026-10-07-ipad-explore-and-dialogs.md`, which this plan's commit deletes.
 
 ## Ports from the draft
 
-| Draft commit                  | What it is                                                                | Task | How                                       |
-| ----------------------------- | ------------------------------------------------------------------------- | ---- | ----------------------------------------- |
-| `943b5d9a`                    | ticket cards rise to the middle; the Shop's wrappers                      | 2, 6 | `tickets.css` by `git apply`; TSX by hand |
-| `7ca72b31`                    | the query needs a touch screen; the upright column; the swatch variables  | 2, 7 | `tickets.css` by `git apply`; CSS by hand |
-| `27dc855c`                    | the Sealed card rises to the middle                                       | 3    | `git apply`                               |
-| `8ba750b3`, `911d56e4`        | the gratitude events card's large-screen block, no tear strip             | 5    | by hand                                   |
-| `500e5fad`, `696123ba` (Shop) | the spread: banner, upright perforation, three shelves; air after the fan | 6, 8 | by hand: Phase 0 rewrote the hero         |
-| `c9d290b0`                    | the Shop's copy                                                           | —    | Phase 0                                   |
+| Draft commit                  | What it is                                                                | Task | How                                                                                              |
+| ----------------------------- | ------------------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------ |
+| `943b5d9a`                    | ticket cards rise to the middle; the Shop's wrappers                      | 2, 6 | `tickets.css` by `git apply`; the hero's wrappers by hand (Phase 0 already has `.shop__shelves`) |
+| `7ca72b31`                    | the query needs a touch screen; the upright column; the swatch variables  | 2, 7 | `tickets.css` by `git apply`; CSS by hand                                                        |
+| `27dc855c`                    | the Sealed card rises to the middle                                       | 3    | `git apply`                                                                                      |
+| `8ba750b3`, `911d56e4`        | the gratitude events card's large-screen block, no tear strip             | 5    | by hand                                                                                          |
+| `500e5fad`, `696123ba` (Shop) | the spread: banner, upright perforation, three shelves; air after the fan | 6, 8 | by hand: Phase 0 rewrote the hero                                                                |
+| `c9d290b0`                    | the Shop's copy                                                           | —    | Phase 0                                                                                          |
 
 ## Files
 
@@ -55,7 +55,7 @@ From `2026-10-07-ipad-explore-and-dialogs.md`, which this plan's commit deletes.
 - Modify: `apps/frontend/src/sticker-creation/sealing/SealedCard.css` (Task 3)
 - Modify: `apps/frontend/src/sticker-creation/sealing/SealCeremony.tsx`, `SealCeremony.test.tsx`, `slotTracker.ts` (Task 4)
 - Modify: `apps/frontend/src/sticker-board/stat-board/gratitude-events.css` (Task 5)
-- Modify: `apps/frontend/src/shop/ReserveTicketsHero.tsx`, `ShopScreen.tsx` (Task 6), `ShopScreen.css` (Tasks 7–8)
+- Modify: `apps/frontend/src/shop/ReserveTicketsHero.tsx` (Task 6), `ShopScreen.css` (Tasks 7–8)
 - Modify: `DESIGN.md` (Task 9)
 - Scratch, never committed: `data/scratch/ipad-shop/` (gitignored), untracked `apps/frontend/vite.ipad-shop.config.ts` (Task 10)
 
@@ -80,12 +80,12 @@ Then `pnpm install --frozen-lockfile --prefer-offline` in it. A lane in an isola
 rg -n 'export const (LARGE_SCREEN|useLargeScreen)' apps/frontend/src/ui/largeScreen.ts
 rg -n -- '--gutter-large' apps/frontend/src/styles/tokens.css
 rg -n 'reserve-hero__price|shelf__lead|lead=' apps/frontend/src/shop
-rg -n 'comingSoon' apps/frontend/src/shop
+rg -n 'comingSoon|shop__shelves|shelf__head' apps/frontend/src/shop
 rg -n 'any-pointer' apps/frontend/src/sticker-board/stat-board/gratitude-events.css
 git cat-file -t 943b5d9a
 ```
 
-Expected: both exports, `LARGE_SCREEN` the query above; `--gutter-large` defined; no hits for the old copy; `comingSoon` rendered once, over the shelves; no `any-pointer` in `gratitude-events.css`; `commit`.
+Expected: both exports, `LARGE_SCREEN` the query above; `--gutter-large` defined; no hits for the old copy; `comingSoon` rendered once, as `h2.shop__soon`, the first child of Phase 0's `section.shop__shelves`, and no `shelf__head` (Phase 0's shelf is its `h3.shelf__title` and its row); no `any-pointer` in `gratitude-events.css`; `commit`.
 
 - No Phase 0 or no foundations on main: stop and report.
 - Foundations keys the large layout some other way (another query, or a class or data attribute on `.phone`): write every large-screen rule in this plan in its form.
@@ -150,22 +150,7 @@ git show 943b5d9a -- apps/frontend/src/tickets/tickets.css | git apply --3way
 git show 7ca72b31 -- apps/frontend/src/tickets/tickets.css | git apply --3way
 ```
 
-Conflicts: none expected; both apply cleanly to main at `ed18a266`, and Phase 0 leaves `tickets.css` alone. The file gains, before its `@media (prefers-reduced-motion: reduce)` block:
-
-```css
-/* On a large screen a ticket card rises to the middle at about a phone's width, rather than running
-   across the screen's foot. */
-@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
-  .out-of-tickets {
-    justify-content: center;
-    align-items: center;
-  }
-
-  .out-of-tickets__card {
-    max-width: 400px;
-  }
-}
-```
+Conflicts: none expected; both apply cleanly in turn to main at `6e20e09e` (trial-applied), and Phase 0 leaves `tickets.css` alone. Together they add one large-screen block before the file's reduced-motion block: `.out-of-tickets` centers its card both ways, and `.out-of-tickets__card` is at most 400px wide.
 
 - [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/tickets` → PASS, unchanged: CSS only. The layout's test is Task 10's "ticket cards" and "checkout" lines.
 - [ ] **Step 3:** Commit: `feat(frontend): on an iPad the checkout and the ticket cards rise to the middle at 400px`
@@ -174,20 +159,7 @@ Conflicts: none expected; both apply cleanly to main at `ed18a266`, and Phase 0 
 
 **Files:** Modify `apps/frontend/src/sticker-creation/sealing/SealedCard.css`
 
-- [ ] **Step 1: Port.** `git show 27dc855c -- apps/frontend/src/sticker-creation/sealing/SealedCard.css | git apply --3way`. Conflicts: none expected (clean on `ed18a266`; Phase 0's Sealed card change is its fine print). The file ends:
-
-```css
-/* On a large screen the card rises to the middle at about a phone's width, as the ticket cards do.
-   Centered by layout alone: the ceremony aims the sticker's flight at the card's offsets. */
-@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
-  .sealed-card {
-    inset: 0;
-    width: min(400px, calc(100% - 28px));
-    height: fit-content;
-    margin: auto;
-  }
-}
-```
+- [ ] **Step 1: Port.** `git show 27dc855c -- apps/frontend/src/sticker-creation/sealing/SealedCard.css | git apply --3way`. Conflicts: none expected (trial-applied clean on `6e20e09e`; Phase 0's Sealed card change is its fine print). The file ends with a large-screen block that centers `.sealed-card` by layout alone (`inset: 0`, `margin: auto`, `height: fit-content`) at `min(400px, calc(100% - 28px))`.
 
 - [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation/sealing` → PASS. The layout's test is Task 10's "Sealed card" lines.
 - [ ] **Step 3:** Commit: `fix(frontend): on an iPad the Sealed card rises to the middle at 400px, as the ticket cards do`
@@ -271,135 +243,29 @@ In `slotTracker.ts`, the doc becomes: "Where the sealed card's slot is, measured
 
 **Files:** Modify `apps/frontend/src/sticker-board/stat-board/gratitude-events.css`
 
-- [ ] **Step 1: Port, by hand.** `git show 8ba750b3 -- apps/frontend/src/sticker-board/stat-board/gratitude-events.css` creates the whole file, which Phase 0 already holds, so read the block from the draft's last version, `git show 911d56e4:apps/frontend/src/sticker-board/stat-board/gratitude-events.css`, and insert it before the file's `@media (prefers-reduced-motion: reduce)` block:
+- [ ] **Step 1: Port, by hand.** `git show 8ba750b3 -- apps/frontend/src/sticker-board/stat-board/gratitude-events.css` creates the whole file, which Phase 0 already holds, so take only the draft's last version of its large-screen block, its comment included, and insert it before the file's `@media (prefers-reduced-motion: reduce)` block:
 
-```css
-/* A large screen raises it to the middle as a card of its own width, as the ticket cards rise. */
-@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
-  .gratitude-events-layer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-  }
-
-  /* The tear strip gave the sheet its top room; the card takes its side padding there instead. */
-  .gratitude-events.bottom-sheet {
-    position: relative;
-    width: 100%;
-    max-width: 480px;
-    padding-top: 20px;
-    border-radius: 16px;
-  }
-
-  /* A card has no tear strip: the perforation's button stays for keyboards and screen readers, unseen
-     until it's focused, and the scrim and Escape close it too. */
-  .gratitude-events.bottom-sheet > .perf:not(:focus-visible) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-}
+```bash
+git show 911d56e4:apps/frontend/src/sticker-board/stat-board/gratitude-events.css | sed -n '/A large screen raises it/,/^}/p'
 ```
 
-Conflicts: if Phase 0 named the layer or the sheet differently, use its classes. If Step 2 of Task 1 found a block already there, make it match this one.
+It centers `.gratitude-events-layer`'s sheet as a card at most 480px wide (20px top padding, 16px radius) and hides the sheet's `.perf` tear strip until it's focused (`:not(:focus-visible)`, clipped to 1px), so it stays for keyboards and screen readers. Conflicts: if Phase 0 named the layer or the sheet differently, use its classes. If Step 2 of Task 1 found a block already there, make it match this one.
 
 - [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-board/stat-board` → PASS. The layout's test is Task 10's "gratitude events" lines.
 - [ ] **Step 3:** Commit: `feat(frontend): on an iPad your gratitude events open as a centered card`
 
 ### Task 6: The Shop's boxes for the spread
 
-**Files:** Modify `apps/frontend/src/shop/ReserveTicketsHero.tsx`, `apps/frontend/src/shop/ShopScreen.tsx`
+**Files:** Modify `apps/frontend/src/shop/ReserveTicketsHero.tsx`
 
 Layout-neutral on a phone: plain blocks with no margins of their own.
 
-- [ ] **Step 1: The reserve tickets section** (the draft's `500e5fad`, reordered by `c9d290b0`; read the result with `git show c9d290b0:apps/frontend/src/shop/ReserveTicketsHero.tsx`). Keep Phase 0's words and order, and wrap the title and its line in `.reserve-hero__text`, and the error line, the count, the key and the Sui credit in `.reserve-hero__buy`, so the section's return is:
-
-```tsx
-<section className="reserve-hero" aria-labelledby={`${id}-title`}>
-  <TicketStubs className="reserve-hero__fan" size="large" stubs={FAN} stars="front" />
-  {/* The words, then the key: one column on a phone, a banner's row across an iPad held sideways. */}
-  <div className="reserve-hero__text">
-    <h2 className="reserve-hero__title" id={`${id}-title`}>
-      {t(($) => $.shop.reserve.title)}
-    </h2>
-    <p className="reserve-hero__lead keep-phrases">{t(($) => $.shop.reserve.lead)}</p>
-  </div>
-  <TearLine />
-  <div className="reserve-hero__buy">
-    {/* With no tickets loaded the Shop would read as if you hold none, so a failed load says so. */}
-    {error && (
-      <ErrorLine className="reserve-hero__problem" detail={errorDetail(error)} onRetry={refresh}>
-        {t(($) => $.shop.reserve.heldProblem, { reason: errorMessage(error) })}
-      </ErrorLine>
-    )}
-    {held > 0 && (
-      <p className="reserve-hero__held">
-        <span aria-hidden="true">
-          <Trans
-            i18nKey={($) => $.shop.reserve.held}
-            components={{ count: <TicketCount kind="reserve" count={held} /> }}
-          />
-        </span>
-        <span className="visually-hidden">
-          {t(($) => $.shop.reserve.heldSpoken, { count: held })}
-        </span>
-      </p>
-    )}
-    <Key className="reserve-hero__key" tone="blue" icon={<BuyTicketsIcon />} onClick={onBuy}>
-      {t(($) => $.shop.reserve.buy)}
-    </Key>
-    <SuiCredit />
-  </div>
-</section>
-```
-
-- [ ] **Step 2: The shelves** (the draft's `943b5d9a`, `git show 943b5d9a -- apps/frontend/src/shop/ShopScreen.tsx`, without the `lead` props Phase 0 removed). Wrap the three `ComingSoonShelf`s in `<div className="shop__shelves">`. The draft's `.shop__reserve` wrapper stays out: no rule has styled it since `500e5fad`. The return becomes:
-
-```tsx
-<div className="shop">
-  <h1 className="shop__title">{t(($) => $.shop.title)}</h1>
-  <ReserveTicketsHero onBuy={onBuyReserveTickets} />
-  <ShopTicketPurchases />
-  {/* One after the other on a phone; held sideways, side by side under the one "Coming soon". */}
-  <div className="shop__shelves">
-    <ComingSoonShelf
-      title={t(($) => $.shop.shelves.laminates.title)}
-      items={LAMINATES.map((laminate) => ({
-        id: laminate,
-        name: t(($) => $.shop.shelves.laminates.items[laminate]),
-        preview: onSticker((s) => (
-          <FinishPreview sticker={s} side={SWATCH} finish={{ laminate }} />
-        )),
-      }))}
-    />
-    <ComingSoonShelf
-      title={t(($) => $.shop.shelves.brushes.title)}
-      swatch="white"
-      items={BRUSHES.map((kind) => ({
-        id: kind,
-        name: t(($) => $.shop.shelves.brushes.items[kind]),
-        preview: <BrushStrokeSample kind={kind} side={SWATCH} />,
-      }))}
-    />
-    <ComingSoonShelf
-      title={t(($) => $.shop.shelves.backingFoils.title)}
-      items={BACKING_FOILS.map((foil) => ({
-        id: foil,
-        name: t(($) => $.shop.shelves.backingFoils.items[foil]),
-        preview: onSticker((s) => <FinishPreview sticker={s} side={SWATCH} finish={{ foil }} />),
-      }))}
-    />
-  </div>
-</div>
-```
-
-Then move Phase 0's one "Coming soon" element (`rg -n 'comingSoon' apps/frontend/src/shop`), its markup unchanged, into `.shop__shelves` as its first child: Task 8 lays it across the spread's three shelves. If Phase 0 gave the shelves other props, keep Phase 0's.
-
+- [ ] **Step 1: The reserve tickets section** (the draft's `500e5fad`; its wrappers as `c9d290b0` left them, `git show c9d290b0:apps/frontend/src/shop/ReserveTicketsHero.tsx`). Phase 0's section runs: the fan, `h2.reserve-hero__title`, `p.reserve-hero__lead`, `<TearLine />`, the error line, `p.reserve-hero__held`, the Key, `<SuiCredit />`. Keep its words and order, and:
+  - wrap the title and the lead in `<div className="reserve-hero__text">`, with `{/* The words, then the key: one column on a phone, a banner's row across an iPad held sideways. */}` above it;
+  - wrap everything after `<TearLine />` (the error line with its comment, the count, the Key, `<SuiCredit />`) in `<div className="reserve-hero__buy">`.
+- [ ] **Step 2: The shelves need nothing:** Phase 0's `section.shop__shelves` already holds `h2.shop__soon` and the three `ComingSoonShelf`s (Task 1 Step 2's check). The draft's `.shop__reserve` wrapper stays out: no rule has styled it since `500e5fad`.
 - [ ] **Step 3:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/shop` and `pnpm -C apps/frontend typecheck` → PASS.
-- [ ] **Step 4:** Commit: `refactor(frontend): the Shop's reserve tickets and shelves get the boxes an iPad lays out`
+- [ ] **Step 4:** Commit: `refactor(frontend): the Shop's reserve tickets get the boxes an iPad lays out`
 
 ### Task 7: The Shop upright: one centered column, every swatch whole
 
@@ -441,7 +307,7 @@ From `7ca72b31` (`git show 7ca72b31 -- apps/frontend/src/shop/ShopScreen.css`): 
 
 **Files:** Modify `apps/frontend/src/shop/ShopScreen.css`; `apps/frontend/src/styles/tokens.css` only if Task 1 found no `--gutter-large`
 
-The draft's `500e5fad`, as `c9d290b0` (Phase 0's copy) and `696123ba` (air after the fan) left it: `git show 696123ba:apps/frontend/src/shop/ShopScreen.css | sed -n '/orientation: landscape/,/---------- Previews/p'`. Not applied as a patch: its hunks sit on `943b5d9a`'s two-column block and the hero's price line, neither of which exists here. New beside the draft: the rule that puts Phase 0's "Coming soon" across the grid's first row, and implicit grid rows, since that heading adds one.
+The draft's `500e5fad`, as `c9d290b0` and `696123ba` (air after the fan) left it. Not applied as a patch: its hunks sit on `943b5d9a`'s two-column block and the hero's price line, neither of which exists here.
 
 - [ ] **Step 1: Only if Task 1 found no `--gutter-large`:** in `styles/tokens.css`, after `--gutter: 12px;`:
 
@@ -450,103 +316,18 @@ The draft's `500e5fad`, as `c9d290b0` (Phase 0's copy) and `696123ba` (air after
 --gutter-large: 20px;
 ```
 
-- [ ] **Step 2: The spread**, after Task 7's block, inside the Large screens section:
+- [ ] **Step 2: The spread**, after Task 7's block, inside the Large screens section: the draft's block, its comment included,
 
-```css
-/* Held sideways the page is one spread with nothing to scroll: reserve tickets as a banner across
-   the top (the fan, the words, then past an upright perforation, like a ticket's stub, the count
-   over the key), and under it the three shelves side by side, each with its swatches two by two. */
-@media (min-width: 800px) and (min-height: 600px) and (any-pointer: coarse) and (orientation: landscape) {
-  .shop {
-    --shelf-swatch: 96px;
-    --spread-w: min(1040px, 100% - 2 * var(--gutter-large));
-    padding: 20px calc((100% - var(--spread-w)) / 2) 24px;
-  }
-
-  .shop__title {
-    margin: 0 0 12px;
-  }
-
-  .reserve-hero {
-    display: flex;
-    align-items: center;
-    column-gap: 28px;
-    margin: 0;
-    padding: var(--card-pad) 28px;
-    text-align: start;
-  }
-
-  /* The front ticket's star reaches past the fan's box; its margin keeps air between the star and
-     the title. */
-  .reserve-hero .reserve-hero__fan {
-    flex: none;
-    margin: 0 16px 0 0;
-  }
-
-  .reserve-hero__text {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  /* The perforation turns upright and runs the banner's full height. */
-  .reserve-hero > .tear-line {
-    flex: none;
-    align-self: stretch;
-    width: 10px;
-    height: auto;
-    margin: calc(-1 * var(--card-pad)) 0;
-    background: radial-gradient(circle, rgba(28, 24, 36, 0.16) 1.4px, #0000 1.9px) 50% 0 / 4px 9px
-      repeat-y;
-  }
-
-  .reserve-hero__buy {
-    flex: none;
-    width: calc(var(--ph-w) - 60px);
-  }
-
-  .shop__purchases {
-    max-width: calc(var(--ph-w) - 24px);
-    margin-inline: 0;
-  }
-
-  /* Each shelf as wide as its swatches, the three spread to the banner's edges under the one "Coming
-     soon"; their heads and swatches share rows, so a head that wraps lowers every shelf's swatches. */
-  .shop__shelves {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, max-content));
-    justify-content: space-between;
-    column-gap: 32px;
-    margin-top: 24px;
-  }
-
-  .shop__shelves > :not(.shelf) {
-    grid-column: 1 / -1;
-    justify-self: start;
-    margin: 0 0 8px;
-  }
-
-  .shop__shelves > .shelf {
-    display: grid;
-    grid-row: span 2;
-    grid-template-rows: subgrid;
-    align-content: start;
-    margin-top: 0;
-  }
-
-  .shelf__head {
-    padding-inline: 0;
-  }
-
-  /* Two by two, every swatch in view, so the row has nothing to scroll. */
-  .shelf__row {
-    display: grid;
-    grid-template-columns: repeat(2, var(--shelf-swatch));
-    gap: 12px var(--shelf-gap);
-    padding: 14px 0 0;
-    overflow: visible;
-  }
-}
+```bash
+git show 696123ba:apps/frontend/src/shop/ShopScreen.css | sed -n '/In landscape the page reads/,/^}/p'
 ```
+
+with four changes, as tried in Chromium (Task 10):
+
+- `.reserve-hero` drops `--card-pad: 18px;`, keeping the card's own padding.
+- `.shop__shelves` drops `grid-template-rows: auto auto;`: Phase 0's `h2.shop__soon` adds a row, so the rows are implicit.
+- After `.shop__shelves`, a rule lays Phase 0's "Coming soon" across the grid's first row: `.shop__shelves > :not(.shelf) { grid-column: 1 / -1; justify-self: start; margin: 0 0 8px; }`; `.shop__shelves`'s comment says the three spread "under the one 'Coming soon'".
+- `.shelf__head { padding-inline: 0; }` becomes `.shelf__title { padding-inline: 0; }`: Phase 0's shelf has no head, and its title carries the 18px sides.
 
 - [ ] **Step 3: Short screens**, after Step 2's block (Decision 4; `696123ba` tightened the stat board the same way):
 
