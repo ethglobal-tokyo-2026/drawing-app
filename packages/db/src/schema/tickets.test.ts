@@ -28,15 +28,17 @@ describe("tickets", () => {
     spend(insertUser(db))();
   });
 
-  it("makes a day's first uses daily tickets and the rest reserve ones", () => {
+  it("never spends a reserve ticket among a day's first DAILY_TICKETS_PER_DAY uses, and takes daily ones after one", () => {
     const spend = (dayIndex: number, kind: (typeof ticketKinds)[number]) => () =>
       insertTicketUse(db, userId, { dayIndex, kind });
-    expect(refusal(spend(FIRST_USE, "reserve"))).toMatch(
+    expect(refusal(spend(DAILY_TICKETS_PER_DAY - 1, "reserve"))).toMatch(
       /CHECK constraint failed: ticket_uses_kind/,
     );
-    expect(refusal(spend(DAILY_TICKETS_PER_DAY, "daily"))).toMatch(
-      /CHECK constraint failed: ticket_uses_kind/,
-    );
+    // A mixed day: the standard allowance, a reserve ticket, then daily tickets again, as Kyoto
+    // Seika Manga Expression Practice Mode's larger allowance gives them.
+    for (let dayIndex = 0; dayIndex < DAILY_TICKETS_PER_DAY; dayIndex++) spend(dayIndex, "daily")();
+    spend(DAILY_TICKETS_PER_DAY, "reserve")();
+    expect(spend(DAILY_TICKETS_PER_DAY + 1, "daily")).not.toThrow();
   });
 
   /** Records a one-ticket purchase with `values`. */

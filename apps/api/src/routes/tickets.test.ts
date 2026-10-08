@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   DAILY_TICKETS_PER_DAY,
+  KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
   suiTransactions,
   ticketPurchases,
   ticketUses,
@@ -413,5 +414,68 @@ describe("tickets", () => {
       status: 503,
       error: "chain_unavailable",
     });
+  });
+});
+
+/** Turns Kyoto Seika Manga Expression Practice Mode on or off, as Settings does. */
+async function setKyotoSeikaPractice(kyotoSeikaPractice: boolean) {
+  const body = { kyotoSeikaPractice };
+  expect(
+    (await test.send("POST", "/api/me/kyoto-seika-practice", { as: userId, body })).status,
+  ).toBe(200);
+}
+
+describe("tickets in Kyoto Seika Manga Expression Practice Mode", () => {
+  it("give the mode's allowance while it's on, and mark each spend with the mode", async () => {
+    await setKyotoSeikaPractice(true);
+    expect(await getTickets()).toMatchObject({
+      dailyPerDay: KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
+      dailyLeft: KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
+    });
+    const answers = await spendTickets("daily", KYOTO_SEIKA_DAILY_TICKETS_PER_DAY);
+    answers.forEach(({ ticketUse }, dayIndex) =>
+      expect(ticketUse).toMatchObject({ dayIndex, kind: "daily", kyotoSeikaPractice: true }),
+    );
+    expect(await refusalOf(await spend("daily"))).toMatchObject({
+      status: 409,
+      error: "no_tickets_left",
+    });
+  });
+
+  it("follow the switch at each spend, and never refill", async () => {
+    const [standard] = await spendTickets("daily", DAILY_TICKETS_PER_DAY);
+    expect(standard.ticketUse.kyotoSeikaPractice).toBe(false);
+    await setKyotoSeikaPractice(true);
+    expect((await getTickets()).dailyLeft).toBe(
+      KYOTO_SEIKA_DAILY_TICKETS_PER_DAY - DAILY_TICKETS_PER_DAY,
+    );
+    await spendTicket("daily");
+    await setKyotoSeikaPractice(false);
+    expect(await getTickets()).toMatchObject({ dailyPerDay: DAILY_TICKETS_PER_DAY, dailyLeft: 0 });
+    await setKyotoSeikaPractice(true);
+    expect((await getTickets()).dailyLeft).toBe(
+      KYOTO_SEIKA_DAILY_TICKETS_PER_DAY - DAILY_TICKETS_PER_DAY - 1,
+    );
+  });
+
+  it("go back to daily tickets after a reserve one when the mode turns on mid-day", async () => {
+    await buyPack(PACK);
+    await spendTickets("daily", DAILY_TICKETS_PER_DAY);
+    expect((await spendTicket("reserve")).ticketUse).toMatchObject({
+      dayIndex: DAILY_TICKETS_PER_DAY,
+      kind: "reserve",
+    });
+    await setKyotoSeikaPractice(true);
+    expect(await refusalOf(await spend("reserve"))).toMatchObject({
+      status: 409,
+      error: "ticket_kind_changed",
+    });
+    const daily = await spendTicket("daily");
+    expect(daily.ticketUse).toMatchObject({
+      dayIndex: DAILY_TICKETS_PER_DAY + 1,
+      kind: "daily",
+      kyotoSeikaPractice: true,
+    });
+    expect(daily.tickets.reserveLeft).toBe(PACK.tickets - 1);
   });
 });

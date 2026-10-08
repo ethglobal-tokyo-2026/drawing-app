@@ -1,9 +1,16 @@
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DAILY_TICKETS_PER_DAY, KYOTO_SEIKA_DAILY_TICKETS_PER_DAY } from "@drawing-app/db";
 import { describe, expect, it } from "vitest";
 import { TEST_CHAT_MENU_IDS } from "../testing/fakeLine.ts";
-import { chatMenuFor, menuToLink, midnightMoves, readChatMenuIds } from "./menus.ts";
+import {
+  chatMenuFor,
+  menuToLink,
+  midnightMoves,
+  readChatMenuIds,
+  type ChatMenuIds,
+} from "./menus.ts";
 
 /** Writes `contents` to a menus.json of its own and returns its path. */
 function menusFile(contents: unknown) {
@@ -11,6 +18,24 @@ function menusFile(contents: unknown) {
   writeFileSync(path, JSON.stringify(contents));
   return path;
 }
+
+/**
+ * A family's menus as chatMenuFor names them: each count from the full day's down, then reserve
+ * and none.
+ */
+function familyOf(kyotoSeikaPractice: boolean) {
+  const perDay = kyotoSeikaPractice ? KYOTO_SEIKA_DAILY_TICKETS_PER_DAY : DAILY_TICKETS_PER_DAY;
+  const counts = Array.from({ length: perDay }, (_, used) => perDay - used);
+  return [
+    ...counts.map((dailyLeft) => chatMenuFor({ dailyLeft, reserveLeft: 0 }, kyotoSeikaPractice)),
+    chatMenuFor({ dailyLeft: 0, reserveLeft: 1 }, kyotoSeikaPractice),
+    chatMenuFor({ dailyLeft: 0, reserveLeft: 0 }, kyotoSeikaPractice),
+  ];
+}
+
+/** Where the midnight batch leaves someone on `menu`. */
+const afterMidnight = (ids: ChatMenuIds, menu: string) =>
+  midnightMoves(ids).find(({ from }) => from === menu)?.to ?? menu;
 
 describe("the chat menu map", () => {
   it("reads deploy/line/menus.json, counting a menu left out, null or empty as not made yet", () => {
@@ -28,10 +53,24 @@ describe("the chat menu map", () => {
   });
 
   it("picks the menu for what the Draw key shows: daily tickets first, then reserve ones", () => {
-    const menus = [3, 2, 1, 0].map((dailyLeft) => chatMenuFor({ dailyLeft, reserveLeft: 0 }));
+    const menus = [3, 2, 1, 0].map((dailyLeft) =>
+      chatMenuFor({ dailyLeft, reserveLeft: 0 }, false),
+    );
     expect(menus).toEqual(["3", "2", "1", "none"]);
-    expect(chatMenuFor({ dailyLeft: 0, reserveLeft: 4 })).toBe("reserve");
-    expect(chatMenuFor({ dailyLeft: 2, reserveLeft: 4 })).toBe("2");
+    expect(chatMenuFor({ dailyLeft: 0, reserveLeft: 4 }, false)).toBe("reserve");
+    expect(chatMenuFor({ dailyLeft: 2, reserveLeft: 4 }, false)).toBe("2");
+  });
+
+  it("gives Kyoto Seika Manga Expression Practice Mode a menu of its own for each count of its allowance, then reserve and none", () => {
+    const kyotoSeika = familyOf(true);
+    expect(new Set(kyotoSeika).size).toBe(KYOTO_SEIKA_DAILY_TICKETS_PER_DAY + 2);
+    expect(kyotoSeika.filter((menu) => familyOf(false).includes(menu))).toEqual([]);
+  });
+
+  it("refuses a map where one of Kyoto Seika Manga Expression Practice Mode's menus shares its rich menu with a standard one", () => {
+    const { en } = TEST_CHAT_MENU_IDS;
+    const path = menusFile({ en: { "3": en["3"], "kyoto-seika-3": en["3"] } });
+    expect(() => readChatMenuIds(path)).toThrow(/kyoto-seika-3/);
   });
 
   it("links a missing menu's plain one, and nothing without that", () => {
@@ -42,17 +81,17 @@ describe("the chat menu map", () => {
     expect(menuToLink(ids, "ja", "2")).toBeNull();
   });
 
-  it("moves each language's other menus onto its 3 menu at midnight", () => {
+  it("moves each family back to its full count at midnight, in each language", () => {
     const { en, ja } = TEST_CHAT_MENU_IDS;
-    expect(midnightMoves(TEST_CHAT_MENU_IDS)).toEqual(
-      [en, ja].flatMap((menus) =>
-        [menus.plain, menus["2"], menus["1"], menus.reserve, menus.none].map((from) => ({
-          from,
-          to: menus["3"],
-        })),
-      ),
-    );
-    // A language without a 3 menu has nothing to move to.
+    for (const menus of [en, ja]) {
+      for (const kyotoSeika of [false, true]) {
+        const [full, ...rest] = familyOf(kyotoSeika);
+        for (const menu of kyotoSeika ? rest : [...rest, "plain" as const]) {
+          expect(afterMidnight(TEST_CHAT_MENU_IDS, menus[menu])).toBe(menus[full]);
+        }
+      }
+    }
+    // A language without a full-count menu has nothing to move to.
     expect(midnightMoves({ en: { plain: en.plain }, ja })).toEqual(midnightMoves({ ja }));
   });
 });

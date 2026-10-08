@@ -1,4 +1,4 @@
-import { DAILY_TICKETS_PER_DAY, ticketUses } from "@drawing-app/db";
+import { ticketUses } from "@drawing-app/db";
 import { Hono, type Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { AppDeps } from "../deps.ts";
@@ -7,9 +7,10 @@ import type { AppEnv } from "../session.ts";
 import type { Refusal } from "../shapes.ts";
 import { payTicketPurchase, startTicketPurchase } from "../tickets/purchases.ts";
 import {
+  kyotoSeikaPracticeOf,
+  nextTicketKind,
   spendRequestSchema,
   startPurchaseRequestSchema,
-  ticketKindAt,
   ticketPurchaseRequestSchema,
   ticketShop,
   ticketsOf,
@@ -61,19 +62,24 @@ export const ticketRoutes = (deps: AppDeps) => {
               200,
             );
           }
-          const { ticketDay, dailyLeft, reserveLeft, usedToday } = ticketsOf(tx, userId, now);
+          const kyotoSeikaPractice = kyotoSeikaPracticeOf(tx, userId);
+          const { ticketDay, dailyPerDay, dailyLeft, reserveLeft, usedToday } = ticketsOf(
+            tx,
+            userId,
+            now,
+          );
           if (dailyLeft === 0 && reserveLeft === 0) {
             return apiError(
               c,
               409,
               "no_tickets_left",
-              `All ${DAILY_TICKETS_PER_DAY} daily tickets for ${ticketDay} are spent, and no reserve tickets are left`,
+              `All ${dailyPerDay} daily tickets for ${ticketDay} are spent, and no reserve tickets are left`,
             );
           }
-          // Daily tickets go first, so the day's next index decides the kind. The start screen asks
-          // before spending a reserve ticket, so it must never get the other kind than it offered.
+          // Daily tickets go first, under the allowance of the mode in force now. The start screen
+          // asks before spending a reserve ticket, so it must never get the other kind than it offered.
           const dayIndex = usedToday.length;
-          const next = ticketKindAt(dayIndex);
+          const next = nextTicketKind({ dailyLeft });
           if (kind !== next) {
             return apiError(
               c,
@@ -86,7 +92,7 @@ export const ticketRoutes = (deps: AppDeps) => {
           // and a key sent twice at once finds its first use above.
           const use = tx
             .insert(ticketUses)
-            .values({ userId, ticketDay, dayIndex, kind, idempotencyKey })
+            .values({ userId, ticketDay, dayIndex, kind, idempotencyKey, kyotoSeikaPractice })
             .returning()
             .get();
           return c.json({ ticketUse: toTicketUse(use), tickets: ticketsOf(tx, userId, now) }, 201);

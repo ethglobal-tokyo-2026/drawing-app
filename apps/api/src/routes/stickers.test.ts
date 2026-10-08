@@ -1,5 +1,17 @@
-import { MAX_TIME_USED_S, stickers, stickerTimelapses, ticketUses } from "@drawing-app/db";
-import { insertGratitude, insertTicketUse, insertUser, packGift } from "@drawing-app/db/testing";
+import {
+  KYOTO_SEIKA_TIME_USED_S,
+  MAX_TIME_USED_S,
+  stickers,
+  stickerTimelapses,
+  ticketUses,
+} from "@drawing-app/db";
+import {
+  insertGratitude,
+  insertTicketUse,
+  insertUser,
+  packGift,
+  TEST_KYOTO_SEIKA_SUBJECTS,
+} from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
@@ -257,6 +269,79 @@ describe("POST /api/stickers", () => {
   });
 });
 
+/** The subject pair as the seal form sends it. */
+const SUBJECTS_PART = JSON.stringify(TEST_KYOTO_SEIKA_SUBJECTS);
+
+describe("POST /api/stickers on a ticket spent in Kyoto Seika Manga Expression Practice Mode", () => {
+  /** Seals with `overrides` on a new ticket of the person's, spent in the mode or not. */
+  const sealOn = (artistId: string, kyotoSeikaPractice: boolean, overrides: Partial<SealParts>) =>
+    postSeal(
+      artistId,
+      sealFormData(
+        sealParts(insertTicketUse(test.db, artistId, { kyotoSeikaPractice }), overrides),
+      ),
+    );
+
+  it("keeps the subject pair and the mode's clock", async () => {
+    const overrides = {
+      timeUsed: String(KYOTO_SEIKA_TIME_USED_S),
+      kyotoSeikaSubjects: SUBJECTS_PART,
+    };
+    const { sticker } = await bodyOf(
+      await sealOn(insertUser(test.db), true, overrides),
+      sealResponseSchema,
+      201,
+    );
+    expect(sticker).toMatchObject({
+      timeUsed: KYOTO_SEIKA_TIME_USED_S,
+      kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS,
+    });
+  });
+
+  const one = JSON.stringify(TEST_KYOTO_SEIKA_SUBJECTS.slice(0, 1));
+  const refused: Array<{ why: string; kyotoSeika: boolean; overrides: Partial<SealParts> }> = [
+    {
+      why: "a sticker without its subjects on a ticket spent in the mode",
+      kyotoSeika: true,
+      overrides: {},
+    },
+    {
+      why: "subjects on a standard ticket's sticker",
+      kyotoSeika: false,
+      overrides: { kyotoSeikaSubjects: SUBJECTS_PART },
+    },
+    {
+      why: "time past the mode's clock",
+      kyotoSeika: true,
+      overrides: {
+        timeUsed: String(KYOTO_SEIKA_TIME_USED_S + 1),
+        kyotoSeikaSubjects: SUBJECTS_PART,
+      },
+    },
+    {
+      why: "subjects that aren't a pair",
+      kyotoSeika: true,
+      overrides: { kyotoSeikaSubjects: one },
+    },
+    {
+      why: "subjects that aren't JSON",
+      kyotoSeika: true,
+      overrides: { kyotoSeikaSubjects: "風 × 再会" },
+    },
+  ];
+
+  it.each(refused)(
+    "refuses $why with invalid_request, naming the part and storing nothing",
+    async ({ kyotoSeika, overrides }) => {
+      const answer = await refusalOf(await sealOn(insertUser(test.db), kyotoSeika, overrides));
+      expect(answer).toMatchObject({ status: 400, error: "invalid_request" });
+      expect(answer.detail).toMatch(/timeUsed|kyotoSeikaSubjects/);
+      expect(allStickers()).toEqual([]);
+      expect(test.images.saved.size).toBe(0);
+    },
+  );
+});
+
 describe("GET /api/stickers/:stickerId", () => {
   it("shows who holds it now, its Original Artist, and its received gifts newest first", async () => {
     const artistId = insertUser(test.db);
@@ -310,6 +395,18 @@ describe("GET /api/stickers/:stickerId", () => {
   it("refuses an unknown sticker with sticker_not_found", async () => {
     const response = await getSticker(insertUser(test.db), "no-such-sticker");
     expect(await refusalOf(response)).toMatchObject({ status: 404, error: "sticker_not_found" });
+  });
+
+  it("shows the Kyoto Seika Subjects of a sticker drawn in Kyoto Seika Manga Expression Practice Mode, and none on any other", async () => {
+    const artistId = insertUser(test.db);
+    const kyotoSeikaSticker = insertSealedSticker(test.db, artistId, {
+      kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS,
+    });
+    const subjectsOf = async (stickerId: string) =>
+      (await bodyOf(await getSticker(insertUser(test.db), stickerId), stickerDetailSchema)).sticker
+        .kyotoSeikaSubjects;
+    expect(await subjectsOf(kyotoSeikaSticker)).toEqual(TEST_KYOTO_SEIKA_SUBJECTS);
+    expect(await subjectsOf(insertSealedSticker(test.db, artistId))).toBeNull();
   });
 });
 

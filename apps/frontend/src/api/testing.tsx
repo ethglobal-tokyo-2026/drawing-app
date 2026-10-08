@@ -30,6 +30,8 @@ export const TEST_ME: Me = {
   needsHandle: false,
   newStickerCount: 0,
   unseenGratitudeCount: 0,
+  kyotoSeikaPractice: false,
+  kyotoSeikaDarkSubjects: false,
 };
 
 /** Three daily tickets, none spent, and no reserve ones. */

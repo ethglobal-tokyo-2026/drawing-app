@@ -3,6 +3,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { Clock, LineChatMenu } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
 import type { LineMessaging } from "../services/lineMessaging.ts";
+import { kyotoSeikaPracticeOn } from "../shapes.ts";
 import { ticketsLeftOf } from "../tickets/tickets.ts";
 import { chatMenuFor, menuToLink, type ChatMenuIds, type ChatMenuOffReason } from "./menus.ts";
 
@@ -48,12 +49,16 @@ export function createLineChatMenu({
   /** The person's LINE user ID and the menu their tickets call for now; null once the account is gone. */
   function menuNow(userId: string) {
     const user = db
-      .select({ lineUserId: users.lineUserId, language: users.language })
+      .select({
+        lineUserId: users.lineUserId,
+        language: users.language,
+        kyotoSeikaPracticeOnAt: users.kyotoSeikaPracticeOnAt,
+      })
       .from(users)
       .where(and(eq(users.id, userId), isNull(users.deletedAt)))
       .get();
     if (!user?.lineUserId) return null;
-    const wanted = chatMenuFor(ticketsLeftOf(db, userId, clock.now()));
+    const wanted = chatMenuFor(ticketsLeftOf(db, userId, clock.now()), kyotoSeikaPracticeOn(user));
     return { lineUserId: user.lineUserId, toLink: menuToLink(ids, user.language, wanted) };
   }
 

@@ -1,10 +1,10 @@
 import {
   gifts,
   gratitude,
+  KYOTO_SEIKA_TIME_USED_S,
   MAX_HITS,
   MAX_PEAK_MULT,
   MAX_PEAK_TIER,
-  MAX_TIME_USED_S,
   stickerPlacements,
   stickers,
   suiTransactions,
@@ -16,6 +16,7 @@ import { eq, inArray } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import type { AppDeps } from "./deps.ts";
+import { kyotoSeikaSubjectsSchema } from "./stickers/kyotoSeikaSubjects.ts";
 
 // The contract's shapes that routes share, and the functions that turn rows into them.
 
@@ -95,6 +96,10 @@ type UserRow = typeof users.$inferSelect;
 export const optedIntoNsfw = (user: Pick<UserRow, "nsfwOptedInAt">): boolean =>
   user.nsfwOptedInAt !== null;
 
+/** Whether the person has Kyoto Seika Manga Expression Practice Mode on. */
+export const kyotoSeikaPracticeOn = (user: Pick<UserRow, "kyotoSeikaPracticeOnAt">): boolean =>
+  user.kyotoSeikaPracticeOnAt !== null;
+
 /** Anyone, as other signed-in people see them. */
 export const personSchema = userRow
   .pick({
@@ -148,6 +153,13 @@ export const meSchema = personSchema.extend({
   newStickerCount: count,
   /** The pink tag. */
   unseenGratitudeCount: count,
+  /**
+   * Kyoto Seika Manga Expression Practice Mode, in Settings: each ticket spent while it's on is
+   * spent in it.
+   */
+  kyotoSeikaPractice: z.boolean(),
+  /** "Dark subjects too", under it: the deal may bring the dark Kyoto Seika Subjects. */
+  kyotoSeikaDarkSubjects: z.boolean(),
 });
 export type Me = z.infer<typeof meSchema>;
 
@@ -162,6 +174,8 @@ export const toMe = (
   createdAt: toIsoTime(user.createdAt),
   needsHandle: user.handle === null,
   ...counts,
+  kyotoSeikaPractice: kyotoSeikaPracticeOn(user),
+  kyotoSeikaDarkSubjects: user.kyotoSeikaDarkSubjectsOnAt !== null,
 });
 
 /** The five PNGs a sticker is sealed with. The sticker PNG's hash names them. */
@@ -190,7 +204,7 @@ const stickerImagesSchema = stickerPngsSchema.extend({ webp: stickerWebpsSchema 
 export type StickerImages = z.infer<typeof stickerImagesSchema>;
 
 const stickerRow = createSelectSchema(stickers, {
-  timeUsed: (schema) => schema.min(0).max(MAX_TIME_USED_S),
+  timeUsed: (schema) => schema.min(0).max(KYOTO_SEIKA_TIME_USED_S),
   width: (schema) => schema.positive(),
   height: (schema) => schema.positive(),
 });
@@ -212,6 +226,11 @@ export const stickerSchema = z.object({
   artist: personSchema,
   images: stickerImagesSchema,
   sealedAt: isoTimeSchema,
+  /**
+   * The subject pair of a sticker drawn in Kyoto Seika Manga Expression Practice Mode, fixed at
+   * seal; null on any other, so it marks such a sticker.
+   */
+  kyotoSeikaSubjects: kyotoSeikaSubjectsSchema.nullable(),
 });
 export type Sticker = z.infer<typeof stickerSchema>;
 
@@ -340,6 +359,7 @@ export function toSticker(
     objectId: sticker.objectId,
     nsfw: sticker.nsfw,
     sealedAt: toIsoTime(sticker.createdAt),
+    kyotoSeikaSubjects: sticker.kyotoSeikaSubjects,
   };
 }
 

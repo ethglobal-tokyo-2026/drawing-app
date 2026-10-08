@@ -1,8 +1,10 @@
 import {
   DAILY_TICKETS_PER_DAY,
+  KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
   stickers,
   ticketPurchases,
   ticketUses,
+  users,
   type Db,
 } from "@drawing-app/db";
 import { and, asc, count, eq, isNotNull, sum } from "drizzle-orm";
@@ -11,6 +13,7 @@ import { z } from "zod";
 import type { TicketPaymentTarget } from "../deps.ts";
 import {
   isoTimeSchema,
+  kyotoSeikaPracticeOn,
   signedTransactionSchema,
   toIsoTime,
   type Tickets,
@@ -52,16 +55,37 @@ type DbOrTx = Db | Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 export type TicketKind = (typeof ticketUses.$inferSelect)["kind"];
 
-/** The kind the day's use at `dayIndex` spends: daily tickets always go first. */
-export const ticketKindAt = (dayIndex: number): TicketKind =>
-  dayIndex < DAILY_TICKETS_PER_DAY ? "daily" : "reserve";
+/** Whether `userId` has Kyoto Seika Manga Expression Practice Mode on now. */
+export function kyotoSeikaPracticeOf(db: DbOrTx, userId: string): boolean {
+  const user = db
+    .select({ kyotoSeikaPracticeOnAt: users.kyotoSeikaPracticeOnAt })
+    .from(users)
+    .where(eq(users.id, userId))
+    .get();
+  return user !== undefined && kyotoSeikaPracticeOn(user);
+}
 
-/** How many tickets the person has left at `now`: today's daily ones, Tokyo time, and reserve ones. */
+/**
+ * The day's daily tickets with Kyoto Seika Manga Expression Practice Mode on or off. Each spend
+ * reads the mode in force, so turning it off and on again never refills.
+ */
+export const dailyTicketsPerDay = (kyotoSeikaPractice: boolean): number =>
+  kyotoSeikaPractice ? KYOTO_SEIKA_DAILY_TICKETS_PER_DAY : DAILY_TICKETS_PER_DAY;
+
+/** The kind the next spend takes: daily tickets always go first. */
+export const nextTicketKind = ({ dailyLeft }: Pick<Tickets, "dailyLeft">): TicketKind =>
+  dailyLeft > 0 ? "daily" : "reserve";
+
+/**
+ * How many tickets the person has left at `now`: today's daily ones, Tokyo time, under the
+ * allowance of the mode they're in, and reserve ones.
+ */
 export function ticketsLeftOf(
   db: DbOrTx,
   userId: string,
   now: Date,
-): Pick<Tickets, "dailyLeft" | "reserveLeft"> {
+): Pick<Tickets, "dailyPerDay" | "dailyLeft" | "reserveLeft"> {
+  const dailyPerDay = dailyTicketsPerDay(kyotoSeikaPracticeOf(db, userId));
   const dailyUsed = db
     .select({ n: count() })
     .from(ticketUses)
@@ -84,7 +108,8 @@ export function ticketsLeftOf(
     .where(and(eq(ticketUses.userId, userId), eq(ticketUses.kind, "reserve")))
     .get();
   return {
-    dailyLeft: Math.max(0, DAILY_TICKETS_PER_DAY - (dailyUsed?.n ?? 0)),
+    dailyPerDay,
+    dailyLeft: Math.max(0, dailyPerDay - (dailyUsed?.n ?? 0)),
     reserveLeft: Math.max(0, Number(bought?.tickets ?? 0) - (reserveUses?.n ?? 0)),
   };
 }
@@ -111,7 +136,6 @@ export function ticketsOf(db: DbOrTx, userId: string, now: Date): Tickets {
     .all();
   return {
     ticketDay: day,
-    dailyPerDay: DAILY_TICKETS_PER_DAY,
     ...ticketsLeftOf(db, userId, now),
     nextRefillAt: toIsoTime(nextTokyoTicketDayStart(now)),
     usedToday: usedToday.map(({ sticker, ...use }) => ({
@@ -135,7 +159,7 @@ export const ticketUseSchema = createSelectSchema(ticketUses, {
   ticketDay: z.iso.date(),
   dayIndex: (schema) => schema.nonnegative(),
 })
-  .pick({ id: true, ticketDay: true, dayIndex: true, kind: true })
+  .pick({ id: true, ticketDay: true, dayIndex: true, kind: true, kyotoSeikaPractice: true })
   .extend({ spentAt: isoTimeSchema });
 export type TicketUse = z.infer<typeof ticketUseSchema>;
 
@@ -144,6 +168,7 @@ export const toTicketUse = (use: typeof ticketUses.$inferSelect): TicketUse => (
   ticketDay: use.ticketDay,
   dayIndex: use.dayIndex,
   kind: use.kind,
+  kyotoSeikaPractice: use.kyotoSeikaPractice,
   spentAt: toIsoTime(use.createdAt),
 });
 

@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import { createLineChatMenu } from "../chatMenu/lineChatMenu.ts";
-import type { ChatMenuIds } from "../chatMenu/menus.ts";
+import type { ChatMenu, ChatMenuIds } from "../chatMenu/menus.ts";
 import { createGiverNotice } from "../gifts/giverNotice.ts";
 import { createLineMessaging, type BatchPhase, type MenuMove } from "../services/lineMessaging.ts";
 import type { TestBase } from "./createTestApp.ts";
@@ -7,28 +8,37 @@ import type { TestBase } from "./createTestApp.ts";
 /** A made-up Messaging API channel. */
 export const TEST_CHANNEL = { channelId: "2000000001", channelSecret: "test-channel-secret" };
 
-/** A rich menu ID as LINE writes them, `richmenu-` and 32 lowercase hex digits: `name` in hex. */
-const richMenuId = (name: string) =>
-  `richmenu-${Buffer.from(name).toString("hex").padEnd(32, "0")}`;
+/** A made-up rich menu ID for `name`, as LINE writes them: `richmenu-` and 32 lowercase hex digits. */
+const richMenuId = (name: string) => `richmenu-${createHash("md5").update(name).digest("hex")}`;
 
-/** Every chat menu in both languages, named for what it is, as deploy/line/menus.json maps them. */
+/** Every chat menu in `language`, named for what it is, as deploy/line/menus.json maps them. */
+function languageMenus(language: "en" | "ja") {
+  const id = (menu: ChatMenu) => richMenuId(`${language}-${menu}`);
+  return {
+    plain: id("plain"),
+    "3": id("3"),
+    "2": id("2"),
+    "1": id("1"),
+    reserve: id("reserve"),
+    none: id("none"),
+    "kyoto-seika-10": id("kyoto-seika-10"),
+    "kyoto-seika-9": id("kyoto-seika-9"),
+    "kyoto-seika-8": id("kyoto-seika-8"),
+    "kyoto-seika-7": id("kyoto-seika-7"),
+    "kyoto-seika-6": id("kyoto-seika-6"),
+    "kyoto-seika-5": id("kyoto-seika-5"),
+    "kyoto-seika-4": id("kyoto-seika-4"),
+    "kyoto-seika-3": id("kyoto-seika-3"),
+    "kyoto-seika-2": id("kyoto-seika-2"),
+    "kyoto-seika-1": id("kyoto-seika-1"),
+    "kyoto-seika-reserve": id("kyoto-seika-reserve"),
+    "kyoto-seika-none": id("kyoto-seika-none"),
+  } satisfies Record<ChatMenu, string>;
+}
+
 export const TEST_CHAT_MENU_IDS = {
-  en: {
-    plain: richMenuId("en-plain"),
-    "3": richMenuId("en-3"),
-    "2": richMenuId("en-2"),
-    "1": richMenuId("en-1"),
-    reserve: richMenuId("en-reserve"),
-    none: richMenuId("en-none"),
-  },
-  ja: {
-    plain: richMenuId("ja-plain"),
-    "3": richMenuId("ja-3"),
-    "2": richMenuId("ja-2"),
-    "1": richMenuId("ja-1"),
-    reserve: richMenuId("ja-reserve"),
-    none: richMenuId("ja-none"),
-  },
+  en: languageMenus("en"),
+  ja: languageMenus("ja"),
   default: richMenuId("default"),
 } satisfies ChatMenuIds;
 

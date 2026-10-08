@@ -29,6 +29,8 @@ const me: Me = {
   needsHandle: false,
   newStickerCount: 0,
   unseenGratitudeCount: 0,
+  kyotoSeikaPractice: false,
+  kyotoSeikaDarkSubjects: false,
 };
 
 /** The app behind the gate; its `lang` is the app's language as it first opens. */

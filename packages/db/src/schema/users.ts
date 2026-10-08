@@ -46,6 +46,15 @@ export const users = sqliteTable(
     /** Set on account deletion. The row stays, as the Original Artist of their stickers. */
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
     ...timestamps(),
+    /**
+     * When the person turned on Kyoto Seika Manga Expression Practice Mode in Settings; null while
+     * it's off. Each ticket spent while it's on is spent in that mode. Cleared on account deletion.
+     */
+    kyotoSeikaPracticeOnAt: integer("kyoto_seika_practice_on_at", { mode: "timestamp_ms" }),
+    /** When they turned on "Dark subjects too", under it; null while it's off. Cleared on account deletion. */
+    kyotoSeikaDarkSubjectsOnAt: integer("kyoto_seika_dark_subjects_on_at", {
+      mode: "timestamp_ms",
+    }),
   },
   (t) => [
     uniqueIndex("users_handle").on(sql`lower(${t.handle})`),

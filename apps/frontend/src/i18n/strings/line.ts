@@ -75,6 +75,42 @@ export const line = {
         "1": { en: "Draw with 1 daily ticket left" },
         reserve: { en: "Draw with reserve tickets" },
         none: { en: "Draw with no tickets left" },
+        "kyoto-seika-10": {
+          en: "Kyoto Seika Manga Expression Practice Mode: draw with 10 daily tickets left",
+        },
+        "kyoto-seika-9": {
+          en: "Kyoto Seika Manga Expression Practice Mode: draw with 9 daily tickets left",
+        },
+        "kyoto-seika-8": {
+          en: "Kyoto Seika Manga Expression Practice Mode: draw with 8 daily tickets left",
+        },
+        "kyoto-seika-7": {
+          en: "Kyoto Seika Manga Expression Practice Mode: draw with 7 daily tickets left",
+        },
+        "kyoto-seika-6": {
+          en: "Kyoto Seika Manga Expression Practice Mode: draw with 6 daily tickets left",
+        },
+        "kyoto-seika-5": {
+          en: "Kyoto Seika Manga Expression Practice Mode: draw with 5 daily tickets left",
+        },
+        "kyoto-seika-4": {
+          en: "Kyoto Seika Manga Expression Practice Mode: draw with 4 daily tickets left",
+        },
+        "kyoto-seika-3": {
+          en: "Kyoto Seika Manga Expression Practice Mode: draw with 3 daily tickets left",
+        },
+        "kyoto-seika-2": {
+          en: "Kyoto Seika Manga Expression Practice Mode: draw with 2 daily tickets left",
+        },
+        "kyoto-seika-1": {
+          en: "Kyoto Seika Manga Expression Practice Mode: draw with 1 daily ticket left",
+        },
+        "kyoto-seika-reserve": {
+          en: "Kyoto Seika Manga Expression Practice Mode: draw with reserve tickets",
+        },
+        "kyoto-seika-none": {
+          en: "Kyoto Seika Manga Expression Practice Mode: draw with no tickets left",
+        },
       },
       notAFriend: { en: "Open Sticker Board: add the official account as a friend to switch" },
       /** Why the server linked nothing. */

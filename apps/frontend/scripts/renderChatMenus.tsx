@@ -27,7 +27,22 @@ const PLAYWRIGHT = "playwright@1.59.1";
 /** LINE takes a menu image of at most 1 MB. */
 const MAX_BYTES = 1_000_000;
 
-const STATES = ["plain", "3", "2", "1", "reserve", "none"] as const;
+/** 4–10 show only on Kyoto Seika Manga Expression Practice Mode's menus. */
+const STATES = [
+  "plain",
+  "10",
+  "9",
+  "8",
+  "7",
+  "6",
+  "5",
+  "4",
+  "3",
+  "2",
+  "1",
+  "reserve",
+  "none",
+] as const;
 const LANGUAGES = ["en", "ja"] as const;
 type Language = (typeof LANGUAGES)[number];
 
@@ -74,7 +89,12 @@ const content = {
     star: svg(StarFour, { weight: "fill" }),
   },
   // Each ticket is as long as what it prints needs, plus the 16px tucked under the key.
-  tickets: { daily: ticket(62), reserve: ticket(56), used: { en: ticket(84), ja: ticket(86) } },
+  tickets: {
+    daily: ticket(62),
+    dailyTwoDigits: ticket(70),
+    reserve: ticket(56),
+    used: { en: ticket(84), ja: ticket(86) },
+  },
 };
 
 const TYPES: Record<string, string> = {

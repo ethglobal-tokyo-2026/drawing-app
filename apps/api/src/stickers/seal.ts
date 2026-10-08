@@ -1,4 +1,6 @@
 import {
+  KYOTO_SEIKA_TIME_USED_S,
+  MAX_TIME_USED_S,
   stickerPlacements,
   stickers,
   stickerTimelapses,
@@ -89,9 +91,13 @@ function checkTicket(
   db: Pick<Db, "select">,
   ticketUseId: number,
   userId: string,
-): { stickerId: string | null } | SealRefusal {
+): { stickerId: string | null; kyotoSeikaPractice: boolean } | SealRefusal {
   const ticket = db
-    .select({ userId: ticketUses.userId, stickerId: ticketUses.stickerId })
+    .select({
+      userId: ticketUses.userId,
+      stickerId: ticketUses.stickerId,
+      kyotoSeikaPractice: ticketUses.kyotoSeikaPractice,
+    })
     .from(ticketUses)
     .where(eq(ticketUses.id, ticketUseId))
     .get();
@@ -102,7 +108,30 @@ function checkTicket(
     const detail = `Ticket use ${ticketUseId} is someone else's`;
     return { status: 403, error: "ticket_not_yours", detail };
   }
-  return { stickerId: ticket.stickerId };
+  return { stickerId: ticket.stickerId, kyotoSeikaPractice: ticket.kyotoSeikaPractice };
+}
+
+/**
+ * A sticker keeps to its ticket's clock, and has a subject pair exactly when its ticket was spent
+ * in Kyoto Seika Manga Expression Practice Mode.
+ */
+function checkTicketMode(form: SealForm, kyotoSeikaPractice: boolean): SealRefusal | null {
+  const ticket = `ticket use ${form.ticketUseId}`;
+  const clock = kyotoSeikaPractice ? KYOTO_SEIKA_TIME_USED_S : MAX_TIME_USED_S;
+  if (form.timeUsed > clock) {
+    return invalid(`timeUsed: ${form.timeUsed} s is past ${ticket}'s ${clock} s clock`);
+  }
+  if (kyotoSeikaPractice && !form.kyotoSeikaSubjects) {
+    return invalid(
+      `kyotoSeikaSubjects: ${ticket} was spent in Kyoto Seika Manga Expression Practice Mode, so its sticker needs its subject pair`,
+    );
+  }
+  if (!kyotoSeikaPractice && form.kyotoSeikaSubjects) {
+    return invalid(
+      `kyotoSeikaSubjects: ${ticket} wasn't spent in Kyoto Seika Manga Expression Practice Mode, so its sticker has no subject pair`,
+    );
+  }
+  return null;
 }
 
 const bytesOf = async (file: File) => new Uint8Array(await file.arrayBuffer());
@@ -164,6 +193,9 @@ export async function sealSticker(
     if (refused) return { refused };
     return { sealed: sealedSticker(deps, userId, ticket.stickerId), created: false };
   }
+  // A ticket's mode is fixed at its spend, so the transaction's second checkTicket needn't check it.
+  const modeRefusal = checkTicketMode(form, ticket.kyotoSeikaPractice);
+  if (modeRefusal) return { refused: modeRefusal };
 
   if (form.nsfw) {
     const artist = deps.db
@@ -229,6 +261,7 @@ export async function sealSticker(
           contentHash,
           nsfw: form.nsfw,
           veiledHash,
+          kyotoSeikaSubjects: form.kyotoSeikaSubjects ?? null,
         })
         .run();
       tx.update(ticketUses).set({ stickerId }).where(eq(ticketUses.id, form.ticketUseId)).run();

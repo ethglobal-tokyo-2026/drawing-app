@@ -1,9 +1,9 @@
 import { inspect } from "node:util";
-import { DAILY_TICKETS_PER_DAY } from "@drawing-app/db";
+import { DAILY_TICKETS_PER_DAY, KYOTO_SEIKA_DAILY_TICKETS_PER_DAY } from "@drawing-app/db";
 import { insertUser } from "@drawing-app/db/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { chatMenuLinkSchema, type ChatMenuIds } from "../chatMenu/menus.ts";
+import { chatMenuFor, chatMenuLinkSchema, type ChatMenuIds } from "../chatMenu/menus.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import {
   chatMenuThrough,
@@ -207,6 +207,23 @@ describe("the chat menu after a spend or a purchase", () => {
       `link ${LINE_USER_ID} ${TEST_CHAT_MENU_IDS.en["2"]}`,
       `link ${LINE_USER_ID} ${TEST_CHAT_MENU_IDS.en["1"]}`,
     ]);
+  });
+});
+
+describe("the chat menu in Kyoto Seika Manga Expression Practice Mode", () => {
+  const setKyotoSeikaPractice = async (kyotoSeikaPractice: boolean) =>
+    expect((await post("/api/me/kyoto-seika-practice", { kyotoSeikaPractice })).status).toBe(200);
+  const menuFor = (dailyLeft: number, kyotoSeika: boolean) =>
+    TEST_CHAT_MENU_IDS.en[chatMenuFor({ dailyLeft, reserveLeft: 0 }, kyotoSeika)];
+
+  it("moves to the mode's menus as it turns on, follows its spends, and moves back as it turns off", async () => {
+    await spendTicket("daily");
+    await setKyotoSeikaPractice(true);
+    expect(await menuAfterLinks()).toBe(menuFor(KYOTO_SEIKA_DAILY_TICKETS_PER_DAY - 1, true));
+    await spendTicket("daily");
+    expect(await menuAfterLinks()).toBe(menuFor(KYOTO_SEIKA_DAILY_TICKETS_PER_DAY - 2, true));
+    await setKyotoSeikaPractice(false);
+    expect(await menuAfterLinks()).toBe(menuFor(DAILY_TICKETS_PER_DAY - 2, false));
   });
 });
 

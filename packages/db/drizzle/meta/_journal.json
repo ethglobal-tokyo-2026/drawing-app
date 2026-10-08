@@ -8,6 +8,13 @@
       "when": 1791316761798,
       "tag": "0000_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791401661693,
+      "tag": "0001_kyoto_seika_practice",
+      "breakpoints": true
     }
   ]
 }

@@ -5,23 +5,33 @@ import {
   insertSticker,
   insertUser,
   refusal,
+  TEST_KYOTO_SEIKA_SUBJECTS,
   type TestDb,
 } from "../testDb.ts";
-import { MAX_TIME_USED_S } from "./limits.ts";
+import { KYOTO_SEIKA_TIME_USED_S } from "./limits.ts";
 
 let db: TestDb;
+let sqlite: Awaited<ReturnType<typeof createTestDb>>["sqlite"];
 let artist: string;
 beforeEach(async () => {
-  ({ db } = await createTestDb());
+  ({ db, sqlite } = await createTestDb());
   artist = insertUser(db);
 });
 
 describe("stickers", () => {
-  it("keeps time used within the drawing clock", () => {
-    expect(() => insertSticker(db, artist, { timeUsed: MAX_TIME_USED_S })).not.toThrow();
-    expect(refusal(() => insertSticker(db, artist, { timeUsed: MAX_TIME_USED_S + 1 }))).toMatch(
-      /stickers_time_used/,
-    );
+  it("keeps time used within the longest drawing clock", () => {
+    expect(() => insertSticker(db, artist, { timeUsed: KYOTO_SEIKA_TIME_USED_S })).not.toThrow();
+    expect(
+      refusal(() => insertSticker(db, artist, { timeUsed: KYOTO_SEIKA_TIME_USED_S + 1 })),
+    ).toMatch(/stickers_time_used/);
+  });
+
+  it("holds a sticker's Kyoto Seika Subjects as a pair", () => {
+    const id = insertSticker(db, artist, { kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS });
+    const one = JSON.stringify(TEST_KYOTO_SEIKA_SUBJECTS.slice(0, 1));
+    const setOne = () =>
+      sqlite.prepare("update stickers set kyoto_seika_subjects = ? where id = ?").run(one, id);
+    expect(refusal(setOne)).toMatch(/stickers_kyoto_seika_subjects/);
   });
 
   it("has a veiled image exactly when it's NSFW", () => {

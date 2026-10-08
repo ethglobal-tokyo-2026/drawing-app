@@ -82,7 +82,7 @@ export const pngFile = (bytes: Uint8Array<ArrayBuffer>, name: string) =>
   new File([bytes], `${name}.png`, { type: "image/png" });
 
 /** The seal's multipart parts, by name; undefined leaves a part out. */
-export type SealParts = Record<keyof z.input<typeof sealForm>, string | File | undefined>;
+export type SealParts = Partial<Record<keyof z.input<typeof sealForm>, string | File>>;
 
 /** A seal that passes every check, on ticket use `ticketUseId`: the form the typed client uploads. */
 export function sealUpload(ticketUseId: number) {

@@ -1,8 +1,18 @@
 import { sql } from "drizzle-orm";
 import { blob, check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { isBytes32, literal, timestamps } from "./columns.ts";
-import { MAX_TIME_USED_S } from "./limits.ts";
+import { KYOTO_SEIKA_TIME_USED_S } from "./limits.ts";
 import { users } from "./users.ts";
+
+/**
+ * One of the two Kyoto Seika Subjects a sticker drawn in Kyoto Seika Manga Expression Practice Mode
+ * keeps: the word as the test prints it, its reading (empty when it has no kanji), and its English.
+ */
+export interface KyotoSeikaSubject {
+  ja: string;
+  reading: string;
+  en: string;
+}
 
 /** A sealed sticker. Everything but owner_id and the mint is fixed at seal; created_at is the seal. */
 export const stickers = sqliteTable(
@@ -23,7 +33,10 @@ export const stickers = sqliteTable(
     ownerId: text("owner_id")
       .notNull()
       .references(() => users.id),
-    /** Seconds on the drawing clock, which pauses. 0 if sealed within the first second. */
+    /**
+     * Seconds on the drawing clock, which pauses: at most its ticket's clock. 0 if sealed within
+     * the first second.
+     */
     timeUsed: integer("time_used").notNull(),
     /** The sticker image's size; the mask and resin masks share it. */
     width: integer("width").notNull(),
@@ -43,6 +56,13 @@ export const stickers = sqliteTable(
     /** The sticker's Sui object, once its mint lands; the mint's digest is in sui_transactions. */
     objectId: text("object_id").unique(),
     ...timestamps(),
+    /**
+     * The subject pair of a sticker drawn in Kyoto Seika Manga Expression Practice Mode, fixed at
+     * seal; null on any other. Not on Sui.
+     */
+    kyotoSeikaSubjects: text("kyoto_seika_subjects", { mode: "json" }).$type<
+      [KyotoSeikaSubject, KyotoSeikaSubject]
+    >(),
   },
   (t) => [
     index("stickers_owner").on(t.ownerId),
@@ -50,7 +70,15 @@ export const stickers = sqliteTable(
     index("stickers_content_hash").on(t.contentHash),
     index("stickers_artist").on(t.artistId, t.createdAt),
     index("stickers_created").on(t.createdAt),
-    check("stickers_time_used", sql`${t.timeUsed} between 0 and ${literal(MAX_TIME_USED_S)}`),
+    // The longest clock; the seal route holds each sticker to its own ticket's.
+    check(
+      "stickers_time_used",
+      sql`${t.timeUsed} between 0 and ${literal(KYOTO_SEIKA_TIME_USED_S)}`,
+    ),
+    check(
+      "stickers_kyoto_seika_subjects",
+      sql`${t.kyotoSeikaSubjects} is null or (json_valid(${t.kyotoSeikaSubjects}) and json_array_length(${t.kyotoSeikaSubjects}) = 2)`,
+    ),
     check("stickers_size", sql`${t.width} > 0 and ${t.height} > 0`),
     check("stickers_content_hash", isBytes32(t.contentHash)),
     check("stickers_veiled", sql`${t.nsfw} = (${t.veiledHash} is not null)`),

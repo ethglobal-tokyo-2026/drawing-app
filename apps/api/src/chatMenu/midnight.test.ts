@@ -1,4 +1,4 @@
-import { chatMenuBatches } from "@drawing-app/db";
+import { chatMenuBatches, KYOTO_SEIKA_DAILY_TICKETS_PER_DAY } from "@drawing-app/db";
 import { insertUser } from "@drawing-app/db/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AFTER_MIDNIGHT_MS } from "../midnightJob.ts";
@@ -12,7 +12,7 @@ import {
 } from "../testing/fakeLine.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
 import { spendBody } from "../tickets/testSpends.ts";
-import type { ChatMenuIds } from "./menus.ts";
+import { chatMenuFor, type ChatMenuIds } from "./menus.ts";
 import {
   FIRST_LOOK_MS,
   LOOK_EVERY_MS,
@@ -131,6 +131,21 @@ describe("the chat menu's midnight batch", () => {
     expect(line.links.get(ANN)).toBe(en["2"]);
     expect(line.links.get(BEN)).toBe(en["2"]);
     expect(waits).toEqual([FIRST_LOOK_MS, LOOK_EVERY_MS]);
+  });
+
+  it("moves Kyoto Seika Manga Expression Practice Mode's menus to its full count and the rest to 3, in one batch", async () => {
+    const kyotoSeikaMenu = (dailyLeft: number) => chatMenuFor({ dailyLeft, reserveLeft: 0 }, true);
+    const full = kyotoSeikaMenu(KYOTO_SEIKA_DAILY_TICKETS_PER_DAY);
+    person(ANN, en[kyotoSeikaMenu(1)]);
+    person(BEN, ja[kyotoSeikaMenu(0)], "ja");
+    person(CHO, en["2"]);
+    await runChatMenuBatch(jobDeps(), today());
+    expect(line.batches).toHaveLength(1);
+    expect(Object.fromEntries(line.links)).toEqual({
+      [ANN]: en[full],
+      [BEN]: ja[full],
+      [CHO]: en["3"],
+    });
   });
 
   it("runs once a day: an ended batch isn't run again", async () => {

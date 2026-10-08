@@ -1,7 +1,7 @@
 <!doctype html>
 <!--
   The official account's chat menus, drawn as the app's board foot: the Draw key on the left, and My board and
-  Explore as label stock stacked on the right. ?state=plain|3|2|1|reserve|none sets the tickets tucked behind the
+  Explore as label stock stacked on the right. ?state=plain|10…1|reserve|none sets the tickets tucked behind the
   key, ?lang=en|ja the language, and ?menu=default draws the one bilingual key new people see instead.
   Don't open this file directly: `pnpm --filter frontend chat-menus` serves it with the app's styles, words, icons
   and ticket shape, and renders every menu to deploy/line/images/ (`--serve` only serves it). The script is
@@ -280,7 +280,8 @@
       const kind = query.get("menu") === "default" ? "default" : "returning";
       const lang = query.get("lang") === "ja" ? "ja" : "en";
       const state = query.get("state") ?? "plain";
-      if (!["plain", "3", "2", "1", "reserve", "none"].includes(state))
+      const COUNTS = ["10", "9", "8", "7", "6", "5", "4", "3", "2", "1"];
+      if (!["plain", ...COUNTS, "reserve", "none"].includes(state))
         throw new Error(`No chat menu state "${state}"`);
 
       document.documentElement.lang = kind === "default" ? "ja" : lang;
@@ -304,11 +305,11 @@
         </span>`;
       const tickets = menu.querySelector(".tickets");
       if (tickets) {
-        const { daily, reserve, used } = content.tickets;
-        if (["3", "2", "1"].includes(state))
+        const { daily, dailyTwoDigits, reserve, used } = content.tickets;
+        if (COUNTS.includes(state))
           tickets.innerHTML = ticket(
             "daily",
-            daily,
+            state.length > 1 ? dailyTwoDigits : daily,
             `<span class="ticket-print">${words.count.replace("{{count}}", state)}</span>`,
           );
         else if (state === "reserve")

@@ -2,12 +2,39 @@ import { readFileSync } from "node:fs";
 import { DAILY_TICKETS_PER_DAY, type users } from "@drawing-app/db";
 import { z } from "zod";
 import type { Tickets } from "../shapes.ts";
+import { dailyTicketsPerDay } from "../tickets/tickets.ts";
 
 /**
- * Each language's chat menus: the plain one, whose Draw key shows no count, and one for each thing
- * the Draw key can show: 3, 2 or 1 daily tickets left, reserve tickets only, or none.
+ * Each language's standard chat menus: the plain one, whose Draw key shows no count, then one for
+ * each thing it can show: 3, 2 or 1 daily tickets left, reserve tickets only, or none.
  */
-const CHAT_MENUS = ["plain", "3", "2", "1", "reserve", "none"] as const;
+const STANDARD_MENUS = ["plain", "3", "2", "1", "reserve", "none"] as const;
+/**
+ * Kyoto Seika Manga Expression Practice Mode's count menus, from 1 daily ticket left: index n − 1
+ * shows n.
+ */
+const KYOTO_SEIKA_COUNT_MENUS = [
+  "kyoto-seika-1",
+  "kyoto-seika-2",
+  "kyoto-seika-3",
+  "kyoto-seika-4",
+  "kyoto-seika-5",
+  "kyoto-seika-6",
+  "kyoto-seika-7",
+  "kyoto-seika-8",
+  "kyoto-seika-9",
+  "kyoto-seika-10",
+] as const;
+/**
+ * Kyoto Seika Manga Expression Practice Mode's menus. The midnight batch moves people by the menu
+ * they're on, so none can share a standard menu's rich menu.
+ */
+const KYOTO_SEIKA_MENUS = [
+  ...KYOTO_SEIKA_COUNT_MENUS,
+  "kyoto-seika-reserve",
+  "kyoto-seika-none",
+] as const;
+const CHAT_MENUS = [...STANDARD_MENUS, ...KYOTO_SEIKA_MENUS] as const;
 const chatMenuSchema = z.enum(CHAT_MENUS);
 export type ChatMenu = z.infer<typeof chatMenuSchema>;
 
@@ -20,14 +47,38 @@ const menuIdSchema = z
   .union([richMenuIdSchema, z.literal(""), z.null()])
   .transform((id) => id || undefined)
   .optional();
-const languageMenusSchema = z.object({
-  plain: menuIdSchema,
-  "3": menuIdSchema,
-  "2": menuIdSchema,
-  "1": menuIdSchema,
-  reserve: menuIdSchema,
-  none: menuIdSchema,
-} satisfies Record<ChatMenu, typeof menuIdSchema>);
+const languageMenusSchema = z
+  .object({
+    plain: menuIdSchema,
+    "3": menuIdSchema,
+    "2": menuIdSchema,
+    "1": menuIdSchema,
+    reserve: menuIdSchema,
+    none: menuIdSchema,
+    "kyoto-seika-10": menuIdSchema,
+    "kyoto-seika-9": menuIdSchema,
+    "kyoto-seika-8": menuIdSchema,
+    "kyoto-seika-7": menuIdSchema,
+    "kyoto-seika-6": menuIdSchema,
+    "kyoto-seika-5": menuIdSchema,
+    "kyoto-seika-4": menuIdSchema,
+    "kyoto-seika-3": menuIdSchema,
+    "kyoto-seika-2": menuIdSchema,
+    "kyoto-seika-1": menuIdSchema,
+    "kyoto-seika-reserve": menuIdSchema,
+    "kyoto-seika-none": menuIdSchema,
+  } satisfies Record<ChatMenu, typeof menuIdSchema>)
+  .superRefine((menus, ctx) => {
+    for (const kyotoSeikaMenu of KYOTO_SEIKA_MENUS) {
+      const shared = STANDARD_MENUS.find(
+        (menu) => menus[kyotoSeikaMenu] && menus[menu] === menus[kyotoSeikaMenu],
+      );
+      if (shared) {
+        const message = `shares its rich menu with ${shared}: the midnight batch moves people by the menu they're on`;
+        ctx.addIssue({ code: "custom", path: [kyotoSeikaMenu], message });
+      }
+    }
+  });
 
 /**
  * deploy/line/menus.json: each language's chat menus by name, and `default`, the menu LINE shows
@@ -49,11 +100,20 @@ export function readChatMenuIds(path: string): ChatMenuIds {
   return parsed.data;
 }
 
-/** The menu whose Draw key shows what someone with these tickets has left. */
-export function chatMenuFor({
-  dailyLeft,
-  reserveLeft,
-}: Pick<Tickets, "dailyLeft" | "reserveLeft">): Exclude<ChatMenu, "plain"> {
+/**
+ * The menu whose Draw key shows what someone with these tickets has left, among the menus of the
+ * mode they're in.
+ */
+export function chatMenuFor(
+  { dailyLeft, reserveLeft }: Pick<Tickets, "dailyLeft" | "reserveLeft">,
+  kyotoSeikaPractice: boolean,
+): Exclude<ChatMenu, "plain"> {
+  if (kyotoSeikaPractice) {
+    const counted =
+      KYOTO_SEIKA_COUNT_MENUS[Math.min(dailyLeft, KYOTO_SEIKA_COUNT_MENUS.length) - 1];
+    if (counted) return counted;
+    return reserveLeft > 0 ? "kyoto-seika-reserve" : "kyoto-seika-none";
+  }
   if (dailyLeft >= DAILY_TICKETS_PER_DAY) return "3";
   if (dailyLeft === 2) return "2";
   if (dailyLeft === 1) return "1";
@@ -69,19 +129,30 @@ export function menuToLink(ids: ChatMenuIds, language: Language, wanted: ChatMen
 }
 
 /**
- * The midnight batch's moves: in each language with a 3 menu, everyone on another of its menus
- * moves to it, since everyone has 3 daily tickets again. The plain menu moves too: it stands in for
- * a count menu missing from menus.json.
+ * The midnight batch's moves: in each language, everyone on one of a mode's menus moves to its
+ * full count, since everyone has a full day's daily tickets again. The plain menu moves with the
+ * standard menus: it stands in for a count menu missing from menus.json.
  */
 export function midnightMoves(ids: ChatMenuIds) {
   const moves: { from: string; to: string }[] = [];
+  const families = [
+    [STANDARD_MENUS, false],
+    [KYOTO_SEIKA_MENUS, true],
+  ] as const;
   for (const menus of [ids.en, ids.ja]) {
-    const to = menus?.["3"];
-    if (!menus || !to) continue;
-    for (const menu of CHAT_MENUS) {
-      const from = menus[menu];
-      if (from && from !== to && !moves.some((move) => move.from === from)) {
-        moves.push({ from, to });
+    if (!menus) continue;
+    for (const [family, kyotoSeikaPractice] of families) {
+      const full = chatMenuFor(
+        { dailyLeft: dailyTicketsPerDay(kyotoSeikaPractice), reserveLeft: 0 },
+        kyotoSeikaPractice,
+      );
+      const to = menus[full];
+      if (!to) continue;
+      for (const menu of family) {
+        const from = menus[menu];
+        if (from && from !== to && !moves.some((move) => move.from === from)) {
+          moves.push({ from, to });
+        }
       }
     }
   }

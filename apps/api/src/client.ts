@@ -31,10 +31,15 @@ export { purchaseNamedBy } from "./tickets/paymentReference.ts";
 export {
   GIFT_EXPIRY_MS,
   GRATITUDE_PER_HIT,
+  KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
+  KYOTO_SEIKA_TIME_USED_S,
   MAX_PEAK_MULT,
   MAX_TIME_USED_S,
   METHOD_WEIGHT,
 } from "@drawing-app/db/limits";
+
+// Type-only, so the app bundles nothing of the database package.
+export type { KyotoSeikaSubject } from "@drawing-app/db";
 
 // The contract's shapes, for the app's screens: each is the type its route's schema checks.
 export type { ChatMenuLink } from "./chatMenu/menus.ts";

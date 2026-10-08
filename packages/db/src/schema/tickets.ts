@@ -27,22 +27,29 @@ export const ticketUses = sqliteTable(
     ticketDay: text("ticket_day").notNull(),
     /** Order within the day, from 0. */
     dayIndex: integer("day_index").notNull(),
-    /** Daily tickets are always spent first, so a day's first uses are daily and the rest reserve. */
+    /** Daily tickets go first, under the allowance of the mode in force at each spend. */
     kind: text("kind", { enum: ticketKinds }).notNull(),
     stickerId: text("sticker_id")
       .unique()
       .references(() => stickers.id),
     ...timestamps(),
+    /**
+     * Spent in Kyoto Seika Manga Expression Practice Mode: its sheet runs that mode's clock, and its
+     * sticker keeps a subject pair.
+     */
+    kyotoSeikaPractice: integer("kyoto_seika_practice", { mode: "boolean" })
+      .notNull()
+      .default(false),
   },
   (t) => [
     uniqueIndex("ticket_uses_day").on(t.userId, t.ticketDay, t.dayIndex),
     uniqueIndex("ticket_uses_idempotency_key").on(t.userId, t.idempotencyKey),
     check("ticket_uses_day_index", sql`${t.dayIndex} >= 0`),
-    // Holds every row, past days' too, to the current DAILY_TICKETS_PER_DAY: changing it needs a
-    // migration that rewrites old rows to pass.
+    // Kyoto Seika Manga Expression Practice Mode's daily tickets can follow a reserve one, so only
+    // the smaller allowance holds.
     check(
       "ticket_uses_kind",
-      sql`${t.kind} = case when ${t.dayIndex} < ${literal(DAILY_TICKETS_PER_DAY)} then 'daily' else 'reserve' end`,
+      sql`${t.kind} = 'daily' or ${t.dayIndex} >= ${literal(DAILY_TICKETS_PER_DAY)}`,
     ),
   ],
 );

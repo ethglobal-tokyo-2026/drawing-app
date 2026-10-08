@@ -46,6 +46,20 @@ const languageChoiceBody = userInput.pick({ languageChoice: true, language: true
 /** Show 18+ stickers, in Settings: on or off. */
 const nsfwOptInBody = z.object({ nsfwOptIn: z.boolean() });
 
+/**
+ * Settings' switches for Kyoto Seika Manga Expression Practice Mode and its "Dark subjects too":
+ * either or both, each on or off.
+ */
+const kyotoSeikaPracticeBody = z
+  .object({
+    kyotoSeikaPractice: z.boolean().optional(),
+    kyotoSeikaDarkSubjects: z.boolean().optional(),
+  })
+  .refine(
+    (body) => body.kyotoSeikaPractice !== undefined || body.kyotoSeikaDarkSubjects !== undefined,
+    "kyotoSeikaPractice or kyotoSeikaDarkSubjects: say at least one",
+  );
+
 type UserRow = typeof users.$inferSelect;
 
 /** A live account's row; undefined once it's deleted. */
@@ -199,6 +213,25 @@ export const sessionRoutes = (deps: AppDeps) =>
       if (!user) return apiError(c, 401, "signed_out");
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
+    .post("/me/kyoto-seika-practice", validate("json", kyotoSeikaPracticeBody), (c) => {
+      const { kyotoSeikaPractice, kyotoSeikaDarkSubjects } = c.req.valid("json");
+      const now = deps.clock.now();
+      // A switch the body leaves out stays as it is: Drizzle's set skips an undefined column.
+      const onAt = (on: boolean | undefined) => (on === undefined ? undefined : on ? now : null);
+      const user = deps.db
+        .update(users)
+        .set({
+          kyotoSeikaPracticeOnAt: onAt(kyotoSeikaPractice),
+          kyotoSeikaDarkSubjectsOnAt: onAt(kyotoSeikaDarkSubjects),
+        })
+        .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
+        .returning()
+        .get();
+      if (!user) return apiError(c, 401, "signed_out");
+      // The Draw key's menus change with the mode at once, as its count does after a spend.
+      if (kyotoSeikaPractice !== undefined) void deps.lineChatMenu.relink(user.id);
+      return c.json({ me: meOf(deps.db, user) }, 200);
+    })
     .delete("/me", (c) => {
       // Read before the row loses it: their chat menu goes back to LINE's default, in the background.
       const lineUserId = liveUser(deps.db, c.var.userId)?.lineUserId;
@@ -213,6 +246,8 @@ export const sessionRoutes = (deps: AppDeps) =>
           linePictureUrl: null,
           handle: null,
           nsfwOptedInAt: null,
+          kyotoSeikaPracticeOnAt: null,
+          kyotoSeikaDarkSubjectsOnAt: null,
         })
         .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
         .run();

@@ -71,6 +71,7 @@ export function sticker(overrides: Partial<Sticker> = {}): Sticker {
     objectId: null,
     sealedAt: "2026-09-23T11:52:00.000Z",
     nsfw: false,
+    kyotoSeikaSubjects: null,
     ...overrides,
   };
 }

@@ -25,7 +25,12 @@ export const GRATITUDE_PER_HIT = 10;
  */
 export const METHOD_WEIGHT = 1.5;
 /**
- * Daily tickets per ticket day: each day's first uses spend them. The ticket_uses_kind CHECK is
- * built from it, so changing it breaks that CHECK for past rows.
+ * Daily tickets per ticket day outside Kyoto Seika Manga Expression Practice Mode, the smaller
+ * allowance: no reserve ticket is spent among a day's first this many uses. The ticket_uses_kind
+ * CHECK holds every row to it, so changing it breaks that CHECK for past rows.
  */
 export const DAILY_TICKETS_PER_DAY = 3;
+/** Daily tickets per ticket day while Kyoto Seika Manga Expression Practice Mode is on. */
+export const KYOTO_SEIKA_DAILY_TICKETS_PER_DAY = 10;
+/** The drawing clock on a ticket spent in Kyoto Seika Manga Expression Practice Mode, in seconds. */
+export const KYOTO_SEIKA_TIME_USED_S = 30 * 60;

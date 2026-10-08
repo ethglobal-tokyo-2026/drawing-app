@@ -72,7 +72,7 @@ To move the sticker images to another host, run `node deploy/publish-sui.mjs --s
 
 ## LINE: chat menus and greeting
 
-- `./deploy/line/create-returning-menu.sh en|ja plain|3|2|1|reserve|none`, or `default [--set-default]`, makes one chat menu in LINE and records its ID in `deploy/line/menus.json`. Commit that and deploy the API, which links each person's menu from it. `--print` prints the menu without calling LINE. It needs `jq`, and the Messaging API channel's ID and secret in `deploy/.env`.
+- `./deploy/line/create-returning-menu.sh en|ja plain|3|2|1|reserve|none`, or `en|ja kyoto-seika-10` … `kyoto-seika-1`, `kyoto-seika-reserve` or `kyoto-seika-none` for the 12 menus per language that Kyoto Seika Manga Expression Practice Mode links, or `default [--set-default]`, makes one chat menu in LINE and records its ID in `deploy/line/menus.json`. Commit that and deploy the API, which links each person's menu from it. `--print` prints the menu without calling LINE. It needs `jq`, and the Messaging API channel's ID and secret in `deploy/.env`.
 - `pnpm --filter frontend chat-menus` renders the menus' images in `deploy/line/images/` from `returning-menu.html`. LINE can't replace a menu's image, so a new image means a new menu; the old one stays in LINE until it's deleted.
 - `deploy/line/greeting.md`: the Official account's greeting and auto-reply settings, set by hand in LINE Official Account Manager.
 

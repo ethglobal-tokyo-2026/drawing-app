@@ -17,6 +17,7 @@ const SPENT = {
     ticketDay: FRESH_TICKETS.ticketDay,
     dayIndex: 0,
     kind: "daily",
+    kyotoSeikaPractice: false,
     spentAt: "2026-09-26T00:00:00.000Z",
   },
   tickets: FRESH_TICKETS,

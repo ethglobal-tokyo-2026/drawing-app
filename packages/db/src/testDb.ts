@@ -5,6 +5,7 @@ import { generateSQLiteDrizzleJson, generateSQLiteMigration } from "drizzle-kit/
 import { and, count, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema/index.ts";
+import type { KyotoSeikaSubject } from "./schema/index.ts";
 import { DAILY_TICKETS_PER_DAY, GIFT_EXPIRY_MS } from "./schema/limits.ts";
 import { updatedAtTriggerStatements } from "./schema/updatedAtTriggers.ts";
 
@@ -82,12 +83,22 @@ export function insertSticker(
   return id;
 }
 
+/**
+ * A Kyoto Seika Subject pair from the test's first sitting, as a sticker drawn in Kyoto Seika Manga
+ * Expression Practice Mode keeps it.
+ */
+export const TEST_KYOTO_SEIKA_SUBJECTS: [KyotoSeikaSubject, KyotoSeikaSubject] = [
+  { ja: "風", reading: "かぜ", en: "wind" },
+  { ja: "再会", reading: "さいかい", en: "reunion" },
+];
+
 /** The ticket day of a use a test doesn't place. */
 const TICKET_DAY = "2026-09-26";
 
 /**
  * Spends one of `userId`'s tickets straight into ticket_uses, as spending leaves it: the day's next
- * slot, daily while the day has any left, under a new spend key. Returns the use's id.
+ * slot, daily for its first DAILY_TICKETS_PER_DAY unless `kind` says otherwise, under a new spend
+ * key. Returns the use's id.
  */
 export function insertTicketUse(
   db: TestDb,

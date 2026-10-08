@@ -2,13 +2,15 @@
 # deploy/line/create-returning-menu.sh: create one of the official account's chat menus in LINE, and record its ID in
 # deploy/line/menus.json, from which the REST API links each person's menu; it never links anyone itself. A returning
 # person's menu (en|ja) has Draw, My board and Explore, with 3, 2 or 1 daily tickets left, only reserve ones, none, or
-# no count (plain); new people's (default) has one bilingual key, and --set-default makes it LINE's default too. --print
+# no count (plain); with Kyoto Seika Manga Expression Practice Mode on, its own menus (kyoto-seika-…) show 10 down to 1
+# daily tickets left, reserve or none. New people's (default) has one bilingual key, and --set-default makes it LINE's
+# default too. --print
 # prints the menu without calling LINE. `pnpm --filter frontend chat-menus` renders the images; LINE can't replace a
 # menu's image, so a new image means a new menu. Needs curl, jq, and the Messaging API channel in deploy/.env.
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 en|ja plain|3|2|1|reserve|none [--print]" >&2
+  echo "usage: $0 en|ja plain|3|2|1|reserve|none|kyoto-seika-<1-10>|kyoto-seika-reserve|kyoto-seika-none [--print]" >&2
   echo "       $0 default [--set-default] [--print]" >&2
   exit 2
 }
@@ -24,6 +26,7 @@ case "$MENU" in
     STATE="${2:-}"
     case "$STATE" in
       plain | 3 | 2 | 1 | reserve | none) ;;
+      kyoto-seika-[1-9] | kyoto-seika-10 | kyoto-seika-reserve | kyoto-seika-none) ;;
       *) usage ;;
     esac
     shift 2
@@ -31,6 +34,9 @@ case "$MENU" in
   default) shift ;;
   *) usage ;;
 esac
+# A menu for Kyoto Seika Manga Expression Practice Mode shows the standard image for its count; 4–10 are drawn for
+# that mode alone.
+SHOWS="${STATE#kyoto-seika-}"
 PRINT=""
 SET_DEFAULT=""
 for option in "$@"; do
@@ -48,10 +54,12 @@ command -v jq >/dev/null || { echo "✗ this needs jq to build the menu and read
 case "$MENU" in
   en)
     CHAT_BAR_TEXT="Croquis"
-    case "$STATE" in
+    case "$SHOWS" in
       plain) DRAW="Draw" ;;
       1) DRAW="Draw, 1 ticket left" ;;
-      2 | 3) DRAW="Draw, $STATE tickets left" ;;
+      2 | 3 | 4 | 5 | 6 | 7 | 8 | 9) DRAW="Draw, $SHOWS tickets left" ;;
+      # "Draw, 10 tickets left" is over LINE's 20 characters.
+      10) DRAW="Draw, 10 left" ;;
       reserve) DRAW="Draw, reserve ticket" ;;
       none) DRAW="Draw, out of tickets" ;;
     esac
@@ -60,9 +68,9 @@ case "$MENU" in
     ;;
   ja)
     CHAT_BAR_TEXT="クロッキー"
-    case "$STATE" in
+    case "$SHOWS" in
       plain) DRAW="かく" ;;
-      1 | 2 | 3) DRAW="かく（のこり${STATE}枚）" ;;
+      1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10) DRAW="かく（のこり${SHOWS}枚）" ;;
       reserve) DRAW="かく（有償チケット）" ;;
       none) DRAW="かく（チケットなし）" ;;
     esac
@@ -88,7 +96,7 @@ if [ "$MENU" = default ]; then
   }')"
   MENU_PATH='["default"]'
 else
-  IMAGE="$ROOT/deploy/line/images/returning-$MENU-$STATE.png"
+  IMAGE="$ROOT/deploy/line/images/returning-$MENU-$SHOWS.png"
   # The areas the image draws: the Draw key and its tickets on the left, My board over Explore on the right.
   MENU_JSON="$(jq -n --arg name "Returning ($MENU, $STATE): Draw · My board · Explore" \
     --arg bar "$CHAT_BAR_TEXT" --arg draw "$DRAW" --arg board "$MY_BOARD" --arg explore "$EXPLORE" \
