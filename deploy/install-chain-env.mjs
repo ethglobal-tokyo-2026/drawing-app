@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // deploy-api.sh runs this on the server to validate and atomically install the REST API's chain.env: exactly the
-// keys below, all required. It merges nothing from the file already there, so a key the API stopped reading
-// leaves the box with the next deploy.
+// keys below, each required one, and each optional one that's set. It merges nothing from the file already there, so
+// a key the API stopped reading leaves the box with the next deploy.
 import { chmodSync, existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 
@@ -19,6 +19,11 @@ const required = {
   PRIVY_APP_SECRET: /./,
   LINE_MESSAGING_CHANNEL_ID: /^\d+$/,
   LINE_MESSAGING_CHANNEL_SECRET: /^[0-9a-f]{32}$/,
+  FASTLY_API_TOKEN: /./,
+};
+const optional = {
+  // Who the CDN cap tells in LINE. Without it the cap still pauses the site, and logs what it couldn't tell.
+  OPERATOR_LINE_USER_ID: /^U[0-9a-f]{32}$/,
 };
 /** @type {Record<string, string>} */
 const values = { STICKER_CHAIN_MODE: "sui" };
@@ -31,6 +36,14 @@ for (const [key, shape] of Object.entries(required)) {
     !shape.test(value)
   ) {
     throw new Error(`Missing or invalid ${key}; configure deploy/.env`);
+  }
+  values[key] = value;
+}
+for (const [key, shape] of Object.entries(optional)) {
+  const value = supplied[key];
+  if (!value) continue;
+  if (/replace-with|your-|placeholder/i.test(value) || /[\r\n]/.test(value) || !shape.test(value)) {
+    throw new Error(`Invalid ${key}; configure deploy/.env`);
   }
   values[key] = value;
 }

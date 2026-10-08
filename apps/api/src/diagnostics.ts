@@ -52,6 +52,10 @@ export interface DiagnosticFields {
   serverMatches?: boolean;
   missing?: string;
   fundMist?: string;
+  /** The CDN cap: Fastly's requests and bytes this month, and the cap's switch, "serve" while the site is up. */
+  requests?: number;
+  bytes?: number;
+  cap?: string;
   /** Why a step was skipped, in words. */
   reason?: string;
 }
@@ -166,6 +170,9 @@ const loggedFields = {
   serverMatches: true,
   missing: true,
   fundMist: true,
+  requests: true,
+  bytes: true,
+  cap: true,
   reason: true,
 } satisfies Record<keyof DiagnosticFields, true>;
 

@@ -9,15 +9,18 @@ import {
   chatMenuFromEnvironment,
   messagingChannelFromEnvironment,
 } from "./chatMenu/fromEnvironment.ts";
+import { startCdnCap, type TellOperator } from "./cdn/cdnCap.ts";
 import { startMidnightBatches } from "./chatMenu/midnight.ts";
 import type { AppDeps } from "./deps.ts";
-import { logInfo } from "./diagnostics.ts";
+import { logFailure, logInfo } from "./diagnostics.ts";
 import { startExpiredGiftReturns } from "./gifts/expiry.ts";
 import { giverNoticeFor, startGiverNoticeSweeps } from "./gifts/giverNotice.ts";
 import { chooseLineVerifier } from "./services/devSignIn.ts";
+import { createFastlyCdn } from "./services/fastly.ts";
 import { createShinamiGasStation } from "./services/gasStation.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { journalLog } from "./services/journal.ts";
+import { retryKeyFor } from "./services/lineMessaging.ts";
 import { createLineVerifier } from "./services/lineVerifier.ts";
 import { mockChain } from "./services/mockChain.ts";
 import { createPrivySuiWallets } from "./services/privySuiWallets.ts";
@@ -57,6 +60,12 @@ const envSchema = z.object({
   LINE_MESSAGING_CHANNEL_ID: z.string().optional(),
   LINE_MESSAGING_CHANNEL_SECRET: z.string().optional(),
   LINE_CHAT_MENUS_FILE: z.string().optional(),
+  // Who the CDN cap tells in LINE, from the Official account: the operator's user ID, as the channel's
+  // Basic settings show it.
+  OPERATOR_LINE_USER_ID: z
+    .string()
+    .regex(/^U[0-9a-f]{32}$/, "Expected a LINE user ID")
+    .optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -121,6 +130,26 @@ const chain = (() => {
   return { sui, gasStation, suiWallets };
 })();
 
+// The CDN cap, with Fastly's token and the IDs of its service and the croquis_cdn dictionary; without
+// any of them, as in development, it's off.
+const cdn = (() => {
+  const keys = ["FASTLY_API_TOKEN", "FASTLY_SERVICE_ID", "FASTLY_CAP_DICTIONARY_ID"];
+  if (keys.every((key) => !process.env[key])) return null;
+  const fastlyIdSchema = z.string().regex(/^[A-Za-z0-9]{22}$/, "Expected a Fastly ID");
+  const fastly = z
+    .object({
+      FASTLY_API_TOKEN: secretSchema,
+      FASTLY_SERVICE_ID: fastlyIdSchema,
+      FASTLY_CAP_DICTIONARY_ID: fastlyIdSchema,
+    })
+    .parse(process.env);
+  return createFastlyCdn({
+    token: fastly.FASTLY_API_TOKEN,
+    serviceId: fastly.FASTLY_SERVICE_ID,
+    dictionaryId: fastly.FASTLY_CAP_DICTIONARY_ID,
+  });
+})();
+
 const clock = { now: () => new Date() };
 const messaging = messagingChannelFromEnvironment({
   devSignIn: env.DEV_SIGN_IN,
@@ -173,6 +202,29 @@ startTicketPurchaseSweeps(deps);
 // The package's objects, the server's address and Shinami's fund, checked: now, then just after each
 // midnight, Tokyo time.
 startChainChecks(deps);
+
+// Fastly's usage this month, checked now and then every few minutes: the operator hears in LINE, and
+// the site pauses before Fastly would bill.
+const tellOperator: TellOperator = async (text, key) => {
+  if (!messaging.line || !env.OPERATOR_LINE_USER_ID) {
+    throw new Error(
+      "No one to tell in LINE: OPERATOR_LINE_USER_ID or the Messaging API channel is unset",
+    );
+  }
+  await messaging.line.pushText(env.OPERATOR_LINE_USER_ID, text, retryKeyFor(key));
+};
+if (cdn) {
+  if (!messaging.line || !env.OPERATOR_LINE_USER_ID) {
+    logFailure(
+      "cdn.cap.no_operator",
+      new Error("The CDN cap can pause the site, but has no one to tell in LINE"),
+      { reason: "OPERATOR_LINE_USER_ID or the Messaging API channel is unset" },
+    );
+  }
+  startCdnCap({ cdn, clock, tellOperator });
+} else {
+  logInfo("cdn.cap.off", { reason: "no Fastly settings" });
+}
 
 // Only a proxy on this machine reaches it: Vite's in development, HAProxy's on the box.
 serve(

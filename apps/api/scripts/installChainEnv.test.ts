@@ -52,7 +52,10 @@ describe("install-chain-env.mjs", { timeout: NODE_RUNS_TIMEOUT_MS }, () => {
   it("refuses a missing or malformed setting, naming it, and keeps the chain.env it has", () => {
     const { chain, input, run } = setup();
     const refusals: [key: string, value: string][] = [
-      ...Object.keys(input).map((key): [string, string] => [key, ""]),
+      ...Object.keys(input)
+        .filter((key) => key !== "OPERATOR_LINE_USER_ID")
+        .map((key): [string, string] => [key, ""]),
+      ["OPERATOR_LINE_USER_ID", "ad0ll"],
       ["SUI_SERVER_PRIVATE_KEY", `0x${"3".repeat(64)}`],
       ["LINE_MESSAGING_CHANNEL_ID", "channel"],
       ["LINE_MESSAGING_CHANNEL_SECRET", "not hex"],
@@ -62,7 +65,7 @@ describe("install-chain-env.mjs", { timeout: NODE_RUNS_TIMEOUT_MS }, () => {
       for (const [key, value] of refusals) {
         const result = run({ ...input, [key]: value });
         expect(result.status, `${key}=${value}`).not.toBe(0);
-        expect(result.stderr).toContain(`Missing or invalid ${key}`);
+        expect(result.stderr).toMatch(new RegExp(`(Missing or invalid|Invalid) ${key}`));
       }
     };
     expectEachRefused();
@@ -71,5 +74,15 @@ describe("install-chain-env.mjs", { timeout: NODE_RUNS_TIMEOUT_MS }, () => {
     const installed = readFileSync(chain, "utf8");
     expectEachRefused();
     expect(readFileSync(chain, "utf8")).toBe(installed);
+  });
+
+  it("installs without the operator's LINE user ID, which is optional", () => {
+    const { chain, input, run } = setup();
+    const { OPERATOR_LINE_USER_ID: _, ...required } = input;
+    expect(run(required).status).toBe(0);
+    expect(parseEnv(readFileSync(chain, "utf8"))).toEqual({
+      STICKER_CHAIN_MODE: "sui",
+      ...required,
+    });
   });
 });
