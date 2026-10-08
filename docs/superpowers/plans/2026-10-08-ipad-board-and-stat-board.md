@@ -60,14 +60,14 @@ Under `apps/frontend/src/sticker-board/` unless shown.
 
 ## Setup
 
-- [ ] `git -C <main checkout> fetch`, then `git -C <main checkout> worktree add -b feat/ipad-board-and-stat-board .claude/worktrees/ipad-board-and-stat-board origin/main`, and `pnpm install` in it. Every command below runs from that worktree's root.
+- [ ] `git -C <main checkout> fetch`, then `git -C <main checkout> worktree add -b feat/ipad-board-and-stat-board .claude/worktrees/ipad-board-and-stat-board origin/main`, and `pnpm install` in it. Every command below runs from that worktree's root, `W`: in a subshell, `(cd "$W" && …)`, never a bare `cd`, since the shell can be reset to the main checkout, which other sessions share, and a relative `git commit` there lands on main.
 - Scratch goes in the worktree's gitignored `data/scratch/board-and-stat-board/`. This plan's dev server takes ports 5194 (Vite) and 8794 (API).
 - Frontend tests run with `TZ=Asia/Tokyo`.
 - Order: 0–6 in order. 7 and 8 after 6 (they edit `StickerBoard.tsx` and `ArtistBoard.tsx`). 9 and 10 touch only their own files and can run beside 4–8, but 9 waits for 4 when its item 11 reaches `useBoardGestures.ts`. A lane in its own worktree starts with `git switch -c <branch> <commit>` and restores any tracked file the fresh worktree lacks. Then 11, 12, 13.
 
 ### Task 0: The base, the dev server and the phone's baseline
 
-- [ ] **Step 1:** Confirm Phase 0 and foundations are on `origin/main`: `git log --oneline origin/main -- docs/superpowers/plans/2026-10-08-small-fixes.md docs/superpowers/plans/2026-10-08-ipad-foundations.md` shows each plan's last commit, and neither has an open box. If either hasn't merged, stop and say so.
+- [ ] **Step 1:** Confirm Phase 0 and foundations are on `origin/main`: each plan's last step deletes it once merged, so `git cat-file -e origin/main:docs/superpowers/plans/2026-10-08-small-fixes.md` and the same for `2026-10-08-ipad-foundations.md` both fail. If either file is still there, stop and say so.
 - [ ] **Step 2:** Find the names in the Base table:
 
 ```bash
@@ -112,7 +112,7 @@ export default mergeConfig(
 );
 ```
 
-- [ ] **Step 5: Scripts.** Copy `<main checkout>/.claude/worktrees/ipad-research/data/scratch/ipad/scripts/captures/lib.js` into the scratch folder, with `BASE` at `http://localhost:5194`, `OUT` in the scratch folder, and the playwright-core of the `~/.npm/_npx/*/node_modules/` copy whose `browsers.json` WebKit revision has a `~/Library/Caches/ms-playwright/webkit-<rev>` folder. It signs in from Node and adds the session cookie back without `Secure`, which WebKit drops on localhost. Contexts: `isMobile: true, hasTouch: true`, an iPad user agent for large sizes, `reducedMotion: "reduce"` (WebKit's screenshots draw no 3D), `locale: "en-US"`, `timezoneId: "Asia/Tokyo"`.
+- [ ] **Step 5: Scripts.** Copy `<main checkout>/.claude/worktrees/ipad-research/data/scratch/ipad/scripts/captures/lib.js` into the scratch folder, with `BASE` at `http://localhost:5194`, `OUT` in the scratch folder, and its `require` of an npx playwright-core replaced by the repo's, as the foundations plan's captures load it: `require("node:module").createRequire("<worktree>/apps/frontend/package.json")("@playwright/test")`, its browsers from `pnpm --filter frontend exec playwright install chromium webkit`. It signs in from Node and adds the session cookie back without `Secure`, which WebKit drops on localhost. Contexts: `isMobile: true, hasTouch: true`, an iPad user agent for large sizes, `reducedMotion: "reduce"` (WebKit's screenshots draw no 3D), `locale: "en-US"`, `timezoneId: "Asia/Tokyo"`.
 - [ ] **Step 6: `record.js`**, in the scratch folder: given a label, an engine and a viewport, signed in as alice, it writes `<label>-<engine>-<w>x<h>.json` and a screenshot per state, after `waitForLoadState("networkidle")`:
   - the board: every `.placed-sticker`'s `data-sticker-id`, `style.transform`, `style.width` and `style.height`, and the rounded `getBoundingClientRect()` of `.board-who`, `.board-gifts`, `.board-draw`, `.zip__tab--front`;
   - the tray open (`page.touchscreen.tap` on `.zip__tab--front`'s center): `.tray__col`, the stack's `style.transform`, `.tray__new`;
@@ -372,7 +372,7 @@ describe("POST /api/sticker-boards/me/large-layout", () => {
     expect(onBoard?.largePlacement).toBeNull();
   });
 
-  it("takes from 1 to MAX_LARGE_LAYOUT_BATCH stickers at once", async () => {
+  it("refuses an empty batch and one over MAX_LARGE_LAYOUT_BATCH", async () => {
     const me = insertUser(test.db);
     const entries = (length: number) =>
       Array.from({ length }, (_, index) => ({
@@ -1042,7 +1042,7 @@ describe("ArtistBoard's layouts", () => {
 
 ```ts
 /** Every layout, in the order a body that saves spots names them. */
-export const BOARD_LAYOUTS = ["phone", "large"] as const satisfies readonly BoardLayout[];
+const BOARD_LAYOUTS = ["phone", "large"] as const satisfies readonly BoardLayout[];
 
 /** A sticker's spots to save, by layout. */
 export type Spots = Partial<Record<BoardLayout, Placement>>;
@@ -1874,17 +1874,7 @@ const head = (
 );
 ```
 
-In `front`, they give way to:
-
-```tsx
-{
-  /* Your name and Draw come before the stickers, so Tab reaches them first. On a large screen the
-          name and the gifts share one row, so a long name gives way to the gifts rather than under them. */
-}
-{
-  layout === "large" ? <div className="board-head">{head}</div> : head;
-}
-```
+In `front`, they give way to `{layout === "large" ? <div className="board-head">{head}</div> : head}` (no semicolon: it's a JSX child), under the comment `{/* Your name and Draw come before the stickers, so Tab reaches them first. On a large screen the name and the gifts share one row, so a long name gives way to the gifts rather than under them. */}`.
 
 - [ ] **Step 5: `placement.ts`'s `boxOf`:**
 
@@ -2163,7 +2153,7 @@ Judge the captures through `/impeccable adapt`, after reading DESIGN.md. Restart
 
 ### Task 13: Check and merge
 
-- [ ] **Step 1:** `TZ=Asia/Tokyo pnpm check:full` → lint, typecheck, tests, the format check, the Move tests, the build and knip's report pass. `pnpm --filter frontend test:e2e` (the phone's core loop) passes.
+- [ ] **Step 1:** `TZ=Asia/Tokyo pnpm check:full` → lint, typecheck, tests, the format check, the Move tests, the build and knip's report pass. `pnpm --filter frontend test:e2e` (the whole E2E suite) passes.
 - [ ] **Step 2:** Squash the branch into `feat: the iPad board keeps a large layout of its own beside the phone's, with its tray and stat board` and the docs commit, with no AI attribution lines.
 - [ ] **Step 3:** In the main checkout, in one command: fetch, fast-forward main, merge the branch, push. A conflicting migration number means rebasing, deleting this branch's migration and generating it again (Task 1, Step 4).
 - [ ] **Step 4:** Delete the worktree, the branch, `data/scratch/board-and-stat-board/` and `apps/frontend/vite.board.config.ts`, and this plan in a `docs:` commit; the brief stays for the plans still open. Report the tuned values to ad0ll.
@@ -2182,7 +2172,7 @@ Judge the captures through `/impeccable adapt`, after reading DESIGN.md. Restart
   - One header row; the lit Explore tab leads back: Task 8; the tab's caret is foundations'.
   - The zipper runs the board's height; sheets grow up to 1.5×: Task 9 (the phone's run to the foot is Phase 0's).
   - The stat board in the phone's order, one centered cluster, Settings under it, Flip back at the top left: Task 10 (Flip back's phone place is Phase 0's). Gratitude events as a centered card: `2026-10-08-ipad-shop-and-cards.md`'s Task 5, checked in Task 11.
-  - Phones unchanged: Task 0's baseline against Task 11 Step 1, and the e2e core loop.
+  - Phones unchanged: Task 0's baseline against Task 11 Step 1, and the E2E suite.
 - **Placeholders:** none. Code for main's own parts that move (Draw's and Give's keys, the name and gifts, the Explore chip) is main's as it stands today; where Phase 0 changed one, its version moves instead. Ports name their commits, the hunks to take and the hunks to leave.
 - **Names, as defined and used:** db `largeOnBoard`…`largeZ`; API `placementsRequestSchema`/`PlacementsRequest`, `largeLayoutRequestSchema`/`LargeLayoutEntry`, `MAX_LARGE_LAYOUT_BATCH`, `largeColumns`, `savePlacements`, `neverReached`, `saveDerivedLargeLayout`, `LARGE_SPOT`; client `saveStickerPlacement(stickerId, spots)`, `saveLargeLayout(entries)`, `toApiSpots`; board `BoardLayout`, `BOARD_LAYOUTS`, `Spots`, `spotsIn`, `layoutsIn`, `PHONE_BOARD`, `BoardSize`, `unitOf`, `useBoardLayout`, `boardLayoutNow`, `useBoardSize(ref, layout)`, `Placements`, `PlacedBoardSticker`, `UnplacedBoardSticker`, `GivenSpots`, `hasLargeLayout`, `movedIn`, `placeUnplaced`, `shownIn`, `largeSpotFrom`, `LargeSpot`, `deriveLargeLayout`, `laidOutForVisitor`, `saveDerivedLayout`; tray `MAX_STACK_SCALE`, `TrayFit`, `trayFitFor`, `trayTop`, `fitTray`, `--scale`; lead `TabsLead`, `TabsLeadSlot`; tests `onLargeScreen`, `onAnIpad`, `boardServer`, `show`.
 - **Risks:** Phase 0's and foundations' names (Task 0 checks them first); Phase 0's tray port, which decides how much of Task 9's list is left; a migration number taken on main meanwhile (Task 13, Step 3).
