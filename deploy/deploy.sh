@@ -60,14 +60,15 @@ if [ -n "$auth_changed" ]; then install_and_restart_unit sticker-auth "$AUTH_DIR
 ssh "$TARGET" "$BOX_CURL -fsS http://127.0.0.1:3003/" | cmp -s - "$DIST/index.html" \
   || { echo "✗ the server on the box doesn't serve the build" >&2; exit 1; }
 echo "✓ 127.0.0.1:3003 on the box"
-# Fastly keeps the page a few minutes at each location (deploy/README.md's CDN): the new one replaces it now.
-if [ -n "${FASTLY_API_TOKEN:-}" ]; then
+# Fastly keeps the page a day at each location (deploy/README.md's CDN): the new one replaces it now. The second purge
+# catches a location that refilled from the shield before the first purge reached the shield.
+for _ in 1 2; do
   curl -fsS --max-time 30 -X POST -H "Fastly-Key: $FASTLY_API_TOKEN" \
     "https://api.fastly.com/service/$FASTLY_SERVICE_ID/purge/page" > /dev/null \
     || { echo "✗ Fastly didn't purge the cached page; see deploy/README.md's CDN" >&2; exit 1; }
   sleep 2
-  echo "✓ purged the cached page from Fastly"
-fi
+done
+echo "✓ purged the cached page from Fastly"
 curl -fsS --max-time 15 "$URL/" | cmp -s - "$DIST/index.html" || { echo "✗ $URL/ doesn't match the build" >&2; exit 1; }
 echo "✓ $URL/"
 # The auth server's JWKS must carry its key ID: serve.py answers unknown paths with the app, also with a 200.
