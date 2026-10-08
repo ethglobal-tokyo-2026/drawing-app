@@ -226,8 +226,8 @@ export const stickerBoard = {
       help: { en: "About this mode", ja: "このモードについて" },
       /** Settings note, the note under Kyoto Seika Practice Mode's legend: how a sheet works; {{minutes}} is its clock */
       how: {
-        en: "Each new sticker deals two subjects to combine, and the die beside each deals another. Begin starts the {{minutes}} minutes at once, as in the real test.",
-        ja: "シールをかくたびに題材が2つ配られ、横のサイコロで別の題材にできます。「はじめ」を押すと、試験の「始め」と同じく{{minutes}}分のタイマーが動きだします。",
+        en: "Each new sticker deals two subjects to combine, and each one's die deals another. Begin starts the {{minutes}} minutes at once, as in the real test.",
+        ja: "シールをかくたびに題材が2つ配られ、サイコロで別の題材にできます。「はじめ」を押すと、試験の「始め」と同じく{{minutes}}分のタイマーが動きだします。",
       },
       /** Settings note, the note under Kyoto Seika Practice Mode's legend: who made the mode, and that neither Croquis nor its maker is connected with the university */
       maker: {
