@@ -28,6 +28,17 @@ export interface AppDeps {
   lineChatMenu: LineChatMenu;
   /** Off as lineChatMenu is: every call then does nothing. */
   giverNotice: GiverNotice;
+  /** Null without Fastly's settings, as in development: a mark then skips the purge. */
+  cdnPurge: CdnPurge | null;
+}
+
+/** The CDN in front of the box, as marking a sticker 18+ clears its copies of the drawing. */
+export interface CdnPurge {
+  /**
+   * Purges each URL's copies from every POP, retrying a failure within a deadline, and logs each
+   * purge. True once all are purged; false once one failed for good, which it logs. Never rejects.
+   */
+  purge: (urls: string[]) => Promise<boolean>;
 }
 
 /**
@@ -116,13 +127,8 @@ export interface ImageStore {
    * content hash, which it resolves to. Rejects when the sticker's images aren't saved.
    */
   saveVeiled: (contentHash: string) => Promise<string>;
-  /** Where anyone gets them: the CDN in front of the box, or the box itself without one. */
+  /** Where they load from. The box serves an NSFW sticker's drawing only to the NSFW opt-in. */
   urls: (contentHash: string) => StickerImages;
-  /**
-   * What a viewer with the NSFW opt-in gets for an NSFW sticker: `urls`, with each image that shows
-   * the drawing from the box, which checks their session.
-   */
-  optInUrls: (contentHash: string) => StickerImages;
   /** What a viewer without the NSFW opt-in gets for an NSFW sticker: `urls` with its veiled image in place. */
   veiledUrls: (contentHash: string, veiledHash: string) => StickerImages;
 }

@@ -2,7 +2,7 @@ import { users, type Db } from "@drawing-app/db";
 import { bytes32 } from "@drawing-app/db/testing";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { eq } from "drizzle-orm";
-import type { Ids, ImageStore, ServerLog, TicketPaymentTarget } from "../deps.ts";
+import type { CdnPurge, Ids, ImageStore, ServerLog, TicketPaymentTarget } from "../deps.ts";
 import { createDevLineVerifier } from "../services/devSignIn.ts";
 import { imageUrls } from "../services/imageStore.ts";
 import type { StickerPngKind } from "../shapes.ts";
@@ -48,10 +48,7 @@ export function fakeImageStore() {
       saved.has(contentHash)
         ? Promise.resolve(bytes32(`veiled ${contentHash}`))
         : Promise.reject(new Error(`No images are saved under ${contentHash}`)),
-    ...imageUrls({
-      imageBaseUrl: "https://box.test/api/images",
-      cdnBaseUrl: "https://cdn.test/api/images",
-    }),
+    ...imageUrls("https://box.test/api/images"),
   };
   return { ...store, saved };
 }
@@ -91,6 +88,19 @@ export const TEST_PAYMENT_TARGET: TicketPaymentTarget = {
   paymentPackage: `0x${"b".repeat(64)}`,
   vault: `0x${"c".repeat(64)}`,
 };
+
+/** The CDN's purge: keeps every URL it's asked to purge, and answers `purged`, which a test may change. */
+export function fakeCdnPurge(purged = true) {
+  const fake: CdnPurge & { urls: string[]; purged: boolean } = {
+    urls: [],
+    purged,
+    purge: (asked) => {
+      fake.urls.push(...asked);
+      return Promise.resolve(fake.purged);
+    },
+  };
+  return fake;
+}
 
 /** A server log that reads `text`. */
 export const fakeServerLog =

@@ -56,9 +56,16 @@ export interface DiagnosticFields {
   requests?: number;
   bytes?: number;
   cap?: string;
+  /** The CDN purge: the sticker image's URL it purged, kept whole, and the ID Fastly gave the purge. */
+  imageUrl?: string;
+  purgeId?: string;
   /** Why a step was skipped, in words. */
   reason?: string;
 }
+
+/** A sticker image's URL names nothing but its public content hash, so it's logged whole. */
+const STICKER_IMAGE_URL =
+  /^https?:\/\/[^\s/?#@]+\/(?:[^\s?#]*\/)?0x[0-9a-f]{64}(?:\.[a-z]+)?\.(?:png|webp)$/;
 
 const requests = new AsyncLocalStorage<RequestContext>();
 
@@ -173,6 +180,8 @@ const loggedFields = {
   requests: true,
   bytes: true,
   cap: true,
+  imageUrl: true,
+  purgeId: true,
   reason: true,
 } satisfies Record<keyof DiagnosticFields, true>;
 
@@ -191,6 +200,8 @@ function record(event: string, fields: DiagnosticFields) {
       selected[key] = /^0x[a-f0-9]{64}$/i.test(value) ? value : "[invalid-hash]";
     } else if (key === "txDigest") {
       selected[key] = /^[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(value) ? value : "[invalid-digest]";
+    } else if (key === "imageUrl") {
+      selected[key] = STICKER_IMAGE_URL.test(value) ? value : "[invalid-image-url]";
     } else {
       selected[key] = redact(value);
     }

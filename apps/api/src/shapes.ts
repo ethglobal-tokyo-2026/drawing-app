@@ -110,8 +110,8 @@ export const personSchema = userRow
   })
   .extend({
     /**
-     * Show 18+ stickers, in Settings. Only someone with it on marks, sees unblurred or receives NSFW
-     * stickers, so the give sheet shows it.
+     * Show 18+ stickers, in Settings. Only someone with it on sees NSFW stickers unblurred or receives
+     * them, so the give sheet shows it.
      */
     nsfwOptIn: z.boolean(),
   });
@@ -315,8 +315,7 @@ function viewerOf(images: AppDeps["images"], optedIn: boolean): StickerViewer {
   return {
     veils,
     images: (sticker) => {
-      if (!sticker.nsfw) return images.urls(sticker.contentHash);
-      if (optedIn) return images.optInUrls(sticker.contentHash);
+      if (!sticker.nsfw || optedIn) return images.urls(sticker.contentHash);
       // The database holds every NSFW sticker to its veil, so a row without one is a fault.
       if (sticker.veiledHash === null) {
         throw new Error(`The NSFW sticker with content hash ${sticker.contentHash} has no veil`);

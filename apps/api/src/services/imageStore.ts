@@ -56,34 +56,16 @@ function stickerImageUrls(baseUrl: string, contentHash: string): StickerImages {
   };
 }
 
-/** Where the sticker images load from. */
-interface ImageBaseUrls {
-  /** The box's own: an NSFW sticker's drawing loads from here, since only the box sees the session. */
-  imageBaseUrl: string;
-  /** Every other image's: the CDN in front of the box, or the box's own without one. */
-  cdnBaseUrl: string;
-}
+/** The URLs among a sticker's images that show its drawing: its PNG, its WebP and the flat sheet. */
+export const drawingUrls = ({ png, flat, webp }: StickerImages) => [png, flat, webp.sticker];
 
-/** A sticker's image URLs for each viewer, under `bases`. */
-export function imageUrls({
-  imageBaseUrl,
-  cdnBaseUrl,
-}: ImageBaseUrls): Pick<ImageStore, "urls" | "optInUrls" | "veiledUrls"> {
+/** A sticker's image URLs for each viewer, under `imageBaseUrl`. */
+export function imageUrls(imageBaseUrl: string): Pick<ImageStore, "urls" | "veiledUrls"> {
   return {
-    urls: (contentHash) => stickerImageUrls(cdnBaseUrl, contentHash),
-    optInUrls: (contentHash) => {
-      const shared = stickerImageUrls(cdnBaseUrl, contentHash);
-      const drawing = stickerImageUrls(imageBaseUrl, contentHash);
-      return {
-        ...shared,
-        png: drawing.png,
-        flat: drawing.flat,
-        webp: { ...shared.webp, sticker: drawing.webp.sticker },
-      };
-    },
+    urls: (contentHash) => stickerImageUrls(imageBaseUrl, contentHash),
     veiledUrls: (contentHash, veiledHash) => {
-      const shared = stickerImageUrls(cdnBaseUrl, contentHash);
-      const veiled = stickerImageUrls(cdnBaseUrl, veiledHash);
+      const shared = stickerImageUrls(imageBaseUrl, contentHash);
+      const veiled = stickerImageUrls(imageBaseUrl, veiledHash);
       return {
         ...shared,
         png: veiled.png,
@@ -197,8 +179,8 @@ async function saveVeiled(imageDir: string, contentHash: string): Promise<string
   return veiledHash;
 }
 
-/** Writes sticker images into the folder the box serves, at `bases.imageBaseUrl`. */
-export function createDiskImageStore(imageDir: string, bases: ImageBaseUrls): ImageStore {
+/** Writes sticker images into the folder the box serves at `imageBaseUrl`. */
+export function createDiskImageStore(imageDir: string, imageBaseUrl: string): ImageStore {
   mkdirSync(imageDir, { recursive: true });
   return {
     save: async (contentHash, pngs) => {
@@ -211,6 +193,6 @@ export function createDiskImageStore(imageDir: string, bases: ImageBaseUrls): Im
       await writeMissingWebps(imageDir, contentHash);
     },
     saveVeiled: (contentHash) => saveVeiled(imageDir, contentHash),
-    ...imageUrls(bases),
+    ...imageUrls(imageBaseUrl),
   };
 }

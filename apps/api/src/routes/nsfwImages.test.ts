@@ -56,16 +56,13 @@ async function nsfwSticker() {
       }),
     ]);
   const drawings = [sticker, giftSticker].map(({ contentHash }) => contentHash);
-  /** The URLs of each file that shows either sticker's drawing, on the CDN and on the box. */
-  const drawingUrls = drawings.flatMap((contentHash) =>
-    [test.images.urls(contentHash), test.images.optInUrls(contentHash)].flatMap(
-      ({ png, flat, webp }) => [png, flat, webp.sticker],
-    ),
-  );
+  /** The URLs of each file that shows either sticker's drawing. */
+  const drawingUrls = drawings.flatMap((contentHash) => {
+    const { png, flat, webp } = test.images.urls(contentHash);
+    return [png, flat, webp.sticker];
+  });
   /** Each sticker's WebP as the NSFW opt-in gets it. */
-  const optedInWebps = drawings.map(
-    (contentHash) => test.images.optInUrls(contentHash).webp.sticker,
-  );
+  const optedInWebps = drawings.map((contentHash) => test.images.urls(contentHash).webp.sticker);
   const veiled = test.images.urls(veiledHash);
   return { test, artistId, stickerId, answers, drawingUrls, optedInWebps, veiled };
 }

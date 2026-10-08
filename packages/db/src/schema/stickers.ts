@@ -14,7 +14,10 @@ export interface KyotoSeikaSubject {
   en: string;
 }
 
-/** A sealed sticker. Everything but owner_id and the mint is fixed at seal; created_at is the seal. */
+/**
+ * A sealed sticker. Everything but owner_id, the mint and a later 18+ mark is fixed at seal;
+ * created_at is the seal.
+ */
 export const stickers = sqliteTable(
   "stickers",
   {
@@ -43,7 +46,10 @@ export const stickers = sqliteTable(
     height: integer("height").notNull(),
     /** The cut line as an SVG path in image pixels. */
     outline: text("outline").notNull(),
-    /** An NSFW sticker: its Original Artist, with the NSFW opt-in on, marked it 18+ at seal. */
+    /**
+     * An NSFW sticker: its Original Artist marked it 18+, at seal or after. A mark is for good, and
+     * the Sui object keeps the one it was minted with, so this is the current one.
+     */
     nsfw: integer("nsfw", { mode: "boolean" }).notNull(),
     /** sha256 of the sticker PNG. Names its image files on the CDN, and goes to the mint. */
     contentHash: text("content_hash").notNull(),
@@ -63,13 +69,23 @@ export const stickers = sqliteTable(
     kyotoSeikaSubjects: text("kyoto_seika_subjects", { mode: "json" }).$type<
       [KyotoSeikaSubject, KyotoSeikaSubject]
     >(),
+    /**
+     * Set by the 18+ mark that made its drawing private: the CDN's copies of the files that show it
+     * are due for a purge. Cleared on every sticker that shows the drawing once a purge that began
+     * after it has cleared them.
+     */
+    cdnPurgeDueAt: integer("cdn_purge_due_at", { mode: "timestamp_ms" }),
   },
   (t) => [
     index("stickers_owner").on(t.ownerId),
-    // The image server finds an image's sticker by it, for every image that shows the drawing.
+    // The image server finds every sticker that shows a drawing by it, for each file that shows one.
     index("stickers_content_hash").on(t.contentHash),
     index("stickers_artist").on(t.artistId, t.createdAt),
     index("stickers_created").on(t.createdAt),
+    // The CDN purges still due, which the purge sweep reads.
+    index("stickers_cdn_purge_due")
+      .on(t.cdnPurgeDueAt)
+      .where(sql`${t.cdnPurgeDueAt} is not null`),
     // The longest clock; the seal route holds each sticker to its own ticket's.
     check(
       "stickers_time_used",

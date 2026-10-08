@@ -16,7 +16,7 @@ import { logFailure, logInfo } from "./diagnostics.ts";
 import { startExpiredGiftReturns } from "./gifts/expiry.ts";
 import { giverNoticeFor, startGiverNoticeSweeps } from "./gifts/giverNotice.ts";
 import { chooseLineVerifier } from "./services/devSignIn.ts";
-import { createFastlyCdn } from "./services/fastly.ts";
+import { createFastlyCdn, createFastlyPurge } from "./services/fastly.ts";
 import { createShinamiGasStation } from "./services/gasStation.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { journalLog } from "./services/journal.ts";
@@ -26,6 +26,7 @@ import { mockChain } from "./services/mockChain.ts";
 import { createPrivySuiWallets } from "./services/privySuiWallets.ts";
 import { createSuiChain } from "./services/suiChain.ts";
 import { startMintCatchUp } from "./stickers/mint.ts";
+import { startCdnPurgeSweeps } from "./stickers/nsfwDrawing.ts";
 import { suiIdSchema } from "./shapes.ts";
 import { startChainChecks } from "./sui/chainCheck.ts";
 import { startTicketPurchaseSweeps } from "./tickets/purchaseSweep.ts";
@@ -41,10 +42,8 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(32),
   LINE_CHANNEL_ID: z.string().min(1),
   IMAGE_DIR: z.string().min(1),
-  // Where the box serves the sticker images, and the CDN in front of it, which every image but an
-  // NSFW sticker's drawing loads from. Without CDN_BASE_URL, every image loads from the box.
+  // Where the sticker images load from: the box's, through Fastly in front of the site on the box.
   IMAGE_BASE_URL: z.url(),
-  CDN_BASE_URL: z.union([z.url(), z.literal("")]).optional(),
   PORT: z.coerce.number().int().positive().default(8788),
   STICKER_CHAIN_MODE: z.enum(["mock", "sui"]),
   // Empty is how .env switches off what .env.example switches on.
@@ -78,10 +77,7 @@ const env = parsed.data;
 migrateDatabase();
 
 const db = openDb();
-const images = createDiskImageStore(env.IMAGE_DIR, {
-  imageBaseUrl: env.IMAGE_BASE_URL,
-  cdnBaseUrl: env.CDN_BASE_URL || env.IMAGE_BASE_URL,
-});
+const images = createDiskImageStore(env.IMAGE_DIR, env.IMAGE_BASE_URL);
 const ticketPayment = {
   network: env.SUI_NETWORK,
   coinType: env.JPYC_COIN_TYPE,
@@ -130,24 +126,28 @@ const chain = (() => {
   return { sui, gasStation, suiWallets };
 })();
 
-// The CDN cap, with Fastly's token and the IDs of its service and the croquis_cdn dictionary; without
-// any of them, as in development, it's off.
-const cdn = (() => {
+// Fastly's service in front of the site, with its API token and the IDs of the service and its
+// croquis_cdn dictionary: the CDN cap watches it, and an 18+ mark purges the drawing from it. Without
+// any of them, as in development, both are off.
+const fastly = (() => {
   const keys = ["FASTLY_API_TOKEN", "FASTLY_SERVICE_ID", "FASTLY_CAP_DICTIONARY_ID"];
   if (keys.every((key) => !process.env[key])) return null;
   const fastlyIdSchema = z.string().regex(/^[A-Za-z0-9]{22}$/, "Expected a Fastly ID");
-  const fastly = z
+  const settings = z
     .object({
       FASTLY_API_TOKEN: secretSchema,
       FASTLY_SERVICE_ID: fastlyIdSchema,
       FASTLY_CAP_DICTIONARY_ID: fastlyIdSchema,
     })
     .parse(process.env);
-  return createFastlyCdn({
-    token: fastly.FASTLY_API_TOKEN,
-    serviceId: fastly.FASTLY_SERVICE_ID,
-    dictionaryId: fastly.FASTLY_CAP_DICTIONARY_ID,
-  });
+  return {
+    cdn: createFastlyCdn({
+      token: settings.FASTLY_API_TOKEN,
+      serviceId: settings.FASTLY_SERVICE_ID,
+      dictionaryId: settings.FASTLY_CAP_DICTIONARY_ID,
+    }),
+    cdnPurge: createFastlyPurge({ token: settings.FASTLY_API_TOKEN }),
+  };
 })();
 
 const clock = { now: () => new Date() };
@@ -176,6 +176,7 @@ const deps: AppDeps = {
   serverLog: journalLog,
   lineChatMenu: chatMenu.lineChatMenu,
   giverNotice,
+  cdnPurge: fastly?.cdnPurge ?? null,
 };
 
 logInfo("api.configured", { mode: env.STICKER_CHAIN_MODE });
@@ -213,7 +214,7 @@ const tellOperator: TellOperator = async (text, key) => {
   }
   await messaging.line.pushText(env.OPERATOR_LINE_USER_ID, text, retryKeyFor(key));
 };
-if (cdn) {
+if (fastly) {
   if (!messaging.line || !env.OPERATOR_LINE_USER_ID) {
     logFailure(
       "cdn.cap.no_operator",
@@ -221,9 +222,13 @@ if (cdn) {
       { reason: "OPERATOR_LINE_USER_ID or the Messaging API channel is unset" },
     );
   }
-  startCdnCap({ cdn, clock, tellOperator });
+  startCdnCap({ cdn: fastly.cdn, clock, tellOperator });
+  // The CDN purges an 18+ mark made due that failed, or that a restart cut off: retried now, then
+  // every few minutes.
+  startCdnPurgeSweeps(deps);
 } else {
   logInfo("cdn.cap.off", { reason: "no Fastly settings" });
+  logInfo("cdn.purge.off", { reason: "no Fastly settings" });
 }
 
 // Only a proxy on this machine reaches it: Vite's in development, HAProxy's on the box.

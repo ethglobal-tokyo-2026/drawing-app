@@ -16,6 +16,8 @@ import { eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CdnPurge } from "../deps.ts";
+import { markNsfwResponseSchema, markStickerNsfw } from "../stickers/markNsfw.ts";
 import { sealResponseSchema } from "../stickers/seal.ts";
 import { MAX_SEAL_BYTES } from "../stickers/sealForm.ts";
 import { stickerDetailSchema } from "../stickers/stickerDetail.ts";
@@ -32,8 +34,9 @@ import {
 } from "../stickers/testPngs.ts";
 import { timelapseV1Schema } from "../stickers/timelapse.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { fakeSuiWallets } from "../testing/fakes.ts";
+import { fakeCdnPurge, fakeSuiWallets } from "../testing/fakes.ts";
 import { fakeSui, type FakeSui } from "../testing/fakeSui.ts";
+import { captureLogLines } from "../testing/logLines.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { giveSticker, insertSealedSticker } from "../testing/rows.ts";
 
@@ -84,6 +87,15 @@ const getSticker = (viewerId: string, stickerId: string) =>
   test.send("GET", `/api/stickers/${stickerId}`, { as: viewerId });
 
 const allStickers = () => test.db.select().from(stickers).all();
+const rowOf = (stickerId: string) =>
+  test.db.select().from(stickers).where(eq(stickers.id, stickerId)).get();
+
+/** An NSFW sticker's images as anyone without the NSFW opt-in gets them: its veil in place of its drawing. */
+function veiledImagesOf(stickerId: string) {
+  const row = rowOf(stickerId);
+  if (!row?.veiledHash) throw new Error(`Sticker ${stickerId} has no veil`);
+  return test.images.veiledUrls(row.contentHash, row.veiledHash);
+}
 const timelapseOf = (stickerId: string) =>
   test.db.select().from(stickerTimelapses).where(eq(stickerTimelapses.stickerId, stickerId)).get();
 
@@ -113,23 +125,22 @@ describe("POST /api/stickers", () => {
     expect(new Uint8Array(timelapseOf(sticker.id)?.ops ?? [])).toEqual(testTimelapse());
   });
 
-  it("seals an NSFW sticker for someone opted in, and refuses anyone else before storing a file", async () => {
+  it("seals an NSFW sticker for anyone, and someone without the NSFW opt-in then sees their own veiled", async () => {
     const optedInId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
-    expect((await seal(optedInId, { nsfw: "true" })).sticker).toMatchObject({
+    const optedIn = (await seal(optedInId, { nsfw: "true" })).sticker;
+    expect(optedIn).toMatchObject({
       nsfw: true,
-      artist: { nsfwOptIn: true },
+      images: test.images.urls(optedIn.contentHash),
     });
     expect((await seal(optedInId)).sticker.nsfw).toBe(false);
 
     const optedOutId = insertUser(test.db);
-    const ticketUseId = spendTicket(optedOutId);
     const png = testPng(STICKER_SIZE.width, STICKER_SIZE.height, "nsfw");
-    const parts = sealParts(ticketUseId, { nsfw: "true", png: pngFile(png, "png") });
-    expect(await refusalOf(await postSeal(optedOutId, sealFormData(parts)))).toMatchObject({
-      status: 403,
-      error: "nsfw_not_opted_in",
-    });
-    expect(test.images.saved.has(hashOf(png))).toBe(false);
+    const { sticker } = await seal(optedOutId, { nsfw: "true", png: pngFile(png, "png") });
+    const veiled = veiledImagesOf(sticker.id);
+    expect(sticker).toMatchObject({ nsfw: true, images: veiled });
+    const detail = await bodyOf(await getSticker(optedOutId, sticker.id), stickerDetailSchema);
+    expect(detail).toMatchObject({ sticker: { images: veiled }, hasTimelapse: false });
   });
 
   it("numbers seals across everyone, one after another", async () => {
@@ -408,6 +419,107 @@ describe("GET /api/stickers/:stickerId", () => {
     expect(await subjectsOf(kyotoSeikaSticker)).toEqual(TEST_KYOTO_SEIKA_SUBJECTS);
     expect(await subjectsOf(insertSealedSticker(test.db, artistId))).toBeNull();
   });
+});
+
+describe("POST /api/stickers/:stickerId/nsfw", () => {
+  /** The app with `cdnPurge`, and a sticker its Original Artist sealed without the mark. */
+  async function sealedUnmarked(cdnPurge: CdnPurge | null = fakeCdnPurge()) {
+    test = await createTestApp({ cdnPurge });
+    const artistId = insertUser(test.db);
+    const { sticker } = await seal(artistId);
+    return { artistId, sticker };
+  }
+  const markNsfw = (userId: string, stickerId: string) =>
+    test.send("POST", `/api/stickers/${stickerId}/nsfw`, { as: userId });
+
+  it("marks its Original Artist's sticker 18+, veiled to anyone without the NSFW opt-in, and purges each CDN file that shows its drawing", async () => {
+    const purge = fakeCdnPurge();
+    const { artistId, sticker } = await sealedUnmarked(purge);
+    const marked = await bodyOf(await markNsfw(artistId, sticker.id), markNsfwResponseSchema);
+    const veiled = veiledImagesOf(sticker.id);
+    expect(marked).toEqual({
+      sticker: { ...sticker, nsfw: true, images: veiled },
+      cdnPurged: true,
+    });
+    const { png, flat, webp } = test.images.urls(sticker.contentHash);
+    expect(purge.urls.toSorted()).toEqual([png, flat, webp.sticker].toSorted());
+    const optedInId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
+    const seen = await bodyOf(await getSticker(optedInId, sticker.id), stickerDetailSchema);
+    expect(seen.sticker.images).toEqual(test.images.urls(sticker.contentHash));
+  });
+
+  it("refuses an unknown sticker, anyone but its Original Artist, even its holder, and one already marked", async () => {
+    const purge = fakeCdnPurge();
+    const { artistId, sticker } = await sealedUnmarked(purge);
+    const holderId = insertUser(test.db);
+    giveSticker(test.db, sticker.id, artistId, holderId);
+    expect(await refusalOf(await markNsfw(artistId, "no-such-sticker"))).toMatchObject({
+      status: 404,
+      error: "sticker_not_found",
+    });
+    expect(await refusalOf(await markNsfw(holderId, sticker.id))).toMatchObject({
+      status: 403,
+      error: "not_original_artist",
+    });
+    expect(rowOf(sticker.id)?.nsfw).toBe(false);
+    expect(purge.urls).toEqual([]);
+    expect((await markNsfw(artistId, sticker.id)).status).toBe(200);
+    const purged = purge.urls.length;
+    expect(await refusalOf(await markNsfw(artistId, sticker.id))).toMatchObject({
+      status: 409,
+      error: "already_nsfw",
+    });
+    expect(purge.urls).toHaveLength(purged);
+  });
+
+  it("refuses with already_nsfw when another mark lands while the veil is made", async () => {
+    const purge = fakeCdnPurge();
+    const { artistId, sticker } = await sealedUnmarked(purge);
+    const saveVeiled = test.images.saveVeiled;
+    vi.spyOn(test.images, "saveVeiled").mockImplementationOnce(async (contentHash) => {
+      const veiledHash = await saveVeiled(contentHash);
+      test.db
+        .update(stickers)
+        .set({ nsfw: true, veiledHash })
+        .where(eq(stickers.id, sticker.id))
+        .run();
+      return veiledHash;
+    });
+    expect(await refusalOf(await markNsfw(artistId, sticker.id))).toMatchObject({
+      status: 409,
+      error: "already_nsfw",
+    });
+    expect(purge.urls).toEqual([]);
+  });
+
+  it("makes one veil for marks of one sticker sent at once, and refuses the rest with already_nsfw", async () => {
+    const { artistId, sticker } = await sealedUnmarked();
+    const veils = vi.spyOn(test.images, "saveVeiled");
+    // Each mark runs until it first waits before the next one starts.
+    const outcomes = await Promise.all(
+      Array.from({ length: 3 }, () => markStickerNsfw(test.deps, artistId, sticker.id)),
+    );
+    expect(veils).toHaveBeenCalledTimes(1);
+    const answered = outcomes.map((outcome) =>
+      "marked" in outcome ? 200 : outcome.refused.status,
+    );
+    expect(answered.toSorted((a, b) => a - b)).toEqual([200, 409, 409]);
+  });
+
+  it.each([
+    { what: "fails", cdnPurge: () => fakeCdnPurge(false), logged: undefined },
+    { what: "is off", cdnPurge: () => null, logged: "cdn.purge.skipped" },
+  ])(
+    "keeps the mark and answers cdnPurged false when the CDN purge $what",
+    async ({ cdnPurge, logged }) => {
+      const logs = captureLogLines();
+      const { artistId, sticker } = await sealedUnmarked(cdnPurge());
+      const marked = await bodyOf(await markNsfw(artistId, sticker.id), markNsfwResponseSchema);
+      expect(marked).toMatchObject({ sticker: { nsfw: true }, cdnPurged: false });
+      expect(rowOf(sticker.id)?.nsfw).toBe(true);
+      if (logged) logs.expectLogged(logged, { stickerId: sticker.id });
+    },
+  );
 });
 
 describe("GET /api/stickers/:stickerId/timelapse", () => {

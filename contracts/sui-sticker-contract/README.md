@@ -22,6 +22,8 @@ On publish, `init` shares a `StickerRegistry` and a `ServerConfig` that names th
 
 A `Sticker` keeps its running `number`, its Original Artist's address at Sealing (`artist`), the sha256 of its PNG (`content_hash`), `width`, `height`, `nsfw`, and `image`: the file name of the image anyone may see, which is an NSFW sticker's veiled image. Display joins `image` to the image host it holds, so moving the host is one Display edit.
 
+The object keeps the mark it was minted with. An Original Artist can mark a sticker 18+ after its seal, which changes the API's database, so the database's `nsfw` is the current mark and the object's can be older. Such a sticker's `image` still names its drawing's file, which the box then serves only to the NSFW opt-in, so a wallet shows a broken image instead, unless an unmarked sticker shares the drawing, which keeps the file public.
+
 Events:
 
 - `StickerSealed { sticker, key, number, artist, nsfw }`

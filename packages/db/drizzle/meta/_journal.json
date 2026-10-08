@@ -15,6 +15,13 @@
       "when": 1791401661693,
       "tag": "0001_kyoto_seika_practice",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791475986278,
+      "tag": "0002_cdn_purge_due",
+      "breakpoints": true
     }
   ]
 }

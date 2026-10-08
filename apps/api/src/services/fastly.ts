@@ -1,12 +1,39 @@
 import { z } from "zod";
 import type { Cdn, CdnSwitch } from "../cdn/cdnCap.ts";
-import { failureCause } from "../diagnostics.ts";
+import type { CdnPurge } from "../deps.ts";
+import { failureCause, logFailure, logInfo } from "../diagnostics.ts";
 
 export const FASTLY_API_URL = "https://api.fastly.com";
 /** One call to Fastly's API, its body's read included. */
 const FASTLY_CALL_TIMEOUT_MS = 10_000;
 /** The CDN cap's switch before anything has set it: the site serves, and no one has been warned. */
 const UNSET_SWITCH: CdnSwitch = { cap: "serve", warned: "" };
+
+/**
+ * A mark's purge of every URL, both purges with their tries and pauses. A mark waits on it inside the
+ * app's own request limit (REQUEST_TIMEOUT_MS in the frontend's httpApi.ts), with room for the veil.
+ */
+export const CDN_PURGE_DEADLINE_MS = 10_000;
+/** Each purge's tries, the first included. */
+export const CDN_PURGE_TRIES = 3;
+/**
+ * The pause before a URL's second purge. An edge the first purge reached can refill from a shield it
+ * hadn't reached yet, and keep that copy; the second purge clears it.
+ */
+export const CDN_PURGE_AGAIN_AFTER_MS = 1_000;
+/** The pause before a purge's first retry, doubled before each one after it. */
+const CDN_PURGE_BACKOFF_MS = 500;
+const backoffAfter = (tried: number) => CDN_PURGE_BACKOFF_MS * 2 ** (tried - 1);
+/**
+ * Each try's share of what the pauses leave of the deadline, so a stalled try leaves the next as
+ * long. Whole milliseconds, since AbortSignal.timeout throws on any other delay.
+ */
+const CDN_PURGE_TRY_TIMEOUT_MS = Math.floor(
+  (CDN_PURGE_DEADLINE_MS -
+    CDN_PURGE_AGAIN_AFTER_MS -
+    2 * CDN_PURGE_BACKOFF_MS * (2 ** (CDN_PURGE_TRIES - 1) - 1)) /
+    (2 * CDN_PURGE_TRIES),
+);
 
 /** Each hour's count, from Fastly's historical stats for one field. */
 const hourlyRequestsSchema = z.object({
@@ -16,6 +43,8 @@ const hourlyBandwidthSchema = z.object({
   data: z.array(z.object({ bandwidth: z.number().nonnegative() })),
 });
 const itemSchema = z.object({ item_key: z.string(), item_value: z.string() });
+/** A purge Fastly took, with the ID it gave it. */
+const purgeSchema = z.object({ status: z.literal("ok"), id: z.string().min(1) });
 /** How Fastly's API says what failed: its older endpoints in msg and detail, newer ones in title. */
 const errorSchema = z.object({
   msg: z.string().nullish(),
@@ -24,6 +53,7 @@ const errorSchema = z.object({
 });
 
 const sum = (counts: number[]) => counts.reduce((total, count) => total + count, 0);
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Fastly's words for why a call failed, or the body as it came. */
 function fastlyWords(body: string): string {
@@ -38,70 +68,71 @@ function fastlyWords(body: string): string {
   return [error.data.msg ?? error.data.title, error.data.detail].filter(Boolean).join(": ") || body;
 }
 
+/** Fastly's API with a token: `url` and `fetchImpl` stand in for it in tests. */
+interface FastlyApi {
+  token: string;
+  url?: string;
+  fetchImpl?: typeof fetch;
+}
+
+/** One call to Fastly's API; rejects with what failed, in Fastly's words when it answered. */
+async function callFastly<T>(
+  { token, url = FASTLY_API_URL, fetchImpl = fetch }: FastlyApi,
+  method: "GET" | "PUT" | "POST",
+  path: string,
+  schema: z.ZodType<T>,
+  { body, timeoutMs = FASTLY_CALL_TIMEOUT_MS }: { body?: URLSearchParams; timeoutMs?: number } = {},
+): Promise<T> {
+  const what = `Fastly's ${method} ${path.split("?")[0]}`;
+  let text: string;
+  let status: number;
+  try {
+    const response = await fetchImpl(`${url}${path}`, {
+      method,
+      headers: { "Fastly-Key": token, Accept: "application/json" },
+      body,
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    status = response.status;
+    text = await response.text();
+  } catch (error) {
+    throw new Error(`${what} couldn't be reached: ${failureCause(error)}`, { cause: error });
+  }
+  if (status < 200 || status >= 300) {
+    throw new Error(`${what} answered HTTP ${status}: ${fastlyWords(text)}`);
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    throw new Error(`${what} answered with a body that isn't JSON`, { cause: error });
+  }
+  const answer = schema.safeParse(parsed);
+  if (!answer.success) {
+    throw new Error(`${what} answered in a shape this server doesn't read`, {
+      cause: answer.error,
+    });
+  }
+  return answer.data;
+}
+
 /**
  * Fastly's service in front of the site, through its API: the service's hourly stats for its usage,
  * which trail what it serves by a few minutes, and the croquis_cdn edge dictionary for the switch.
  */
 export function createFastlyCdn({
-  token,
   serviceId,
   dictionaryId,
-  url = FASTLY_API_URL,
-  fetchImpl = fetch,
-}: {
-  token: string;
-  serviceId: string;
-  dictionaryId: string;
-  url?: string;
-  fetchImpl?: typeof fetch;
-}): Cdn {
-  async function call<T>(
-    method: "GET" | "PUT",
-    path: string,
-    schema: z.ZodType<T>,
-    body?: URLSearchParams,
-  ): Promise<T> {
-    const what = `Fastly's ${method} ${path.split("?")[0]}`;
-    let text: string;
-    let status: number;
-    try {
-      const response = await fetchImpl(`${url}${path}`, {
-        method,
-        headers: { "Fastly-Key": token, Accept: "application/json" },
-        body,
-        signal: AbortSignal.timeout(FASTLY_CALL_TIMEOUT_MS),
-      });
-      status = response.status;
-      text = await response.text();
-    } catch (error) {
-      throw new Error(`${what} couldn't be reached: ${failureCause(error)}`, { cause: error });
-    }
-    if (status < 200 || status >= 300) {
-      throw new Error(`${what} answered HTTP ${status}: ${fastlyWords(text)}`);
-    }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text);
-    } catch (error) {
-      throw new Error(`${what} answered with a body that isn't JSON`, { cause: error });
-    }
-    const answer = schema.safeParse(parsed);
-    if (!answer.success) {
-      throw new Error(`${what} answered in a shape this server doesn't read`, {
-        cause: answer.error,
-      });
-    }
-    return answer.data;
-  }
-
+  ...api
+}: FastlyApi & { serviceId: string; dictionaryId: string }): Cdn {
   const dictionary = `/service/${serviceId}/dictionary/${dictionaryId}`;
   return {
     usageSince: async (from) => {
       const query = `from=${Math.floor(from.getTime() / 1000)}&by=hour`;
       const stats = `/stats/service/${serviceId}/field`;
       const [requests, bandwidth] = await Promise.all([
-        call("GET", `${stats}/requests?${query}`, hourlyRequestsSchema),
-        call("GET", `${stats}/bandwidth?${query}`, hourlyBandwidthSchema),
+        callFastly(api, "GET", `${stats}/requests?${query}`, hourlyRequestsSchema),
+        callFastly(api, "GET", `${stats}/bandwidth?${query}`, hourlyBandwidthSchema),
       ]);
       return {
         requests: sum(requests.data.map((hour) => hour.requests)),
@@ -109,14 +140,50 @@ export function createFastlyCdn({
       };
     },
     readSwitch: async () => {
-      const items = await call("GET", `${dictionary}/items`, z.array(itemSchema));
+      const items = await callFastly(api, "GET", `${dictionary}/items`, z.array(itemSchema));
       const value = (key: keyof CdnSwitch) =>
         items.find(({ item_key }) => item_key === key)?.item_value ?? UNSET_SWITCH[key];
       return { cap: value("cap"), warned: value("warned") };
     },
     setSwitch: async (item, value) => {
       const body = new URLSearchParams({ item_value: value });
-      await call("PUT", `${dictionary}/item/${item}`, itemSchema, body);
+      await callFastly(api, "PUT", `${dictionary}/item/${item}`, itemSchema, { body });
     },
+  };
+}
+
+/**
+ * Purges URLs from every Fastly location through its API, by host and path, each twice,
+ * CDN_PURGE_AGAIN_AFTER_MS apart. Each purge gets CDN_PURGE_TRIES tries, with a growing pause between
+ * them, all within CDN_PURGE_DEADLINE_MS.
+ */
+export function createFastlyPurge(api: FastlyApi): CdnPurge {
+  /** One purge of `imageUrl`, retried; true once Fastly took it. */
+  async function purgeOnce(imageUrl: string): Promise<boolean> {
+    for (let tried = 1; ; tried++) {
+      try {
+        const { host, pathname } = new URL(imageUrl);
+        const { id } = await callFastly(api, "POST", `/purge/${host}${pathname}`, purgeSchema, {
+          timeoutMs: CDN_PURGE_TRY_TIMEOUT_MS,
+        });
+        logInfo("cdn.purge.completed", { imageUrl, purgeId: id });
+        return true;
+      } catch (error) {
+        if (tried >= CDN_PURGE_TRIES) {
+          logFailure("cdn.purge.failed", error, { imageUrl, count: tried });
+          return false;
+        }
+        logFailure("cdn.purge.retrying", error, { imageUrl, count: tried });
+        await pause(backoffAfter(tried));
+      }
+    }
+  }
+  async function purgeTwice(imageUrl: string): Promise<boolean> {
+    if (!(await purgeOnce(imageUrl))) return false;
+    await pause(CDN_PURGE_AGAIN_AFTER_MS);
+    return purgeOnce(imageUrl);
+  }
+  return {
+    purge: async (urls) => (await Promise.all(urls.map(purgeTwice))).every(Boolean),
   };
 }

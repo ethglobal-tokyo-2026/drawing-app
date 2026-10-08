@@ -5,7 +5,6 @@ import {
   stickers,
   stickerTimelapses,
   ticketUses,
-  users,
   type Db,
 } from "@drawing-app/db";
 import { createHash } from "node:crypto";
@@ -15,7 +14,6 @@ import type { AppDeps } from "../deps.ts";
 import { diagnosticStep, failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import {
   loadStickers,
-  optedIntoNsfw,
   stickerPlacementSchema,
   stickerPngsSchema,
   stickerSchema,
@@ -38,7 +36,6 @@ export type SealResponse = z.infer<typeof sealResponseSchema>;
 export type SealRefusal =
   | { status: 400; error: "invalid_request"; detail: string }
   | { status: 403; error: "ticket_not_yours"; detail: string }
-  | { status: 403; error: "nsfw_not_opted_in"; detail: string }
   | { status: 404; error: "ticket_not_found"; detail: string }
   | { status: 409; error: "ticket_already_used"; detail: string }
   | { status: 503; error: "mint_failed"; detail: string };
@@ -196,18 +193,6 @@ export async function sealSticker(
   // A ticket's mode is fixed at its spend, so the transaction's second checkTicket needn't check it.
   const modeRefusal = checkTicketMode(form, ticket.kyotoSeikaPractice);
   if (modeRefusal) return { refused: modeRefusal };
-
-  if (form.nsfw) {
-    const artist = deps.db
-      .select({ nsfwOptedInAt: users.nsfwOptedInAt })
-      .from(users)
-      .where(eq(users.id, userId))
-      .get();
-    if (!artist || !optedIntoNsfw(artist)) {
-      const detail = "Only a person with the NSFW opt-in on can seal an NSFW sticker";
-      return { refused: { status: 403, error: "nsfw_not_opted_in", detail } };
-    }
-  }
 
   const pngs: StickerPngs = {
     png: await bytesOf(form.png),

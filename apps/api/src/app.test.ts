@@ -8,12 +8,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createServer, STICKER_IMAGES_PATH } from "./app.ts";
 import { validate } from "./errors.ts";
-import { createDiskImageStore } from "./services/imageStore.ts";
+import { createDiskImageStore, drawingUrls } from "./services/imageStore.ts";
 import { setSessionCookie, type AppEnv } from "./session.ts";
 import type { StickerImages } from "./shapes.ts";
+import { markNsfwResponseSchema } from "./stickers/markNsfw.ts";
+import { sweepCdnPurges } from "./stickers/nsfwDrawing.ts";
 import { sealImages } from "./stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
-import { fakeServerLog } from "./testing/fakes.ts";
+import { fakeCdnPurge, fakeServerLog } from "./testing/fakes.ts";
+import { captureLogLines } from "./testing/logLines.ts";
 import { insertSealedSticker } from "./testing/rows.ts";
 import { bodyOf, refusalOf } from "./testing/responses.ts";
 
@@ -161,14 +164,13 @@ describe("sticker images", () => {
 
   const get = (path: string) => createServer(test.deps, imageDir).request(path);
 
-  /** Where the box serves the images, and the CDN in front of it, which asks the box for the same paths. */
-  const box = `https://sticker.test${STICKER_IMAGES_PATH}`;
-  const cdn = `https://cdn.test${STICKER_IMAGES_PATH}`;
+  /** Where the box serves the images. */
+  const base = `https://sticker.test${STICKER_IMAGES_PATH}`;
 
   /** A disk store with a new sticker's images saved in it, under their content hash. */
   async function savedImages() {
     const pngs = sealImages();
-    const store = createDiskImageStore(imageDir, { imageBaseUrl: box, cdnBaseUrl: cdn });
+    const store = createDiskImageStore(imageDir, base);
     const contentHash = sha256Hex(pngs.png);
     await store.save(contentHash, pngs);
     return { store, pngs, contentHash };
@@ -180,20 +182,19 @@ describe("sticker images", () => {
     ...Object.values(webp),
   ];
 
-  /** Asserts the server answers `url`'s path to anyone, cached for good and readable from any origin. */
+  /** Asserts the server answers `url`'s path to anyone, cached for good. */
   async function expectPublic(url: string) {
     const response = await get(new URL(url).pathname);
     expect(response.status, url).toBe(200);
     expect(response.headers.get("cache-control"), url).toMatch(/^public,.*immutable/);
-    expect(response.headers.get("access-control-allow-origin"), url).toBe("*");
     return response;
   }
 
-  it("load from the CDN, which the box answers without a session, cached for good and readable from any origin", async () => {
+  it("load from the box's folder, answered without a session and cached for good", async () => {
     const { store, pngs, contentHash } = await savedImages();
     const urls = store.urls(contentHash);
     for (const url of urlsIn(urls)) {
-      expect(url.startsWith(`${cdn}/`), url).toBe(true);
+      expect(url.startsWith(`${base}/`), url).toBe(true);
       await expectPublic(url);
     }
     const png = await expectPublic(urls.png);
@@ -202,7 +203,7 @@ describe("sticker images", () => {
     expect(webp.headers.get("content-type")).toBe("image/webp");
   });
 
-  it("show an NSFW sticker's drawing from the box, only to an opted-in session, never publicly cached or read across origins", async () => {
+  it("show an NSFW sticker's drawing only to an opted-in session, never publicly cached", async () => {
     const { store, contentHash } = await savedImages();
     const artistId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
     insertSealedSticker(test.db, artistId, { nsfw: true, contentHash });
@@ -211,26 +212,20 @@ describe("sticker images", () => {
       server.request(new URL(url).pathname, {
         headers: userId === undefined ? {} : await test.signInAs(userId),
       });
-    const optInUrls = store.optInUrls(contentHash);
-    const onBox = urlsIn(optInUrls).filter((url) => url.startsWith(`${box}/`));
-    expect(onBox.toSorted()).toEqual(
-      [optInUrls.png, optInUrls.flat, optInUrls.webp.sticker].toSorted(),
-    );
+    const urls = store.urls(contentHash);
+    const drawing = drawingUrls(urls);
 
-    for (const url of onBox) {
+    for (const url of drawing) {
       for (const viewer of [undefined, insertUser(test.db)]) {
         const refused = await getAs(url, viewer);
-        expect(refused.headers.get("access-control-allow-origin")).toBeNull();
         expect(await refusalOf(refused)).toMatchObject({ status: 403, error: "nsfw_not_opted_in" });
       }
       const optedIn = await getAs(url, artistId);
       expect(optedIn.status).toBe(200);
       expect(optedIn.headers.get("cache-control")).toMatch(/^private,/);
-      expect(optedIn.headers.get("access-control-allow-origin")).toBeNull();
     }
-    // The rest, such as the cut's mask, show no drawing, so they stay public, on the CDN.
-    for (const url of urlsIn(optInUrls).filter((url) => !onBox.includes(url))) {
-      expect(url.startsWith(`${cdn}/`), url).toBe(true);
+    // The rest, such as the cut's mask, show no drawing, so they stay public.
+    for (const url of urlsIn(urls).filter((url) => !drawing.includes(url))) {
       await expectPublic(url);
     }
   });
@@ -239,6 +234,66 @@ describe("sticker images", () => {
     const response = await get(`${STICKER_IMAGES_PATH}/${sha256Hex(new Uint8Array([9]))}.png`);
     expect(response.headers.get("cache-control")).toBeNull();
     expect(await refusalOf(response)).toMatchObject({ status: 404, error: "image_not_found" });
+  });
+
+  describe("once a sticker that shows them is marked 18+", () => {
+    /**
+     * Alice's sticker, sealed from a new drawing whose files the box serves, and a server whose CDN
+     * purge keeps what it's asked. `mark` marks a sticker 18+ through the server's own route.
+     */
+    async function aliceSealed() {
+      const { store, pngs, contentHash } = await savedImages();
+      // The API's own store makes the veil from them.
+      await test.images.save(contentHash, pngs);
+      const purge = fakeCdnPurge();
+      const deps = { ...test.deps, cdnPurge: purge };
+      const server = createServer(deps, imageDir);
+      const aliceId = insertUser(test.db);
+      const aliceSticker = insertSealedSticker(test.db, aliceId, { contentHash });
+      const mark = async (userId: string, stickerId: string) =>
+        bodyOf(
+          await server.request(`/api/stickers/${stickerId}/nsfw`, {
+            method: "POST",
+            headers: await test.signInAs(userId),
+          }),
+          markNsfwResponseSchema,
+        );
+      return {
+        contentHash,
+        purge,
+        aliceId,
+        aliceSticker,
+        mark,
+        sweep: () => sweepCdnPurges(deps),
+        drawing: drawingUrls(store.urls(contentHash)),
+      };
+    }
+
+    it("stay public, and purge nothing, while another sticker that isn't marked shows the drawing", async () => {
+      const logs = captureLogLines();
+      const scene = await aliceSealed();
+      const malloryId = insertUser(test.db);
+      const copy = insertSealedSticker(test.db, malloryId, { contentHash: scene.contentHash });
+      const marked = await scene.mark(malloryId, copy);
+      for (const url of scene.drawing) await expectPublic(url);
+      await scene.sweep();
+      expect(scene.purge.urls).toEqual([]);
+      expect(marked).toMatchObject({ sticker: { nsfw: true }, cdnPurged: false });
+      logs.expectLogged("cdn.purge.skipped", { stickerId: copy });
+    });
+
+    it("go private, and are purged, when no other sticker shows the drawing", async () => {
+      const scene = await aliceSealed();
+      expect(await scene.mark(scene.aliceId, scene.aliceSticker)).toMatchObject({
+        cdnPurged: true,
+      });
+      for (const url of scene.drawing) {
+        const refused = await get(new URL(url).pathname);
+        expect(await refusalOf(refused)).toMatchObject({ status: 403, error: "nsfw_not_opted_in" });
+      }
+      const purged = drawingUrls(test.images.urls(scene.contentHash));
+      expect(scene.purge.urls.toSorted()).toEqual(purged.toSorted());
+    });
   });
 });
 

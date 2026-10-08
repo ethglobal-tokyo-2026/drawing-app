@@ -1,6 +1,4 @@
-import { stickers, type Db } from "@drawing-app/db";
 import { serveStatic } from "@hono/node-server/serve-static";
-import { and, eq } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { except } from "hono/combine";
 import { createMiddleware } from "hono/factory";
@@ -18,6 +16,7 @@ import { stickerRoutes } from "./routes/stickers.ts";
 import { ticketRoutes } from "./routes/tickets.ts";
 import { requireSession, sessionUser, type AppEnv } from "./session.ts";
 import { optedIntoNsfw } from "./shapes.ts";
+import { isNsfwDrawing } from "./stickers/nsfwDrawing.ts";
 import { requestDiagnostics } from "./requestDiagnostics.ts";
 
 /**
@@ -75,18 +74,10 @@ const serverLogQuerySchema = z.object({
 /** The files that show a sticker's drawing, by its content hash: its PNG, its WebP and the flat sheet. */
 const DRAWING_FILE = /^\/(0x[0-9a-f]{64})(?:\.png|\.webp|\.flat\.png)$/;
 
-/** Whether an NSFW sticker was sealed with this content hash, so its files show its drawing. */
-const isNsfwDrawing = (db: Db, contentHash: string) =>
-  db
-    .select({ id: stickers.id })
-    .from(stickers)
-    .where(and(eq(stickers.contentHash, contentHash), eq(stickers.nsfw, true)))
-    .get() !== undefined;
-
 /**
- * Serves the files that show an NSFW sticker's drawing only to an opted-in session, never publicly
- * cached; anyone else gets 403 nsfw_not_opted_in. Every other image is public: cached for good, and
- * readable from any origin, as the app reads the CDN's copies on canvases and as CSS masks.
+ * Serves the files that show a drawing only NSFW stickers show to an opted-in session alone, never
+ * publicly cached; anyone else gets 403 nsfw_not_opted_in. Every other image is public, cached for
+ * good.
  */
 const imageAccess = (deps: AppDeps) =>
   createMiddleware(async (c, next) => {
@@ -100,9 +91,7 @@ const imageAccess = (deps: AppDeps) =>
       }
     }
     await next();
-    // serveStatic's onFound runs after it has made the response, too late to add a header. The CDN
-    // keeps the first copy it gets, so the public ones carry CORS whether or not the request asked.
-    if (!optInOnly) c.header("Access-Control-Allow-Origin", "*");
+    // serveStatic's onFound runs after it has made the response, too late to add a header.
     if (!c.res.ok) return;
     const scope = optInOnly ? "private" : "public";
     c.header("Cache-Control", `${scope}, max-age=${IMMUTABLE_MAX_AGE_S}, immutable`);
