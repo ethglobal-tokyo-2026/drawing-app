@@ -84,7 +84,7 @@ async function giveInLine(t: ReturnType<typeof setup>, answer: Promise<GiftSendO
     takeOutMs: 0,
     report: () => {},
   });
-  flow.chooseLineChat();
+  flow.give();
   await vi.advanceTimersByTimeAsync(0);
   return flow;
 }

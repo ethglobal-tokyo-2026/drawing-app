@@ -1,4 +1,4 @@
-/* Giving: the give sheet over the sticker, the gift bag while it's packed, and "Closed and sent". */
+/* Giving: the gift bag under the given sticker's silhouette, from packing to "Closed and sent". */
 
 .giving {
   position: absolute;
@@ -9,8 +9,8 @@
   color: var(--ink);
 }
 
-/* The sticker being given, above the sheet. Once it's in the bag, its silhouette stays behind. A tap
-   on it falls through to the scrim, which closes the sheet. */
+/* The sticker being given, above the sheet: it's in the bag from the start, so only its silhouette
+   stays behind. A tap on it falls through to the scrim, which closes the sheet. */
 .giving__sticker {
   position: absolute;
   left: 0;
@@ -23,22 +23,7 @@
   pointer-events: none;
 }
 
-/* The figure sits above the scrim, so the object being given isn't dimmed with the page. */
-.giving__figure {
-  position: relative;
-  z-index: var(--z-sheet);
-  width: 206px;
-  height: 206px;
-  object-fit: contain;
-  transform: rotate(-3deg);
-  filter: var(--sticker-cut) var(--sticker-cast);
-}
-
-.giving__figure.nsfw-img {
-  filter: var(--sticker-cut) drop-shadow(0 0 2px var(--foil-rose))
-    drop-shadow(0 0 5px var(--foil-blush));
-}
-
+/* Above the scrim, so what's being given isn't dimmed with the page. */
 .giving__given-sticker-silhouette {
   position: relative;
   z-index: var(--z-sheet);

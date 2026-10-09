@@ -28,7 +28,7 @@ export const giving = {
     /** The Gift Message sent through LINE: its button, which opens the gift in the app */
     open: { en: "Open your gift", ja: "ギフトをひらく" },
   },
-  /** Giving's first screen: the sheet's title ("Give No.0147"); and the give sheet's key once a sticker is picked */
+  /** The give sheet on someone else's sticker board: its key once a sticker is picked ("Give No.0147") */
   give: { en: "Give {{no}}", ja: "{{no}}を贈る" },
   /** Giving from someone else's sticker board: picking one of yours first. */
   giveSheet: {
@@ -61,7 +61,7 @@ export const giving = {
       en: "18+ stickers only go to people who turned on Show 18+ stickers, and <name/> hasn’t.",
       ja: "18+のシールは、<wbr/>「18+のシールを表示する」を<wbr/>オンにした人にだけ<wbr/>贈れます。<wbr/><name/>さんは<wbr/>オンにしていません。",
     },
-    /** Giving's first screen, for an NSFW sticker: fine print on who can open the gift */
+    /** Giving, for an NSFW sticker: fine print at the foot of the open gift bag's screens, from Preparing your gift on, on who can open the gift */
     whoCanOpen: {
       en: "18+ sticker: only someone who turned on Show 18+ stickers can open this gift.",
       ja: "18+のシール：<wbr/>「18+のシールを表示する」を<wbr/>オンにした人だけが<wbr/>このギフトを<wbr/>ひらけます。",
@@ -72,16 +72,11 @@ export const giving = {
     en: "{{no}} · <duration/> · {{day}} · <name/>",
     ja: "{{no}}・<duration/>・{{day}}・<name/>",
   },
-  /** Giving's first screen: how the sticker goes out. */
-  sheet: {
-    /** Giving's first screen: the bold title of the aqua row that packs the sticker and opens LINE's friend picker */
-    sendInChat: { en: "Send in a LINE chat", ja: "LINEのトークで送る" },
-  },
-  /** "Can’t find them?", in the give sheet's place: for a friend LINE's picker leaves out. */
+  /** "Can’t find them?", in Not sent yet's place: for a friend LINE's picker leaves out. */
   cantFind: {
-    /** Giving's first screen: the quiet link under "Send in a LINE chat"; and the title of the screen it opens in the sheet */
+    /** Giving's "Not sent yet" screen: the quiet link under Send in LINE; and the title of the screen it opens in the sheet */
     title: { en: "Can’t find them?", ja: "相手が見つからない？" },
-    /** Giving's "Can't find them?" screen: the back arrow's name for assistive tech */
+    /** Giving's "Can't find them?" screen: the back arrow's name for assistive tech, which goes back to Not sent yet */
     back: { en: "Back", ja: "戻る" },
     /** Giving's "Can't find them?" screen: the line under its title, on who LINE's friend picker leaves out */
     lead: {
@@ -102,13 +97,8 @@ export const giving = {
     },
   },
   preparing: {
-    /** Giving, while the sticker goes into the gift bag before LINE's friend picker opens: the sheet's title */
+    /** Giving, as Give opens it: the sheet's title while the sticker goes into the gift bag, before LINE's friend picker opens */
     title: { en: "Preparing your gift", ja: "ギフトを準備中" },
-    /** Giving's “Preparing your gift” screen: the line under its title, saying LINE's friend picker opens next and nothing is sent yet */
-    lead: {
-      en: "Getting your gift ready. LINE’s friend picker opens next; nothing is sent until you pick a chat.",
-      ja: "ギフトを<wbr/>準備しています。<wbr/>次に<wbr/>LINEの<wbr/>友だち選択が<wbr/>ひらきます。<wbr/>トークを<wbr/>選ぶまで、<wbr/>何も<wbr/>送られません。",
-    },
     /** Giving's “Preparing your gift” screen: the send key's label while the sticker is being prepared */
     button: { en: "Preparing…", ja: "準備中…" },
     /** What a long wait is waiting on, by step: the line under “Preparing your gift” once it has run long. */
@@ -169,7 +159,7 @@ export const giving = {
     },
     /** Giving, with the sticker in the open gift bag: the aqua key that opens LINE's friend picker (again) */
     send: { en: "Send in LINE", ja: "LINEで送る" },
-    /** Giving, with the sticker in the open gift bag: the quiet link under Send in LINE that lifts it back out, back to the first screen; and the sticker detail of a sticker in a gift: the quiet link under its note, and its confirm's key */
+    /** Giving, with the sticker in the open gift bag: the quiet link under Send in LINE that lifts it back out and closes Giving; and the sticker detail of a sticker in a gift: the quiet link under its note, and its confirm's key */
     takeOut: { en: "Take it out", ja: "取り出す" },
     /** Giving's "Not sent yet" screen: an alert when Croquis couldn't pack the gift, with why */
     couldntPack: {

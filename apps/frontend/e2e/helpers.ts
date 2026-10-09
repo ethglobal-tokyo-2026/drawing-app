@@ -314,7 +314,10 @@ export async function yenShown(price: Locator) {
   return Number(yen.replaceAll(",", ""));
 }
 
-/** Opens Giving for a sticker on your own board: a tap selects it, its toolbar's Give opens Giving. */
+/**
+ * Gives a sticker on your own board: a tap selects it, and its toolbar's Give opens Giving, which
+ * packs it at once.
+ */
 export async function giveFromBoard(page: Page, language: Language, no: string) {
   await boardSticker(page, language, no).click();
   await page
@@ -325,7 +328,7 @@ export async function giveFromBoard(page: Page, language: Language, no: string) 
 
 /**
  * The Gift Claim Token from the app's own answer to packaging the gift, which the Gift Message's link
- * ends in. Ask before Giving packs, so the answer isn't missed.
+ * ends in. Ask before Give, which packs at once, so the answer isn't missed.
  */
 export function giftClaimTokenFrom(page: Page) {
   return page
@@ -346,12 +349,10 @@ export function giftClaimTokenFrom(page: Page) {
 }
 
 /**
- * Giving, from its first screen: Send in a LINE chat drops the sticker in the open gift bag, and
- * LIFF Mock's friend picker sends the Gift Message; the bag closes, and Giving goes back to the board.
+ * Giving, once Give has opened it: the sticker drops in the open gift bag, and LIFF Mock's friend
+ * picker sends the Gift Message; the bag closes, and Giving goes back to the board.
  */
-export async function sendInLineChat(page: Page, language: Language, no: string) {
-  const sheet = page.getByRole("dialog", { name: say(giving.give, language, { no }) });
-  await sheet.getByRole("button", { name: say(giving.sheet.sendInChat, language) }).click();
+export async function backToBoardOnceSent(page: Page, language: Language) {
   const bag = (state: "open" | "closed") =>
     page.getByRole("img", { name: startsWith(say(giving.giftBag.pictured[state], language)) });
   await expect(bag("open")).toBeVisible();
