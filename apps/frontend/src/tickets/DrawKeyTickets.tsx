@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "../i18n/react";
 import { formatRefillTime } from "./refill";
 import { ReserveStar, ResinCoat } from "./ReserveResin";
@@ -75,9 +75,16 @@ function KeyTicket({ kind, print, behind = false, pop = false, style }: TicketPr
  * (ticketView). One Seal Yellow ticket ×daily, with the reserve ticket behind it when there are any; the reserve
  * ticket alone once the daily ones are used; with neither, the empty backing printed "New at 12:00 AM". They're
  * paper under the key, not part of it: they take no taps, the key sinks over them, and the key's own name says
- * what's left. When Draw spends a ticket, the front one peels off as the canvas opens.
+ * what's left. When Draw spends a ticket, the front one peels off as the canvas opens. Memoized: the board
+ * re-renders on every selection and drop.
  */
-export function DrawKeyTickets({ tickets, peel = false }: { tickets: Tickets; peel?: boolean }) {
+export const DrawKeyTickets = memo(function DrawKeyTickets({
+  tickets,
+  peel = false,
+}: {
+  tickets: Tickets;
+  peel?: boolean;
+}) {
   const { t } = useTranslation();
   const view = ticketView(tickets);
   const [front, frontWidth] = useWidth<HTMLSpanElement>();
@@ -120,4 +127,4 @@ export function DrawKeyTickets({ tickets, peel = false }: { tickets: Tickets; pe
       </span>
     </span>
   );
-}
+});

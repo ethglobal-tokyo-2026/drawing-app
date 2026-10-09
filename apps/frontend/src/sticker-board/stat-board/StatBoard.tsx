@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Ref } from "react";
+import { memo, useEffect, useRef, useState, type Ref } from "react";
 import { logOut } from "../../api/logOut";
 import { useMe } from "../../api/meContext";
 import { useApiQuery } from "../../api/useApiQuery";
@@ -42,8 +42,17 @@ interface Props {
   ref?: Ref<StatBoardHandle>;
 }
 
-/** Your stat board: the Sticker Board's back, with your User Stats pinned on the cork. */
-export function StatBoard({ turned, onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref }: Props) {
+/**
+ * Your stat board: the Sticker Board's back, with your User Stats pinned on the cork. Memoized: it stays
+ * mounted behind the board, which re-renders on every selection, hold and drop.
+ */
+export const StatBoard = memo(function StatBoard({
+  turned,
+  onFlipBack,
+  flipBackRef,
+  onTryGratitudeMiniGame,
+  ref,
+}: Props) {
   const { t } = useTranslation();
   const me = useIdentity();
   const account = useMe();
@@ -122,7 +131,7 @@ export function StatBoard({ turned, onFlipBack, flipBackRef, onTryGratitudeMiniG
       {showingGratitude && <GratitudeEventsSheet onClose={() => setShowingGratitude(false)} />}
     </>
   );
-}
+});
 
 type Translate = ReturnType<typeof useTranslation>["t"];
 

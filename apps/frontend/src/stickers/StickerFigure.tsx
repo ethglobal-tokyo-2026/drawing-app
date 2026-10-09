@@ -1,4 +1,4 @@
-import type { CSSProperties, Ref } from "react";
+import { memo, type CSSProperties, type Ref } from "react";
 import { useTranslation } from "../i18n/react";
 import { LiveResin } from "./LiveResin";
 import { madeFoil } from "./madeFoil";
@@ -44,9 +44,10 @@ const cssUrl = (url: string) => `url("${url}")`;
 /**
  * A sticker as material, filling its box: its foil when someone else drew it, it's NSFW or it was drawn in
  * Kyoto Seika Practice Mode, the image with its kiss-cut and cast shadow, live resin under the one light,
- * and the gloss sweep that plays when it sticks.
+ * and the gloss sweep that plays when it sticks. Memoized: a board sticker re-renders as it's selected,
+ * held or restacked, none of which changes its figure.
  */
-export function StickerFigure({
+export const StickerFigure = memo(function StickerFigure({
   urls,
   width,
   height,
@@ -109,4 +110,4 @@ export function StickerFigure({
       </span>
     </span>
   );
-}
+});

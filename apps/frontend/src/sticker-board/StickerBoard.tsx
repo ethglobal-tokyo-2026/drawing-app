@@ -609,6 +609,20 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     (latest, s) => (!latest || s.createdAt > latest.createdAt ? s : latest),
     null,
   );
+  const demoGiver = {
+    handle: account.handle ?? me.displayName,
+    displayName: me.displayName,
+    pictureUrl: me.pictureUrl,
+  };
+  // The stat board's callbacks are stable, so the memoized stat board skips the board's renders.
+  const demo = useRef({ newest, giver: demoGiver });
+  useLayoutEffect(() => {
+    demo.current = { newest, giver: demoGiver };
+  });
+  const tryGratitudeMiniGame = useCallback(() => {
+    const { newest: sticker, giver } = demo.current;
+    if (sticker) setGratitudeFor({ sticker, giver });
+  }, []);
   const field = useMemo(() => size && fieldOf(size.W, size.H), [size]);
   const landedNow = useCallback(() => setLandingId(undefined), []);
   /** Drawn by someone other than the board's owner: it wears foil and names its artist. */
@@ -664,10 +678,14 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     save(sticker, spotsIn(layout, placement));
   };
 
+  const turnBack = useCallback(() => setTurned(false), []);
   // Turning over lets go of the selected sticker, so the board comes back without a stray toolbar.
   const turn = (over: boolean) => {
-    setTurned(over);
-    if (!over) return;
+    if (!over) {
+      turnBack();
+      return;
+    }
+    setTurned(true);
     setWasTurned(true);
     // Chips still playing end with the turn, so they don't start over when the board turns back.
     if (greeting) setChipsDone(true);
@@ -1154,21 +1172,9 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             <StatBoard
               ref={statBoard}
               turned={turned}
-              onFlipBack={() => turn(false)}
+              onFlipBack={turnBack}
               flipBackRef={flipBack}
-              onTryGratitudeMiniGame={
-                newest
-                  ? () =>
-                      setGratitudeFor({
-                        sticker: newest,
-                        giver: {
-                          handle: account.handle ?? me.displayName,
-                          displayName: me.displayName,
-                          pictureUrl: me.pictureUrl,
-                        },
-                      })
-                  : null
-              }
+              onTryGratitudeMiniGame={newest ? tryGratitudeMiniGame : null}
             />
           </Suspense>
         )
