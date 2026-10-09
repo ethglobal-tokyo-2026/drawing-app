@@ -6,6 +6,9 @@
  * return at their first check.
  */
 
+import { LARGE_SCREEN } from "../ui/largeScreen";
+import { deviceLines, readDeviceFacts } from "./deviceFacts";
+
 /** Something that happened, on the performance.now() clock. */
 interface TimelineEvent {
   at: number;
@@ -472,12 +475,12 @@ export function readPerformanceRecording(): {
   return log && { summary: log.summary(), slowFrames: log.slowFrames() };
 }
 
-/** The phone and browser, for the report, and the clock's step where it's a whole ms or more. */
+/** The device and its browser, for the report, and the clock's step where it's a whole ms or more. */
 export function describeDevice(): string {
-  const { width, height } = window.screen;
+  const lines = deviceLines(readDeviceFacts(), window.matchMedia(LARGE_SCREEN).matches);
   const step = clockStepMs();
-  const clock = step >= 1 ? `, clock in ${Math.round(step)}ms steps` : "";
-  return `${navigator.userAgent}\nScreen ${width}×${height} at ${devicePixelRatio}x, window ${innerWidth}×${innerHeight}${clock}`;
+  if (step >= 1) lines.push(`Clock: ${Math.round(step)}ms steps`);
+  return lines.join("\n");
 }
 
 /**

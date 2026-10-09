@@ -16,6 +16,7 @@ import { AddressDialog } from "./AddressDialog";
 import { AddressPapers } from "./AddressPapers";
 import { useSuiAddress } from "./addresses";
 import { DeveloperSlip } from "./DeveloperSlip";
+import { DeviceDetails } from "./DeviceDetails";
 import { GratitudeEventsSheet } from "./GratitudeEvents";
 import { GratitudeDemoControls } from "./GratitudeDemoControls";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
@@ -108,6 +109,7 @@ export function StatBoard({ turned, onFlipBack, flipBackRef, onTryGratitudeMiniG
           <DeveloperSlip>
             <SendTestMessage senderName={me.displayName} />
             <LineDetails />
+            <DeviceDetails />
             <PrivyLine />
             <PrivyAccount />
             <GratitudeDemoControls onTry={onTryGratitudeMiniGame} />

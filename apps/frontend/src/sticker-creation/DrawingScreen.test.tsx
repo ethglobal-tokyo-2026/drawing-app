@@ -372,7 +372,7 @@ describe("the drawing screen after a reload", () => {
     // Its seal went out before the reload, so it's back locked for the check, which cuts it again.
     act(() => document.querySelector<HTMLButtonElement>(".seal-key")?.click());
     await settle(1000);
-    expect(chip()).toContain(strings.stickerCreation.seal.failed.onThisPhone.en);
+    expect(chip()).toContain(strings.stickerCreation.seal.failed.onThisDevice.en);
     // The cut's own words show under the chip for a report, with Copy, as every error line does.
     expect(chip()).toContain(strings.ui.errorLine.details.en);
     expect(chip()).toContain("The sealing worker stopped");

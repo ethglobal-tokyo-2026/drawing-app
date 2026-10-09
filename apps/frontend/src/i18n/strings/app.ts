@@ -40,14 +40,14 @@ export const app = {
     reload: { en: "Reload", ja: "再読み込み" },
   },
   motionPermission: {
-    /** Motion permission card, shown once over the app on iPhone: its screen-reader name */
+    /** Motion permission card, shown once over the app on iPhone and iPad: its screen-reader name */
     label: { en: "Motion permission", ja: "モーションの許可" },
-    /** Motion permission card, shown once over the app on iPhone: the question it asks, naming what shaking does and that iPhone asks once more after Allow */
+    /** Motion permission card, shown once over the app on iPhone and iPad: the question it asks, naming what shaking does and that the system asks once more after Allow */
     question: {
-      en: "Shake your phone to send gratitude? After you allow it, iPhone asks once more.",
-      ja: "端末を振って感謝を送りませんか？許可すると、iPhoneがもう一度確認します。",
+      en: "Shake to send gratitude? After you allow it, you’ll be asked once more.",
+      ja: "端末を振って感謝を送りませんか？許可すると、もう一度確認が表示されます。",
     },
-    /** Motion permission card: the key that grants motion access, after which iOS shows its own prompt */
+    /** Motion permission card: the key that grants motion access, after which iOS or iPadOS shows its own prompt */
     allow: { en: "Allow", ja: "許可する" },
     /** Motion permission card: the quiet link under Allow that declines */
     dontAllow: { en: "Don’t allow", ja: "許可しない" },

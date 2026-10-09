@@ -87,9 +87,9 @@ export const stickerCreation = {
         en: "Couldn’t pick up where you left off",
         ja: "前回の続きから再開できませんでした",
       },
-      /** Drawing screen, top left: the white label under the timer, also announced, for as long as this phone can't keep your drawing in progress, so a reload or closing the app would lose it; it goes once the drawing is kept again; the label never wraps by itself */
+      /** Drawing screen, top left: the white label under the timer, also announced, for as long as this device can't keep your drawing in progress, so a reload or closing the app would lose it; it goes once the drawing is kept again; the label never wraps by itself */
       notKept: {
-        en: "This phone can’t keep your drawing,\nso seal it before you close the app",
+        en: "This device can’t keep your drawing,\nso seal it before you close the app",
         ja: "かきかけのシールをこの端末に残せません。\nアプリを閉じる前に仕上げてください",
       },
     },
@@ -110,9 +110,9 @@ export const stickerCreation = {
     },
     /** The chip beside the seal key when a seal failed: what failed, then what to do. Its technical detail goes to the console. */
     failed: {
-      /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing failed on this phone before the server was asked; the check is the seal key's icon */
-      onThisPhone: {
-        en: "Couldn’t seal: something went wrong on this phone. Tap the check to try again.",
+      /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing failed on this device before the server was asked; the check is the seal key's icon */
+      onThisDevice: {
+        en: "Couldn’t seal: something went wrong on this device. Tap the check to try again.",
         ja: "仕上げられ<wbr/>ませんでした：<wbr/>この端末で<wbr/>問題が<wbr/>起きました。<wbr/>チェックを<wbr/>もう一度<wbr/>タップして<wbr/>ください。",
       },
       /** Drawing screen, bottom right: the chip beside the seal key, announced, when the app's server didn't answer the seal, or its answer couldn't be read; tapping the check sends the same seal again */

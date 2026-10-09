@@ -28,7 +28,7 @@
       padding-top: 14px;
       border: var(--ph-bezel) solid var(--ink);
       border-radius: calc(var(--ph-radius) + var(--ph-bezel));
-      overflow: hidden;
+      overflow: clip;
       box-shadow: var(--shadow-device);
     }
   }

@@ -1,9 +1,10 @@
 /* The drawing screen fills whatever holds it and paints its own Liner ground; the white sheet sits on
-   it with thin margins. Everything is flat label stock but the one key, the seal check. */
+   it with thin margins. Everything is flat label stock but the one key, the seal check. It clips
+   without being a scroll container, so a ticket card focused as it rises can't scroll it. */
 .drawing-screen {
   position: absolute;
   inset: 0;
-  overflow: hidden;
+  overflow: clip;
   isolation: isolate;
   background: var(--liner);
   font-family: var(--font-ui);

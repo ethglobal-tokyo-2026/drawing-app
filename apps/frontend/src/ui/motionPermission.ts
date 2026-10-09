@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * The app's one answer about reading the phone's motion. iOS asks, from a tap, once for motion and
+ * The app's one answer about reading the device's motion. iOS asks, from a tap, once for motion and
  * tilt together; other browsers need no permission. The answer is kept on this device.
  */
 export type MotionPermission = "not-needed" | "unasked" | "granted" | "denied";
@@ -106,14 +106,14 @@ export function createMotionPermission(host: MotionHost): MotionPermissionStore 
   };
 }
 
-/** iOS's motion prompt, which TypeScript's DOM types don't declare. */
 /** iPhone and iPad, iPadOS included, which reports itself as a Mac with a touch screen. */
 const isAppleMobile = () =>
   /iPhone|iPad|iPod/.test(navigator.userAgent) ||
   (navigator.userAgent.includes("Macintosh") && navigator.maxTouchPoints > 1);
 
+/** iOS's motion prompt, which TypeScript's DOM types don't declare. */
 function iosMotionPrompt(): (() => Promise<string>) | undefined {
-  // Some desktop browsers carry the prompt too; the ask is for phones that need it.
+  // Some desktop browsers carry the prompt too; the ask is for the phones and iPads that need it.
   if (!isAppleMobile()) return undefined;
   const motion: unknown = window.DeviceMotionEvent;
   if (typeof motion !== "function" || !("requestPermission" in motion)) return undefined;

@@ -120,7 +120,7 @@ export const errors = {
   },
   /** Any screen, when the server can't read a request (400), through problemOf; e.g. the Drawing screen's seal chip when a seal's images are malformed (POST /api/stickers) */
   invalid_request: {
-    en: "Croquis couldn’t read what your phone sent. Try again. If it keeps happening, tell the Croquis Official account in LINE.",
+    en: "Croquis couldn’t read what your device sent. Try again. If it keeps happening, tell the Croquis Official account in LINE.",
     ja: "クロッキーが<wbr/>その内容を<wbr/>読み取れませんでした。<wbr/>もう一度<wbr/>お試しください。<wbr/>続く場合は、<wbr/>LINEの<wbr/>クロッキー<wbr/>公式アカウントに<wbr/>お知らせください。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) when LINE refuses the ID token, through errorMessage */
@@ -285,7 +285,7 @@ export const errors = {
     en: "Couldn’t get the Sui address just now. Try again in a moment.",
     ja: "Suiアドレスをいま取得できません。少し待ってから、もう一度お試しください。",
   },
-  /** Any error line, when what failed isn't the server's answer but something on this phone or in a library, such as LINE's picker; its own English words follow as details for a report (made by the app itself, shown through problemOf) */
+  /** Any error line, when what failed isn't the server's answer but something on this device or in a library, such as LINE's picker; its own English words follow as details for a report (made by the app itself, shown through problemOf) */
   unexpected: {
     en: "Something went wrong. Try again in a moment.",
     ja: "問題が発生しました。少し待ってから、もう一度お試しください。",

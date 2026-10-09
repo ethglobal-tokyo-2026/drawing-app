@@ -58,6 +58,7 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | Reroll (a subject's die)         | 振り直し                               | The lettering beside each die, and the start of its name for screen readers           |
 | entrance exam (Settings' legend) | 入試                                   | Kyoto Seika Practice Mode's setting; its tag on a sticker's detail is 入試練習        |
 | censor bar                       | 伏せ字                                 | The bar over the university's name; its label says 大人の事情により伏せています       |
+| device (a phone or an iPad)      | 端末                                   | "This device" in notes and errors; never the device's name                            |
 
 ## Style
 

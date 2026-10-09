@@ -150,7 +150,7 @@ const SEAL_REFUSALS: ReadonlySet<string> = new Set([
 /**
  * What a failed seal request says about the server. "refused": it answered that it holds no seal for
  * this ticket, so the sheet may change. "unsent": the wait for the Sui address stopped it before it
- * left the phone. "unknown": anything else, no answer above all, after which the server may hold it.
+ * left the device. "unknown": anything else, no answer above all, after which the server may hold it.
  */
 export function sealFailure(error: unknown): "refused" | "unsent" | "unknown" {
   if (!(error instanceof ApiError)) return "unknown";
@@ -163,7 +163,7 @@ export function sealFailure(error: unknown): "refused" | "unsent" | "unknown" {
 export type SealProblem =
   | {
       kind:
-        | "onThisPhone"
+        | "onThisDevice"
         | "noAnswer"
         | "serverProblem"
         | "notOnChain"
@@ -173,10 +173,10 @@ export type SealProblem =
   /** The server's own answer, worded by its error message. */
   | { kind: "refused"; error: ApiError };
 
-/** Sorts a failed seal for its chip. `sent`: the request had left the phone. */
+/** Sorts a failed seal for its chip. `sent`: the request had left the device. */
 export function describeSealFailure(error: unknown, sent: boolean): SealProblem {
-  // An answer that can't be read is no answer; a failure before the request left is the phone's.
-  if (!(error instanceof ApiError)) return { kind: sent ? "noAnswer" : "onThisPhone" };
+  // An answer that can't be read is no answer; a failure before the request left is the device's.
+  if (!(error instanceof ApiError)) return { kind: sent ? "noAnswer" : "onThisDevice" };
   if (error.code === "line_token_expired") return { kind: "signInExpired" };
   if (error.code === "sui_wallet_not_ready") return { kind: "suiAddress" };
   if (error.code === "mint_failed") return { kind: "notOnChain" };

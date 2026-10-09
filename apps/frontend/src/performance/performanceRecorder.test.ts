@@ -483,12 +483,15 @@ describe("the recorder on the page", () => {
     );
   });
 
-  it("says when the clock moves in whole ms, as WebKit's does", () => {
+  it("says what the device says, and when the clock moves in whole ms, as WebKit's does", () => {
     let t = 0;
     const now = vi.spyOn(performance, "now").mockImplementation(() => Math.floor((t += 0.3)));
-    expect(describeDevice()).toMatch(/window \d+×\d+, clock in 1ms steps$/);
+    const device = describeDevice();
+    expect(device).toMatch(/^User agent: .+\nPlatform: /);
+    expect(device).toContain("\nLarge screen: ");
+    expect(device).toMatch(/\nClock: 1ms steps$/);
     now.mockImplementation(() => (t += 0.005));
-    expect(describeDevice()).not.toContain("clock");
+    expect(describeDevice()).not.toContain("Clock");
   });
 
   it("starts and stops at once from the switch, and keeps the setting for the next start", () => {

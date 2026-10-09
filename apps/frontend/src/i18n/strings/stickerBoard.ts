@@ -198,9 +198,9 @@ export const stickerBoard = {
         en: "Your language couldn’t be saved, so it hasn’t changed: {{reason}}",
         ja: "言語を保存できなかったため、変更していません：{{reason}}",
       },
-      /** Settings note: the alert when the language saved and the app switched, but this phone couldn't keep it for its next start, over the phone's own words for a report */
+      /** Settings note: the alert when the language saved and the app switched, but this device couldn't keep it for its next start, over the device's own words for a report */
       notKept: {
-        en: "Your language is saved, but this phone couldn’t keep it: the next time you open Croquis, it may start in the old one for a moment.",
+        en: "Your language is saved, but this device couldn’t keep it: the next time you open Croquis, it may start in the old one for a moment.",
         ja: "言語は保存しましたが、この端末には残せませんでした。次にクロッキーをひらいたとき、少しのあいだ前の言語で表示されることがあります。",
       },
     },
@@ -365,6 +365,15 @@ export const stickerBoard = {
       couldntStop: { en: "Recording couldn’t stop: {{reason}}" },
       notCopied: { en: "The report couldn’t be copied: {{reason}}. It’s below to copy by hand." },
       report: { en: "Performance report" },
+    },
+    device: {
+      title: { en: "Device" },
+      copy: { en: "Copy device details" },
+      copied: { en: "Copied. Paste it into the chat." },
+      notCopied: {
+        en: "The device details couldn’t be copied: {{reason}}. They’re below to copy by hand.",
+      },
+      text: { en: "Device details" },
     },
   },
   /** Your own sticker board. */
@@ -760,7 +769,7 @@ export const stickerBoard = {
       en: "Couldn’t load the timelapse: {{reason}}",
       ja: "タイムラプスを読み込めませんでした：{{reason}}",
     },
-    /** Sticker detail: the timelapse alert's reason when this phone couldn't play it; the player's own English words follow as details for a report */
+    /** Sticker detail: the timelapse alert's reason when this device couldn't play it; the player's own English words follow as details for a report */
     notPlayed: {
       en: "It couldn’t play here.",
       ja: "この端末では再生できませんでした。",
