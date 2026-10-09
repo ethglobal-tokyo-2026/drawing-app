@@ -226,3 +226,8 @@
   transform: rotate(-2deg);
   transform-origin: 0 0;
 }
+
+/* A time call wears no arrow, so it tucks up under the dot. */
+.timer-hint.is-call .timer-hint-label {
+  margin: 4px 0 0;
+}

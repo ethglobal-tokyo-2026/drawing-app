@@ -28,6 +28,7 @@ import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { TicketsNotLoaded } from "../tickets/TicketsNotLoaded";
 import { useTickets } from "../tickets/useTickets";
 import { clamp01 } from "../ui/easing";
+import { useSideways } from "../ui/sideways";
 import { useLargeScreen } from "../ui/largeScreen";
 import { QuietLink } from "../ui/QuietLink";
 import { releaseCanvas } from "../ui/releaseCanvas";
@@ -211,11 +212,7 @@ export function DrawingScreen({
   const [kept, setKept] = useState(true);
   const [keeper] = useState(() => new SessionKeeper(me.id, setKept));
   // The deal of a ticket spent in Kyoto Seika Manga Expression Practice Mode, and whether this sheet's was.
-  const kyotoSeikaSheet = useKyotoSeikaSheet({
-    userId: me.id,
-    dark: me.kyotoSeikaPractice && me.kyotoSeikaDarkSubjects,
-    keeper,
-  });
+  const kyotoSeikaSheet = useKyotoSeikaSheet({ userId: me.id, keeper });
   const ticketKyotoSeika = useRef(false);
   const begin = useRef<BeginKeyHandle>(null);
   // Begin was pressed: the deal tucks away before it goes.
@@ -854,20 +851,21 @@ export function DrawingScreen({
     else setPaused((p) => !p);
   };
 
-  // Every hold stops the clock: the person's pause, the board covering the screen, the seal sheet, a
-  // tool in hand.
+  // Every hold stops the clock: the person's pause, the board or the upright cover over the screen,
+  // the seal sheet, a tool in hand.
   const sealSheet = session.phase === "seal-sheet";
+  const sideways = useSideways();
   useEffect(() => {
     clock.setHolds({
       paused,
-      away: !active,
+      away: !active || sideways,
       seal: pausable && sealSheet,
       color: pausable && panel === "color",
       smoothing: pausable && panel === "smoothing",
       clear: pausable && panel === "clear",
       size: pausable && sizing,
     });
-  }, [clock, paused, active, sealSheet, panel, sizing, pausable]);
+  }, [clock, paused, active, sideways, sealSheet, panel, sizing, pausable]);
 
   // Out of tickets: the card comes up as Draw opens on a fresh sheet, and stays until the person picks
   // a way on, even if tickets come back meanwhile.
@@ -1148,6 +1146,7 @@ export function DrawingScreen({
         open={active && (sealSheet || timeUp)}
         timeUp={timeUp}
         nsfw={nsfwOn}
+        subjects={lockedPair}
         ink={readInk}
         onNsfwChange={(on) => {
           keepNsfw(on);

@@ -6,10 +6,12 @@ import { ArrowRight, GratitudeIcon, StickerBoardIcon } from "../icons";
 import { formatHandle, formatMonthDay } from "../stickers/format";
 import { EASE_OUT } from "../ui/easing";
 import { LabelButton } from "../ui/LabelButton";
+import { useLargeScreen } from "../ui/largeScreen";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
+import { useSheetDrag } from "../ui/useSheetDrag";
 import "./gift-received-notice.css";
 
 interface Props {
@@ -26,11 +28,14 @@ const FLYER_PX = 56;
 
 /**
  * "@bob received your sticker", and a heart: the giver's moment once a gift is received, over the whole phone.
- * The sticker's silhouette holds its place, and the receiver's picture sticks on beside it.
+ * The sticker's silhouette holds its place, and the receiver's picture sticks on beside it. On a large
+ * screen it's a card over the board, closed by its scrim or a swipe down its head too.
  */
 export function GiftReceivedNotice({ sticker, receiver, receivedAt, onClose }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
+  const large = useLargeScreen();
+  const drag = useSheetDrag(onClose);
   const titleId = useId();
   const root = useRef<HTMLDivElement>(null);
   const prop = useRef<HTMLDivElement>(null);
@@ -76,49 +81,54 @@ export function GiftReceivedNotice({ sticker, receiver, receivedAt, onClose }: P
       aria-labelledby={titleId}
       tabIndex={-1}
     >
-      <header className="gift-received-notice__head">
-        <h1 id={titleId} className="gift-received-notice__title">
-          {t(($) => $.giving.receivedNotice.title, { name: who })}
-          {/* A no-break space, so the heart never wraps onto a line of its own. */}
-          {"\u00a0"}
-          <GratitudeIcon className="gift-received-notice__heart" />
-        </h1>
-        <p className="gift-received-notice__sub">
-          {t(($) => $.giving.receivedNotice.lead, { name: who })}
-        </p>
-      </header>
-      <div className="gift-received-notice__stage">
-        <div ref={prop} className="gift-received-notice__prop">
-          <span
-            className="gift-received-notice__silhouette"
-            style={{ "--m": `url("${sticker.urls.mask}")` }}
-            aria-hidden="true"
-          />
-          <span className="gift-received-notice__caption">
-            <ArrowRight size={12} aria-hidden="true" />
-            {t(($) => $.giving.receivedNotice.caption, {
-              name: who,
-              date: formatMonthDay(receivedAt),
-            })}
-          </span>
-          <span ref={face} className="gift-received-notice__face">
-            <PhotoSticker src={receiver.pictureUrl} name={receiver.name} size={150} />
-          </span>
-          {arriving && (
-            <img
-              ref={flyer}
-              className="gift-received-notice__flyer"
-              src={sticker.urls.png}
-              alt=""
-              draggable={false}
+      {large && (
+        <div className="gift-received-notice__scrim" aria-hidden="true" onClick={onClose} />
+      )}
+      <div className="gift-received-notice__card" style={large ? drag.style : undefined}>
+        <header className="gift-received-notice__head" {...(large ? drag.handlers : {})}>
+          <h1 id={titleId} className="gift-received-notice__title">
+            {t(($) => $.giving.receivedNotice.title, { name: who })}
+            {/* A no-break space, so the heart never wraps onto a line of its own. */}
+            {"\u00a0"}
+            <GratitudeIcon className="gift-received-notice__heart" />
+          </h1>
+          <p className="gift-received-notice__sub">
+            {t(($) => $.giving.receivedNotice.lead, { name: who })}
+          </p>
+        </header>
+        <div className="gift-received-notice__stage">
+          <div ref={prop} className="gift-received-notice__prop">
+            <span
+              className="gift-received-notice__silhouette"
+              style={{ "--m": `url("${sticker.urls.mask}")` }}
+              aria-hidden="true"
             />
-          )}
+            <span className="gift-received-notice__caption">
+              <ArrowRight size={12} aria-hidden="true" />
+              {t(($) => $.giving.receivedNotice.caption, {
+                name: who,
+                date: formatMonthDay(receivedAt),
+              })}
+            </span>
+            <span ref={face} className="gift-received-notice__face">
+              <PhotoSticker src={receiver.pictureUrl} name={receiver.name} size={150} />
+            </span>
+            {arriving && (
+              <img
+                ref={flyer}
+                className="gift-received-notice__flyer"
+                src={sticker.urls.png}
+                alt=""
+                draggable={false}
+              />
+            )}
+          </div>
         </div>
-      </div>
-      <div className="gift-received-notice__act">
-        <LabelButton block icon={<StickerBoardIcon size={18} />} onClick={onClose}>
-          {t(($) => $.ui.backToBoard)}
-        </LabelButton>
+        <div className="gift-received-notice__act">
+          <LabelButton block icon={<StickerBoardIcon size={18} />} onClick={onClose}>
+            {t(($) => $.ui.backToBoard)}
+          </LabelButton>
+        </div>
       </div>
     </div>
   );

@@ -49,6 +49,11 @@
   animation-play-state: paused;
 }
 
+/* A picture of the deal (Kyoto Seika Practice Mode's help) keeps its line at rest. */
+.subject-balloons.is-picture .shape-ink {
+  animation: none;
+}
+
 @keyframes ink-boil {
   0% {
     visibility: visible;

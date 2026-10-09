@@ -47,9 +47,7 @@ function Harness() {
   });
   const roll = (balloon: Balloon) =>
     setDeal(
-      (d) =>
-        rollDie(TEST_SUBJECTS, d, balloon, { recent: [], dark: false, random: seededRandom(3) }) ??
-        d,
+      (d) => rollDie(TEST_SUBJECTS, d, balloon, { recent: [], random: seededRandom(3) }) ?? d,
     );
   return <SubjectBalloons deal={deal} layout={LAYOUT} onRoll={roll} />;
 }

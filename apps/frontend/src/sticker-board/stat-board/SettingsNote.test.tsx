@@ -14,9 +14,6 @@ import { keepBoard, keptBoardFor, readKeptBoardAgain } from "../lastBoard";
 import { SettingsNote } from "./SettingsNote";
 import { statsClearPeek } from "./settingsPeek";
 
-const liff = vi.hoisted(() => ({ isInClient: vi.fn(() => false), openWindow: vi.fn() }));
-vi.mock("@line/liff", () => ({ default: liff }));
-
 let unmount = () => {};
 
 afterEach(async () => {
@@ -25,8 +22,6 @@ afterEach(async () => {
   localStorage.clear();
   readKeptBoardAgain();
   vi.restoreAllMocks();
-  liff.isInClient.mockReset().mockReturnValue(false);
-  liff.openWindow.mockReset();
   await i18next.changeLanguage("en");
 });
 
@@ -44,22 +39,25 @@ const render = (setLanguageChoice: ApiClient["setLanguageChoice"]) =>
 const saving = () =>
   vi.fn<ApiClient["setLanguageChoice"]>((language) => Promise.resolve({ ...TEST_ME, language }));
 
-const picker = (host: HTMLElement) => {
-  const found = host.querySelector("select");
-  if (!found) throw new Error("No language select on the note");
+/** The language's choices, a radio group. */
+const languages = (host: HTMLElement) => {
+  const found = host.querySelector<HTMLElement>('[data-setting="language"] [role="radiogroup"]');
+  if (!found) throw new Error("No language choices on the note");
   return found;
 };
+const languageRadios = (host: HTMLElement) => [
+  ...languages(host).querySelectorAll<HTMLElement>('[role="radio"]'),
+];
 
-/** The language the select has picked, as it names it. */
-const picked = (host: HTMLElement) => picker(host).selectedOptions[0]?.textContent;
+/** The language picked, as it names it. */
+const picked = (host: HTMLElement) =>
+  languageRadios(host).find((radio) => radio.getAttribute("aria-checked") === "true")?.textContent;
 
 const choose = (host: HTMLElement, label: string) =>
   act(async () => {
-    const select = picker(host);
-    const choice = [...select.options].find((o) => o.textContent === label);
+    const choice = languageRadios(host).find((radio) => radio.textContent === label);
     if (!choice) throw new Error(`No language ${label}`);
-    select.value = choice.value;
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+    choice.click();
   });
 
 /** Show 18+ stickers, the note's first switch. */
@@ -72,9 +70,16 @@ const flip = (host: HTMLElement) => act(async () => switchOf(host).click());
 
 const alert = (host: HTMLElement) => host.querySelector('[role="alert"]')?.textContent;
 
-/** Each setting's status line, language first. */
-const statuses = (host: HTMLElement) =>
-  [...host.querySelectorAll('[role="status"]')].map((p) => p.textContent);
+/** Whether the setting named `setting` is marked busy, saving. */
+const busy = (host: HTMLElement, setting: string) =>
+  host.querySelector(`[data-setting="${setting}"]`)?.getAttribute("aria-busy");
+
+/** A save that waits for `answer`, as a slow server does. */
+function slowly<T>(answer: T) {
+  let land = () => {};
+  const request = vi.fn(() => new Promise<T>((resolve) => (land = () => resolve(answer))));
+  return { request, land: () => act(async () => land()) };
+}
 
 describe("the Settings note's language", () => {
   it("saves a choice to your account, keeps it on this phone, and switches the app to it in place", async () => {
@@ -85,9 +90,25 @@ describe("the Settings note's language", () => {
     expect(readChosenLanguage()).toBe("ja");
     expect(currentLanguage()).toBe("ja");
     expect(picked(host)).toBe("日本語");
-    expect(statuses(host)[0]).toBe(
-      i18next.t(($) => $.stickerBoard.settings.language.applied, { language: "日本語" }),
-    );
+    // The choice says it: no status line.
+    expect(host.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it("shows the choice while it saves, busy and taking no other pick, then takes picks again", async () => {
+    const { request, land } = slowly({ ...TEST_ME, language: "ja" as const });
+    const host = render(request);
+    await choose(host, "日本語");
+    expect(picked(host)).toBe("日本語");
+    expect(busy(host, "language")).toBe("true");
+    expect(languages(host).getAttribute("aria-disabled")).toBe("true");
+    await choose(host, "English");
+    expect(request).toHaveBeenCalledOnce();
+
+    await land();
+    expect(busy(host, "language")).toBe("false");
+    expect(languages(host).hasAttribute("aria-disabled")).toBe(false);
+    expect(picked(host)).toBe("日本語");
+    expect(host.querySelector('[role="status"]')).toBeNull();
   });
 
   it("says why a choice wasn't saved, and leaves this phone's choice and the app as they were", async () => {
@@ -121,9 +142,12 @@ describe("the Settings note's language", () => {
     await i18next.changeLanguage("ja");
     const host = render(saving());
     expect(host.querySelector("h3")?.textContent).toBe("設定");
-    const name = picker(host).getAttribute("aria-labelledby") ?? "";
+    const name = languages(host).getAttribute("aria-labelledby") ?? "";
     expect(document.getElementById(name)?.textContent).toBe("言語");
-    expect([...picker(host).options].map((o) => o.textContent)).toEqual(["English", "日本語"]);
+    expect(languageRadios(host).map((radio) => [radio.textContent, radio.lang])).toEqual([
+      ["English", "en"],
+      ["日本語", "ja"],
+    ]);
   });
 });
 
@@ -138,7 +162,7 @@ describe("the Settings note's 18+ switch", () => {
     expect(switchOf(host).closest("label")?.textContent).toBe("Show 18+ stickers");
   });
 
-  it("saves it to your account, forgets the board kept on this phone, and says the stickers show", async () => {
+  it("saves it to your account, forgets the board kept on this phone, and shows it on", async () => {
     const setNsfwOptIn = savingOptIn();
     const host = renderNote({ setNsfwOptIn });
     keepABoard();
@@ -146,16 +170,33 @@ describe("the Settings note's 18+ switch", () => {
     expect(setNsfwOptIn).toHaveBeenCalledExactlyOnceWith(true);
     expect(switchOf(host).checked).toBe(true);
     expect(keptBoardFor(TEST_ME.id)).toBeNull();
-    expect(statuses(host)).toEqual(["", stickerBoard.settings.nsfw.shown.en, "", ""]);
+    expect(host.querySelector('[role="status"]')).toBeNull();
   });
 
-  it("turns it off the same way, and says they're blurred now", async () => {
+  it("turns it off the same way", async () => {
     const setNsfwOptIn = savingOptIn();
     const host = renderNote({ setNsfwOptIn }, { ...TEST_ME, nsfwOptIn: true });
     expect(switchOf(host).checked).toBe(true);
     await flip(host);
     expect(setNsfwOptIn).toHaveBeenCalledExactlyOnceWith(false);
-    expect(statuses(host)).toEqual(["", stickerBoard.settings.nsfw.blurred.en, "", ""]);
+    expect(switchOf(host).checked).toBe(false);
+  });
+
+  it("shows its new state while it saves, busy and taking no flip, then takes flips again", async () => {
+    const { request, land } = slowly({ ...TEST_ME, nsfwOptIn: true });
+    const host = renderNote({ setNsfwOptIn: request });
+    await flip(host);
+    expect(switchOf(host).checked).toBe(true);
+    expect(switchOf(host).getAttribute("aria-disabled")).toBe("true");
+    expect(busy(host, "nsfw")).toBe("true");
+    await flip(host);
+    expect(switchOf(host).checked).toBe(true);
+    expect(request).toHaveBeenCalledOnce();
+
+    await land();
+    expect(busy(host, "nsfw")).toBe("false");
+    expect(switchOf(host).hasAttribute("aria-disabled")).toBe(false);
+    expect(switchOf(host).checked).toBe(true);
   });
 
   it("says why it wasn't saved, and leaves the switch and the kept board as they were", async () => {
@@ -168,6 +209,7 @@ describe("the Settings note's 18+ switch", () => {
     expect(alert(host)).toContain("Your 18+ setting couldn’t be saved, so it hasn’t changed");
     expect(host.textContent).toContain("Failed to fetch");
     expect(switchOf(host).checked).toBe(false);
+    expect(busy(host, "nsfw")).toBe("false");
     expect(keptBoardFor(TEST_ME.id)).not.toBeNull();
   });
 
@@ -181,70 +223,57 @@ describe("the Settings note's 18+ switch", () => {
 });
 
 describe("the Settings note's Kyoto Seika Practice Mode", () => {
-  const switchIn = (host: HTMLElement, setting: "kyoto-seika" | "kyoto-seika-dark") => {
-    const found = host.querySelector<HTMLInputElement>(
-      `[data-setting="${setting}"] > label ${SWITCH}`,
-    );
-    if (!found) throw new Error(`No ${setting} switch on the note`);
+  const row = (host: HTMLElement) => {
+    const found = host.querySelector<HTMLElement>('[data-setting="kyoto-seika"]');
+    if (!found) throw new Error("No Kyoto Seika Practice Mode on the note");
     return found;
   };
-  const savingSwitches = () =>
-    vi.fn<ApiClient["setKyotoSeikaPractice"]>((change) =>
-      Promise.resolve({ ...TEST_ME, kyotoSeikaPractice: true, ...change }),
+  const switchIn = (host: HTMLElement) => {
+    const found = row(host).querySelector<HTMLInputElement>(SWITCH);
+    if (!found) throw new Error("No Kyoto Seika Practice Mode switch on the note");
+    return found;
+  };
+  const help = (host: HTMLElement) =>
+    row(host).querySelector<HTMLButtonElement>(
+      `button[aria-label="${stickerBoard.settings.kyotoSeika.help.en}"]`,
     );
 
-  it("turns on in place: it saves, your tickets reload, it says so, and the dark subjects switch shows", async () => {
-    const setKyotoSeikaPractice = savingSwitches();
+  it("turns on in place: it saves, your tickets reload, and the switch shows it", async () => {
+    const setKyotoSeikaPractice = vi.fn<ApiClient["setKyotoSeikaPractice"]>((change) =>
+      Promise.resolve({ ...TEST_ME, ...change }),
+    );
     const tickets = vi.fn<ApiClient["tickets"]>(() => Promise.resolve(FRESH_TICKETS));
     const host = renderNote({ setKyotoSeikaPractice, tickets });
-    expect(host.querySelector('[data-setting="kyoto-seika-dark"]')).toBeNull();
-    await act(async () => switchIn(host, "kyoto-seika").click());
+    await act(async () => switchIn(host).click());
     expect(setKyotoSeikaPractice).toHaveBeenCalledExactlyOnceWith({ kyotoSeikaPractice: true });
-    expect(switchIn(host, "kyoto-seika").checked).toBe(true);
+    expect(switchIn(host).checked).toBe(true);
     expect(tickets).toHaveBeenCalledTimes(2);
-    expect(statuses(host)[2]).toBe(stickerBoard.settings.kyotoSeika.on.en);
-    expect(switchIn(host, "kyoto-seika-dark").checked).toBe(false);
+    expect(host.querySelector('[role="status"]')).toBeNull();
   });
 
-  it("turns dark subjects on under it, leaving the mode as it is", async () => {
-    const setKyotoSeikaPractice = savingSwitches();
-    const host = renderNote({ setKyotoSeikaPractice }, { ...TEST_ME, kyotoSeikaPractice: true });
-    await act(async () => switchIn(host, "kyoto-seika-dark").click());
-    expect(setKyotoSeikaPractice).toHaveBeenCalledExactlyOnceWith({ kyotoSeikaDarkSubjects: true });
-    expect(switchIn(host, "kyoto-seika-dark").checked).toBe(true);
-    expect(switchIn(host, "kyoto-seika").checked).toBe(true);
-  });
-
-  it("names the mode for screen readers without its censor bar", () => {
+  it("is one row, its name and then its switch, named for screen readers without its censor bar", () => {
     const host = renderNote({});
-    expect(switchIn(host, "kyoto-seika").getAttribute("aria-label")).toBe(
+    expect(switchIn(host).getAttribute("aria-label")).toBe(
       stickerBoard.settings.kyotoSeika.spokenName.en,
     );
+    expect(row(host).querySelectorAll(".settings-note__option")).toHaveLength(1);
+    expect(row(host).querySelector("legend, p")).toBeNull();
   });
 
-  it("opens the mode's note under its legend, and closes it", async () => {
+  it("has its help right after its name, and a tap on it opens the help sheet and leaves the switch alone", async () => {
     const host = renderNote({});
-    const help = host.querySelector<HTMLButtonElement>(
-      '[data-setting="kyoto-seika"] .settings-note__help',
+    const button = help(host);
+    const sheet = () => host.querySelector("[role=dialog]");
+    expect(button?.previousElementSibling?.matches(`label[for="${switchIn(host).id}"]`)).toBe(true);
+    expect(sheet()).toBeNull();
+    await act(async () => button?.click());
+    // Its code loads on the first tap.
+    await vi.waitFor(() =>
+      expect(sheet()?.getAttribute("aria-label")).toBe(
+        stickerBoard.settings.kyotoSeika.spokenName.en,
+      ),
     );
-    const note = () => document.getElementById(help?.getAttribute("aria-controls") ?? "");
-    expect(note()?.hidden).toBe(true);
-    await act(async () => help?.click());
-    expect(help?.getAttribute("aria-expanded")).toBe("true");
-    expect(note()?.hidden).toBe(false);
-    await act(async () => help?.click());
-    expect(note()?.hidden).toBe(true);
-  });
-
-  it("opens its credit's Sources in LINE's own browser inside LINE's app", () => {
-    liff.isInClient.mockReturnValue(true);
-    const host = renderNote({});
-    const sources = host.querySelector<HTMLAnchorElement>(".settings-note__credit a[href]");
-    if (!sources) throw new Error("No Sources link in the credit");
-    const tap = new MouseEvent("click", { bubbles: true, cancelable: true });
-    act(() => void sources.dispatchEvent(tap));
-    expect(tap.defaultPrevented).toBe(true);
-    expect(liff.openWindow).toHaveBeenCalledExactlyOnceWith({ url: sources.href, external: false });
+    expect(switchIn(host).checked).toBe(false);
   });
 });
 
@@ -298,21 +327,16 @@ describe("the Settings note's saves", () => {
     const host = renderNote(server);
     await choose(host, "日本語");
     await flip(host);
-    // It shows the change, says it's saving, and waits for the language's answer.
+    // It shows the change, busy, and waits for the language's answer.
     expect(switchOf(host).checked).toBe(true);
-    expect(statuses(host)[1]).toBe(stickerBoard.settings.saving.en);
+    expect(busy(host, "nsfw")).toBe("true");
     expect(server.setNsfwOptIn).not.toHaveBeenCalled();
 
     await act(async () => answerLanguage());
     expect(server.setNsfwOptIn).toHaveBeenCalledExactlyOnceWith(true);
     expect(picked(host)).toBe("日本語");
     expect(switchOf(host).checked).toBe(true);
-    expect(statuses(host)).toEqual([
-      i18next.t(($) => $.stickerBoard.settings.language.applied, { language: "日本語" }),
-      stickerBoard.settings.nsfw.shown.ja,
-      "",
-      "",
-    ]);
+    expect([busy(host, "language"), busy(host, "nsfw")]).toEqual(["false", "false"]);
   });
 });
 

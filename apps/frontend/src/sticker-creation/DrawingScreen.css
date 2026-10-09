@@ -1,9 +1,10 @@
 /* The drawing screen fills whatever holds it and paints its own Liner ground; the white sheet sits on
-   it with thin margins. Everything is flat label stock but the one key, the seal check. */
+   it with thin margins. Everything is flat label stock but the one key, the seal check. It clips
+   without being a scroll container, so a ticket card focused as it rises can't scroll it. */
 .drawing-screen {
   position: absolute;
   inset: 0;
-  overflow: hidden;
+  overflow: clip;
   isolation: isolate;
   background: var(--liner);
   font-family: var(--font-ui);
@@ -147,6 +148,10 @@
   transform-origin: 100% 0;
 }
 
+.drawing-screen[data-hand="left"] .timer-hint.is-call .timer-hint-label {
+  margin: 4px 0 0;
+}
+
 /* The wide dot grows from its top-right corner, away from the screen's edge. */
 .drawing-screen[data-hand="left"] .timer-dot.is-wide {
   translate: -4px 4px;
@@ -177,7 +182,7 @@
 /* My board stays on undo's far side, nearer the middle, as on the right. */
 .drawing-screen[data-hand="left"] > .my-board-tile {
   left: auto;
-  right: calc(18px + 2 * (46px + 6px));
+  right: calc(18px + var(--board-at));
 }
 
 .drawing-screen.is-dealt[data-hand="left"] > .my-board-tile {
@@ -202,15 +207,15 @@
   right: auto;
 }
 
-/* Kyoto Seika's corner print stays over the seal check, and the deal tucks toward it. */
+/* Kyoto Seika's corner print goes over the tiles in the lower right, clear of the left hand, which
+   covers the lower left as it draws; the deal tucks toward it. */
 .drawing-screen[data-hand="left"] .corner-print {
-  left: 39px;
-  right: auto;
-  translate: -50% 0;
+  left: auto;
+  right: 10px;
 }
 
 .drawing-screen[data-hand="left"] > .kyoto-seika-deal {
-  transform-origin: 40px calc(100% - 270px);
+  transform-origin: calc(100% - 40px) calc(100% - 270px);
 }
 
 /* ---------- Large screens: as in drawing apps made for a tablet, the controls take a slim top bar and
@@ -225,7 +230,7 @@
     --foot: 8px;
     /* The rail, then undo, redo and My board under it, centered on the sidebar's height. */
     --rail-h: 180px;
-    --tiles-h: calc(3 * 46px + 2 * 6px);
+    --tiles-h: calc(3 * 46px + 6px + 16px);
     --rail-top: calc(50% - (var(--rail-h) + 16px + var(--tiles-h)) / 2);
     --tiles-top: calc(var(--rail-top) + var(--rail-h) + 16px);
   }
@@ -264,7 +269,7 @@
   .drawing-screen > .my-board-tile,
   .drawing-screen.is-dealt > .my-board-tile {
     left: calc((var(--edge-w) - 46px) / 2);
-    top: calc(var(--tiles-top) + 2 * (46px + 6px));
+    top: calc(var(--tiles-top) + var(--board-at));
     bottom: auto;
   }
 
@@ -284,8 +289,7 @@
     bottom: calc(var(--foot) + 8px);
   }
 
-  /* The seal problem chip beside the check, over the sheet's corner: Kyoto Seika's corner print is in
-     the sheet's other bottom corner, so it never stands under the chip. */
+  /* The seal problem chip beside the check, over the sheet's corner. */
   .drawing-screen > .seal-chip {
     right: auto;
     left: calc(var(--edge-w) + 4px);

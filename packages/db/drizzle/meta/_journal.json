@@ -36,6 +36,13 @@
       "when": 1791507814048,
       "tag": "0004_large_layout",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791528712304,
+      "tag": "0005_drop_kyoto_seika_dark_subjects",
+      "breakpoints": true
     }
   ]
 }

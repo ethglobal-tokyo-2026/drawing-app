@@ -1,7 +1,7 @@
 import type { ReplayV1 } from "@drawing-app/api/client";
 import type { HeartBox } from "../miniHeartPhysics";
 import { STAGE_UNITS } from "../replayRecorder";
-import { heartRest, LIVE_FRAME } from "../stageLayout";
+import { liveHeartRest } from "../stageLayout";
 
 /** A combo that lasted up to this long replays in real time. */
 export const REPLAY_REAL_TIME_MS = 4000;
@@ -67,7 +67,7 @@ export function createReplayFeed(replay: ReplayV1, target: HeartBox): ReplayFeed
   const [width, height] = replay.stage;
   // Both hearts have the art's aspect, so a stroke scales evenly and keeps its shape. Nothing is
   // clamped to the replay's stage: that would bend the strokes the detector and effects read.
-  const recorded = heartRest(width, height, LIVE_FRAME);
+  const recorded = liveHeartRest(width, height);
   const place = (x: number, y: number): StagePoint => ({
     x: target.x + (((x / STAGE_UNITS) * width - recorded.x) / recorded.width) * target.width,
     y: target.y + (((y / STAGE_UNITS) * height - recorded.y) / recorded.height) * target.height,

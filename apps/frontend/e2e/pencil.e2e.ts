@@ -194,20 +194,21 @@ test("Settings shows Input and Pen pressure once a pen has drawn on the device, 
 }) => {
   await signIn(page, "pencil-settings", language);
   let settings = await openSettings(page, language);
-  const input = () =>
-    settings.getByRole("combobox", {
-      name: say(stickerBoard.settings.pencil.input.title, language),
-    });
+  const { pencil: words } = stickerBoard.settings;
+  const input = () => settings.getByRole("radiogroup", { name: say(words.input.title, language) });
   await expect(input()).toHaveCount(0);
 
   // What a pen's first stroke on the drawing screen keeps on the device.
   await page.evaluate(() => localStorage.setItem("draw.inputMode", "pencilOnly"));
   await page.reload();
   settings = await openSettings(page, language);
-  await expect(input()).toHaveValue("pencilOnly");
+  await expect(
+    input().getByRole("radio", { name: say(words.input.pencilOnly, language) }),
+  ).toBeChecked();
   await settings
-    .getByRole("combobox", { name: say(stickerBoard.settings.pencil.pressure.title, language) })
-    .selectOption("light");
+    .getByRole("radiogroup", { name: say(words.pressure.title, language) })
+    .getByRole("radio", { name: say(words.pressure.light, language) })
+    .click();
 
   const strip = page.locator(".try-pen-pressure__ink");
   await strip.scrollIntoViewIfNeeded();

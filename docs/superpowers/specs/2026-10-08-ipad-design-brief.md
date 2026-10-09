@@ -56,16 +56,9 @@ Below 600×600 the phone layout, with a short-height pass so the size rail and c
 
 ## Plans
 
-Phase 0 lands first; then foundations, before the screens, which can run in parallel; the Pencil after the drawing screen; small windows and the finish last.
+Built and merged: Phase 0, foundations, the board and stat board, the Shop and cards, Explore, the drawing screen and the Pencil. Open: the dialogs plan (the seal sheet card, e2e, checks, docs) and the small windows plan (the finish).
 
-| Plan                                      | Covers                                                                                                                          |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `2026-10-08-small-fixes.md`               | Phase 0                                                                                                                         |
-| `2026-10-08-ipad-foundations.md`          | the large-screen query and touch gate, the desktop frame, the tab row's lead slot and quieter style, the Explore tab's way back |
-| `2026-10-08-ipad-board-and-stat-board.md` | the board's unit and separate large layout, header, tray, stat board                                                            |
-| `2026-10-08-ipad-shop-and-cards.md`       | Shop, checkout, ticket cards, Sealed card, gratitude events card                                                                |
-| `2026-10-08-ipad-explore.md`              | the split view, search, three leaderboards                                                                                      |
-| `2026-10-08-ipad-drawing.md`              | one sheet for every device, the drawing screen's layout, My board key, drawing hand                                             |
-| `2026-10-08-ipad-pencil.md`               | input mode, pen pressure, hover, prediction, palm fixes                                                                         |
-| `2026-10-08-ipad-dialogs.md`              | the sticker detail, giving, receiving, the Mini-game and its replay, and Explore's lifted sticker on an iPad (to write)         |
-| `2026-10-08-ipad-small-windows.md`        | Split View, LINE's sheet, short heights, the finish                                                                             |
+| Plan                               | Covers                                                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `2026-10-08-ipad-dialogs.md`       | the sticker detail, giving, receiving, the Mini-game and its replay, and Explore's lifted sticker on an iPad |
+| `2026-10-08-ipad-small-windows.md` | Split View, LINE's sheet, short heights, the finish                                                          |

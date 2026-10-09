@@ -95,6 +95,14 @@ describe("the timer dot", () => {
     expect(announced(host)).toContain(why);
   });
 
+  it("names the timer as time's up at 0:00, never as a pause", () => {
+    const length = 5000;
+    const { advance, host } = renderDot({ length });
+    advance(length + 1000);
+    expect(dot(host).getAttribute("aria-label")).toBe(strings.stickerCreation.timer.label.en);
+    expect(described(host)).toBe(strings.stickerCreation.timer.status.timeUp.en);
+  });
+
   it("says a dealt clock starts at Begin", () => {
     const { host } = renderDot({ length: sessionMs(true), started: false, waitsFor: "begin" });
     expect(described(host)).toMatch(/press Begin/);

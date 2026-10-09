@@ -75,7 +75,7 @@ case "$MENU" in
       none) DRAW="かく（チケットなし）" ;;
     esac
     MY_BOARD="マイボード"
-    EXPLORE="さがす"
+    EXPLORE="発見"
     ;;
 esac
 

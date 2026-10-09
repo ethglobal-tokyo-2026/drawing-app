@@ -37,7 +37,14 @@ import { createParticleEffects } from "./particleEffects";
 import { listenToPhoneMotion } from "./phoneMotion";
 import { createReplayRecorder } from "./replayRecorder";
 import { createShakeDetector, type ShakeReversal } from "./shakeDetector";
-import { heartRest, LIVE_FRAME, type StageFrame } from "./stageLayout";
+import {
+  heartRest,
+  LIVE_FRAME,
+  LIVE_STAGE,
+  liveScale,
+  MAX_HEART_WIDTH,
+  type StageFrame,
+} from "./stageLayout";
 import { createStrokeDetector } from "./strokeDetector";
 import { createTierBackground } from "./tierBackground";
 import { shownGloss, TIER_NAMES } from "./tierNames";
@@ -145,9 +152,9 @@ export interface ReplayEngineOptions {
   /** How fast that clock runs against real time: Web Animations play at it too. */
   speed: number;
   layout: StageLayout;
-  /** The stage's width over the live game's: lettering, particles and mini hearts scale by it. */
+  /** The replay's width over LIVE_STAGE's: lettering, particles and mini hearts draw at it. */
   scale: number;
-  /** The replay's px per px of the stage it was recorded on: the stroke rules scale by it. */
+  /** px on this stage per px of the live game on a phone: the touch and stroke rules scale by it. */
   inputScale: number;
   /** Mini hearts in play at most. */
   miniHearts: number;
@@ -194,7 +201,11 @@ interface EngineOptions {
   frames: FrameSource;
   speed: number;
   layout: StageLayout;
+  /** Lettering, particles, mini hearts and what the stylesheet sizes in px draw at it. */
   scale: number;
+  /** The heart's widest, px: the live game's grows with its scale; a replay's sets the scale. */
+  heartWidest: number;
+  /** px on this stage per px of the live game on a phone: the touch and stroke rules scale by it. */
   inputScale: number;
   miniHearts: number;
   onFinished: (record: ComboRecord) => void;
@@ -207,13 +218,26 @@ type Ended = Extract<ComboEvent, { kind: "ended" }>;
 /** A hit's press, by how it was made. */
 const SQUASH_BY_METHOD: Record<Method, number> = { tap: 3.3, stroke: 1.6, shake: 1.2 };
 
-/** The live game's stage width: a smaller stage draws at its width over this. */
-export const LIVE_STAGE_WIDTH = 390;
+/** `el`'s middle in `root`'s px, through the positioned boxes between them. */
+function middleIn(el: HTMLElement, root: HTMLElement) {
+  let x = el.offsetWidth / 2;
+  let y = el.offsetHeight / 2;
+  for (
+    let at: Element | null = el;
+    at instanceof HTMLElement && at !== root;
+    at = at.offsetParent
+  ) {
+    x += at.offsetLeft;
+    y += at.offsetTop;
+  }
+  return { x, y };
+}
+
 /** The live screen: its top band and HUD above the heart, and a phone's size until it has one. */
 const LIVE_LAYOUT: StageLayout = {
   frame: LIVE_FRAME,
   hudTop: 172,
-  fallback: { width: LIVE_STAGE_WIDTH, height: 741 },
+  fallback: LIVE_STAGE,
 };
 
 /** The tips: what to do, said only once the person is trying, and held this long in s. */
@@ -248,14 +272,20 @@ export function mountMiniGameEngine(
   options: MiniGameOptions,
 ): MiniGameEngine {
   const { onRecord, onInPlay, onStarted, frames, ...rest } = options;
+  // Read once as the screen opens: a rotation re-lays the stage and keeps this scale.
+  const scale = liveScale(
+    parts.root.clientWidth || LIVE_LAYOUT.fallback.width,
+    parts.root.clientHeight || LIVE_LAYOUT.fallback.height,
+  );
   return mountEngine(parts, {
     ...rest,
     config: GAME_CONFIG,
     frames: frames ?? browserFrames,
     speed: 1,
     layout: LIVE_LAYOUT,
-    scale: 1,
-    inputScale: 1,
+    scale,
+    heartWidest: MAX_HEART_WIDTH * scale,
+    inputScale: scale,
     miniHearts: FEEL_CONFIG.miniHearts.live,
     input: { kind: "live", parts, onRecord, onInPlay, onStarted },
   });
@@ -269,6 +299,7 @@ export function mountReplayEngine(parts: StageParts, options: ReplayEngineOption
   const { landAt, drive, onEnded, onLanded, ...rest } = options;
   const { setReduced, destroy } = mountEngine(parts, {
     ...rest,
+    heartWidest: MAX_HEART_WIDTH,
     // Its stage is hidden from assistive tech: the card it plays in says what it shows.
     giverHandle: "",
     showFrameTimes: false,
@@ -280,7 +311,9 @@ export function mountReplayEngine(parts: StageParts, options: ReplayEngineOption
 
 function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine {
   const { root, page, ground } = parts;
-  const { frames, layout, scale, inputScale, speed } = options;
+  const { frames, layout, scale, inputScale, speed, heartWidest } = options;
+  // The stylesheet draws what it sizes in px at the stage's scale.
+  root.style.setProperty("--gr-scale", scale.toFixed(3));
   const liveInput = options.input.kind === "live" ? options.input : null;
   const replay = options.input.kind === "replay" ? options.input : null;
   const mount = ++mounts;
@@ -389,14 +422,12 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
   /** Where the heart ends up: the middle of the giver's picture, or where a replay lands it. */
   const giverPoint = (rest: { x: number; y: number }) => {
     if (!liveInput) return replay?.landAt() ?? { x: rest.x, y: rest.y };
-    const { giverPhoto } = liveInput.parts;
-    return {
-      x: giverPhoto.offsetLeft + giverPhoto.offsetWidth / 2 || 128,
-      y: giverPhoto.offsetTop + giverPhoto.offsetHeight / 2 || 120,
-    };
+    // On a large screen the picture sits in the top band's middle, not at the stage's edge.
+    const middle = middleIn(liveInput.parts.giverPhoto, root);
+    return { x: middle.x || 128, y: middle.y || 120 };
   };
   const layoutFor = (width: number, height: number): HeartLayout => {
-    const rest = heartRest(width, height, layout.frame);
+    const rest = heartRest(width, height, layout.frame, heartWidest);
     const top = layout.frame.above;
     return {
       rest: { x: rest.x, y: rest.y },
@@ -440,7 +471,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
     parts.hud.style.setProperty("--hud-top", `${layout.hudTop}px`);
     const above = layout.frame.above;
     if (liveInput) {
-      liveInput.parts.hint.style.top = `${L.rest.y + L.height * 0.5 + 22}px`;
+      liveInput.parts.hint.style.top = `${L.rest.y + L.height * 0.5 + 22 * scale}px`;
       tip.style.top = `${L.rest.y + L.height * 0.5 + 16}px`;
       root.style.setProperty("--rc-top", `${Math.max(above - 10, L.rest.y - 110)}px`);
     }
@@ -793,8 +824,8 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
   };
 
   // Stroking: one finger at a time, anywhere on the screen. Before the unlock a drag on the heart
-  // pulls it and counts as a try; five fast passes in a row commit the combo to stroking. A replay's
-  // strokes come scaled onto its stage, so the rules' lengths and speeds scale with them.
+  // pulls it and counts as a try; five fast passes in a row commit the combo to stroking. The rules'
+  // lengths and speeds scale with the stage: a large screen's game grows, a replay's shrinks.
   const { minRunPx, fastPxPerMs, turnPx, pauseMs } = FEEL_CONFIG.stroke;
   const strokes = createStrokeDetector({
     minRunPx: minRunPx * inputScale,
@@ -814,7 +845,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
     runFrom: { x: number; y: number };
   } | null = null;
   let strokeTries = 0;
-  /** The thumb's smoothed speed in the recorded stage's px/ms, and the stroke's axis in degrees. */
+  /** The thumb's smoothed speed in a phone's px/ms, and the stroke's axis in degrees. */
   let strokeSpeed = 0;
   let strokeAngle = 90;
   let lastMoveAt = -Infinity;
@@ -972,7 +1003,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
     recorder?.strokeEnd();
     heart.pullTo(0, null);
     // A drag on the heart that didn't unlock stroking is a try; enough of them, and the tip says how.
-    if (!s?.onHeart || s.travel < FEEL_CONFIG.stroke.tryTravelPx) return;
+    if (!s?.onHeart || s.travel < FEEL_CONFIG.stroke.tryTravelPx * inputScale) return;
     if (!running || ending || combo.view.method !== "tap" || combo.view.phase === "ended") return;
     strokeTries++;
     if (strokeTries >= FEEL_CONFIG.stroke.triesForTip) showTip("stroke");
@@ -1096,7 +1127,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
             x: (e.clientX - rect.left) / rect.scale,
             y: (e.clientY - rect.top) / rect.scale,
           }),
-          tapSlopPx: FEEL_CONFIG.tapSlopPx,
+          tapSlopPx: FEEL_CONFIG.tapSlopPx * inputScale,
           tapHoldMs: FEEL_CONFIG.tapHoldMs,
         },
         { onHeartDown, onHeartTap, onStrokeStart, onStrokeMove, onStrokeEnd },

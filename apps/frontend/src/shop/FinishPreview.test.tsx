@@ -2,7 +2,6 @@
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithApi } from "../api/testing";
-import { acquireLight, installLight } from "../stickers/light";
 import { FinishPreview, type Laminate } from "./FinishPreview";
 import type { ShopSticker } from "./shopSticker";
 
@@ -79,30 +78,5 @@ describe("FinishPreview", () => {
     expect(host.querySelector(".laminate-film")).toBeNull();
     load(dog.urls.mask);
     expect(host.querySelector(".laminate-film")).not.toBeNull();
-  });
-});
-
-describe("FinishPreview's light", () => {
-  it("starts a film shown after the light moved where the light is", () => {
-    vi.useFakeTimers({ toFake: ["requestAnimationFrame"] });
-    // A resin already on screen as the light moves.
-    const shown = document.createElement("span");
-    shown.className = "live-resin";
-    document.body.append(shown);
-    const uninstall = installLight(document.documentElement);
-    const release = acquireLight();
-    window.dispatchEvent(
-      new PointerEvent("pointermove", { clientX: window.innerWidth, clientY: 0 }),
-    );
-    vi.advanceTimersToNextFrame();
-    const host = preview("prism");
-    load(sticker.urls.mask);
-    const film = host.querySelector<HTMLElement>(".laminate-film");
-    release();
-    uninstall();
-    shown.remove();
-    vi.useRealTimers();
-    expect(shown.style.getPropertyValue("--lx")).not.toBe("");
-    expect(film?.style.getPropertyValue("--lx")).toBe(shown.style.getPropertyValue("--lx"));
   });
 });

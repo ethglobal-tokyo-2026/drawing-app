@@ -1,5 +1,6 @@
 import { useImperativeHandle, useLayoutEffect, useRef, type Ref } from "react";
 import { useTranslation } from "../../i18n/react";
+import { formatHandle } from "../../stickers/format";
 import { useMyNsfwOptIn, veiledFor } from "../../stickers/nsfw";
 import { handleOf, type BoardStickerView } from "../boardSticker";
 import {
@@ -65,6 +66,8 @@ function trayStickers(
     };
     if (s.outline !== undefined) sticker.outline = s.outline;
     if (!s.held && s.givenTo) sticker.givenTo = handleOf(s.givenTo.receiver);
+    if (slot.state === "onItsWay" && s.openGift?.to)
+      sticker.onItsWayTo = formatHandle(s.openGift.to);
     return [sticker];
   });
 }
@@ -96,6 +99,7 @@ export function StickerTray({ board, stickers, ownerId, api, onSeen, onProblem, 
       remove: (id) => latest.current.api.remove(id),
       pulse: (id) => latest.current.api.pulse(id),
       openGiven: (id) => latest.current.api.openGiven(id),
+      openYours: (id) => latest.current.api.openYours(id),
     };
     const tray = createTrayEngine(board, {
       slots: () => {

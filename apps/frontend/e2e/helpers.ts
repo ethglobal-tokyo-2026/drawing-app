@@ -122,17 +122,22 @@ export async function openSettings(page: Page, language: Language) {
 
 /**
  * Chooses `to` as Croquis's language in the open Settings note, which reads in `from`, and waits for
- * the note's status line to say, in `to`, that the app has switched.
+ * the note to read in `to`, with that choice picked and taking picks again.
  */
 export async function chooseLanguage(page: Page, from: Language, to: Language) {
   const { language } = stickerBoard.settings;
-  await page
-    .getByRole("region", { name: say(stickerBoard.settings.title, from) })
-    .getByRole("combobox", { name: say(language.title, from) })
-    .selectOption({ label: say(language.names[to], from) });
+  const choices = (named: Language) =>
+    page
+      .getByRole("region", { name: say(stickerBoard.settings.title, named) })
+      .getByRole("radiogroup", { name: say(language.title, named) });
+  await choices(from)
+    .getByRole("radio", { name: say(language.names[to], from) })
+    .click();
+  // Saved and in place: the choice is named in its own language, and takes picks again.
   await expect(
-    page.getByText(say(language.applied, to, { language: say(language.names[to], to) })),
+    choices(to).getByRole("radio", { name: say(language.names[to], to), checked: true }),
   ).toBeVisible();
+  await expect(choices(to)).not.toHaveAttribute("aria-disabled");
 }
 
 /**

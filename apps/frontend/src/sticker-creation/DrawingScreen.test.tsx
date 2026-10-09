@@ -24,7 +24,7 @@ import { i18next } from "../i18n/i18n";
 import { strings } from "../i18n/strings";
 import { useTickets } from "../tickets/useTickets";
 import { personKey } from "../ui/deviceStorage";
-import { onLargeScreen, SWITCH } from "../ui/testing";
+import { onLargeScreen, onTouchScreen, SWITCH } from "../ui/testing";
 import type { HistoryState, InputMode } from "./canvas/inkEngine";
 import type { Op } from "./canvas/ops";
 import { frameFor, SHEET_SHORT_UNITS } from "./canvas/sheetFrame";
@@ -372,7 +372,7 @@ describe("the drawing screen after a reload", () => {
     // Its seal went out before the reload, so it's back locked for the check, which cuts it again.
     act(() => document.querySelector<HTMLButtonElement>(".seal-key")?.click());
     await settle(1000);
-    expect(chip()).toContain(strings.stickerCreation.seal.failed.onThisPhone.en);
+    expect(chip()).toContain(strings.stickerCreation.seal.failed.onThisDevice.en);
     // The cut's own words show under the chip for a report, with Copy, as every error line does.
     expect(chip()).toContain(strings.ui.errorLine.details.en);
     expect(chip()).toContain("The sealing worker stopped");
@@ -450,6 +450,7 @@ describe("the seal sheet", () => {
     "opens at one tap on the check, and seals 18+ only with the switch on: on %s",
     async (on) => {
       const seal = await openDrawing();
+      expect(document.querySelector(".seal-key")?.getAttribute("aria-haspopup")).toBe("dialog");
       tapSealKey();
       expect(sealSheet()).not.toBeNull();
       expect(nsfwSwitch()?.checked).toBe(false);
@@ -502,7 +503,7 @@ describe("the seal sheet", () => {
     const seal = await openDrawing(keptNearTimeUp);
     act(tapTimer);
     await settle(3000);
-    expect(sealSheet()?.textContent).toContain(words.timeUp.en);
+    expect(sealSheet()?.querySelector("h2")?.textContent).toBe(words.timeUp.en);
     expect(sheetButton(words.notYet.en)).toBeUndefined();
     // Escape, like Back and the perforation, can't put the pencils back in hand.
     act(() => {
@@ -544,6 +545,15 @@ describe("the drawing screen's clock", () => {
     await settle();
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
     expect(await countedAfter(tapMyBoardTile)).toBe(0);
+  });
+
+  it("holds while the phone is on its side, under the upright cover, and runs again upright", async () => {
+    const phone = onTouchScreen({ landscape: false, large: false });
+    reopen(keptHalfway);
+    await settle();
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    expect(await countedAfter(() => phone.landscape.change(true))).toBe(0);
+    expect(await countedAfter(() => phone.landscape.change(false))).toBeGreaterThan(0);
   });
 });
 
@@ -804,9 +814,19 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     expect(timerCalls.clockRuns).toBe(1);
   });
 
-  it("runs on under the open seal sheet, as the real test's clock does, and turns it time's up at 0:00", async () => {
+  it("holds a begun sheet's clock while the phone is on its side, as it does under the board", async () => {
+    const phone = onTouchScreen({ landscape: false, large: false });
     const begun = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
-    const { notYet, timeUp } = strings.stickerCreation.sealSheet;
+    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: begun });
+    // A reload's pause lets go at a tap.
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    expect(await countedAfter(() => phone.landscape.change(true))).toBe(0);
+    expect(await countedAfter(() => phone.landscape.change(false))).toBeGreaterThan(0);
+  });
+
+  it("runs on under the open seal sheet, as the real test's clock does, and calls pencils down in place at 0:00", async () => {
+    const begun = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
+    const { notYet, pencilsDown } = strings.stickerCreation.sealSheet;
     sealing.cut.mockResolvedValue(cutSticker());
     await openKyotoSeikaSheet({
       ...keptHalfway,
@@ -817,10 +837,28 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     // A reload's pause lets go at a tap.
     act(tapTimer);
     expect(await countedAfter(clickSealKey)).toBeGreaterThan(0);
-    expect(sheetButton(notYet.en)).toBeDefined();
+    const notYetLink = sheetButton(notYet.en);
+    act(() => notYetLink?.focus());
     await settle(3000);
-    expect(sealSheet()?.textContent).toContain(timeUp.en);
-    expect(sheetButton(notYet.en)).toBeUndefined();
+    expect(sealSheet()?.querySelector("h2")?.textContent).toBe(pencilsDown.en);
+    expect(sealSheet()?.querySelector("[role='status']")?.textContent).toBe(pencilsDown.en);
+    // Not yet's slot stays, out of reach, so the sheet keeps its height; focus goes to the switch,
+    // never to Seal, so Enter can't seal blind.
+    expect(notYetLink?.closest("[inert]")).not.toBeNull();
+    expect(document.activeElement).toBe(nsfwSwitch());
+  });
+
+  it("shows a begun sheet's pair on its seal sheet, whose sticker wears the Kyoto Seika foil, and pink once marked 18+", async () => {
+    const begun = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
+    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: begun });
+    tapSealKey();
+    const pair = sealSheet()?.querySelector(".subject-pair")?.textContent;
+    expect(pair).toContain(WIND.ja);
+    expect(pair).toContain(REUNION.ja);
+    const foil = () => sealSheet()?.querySelector(".seal-preview .sticker-foil")?.classList;
+    expect(foil()).toContain("sticker-foil--kyoto-seika");
+    act(() => nsfwSwitch()?.click());
+    expect(foil()).toContain("sticker-foil--pink");
   });
 
   it("names a begun canvas by its pair: each word with its English in English, the words alone in Japanese", async () => {

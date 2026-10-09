@@ -29,6 +29,8 @@ export const stickerCreation = {
         en: "{{time}} left, starts when you press Begin",
         ja: "残り{{time}}、はじめを押すとスタート",
       },
+      /** Drawing screen, top left: read by screen readers after the timer dot's name once the clock reaches 0:00, under the time's-up seal sheet */
+      timeUp: { en: "Time’s up", ja: "タイムアップ" },
       /** Drawing screen, top left: read by screen readers after the timer dot's name while the clock is stopped by a tap on the timer, by the app going to the background, or by another screen covering the drawing screen */
       paused: { en: "{{time}} left, paused", ja: "残り{{time}}、一時停止中" },
       /** Drawing screen, top left: read by screen readers after the timer dot's name while the color sheet is open, which stops the clock */
@@ -87,9 +89,9 @@ export const stickerCreation = {
         en: "Couldn’t pick up where you left off",
         ja: "前回の続きから再開できませんでした",
       },
-      /** Drawing screen, top left: the white label under the timer, also announced, for as long as this phone can't keep your drawing in progress, so a reload or closing the app would lose it; it goes once the drawing is kept again; the label never wraps by itself */
+      /** Drawing screen, top left: the white label under the timer, also announced, for as long as this device can't keep your drawing in progress, so a reload or closing the app would lose it; it goes once the drawing is kept again; the label never wraps by itself */
       notKept: {
-        en: "This phone can’t keep your drawing,\nso seal it before you close the app",
+        en: "This device can’t keep your drawing,\nso seal it before you close the app",
         ja: "かきかけのシールをこの端末に残せません。\nアプリを閉じる前に仕上げてください",
       },
     },
@@ -106,13 +108,13 @@ export const stickerCreation = {
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when time runs out after everything drawn was erased or undone; the sheet is fresh again and the chip goes with its first stroke */
     emptyAtTimeUp: {
       en: "Time’s up. The sheet was empty, so nothing was sealed.",
-      ja: "時間切れです。<wbr/>キャンバスが<wbr/>真っ白だったので、<wbr/>何も<wbr/>仕上がり<wbr/>ませんでした。",
+      ja: "タイムアップです。<wbr/>キャンバスが<wbr/>真っ白だったので、<wbr/>何も<wbr/>仕上がり<wbr/>ませんでした。",
     },
     /** The chip beside the seal key when a seal failed: what failed, then what to do. Its technical detail goes to the console. */
     failed: {
-      /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing failed on this phone before the server was asked; the check is the seal key's icon */
-      onThisPhone: {
-        en: "Couldn’t seal: something went wrong on this phone. Tap the check to try again.",
+      /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing failed on this device before the server was asked; the check is the seal key's icon */
+      onThisDevice: {
+        en: "Couldn’t seal: something went wrong on this device. Tap the check to try again.",
         ja: "仕上げられ<wbr/>ませんでした：<wbr/>この端末で<wbr/>問題が<wbr/>起きました。<wbr/>チェックを<wbr/>もう一度<wbr/>タップして<wbr/>ください。",
       },
       /** Drawing screen, bottom right: the chip beside the seal key, announced, when the app's server didn't answer the seal, or its answer couldn't be read; tapping the check sends the same seal again */
@@ -147,13 +149,13 @@ export const stickerCreation = {
       ja: "仕上げられ<wbr/>ませんでした。<wbr/>{{reason}}",
     },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when a seal failed at 0:00, in front of that chip's words; {{problem}} is the words */
-    timeUp: { en: "Time’s up. {{problem}}", ja: "時間切れです。<wbr/>{{problem}}" },
+    timeUp: { en: "Time’s up. {{problem}}", ja: "タイムアップです。<wbr/>{{problem}}" },
     /** Drawing screen, bottom left, at 0:00 after a seal that never reached the server failed: the quiet link that lets the sticker in progress go, and its ticket with it, for a fresh sheet */
     startOver: { en: "Start a new sticker", ja: "新しい<wbr/>シールをかく" },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when the server refused the seal at 0:00; the sheet is fresh again and the chip goes with its first stroke; {{reason}} is the refusal's message */
     refusedAtTimeUp: {
       en: "Time’s up. Croquis didn’t accept the seal, so nothing was sealed. {{reason}}",
-      ja: "時間切れです。<wbr/>クロッキーが<wbr/>仕上げを<wbr/>受け付け<wbr/>なかったので、<wbr/>何も<wbr/>仕上がり<wbr/>ませんでした。<wbr/>{{reason}}",
+      ja: "タイムアップです。<wbr/>クロッキーが<wbr/>仕上げを<wbr/>受け付け<wbr/>なかったので、<wbr/>何も<wbr/>仕上がり<wbr/>ませんでした。<wbr/>{{reason}}",
     },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when a reload brings back a drawing whose seal was on its way, so the sheet stays as it was sealed; tapping the check finishes the seal */
     interrupted: {
@@ -165,14 +167,16 @@ export const stickerCreation = {
   sealSheet: {
     /** Seal sheet, over the drawing after a tap on the seal key: its title, and its name for screen readers */
     title: { en: "Seal this sticker?", ja: "このシールを<wbr/>仕上げますか？" },
-    /** Seal sheet, raised by the clock reaching 0:00 (or brought back by a reload then): its title, and its name for screen readers; the drawing can only be sealed now */
-    timeUp: { en: "Time’s up", ja: "時間切れ" },
-    /** Seal sheet: the switch row's only words; on, the sticker seals as 18+, and the preview's edge turns pink foil; off on every new sheet */
-    nsfw: { en: "18+ sticker", ja: "18+のシール" },
+    /** Seal sheet, raised by the clock reaching 0:00 (or brought back by a reload then): its title, and its name for screen readers, also announced when it turns in place; the drawing can only be sealed now */
+    timeUp: { en: "Time’s up", ja: "タイムアップ" },
+    /** Seal sheet, a sheet in Kyoto Seika Practice Mode at 0:00: its title in hand lettering, the proctor's call that ends the test as はじめ began it, and its name for screen readers, also announced when it turns in place */
+    pencilsDown: { en: "Pencils down", ja: "やめ" },
+    /** Seal sheet: the switch row's only words, the sticker detail's own; on, the sticker seals as 18+, and the preview's edge turns pink foil; off on every new sheet */
+    nsfw: { en: "Mark 18+", ja: "18+にする" },
     /** Seal sheet: the 18+ switch's name for screen readers, which starts with its visible words */
     nsfwLabel: {
-      en: "18+ sticker: blurred for anyone who hasn’t turned on Show 18+ stickers",
-      ja: "18+のシール：「18+のシールを表示する」をオンにしていない人にはぼかして表示",
+      en: "Mark 18+: blurred for anyone who hasn’t turned on Show 18+ stickers",
+      ja: "18+にする：「18+のシールを表示する」をオンにしていない人にはぼかして表示",
     },
     /** Seal sheet: the key, with a check mark, that seals the sticker and starts the seal ceremony */
     seal: { en: "Seal", ja: "仕上げ" },

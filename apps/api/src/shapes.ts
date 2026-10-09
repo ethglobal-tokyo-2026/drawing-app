@@ -157,8 +157,6 @@ export const meSchema = personSchema.extend({
    * spent in it.
    */
   kyotoSeikaPractice: z.boolean(),
-  /** "Dark subjects too", under it: the deal may bring the dark Kyoto Seika Subjects. */
-  kyotoSeikaDarkSubjects: z.boolean(),
 });
 export type Me = z.infer<typeof meSchema>;
 
@@ -173,7 +171,6 @@ export const toMe = (
   needsHandle: user.handle === null,
   ...counts,
   kyotoSeikaPractice: kyotoSeikaPracticeOn(user),
-  kyotoSeikaDarkSubjects: user.kyotoSeikaDarkSubjectsOnAt !== null,
 });
 
 /** The five PNGs a sticker is sealed with. The sticker PNG's hash names them. */
@@ -486,7 +483,8 @@ export const ticketShopSchema = z.object({
   packs: z.array(
     z.object({
       tickets: z.literal([1, 3, 5, 10]),
-      priceYen: positiveInt,
+      /** ¥0 for the free first pack, until this person has had it. */
+      priceYen: count,
       /** Off ¥100 per ticket. */
       discountPercent: count,
       /** The same price in JPYC base units, as decimal text: one JPYC is one yen. */

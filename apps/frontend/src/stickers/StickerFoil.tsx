@@ -29,9 +29,10 @@ interface Props {
  * Foil round a sticker, holo, pink or Kyoto Seika: its silhouette grown into a band just past the
  * white edge, from the server's mask when the sticker has one, else dilated in CSS from the `--m` the
  * container sets. The band is the sticker's edge, so its cut and cast shadow fall from the band's
- * outer edge. Holo and pink flow under a fine, still grating; Kyoto Seika is manga tone shaded away
- * from the light, with sparkles that slide with it. A glint sits where the app's one light falls,
- * holding where the last tilt left it. It goes under the image, which shows only inside its own cut.
+ * outer edge. Holo and pink flow under a fine, still grating; Kyoto Seika is a narrower band of manga
+ * screentone, with scraped highlights that the light slides through its glint. A glint sits where the
+ * app's one light falls, holding where the last tilt left it. It goes under the image, which shows only
+ * inside its own cut.
  */
 export function StickerFoil({ size, no, turn = 0, tone = "holo", mask }: Props) {
   const foil = useRef<HTMLSpanElement>(null);

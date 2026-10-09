@@ -1,5 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
-import { lightUp } from "../stickers/light";
+import { useEffect, useState, type CSSProperties } from "react";
 import { StickerFigure } from "../stickers/StickerFigure";
 import type { ShopSticker } from "./shopSticker";
 
@@ -38,15 +37,10 @@ function useImageLoaded(url: string): boolean {
   return loaded === url;
 }
 
-/** A glitter or prism laminate's film, live resin that the app's one light lights. */
+/** A glitter or prism laminate's film, live resin of another kind. */
 function LaminateFilm({ laminate }: { laminate: "glitter" | "prism" }) {
-  const film = useRef<HTMLSpanElement>(null);
-  // It shows once the mask loads, after the screen's light last moved, so it starts where the light is.
-  useLayoutEffect(() => {
-    if (film.current) lightUp(film.current);
-  }, []);
   return (
-    <span ref={film} className={`live-resin laminate-film laminate-film--${laminate}`}>
+    <span className={`live-resin laminate-film laminate-film--${laminate}`}>
       <i>
         <b />
       </i>
@@ -56,8 +50,8 @@ function LaminateFilm({ laminate }: { laminate: "glitter" | "prism" }) {
 
 /**
  * Your sticker in a coming finish: a laminate over it, or a backing foil round it the way someone
- * else's sticker board would show it. A laminate is live resin of another kind, so the app's one
- * light lights it like the resin.
+ * else's sticker board would show it. A swatch is too small to tilt into the light, so every preview
+ * takes the Shop's own light (ShopScreen.css), which circles on its own, never the app's one light.
  */
 export function FinishPreview({
   sticker,

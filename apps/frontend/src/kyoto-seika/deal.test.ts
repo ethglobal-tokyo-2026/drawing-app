@@ -6,7 +6,6 @@ import { TEST_SUBJECTS } from "./testSubjects";
 
 const options = (over: Partial<DealOptions> = {}): DealOptions => ({
   recent: [],
-  dark: false,
   random: seededRandom(1),
   ...over,
 });
@@ -17,15 +16,11 @@ const deals = (n: number, base: DealOptions) =>
   );
 
 describe("dealing Kyoto Seika Subjects", () => {
-  it("deals two subjects of different kinds, never a dark one without Dark subjects too", () => {
+  it("deals two subjects of different kinds", () => {
     for (const deal of deals(200, options())) {
       const [upper, lower] = deal.subjects;
       expect(upper.kind).not.toBe(lower.kind);
-      expect(deal.subjects.some((s) => s.dark)).toBe(false);
     }
-    expect(deals(200, options({ dark: true })).some((d) => d.subjects.some((s) => s.dark))).toBe(
-      true,
-    );
   });
 
   it("rolls a balloon to a new word of another kind than the other balloon's, never either word on screen", () => {

@@ -14,7 +14,7 @@ import { refusingStorage } from "../../ui/testing";
 import { DrawingSettings } from "./DrawingSettings";
 
 const words = stickerBoard.settings.pencil;
-const { kept, notKept } = stickerBoard.settings.drawing;
+const { notKept } = stickerBoard.settings.drawing;
 let unmount = () => {};
 afterEach(() => {
   unmount();
@@ -32,21 +32,26 @@ function render() {
   unmount = view.unmount;
   return view.host;
 }
-/** The select laid over the row named `label`, if the group shows it. */
+/** The choices of the row named `label`, if the group shows it. */
 const rowNamed = (host: HTMLElement, label: string) =>
-  [...host.querySelectorAll("select")].find(
-    (select) =>
-      document.getElementById(select.getAttribute("aria-labelledby") ?? "")?.textContent === label,
+  [...host.querySelectorAll<HTMLElement>('[role="radiogroup"]')].find(
+    (group) =>
+      document.getElementById(group.getAttribute("aria-labelledby") ?? "")?.textContent === label,
   );
 function row(host: HTMLElement, label: string) {
-  const select = rowNamed(host, label);
-  if (!select) throw new Error(`No row named ${label}`);
-  return select;
+  const group = rowNamed(host, label);
+  if (!group) throw new Error(`No row named ${label}`);
+  return group;
 }
-const choose = (select: HTMLSelectElement, value: string) =>
+const picked = (group: HTMLElement) =>
+  group.querySelector('[role="radio"][aria-checked="true"]')?.textContent;
+const choose = (group: HTMLElement, name: string) =>
   act(() => {
-    select.value = value;
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+    const choice = [...group.querySelectorAll<HTMLElement>('[role="radio"]')].find(
+      (radio) => radio.textContent === name,
+    );
+    if (!choice) throw new Error(`No choice ${name}`);
+    choice.click();
   });
 
 describe("Settings' Pencil rows", () => {
@@ -54,17 +59,17 @@ describe("Settings' Pencil rows", () => {
     const host = render();
     expect(rowNamed(host, words.input.title.en)).toBeUndefined();
     act(() => penDrew());
-    expect(row(host, words.input.title.en).value).toBe("pencilOnly");
-    expect(row(host, words.pressure.title.en).value).toBe("normal");
+    expect(picked(row(host, words.input.title.en))).toBe(words.input.pencilOnly.en);
+    expect(picked(row(host, words.pressure.title.en))).toBe(words.pressure.normal.en);
   });
 
-  it("keep each choice on this device at once, and the group's status line says so", () => {
+  it("keep each choice on this device at once", () => {
     penDrew();
     const host = render();
-    choose(row(host, words.input.title.en), "pencilAndFinger");
-    choose(row(host, words.pressure.title.en), "light");
+    choose(row(host, words.input.title.en), words.input.pencilAndFinger.en);
+    choose(row(host, words.pressure.title.en), words.pressure.light.en);
     expect([readInputMode(), readPenPressure()]).toEqual(["pencilAndFinger", "light"]);
-    expect(host.querySelector('[role="status"]')?.textContent).toBe(kept.en);
+    expect(picked(row(host, words.pressure.title.en))).toBe(words.pressure.light.en);
   });
 
   it("say when this device couldn't keep a choice, which still applies until Croquis closes", () => {
@@ -72,8 +77,8 @@ describe("Settings' Pencil rows", () => {
     vi.stubGlobal("localStorage", refusingStorage);
     penDrew();
     const host = render();
-    choose(row(host, words.pressure.title.en), "firm");
+    choose(row(host, words.pressure.title.en), words.pressure.firm.en);
     expect(host.querySelector('[role="alert"]')?.textContent).toBe(notKept.en);
-    expect(row(host, words.pressure.title.en).value).toBe("firm");
+    expect(picked(row(host, words.pressure.title.en))).toBe(words.pressure.firm.en);
   });
 });

@@ -86,8 +86,8 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     return { x, y, r, ...fitOf(s) };
   }
   /**
-   * A given sticker's cut line on its spot, the one its sheet was packed by. A cut line that couldn't
-   * be read packs as a box, which isn't the sticker's, so nothing is traced.
+   * The cut line on a given sticker's spot, or one on its way, the one its sheet was packed by. A cut
+   * line that couldn't be read packs as a box, which isn't the sticker's, so nothing is traced.
    */
   function cutLineEl(s: Slot, q: Size) {
     const shape = knownShape(s);
@@ -134,15 +134,24 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       if (cut) el.append(cut);
       return el;
     }
+    const onItsWay = s.state === "onItsWay";
     if (use !== "picture") {
-      const name =
-        s.state === "used"
+      const name = onItsWay
+        ? s.onItsWayTo === undefined
+          ? i18next.t(($) => $.stickerBoard.tray.slot.onItsWay, no)
+          : i18next.t(($) => $.stickerBoard.tray.slot.onItsWayTo, {
+              ...no,
+              recipient: s.onItsWayTo,
+            })
+        : s.state === "used"
           ? isNew
             ? i18next.t(($) => $.stickerBoard.tray.slot.usedNew, no)
             : i18next.t(($) => $.stickerBoard.tray.slot.used, no)
           : isNew
             ? i18next.t(($) => $.stickerBoard.tray.slot.newOnSheet, no)
             : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no);
+      // A sticker on its way opens, as a given one's spot does: it takes the shared press.
+      if (onItsWay) el.dataset.press = "";
       // A used sticker silhouette shows no sticker, so nothing on it is blurred.
       const blurred = s.veiled && s.state !== "used";
       el.setAttribute(
@@ -192,6 +201,8 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       img.alt = "";
       img.draggable = false;
       fit.append(img);
+      // On its way, it lies under the sleeve's frost.
+      if (onItsWay) fit.append(decorative(make("i", "tray__frost")));
       // Its image is the veiled one: the mark says why it's blurred, as on the board.
       if (s.veiled) {
         fit.append(
@@ -209,6 +220,10 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     fit.style.height = px(q.h);
     if (ui.imagesOn) fit.style.setProperty("--m", cssUrl(s.urls.mask));
     el.append(fit);
+    if (onItsWay) {
+      const cut = cutLineEl(s, q);
+      if (cut) el.append(cut);
+    }
     if (isNew) el.append(decorative(make("span", "tray__new", words.new)));
     return el;
   }
@@ -266,7 +281,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     use: SlotUse = depth > 0 ? "behind" : "live",
   ) {
     const paper = make("div", "tray__paper", decorative(make("i", "tray__tear")));
-    // A sticker on its way leaves nothing; one received leaves its spot, which opens it.
+    // A sticker received leaves its spot, which opens it, when the board says who has it.
     for (const s of sheetItems(f))
       if (s.state !== "given" || s.givenTo !== undefined)
         paper.append(slotEl(s, news.has(s.id), use));

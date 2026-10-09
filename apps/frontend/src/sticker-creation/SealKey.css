@@ -28,6 +28,14 @@
     visibility 0s;
 }
 
+/* Reduced motion: the check shows and goes at once, as every key's states change, with no spring. */
+@media (prefers-reduced-motion: reduce) {
+  .key.seal-key,
+  .key.seal-key.is-shown {
+    transition: none;
+  }
+}
+
 .key.seal-key svg {
   position: relative;
   width: 26px;
@@ -35,7 +43,7 @@
 }
 
 /* What went wrong with the last seal: above the foot row, so it never covers the tiles there, the
-   way out included, and left of the check's column, where Kyoto Seika's corner print stands. */
+   way out included. */
 .seal-chip {
   position: absolute;
   right: 88px;
@@ -50,7 +58,7 @@
     var(--shadow-label);
   font-size: 13px;
   font-weight: 650;
-  line-height: 1.25;
+  line-height: 1.42;
   color: var(--ink);
   opacity: 0;
   transform: translateY(6px);

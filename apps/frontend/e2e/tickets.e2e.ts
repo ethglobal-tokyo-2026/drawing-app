@@ -1,5 +1,5 @@
 import { TOKYO_UTC_OFFSET_MS, tokyoTicketDay } from "@drawing-app/api/client";
-import { TICKET_PACKS } from "@drawing-app/api/tickets";
+import { PAID_PACK } from "@drawing-app/api/testing/purchases";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { buyPackOnFakeSui } from "./fakeSuiPurchase.ts";
@@ -68,9 +68,8 @@ test("spending a reserve ticket: with no daily ticket left Draw asks first; Not 
   await signIn(page, "reserve", language);
   await spendEveryDailyTicket(page, language);
   // A pack of more than one, so a count is left to show once one is spent.
-  const pack = TICKET_PACKS.find((offer) => offer.tickets > 1);
-  if (!pack) throw new Error("No pack holds more than one ticket");
-  await buyPackOnFakeSui(page, pack.tickets);
+  const pack = PAID_PACK;
+  await buyPackOnFakeSui(page, pack);
   await page.reload();
 
   const reserve = await openShop(page, language);

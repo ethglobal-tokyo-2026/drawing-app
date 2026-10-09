@@ -61,6 +61,27 @@
   max-width: 100%;
 }
 
+/* A large screen's layer and scrim, as the give sheet's. */
+.send-gratitude-layer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+}
+
+.send-gratitude-layer__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 24, 36, 0.36);
+}
+
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .bottom-sheet.send-gratitude-sheet.sheet-card {
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bottom-sheet.send-gratitude-sheet {
     animation: send-gratitude-sheet-fade 150ms linear;

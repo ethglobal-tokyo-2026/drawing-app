@@ -1,12 +1,9 @@
 import { insertUser } from "@drawing-app/db/testing";
 import { describe, expect, it } from "vitest";
-import {
-  giftClaimTokenSchema,
-  packagedGiftSchema,
-  pendingGiftsSchema,
-} from "../gifts/packaging.ts";
+import { giftClaimTokenSchema, packagedGiftSchema } from "../gifts/packaging.ts";
 import { giftPreviewSchema, giftsForYouSchema, receivedGiftSchema } from "../gifts/receiving.ts";
 import { createGiftsTestApp, giftOf, type GiftsTestApp } from "../gifts/testGifts.ts";
+import { stickerBoardSchema } from "../stickerBoards/board.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 
 /** A gift of a sticker its giver drew, packaged for `forUserId` if given, and sent through LINE. */
@@ -35,9 +32,14 @@ describe("gifts waiting for you", () => {
       { gift: { id: gift.id }, sticker: { id: gift.stickerId }, giver: { id: giverId } },
     ]);
     expect(await waitingFor(test, insertUser(test.db))).toEqual([]);
-    // The giver's gifts on their way say who it went to.
-    const pending = await bodyOf(await test.get(giverId, "/pending"), pendingGiftsSchema);
-    expect(pending.gifts).toMatchObject([{ gift: { id: gift.id }, for: { id: bobId } }]);
+    // The giver's board says who the gift waits for.
+    const board = await bodyOf(
+      await test.send("GET", `/api/sticker-boards/${giverId}`, { as: giverId }),
+      stickerBoardSchema,
+    );
+    expect(
+      board.boardStickers.find((s) => s.sticker.id === gift.stickerId)?.openGift,
+    ).toMatchObject({ id: gift.id, status: "sent", for: { id: bobId } });
 
     const received = await bodyOf(await receiveFromBoard(test, bobId, gift.id), receivedGiftSchema);
     expect(received.gift.receiverId).toBe(bobId);

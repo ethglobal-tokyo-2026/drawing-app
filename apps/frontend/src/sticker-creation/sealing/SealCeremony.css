@@ -70,7 +70,7 @@
 .seal-ceremony__tint,
 .seal-ceremony__gloss,
 .seal-ceremony__pour,
-.seal-ceremony__sticker :is(.live-resin__lens, .live-resin__spec, .live-resin__rim) {
+.seal-ceremony__sticker :is(.sticker-foil, .live-resin__lens, .live-resin__spec, .live-resin__rim) {
   opacity: 0;
 }
 

@@ -13,7 +13,6 @@ import type {
   Me,
   OpenGiftBody,
   PackagedGift,
-  PendingGifts,
   Person,
   PilePage,
   PlacementsRequest,
@@ -24,6 +23,7 @@ import type {
   SpendTicket,
   SponsoredTransaction,
   StartedTicketPurchase,
+  StartPurchase,
   Sticker,
   StickerBoard,
   StickerDetail,
@@ -64,11 +64,13 @@ interface SealRequest {
 /** Opening a Gift Message's link: its token as the link carries it, which the client checks. */
 export type GiftOpening = Omit<OpenGiftBody, "giftClaimToken"> & { giftClaimToken: string };
 
-/** A purchase started: the purchase, and its payment for the person's wallet to sign. */
-interface StartedPurchase {
-  purchase: StartedTicketPurchase;
-  payment: SponsoredTransaction;
-}
+/**
+ * A purchase started: the purchase, and its payment for the person's wallet to sign; or the free
+ * first pack, with nothing to pay and its tickets already added.
+ */
+type StartedPurchase =
+  | { purchase: StartedTicketPurchase; payment: SponsoredTransaction }
+  | { purchase: StartedTicketPurchase; payment: null; tickets: Tickets };
 
 /** The REST API, one method per route the app calls. */
 export interface ApiClient {
@@ -76,11 +78,8 @@ export interface ApiClient {
   setLanguageChoice: (language: Me["language"]) => Promise<Me>;
   /** POST /api/me/nsfw-opt-in: Show 18+ stickers, in Settings. */
   setNsfwOptIn: (nsfwOptIn: boolean) => Promise<Me>;
-  /** POST /api/me/kyoto-seika-practice: Kyoto Seika Practice Mode and its dark subjects, in Settings; a switch left out stays. */
-  setKyotoSeikaPractice: (change: {
-    kyotoSeikaPractice?: boolean;
-    kyotoSeikaDarkSubjects?: boolean;
-  }) => Promise<Me>;
+  /** POST /api/me/kyoto-seika-practice: Kyoto Seika Practice Mode, in Settings. */
+  setKyotoSeikaPractice: (change: { kyotoSeikaPractice: boolean }) => Promise<Me>;
 
   /** GET /api/sticker-boards/:userId; `me` for your own. */
   stickerBoard: (userId?: string) => Promise<StickerBoard>;
@@ -116,8 +115,11 @@ export interface ApiClient {
   spendTicket: (spend: SpendTicket) => Promise<{ ticketUse: TicketUse; tickets: Tickets }>;
   /** GET /api/ticket-shop */
   ticketShop: () => Promise<TicketShop>;
-  /** POST /api/ticket-purchases/start: records a purchase of the pack of `tickets`, and builds its payment. */
-  startTicketPurchase: (tickets: number) => Promise<StartedPurchase>;
+  /**
+   * POST /api/ticket-purchases/start: records a purchase of a pack at the price the shop showed, and
+   * builds its payment, or gives the free first pack.
+   */
+  startTicketPurchase: (pack: StartPurchase) => Promise<StartedPurchase>;
   /** POST /api/ticket-purchases: a started purchase's signed payment, which the server runs and adds tickets for. */
   buyTickets: (payment: TicketPurchasePayment) => Promise<Tickets>;
 
@@ -134,8 +136,6 @@ export interface ApiClient {
   startTakeOut: (giftId: string) => Promise<TakeOutStart>;
   /** POST /api/gifts/:giftId/take-out: the signed take-out, which the server runs. */
   takeOutGift: (giftId: string, signed: SignedTransaction) => Promise<Gift>;
-  /** GET /api/gifts/pending */
-  pendingGifts: () => Promise<PendingGifts>;
   /** POST /api/gifts/preview */
   previewGift: (body: GiftOpening) => Promise<GiftPreview>;
   /** POST /api/gifts/receive */

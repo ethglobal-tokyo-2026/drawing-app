@@ -80,12 +80,10 @@ test("Kyoto Seika Practice Mode: switched on in Settings, dealt, timed and seale
   const rerolled = await dealtPair(page);
   expect(rerolled[1]).toBe(dealt[1]);
 
-  // A reload lands on the board; Draw brings the same sheet back, with the same pair.
+  // A reload lands on the board, whose Draw key now continues the waiting sheet, with the same pair.
   await page.reload();
   await page
-    .getByRole("button", {
-      name: startsWith(say(stickerBoard.board.drawLabelWithTickets, language)),
-    })
+    .getByRole("button", { name: say(stickerBoard.board.continueDrawing, language) })
     .click();
   expect(await dealtPair(page)).toEqual(rerolled);
 

@@ -32,6 +32,13 @@ export const TICKET_PACKS = [
   { tickets: 5, priceYen: 375 },
   { tickets: 10, priceYen: 600 },
 ] as const satisfies ReadonlyArray<Pick<TicketShop["packs"][number], "tickets" | "priceYen">>;
+export type TicketPack = (typeof TICKET_PACKS)[number];
+
+/**
+ * The pack each person gets once at ¥0, the first time they take it; null sells every pack at its
+ * price. A free pack never reaches Sui, since the payment vault refuses a zero payment.
+ */
+export const FREE_FIRST_PACK_TICKETS: TicketPack["tickets"] | null = 3;
 
 const PERCENT = 100;
 
@@ -39,19 +46,47 @@ const PERCENT = 100;
 export const jpycFor = (priceYen: number, decimals: number): bigint =>
   BigInt(priceYen) * 10n ** BigInt(decimals);
 
-/** The ticket shop: its packs, and where they're paid. */
-export const ticketShop = (target: TicketPaymentTarget): TicketShop => ({
-  packs: TICKET_PACKS.map(({ tickets, priceYen }) => ({
-    tickets,
-    priceYen,
-    discountPercent: Math.round(PERCENT - (PERCENT * priceYen) / (tickets * TICKET_PRICE_YEN)),
-    priceJpyc: jpycFor(priceYen, target.decimals).toString(),
-  })),
-  payment: target,
-});
-
 /** The database, or a transaction on it. */
 type DbOrTx = Db | Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+/**
+ * paid_jpyc of a purchase that paid nothing, which only a free first pack can be: the vault refuses
+ * a zero payment. Its row keeps the pack's price in price_yen, whose check wants it above 0.
+ */
+export const NOTHING_PAID = "0";
+
+/** Whether `userId` has had their free first pack. */
+export const hadFreePack = (db: DbOrTx, userId: string): boolean =>
+  db
+    .select({ id: ticketPurchases.id })
+    .from(ticketPurchases)
+    .where(and(eq(ticketPurchases.userId, userId), eq(ticketPurchases.paidJpyc, NOTHING_PAID)))
+    .get() !== undefined;
+
+/** The pack of how many tickets is free for `userId` now: the free first pack, until they've had it. */
+const freePackFor = (db: DbOrTx, userId: string) =>
+  FREE_FIRST_PACK_TICKETS !== null && !hadFreePack(db, userId) ? FREE_FIRST_PACK_TICKETS : null;
+
+/** `pack`'s price for `userId`: ¥0 for the free first pack until they've had it. */
+export const priceYenFor = (db: DbOrTx, userId: string, pack: TicketPack): number =>
+  pack.tickets === freePackFor(db, userId) ? 0 : pack.priceYen;
+
+/** The ticket shop as `userId` sees it: its packs at their prices for them, and where they're paid. */
+export function ticketShop(db: DbOrTx, userId: string, target: TicketPaymentTarget): TicketShop {
+  const free = freePackFor(db, userId);
+  return {
+    packs: TICKET_PACKS.map(({ tickets, priceYen: regular }) => {
+      const priceYen = tickets === free ? 0 : regular;
+      return {
+        tickets,
+        priceYen,
+        discountPercent: Math.round(PERCENT - (PERCENT * priceYen) / (tickets * TICKET_PRICE_YEN)),
+        priceJpyc: jpycFor(priceYen, target.decimals).toString(),
+      };
+    }),
+    payment: target,
+  };
+}
 
 export type TicketKind = (typeof ticketUses.$inferSelect)["kind"];
 
@@ -181,12 +216,15 @@ export const ticketUseSpentWith = (db: DbOrTx, userId: string, idempotencyKey: s
     .get();
 
 /**
- * Starting a purchase of a pack. Any positive count passes here, so the route can answer one that
- * isn't a pack with pack_unknown.
+ * Starting a purchase of a pack at the price the shop showed, which must still be its price for the
+ * buyer, so no one pays a price they didn't see. Any positive count passes here, so the route can
+ * answer one that isn't a pack with pack_unknown.
  */
 export const startPurchaseRequestSchema = createInsertSchema(ticketPurchases, {
   tickets: (schema) => schema.positive(),
-}).pick({ tickets: true });
+  priceYen: (schema) => schema.nonnegative(),
+}).pick({ tickets: true, priceYen: true });
+export type StartPurchase = z.infer<typeof startPurchaseRequestSchema>;
 
 const purchaseRow = createSelectSchema(ticketPurchases, { id: (schema) => schema.positive() });
 

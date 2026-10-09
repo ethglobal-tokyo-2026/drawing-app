@@ -36,11 +36,6 @@ export const giving = {
   giveSheet: {
     /** The give sheet, opened by Give on someone else's sticker board: its title */
     title: { en: "Give {{name}} a sticker", ja: "{{name}}さんにシールを贈る" },
-    /** The give sheet on someone else's sticker board: the line under its title */
-    lead: {
-      en: "Pick one of yours, then send it to {{name}} in a LINE chat.",
-      ja: "あなたのシールを<wbr/>1枚選んで、<wbr/>LINEのトークで<wbr/>{{name}}さんに<wbr/>送りましょう。",
-    },
     /** The give sheet on someone else's sticker board: the name of the grid of your stickers, for assistive tech */
     yourStickers: { en: "Your stickers", ja: "あなたのシール" },
     /** The give sheet on someone else's sticker board: in the grid's place when you have no sticker to give */
@@ -83,16 +78,6 @@ export const giving = {
   sheet: {
     /** Giving's first screen: the bold title of the aqua row that packs the sticker and opens LINE's friend picker */
     sendInChat: { en: "Send in a LINE chat", ja: "LINEのトークで送る" },
-    /** Giving's first screen: the small line under "Send in a LINE chat" */
-    sendInChatHint: {
-      en: "Pick your chat with them. The first to open it gets it.",
-      ja: "相手との<wbr/>トークを<wbr/>選んでください。<wbr/>最初に<wbr/>ひらいた人が<wbr/>受け取れます。",
-    },
-    /** Giving's first screen: the note at the bottom, beside a sticker icon */
-    leaves: {
-      en: "It comes off your board and into a gift bag.",
-      ja: "シールは<wbr/>ボードから<wbr/>はがれて、<wbr/>ギフト袋に<wbr/>入ります。",
-    },
   },
   /** "Can’t find them?", in the give sheet's place: for a friend LINE's picker leaves out. */
   cantFind: {
@@ -165,12 +150,12 @@ export const giving = {
       en: "Your sticker is coming back out of the gift bag. This can take a minute or two.",
       ja: "シールを<wbr/>ギフト袋から<wbr/>取り出しています。<wbr/>数分<wbr/>かかることも<wbr/>あります。",
     },
-    /** Giving's “Taking it out” screen: the send key's label while the sticker comes out */
+    /** Giving's “Taking it out” screen: the send key's label while the sticker comes out; and the sticker detail of a sticker in a gift: Take it out's words while it runs */
     button: { en: "Taking it out…", ja: "取り出し中…" },
   },
   /** The sticker in the open bag, until it's sent or taken out. */
   inTheBag: {
-    /** Giving, once the sticker drops into the open gift bag: the sheet's title while LINE's friend picker opens and is up */
+    /** Giving, once the sticker drops into the open gift bag: the sheet's title while LINE's friend picker opens and is up; and the sticker detail of a sticker in a packed gift: its note */
     title: { en: "In the bag", ja: "ギフト袋に入れました" },
     /** Giving, with the sticker in the open gift bag: the line under "In the bag" */
     lead: {
@@ -186,7 +171,7 @@ export const giving = {
     },
     /** Giving, with the sticker in the open gift bag: the aqua key that opens LINE's friend picker (again) */
     send: { en: "Send in LINE", ja: "LINEで送る" },
-    /** Giving, with the sticker in the open gift bag: the quiet link under Send in LINE that lifts it back out, back to the first screen */
+    /** Giving, with the sticker in the open gift bag: the quiet link under Send in LINE that lifts it back out, back to the first screen; and the sticker detail of a sticker in a gift: the quiet link under its note, and its confirm's key */
     takeOut: { en: "Take it out", ja: "取り出す" },
     /** Giving's "Not sent yet" screen: an alert when Croquis couldn't pack the gift, with why */
     couldntPack: {
@@ -195,7 +180,7 @@ export const giving = {
     },
     /** Giving's "Not sent yet" screen: an alert when LINE's friend picker failed to send the Gift Message, with why */
     wasntSent: { en: "{{no}} wasn’t sent: {{reason}}", ja: "{{no}}を送れませんでした：{{reason}}" },
-    /** Giving's "Not sent yet" screen: an alert when Take it out failed, with why */
+    /** Giving's "Not sent yet" screen: an alert when Take it out failed, with why; and the sticker detail of a sticker in a gift: the alert under its note, with Try again and Dismiss */
     couldntTakeOut: {
       en: "{{no}} couldn’t be taken out: {{reason}}",
       ja: "{{no}}を取り出せませんでした：{{reason}}",
@@ -303,28 +288,5 @@ export const giving = {
     },
     /** The giver's received notice: the caption beside the sticker's silhouette, the receiver and the day they received it */
     caption: { en: "{{name}} · {{date}}", ja: "{{name}}・{{date}}" },
-  },
-  /** Your gifts on their way, in clear film. */
-  pendingGifts: {
-    /** The pending gifts badge on your own sticker board: its fine print, with one gift sent and not yet received */
-    onTheirWay_one: { en: "On its way" },
-    /** The pending gifts badge on your own sticker board: its fine print, with gifts sent and not yet received */
-    onTheirWay_other: { en: "On their way", ja: "お届け中" },
-    /** The pending gifts badge on your own sticker board: the line under "On their way", the newest gift's number and how many more */
-    andMore: { en: "{{no}} and {{count}} more", ja: "{{no}}ほか{{count}}枚" },
-    /** The pending gifts badge on your own sticker board: the line under "On its way" naming who one gift waits for: the person picked in the app, or whoever first opened its link */
-    to: { en: "to {{name}}", ja: "{{name}}さんへ" },
-    /** Names the badge for assistive tech. */
-    label: {
-      /** The pending gifts badge on your own sticker board: its name for assistive tech, with one gift on its way */
-      one: { en: "Gifts on their way: {{no}}", ja: "お届け中のギフト：{{no}}" },
-      /** The pending gifts badge on your own sticker board: its name for assistive tech, with one gift that waits for someone: the person picked in the app, or whoever first opened its link */
-      oneTo: {
-        en: "Gifts on their way: {{no}} to {{name}}",
-        ja: "お届け中のギフト：{{name}}さんへの{{no}}",
-      },
-      /** The pending gifts badge on your own sticker board: its name for assistive tech, with several gifts on their way */
-      several: { en: "{{count}} gifts on their way", ja: "お届け中のギフト：{{count}}件" },
-    },
   },
 } as const satisfies Section;

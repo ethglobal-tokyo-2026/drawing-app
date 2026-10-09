@@ -505,6 +505,25 @@
   stroke-dasharray: 3 2.4;
 }
 
+/* A sticker on its way: in its spot under the sleeve's frost, inside its own cut line, so its sheet's
+   packing never moves. It opens, never peels. */
+.tray__slot[data-state="onItsWay"] {
+  cursor: pointer;
+}
+
+/* The sleeve's frost over the sticker, inside its cut: the fit's own mask (--m), as the used
+   sticker silhouette's. */
+.tray__frost {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
+  mask: var(--m) 0 0 / 100% 100% no-repeat;
+  background: rgba(246, 245, 250, 0.62);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
 .tray__fit {
   position: absolute;
   left: 50%;

@@ -8,7 +8,6 @@ import { logInfo, withRequestDiagnostics } from "./diagnostics.ts";
 const LOGGED_ROUTES = new Set([
   "/api/stickers",
   "/api/gifts",
-  "/api/gifts/pending",
   "/api/gifts/preview",
   "/api/gifts/receive",
   "/api/gifts/:giftId/receive",

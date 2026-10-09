@@ -14,7 +14,7 @@ import {
   type Box,
   type PileItem,
   type PiledSticker,
-  LARGE_PILE_SCALE,
+  MAX_PILE_SCALE,
   pileFit,
 } from "./pileLayout";
 
@@ -255,13 +255,13 @@ describe("tagLines", () => {
 });
 
 describe("pileFit", () => {
-  it("scales a phone's 360-unit pile to its width, and keeps a large screen's scale across more units", () => {
-    for (const px of [375, 390, 430]) {
-      expect(pileFit(px, false)).toEqual({ k: px / PILE_WIDTH, units: PILE_WIDTH });
-    }
-    const [mini, wide] = [pileFit(744, true), pileFit(1180, true)];
-    expect([mini.k, wide.k]).toEqual([LARGE_PILE_SCALE, LARGE_PILE_SCALE]);
-    expect(wide.units).toBeGreaterThan(mini.units);
-    expect(mini.units).toBeGreaterThan(PILE_WIDTH);
+  it("scales a phone's 360-unit pile to its width, and past MAX_PILE_SCALE keeps that scale across more units", () => {
+    const widest = PILE_WIDTH * MAX_PILE_SCALE;
+    for (const px of [PILE_WIDTH, widest])
+      expect(pileFit(px)).toEqual({ k: px / PILE_WIDTH, units: PILE_WIDTH });
+    const [wider, wide] = [pileFit(widest * 1.2), pileFit(widest * 3)];
+    expect([wider.k, wide.k]).toEqual([MAX_PILE_SCALE, MAX_PILE_SCALE]);
+    expect(wide.units).toBeGreaterThan(wider.units);
+    expect(wider.units).toBeGreaterThan(PILE_WIDTH);
   });
 });

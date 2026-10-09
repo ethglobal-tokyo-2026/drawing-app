@@ -15,8 +15,10 @@ import { ErrorDetail, ErrorLine } from "../ui/ErrorLine";
 import { HitCounter } from "../ui/HitCounter";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
+import { useLargeScreen } from "../ui/largeScreen";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
+import { useSheetDrag } from "../ui/useSheetDrag";
 import type { ComboRecord } from "./combo";
 import { newIdempotencyKey } from "../api/idempotencyKey";
 import {
@@ -291,6 +293,9 @@ export function GratitudeMiniGame({
     if (engine.current?.close()) return;
     leave();
   };
+  // On a large screen the receipt is a card in the middle, and a swipe down its head closes it.
+  const large = useLargeScreen();
+  const drag = useSheetDrag(close);
   useFocusTrap(root, { onEscape: close });
   // The trap focuses the first control, the X; the heart takes it, so Enter taps rather than closes.
   useEffect(() => engine.current?.focusHeart(), []);
@@ -385,9 +390,10 @@ export function GratitudeMiniGame({
           className={["gr-receipt is-on", note && "has-note", note?.detail && "has-detail"]
             .filter(Boolean)
             .join(" ")}
+          style={large ? drag.style : undefined}
           aria-label={receiptLabel}
         >
-          <div className="gr-rc-row">
+          <div className="gr-rc-row" {...(large ? drag.handlers : {})}>
             <div className="gr-rc-photo">
               <PhotoSticker src={giver.pictureUrl} name={giver.displayName} size={58} />
               <span className="gr-photo-dot" aria-hidden>

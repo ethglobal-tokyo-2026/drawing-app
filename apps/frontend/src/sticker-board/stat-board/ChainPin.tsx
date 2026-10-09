@@ -1,30 +1,16 @@
-import { BRAND_MARKS } from "../../icons/brandMarks";
+// Sui's droplet in Sui Blue, byte for byte from its brand kit (live.standards.site/sui-media-kit). Sui's
+// rules forbid altering it, so the pin's head is the file itself: never recolored, outlined or glinted.
+import suiDroplet from "./Logo_Sui_Droplet_Sui_Blue.svg";
 import "./address-papers.css";
 
-// The top-left light's glint, laid along the mark's upper-left edge, inside the plastic.
-const GLINT = { cx: 8.6, cy: 5.8, rx: 1.8, ry: 0.75, turn: -51 };
-
-/** A push pin whose plastic head is Sui's mark, holding the Sui address paper to the cork. */
+/** A push pin whose head is Sui's droplet, holding the Sui address paper to the cork. */
 export function ChainPin({ className }: { className?: string }) {
-  const g = GLINT;
   return (
-    <svg
+    <img
       className={["chain-pin", className].filter(Boolean).join(" ")}
-      viewBox="0 0 24 24"
-      width={22}
-      height={22}
-      aria-hidden
-      focusable="false"
-    >
-      <path className="chain-pin__head" d={BRAND_MARKS.sui} />
-      <ellipse
-        className="chain-pin__glint"
-        cx={g.cx}
-        cy={g.cy}
-        rx={g.rx}
-        ry={g.ry}
-        transform={`rotate(${g.turn} ${g.cx} ${g.cy})`}
-      />
-    </svg>
+      src={suiDroplet}
+      alt=""
+      draggable={false}
+    />
   );
 }

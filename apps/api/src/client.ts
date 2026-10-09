@@ -48,7 +48,7 @@ export type { ChatMenuLink } from "./chatMenu/menus.ts";
 export type { ErrorBody } from "./errors.ts";
 export type { Explore, PilePage, PileSticker } from "./explore/explore.ts";
 export type { LeaderboardRow } from "./explore/leaderboards.ts";
-export type { PackagedGift, PendingGifts, TakeOutStart } from "./gifts/packaging.ts";
+export type { PackagedGift, TakeOutStart } from "./gifts/packaging.ts";
 export type {
   GiftPreview,
   GiftsForYou,
@@ -88,6 +88,7 @@ export type { TimelapseV1 } from "./stickers/timelapse.ts";
 export type {
   SpendTicket,
   StartedTicketPurchase,
+  StartPurchase,
   TicketKind,
   TicketPurchasePayment,
   TicketUse,

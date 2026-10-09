@@ -12,7 +12,7 @@ export interface ReportInput {
   summary: PerformanceSummary;
   slowFrames: readonly SlowFrame[];
   takenAt: Date;
-  /** The phone and browser, from `describeDevice`. */
+  /** The device and its browser, from `describeDevice`. */
   device: string;
   /** This open's start, step by step, from `readBootMilestones`. */
   start?: readonly BootMilestone[];

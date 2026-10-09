@@ -1,20 +1,22 @@
-/* The pair as a faint vertical margin note (縦書き) in the sheet's corner, just above the seal key:
-   each word alone in its own column, right to left. Non-repro blue, pale enough to sink into the
-   paper under the ink drawn over it. The seal chip stands left of its column, so it never covers it. */
+/* The pair as a vertical margin note (縦書き) in the sheet's lower left, over the foot row's tiles:
+   each word alone in its own column, right to left. Non-repro blue, a pencil note that won't print,
+   under the ink drawn over it. A drawing hand covers the lower corner on its own side, so the print
+   takes the other one: a left hand mirrors it with the tiles (DrawingScreen.css). */
 .corner-print {
   position: absolute;
-  /* Centered over the seal key, whatever the words' face measures, a little above it. */
-  right: 39px;
-  bottom: 82px;
-  translate: 50% 0;
+  /* Its outer edge in line with undo's, and its foot just clear of the tiles, which a phone's sheet
+     reaches down under. */
+  left: 10px;
+  bottom: 70px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 8px;
   writing-mode: vertical-rl;
   /* Latin letters stand upright too, as in a handwritten note: BGM, Tシャツ. */
   text-orientation: upright;
-  color: color-mix(in srgb, var(--non-repro-blue) 30%, transparent);
+  /* Strong enough to read at arm's length while drawing, and still paler than any ink. */
+  color: color-mix(in srgb, var(--non-repro-blue) 70%, transparent);
   font-family: var(--font-jp);
   pointer-events: none;
   user-select: none;
@@ -35,7 +37,7 @@
 }
 
 .corner-print__word {
-  font-size: 15px;
+  font-size: 26px;
   font-weight: 700;
   line-height: 1.1;
 }

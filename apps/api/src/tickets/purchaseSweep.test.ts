@@ -12,15 +12,14 @@ import {
   sweepTicketPurchases,
 } from "./purchaseSweep.ts";
 import {
+  PAID_PACK as PACK,
   payPurchase,
   purchasesApp,
   signedBy,
   startedPurchase,
   type PurchasesApp,
 } from "./testPurchases.ts";
-import { TICKET_PACKS, ticketsLeftOf } from "./tickets.ts";
-
-const [, PACK] = TICKET_PACKS;
+import { ticketsLeftOf } from "./tickets.ts";
 
 let shop: PurchasesApp;
 let userId: string;
@@ -43,7 +42,7 @@ const reserveLeft = () => ticketsLeftOf(shop.test.db, userId, shop.test.clock.no
 
 /** Starts a purchase, and sends its signed payment with Sui's answer lost on the way back. */
 async function paidWithAnswerLost() {
-  const started = await startedPurchase(shop.test, userId, PACK.tickets);
+  const started = await startedPurchase(shop.test, userId, PACK);
   shop.chain.answerNext("lost");
   const signed = await signedBy(shop.walletOf(userId), started.payment);
   expect(
@@ -76,9 +75,9 @@ describe("the ticket purchase sweep", () => {
   });
 
   it("gives up a purchase whose payment was never signed once its sponsorship lapses, and one Sui never showed after the grace", async () => {
-    const unsigned = await startedPurchase(shop.test, userId, PACK.tickets);
+    const unsigned = await startedPurchase(shop.test, userId, PACK);
     const other = shop.buyer();
-    const lost = await startedPurchase(shop.test, other, PACK.tickets);
+    const lost = await startedPurchase(shop.test, other, PACK);
     shop.chain.answerNext("lost");
     await payPurchase(
       shop.test,
@@ -119,7 +118,7 @@ describe("the ticket purchase sweep", () => {
   it("runs at boot and every PURCHASE_SWEEP_EVERY_MS after, logging a payment it can't follow and going on", async () => {
     const failing = await paidWithAnswerLost();
     const other = shop.buyer();
-    const fine = await startedPurchase(shop.test, other, PACK.tickets);
+    const fine = await startedPurchase(shop.test, other, PACK);
     shop.chain.answerNext("lost");
     await payPurchase(
       shop.test,

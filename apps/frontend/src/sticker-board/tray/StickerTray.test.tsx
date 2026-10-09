@@ -79,6 +79,7 @@ const api: TrayBoard = {
   remove: () => {},
   pulse: () => {},
   openGiven: () => {},
+  openYours: () => {},
 };
 const render = (
   stickers: BoardStickerView[],
@@ -288,24 +289,22 @@ describe("StickerTray", () => {
 
   it("leaves a given sticker's spot, a button that opens it among the stickers you gave", async () => {
     const openGiven = vi.fn();
-    render([givenSticker("given", 1), sentSticker("sent", 3)], { openGiven });
+    render([givenSticker("given", 1)], { openGiven });
     await act(async () => void (await tray.current?.open()));
     const spot = board.querySelector<HTMLElement>('.tray__slot[data-id="given"]');
     expect(spot?.getAttribute("aria-label")).toBe("No.0001, given to @bob. Open it");
     // Nothing of the sticker shows, and it takes the shared press.
     expect(spot?.querySelector(".tray__fit, .tray__img")).toBeNull();
     expect(spot?.getAttribute("data-press")).toBe("");
-    // A sticker on its way leaves nothing to tap: the pending gifts badge holds it.
-    expect(slotOf("sent")).toBeNull();
 
     act(() => spot?.click());
     expect(openGiven).toHaveBeenCalledExactlyOnceWith("given");
   });
 
-  it("traces a given sticker's own cut line on its spot, and leaves one on its way only paper", async () => {
+  it("traces a given sticker's own cut line on its spot", async () => {
     render([givenSticker("given", 1), sentSticker("sent", 3)]);
     await openTray();
-    const outlines = board.querySelectorAll(".tray__given-outline");
+    const outlines = board.querySelectorAll('.tray__slot[data-id="given"] .tray__given-outline');
     const spot = board.querySelector<HTMLElement>('.tray__slot[data-id="given"]');
     expect(outlines).toHaveLength(1);
     expect(spot?.contains(outlines[0] ?? null)).toBe(true);
@@ -321,6 +320,18 @@ describe("StickerTray", () => {
       expect(y).toBeGreaterThan(0);
       expect(y).toBeLessThan(h);
     }
+  });
+
+  it("shows a sticker on its way under frost in its spot, which opens it among your stickers", async () => {
+    const openYours = vi.fn();
+    render([sentSticker("sent", 3)], { openYours });
+    await openTray();
+    const spot = board.querySelector<HTMLElement>('.tray__slot[data-id="sent"]');
+    expect(spot?.getAttribute("aria-label")).toBe("No.0001, on its way. Open it");
+    expect(spot?.querySelector(".tray__frost")).not.toBeNull();
+    expect(spot?.querySelector(".tray__given-outline")).not.toBeNull();
+    act(() => spot?.click());
+    expect(openYours).toHaveBeenCalledExactlyOnceWith("sent");
   });
 
   it("puts a sticker in hand back on its pulled-out sheet when the sheet is sent home", async () => {
@@ -926,12 +937,26 @@ describe("StickerTray", () => {
       const sheets = (stackEl()?.querySelectorAll(".tray__sheet").length ?? 0) + hidden;
       const stackFoot = stackTop + scale * SHEET.h + stackFootFor(sheets);
       expect(scale).toBe(1);
-      // The slider stopped short of the rail's foot: only a little lining under the sheets.
+      // The mouth closes in short of the rail's foot: only a little lining under the sheets.
       expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
       expect(mouthFoot - stackFoot).toBeLessThan(2 * POUCH_LINING);
     });
 
-    it("takes a sticker back beside the open mouth, and not from below its slider", async () => {
+    it("runs the slider down to the bottom stop, however few the sheets", async () => {
+      await openOn(776, 1);
+      const [, sliderY = NaN] = numbersIn(board.querySelector(".zip__slider"));
+      const [, stopY = NaN] = numbersIn(board.querySelector(".zip__stop--bottom"));
+      // The slider's length, as its body is drawn.
+      const [, , , length = NaN] = (
+        board.querySelector(".zip__body")?.getAttribute("viewBox") ?? ""
+      )
+        .split(" ")
+        .map(Number);
+      expect(stopY - sliderY).toBeGreaterThan(0);
+      expect(stopY - sliderY).toBeLessThan(length);
+    });
+
+    it("takes a sticker back beside the open mouth, and not from below it", async () => {
       vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
         this: HTMLElement,
       ) {

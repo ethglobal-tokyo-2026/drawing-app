@@ -1,0 +1,25 @@
+/* ---------- The upright cover: over everything while the phone is on its side ---------- */
+
+.upright-cover {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-cover);
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  background: var(--liner);
+  color: var(--ink);
+}
+
+.upright-cover:focus {
+  outline: none;
+}
+
+.upright-cover__line {
+  margin: 0;
+  font-size: 26px;
+  text-align: center;
+}

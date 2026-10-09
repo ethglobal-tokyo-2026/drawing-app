@@ -22,17 +22,23 @@ import {
 } from "../sui/transactions.ts";
 import { ticketPaymentReference } from "./paymentReference.ts";
 import {
+  FREE_FIRST_PACK_TICKETS,
+  hadFreePack,
   jpycFor,
+  NOTHING_PAID,
+  priceYenFor,
   TICKET_PACKS,
   ticketsOf,
   toStartedTicketPurchase,
   type StartedTicketPurchase,
+  type StartPurchase,
+  type TicketPack,
   type TicketPurchasePayment,
 } from "./tickets.ts";
 
 type Purchase = typeof ticketPurchases.$inferSelect;
 
-/** The routes check for Sui first, so only mock chain mode lacks it, where nothing is bought. */
+/** Paying checks for Sui first, so only mock chain mode lacks it, where nothing is bought. */
 function chainOf({ db, clock, sui, gasStation }: AppDeps): SuiTransactionDeps {
   if (!sui || !gasStation) throw new Error("Ticket purchases need Sui and Shinami Gas Station");
   return { db, clock, sui, gasStation };
@@ -147,25 +153,78 @@ export async function followPayment(deps: AppDeps, row: SuiTransaction) {
 }
 
 export type PurchaseStart =
-  | Refusal<"pack_unknown" | "no_sui_wallet" | "payment_not_landed">
-  | { refusal: null; purchase: StartedTicketPurchase; payment: SponsoredTransaction };
+  | Refusal<
+      | "pack_unknown"
+      | "free_pack_used"
+      | "price_changed"
+      | "chain_unavailable"
+      | "no_sui_wallet"
+      | "payment_not_landed"
+    >
+  | { refusal: null; purchase: StartedTicketPurchase; payment: SponsoredTransaction }
+  /** The free first pack: nothing to pay, its tickets counted as it starts. */
+  | { refusal: null; purchase: StartedTicketPurchase; payment: null; tickets: Tickets };
 
 /**
- * Starts a purchase of a pack: the server builds its payment, which Shinami sponsors, for the
- * buyer's Privy Sui wallet to sign. An earlier payment of theirs goes first: one that ran counts its
+ * Gives `userId` their free first pack, a purchase that paid nothing, counted at once. The check and
+ * the insert share one immediate transaction, so two taps at once give one pack.
+ */
+function giveFreePack(deps: AppDeps, userId: string, pack: TicketPack): PurchaseStart {
+  const given = deps.db.transaction(
+    (tx) => {
+      if (hadFreePack(tx, userId)) return undefined;
+      const { tickets, priceYen } = pack;
+      return tx
+        .insert(ticketPurchases)
+        .values({ userId, tickets, priceYen, paidJpyc: NOTHING_PAID, verifiedAt: deps.clock.now() })
+        .returning()
+        .get();
+    },
+    { behavior: "immediate" },
+  );
+  if (!given) {
+    return refuse(
+      "free_pack_used",
+      `priceYen: ${userId} has had their free pack of ${pack.tickets}, which is ¥${pack.priceYen} now`,
+    );
+  }
+  logInfo("ticket_purchase.free_pack_given", { userId, purchaseId: given.id });
+  return {
+    refusal: null,
+    purchase: { ...toStartedTicketPurchase(given), priceYen: 0 },
+    payment: null,
+    tickets: ticketsOf(deps.db, userId, deps.clock.now()),
+  };
+}
+
+/**
+ * Starts a purchase of a pack at the price the buyer saw. The free first pack is given at once,
+ * without Sui. Any other: the server builds its payment, which Shinami sponsors, for the buyer's
+ * Privy Sui wallet to sign. An earlier payment of theirs goes first: one that ran counts its
  * tickets, and one never sent is dropped with its purchase. Rejects with SponsorshipError when
  * Shinami refuses it, such as for a balance short of the pack, giving the purchase up.
  */
 export async function startTicketPurchase(
   deps: AppDeps,
   userId: string,
-  tickets: number,
+  { tickets, priceYen }: StartPurchase,
 ): Promise<PurchaseStart> {
   const pack = TICKET_PACKS.find((offer) => offer.tickets === tickets);
   if (!pack) {
     const packs = TICKET_PACKS.map((offer) => offer.tickets).join(", ");
     return refuse("pack_unknown", `tickets: no pack has ${tickets}; packs have ${packs}`);
   }
+  if (priceYen === 0 && pack.tickets === FREE_FIRST_PACK_TICKETS) {
+    return giveFreePack(deps, userId, pack);
+  }
+  const price = priceYenFor(deps.db, userId, pack);
+  if (priceYen !== price) {
+    return refuse(
+      "price_changed",
+      `priceYen: the pack of ${tickets} is ¥${price} for ${userId}, not ¥${priceYen}`,
+    );
+  }
+  if (!deps.sui) return refuse("chain_unavailable", "This server runs without Sui");
   const chain = chainOf(deps);
   const payer = await deps.suiWallets.addressFor(userId);
   if (!payer) return refuse("no_sui_wallet", `${userId} has no Privy Sui wallet yet`);

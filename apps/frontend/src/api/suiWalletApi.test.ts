@@ -78,8 +78,19 @@ describe("REST actions that need the person's Sui wallet", () => {
       .fn<ApiClient["startTicketPurchase"]>()
       .mockRejectedValue(refused);
     const api = withSuiWallet(emptyApi({ startTicketPurchase }));
-    await heldUntilTheWallet(startTicketPurchase, api.startTicketPurchase(3));
-    expect(startTicketPurchase).toHaveBeenCalledExactlyOnceWith(3);
+    const pack = { tickets: 3, priceYen: 270 };
+    await heldUntilTheWallet(startTicketPurchase, api.startTicketPurchase(pack));
+    expect(startTicketPurchase).toHaveBeenCalledExactlyOnceWith(pack);
+  });
+
+  it("starts the free first pack without waiting, as it pays nothing", async () => {
+    const startTicketPurchase = vi
+      .fn<ApiClient["startTicketPurchase"]>()
+      .mockRejectedValue(refused);
+    const api = withSuiWallet(emptyApi({ startTicketPurchase }));
+    const free = { tickets: 3, priceYen: 0 };
+    await expect(api.startTicketPurchase(free)).rejects.toBe(refused);
+    expect(startTicketPurchase).toHaveBeenCalledExactlyOnceWith(free);
   });
 
   it("waits for it before Sealing, then takes a confirmed seal", async () => {

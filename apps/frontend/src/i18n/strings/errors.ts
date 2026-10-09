@@ -120,7 +120,7 @@ export const errors = {
   },
   /** Any screen, when the server can't read a request (400), through problemOf; e.g. the Drawing screen's seal chip when a seal's images are malformed (POST /api/stickers) */
   invalid_request: {
-    en: "Croquis couldn’t read what your phone sent. Try again. If it keeps happening, tell the Croquis Official account in LINE.",
+    en: "Croquis couldn’t read what your device sent. Try again. If it keeps happening, tell the Croquis Official account in LINE.",
     ja: "クロッキーが<wbr/>その内容を<wbr/>読み取れませんでした。<wbr/>もう一度<wbr/>お試しください。<wbr/>続く場合は、<wbr/>LINEの<wbr/>クロッキー<wbr/>公式アカウントに<wbr/>お知らせください。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) when LINE refuses the ID token, through errorMessage */
@@ -168,6 +168,16 @@ export const errors = {
   own_gift: { en: "You can’t open your own gift.", ja: "自分が贈ったギフトは、ひらけません。" },
   /** Reserve ticket checkout, after tapping Pay: starting the purchase (POST /api/ticket-purchases/start) for a pack size the shop doesn't sell, under “Payment didn’t go through” through errorMessage; nothing was paid */
   pack_unknown: { en: "That ticket pack doesn’t exist.", ja: "そのチケットパックはありません。" },
+  /** Reserve ticket checkout, after tapping Get it free: taking the free first pack (POST /api/ticket-purchases/start) when you've already had it, such as in another window, under “Payment didn’t go through” through errorMessage; Back to the packs shows its price now */
+  free_pack_used: {
+    en: "You’ve already had your free pack.",
+    ja: "無料パックはすでにもらっています。",
+  },
+  /** Reserve ticket checkout, after tapping Pay: starting the purchase (POST /api/ticket-purchases/start) of a pack whose price changed since the checkout showed it, under “Payment didn’t go through” through errorMessage; nothing was paid */
+  price_changed: {
+    en: "This pack’s price has changed, so nothing was paid.",
+    ja: "このパックの価格が変わったため、支払いは行われていません。",
+  },
   /** Reserve ticket checkout, after paying: the reason in “Tickets not added yet” when Sui's answer to the signed payment (POST /api/ticket-purchases) never came, under the key that sends it again */
   payment_not_landed: {
     en: "Sui hasn’t answered about the payment yet.",
@@ -243,7 +253,7 @@ export const errors = {
   /** An artist's sticker board: loading their board or stats (GET /api/sticker-boards/:userId, …/user-stats) for a person who doesn't exist, in “Couldn’t load …’s board” or “Their stats didn’t load” through problemOf */
   user_not_found: {
     en: "Couldn’t find that artist. Search for them in Explore to check the handle.",
-    ja: "そのアーティストが見つかりませんでした。さがすでユーザー名を確認してください。",
+    ja: "そのアーティストが見つかりませんでした。「発見」でユーザー名を確認してください。",
   },
   /** Giving and the reserve ticket checkout: a deposit, take-out or payment (POST /api/gifts/…, /api/ticket-purchases) signed after the server's sponsorship of it lapsed, so it was never sent; Giving packs again by itself first, so it shows only when that fails too, through problemOf */
   sponsorship_expired: {
@@ -285,7 +295,7 @@ export const errors = {
     en: "Couldn’t get the Sui address just now. Try again in a moment.",
     ja: "Suiアドレスをいま取得できません。少し待ってから、もう一度お試しください。",
   },
-  /** Any error line, when what failed isn't the server's answer but something on this phone or in a library, such as LINE's picker; its own English words follow as details for a report (made by the app itself, shown through problemOf) */
+  /** Any error line, when what failed isn't the server's answer but something on this device or in a library, such as LINE's picker; its own English words follow as details for a report (made by the app itself, shown through problemOf) */
   unexpected: {
     en: "Something went wrong. Try again in a moment.",
     ja: "問題が発生しました。少し待ってから、もう一度お試しください。",

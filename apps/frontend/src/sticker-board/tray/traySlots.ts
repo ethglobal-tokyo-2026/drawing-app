@@ -1,10 +1,10 @@
 import { onItsWay, type BoardStickerView } from "../boardSticker";
 
 /**
- * "here" in its spot, "used" out on the board (its used sticker silhouette shows), "given" away (its
- * spot stays, with only its cut line traced).
+ * "here" in its spot, "used" out on the board (its used sticker silhouette shows), "onItsWay" (its
+ * spot shows it under frost), "given" away (its spot stays, with only its cut line traced).
  */
-type TraySlotState = "here" | "used" | "given";
+type TraySlotState = "here" | "used" | "onItsWay" | "given";
 
 /** A sticker's permanent place in the sticker tray. */
 export interface TraySlot {
@@ -37,15 +37,14 @@ export function traySlots(
       arrivedAt: s.arrivedAt,
       sheet: Math.floor(n / PER_SHEET),
       slot: n % PER_SHEET,
-      // On its way or received, it's gone from its spot.
-      state: !s.held || onItsWay(s) ? "given" : s.placement.on ? "used" : "here",
+      state: !s.held ? "given" : onItsWay(s) ? "onItsWay" : s.placement.on ? "used" : "here",
     }));
 }
 
 /**
  * NEW: the stickers that arrived in today's ticket day and the open tray hasn't shown yet. A sticker
- * lands on the board when it's sealed or received, so a fresh arrival is NEW as its hole; one
- * given away has left.
+ * lands on the board when it's sealed or received, so a fresh arrival is NEW as its hole; one on its
+ * way or given away has left.
  */
 export function newSlots(
   slots: readonly TraySlot[],
@@ -62,7 +61,12 @@ export function newSlots(
 ): Set<string> {
   return new Set(
     slots
-      .filter((s) => s.state !== "given" && !seen.has(s.id) && dayOf(s.arrivedAt) === today)
+      .filter(
+        (s) =>
+          (s.state === "here" || s.state === "used") &&
+          !seen.has(s.id) &&
+          dayOf(s.arrivedAt) === today,
+      )
       .map((s) => s.id),
   );
 }

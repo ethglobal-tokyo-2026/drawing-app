@@ -8,6 +8,8 @@ import {
 } from "react";
 import { useLight } from "../../stickers/light";
 import { LiveResin } from "../../stickers/LiveResin";
+import { madeFoil } from "../../stickers/madeFoil";
+import { StickerFoil } from "../../stickers/StickerFoil";
 import { sweepSheen } from "../../stickers/resinSheen";
 import type { Sticker } from "@drawing-app/api/client";
 import { releaseCanvas } from "../../ui/releaseCanvas";
@@ -37,6 +39,8 @@ const CUTTER_FADE_MS = 160;
 const TRAIL_GROW_MS = 700;
 /** A frame after a hitch moves the ceremony on by at most this, so a hitch slows it rather than skipping it. */
 const MAX_FRAME_MS = 64;
+/** The sticker's turn as it lands on the card, which a foil's glint undoes. */
+const LANDED_TURN_DEG = -2;
 /** Until the card is there, the sticker stays on its backing: nothing flies before the seal is recorded. */
 const ON_BACKING: Flight = { peel: { x: 0, y: 0 }, dx: 0, dy: 0, scale: 1 };
 
@@ -239,6 +243,9 @@ export function SealCeremony({
       opacity(parts.spec, f.spec.opacity);
       parts.specFace.style.scale = String(f.spec.scale);
       opacity(parts.rim, f.rim);
+      // A foil that marks how the sticker was made comes with the seal's answer, and rises with the resin.
+      const foil = parts.sticker.querySelector<HTMLElement>(".sticker-foil");
+      if (foil) opacity(foil, f.tint);
       const p = f.sticker;
       parts.sticker.style.transform = `perspective(1000px) translate(${p.x}px, ${p.y}px) rotate(${p.rotate}deg) rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg) scale(${p.scale})`;
       const s = f.shadow;
@@ -328,6 +335,11 @@ export function SealCeremony({
     "--mb": `url("${layers.rim}")`,
   };
 
+  // Pink on an 18+ sticker, else the Kyoto Seika Practice Mode foil on one drawn in that mode: the
+  // Other Hand Rule lets these show on your own stickers.
+  const foil =
+    sealed && madeFoil({ nsfw: sealed.nsfw, kyotoSeika: sealed.kyotoSeikaSubjects !== null });
+
   const classes = ["seal-ceremony", failed && "is-failed", leaving && "is-leaving"];
   return (
     <div
@@ -380,6 +392,9 @@ export function SealCeremony({
           decoding="sync"
         />
         <div className="seal-ceremony__sticker" style={resin} aria-hidden="true">
+          {foil && sealed && (
+            <StickerFoil size="board" tone={foil} no={sealed.number} turn={LANDED_TURN_DEG} />
+          )}
           <img className="seal-ceremony__plain" src={layers.plain} alt="" decoding="sync" />
           <img className="seal-ceremony__tint" src={layers.tint} alt="" decoding="sync" />
           <img className="seal-ceremony__gloss" src={layers.gloss} alt="" decoding="sync" />

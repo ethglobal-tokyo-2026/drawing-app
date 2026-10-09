@@ -12,6 +12,24 @@ const SETTLE_MS = 10_000;
 
 /** Resolves with what `run` resolved, and the slider's progress at that moment. */
 const whenDone = (run: Promise<boolean>) => run.then((open) => ({ open, progress: zip.progress }));
+/** The pull's turn about its hinge, out of the tape's plane, in degrees: 0 lays it hanging down. */
+const pullTurn = () => {
+  const transform = zip.el.querySelector<HTMLElement>(".zip__flop")?.style.transform ?? "";
+  return parseFloat(/rotateX\((-?[\d.]+)deg\)/.exec(transform)?.[1] ?? "NaN");
+};
+/** Whether the pull's free end is below its hinge. */
+const hangsDown = () => Math.cos((pullTurn() * Math.PI) / 180) > 0;
+/** The pull's highest turn out of the tape over the next `ms`, a frame at a time. */
+async function highestTurn(ms: number) {
+  let most = pullTurn();
+  for (let t = 0; t < ms; t += 16) {
+    await vi.advanceTimersByTimeAsync(16);
+    most = Math.max(most, pullTurn());
+  }
+  return most;
+}
+const pointer = (type: string, clientY: number, on: Element = zip.slider) =>
+  on.dispatchEvent(new PointerEvent(type, { pointerId: 1, clientY, bubbles: true }));
 
 beforeEach(() => {
   vi.useFakeTimers({
@@ -79,8 +97,6 @@ describe("the Zipper", () => {
   });
 
   it("lets a touch the system takes go without a tap or a release", async () => {
-    const pointer = (type: string, clientY: number, on: Element = zip.slider) =>
-      on.dispatchEvent(new PointerEvent(type, { pointerId: 1, clientY, bubbles: true }));
     // Still and short, it would have been a tap.
     pointer("pointerdown", 20);
     pointer("pointercancel", 20);
@@ -103,18 +119,22 @@ describe("the Zipper", () => {
     expect(zip.isOpen).toBe(true);
   });
 
-  it("swings its pull when the phone jolts, but not under reduced motion", async () => {
+  it("swings its pull out of the tape when the phone jolts and lets it fall back, not under reduced motion", async () => {
     const jolt = () =>
       window.dispatchEvent(
-        Object.assign(new Event("devicemotion"), { acceleration: { x: 6, y: 1, z: 0 } }),
+        Object.assign(new Event("devicemotion"), { acceleration: { x: 6, y: 1, z: 2 } }),
       );
-    const swing = () => {
-      const pull = zip.el.querySelector<HTMLElement>(".zip__flop")?.style.transform ?? "";
-      return parseFloat(/rotate\((-?[\d.]+)deg\)/.exec(pull)?.[1] ?? "NaN");
-    };
+    const rest = pullTurn();
+    const sliderAt = zip.slider.style.transform;
+    let frames = 0;
+    zip.on("frame", () => frames++);
     jolt();
-    await vi.advanceTimersByTimeAsync(100);
-    expect(Math.abs(swing())).toBeGreaterThan(1);
+    expect(await highestTurn(400)).toBeGreaterThan(rest);
+    // It falls back hanging down; the slider and the chain never moved.
+    await vi.advanceTimersByTimeAsync(SETTLE_MS);
+    expect(pullTurn()).toBeCloseTo(rest, 1);
+    expect(zip.slider.style.transform).toBe(sliderAt);
+    expect(frames).toBe(0);
     expect(zip.isOpen).toBe(false);
 
     zip.destroy();
@@ -122,24 +142,43 @@ describe("the Zipper", () => {
     vi.spyOn(window, "matchMedia").mockReturnValue(window.matchMedia("all"));
     zip = createZipper(host, OPTIONS);
     jolt();
-    await vi.advanceTimersByTimeAsync(100);
-    expect(swing()).toBe(0);
+    expect(await highestTurn(400)).toBe(pullTurn());
   });
 
-  it("leaves the chain as drawn while only the pull swings on after a run", async () => {
-    const swing = () => {
-      const pull = zip.el.querySelector<HTMLElement>(".zip__flop")?.style.transform ?? "";
-      return parseFloat(/rotate\((-?[\d.]+)deg\)/.exec(pull)?.[1] ?? "NaN");
-    };
+  it("lets its pull hang down at rest, shut and open", async () => {
+    const shut = pullTurn();
+    expect(hangsDown()).toBe(true);
     void zip.open();
-    // The run and its knock have settled; the pull still swings from the knock.
-    await vi.advanceTimersByTimeAsync(2000);
-    let frames = 0;
-    zip.on("frame", () => frames++);
-    const before = swing();
+    await vi.advanceTimersByTimeAsync(SETTLE_MS);
+    expect(pullTurn()).toBeCloseTo(shut, 1);
+  });
+
+  it("turns its pull the way a hand pulls it, and lets it fall back hanging down", async () => {
+    void zip.open();
+    await vi.advanceTimersByTimeAsync(SETTLE_MS);
+    const rest = pullTurn();
+    const y = zip.geometry().sliderY;
+    // Pushed up slowly, not flicked shut.
+    pointer("pointerdown", y);
+    await vi.advanceTimersByTimeAsync(100);
+    pointer("pointermove", y - 40);
     await vi.advanceTimersByTimeAsync(300);
-    expect(swing()).not.toBeCloseTo(before, 1);
-    expect(frames).toBe(0);
+    expect(hangsDown()).toBe(false);
+    pointer("pointerup", y - 40);
+    await vi.advanceTimersByTimeAsync(SETTLE_MS);
+    expect(zip.isOpen).toBe(true);
+    expect(pullTurn()).toBeCloseTo(rest, 1);
+  });
+
+  it("keeps each top stop where it's sewn on its tape as the slider opens", async () => {
+    const topStops = () =>
+      [...zip.el.querySelectorAll<HTMLElement>(".zip__stop--top")].map((s) => s.style.transform);
+    const sewn = topStops();
+    void zip.open();
+    for (let t = 0; t < 1500; t += 50) {
+      await vi.advanceTimersByTimeAsync(50);
+      expect(topStops()).toEqual(sewn);
+    }
   });
 
   it("stops everything when destroyed and ignores later calls", async () => {

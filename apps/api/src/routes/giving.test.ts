@@ -1,9 +1,9 @@
 import { GIFT_EXPIRY_MS } from "@drawing-app/db";
-import { bytes32, insertUser, packGift, receiveGift } from "@drawing-app/db/testing";
+import { bytes32, insertUser, receiveGift } from "@drawing-app/db/testing";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { fromBase64 } from "@mysten/sui/utils";
 import { describe, expect, it } from "vitest";
-import { claimCommitmentOf, giftClaimTokenSchema, pendingGiftsSchema } from "../gifts/packaging.ts";
+import { claimCommitmentOf, giftClaimTokenSchema } from "../gifts/packaging.ts";
 import {
   createGiftsTestApp,
   giftOf,
@@ -13,9 +13,7 @@ import {
 } from "../gifts/testGifts.ts";
 import { SPONSORSHIP_MARGIN_MS } from "../sui/transactions.ts";
 import { TransactionRefusedError } from "../sui/types.ts";
-import { bodyOf, refusalOf } from "../testing/responses.ts";
-
-const HOUR_MS = 60 * 60 * 1000;
+import { refusalOf } from "../testing/responses.ts";
 
 describe("Packaging", () => {
   it("packs a gift whose Gift Claim Token only its commitment is kept for, then answers it again", async () => {
@@ -350,28 +348,5 @@ describe("A gift's routes", () => {
       });
     }
     expect(test.giftRow(gift.id).status).toBe("packed");
-  });
-});
-
-describe("GET /api/gifts/pending", () => {
-  it("lists your packed and sent gifts, newest first, with their stickers", async () => {
-    const test = await createGiftsTestApp();
-    const me = insertUser(test.db);
-    const hoursAgo = (hours: number) => new Date(test.clock.now().getTime() - hours * HOUR_MS);
-    const pack = (giverId: string, values: Parameters<typeof packGift>[3]) =>
-      packGift(test.db, test.sealSticker(giverId), giverId, { escrowStatus: "pending", ...values });
-    const older = pack(me, { createdAt: hoursAgo(3) });
-    const sent = pack(me, { createdAt: hoursAgo(2), status: "sent", sentAt: hoursAgo(1) });
-    pack(me, {
-      createdAt: hoursAgo(1),
-      status: "taken_out",
-      takenOutAt: hoursAgo(0),
-      escrowStatus: "taken_out",
-    });
-    pack(insertUser(test.db), {});
-
-    const { gifts } = await bodyOf(await test.get(me, "/pending"), pendingGiftsSchema);
-    expect(gifts.map(({ gift }) => gift.id)).toEqual([sent, older]);
-    for (const { gift, sticker } of gifts) expect(sticker.id).toBe(gift.stickerId);
   });
 });

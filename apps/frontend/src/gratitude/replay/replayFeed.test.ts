@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ReplayV1 } from "@drawing-app/api/client";
 import { FEEL_CONFIG, GAME_CONFIG } from "../gameConfig";
 import type { HeartBox } from "../miniHeartPhysics";
-import { heartRest, LIVE_FRAME } from "../stageLayout";
+import { heartRest, liveHeartRest } from "../stageLayout";
 import { session, STAGE, strokeStartedCombo, strokeUpAndDown } from "../testCombos";
 import { isOnHeart } from "../touchInput";
 import {
@@ -15,7 +15,7 @@ import {
 } from "./replayFeed";
 
 /** The heart on the stage the tests record on: fed onto it, every input stays where it was. */
-const RECORDED_HEART = heartRest(STAGE.width, STAGE.height, LIVE_FRAME);
+const RECORDED_HEART = liveHeartRest(STAGE.width, STAGE.height);
 
 const px = ({ x, y }: StagePoint) => [Math.round(x), Math.round(y)];
 
@@ -158,9 +158,9 @@ describe("where a replay's inputs land", () => {
 
   it.each([
     ["a phone", STAGE],
-    ["a tablet, with the heart at its widest", { width: 820, height: 1180 }],
+    ["an iPad, the heart grown with its stage", { width: 820, height: 1180 }],
   ])("keeps a touch's place on the heart, recorded on %s", (_, stage) => {
-    const recorded = heartRest(stage.width, stage.height, LIVE_FRAME);
+    const recorded = liveHeartRest(stage.width, stage.height);
     // The heart's middle, and eight spots just inside its reach.
     const reach = 0.97 * (1 + FEEL_CONFIG.heartReach);
     const spots: StagePoint[] = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => ({
@@ -182,7 +182,7 @@ describe("where a replay's inputs land", () => {
   });
 
   it("keeps a stroke's shape around the heart, unclamped past the replay stage's edge", () => {
-    const recorded = heartRest(STAGE.width, STAGE.height, LIVE_FRAME);
+    const recorded = RECORDED_HEART;
     // A drag along the bottom of the phone, far under the heart.
     const path: StagePoint[] = [
       { x: 60, y: 700 },

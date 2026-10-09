@@ -1,0 +1,120 @@
+/* Kyoto Seika Practice Mode's help (KyotoSeikaHelp.tsx). Over the whole phone with a scrim that closes
+   it, as your gratitude events' layer is; it stays mounted, so it lets taps through while closed. */
+.kyoto-seika-help-layer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+}
+
+.kyoto-seika-help-layer:not(.is-open) {
+  pointer-events: none;
+}
+
+.kyoto-seika-help__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 24, 36, 0.36);
+  opacity: 0;
+  transition: opacity var(--t-peel) var(--ease-out);
+}
+
+.kyoto-seika-help-layer.is-open .kyoto-seika-help__scrim {
+  opacity: 1;
+}
+
+.kyoto-seika-help__title {
+  margin: 0 0 8px;
+  font: 800 20px/1.15 var(--font-ui);
+  font-stretch: var(--w-title);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.kyoto-seika-help__lead {
+  margin: 0;
+  color: var(--ink);
+  font: 500 15px/1.45 var(--font-ui);
+  text-wrap: pretty;
+}
+
+/* Three panels, like a 3-koma strip: each a close-up of the real screen, framed in ink as a manga's
+   panels are, over its caption. The deal's panel is the widest, for its two balloons. */
+.kyoto-seika-help__strip {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 6px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kyoto-seika-help__koma {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Clipped inside its frame, so a close-up's edges run under the ink as a panel's art does. */
+.kyoto-seika-help__panel {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 108px;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  background: var(--canvas);
+}
+
+/* The drawing screen's deal as a phone lays it out, small. */
+.kyoto-seika-help__deal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  scale: 0.38;
+}
+
+.kyoto-seika-help__clock {
+  scale: 1.4;
+}
+
+.kyoto-seika-help__tickets {
+  scale: 1.8;
+}
+
+.kyoto-seika-help__caption {
+  color: var(--ink);
+  font: 700 13px/1.3 var(--font-ui);
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* Japanese breaks only between its marked phrases (keep-phrases); English wraps as it always has. */
+.kyoto-seika-help__caption:not(:lang(ja)) {
+  word-break: normal;
+}
+
+.kyoto-seika-help__fine {
+  display: block;
+  margin: 16px 0 0;
+  color: var(--graphite);
+  font: 500 12px/1.5 var(--font-ui);
+  text-wrap: pretty;
+}
+
+.kyoto-seika-help__credit {
+  width: fit-content;
+  /* A touch band past the line, which sits 2px under the fine print over it. */
+  margin: -4px 0 -6px;
+  padding: 6px 0;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.kyoto-seika-help:lang(ja) :is(.kyoto-seika-help__lead, .kyoto-seika-help__fine) {
+  font-family: var(--font-jp);
+  line-height: 1.65;
+  word-break: auto-phrase;
+}

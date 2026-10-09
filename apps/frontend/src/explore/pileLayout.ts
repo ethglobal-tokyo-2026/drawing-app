@@ -7,7 +7,7 @@
  * - Named: every sticker's name tag hangs across its lower left edge, and no later sticker or tag
  *   covers an earlier tag.
  * - Stable: a spot depends only on the day, the sticker's id and the stickers before it, in a space
- *   `width` units wide (PILE_WIDTH on every phone, wider on a large screen), so appending moves
+ *   `width` units wide (PILE_WIDTH on every phone, wider in a wider window), so appending moves
  *   nothing and each visit looks the same.
  * Units: x runs from 0 to `width`, and y from the floor at 0 up, so a heap's y is negative.
  */
@@ -18,15 +18,15 @@ import { seededRandom } from "../ui/seededRandom";
 /** The pile's width in units on a phone; the screen scales it to fit. */
 export const PILE_WIDTH = 360;
 /**
- * px per pile unit on a large screen, about a phone's: a wider pile spans more units and shows more
- * stickers, rather than a phone's 360 units blown up.
+ * px per pile unit at most, about a phone's: a wider pile, in either layout, spans more units and
+ * shows more stickers, rather than a phone's 360 units blown up.
  */
-export const LARGE_PILE_SCALE = 1.25;
+export const MAX_PILE_SCALE = 1.25;
 
 /** A pile `px` wide: px per unit, and its width in units. */
-export const pileFit = (px: number, large: boolean) =>
-  large && px / PILE_WIDTH > LARGE_PILE_SCALE
-    ? { k: LARGE_PILE_SCALE, units: Math.floor(px / LARGE_PILE_SCALE) }
+export const pileFit = (px: number) =>
+  px / PILE_WIDTH > MAX_PILE_SCALE
+    ? { k: MAX_PILE_SCALE, units: Math.floor(px / MAX_PILE_SCALE) }
     : { k: px / PILE_WIDTH, units: PILE_WIDTH };
 /** A name tag's height on one line: a 12-unit line of 11-unit text in a pill round a 13-unit photo. */
 export const TAG_H = 17;
@@ -232,7 +232,7 @@ export interface PileLayer {
 export interface PileOptions {
   /** The day, which seeds the layer. */
   seed: string;
-  /** Its width in units: PILE_WIDTH, or wider on a large screen (pileFit). */
+  /** Its width in units: PILE_WIDTH, or wider past MAX_PILE_SCALE (pileFit). */
   width?: number;
   /** How far a sticker sinks into what it lands on, as a share of its radius. */
   overlap?: number;

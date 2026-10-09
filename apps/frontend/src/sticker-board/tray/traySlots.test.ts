@@ -38,7 +38,7 @@ describe("traySlots", () => {
       sticker("here", 4),
       sticker("bagged", 5, false, packed),
     ]);
-    expect(slots.map((s) => s.state)).toEqual(["used", "given", "given", "here", "here"]);
+    expect(slots.map((s) => s.state)).toEqual(["used", "onItsWay", "given", "here", "here"]);
   });
 });
 

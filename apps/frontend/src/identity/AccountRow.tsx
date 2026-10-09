@@ -15,6 +15,17 @@ interface Props {
 
 /** One row of account details inside a <dl className="account-rows">: the value in full, selectable. */
 export function AccountRow({ label, value, children, copyable = false }: Props) {
+  return (
+    <div className="account-rows__row">
+      <dt className="fine">{label}</dt>
+      <dd className="account-rows__value">{children ?? value}</dd>
+      {copyable && <CopyValue label={label} value={value} />}
+    </div>
+  );
+}
+
+/** A row's Copy, which toasts: only a row that copies needs a ToastProvider above it. */
+function CopyValue({ label, value }: { label: string; value: string }) {
   const { t } = useTranslation();
   const toast = useToast();
   // A failed copy stays under the row until the next try, where a toast would be gone in seconds.
@@ -30,26 +41,22 @@ export function AccountRow({ label, value, children, copyable = false }: Props) 
     }
   };
   return (
-    <div className="account-rows__row">
-      <dt className="fine">{label}</dt>
-      <dd className="account-rows__value">{children ?? value}</dd>
-      {copyable && (
-        <dd className="account-rows__copy">
-          <QuietLink
-            onClick={copy}
-            aria-label={t(($) => $.identity.developer.copy.ariaLabel, {
-              label: label.toLowerCase(),
-            })}
-          >
-            {t(($) => $.identity.developer.copy.button)}
-          </QuietLink>
-        </dd>
-      )}
+    <>
+      <dd className="account-rows__copy">
+        <QuietLink
+          onClick={copy}
+          aria-label={t(($) => $.identity.developer.copy.ariaLabel, {
+            label: label.toLowerCase(),
+          })}
+        >
+          {t(($) => $.identity.developer.copy.button)}
+        </QuietLink>
+      </dd>
       {problem && (
         <dd className="account-rows__problem">
           <ErrorLine>{problem}</ErrorLine>
         </dd>
       )}
-    </div>
+    </>
   );
 }

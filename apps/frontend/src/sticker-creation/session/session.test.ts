@@ -195,8 +195,8 @@ describe("describeSealFailure", () => {
     expect(problem(404, "ticket_not_found")).toBe("refused");
   });
 
-  it("blames the phone only for a failure before the request left it", () => {
-    expect(describeSealFailure(new Error("the cut failed"), false).kind).toBe("onThisPhone");
+  it("blames the device only for a failure before the request left it", () => {
+    expect(describeSealFailure(new Error("the cut failed"), false).kind).toBe("onThisDevice");
     expect(describeSealFailure(new SyntaxError("the answer isn't JSON"), true).kind).toBe(
       "noAnswer",
     );

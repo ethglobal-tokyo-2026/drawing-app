@@ -28,14 +28,17 @@
       padding-top: 14px;
       border: var(--ph-bezel) solid var(--ink);
       border-radius: calc(var(--ph-radius) + var(--ph-bezel));
-      overflow: hidden;
+      overflow: clip;
       box-shadow: var(--shadow-device);
     }
   }
 }
 
-/* Everything between LINE's header and the tabs, edge to edge. Each screen paints its own ground. */
+/* Everything between LINE's header and the tabs, edge to edge. Each screen paints its own ground.
+   It ends above the tab strip, which clears the home indicator, so nothing in it pads the foot's
+   safe area. */
 .screen {
+  --foot-inset: 0px;
   position: relative;
   flex: 1;
   min-width: 0;

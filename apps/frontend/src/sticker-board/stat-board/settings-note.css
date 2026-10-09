@@ -32,7 +32,7 @@
   letter-spacing: -0.01em;
 }
 
-/* A setting: its row, or a legend over its rows, then its status line and any error. */
+/* A setting: its row, or a legend over its rows, then any error. */
 .settings-note__setting {
   min-width: 0;
   margin: 0;
@@ -72,53 +72,150 @@
   touch-action: manipulation;
 }
 
-.settings-note__status {
-  clear: both;
-  margin: 0 0 8px;
-}
-
-/* Under a switch's note, rather than right under its row. */
-.settings-note__about + .settings-note__status {
-  margin-top: 8px;
-}
-
-.settings-note__status:empty {
-  display: none;
-}
-
 .settings-note__problem {
   margin: 0 0 8px;
 }
 
-/* A choice row: the choice it shows, with a caret, and the unseen select over the whole row. */
-.settings-note__choice {
+/* A choice row (ChoiceRow): its choices side by side at the row's end, in a Canvas pill with the
+   switch's Graphite edge, the picked one inked in as a switch is when on. Choices too long to share
+   the row drop under its name. */
+.settings-choice {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.settings-choice__choices {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+  padding: 2px;
+  border: 1.5px solid var(--graphite);
+  border-radius: 999px;
+  background: var(--canvas);
+}
+
+/* 26px to see and 44px to touch: an invisible band reaches above and below the face. */
+.settings-choice__choice {
+  position: relative;
+  min-width: 44px;
+  height: 26px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--graphite);
+  font: 650 14px/1 var(--font-ui);
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-choice__choice::before {
+  content: "";
+  position: absolute;
+  inset: -9px 0;
+}
+
+.settings-choice__choice[aria-checked="true"] {
+  background: var(--ink);
+  color: var(--canvas);
+}
+
+@media (hover: hover) {
+  .settings-choice__choice[aria-checked="false"]:hover {
+    color: var(--ink);
+  }
+}
+
+.settings-choice__choice:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* While a setting saves, its control shows the new state faded, and takes no input until it lands.
+   The fade waits a moment, so a quick save never flickers. */
+.settings-note :is(.settings-choice__choices, .switch) {
+  transition: opacity 160ms var(--ease-out);
+}
+
+.settings-note__setting[aria-busy="true"] :is(.settings-choice__choices, .switch) {
+  opacity: 0.45;
+  transition-delay: 120ms;
+}
+
+.settings-note__setting[aria-busy="true"] :is(.settings-choice__choice, .switch__input) {
+  cursor: progress;
+}
+
+/* Kyoto Seika Practice Mode's row: its name with "?" after the last word, then its switch. The name's
+   label reaches across the row under both, so a tap anywhere else flips the switch. */
+.settings-note__option--help {
   position: relative;
 }
 
-.settings-note__picked {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.settings-note__name {
   min-width: 0;
-  color: var(--graphite);
 }
 
-.settings-note__select {
+.settings-note__name > label::before {
+  content: "";
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  font: inherit;
-  appearance: none;
-  cursor: pointer;
 }
 
-.settings-note__choice:has(.settings-note__select:focus-visible) {
-  border-radius: 3px;
+/* "?" sits in the name's line at the words' size; its touch area is 44px. */
+.settings-note__help {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: -4px 0 -4px 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--graphite);
+  vertical-align: middle;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-note__help::before {
+  content: "";
+  position: absolute;
+  inset: -11px;
+}
+
+.settings-note__help svg {
+  width: 20px;
+  height: 20px;
+}
+
+@media (hover: hover) {
+  .settings-note__help:hover {
+    color: var(--ink);
+  }
+}
+
+.settings-note__help:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .settings-choice__choice {
+    transition:
+      background-color 160ms var(--ease-out),
+      color 160ms var(--ease-out);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-note :is(.settings-choice__choices, .switch) {
+    transition: none;
+  }
 }
 
 /* Washi across both top corners. */
@@ -136,115 +233,6 @@
 .settings-note > .settings-note__washi--end {
   right: -12px;
   transform: rotate(27deg);
-}
-
-/* What a switch does: a supporting note in sentence case, since caps fine print is for metadata. */
-.settings-note__about {
-  margin: 4px 0 0;
-  color: var(--graphite);
-  font: 500 13px/1.45 var(--font-ui);
-  text-wrap: pretty;
-}
-
-.settings-note__about:lang(ja) {
-  font-family: var(--font-jp);
-  line-height: 1.6;
-  word-break: auto-phrase;
-}
-
-/* Kyoto Seika Practice Mode's name runs to two lines in English: it keeps clear of its switch. */
-.settings-note__setting[data-setting="kyoto-seika"] > .settings-note__switch > span:first-child {
-  padding-right: 12px;
-}
-
-/* The legend's help button: its glyph sits in the caps line, its touch area is 44px. */
-.settings-note__legend--help {
-  display: flex;
-  align-items: center;
-}
-
-.settings-note__help {
-  position: relative;
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  width: 20px;
-  height: 20px;
-  margin: -10px 0 -10px 5px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: var(--graphite);
-}
-
-.settings-note__help::before {
-  content: "";
-  position: absolute;
-  inset: -12px;
-}
-
-.settings-note__help svg {
-  width: 18px;
-  height: 18px;
-}
-
-.settings-note__help[aria-expanded="true"] {
-  color: var(--ink);
-}
-
-.settings-note__help:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
-}
-
-/* The mode's note opens in place under the legend, ruled off like a row: no container. */
-.settings-note__note {
-  clear: both;
-  padding: 4px 0 10px;
-  border-bottom: 1px dashed var(--rule);
-  color: var(--ink);
-  font: 500 14px/1.5 var(--font-ui);
-  text-wrap: pretty;
-}
-
-.settings-note__note:lang(ja) {
-  font-family: var(--font-jp);
-  font-size: 13.5px;
-  line-height: 1.65;
-  word-break: auto-phrase;
-}
-
-.settings-note__note p {
-  margin: 0;
-}
-
-.settings-note__note p + p {
-  margin-top: 6px;
-  color: var(--graphite);
-}
-
-/* Dark subjects, under the mode's switch while it's on: indented behind a rule, with no divider. */
-.settings-note__nested {
-  margin: 10px 0 0 2px;
-  padding-left: 12px;
-  border-left: 1px solid var(--rule-strong);
-}
-
-.settings-note__nested .settings-note__option {
-  min-height: 40px;
-  font-size: 14px;
-}
-
-/* The subject list's credit, in its own case: names and a link, not caps metadata. */
-.settings-note__credit {
-  margin: 8px 0 4px;
-  text-transform: none;
-  letter-spacing: 0.02em;
-}
-
-.settings-note__credit a {
-  color: inherit;
 }
 
 /* A large screen keeps the card at a readable width rather than across the cork. */

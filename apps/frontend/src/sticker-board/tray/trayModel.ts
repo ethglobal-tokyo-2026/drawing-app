@@ -32,6 +32,8 @@ export interface TraySticker extends TraySlot {
   seen: boolean;
   /** Given away and received: who has it, printed. Its spot opens it among the stickers you gave. */
   givenTo?: string;
+  /** On its way: who it waits for, printed, when the app knows. */
+  onItsWayTo?: string;
 }
 
 export interface Point {
@@ -76,6 +78,8 @@ export interface TrayBoard {
   pulse: (id: string) => void;
   /** Opens a given sticker's detail, among the stickers you gave. */
   openGiven: (id: string) => void;
+  /** Opens a sticker on its way among your stickers. */
+  openYours: (id: string) => void;
 }
 
 /**
@@ -241,7 +245,7 @@ export interface Tray {
   Wb: () => number;
   Hb: () => number;
   colLeft: () => number;
-  /** Where the open pouch ends, as the board's y: where its slider stops. */
+  /** Where the open pouch ends, as the board's y: where its mouth closes in. */
   pouchFoot: () => number;
   boardView: () => BoardView;
 }
@@ -261,7 +265,7 @@ export const SHEET = { w: 156, h: 364 };
 /** Packing keeps clear of the sheet's tear strip at the top and its dated foot. */
 const PACK = { sheet: SHEET, margin: { top: 30, right: 10, bottom: 24, left: 10 } };
 /** The tray runs from under the board's header and its gifts badge to its foot; a large screen's header
- * row, where the gifts sit side by side, is taller (sticker-tray.css sets --tray-top to match). */
+ * row, where the gifts sit beside your name, is taller (sticker-tray.css sets --tray-top to match). */
 export const trayTop = () => (window.matchMedia(LARGE_SCREEN).matches ? 80 : 72);
 /** The tray's column: wide enough for the left row's full travel. */
 export const COL = 205;
@@ -294,19 +298,20 @@ export interface TrayFit {
   /** What the column and the mouth's travel grow by, and a pulled-out sheet's size: 1 but on a large screen. */
   grow: number;
   /**
-   * How far short of the rail's far stop the slider stops when it opens: just below the stack's foot,
+   * How far short of the slider on the far stop the open mouth closes in: just below the stack's foot,
    * so the open pouch holds no bare lining under the sheets.
    */
-  stopShort: number;
+  mouthShort: number;
 }
 
-export const PHONE_FIT: TrayFit = { scale: 1, grow: 1, stopShort: 0 };
+export const PHONE_FIT: TrayFit = { scale: 1, grow: 1, mouthShort: 0 };
 
 /**
  * The tray on its board. The stack shrinks until a deep stack fits the mouth opened to the rail's far
  * stop; on a large screen it grows to fill it, up to MAX_STACK_SCALE, and the column and the mouth's
- * travel grow with it. Opened, the slider stops a little below the foot of the `sheets` there are.
- * `windowFoot` is where the open mouth ends with the slider stopped this many px short of the far stop.
+ * travel grow with it. Opened, the slider runs to the far stop and the mouth closes in a little below
+ * the foot of the `sheets` there are. `windowFoot` is where the open mouth ends when it closes in this
+ * many px short of the slider.
  */
 export function trayFitFor(
   large: boolean,
@@ -322,7 +327,7 @@ export function trayFitFor(
   return {
     scale,
     grow: large ? Math.max(1, scale) : 1,
-    stopShort: Math.max(0, Math.floor(foot - wanted)),
+    mouthShort: Math.max(0, Math.floor(foot - wanted)),
   };
 }
 /** Phosphor's Stack and X icons, bold. */

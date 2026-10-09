@@ -1,7 +1,7 @@
 {
   "detector": {
     "ignoreRules": [],
-    "ignoreFiles": [],
+    "ignoreFiles": ["**/*.test.ts", "**/*.test.tsx"],
     "ignoreValues": [
       {
         "rule": "bounce-easing",

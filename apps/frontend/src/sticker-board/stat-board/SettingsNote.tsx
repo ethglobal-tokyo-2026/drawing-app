@@ -1,22 +1,17 @@
-import {
-  KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
-  KYOTO_SEIKA_TIME_USED_S,
-  type Me,
-} from "@drawing-app/api/client";
-import { useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import type { Me } from "@drawing-app/api/client";
+import { Suspense, useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { apiError } from "../../api/apiClient";
 import { useMe, useSetMe } from "../../api/meContext";
 import { useApi } from "../../api/useApi";
 import { problemOf } from "../../i18n/errorMessage";
-import { currentLanguage } from "../../i18n/i18n";
 import { keepChosenLanguage, type Language } from "../../i18n/language";
 import { followLanguageChoice } from "../../i18n/pageLanguage";
 import { Trans, useTranslation } from "../../i18n/react";
 import { Question } from "../../icons";
 import { CensorBar } from "../../kyoto-seika/CensorBar";
-import { openLinkInLine } from "../../line/openLink";
 import { useTickets } from "../../tickets/useTickets";
 import { ErrorLine } from "../../ui/ErrorLine";
+import { lazyWithPreload } from "../../ui/lazyWithPreload";
 import { Switch } from "../../ui/Switch";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { forget as forgetKeptBoard } from "../lastBoard";
@@ -27,6 +22,11 @@ import "./settings-note.css";
 
 const CHOICES: readonly Language[] = ["en", "ja"];
 
+// Its own chunk, with the deal's balloons and the clock it shows, so the stat board doesn't carry them.
+const KyotoSeikaHelp = lazyWithPreload("Kyoto Seika Practice Mode's help", () =>
+  import("../../kyoto-seika/KyotoSeikaHelp").then((m) => m.KyotoSeikaHelp),
+);
+
 /** How much of the paper under its title peeks above the cork's foot, in px. */
 const PEEK_UNDER_TITLE = 10;
 
@@ -34,16 +34,16 @@ const PEEK_UNDER_TITLE = 10;
  * The settings on the note, each saved to your account and applied in place. One saves at a time, in
  * the order they were changed, so each answer is the account as it then is.
  */
-type Setting = "language" | "nsfw" | "kyotoSeika" | "kyotoSeikaDark";
+type Setting = "language" | "nsfw" | "kyotoSeika";
 /** The account's settings as the note shows them: a saving one shows its new value. */
-type Shown = Pick<Me, "language" | "nsfwOptIn" | "kyotoSeikaPractice" | "kyotoSeikaDarkSubjects">;
+type Shown = Pick<Me, "language" | "nsfwOptIn" | "kyotoSeikaPractice">;
 /** Why a setting didn't take: kept as it failed, so its words follow the app's language. */
 type Failure = { kind: "notSaved" | "notKept"; error: unknown };
-/** A setting's last change, until it's changed again: saving, waiting its turn included, then in place or why not. */
-type Status =
-  | { step: "saving"; to: Partial<Shown> }
-  | { step: "applied" }
-  | { step: "failed"; failure: Failure };
+/**
+ * A setting's last change while it saves, waiting its turn included, or why it didn't take, until it's
+ * changed again. A setting that took has none: its control shows it.
+ */
+type Status = { step: "saving"; to: Partial<Shown> } | { step: "failed"; failure: Failure };
 
 /**
  * Sticks the note to the cork's foot with only its title showing, until it scrolls into view: CSS
@@ -114,13 +114,15 @@ export function SettingsNote() {
   const saves = useRef(Promise.resolve());
   /** Each setting's latest change: only its outcome is that setting's status. */
   const latestChanges = useRef(new Map<Setting, object>());
-  const [aboutOpen, setAboutOpen] = useState(false);
+  // Null until "?" is first tapped: only then does the help sheet's code load. It stays mounted after.
+  const [helpOpen, setHelpOpen] = useState<boolean | null>(null);
   const { refresh: refreshTickets } = useTickets();
   const reveal = usePeek(note, title);
 
   /**
    * Saves a setting after the changes before it, then applies it: `me` takes the answer, and `apply`
-   * does what it changes on this phone, returning what it couldn't do rather than throwing.
+   * does what it changes on this phone, returning what it couldn't do rather than throwing. A setting
+   * still saving takes no other change: its control shows the one on its way.
    */
   const save = (
     setting: Setting,
@@ -128,9 +130,10 @@ export function SettingsNote() {
     request: () => Promise<Me>,
     apply: () => Promise<Failure | null> | Failure | null,
   ) => {
+    if (statuses[setting]?.step === "saving") return;
     const change = {};
     latestChanges.current.set(setting, change);
-    const settle = (status: Status) => {
+    const settle = (status: Status | undefined) => {
       if (latestChanges.current.get(setting) === change)
         setStatuses((all) => ({ ...all, [setting]: status }));
     };
@@ -147,7 +150,7 @@ export function SettingsNote() {
       }
       setMe(saved);
       const failure = await apply();
-      settle(failure ? { step: "failed", failure } : { step: "applied" });
+      settle(failure ? { step: "failed", failure } : undefined);
     });
   };
 
@@ -194,48 +197,21 @@ export function SettingsNote() {
       },
     );
 
-  const switchDark = (kyotoSeikaDarkSubjects: boolean) =>
-    save(
-      "kyotoSeikaDark",
-      { kyotoSeikaDarkSubjects },
-      () => api.setKyotoSeikaPractice({ kyotoSeikaDarkSubjects }),
-      () => null,
-    );
-
   const named = (language: Language) => t(($) => $.stickerBoard.settings.language.names[language]);
   const shown: Shown = Object.values(statuses).reduce<Shown>(
     (all, status) => (status?.step === "saving" ? { ...all, ...status.to } : all),
     me,
   );
   const saving = (setting: Setting) => statuses[setting]?.step === "saving";
-  /** A setting's status line: saving, then what took, in the app's language now. */
-  const statusLine = (setting: Setting) => {
-    if (saving(setting)) return t(($) => $.stickerBoard.settings.saving);
-    if (statuses[setting]?.step !== "applied") return "";
-    if (setting === "language")
-      return t(($) => $.stickerBoard.settings.language.applied, {
-        language: named(currentLanguage()),
-      });
-    if (setting === "kyotoSeika")
-      return me.kyotoSeikaPractice
-        ? t(($) => $.stickerBoard.settings.kyotoSeika.on)
-        : t(($) => $.stickerBoard.settings.kyotoSeika.off);
-    if (setting === "kyotoSeikaDark") return "";
-    return me.nsfwOptIn
-      ? t(($) => $.stickerBoard.settings.nsfw.shown)
-      : t(($) => $.stickerBoard.settings.nsfw.blurred);
-  };
   /** Why a setting didn't take, in the app's language now. */
   const problem = (setting: Setting) => {
     const status = statuses[setting];
     if (status?.step !== "failed") return null;
     const { message, detail } = problemOf(status.failure.error);
-    // Both Kyoto Seika Practice Mode switches say it in the mode's words.
-    const strings = setting === "kyotoSeikaDark" ? "kyotoSeika" : setting;
     const words =
       status.failure.kind === "notKept"
         ? t(($) => $.stickerBoard.settings.language.notKept)
-        : t(($) => $.stickerBoard.settings[strings].notSaved, { reason: message });
+        : t(($) => $.stickerBoard.settings[setting].notSaved, { reason: message });
     return (
       <ErrorLine className="settings-note__problem" detail={detail}>
         {words}
@@ -255,7 +231,11 @@ export function SettingsNote() {
         <h3 ref={title} className="settings-note__title" id={`${id}-title`}>
           {t(($) => $.stickerBoard.settings.title)}
         </h3>
-        <div className="settings-note__setting" aria-busy={saving("language")}>
+        <div
+          className="settings-note__setting"
+          data-setting="language"
+          aria-busy={saving("language")}
+        >
           <ChoiceRow
             label={t(($) => $.stickerBoard.settings.language.title)}
             choices={CHOICES}
@@ -264,110 +244,64 @@ export function SettingsNote() {
             // A language's own name is in that language, for screen readers too.
             langOf={(choice) => choice}
             onChoose={choose}
+            busy={saving("language")}
           />
-          <p className="fine settings-note__status" role="status">
-            {statusLine("language")}
-          </p>
           {problem("language")}
         </div>
-        <div className="settings-note__setting" aria-busy={saving("nsfw")}>
-          <label className="settings-note__option settings-note__switch">
+        <div className="settings-note__setting" data-setting="nsfw" aria-busy={saving("nsfw")}>
+          <label className="settings-note__option">
             <span>{t(($) => $.stickerBoard.settings.nsfw.show)}</span>
-            <Switch checked={shown.nsfwOptIn} onChange={switchNsfw} />
+            <Switch
+              checked={shown.nsfwOptIn}
+              aria-disabled={saving("nsfw") || undefined}
+              onChange={switchNsfw}
+            />
           </label>
-          <p className="fine settings-note__status" role="status">
-            {statusLine("nsfw")}
-          </p>
           {problem("nsfw")}
         </div>
-        <fieldset
+        <div
           className="settings-note__setting"
           data-setting="kyoto-seika"
-          aria-labelledby={`${id}-kyoto-seika-title`}
           aria-busy={saving("kyotoSeika")}
         >
-          {/* The group is named by the legend's words alone, not its help button too. */}
-          <legend className="fine settings-note__legend settings-note__legend--help">
-            <span id={`${id}-kyoto-seika-title`}>
-              {t(($) => $.stickerBoard.settings.kyotoSeika.title)}
-            </span>
-            <button
-              type="button"
-              className="settings-note__help"
-              aria-expanded={aboutOpen}
-              aria-controls={`${id}-kyoto-seika-note`}
-              aria-label={t(($) => $.stickerBoard.settings.kyotoSeika.help)}
-              onClick={() => setAboutOpen((open) => !open)}
-            >
-              <Question weight={aboutOpen ? "fill" : "bold"} aria-hidden focusable="false" />
-            </button>
-          </legend>
-          <div className="settings-note__note" id={`${id}-kyoto-seika-note`} hidden={!aboutOpen}>
-            <p id={`${id}-kyoto-seika-how`}>
-              {t(($) => $.stickerBoard.settings.kyotoSeika.how, {
-                minutes: KYOTO_SEIKA_TIME_USED_S / 60,
-                tickets: KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
-              })}
-            </p>
-            <p>{t(($) => $.stickerBoard.settings.kyotoSeika.maker)}</p>
-          </div>
-          <label className="settings-note__option settings-note__switch">
-            <span>
-              <Trans
-                i18nKey={($) => $.stickerBoard.settings.kyotoSeika.name}
-                components={{
-                  bar: <CensorBar hidden={t(($) => $.stickerBoard.settings.kyotoSeika.hidden)} />,
-                }}
-              />
-            </span>
-            <Switch
-              checked={shown.kyotoSeikaPractice}
-              aria-label={t(($) => $.stickerBoard.settings.kyotoSeika.spokenName)}
-              // The help note says how the mode works; a screen reader hears it with the switch, open or not.
-              aria-describedby={`${id}-kyoto-seika-how`}
-              onChange={switchKyotoSeika}
-            />
-          </label>
-          <p className="fine settings-note__status" role="status">
-            {statusLine("kyotoSeika")}
-          </p>
-          {problem("kyotoSeika")}
-          {shown.kyotoSeikaPractice && (
-            <div
-              className="settings-note__nested"
-              data-setting="kyoto-seika-dark"
-              aria-busy={saving("kyotoSeikaDark")}
-            >
-              <label className="settings-note__option settings-note__switch">
-                <span>{t(($) => $.stickerBoard.settings.kyotoSeika.dark.label)}</span>
-                <Switch
-                  checked={shown.kyotoSeikaDarkSubjects}
-                  aria-describedby={`${id}-kyoto-seika-dark-about`}
-                  onChange={switchDark}
+          {/* "?" follows the name's last word; the name's label reaches across the row under it, so
+              a tap anywhere else flips the switch. */}
+          <div className="settings-note__option settings-note__option--help">
+            <span className="settings-note__name">
+              <label htmlFor={`${id}-kyoto-seika`}>
+                <Trans
+                  i18nKey={($) => $.stickerBoard.settings.kyotoSeika.name}
+                  components={{
+                    bar: <CensorBar hidden={t(($) => $.stickerBoard.settings.kyotoSeika.hidden)} />,
+                  }}
                 />
               </label>
-              <p className="settings-note__about" id={`${id}-kyoto-seika-dark-about`}>
-                {t(($) => $.stickerBoard.settings.kyotoSeika.dark.about)}
-              </p>
-              {problem("kyotoSeikaDark")}
-            </div>
-          )}
-          <p className="fine settings-note__credit">
-            <Trans
-              i18nKey={($) => $.stickerBoard.settings.kyotoSeika.credit}
-              components={{
-                sources: (
-                  <a
-                    href={t(($) => $.pages.sources)}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={openLinkInLine}
-                  />
-                ),
-              }}
+              <button
+                type="button"
+                className="settings-note__help"
+                aria-haspopup="dialog"
+                aria-label={t(($) => $.stickerBoard.settings.kyotoSeika.help)}
+                onPointerDown={() => void KyotoSeikaHelp.preload()}
+                onClick={() => setHelpOpen(true)}
+              >
+                <Question weight={helpOpen ? "fill" : "bold"} aria-hidden focusable="false" />
+              </button>
+            </span>
+            <Switch
+              id={`${id}-kyoto-seika`}
+              checked={shown.kyotoSeikaPractice}
+              aria-label={t(($) => $.stickerBoard.settings.kyotoSeika.spokenName)}
+              aria-disabled={saving("kyotoSeika") || undefined}
+              onChange={switchKyotoSeika}
             />
-          </p>
-        </fieldset>
+          </div>
+          {problem("kyotoSeika")}
+          {helpOpen !== null && (
+            <Suspense fallback={null}>
+              <KyotoSeikaHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
+            </Suspense>
+          )}
+        </div>
         <DrawingSettings />
       </div>
       <i

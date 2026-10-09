@@ -17,7 +17,7 @@ import {
   unpackageAndAccept,
 } from "./helpers.ts";
 
-const { giving, receiving, stickerBoard } = strings;
+const { giving, receiving, stickerBoard, ui } = strings;
 const language = "en";
 
 test("Gift link: Alice gives from her board, and Bob opens the Gift Message's link and accepts", async ({
@@ -30,11 +30,19 @@ test("Gift link: Alice gives from her board, and Bob opens the Gift Message's li
   const giftClaimToken = giftClaimTokenFrom(alice);
   await sendInLineChat(alice, language, no);
 
-  // Sent, it leaves Alice's board for the badge of gifts on their way.
-  await expect(
-    alice.getByRole("button", { name: say(giving.pendingGifts.label.one, language, { no }) }),
-  ).toBeVisible();
+  // Sent, it leaves Alice's board; its detail says it's on its way.
   await expect(boardSticker(alice, language, no)).toHaveCount(0);
+  const other = await sealFromBoard(alice, language);
+  await (
+    await openDetail(alice, language, other)
+  )
+    .getByRole("navigation", { name: say(stickerBoard.detail.yourStickers, language) })
+    .getByRole("button", { name: no, exact: true })
+    .click();
+  // The detail is named for the sticker it shows.
+  const onItsWay = alice.getByRole("dialog", { name: no });
+  await expect(onItsWay.getByText(say(stickerBoard.detail.onItsWay, language))).toBeVisible();
+  await onItsWay.getByRole("button", { name: say(ui.backToBoard, language) }).click();
 
   await signIn(bob, "bob", language);
   await bob.goto(`/g/${await giftClaimToken}`);

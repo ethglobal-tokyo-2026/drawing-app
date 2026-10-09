@@ -33,7 +33,7 @@
   flex-direction: column;
   align-items: center;
   max-height: calc(100% - 24px);
-  padding: 0 20px calc(20px + env(safe-area-inset-bottom));
+  padding: 0 20px calc(20px + var(--foot-inset, 0px));
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -161,6 +161,40 @@
   text-align: center;
   text-wrap: balance;
   overflow-wrap: anywhere;
+}
+
+/* On a large screen it's the shared card (ui/sheet.css) in the middle, its carets just outside the
+   sticker's square; the flight lands in the card, and Put back flies it home. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .lifted-sticker__sheet {
+    inset: 0;
+    width: min(var(--card-w), calc(100% - 2 * var(--gutter-large)));
+    height: fit-content;
+    max-height: calc(100% - 2 * var(--gutter-large));
+    margin: auto;
+    padding-block: 20px;
+    border-radius: 16px;
+  }
+
+  .lifted-sticker__sheet > .perf:not(:focus-visible) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .lifted-sticker__turn--previous {
+    left: calc(50% - 105px - 40px);
+  }
+
+  .lifted-sticker__turn--next {
+    right: calc(50% - 105px - 40px);
+  }
+
+  .lifted-sticker__about {
+    touch-action: none;
+  }
 }
 
 @media (hover: hover) {

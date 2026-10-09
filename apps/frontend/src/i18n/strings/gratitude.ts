@@ -59,9 +59,9 @@ export const gratitude = {
     label: { en: "Gratitude sent", ja: "感謝を送りました" },
     /** Gratitude Mini-game, once the ending has played while the gratitude is still going to the server: screen readers' name for the receipt card */
     labelSending: { en: "Sending gratitude", ja: "感謝を送っています" },
-    /** Gratitude Mini-game, once the ending has played when the gratitude couldn't reach the server and waits on this phone: screen readers' name for the receipt card */
+    /** Gratitude Mini-game, once the ending has played when the gratitude couldn't reach the server and waits on this device: screen readers' name for the receipt card */
     labelKept: { en: "Gratitude saved", ja: "感謝を保存しました" },
-    /** Gratitude Mini-game, once the ending has played when the gratitude couldn't reach the server and this phone couldn't save it: screen readers' name for the receipt card */
+    /** Gratitude Mini-game, once the ending has played when the gratitude couldn't reach the server and this device couldn't save it: screen readers' name for the receipt card */
     labelLost: { en: "Gratitude not sent or saved", ja: "感謝を送れず、保存もできませんでした" },
     /** Gratitude Mini-game, once the ending has played when the server refused the gratitude: screen readers' name for the receipt card */
     labelRefused: { en: "Gratitude not sent", ja: "感謝を送れませんでした" },
@@ -73,12 +73,12 @@ export const gratitude = {
     sending: { en: "Sending…", ja: "送っています…" },
     /** Gratitude Mini-game, receipt card, in a note under the combo when the gratitude couldn't reach the server, also said to screen readers */
     kept: {
-      en: "Saved on this phone. It goes to {{handle}} when you’re back online.",
+      en: "Saved on this device. It goes to {{handle}} when you’re back online.",
       ja: "この端末に保存しました。接続が戻ったら、{{handle}}さんに送ります。",
     },
-    /** Gratitude Mini-game, receipt card, in a note under the combo when the gratitude couldn't reach the server and this phone couldn't save it, also said to screen readers: sending it again is up to the person */
+    /** Gratitude Mini-game, receipt card, in a note under the combo when the gratitude couldn't reach the server and this device couldn't save it, also said to screen readers: sending it again is up to the person */
     lost: {
-      en: "This combo wasn’t sent, and this phone couldn’t save it. Close this and send your gratitude again.",
+      en: "This combo wasn’t sent, and this device couldn’t save it. Close this and send your gratitude again.",
       ja: "今回の感謝は送られず、この端末にも保存できませんでした。閉じてから、もう一度感謝を送ってください。",
     },
   },

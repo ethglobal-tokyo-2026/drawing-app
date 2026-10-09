@@ -38,6 +38,7 @@ export function SealKey({ shown, problem, detail, onTap }: Props) {
         style={{ "--size": "58px" }}
         icon={<CheckFat weight="fill" />}
         aria-label={t(($) => $.stickerCreation.seal.label)}
+        aria-haspopup="dialog"
         onClick={onTap}
       />
     </>

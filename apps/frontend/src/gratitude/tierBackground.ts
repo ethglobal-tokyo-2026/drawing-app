@@ -41,6 +41,8 @@ const FOCUS_SWAPS_PER_S = 3;
 const RAYS_DEG_PER_S = 6;
 const FLASH = { opacity: 0.7, seconds: 0.32 };
 const SPEED_FIELD_SEED = 31;
+/** The speed lines' side as drawn, px: their SVG's square. */
+const SPEED_FIELD_PX = 1100;
 /** The least change in the speed lines' opacity or angle, in degrees, worth writing. */
 const SPEED_FIELD_STEP = { opacity: 0.02, degrees: 1 };
 /** Dents on screen at most; past this the oldest is reused. */
@@ -135,6 +137,15 @@ export function createTierBackground(
   return {
     setLayout(width, height, heart) {
       screen = { width, height };
+      // They turn with the stroke, so they're a square the stage's diagonal across.
+      if (speedLines instanceof SVGElement) {
+        const side = Math.max(SPEED_FIELD_PX, Math.ceil(Math.hypot(width, height)));
+        Object.assign(speedLines.style, {
+          width: `${side}px`,
+          height: `${side}px`,
+          margin: `${-side / 2}px 0 0 ${-side / 2}px`,
+        });
+      }
       focus.innerHTML = FOCUS_SEEDS.map((seed) =>
         focusLinesSvg(width, height, heart.x, heart.y, seed),
       ).join("");

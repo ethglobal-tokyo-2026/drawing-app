@@ -103,14 +103,19 @@ export function TimerDot({ ref, clock, paused, note, waitsFor, pausable, onToggl
         ? t(($) => $.stickerCreation.timer.note.clockRuns)
         : null;
   if (flash && !flashWords) setFlash(null);
-  const label =
-    flashWords ??
-    (call !== null ? t(($) => $.stickerCreation.timer.note.minutesLeft, { minutes: call }) : note);
-  // The label keeps its words while it peels off. Waiting for Begin, it holds the start note's even
-  // while off, so the balloons are laid out clear of the room a touch's note takes.
-  const [words, setWords] = useState(label);
-  if (label && label !== words) setWords(label);
-  const held = !label && startsAtBegin ? startsAtBegin : words;
+  // A time call only says the time, so it wears no arrow: the arrow means "tap the timer".
+  const calling = !flashWords && call !== null;
+  const label = calling
+    ? t(($) => $.stickerCreation.timer.note.minutesLeft, { minutes: call })
+    : (flashWords ?? note);
+  // The label keeps its words, and whether they're a call, while it peels off. Waiting for Begin, it
+  // holds the start note's even while off, so the balloons are laid out clear of the room a touch's
+  // note takes.
+  const [words, setWords] = useState({ text: label, call: calling });
+  if (label && (label !== words.text || calling !== words.call))
+    setWords({ text: label, call: calling });
+  const held = !label && startsAtBegin ? startsAtBegin : words.text;
+  const heldCall = !(!label && startsAtBegin) && words.call;
 
   useImperativeHandle(ref, () => {
     const flashFor = (what: "hint" | "clockRuns") => {
@@ -163,7 +168,15 @@ export function TimerDot({ ref, clock, paused, note, waitsFor, pausable, onToggl
 
   const time = clockText(view.secondsLeft);
   const waiting = waitsFor === "begin" ? "dealt" : "waiting";
-  const status = view.waiting ? waiting : view.held ? HELD_STATUS[view.held] : "running";
+  // At 0:00 the clock is done for good: there's nothing left to pause.
+  const over = !view.waiting && view.secondsLeft === 0;
+  const status = view.waiting
+    ? waiting
+    : over
+      ? "timeUp"
+      : view.held
+        ? HELD_STATUS[view.held]
+        : "running";
   const wide = view.secondsLeft >= WIDE_FROM_SECONDS;
   const classes = [
     "timer-dot",
@@ -179,11 +192,13 @@ export function TimerDot({ ref, clock, paused, note, waitsFor, pausable, onToggl
         type="button"
         className={classes.join(" ")}
         aria-label={
-          paused && !view.waiting
-            ? t(($) => $.stickerCreation.timer.resume)
-            : pausable && !view.waiting
-              ? t(($) => $.stickerCreation.timer.pause)
-              : t(($) => $.stickerCreation.timer.label)
+          view.waiting || over
+            ? t(($) => $.stickerCreation.timer.label)
+            : paused
+              ? t(($) => $.stickerCreation.timer.resume)
+              : pausable
+                ? t(($) => $.stickerCreation.timer.pause)
+                : t(($) => $.stickerCreation.timer.label)
         }
         aria-describedby={describedBy}
         onClick={onToggle}
@@ -208,10 +223,10 @@ export function TimerDot({ ref, clock, paused, note, waitsFor, pausable, onToggl
         </span>
       </button>
       <div
-        className={`timer-hint ${label ? "is-on" : ""} ${wide ? "is-wide" : ""}`}
+        className={`timer-hint ${label ? "is-on" : ""} ${wide ? "is-wide" : ""} ${heldCall ? "is-call" : ""}`}
         aria-hidden="true"
       >
-        <ArrowBendLeftUp className="timer-hint-arrow" size={28} />
+        {!heldCall && <ArrowBendLeftUp className="timer-hint-arrow" size={28} />}
         <span className="timer-hint-label">{held}</span>
       </div>
       <span className="visually-hidden" role="status">

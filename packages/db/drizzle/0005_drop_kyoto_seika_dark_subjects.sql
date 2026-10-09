@@ -1,0 +1,1 @@
+ALTER TABLE `users` DROP COLUMN `kyoto_seika_dark_subjects_on_at`;

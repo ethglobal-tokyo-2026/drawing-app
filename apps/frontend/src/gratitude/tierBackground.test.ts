@@ -117,4 +117,14 @@ describe("createTierBackground", () => {
     background.setSpeedField(0.5, 90);
     expect(shown()).toEqual(["0.500", "rotate(90.0deg)"]);
   });
+
+  it("covers a stage of any size with its speed lines, however they turn", () => {
+    const { ground, background } = setUp();
+    const stage = { width: 1376, height: 1032 };
+    background.setLayout(stage.width, stage.height, { x: 688, y: 600, height: 300 });
+    const lines = ground.querySelector<SVGElement>(".gr-speedfield svg");
+    expect(parseFloat(lines?.style.width ?? "0")).toBeGreaterThanOrEqual(
+      Math.hypot(stage.width, stage.height),
+    );
+  });
 });

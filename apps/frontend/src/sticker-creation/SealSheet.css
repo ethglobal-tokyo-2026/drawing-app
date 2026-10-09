@@ -7,23 +7,21 @@
 .seal-sheet__body {
   display: grid;
   grid-template-columns: 136px minmax(0, 1fr);
-  grid-template-rows: 1fr auto;
+  align-items: center;
   column-gap: 18px;
-  min-height: 136px;
 }
 
 /* The sticker sits on the sheet at a small turn, as stickers do on a board. */
 .seal-preview {
-  grid-row: 1 / span 2;
   display: grid;
   place-items: center;
   width: 136px;
   height: 136px;
 }
 
-/* A rectangle's silhouette, for the pink foil to grow its band from. */
+/* A rectangle's silhouette, for the foil to grow its band from: a mask reads only its opacity. */
 .seal-preview__sticker {
-  --m: linear-gradient(#000 0 0);
+  --m: linear-gradient(var(--ink) 0 0);
   position: relative;
   display: block;
   rotate: -3deg;
@@ -56,9 +54,27 @@
   }
 }
 
+/* The title, a Kyoto Seika sheet's pair, and the switch row directly under them, as one group
+   centered on the sticker. */
+.seal-sheet__side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* The title's cell. Turned in place, the outgoing title lies unseen under the new one, so the cell
+   keeps the taller of the two. */
+.seal-sheet__titles {
+  display: grid;
+}
+
+.seal-sheet__titles > * {
+  grid-area: 1 / 1;
+}
+
 .seal-sheet__title {
-  align-self: start;
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 20px;
   font-weight: 800;
   font-stretch: var(--w-title);
@@ -67,9 +83,62 @@
   text-wrap: balance;
 }
 
+.seal-sheet__title.is-outgoing {
+  visibility: hidden;
+}
+
+/* A Kyoto Seika sheet's やめ: the proctor's call in the deal's hand lettering (書き文字), as
+   はじめ began it, on one line in the plain title's line box. */
+.seal-sheet__title.is-lettered {
+  justify-self: start;
+  align-self: center;
+  padding-left: 2px;
+  font-family: var(--font-puffy);
+  font-size: 22px;
+  font-weight: 400;
+  font-stretch: normal;
+  line-height: 22px;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  color: var(--canvas);
+  paint-order: stroke fill;
+  -webkit-text-stroke: 5px var(--ink);
+  rotate: -6deg;
+  transform-origin: 0 100%;
+}
+
+/* Time's up with the sheet open: the new title takes a beat as it turns in place. */
+.seal-sheet__title.is-turned {
+  animation: seal-title-turn 240ms var(--ease-out) both;
+}
+
+.seal-sheet__title.is-lettered.is-turned {
+  animation: seal-title-letter 320ms var(--ease-out) both;
+}
+
+@keyframes seal-title-turn {
+  from {
+    opacity: 0;
+    translate: 0 5px;
+  }
+}
+
+@keyframes seal-title-letter {
+  from {
+    opacity: 0;
+    scale: 1.35;
+  }
+}
+
+/* A Kyoto Seika sheet's pair, as the sealed card prints it, its furigana clear of the title. */
+.seal-sheet__pair {
+  margin: 0;
+  padding-top: 6px;
+  line-height: 1;
+}
+
 /* One switch row under a hairline, its words at label weight and the switch at its end. */
 .seal-sheet__switch {
-  align-self: end;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -83,11 +152,12 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Seal, and Not yet 12px under its lip, 44px to touch. */
 .seal-sheet__foot {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 12px;
   margin-top: 16px;
 }
 
@@ -95,8 +165,36 @@
   min-width: 196px;
 }
 
+.seal-sheet .seal-sheet__not-yet {
+  min-height: 44px;
+}
+
+.seal-sheet .seal-sheet__not-yet::before {
+  inset: 0 -4px;
+}
+
+/* At time's up its slot fades and keeps its room, so a sheet that turns in place keeps its height. */
+.seal-sheet__not-yet-slot {
+  display: flex;
+  transition: opacity 220ms var(--ease-out);
+}
+
+.seal-sheet__not-yet-slot[inert] {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 220ms var(--ease-out),
+    visibility 0s linear 220ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .seal-preview .sticker-foil {
+  .seal-preview .sticker-foil,
+  .seal-sheet__title.is-turned {
     animation: none;
+  }
+
+  .seal-sheet__not-yet-slot,
+  .seal-sheet__not-yet-slot[inert] {
+    transition: none;
   }
 }

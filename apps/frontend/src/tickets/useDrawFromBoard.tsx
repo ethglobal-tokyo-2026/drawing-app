@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { useMe } from "../api/meContext";
+import { keepsSession } from "../sticker-creation/session/keptSession";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { OutOfTickets } from "./OutOfTickets";
 import { ReserveTicketCheckout } from "./ReserveTicketCheckout";
@@ -18,7 +20,12 @@ export const PEEL_MS = 220;
  */
 export function useDrawFromBoard(onDraw: () => void) {
   const tickets = useTickets();
+  const me = useMe();
   const reduced = useReducedMotion();
+  // A drawing in progress waits for Draw: the drawing screen holds its sheet or, until that screen has
+  // said (after a reload its code loads after the board), this device keeps one.
+  const [keptHere] = useState(() => keepsSession(me.id));
+  const inProgress = tickets.sheet === "held" || (tickets.sheet === null && keptHere);
   // The tickets as Draw found them, shown while the front one peels, whatever the spend does meanwhile.
   const [peeling, setPeeling] = useState<Tickets | null>(null);
   const [card, setCard] = useState<"out" | "shop" | null>(null);
@@ -76,5 +83,11 @@ export function useDrawFromBoard(onDraw: () => void) {
       />
     ) : null;
 
-  return { draw: () => draw(), shown: peeling ?? loaded, peeling: peeling !== null, overBoard };
+  return {
+    draw: () => draw(),
+    shown: peeling ?? loaded,
+    peeling: peeling !== null,
+    overBoard,
+    inProgress,
+  };
 }

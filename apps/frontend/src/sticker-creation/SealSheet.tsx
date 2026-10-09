@@ -1,6 +1,10 @@
+import type { KyotoSeikaSubject } from "@drawing-app/api/client";
 import { CheckFat } from "../icons";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "../i18n/react";
+import { spokenSubject } from "../kyoto-seika/spokenSubject";
+import { SubjectPair } from "../kyoto-seika/SubjectPair";
+import { madeFoil } from "../stickers/madeFoil";
 import { StickerFoil } from "../stickers/StickerFoil";
 import { Key } from "../ui/Key";
 import { QuietLink } from "../ui/QuietLink";
@@ -25,6 +29,8 @@ interface Props {
   timeUp: boolean;
   /** The sticker seals 18+. */
   nsfw: boolean;
+  /** The pair a sheet in Kyoto Seika Practice Mode was dealt, which the sticker keeps; null on a regular sheet. */
+  subjects: readonly [KyotoSeikaSubject, KyotoSeikaSubject] | null;
   /** A copy of the ink as it is now, which the preview lets go. */
   ink: () => HTMLCanvasElement | null;
   onNsfwChange: (on: boolean) => void;
@@ -34,42 +40,101 @@ interface Props {
 
 /**
  * The seal sheet: the sticker as it will be, the 18+ switch, and Seal, the screen's one key while
- * it's up. Not yet closes it back to the drawing, until time's up.
+ * it's up. Not yet closes it back to the drawing, until time's up. A sheet in Kyoto Seika Practice
+ * Mode shows its pair, and its time's up is the proctor's やめ, in the deal's hand lettering.
  */
-export function SealSheet({ open, timeUp, nsfw, ink, onNsfwChange, onSeal, onNotYet }: Props) {
+export function SealSheet({
+  open,
+  timeUp,
+  nsfw,
+  subjects,
+  ink,
+  onNsfwChange,
+  onSeal,
+  onNotYet,
+}: Props) {
   const { t } = useTranslation();
-  const words = timeUp
-    ? t(($) => $.stickerCreation.sealSheet.timeUp)
-    : t(($) => $.stickerCreation.sealSheet.title);
+  const lettered = timeUp && subjects !== null;
+  const words = !timeUp
+    ? t(($) => $.stickerCreation.sealSheet.title)
+    : lettered
+      ? t(($) => $.stickerCreation.sealSheet.pencilsDown)
+      : t(($) => $.stickerCreation.sealSheet.timeUp);
+  // Time's up while the sheet is open turns it in place: Not yet's slot fades rather than closing up,
+  // so the sheet keeps its height, and the new title takes a beat and is announced.
+  const [offeredNotYet, setOfferedNotYet] = useState(false);
+  if (open && !timeUp && !offeredNotYet) setOfferedNotYet(true);
+  if (!open && offeredNotYet) setOfferedNotYet(false);
+  const turned = timeUp && offeredNotYet;
+  const notYet = useRef<HTMLButtonElement>(null);
+  const switchRow = useRef<HTMLLabelElement>(null);
+  // Focus on Not yet as it goes moves to the switch, never to Seal, so Enter never seals blind.
+  useLayoutEffect(() => {
+    if (timeUp && notYet.current && document.activeElement === notYet.current)
+      switchRow.current?.querySelector("input")?.focus({ preventScroll: true });
+  }, [timeUp]);
   return (
     <Sheet
       label={words}
       open={open}
       closable={!timeUp}
+      card
       className={`seal-sheet keep-phrases ${timeUp ? "is-time-up" : ""}`}
       onClose={onNotYet}
     >
       <div className="seal-sheet__body">
-        <SealPreview open={open} nsfw={nsfw} ink={ink} />
-        <h2 className="seal-sheet__title">{words}</h2>
-        <label className="seal-sheet__switch">
-          <span aria-hidden="true">{t(($) => $.stickerCreation.sealSheet.nsfw)}</span>
-          <Switch
-            checked={nsfw}
-            data-autofocus
-            aria-label={t(($) => $.stickerCreation.sealSheet.nsfwLabel)}
-            onChange={onNsfwChange}
-          />
-        </label>
+        <SealPreview open={open} nsfw={nsfw} kyotoSeika={subjects !== null} ink={ink} />
+        <div className="seal-sheet__side">
+          {/* Turned in place, the title it had stays unseen in the same cell, so a shorter one
+              keeps the sheet's height. */}
+          <div className="seal-sheet__titles">
+            {turned && (
+              <span className="seal-sheet__title is-outgoing" aria-hidden="true">
+                {t(($) => $.stickerCreation.sealSheet.title)}
+              </span>
+            )}
+            <h2
+              key={words}
+              className={`seal-sheet__title ${lettered ? "is-lettered" : ""} ${turned ? "is-turned" : ""}`}
+            >
+              {words}
+            </h2>
+          </div>
+          {subjects && (
+            <p className="seal-sheet__pair">
+              <SubjectPair subjects={subjects} />
+              <span className="visually-hidden">
+                {t(($) => $.kyotoSeika.pair.spoken, {
+                  first: spokenSubject(subjects[0]),
+                  second: spokenSubject(subjects[1]),
+                })}
+              </span>
+            </p>
+          )}
+          <label ref={switchRow} className="seal-sheet__switch">
+            <span aria-hidden="true">{t(($) => $.stickerCreation.sealSheet.nsfw)}</span>
+            <Switch
+              checked={nsfw}
+              data-autofocus
+              aria-label={t(($) => $.stickerCreation.sealSheet.nsfwLabel)}
+              onChange={onNsfwChange}
+            />
+          </label>
+        </div>
       </div>
+      <p className="visually-hidden" role="status">
+        {turned ? words : ""}
+      </p>
       <div className="seal-sheet__foot">
         <Key className="seal-sheet__key" icon={<CheckFat weight="fill" />} onClick={onSeal}>
           {t(($) => $.stickerCreation.sealSheet.seal)}
         </Key>
-        {!timeUp && (
-          <QuietLink className="seal-sheet__not-yet" onClick={onNotYet}>
-            {t(($) => $.stickerCreation.sealSheet.notYet)}
-          </QuietLink>
+        {(!timeUp || turned) && (
+          <div className="seal-sheet__not-yet-slot" inert={timeUp}>
+            <QuietLink ref={notYet} className="seal-sheet__not-yet" onClick={onNotYet}>
+              {t(($) => $.stickerCreation.sealSheet.notYet)}
+            </QuietLink>
+          </div>
         )}
       </div>
     </Sheet>
@@ -78,9 +143,15 @@ export function SealSheet({ open, timeUp, nsfw, ink, onNsfwChange, onSeal, onNot
 
 /**
  * The drawing on white, cropped to its ink with a border as the cut leaves, so it opens at once:
- * nothing waits on the cut. On an 18+ sticker its edge is pink foil.
+ * nothing waits on the cut. Its edge wears the foil the sticker will: pink on an 18+ sticker, else
+ * the Kyoto Seika Practice Mode foil on a sheet in that mode.
  */
-function SealPreview({ open, nsfw, ink }: Pick<Props, "open" | "nsfw" | "ink">) {
+function SealPreview({
+  open,
+  nsfw,
+  kyotoSeika,
+  ink,
+}: Pick<Props, "open" | "nsfw" | "ink"> & { kyotoSeika: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   // Drawn as the sheet opens; the drawing can't change while it's up.
   useLayoutEffect(() => {
@@ -97,10 +168,12 @@ function SealPreview({ open, nsfw, ink }: Pick<Props, "open" | "nsfw" | "ink">) 
       releaseCanvas(copy);
     }
   }, [open, ink]);
+  const tone = madeFoil({ nsfw, kyotoSeika });
   return (
     <div className="seal-preview" aria-hidden="true">
-      <span className={`seal-preview__sticker ${nsfw ? "is-nsfw" : ""}`}>
-        {nsfw && <StickerFoil size="board" tone="pink" no={0} turn={TURN_DEG} />}
+      <span className="seal-preview__sticker">
+        {/* Keyed by tone, so marking 18+ lays the pink foil on fresh. */}
+        {tone && <StickerFoil key={tone} size="board" tone={tone} no={0} turn={TURN_DEG} />}
         <canvas ref={canvas} className="seal-preview__ink" />
       </span>
     </div>

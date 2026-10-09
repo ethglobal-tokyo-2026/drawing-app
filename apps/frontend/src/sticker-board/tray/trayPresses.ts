@@ -210,7 +210,7 @@ export function createTrayPresses(
   listen(stack, "lostpointercapture", cancelOnStack);
   listen(stack, "click", (e) => {
     if (targetOf(e)?.closest(".tray__depth")) openSpread({ focus: e.detail === 0 });
-    else openGivenAt(e);
+    else openSpotAt(e);
   });
   listen(stack, "keydown", (e) => {
     if (e.key === "PageDown") {
@@ -232,24 +232,34 @@ export function createTrayPresses(
       void bringToFront(f);
       return;
     }
-    // A given sticker's spot opens on its click, which the press sends as it pops.
+    // A given sticker's spot, or one on its way, opens on its click, which the press sends as it pops.
     const slot = target?.closest<HTMLElement>(".tray__slot");
-    if (slot && slot.dataset.state !== "given") {
+    if (slot && !opens(slot)) {
       e.preventDefault();
       tapSlot(slot);
     }
   });
-  /** A click on a given sticker's spot opens it among the stickers you gave. */
-  function openGivenAt(e: Event) {
-    const id = targetOf(e)?.closest<HTMLElement>('.tray__slot[data-state="given"]')?.dataset.id;
-    if (id !== undefined) api.openGiven(id);
+  /** A given sticker's spot, or one on its way: it opens on its click, and never peels. */
+  function opens(el: HTMLElement) {
+    return el.dataset.state === "given" || el.dataset.state === "onItsWay";
   }
   /**
-   * A press on a given sticker's spot that turned into a drag isn't a tap: its shared press lets go
-   * without the click that opens it, and presses again after.
+   * A click on a given sticker's spot opens it among the stickers you gave; on a sticker on its way,
+   * among your stickers.
+   */
+  function openSpotAt(e: Event) {
+    const spot = targetOf(e)?.closest<HTMLElement>(".tray__slot");
+    const id = spot?.dataset.id;
+    if (!spot || id === undefined) return;
+    if (spot.dataset.state === "given") api.openGiven(id);
+    else if (spot.dataset.state === "onItsWay") api.openYours(id);
+  }
+  /**
+   * A press on a spot that opens, turned into a drag, isn't a tap: its shared press lets go without
+   * the click that opens it, and presses again after.
    */
   function holdPress(el: HTMLElement | null) {
-    if (el?.dataset.state === "given") el.dataset.press = "off";
+    if (el && opens(el)) el.dataset.press = "off";
   }
   function freePress(el: HTMLElement | null) {
     if (el?.dataset.press === "off") el.dataset.press = "";
@@ -363,7 +373,7 @@ export function createTrayPresses(
     ) => wrap.addEventListener(type, fn, { signal: p.listening.signal });
     on("click", (e) => {
       if (targetOf(e)?.closest(".tray__x")) void sendHome();
-      else openGivenAt(e);
+      else openSpotAt(e);
     });
     on("pointerdown", (e) => {
       const target = targetOf(e);

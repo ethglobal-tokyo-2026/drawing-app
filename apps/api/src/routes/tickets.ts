@@ -24,6 +24,9 @@ import {
  */
 const PURCHASE_REFUSAL_STATUS = {
   pack_unknown: 400,
+  free_pack_used: 409,
+  price_changed: 409,
+  chain_unavailable: 503,
   no_sui_wallet: 409,
   purchase_not_found: 404,
   payment_not_yours: 403,
@@ -40,8 +43,9 @@ const refusedPurchase = <Code extends keyof typeof PURCHASE_REFUSAL_STATUS>(
 /**
  * Tickets: the day's tickets, spending one, the ticket shop, and buying its packs with JPYC: a
  * purchase is started with its payment, which the server builds, then the buyer's wallet signs it
- * and the server submits it. Once a spend or a purchase commits, the chat menu's Draw key catches up
- * in the background: LINE never holds up the answer or fails it.
+ * and the server submits it; the free first pack is given as it starts. Once a spend or a purchase
+ * commits, the chat menu's Draw key catches up in the background: LINE never holds up the answer or
+ * fails it.
  */
 export const ticketRoutes = (deps: AppDeps) => {
   const { db, clock, ticketPayment, lineChatMenu } = deps;
@@ -102,13 +106,15 @@ export const ticketRoutes = (deps: AppDeps) => {
       if (spent.status === 201) void lineChatMenu.relink(userId);
       return spent;
     })
-    .get("/ticket-shop", (c) => c.json({ shop: ticketShop(ticketPayment) }, 200))
+    .get("/ticket-shop", (c) => c.json({ shop: ticketShop(db, c.var.userId, ticketPayment) }, 200))
     .post("/ticket-purchases/start", validate("json", startPurchaseRequestSchema), async (c) => {
-      if (!deps.sui) {
-        return apiError(c, 503, "chain_unavailable", "This server runs without Sui");
-      }
-      const started = await startTicketPurchase(deps, c.var.userId, c.req.valid("json").tickets);
+      const started = await startTicketPurchase(deps, c.var.userId, c.req.valid("json"));
       if (started.refusal !== null) return refusedPurchase(c, started);
+      if (started.payment === null) {
+        void lineChatMenu.relink(c.var.userId);
+        const { purchase, tickets } = started;
+        return c.json({ purchase, payment: null, tickets }, 201);
+      }
       const { purchase, payment } = started;
       return c.json({ purchase, payment }, 201);
     })

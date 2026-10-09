@@ -59,13 +59,14 @@
   box-shadow: 0 0 0 2px var(--canvas);
 }
 
-/* No picture: their first letter on the paper, in the photo sticker's puffy capital, at the 11px floor.
-   It's drawn, not text, so the chip still reads as its caption and handle. */
+/* No picture: their first letter on the paper, in the photo sticker's puffy capital, which on a face
+   this small stops at the 11px floor. It's drawn, not text, so the chip still reads as its caption and
+   handle. */
 .artist-chip__letter {
   display: grid;
   place-items: center;
   color: var(--ink);
-  font: 400 11px/1 var(--font-puffy);
+  font: 400 var(--fs-fine) / 1 var(--font-puffy);
 }
 
 .artist-chip__letter::before {
@@ -104,10 +105,6 @@
 .artist-chip--artist .artist-chip__face {
   width: 26px;
   height: 26px;
-}
-
-.artist-chip--artist .artist-chip__letter {
-  font-size: 12px;
 }
 
 .artist-chip--artist .artist-chip__text {

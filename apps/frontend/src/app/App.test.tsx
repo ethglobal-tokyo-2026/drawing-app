@@ -1,14 +1,16 @@
 // @vitest-environment happy-dom
 import type { GiftPreview } from "@drawing-app/api/client";
 import { act } from "react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { gift, people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { SEARCH_AFTER_MS } from "../explore/ExploreScreen";
 import { keepGift } from "../giving/keptGifts";
+import { strings } from "../i18n/strings";
 import { PULL } from "../receiving/pullTab";
 import { forgetBoardComplete } from "../sticker-board/boardComplete";
 import { readKeptBoardAgain } from "../sticker-board/lastBoard";
+import { onTouchScreen } from "../ui/testing";
 import App from "./App";
 
 vi.mock("@line/liff", () => ({
@@ -178,4 +180,38 @@ it("keeps Explore's search while another tab shows, asks nothing for it then, an
   await settle();
   expect(explore).toHaveBeenCalledTimes(2);
   expect(searchUsers).toHaveBeenCalledTimes(2);
+});
+
+describe("the upright cover", () => {
+  /** The app on the board, on a touch screen shaped as `screen` says. */
+  const openOn = async (screen: { landscape: boolean; large: boolean }) => {
+    history.replaceState(null, "", "/");
+    const switches = onTouchScreen(screen);
+    const view = renderWithApi(<App />, emptyApi());
+    unmount = view.unmount;
+    await act(() => vi.dynamicImportSettled());
+    await settle();
+    const cover = () => view.host.querySelector(".upright-cover");
+    const phone = () => view.host.querySelector(".phone");
+    return { switches, cover, phone };
+  };
+
+  it("covers a phone on its side, with the app inert under it, until it's turned upright", async () => {
+    const { switches, cover, phone } = await openOn({ landscape: true, large: false });
+    expect(cover()?.textContent).toBe(strings.app.upright.turn.en);
+    expect(phone()?.hasAttribute("inert")).toBe(true);
+
+    act(() => switches.landscape.change(false));
+    expect(cover()).toBeNull();
+    expect(phone()?.hasAttribute("inert")).toBe(false);
+  });
+
+  it.each([
+    ["an upright phone", { landscape: false, large: false }],
+    ["an iPad on its side, which has the room", { landscape: true, large: true }],
+  ])("never shows on %s", async (_, screen) => {
+    const { cover, phone } = await openOn(screen);
+    expect(cover()).toBeNull();
+    expect(phone()?.hasAttribute("inert")).toBe(false);
+  });
 });

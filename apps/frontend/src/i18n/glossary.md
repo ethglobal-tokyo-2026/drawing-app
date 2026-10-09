@@ -17,7 +17,7 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | seal (a sticker)                 | 仕上げる                               | The Seal key: 仕上げ. Sealed: 仕上がった                                              |
 | draw                             | かく                                   | In hiragana, as on the Draw key                                                       |
 | the check (the seal key)         | チェック                               | In words naming the key; the act it does is 仕上げ                                    |
-| Time's up                        | 時間切れ                               | The drawing clock at 0:00                                                             |
+| Time's up                        | タイムアップ                           | The seal sheet's title at 0:00; a Kyoto Seika sheet's is Pencils down, やめ           |
 | clear (the sheet)                | 消去                                   | Clip Studio Paint's word for its Clear; the eraser stays 消しゴム                     |
 | two fingers                      | 2本指                                  | Undo on the drawing screen; three fingers (3本指) redo                                |
 | Pencil only / Pencil and finger  | ペンのみ / ペンと指                    | The two inputs: Settings' Input (入力), and the drawing screen's pen tile             |
@@ -39,25 +39,29 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | Best combo                       | 最高コンボ                             | The most hits in one combo; never 最大コンボ                                          |
 | streak                           | 連続日数                               | Days in a row you sealed a sticker; the longest: 最長連続日数                         |
 | ticket / daily / reserve         | チケット / 無償チケット / 有償チケット | Gacha's words for free and bought; 無償チケットから先に使われます (ad0ll, 2026-09-27) |
+| Free (a pack's price)            | 無料                                   | The free first pack's price; 無償 is only the daily ticket's                          |
 | Shop (the tab)                   | ショップ                               |                                                                                       |
 | laminate / backing foil          | ラミネート / ホイル                    | The Shop's coming-soon shelves                                                        |
 | Original Artist                  | 作者                                   |                                                                                       |
 | Residual (gratitude)             | 作者として                             | The tag on your gratitude events' rows; never a money word such as 印税               |
 | artist (someone who draws)       | アーティスト                           |                                                                                       |
 | Transfer Trail                   | 来歴                                   | Provenance: who held it, and how it passed hand to hand (ad0ll, 2026-09-27)           |
-| Explore / My board               | さがす / マイボード                    | The tab labels; the way back is マイボードに戻る                                      |
+| Explore (the tab)                | 発見                                   | Instagram's name for its Explore; never さがす, which is search (ad0ll, 2026-10-09)   |
+| My board (the tab)               | マイボード                             | The way back is マイボードに戻る                                                      |
 | Sui address                      | Suiアドレス                            | The stat board's address paper, which holds the stickers                              |
+| Deposit (the Shop)               | 入金                                   | Holds up your Sui address, to send JPYC to (ad0ll, 2026-10-09)                        |
 | handle                           | ユーザー名                             | X's word for the @handle; a display name is 名前                                      |
 | LINE friend / chat               | 友だち / トーク                        | LINE's own words                                                                      |
 | Official Account                 | 公式アカウント                         |                                                                                       |
 | Terms / Privacy Policy           | 利用規約 / プライバシーポリシー        |                                                                                       |
-| NSFW sticker / 18+               | 18+のシール / 18+                      | The toggle at sealing reads 18+ in both languages                                     |
+| NSFW sticker / 18+               | 18+のシール / 18+                      | Marking one, at sealing or on its detail, is Mark 18+, 18+にする                      |
 | NSFW opt-in (Settings)           | 18+のシールを表示する                  | The switch's label; on and off are オン / オフ                                        |
 | subject (Kyoto Seika Subject)    | 題材                                   | The guide's word; "subject" in English                                                |
 | Begin (the drawing screen's key) | はじめ                                 | The proctor's word                                                                    |
 | Reroll (a subject's die)         | 振り直し                               | The lettering beside each die, and the start of its name for screen readers           |
 | entrance exam (Settings' legend) | 入試                                   | Kyoto Seika Practice Mode's setting; its tag on a sticker's detail is 入試練習        |
 | censor bar                       | 伏せ字                                 | The bar over the university's name; its label says 大人の事情により伏せています       |
+| device (a phone or an iPad)      | 端末                                   | "This device" in notes and errors; never the device's name                            |
 
 ## Style
 

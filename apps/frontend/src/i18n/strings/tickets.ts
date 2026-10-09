@@ -147,6 +147,10 @@ export const tickets = {
     discount: { en: "−{{percent}}%", ja: "{{percent}}%オフ" },
     /** Reserve ticket checkout: screen-reader text for a discounted pack's struck-through full price */
     was: { en: "was {{price}}", ja: "通常価格{{price}}" },
+    /** Reserve ticket checkout: in a pack's price column, in its price's place, while it's your free first pack */
+    free: { en: "Free", ja: "無料" },
+    /** Reserve ticket checkout: the blue Pay key, in place of “Pay ¥…”, while the picked pack is your free first pack */
+    takeFree: { en: "Get it free", ja: "無料でもらう" },
     /** Reserve ticket checkout: the blue Pay key, before a pack's price is known */
     pay: { en: "Pay", ja: "支払う" },
     /** Reserve ticket checkout: the blue Pay key, with the chosen pack's price */
@@ -196,7 +200,7 @@ export const tickets = {
     buyMore: { en: "Buy more tickets", ja: "チケットをもっと買う" },
     /** Reserve ticket checkout when a payment fails: the title, above the reason */
     paymentFailed: { en: "Payment didn’t go through", ja: "支払いが完了しませんでした" },
-    /** Reserve ticket checkout, under “Payment didn’t go through”: one bold line per known reason, then the phone's own words as fine print beside Copy. No JPYC moved in any of them. */
+    /** Reserve ticket checkout, under “Payment didn’t go through”: one bold line per known reason, then the device's own words as fine print beside Copy. No JPYC moved in any of them. */
     paymentFailure: {
       /** Reserve ticket checkout, payment failed: when building and signing the payment took too long, so it was never sent */
       timedOut: {
@@ -213,7 +217,7 @@ export const tickets = {
     notAdded: {
       /** Reserve ticket checkout, after paying, when the answer to the signed payment never came: the title */
       title: { en: "Tickets not added yet", ja: "チケットが未追加です" },
-      /** Reserve ticket checkout, tickets not added: the line under the title, in bold, then why in quiet type; `reason` is the server's or the phone's words for the lost answer */
+      /** Reserve ticket checkout, tickets not added: the line under the title, in bold, then why in quiet type; `reason` is the server's or the device's words for the lost answer */
       line: {
         en: "<strong>Adding the tickets again won’t charge you twice.</strong> <why>{{reason}}</why>",
         ja: "<strong>チケットをもう一度追加しても、二重に請求されることはありません。</strong><why>{{reason}}</why>",

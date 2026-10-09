@@ -6,6 +6,7 @@ import { gift, MARKUP_LIKE_NAME, markupLikePerson, people, sticker } from "../ap
 import { renderWithApi, shownText } from "../api/testing";
 import { toPerson, toSticker } from "../api/views";
 import { formatDuration } from "../stickers/format";
+import { onLargeScreen } from "../ui/testing";
 import { SendGratitudeSheet } from "./SendGratitudeSheet";
 
 const onSend = vi.fn();
@@ -16,6 +17,7 @@ afterEach(() => {
   unmount();
   onSend.mockReset();
   onLater.mockReset();
+  vi.restoreAllMocks();
 });
 
 /** The sheet for a sticker `artist` drew, just received from `giver`. */
@@ -101,5 +103,12 @@ describe("SendGratitudeSheet", () => {
     act(() => button(`Close ${title}`).click());
     expect(onLater).toHaveBeenCalledTimes(2);
     expect(onSend).toHaveBeenCalledOnce();
+  });
+
+  it("on an iPad waits as a card over a scrim, which says Later", () => {
+    onLargeScreen();
+    open(people.ken, people.mika);
+    act(() => document.querySelector<HTMLElement>(".send-gratitude-layer__scrim")?.click());
+    expect(onLater).toHaveBeenCalledOnce();
   });
 });

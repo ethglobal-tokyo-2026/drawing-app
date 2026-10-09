@@ -2,6 +2,7 @@ import type { CSSProperties, Ref } from "react";
 import { useTranslation } from "../i18n/react";
 import type { Fold } from "./liftedCorner";
 import { LiveResin } from "./LiveResin";
+import { madeFoil } from "./madeFoil";
 import { StickerFoil, type FoilSize } from "./StickerFoil";
 import type { StickerUrls } from "./stickerUrls";
 import { revealOnLoad } from "../ui/reveal";
@@ -63,9 +64,10 @@ export function StickerFigure({
 }: Props) {
   const { t } = useTranslation();
   const { mask, spec, rim } = urls;
-  // Pink protects people, so it wins over Kyoto Seika; either marks the sticker whoever drew it.
-  const foilSize = foil ?? (nsfw || kyotoSeika ? "board" : undefined);
-  const tone = nsfw ? "pink" : kyotoSeika ? "kyoto-seika" : "holo";
+  // A foil that marks how it was made shows whoever drew it; holo marks someone else's hand.
+  const made = madeFoil({ nsfw, kyotoSeika });
+  const foilSize = foil ?? (made ? "board" : undefined);
+  const tone = made ?? "holo";
   const style: CSSProperties = {
     "--ar": (width / height).toFixed(4),
     "--m": cssUrl(mask),

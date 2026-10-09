@@ -49,10 +49,6 @@ export const users = sqliteTable(
      * it's off. Each ticket spent while it's on is spent in that mode. Cleared on account deletion.
      */
     kyotoSeikaPracticeOnAt: integer("kyoto_seika_practice_on_at", { mode: "timestamp_ms" }),
-    /** When they turned on "Dark subjects too", under it; null while it's off. Cleared on account deletion. */
-    kyotoSeikaDarkSubjectsOnAt: integer("kyoto_seika_dark_subjects_on_at", {
-      mode: "timestamp_ms",
-    }),
   },
   (t) => [
     uniqueIndex("users_handle").on(sql`lower(${t.handle})`),
