@@ -177,11 +177,27 @@ export const nsfwSwitch = (page: Page, language: Language) =>
 const sealSheet = (page: Page, language: Language) =>
   page.getByRole("dialog").filter({ has: nsfwSwitch(page, language) });
 
-/** Taps the seal key, which opens the seal sheet. Resolves with the sheet. */
+/**
+ * Taps the seal key, which opens the seal sheet, and resolves with the sheet once it has risen. The
+ * drawing screen holds still as it rises: focus moving into the sheet mustn't scroll the screen to it.
+ */
 export async function openSealSheet(page: Page, language: Language) {
+  const screen = page.locator(".drawing-screen");
+  await screen.evaluate((el) => {
+    el.dataset.mostScrolled = "0";
+    el.addEventListener("scroll", () => {
+      el.dataset.mostScrolled = String(Math.max(Number(el.dataset.mostScrolled), el.scrollTop));
+    });
+  });
   await page.getByRole("button", { name: say(stickerCreation.seal.label, language) }).click();
   const sheet = sealSheet(page, language);
   await expect(sheet).toBeVisible();
+  await sheet.evaluate(async (el) => {
+    await Promise.all(el.getAnimations().map((rise) => rise.finished));
+    // A scroll is heard at the next frame.
+    await new Promise(requestAnimationFrame);
+  });
+  expect(await screen.getAttribute("data-most-scrolled")).toBe("0");
   return sheet;
 }
 

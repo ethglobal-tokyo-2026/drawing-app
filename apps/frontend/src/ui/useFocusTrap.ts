@@ -72,9 +72,10 @@ export function useFocusTrap(
     };
   }, [active, ref]);
 
-  // Apart from the trap, so a new `refocus` moves focus again without registering it afresh.
+  // Apart from the trap, so a new `refocus` moves focus again without registering it afresh. Without
+  // scrolling: a sheet still rising from below the screen would scroll its screen up to meet it.
   useEffect(() => {
     const root = ref.current;
-    if (active && root) startOf(root).focus();
+    if (active && root) startOf(root).focus({ preventScroll: true });
   }, [active, ref, refocus]);
 }

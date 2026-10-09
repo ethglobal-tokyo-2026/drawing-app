@@ -177,9 +177,12 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
     close();
     return !busy;
   });
-  // Each screen's control takes focus as it comes: the slider, Accept, a refusal's button.
+  // Each screen's control takes focus as it comes: the slider, Accept, a refusal's button. Without
+  // scrolling, since Accept's sheet may still be rising from below the screen.
   useEffect(() => {
-    root.current?.querySelector<HTMLElement>("[data-autofocus], [role=slider]")?.focus();
+    root.current
+      ?.querySelector<HTMLElement>("[data-autofocus], [role=slider]")
+      ?.focus({ preventScroll: true });
   }, [screen.step, reveal]);
 
   // Outside LINE's app, or opened from the board, there's no LINE window to go back to: the way out

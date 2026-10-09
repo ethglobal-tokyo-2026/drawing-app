@@ -166,8 +166,9 @@ export function Giving({
   }
   const layer = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLDivElement>(null);
+  // Without scrolling, since the sheet may still be rising from below the screen.
   useEffect(() => {
-    body.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
+    body.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus({ preventScroll: true });
   }, [view]);
 
   const [closed, setClosed] = useState(false);
