@@ -189,7 +189,7 @@ Every hit squashes the heart, stamps under the finger and sends up a ♡. The hi
 
 ## Playing a replay
 
-What a person sees is in DESIGN.md's Gratitude replay. How it runs:
+What a person sees is recorded by `apps/frontend/src/gratitude/replay/` and its tests. How it runs:
 
 - **The same engine.** `mountGratitudeReplay` runs `miniGameEngine.ts` in replay mode: no listeners, recorder, tips or live region, and the heart takes no taps. `replayFeed.ts` turns the replay into inputs, each where it was relative to the heart, in heart widths from its middle. `replayInput.ts` hands them to the engine's own handlers as its clock reaches them, so the rules, the detectors and the effects run as they did live. The effects draw from the replay's seed, each from its own stream, so a combo looks the same however the frames fall.
 - **Speed.** `replaySpeed`: real time up to `REPLAY_REAL_TIME_MS`, and a longer combo sped up to take that long, at most `MAX_REPLAY_SPEED` times as fast. Web Animations keep pace through `webAnimations.ts`; CSS transitions run at real time. The first hit comes a moment in, so the heart rests first.
