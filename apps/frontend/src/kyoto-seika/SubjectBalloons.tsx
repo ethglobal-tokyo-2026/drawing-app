@@ -1,5 +1,6 @@
 import type { KyotoSeikaSubject } from "@drawing-app/api/client";
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -31,18 +32,17 @@ import {
   ARRIVE,
   BOIL,
   CLOUD_ARRIVE,
-  CLOUD_SQUASH,
+  cloudPop,
   driftKeyframes,
   FLOAT,
   POOL,
-  ROLL,
   SPRING,
   BOOM_MS,
   COUNT_MS,
   TEASE_MS,
-  WORD_IN,
-  WORD_OUT,
   WORD_STAMP,
+  type CloudPop,
+  type Motion,
 } from "./dealMotion";
 import { DieBang, TeaseLine } from "./DieTeasing";
 import { CHARRED_AT_ROLL, dieMood } from "./dieMood";
@@ -126,45 +126,123 @@ function useDrift(
   }, [still]);
 }
 
-const SVG = "http://www.w3.org/2000/svg";
-/** The puffs a roll blows out of a cloud: a few sizes, drawn once. */
-const PUFFS = [6, 7.5, 9, 11].map((r, i) => ({ r, ...beadShape(r, 61 + i) }));
+/** How an element looks this instant, mid-arrival or at rest. */
+type Look = Pick<CSSProperties, "scale" | "rotate" | "opacity">;
+const lookOf = (el: HTMLElement | null): Look | null => {
+  if (!el) return null;
+  const { scale, rotate, opacity } = getComputedStyle(el);
+  return { scale, rotate, opacity };
+};
 
-/** Small puffs burst from a rolled cloud's middle and drift up; random by design, so drawn outside React. */
-function puff(layer: HTMLElement) {
-  for (let i = 0; i < ROLL.puffs; i++) {
-    const { r, white, ink } = PUFFS[Math.floor(Math.random() * PUFFS.length)];
-    const size = 2 * r + 6;
-    const el = document.createElementNS(SVG, "svg");
-    el.setAttribute("class", "subject-puff");
-    el.setAttribute("viewBox", `${-size / 2} ${-size / 2} ${size} ${size}`);
-    el.setAttribute("width", String(size));
-    el.setAttribute("height", String(size));
-    el.setAttribute("aria-hidden", "true");
-    for (const [className, d] of [
-      ["subject-puff__white", white],
-      ["subject-puff__ink", ink],
-    ]) {
-      const path = document.createElementNS(SVG, "path");
-      path.setAttribute("class", className);
-      path.setAttribute("d", d);
-      el.append(path);
-    }
-    el.style.margin = `${-size / 2}px 0 0 ${-size / 2}px`;
-    el.style.left = `${(Math.random() - 0.5) * 40}px`;
-    el.style.top = `${(Math.random() - 0.5) * 24}px`;
-    layer.append(el);
-    const drift = `${(Math.random() - 0.5) * 70}px ${-20 - Math.random() * 30}px`;
-    const motion = el.animate(
-      [
-        { opacity: 1, scale: 0.6, translate: "0 0" },
-        { opacity: 0, scale: 1.4, translate: drift },
-      ],
-      { duration: ROLL.puffMs, easing: EASE_OUT },
+/** A cloud a roll dealt again, as it pops: the subject it held, and how it and its word looked then. */
+interface Pop {
+  id: number;
+  was: KyotoSeikaSubject;
+  motion: CloudPop;
+  cloud: Look | null;
+  word: Look | null;
+}
+
+const play = (el: Element | null | undefined, { keyframes, timing }: Motion) =>
+  el?.animate(keyframes, timing);
+
+/** A bead's square, round its middle, with room for its pen line. */
+const beadSize = (r: number) => 2 * r + 6;
+
+interface PoppedProps {
+  pop: Pop;
+  placed: PlacedBalloon;
+  /** The cloud's pen line, once per boil frame, as the cloud itself is inked. */
+  inks: readonly string[];
+  fit: Fit;
+  phase: number;
+  onGone: (id: number) => void;
+}
+
+/**
+ * The old cloud over the new one, popping: it and its word swell from the look they had at the roll
+ * and are gone, then every other lobe of its pen line bursts off as a rim, and beads spray off it.
+ */
+function PoppedCloud({ pop, placed, inks, fit, phase, onGone }: PoppedProps) {
+  const swell = useRef<HTMLDivElement>(null);
+  const wordSwell = useRef<HTMLDivElement>(null);
+  const rim = useRef<SVGSVGElement>(null);
+  const spray = useRef<HTMLDivElement>(null);
+  const beads = useMemo(
+    () => pop.motion.beads.map((bead) => ({ ...bead, ...beadShape(bead.r, bead.seed) })),
+    [pop],
+  );
+
+  // Before paint, so the swell is under way from the pop's first frame.
+  useLayoutEffect(() => {
+    const { motion } = pop;
+    const played = [
+      play(swell.current, motion.swell),
+      play(wordSwell.current, motion.swell),
+      ...motion.rim.map((piece, i) => play(rim.current?.children[i], piece.motion)),
+      ...motion.beads.map((bead, i) => play(spray.current?.children[i], bead.motion)),
+    ].filter((played) => played !== undefined);
+    // Cancelling rejects `finished` with an AbortError: that's the cancel asked for, not a failure.
+    Promise.all(played.map((motion) => motion.finished)).then(
+      () => onGone(pop.id),
+      () => {},
     );
-    motion.onfinish = () => el.remove();
-    motion.oncancel = () => el.remove();
-  }
+    return () => played.forEach((motion) => motion.cancel());
+  }, [pop, onGone]);
+
+  const { spec } = placed;
+  const box = placed.cloudBox;
+  return (
+    <div className="subject-pop" aria-hidden="true">
+      <div className="subject-pop__look" style={pop.cloud ?? undefined}>
+        <div ref={swell} className="subject-pop__part">
+          <Inked white={placed.whitePath} inks={inks} box={box} phase={phase} />
+        </div>
+        <svg
+          ref={rim}
+          className="subject-pop__rim"
+          viewBox={`${box.minX} ${box.minY} ${box.maxX - box.minX} ${box.maxY - box.minY}`}
+          width={box.maxX - box.minX}
+          height={box.maxY - box.minY}
+          style={{ left: box.minX, top: box.minY }}
+        >
+          {pop.motion.rim.map(({ d }, i) => (
+            <path key={i} d={d} />
+          ))}
+        </svg>
+        <div ref={spray} className="subject-pop__part">
+          {beads.map(({ r, at, white, ink }, i) => {
+            const size = beadSize(r);
+            return (
+              <svg
+                key={i}
+                className="subject-pop__bead"
+                viewBox={`${-size / 2} ${-size / 2} ${size} ${size}`}
+                width={size}
+                height={size}
+                style={{ left: at.x - size / 2, top: at.y - size / 2 }}
+              >
+                <path className="subject-puff__white" d={white} />
+                <path className="subject-puff__ink" d={ink} />
+              </svg>
+            );
+          })}
+        </div>
+      </div>
+      <div
+        className="subject-balloon__words"
+        style={{ left: -spec.w / 2, top: -spec.h / 2, width: spec.w, height: spec.h, ...pop.word }}
+      >
+        <div
+          ref={wordSwell}
+          className="subject-balloon__word"
+          style={{ fontSize: wordSizePx(pop.was.ja, fit, spec.w) }}
+        >
+          <SubjectWord subject={pop.was} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -201,6 +279,8 @@ interface BalloonProps {
   placed: PlacedBalloon;
   fit: Fit;
   subject: KyotoSeikaSubject;
+  /** The rolls that dealt the deal: a cloud dealt again pops, seeded by its roll. */
+  rolls: number;
   picked: boolean;
   /** Two others are picked: this one takes no pick until one is unpicked. */
   locked: boolean;
@@ -213,14 +293,15 @@ interface BalloonProps {
 }
 
 /**
- * One thought cloud, a toggle that picks its subject: it arrives, drifts, puffs one word out and the
- * next in at a roll, and a pick inks it solid from where it was tapped, its word lettered white.
+ * One thought cloud, a toggle that picks its subject: it arrives, drifts, pops at a roll as a new one
+ * puffs up in its place, and a pick inks it solid from where it was tapped, its word lettered white.
  */
 function SubjectBalloon({
   place,
   placed,
   fit,
   subject,
+  rolls,
   picked,
   locked,
   onPick,
@@ -237,9 +318,6 @@ function SubjectBalloon({
   const ink = useRef<SVGSVGElement>(null);
   const words = useRef<HTMLDivElement>(null);
   const lettered = useRef<HTMLDivElement>(null);
-  // A rolled word puffs out before the next comes in, so the screen lags the deal by that long.
-  const [shown, setShown] = useState(subject);
-  const visible = reduced ? subject : shown;
 
   // Where the last pick or unpick landed: its ink pools out from there, or drains back into it.
   const tapped = useRef<Pt>({ x: 0, y: 0 });
@@ -298,22 +376,35 @@ function SubjectBalloon({
     });
   }, [place, reduced]);
 
-  useEffect(() => {
-    if (reduced || subject === shown) return;
-    cloud.current?.animate(CLOUD_SQUASH, { duration: ROLL.cloudMs, easing: EASE_OUT });
-    if (float.current) puff(float.current);
-    // The word in holds its end, over the word out's: the browser drops each once it's replaced.
-    const fill = "forwards";
-    words.current?.animate(WORD_OUT, { duration: ROLL.wordOutMs, easing: EASE_OUT, fill });
-    const swap = setTimeout(() => {
-      setShown(subject);
-      words.current?.animate(WORD_IN, { duration: ROLL.wordInMs, easing: SPRING, fill });
-    }, ROLL.wordOutMs);
-    return () => clearTimeout(swap);
-  }, [subject, shown, reduced]);
+  // A roll pops the cloud it deals again, from wherever the last roll's arrival had got to, and the new
+  // cloud and word arrive in its place: the new word is in the page at once, hidden until it stamps in.
+  const [pops, setPops] = useState<readonly Pop[]>([]);
+  const dealt = useRef(subject);
+  const popped = useRef(0);
+  const arriving = useRef<readonly Animation[]>([]);
+  useLayoutEffect(() => {
+    const was = dealt.current;
+    if (was === subject) return;
+    dealt.current = subject;
+    const motion = cloudPop({ white: placed.white, inks }, spec.seed, rolls, reduced);
+    if (!motion) return;
+    const pop = {
+      id: ++popped.current,
+      was,
+      motion,
+      cloud: lookOf(cloud.current),
+      word: lookOf(words.current),
+    };
+    for (const arrival of arriving.current) arrival.cancel();
+    arriving.current = [play(cloud.current, motion.cloud), play(words.current, motion.word)].filter(
+      (arrival) => arrival !== undefined,
+    );
+    setPops((now) => [...now, pop]);
+  }, [subject, rolls, spec.seed, placed.white, inks, reduced]);
+  const gone = useCallback((id: number) => setPops((now) => now.filter((p) => p.id !== id)), []);
 
   const type = fit === "roomy" ? TYPE : TIGHT_TYPE;
-  const size = wordSizePx(visible.ja, fit, spec.w);
+  const size = wordSizePx(subject.ja, fit, spec.w);
   const style = {
     left: placed.center.x,
     top: placed.center.y,
@@ -355,16 +446,27 @@ function SubjectBalloon({
           style={{ left: -spec.w / 2, top: -spec.h / 2, width: spec.w, height: spec.h }}
         >
           <div className="subject-balloon__word" style={{ fontSize: size }}>
-            <SubjectWord subject={visible} />
+            <SubjectWord subject={subject} />
           </div>
           {inked && (
             <div ref={lettered} className="subject-balloon__lettered" aria-hidden="true">
               <div className="subject-balloon__word" style={{ fontSize: size }}>
-                <SubjectWord subject={visible} />
+                <SubjectWord subject={subject} />
               </div>
             </div>
           )}
         </div>
+        {pops.map((pop) => (
+          <PoppedCloud
+            key={pop.id}
+            pop={pop}
+            placed={placed}
+            inks={inks}
+            fit={fit}
+            phase={place / 2}
+            onGone={gone}
+          />
+        ))}
       </div>
       <button
         type="button"
@@ -513,6 +615,7 @@ export function SubjectBalloons({ deal, layout, onRoll, onPick, picture = false 
               placed={placed}
               fit={layout.fit}
               subject={subject}
+              rolls={deal.rolls}
               picked={picked}
               locked={full && !picked}
               onPick={onPick}

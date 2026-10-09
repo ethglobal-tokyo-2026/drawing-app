@@ -148,13 +148,29 @@
   color: var(--graphite);
 }
 
-/* A puff from a rolled cloud, inked like its bubbles. */
-.subject-puff {
+/* A cloud dealt again pops over the new one, played from SubjectBalloons: the old cloud and word in
+   the look they had at the roll, then its burst. The rim's lobes and the beads show only while their
+   own motion plays; each lobe turns and shrinks round its own middle. */
+.subject-pop,
+.subject-pop__look,
+.subject-pop__part {
   position: absolute;
-  overflow: visible;
+  inset: 0;
   pointer-events: none;
 }
 
+.subject-pop__rim path {
+  fill: var(--ink);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.subject-pop__bead {
+  opacity: 0;
+}
+
+/* A lone puff (beadShape), white and inked like the clouds. */
 .subject-puff__white {
   fill: var(--canvas);
 }

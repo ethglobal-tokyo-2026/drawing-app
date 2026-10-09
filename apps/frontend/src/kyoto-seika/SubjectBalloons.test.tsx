@@ -195,7 +195,24 @@ describe("a roll", () => {
     expect(pips(host)).not.toBe(before.pips);
     expect(words()).not.toBe(before.words);
     expect(host.querySelector(".subject-reroll__sound")).toBeNull();
-    expect(host.querySelector(".subject-puff")).toBeNull();
+    expect(host.querySelector(".subject-pop")).toBeNull();
+  });
+
+  it("pops each cloud it deals again, its old word riding the pop as the new one takes its place, and never a pick", () => {
+    const { host } = render(<Harness />);
+    act(() => toggles(host)[2].click());
+    const clouds = () => [...host.querySelectorAll(".subject-balloon")];
+    // Each cloud's own word comes first; a pop's follows it.
+    const shown = () => clouds().map((c) => c.querySelector(".subject-balloon__word")?.textContent);
+    const before = shown();
+    act(() => die(host).click());
+    const after = shown();
+    const popped = clouds().map(
+      (c) => c.querySelector(".subject-pop .subject-balloon__word")?.textContent ?? null,
+    );
+    expect(popped).toEqual(before.map((word, place) => (after[place] === word ? null : word)));
+    expect(popped[2]).toBeNull();
+    expect(popped.some((word) => word !== null)).toBe(true);
   });
 });
 

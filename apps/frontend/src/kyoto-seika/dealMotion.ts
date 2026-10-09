@@ -1,5 +1,6 @@
-import { EASE_SPRING } from "../ui/easing";
+import { EASE_OUT, EASE_SPRING } from "../ui/easing";
 import { seededRandom } from "../ui/seededRandom";
+import type { Pt } from "./pen";
 
 // The deal's motion, from its prototype: tunable values, played through the Web Animations API.
 
@@ -98,8 +99,8 @@ export const WORD_STAMP: Keyframe[] = [
 ];
 
 /**
- * A roll: the die tumbles once over an edge onto its new pips with a hop, its コロッ pops beside it, the
- * cloud squashes and puffs, and the word swaps.
+ * A roll: the die tumbles once over an edge onto its new pips with a hop, and its コロッ pops beside it.
+ * Each cloud it deals again pops (POP).
  */
 export const ROLL = {
   dieMs: 250,
@@ -107,11 +108,6 @@ export const ROLL = {
   /** How far round the die starts, so it lands square on its new face. */
   tumbleDeg: 90,
   soundMs: 640,
-  cloudMs: 300,
-  wordOutMs: 120,
-  wordInMs: 220,
-  puffs: 5,
-  puffMs: 420,
 };
 /** A tumble's easing: gentle enough that the turn shows across its quarter second, not just its start. */
 export const TUMBLE_EASE = "cubic-bezier(0.3, 0.6, 0.45, 1)";
@@ -121,21 +117,160 @@ export const DIE_TUMBLE: Keyframe[] = [
   { rotate: "0deg", translate: "0 0", scale: "1.08 0.92", offset: 0.82 },
   { rotate: "0deg", translate: "0 0", scale: "1" },
 ];
-export const CLOUD_SQUASH: Keyframe[] = [
-  { scale: "1 1" },
-  { scale: "0.95 0.97" },
-  { scale: "1.03 1.01" },
-  { scale: "1 1" },
-];
-export const WORD_OUT: Keyframe[] = [
-  { opacity: 1, scale: 1 },
-  { opacity: 0, scale: 0.7 },
-];
-export const WORD_IN: Keyframe[] = [
-  { opacity: 0, scale: 0.7 },
-  { opacity: 1, scale: 1.12, offset: 0.6 },
-  { opacity: 1, scale: 1 },
-];
+
+/**
+ * A cloud the die deals again pops, as a cartoon ends a thought: the old cloud and its word swell, then
+ * are gone in one frame; every other lobe of its pen line bursts off as a rim, beads spray off it, and
+ * the new cloud puffs up where it stood, its word stamped in. Px are in the cloud's own frame.
+ */
+const POP = {
+  swellMs: 70,
+  swellScale: 1.1,
+  /** Easing in, so the swell is quickest as it gives. */
+  swellEase: "cubic-bezier(0.5, 0, 0.9, 0.5)",
+  /** Each lobe starts `scale` times as far out, flies `px` further, and holds its ink for `holdFor`. */
+  rim: { scale: 1.18, ms: 190, px: [8, 17], spinDeg: 14, endScale: 0.94, holdFor: 0.3 },
+  /** Each bead leaves the rim at `r` px, flies `px` out and `liftPx` up, and holds its ink for `holdFor`. */
+  beads: { count: 6, ms: 240, r: [2.6, 3.8], px: [12, 22], liftPx: 4, endScale: 0.4, holdFor: 0.5 },
+  /** The new cloud and its word, from the roll. */
+  cloud: { afterMs: 120, ms: 280 },
+  word: { afterMs: 170, ms: 200 },
+} as const;
+
+/** Keyframes and the timing to play them with. */
+export interface Motion {
+  keyframes: Keyframe[];
+  timing: KeyframeAnimationOptions;
+}
+
+/** A pop: the old cloud and word go, their burst flies, and the new cloud and word arrive. */
+export interface CloudPop {
+  /** For the old cloud and its word, from the look they had at the roll. */
+  swell: Motion;
+  /** Every other lobe of the old cloud's pen line, as path data in the cloud's frame. */
+  rim: { d: string; motion: Motion }[];
+  /** Beads drawn round (0, 0) at `r` px from `seed`, each leaving the rim at `at`. */
+  beads: { r: number; seed: number; at: Pt; motion: Motion }[];
+  cloud: Motion;
+  word: Motion;
+}
+
+/** What penStroke writes each command with, and where in its numbers the command's end point sits. */
+const PATH_ARITY: Record<string, number> = { M: 2, L: 2, C: 6, S: 4, A: 7, Z: 0 };
+
+/**
+ * A cloud's pen line split into its lobes, each with the middle of its reach: cloudShape inks each lobe
+ * as one closed subpath of absolute commands.
+ */
+function inkLobes(ink: string): { d: string; middle: Pt }[] {
+  return ink.split(/(?=M)/).map((d) => {
+    const ends: Pt[] = [];
+    for (const [, command, args] of d.matchAll(/([A-Z])([^A-Z]*)/g)) {
+      const n = (args.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/g) ?? []).map(Number);
+      const arity = PATH_ARITY[command] ?? 0;
+      for (let end = arity; arity > 0 && end <= n.length; end += arity)
+        ends.push({ x: n[end - 2], y: n[end - 1] });
+    }
+    const xs = ends.map((p) => p.x);
+    const ys = ends.map((p) => p.y);
+    const middle = {
+      x: (Math.min(...xs) + Math.max(...xs)) / 2,
+      y: (Math.min(...ys) + Math.max(...ys)) / 2,
+    };
+    return { d, middle };
+  });
+}
+
+const translateTo = (p: Pt) => `${p.x.toFixed(1)}px ${p.y.toFixed(1)}px`;
+const outFrom = (p: Pt): Pt => {
+  const reach = Math.hypot(p.x, p.y) || 1;
+  return { x: p.x / reach, y: p.y / reach };
+};
+
+/**
+ * The pop of a cloud that roll number `rolls` dealt again, seeded by the cloud's own `seed` and that
+ * roll, so it plays the same every time. None under reduced motion, where the words swap in place.
+ */
+export function cloudPop(
+  cloud: { white: readonly Pt[]; inks: readonly string[] },
+  seed: number,
+  rolls: number,
+  reduced: boolean,
+): CloudPop | null {
+  if (reduced) return null;
+  const random = seededRandom(seed * 7919 + rolls * 104_729);
+  const between = ([lo, hi]: readonly [number, number]) => lo + (hi - lo) * random();
+  const burst = { delay: POP.swellMs, easing: EASE_OUT };
+  const { rim, beads } = POP;
+
+  // Which half of the lobes bursts off varies by roll.
+  const half = random() < 0.5 ? 0 : 1;
+  const pieces = inkLobes(cloud.inks[0] ?? "").filter((_, i) => i % 2 === half);
+  const flung = pieces.map(({ d, middle }) => {
+    const at = { x: middle.x * (rim.scale - 1), y: middle.y * (rim.scale - 1) };
+    const out = outFrom(middle);
+    const far = between(rim.px);
+    const to = { x: at.x + out.x * far, y: at.y + out.y * far };
+    const spin = (random() * 2 - 1) * rim.spinDeg;
+    const keyframes: Keyframe[] = [
+      { translate: translateTo(at), scale: rim.scale, rotate: "0deg", opacity: 1 },
+      { opacity: 1, offset: rim.holdFor },
+      {
+        translate: translateTo(to),
+        scale: rim.endScale,
+        rotate: `${spin.toFixed(1)}deg`,
+        opacity: 0,
+      },
+    ];
+    return { d, motion: { keyframes, timing: { ...burst, duration: rim.ms } } };
+  });
+
+  // Each bead leaves its own stretch of the rim, a little off its even spacing.
+  const sprayed = Array.from({ length: beads.count }, (_, i) => {
+    const on = Math.floor(((i + random() * 0.6) / beads.count) * cloud.white.length);
+    const p = cloud.white[on % cloud.white.length] ?? { x: 0, y: 0 };
+    const out = outFrom(p);
+    const r = between(beads.r);
+    const seed = Math.floor(random() * 2 ** 31);
+    const far = between(beads.px);
+    const to = { x: out.x * far, y: out.y * far - beads.liftPx };
+    const keyframes: Keyframe[] = [
+      { translate: "0px 0px", scale: 1, opacity: 1 },
+      { opacity: 1, offset: beads.holdFor },
+      { translate: translateTo(to), scale: beads.endScale, opacity: 0 },
+    ];
+    const at = { x: p.x * rim.scale, y: p.y * rim.scale };
+    return { r, seed, at, motion: { keyframes, timing: { ...burst, duration: beads.ms } } };
+  });
+
+  return {
+    // Gone in the swell's last frame, with no fade a frame could catch, and kept gone.
+    swell: {
+      keyframes: [
+        { scale: 1, opacity: 1, easing: POP.swellEase },
+        { scale: POP.swellScale, opacity: 1, offset: 0.999 },
+        { scale: POP.swellScale, opacity: 0 },
+      ],
+      timing: { duration: POP.swellMs, fill: "forwards" },
+    },
+    rim: flung,
+    beads: sprayed,
+    // Hidden until they start, so the old cloud has the spot to itself until it pops.
+    cloud: {
+      keyframes: CLOUD_ARRIVE,
+      timing: {
+        delay: POP.cloud.afterMs,
+        duration: POP.cloud.ms,
+        easing: EASE_OUT,
+        fill: "backwards",
+      },
+    },
+    word: {
+      keyframes: WORD_STAMP,
+      timing: { delay: POP.word.afterMs, duration: POP.word.ms, easing: SPRING, fill: "backwards" },
+    },
+  };
+}
 
 /**
  * A die rolled too often shakes, harder as dieMood's shake builds from 0 to 1: this far and this many
