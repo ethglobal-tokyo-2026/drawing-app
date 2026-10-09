@@ -9,16 +9,18 @@ import { useMe, useSetMe } from "../../api/meContext";
 import { useApi } from "../../api/useApi";
 import { problemOf } from "../../i18n/errorMessage";
 import { currentLanguage } from "../../i18n/i18n";
-import { keepChosenLanguage, languageOf, type Language } from "../../i18n/language";
+import { keepChosenLanguage, type Language } from "../../i18n/language";
 import { followLanguageChoice } from "../../i18n/pageLanguage";
 import { Trans, useTranslation } from "../../i18n/react";
-import { CaretDown, Question } from "../../icons";
+import { Question } from "../../icons";
 import { CensorBar } from "../../kyoto-seika/CensorBar";
 import { openLinkInLine } from "../../line/openLink";
 import { useTickets } from "../../tickets/useTickets";
 import { ErrorLine } from "../../ui/ErrorLine";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { forget as forgetKeptBoard } from "../lastBoard";
+import { ChoiceRow } from "./ChoiceRow";
+import { DrawingSettings } from "./DrawingSettings";
 import { statsClearPeek } from "./settingsPeek";
 import "./settings-note.css";
 
@@ -95,7 +97,8 @@ function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLEleme
 /**
  * Your Settings, the first paper under the stats on your stat board. Each setting saves to your account
  * and applies in place: `me` takes the server's answer, and every screen follows it. A language is
- * also kept on this phone for the first screens of the next start.
+ * also kept on this phone for the first screens of the next start. The Drawing group
+ * (`DrawingSettings`) is this device's own.
  */
 export function SettingsNote() {
   const { t } = useTranslation();
@@ -252,28 +255,15 @@ export function SettingsNote() {
           {t(($) => $.stickerBoard.settings.title)}
         </h3>
         <div className="settings-note__setting" aria-busy={saving("language")}>
-          {/* One row with its choice at the end. The select lies unseen over the whole row, so a tap
-              anywhere on it opens the phone's own list of choices. */}
-          <div className="settings-note__option settings-note__choice">
-            <span id={`${id}-language`}>{t(($) => $.stickerBoard.settings.language.title)}</span>
-            <span className="settings-note__picked" aria-hidden>
-              <span lang={shown.language}>{named(shown.language)}</span>
-              <CaretDown size={16} weight="bold" />
-            </span>
-            <select
-              className="settings-note__select"
-              aria-labelledby={`${id}-language`}
-              value={shown.language}
-              onChange={(event) => choose(languageOf(event.target.value))}
-            >
-              {CHOICES.map((choice) => (
-                // A language's own name is in that language, for screen readers too.
-                <option key={choice} value={choice} lang={choice}>
-                  {named(choice)}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ChoiceRow
+            label={t(($) => $.stickerBoard.settings.language.title)}
+            choices={CHOICES}
+            value={shown.language}
+            nameOf={named}
+            // A language's own name is in that language, for screen readers too.
+            langOf={(choice) => choice}
+            onChoose={choose}
+          />
           <p className="fine settings-note__status" role="status">
             {statusLine("language")}
           </p>
@@ -390,6 +380,7 @@ export function SettingsNote() {
             />
           </p>
         </fieldset>
+        <DrawingSettings />
       </div>
       <i
         className="stat-board__washi settings-note__washi settings-note__washi--start"

@@ -7,17 +7,27 @@ import "./SizeRail.css";
 
 /** The thumb's center runs from this far below the rail's top… */
 const THUMB_TOP = 18;
-/** …to this far above its foot, where the px label sits. */
-const THUMB_BOTTOM = 44;
+/** …to `--thumb-foot` above its foot, room for the px label; this when no CSS lays the rail out. */
+const THUMB_FOOT = 44;
 /** How far one arrow key moves the size. */
 const KEY_STEP = 0.04;
 
-/** How far from the rail's top the thumb's center sits for a size, in a rail this tall. */
-const thumbCenter = (value: number, height: number) =>
-  THUMB_TOP + (1 - value) * (height - THUMB_TOP - THUMB_BOTTOM);
+/** The rail's length from top to foot, as its CSS lays it out. */
+interface Travel {
+  height: number;
+  foot: number;
+}
+
+const travelOf = (rail: HTMLElement, height: number): Travel => ({
+  height,
+  foot: parseFloat(getComputedStyle(rail).getPropertyValue("--thumb-foot")) || THUMB_FOOT,
+});
+/** How far from the rail's top the thumb's center sits for a size. */
+const thumbCenter = (value: number, { height, foot }: Travel) =>
+  THUMB_TOP + (1 - value) * (height - THUMB_TOP - foot);
 /** The size held by a thumb whose center is this far from the rail's top. */
-const sizeAt = (center: number, height: number) =>
-  clamp01(1 - (center - THUMB_TOP) / (height - THUMB_TOP - THUMB_BOTTOM));
+const sizeAt = (center: number, { height, foot }: Travel) =>
+  clamp01(1 - (center - THUMB_TOP) / (height - THUMB_TOP - foot));
 
 /**
  * The size as CSS draws it: the thumb's place, the tip's dot, the px label, and the ghost's width,
@@ -55,22 +65,26 @@ export function SizeRail({ value, eraser, active, scale, onChange, onHold }: Pro
   const rail = useRef<HTMLDivElement>(null);
   const ghost = useRef<HTMLDivElement>(null);
   const dragged = useRef(value);
-  // The rail's box, and how far the finger landed from the thumb's center: the thumb moves with the
-  // finger from where it took hold, rather than jumping to it.
-  const railBox = useRef<DOMRect | null>(null);
+  // The rail's top and travel, and how far the finger landed from the thumb's center: the thumb moves
+  // with the finger from where it took hold, rather than jumping to it.
+  const railTop = useRef(0);
+  const travel = useRef<Travel | null>(null);
   const grabbed = useRef(0);
 
   const drag = useDrag({
     onStart: (_x, y) => {
-      const box = rail.current?.getBoundingClientRect() ?? null;
-      railBox.current = box;
-      grabbed.current = box ? y - box.top - thumbCenter(value, box.height) : 0;
+      const el = rail.current;
+      if (el) {
+        const box = el.getBoundingClientRect();
+        railTop.current = box.top;
+        travel.current = travelOf(el, box.height);
+        grabbed.current = y - box.top - thumbCenter(value, travel.current);
+      }
       onHold(true);
     },
     onMove: (_x, y) => {
-      const box = railBox.current;
-      if (!box) return;
-      dragged.current = sizeAt(y - grabbed.current - box.top, box.height);
+      if (!travel.current) return;
+      dragged.current = sizeAt(y - grabbed.current - railTop.current, travel.current);
       for (const el of [rail.current, ghost.current])
         for (const [name, v] of Object.entries(sizeStyle(dragged.current, scale)))
           el?.style.setProperty(name, String(v));

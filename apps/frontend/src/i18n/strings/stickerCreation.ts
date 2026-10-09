@@ -197,7 +197,7 @@ export const stickerCreation = {
     clear: { en: "Clear the sheet", ja: "キャンバスを消去" },
   },
   colorSheet: {
-    /** Color sheet, which slides up over the drawing screen from the color tile: its heading, and its name for screen readers */
+    /** Color sheet, which slides up over the drawing screen from the color tile, or opens under the tool strip on a large screen: its heading, and its name for screen readers */
     title: { en: "Color", ja: "カラー" },
     /** Color sheet: the small label to the left of the row of recently used colors, 50px wide; hidden from screen readers */
     recent: { en: "Recent", ja: "最近" },

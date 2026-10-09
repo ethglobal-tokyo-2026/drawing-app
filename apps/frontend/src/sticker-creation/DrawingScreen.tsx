@@ -28,11 +28,13 @@ import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { TicketsNotLoaded } from "../tickets/TicketsNotLoaded";
 import { useTickets } from "../tickets/useTickets";
 import { clamp01 } from "../ui/easing";
+import { useLargeScreen } from "../ui/largeScreen";
 import { QuietLink } from "../ui/QuietLink";
 import { releaseCanvas } from "../ui/releaseCanvas";
 import { sizePx } from "./canvas/brush";
 import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas";
 import type { HistoryState } from "./canvas/inkEngine";
+import { useDrawingHand } from "./drawingSettings";
 import { isFirstVisit } from "./drawVisits";
 import { lazyRadius } from "./canvas/lazyBrush";
 import type { Op, Tool } from "./canvas/ops";
@@ -126,10 +128,11 @@ interface Props {
 }
 
 /**
- * The drawing screen: a white sheet on the Liner, the timer and the tools in one row across the top,
- * the size rail down the left edge, undo, redo and My board at the bottom left and the seal key at
- * the bottom right. It owns the session (tickets, the clock and the seal step); the ink engine owns
- * the drawing.
+ * The drawing screen: a white sheet on the Liner, the timer and the tools in one row across the top.
+ * On a phone the size rail runs down the left edge, undo, redo and My board sit at the bottom left
+ * and the seal key at the bottom right; on a large screen the rail, undo, redo, My board and the seal
+ * key stack in a slim sidebar at the left edge. A left drawing hand mirrors both. It owns the session
+ * (tickets, the clock and the seal step); the ink engine owns the drawing.
  */
 export function DrawingScreen({
   ref,
@@ -152,6 +155,9 @@ export function DrawingScreen({
   const colorSheetId = useId();
   const smoothingBarId = useId();
   const clearBarId = useId();
+  /** On a large screen the color sheet is a popover, which a tap outside closes. */
+  const large = useLargeScreen();
+  const hand = useDrawingHand();
 
   const [tool, setTool] = useState<Tool>("brush");
   const [color, setColor] = useState(() => startingColor());
@@ -965,12 +971,20 @@ export function DrawingScreen({
     closePanel: () => setPanel(null),
   });
 
-  // A tap anywhere but an open bar or its tile closes the bar. The sheet is left to the ink engine,
-  // which closes it and swallows the tap: closing it here first would let the tap draw.
-  const closeBarOutside = (e: ReactPointerEvent) => {
-    const bar = panel === "smoothing" ? smoothingBarId : panel === "clear" ? clearBarId : null;
-    if (!bar || !(e.target instanceof Element)) return;
-    const own = `#${CSS.escape(bar)}, [aria-controls="${bar}"], .ink-sheet`;
+  // A tap anywhere but an open panel or its tile closes the panel: the bars always, and the color sheet
+  // where it's a popover, since a bottom sheet covers what's around it. The sheet is left to the ink
+  // engine, which closes it and swallows the tap: closing it here first would let the tap draw.
+  const closePanelOutside = (e: ReactPointerEvent) => {
+    const open =
+      panel === "smoothing"
+        ? smoothingBarId
+        : panel === "clear"
+          ? clearBarId
+          : panel === "color" && large
+            ? colorSheetId
+            : null;
+    if (!open || !(e.target instanceof Element)) return;
+    const own = `#${CSS.escape(open)}, [aria-controls="${open}"], .ink-sheet, .color-sheet`;
     if (!e.target.closest(own)) setPanel(null);
   };
 
@@ -978,10 +992,11 @@ export function DrawingScreen({
     <div
       ref={root}
       className={`drawing-screen ${sealing ? "is-sealing" : ""} ${retrying ? "is-retrying" : ""} ${timeUp ? "is-time-up" : ""} ${dealt ? "is-dealt" : ""} ${dealLeaving ? "is-deal-leaving" : ""}`}
+      data-hand={hand}
       style={{ "--draw-color": color }}
       // It stays mounted under the board so a sticker in progress survives; covered, it takes no focus.
       inert={!active}
-      onPointerDownCapture={closeBarOutside}
+      onPointerDownCapture={closePanelOutside}
     >
       <DrawingCanvas
         ref={canvas}

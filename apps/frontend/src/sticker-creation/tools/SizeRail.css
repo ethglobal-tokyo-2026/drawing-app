@@ -1,4 +1,6 @@
 .size-rail {
+  /* How far above the rail's foot the thumb stops: room for the px label. SizeRail's drag reads it. */
+  --thumb-foot: 44px;
   position: absolute;
   left: 0;
   top: 104px;
@@ -19,7 +21,7 @@
   position: absolute;
   left: 19px;
   top: 18px;
-  bottom: 44px;
+  bottom: var(--thumb-foot);
   width: 4px;
   border-radius: 999px;
   background: var(--liner-deep);
@@ -71,7 +73,7 @@
 .size-thumb {
   position: absolute;
   left: 7px;
-  top: calc(18px + (1 - var(--v)) * (100% - 62px) - 14px);
+  top: calc(18px + (1 - var(--v)) * (100% - 18px - var(--thumb-foot)) - 14px);
   display: grid;
   place-items: center;
   width: 28px;

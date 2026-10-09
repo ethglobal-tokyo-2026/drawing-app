@@ -288,6 +288,27 @@ export const stickerBoard = {
         ja: "入試の設定を保存できなかったため、変更していません：{{reason}}",
       },
     },
+    /** The Drawing group, after the entrance exam: settings this device keeps for drawing, not your account. */
+    drawing: {
+      /** Settings note: the legend over the Drawing group, the drawing screen's settings this device keeps */
+      title: { en: "Drawing", ja: "かく画面" },
+      /** The drawing hand: Left mirrors the drawing screen. */
+      hand: {
+        /** Settings note, Drawing group: the drawing hand row's name; a tap opens the choice of Right or Left */
+        label: { en: "Drawing hand", ja: "利き手" },
+        /** Settings note, Drawing group: the drawing hand choice for the right hand, the default */
+        right: { en: "Right", ja: "右手" },
+        /** Settings note, Drawing group: the drawing hand choice for the left hand, which mirrors the drawing screen */
+        left: { en: "Left", ja: "左手" },
+      },
+      /** Settings note, Drawing group: the status line once a drawing setting has changed, which this device keeps rather than your account */
+      kept: { en: "Kept on this device.", ja: "この端末に保存しました。" },
+      /** Settings note, Drawing group: the alert when this device couldn't keep a drawing setting, which still applies until Croquis closes */
+      notKept: {
+        en: "This device couldn’t keep that, so it lasts until you close Croquis.",
+        ja: "この端末に保存できなかったため、クロッキーを閉じるまでの設定になります。",
+      },
+    },
   },
   /** The developer slip: English only, so the Japanese catalog never translates it. */
   developer: {

@@ -90,7 +90,7 @@
   margin: 0 0 8px;
 }
 
-/* Language's row: the choice it shows, with a caret, and the unseen select over the whole row. */
+/* A choice row: the choice it shows, with a caret, and the unseen select over the whole row. */
 .settings-note__choice {
   position: relative;
 }

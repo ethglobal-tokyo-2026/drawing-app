@@ -198,3 +198,49 @@
     var(--shadow-label);
   pointer-events: none;
 }
+
+/* ---------- Large screens: a popover under the tool strip, from the color tile, so the drawing stays
+   in view. Escape, Back and a tap outside close it. A popover has no tear strip: the perforation's
+   button stays for keyboards and screen readers, unseen until it's focused. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .drawing-screen .bottom-sheet.color-sheet {
+    inset: var(--top-h) 8px auto auto;
+    width: 360px;
+    max-width: calc(100% - 16px);
+    max-height: calc(100% - var(--top-h) - 8px);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lift);
+    animation: color-popover-in 220ms var(--ease-out);
+  }
+
+  .drawing-screen .bottom-sheet.color-sheet.is-leaving {
+    animation: color-popover-out 160ms var(--ease-out) forwards;
+  }
+
+  /* A left drawing hand has the tool strip at the left, so the popover opens there. */
+  .drawing-screen[data-hand="left"] .bottom-sheet.color-sheet {
+    inset: var(--top-h) auto auto 8px;
+  }
+
+  .drawing-screen .bottom-sheet.color-sheet > .perf:not(:focus-visible) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+
+@keyframes color-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes color-popover-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}

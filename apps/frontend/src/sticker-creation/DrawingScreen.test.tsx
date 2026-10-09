@@ -24,10 +24,12 @@ import { i18next } from "../i18n/i18n";
 import { strings } from "../i18n/strings";
 import { useTickets } from "../tickets/useTickets";
 import { personKey } from "../ui/deviceStorage";
+import { onLargeScreen } from "../ui/testing";
 import type { HistoryState } from "./canvas/inkEngine";
 import type { Op } from "./canvas/ops";
 import { frameFor, SHEET_SHORT_UNITS } from "./canvas/sheetFrame";
 import { DrawingScreen, type DrawingScreenHandle } from "./DrawingScreen";
+import { keepDrawingHand } from "./drawingSettings";
 import { CHARRED_AT_ROLL } from "../kyoto-seika/dieMood";
 import { REUNION, TEST_SUBJECTS, WIND } from "../kyoto-seika/testSubjects";
 import { LOAD_TIMEOUT_MS, SessionKeeper, type KeptSession } from "./session/keptSession";
@@ -144,7 +146,9 @@ vi.mock("./TimerDot", () => ({
 }));
 vi.mock("../identity/privy", () => ({ retryPrivySignIn: () => {} }));
 vi.mock("../tickets/ReserveTicketCheckout", () => ({ ReserveTicketCheckout: () => null }));
-vi.mock("./tools/ColorSheet", () => ({ ColorSheet: () => null }));
+vi.mock("./tools/ColorSheet", () => ({
+  ColorSheet: ({ open }: { open: boolean }) => (open ? <div className="color-sheet" /> : null),
+}));
 vi.mock("./tools/SizeRail", () => ({
   SizeRail: ({ onHold }: { onHold: (held: boolean) => void }) => {
     useEffect(() => {
@@ -823,5 +827,51 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     loads();
     await openKyotoSeikaSheet();
     expect(beginKey()?.getAttribute("aria-label")).toBe(BEGIN_LABEL);
+  });
+});
+
+describe("the color sheet", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  /** Opens the color sheet over a drawing picked up after a reload. */
+  const openColors = async () => {
+    reopen(keptHalfway);
+    await settle();
+    act(openPanel("color"));
+  };
+  const colorSheet = () => document.querySelector(".color-sheet");
+  /** A finger landing on what `selector` finds. */
+  const touch = (selector: string) =>
+    act(
+      () =>
+        void document
+          .querySelector(selector)
+          ?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })),
+    );
+
+  it("closes at a tap outside on a large screen, where it's a popover, and not at a tap on it", async () => {
+    onLargeScreen();
+    await openColors();
+    touch(".color-sheet");
+    expect(colorSheet()).not.toBeNull();
+    touch(".timer-stub");
+    expect(colorSheet()).toBeNull();
+  });
+
+  it("stays at a tap outside on a phone, where it's a bottom sheet", async () => {
+    await openColors();
+    touch(".timer-stub");
+    expect(colorSheet()).not.toBeNull();
+  });
+});
+
+describe("the drawing hand", () => {
+  it("mirrors the drawing screen at once when Left is chosen, with no reload", async () => {
+    reopen(keptHalfway);
+    await settle();
+    const hand = () => document.querySelector(".drawing-screen")?.getAttribute("data-hand");
+    expect(hand()).toBe("right");
+    act(() => void keepDrawingHand("left"));
+    expect(hand()).toBe("left");
   });
 });

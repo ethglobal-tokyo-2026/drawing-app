@@ -145,7 +145,7 @@ describe("the Settings note's 18+ switch", () => {
     expect(setNsfwOptIn).toHaveBeenCalledExactlyOnceWith(true);
     expect(switchOf(host).checked).toBe(true);
     expect(keptBoardFor(TEST_ME.id)).toBeNull();
-    expect(statuses(host)).toEqual(["", stickerBoard.settings.nsfw.shown.en, ""]);
+    expect(statuses(host)).toEqual(["", stickerBoard.settings.nsfw.shown.en, "", ""]);
   });
 
   it("turns it off the same way, and says they're blurred now", async () => {
@@ -154,7 +154,7 @@ describe("the Settings note's 18+ switch", () => {
     expect(switchOf(host).checked).toBe(true);
     await flip(host);
     expect(setNsfwOptIn).toHaveBeenCalledExactlyOnceWith(false);
-    expect(statuses(host)).toEqual(["", stickerBoard.settings.nsfw.blurred.en, ""]);
+    expect(statuses(host)).toEqual(["", stickerBoard.settings.nsfw.blurred.en, "", ""]);
   });
 
   it("says why it wasn't saved, and leaves the switch and the kept board as they were", async () => {
@@ -309,6 +309,7 @@ describe("the Settings note's saves", () => {
     expect(statuses(host)).toEqual([
       i18next.t(($) => $.stickerBoard.settings.language.applied, { language: "日本語" }),
       stickerBoard.settings.nsfw.shown.ja,
+      "",
       "",
     ]);
   });

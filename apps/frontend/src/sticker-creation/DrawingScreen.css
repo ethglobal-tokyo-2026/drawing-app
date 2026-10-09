@@ -122,6 +122,226 @@
   text-align: left;
 }
 
+/* ---------- Drawing hand: Left mirrors the screen, so the drawing hand never rests on a control. The
+   rail, the foot row's tiles and the seal check change sides; the tools go to the top left, the timer
+   to the top right. Each control keeps its own reading order: undo still comes before redo. */
+.drawing-screen[data-hand="left"] > .drawing-top {
+  left: 14px;
+  right: 16px;
+  flex-direction: row-reverse;
+}
+
+.drawing-screen[data-hand="left"] .timer-hint {
+  left: auto;
+  right: 4px;
+  flex-direction: row-reverse;
+  transform-origin: calc(100% - 14px) 0;
+}
+
+.drawing-screen[data-hand="left"] .timer-hint-arrow {
+  scale: -1 1;
+}
+
+.drawing-screen[data-hand="left"] .timer-hint-label {
+  margin: 18px -2px 0 0;
+  transform-origin: 100% 0;
+}
+
+/* The wide dot grows from its top-right corner, away from the screen's edge. */
+.drawing-screen[data-hand="left"] .timer-dot.is-wide {
+  translate: -4px 4px;
+}
+
+.drawing-screen[data-hand="left"] > :is(.smoothing-bar, .clear-bar) {
+  left: 14px;
+  right: auto;
+}
+
+.drawing-screen[data-hand="left"] > .size-rail {
+  left: auto;
+  right: 0;
+}
+
+/* The rail's number grows left for two digits, away from the screen's edge. */
+.drawing-screen[data-hand="left"] .size-num {
+  left: auto;
+  right: 7px;
+  transform-origin: 100% 100%;
+}
+
+.drawing-screen[data-hand="left"] > .history-buttons {
+  left: auto;
+  right: 18px;
+}
+
+/* My board stays on undo's far side, nearer the middle, as on the right. */
+.drawing-screen[data-hand="left"] > .my-board-tile {
+  left: auto;
+  right: calc(18px + 2 * (46px + 6px));
+}
+
+.drawing-screen.is-dealt[data-hand="left"] > .my-board-tile {
+  right: 18px;
+}
+
+.drawing-screen[data-hand="left"] > .drawing-start-over {
+  left: auto;
+  right: 18px;
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.drawing-screen[data-hand="left"] > .key.seal-key {
+  left: 18px;
+  right: auto;
+}
+
+/* The seal problem chip stays above the foot row, on the sheet's side of the check's column. */
+.drawing-screen[data-hand="left"] > .seal-chip {
+  left: 88px;
+  right: auto;
+}
+
+/* Kyoto Seika's corner print stays over the seal check, and the deal tucks toward it. */
+.drawing-screen[data-hand="left"] .corner-print {
+  left: 39px;
+  right: auto;
+  translate: -50% 0;
+}
+
+.drawing-screen[data-hand="left"] > .kyoto-seika-deal {
+  transform-origin: 40px calc(100% - 270px);
+}
+
+/* ---------- Large screens: as in drawing apps made for a tablet, the controls take a slim top bar and
+   a slim sidebar at the edge away from the drawing hand, and the sheet takes everything else. The
+   sidebar holds the size rail, then the foot row's tiles in its order, and the seal check at its foot. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .drawing-screen {
+    /* The sidebar is just wider than the seal check; the top bar just taller than the timer. */
+    --edge-w: 76px;
+    --top-h: 62px;
+    /* The app stops the screen above the home indicator. */
+    --foot: 8px;
+    /* The rail, then undo, redo and My board under it, centered on the sidebar's height. */
+    --rail-h: 180px;
+    --tiles-h: calc(3 * 46px + 2 * 6px);
+    --rail-top: calc(50% - (var(--rail-h) + 16px + var(--tiles-h)) / 2);
+    --tiles-top: calc(var(--rail-top) + var(--rail-h) + 16px);
+  }
+
+  .drawing-screen > .drawing-top {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+  }
+
+  /* The sheet's room: its one rule, everything the bars leave. */
+  .drawing-screen > .ink-area {
+    inset: var(--top-h) 8px var(--foot) var(--edge-w);
+  }
+
+  /* The thumb's tip shows the size, and a held thumb its ghost mid-sheet, so the rail drops the px label. */
+  .drawing-screen > .size-rail {
+    --thumb-foot: 18px;
+    left: calc((var(--edge-w) - 40px) / 2);
+    top: var(--rail-top);
+    height: var(--rail-h);
+  }
+
+  .drawing-screen > .size-rail .size-num {
+    display: none;
+  }
+
+  .drawing-screen > .history-buttons {
+    flex-direction: column;
+    left: calc((var(--edge-w) - 46px) / 2);
+    top: var(--tiles-top);
+    bottom: auto;
+  }
+
+  /* Under redo, where it stays while a sheet waits for Begin: the sidebar keeps it clear of Begin. */
+  .drawing-screen > .my-board-tile,
+  .drawing-screen.is-dealt > .my-board-tile {
+    left: calc((var(--edge-w) - 46px) / 2);
+    top: calc(var(--tiles-top) + 2 * (46px + 6px));
+    bottom: auto;
+  }
+
+  /* In undo and redo's place, which a seal to try again has put away; the sheet can't change then. */
+  .drawing-screen > .drawing-start-over {
+    left: 4px;
+    top: var(--tiles-top);
+    bottom: auto;
+    max-width: calc(var(--edge-w) - 8px);
+    justify-content: center;
+    text-align: center;
+  }
+
+  .drawing-screen > .key.seal-key {
+    right: auto;
+    left: calc((var(--edge-w) - 58px) / 2);
+    bottom: calc(var(--foot) + 8px);
+  }
+
+  /* The seal problem chip beside the check, over the sheet's corner: Kyoto Seika's corner print is in
+     the sheet's other bottom corner, so it never stands under the chip. */
+  .drawing-screen > .seal-chip {
+    right: auto;
+    left: calc(var(--edge-w) + 4px);
+    bottom: calc(var(--foot) + 8px);
+  }
+
+  .drawing-screen > :is(.smoothing-bar, .clear-bar) {
+    top: var(--top-h);
+    right: 8px;
+  }
+
+  /* Left: the sidebar at the right edge. These beat the phone's Left rules by coming later. */
+  .drawing-screen[data-hand="left"] > .drawing-top {
+    left: 8px;
+    right: 8px;
+  }
+
+  .drawing-screen[data-hand="left"] > .ink-area {
+    inset: var(--top-h) var(--edge-w) var(--foot) 8px;
+  }
+
+  .drawing-screen[data-hand="left"] > .size-rail {
+    left: auto;
+    right: calc((var(--edge-w) - 40px) / 2);
+  }
+
+  .drawing-screen[data-hand="left"] > .history-buttons,
+  .drawing-screen[data-hand="left"] > .my-board-tile,
+  .drawing-screen.is-dealt[data-hand="left"] > .my-board-tile {
+    left: auto;
+    right: calc((var(--edge-w) - 46px) / 2);
+  }
+
+  .drawing-screen[data-hand="left"] > .drawing-start-over {
+    left: auto;
+    right: 4px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .drawing-screen[data-hand="left"] > .key.seal-key {
+    left: auto;
+    right: calc((var(--edge-w) - 58px) / 2);
+  }
+
+  .drawing-screen[data-hand="left"] > .seal-chip {
+    left: auto;
+    right: calc(var(--edge-w) + 4px);
+  }
+
+  .drawing-screen[data-hand="left"] > :is(.smoothing-bar, .clear-bar) {
+    left: 8px;
+    right: auto;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Keys and labels handle their own press; everything else settles at once, in the same order. */
   .drawing-screen :where(:not(.key, .label-btn)),

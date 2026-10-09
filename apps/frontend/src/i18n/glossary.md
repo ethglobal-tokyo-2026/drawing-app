@@ -20,6 +20,8 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | Time's up                        | 時間切れ                               | The drawing clock at 0:00                                                             |
 | clear (the sheet)                | 消去                                   | Clip Studio Paint's word for its Clear; the eraser stays 消しゴム                     |
 | two fingers                      | 2本指                                  | Undo on the drawing screen; three fingers (3本指) redo                                |
+| Drawing (Settings' group)        | かく画面                               | The drawing screen's settings, kept on the device                                     |
+| drawing hand                     | 利き手                                 | Right 右手, Left 左手; Left mirrors the drawing screen                                |
 | Timelapse                        | タイムラプス                           | The sticker detail's replay of how it was drawn                                       |
 | gift / Gift Message              | ギフト / ギフトメッセージ              |                                                                                       |
 | give (a sticker)                 | 贈る                                   |                                                                                       |
