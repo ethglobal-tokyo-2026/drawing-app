@@ -7,7 +7,7 @@ import { i18next } from "../i18n/i18n";
 import { strings } from "../i18n/strings";
 import { seededRandom } from "../ui/seededRandom";
 import { dealLayout } from "./balloonGeometry";
-import { rollDie, togglePick, type Deal } from "./deal";
+import { dealKinds, rollDie, togglePick, type Deal } from "./deal";
 import { CHARRED_AT_ROLL, TEASE_LINES } from "./dieMood";
 import { SubjectBalloons } from "./SubjectBalloons";
 import { DEAL, SPORTS, TEST_SUBJECTS, WIND } from "./testSubjects";
@@ -17,7 +17,14 @@ declare global {
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-const LAYOUT = dealLayout({ width: 390, top: 100, bottom: 700 });
+const LAYOUT = dealLayout({
+  width: 390,
+  top: 100,
+  bottom: 700,
+  kinds: dealKinds(TEST_SUBJECTS, DEAL),
+  list: TEST_SUBJECTS,
+  seed: 1,
+});
 const idle = () => {};
 
 let cleanup = () => {};

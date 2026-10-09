@@ -1,15 +1,27 @@
-import { useEffect, useLayoutEffect, useRef, useState, type Ref, type RefObject } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+  type RefObject,
+} from "react";
 import { problemOf } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { dealLayout, ROOM_PX, type DealLayout } from "./balloonGeometry";
+import { dealLayout, ROOM_PX, type DealInput } from "./balloonGeometry";
 import { BeginKey, type BeginKeyHandle } from "./BeginKey";
-import { pickedPair, type Deal } from "./deal";
+import { dealKinds, pickedPair, type Deal } from "./deal";
+import type { SubjectKind } from "./subjectList";
 import { SubjectBalloons } from "./SubjectBalloons";
 import type { SubjectListState } from "./useKyotoSeikaSheet";
 import "./kyoto-seika-deal.css";
+
+/** The pair area's width and the space the deal stands in. */
+type DealSpace = Pick<DealInput, "width" | "top" | "bottom">;
 
 /** Begin leaves: the key drops this far and fades, as the clouds tuck into the corner print. */
 const LEAVE = { keyDropPx: 56, keyMs: 220, balloonsMs: 360 };
@@ -19,6 +31,8 @@ interface Props {
   screen: RefObject<HTMLDivElement | null>;
   list: SubjectListState;
   deal: Deal | null;
+  /** The sheet's ticket use, which seats the clouds. */
+  seed: number;
   /** The clock's length, which Begin starts. */
   minutes: number;
   begin: Ref<BeginKeyHandle>;
@@ -38,6 +52,7 @@ export function KyotoSeikaDeal({
   screen,
   list,
   deal,
+  seed,
   minutes,
   begin,
   onRoll,
@@ -50,10 +65,20 @@ export function KyotoSeikaDeal({
   const reduced = useReducedMotion();
   const balloons = useRef<HTMLDivElement>(null);
   const pairArea = useRef<HTMLDivElement>(null);
-  const [layout, setLayout] = useState<DealLayout | null>(null);
+  const [space, setSpace] = useState<DealSpace | null>(null);
   // Begin keeps only the picked pair: the five stay on screen as they were while the deal leaves.
   const [shown, setShown] = useState(deal);
   if (!leaving && deal !== shown) setShown(deal);
+  // Seated by kind, which a roll never changes, so a roll lays nothing out again.
+  const subjects = list.status === "loaded" ? list.subjects : null;
+  const [kinds, setKinds] = useState<readonly SubjectKind[] | null>(null);
+  const dealt = subjects && shown ? dealKinds(subjects, shown) : null;
+  if (dealt?.join() !== kinds?.join()) setKinds(dealt);
+  const layout = useMemo(
+    () =>
+      space && subjects && kinds ? dealLayout({ ...space, kinds, list: subjects, seed }) : null,
+    [space, subjects, kinds, seed],
+  );
 
   useLayoutEffect(() => {
     const el = screen.current;
@@ -67,12 +92,15 @@ export function KyotoSeikaDeal({
       const above = el.querySelector(".timer-hint-label") ?? el.querySelector(".drawing-top");
       const below = el.querySelector(".begin-key");
       if (!above || !below) return;
-      setLayout(
-        dealLayout({
-          width: area.offsetWidth,
-          top: (above.getBoundingClientRect().bottom - box.top) / scale + ROOM_PX,
-          bottom: (below.getBoundingClientRect().top - box.top) / scale - ROOM_PX,
-        }),
+      const next = {
+        width: area.offsetWidth,
+        top: (above.getBoundingClientRect().bottom - box.top) / scale + ROOM_PX,
+        bottom: (below.getBoundingClientRect().top - box.top) / scale - ROOM_PX,
+      };
+      setSpace((was) =>
+        was && was.width === next.width && was.top === next.top && was.bottom === next.bottom
+          ? was
+          : next,
       );
     };
     measure();

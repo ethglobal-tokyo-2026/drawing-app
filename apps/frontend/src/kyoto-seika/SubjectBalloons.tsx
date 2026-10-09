@@ -2,6 +2,7 @@ import type { KyotoSeikaSubject } from "@drawing-app/api/client";
 import {
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -14,9 +15,11 @@ import { EASE_OUT } from "../ui/easing";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import {
   beadShape,
+  cloudShape,
   TIGHT_TYPE,
   TYPE,
   wordSizePx,
+  type Bead,
   type Box,
   type DealLayout,
   type Fit,
@@ -227,6 +230,7 @@ function SubjectBalloon({
 }: BalloonProps) {
   const { spec } = placed;
   const box = placed.cloudBox;
+  const { inks } = useMemo(() => cloudShape(spec), [spec]);
   const float = useRef<HTMLDivElement>(null);
   const cloud = useRef<HTMLDivElement>(null);
   const drawnCloud = useRef<SVGSVGElement>(null);
@@ -313,6 +317,7 @@ function SubjectBalloon({
   const style = {
     left: placed.center.x,
     top: placed.center.y,
+    zIndex: placed.stack,
     rotate: `${spec.tilt}deg`,
     "--boil-frame": `${BOIL.frameMs}ms`,
     "--gap": `${type.gapPx}px`,
@@ -326,7 +331,7 @@ function SubjectBalloon({
           <Inked
             ref={drawnCloud}
             white={placed.whitePath}
-            inks={placed.cloud.inks}
+            inks={inks}
             box={box}
             phase={place / 2}
           />
@@ -386,6 +391,36 @@ function SubjectBalloon({
         </svg>
       </button>
     </div>
+  );
+}
+
+/**
+ * The thought trail: three bubbles from the cluster toward the artist, still while the clouds drift.
+ * They pop in from the smallest, as a thought rises, before the clouds arrive.
+ */
+function ThoughtTrail({ trail, reduced }: { trail: readonly Bead[]; reduced: boolean }) {
+  const layer = useRef<SVGSVGElement>(null);
+  const drawings = useMemo(() => trail.map((bead, i) => beadShape(bead.r, 90 + i)), [trail]);
+  useEffect(() => {
+    if (reduced) return;
+    [...(layer.current?.children ?? [])].toReversed().forEach((bead, i) =>
+      bead.animate(CLOUD_ARRIVE, {
+        duration: ARRIVE.cloudMs,
+        delay: i * ARRIVE.staggerMs,
+        easing: EASE_OUT,
+        fill: "backwards",
+      }),
+    );
+  }, [reduced]);
+  return (
+    <svg ref={layer} className="subject-trail" aria-hidden="true">
+      {trail.map((bead, i) => (
+        <g key={i} transform={`translate(${bead.x} ${bead.y})`}>
+          <path className="subject-puff__white" d={drawings[i].white} />
+          <path className="subject-puff__ink" d={drawings[i].ink} />
+        </g>
+      ))}
+    </svg>
   );
 }
 
@@ -466,6 +501,7 @@ export function SubjectBalloons({ deal, layout, onRoll, onPick, picture = false 
       aria-label={t(($) => $.kyotoSeika.balloons.label)}
     >
       <div ref={clouds} className="subject-balloons__clouds">
+        <ThoughtTrail trail={layout.trail} reduced={reduced} />
         {deal.subjects.map((subject, place) => {
           const placed = layout.balloons[place];
           if (!placed) return null;

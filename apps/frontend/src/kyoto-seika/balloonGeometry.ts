@@ -1,7 +1,7 @@
 import { seededRandom } from "../ui/seededRandom";
 import { BOIL } from "./dealMotion";
 import { outline, penStroke, pressure, wobble, type PenPoint, type Pt } from "./pen";
-import { charCount } from "./subjectList";
+import { charCount, type KyotoSeikaSubjectEntry, type SubjectKind } from "./subjectList";
 
 export type { Pt };
 
@@ -20,25 +20,15 @@ export interface BalloonSpec {
   seed: number;
 }
 
-/** Each cloud's lean and seed, by its place in the deal: rows of two, two and one, read left to right. */
-const CLOUDS = [
-  { tilt: 2, seed: 7 },
-  { tilt: -2.5, seed: 23 },
-  { tilt: -1.5, seed: 41 },
-  { tilt: 2.5, seed: 59 },
-  { tilt: -2, seed: 73 },
-] as const satisfies readonly Pick<BalloonSpec, "tilt" | "seed">[];
-/** The places in each row; the die takes the last row's right-hand room. */
-const ROWS = [[0, 1], [2, 3], [4]] as const;
-
 /** How far the clouds tightened, rather than scaled, to fit a space shorter than the deal. */
 export type Fit = "roomy" | "tight" | "tighter";
-/** The word area's height, the room round it, the lobes, and how much lower the right-hand clouds sit. */
+/** The word area's height, the room round it, and the lobes. */
 const FITS = {
-  roomy: { h: 54, padY: 10, lobe: 15, stagger: 10 },
-  tight: { h: 46, padY: 7, lobe: 12, stagger: 4 },
-  tighter: { h: 40, padY: 5, lobe: 10, stagger: 0 },
-} as const satisfies Record<Fit, Pick<BalloonSpec, "h" | "padY" | "lobe"> & { stagger: number }>;
+  roomy: { h: 54, padY: 10, lobe: 15 },
+  tight: { h: 46, padY: 7, lobe: 12 },
+  tighter: { h: 40, padY: 5, lobe: 10 },
+} as const satisfies Record<Fit, Pick<BalloonSpec, "h" | "padY" | "lobe">>;
+const FIT_ORDER = ["roomy", "tight", "tighter"] as const satisfies readonly Fit[];
 
 export interface Box {
   minX: number;
@@ -121,22 +111,34 @@ export interface Cloud {
 /** One frame of the boil's own seed: the same lobes, inked again by a hand that never quite repeats. */
 const boilRandom = (seed: number, frame: number) => seededRandom(seed * 7919 + frame * 104_729);
 
+/** How squared-off the ellipse a cloud's lobes run round is: 2 is an ellipse. */
+const SQUARENESS = 2.6;
+
+/** One lobe: an arc round `center` from `a0` through `span` radians, turning `turn`, bulging along `out`. */
+interface Lobe {
+  center: Pt;
+  radius: number;
+  a0: number;
+  span: number;
+  turn: number;
+  out: Pt;
+  chord: number;
+}
+
 /**
- * A manga thought cloud round its word area, inked lobe by lobe: lobes of different sizes round a
- * squared-off ellipse, bigger where the cloud piles up along its top, each one stroke that swells and
- * tapers and crosses the next at its cusp.
+ * A manga thought cloud's lobes round its word area: lobes of different sizes round a squared-off
+ * ellipse, bigger where the cloud piles up along its top, and the white they close round.
  */
-export function cloudShape(spec: BalloonSpec): Cloud {
+function lobesOf(spec: BalloonSpec): { white: Pt[]; lobes: Lobe[] } {
   const random = seededRandom(spec.seed);
   const ax = spec.w / 2 + PAD_X;
   const ay = spec.h / 2 + spec.padY;
-  const exp = 2.6;
   const base = (t: number): Pt => {
     const c = Math.cos(t);
     const s = Math.sin(t);
     return {
-      x: ax * Math.sign(c) * Math.abs(c) ** (2 / exp),
-      y: ay * Math.sign(s) * Math.abs(s) ** (2 / exp),
+      x: ax * Math.sign(c) * Math.abs(c) ** (2 / SQUARENESS),
+      y: ay * Math.sign(s) * Math.abs(s) ** (2 / SQUARENESS),
     };
   };
   const steps = 900;
@@ -175,7 +177,7 @@ export function cloudShape(spec: BalloonSpec): Cloud {
   });
 
   const white: Pt[] = [];
-  const strokes: ((random: () => number) => string)[] = [];
+  const lobes: Lobe[] = [];
   for (const [from, to] of place(weights)) {
     const a = along(from);
     const b = along(to);
@@ -197,27 +199,39 @@ export function cloudShape(spec: BalloonSpec): Cloud {
     const samples = Math.max(10, Math.round(chord / 2.5));
     for (let i = 0; i < samples; i++)
       white.push(add(center, mul(polar(a0 + (turn * span * i) / samples), radius)));
-
-    const count = Math.max(8, Math.round(chord / 4));
-    // Each inking of the lobe lands, runs on and presses a little differently.
-    strokes.push((ink) => {
-      const heavy = PEN.heavy * (1 + PEN.shade * dot(out, SHADE)) * (1 + (ink() - 0.5) * 0.12);
-      const before = (PEN.before + (ink() - 0.5) * PEN.runOnJitter) / radius;
-      const after = (PEN.after + (ink() - 0.5) * PEN.runOnJitter) / radius;
-      const wob = wobble(ink, 2);
-      const pts: PenPoint[] = [];
-      for (let i = 0; i <= count; i++) {
-        const t = i / count;
-        const ang = a0 + turn * (-before + t * (span + before + after));
-        const p = add(center, mul(polar(ang), radius + PEN.wobble * wob(t)));
-        pts.push({ ...p, w: PEN.fine + (heavy - PEN.fine) * pressure(t, 0.44, 0.65, 1.05) });
-      }
-      return penStroke(pts);
-    });
+    lobes.push({ center, radius, a0, span, turn, out, chord });
   }
+  return { white, lobes };
+}
+
+/** A cloud's white alone, as a closed outline round its center: all laying the deal out measures. */
+const cloudWhite = (spec: BalloonSpec): readonly Pt[] => lobesOf(spec).white;
+
+/**
+ * A manga thought cloud round its word area, inked lobe by lobe: each lobe one stroke that swells and
+ * tapers and crosses the next at its cusp.
+ */
+export function cloudShape(spec: BalloonSpec): Cloud {
+  const { white, lobes } = lobesOf(spec);
+  // Each inking of a lobe lands, runs on and presses a little differently.
+  const stroke = ({ center, radius, a0, span, turn, out, chord }: Lobe, ink: () => number) => {
+    const count = Math.max(8, Math.round(chord / 4));
+    const heavy = PEN.heavy * (1 + PEN.shade * dot(out, SHADE)) * (1 + (ink() - 0.5) * 0.12);
+    const before = (PEN.before + (ink() - 0.5) * PEN.runOnJitter) / radius;
+    const after = (PEN.after + (ink() - 0.5) * PEN.runOnJitter) / radius;
+    const wob = wobble(ink, 2);
+    const pts: PenPoint[] = [];
+    for (let i = 0; i <= count; i++) {
+      const t = i / count;
+      const ang = a0 + turn * (-before + t * (span + before + after));
+      const p = add(center, mul(polar(ang), radius + PEN.wobble * wob(t)));
+      pts.push({ ...p, w: PEN.fine + (heavy - PEN.fine) * pressure(t, 0.44, 0.65, 1.05) });
+    }
+    return penStroke(pts);
+  };
   const inks = Array.from({ length: BOIL.frames }, (_, frame) => {
     const ink = boilRandom(spec.seed, frame);
-    return strokes.map((stroke) => stroke(ink)).join("");
+    return lobes.map((lobe) => stroke(lobe, ink)).join("");
   });
   return { white, inks };
 }
@@ -251,131 +265,506 @@ export function beadShape(r: number, seed: number): { white: string; ink: string
   };
 }
 
-/** The reroll, in px: the die and its lettering side by side, in the last row's right-hand room. */
+/** The reroll, in px: the die and its lettering side by side. */
 const REROLL = { die: 32, label: 64, gap: 3, height: 32 };
-/** Room kept between two clouds side by side, and between rows, in px. */
-const CLEAR_PX = { x: 6, y: 4 };
+const REROLL_W = REROLL.label + REROLL.gap + REROLL.die;
+/** Room kept between two clouds side by side where the widest word area is cut, in px. */
+const CLEAR_X_PX = 6;
 /** The clouds keep this far from the screen's sides, in px. */
 const SIDE_PX = 10;
 /** The narrowest word area a cloud is cut to, in px. */
 const MIN_WORD_W = 80;
+/** The die keeps this far from every cloud's outline, and the trail from the die, in px. */
+export const DIE_CLEAR_PX = 6;
+/** The trail's bubbles keep this far from every cloud's outline, in px. */
+const BEAD_CLEAR_PX = 3;
+/** From this pair area width the five stand three over two; narrower, two, one and two. */
+export const WIDE_DEAL_PX = 500;
 /** Where the deal stands in the space between the timer's label and the task line: a little above the middle. */
 export const DEAL_AT = 0.45;
 /** The room kept between the deal and the timer's label above it, and the task over Begin below it, in px. */
 export const ROOM_PX = 14;
 
+/** A word a seat must hold: every word its kind can be dealt. */
+type SeatWord = Pick<KyotoSeikaSubjectEntry, "ja" | "reading" | "kind">;
+/** How wide a reading's character sets, in ems, its letter spacing included. */
+const READING_EM = 1.12;
+/** The narrowest seat, in px. */
+const MIN_SEAT_W = 64;
+/** A seat is cut up to this much wider than its words need, by its seed, never past the widest word area. */
+const SEAT_GROW = 0.06;
+/** How far each cloud leans, in degrees, each the other way from its neighbor. */
+const TILT = { least: 1, most: 3 };
+/** Clouds touch with this much of their lobes overlapping, so their outlines just cross. */
+const KISS = 0.3;
+/** Room kept between a cloud's word area and any other cloud's outline, in px. */
+const WORD_CLEAR_PX = 2;
+/** How much of a lobe's bulge counts toward a cloud's reach: lobes bulge their most only here and there. */
+const LOBE_REACH = 0.8;
+/** Rounds of pushing touching clouds together and overlapping ones apart, then of parting any outline from a word. */
+const RELAX = { rounds: 70, partRounds: 30, partPx: 1.5 };
+/** The trail's three bubbles, largest by its cloud, in px; a tightened deal draws them smaller. */
+const TRAIL = { radii: [7, 5, 3.4], tight: 0.85 };
+/** Ways the trail may run from its cloud, first choice first: down toward the artist at the lower left. */
+const TRAIL_WAYS = [
+  { x: -0.62, y: 0.78 },
+  { x: -0.4, y: 0.92 },
+  { x: -0.85, y: 0.52 },
+  { x: 0.1, y: 1 },
+].map(unit);
+
+/** Two pairs of clouds side by side, each leaning the other way from its neighbor. */
+const SIDE_BY_SIDE = [
+  [
+    { tilt: 2, seed: 7 },
+    { tilt: -2.5, seed: 23 },
+  ],
+  [
+    { tilt: -1.5, seed: 41 },
+    { tilt: 2.5, seed: 59 },
+  ],
+] as const;
+
+const widestKnown = new Map<string, number>();
+/** The widest word area two clouds side by side leave room for on a screen `width` wide: no seat is wider. */
+export function widestWordArea(width: number, fit: Fit): number {
+  const key = `${width} ${fit}`;
+  const known = widestKnown.get(key);
+  if (known !== undefined) return known;
+  const across = (lean: { tilt: number; seed: number }, w: number) => {
+    const reach = boxOf(cloudWhite({ ...lean, ...FITS[fit], w }).map((p) => rotate(p, lean.tilt)));
+    return reach.maxX - reach.minX;
+  };
+  let w = Math.floor((width - 2 * SIDE_PX - CLEAR_X_PX) / 2 - 2 * PAD_X);
+  const sideBySide = () =>
+    SIDE_BY_SIDE.every(
+      ([left, right]) => across(left, w) + across(right, w) + CLEAR_X_PX + 2 * SIDE_PX <= width,
+    );
+  while (!sideBySide() && w > MIN_WORD_W) w -= 2;
+  widestKnown.set(key, w);
+  return w;
+}
+
+/** How wide `word` and its reading set in a cloud `w` wide, in px. */
+function wordWidth({ ja, reading }: SeatWord, fit: Fit, w: number): number {
+  const { readingPx } = fit === "roomy" ? TYPE : TIGHT_TYPE;
+  const em = isAcronym(ja) ? ACRONYM_EM : WORD_EM;
+  return Math.max(
+    charCount(ja) * wordSizePx(ja, fit, w) * em,
+    charCount(reading) * readingPx * READING_EM,
+  );
+}
+
+/** Each kind's seat: as wide as its widest word sets in the widest word area, and no wider than that. */
+function seatWidths(list: readonly SeatWord[], fit: Fit, area: number) {
+  const seats = new Map<SubjectKind, number>();
+  for (const word of list) {
+    const need = Math.ceil(wordWidth(word, fit, area));
+    seats.set(word.kind, Math.min(area, Math.max(seats.get(word.kind) ?? MIN_SEAT_W, need)));
+  }
+  return seats;
+}
+
+/** Mixes numbers into one seed. */
+function mixSeed(...ns: number[]): number {
+  let h = 0x811c9dc5;
+  for (const n of ns) {
+    h = Math.imul(h ^ (n >>> 0), 0x01000193);
+    h ^= h >>> 13;
+  }
+  return h >>> 0;
+}
+
+/** How far a cloud reaches from its center toward the unit direction `u`: its ellipse, turned, and most of a lobe. */
+function reachToward(spec: BalloonSpec, u: Pt): number {
+  const v = rotate(u, -spec.tilt);
+  const dual = SQUARENESS / (SQUARENESS - 1);
+  const ax = spec.w / 2 + PAD_X;
+  const ay = spec.h / 2 + spec.padY;
+  const ellipse = (Math.abs(ax * v.x) ** dual + Math.abs(ay * v.y) ** dual) ** (1 / dual);
+  return ellipse + spec.lobe * LOBE_REACH;
+}
+const halfW = (spec: BalloonSpec) => reachToward(spec, { x: 1, y: 0 });
+const halfH = (spec: BalloonSpec) => reachToward(spec, { x: 0, y: 1 });
+
+/** Directions round half a turn that two clouds' overlap is measured along. */
+const AXES = Array.from({ length: 18 }, (_, i) => polar((i * Math.PI) / 18));
+
+/** How deep two clouds overlap, and the way from `a` toward `b` they'd part by most easily. */
+function overlap(a: BalloonSpec, at: Pt, b: BalloonSpec, bt: Pt) {
+  let best = { depth: Infinity, toward: AXES[0] };
+  for (const axis of AXES) {
+    const apart = dot(sub(bt, at), axis);
+    const toward = apart < 0 ? mul(axis, -1) : axis;
+    const depth = reachToward(a, toward) + reachToward(b, mul(toward, -1)) - Math.abs(apart);
+    if (depth < best.depth) best = { depth, toward };
+  }
+  return best;
+}
+
+/** Whether `p` lies inside the closed outline `poly` (even-odd). */
+function inside(p: Pt, poly: readonly Pt[]): boolean {
+  let hit = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i];
+    const b = poly[j];
+    if (a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x)
+      hit = !hit;
+  }
+  return hit;
+}
+const inBox = (p: Pt, b: Box) => p.x > b.minX && p.x < b.maxX && p.y > b.minY && p.y < b.maxY;
+const meets = (a: Box, b: Box) =>
+  a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
+const union = (boxes: readonly Box[]): Box => ({
+  minX: Math.min(...boxes.map((b) => b.minX)),
+  minY: Math.min(...boxes.map((b) => b.minY)),
+  maxX: Math.max(...boxes.map((b) => b.maxX)),
+  maxY: Math.max(...boxes.map((b) => b.maxY)),
+});
+
+/** A seat plan's slots: the trail runs from the fourth, the lowest on the left, and the die goes by the last. */
+const TRAIL_SLOT = 3;
+const DIE_SLOT = 4;
+
+/**
+ * A seat plan: which place takes each slot, given the places widest seat first; a first guess at each
+ * slot's center; and which slots' clouds touch.
+ */
+interface SeatPlan {
+  assign: (widestFirst: readonly number[], random: () => number) => number[];
+  guess: (specs: readonly BalloonSpec[], width: number, random: () => number) => Pt[];
+  touch: readonly (readonly [number, number])[];
+}
+
+type SeatPlanName = "2-1-2" | "3-over-2";
+
+const PLANS: Record<SeatPlanName, SeatPlan> = {
+  // Two, one and two, like the die's five, the middle one over both rows: the narrowest kind takes
+  // it. Slots: top left, top right, middle, bottom left, bottom right.
+  "2-1-2": {
+    assign([a, b, c, d, e], random) {
+      const rows =
+        random() < 0.5
+          ? [
+              [a, d],
+              [b, c],
+            ]
+          : [
+              [b, c],
+              [a, d],
+            ];
+      const [top, bottom] = rows.map((row) => (random() < 0.5 ? row : row.toReversed()));
+      return [top[0], top[1], e, bottom[0], bottom[1]];
+    },
+    guess(specs, width, random) {
+      const h = Math.max(...specs.map(halfH));
+      const midX = width / 2 + (random() < 0.5 ? -1 : 1) * (8 + random() * 14);
+      const row = (left: number, right: number, y: number): Pt[] => [
+        { x: SIDE_PX + halfW(specs[left]) + random() * 8, y: y + (random() - 0.5) * 10 },
+        {
+          x: width - SIDE_PX - halfW(specs[right]) - random() * 8,
+          y: y + (random() - 0.5) * 10 + 6,
+        },
+      ];
+      const top = row(0, 1, 0);
+      return [...top, { x: midX, y: h * 1.25 }, ...row(3, 4, h * 2.5)];
+    },
+    touch: [
+      [0, 1],
+      [0, 2],
+      [1, 2],
+      [2, 3],
+      [2, 4],
+      [3, 4],
+    ],
+  },
+  // Three over two, the bottom two under the top row's gaps: the widest two weigh it down and the
+  // next widest crowns it. Slots: top left, top middle, top right, bottom left, bottom right.
+  "3-over-2": {
+    assign([a, b, c, d, e], random) {
+      return random() < 0.5 ? [d, c, e, a, b] : [e, c, d, b, a];
+    },
+    guess(specs, width, random) {
+      const h = Math.max(...specs.map(halfH));
+      const mid = { x: width / 2 + (random() - 0.5) * 12, y: -h * 0.2 };
+      const left = { x: mid.x - halfW(specs[1]) - halfW(specs[0]) + 10, y: (random() - 0.3) * 12 };
+      const right = { x: mid.x + halfW(specs[1]) + halfW(specs[2]) - 10, y: (random() - 0.3) * 12 };
+      return [
+        left,
+        mid,
+        right,
+        { x: width / 2 - halfW(specs[3]) + 6, y: h * 1.6 + (random() - 0.5) * 10 },
+        { x: width / 2 + halfW(specs[4]) - 6, y: h * 1.6 + (random() - 0.5) * 10 },
+      ];
+    },
+    touch: [
+      [0, 1],
+      [1, 2],
+      [0, 3],
+      [1, 3],
+      [1, 4],
+      [2, 4],
+      [3, 4],
+    ],
+  },
+};
+
+/** One of the trail's bubbles: its center and radius, in px. */
+export interface Bead extends Pt {
+  r: number;
+}
+
+/** The deal's clouds as one cluster at `fit`, in its own frame, by slot. */
+function cluster(
+  plan: SeatPlan,
+  fit: Fit,
+  { width, kinds, list, seed }: Omit<DealInput, "top" | "bottom">,
+) {
+  const area = widestWordArea(width, fit);
+  const seats = seatWidths(list, fit, area);
+  const seatOf = (place: number) => seats.get(kinds[place]) ?? area;
+  const random = seededRandom(mixSeed(seed, 7));
+  const widestFirst = kinds.map((_, place) => place).sort((a, b) => seatOf(b) - seatOf(a) || a - b);
+  const placeIn = plan.assign(widestFirst, random);
+  const lean = random() < 0.5 ? 1 : -1;
+  const specs: BalloonSpec[] = placeIn.map((place, slot) => {
+    const own = seededRandom(mixSeed(seed, place, 11));
+    return {
+      ...FITS[fit],
+      w: Math.min(area, Math.round(seatOf(place) * (1 + SEAT_GROW * own()))),
+      tilt: (slot % 2 ? 1 : -1) * lean * (TILT.least + (TILT.most - TILT.least) * own()),
+      seed: mixSeed(seed, place, 3) % 99_991,
+    };
+  });
+  const centers = plan.guess(specs, width, random);
+  const slots = specs.map((_, slot) => slot);
+  const keepInside = () =>
+    slots.forEach((slot) => {
+      const half = halfW(specs[slot]);
+      centers[slot] = {
+        x: clamp(centers[slot].x, SIDE_PX + half, width - SIDE_PX - half),
+        y: centers[slot].y,
+      };
+    });
+  const touching = new Set(plan.touch.map(([a, b]) => `${a} ${b}`));
+  const size = specs.map((s) => halfW(s) * halfH(s));
+  for (let round = 0; round < RELAX.rounds; round++) {
+    for (const a of slots)
+      for (const b of slots.slice(a + 1)) {
+        const { depth, toward } = overlap(specs[a], centers[a], specs[b], centers[b]);
+        const kiss = (specs[a].lobe + specs[b].lobe) * KISS;
+        let push = 0;
+        if (depth > kiss + 0.5) push = depth - kiss;
+        else if (touching.has(`${a} ${b}`) && depth < kiss - 0.5) push = -(kiss - depth) * 0.5;
+        if (!push) continue;
+        const share = size[b] / (size[a] + size[b]);
+        centers[a] = sub(centers[a], mul(toward, push * share * 0.5));
+        centers[b] = add(centers[b], mul(toward, push * (1 - share) * 0.5));
+      }
+    keepInside();
+  }
+
+  const whites = specs.map(cloudWhite);
+  const turned = whites.map((white, slot) => white.map((p) => rotate(p, specs[slot].tilt)));
+  // Whether b's outline reaches into a's word area, its reading included.
+  const intrudes = (a: number, b: number) =>
+    turned[b].some((p, i) => {
+      if (i % 3) return false;
+      const local = rotate(sub(add(p, centers[b]), centers[a]), -specs[a].tilt);
+      return (
+        Math.abs(local.x) < specs[a].w / 2 + WORD_CLEAR_PX &&
+        Math.abs(local.y) < specs[a].h / 2 + WORD_CLEAR_PX
+      );
+    });
+  for (let round = 0; round < RELAX.partRounds; round++) {
+    let moved = false;
+    for (const a of slots)
+      for (const b of slots) {
+        if (a === b || !intrudes(a, b)) continue;
+        const away = unit(sub(centers[b], centers[a]));
+        centers[a] = sub(centers[a], mul(away, RELAX.partPx));
+        centers[b] = add(centers[b], mul(away, RELAX.partPx));
+        moved = true;
+      }
+    keepInside();
+    if (!moved) break;
+  }
+
+  const outlines = turned.map((pts, slot) => pts.map((p) => add(p, centers[slot])));
+  const reaches = outlines.map(boxOf);
+  const clouds = union(reaches);
+  const inSides = (box: Box) => box.minX >= SIDE_PX && box.maxX <= width - SIDE_PX;
+  const clearOf = (box: Box, by: number) => {
+    const near = grow(box, by);
+    const probes = [
+      { x: box.minX, y: box.minY },
+      { x: box.maxX, y: box.minY },
+      { x: box.minX, y: box.maxY },
+      { x: box.maxX, y: box.maxY },
+      { x: (box.minX + box.maxX) / 2, y: (box.minY + box.maxY) / 2 },
+    ];
+    return outlines.every(
+      (poly) => !poly.some((p) => inBox(p, near)) && !probes.some((q) => inside(q, poly)),
+    );
+  };
+
+  // The die: in a nook beside or under the last cloud, or else under the whole cluster.
+  const rerollAt = (x: number, y: number): Box => ({
+    minX: x,
+    minY: y,
+    maxX: x + REROLL_W,
+    maxY: y + REROLL.height,
+  });
+  const last = reaches[DIE_SLOT];
+  const lastAt = centers[DIE_SLOT];
+  const nooks: Box[] = [];
+  for (let dx = -18; dx <= 6; dx += 3)
+    for (let dy = -6; dy <= 30; dy += 4)
+      nooks.push(rerollAt(last.maxX + dx, lastAt.y - REROLL.height / 2 + dy));
+  for (let dx = 30; dx >= -40; dx -= 5)
+    nooks.push(rerollAt(lastAt.x + dx - REROLL_W / 2, last.maxY - 12));
+  const right = Math.min(clouds.maxX, width - SIDE_PX) - REROLL_W;
+  for (let dx = 0; dx <= 120; dx += 10)
+    nooks.push(rerollAt(right - dx, clouds.maxY + DIE_CLEAR_PX + 1 - 14));
+  const under = rerollAt(right, clouds.maxY + DIE_CLEAR_PX + 1);
+  const reroll = nooks.find((box) => inSides(box) && clearOf(box, DIE_CLEAR_PX)) ?? under;
+
+  // The trail: three bubbles from the lowest cloud on the left toward the artist, clear of all.
+  const from = TRAIL_SLOT;
+  const scale = fit === "roomy" ? 1 : TRAIL.tight;
+  const beadBox = (b: Bead): Box => ({
+    minX: b.x - b.r,
+    minY: b.y - b.r,
+    maxX: b.x + b.r,
+    maxY: b.y + b.r,
+  });
+  let trail: Bead[] = [];
+  for (const way of TRAIL_WAYS) {
+    let d = reachToward(specs[from], way) - 2;
+    const beads = TRAIL.radii.map((radius, i) => {
+      const r = radius * scale;
+      d += r + (i === 0 ? 5 : 4);
+      const bead = { ...add(centers[from], mul(way, d)), r };
+      d += r;
+      return bead;
+    });
+    const clear = beads.every((b) => {
+      const box = beadBox(b);
+      return inSides(box) && clearOf(box, BEAD_CLEAR_PX) && !meets(box, grow(reroll, DIE_CLEAR_PX));
+    });
+    if (clear) {
+      trail = beads;
+      break;
+    }
+  }
+
+  const valid =
+    clearOf(reroll, DIE_CLEAR_PX) &&
+    slots.every((a) => slots.every((b) => a === b || !intrudes(a, b)));
+  const slotOf: number[] = [];
+  placeIn.forEach((place, slot) => (slotOf[place] = slot));
+  return {
+    specs,
+    centers,
+    whites,
+    reaches,
+    slotOf,
+    reroll,
+    trail,
+    valid,
+    box: union([clouds, reroll, ...trail.map(beadBox)]),
+  };
+}
+
 export interface PlacedBalloon {
   spec: BalloonSpec;
   /** The cloud's center on the screen; it's drawn turned by its spec's tilt round it. */
   center: Pt;
-  cloud: Cloud;
+  /** The cloud's white, as a closed outline round its center. */
+  white: readonly Pt[];
   /** The cloud's white as SVG path data, and its reach round its center, ink included. */
   whitePath: string;
   cloudBox: Box;
   /** The cloud's reach on the screen. */
   reach: Box;
+  /** Its place in the cluster's stack: a cloud later in the plan overlaps the ones before. */
+  stack: number;
 }
 
 export interface DealLayout {
   /** The screen's width the deal was laid out on. */
   width: number;
   fit: Fit;
+  plan: SeatPlanName;
   /** One cloud per place in the deal. */
   balloons: readonly PlacedBalloon[];
   /** The reroll's die and lettering on the screen, and the die's center. */
   reroll: Box;
   die: Pt;
+  /** The thought trail's bubbles, largest by its cloud; none when no way is clear. */
+  trail: readonly Bead[];
 }
 
 /** A point in `placed`'s own frame, on the screen. */
 export const toScreen = (placed: Pick<PlacedBalloon, "center" | "spec">, p: Pt): Pt =>
   add(placed.center, rotate(p, placed.spec.tilt));
 
-/** One cloud drawn and turned round its center (0, 0), and its reach. */
-function drawn(spec: BalloonSpec) {
-  const cloud = cloudShape(spec);
-  return { spec, cloud, reach: boxOf(cloud.white.map((p) => rotate(p, spec.tilt))) };
-}
-type Drawn = ReturnType<typeof drawn>;
-
-/**
- * The five clouds between the timer's label (`top`) and the task line (`bottom`) on a screen `width`
- * wide, in rows of two, two and one, the reroll beside the last; as wide as two side by side allow, and
- * tightened rather than scaled on a short phone. A deal taller than the space even so keeps its foot on
- * the task line's room, giving up some of the room under the timer's label.
- */
-export function dealLayout({
-  width,
-  top,
-  bottom,
-}: {
+export interface DealInput {
+  /** The screen's width, and the space between the timer's label (`top`) and the task line (`bottom`). */
   width: number;
   top: number;
   bottom: number;
-}): DealLayout {
+  /** Each place's kind: seats are sized by kind, so a roll never moves a cloud. */
+  kinds: readonly SubjectKind[];
+  /** Every word the kinds can be dealt: each seat holds its kind's widest. */
+  list: readonly SeatWord[];
+  /** The sheet's own seed, so a reload lays the deal out the same. */
+  seed: number;
+}
+
+/**
+ * The five clouds as one thought cluster between the timer's label and the task line: two, one and two
+ * on a phone, three over two from WIDE_DEAL_PX, each seat sized by its kind and placed by the sheet's
+ * seed, with the die in a nook by the last and a trail of bubbles toward the artist. Tightened rather
+ * than scaled on a short phone; a deal taller than the space even so keeps its foot on the task line's
+ * room, giving up some of the room under the timer's label.
+ */
+export function dealLayout(input: DealInput): DealLayout {
+  const { width, top, bottom } = input;
   const space = bottom - top;
-  const arrange = (fit: Fit) => {
-    const { stagger, ...cut } = FITS[fit];
-    const draw = (w: number) => CLOUDS.map((c) => drawn({ ...c, ...cut, w }));
-    // The widest word area two clouds side by side leave room for.
-    let w = Math.floor((width - 2 * SIDE_PX - CLEAR_PX.x) / 2 - 2 * PAD_X);
-    let clouds: Drawn[] = draw(w);
-    const across = ({ reach }: Drawn) => reach.maxX - reach.minX;
-    const sideBySide = (cs: readonly Drawn[]) =>
-      ROWS.every((row) => {
-        const [left, right] = row.map((place) => cs[place]);
-        return !right || across(left) + across(right) + CLEAR_PX.x + 2 * SIDE_PX <= width;
-      });
-    while (!sideBySide(clouds) && w > MIN_WORD_W) clouds = draw((w -= 2));
-    const centers: Pt[] = [];
-    let y = 0;
-    for (const row of ROWS) {
-      const height = Math.max(
-        ...row.map((place) => clouds[place].reach.maxY - clouds[place].reach.minY),
-      );
-      row.forEach((place, column) => {
-        const { reach } = clouds[place];
-        const x = column === 0 ? SIDE_PX - reach.minX : width - SIDE_PX - reach.maxX;
-        centers[place] = { x, y: y - reach.minY + column * stagger };
-      });
-      y += height + CLEAR_PX.y;
-    }
-    // The die sits where a sixth cloud would: centered in the right-hand column of the last row.
-    const right = clouds[1];
-    const dieRow = centers[ROWS[2][0]].y + stagger;
-    const middle = width - SIDE_PX - (right.reach.maxX - right.reach.minX) / 2;
-    const rerollW = REROLL.label + REROLL.gap + REROLL.die;
-    const reroll: Box = {
-      minX: middle - rerollW / 2,
-      minY: dieRow - REROLL.height / 2,
-      maxX: middle + rerollW / 2,
-      maxY: dieRow + REROLL.height / 2,
-    };
-    const reaches = clouds.map((c, place) => shift(c.reach, centers[place]));
-    const head = Math.min(...reaches.map((r) => r.minY));
-    const foot = Math.max(...reaches.map((r) => r.maxY), reroll.maxY);
-    return { clouds, centers, reroll, head, height: foot - head };
-  };
-  let fit: Fit = "roomy";
-  let deal = arrange(fit);
-  for (const tighter of ["tight", "tighter"] as const)
-    if (deal.height > space) [deal, fit] = [arrange(tighter), tighter];
-  const room = space - deal.height;
-  const dealTop =
-    room >= 0 ? top + clamp(DEAL_AT * space - deal.height / 2, 0, room) : bottom - deal.height;
-  const down = { x: 0, y: dealTop - deal.head };
+  const plan: SeatPlanName = width >= WIDE_DEAL_PX ? "3-over-2" : "2-1-2";
+  const lay = (fit: Fit) => cluster(PLANS[plan], fit, input);
+  const fits = (deal: ReturnType<typeof lay>) =>
+    deal.valid &&
+    deal.box.minX >= SIDE_PX - 0.5 &&
+    deal.box.maxX <= width - SIDE_PX + 0.5 &&
+    deal.box.maxY - deal.box.minY <= space;
+  let fit: Fit = FIT_ORDER[0];
+  let deal = lay(fit);
+  for (const tighter of FIT_ORDER.slice(1)) {
+    if (fits(deal)) break;
+    [deal, fit] = [lay(tighter), tighter];
+  }
+  const height = deal.box.maxY - deal.box.minY;
+  const room = space - height;
+  const dealTop = room >= 0 ? top + clamp(DEAL_AT * space - height / 2, 0, room) : bottom - height;
+  const down = { x: 0, y: dealTop - deal.box.minY };
   return {
     width,
     fit,
-    balloons: deal.clouds.map(({ spec, cloud, reach }, place) => {
-      const center = add(deal.centers[place], down);
+    plan,
+    balloons: input.kinds.map((_, place) => {
+      const slot = deal.slotOf[place];
+      const white = deal.whites[slot];
       return {
-        spec,
-        center,
-        cloud,
-        whitePath: outline(cloud.white),
-        cloudBox: grow(boxOf(cloud.white), INK_REACH_PX),
-        reach: shift(reach, center),
+        spec: deal.specs[slot],
+        center: add(deal.centers[slot], down),
+        white,
+        whitePath: outline(white),
+        cloudBox: grow(boxOf(white), INK_REACH_PX),
+        reach: shift(deal.reaches[slot], down),
+        stack: slot,
       };
     }),
     reroll: shift(deal.reroll, down),
@@ -383,6 +772,7 @@ export function dealLayout({
       x: deal.reroll.maxX - REROLL.die / 2,
       y: (deal.reroll.minY + deal.reroll.maxY) / 2 + down.y,
     },
+    trail: deal.trail.map((b) => ({ ...b, y: b.y + down.y })),
   };
 }
 
@@ -402,11 +792,12 @@ const ACRONYM_PX = { roomy: 32, tight: 28, tighter: 24 } as const satisfies Reco
 /** How wide a character sets, in ems: full width with the word's spacing, or a capital letter. */
 const WORD_EM = 1.04;
 const ACRONYM_EM = 0.75;
+const isAcronym = (ja: string) => /^[A-Z]+$/.test(ja);
 
 /** The size a subject's word is set at in a cloud whose word area is `w` px wide, in px. */
 export function wordSizePx(ja: string, fit: Fit, w: number): number {
   const chars = Math.max(charCount(ja), 1);
-  if (/^[A-Z]+$/.test(ja)) return Math.min(ACRONYM_PX[fit], Math.floor(w / (chars * ACRONYM_EM)));
+  if (isAcronym(ja)) return Math.min(ACRONYM_PX[fit], Math.floor(w / (chars * ACRONYM_EM)));
   const sizes = WORD_PX[fit];
   return Math.min(sizes[Math.min(chars, sizes.length) - 1], Math.floor(w / (chars * WORD_EM)));
 }

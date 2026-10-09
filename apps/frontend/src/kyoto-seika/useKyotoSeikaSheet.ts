@@ -11,7 +11,8 @@ import { KINDS, loadSubjectList, type KyotoSeikaSubjectEntry } from "./subjectLi
 
 /** The subject list as the sheet has it: not asked for, on its way, in, or failed with a way to retry. */
 export type SubjectListState =
-  | { status: "idle" | "loading" | "loaded" }
+  | { status: "idle" | "loading" }
+  | { status: "loaded"; subjects: readonly KyotoSeikaSubjectEntry[] }
   | { status: "failed"; error: unknown; retry: () => void };
 
 interface Options {
@@ -32,6 +33,7 @@ export function useKyotoSeikaSheet({ userId, keeper }: Options) {
   const [list, setList] = useState<SubjectListState>({ status: "idle" });
   const [deal, setDeal] = useState<Deal | null>(null);
   const [begun, setBegun] = useState(false);
+  const [seed, setSeed] = useState(0);
   // Each open is its own sheet: a load that answers after the sheet moved on is dropped.
   const opened = useRef(0);
   const subjects = useRef<readonly KyotoSeikaSubjectEntry[] | null>(null);
@@ -51,7 +53,7 @@ export function useKyotoSeikaSheet({ userId, keeper }: Options) {
       (loaded) => {
         if (sheet !== opened.current) return;
         subjects.current = loaded.subjects;
-        setList({ status: "loaded" });
+        setList({ status: "loaded", subjects: loaded.subjects });
         const kept = part.current;
         if (!kept?.subjects) {
           const fresh = firstDeal(loaded.subjects, options());
@@ -81,9 +83,13 @@ export function useKyotoSeikaSheet({ userId, keeper }: Options) {
     );
   };
 
-  /** A ticket spent in the mode landed (`kept` null), or a kept sheet came back: deal, or deal again. */
-  const open = (kept: KeptKyotoSeika | null) => {
+  /**
+   * A ticket spent in the mode landed (`kept` null), or a kept sheet came back: deal, or deal again.
+   * `ticket` is the sheet's ticket use, which seats the deal's clouds the same after a reload.
+   */
+  const open = (ticket: number, kept: KeptKyotoSeika | null) => {
     const sheet = ++opened.current;
+    setSeed(ticket);
     part.current = kept ?? UNDEALT;
     setDeal(kept && dealOf(kept));
     setBegun(kept?.begun ?? false);
@@ -137,5 +143,5 @@ export function useKyotoSeikaSheet({ userId, keeper }: Options) {
   // Begin's pair: what the corner print, the canvas's name and the seal carry. Kept as one value per
   // deal, so what it's handed to only changes when the deal does.
   const pair = useMemo(() => (begun && deal ? pickedPair(deal) : null), [begun, deal]);
-  return { list, deal, begun, pair, open, roll, pick, begin, close };
+  return { list, deal, begun, pair, seed, open, roll, pick, begin, close };
 }

@@ -265,7 +265,8 @@ export function DrawingScreen({
     switch (effect) {
       case "keep-session":
         keeper.start(ticket.current, ticketKyotoSeika.current ? UNDEALT : null);
-        if (ticketKyotoSeika.current) kyotoSeikaSheet.open(null);
+        if (ticketKyotoSeika.current && ticket.current !== null)
+          kyotoSeikaSheet.open(ticket.current, null);
         // The ticket use is kept with this sheet now, so the spend's key can go.
         tickets.forgetKeptSpend();
         return;
@@ -611,7 +612,7 @@ export function DrawingScreen({
     const drawn = part ? part.begun : found.steps.length > 0 || found.elapsedMs > 0;
     clock.setLength(sessionMs(part !== null));
     ticketKyotoSeika.current = part !== null;
-    if (part) kyotoSeikaSheet.open(part);
+    if (part) kyotoSeikaSheet.open(found.ticket, part);
     canvas.current?.load(found.steps, found.frame);
     // It keeps its own color rather than the one a fresh sheet would start in.
     const own = keptColor(found.steps);
@@ -665,7 +666,7 @@ export function DrawingScreen({
     else keeper.carry(ticketUseId, kyotoSeika);
     clock.setLength(sessionMs(kyotoSeika !== null));
     ticketKyotoSeika.current = kyotoSeika !== null;
-    if (kyotoSeika) kyotoSeikaSheet.open(kyotoSeika);
+    if (kyotoSeika) kyotoSeikaSheet.open(ticketUseId, kyotoSeika);
     // A begun pair stays locked in on the fresh sheet, whose clock waits for the first stroke.
     const dealt = kyotoSeika !== null && !kyotoSeika.begun;
     send({ type: "restored", drawn: false, sealSent: false, dealt, timeUp: false });
@@ -1068,6 +1069,7 @@ export function DrawingScreen({
         <KyotoSeikaDeal
           screen={root}
           list={kyotoSeikaSheet.list}
+          seed={kyotoSeikaSheet.seed}
           deal={kyotoSeikaSheet.deal}
           minutes={clock.length / 60_000}
           begin={begin}

@@ -201,3 +201,18 @@
     transition: none;
   }
 }
+
+/* The thought trail: its bubbles placed by their centers, each popping in round its own middle. */
+.subject-trail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.subject-trail g {
+  transform-box: fill-box;
+  transform-origin: center;
+}

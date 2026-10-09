@@ -22,13 +22,19 @@
   pointer-events: auto;
 }
 
-/* A large screen keeps the phone's composition: the pair is laid out a phone's width wide over Begin,
-   so the clouds stagger as one pair rather than parting to the screen's sides, then drawn larger. */
+/* A large screen lays the pair out 500px wide over Begin, room enough for three clouds over two, so
+   the five stay one cluster rather than parting to the screen's sides, then draws them larger. */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
   .kyoto-seika-deal__pair {
-    left: calc(50% - 210px);
-    right: calc(50% - 210px);
-    scale: 1.25;
+    left: calc(50% - 250px);
+    right: calc(50% - 250px);
+    scale: 1.1;
     transform-origin: 50% 0;
+  }
+}
+
+@media (min-width: 680px) and (min-height: 600px) and (any-pointer: coarse) {
+  .kyoto-seika-deal__pair {
+    scale: 1.25;
   }
 }

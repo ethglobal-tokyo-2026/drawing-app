@@ -24,7 +24,7 @@ function firstClear(
   candidates: readonly { left: number; top: number }[],
 ) {
   const { reroll } = layout;
-  const outlines = layout.balloons.map((b) => b.cloud.white.map((p) => toScreen(b, p)));
+  const outlines = layout.balloons.map((b) => b.white.map((p) => toScreen(b, p)));
   const clear = ({ left, top }: { left: number; top: number }) => {
     const box = { minX: left, minY: top, maxX: left + size.w, maxY: top + size.h };
     const holds = (p: Pt) =>

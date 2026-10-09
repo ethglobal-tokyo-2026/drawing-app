@@ -14,24 +14,26 @@ import { Sheet } from "../ui/Sheet";
 import { dealLayout } from "./balloonGeometry";
 import { CensorBar } from "./CensorBar";
 import type { Deal } from "./deal";
+import type { KyotoSeikaSubjectEntry } from "./subjectList";
 import { SubjectBalloons } from "./SubjectBalloons";
 import "./kyoto-seika-help.css";
 
-/** The deal the first panel shows: the five a past exam set, two of them picked, the die not rolled. */
-const SAMPLE_DEAL: Deal = {
-  subjects: [
-    { ja: "風", reading: "かぜ", en: "wind" },
-    { ja: "再会", reading: "さいかい", en: "reunion" },
-    { ja: "地図", reading: "ちず", en: "map" },
-    { ja: "SNS", reading: "", en: "social media" },
-    { ja: "双子", reading: "ふたご", en: "twins" },
-  ],
-  picked: [0, 1],
-  rolls: 0,
-};
+/** The five a past exam set, which the first panel's deal holds. */
+const SAMPLE_SUBJECTS = [
+  { ja: "風", reading: "かぜ", en: "wind", kind: "phenomenon" },
+  { ja: "再会", reading: "さいかい", en: "reunion", kind: "moment" },
+  { ja: "地図", reading: "ちず", en: "map", kind: "thing" },
+  { ja: "SNS", reading: "", en: "social media", kind: "loanword" },
+  { ja: "双子", reading: "ふたご", en: "twins", kind: "people" },
+] as const satisfies readonly KyotoSeikaSubjectEntry[];
+
+/** The deal the first panel shows: the five, two of them picked, the die not rolled. */
+const SAMPLE_DEAL: Deal = { subjects: SAMPLE_SUBJECTS, picked: [0, 1], rolls: 0 };
 
 /** The drawing screen the first panel crops: a 390px phone's width, and just the room its roomy deal takes. */
-const DEAL_SCREEN = { width: 390, height: 310 };
+const DEAL_SCREEN = { width: 390, height: 300 };
+/** The picture's own seed, so it's seated the same every time. */
+const SAMPLE_SEED = 7;
 
 const stayPut = () => {};
 
@@ -60,8 +62,16 @@ function BarredLine({ line }: { line: "lead" | "maker" }) {
  */
 function HelpBody() {
   const { t } = useTranslation();
+  // Seated by its own five, since the list loads only for a sheet.
   const [layout] = useState(() =>
-    dealLayout({ width: DEAL_SCREEN.width, top: 0, bottom: DEAL_SCREEN.height }),
+    dealLayout({
+      width: DEAL_SCREEN.width,
+      top: 0,
+      bottom: DEAL_SCREEN.height,
+      kinds: SAMPLE_SUBJECTS.map((s) => s.kind),
+      list: SAMPLE_SUBJECTS,
+      seed: SAMPLE_SEED,
+    }),
   );
   // Never started: it reads the mode's full length, as a dealt sheet's timer does before Begin.
   const [clock] = useState(() => new SessionClock(undefined, sessionMs(true)));

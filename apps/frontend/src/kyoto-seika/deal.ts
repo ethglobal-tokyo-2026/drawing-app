@@ -50,6 +50,13 @@ function poolFor(
   return fresh.length > 0 ? fresh : allowed;
 }
 
+/**
+ * Each place's kind, which a roll keeps: the deal's clouds are seated by it. A subject whose kind is
+ * lost takes its place's kind in the list's order.
+ */
+export const dealKinds = (list: List, deal: Pick<Deal, "subjects">): SubjectKind[] =>
+  deal.subjects.map((subject, place) => kindOf(list, subject) ?? KINDS[place % KINDS.length]);
+
 const draw = <T>(pool: readonly T[], random: () => number) =>
   pool[Math.floor(random() * pool.length)];
 
