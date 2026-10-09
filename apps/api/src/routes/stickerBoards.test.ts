@@ -3,8 +3,14 @@ import { insertUser, packGift } from "@drawing-app/db/testing";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { stickerPlacementSchema, userStatsSchema, type StickerPlacement } from "../shapes.ts";
+import {
+  largeColumns,
+  stickerPlacementSchema,
+  userStatsSchema,
+  type StickerPlacement,
+} from "../shapes.ts";
 import { MAX_SEEN_BATCH, newStickerCount, stickerBoardSchema } from "../stickerBoards/board.ts";
+import { MAX_LARGE_LAYOUT_BATCH } from "../stickerBoards/largeLayoutLimit.ts";
 import { simplifiedOutline } from "../stickers/outline.ts";
 import { stickerDetailSchema } from "../stickers/stickerDetail.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
@@ -14,6 +20,7 @@ import {
   FEW_HITS,
   giveSticker,
   insertSealedSticker,
+  LARGE_SPOT,
   MORE_HITS,
   OWN_TAP,
   sendGratitude,
@@ -43,6 +50,7 @@ const SHAKE = { method: "shake", total: 45 } as const;
 const LONGEST_RUN = 3;
 
 const placementResponseSchema = z.object({ stickerPlacement: stickerPlacementSchema });
+const largeLayoutResponseSchema = z.object({ stickerPlacements: z.array(stickerPlacementSchema) });
 const seenResponseSchema = z.object({ newStickerCount: z.number().int().nonnegative() });
 const statsResponseSchema = z.object({ userStats: userStatsSchema });
 
@@ -67,6 +75,12 @@ const postSeen = (userId: string, stickerIds: string[]) =>
   test.send("POST", "/api/sticker-boards/me/sticker-tray/seen", {
     as: userId,
     body: { stickerIds },
+  });
+
+const postLargeLayout = (userId: string, stickerPlacements: unknown) =>
+  test.send("POST", "/api/sticker-boards/me/large-layout", {
+    as: userId,
+    body: { stickerPlacements },
   });
 
 const statsOf = async (viewerId: string, userId: string) => {
@@ -199,6 +213,26 @@ describe("GET /api/sticker-boards/:userId", () => {
     });
   });
 
+  it("shows someone else the stickers on their board in either layout, with both spots", async () => {
+    const me = insertUser(test.db);
+    const friend = insertUser(test.db);
+    const [phoneOnly, largeOnly, inBothTrays] = [seal(friend), seal(friend), seal(friend)];
+    for (const [stickerId, phone, large] of [
+      [phoneOnly, SPOT, IN_TRAY],
+      [largeOnly, IN_TRAY, LARGE_SPOT],
+      [inBothTrays, IN_TRAY, IN_TRAY],
+    ] as const) {
+      test.db
+        .update(stickerPlacements)
+        .set({ ...phone, ...largeColumns(large) })
+        .where(placementOf(friend, stickerId))
+        .run();
+    }
+    const shown = byStickerId((await boardOf(me, friend)).boardStickers);
+    expect([...shown.keys()].sort()).toEqual([phoneOnly, largeOnly].sort());
+    expect(shown.get(largeOnly)).toMatchObject({ placement: IN_TRAY, largePlacement: LARGE_SPOT });
+  });
+
   it("names who received a sticker given away, the last time it left the board's owner", async () => {
     const me = insertUser(test.db);
     const friend = insertUser(test.db);
@@ -243,34 +277,104 @@ describe("GET /api/sticker-boards/:userId", () => {
 });
 
 describe("PATCH /api/sticker-boards/me/sticker-placements/:stickerId", () => {
-  it("saves a placement whole on any sticker that reached you, and returns it", async () => {
+  it("saves a placement whole on any sticker that reached you, in either layout or both", async () => {
     const me = insertUser(test.db);
     const kept = seal(me);
     const given = seal(me);
     giveSticker(test.db, given, me, insertUser(test.db));
     for (const stickerId of [kept, given]) {
-      for (const placement of [SPOT, IN_TRAY]) {
+      for (const body of [
+        { placement: SPOT },
+        { largePlacement: LARGE_SPOT },
+        { placement: IN_TRAY, largePlacement: IN_TRAY },
+      ]) {
         const saved = await bodyOf(
-          await patchPlacement(me, stickerId, placement),
+          await patchPlacement(me, stickerId, body),
           placementResponseSchema,
         );
-        expect(saved.stickerPlacement).toMatchObject({ stickerId, placement });
+        expect(saved.stickerPlacement).toMatchObject({ stickerId, ...body });
       }
     }
     const board = await boardOf(me, "me");
-    expect(board.boardStickers.map(({ placement }) => placement)).toEqual([IN_TRAY, IN_TRAY]);
+    expect(board.boardStickers.map((s) => [s.placement, s.largePlacement])).toEqual([
+      [IN_TRAY, IN_TRAY],
+      [IN_TRAY, IN_TRAY],
+    ]);
   });
 
-  it("refuses a sticker that never reached you, and a placement outside the board", async () => {
+  it("leaves the phone's spot as it was when a large screen moves the sticker", async () => {
+    const me = insertUser(test.db);
+    const stickerId = seal(me);
+    await patchPlacement(me, stickerId, { placement: SPOT, largePlacement: LARGE_SPOT });
+    const moved = { ...LARGE_SPOT, x: 0.9, scale: 0.5, rotation: 20 };
+    await patchPlacement(me, stickerId, { largePlacement: moved });
+    const [onBoard] = (await boardOf(me, "me")).boardStickers;
+    expect(onBoard).toMatchObject({ placement: SPOT, largePlacement: moved });
+  });
+
+  it("refuses a sticker that never reached you, a body naming no layout, and a spot outside the board", async () => {
     const me = insertUser(test.db);
     const theirs = seal(insertUser(test.db));
-    expect(await refusalOf(await patchPlacement(me, theirs, SPOT))).toMatchObject({
+    expect(await refusalOf(await patchPlacement(me, theirs, { placement: SPOT }))).toMatchObject({
       status: 404,
       error: "sticker_placement_not_found",
     });
     const mine = seal(me);
-    for (const outside of [OFF_THE_FIELD, NO_SIZE]) {
-      expect(await refusalOf(await patchPlacement(me, mine, outside))).toMatchObject({
+    for (const body of [{}, { placement: OFF_THE_FIELD }, { largePlacement: NO_SIZE }]) {
+      expect(await refusalOf(await patchPlacement(me, mine, body))).toMatchObject({
+        status: 400,
+        error: "invalid_request",
+      });
+    }
+  });
+});
+
+describe("POST /api/sticker-boards/me/large-layout", () => {
+  it("saves each spot only where the sticker has no large spot yet, and answers every listed sticker", async () => {
+    const me = insertUser(test.db);
+    const [first, second] = [seal(me), seal(me)];
+    await patchPlacement(me, first, { largePlacement: LARGE_SPOT });
+    const derived = { ...SPOT, x: 0.45 };
+    const answer = await bodyOf(
+      await postLargeLayout(
+        me,
+        [first, second].map((stickerId) => ({ stickerId, largePlacement: derived })),
+      ),
+      largeLayoutResponseSchema,
+    );
+    expect(new Map(answer.stickerPlacements.map((p) => [p.stickerId, p.largePlacement]))).toEqual(
+      new Map([
+        [first, LARGE_SPOT],
+        [second, derived],
+      ]),
+    );
+  });
+
+  it("refuses stickers that never reached you, naming them, and saves none of the batch", async () => {
+    const me = insertUser(test.db);
+    const mine = seal(me);
+    const theirs = seal(insertUser(test.db));
+    const refused = await refusalOf(
+      await postLargeLayout(
+        me,
+        [mine, theirs].map((stickerId) => ({ stickerId, largePlacement: SPOT })),
+      ),
+    );
+    expect(refused).toMatchObject({ status: 404, error: "sticker_placement_not_found" });
+    expect(refused.detail).toContain(theirs);
+    const [onBoard] = (await boardOf(me, "me")).boardStickers;
+    expect(onBoard?.largePlacement).toBeNull();
+  });
+
+  it("refuses an empty batch and one over MAX_LARGE_LAYOUT_BATCH", async () => {
+    const me = insertUser(test.db);
+    const entries = (length: number) =>
+      Array.from({ length }, (_, index) => ({
+        stickerId: `not-a-sticker-${index}`,
+        largePlacement: SPOT,
+      }));
+    for (const stickerPlacements of [entries(0), entries(MAX_LARGE_LAYOUT_BATCH + 1)]) {
+      expect(await refusalOf(await postLargeLayout(me, stickerPlacements))).toMatchObject({
         status: 400,
         error: "invalid_request",
       });

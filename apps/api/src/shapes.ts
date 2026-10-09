@@ -233,8 +233,8 @@ export const stickerSchema = z.object({
 export type Sticker = z.infer<typeof stickerSchema>;
 
 /**
- * A placement's six values, all set, with the table's CHECK ranges: StickerPlacement's `placement`,
- * and the body that saves one.
+ * A placement's six values, all set, with the table's CHECK ranges: StickerPlacement's `placement`
+ * and `largePlacement`, and the bodies that save them.
  */
 export const placementSchema = createSelectSchema(stickerPlacements, {
   onBoard: z.boolean(),
@@ -249,7 +249,10 @@ export type Placement = z.infer<typeof placementSchema>;
 
 export const stickerPlacementSchema = z.object({
   stickerId: createSelectSchema(stickerPlacements).shape.stickerId,
+  /** Its spot in the phone's layout; null until the board first places it. */
   placement: placementSchema.nullable(),
+  /** Its spot in the large layout a large screen shows; null until that layout first places it. */
+  largePlacement: placementSchema.nullable(),
   /** Null shows NEW. */
   seenAt: isoTimeSchema.nullable(),
   /** The sticker tray's order. */
@@ -389,19 +392,41 @@ export function stickerLookup(db: Db, ids: Iterable<string>, viewer: StickerView
   };
 }
 
+/** A placement as the large layout's columns hold it. */
+export const largeColumns = (p: Placement) => ({
+  largeOnBoard: p.onBoard,
+  largeX: p.x,
+  largeY: p.y,
+  largeScale: p.scale,
+  largeRotation: p.rotation,
+  largeZ: p.z,
+});
+
+/** A placement's six values, or null unless every one is set. */
+function wholePlacement(values: { [K in keyof Placement]: Placement[K] | null }): Placement | null {
+  const { onBoard, x, y, scale, rotation, z } = values;
+  return onBoard === null ||
+    x === null ||
+    y === null ||
+    scale === null ||
+    rotation === null ||
+    z === null
+    ? null
+    : { onBoard, x, y, scale, rotation, z };
+}
+
 export function toStickerPlacement(row: typeof stickerPlacements.$inferSelect): StickerPlacement {
-  const { onBoard, x, y, scale, rotation, z } = row;
   return {
     stickerId: row.stickerId,
-    placement:
-      onBoard === null ||
-      x === null ||
-      y === null ||
-      scale === null ||
-      rotation === null ||
-      z === null
-        ? null
-        : { onBoard, x, y, scale, rotation, z },
+    placement: wholePlacement(row),
+    largePlacement: wholePlacement({
+      onBoard: row.largeOnBoard,
+      x: row.largeX,
+      y: row.largeY,
+      scale: row.largeScale,
+      rotation: row.largeRotation,
+      z: row.largeZ,
+    }),
     seenAt: toIsoTime(row.seenAt),
     arrivedAt: toIsoTime(row.createdAt),
   };

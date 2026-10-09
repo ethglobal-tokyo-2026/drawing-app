@@ -11,10 +11,11 @@ import {
   type ReceiveRefusal,
 } from "../gifts/receiving.ts";
 import { createGiftsTestApp, giftOf, type GiftsTestApp } from "../gifts/testGifts.ts";
+import { largeColumns } from "../shapes.ts";
 import { SponsorshipError } from "../sui/types.ts";
 import { captureLogLines } from "../testing/logLines.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
-import { SPOT } from "../testing/rows.ts";
+import { LARGE_SPOT, SPOT } from "../testing/rows.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
 /** A 1:1 chat, where a Gift Message is received. */
@@ -160,7 +161,7 @@ describe("POST /api/gifts/receive", () => {
     expect(test.ownerOf(gift.stickerId)).toBe(nextReceiver);
   });
 
-  it("returns a sticker coming back to its old spot in the tray, NEW again", async () => {
+  it("returns a sticker coming back to its old spots in the tray, in both layouts, NEW again", async () => {
     const test = await createGiftsTestApp();
     const artistId = insertUser(test.db);
     const { gift, giftClaimToken } = await test.packagedGift(artistId);
@@ -170,7 +171,7 @@ describe("POST /api/gifts/receive", () => {
     );
     const placed = test.db
       .update(stickerPlacements)
-      .set({ ...SPOT, seenAt: test.clock.now() })
+      .set({ ...SPOT, ...largeColumns(LARGE_SPOT), seenAt: test.clock.now() })
       .where(artistsPlacement)
       .returning()
       .get();
@@ -183,6 +184,7 @@ describe("POST /api/gifts/receive", () => {
     expect(returned.stickerPlacement).toEqual({
       stickerId: gift.stickerId,
       placement: { ...SPOT, onBoard: false },
+      largePlacement: { ...LARGE_SPOT, onBoard: false },
       seenAt: null,
       arrivedAt: placed.createdAt.toISOString(),
     });

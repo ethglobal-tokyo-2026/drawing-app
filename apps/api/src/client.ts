@@ -25,6 +25,7 @@ export type ApiErrorCode =
   | "sponsor_unavailable"
   | "signature_invalid";
 export { HANDLE_MAX_LENGTH } from "./session/handleLimit.ts";
+export { MAX_LARGE_LAYOUT_BATCH } from "./stickerBoards/largeLayoutLimit.ts";
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
 export { TOKYO_UTC_OFFSET_MS, tokyoTicketDay } from "./ticketDays.ts";
 export { purchaseNamedBy } from "./tickets/paymentReference.ts";
@@ -74,7 +75,12 @@ export type {
   TicketShop,
   UserStats,
 } from "./shapes.ts";
-export type { BoardSticker, StickerBoard } from "./stickerBoards/board.ts";
+export type {
+  BoardSticker,
+  LargeLayoutEntry,
+  PlacementsRequest,
+  StickerBoard,
+} from "./stickerBoards/board.ts";
 export type { MarkNsfwResponse } from "./stickers/markNsfw.ts";
 export type { SealResponse } from "./stickers/seal.ts";
 export type { StickerDetail, TransferTrailEntry } from "./stickers/stickerDetail.ts";

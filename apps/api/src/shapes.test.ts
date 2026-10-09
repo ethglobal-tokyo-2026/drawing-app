@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   giftSchema,
   gratitudeSchema,
+  largeColumns,
   loadStickers,
   meSchema,
   personSchema,
@@ -18,7 +19,7 @@ import {
   toStickerPlacement,
 } from "./shapes.ts";
 import { fakeImageStore } from "./testing/fakes.ts";
-import { giveSticker, insertSealedSticker, SPOT } from "./testing/rows.ts";
+import { giveSticker, insertSealedSticker, LARGE_SPOT, SPOT } from "./testing/rows.ts";
 
 /** The tests' CDN. */
 const images = fakeImageStore();
@@ -69,7 +70,7 @@ describe("shapes", () => {
     expect([...loadStickers(db, asked, viewer).keys()].sort()).toEqual([...asked].sort());
   });
 
-  it("show a placement as null until the board places it, then whole", () => {
+  it("show each layout's placement as null until it's placed there, then whole", () => {
     const userId = insertUser(db);
     const stickerId = insertSealedSticker(db, userId);
     const read = () => {
@@ -77,9 +78,14 @@ describe("shapes", () => {
       if (!row) throw new Error("Sealing left no sticker placement");
       return stickerPlacementSchema.parse(toStickerPlacement(row));
     };
-    expect(read().placement).toBeNull();
+    expect(read()).toMatchObject({ placement: null, largePlacement: null });
     db.update(stickerPlacements).set(SPOT).where(placementOf(userId, stickerId)).run();
-    expect(read().placement).toEqual(SPOT);
+    expect(read()).toMatchObject({ placement: SPOT, largePlacement: null });
+    db.update(stickerPlacements)
+      .set(largeColumns(LARGE_SPOT))
+      .where(placementOf(userId, stickerId))
+      .run();
+    expect(read()).toMatchObject({ placement: SPOT, largePlacement: LARGE_SPOT });
   });
 
   it("show gifts and gratitude with the contract's names for their times", () => {

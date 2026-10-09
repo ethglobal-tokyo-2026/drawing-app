@@ -39,6 +39,9 @@ export const sendGratitude = (
 /** A spot on the board, as a drag leaves it. */
 export const SPOT = { onBoard: true, x: 0.25, y: 0.75, scale: 0.3, rotation: -4, z: 2 };
 
+/** A spot in the large layout, as the API sends it; `largeColumns` writes it to a row. */
+export const LARGE_SPOT = { onBoard: true, x: 0.6, y: 0.4, scale: 0.32, rotation: 3, z: 4 };
+
 /** A combo on a gift its Original Artist didn't give: their share comes out of the giver's part. */
 export const SHARED_TAP = { method: "tap", total: 100, originalArtistGratitudeShare: 20 } as const;
 /** More than either part of SHARED_TAP, less than both together. */

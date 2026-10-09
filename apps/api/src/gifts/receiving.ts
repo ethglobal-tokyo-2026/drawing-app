@@ -363,10 +363,11 @@ const recordReceive =
       .values({ userId, stickerId: gift.stickerId })
       .onConflictDoUpdate({
         target: [stickerPlacements.userId, stickerPlacements.stickerId],
-        // A sticker coming back returns to the tray at its old spot, and is NEW again. created_at
-        // is kept, so its place in the tray doesn't move.
+        // A sticker coming back returns to the tray at its old spots, in both layouts, and is NEW
+        // again. created_at is kept, so its place in the tray doesn't move.
         set: {
           onBoard: sql`case when ${stickerPlacements.onBoard} is null then null else 0 end`,
+          largeOnBoard: sql`case when ${stickerPlacements.largeOnBoard} is null then null else 0 end`,
           seenAt: null,
         },
       })

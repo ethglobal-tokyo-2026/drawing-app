@@ -27,4 +27,20 @@ describe("sticker placements", () => {
       place({ onBoard: true, x: 0.5, y: 0.5, scale: 0.5, rotation: 0, z: 0 }),
     ).not.toThrow();
   });
+
+  it("stores the large layout's placement whole or not at all, beside the phone's", () => {
+    expect(refusal(() => place({ largeOnBoard: true }))).toMatch(
+      /sticker_placements_large_placement/,
+    );
+    expect(() =>
+      place({
+        largeOnBoard: false,
+        largeX: 0.5,
+        largeY: 0.5,
+        largeScale: 0.5,
+        largeRotation: 0,
+        largeZ: 0,
+      }),
+    ).not.toThrow();
+  });
 });

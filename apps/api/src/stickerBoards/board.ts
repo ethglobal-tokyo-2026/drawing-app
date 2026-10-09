@@ -1,9 +1,10 @@
 import { gifts, stickerPlacements, stickers, users, type Db } from "@drawing-app/db";
-import { and, asc, count, eq, inArray, isNull, notExists } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, notExists, or } from "drizzle-orm";
 import { z } from "zod";
 import {
   giftSchema,
   isoTimeSchema,
+  largeColumns,
   personSchema,
   placementSchema,
   stickerPlacementSchema,
@@ -15,6 +16,7 @@ import {
   type StickerViewer,
 } from "../shapes.ts";
 import { simplifiedOutlineOf } from "../stickers/outline.ts";
+import { MAX_LARGE_LAYOUT_BATCH } from "./largeLayoutLimit.ts";
 
 /** `me` in a board's path: the signed-in person. */
 export const ME = "me";
@@ -48,6 +50,31 @@ export type StickerBoard = z.infer<typeof stickerBoardSchema>;
 export const seenRequestSchema = z.object({
   stickerIds: z.array(stickerPlacementSchema.shape.stickerId.min(1)).min(1).max(MAX_SEEN_BATCH),
 });
+
+/** The body that saves a sticker's spot: in the phone's layout, the large layout, or both at once. */
+export const placementsRequestSchema = z
+  .object({ placement: placementSchema.optional(), largePlacement: placementSchema.optional() })
+  .refine(
+    (body) => body.placement !== undefined || body.largePlacement !== undefined,
+    "placement or largePlacement: say at least one",
+  );
+export type PlacementsRequest = z.infer<typeof placementsRequestSchema>;
+
+/** A large layout derived from the phone's: each sticker's spot in it. */
+export const largeLayoutRequestSchema = z.object({
+  stickerPlacements: z
+    .array(
+      z.object({
+        stickerId: stickerPlacementSchema.shape.stickerId.min(1),
+        largePlacement: placementSchema,
+      }),
+    )
+    .min(1)
+    .max(MAX_LARGE_LAYOUT_BATCH),
+});
+export type LargeLayoutEntry = z.infer<
+  typeof largeLayoutRequestSchema
+>["stickerPlacements"][number];
 
 /** Whose board a path names: `me`, or a user id. Undefined when there's no such person. */
 export const findBoardOwner = (db: Db, userId: string, viewerId: string) =>
@@ -138,7 +165,8 @@ export function loadStickerBoard(
         own
           ? undefined
           : and(
-              eq(stickerPlacements.onBoard, true),
+              // On the board in either layout: the visitor's screen shows the one for its size.
+              or(eq(stickerPlacements.onBoard, true), eq(stickerPlacements.largeOnBoard, true)),
               eq(stickers.ownerId, owner.id),
               notExists(onItsWayFrom(db, owner.id)),
             ),
@@ -175,19 +203,72 @@ export function loadStickerBoard(
   };
 }
 
-/** Saves all six values of the person's placement of a sticker. Undefined when it never reached them. */
-export const savePlacement = (
+/**
+ * Saves the person's placement of a sticker in either layout or both, all six values of each.
+ * Undefined when it never reached them.
+ */
+export const savePlacements = (
   db: Db,
   userId: string,
   stickerId: string,
-  placement: z.infer<typeof placementSchema>,
+  { placement, largePlacement }: PlacementsRequest,
 ) =>
   db
     .update(stickerPlacements)
-    .set(placement)
+    .set({ ...placement, ...(largePlacement && largeColumns(largePlacement)) })
     .where(and(eq(stickerPlacements.userId, userId), eq(stickerPlacements.stickerId, stickerId)))
     .returning()
     .get();
+
+/** Which of `stickerIds` never reached the person: they hold no placement of it. */
+export function neverReached(db: Db, userId: string, stickerIds: readonly string[]) {
+  const found = new Set(
+    db
+      .select({ stickerId: stickerPlacements.stickerId })
+      .from(stickerPlacements)
+      .where(
+        and(
+          eq(stickerPlacements.userId, userId),
+          inArray(stickerPlacements.stickerId, [...stickerIds]),
+        ),
+      )
+      .all()
+      .map(({ stickerId }) => stickerId),
+  );
+  return stickerIds.filter((id) => !found.has(id));
+}
+
+/**
+ * Saves a large layout derived from the phone's, each spot only where the sticker has none in the
+ * large layout yet: a large layout saved first from another device stays. Answers the listed
+ * stickers' placements as saved.
+ */
+export function saveDerivedLargeLayout(
+  db: Db,
+  userId: string,
+  entries: readonly LargeLayoutEntry[],
+) {
+  const ids = entries.map(({ stickerId }) => stickerId);
+  return db.transaction((tx) => {
+    for (const { stickerId, largePlacement } of entries) {
+      tx.update(stickerPlacements)
+        .set(largeColumns(largePlacement))
+        .where(
+          and(
+            eq(stickerPlacements.userId, userId),
+            eq(stickerPlacements.stickerId, stickerId),
+            isNull(stickerPlacements.largeOnBoard),
+          ),
+        )
+        .run();
+    }
+    return tx
+      .select()
+      .from(stickerPlacements)
+      .where(and(eq(stickerPlacements.userId, userId), inArray(stickerPlacements.stickerId, ids)))
+      .all();
+  });
+}
 
 /** Clears NEW on the person's stickers among `stickerIds`, keeping the time each was first seen. */
 export function markStickersSeen(db: Db, userId: string, stickerIds: string[], now: Date) {

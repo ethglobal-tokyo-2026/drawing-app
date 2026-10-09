@@ -6,7 +6,6 @@ import { apiError, validate } from "../errors.ts";
 import type { AppEnv } from "../session.ts";
 import {
   personSchema,
-  placementSchema,
   stickerPlacementSchema,
   stickerViewer,
   suiIdSchema,
@@ -14,10 +13,14 @@ import {
 } from "../shapes.ts";
 import {
   findBoardOwner,
+  largeLayoutRequestSchema,
   loadStickerBoard,
   markStickersSeen,
+  neverReached,
   newStickerCount,
-  savePlacement,
+  placementsRequestSchema,
+  saveDerivedLargeLayout,
+  savePlacements,
   seenRequestSchema,
 } from "../stickerBoards/board.ts";
 import { loadUserStats } from "../stickerBoards/userStats.ts";
@@ -64,10 +67,10 @@ export const stickerBoardRoutes = ({ db, clock, images, suiWallets }: AppDeps) =
     .patch(
       "/me/sticker-placements/:stickerId",
       validate("param", placementParamSchema),
-      validate("json", placementSchema),
+      validate("json", placementsRequestSchema),
       (c) => {
         const { stickerId } = c.req.valid("param");
-        const row = savePlacement(db, c.var.userId, stickerId, c.req.valid("json"));
+        const row = savePlacements(db, c.var.userId, stickerId, c.req.valid("json"));
         if (!row) {
           return apiError(
             c,
@@ -82,4 +85,22 @@ export const stickerBoardRoutes = ({ db, clock, images, suiWallets }: AppDeps) =
     .post("/me/sticker-tray/seen", validate("json", seenRequestSchema), (c) => {
       markStickersSeen(db, c.var.userId, c.req.valid("json").stickerIds, clock.now());
       return c.json({ newStickerCount: newStickerCount(db, c.var.userId) }, 200);
+    })
+    .post("/me/large-layout", validate("json", largeLayoutRequestSchema), (c) => {
+      const entries = c.req.valid("json").stickerPlacements;
+      const missing = neverReached(
+        db,
+        c.var.userId,
+        entries.map(({ stickerId }) => stickerId),
+      );
+      if (missing.length > 0) {
+        return apiError(
+          c,
+          404,
+          "sticker_placement_not_found",
+          `Stickers ${missing.join(", ")} never reached you`,
+        );
+      }
+      const saved = saveDerivedLargeLayout(db, c.var.userId, entries);
+      return c.json({ stickerPlacements: saved.map(toStickerPlacement) }, 200);
     });
