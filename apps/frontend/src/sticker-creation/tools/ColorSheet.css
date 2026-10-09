@@ -20,10 +20,28 @@
   overscroll-behavior: contain;
 }
 
-/* On a short screen the pad gives way, so the first row of swatches shows under the bar. */
-@media (max-height: 640px) {
-  .color-picker .color-pad {
-    height: 72px;
+/* Short heights in the phone layout (LINE's sheet on an iPad, an iPhone SE in LINE): the color sheet
+   leaves more than half the drawing sheet in view. Its heading goes from sight (the dialog keeps its
+   name), the pad gives way, and the swatches wait behind a scroll. */
+@media not all and (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  @media (max-height: 699.98px) {
+    .bottom-sheet.color-sheet {
+      max-height: 42%;
+    }
+
+    .color-sheet .color-head {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .color-picker .color-pad {
+      height: 56px;
+    }
   }
 }
 
