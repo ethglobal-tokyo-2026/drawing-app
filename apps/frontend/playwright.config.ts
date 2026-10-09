@@ -25,10 +25,7 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...phone, browserName: "chromium" } },
-    // Off unless E2E_WEBKIT=on: WebKit can't open pages on this Mac yet.
-    ...(process.env.E2E_WEBKIT === "on"
-      ? [{ name: "webkit", use: { ...phone, browserName: "webkit" as const } }]
-      : []),
+    { name: "webkit", use: { ...phone, browserName: "webkit" } },
   ],
   // Each server is exec'd rather than run through pnpm, whose children leave Playwright's process
   // group and outlive the run.
