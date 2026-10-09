@@ -80,6 +80,7 @@ export {
   Circle,
   Clock,
   Copy,
+  DeviceRotate,
   Eraser,
   HandHeart,
   HandPointing,

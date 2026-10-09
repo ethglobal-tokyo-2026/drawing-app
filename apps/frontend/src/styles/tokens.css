@@ -117,6 +117,8 @@
   --z-toast: 60;
   --z-banner: 70;
   --z-status: 80;
+  /* The upright cover, over the whole app and its toasts while the phone is on its side */
+  --z-cover: 90;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -24,7 +24,7 @@ import { i18next } from "../i18n/i18n";
 import { strings } from "../i18n/strings";
 import { useTickets } from "../tickets/useTickets";
 import { personKey } from "../ui/deviceStorage";
-import { onLargeScreen, SWITCH } from "../ui/testing";
+import { onLargeScreen, onTouchScreen, SWITCH } from "../ui/testing";
 import type { HistoryState, InputMode } from "./canvas/inkEngine";
 import type { Op } from "./canvas/ops";
 import { frameFor, SHEET_SHORT_UNITS } from "./canvas/sheetFrame";
@@ -546,6 +546,15 @@ describe("the drawing screen's clock", () => {
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
     expect(await countedAfter(tapMyBoardTile)).toBe(0);
   });
+
+  it("holds while the phone is on its side, under the upright cover, and runs again upright", async () => {
+    const phone = onTouchScreen({ landscape: false, large: false });
+    reopen(keptHalfway);
+    await settle();
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    expect(await countedAfter(() => phone.landscape.change(true))).toBe(0);
+    expect(await countedAfter(() => phone.landscape.change(false))).toBeGreaterThan(0);
+  });
 });
 
 describe("clearing the sheet", () => {
@@ -803,6 +812,16 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     for (const takeTool of TOOLS_IN_HAND) expect(await countedAfter(takeTool)).toBeGreaterThan(0);
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
     expect(timerCalls.clockRuns).toBe(1);
+  });
+
+  it("holds a begun sheet's clock while the phone is on its side, as it does under the board", async () => {
+    const phone = onTouchScreen({ landscape: false, large: false });
+    const begun = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
+    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: begun });
+    // A reload's pause lets go at a tap.
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    expect(await countedAfter(() => phone.landscape.change(true))).toBe(0);
+    expect(await countedAfter(() => phone.landscape.change(false))).toBeGreaterThan(0);
   });
 
   it("runs on under the open seal sheet, as the real test's clock does, and calls pencils down in place at 0:00", async () => {

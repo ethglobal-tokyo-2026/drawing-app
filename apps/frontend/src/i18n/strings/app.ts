@@ -28,6 +28,10 @@ export const app = {
   },
   /** Drawing screen, when Draw is tapped before its code has loaded: what screen readers hear while it loads */
   drawingLoading: { en: "Opening the drawing screen", ja: "かく画面を読み込んでいます" },
+  upright: {
+    /** Any screen, on a phone turned on its side: the one line on the cover over the app, until the phone is upright again */
+    turn: { en: "Turn your phone upright", ja: "スマホを縦にしてください" },
+  },
   crash: {
     /** The page that takes the app's place when a screen fails as it shows: its heading */
     title: { en: "Croquis stopped", ja: "クロッキーが止まりました" },

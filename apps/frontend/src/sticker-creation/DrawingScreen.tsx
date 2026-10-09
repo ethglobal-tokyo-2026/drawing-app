@@ -28,6 +28,7 @@ import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { TicketsNotLoaded } from "../tickets/TicketsNotLoaded";
 import { useTickets } from "../tickets/useTickets";
 import { clamp01 } from "../ui/easing";
+import { useSideways } from "../ui/sideways";
 import { useLargeScreen } from "../ui/largeScreen";
 import { QuietLink } from "../ui/QuietLink";
 import { releaseCanvas } from "../ui/releaseCanvas";
@@ -854,20 +855,21 @@ export function DrawingScreen({
     else setPaused((p) => !p);
   };
 
-  // Every hold stops the clock: the person's pause, the board covering the screen, the seal sheet, a
-  // tool in hand.
+  // Every hold stops the clock: the person's pause, the board or the upright cover over the screen,
+  // the seal sheet, a tool in hand.
   const sealSheet = session.phase === "seal-sheet";
+  const sideways = useSideways();
   useEffect(() => {
     clock.setHolds({
       paused,
-      away: !active,
+      away: !active || sideways,
       seal: pausable && sealSheet,
       color: pausable && panel === "color",
       smoothing: pausable && panel === "smoothing",
       clear: pausable && panel === "clear",
       size: pausable && sizing,
     });
-  }, [clock, paused, active, sealSheet, panel, sizing, pausable]);
+  }, [clock, paused, active, sideways, sealSheet, panel, sizing, pausable]);
 
   // Out of tickets: the card comes up as Draw opens on a fresh sheet, and stays until the person picks
   // a way on, even if tickets come back meanwhile.

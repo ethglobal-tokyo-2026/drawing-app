@@ -1,6 +1,7 @@
 import { act } from "react";
 import { onTestFinished, vi } from "vitest";
 import { LARGE_SCREEN } from "./largeScreen";
+import { LANDSCAPE_TOUCH } from "./sideways";
 
 /** A media query switched by the test: a matchMedia spy returns it, and `change` tells its listeners. */
 class SwitchedQuery extends EventTarget implements MediaQueryList {
@@ -39,6 +40,30 @@ export function onLargeScreen() {
     query === LARGE_SCREEN ? large : matchMedia(query),
   );
   return large;
+}
+
+/**
+ * A touch screen for a test, landscape or not and large or not, since happy-dom has no touch screen:
+ * answers LANDSCAPE_TOUCH and LARGE_SCREEN by the switches it returns, and every other query through
+ * happy-dom's own, until the test ends. `landscape.change(true)` turns it on its side.
+ */
+export function onTouchScreen({ landscape, large }: { landscape: boolean; large: boolean }) {
+  const matchMedia = window.matchMedia.bind(window);
+  const screen = {
+    landscape: new SwitchedQuery(LANDSCAPE_TOUCH, landscape),
+    large: new SwitchedQuery(LARGE_SCREEN, large),
+  };
+  const spy = vi
+    .spyOn(window, "matchMedia")
+    .mockImplementation((query) =>
+      query === LANDSCAPE_TOUCH
+        ? screen.landscape
+        : query === LARGE_SCREEN
+          ? screen.large
+          : matchMedia(query),
+    );
+  onTestFinished(() => spy.mockRestore());
+  return screen;
 }
 
 /**

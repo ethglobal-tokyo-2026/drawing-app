@@ -26,10 +26,12 @@ import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { preloadReservePacks } from "../tickets/reservePacks";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { useReducedMotion } from "../ui/useReducedMotion";
+import { useSideways } from "../ui/sideways";
 import { MotionPermissionCard } from "./MotionPermissionCard";
 import type { GiftFrom } from "../receiving/ReceiveGiftDialog";
 import { openedFrom, type View } from "./openedView";
 import { TabBar, type Tab } from "./TabBar";
+import { UprightCover } from "./UprightCover";
 import { useFocusLoop } from "./useFocusLoop";
 import "./App.css";
 
@@ -122,6 +124,8 @@ export default function App() {
   };
   // The reserve ticket checkout, opened from the Shop over the whole phone, tabs and all.
   const [checkingOut, setCheckingOut] = useState(false);
+  // On its side, the phone shows only the upright cover; the app waits under it, inert.
+  const sideways = useSideways();
   const drawing = view === "draw";
   const afterTheBoard = usePreloadAfterBoard(AFTER_THE_BOARD);
   // The Shop's prices load with the screens' code, so the Shop opens on them.
@@ -192,97 +196,105 @@ export default function App() {
 
   // The drawing screen has no tabs, so the sheet gets the room; its My board tile leads back.
   return (
-    <div ref={phone} className={`phone ${drawing ? "is-drawing" : ""}`}>
-      <div
-        className="screen"
-        data-arriving={arriving !== null && arriving === view ? "" : undefined}
-        onAnimationEnd={(e) => {
-          if (e.animationName === "screen-in") setArriving(null);
-        }}
-      >
-        {(afterTheBoard || drewHere) && (
-          // Draw tapped before its code is in holds on plain Liner for the moment it takes.
-          <Suspense fallback={drawing ? <DrawingScreenLoading /> : null}>
-            <DrawingScreen
-              ref={drawingScreen}
-              active={drawing}
-              onSealed={(id) => {
-                setSealedId(id);
-                setFreshId(id);
-              }}
-              onNewSticker={() => setSealedId(undefined)}
-              onGoToBoard={() => setView("board")}
-              onMyBoardTile={() => changeTab("board")}
-            />
-          </Suspense>
-        )}
-        {view === "board" && (
-          <StickerBoard
-            key={boardLoads}
-            freshId={freshId}
-            giftClosures={giftClosures}
-            onDraw={openDrawing}
-            onOpenGift={(gift) => setGiftOpening({ gift })}
-          />
-        )}
-        {/* Each in its own boundary, so Explore stays up while an artist's board loads over it. */}
-        {exploredHere && (
-          // Hidden, it takes no layout, paint or focus, and its effects (loads, timers, frame loops)
-          // stop until it shows again.
-          <Activity mode={view === "explore" ? "visible" : "hidden"}>
-            {/* Inert under their board, so Tab and screen readers stay on it. */}
-            <div
-              className="screen-layer"
-              inert={visiting !== undefined}
-              onFocusCapture={(e) => rememberPlace(e.target)}
-              onClickCapture={(e) => rememberPlace(e.target)}
-            >
-              <Suspense fallback={null}>
-                <ExploreScreen onOpenArtist={setVisiting} onOpenMyBoard={() => setView("board")} />
-              </Suspense>
-            </div>
-          </Activity>
-        )}
-        {view === "explore" && visiting && (
-          <Suspense fallback={null}>
-            <ArtistBoard
-              key={visiting.id}
-              person={visiting}
-              onBack={() => {
-                flushSync(() => setVisiting(undefined));
-                explorePlace.current?.focus({ preventScroll: true });
-              }}
-            />
-          </Suspense>
-        )}
-        {view === "shop" && <ShopScreen onBuyReserveTickets={() => setCheckingOut(true)} />}
-      </div>
-      {!drawing && <TabBar active={view} visiting={visiting !== undefined} onChange={changeTab} />}
-      {checkingOut && view === "shop" && (
-        <ReserveTicketCheckout
-          onDraw={() => {
-            setCheckingOut(false);
-            openDrawing();
+    <>
+      <div ref={phone} className={`phone ${drawing ? "is-drawing" : ""}`} inert={sideways}>
+        <div
+          className="screen"
+          data-arriving={arriving !== null && arriving === view ? "" : undefined}
+          onAnimationEnd={(e) => {
+            if (e.animationName === "screen-in") setArriving(null);
           }}
-          onClose={() => setCheckingOut(false)}
-        />
-      )}
-      <MotionPermissionCard />
-      {giftOpening && (
-        // Liner while ReceiveGiftDialog's code loads, so the board doesn't show first.
-        <Suspense fallback={<div style={GIFT_LOADING} />}>
-          <ReceiveGiftDialog
-            from={giftOpening}
-            onClose={(receivedId) => {
-              setGiftOpening(undefined);
-              setGiftClosures((n) => n + 1);
-              if (!receivedId) return;
-              setFreshId(receivedId);
-              setBoardLoads((n) => n + 1);
+        >
+          {(afterTheBoard || drewHere) && (
+            // Draw tapped before its code is in holds on plain Liner for the moment it takes.
+            <Suspense fallback={drawing ? <DrawingScreenLoading /> : null}>
+              <DrawingScreen
+                ref={drawingScreen}
+                active={drawing}
+                onSealed={(id) => {
+                  setSealedId(id);
+                  setFreshId(id);
+                }}
+                onNewSticker={() => setSealedId(undefined)}
+                onGoToBoard={() => setView("board")}
+                onMyBoardTile={() => changeTab("board")}
+              />
+            </Suspense>
+          )}
+          {view === "board" && (
+            <StickerBoard
+              key={boardLoads}
+              freshId={freshId}
+              giftClosures={giftClosures}
+              onDraw={openDrawing}
+              onOpenGift={(gift) => setGiftOpening({ gift })}
+            />
+          )}
+          {/* Each in its own boundary, so Explore stays up while an artist's board loads over it. */}
+          {exploredHere && (
+            // Hidden, it takes no layout, paint or focus, and its effects (loads, timers, frame loops)
+            // stop until it shows again.
+            <Activity mode={view === "explore" ? "visible" : "hidden"}>
+              {/* Inert under their board, so Tab and screen readers stay on it. */}
+              <div
+                className="screen-layer"
+                inert={visiting !== undefined}
+                onFocusCapture={(e) => rememberPlace(e.target)}
+                onClickCapture={(e) => rememberPlace(e.target)}
+              >
+                <Suspense fallback={null}>
+                  <ExploreScreen
+                    onOpenArtist={setVisiting}
+                    onOpenMyBoard={() => setView("board")}
+                  />
+                </Suspense>
+              </div>
+            </Activity>
+          )}
+          {view === "explore" && visiting && (
+            <Suspense fallback={null}>
+              <ArtistBoard
+                key={visiting.id}
+                person={visiting}
+                onBack={() => {
+                  flushSync(() => setVisiting(undefined));
+                  explorePlace.current?.focus({ preventScroll: true });
+                }}
+              />
+            </Suspense>
+          )}
+          {view === "shop" && <ShopScreen onBuyReserveTickets={() => setCheckingOut(true)} />}
+        </div>
+        {!drawing && (
+          <TabBar active={view} visiting={visiting !== undefined} onChange={changeTab} />
+        )}
+        {checkingOut && view === "shop" && (
+          <ReserveTicketCheckout
+            onDraw={() => {
+              setCheckingOut(false);
+              openDrawing();
             }}
+            onClose={() => setCheckingOut(false)}
           />
-        </Suspense>
-      )}
-    </div>
+        )}
+        <MotionPermissionCard />
+        {giftOpening && (
+          // Liner while ReceiveGiftDialog's code loads, so the board doesn't show first.
+          <Suspense fallback={<div style={GIFT_LOADING} />}>
+            <ReceiveGiftDialog
+              from={giftOpening}
+              onClose={(receivedId) => {
+                setGiftOpening(undefined);
+                setGiftClosures((n) => n + 1);
+                if (!receivedId) return;
+                setFreshId(receivedId);
+                setBoardLoads((n) => n + 1);
+              }}
+            />
+          </Suspense>
+        )}
+      </div>
+      {sideways && <UprightCover />}
+    </>
   );
 }
