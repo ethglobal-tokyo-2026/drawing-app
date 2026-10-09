@@ -4,21 +4,9 @@
 
 ## Phase 0: small fixes, every size, before the iPad work
 
-Changes ad0ll asked for that apply to phones too. One plan, landing on main first.
+Built and merged 2026-10-09 (67f2aa09); DESIGN.md and PRODUCT.md describe it.
 
-- **Settings:** Language is one row showing its choice, the select laid unseen over the row, with two choices, English and 日本語: "Same as LINE" goes, and a new account starts in LINE's language (the device's, outside LINE). Show 18+ stickers is one switch row, with no heading and no fine print.
-- **Receipt:** "Gratitude received" and the total only. On your own stat board a link under it, "See where it came from", opens your gratitude events (newest first: the sticker, who sent it, the day, Residual on Original Artist shares, the amount), through a new `GET /api/gratitude/events`. Someone else's receipt shows only the total.
-- **Bests:** "Best day" (1日の最多感謝), its figure led by the gratitude heart; every best fits one line.
-- **Sui address:** someone else's stat board shows theirs, through `GET /api/sticker-boards/:userId/sui-address` (the server keeps a wallet it looks up). The paper drops "Sui Testnet" and says "Holds your stickers".
-- **Flip back:** at the stat board's top left, where the name that turns the board over sits, on phones too.
-- **Shop:** reserve tickets lead with their name, then their one line; "You have ×N" sits over the Buy key; no price line; no line under each shelf's name; one "Coming soon" over the shelves.
-- **Sticker board:** the first-selection hint goes; the gift chip says "Gifts for you" beside its count badge, without "and 1 more"; the zipper clears the gift badges and runs to the foot, opening only as far as its sheets.
-- **Sealed card:** no handle in its fine print.
-- **One gratitude mark:** GratitudeIcon in plain Bonbon Pink before every amount (Explore's Most gratitude figures included); the ink-lined heart only on the stat board's printed papers; the disc only in the open trail row.
-- **One text field:** DESIGN.md's `text-field` component, one shared class for Explore's search and the handle prompt.
-- **Words:** "stat board", never "cork back", in AGENTS.MD and every doc; Direct and Residual's vocabulary as built.
-
-**Open, not in Phase 0 until decided:** the My board icon's replacement; the My board tab's pink beside the gifts badge's pink; gifts on their way shown in the sticker detail instead of the board's badge (needs a design).
+**Open, after Phase 0:** the My board icon's replacement; the My board tab's pink beside the gifts badge's pink; gifts on their way shown in the sticker detail instead of the board's badge (needs a design).
 
 ## The iPad layout
 
