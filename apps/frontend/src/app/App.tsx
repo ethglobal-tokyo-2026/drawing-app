@@ -69,6 +69,12 @@ const DRAWING_LOADING: CSSProperties = {
 
 const EXPLORE_CONTROLS = 'button, a[href], input, [role="button"]';
 
+/** Each tab's name in the tab bar, which LINE's header shows as the page title while it's open. */
+const TAB_NAMES = { board: "myBoard", explore: "explore", shop: "shop" } as const satisfies Record<
+  Tab,
+  string
+>;
+
 /** The control in Explore that a click or focus reached, unless it's in one of Explore's sheets. */
 const explorePlaceOf = (target: EventTarget) => {
   const control = target instanceof Element ? target.closest<HTMLElement>(EXPLORE_CONTROLS) : null;
@@ -164,7 +170,8 @@ export default function App() {
 
   useEffect(() => {
     // While a gift is open, its dialog names the page.
-    if (!giftOpening) document.title = t(($) => $.app.pageTitles[view]);
+    if (giftOpening) return;
+    document.title = t(($) => (view === "draw" ? $.app.drawTitle : $.app.tabs[TAB_NAMES[view]]));
   }, [view, giftOpening, t]);
 
   // Once opened, a link's path goes, so a reload after moving on doesn't jump back to it, and a

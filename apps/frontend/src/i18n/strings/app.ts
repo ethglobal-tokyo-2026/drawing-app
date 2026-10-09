@@ -3,17 +3,8 @@ import type { Section } from "../catalog";
 export const app = {
   /** Page title in LINE's header as the app opens, before a screen names itself: the app's name */
   title: { en: "Croquis", ja: "クロッキー" },
-  /** LINE's header shows the page title, so each screen names itself there. */
-  pageTitles: {
-    /** Page title in LINE's header while your own sticker board is open */
-    board: { en: "Your sticker board", ja: "あなたのシールボード" },
-    /** Page title in LINE's header while the Explore tab is open */
-    explore: { en: "Explore", ja: "発見" },
-    /** Page title in LINE's header while the Shop tab is open */
-    shop: { en: "Shop", ja: "ショップ" },
-    /** Page title in LINE's header while the drawing screen is open */
-    draw: { en: "Draw", ja: "かく" },
-  },
+  /** Page title in LINE's header while the drawing screen is open; a tab's screen takes its tab's name */
+  drawTitle: { en: "Draw", ja: "かく" },
   tabs: {
     /** Tab bar at the bottom of every screen but the drawing screen: its screen-reader name */
     sections: { en: "App sections", ja: "アプリのセクション" },
