@@ -11,6 +11,7 @@ const {
   app,
   explore,
   giving,
+  gratitude,
   receiving,
   shop,
   stickerBoard,
@@ -117,6 +118,21 @@ export async function openSettings(page: Page, language: Language) {
   const settings = page.getByRole("region", { name: say(stickerBoard.settings.title, language) });
   await settings.scrollIntoViewIfNeeded();
   return settings;
+}
+
+/**
+ * Chooses `to` as Croquis's language in the open Settings note, which reads in `from`, and waits for
+ * the note's status line to say, in `to`, that the app has switched.
+ */
+export async function chooseLanguage(page: Page, from: Language, to: Language) {
+  const { language } = stickerBoard.settings;
+  await page
+    .getByRole("region", { name: say(stickerBoard.settings.title, from) })
+    .getByRole("combobox", { name: say(language.title, from) })
+    .selectOption({ label: say(language.names[to], from) });
+  await expect(
+    page.getByText(say(language.applied, to, { language: say(language.names[to], to) })),
+  ).toBeVisible();
 }
 
 /**
@@ -315,9 +331,14 @@ export async function sendInLineChat(page: Page, language: Language, no: string)
   await expect(sent).toBeHidden();
 }
 
+/** Opens the Explore tab. */
+export async function openExplore(page: Page, language: Language) {
+  await page.getByRole("button", { name: say(app.tabs.explore, language), exact: true }).click();
+}
+
 /** Someone else's sticker board, opened from an Explore search for their handle. */
 export async function openTheirBoard(page: Page, language: Language, handle: string) {
-  await page.getByRole("button", { name: say(app.tabs.explore, language), exact: true }).click();
+  await openExplore(page, language);
   await page.getByRole("searchbox", { name: say(explore.search.label, language) }).fill(handle);
   await page.getByRole("button", { name: handle }).click();
 }
@@ -362,6 +383,59 @@ export const gratitudeAsk = (page: Page, language: Language, giverHandle: string
   page.getByRole("dialog", {
     name: say(receiving.sendGratitude.title, language, { name: giverHandle }),
   });
+
+/**
+ * The combo's gratitude total and hits from the app's own request to record it. Ask before the combo
+ * ends, so the request isn't missed.
+ */
+function comboFrom(page: Page) {
+  return page
+    .waitForRequest((r) => r.method() === "POST" && new URL(r.url()).pathname === "/api/gratitude")
+    .then((request) => {
+      const body: unknown = request.postDataJSON();
+      if (body === null || typeof body !== "object" || !("total" in body) || !("hits" in body)) {
+        throw new Error("POST /api/gratitude carried no total or hits");
+      }
+      const { total, hits } = body;
+      if (typeof total !== "number" || typeof hits !== "number") {
+        throw new Error(`POST /api/gratitude carried ${JSON.stringify({ total, hits })}`);
+      }
+      return { total, hits };
+    });
+}
+
+/**
+ * Taps the heart `taps` times, as a thumb does. The heart breathes and squashes, so it's tapped where
+ * it stands rather than waited on to hold still; a tap counts anywhere on its resting area.
+ */
+async function tapHeart(heart: Locator, taps: number) {
+  const box = await heart.boundingBox();
+  if (!box) throw new Error("The heart isn't on screen");
+  for (let tap = 0; tap < taps; tap++) {
+    await heart.page().touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+  }
+}
+
+/**
+ * From the ask to send `giverHandle` gratitude: Send, `taps` taps on the heart, and the X, which ends
+ * the combo and sends it. Resolves with the combo as the app recorded it, and its receipt once it's
+ * named sent, which is once the server has the combo.
+ */
+export async function playCombo(page: Page, language: Language, giverHandle: string, taps: number) {
+  await gratitudeAsk(page, language, giverHandle)
+    .getByRole("button", { name: say(receiving.sendGratitude.send, language) })
+    .click();
+  const combo = comboFrom(page);
+  await tapHeart(
+    page.getByRole("button", { name: say(gratitude.heart, language, { handle: giverHandle }) }),
+    taps,
+  );
+  // While the combo runs, the X ends it and sends it, rather than closing the screen.
+  await page.getByRole("button", { name: say(gratitude.endAndSend, language) }).click();
+  const receipt = page.getByRole("region", { name: say(gratitude.receipt.label, language) });
+  await expect(receipt).toBeVisible();
+  return { combo: await combo, receipt };
+}
 
 /** The Transfer Trail's row for a gift you received; the day it was received ends the row. */
 export const receivedRow = (detail: Locator, language: Language, giverHandle: string) =>
