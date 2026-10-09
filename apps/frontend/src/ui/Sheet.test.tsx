@@ -2,8 +2,9 @@
 import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DISMISS_PX, Sheet } from "./Sheet";
+import { Sheet } from "./Sheet";
 import { dragBy } from "./testing";
+import { DISMISS_PX } from "./useSheetDrag";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;

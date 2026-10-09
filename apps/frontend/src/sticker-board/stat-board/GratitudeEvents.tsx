@@ -97,6 +97,7 @@ export function GratitudeEventsSheet({ onClose }: { onClose: () => void }) {
         layer={layer}
         onClose={onClose}
         className="gratitude-events"
+        card
         head={
           <h2 className="gratitude-events__title">
             <GratitudeIcon className="gratitude-events__heart" size={18} />

@@ -1,15 +1,11 @@
-import { useRef, useState, type DOMAttributes, type ReactNode, type RefObject } from "react";
+import { useRef, useState, type ReactNode, type RefObject } from "react";
 import { useTranslation } from "../i18n/react";
 import { useLargeScreen } from "./largeScreen";
 import { useBackToClose } from "./useBackToClose";
 import { useFocusTrap } from "./useFocusTrap";
 import { useModalDialog } from "./useModalDialog";
+import { useSheetDrag } from "./useSheetDrag";
 import "./sheet.css";
-
-/** How far the perforation must be dragged down before the sheet lets go. */
-export const DISMISS_PX = 40;
-/** How far a finger may wander, any way, and still tap rather than drag. */
-const TAP_SLOP_PX = 8;
 
 interface Props {
   /** Names the sheet for assistive tech. */
@@ -42,6 +38,8 @@ interface Props {
    * does, for a sheet that shows there as a card without its tear strip.
    */
   head?: ReactNode;
+  /** On a large screen it shows as a card in the middle of its layer (sheet.css's `.sheet-card`). */
+  card?: boolean;
   className?: string;
   children: ReactNode;
 }
@@ -61,33 +59,29 @@ export function Sheet({
   returnFocus,
   layer,
   head,
+  card = false,
   className,
   children,
 }: Props) {
   const { t } = useTranslation();
   const large = useLargeScreen();
   const ref = useRef<HTMLDivElement>(null);
-  // The press on the perforation: where it started, how far down it is now, and whether it moved.
-  const press = useRef<{ x: number; y: number; dy: number; moved: boolean } | null>(null);
-  // A drag's release is its own; the click the browser sends after it isn't a tap.
-  const dragged = useRef(false);
-  const [dy, setDy] = useState(0);
-  // Where a drag left the sheet, so it slides away from there rather than jumping back first.
-  const [leaveFrom, setLeaveFrom] = useState(0);
+  // The perforation, Escape and Back all close it, and all refuse while its act is on its way.
+  const stays = busy || !closable;
+  const close = () => {
+    if (!stays) onClose();
+  };
+  // A drag down the perforation, or on a large screen down its head, closes it.
+  const drag = useSheetDrag(close);
   const [shown, setShown] = useState(open);
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
       setShown(true);
-      setLeaveFrom(0);
+      drag.reset();
     }
   }
-  // The perforation, Escape and Back all close it, and all refuse while its act is on its way.
-  const stays = busy || !closable;
-  const close = () => {
-    if (!stays) onClose();
-  };
   // The page comes back from inert before the trap gives focus back to it, so this goes first.
   useModalDialog(ref, { layer, active: open });
   useFocusTrap(ref, { active: open, onEscape: onEscape ?? close, returnFocus });
@@ -97,51 +91,19 @@ export function Sheet({
   });
   if (!shown) return null;
 
-  const release = () => {
-    const held = press.current;
-    press.current = null;
-    setDy(0);
-    // A tap closes on the click that follows it, as a screen reader's activation does.
-    if (!held?.moved) return;
-    dragged.current = true;
-    if (held.dy <= DISMISS_PX) return;
-    setLeaveFrom(held.dy);
-    close();
-  };
-  // A finger's drag on the perforation, or on a large screen's head: past DISMISS_PX down, it closes.
-  const drag: DOMAttributes<HTMLElement> = {
-    onPointerDown: (e) => {
-      press.current = { x: e.clientX, y: e.clientY, dy: 0, moved: false };
-      dragged.current = false;
-      e.currentTarget.setPointerCapture(e.pointerId);
-    },
-    onPointerMove: (e) => {
-      const held = press.current;
-      if (!held) return;
-      const x = e.clientX - held.x;
-      const y = e.clientY - held.y;
-      held.moved ||= Math.hypot(x, y) > TAP_SLOP_PX;
-      held.dy = Math.max(0, y);
-      setDy(held.dy);
-    },
-    onPointerUp: release,
-    onPointerCancel: () => {
-      press.current = null;
-      setDy(0);
-    },
-  };
-
   const leaving = !open;
   return (
     <div
       ref={ref}
-      className={["bottom-sheet", leaving && "is-leaving", className].filter(Boolean).join(" ")}
+      className={["bottom-sheet", card && "sheet-card", leaving && "is-leaving", className]
+        .filter(Boolean)
+        .join(" ")}
       role="dialog"
       aria-label={label}
       tabIndex={-1}
       aria-hidden={leaving || undefined}
       inert={leaving}
-      style={dy ? { transform: `translateY(${dy}px)` } : { "--leave-from": `${leaveFrom}px` }}
+      style={drag.style}
       onAnimationEnd={(e) => {
         if (leaving && e.target === e.currentTarget) setShown(false);
       }}
@@ -151,14 +113,13 @@ export function Sheet({
         className="perf"
         aria-label={t(($) => $.ui.sheet.close, { label })}
         aria-disabled={stays || undefined}
-        {...drag}
+        {...drag.handlers}
         onClick={() => {
-          if (dragged.current) dragged.current = false;
-          else close();
+          if (!drag.tookClick()) close();
         }}
       />
       {head !== undefined && (
-        <div className="bottom-sheet__head" {...(large ? drag : {})}>
+        <div className="bottom-sheet__head" {...(large ? drag.handlers : {})}>
           {head}
         </div>
       )}

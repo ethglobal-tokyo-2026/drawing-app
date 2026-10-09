@@ -21,6 +21,8 @@
   --gutter: 12px;
   /* A large screen's edge margin, wider than the phone's gutter. */
   --gutter-large: 20px;
+  /* A card's width on a large screen: a phone's, as the ticket cards and the Sealed card rise at. */
+  --card-w: 400px;
   --ease-peel: cubic-bezier(0.2, 0.7, 0.2, 1);
   --t-peel: 280ms;
   --t-stick: 220ms;
