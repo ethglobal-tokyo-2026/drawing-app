@@ -7,7 +7,8 @@ import { i18next } from "../i18n/i18n";
 import { strings } from "../i18n/strings";
 import { seededRandom } from "../ui/seededRandom";
 import { dealLayout } from "./balloonGeometry";
-import { dealKinds, rollDie, togglePick, type Deal } from "./deal";
+import { dealKinds, PICKS, rollDie, togglePick, type Deal } from "./deal";
+import { FADED } from "./dealMotion";
 import { CHARRED_AT_ROLL, TEASE_LINES } from "./dieMood";
 import { SubjectBalloons } from "./SubjectBalloons";
 import { DEAL, SPORTS, TEST_SUBJECTS, WIND } from "./testSubjects";
@@ -80,6 +81,44 @@ const said = (subject: KyotoSeikaSubject) =>
     .replace("{{english}}", subject.en);
 const status = (host: HTMLElement) => host.querySelector('[role="status"]')?.textContent ?? "";
 
+/** How opaque `el` shows on the sheet: its own opacity times that of everything it sits in. */
+function shownOpacity(el: Element | null): number {
+  if (!el) throw new Error("Nothing to show");
+  let shown = 1;
+  for (let at: Element | null = el; at; at = at.parentElement) {
+    const own = getComputedStyle(at).opacity;
+    shown *= own === "" ? 1 : Number(own);
+  }
+  return shown;
+}
+
+/**
+ * Each cloud as it shows: its white, its pen line and its word, never a pop's, and whether it waits,
+ * faded, for a pick to be undone.
+ */
+const clouds = (host: HTMLElement) =>
+  [...host.querySelectorAll(".subject-balloon")].map((cloud, place) => ({
+    waits: toggles(host)[place].getAttribute("aria-disabled") === "true",
+    white: shownOpacity(cloud.querySelector(".subject-balloon__cloud .shape-fill")),
+    line: [...cloud.querySelectorAll(".subject-balloon__cloud .shape-ink")].map(shownOpacity),
+    word: shownOpacity(
+      cloud.querySelector(
+        ":scope > .subject-balloon__float > .subject-balloon__words > .subject-balloon__word",
+      ),
+    ),
+  }));
+
+/** Every cloud's white shows whole; a waiting cloud's pen line and word show faded, the rest whole. */
+function expectOnlyInkFaded(host: HTMLElement) {
+  for (const { waits, white, line, word } of clouds(host)) {
+    const ink = waits ? FADED : 1;
+    expect(white).toBe(1);
+    expect(line.length).toBeGreaterThan(0);
+    for (const frame of line) expect(frame).toBeCloseTo(ink);
+    expect(word).toBeCloseTo(ink);
+  }
+}
+
 describe("the Kyoto Seika clouds", () => {
   it("names the deal as a group, and each cloud as a toggle by its word: in English with its English", async () => {
     const { host } = render(still(DEAL));
@@ -111,6 +150,17 @@ describe("the Kyoto Seika clouds", () => {
     act(() => toggles(host)[3].click());
     act(() => toggles(host)[1].click());
     expect(dealtNow.picked).toEqual([0, 1]);
+  });
+
+  it("with two picked, fades the rest's pen line and word over a white kept whole, so no cloud behind shows through", () => {
+    const { host } = render(<Harness />);
+    act(() => toggles(host)[0].click());
+    act(() => toggles(host)[1].click());
+    expect(clouds(host).filter(({ waits }) => waits)).toHaveLength(DEAL.subjects.length - PICKS);
+    expectOnlyInkFaded(host);
+    act(() => toggles(host)[1].click());
+    expect(clouds(host).some(({ waits }) => waits)).toBe(false);
+    expectOnlyInkFaded(host);
   });
 
   it("under reduced motion, inks a picked cloud at once, its white word for sight only, and an unpick takes the ink off at once", () => {
@@ -213,6 +263,28 @@ describe("a roll", () => {
     expect(popped).toEqual(before.map((word, place) => (after[place] === word ? null : word)));
     expect(popped[2]).toBeNull();
     expect(popped.some((word) => word !== null)).toBe(true);
+  });
+
+  it("pops a waiting cloud at full strength, swell, rim and beads, and the new cloud settles faded", () => {
+    const animate = vi.spyOn(Element.prototype, "animate");
+    const { host } = render(<Harness />);
+    act(() => toggles(host)[0].click());
+    act(() => toggles(host)[1].click());
+    animate.mockClear();
+    act(() => die(host).click());
+    const waiting = clouds(host).map(({ waits }) => waits);
+    const balloons = [...host.querySelectorAll(".subject-balloon")];
+    const popParts = animate.mock.calls.flatMap(([keyframes], call) => {
+      const part = animate.mock.contexts[call];
+      return part instanceof Element && part.closest(".subject-pop") ? [{ part, keyframes }] : [];
+    });
+    expect(popParts.length).toBeGreaterThan(0);
+    for (const { part, keyframes } of popParts) {
+      expect(waiting[balloons.findIndex((balloon) => balloon.contains(part))]).toBe(true);
+      const first = Array.isArray(keyframes) ? keyframes[0]?.opacity : undefined;
+      expect(shownOpacity(part.parentElement) * Number(first ?? 1)).toBe(1);
+    }
+    expectOnlyInkFaded(host);
   });
 });
 

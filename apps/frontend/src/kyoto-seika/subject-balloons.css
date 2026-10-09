@@ -14,12 +14,13 @@
   position: absolute;
   width: 0;
   height: 0;
-  transition: opacity 160ms var(--ease-out);
 }
 
-/* Two picked: the other three wait, faded, until one is unpicked. */
-.subject-balloon.is-locked {
-  opacity: 0.4;
+/* Two picked: the other three wait with their pen line and word faded (FADED in dealMotion), set on
+   them from SubjectBalloons, until one is unpicked. Their white never fades. */
+.subject-balloon .shape-ink,
+.subject-balloon__word {
+  transition: opacity 160ms var(--ease-out);
 }
 
 /* Each cloud drifts on its own seeded track, played from SubjectBalloons. */
@@ -213,7 +214,8 @@
     animation: none;
   }
 
-  .subject-balloon {
+  .subject-balloon .shape-ink,
+  .subject-balloon__word {
     transition: none;
   }
 }

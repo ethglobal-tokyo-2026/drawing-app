@@ -34,6 +34,7 @@ import {
   CLOUD_ARRIVE,
   cloudPop,
   driftKeyframes,
+  FADED,
   FLOAT,
   POOL,
   SPRING,
@@ -58,19 +59,22 @@ const onVisibility = (onChange: () => void) => {
 
 /**
  * A cloud: the white, and the pen line over it in each boil frame, one showing at a time, in an SVG
- * the size of `box`. `phase` shifts the boil, in frames, so no two clouds flick in step.
+ * the size of `box`. `phase` shifts the boil, in frames, so no two clouds flick in step. `line` is the
+ * pen line's opacity: a cloud fades its line, never its white.
  */
 function Inked({
   white,
   inks,
   box,
   phase,
+  line = 1,
   ref,
 }: {
   white: string;
   inks: readonly string[];
   box: Box;
   phase: number;
+  line?: number;
   ref?: Ref<SVGSVGElement>;
 }) {
   const width = box.maxX - box.minX;
@@ -90,7 +94,7 @@ function Inked({
           key={frame}
           className="shape-ink"
           d={ink}
-          style={{ animationDelay: `${-(frame + phase) * BOIL.frameMs}ms` }}
+          style={{ animationDelay: `${-(frame + phase) * BOIL.frameMs}ms`, opacity: line }}
         />
       ))}
     </svg>
@@ -404,7 +408,10 @@ function SubjectBalloon({
   const gone = useCallback((id: number) => setPops((now) => now.filter((p) => p.id !== id)), []);
 
   const type = fit === "roomy" ? TYPE : TIGHT_TYPE;
-  const size = wordSizePx(subject.ja, fit, spec.w);
+  // Waiting, it fades its pen line and word only, never its white or the parts a roll animates, so
+  // no cloud behind shows through it and its pop plays at full strength.
+  const inkOpacity = locked ? FADED : 1;
+  const word = { fontSize: wordSizePx(subject.ja, fit, spec.w), opacity: inkOpacity };
   const style = {
     left: placed.center.x,
     top: placed.center.y,
@@ -416,7 +423,7 @@ function SubjectBalloon({
   } as CSSProperties;
   const half = { w: spec.w / 2 + spec.lobe, h: spec.h / 2 + spec.padY };
   return (
-    <div className={`subject-balloon ${locked ? "is-locked" : ""}`} style={style}>
+    <div className="subject-balloon" style={style}>
       <div ref={float} className="subject-balloon__float">
         <div ref={cloud} className="subject-balloon__cloud">
           <Inked
@@ -425,6 +432,7 @@ function SubjectBalloon({
             inks={inks}
             box={box}
             phase={place / 2}
+            line={inkOpacity}
           />
           {inked && (
             <svg
@@ -445,12 +453,12 @@ function SubjectBalloon({
           className="subject-balloon__words"
           style={{ left: -spec.w / 2, top: -spec.h / 2, width: spec.w, height: spec.h }}
         >
-          <div className="subject-balloon__word" style={{ fontSize: size }}>
+          <div className="subject-balloon__word" style={word}>
             <SubjectWord subject={subject} />
           </div>
           {inked && (
             <div ref={lettered} className="subject-balloon__lettered" aria-hidden="true">
-              <div className="subject-balloon__word" style={{ fontSize: size }}>
+              <div className="subject-balloon__word" style={word}>
                 <SubjectWord subject={subject} />
               </div>
             </div>

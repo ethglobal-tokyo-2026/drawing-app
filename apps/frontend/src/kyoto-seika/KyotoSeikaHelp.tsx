@@ -2,7 +2,7 @@ import {
   KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
   KYOTO_SEIKA_TIME_USED_S,
 } from "@drawing-app/api/client";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "../i18n/react";
 import { openLinkInLine } from "../line/openLink";
@@ -13,8 +13,8 @@ import { TicketCount } from "../tickets/TicketCount";
 import { Sheet } from "../ui/Sheet";
 import { dealLayout } from "./balloonGeometry";
 import { CensorBar } from "./CensorBar";
-import type { Deal } from "./deal";
-import type { KyotoSeikaSubjectEntry } from "./subjectList";
+import { dealKinds, type Deal } from "./deal";
+import { loadSubjectList, type KyotoSeikaSubjectEntry } from "./subjectList";
 import { SubjectBalloons } from "./SubjectBalloons";
 import "./kyoto-seika-help.css";
 
@@ -30,8 +30,8 @@ const SAMPLE_SUBJECTS = [
 /** The deal the first panel shows: the five, two of them picked, the die not rolled. */
 const SAMPLE_DEAL: Deal = { subjects: SAMPLE_SUBJECTS, picked: [0, 1], rolls: 0 };
 
-/** The drawing screen the first panel crops: a 390px phone's width, and just the room its roomy deal takes. */
-const DEAL_SCREEN = { width: 390, height: 300 };
+/** The drawing screen the first panel crops: a 390px phone's width, and a little more than its roomy deal takes. */
+const DEAL_SCREEN = { width: 390, height: 320 };
 /** The picture's own seed, so it's seated the same every time. */
 const SAMPLE_SEED = 7;
 
@@ -62,16 +62,34 @@ function BarredLine({ line }: { line: "lead" | "maker" }) {
  */
 function HelpBody() {
   const { t } = useTranslation();
-  // Seated by its own five, since the list loads only for a sheet.
-  const [layout] = useState(() =>
-    dealLayout({
-      width: DEAL_SCREEN.width,
-      top: 0,
-      bottom: DEAL_SCREEN.height,
-      kinds: SAMPLE_SUBJECTS.map((s) => s.kind),
-      list: SAMPLE_SUBJECTS,
-      seed: SAMPLE_SEED,
-    }),
+  // Seated by the whole list, as a sheet's deal is, so its clouds come out as wide; the list loads
+  // from its own chunk, as a sheet's does.
+  const [list, setList] = useState<readonly KyotoSeikaSubjectEntry[] | null>(null);
+  useEffect(() => {
+    let shown = true;
+    loadSubjectList().then(
+      (loaded) => {
+        if (shown) setList(loaded.subjects);
+      },
+      // loadSubjectList logs the failure; the first panel goes without its picture.
+      () => {},
+    );
+    return () => {
+      shown = false;
+    };
+  }, []);
+  const layout = useMemo(
+    () =>
+      list &&
+      dealLayout({
+        width: DEAL_SCREEN.width,
+        top: 0,
+        bottom: DEAL_SCREEN.height,
+        kinds: dealKinds(list, SAMPLE_DEAL),
+        list,
+        seed: SAMPLE_SEED,
+      }),
+    [list],
   );
   // Never started: it reads the mode's full length, as a dealt sheet's timer does before Begin.
   const [clock] = useState(() => new SessionClock(undefined, sessionMs(true)));
@@ -84,13 +102,15 @@ function HelpBody() {
         <li className="kyoto-seika-help__koma">
           <div className="kyoto-seika-help__panel" aria-hidden="true" inert>
             <div className="kyoto-seika-help__deal" style={DEAL_SCREEN}>
-              <SubjectBalloons
-                deal={SAMPLE_DEAL}
-                layout={layout}
-                onRoll={stayPut}
-                onPick={stayPut}
-                picture
-              />
+              {layout && (
+                <SubjectBalloons
+                  deal={SAMPLE_DEAL}
+                  layout={layout}
+                  onRoll={stayPut}
+                  onPick={stayPut}
+                  picture
+                />
+              )}
             </div>
           </div>
           <span className="kyoto-seika-help__caption keep-phrases">

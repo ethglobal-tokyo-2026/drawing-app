@@ -34,6 +34,12 @@ export const BOIL = { frames: 3, frameMs: 180 };
 /** A pick's ink pools out from the tap; an unpick drains it back into the tap, quicker. */
 export const POOL = { inMs: 180, drainMs: 110, drainEase: "ease-in" };
 
+/**
+ * With two picked, the other clouds' pen line and word fade to this opacity while they wait. Their
+ * white stays opaque, so a cloud behind never shows through.
+ */
+export const FADED = 0.4;
+
 const TAU = Math.PI * 2;
 /** Each axis mixes one slow wave, one middling and one quick, as harmonics of its loop. */
 const WAVES = [
