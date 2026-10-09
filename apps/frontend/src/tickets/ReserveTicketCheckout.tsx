@@ -1,7 +1,6 @@
 import type { TicketPurchasePayment } from "@drawing-app/api/client";
 import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ApiError } from "../api/apiClient";
-import { useApi } from "../api/useApi";
 import { errorDetail, errorMessage, problemOf } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { ArrowClockwise, BuyTicketsIcon, DrawIcon } from "../icons";
@@ -41,11 +40,15 @@ interface Props {
   onClose: () => void;
 }
 
-/** A signed payment, with what it buys. */
-interface SignedPurchase {
-  body: TicketPurchasePayment;
+/** What a purchase bought, and what it cost: ¥0 for the free first pack. */
+interface Bought {
   tickets: number;
   priceYen: number;
+}
+
+/** A signed payment, with what it buys. */
+interface SignedPurchase extends Bought {
+  body: TicketPurchasePayment;
 }
 
 /**
@@ -139,7 +142,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const [step, setStep] = useState<Step>("choose");
   const [waiting, setWaiting] = useState<Waiting>("signing");
   const [chosen, setChosen] = useState<ReservePack["tickets"]>(1);
-  const [bought, setBought] = useState<SignedPurchase | null>(null);
+  const [bought, setBought] = useState<Bought | null>(null);
   const [failure, setFailure] = useState<PaymentFailure | null>(null);
   const [lost, setLost] = useState<LostAnswer | null>(null);
   const [adding, setAdding] = useState(false);
@@ -148,10 +151,11 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const sui = useSuiAccount();
   const jpyc = useJpycBalance(sui.address, shop?.payment);
   const { tickets: state, buyer } = useTickets();
-  const api = useApi();
   const id = useId();
 
   const pack = shop?.packs.find((p) => p.tickets === chosen);
+  // The free first pack pays nothing, so it needs neither JPYC nor a Sui account.
+  const free = pack?.priceYen === 0;
   // A discounted pack's full price is its tickets at the server's price for one alone.
   const single = shop && singleTicketPrice(shop.packs);
   const balance = jpyc.balance;
@@ -160,7 +164,9 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const short = pack && balance !== null && balance < BigInt(pack.priceJpyc);
   // What to do when it's short: a smaller pack, if the balance covers one.
   const coversSmaller =
-    balance !== null && !!shop?.packs.some((p) => BigInt(p.priceJpyc) <= balance);
+    balance !== null &&
+    !!pack &&
+    !!shop?.packs.some((p) => p.tickets < pack.tickets && BigInt(p.priceJpyc) <= balance);
 
   /** Has the server run a signed payment and add its tickets. */
   const submit = async (signed: SignedPurchase) => {
@@ -183,6 +189,24 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
     }
   };
 
+  /** Takes the free first pack: nothing to sign, and the server adds its tickets as it starts it. */
+  const takeFree = async (p: ReservePack) => {
+    setStep("paying");
+    setWaiting("adding");
+    try {
+      const { purchase } = await buyer.startTicketPurchase({ tickets: p.tickets, priceYen: 0 });
+      setBought({ tickets: purchase.tickets, priceYen: purchase.priceYen });
+      setStep("done");
+    } catch (e) {
+      console.error(`Taking the free pack of ${p.tickets} tickets failed`, e);
+      setFailure(paymentFailureOf(e));
+      setStep("error");
+    } finally {
+      // It's free once, so the packs load again with what they cost now.
+      if (packs.state === "ready") packs.refresh();
+    }
+  };
+
   const pay = async (p: ReservePack) => {
     setStep("paying");
     setWaiting("signing");
@@ -192,7 +216,13 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
       const { signSponsored, waitForSuiSigner } = await import("../identity/suiSigner");
       await waitForSuiSigner();
       // The server records the purchase and builds its payment, which the wallet signs as sender.
-      const { purchase, payment } = await api.startTicketPurchase(p.tickets);
+      const started = await buyer.startTicketPurchase({ tickets: p.tickets, priceYen: p.priceYen });
+      const { purchase, payment } = started;
+      if (payment === null) {
+        throw new Error(
+          `The server gave the pack of ${p.tickets} free, though it showed ¥${p.priceYen}`,
+        );
+      }
       const { digest, signature } = await signSponsored(payment);
       signed = {
         body: { purchaseId: purchase.id, digest, signature },
@@ -273,9 +303,11 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         <h2 className="out-of-tickets__title" id={`${id}-title`}>
           {t(($) => $.tickets.checkout.added, { count: bought.tickets })}
         </h2>
-        <p className="out-of-tickets__line out-of-tickets__quiet">
-          {t(($) => $.tickets.checkout.paid, { price: formatYen(bought.priceYen) })}
-        </p>
+        {bought.priceYen > 0 && (
+          <p className="out-of-tickets__line out-of-tickets__quiet">
+            {t(($) => $.tickets.checkout.paid, { price: formatYen(bought.priceYen) })}
+          </p>
+        )}
         <TearLine />
         <Key
           className="out-of-tickets__key"
@@ -441,7 +473,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
                     {t(($) => $.tickets.checkout.pack, { count: p.tickets })}
                   </span>
                   <span className="reserve-checkout__price">
-                    {p.discountPercent > 0 && single && (
+                    {p.priceYen > 0 && p.discountPercent > 0 && single && (
                       <span className="reserve-checkout__was">
                         <span className="fine reserve-checkout__discount">
                           {t(($) => $.tickets.checkout.discount, { percent: p.discountPercent })}
@@ -455,7 +487,9 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
                         </s>
                       </span>
                     )}
-                    <strong>{formatYen(p.priceYen)}</strong>
+                    <strong>
+                      {p.priceYen === 0 ? t(($) => $.tickets.checkout.free) : formatYen(p.priceYen)}
+                    </strong>
                   </span>
                 </button>
               ))}
@@ -496,18 +530,20 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
             className="out-of-tickets__key"
             tone="blue"
             icon={<BuyTicketsIcon />}
-            disabled={!pack || !shop || !sui.address || short}
+            disabled={!pack || !shop || (!free && (!sui.address || short))}
             aria-busy={paying}
             aria-disabled={paying}
             onClick={() => {
-              if (!paying && pack && shop) void pay(pack);
+              if (!paying && pack && shop) void (free ? takeFree(pack) : pay(pack));
             }}
           >
             {paying
               ? t(($) => $.tickets.checkout.paying)
-              : pack
-                ? t(($) => $.tickets.checkout.payPrice, { price: formatYen(pack.priceYen) })
-                : t(($) => $.tickets.checkout.pay)}
+              : free
+                ? t(($) => $.tickets.checkout.takeFree)
+                : pack
+                  ? t(($) => $.tickets.checkout.payPrice, { price: formatYen(pack.priceYen) })
+                  : t(($) => $.tickets.checkout.pay)}
           </Key>
           {close}
         </div>

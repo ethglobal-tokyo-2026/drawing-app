@@ -19,6 +19,7 @@ import { insertSealedSticker } from "../testing/rows.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
 import { ticketPaymentReference } from "../tickets/paymentReference.ts";
 import {
+  PAID_PACK as PACK,
   payPurchase,
   purchasesApp,
   signedBy,
@@ -28,21 +29,32 @@ import {
 } from "../tickets/testPurchases.ts";
 import { spendBody } from "../tickets/testSpends.ts";
 import {
+  FREE_FIRST_PACK_TICKETS,
+  startedTicketPurchaseSchema,
   TICKET_PACKS,
   TICKET_PRICE_YEN,
   ticketUseSchema,
   type TicketKind,
+  type TicketPack,
 } from "../tickets/tickets.ts";
 
 const ticketsBodySchema = z.object({ tickets: ticketsSchema });
 const spendBodySchema = z.object({ ticketUse: ticketUseSchema, tickets: ticketsSchema });
 const shopBodySchema = z.object({ shop: ticketShopSchema });
+/** A free pack's start: nothing to pay, and its tickets already counted. */
+const freeStartBodySchema = z.object({
+  purchase: startedTicketPurchaseSchema,
+  payment: z.null(),
+  tickets: ticketsSchema,
+});
 
 /** A sealed sticker's cut, for the ticket stubs. */
 const SEALED_CUT = { outline: "M0 0L4 0L4 2Z", width: 4, height: 2 };
 
-/** The pack after the single ticket: it has tickets to spare once one is spent. */
-const [, PACK] = TICKET_PACKS;
+/** The pack each person's first one of is free, while the offer is on. */
+const FREE_PACK = TICKET_PACKS.find((pack) => pack.tickets === FREE_FIRST_PACK_TICKETS);
+/** The packs everyone pays for. */
+const PAID_PACKS = TICKET_PACKS.filter((pack) => pack !== FREE_PACK);
 /** More tickets than any pack holds. */
 const NOT_A_PACK = Math.max(...TICKET_PACKS.map((pack) => pack.tickets)) + 1;
 const PERCENT = 100;
@@ -88,14 +100,14 @@ const getShop = async (as = userId) =>
   (await bodyOf(await test.send("GET", "/api/ticket-shop", { as }), shopBodySchema)).shop;
 
 /** Starts a purchase of `pack` as `as`, which must be granted. */
-const started = (pack: { tickets: number }, as = userId) => startedPurchase(test, as, pack.tickets);
+const started = (pack: TicketPack, as = userId) => startedPurchase(test, as, pack);
 
 /** Pays `purchaseId` with `as`'s signature over `payment`. */
 const pay = async (purchaseId: number, payment: SponsoredTransaction, as = userId) =>
   payPurchase(test, as, purchaseId, await signedBy(shop.walletOf(as), payment));
 
 /** Starts a purchase of `pack`, signs and pays it, and returns the tickets after. */
-async function buyPack(pack: (typeof TICKET_PACKS)[number]) {
+async function buyPack(pack: TicketPack) {
   const { purchase, payment } = await started(pack);
   return (await bodyOf(await pay(purchase.id, payment), ticketsBodySchema, 201)).tickets;
 }
@@ -243,7 +255,7 @@ describe("tickets", () => {
   it("price each pack in JPYC at one yen each, and say where to pay", async () => {
     const shop = await getShop();
     expect(shop.packs.map(({ tickets, priceYen }) => ({ tickets, priceYen }))).toEqual(
-      TICKET_PACKS,
+      TICKET_PACKS.map((pack) => (pack === FREE_PACK ? { ...pack, priceYen: 0 } : pack)),
     );
     for (const pack of shop.packs) {
       expect(pack.priceYen * PERCENT).toBe(
@@ -271,7 +283,7 @@ describe("tickets", () => {
 
   it("add each pack's tickets once its signed payment lands, recording what it paid", async () => {
     let reserveLeft = 0;
-    for (const pack of TICKET_PACKS) {
+    for (const pack of PAID_PACKS) {
       const { purchase, payment } = await started(pack);
       reserveLeft += pack.tickets;
       const paid = await bodyOf(await pay(purchase.id, payment), ticketsBodySchema, 201);
@@ -376,12 +388,12 @@ describe("tickets", () => {
   it("refuse a buyer without a Sui wallet, and give up a purchase Shinami won't sponsor", async () => {
     const walletless = insertUser(test.db);
     shop.without.add(walletless);
-    expect(await refusalOf(await startPurchase(test, walletless, PACK.tickets))).toMatchObject({
+    expect(await refusalOf(await startPurchase(test, walletless, PACK))).toMatchObject({
       status: 409,
       error: "no_sui_wallet",
     });
     shop.chain.refuseNext(new SponsorshipError("refused", "The payer holds too little JPYC"));
-    expect(await refusalOf(await startPurchase(test, userId, PACK.tickets))).toMatchObject({
+    expect(await refusalOf(await startPurchase(test, userId, PACK))).toMatchObject({
       status: 422,
       error: "sponsorship_refused",
     });
@@ -390,7 +402,9 @@ describe("tickets", () => {
   });
 
   it("refuse a count that isn't a pack, and a payment whose digest or signature isn't Sui's", async () => {
-    expect(await refusalOf(await startPurchase(test, userId, NOT_A_PACK))).toMatchObject({
+    expect(
+      await refusalOf(await startPurchase(test, userId, { tickets: NOT_A_PACK, priceYen: 0 })),
+    ).toMatchObject({
       status: 400,
       error: "pack_unknown",
     });
@@ -410,10 +424,73 @@ describe("tickets", () => {
   it("start and pay nothing in mock chain mode", async () => {
     const mock = await createTestApp();
     const someone = insertUser(mock.db);
-    expect(await refusalOf(await startPurchase(mock, someone, PACK.tickets))).toMatchObject({
+    expect(await refusalOf(await startPurchase(mock, someone, PACK))).toMatchObject({
       status: 503,
       error: "chain_unavailable",
     });
+  });
+
+  it("refuse a start at a price that isn't the pack's for the buyer with price_changed, recording nothing", async () => {
+    expect(
+      await refusalOf(await startPurchase(test, userId, { ...PACK, priceYen: 0 })),
+    ).toMatchObject({ status: 409, error: "price_changed" });
+    const raised = { ...PACK, priceYen: PACK.priceYen + 1 };
+    expect(await refusalOf(await startPurchase(test, userId, raised))).toMatchObject({
+      status: 409,
+      error: "price_changed",
+    });
+    expect(test.db.select().from(ticketPurchases).all()).toEqual([]);
+  });
+});
+
+/** The free first pack, which these tests need the offer on for. */
+function freePack() {
+  if (!FREE_PACK) throw new Error("The free first pack is off");
+  return FREE_PACK;
+}
+
+/** Starts the free first pack at ¥0, as `as`. */
+const startFree = (as = userId, app = test) =>
+  startPurchase(app, as, { tickets: freePack().tickets, priceYen: 0 });
+
+/** The shop's pack of `tickets`, as the buyer sees it. */
+const shownPack = async (tickets: number) =>
+  (await getShop()).packs.find((pack) => pack.tickets === tickets);
+
+describe.runIf(FREE_PACK)("the free first pack", () => {
+  it("is ¥0 for a new person, counts its tickets without Sui, and is back at its price after", async () => {
+    const free = freePack();
+    expect(await shownPack(free.tickets)).toMatchObject({ priceYen: 0, priceJpyc: "0" });
+    const taken = await bodyOf(await startFree(), freeStartBodySchema, 201);
+    expect(taken.purchase).toMatchObject({ tickets: free.tickets, priceYen: 0 });
+    expect(taken.tickets.reserveLeft).toBe(free.tickets);
+    expect(shop.chain.built).toEqual([]);
+    expect(await shownPack(free.tickets)).toMatchObject({
+      priceYen: free.priceYen,
+      priceJpyc: jpycOf(free).toString(),
+    });
+    // Its tickets spend as bought ones do, once the daily tickets are gone.
+    await spendTickets("daily", DAILY_TICKETS_PER_DAY);
+    expect((await spendTicket("reserve")).tickets.reserveLeft).toBe(free.tickets - 1);
+  });
+
+  it("is given once: starts at ¥0 after it, at once or one after another, are refused with free_pack_used", async () => {
+    const free = freePack();
+    const atOnce = await Promise.all([startFree(), startFree()]);
+    expect(atOnce.map((answer) => answer.status).toSorted((a, b) => a - b)).toEqual([201, 409]);
+    for (const again of [...atOnce.filter((answer) => answer.status === 409), await startFree()]) {
+      expect(await refusalOf(again)).toMatchObject({ status: 409, error: "free_pack_used" });
+    }
+    expect(test.db.select().from(ticketPurchases).all()).toHaveLength(1);
+    // At its price, it's bought like any other pack.
+    expect((await buyPack(free)).reserveLeft).toBe(2 * free.tickets);
+  });
+
+  it("is given to each person, and in mock chain mode too, where nothing can be paid", async () => {
+    expect((await startFree()).status).toBe(201);
+    expect((await startFree(shop.buyer())).status).toBe(201);
+    const mock = await createTestApp();
+    expect((await startFree(insertUser(mock.db), mock)).status).toBe(201);
   });
 });
 

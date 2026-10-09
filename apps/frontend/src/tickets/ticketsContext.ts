@@ -2,8 +2,11 @@ import type { TicketKind, Tickets, TicketUse } from "@drawing-app/api/client";
 import { createContext } from "react";
 import type { ApiClient, ApiError } from "../api/apiClient";
 
-/** The requests a purchase sends: buying a pack, and loading the tickets once it's already counted. */
-export type TicketBuyer = Pick<ApiClient, "buyTickets" | "tickets">;
+/**
+ * The requests a purchase sends: starting it, which adds the free first pack's tickets at once,
+ * buying a pack, and loading the tickets once it's already counted.
+ */
+export type TicketBuyer = Pick<ApiClient, "startTicketPurchase" | "buyTickets" | "tickets">;
 
 /**
  * What the drawing screen's sheet needs from Draw: "fresh" when Draw starts a new sheet, which spends a ticket;

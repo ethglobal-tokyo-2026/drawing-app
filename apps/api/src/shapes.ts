@@ -486,7 +486,8 @@ export const ticketShopSchema = z.object({
   packs: z.array(
     z.object({
       tickets: z.literal([1, 3, 5, 10]),
-      priceYen: positiveInt,
+      /** ¥0 for the free first pack, until this person has had it. */
+      priceYen: count,
       /** Off ¥100 per ticket. */
       discountPercent: count,
       /** The same price in JPYC base units, as decimal text: one JPYC is one yen. */

@@ -23,6 +23,7 @@ import type {
   SpendTicket,
   SponsoredTransaction,
   StartedTicketPurchase,
+  StartPurchase,
   Sticker,
   StickerBoard,
   StickerDetail,
@@ -63,11 +64,13 @@ interface SealRequest {
 /** Opening a Gift Message's link: its token as the link carries it, which the client checks. */
 export type GiftOpening = Omit<OpenGiftBody, "giftClaimToken"> & { giftClaimToken: string };
 
-/** A purchase started: the purchase, and its payment for the person's wallet to sign. */
-interface StartedPurchase {
-  purchase: StartedTicketPurchase;
-  payment: SponsoredTransaction;
-}
+/**
+ * A purchase started: the purchase, and its payment for the person's wallet to sign; or the free
+ * first pack, with nothing to pay and its tickets already added.
+ */
+type StartedPurchase =
+  | { purchase: StartedTicketPurchase; payment: SponsoredTransaction }
+  | { purchase: StartedTicketPurchase; payment: null; tickets: Tickets };
 
 /** The REST API, one method per route the app calls. */
 export interface ApiClient {
@@ -115,8 +118,11 @@ export interface ApiClient {
   spendTicket: (spend: SpendTicket) => Promise<{ ticketUse: TicketUse; tickets: Tickets }>;
   /** GET /api/ticket-shop */
   ticketShop: () => Promise<TicketShop>;
-  /** POST /api/ticket-purchases/start: records a purchase of the pack of `tickets`, and builds its payment. */
-  startTicketPurchase: (tickets: number) => Promise<StartedPurchase>;
+  /**
+   * POST /api/ticket-purchases/start: records a purchase of a pack at the price the shop showed, and
+   * builds its payment, or gives the free first pack.
+   */
+  startTicketPurchase: (pack: StartPurchase) => Promise<StartedPurchase>;
   /** POST /api/ticket-purchases: a started purchase's signed payment, which the server runs and adds tickets for. */
   buyTickets: (payment: TicketPurchasePayment) => Promise<Tickets>;
 

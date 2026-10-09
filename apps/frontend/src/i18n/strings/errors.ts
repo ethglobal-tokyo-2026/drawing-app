@@ -168,6 +168,16 @@ export const errors = {
   own_gift: { en: "You can’t open your own gift.", ja: "自分が贈ったギフトは、ひらけません。" },
   /** Reserve ticket checkout, after tapping Pay: starting the purchase (POST /api/ticket-purchases/start) for a pack size the shop doesn't sell, under “Payment didn’t go through” through errorMessage; nothing was paid */
   pack_unknown: { en: "That ticket pack doesn’t exist.", ja: "そのチケットパックはありません。" },
+  /** Reserve ticket checkout, after tapping Get it free: taking the free first pack (POST /api/ticket-purchases/start) when you've already had it, such as in another window, under “Payment didn’t go through” through errorMessage; Back to the packs shows its price now */
+  free_pack_used: {
+    en: "You’ve already had your free pack.",
+    ja: "無料パックはすでにもらっています。",
+  },
+  /** Reserve ticket checkout, after tapping Pay: starting the purchase (POST /api/ticket-purchases/start) of a pack whose price changed since the checkout showed it, under “Payment didn’t go through” through errorMessage; nothing was paid */
+  price_changed: {
+    en: "This pack’s price has changed, so nothing was paid.",
+    ja: "このパックの価格が変わったため、支払いは行われていません。",
+  },
   /** Reserve ticket checkout, after paying: the reason in “Tickets not added yet” when Sui's answer to the signed payment (POST /api/ticket-purchases) never came, under the key that sends it again */
   payment_not_landed: {
     en: "Sui hasn’t answered about the payment yet.",

@@ -39,6 +39,7 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | Best combo                       | 最高コンボ                             | The most hits in one combo; never 最大コンボ                                          |
 | streak                           | 連続日数                               | Days in a row you sealed a sticker; the longest: 最長連続日数                         |
 | ticket / daily / reserve         | チケット / 無償チケット / 有償チケット | Gacha's words for free and bought; 無償チケットから先に使われます (ad0ll, 2026-09-27) |
+| Free (a pack's price)            | 無料                                   | The free first pack's price; 無償 is only the daily ticket's                          |
 | Shop (the tab)                   | ショップ                               |                                                                                       |
 | laminate / backing foil          | ラミネート / ホイル                    | The Shop's coming-soon shelves                                                        |
 | Original Artist                  | 作者                                   |                                                                                       |

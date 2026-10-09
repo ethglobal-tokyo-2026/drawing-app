@@ -135,6 +135,12 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
   // them: they load again.
   const buyer = useMemo<TicketBuyer>(
     () => ({
+      startTicketPurchase: async (pack) => {
+        const request = ++sent.current;
+        const started = await api.startTicketPurchase(pack);
+        if (started.payment === null && !show(request, started.tickets)) refresh();
+        return started;
+      },
       buyTickets: async (purchase) => {
         const request = ++sent.current;
         const bought = await api.buyTickets(purchase);

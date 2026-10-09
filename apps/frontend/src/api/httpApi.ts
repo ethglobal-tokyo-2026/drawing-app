@@ -275,8 +275,8 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, "GET /api/ticket-shop");
       return (await response.json()).shop;
     },
-    startTicketPurchase: async (tickets) => {
-      const response = await api["ticket-purchases"].start.$post({ json: { tickets } });
+    startTicketPurchase: async (pack) => {
+      const response = await api["ticket-purchases"].start.$post({ json: pack });
       if (!response.ok) throw await refusal(response, "POST /api/ticket-purchases/start");
       return response.json();
     },

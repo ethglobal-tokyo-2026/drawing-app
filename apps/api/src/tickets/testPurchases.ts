@@ -7,7 +7,12 @@ import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeSuiWallets } from "../testing/fakes.ts";
 import { fakeSui, type FakeSui } from "../testing/fakeSui.ts";
 import { bodyOf } from "../testing/responses.ts";
-import { startedTicketPurchaseSchema } from "./tickets.ts";
+import {
+  FREE_FIRST_PACK_TICKETS,
+  startedTicketPurchaseSchema,
+  TICKET_PACKS,
+  type StartPurchase,
+} from "./tickets.ts";
 
 const startedBodySchema = z.object({
   purchase: startedTicketPurchaseSchema,
@@ -33,13 +38,22 @@ export async function purchasesApp(databaseFile?: string) {
 }
 export type PurchasesApp = Awaited<ReturnType<typeof purchasesApp>>;
 
-/** POST /api/ticket-purchases/start for a pack of `tickets`, as `as`. */
-export const startPurchase = (test: TestApp, as: string, tickets: number) =>
-  test.send("POST", "/api/ticket-purchases/start", { as, body: { tickets } });
+/** A pack of more than one ticket that's never free, so anyone buys it at its price. */
+export const PAID_PACK = (() => {
+  const pack = TICKET_PACKS.find(
+    (offer) => offer.tickets > 1 && offer.tickets !== FREE_FIRST_PACK_TICKETS,
+  );
+  if (!pack) throw new Error("No pack of more than one ticket is sold at its price");
+  return pack;
+})();
 
-/** Starts a purchase of a pack of `tickets` as `as`, which must be granted: the purchase and its payment. */
-export const startedPurchase = async (test: TestApp, as: string, tickets: number) =>
-  bodyOf(await startPurchase(test, as, tickets), startedBodySchema, 201);
+/** POST /api/ticket-purchases/start for `pack`, at the price the shop showed, as `as`. */
+export const startPurchase = (test: TestApp, as: string, { tickets, priceYen }: StartPurchase) =>
+  test.send("POST", "/api/ticket-purchases/start", { as, body: { tickets, priceYen } });
+
+/** Starts a purchase of `pack` as `as`, which must be granted: the purchase and its payment. */
+export const startedPurchase = async (test: TestApp, as: string, pack: StartPurchase) =>
+  bodyOf(await startPurchase(test, as, pack), startedBodySchema, 201);
 
 /** `wallet`'s signature over a payment the server built, as the app posts it. */
 export const signedBy = async (wallet: Ed25519Keypair, payment: SponsoredTransaction) => ({

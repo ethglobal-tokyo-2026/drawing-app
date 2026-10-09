@@ -88,6 +88,7 @@ export type { TimelapseV1 } from "./stickers/timelapse.ts";
 export type {
   SpendTicket,
   StartedTicketPurchase,
+  StartPurchase,
   TicketKind,
   TicketPurchasePayment,
   TicketUse,

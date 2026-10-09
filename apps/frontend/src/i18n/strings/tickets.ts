@@ -147,6 +147,10 @@ export const tickets = {
     discount: { en: "−{{percent}}%", ja: "{{percent}}%オフ" },
     /** Reserve ticket checkout: screen-reader text for a discounted pack's struck-through full price */
     was: { en: "was {{price}}", ja: "通常価格{{price}}" },
+    /** Reserve ticket checkout: in a pack's price column, in its price's place, while it's your free first pack */
+    free: { en: "Free", ja: "無料" },
+    /** Reserve ticket checkout: the blue Pay key, in place of “Pay ¥…”, while the picked pack is your free first pack */
+    takeFree: { en: "Get it free", ja: "無料でもらう" },
     /** Reserve ticket checkout: the blue Pay key, before a pack's price is known */
     pay: { en: "Pay", ja: "支払う" },
     /** Reserve ticket checkout: the blue Pay key, with the chosen pack's price */

@@ -171,7 +171,7 @@ describe("the chat menu after a spend or a purchase", () => {
 
   it("shows reserve tickets only once the daily ones are gone, after a purchase", async () => {
     for (let spent = 0; spent < DAILY_TICKETS_PER_DAY; spent++) await spendTicket("daily");
-    const { purchase, payment } = await startedPurchase(test, userId, ONE_TICKET.tickets);
+    const { purchase, payment } = await startedPurchase(test, userId, ONE_TICKET);
     const signed = await signedBy(wallets.keyOf(userId), payment);
     expect((await payPurchase(test, userId, purchase.id, signed)).status).toBe(201);
     expect(await menuAfterLinks()).toBe(TEST_CHAT_MENU_IDS.en.reserve);

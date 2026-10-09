@@ -2,6 +2,7 @@
 import {
   KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
   type StartedTicketPurchase,
+  type StartPurchase,
   type Tickets,
   type TicketShop as Shop,
 } from "@drawing-app/api/client";
@@ -312,10 +313,18 @@ const paidFor = (tickets: number) => ({
 const checkoutApi = (overrides: Partial<ApiClient> = {}) =>
   emptyApi({
     ticketShop: () => Promise.resolve(SHOP),
-    startTicketPurchase: (tickets) =>
+    startTicketPurchase: ({ tickets }) =>
       Promise.resolve({ purchase: purchaseFor(tickets), payment: PAYMENT }),
     ...overrides,
   });
+
+/** SHOP as a new person sees it: the pack of 3 is their free first pack. */
+const FREE_SHOP: Shop = {
+  ...SHOP,
+  packs: SHOP.packs.map((p) =>
+    p.tickets === 3 ? { ...p, priceYen: 0, discountPercent: 100, priceJpyc: "0" } : p,
+  ),
+};
 
 describe("ReserveTicketCheckout", () => {
   const checkout = () => <ReserveTicketCheckout onDraw={onDraw} onClose={onBoard} />;
@@ -334,7 +343,7 @@ describe("ReserveTicketCheckout", () => {
 
   it("starts a purchase of the chosen pack, signs the payment the server built, and shows the tickets the server added", async () => {
     const steps: string[] = [];
-    const started = vi.fn((count: number) => {
+    const started = vi.fn(({ tickets: count }: StartPurchase) => {
       steps.push("start");
       return Promise.resolve({ purchase: purchaseFor(count), payment: PAYMENT });
     });
@@ -358,12 +367,69 @@ describe("ReserveTicketCheckout", () => {
     expect(document.querySelectorAll(".ticket-stub")).toHaveLength(1);
     expect(document.querySelector(".ticket-stub__badge")?.textContent).toBe("×4");
     expect(steps).toEqual(["start", "sign"]);
-    expect(started).toHaveBeenCalledExactlyOnceWith(3);
+    expect(started).toHaveBeenCalledExactlyOnceWith({
+      tickets: 3,
+      priceYen: purchaseFor(3).priceYen,
+    });
     expect(signSponsored).toHaveBeenCalledExactlyOnceWith(PAYMENT);
     expect(bought).toHaveBeenCalledExactlyOnceWith(paidFor(3));
     expect(buttonNamed("Draw")?.getAttribute("aria-label")).toContain("4 reserve tickets");
     click("Draw");
     expect(onDraw).toHaveBeenCalledOnce();
+  });
+
+  it("shows the free first pack as Free with no discount, gives it with no JPYC and nothing to sign, then shows its price", async () => {
+    vi.mocked(getJpycBalance).mockResolvedValue(0n);
+    const shops = [FREE_SHOP, SHOP];
+    const started = vi.fn<ApiClient["startTicketPurchase"]>(() =>
+      Promise.resolve({
+        purchase: { ...purchaseFor(3), priceYen: 0 },
+        payment: null,
+        tickets: tickets(3, 3),
+      }),
+    );
+    await open(
+      checkoutApi({
+        ticketShop: () => Promise.resolve(shops.shift() ?? SHOP),
+        startTicketPurchase: started,
+      }),
+    );
+    const priceOf = (name: string) =>
+      [...document.querySelectorAll("[role=radio]")]
+        .find((pack) => pack.textContent?.includes(name))
+        ?.querySelector(".reserve-checkout__price")?.textContent;
+    expect(priceOf("3 tickets")).toBe("Free");
+    click("3 tickets");
+    click("Get it free");
+    await settle(500);
+    expect(title()).toBe("3 reserve tickets added");
+    expect(document.querySelector(".ticket-stub__badge")?.textContent).toBe("×3");
+    expect(document.body.textContent).not.toContain("Paid");
+    expect(started).toHaveBeenCalledExactlyOnceWith({ tickets: 3, priceYen: 0 });
+    expect(signSponsored).not.toHaveBeenCalled();
+    click("Buy more tickets");
+    expect(priceOf("3 tickets")).toContain("¥270");
+  });
+
+  it("says so when the free first pack was already had, and shows the packs' prices now", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const shops = [FREE_SHOP, SHOP];
+    await open(
+      checkoutApi({
+        ticketShop: () => Promise.resolve(shops.shift() ?? SHOP),
+        startTicketPurchase: () =>
+          Promise.reject(new ApiError(409, { error: "free_pack_used", detail: "had it" })),
+      }),
+    );
+    click("3 tickets");
+    click("Get it free");
+    await settle(500);
+    expect(title()).toBe("Payment didn’t go through");
+    expect(document.querySelector("[role=alert]")?.textContent).toBe(
+      "You’ve already had your free pack.",
+    );
+    click("Back to the packs");
+    expect(buttonNamed("Pay ¥270")).toBeDefined();
   });
 
   it("says nothing was paid when the purchase can't be started, and signs nothing", async () => {
@@ -426,7 +492,7 @@ describe("ReserveTicketCheckout", () => {
       .fn()
       .mockRejectedValueOnce(new ApiError(503, { error: "payment_not_landed" }))
       .mockResolvedValueOnce(tickets(3, 1));
-    const started = vi.fn((count: number) =>
+    const started = vi.fn(({ tickets: count }: StartPurchase) =>
       Promise.resolve({ purchase: purchaseFor(count), payment: PAYMENT }),
     );
     await open(checkoutApi({ buyTickets: bought, startTicketPurchase: started }));
