@@ -4,7 +4,7 @@ import { migrateDatabase } from "@drawing-app/db/migrate";
 import { serve } from "@hono/node-server";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { z } from "zod";
-import { createServer } from "./app.ts";
+import { createServer, STICKER_IMAGES_PATH } from "./app.ts";
 import {
   chatMenuFromEnvironment,
   messagingChannelFromEnvironment,
@@ -42,8 +42,11 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(32),
   LINE_CHANNEL_ID: z.string().min(1),
   IMAGE_DIR: z.string().min(1),
-  // Where the sticker images load from: the box's, through Fastly in front of the site on the box.
-  IMAGE_BASE_URL: z.url(),
+  // Where the sticker images load from: the box's, through Fastly in front of the site on the box. The
+  // path alone loads them from whichever origin the app was opened on, as behind a demo's tunnel.
+  IMAGE_BASE_URL: z.union([z.url(), z.literal(STICKER_IMAGES_PATH)], {
+    error: `Expected an absolute URL, or ${STICKER_IMAGES_PATH}`,
+  }),
   PORT: z.coerce.number().int().positive().default(8788),
   STICKER_CHAIN_MODE: z.enum(["mock", "sui"]),
   // Empty is how .env switches off what .env.example switches on.
@@ -149,6 +152,11 @@ const fastly = (() => {
     cdnPurge: createFastlyPurge({ token: settings.FASTLY_API_TOKEN }),
   };
 })();
+
+// A purge names each drawing by its absolute URL, so a path would leave 18+ drawings in Fastly's caches.
+if (fastly && !URL.canParse(env.IMAGE_BASE_URL)) {
+  throw new Error("IMAGE_BASE_URL must be an absolute URL while Fastly's settings are set");
+}
 
 const clock = { now: () => new Date() };
 const messaging = messagingChannelFromEnvironment({

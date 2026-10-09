@@ -56,6 +56,8 @@ vi.mock("../line/liff", () => ({
     profile: { userId: "U1", displayName: "You" },
     inClient: true,
   }),
+  // The developer slip asks it who's signed in once a .env names demo people (VITE_DEMO_PEOPLE).
+  mockPerson: () => ({ sub: "U1", name: "You" }),
 }));
 
 let unmount = () => {};

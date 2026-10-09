@@ -22,6 +22,7 @@ import { GratitudeDemoControls } from "./GratitudeDemoControls";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
 import { SettingsNote } from "./SettingsNote";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./StatCork";
+import { SwitchPersonControls } from "./SwitchPersonControls";
 import { statFigures } from "./statFigures";
 
 // The developer slip, LINE's and Privy's details for testing them from the board. The dev server shows
@@ -119,6 +120,7 @@ export const StatBoard = memo(function StatBoard({
         <AddressPapers sui={sui} lifted={lifted} paperRef={suiPaper} onOpen={openAddress} />
         {DEV_SLIP && (
           <DeveloperSlip>
+            <SwitchPersonControls />
             <SendTestMessage senderName={me.displayName} />
             <LineDetails />
             <DeviceDetails />

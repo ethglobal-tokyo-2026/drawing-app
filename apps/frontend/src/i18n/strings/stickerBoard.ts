@@ -285,6 +285,10 @@ export const stickerBoard = {
       off: { en: "Privy is off on the dev server, where LIFF Mock signs you in" },
       tryAgain: { en: "Try again" },
     },
+    demoPeople: {
+      title: { en: "Demo people" },
+      switchTo: { en: "Switch to {{name}}" },
+    },
     gratitudeDemo: {
       title: { en: "Gratitude mini-game" },
       try: { en: "Try the gratitude mini-game" },

@@ -12,6 +12,7 @@
   "scripts": {
     "build": "node scripts/build.ts",
     "dev": "node --watch --env-file=.env.example --env-file-if-exists=.env src/server.ts",
+    "demo": "PORT=8785 DATABASE_URL=data/demo/drawing-app.db IMAGE_DIR=../../data/demo/images IMAGE_BASE_URL=/api/images DEV_SIGN_IN=on STICKER_CHAIN_MODE=mock node --env-file=.env.example src/server.ts",
     "test": "vitest run",
     "typecheck": "tsc",
     "lint": "oxlint --type-check"

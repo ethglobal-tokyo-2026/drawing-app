@@ -13,7 +13,9 @@
     "chat-menus": "tsx --tsconfig tsconfig.scripts.json scripts/renderChatMenus.tsx",
     "croquis-sans": "uv run --script scripts/buildCroquisSans.py",
     "test:ipad-safari": "tsx --tsconfig tsconfig.scripts.json scripts/ipadSafari.ts",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "demo:build": "vite build --config vite.demo.config.ts",
+    "demo:serve": "vite preview --config vite.demo.config.ts"
   },
   "dependencies": {
     "@line/liff": "^2.31.1",

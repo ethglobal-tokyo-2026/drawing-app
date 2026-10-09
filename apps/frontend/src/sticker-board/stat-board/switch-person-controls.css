@@ -1,0 +1,20 @@
+/* ---------- Switching the demo between its people, on the developer slip ---------- */
+
+.switch-person {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule-strong);
+}
+
+.switch-person__h {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.switch-person :focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
