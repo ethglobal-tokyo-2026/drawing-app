@@ -317,6 +317,30 @@ export function inkAt(page: Page, point: At, selector = ".ink-canvas:not(.ink-pr
   );
 }
 
+/** The furthest right, in CSS px, that ink reaches along screen row `y`; null on a blank row. */
+export function inkReach(page: Page, y: number, selector = ".ink-canvas:not(.ink-prediction)") {
+  return page.evaluate(
+    ({ selector, y }) => {
+      const canvas = document.querySelector<HTMLCanvasElement>(selector);
+      const ctx = canvas?.getContext("2d");
+      if (!canvas || !ctx) throw new Error(`No canvas at ${selector}`);
+      const box = canvas.getBoundingClientRect();
+      const k = canvas.width / box.width;
+      const row = ctx.getImageData(0, Math.round((y - box.top) * k), canvas.width, 1).data;
+      for (let x = canvas.width - 1; x >= 0; x--) if (row[x * 4 + 3] > 128) return box.left + x / k;
+      return null;
+    },
+    { selector, y },
+  );
+}
+
+/** Waits out two animation frames, so samples already sent are painted. */
+export const nextFrames = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))),
+  );
+
 /** Pixels holding ink anywhere on the canvas `selector` names. */
 export function inkedPixels(page: Page, selector: string) {
   return page.evaluate((selector) => {

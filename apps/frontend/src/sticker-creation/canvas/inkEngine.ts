@@ -40,8 +40,7 @@ export interface InkLayer extends Surface<unknown> {
 
 /**
  * Where prediction shows: the browser's guess at a pen's next samples, painted ahead of the stroke for
- * one frame on an overlay over the ink, never the ink. It's the opposite of Smoothing, which trails
- * the line to steady it.
+ * one frame on an overlay over the ink, never the ink.
  */
 export interface PredictionLayer {
   /** Wipes what it showed, then paints this path. */
@@ -55,7 +54,7 @@ export interface InkSettings {
   color: string;
   /** Brush or eraser width, in sheet units. */
   size: number;
-  /** How far the brush trails the finger, in sheet units. */
+  /** How far the brush trails a finger, in sheet units; a pen's trails by a share of it. */
   lazyRadius: number;
   /** No input at all: sealing, sealed, or the ticket card is up. */
   locked: boolean;
@@ -627,7 +626,10 @@ export class InkEngine {
       id: e.pointerId,
       pointerType: e.pointerType,
       builder,
-      lazy: new LazyBrush(x, y, s.lazyRadius),
+      lazy:
+        e.pointerType === "pen"
+          ? LazyBrush.forPen(x, y, s.lazyRadius)
+          : new LazyBrush(x, y, s.lazyRadius),
       queue: [],
       painted: 1,
       t0: e.timeStamp,
@@ -669,9 +671,9 @@ export class InkEngine {
   }
 
   /**
-   * The browser's guess at where the pen goes next, painted ahead of the stroke for this frame. It
-   * runs through a copy of the lazy brush, so it extends the line as the stroke would, at the
-   * stroke's last width; the next frame wipes it, and none of it reaches the ink or the op.
+   * The browser's guess at where the pen goes next, painted ahead of the stroke for this frame at
+   * its last width: from the stroke's end through the nib, which Smoothing barely trails, to the
+   * guess. The next frame wipes it, and none of it reaches the ink or the op.
    */
   private paintPrediction(live: LiveStroke): void {
     const prediction = this.prediction;
@@ -685,13 +687,8 @@ export class InkEngine {
     const last = (live.builder.count - 1) * STRIDE;
     const width = pts[last + 2];
     const guess = [pts[last], pts[last + 1], width, 0];
-    const brush = live.lazy.copy();
-    for (let i = 0; i < ahead.length; i += 2)
-      if (brush.follow(ahead[i], ahead[i + 1])) guess.push(brush.x, brush.y, width, 0);
-    if (guess.length === STRIDE) {
-      prediction.clear();
-      return;
-    }
+    if (live.x !== pts[last] || live.y !== pts[last + 1]) guess.push(live.x, live.y, width, 0);
+    for (let i = 0; i < ahead.length; i += 2) guess.push(ahead[i], ahead[i + 1], width, 0);
     prediction.paint({ tool, color, pts: guess, T });
     // The next frame wipes it, whether or not a new sample comes.
     this.cancelFrame ??= this.requestFrame(this.paintFrame);

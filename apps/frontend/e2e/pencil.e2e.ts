@@ -2,6 +2,8 @@ import { DAILY_TICKETS_PER_DAY } from "@drawing-app/api/client";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { PALM_CONTACT_PX } from "../src/sticker-creation/canvas/gestures.ts";
+import { lazyRadius, PEN_TRAIL_SHARE } from "../src/sticker-creation/canvas/lazyBrush.ts";
+import { SHEET_SHORT_UNITS } from "../src/sticker-creation/canvas/sheetFrame.ts";
 import { canvas, drawKeyName, openSettings, say, signIn } from "./helpers.ts";
 import { ipad } from "./ipad.ts";
 import {
@@ -11,7 +13,9 @@ import {
   hand,
   inkAt,
   inkedPixels,
+  inkReach,
   middle,
+  nextFrames,
   pencil,
   penStroke,
   touchStroke,
@@ -153,6 +157,35 @@ test("prediction paints a guess ahead of the pen while it moves, and none of it 
   await expect.poll(() => inkedPixels(page, ".ink-prediction")).toBe(0);
   // The stroke ends where the pen lifted.
   expect(await inkAt(page, { x: lift.x + 24, y: lift.y })).toBe(0);
+});
+
+test("at Smooth, a pen's line stays under its nib as it moves, and ends where it lifts", async ({
+  page,
+}) => {
+  const box = await openSheet(page, "smooth-pen");
+  const smoothing = page.getByRole("button", {
+    name: say(stickerCreation.tools.smoothing, language),
+  });
+  await smoothing.click();
+  await page.locator(".smoothing-range").fill("100");
+  await smoothing.click();
+  await expect(smoothing).toHaveAttribute("aria-expanded", "false");
+
+  const pen = await pencil(page);
+  const row = along(box, 0.5, 0.1, 0.6, 30);
+  const nib = row[row.length - 1];
+  const t0 = Date.now();
+  await pen.down(row[0], 0.5, t0);
+  for (let i = 1; i < row.length; i++) {
+    await pen.move(row[i], 0.5, t0 + i * 16);
+    await page.waitForTimeout(16);
+  }
+  await nextFrames(page);
+  // Before it lifts, the ink is within the pen's trail of the nib, in CSS px.
+  const trail = lazyRadius(100) * PEN_TRAIL_SHARE * (box.width / SHEET_SHORT_UNITS);
+  expect(nib.x - ((await inkReach(page, nib.y)) ?? row[0].x)).toBeLessThanOrEqual(trail + 1);
+  await pen.up(nib, t0 + row.length * 16);
+  expect(await inkReach(page, nib.y)).toBeGreaterThanOrEqual(nib.x - 1);
 });
 
 test("once a pen has drawn here, a palm never draws, and a resting palm doesn't hold up two-finger undo", async ({

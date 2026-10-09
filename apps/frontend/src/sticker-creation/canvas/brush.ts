@@ -29,6 +29,8 @@ const PRESSURE_EXPONENTS = {
 const MID_PRESSURE = 0.5;
 /** A pen's pressure moving less than this within a stroke is a pen that senses none. */
 const PRESSURE_STEP = 0.01;
+/** A pressing pen's width is the mean of its last this-many samples' widths: steady, and a step lands in full by then. */
+export const PEN_PRESSURE_SAMPLES = 2;
 /** Touch, mouse and a pen with no pressure draw between these fractions of the size: thin when quick. */
 const SPEED_WIDTHS = { fast: 0.68, slow: 1.1 } as const;
 
@@ -71,9 +73,9 @@ interface StrokeStart {
 }
 
 /**
- * Builds a stroke point by point. A brush's width follows a pen's pressure through its curve, or the
- * speed for touch, mouse and a pen whose pressure never moves, smoothed so it never jumps, and tapers
- * in from a dot. It starts from the first sample's width, so a light start stays light. The eraser
+ * Builds a stroke point by point. A brush's width follows a pen's pressure through its curve within
+ * a few samples, or the speed for touch, mouse and a pen whose pressure never moves, smoothed so it
+ * never jumps, and tapers in from a dot. It starts from the first sample's width, so a light start stays light. The eraser
  * keeps one width, and so does a pen with its pressure Off.
  */
 export class StrokeBuilder {
@@ -87,6 +89,8 @@ export class StrokeBuilder {
   /** Pressure sets the width: this pen has shown its pressure moving, in this stroke or before. */
   private pressed: boolean;
   private smoothed: number;
+  /** A pressing pen's latest widths, newest last, that its width is the mean of. */
+  private readonly pressedWidths: number[] = [];
 
   constructor(start: StrokeStart) {
     const { tool, color, size, x, y, t, T, pressure, pointerType, pressureVaries, response } =
@@ -124,13 +128,19 @@ export class StrokeBuilder {
     if (tool === "brush") {
       if (this.pen && Math.abs(pressure - this.firstPressure) > PRESSURE_STEP) this.pressed = true;
       // Off, a pen draws the brush's size, whatever it reports.
-      const wants =
-        this.pen && this.response === "off"
-          ? 1
-          : this.pressed && pressure > 0
-            ? pressureWidth(pressure, this.response)
-            : speedWidth(dist / dt);
-      this.smoothed = 0.7 * this.smoothed + 0.3 * wants;
+      const off = this.pen && this.response === "off";
+      if (!off && this.pressed && pressure > 0) {
+        // Pressure shows at the nib at once; speed, under a finger, eases in so it never jumps.
+        const widths = this.pressedWidths;
+        if (widths.length === 0) widths.push(this.smoothed);
+        widths.push(pressureWidth(pressure, this.response));
+        if (widths.length > PEN_PRESSURE_SAMPLES)
+          widths.splice(0, widths.length - PEN_PRESSURE_SAMPLES);
+        this.smoothed = widths.reduce((sum, w) => sum + w, 0) / widths.length;
+      } else {
+        this.pressedWidths.length = 0;
+        this.smoothed = 0.7 * this.smoothed + 0.3 * (off ? 1 : speedWidth(dist / dt));
+      }
       width *= this.smoothed * Math.min(1, FIRST_DOT + TAPER_STEP * n);
     }
     pts.push(x, y, width, Math.round(t - this.t0));

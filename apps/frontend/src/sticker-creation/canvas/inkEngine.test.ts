@@ -10,6 +10,7 @@ import {
   type PointerInput,
   type PredictionLayer,
 } from "./inkEngine";
+import { lazyRadius, PEN_TRAIL_SHARE } from "./lazyBrush";
 import { STRIDE, type FillOp, type Op, type StrokeOp } from "./ops";
 import {
   areaFrame,
@@ -31,6 +32,8 @@ vi.mock("../../performance/performanceRecorder", () => ({
 /** Records what reaches the ink; the pixels themselves are the surface's business. */
 class FakeLayer implements InkLayer {
   paints = 0;
+  /** The stroke last painted, as it stood then. */
+  painting: StrokeOp | null = null;
   /** Every frame the ink was sized to, and how often it was blanked to be rebuilt. */
   frames: SheetFrame[] = [];
   restores = 0;
@@ -38,8 +41,9 @@ class FakeLayer implements InkLayer {
     this.frames.push(frame);
     return true;
   }
-  paint() {
+  paint(op: StrokeOp) {
     this.paints++;
+    this.painting = op;
   }
   fill(_op: FillOp) {
     return true;
@@ -226,6 +230,29 @@ describe("InkEngine", () => {
     expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false));
   });
 
+  it("keeps a pen's line under its nib at Smooth, from where it lands to where it lifts, where a finger's trails on its string", () => {
+    const SMOOTH = lazyRadius(100);
+    /** A stroke along a row at Smooth: how far its painted end trailed the pointer at most, and where it began and ended. */
+    const drawn = (pointerType: string) => {
+      const { engine, at, runFrame, layer, committed } = setup({ lazyRadius: SMOOTH });
+      engine.down(at(pointerType, 1, 0, 0, 0));
+      let trailed = 0;
+      for (let i = 1; i <= 20; i++) {
+        engine.move(at(pointerType, 1, i * 10, 0, i * 16));
+        runFrame();
+        if (layer.painting) trailed = Math.max(trailed, i * 10 - lastPoint(layer.painting)[0]);
+      }
+      engine.up(at(pointerType, 1, 200, 0, 400));
+      const op = committed()[0];
+      return { trailed, first: op.tool === "fill" ? [] : op.pts.slice(0, 2), last: lastPoint(op) };
+    };
+    const pen = drawn("pen");
+    expect(pen.trailed).toBeLessThanOrEqual(SMOOTH * PEN_TRAIL_SHARE);
+    expect(pen.first).toEqual([0, 0]);
+    expect(pen.last).toEqual([200, 0]);
+    expect(drawn("touch").trailed).toBeCloseTo(SMOOTH);
+  });
+
   it("takes back a stroke when a second finger lands on it, and undoes on the tap", () => {
     const { engine, at, stroke, committed, events } = setup();
     stroke("touch", 1, [0, 0], [100, 0]);
@@ -339,9 +366,9 @@ describe("InkEngine", () => {
     expect(new Set(timed)).toEqual(new Set(Object.values(INK_WORK)));
   });
 
-  it("paints a pen's predicted points ahead of its brush stroke for one frame, and never keeps them", () => {
+  it("paints a pen's predicted points ahead of its nib for one frame, and never keeps them", () => {
     const prediction = new FakePrediction();
-    const { engine, at, runFrame, committed } = setup({}, prediction);
+    const { engine, at, runFrame, committed } = setup({ lazyRadius: lazyRadius(100) }, prediction);
     const guessing = (input: PointerInput, ...ahead: [number, number][]): PointerInput => ({
       ...input,
       getPredictedEvents: () => ahead.map(([x, y]) => ({ ...input, clientX: x, clientY: y })),
@@ -349,7 +376,10 @@ describe("InkEngine", () => {
     engine.down(at("pen", 1, 0, 0, 0));
     engine.move(guessing(at("pen", 1, 10, 0, 16), [20, 0], [30, 0]));
     runFrame();
-    expect(prediction.shown?.pts.filter((_, i) => i % STRIDE === 0)).toEqual([10, 20, 30]);
+    // From the stroke's end, through the nib, which Smoothing barely trails, to the guess.
+    expect(prediction.shown?.pts.filter((_, i) => i % STRIDE === 0).slice(-3)).toEqual([
+      10, 20, 30,
+    ]);
     runFrame();
     expect(prediction.shown).toBeNull();
     engine.up(at("pen", 1, 10, 0, 40));

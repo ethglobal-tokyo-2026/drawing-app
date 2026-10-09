@@ -30,6 +30,12 @@ describe("LazyBrush", () => {
   it("has nothing to catch up when it's already under the pointer", () => {
     expect(new LazyBrush(5, 5, 10).catchUp(5.2, 5.2)).toEqual([]);
   });
+
+  it("moves a pen's brush from the nib's first slight drag, where a finger's rests on its string", () => {
+    const smooth = lazyRadius(100);
+    expect(LazyBrush.forPen(0, 0, smooth).follow(1, 0)).toBe(true);
+    expect(new LazyBrush(0, 0, smooth).follow(1, 0)).toBe(false);
+  });
 });
 
 describe("lazyRadius", () => {
