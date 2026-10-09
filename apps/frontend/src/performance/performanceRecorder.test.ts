@@ -301,6 +301,45 @@ describe("the recorder on the page", () => {
     expect(types(unlistens.mock.calls)).toEqual(types(listens.mock.calls));
   });
 
+  it("sums up each kind of pointer: contacts, hovering, pressure, contact size and samples a move", () => {
+    startPerformanceRecorder();
+    const sample = new PointerEvent("pointermove");
+    const pen = (type: string, init: PointerEventInit) =>
+      window.dispatchEvent(new PointerEvent(type, { pointerType: "pen", ...init }));
+    const contact = { buttons: 1, width: 0.5, height: 0.5 };
+    pen("pointermove", { buttons: 0 });
+    pen("pointerdown", { ...contact, pressure: 0.1 });
+    pen("pointermove", {
+      ...contact,
+      pressure: 0.9,
+      coalescedEvents: [sample, sample, sample],
+      predictedEvents: [sample],
+    });
+    pen("pointermove", { ...contact, pressure: 0.4, coalescedEvents: [sample] });
+    window.dispatchEvent(
+      new PointerEvent("pointerdown", { pointerType: "touch", buttons: 1, width: 30, height: 34 }),
+    );
+
+    const pointers = readPerformanceRecording()?.summary.pointers;
+    expect(pointers?.get("pen")).toEqual({
+      downs: 1,
+      moves: 2,
+      hovers: 1,
+      pressure: { min: 0.1, max: 0.9 },
+      width: { min: 0.5, max: 0.5 },
+      height: { min: 0.5, max: 0.5 },
+      coalesced: { total: 4, most: 3 },
+      predicted: { total: 1, most: 1 },
+    });
+    expect(pointers?.get("touch")).toMatchObject({
+      downs: 1,
+      width: { min: 30, max: 30 },
+      height: { min: 34, max: 34 },
+    });
+    clearPerformanceRecording();
+    expect(readPerformanceRecording()?.summary.pointers.size).toBe(0);
+  });
+
   it("notes a font event that names no faces, as WebKit's don't", () => {
     const fonts = new EventTarget();
     Object.defineProperty(document, "fonts", { value: fonts, configurable: true });

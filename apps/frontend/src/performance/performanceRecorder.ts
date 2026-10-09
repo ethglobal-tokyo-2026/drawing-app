@@ -1,6 +1,7 @@
 /**
  * The performance recorder, for phones where LINE's browser has no developer tools: every frame's
- * interval, judged against the typical frame, and what happened around each slow one. Off, it costs
+ * interval, judged against the typical frame, and what happened around each slow one, and each kind
+ * of pointer seen, for checking a Pencil. Off, it costs
  * a flag check: no loop, no observers and no listeners, and `notePerformance` and `timeOurWork`
  * return at their first check.
  */
@@ -69,6 +70,53 @@ export interface PerformanceSummary {
   byScreen: ReadonlyMap<string, ScreenFrames>;
   /** The stretches watched, oldest first. */
   windows: readonly FrameWindow[];
+  /** Each kind of pointer seen, by its pointerType. */
+  pointers: ReadonlyMap<string, PointerKindSummary>;
+}
+
+/** Lowest and highest of what was seen. */
+export interface Span {
+  min: number;
+  max: number;
+}
+
+/** Samples moves carried: all of them, and the most in one move. */
+export interface SampleCount {
+  total: number;
+  most: number;
+}
+
+/**
+ * One kind of pointer while recording, for checking a Pencil on a real iPad: its contacts and its
+ * hovering, how hard and how big its contact was, and the samples each move carried.
+ */
+export interface PointerKindSummary {
+  /** Contacts begun, and moves in contact. */
+  downs: number;
+  moves: number;
+  /** Moves with nothing pressed: a Pencil hovering, or a mouse. */
+  hovers: number;
+  /** In contact: the pressure, and the contact's width and height in CSS px; null before any contact. */
+  pressure: Span | null;
+  width: Span | null;
+  height: Span | null;
+  /** Each move in contact's coalesced and predicted samples; null where the browser has no such list. */
+  coalesced: SampleCount | null;
+  predicted: SampleCount | null;
+}
+
+/** A pointerdown or pointermove, as the recorder keeps it. */
+interface PointerSample {
+  kind: "down" | "move";
+  pointerType: string;
+  /** A button or the contact is down. */
+  pressed: boolean;
+  pressure: number;
+  width: number;
+  height: number;
+  /** Its coalesced and predicted samples; null where the browser has no such list. */
+  coalesced: number | null;
+  predicted: number | null;
 }
 
 export interface PerformanceLog {
@@ -82,6 +130,8 @@ export interface PerformanceLog {
    */
   pause: () => void;
   note: (event: TimelineEvent) => void;
+  /** A pointer pressed or moved. */
+  notePointer: (sample: PointerSample) => void;
   /** Our own script time, counted in the frame in progress. */
   addOurWork: (label: string, ms: number) => void;
   /** Sums up, apart, the frames that begin in the `ms` from `from`. */
@@ -110,6 +160,27 @@ const BEFORE_SLOW_MS = 250;
 const SETTLE_MS = 1000;
 export const SLOW_FRAMES_KEPT = 60;
 
+const widen = (span: Span | null, value: number): Span =>
+  span
+    ? { min: Math.min(span.min, value), max: Math.max(span.max, value) }
+    : { min: value, max: value };
+
+const tally = (count: SampleCount | null, samples: number | null): SampleCount | null =>
+  samples === null
+    ? count
+    : { total: (count?.total ?? 0) + samples, most: Math.max(count?.most ?? 0, samples) };
+
+const NO_POINTER: PointerKindSummary = {
+  downs: 0,
+  moves: 0,
+  hovers: 0,
+  pressure: null,
+  width: null,
+  height: null,
+  coalesced: null,
+  predicted: null,
+};
+
 /** The recording, on the clock its caller passes in. */
 export function createPerformanceLog(now: number): PerformanceLog {
   let startedAt = now;
@@ -128,6 +199,7 @@ export function createPerformanceLog(now: number): PerformanceLog {
   let worst: PerformanceSummary["worst"] = null;
   const byScreen = new Map<string, ScreenFrames>();
   let windows: (FrameWindow & { intervals: number[] })[] = [];
+  const pointers = new Map<string, PointerKindSummary>();
 
   const typicalMs = () => {
     const n = intervals.length;
@@ -221,6 +293,26 @@ export function createPerformanceLog(now: number): PerformanceLog {
       ours = null;
     },
     note,
+    notePointer: (sample) => {
+      const was = pointers.get(sample.pointerType) ?? NO_POINTER;
+      if (!sample.pressed) {
+        // A move with nothing pressed hovers; a press with nothing pressed isn't one.
+        if (sample.kind === "move")
+          pointers.set(sample.pointerType, { ...was, hovers: was.hovers + 1 });
+        return;
+      }
+      const down = sample.kind === "down";
+      pointers.set(sample.pointerType, {
+        ...was,
+        downs: was.downs + (down ? 1 : 0),
+        moves: was.moves + (down ? 0 : 1),
+        pressure: widen(was.pressure, sample.pressure),
+        width: widen(was.width, sample.width),
+        height: widen(was.height, sample.height),
+        coalesced: down ? was.coalesced : tally(was.coalesced, sample.coalesced),
+        predicted: down ? was.predicted : tally(was.predicted, sample.predicted),
+      });
+    },
     addOurWork: (label, ms) => {
       ours ??= {};
       const work = (ours[label] ??= { ms: 0, calls: 0 });
@@ -245,6 +337,8 @@ export function createPerformanceLog(now: number): PerformanceLog {
         [...byScreen].map(([name, counts]): [string, ScreenFrames] => [name, { ...counts }]),
       ),
       windows: windows.map((w) => ({ ...w, intervals: [...w.intervals] })),
+      // Each record is replaced, never changed in place, so a shallow copy holds still.
+      pointers: new Map(pointers),
     }),
     slowFrames: () => {
       settle();
@@ -265,6 +359,7 @@ export function createPerformanceLog(now: number): PerformanceLog {
       worst = null;
       byScreen.clear();
       windows = [];
+      pointers.clear();
     },
   };
 }
@@ -482,6 +577,29 @@ function describeSlowInput(input: PerformanceEventTiming): string {
   return `${input.name} ${ms(input.duration)}: waited ${ms(waited)}, handlers ${ms(handled)}, then ${ms(painted)} to paint, on ${describeTarget(input.target)}`;
 }
 
+/** The parts of a PointerEvent the recorder reads; before iOS 18.2 there are no sample lists. */
+interface PointerReading {
+  type: string;
+  pointerType: string;
+  buttons: number;
+  pressure: number;
+  width: number;
+  height: number;
+  getCoalescedEvents?: () => readonly unknown[];
+  getPredictedEvents?: () => readonly unknown[];
+}
+
+const readPointer = (e: PointerReading): PointerSample => ({
+  kind: e.type === "pointerdown" ? "down" : "move",
+  pointerType: e.pointerType,
+  pressed: e.buttons !== 0,
+  pressure: e.pressure,
+  width: e.width,
+  height: e.height,
+  coalesced: e.getCoalescedEvents?.().length ?? null,
+  predicted: e.getPredictedEvents?.().length ?? null,
+});
+
 /**
  * Everything the recorder hears on the page; returns what stops it all. When any of it can't start,
  * what did start stops before the error goes on.
@@ -523,8 +641,13 @@ function startListening(log: PerformanceLog, stops: (() => void)[]): void {
     stops.push(() => window.removeEventListener(type, heard, { capture: true }));
   };
   const onTap = (e: PointerEvent) => note("tap", `${e.type} ${describeTarget(e.target)}`);
-  hear("pointerdown", onTap);
+  hear("pointerdown", (e) => {
+    onTap(e);
+    log.notePointer(readPointer(e));
+  });
   hear("pointerup", onTap);
+  // Every move, for the pointers' summary: even a Pencil's rate of events is no load for this.
+  hear("pointermove", (e) => log.notePointer(readPointer(e)));
   // Only named keys: what someone types stays theirs. Android's autofill sends a keydown with no key.
   hear("keydown", (e) => {
     const key = typeof e.key === "string" ? e.key : "Unidentified";

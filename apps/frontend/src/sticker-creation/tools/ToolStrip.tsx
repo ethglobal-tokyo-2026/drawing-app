@@ -4,11 +4,13 @@ import {
   Eraser,
   PaintBrush,
   PaintBucket,
+  PencilOnlyIcon,
   WaveSine,
   type Icon,
 } from "../../icons";
 import { useState, type KeyboardEvent } from "react";
 import { useTranslation } from "../../i18n/react";
+import type { InputMode } from "../canvas/inkEngine";
 import type { Tool } from "../canvas/ops";
 import "./ToolStrip.css";
 
@@ -22,6 +24,7 @@ const TOOLS: { tool: Tool; Icon: Icon }[] = [
 const COLOR_TILE = TOOLS.length;
 const SMOOTHING_TILE = TOOLS.length + 1;
 const CLEAR_TILE = TOOLS.length + 2;
+const INPUT_TILE = TOOLS.length + 3;
 
 interface Props {
   tool: Tool;
@@ -33,6 +36,10 @@ interface Props {
   clearBarId: string;
   onTool: (tool: Tool) => void;
   onPanel: (panel: Panel) => void;
+  /** The sheet's input mode, or null before a pen has drawn on this device, when there's no tile. */
+  inputMode: InputMode | null;
+  /** The tile switches the sheet between Pencil only and Pencil and finger. */
+  onInputMode: (mode: InputMode) => void;
 }
 
 /** Arrow keys move between the tiles, as in any toolbar. */
@@ -50,7 +57,8 @@ function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
  * The tools: brush, eraser and fill, the color, and smoothing, as one flat label strip, with the clear
  * tile past a rule at its end, since clearing isn't drawing. The current tool, or the open panel's
  * tile, is reversed out of Ink with the fill-weight icon. The strip is one Tab stop, on the tile
- * focused last, or the current tool.
+ * focused last, or the current tool. Once a pen has drawn on the device, the Pencil only tile leads
+ * the strip past a rule.
  */
 export function ToolStrip({
   tool,
@@ -61,6 +69,8 @@ export function ToolStrip({
   clearBarId,
   onTool,
   onPanel,
+  inputMode,
+  onInputMode,
 }: Props) {
   const { t } = useTranslation();
   const [lastFocused, setLastFocused] = useState<number | null>(null);
@@ -78,6 +88,23 @@ export function ToolStrip({
       aria-label={t(($) => $.stickerCreation.tools.label)}
       onKeyDown={moveFocus}
     >
+      {inputMode && (
+        <>
+          <button
+            {...tile(INPUT_TILE)}
+            className="tool-tile"
+            aria-label={t(($) => $.stickerCreation.tools.pencilOnly)}
+            aria-pressed={inputMode === "pencilOnly"}
+            onClick={() =>
+              onInputMode(inputMode === "pencilOnly" ? "pencilAndFinger" : "pencilOnly")
+            }
+          >
+            <PencilOnlyIcon size={22} weight={inputMode === "pencilOnly" ? "fill" : "bold"} />
+          </button>
+          {/* How the sheet takes input isn't a drawing tool: a hairline sets the tile apart. */}
+          <span className="tool-rule" aria-hidden="true" />
+        </>
+      )}
       {TOOLS.map(({ tool: each, Icon }, i) => (
         <button
           key={each}

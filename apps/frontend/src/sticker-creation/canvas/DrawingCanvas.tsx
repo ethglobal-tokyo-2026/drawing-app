@@ -8,11 +8,26 @@ import {
   type Ref,
 } from "react";
 import { useTranslation } from "../../i18n/react";
-import { InkEngine, type InkEvents, type InkSettings } from "./inkEngine";
+import { InkEngine, type HoverRing, type InkEvents, type InkSettings } from "./inkEngine";
 import { InkSurface } from "./inkSurface";
+import { PredictionCanvas } from "./predictionCanvas";
 import type { Op, Step } from "./ops";
 import { fitScale, type SheetArea, type SheetFrame } from "./sheetFrame";
 import "./DrawingCanvas.css";
+
+/** A ring narrower than this many CSS px reads as a dot, so a fine brush's ring keeps this width. */
+const MIN_RING_PX = 6;
+
+/** Puts the ring where a hovering pen would land, or takes it away: hover comes too often for React state. */
+function showRing(el: HTMLElement | null, ring: HoverRing | null) {
+  if (!el) return;
+  el.hidden = ring === null;
+  if (!ring) return;
+  const d = Math.max(ring.diameter, MIN_RING_PX);
+  el.style.width = `${d}px`;
+  el.style.height = `${d}px`;
+  el.style.transform = `translate(${ring.x - d / 2}px, ${ring.y - d / 2}px)`;
+}
 
 export interface DrawingCanvasHandle {
   undo: () => void;
@@ -43,7 +58,8 @@ export interface DrawingCanvasHandle {
   screenToSheet: (clientX: number, clientY: number) => [x: number, y: number] | null;
 }
 
-interface Props extends InkEvents {
+// The hover ring is the paper's own, so its event stays here.
+interface Props extends Omit<InkEvents, "onHover"> {
   ref?: Ref<DrawingCanvasHandle>;
   settings: InkSettings;
   /** The drawing screen shows, not covered by another screen. */
@@ -66,6 +82,8 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
   const areaRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const predictionRef = useRef<HTMLCanvasElement>(null);
+  const ringRef = useRef<HTMLSpanElement>(null);
   const ink = useRef<{ engine: InkEngine; surface: InkSurface } | null>(null);
   const showing = useRef(active);
   const measureAgain = useRef<(() => void) | null>(null);
@@ -75,6 +93,7 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
   const onCommit = useEffectEvent(events.onCommit);
   const onBlocked = useEffectEvent(events.onBlocked);
   const onDismissPanel = useEffectEvent(events.onDismissPanel);
+  const onPen = useEffectEvent(events.onPen);
   const onFit = useEffectEvent(events.onFit);
   const initialSettings = useEffectEvent(() => settings);
 
@@ -82,14 +101,30 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
     const area = areaRef.current;
     const sheet = sheetRef.current;
     const canvas = canvasRef.current;
-    if (!area || !sheet || !canvas) return;
+    const predicted = predictionRef.current;
+    if (!area || !sheet || !canvas || !predicted) return;
     const surface = new InkSurface(canvas);
-    const engine = new InkEngine(surface, initialSettings(), {
-      onHistory: (state) => onHistory(state),
-      onCommit: (op) => onCommit(op),
-      onBlocked: () => onBlocked(),
-      onDismissPanel: () => onDismissPanel(),
-    });
+    // Sized and scaled as the ink is whenever it paints, so it follows the sheet's frame.
+    const prediction = new PredictionCanvas(predicted, () => ({
+      width: canvas.width,
+      height: canvas.height,
+      density: surface.density,
+    }));
+    const engine = new InkEngine(
+      surface,
+      initialSettings(),
+      {
+        onHistory: (state) => onHistory(state),
+        onCommit: (op) => onCommit(op),
+        onBlocked: () => onBlocked(),
+        onDismissPanel: () => onDismissPanel(),
+        onPen: () => onPen(),
+        onHover: (ring) => showRing(ringRef.current, ring),
+      },
+      // The browser's frames, then the overlay.
+      undefined,
+      prediction,
+    );
     ink.current = { engine, surface };
     const detach = engine.attach(sheet);
     /** The area the sheet last had on screen, in CSS px. */
@@ -125,6 +160,7 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
       fitAgain.current = null;
       detach();
       engine.dispose();
+      prediction.release();
       ink.current = null;
     };
   }, []);
@@ -172,6 +208,15 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
           ref={canvasRef}
           className="ink-canvas"
           aria-label={label ?? t(($) => $.stickerCreation.canvas)}
+        />
+        {/* A pen's prediction, one frame at a time: never read, kept or sealed. */}
+        <canvas ref={predictionRef} className="ink-canvas ink-prediction" aria-hidden="true" />
+        {/* Where a hovering pen would land. */}
+        <span
+          ref={ringRef}
+          className={settings.tool === "eraser" ? "nib-ring is-eraser" : "nib-ring"}
+          hidden
+          aria-hidden="true"
         />
       </div>
     </div>

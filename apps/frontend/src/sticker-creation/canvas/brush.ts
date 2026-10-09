@@ -7,18 +7,48 @@ import { STRIDE, type StrokeOp } from "./ops";
  */
 export const sizePx = (value: number) => 1.5 + 46.5 * value * value;
 
+/** How a pen's pressure sets its width: not at all (Off), or along a light, normal or firm curve. */
+export const PEN_PRESSURES = ["off", "light", "normal", "firm"] as const;
+export type PenPressure = (typeof PEN_PRESSURES)[number];
+
 /** Points closer than this many sheet units to the last one add cost and nothing else. */
 const MIN_STEP = 0.5;
-/** A stroke starts as a dot this fraction of the size, then widens by `TAPER_STEP` a point. */
+/** A stroke starts as a dot this fraction of its first width, then widens by `TAPER_STEP` a point. */
 const FIRST_DOT = 0.6;
 const TAPER_STEP = 0.08;
+/**
+ * Each curve's exponent on the pressure: under 1 a light touch already draws wide, over 1 full width
+ * takes more force. Normal is the curve a pen has always had.
+ */
+const PRESSURE_EXPONENTS = {
+  light: 0.5,
+  normal: 0.75,
+  firm: 1.25,
+} as const satisfies Record<Exclude<PenPressure, "off">, number>;
+/** A pen pressed halfway: what the hover ring previews, as Apple's guidance asks of a preview. */
+const MID_PRESSURE = 0.5;
+/** A pen's pressure moving less than this within a stroke is a pen that senses none. */
+const PRESSURE_STEP = 0.01;
+/** Touch, mouse and a pen with no pressure draw between these fractions of the size: thin when quick. */
+const SPEED_WIDTHS = { fast: 0.68, slow: 1.1 } as const;
 
-/** How wide this point wants to be, as a fraction of the size. */
-function widthFactor(pressure: number, pointerType: string, speed: number): number {
-  if (pointerType === "pen" && pressure > 0) return 0.28 + 0.72 * pressure ** 0.75;
-  // Touch and mouse have no pressure, so a quick flick draws thinner, the way ink runs thin.
-  return clamp(1.12 - 0.15 * speed, 0.68, 1.1);
-}
+/** How wide a pen draws at this pressure under `response`, as a fraction of the size; Off is the size. */
+const pressureWidth = (pressure: number, response: PenPressure) =>
+  response === "off" ? 1 : 0.28 + 0.72 * pressure ** PRESSURE_EXPONENTS[response];
+/** Touch, mouse and a pen with no pressure: a quick flick draws thinner, the way ink runs thin. */
+const speedWidth = (speed: number) =>
+  clamp(1.12 - 0.15 * speed, SPEED_WIDTHS.fast, SPEED_WIDTHS.slow);
+
+/**
+ * How wide a pen's mark will be before it lands, as a fraction of the size: a middle pressure under
+ * its curve, or the speed model's middle for a pen not known to sense pressure. Off is the size.
+ */
+export const previewWidth = (response: PenPressure, pressureVaries: boolean) =>
+  response === "off"
+    ? 1
+    : pressureVaries
+      ? pressureWidth(MID_PRESSURE, response)
+      : (SPEED_WIDTHS.fast + SPEED_WIDTHS.slow) / 2;
 
 interface StrokeStart {
   tool: StrokeOp["tool"];
@@ -31,32 +61,59 @@ interface StrokeStart {
   t: number;
   /** ms into the session. */
   T: number;
+  /** The first sample's pressure, and the pointer drawing. */
+  pressure: number;
+  pointerType: string;
+  /** This pen has shown its pressure moving before, so pressure sets the width from the first sample. */
+  pressureVaries: boolean;
+  /** How a pen's pressure sets its width; a finger or a mouse goes by speed whatever it is. */
+  response: PenPressure;
 }
 
 /**
- * Builds a stroke point by point. A brush's width follows pen pressure, or speed for touch and mouse,
- * smoothed so it never jumps, and tapers in from a dot. The eraser keeps one width.
+ * Builds a stroke point by point. A brush's width follows a pen's pressure through its curve, or the
+ * speed for touch, mouse and a pen whose pressure never moves, smoothed so it never jumps, and tapers
+ * in from a dot. It starts from the first sample's width, so a light start stays light. The eraser
+ * keeps one width, and so does a pen with its pressure Off.
  */
 export class StrokeBuilder {
   readonly op: StrokeOp;
   private readonly size: number;
   private readonly t0: number;
   private lastT: number;
-  private smoothed = 1;
+  private readonly pen: boolean;
+  private readonly response: PenPressure;
+  private readonly firstPressure: number;
+  /** Pressure sets the width: this pen has shown its pressure moving, in this stroke or before. */
+  private pressed: boolean;
+  private smoothed: number;
 
-  constructor({ tool, color, size, x, y, t, T }: StrokeStart) {
+  constructor(start: StrokeStart) {
+    const { tool, color, size, x, y, t, T, pressure, pointerType, pressureVaries, response } =
+      start;
     this.size = size;
     this.t0 = t;
     this.lastT = t;
-    this.op = { tool, color, pts: [x, y, size * (tool === "eraser" ? 1 : FIRST_DOT), 0], T };
+    this.pen = pointerType === "pen";
+    this.response = response;
+    this.firstPressure = pressure;
+    this.pressed = this.pen && pressureVaries && pressure > 0;
+    this.smoothed = this.pressed ? pressureWidth(pressure, response) : 1;
+    const dot = tool === "eraser" ? 1 : FIRST_DOT * this.smoothed;
+    this.op = { tool, color, pts: [x, y, size * dot, 0], T };
   }
 
   get count(): number {
     return this.op.pts.length / STRIDE;
   }
 
+  /** Whether pressure set this stroke's width: its pen senses pressure. */
+  get pressured(): boolean {
+    return this.pressed;
+  }
+
   /** Adds a point unless it's within half a unit of the last one; says whether it did. */
-  add(x: number, y: number, pressure: number, pointerType: string, t: number): boolean {
+  add(x: number, y: number, pressure: number, t: number): boolean {
     const { pts, tool } = this.op;
     const n = this.count;
     const dist = Math.hypot(x - pts[(n - 1) * STRIDE], y - pts[(n - 1) * STRIDE + 1]);
@@ -65,7 +122,15 @@ export class StrokeBuilder {
     this.lastT = t;
     let width = this.size;
     if (tool === "brush") {
-      this.smoothed = 0.7 * this.smoothed + 0.3 * widthFactor(pressure, pointerType, dist / dt);
+      if (this.pen && Math.abs(pressure - this.firstPressure) > PRESSURE_STEP) this.pressed = true;
+      // Off, a pen draws the brush's size, whatever it reports.
+      const wants =
+        this.pen && this.response === "off"
+          ? 1
+          : this.pressed && pressure > 0
+            ? pressureWidth(pressure, this.response)
+            : speedWidth(dist / dt);
+      this.smoothed = 0.7 * this.smoothed + 0.3 * wants;
       width *= this.smoothed * Math.min(1, FIRST_DOT + TAPER_STEP * n);
     }
     pts.push(x, y, width, Math.round(t - this.t0));

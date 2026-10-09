@@ -35,3 +35,24 @@
   border-radius: inherit;
   touch-action: none;
 }
+
+/* The prediction overlay lies over the ink and lets every touch through to the paper. */
+.ink-prediction {
+  pointer-events: none;
+}
+
+/* A hovering Pencil's ring: where it would land, as wide as its stroke shows, in the brush's color
+   with a white edge for dark ink. It takes no touch. */
+.nib-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  border: 1.5px solid var(--draw-color);
+  border-radius: 50%;
+  outline: 1px solid rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+}
+.nib-ring.is-eraser {
+  border-color: rgba(28, 24, 36, 0.45);
+}

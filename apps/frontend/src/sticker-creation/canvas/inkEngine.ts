@@ -1,8 +1,9 @@
-import { StrokeBuilder } from "./brush";
-import { TapRecognizer } from "./gestures";
+import { timeOurWork } from "../../performance/performanceRecorder";
+import { previewWidth, StrokeBuilder, type PenPressure } from "./brush";
+import { isPalm, TapRecognizer } from "./gestures";
 import { History, type Surface } from "./history";
 import { LazyBrush } from "./lazyBrush";
-import type { FillOp, Op, Step, StrokeOp, Tool } from "./ops";
+import { STRIDE, type FillOp, type Op, type Step, type StrokeOp, type Tool } from "./ops";
 import { areaFrame, frameFor, type SheetArea, type SheetFrame } from "./sheetFrame";
 
 /** A fill takes a tap: a pointer that lifts within this many sheet units of where it landed. */
@@ -14,6 +15,18 @@ const CANCEL_KEEPS = 4;
 /** The catch-up on lift moves like a steady hand, so its width follows the same speed model. */
 const CATCH_UP_MS = 8;
 
+/** How the sheet takes input: Pencil only, where fingers only tap, or Pencil and finger. */
+export const INPUT_MODES = ["pencilOnly", "pencilAndFinger"] as const;
+export type InputMode = (typeof INPUT_MODES)[number];
+
+/** The ink's work as the performance recorder's report names it, so a slow Pencil stroke can be told. */
+export const INK_WORK = {
+  paint: "ink paint",
+  fill: "ink fill",
+  replay: "ink replay",
+  snapshot: "ink snapshot",
+} as const;
+
 /** What the engine paints on: the ink canvas in the app, a record of calls in tests. */
 export interface InkLayer extends Surface<unknown> {
   /** Sizes the ink to a frame, which clears it; says whether its size changed. */
@@ -22,6 +35,17 @@ export interface InkLayer extends Surface<unknown> {
   paint: (op: StrokeOp, from: number, to: number) => void;
   /** Floods from the op's point; false when nothing changed. */
   fill: (op: FillOp) => boolean;
+}
+
+/**
+ * Where prediction shows: the browser's guess at a pen's next samples, painted ahead of the stroke for
+ * one frame on an overlay over the ink, never the ink. It's the opposite of Smoothing, which trails
+ * the line to steady it.
+ */
+export interface PredictionLayer {
+  /** Wipes what it showed, then paints this path. */
+  paint: (op: StrokeOp) => void;
+  clear: () => void;
 }
 
 /** What the drawing screen has set; the engine reads it as each pointer lands. */
@@ -38,6 +62,13 @@ export interface InkSettings {
   paused: boolean;
   /** A tool panel is open: a touch on the sheet closes it and draws nothing. */
   panelOpen: boolean;
+  /**
+   * Pencil only: fingers tap, to undo and redo, and never draw. Pencil and finger: both draw. Null on
+   * a device no pen has drawn on: fingers draw, and no contact is judged a palm by its size.
+   */
+  inputMode: InputMode | null;
+  /** How a pen's pressure sets its width. */
+  penPressure: PenPressure;
   /** ms into the session, to stamp each op with. */
   sessionMs: () => number;
 }
@@ -50,6 +81,13 @@ export interface HistoryState {
   hasInk: boolean;
 }
 
+/** Where a hovering pen would land on the paper, and how wide its stroke would show, in CSS px. */
+export interface HoverRing {
+  x: number;
+  y: number;
+  diameter: number;
+}
+
 export interface InkEvents {
   onHistory: (state: HistoryState) => void;
   /** A stroke or fill landed. */
@@ -57,6 +95,10 @@ export interface InkEvents {
   /** Someone tried to draw on a paused sheet. */
   onBlocked: () => void;
   onDismissPanel: () => void;
+  /** A pen touched the sheet. */
+  onPen: () => void;
+  /** A pen hovering over the sheet; null once it lands or leaves, or the sheet takes no mark. */
+  onHover: (ring: HoverRing | null) => void;
 }
 
 /** The parts of a PointerEvent the engine reads. */
@@ -64,11 +106,18 @@ export interface PointerInput {
   pointerId: number;
   pointerType: string;
   button: number;
+  /** The buttons held: none for a pen hovering over the sheet. */
+  buttons: number;
   clientX: number;
   clientY: number;
   pressure: number;
+  /** The contact's size in CSS px: a palm's is far wider than a fingertip's. */
+  width: number;
+  height: number;
   timeStamp: number;
   getCoalescedEvents?: () => PointerInput[];
+  /** Where the browser expects the pointer next, where it says. */
+  getPredictedEvents?: () => PointerInput[];
   preventDefault: () => void;
 }
 
@@ -107,6 +156,8 @@ interface LiveStroke {
   y: number;
   pressure: number;
   t: number;
+  /** The browser's latest guess at the pen's next samples, flat: x, y. */
+  predicted: number[];
 }
 
 /**
@@ -118,8 +169,8 @@ interface LiveStroke {
  * sheet's frame follows its area while the sheet is blank, and is fixed from the first mark.
  *
  * Touch: two fingers tap to undo, three to redo, and a second finger landing early takes back the
- * first one's stroke. Once a pen has drawn, fingers only tap, and a finger stroke a pen interrupts
- * was a resting palm.
+ * first one's stroke. In Pencil only, fingers only tap; in either mode, a finger stroke a pen
+ * interrupts was a resting palm.
  */
 export class InkEngine {
   settings: InkSettings;
@@ -127,6 +178,7 @@ export class InkEngine {
   private readonly history: History<unknown>;
   private readonly events: InkEvents;
   private readonly requestFrame: RequestFrame;
+  private readonly prediction: PredictionLayer | null;
   private readonly taps = new TapRecognizer();
   private live: LiveStroke | null = null;
   private fillTap: { id: number; x: number; y: number } | null = null;
@@ -134,9 +186,12 @@ export class InkEngine {
   private readonly swallowed = new Set<number>();
   /** A touch on a paused sheet, waiting a beat before the hint in case a second finger makes a tap. */
   private blocked: { id: number; cx: number; cy: number } | null = null;
-  private penSeen = false;
   /** Every finger left the screen: the next touch to land is the only one down. */
   private fingersGone = false;
+  /** This page's pen has shown its pressure moving: its strokes start at their first sample's width. */
+  private pressurePen = false;
+  /** A hover ring shows. */
+  private hovering = false;
   private cancelFrame: (() => void) | null = null;
   /** The sheet's frame; null until its area is measured or a kept drawing brings one. */
   private sheet: SheetFrame | null = null;
@@ -154,11 +209,13 @@ export class InkEngine {
     settings: InkSettings,
     events: InkEvents,
     requestFrame: RequestFrame = browserFrame,
+    prediction: PredictionLayer | null = null,
   ) {
     this.layer = layer;
     this.settings = settings;
     this.events = events;
     this.requestFrame = requestFrame;
+    this.prediction = prediction;
     this.history = new History(layer);
   }
 
@@ -177,6 +234,7 @@ export class InkEngine {
     const onMove = (e: PointerEvent) => this.move(e);
     const onUp = (e: PointerEvent) => this.up(e);
     const onCancel = (e: PointerEvent) => this.cancel(e);
+    const onLeave = () => this.leave();
     // Capture ends with every lift; losing it without one means the pointer is gone for good.
     const onLostCapture = (e: PointerEvent) => {
       if (this.tracks(e.pointerId)) this.cancel(e);
@@ -194,6 +252,7 @@ export class InkEngine {
     sheet.addEventListener("pointerup", onUp);
     sheet.addEventListener("pointercancel", onCancel);
     sheet.addEventListener("lostpointercapture", onLostCapture);
+    sheet.addEventListener("pointerleave", onLeave);
     sheet.addEventListener("contextmenu", prevent);
     // iOS can still start a scroll or a text selection from a touch, whatever touch-action says.
     sheet.addEventListener("touchstart", prevent, touch);
@@ -206,6 +265,7 @@ export class InkEngine {
       sheet.removeEventListener("pointerup", onUp);
       sheet.removeEventListener("pointercancel", onCancel);
       sheet.removeEventListener("lostpointercapture", onLostCapture);
+      sheet.removeEventListener("pointerleave", onLeave);
       sheet.removeEventListener("contextmenu", prevent);
       sheet.removeEventListener("touchstart", prevent);
       sheet.removeEventListener("touchmove", prevent);
@@ -223,6 +283,7 @@ export class InkEngine {
   }
 
   down(e: PointerInput): void {
+    this.hideHover();
     const s = this.settings;
     const { pointerId: id, pointerType } = e;
     if (s.locked || !this.sheet || (pointerType === "mouse" && e.button !== 0)) return;
@@ -241,6 +302,7 @@ export class InkEngine {
         stroke
           ? { age: e.timeStamp - stroke.t0, moved: stroke.moved * this.origin.scale }
           : undefined,
+        this.palmContact(e),
       );
       if (result === "cancel-stroke") this.endStroke(true);
       if (result === "cancel-stroke" || result === "gesture") {
@@ -249,7 +311,7 @@ export class InkEngine {
       }
       if (result !== "draw") return;
     } else if (pointerType === "pen") {
-      this.penSeen = true;
+      this.events.onPen();
       if (this.live && this.live.pointerType !== "pen") this.endStroke(true);
     }
     if (this.live || this.fillTap) return;
@@ -258,7 +320,7 @@ export class InkEngine {
       this.events.onDismissPanel();
       return;
     }
-    if (pointerType === "touch" && this.penSeen) return;
+    if (pointerType === "touch" && s.inputMode === "pencilOnly") return;
     e.preventDefault();
     if (s.paused) {
       this.swallowed.add(id);
@@ -274,7 +336,21 @@ export class InkEngine {
 
   move(e: PointerInput): void {
     const id = e.pointerId;
-    if (e.pointerType === "touch") this.taps.move(id, e.clientX, e.clientY);
+    // A pen with nothing pressed hovers: a ring shows where it would land, and it never draws.
+    if (e.pointerType === "pen" && e.buttons === 0 && this.live?.id !== id) {
+      this.hover(e);
+      return;
+    }
+    if (e.pointerType === "touch") {
+      const palm = this.palmContact(e);
+      this.taps.move(id, e.clientX, e.clientY, palm);
+      // A fingertip that spreads into a palm as it settles never meant its stroke.
+      if (palm && this.live?.id === id) {
+        this.endStroke(true);
+        this.swallowed.add(id);
+        return;
+      }
+    }
     const blocked = this.blocked;
     if (
       blocked?.id === id &&
@@ -295,6 +371,10 @@ export class InkEngine {
       live.pressure = sample.pressure;
       live.t = sample.timeStamp;
     }
+    live.predicted.length = 0;
+    if (live.pointerType === "pen")
+      for (const guess of e.getPredictedEvents?.() ?? [])
+        live.predicted.push(...this.toSheet(guess));
     if (!this.cancelFrame) this.cancelFrame = this.requestFrame(this.paintFrame);
   }
 
@@ -311,13 +391,13 @@ export class InkEngine {
   undo(): void {
     if (this.settings.locked) return;
     this.endStroke(true);
-    if (this.history.undo()) this.notifyHistory();
+    if (timeOurWork(INK_WORK.replay, () => this.history.undo())) this.notifyHistory();
   }
 
   redo(): void {
     if (this.settings.locked) return;
     this.endStroke(true);
-    if (this.history.redo()) this.notifyHistory();
+    if (timeOurWork(INK_WORK.replay, () => this.history.redo())) this.notifyHistory();
   }
 
   /**
@@ -336,6 +416,11 @@ export class InkEngine {
   /** Ends a stroke in progress as if the pointer lifted, as time running out does. */
   finishStroke(): void {
     this.endStroke(false);
+  }
+
+  /** The pointer left the paper: a hovering pen's ring goes. */
+  leave(): void {
+    this.hideHover();
   }
 
   /** The ops on the ink, oldest first. */
@@ -403,7 +488,7 @@ export class InkEngine {
       this.frameRule = "area";
       this.sheet = null;
     }
-    this.history.load(steps);
+    timeOurWork(INK_WORK.replay, () => this.history.load(steps));
     this.notifyHistory();
   }
 
@@ -439,7 +524,9 @@ export class InkEngine {
     const was = this.sheet;
     if (was?.w === frame.w && was.h === frame.h && was.density === frame.density) return;
     this.sheet = frame;
-    if (this.layer.setFrame(frame)) this.history.invalidate();
+    timeOurWork(INK_WORK.replay, () => {
+      if (this.layer.setFrame(frame)) this.history.invalidate();
+    });
   }
 
   /** Where the paper is now, and how many CSS px a unit spans on it. */
@@ -455,6 +542,34 @@ export class InkEngine {
   private toSheet(e: PointerInput): [number, number] {
     const { left, top, scale } = this.origin;
     return [(e.clientX - left) / scale, (e.clientY - top) / scale];
+  }
+
+  /** A palm-sized contact, judged only on a device a pen has drawn on: before that, size rules nothing. */
+  private palmContact(e: PointerInput): boolean {
+    return this.settings.inputMode !== null && isPalm(e.width, e.height);
+  }
+
+  /** A hovering pen's ring, while the sheet would take its mark. */
+  private hover(e: PointerInput): void {
+    const s = this.settings;
+    if (s.locked || s.paused || s.panelOpen || s.tool === "fill" || this.live || !this.sheet) {
+      this.hideHover();
+      return;
+    }
+    const { left, top, scale } = this.place();
+    const share = s.tool === "eraser" ? 1 : previewWidth(s.penPressure, this.pressurePen);
+    this.hovering = true;
+    this.events.onHover({
+      x: e.clientX - left,
+      y: e.clientY - top,
+      diameter: s.size * share * scale,
+    });
+  }
+
+  private hideHover(): void {
+    if (!this.hovering) return;
+    this.hovering = false;
+    this.events.onHover(null);
   }
 
   private lift(e: PointerInput, cancelled: boolean): void {
@@ -502,6 +617,10 @@ export class InkEngine {
       y,
       t: e.timeStamp,
       T: s.sessionMs(),
+      pressure: e.pressure,
+      pointerType: e.pointerType,
+      pressureVaries: this.pressurePen,
+      response: s.penPressure,
     });
     this.live = {
       id: e.pointerId,
@@ -518,14 +637,20 @@ export class InkEngine {
       y,
       pressure: e.pressure,
       t: e.timeStamp,
+      predicted: [],
     };
     // The dot shows as the pointer lands, not a frame later.
-    this.layer.paint(builder.op, 0, 1);
+    timeOurWork(INK_WORK.paint, () => this.layer.paint(builder.op, 0, 1));
   }
 
   private readonly paintFrame = (): void => {
     this.cancelFrame = null;
-    if (this.live) this.paintNew(this.live);
+    const live = this.live;
+    if (!live) return;
+    timeOurWork(INK_WORK.paint, () => {
+      this.paintNew(live);
+      this.paintPrediction(live);
+    });
   };
 
   /** Feeds the queued samples through the lazy brush and paints the segments they add. */
@@ -533,13 +658,42 @@ export class InkEngine {
     const { queue, lazy, builder } = live;
     for (let i = 0; i < queue.length; i += 4) {
       if (lazy.follow(queue[i], queue[i + 1]))
-        builder.add(lazy.x, lazy.y, queue[i + 2], live.pointerType, queue[i + 3]);
+        builder.add(lazy.x, lazy.y, queue[i + 2], queue[i + 3]);
     }
     queue.length = 0;
     if (builder.count > live.painted) {
       this.layer.paint(builder.op, live.painted, builder.count);
       live.painted = builder.count;
     }
+  }
+
+  /**
+   * The browser's guess at where the pen goes next, painted ahead of the stroke for this frame. It
+   * runs through a copy of the lazy brush, so it extends the line as the stroke would, at the
+   * stroke's last width; the next frame wipes it, and none of it reaches the ink or the op.
+   */
+  private paintPrediction(live: LiveStroke): void {
+    const prediction = this.prediction;
+    if (!prediction) return;
+    const ahead = live.predicted.splice(0);
+    const { pts, tool, color, T } = live.builder.op;
+    if (ahead.length === 0 || tool !== "brush") {
+      prediction.clear();
+      return;
+    }
+    const last = (live.builder.count - 1) * STRIDE;
+    const width = pts[last + 2];
+    const guess = [pts[last], pts[last + 1], width, 0];
+    const brush = live.lazy.copy();
+    for (let i = 0; i < ahead.length; i += 2)
+      if (brush.follow(ahead[i], ahead[i + 1])) guess.push(brush.x, brush.y, width, 0);
+    if (guess.length === STRIDE) {
+      prediction.clear();
+      return;
+    }
+    prediction.paint({ tool, color, pts: guess, T });
+    // The next frame wipes it, whether or not a new sample comes.
+    this.cancelFrame ??= this.requestFrame(this.paintFrame);
   }
 
   /** Commits the stroke in progress, or takes it back off the ink. */
@@ -549,16 +703,21 @@ export class InkEngine {
     this.live = null;
     this.cancelFrame?.();
     this.cancelFrame = null;
+    this.prediction?.clear();
+    // A pen whose pressure moved senses it: its next strokes start at their first sample's width.
+    if (live.builder.pressured) this.pressurePen = true;
     if (takeBack) {
-      this.history.repaint();
+      timeOurWork(INK_WORK.replay, () => this.history.repaint());
       return;
     }
-    this.paintNew(live);
-    let t = live.t;
-    for (const [x, y] of live.lazy.catchUp(live.x, live.y))
-      live.builder.add(x, y, live.pressure, live.pointerType, (t += CATCH_UP_MS));
-    this.paintNew(live);
-    this.history.commit(live.builder.op);
+    timeOurWork(INK_WORK.paint, () => {
+      this.paintNew(live);
+      let t = live.t;
+      for (const [x, y] of live.lazy.catchUp(live.x, live.y))
+        live.builder.add(x, y, live.pressure, (t += CATCH_UP_MS));
+      this.paintNew(live);
+    });
+    timeOurWork(INK_WORK.snapshot, () => this.history.commit(live.builder.op));
     this.events.onCommit(live.builder.op);
     this.notifyHistory();
   }
@@ -571,9 +730,9 @@ export class InkEngine {
       color: this.settings.color,
       T: this.settings.sessionMs(),
     };
-    if (!this.layer.fill(op)) return;
+    if (!timeOurWork(INK_WORK.fill, () => this.layer.fill(op))) return;
     this.frameRule = "fixed";
-    this.history.commit(op);
+    timeOurWork(INK_WORK.snapshot, () => this.history.commit(op));
     this.events.onCommit(op);
     this.notifyHistory();
   }

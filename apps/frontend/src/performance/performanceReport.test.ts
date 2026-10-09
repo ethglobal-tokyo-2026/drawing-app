@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { BootMilestone } from "./bootMilestones";
-import type { FrameWindow, PerformanceSummary, SlowFrame } from "./performanceRecorder";
+import type {
+  FrameWindow,
+  PerformanceSummary,
+  PointerKindSummary,
+  SlowFrame,
+} from "./performanceRecorder";
 import { formatPerformanceReport, formatSummaryLine } from "./performanceReport";
 
 const summary: PerformanceSummary = {
@@ -15,6 +20,7 @@ const summary: PerformanceSummary = {
     ["Send gratitude", { frames: 5400, slow: 180 }],
   ]),
   windows: [],
+  pointers: new Map(),
 };
 const start: BootMilestone[] = [
   { step: "HTML in", at: 310 },
@@ -138,6 +144,34 @@ describe("the performance report", () => {
       "The 5s after the board was complete: not recorded, as the recorder was off then",
     );
     expect(report({}, [slowFrame], [])).not.toContain("after the board was complete");
+  });
+
+  it("lists each kind of pointer: contacts and hovering, pressure, contact size and samples a move", () => {
+    const pen: PointerKindSummary = {
+      downs: 2,
+      moves: 400,
+      hovers: 57,
+      pressure: { min: 0.03, max: 0.97 },
+      width: { min: 0.5, max: 0.5 },
+      height: { min: 0.5, max: 0.5 },
+      coalesced: { total: 1560, most: 6 },
+      predicted: null,
+    };
+    const hovering = { ...pen, downs: 0, moves: 0, pressure: null, width: null, height: null };
+    const text = report({
+      pointers: new Map([
+        ["pen", pen],
+        ["mouse", hovering],
+      ]),
+    });
+    expect(text).toContain(
+      [
+        "Pointers",
+        "  pen: 2 down, 400 moves, 57 hovering · pressure 0.03–0.97 · contact 0.5–0.5 × 0.5–0.5px · 3.9 coalesced a move (most 6) · no predicted events",
+        "  mouse: 0 down, 0 moves, 57 hovering · no contact",
+      ].join("\n"),
+    );
+    expect(report()).toContain("Pointers: none seen");
   });
 
   it("tells the start even before any frame is recorded", () => {

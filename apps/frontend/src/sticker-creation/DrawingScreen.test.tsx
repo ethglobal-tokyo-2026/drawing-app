@@ -25,11 +25,11 @@ import { strings } from "../i18n/strings";
 import { useTickets } from "../tickets/useTickets";
 import { personKey } from "../ui/deviceStorage";
 import { onLargeScreen } from "../ui/testing";
-import type { HistoryState } from "./canvas/inkEngine";
+import type { HistoryState, InputMode } from "./canvas/inkEngine";
 import type { Op } from "./canvas/ops";
 import { frameFor, SHEET_SHORT_UNITS } from "./canvas/sheetFrame";
 import { DrawingScreen, type DrawingScreenHandle } from "./DrawingScreen";
-import { keepDrawingHand } from "./drawingSettings";
+import { keepDrawingHand, penDrew, readInputMode } from "./drawingSettings";
 import { CHARRED_AT_ROLL } from "../kyoto-seika/dieMood";
 import { REUNION, TEST_SUBJECTS, WIND } from "../kyoto-seika/testSubjects";
 import { LOAD_TIMEOUT_MS, SessionKeeper, type KeptSession } from "./session/keptSession";
@@ -43,7 +43,11 @@ const kept = vi.hoisted(() => ({
 }));
 const sheetCalls = vi.hoisted(() => ({
   cleared: 0,
-  settings: null as { paused: boolean; sessionMs: () => number } | null,
+  settings: null as {
+    paused: boolean;
+    sessionMs: () => number;
+    inputMode: InputMode | null;
+  } | null,
   label: undefined as string | undefined,
   /** A touch met the sheet while it takes no ink. */
   blocked: () => {},
@@ -71,7 +75,7 @@ vi.mock("./canvas/DrawingCanvas", () => ({
       onHistory: (state: HistoryState) => void;
       onCommit: (op: Op) => void;
       onBlocked: () => void;
-      settings: { paused: boolean; sessionMs: () => number };
+      settings: { paused: boolean; sessionMs: () => number; inputMode: InputMode | null };
       label?: string;
     },
     ref,
@@ -158,14 +162,19 @@ vi.mock("./tools/SizeRail", () => ({
   },
 }));
 vi.mock("./tools/SmoothingBar", () => ({ SmoothingBar: () => null }));
-// The tool strip's panel tiles; the clear tile controls the clear bar as the real one does.
+// The tool strip's panel tiles, and the Pencil only tile once a pen has drawn here; the clear tile
+// controls the clear bar as the real one does.
 vi.mock("./tools/ToolStrip", () => ({
   ToolStrip: ({
     clearBarId,
     onPanel,
+    inputMode,
+    onInputMode,
   }: {
     clearBarId: string;
     onPanel: (panel: Exclude<Panel, null>) => void;
+    inputMode: InputMode | null;
+    onInputMode: (mode: InputMode) => void;
   }) => (
     <>
       <button type="button" className="color-tile" onClick={() => onPanel("color")} />
@@ -176,6 +185,14 @@ vi.mock("./tools/ToolStrip", () => ({
         aria-controls={clearBarId}
         onClick={() => onPanel("clear")}
       />
+      {inputMode && (
+        <button
+          type="button"
+          className="input-tile"
+          aria-pressed={inputMode === "pencilOnly"}
+          onClick={() => onInputMode(inputMode === "pencilOnly" ? "pencilAndFinger" : "pencilOnly")}
+        />
+      )}
     </>
   ),
 }));
@@ -862,6 +879,29 @@ describe("the color sheet", () => {
     await openColors();
     touch(".timer-stub");
     expect(colorSheet()).not.toBeNull();
+  });
+});
+
+describe("the input mode", () => {
+  const inputTile = () => document.querySelector<HTMLButtonElement>(".input-tile");
+
+  it("starts each sheet in Settings' default once a pen has drawn here, and the tile switches this sheet alone", async () => {
+    reopen(keptHalfway, {}, TEST_ME, { spendTicket: () => Promise.resolve(spentDaily(false)) });
+    await settle();
+    expect(inputTile()).toBeNull();
+    expect(sheetCalls.settings?.inputMode).toBeNull();
+
+    act(() => penDrew());
+    expect(inputTile()?.getAttribute("aria-pressed")).toBe("true");
+    expect(sheetCalls.settings?.inputMode).toBe("pencilOnly");
+
+    act(() => inputTile()?.click());
+    expect(sheetCalls.settings?.inputMode).toBe("pencilAndFinger");
+    expect(readInputMode()).toBe("pencilOnly");
+
+    act(() => drawingScreen.current?.startNewSticker());
+    await settle();
+    expect(sheetCalls.settings?.inputMode).toBe("pencilOnly");
   });
 });
 

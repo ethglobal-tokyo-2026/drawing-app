@@ -1,5 +1,12 @@
 import type { BootMilestone } from "./bootMilestones";
-import type { FrameWindow, PerformanceSummary, SlowFrame } from "./performanceRecorder";
+import type {
+  FrameWindow,
+  PerformanceSummary,
+  PointerKindSummary,
+  SampleCount,
+  SlowFrame,
+  Span,
+} from "./performanceRecorder";
 
 export interface ReportInput {
   summary: PerformanceSummary;
@@ -21,6 +28,34 @@ const share = (part: number, whole: number) =>
 const fps = (typicalMs: number) => Math.round(1000 / typicalMs);
 const screenName = (screen: string) => screen || "untitled";
 const calls = (n: number) => `${count(n)} ${n === 1 ? "call" : "calls"}`;
+const range = ({ min, max }: Span, digits: number) =>
+  `${min.toFixed(digits)}–${max.toFixed(digits)}`;
+
+/** Samples a move, on average and at most, or that the browser has no such list. */
+const perMove = (samples: SampleCount | null, moves: number, name: string) =>
+  samples === null
+    ? `no ${name} events`
+    : `${(moves > 0 ? samples.total / moves : 0).toFixed(1)} ${name} a move (most ${samples.most})`;
+
+/** One kind of pointer: its contacts and hovering, how hard and how big, and the samples a move carried. */
+function pointerLine(type: string, kind: PointerKindSummary): string {
+  const head = `${type}: ${count(kind.downs)} down, ${count(kind.moves)} moves, ${count(kind.hovers)} hovering`;
+  const { pressure, width, height } = kind;
+  if (!pressure || !width || !height) return `${head} · no contact`;
+  return [
+    head,
+    `pressure ${range(pressure, 2)}`,
+    `contact ${range(width, 1)} × ${range(height, 1)}px`,
+    perMove(kind.coalesced, kind.moves, "coalesced"),
+    perMove(kind.predicted, kind.moves, "predicted"),
+  ].join(" · ");
+}
+
+/** The pointers seen, for checking a Pencil, or that none was. */
+function pointerLines(pointers: PerformanceSummary["pointers"]): string[] {
+  if (pointers.size === 0) return ["Pointers: none seen", ""];
+  return ["Pointers", ...[...pointers].map(([type, kind]) => `  ${pointerLine(type, kind)}`), ""];
+}
 
 /** 45s, or 3m 12s. */
 function span(duration: number): string {
@@ -156,6 +191,7 @@ export function formatPerformanceReport({
       ? ["30 fps: Low Power Mode or throttling"]
       : []),
     "",
+    ...pointerLines(summary.pointers),
     "Slow frames by screen",
     ...[...summary.byScreen]
       .sort(([, a], [, b]) => b.slow - a.slow)

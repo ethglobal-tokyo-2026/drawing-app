@@ -1,24 +1,56 @@
 import { describe, expect, it } from "vitest";
-import { StrokeBuilder } from "./brush";
+import { StrokeBuilder, type PenPressure } from "./brush";
 import { STRIDE } from "./ops";
 
 const SIZE = 10;
 
-const start = (tool: "brush" | "eraser" = "brush") =>
-  new StrokeBuilder({ tool, color: "#000000", size: SIZE, x: 0, y: 0, t: 0, T: 0 });
+/** A brush stroke from 0,0, with whatever of its start `given` sets. */
+const builder = (given: Partial<ConstructorParameters<typeof StrokeBuilder>[0]> = {}) =>
+  new StrokeBuilder({
+    tool: "brush",
+    color: "#000000",
+    size: SIZE,
+    x: 0,
+    y: 0,
+    t: 0,
+    T: 0,
+    pressure: 0,
+    pointerType: "mouse",
+    pressureVaries: false,
+    response: "normal",
+    ...given,
+  });
+
+interface Drawn {
+  /** One pressure for every point, or each point's by its index. */
+  pressure?: number | ((i: number) => number);
+  pointer?: string;
+  ms?: number;
+  tool?: "brush" | "eraser";
+  /** The pen has shown its pressure moving before this stroke. */
+  pressureVaries?: boolean;
+  response?: PenPressure;
+}
 
 /** Widths as fractions of the brush size, after adding `n` points 10px apart, `ms` apart. */
-function widths(
-  n: number,
-  {
+function widths(n: number, drawn: Drawn = {}): number[] {
+  const {
     pressure = 0.5,
     pointer = "mouse",
     ms = 16,
     tool = "brush",
-  }: { pressure?: number; pointer?: string; ms?: number; tool?: "brush" | "eraser" } = {},
-): number[] {
-  const stroke = start(tool);
-  for (let i = 1; i <= n; i++) stroke.add(i * 10, 0, pressure, pointer, i * ms);
+    pressureVaries = true,
+    response = "normal",
+  } = drawn;
+  const pressed = (i: number) => (typeof pressure === "number" ? pressure : pressure(i));
+  const stroke = builder({
+    tool,
+    pressure: pressed(0),
+    pointerType: pointer,
+    pressureVaries,
+    response,
+  });
+  for (let i = 1; i <= n; i++) stroke.add(i * 10, 0, pressed(i), i * ms);
   const { pts } = stroke.op;
   return Array.from({ length: pts.length / STRIDE }, (_, i) => pts[i * STRIDE + 2] / SIZE);
 }
@@ -48,9 +80,41 @@ describe("StrokeBuilder", () => {
   });
 
   it("skips points within half a pixel of the last", () => {
-    const stroke = start();
-    expect(stroke.add(0.3, 0.3, 0.5, "mouse", 16)).toBe(false);
-    expect(stroke.add(0.6, 0, 0.5, "mouse", 32)).toBe(true);
+    const stroke = builder();
+    expect(stroke.add(0.3, 0.3, 0.5, 16)).toBe(false);
+    expect(stroke.add(0.6, 0, 0.5, 32)).toBe(true);
     expect(stroke.op.pts.length / STRIDE).toBe(2);
+  });
+
+  it("starts a pen stroke at its first sample's width, so a light start stays light", () => {
+    const light = widths(40, { pointer: "pen", pressure: 0.1 });
+    const firm = widths(40, { pointer: "pen", pressure: 0.9 });
+    expect(light[0]).toBeLessThan(firm[0]);
+    // Nothing heavier than where it settles: no full-width start thinning out.
+    expect(Math.max(...light)).toBeCloseTo(last(light));
+  });
+
+  it("draws a pen whose pressure never moves as a finger draws, by speed, under every curve", () => {
+    for (const response of ["light", "normal", "firm"] as const)
+      for (const ms of [0.5, 1000])
+        expect(
+          widths(40, { pointer: "pen", pressure: 0.5, pressureVaries: false, response, ms }),
+        ).toEqual(widths(40, { pointer: "touch", ms }));
+    // Once its pressure moves, pressure sets the width.
+    const moving = { pointer: "pen", ms: 0.5, pressureVaries: false } as const;
+    expect(last(widths(40, { ...moving, pressure: (i) => (i < 5 ? 0.5 : 1) }))).toBeCloseTo(
+      last(widths(40, { pointer: "pen", ms: 0.5, pressure: 1 })),
+    );
+  });
+
+  it("draws wider at one pressure under Light than Normal, and Normal than Firm, and the brush's own size under Off", () => {
+    const at = (response: PenPressure) =>
+      last(widths(40, { pointer: "pen", pressure: 0.3, response }));
+    expect(at("light")).toBeGreaterThan(at("normal"));
+    expect(at("normal")).toBeGreaterThan(at("firm"));
+    const off = (pressure: Drawn["pressure"], ms: number, pressureVaries: boolean) =>
+      widths(40, { pointer: "pen", pressure, ms, pressureVaries, response: "off" });
+    expect(off((i) => i / 40, 0.5, true)).toEqual(off(0.5, 1000, false));
+    expect(last(off(0.5, 1000, false))).toBe(1);
   });
 });

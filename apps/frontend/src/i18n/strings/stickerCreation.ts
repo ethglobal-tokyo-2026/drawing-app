@@ -195,6 +195,8 @@ export const stickerCreation = {
     smoothing: { en: "Smoothing", ja: "手ぶれ補正" },
     /** Drawing screen, top right: the clear tile at the end of the tool strip, which opens the clear bar, named for screen readers; dimmed while the sheet is blank */
     clear: { en: "Clear the sheet", ja: "キャンバスを消去" },
+    /** Drawing screen, tool strip: the Pencil only tile at its start, shown once a pen has drawn on this device, named for screen readers; pressed, only the pen draws on this sheet and fingers tap to undo and redo */
+    pencilOnly: { en: "Pencil only", ja: "ペンのみ" },
   },
   colorSheet: {
     /** Color sheet, which slides up over the drawing screen from the color tile, or opens under the tool strip on a large screen: its heading, and its name for screen readers */

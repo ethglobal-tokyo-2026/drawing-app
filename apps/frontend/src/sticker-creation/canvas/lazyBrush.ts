@@ -33,6 +33,11 @@ export class LazyBrush {
     return true;
   }
 
+  /** A brush where this one is, on the same string, to try a path without moving this one. */
+  copy(): LazyBrush {
+    return new LazyBrush(this.x, this.y, this.radius);
+  }
+
   /** The points from the brush to where the pointer lifted, so the stroke ends under the finger. */
   catchUp(px: number, py: number): [number, number][] {
     const dx = px - this.x;

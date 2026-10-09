@@ -309,6 +309,31 @@ export const stickerBoard = {
         ja: "この端末に保存できなかったため、クロッキーを閉じるまでの設定になります。",
       },
     },
+    /** The Drawing group's Pencil rows, shown once a pen has drawn on this device. */
+    pencil: {
+      input: {
+        /** Settings note, Drawing group: the Input row's name, the input each new drawing starts in */
+        title: { en: "Input", ja: "入力" },
+        /** Settings note, Drawing group: the Input choice where only the pen draws and fingers tap to undo and redo */
+        pencilOnly: { en: "Pencil only", ja: "ペンのみ" },
+        /** Settings note, Drawing group: the Input choice where fingers draw as well as the pen */
+        pencilAndFinger: { en: "Pencil and finger", ja: "ペンと指" },
+      },
+      pressure: {
+        /** Settings note, Drawing group: the Pen pressure row's name */
+        title: { en: "Pen pressure", ja: "筆圧" },
+        /** Settings note, Drawing group: the Pen pressure choice where the pen draws the brush's own width */
+        off: { en: "Off", ja: "オフ" },
+        /** Settings note, Drawing group: the Pen pressure choice where a light touch already draws wide */
+        light: { en: "Light", ja: "軽め" },
+        /** Settings note, Drawing group: the Pen pressure choice that's the usual curve, the default */
+        normal: { en: "Normal", ja: "ふつう" },
+        /** Settings note, Drawing group: the Pen pressure choice where full width takes more force */
+        firm: { en: "Firm", ja: "強め" },
+        /** Settings note, Drawing group: the small print on the strip of paper under Pen pressure, where the pen tries the chosen curve; hidden from screen readers */
+        tryIt: { en: "Try it", ja: "ためしがき" },
+      },
+    },
   },
   /** The developer slip: English only, so the Japanese catalog never translates it. */
   developer: {
@@ -332,7 +357,7 @@ export const stickerBoard = {
       title: { en: "Performance" },
       record: { en: "Record performance" },
       what: {
-        en: "Slow frames and what happened around them. While it’s on, it records from the app’s start.",
+        en: "Slow frames and what happened around them, and each kind of pointer. While it’s on, it records from the app’s start.",
       },
       nothingYet: { en: "Nothing recorded yet" },
       copy: { en: "Copy report" },

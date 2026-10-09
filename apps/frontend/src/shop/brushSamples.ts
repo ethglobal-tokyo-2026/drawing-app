@@ -43,10 +43,23 @@ export function brushSample(kind: BrushKind, side: number): StrokeOp {
     case "brush": {
       const path = wave(side);
       const [x, y] = path[0];
-      const stroke = new StrokeBuilder({ tool: "brush", color: INK, size, x, y, t: 0, T: 0 });
+      // Today's brush as a pen that senses pressure draws it, under the Normal curve.
+      const stroke = new StrokeBuilder({
+        tool: "brush",
+        color: INK,
+        size,
+        x,
+        y,
+        t: 0,
+        T: 0,
+        pressure: 0,
+        pointerType: "pen",
+        pressureVaries: true,
+        response: "normal",
+      });
       path.slice(1).forEach(([px, py], i) => {
         const pressure = Math.sin((Math.PI * (i + 1)) / path.length) ** 0.8;
-        stroke.add(px, py, pressure, "pen", (i + 1) * 12);
+        stroke.add(px, py, pressure, (i + 1) * 12);
       });
       return stroke.op;
     }

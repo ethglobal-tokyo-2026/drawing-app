@@ -1,6 +1,15 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from "vitest";
-import { InkEngine, type InkLayer, type InkSettings, type PointerInput } from "./inkEngine";
+import { PALM_CONTACT_PX, YOUNG_MS } from "./gestures";
+import {
+  INK_WORK,
+  InkEngine,
+  type HoverRing,
+  type InkLayer,
+  type InkSettings,
+  type PointerInput,
+  type PredictionLayer,
+} from "./inkEngine";
 import { STRIDE, type FillOp, type Op, type StrokeOp } from "./ops";
 import {
   areaFrame,
@@ -9,6 +18,15 @@ import {
   type SheetArea,
   type SheetFrame,
 } from "./sheetFrame";
+
+/** The labels the engine's work was timed under, as the performance recorder hears them. */
+const timed = vi.hoisted((): string[] => []);
+vi.mock("../../performance/performanceRecorder", () => ({
+  timeOurWork: <T>(label: string, work: () => T): T => {
+    timed.push(label);
+    return work();
+  },
+}));
 
 /** Records what reaches the ink; the pixels themselves are the surface's business. */
 class FakeLayer implements InkLayer {
@@ -39,12 +57,31 @@ class FakeLayer implements InkLayer {
   }
 }
 
+/** Records what the prediction overlay shows. */
+class FakePrediction implements PredictionLayer {
+  shown: StrokeOp | null = null;
+  paint(op: StrokeOp) {
+    this.shown = op;
+  }
+  clear() {
+    this.shown = null;
+  }
+}
+
 /** The sheet's room on screen: a sheet that fits it exactly shows at scale 1. */
 const AREA: SheetArea = { width: SHEET_SHORT_UNITS, height: SHEET_SHORT_UNITS * 2 };
 /** The same room with the screen turned. */
 const TURNED: SheetArea = { width: AREA.height, height: AREA.width };
 /** A stroke kept from before a reload. */
 const KEPT: StrokeOp = { tool: "brush", color: "#1C1824", pts: [10, 10, 7, 0], T: 0 };
+
+/** A fingertip's contact, well under a palm's. */
+const FINGERTIP = PALM_CONTACT_PX / 4;
+const palmSized = (input: PointerInput): PointerInput => ({
+  ...input,
+  width: PALM_CONTACT_PX,
+  height: PALM_CONTACT_PX,
+});
 
 const SETTINGS: InkSettings = {
   tool: "brush",
@@ -54,31 +91,51 @@ const SETTINGS: InkSettings = {
   locked: false,
   paused: false,
   panelOpen: false,
+  inputMode: null,
+  penPressure: "normal",
   sessionMs: () => 0,
 };
 
-function setup(settings: Partial<InkSettings> = {}) {
+function setup(settings: Partial<InkSettings> = {}, prediction: PredictionLayer | null = null) {
   const layer = new FakeLayer();
   const events = {
     onHistory: vi.fn(),
     onCommit: vi.fn<(op: Op) => void>(),
     onBlocked: vi.fn(),
     onDismissPanel: vi.fn(),
+    onPen: vi.fn(),
+    onHover: vi.fn<(ring: HoverRing | null) => void>(),
   };
   let frame: (() => void) | null = null;
-  const engine = new InkEngine(layer, { ...SETTINGS, ...settings }, events, (cb) => {
-    frame = cb;
-    return () => (frame = null);
-  });
+  const engine = new InkEngine(
+    layer,
+    { ...SETTINGS, ...settings },
+    events,
+    (cb) => {
+      frame = cb;
+      return () => (frame = null);
+    },
+    prediction,
+  );
   engine.fit(AREA, 1);
-  const at = (pointerType: string, pointerId: number, x: number, y: number, t: number) =>
+  const at = (
+    pointerType: string,
+    pointerId: number,
+    x: number,
+    y: number,
+    t: number,
+    pressure = pointerType === "pen" ? 0.6 : 0,
+  ) =>
     ({
       pointerId,
       pointerType,
       button: 0,
+      buttons: 1,
       clientX: x,
       clientY: y,
-      pressure: pointerType === "pen" ? 0.6 : 0,
+      pressure,
+      width: pointerType === "touch" ? FINGERTIP : 1,
+      height: pointerType === "touch" ? FINGERTIP : 1,
       timeStamp: t,
       preventDefault() {},
     }) satisfies PointerInput;
@@ -88,23 +145,27 @@ function setup(settings: Partial<InkSettings> = {}) {
     frame = null;
     run?.();
   };
-  /** A pointer landing at `from`, moving in 10px steps 16ms apart, and lifting at `to`. */
+  /**
+   * A pointer landing at `from`, moving in 10px steps 16ms apart, and lifting at `to`; a pen presses
+   * `pressure(step)` at each.
+   */
   const stroke = (
     pointerType: string,
     id: number,
     from: [number, number],
     to: [number, number],
     t0 = 0,
+    pressure?: (step: number) => number,
   ) => {
     const steps = Math.max(1, Math.round(Math.hypot(to[0] - from[0], to[1] - from[1]) / 10));
-    engine.down(at(pointerType, id, from[0], from[1], t0));
+    engine.down(at(pointerType, id, from[0], from[1], t0, pressure?.(0)));
     for (let i = 1; i <= steps; i++) {
       const x = from[0] + ((to[0] - from[0]) * i) / steps;
       const y = from[1] + ((to[1] - from[1]) * i) / steps;
-      engine.move(at(pointerType, id, x, y, t0 + i * 16));
+      engine.move(at(pointerType, id, x, y, t0 + i * 16, pressure?.(i)));
       runFrame();
     }
-    engine.up(at(pointerType, id, to[0], to[1], t0 + steps * 16 + 16));
+    engine.up(at(pointerType, id, to[0], to[1], t0 + steps * 16 + 16, pressure?.(steps)));
   };
   /** A pointer landing on the first point, through the rest 16ms apart, lifting on the last. */
   const trace = (pointerType: string, id: number, points: [number, number][]) => {
@@ -126,7 +187,7 @@ function setup(settings: Partial<InkSettings> = {}) {
     for (let id = 1; id <= fingers; id++) engine.up(at("touch", 100 + id, id * 60, 300, t + 100));
   };
   const committed = () => events.onCommit.mock.calls.map(([op]) => op);
-  return { engine, layer, events, at, trace, stroke, tap, committed };
+  return { engine, layer, events, at, runFrame, trace, stroke, tap, committed };
 }
 
 /** The engine's frame, which every sheet here has from the start. */
@@ -185,13 +246,120 @@ describe("InkEngine", () => {
     expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false));
   });
 
-  it("stops fingers drawing once a pen has, while they still tap", () => {
-    const { stroke, tap, committed, events } = setup();
+  it("lets fingers draw in Pencil and finger, only tap in Pencil only, and tells of every pen", () => {
+    const { engine, stroke, tap, committed, events } = setup({ inputMode: "pencilAndFinger" });
     stroke("pen", 1, [0, 0], [100, 0]);
+    expect(events.onPen).toHaveBeenCalledOnce();
     stroke("touch", 2, [0, 50], [100, 50], 1000);
-    expect(committed()).toHaveLength(1);
-    tap(2, 2000);
-    expect(events.onHistory).toHaveBeenLastCalledWith(state(false, true));
+    expect(committed()).toHaveLength(2);
+    engine.settings = { ...engine.settings, inputMode: "pencilOnly" };
+    stroke("touch", 3, [0, 100], [100, 100], 2000);
+    expect(committed()).toHaveLength(2);
+    tap(2, 3000);
+    expect(events.onHistory).toHaveBeenLastCalledWith(state(true, true));
+  });
+
+  it("judges a palm-sized touch a palm on a device a pen has drawn on: it never draws, and a finger's stroke that spreads into one is taken back", () => {
+    /** One touch stroke, palm-sized from where it lands, or once it has moved with `spreads`. */
+    const touchStroke = (sheet: ReturnType<typeof setup>, spreads = false) => {
+      const contact = (input: PointerInput, landing: boolean) =>
+        spreads && landing ? input : palmSized(input);
+      sheet.engine.down(contact(sheet.at("touch", 1, 0, 50, 0), true));
+      sheet.engine.move(contact(sheet.at("touch", 1, 30, 50, 16), false));
+      sheet.runFrame();
+      sheet.engine.up(contact(sheet.at("touch", 1, 40, 50, 32), false));
+      return sheet.committed();
+    };
+    // No pen has drawn on a phone, so size judges nothing there.
+    expect(touchStroke(setup())).toHaveLength(1);
+    for (const spreads of [false, true])
+      expect(touchStroke(setup({ inputMode: "pencilAndFinger" }), spreads)).toEqual([]);
+  });
+
+  it("undoes on a two-finger tap while a palm rests on the sheet, whatever its size", () => {
+    for (const size of [FINGERTIP, PALM_CONTACT_PX]) {
+      const { engine, at, stroke, tap, events } = setup({ inputMode: "pencilOnly" });
+      stroke("pen", 1, [0, 0], [100, 0]);
+      stroke("pen", 2, [0, 20], [100, 20], 500);
+      engine.down({ ...at("touch", 90, 300, 600, 1000), width: size, height: size });
+      tap(2, 1000 + YOUNG_MS);
+      expect(events.onHistory).toHaveBeenLastCalledWith(state(true, true));
+    }
+  });
+
+  it("starts a pen stroke at its first sample's pressure once the pen has shown it senses pressure", () => {
+    const LIGHT = 0.1;
+    const dot = (op: Op | undefined) => (op?.tool === "brush" ? op.pts[2] : NaN);
+    const fresh = setup();
+    fresh.stroke("pen", 1, [0, 0], [100, 0], 0, () => LIGHT);
+    const sensed = setup();
+    sensed.stroke("pen", 1, [0, 0], [100, 0], 0, (step) => LIGHT + step / 20);
+    sensed.stroke("pen", 2, [0, 50], [100, 50], 1000, () => LIGHT);
+    // Until its pressure moves, a light press can't be told from a pen that senses none.
+    expect(dot(sensed.committed()[1])).toBeLessThan(dot(fresh.committed()[0]));
+  });
+
+  it("rings where a hovering pen would land, as wide as its stroke on screen, and hides it as the pen lands or leaves", () => {
+    const { engine, at, layer, events } = setup({ penPressure: "off" });
+    const hover = (pointerType: string, x: number, t: number) =>
+      engine.move({ ...at(pointerType, 1, x, 40, t), buttons: 0 });
+    const ring = () => events.onHover.mock.lastCall?.[0];
+    // Paper 100px in, two CSS px to the unit.
+    const detach = engine.attach(paperAt(framed(engine), 100, 0, 2));
+    hover("mouse", 110, 0);
+    expect(events.onHover).not.toHaveBeenCalled();
+    hover("pen", 140, 10);
+    expect(ring()).toEqual({ x: 40, y: 40, diameter: SETTINGS.size * 2 });
+    // Under a curve, a middle pressure: narrower than the brush's full size.
+    engine.settings = { ...engine.settings, penPressure: "normal" };
+    hover("pen", 140, 20);
+    expect(ring()?.diameter).toBeLessThan(SETTINGS.size * 2);
+    expect(layer.paints).toBe(0);
+    engine.down(at("pen", 1, 140, 40, 30));
+    expect(ring()).toBeNull();
+    engine.up(at("pen", 1, 140, 40, 40));
+    hover("pen", 150, 50);
+    engine.leave();
+    expect(ring()).toBeNull();
+    // A paused sheet takes no mark, so a hovering pen shows none.
+    hover("pen", 150, 60);
+    engine.settings = { ...engine.settings, paused: true };
+    hover("pen", 160, 70);
+    expect(ring()).toBeNull();
+    detach();
+  });
+
+  it("names its painting, fills, replays and snapshots for the performance recorder", () => {
+    const { engine, stroke } = setup({ tool: "fill" });
+    timed.length = 0;
+    stroke("touch", 1, [40, 40], [42, 40]);
+    engine.settings = { ...engine.settings, tool: "brush" };
+    stroke("mouse", 2, [0, 0], [100, 0], 1000);
+    engine.undo();
+    expect(new Set(timed)).toEqual(new Set(Object.values(INK_WORK)));
+  });
+
+  it("paints a pen's predicted points ahead of its brush stroke for one frame, and never keeps them", () => {
+    const prediction = new FakePrediction();
+    const { engine, at, runFrame, committed } = setup({}, prediction);
+    const guessing = (input: PointerInput, ...ahead: [number, number][]): PointerInput => ({
+      ...input,
+      getPredictedEvents: () => ahead.map(([x, y]) => ({ ...input, clientX: x, clientY: y })),
+    });
+    engine.down(at("pen", 1, 0, 0, 0));
+    engine.move(guessing(at("pen", 1, 10, 0, 16), [20, 0], [30, 0]));
+    runFrame();
+    expect(prediction.shown?.pts.filter((_, i) => i % STRIDE === 0)).toEqual([10, 20, 30]);
+    runFrame();
+    expect(prediction.shown).toBeNull();
+    engine.up(at("pen", 1, 10, 0, 40));
+    expect(lastPoint(committed()[0])).toEqual([10, 0]);
+    // A guess at erasing can't show on an overlay, so the eraser shows none.
+    engine.settings = { ...engine.settings, tool: "eraser" };
+    engine.down(at("pen", 2, 0, 50, 100));
+    engine.move(guessing(at("pen", 2, 10, 50, 116), [20, 50]));
+    runFrame();
+    expect(prediction.shown).toBeNull();
   });
 
   it("marks nothing while paused, hinting at once for a mouse and on lift for a touch", () => {

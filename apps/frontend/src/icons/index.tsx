@@ -5,6 +5,7 @@ import {
   Fire,
   Gift,
   Heart,
+  PenNib,
   Spinner,
   Tag,
   Ticket,
@@ -55,6 +56,10 @@ export const ArrangeIcon = (props: IconProps) => (
  */
 export const ClearSheetIcon = (props: IconProps) => (
   <Spinner aria-hidden focusable="false" {...props} />
+);
+/** Pencil only: the drawing screen's tile that switches the sheet between Pencil only and Pencil and finger. */
+export const PencilOnlyIcon = (props: IconProps) => (
+  <PenNib aria-hidden focusable="false" {...props} />
 );
 
 // Icons with no meaning of their own in the app.

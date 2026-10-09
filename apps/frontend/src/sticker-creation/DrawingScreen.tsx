@@ -33,8 +33,8 @@ import { QuietLink } from "../ui/QuietLink";
 import { releaseCanvas } from "../ui/releaseCanvas";
 import { sizePx } from "./canvas/brush";
 import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas";
-import type { HistoryState } from "./canvas/inkEngine";
-import { useDrawingHand } from "./drawingSettings";
+import type { HistoryState, InputMode } from "./canvas/inkEngine";
+import { penDrew, useDrawingHand, useInputMode, usePenPressure } from "./drawingSettings";
 import { isFirstVisit } from "./drawVisits";
 import { lazyRadius } from "./canvas/lazyBrush";
 import type { Op, Tool } from "./canvas/ops";
@@ -158,6 +158,12 @@ export function DrawingScreen({
   /** On a large screen the color sheet is a popover, which a tap outside closes. */
   const large = useLargeScreen();
   const hand = useDrawingHand();
+  // The input each sheet starts in, from Settings; null before a pen has drawn on this device.
+  const defaultInputMode = useInputMode();
+  // The Pencil only tile's choice for this sheet; a fresh sheet starts in the default again.
+  const [sheetInputMode, setSheetInputMode] = useState<InputMode | null>(null);
+  const inputMode = defaultInputMode === null ? null : (sheetInputMode ?? defaultInputMode);
+  const penPressure = usePenPressure();
 
   const [tool, setTool] = useState<Tool>("brush");
   const [color, setColor] = useState(() => startingColor());
@@ -297,6 +303,7 @@ export function DrawingScreen({
         setPickedUp(null);
         setPaused(false);
         setPanel(null);
+        setSheetInputMode(null);
         lastCeremony.current?.sticker.dispose();
         lastCeremony.current = null;
         sentSeal.current?.sticker.dispose();
@@ -1012,6 +1019,8 @@ export function DrawingScreen({
           // The dealt sheet takes the paused sheet's path, so a touch nudges Begin.
           paused: paused || dealt,
           panelOpen: panel !== null,
+          inputMode,
+          penPressure,
           sessionMs: () => clock.elapsed,
         }}
         onHistory={(next) => {
@@ -1032,6 +1041,7 @@ export function DrawingScreen({
           timer.current?.showHint();
         }}
         onDismissPanel={() => setPanel(null)}
+        onPen={penDrew}
         onFit={setSheetScale}
       />
       <div className="drawing-top">
@@ -1053,6 +1063,8 @@ export function DrawingScreen({
           clearBarId={clearBarId}
           onTool={pickTool}
           onPanel={setPanel}
+          inputMode={inputMode}
+          onInputMode={setSheetInputMode}
         />
       </div>
       {/* A deal on its way out finishes leaving even under the board, so it never plays again. */}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TapRecognizer } from "./gestures";
+import { TapRecognizer, YOUNG_MS } from "./gestures";
 
 /**
  * Lands fingers 50px apart: the first starts drawing, and the second lands 30ms later on that stroke;
@@ -66,5 +66,24 @@ describe("TapRecognizer", () => {
     taps.down(1, 0, 0, 0);
     expect(taps.down(2, 50, 0, 30)).toBe("gesture");
     expect(liftAll(taps, 2, 200)).toBe("undo");
+  });
+
+  it("leaves out a touch already down when a tap begins, so a resting palm doesn't hold the undo up", () => {
+    const taps = new TapRecognizer();
+    taps.down(9, 300, 600, 0);
+    const t = YOUNG_MS + 100;
+    taps.down(1, 0, 0, t);
+    taps.down(2, 50, 0, t + 10);
+    expect(taps.up(1, t + 100)).toBeNull();
+    expect(taps.up(2, t + 110)).toBe("undo");
+  });
+
+  it("never counts a palm-sized contact: it lands as nothing, and a tap around it keeps its count", () => {
+    const taps = new TapRecognizer();
+    expect(taps.down(1, 0, 0, 0)).toBe("draw");
+    expect(taps.down(9, 300, 600, 5, undefined, true)).toBe("ignore");
+    taps.down(2, 50, 0, 10);
+    expect(taps.up(1, 100)).toBeNull();
+    expect(taps.up(2, 110)).toBe("undo");
   });
 });
