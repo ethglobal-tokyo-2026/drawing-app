@@ -50,7 +50,7 @@
     var(--shadow-label);
   font-size: 13px;
   font-weight: 650;
-  line-height: 1.25;
+  line-height: 1.42;
   color: var(--ink);
   opacity: 0;
   transform: translateY(6px);

@@ -148,6 +148,10 @@
   transform-origin: 100% 0;
 }
 
+.drawing-screen[data-hand="left"] .timer-hint.is-call .timer-hint-label {
+  margin: 4px 0 0;
+}
+
 /* The wide dot grows from its top-right corner, away from the screen's edge. */
 .drawing-screen[data-hand="left"] .timer-dot.is-wide {
   translate: -4px 4px;
@@ -178,7 +182,7 @@
 /* My board stays on undo's far side, nearer the middle, as on the right. */
 .drawing-screen[data-hand="left"] > .my-board-tile {
   left: auto;
-  right: calc(18px + 2 * (46px + 6px));
+  right: calc(18px + var(--board-at));
 }
 
 .drawing-screen.is-dealt[data-hand="left"] > .my-board-tile {
@@ -226,7 +230,7 @@
     --foot: 8px;
     /* The rail, then undo, redo and My board under it, centered on the sidebar's height. */
     --rail-h: 180px;
-    --tiles-h: calc(3 * 46px + 2 * 6px);
+    --tiles-h: calc(3 * 46px + 6px + 16px);
     --rail-top: calc(50% - (var(--rail-h) + 16px + var(--tiles-h)) / 2);
     --tiles-top: calc(var(--rail-top) + var(--rail-h) + 16px);
   }
@@ -265,7 +269,7 @@
   .drawing-screen > .my-board-tile,
   .drawing-screen.is-dealt > .my-board-tile {
     left: calc((var(--edge-w) - 46px) / 2);
-    top: calc(var(--tiles-top) + 2 * (46px + 6px));
+    top: calc(var(--tiles-top) + var(--board-at));
     bottom: auto;
   }
 
