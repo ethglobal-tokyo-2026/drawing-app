@@ -157,14 +157,17 @@
     box-shadow: inset 0 2px 3px rgba(28, 24, 36, 0.16);
   }
 
-  /* The compact key's 48px face centers on the tabs, its 6px lip below their foot. It stacks over the
-     screens, since a key's nudge and tickets reach up past the strip, and under the sheets that cover
-     the whole phone. */
+  /* The compact key's 48px face centers on the tabs, its 6px lip below their foot, but never inside the
+     home indicator's safe area. It stacks over the screens, since a key's nudge and tickets reach up
+     past the strip, and under the sheets that cover the whole phone. */
   .tabs-lead {
     position: absolute;
     z-index: calc(var(--z-sheet) - 1);
     left: var(--gutter-large);
-    bottom: calc(var(--tabs-pad-foot) + var(--tab-h) / 2 - 24px - 6px);
+    bottom: max(
+      env(safe-area-inset-bottom),
+      calc(var(--tabs-pad-foot) + var(--tab-h) / 2 - 24px - 6px)
+    );
     display: flex;
   }
 }
