@@ -259,6 +259,11 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, `POST /api/stickers/${stickerId}/nsfw`);
       return response.json();
     },
+    unmarkStickerNsfw: async (stickerId) => {
+      const response = await api.stickers[":stickerId"].nsfw.$delete({ param: { stickerId } });
+      if (!response.ok) throw await refusal(response, `DELETE /api/stickers/${stickerId}/nsfw`);
+      return response.json();
+    },
 
     tickets: async () => {
       const response = await api.tickets.$get();

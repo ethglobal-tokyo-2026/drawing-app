@@ -4,15 +4,15 @@ import type { AppDeps } from "../deps.ts";
 import { apiError, limitBody, validate } from "../errors.ts";
 import type { AppEnv } from "../session.ts";
 import { stickerViewer } from "../shapes.ts";
-import { markStickerNsfw } from "../stickers/markNsfw.ts";
+import { markStickerNsfw, unmarkStickerNsfw } from "../stickers/markNsfw.ts";
 import { sealSticker } from "../stickers/seal.ts";
 import { MAX_SEAL_BYTES, sealForm } from "../stickers/sealForm.ts";
 import { stickerDetail, stickerIdParam } from "../stickers/stickerDetail.ts";
 import { readTimelapse } from "../stickers/timelapse.ts";
 
 /**
- * Stickers: sealing, a sticker's detail with its Transfer Trail, marking it 18+ after its seal, and
- * how it was drawn.
+ * Stickers: sealing, a sticker's detail with its Transfer Trail, marking it 18+ after its seal or
+ * taking the mark off, and how it was drawn.
  */
 export const stickerRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
@@ -38,6 +38,15 @@ export const stickerRoutes = (deps: AppDeps) =>
         return apiError(c, status, error, detail);
       }
       return c.json(outcome.marked, 200);
+    })
+    .delete("/:stickerId/nsfw", validate("param", stickerIdParam), async (c) => {
+      const { stickerId } = c.req.valid("param");
+      const outcome = await unmarkStickerNsfw(deps, c.var.userId, stickerId);
+      if ("refused" in outcome) {
+        const { status, error, detail } = outcome.refused;
+        return apiError(c, status, error, detail);
+      }
+      return c.json(outcome.unmarked, 200);
     })
     .get("/:stickerId/timelapse", validate("param", stickerIdParam), (c) => {
       const { stickerId } = c.req.valid("param");

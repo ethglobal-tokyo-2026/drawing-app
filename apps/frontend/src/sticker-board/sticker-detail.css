@@ -339,11 +339,7 @@
   line-height: 1.42;
 }
 
-.sticker-detail__mark-lines .sticker-detail__mark-undo {
-  font-weight: 700;
-}
-
-/* Scrolled up to as Mark 18+'s confirm opens: with the confirm's foot, clear of the home indicator. */
+/* Scrolled up to as Mark 18+'s or Remove 18+'s confirm opens: with the confirm's foot, clear of the home indicator. */
 .sticker-detail__mark-actions {
   display: flex;
   align-items: center;

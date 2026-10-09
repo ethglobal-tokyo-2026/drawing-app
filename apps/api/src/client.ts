@@ -83,7 +83,7 @@ export type {
   PlacementsRequest,
   StickerBoard,
 } from "./stickerBoards/board.ts";
-export type { MarkNsfwResponse } from "./stickers/markNsfw.ts";
+export type { MarkNsfwResponse, UnmarkNsfwResponse } from "./stickers/markNsfw.ts";
 export type { SealResponse } from "./stickers/seal.ts";
 export type { StickerDetail, TransferTrailEntry } from "./stickers/stickerDetail.ts";
 export type { TimelapseV1 } from "./stickers/timelapse.ts";

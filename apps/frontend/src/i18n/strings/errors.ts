@@ -28,10 +28,10 @@ export const errors = {
     en: "Only people who turned on Show 18+ stickers in Settings can receive 18+ stickers.",
     ja: "18+のシールを受け取れるのは、設定で「18+のシールを表示する」をオンにした人だけです。",
   },
-  /** Sticker detail, Mark 18+: marking a sticker (POST /api/stickers/:stickerId/nsfw) that someone else drew, in the detail's error line */
+  /** Sticker detail, Mark 18+ or Remove 18+: marking a sticker (POST /api/stickers/:stickerId/nsfw) that someone else drew, or taking its mark off (DELETE), in the detail's error line */
   not_original_artist: {
-    en: "Only the person who drew this sticker can mark it 18+.",
-    ja: "18+にできるのは、このシールの作者だけです。",
+    en: "Only the person who drew this sticker can mark it 18+ or remove 18+.",
+    ja: "18+にしたり外したりできるのは、このシールの作者だけです。",
   },
   /** Sticker detail, Mark 18+: marking a sticker (POST /api/stickers/:stickerId/nsfw) that's already marked, such as from another window, in the detail's error line */
   already_nsfw: {

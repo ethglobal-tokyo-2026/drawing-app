@@ -4,10 +4,10 @@ import { strings } from "../src/i18n/strings/index.ts";
 import { blurredMark, drawAndSeal, drawKeyName, openDetail, say, signIn } from "./helpers.ts";
 
 const { stickerBoard, ui } = strings;
-const { markNsfw } = stickerBoard.detail;
+const { markNsfw, unmarkNsfw } = stickerBoard.detail;
 const language = "en";
 
-test("Mark 18+ after seal: the Original Artist marks it from its detail, behind its confirm", async ({
+test("Mark 18+ after seal, then Remove 18+: the Original Artist changes it from its detail, behind each confirm", async ({
   page,
 }) => {
   await signIn(page, "artist", language);
@@ -25,4 +25,15 @@ test("Mark 18+ after seal: the Original Artist marks it from its detail, behind 
   await expect(detail.getByText(say(markNsfw.doneBlurred, language, { no }))).toBeVisible();
   await expect(detail.getByRole("img", blurredMark(language)).first()).toBeVisible();
   await expect(detail.getByRole("button", { name: say(markNsfw.open, language) })).toHaveCount(0);
+
+  // Then takes the mark off, in Mark 18+'s place, only once that confirm is answered.
+  await detail.getByRole("button", { name: say(unmarkNsfw.open, language) }).click();
+  const unmark = detail.getByRole("group", { name: say(unmarkNsfw.title, language, { no }) });
+  await expect(detail.getByRole("img", blurredMark(language)).first()).toBeVisible();
+  await unmark
+    .getByRole("button", { name: say(unmarkNsfw.confirm, language), exact: true })
+    .click();
+  await expect(detail.getByText(say(unmarkNsfw.done, language, { no }))).toBeVisible();
+  await expect(detail.getByRole("img", blurredMark(language))).toHaveCount(0);
+  await expect(detail.getByRole("button", { name: say(markNsfw.open, language) })).toBeVisible();
 });

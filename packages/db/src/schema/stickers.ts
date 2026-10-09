@@ -15,7 +15,7 @@ export interface KyotoSeikaSubject {
 }
 
 /**
- * A sealed sticker. Everything but owner_id, the mint and a later 18+ mark is fixed at seal;
+ * A sealed sticker. Everything but owner_id, the mint and its 18+ mark after seal is fixed at seal;
  * created_at is the seal.
  */
 export const stickers = sqliteTable(
@@ -47,8 +47,8 @@ export const stickers = sqliteTable(
     /** The cut line as an SVG path in image pixels. */
     outline: text("outline").notNull(),
     /**
-     * An NSFW sticker: its Original Artist marked it 18+, at seal or after. A mark is for good, and
-     * the Sui object keeps the one it was minted with, so this is the current one.
+     * An NSFW sticker: its Original Artist marked it 18+, at seal or after, and can take the mark off
+     * from its detail. The Sui object keeps the one it was minted with, so this is the current one.
      */
     nsfw: integer("nsfw", { mode: "boolean" }).notNull(),
     /** sha256 of the sticker PNG. Names its image files on the CDN, and goes to the mint. */

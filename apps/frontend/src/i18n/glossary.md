@@ -55,6 +55,7 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | Official Account                 | 公式アカウント                         |                                                                                       |
 | Terms / Privacy Policy           | 利用規約 / プライバシーポリシー        |                                                                                       |
 | NSFW sticker / 18+               | 18+のシール / 18+                      | Marking one, at sealing or on its detail, is Mark 18+, 18+にする                      |
+| Remove 18+ (an NSFW sticker)     | 18+を外す                              | Taking the mark off, on its detail                                                    |
 | NSFW opt-in (Settings)           | 18+のシールを表示する                  | The switch's label; on and off are オン / オフ                                        |
 | subject (Kyoto Seika Subject)    | 題材                                   | The guide's word; "subject" in English                                                |
 | Begin (the drawing screen's key) | はじめ                                 | The proctor's word                                                                    |

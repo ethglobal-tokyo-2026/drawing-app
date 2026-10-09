@@ -104,10 +104,15 @@ export interface ApiClient {
   timelapse: (stickerId: string) => Promise<TimelapseV1>;
   /**
    * POST /api/stickers/:stickerId/nsfw: marks a sealed sticker 18+, which only its Original Artist
-   * can, once. `sticker` as GET /api/stickers/:stickerId answers it for you; `cdnPurged` is false
-   * when the CDN's copies of the drawing couldn't be cleared.
+   * can. `sticker` as GET /api/stickers/:stickerId answers it for you; `cdnPurged` is false when the
+   * CDN's copies of the drawing couldn't be cleared.
    */
   markStickerNsfw: (stickerId: string) => Promise<{ sticker: Sticker; cdnPurged: boolean }>;
+  /**
+   * DELETE /api/stickers/:stickerId/nsfw: takes a sticker's 18+ mark off, which only its Original
+   * Artist can; one without the mark answers as it is. `sticker` as it's now answered for you.
+   */
+  unmarkStickerNsfw: (stickerId: string) => Promise<{ sticker: Sticker }>;
 
   /** GET /api/tickets */
   tickets: () => Promise<Tickets>;

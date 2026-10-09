@@ -18,7 +18,12 @@ import { gzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CdnPurge } from "../deps.ts";
 import { stickerBoardSchema } from "../stickerBoards/board.ts";
-import { markNsfwResponseSchema, markStickerNsfw } from "../stickers/markNsfw.ts";
+import {
+  markNsfwResponseSchema,
+  markStickerNsfw,
+  unmarkNsfwResponseSchema,
+  unmarkStickerNsfw,
+} from "../stickers/markNsfw.ts";
 import { sealResponseSchema } from "../stickers/seal.ts";
 import { MAX_SEAL_BYTES } from "../stickers/sealForm.ts";
 import { stickerDetailSchema } from "../stickers/stickerDetail.ts";
@@ -524,6 +529,69 @@ describe("POST /api/stickers/:stickerId/nsfw", () => {
       if (logged) logs.expectLogged(logged, { stickerId: sticker.id });
     },
   );
+});
+
+describe("DELETE /api/stickers/:stickerId/nsfw", () => {
+  const unmarkNsfw = (userId: string, stickerId: string) =>
+    test.send("DELETE", `/api/stickers/${stickerId}/nsfw`, { as: userId });
+  /** A sticker its Original Artist sealed, then marked 18+ through the mark's route. */
+  async function sealedMarked() {
+    const artistId = insertUser(test.db);
+    const { sticker } = await seal(artistId);
+    const marked = await test.send("POST", `/api/stickers/${sticker.id}/nsfw`, { as: artistId });
+    expect(marked.status).toBe(200);
+    return { artistId, sticker };
+  }
+
+  it("takes its Original Artist's mark off, so everyone sees its drawing again", async () => {
+    const logs = captureLogLines();
+    const { artistId, sticker } = await sealedMarked();
+    const unmarked = await bodyOf(await unmarkNsfw(artistId, sticker.id), unmarkNsfwResponseSchema);
+    expect(unmarked).toEqual({ sticker });
+    expect(rowOf(sticker.id)).toMatchObject({ nsfw: false, veiledHash: null });
+    const seen = await bodyOf(
+      await getSticker(insertUser(test.db), sticker.id),
+      stickerDetailSchema,
+    );
+    expect(seen.sticker).toEqual(sticker);
+    logs.expectLogged("sticker.nsfw.unmarked", { stickerId: sticker.id });
+  });
+
+  it("refuses an unknown sticker, and anyone but its Original Artist, even its holder", async () => {
+    const { artistId, sticker } = await sealedMarked();
+    const holderId = insertUser(test.db);
+    giveSticker(test.db, sticker.id, artistId, holderId);
+    expect(await refusalOf(await unmarkNsfw(artistId, "no-such-sticker"))).toMatchObject({
+      status: 404,
+      error: "sticker_not_found",
+    });
+    expect(await refusalOf(await unmarkNsfw(holderId, sticker.id))).toMatchObject({
+      status: 403,
+      error: "not_original_artist",
+    });
+    expect(rowOf(sticker.id)?.nsfw).toBe(true);
+  });
+
+  // A retry whose first answer was lost, or a second window's, wants what already holds.
+  it("answers a sticker without the mark as it is, changing nothing", async () => {
+    const logs = captureLogLines();
+    const artistId = insertUser(test.db);
+    const { sticker } = await seal(artistId);
+    const answer = await bodyOf(await unmarkNsfw(artistId, sticker.id), unmarkNsfwResponseSchema);
+    expect(answer).toEqual({ sticker });
+    logs.expectLogged("sticker.nsfw.unmark_skipped", { stickerId: sticker.id });
+  });
+
+  it("waits for a mark sent just before it, which it then takes off", async () => {
+    const artistId = insertUser(test.db);
+    const { sticker } = await seal(artistId);
+    // The mark waits on its veil; the removal mustn't read the row in between.
+    await Promise.all([
+      markStickerNsfw(test.deps, artistId, sticker.id),
+      unmarkStickerNsfw(test.deps, artistId, sticker.id),
+    ]);
+    expect(rowOf(sticker.id)).toMatchObject({ nsfw: false, veiledHash: null });
+  });
 });
 
 describe("GET /api/stickers/:stickerId/timelapse", () => {

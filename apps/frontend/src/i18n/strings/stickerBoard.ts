@@ -669,8 +669,6 @@ export const stickerBoard = {
         en: "From now on it wears pink foil, and anyone who hasn’t turned on Show 18+ stickers sees it blurred and can’t receive it.",
         ja: "これからはピンクのホイルがつき、「18+のシールを表示する」をオンにしていない人にはぼかして表示され、受け取ることもできなくなります。",
       },
-      /** Sticker detail, Mark 18+'s confirm: the bold line saying the mark can't be taken off */
-      cantUndo: { en: "You can’t undo this.", ja: "元に戻すことはできません。" },
       /** Sticker detail, Mark 18+'s confirm: the line saying the mark can't call back copies of the drawing people already saw */
       copies: {
         en: "Anyone who has already seen it may have kept a copy.",
@@ -694,6 +692,31 @@ export const stickerBoard = {
         en: "{{no}} is marked 18+. Show 18+ stickers in Settings shows it unblurred.",
         ja: "{{no}}を18+にしました。設定の「18+のシールを表示する」をオンにすると、ぼかしなしで表示されます。",
       },
+    },
+    /** Remove 18+, at the foot of the detail of an 18+ sticker you drew, where Mark 18+ was, and the confirm it opens. */
+    unmarkNsfw: {
+      /** Sticker detail, an 18+ sticker you drew: the button in its own section at the detail's foot, past a rule, that opens the confirm to take its 18+ mark off */
+      open: { en: "Remove 18+…", ja: "18+を外す…" },
+      /** Sticker detail, Remove 18+'s confirm: its title; {{no}} is the sticker's number, such as "No.0147" */
+      title: { en: "Remove 18+ from {{no}}?", ja: "{{no}}の18+を外しますか？" },
+      /** Sticker detail, Remove 18+'s confirm: what taking the mark off does */
+      does: {
+        en: "Its pink foil comes off, and everyone sees it unblurred and can receive it.",
+        ja: "ピンクのホイルが外れ、だれにでもぼかしなしで表示され、だれでも受け取れるようになります。",
+      },
+      /** Sticker detail, Remove 18+'s confirm: the quiet link that closes it with the mark left on */
+      cancel: { en: "Cancel", ja: "キャンセル" },
+      /** Sticker detail, Remove 18+'s confirm: the red button that takes the 18+ mark off */
+      confirm: { en: "Remove 18+", ja: "18+を外す" },
+      /** Sticker detail, Remove 18+'s confirm: the red button's words while the removal is on its way to the server */
+      sending: { en: "Removing…", ja: "18+を外しています…" },
+      /** Sticker detail, Remove 18+'s confirm: the alert under it when the removal failed or was refused, before the reason and Try again */
+      failed: {
+        en: "Couldn’t remove 18+: {{reason}}",
+        ja: "18+を外せませんでした：{{reason}}",
+      },
+      /** Sticker detail: the status line at its foot once the 18+ mark is off; {{no}} is the sticker's number */
+      done: { en: "{{no}} is no longer 18+.", ja: "{{no}}の18+を外しました。" },
     },
   },
   /** The sticker detail's timelapse, which plays how the sticker was drawn. */

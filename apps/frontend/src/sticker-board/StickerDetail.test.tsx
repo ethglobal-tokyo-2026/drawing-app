@@ -760,9 +760,9 @@ describe("StickerDetail", () => {
       openOn(vi.fn(), sticker(133, day(14), { artist: toPerson(people.mika) }));
       expect(button(words.open.en)).toBeUndefined();
       expect(rule()).toBeNull();
+      // An 18+ sticker offers Remove 18+ in its place.
       openOn(vi.fn(), sticker(133, day(14), { nsfw: true }));
       expect(button(words.open.en)).toBeUndefined();
-      expect(rule()).toBeNull();
     });
 
     it("brings its confirm's buttons into view as it opens, with focus on Cancel", () => {
@@ -779,11 +779,10 @@ describe("StickerDetail", () => {
       expect(document.activeElement).toBe(cancel);
     });
 
-    it("asks first, saying it can't be undone and that a copy may have been kept, and Cancel marks nothing", () => {
+    it("asks first, saying that a copy may have been kept, and Cancel marks nothing", () => {
       const markStickerNsfw = vi.fn<ApiClient["markStickerNsfw"]>();
       openOn(markStickerNsfw);
       press(words.open.en);
-      expect(confirm()?.textContent).toContain(words.cantUndo.en);
       expect(confirm()?.textContent).toContain(words.copies.en);
       expect(document.activeElement?.textContent).toBe(words.cancel.en);
 
@@ -907,6 +906,108 @@ describe("StickerDetail", () => {
         expect(shownSrc()).toBe(reloaded.urls.png);
       },
     );
+  });
+
+  describe("Remove 18+", () => {
+    const words = strings.stickerBoard.detail.unmarkNsfw;
+    /** Your 18+ sticker, as your board lists it to you without the NSFW opt-in. */
+    const marked = () => sticker(133, day(14), { nsfw: true });
+    /** The sticker as the server answers it once its mark is off: as sealed, for everyone. */
+    const answer = {
+      sticker: apiSticker({ id: "s-133", number: 133, nsfw: false, artist: TEST_OWNER }),
+    };
+    /** Opens the detail on `shown`, as you on your board, with `unmarkStickerNsfw` as the server's. */
+    const openOn = (
+      unmarkStickerNsfw: ApiClient["unmarkStickerNsfw"],
+      shown: BoardStickerView = marked(),
+    ) =>
+      open(
+        { ownerId: TEST_OWNER.id, stickers: [shown], startId: shown.id },
+        emptyApi({ unmarkStickerNsfw }),
+      );
+    const confirm = () => document.querySelector(".sticker-detail__mark-ask");
+    const figure = () => document.querySelector(".sticker-detail__slide .sticker-figure");
+    const status = () => document.querySelector('[role="status"]')?.textContent;
+    /** Takes the shown sticker's mark off, through its confirm. */
+    const unmarkIt = async () => {
+      press(words.open.en);
+      press(words.confirm.en);
+      await settle();
+    };
+
+    it("is offered in Mark 18+'s place to its Original Artist only, on a sticker marked 18+", () => {
+      openOn(vi.fn());
+      expect(button(words.open.en)).toBeDefined();
+      expect(button(strings.stickerBoard.detail.markNsfw.open.en)).toBeUndefined();
+      openOn(vi.fn(), sticker(133, day(14), { nsfw: true, artist: toPerson(people.mika) }));
+      expect(button(words.open.en)).toBeUndefined();
+      openOn(vi.fn(), sticker(133, day(14)));
+      expect(button(words.open.en)).toBeUndefined();
+    });
+
+    it("asks first, saying what taking it off does, and Cancel leaves the mark on", () => {
+      const unmarkStickerNsfw = vi.fn<ApiClient["unmarkStickerNsfw"]>();
+      openOn(unmarkStickerNsfw);
+      press(words.open.en);
+      expect(confirm()?.textContent).toContain(words.does.en);
+      expect(document.activeElement?.textContent).toBe(words.cancel.en);
+      press(words.cancel.en);
+      expect(confirm()).toBeNull();
+      expect(document.activeElement).toBe(button(words.open.en));
+      expect(unmarkStickerNsfw).not.toHaveBeenCalled();
+    });
+
+    it("takes the mark off on confirm, shows it unblurred without pink foil, and has the board load again without the kept one", async () => {
+      const unmarkStickerNsfw = vi.fn<ApiClient["unmarkStickerNsfw"]>(() =>
+        Promise.resolve(answer),
+      );
+      const boardChanged = vi.fn();
+      onTestFinished(onMyStickerBoardChanged(boardChanged));
+      keepBoard(TEST_OWNER.id, { owner: you, stickers: [marked()] });
+      openOn(unmarkStickerNsfw);
+      expect(figure()?.classList).toContain("is-veiled");
+      await unmarkIt();
+
+      expect(unmarkStickerNsfw).toHaveBeenCalledExactlyOnceWith("s-133");
+      expect(boardChanged).toHaveBeenCalledOnce();
+      expect(keptBoardFor(TEST_OWNER.id)).toBeNull();
+      expect(figure()?.classList).not.toContain("is-veiled");
+      expect(figure()?.classList).not.toContain("is-nsfw");
+      expect(figure()?.querySelector("img")?.getAttribute("src")).toBe(
+        toSticker(answer.sticker).urls.png,
+      );
+      expect(status()).toBe(words.done.en.replace("{{no}}", "No.0133"));
+      // Mark 18+ is back in its place.
+      expect(button(strings.stickerBoard.detail.markNsfw.open.en)).toBeDefined();
+    });
+
+    it("says why the removal didn't take, with Try again, and leaves the sticker marked", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const refusal = new ApiError(0, { error: "network" });
+      const unmarkStickerNsfw = vi.fn<ApiClient["unmarkStickerNsfw"]>(() =>
+        Promise.reject(refusal),
+      );
+      const boardChanged = vi.fn();
+      onTestFinished(onMyStickerBoardChanged(boardChanged));
+      openOn(unmarkStickerNsfw);
+      await unmarkIt();
+
+      const failed = document.querySelector(".sticker-detail__mark-failed");
+      expect(failed?.querySelector('[role="alert"]')?.textContent).toContain(
+        strings.errors.network.en,
+      );
+      expect(figure()?.classList).toContain("is-nsfw");
+      expect(boardChanged).not.toHaveBeenCalled();
+
+      unmarkStickerNsfw.mockResolvedValueOnce(answer);
+      const tryAgain = failed?.querySelector<HTMLButtonElement>('[role="alert"] button');
+      expect(tryAgain?.textContent).toBe(strings.ui.errorLine.tryAgain.en);
+      act(() => tryAgain?.click());
+      await settle();
+      expect(unmarkStickerNsfw).toHaveBeenCalledTimes(2);
+      expect(confirm()).toBeNull();
+      expect(figure()?.classList).not.toContain("is-nsfw");
+    });
   });
 
   it("titles LINE's header with the shown sticker, and puts the title back when it closes", () => {

@@ -19,11 +19,17 @@ export const markNsfwResponseSchema = z.object({
 });
 export type MarkNsfwResponse = z.infer<typeof markNsfwResponseSchema>;
 
-/** Why a mark was refused: the contract's status and code, and what failed. */
-type MarkNsfwRefusal =
+/** DELETE /api/stickers/:stickerId/nsfw's answer: the sticker as its Original Artist now gets it. */
+export const unmarkNsfwResponseSchema = z.object({ sticker: stickerSchema });
+export type UnmarkNsfwResponse = z.infer<typeof unmarkNsfwResponseSchema>;
+
+/** Why a change to the mark was refused, either way: its status and code, and what failed. */
+type NotArtistsRefusal =
   | { status: 404; error: "sticker_not_found"; detail: string }
-  | { status: 403; error: "not_original_artist"; detail: string }
-  | { status: 409; error: "already_nsfw"; detail: string };
+  | { status: 403; error: "not_original_artist"; detail: string };
+
+/** Why a mark was refused: the contract's status and code, and what failed. */
+type MarkNsfwRefusal = NotArtistsRefusal | { status: 409; error: "already_nsfw"; detail: string };
 
 const alreadyNsfw = (stickerId: string): MarkNsfwRefusal => ({
   status: 409,
@@ -39,8 +45,8 @@ function stillPublic(stickerId: string) {
 }
 
 /**
- * Marks a sealed sticker 18+, for its Original Artist alone and for good: makes its veil, marks its
- * row, then purges the CDN's copies of its drawing once no sticker that isn't 18+ shows it. A gift
+ * Marks a sealed sticker 18+, for its Original Artist alone: makes its veil, marks its row, then
+ * purges the CDN's copies of its drawing once no sticker that isn't 18+ shows it. A gift
  * on its way may be marked, since Receiving reads the mark as it runs.
  */
 export async function markStickerNsfw(
@@ -63,16 +69,13 @@ export async function markStickerNsfw(
   return { marked: { sticker, cdnPurged } };
 }
 
-/**
- * The mark's checks, its veil, then its row, with the CDN purge it makes due when no other sticker
- * that isn't 18+ shows its drawing.
- */
-async function markRow(
-  deps: AppDeps,
+/** The sticker's row, when `userId` is its Original Artist, who alone can mark it or take it off. */
+function artistsRow(
+  { db }: Pick<AppDeps, "db">,
   userId: string,
   stickerId: string,
-): Promise<{ refused: MarkNsfwRefusal } | { contentHash: string; madePrivate: boolean }> {
-  const { db } = deps;
+  doing: string,
+): { refused: NotArtistsRefusal } | { row: { nsfw: boolean; contentHash: string } } {
   const row = db
     .select({ artistId: stickers.artistId, nsfw: stickers.nsfw, contentHash: stickers.contentHash })
     .from(stickers)
@@ -84,9 +87,25 @@ async function markRow(
     };
   }
   if (row.artistId !== userId) {
-    const detail = `Only sticker ${stickerId}'s Original Artist can mark it 18+`;
+    const detail = `Only sticker ${stickerId}'s Original Artist can ${doing}`;
     return { refused: { status: 403, error: "not_original_artist", detail } };
   }
+  return { row };
+}
+
+/**
+ * The mark's checks, its veil, then its row, with the CDN purge it makes due when no other sticker
+ * that isn't 18+ shows its drawing.
+ */
+async function markRow(
+  deps: AppDeps,
+  userId: string,
+  stickerId: string,
+): Promise<{ refused: MarkNsfwRefusal } | { contentHash: string; madePrivate: boolean }> {
+  const { db } = deps;
+  const checked = artistsRow(deps, userId, stickerId, "mark it 18+");
+  if ("refused" in checked) return checked;
+  const { row } = checked;
   if (row.nsfw) return { refused: alreadyNsfw(stickerId) };
 
   // What anyone without the NSFW opt-in sees in its place, made before the row names it.
@@ -117,4 +136,35 @@ async function markRow(
   );
   if (!marked) return { refused: alreadyNsfw(stickerId) };
   return { contentHash: row.contentHash, madePrivate: marked.madePrivate };
+}
+
+/**
+ * Takes a sticker's 18+ mark off, for its Original Artist alone, so everyone sees its drawing again.
+ * Its veiled files stay on disk and on the CDN, and its Sui object keeps the mark it was minted
+ * with. A sticker without the mark answers as it is, so a retry after a lost answer lands too.
+ */
+export async function unmarkStickerNsfw(
+  deps: AppDeps,
+  userId: string,
+  stickerId: string,
+): Promise<{ unmarked: UnmarkNsfwResponse } | { refused: NotArtistsRefusal }> {
+  // The mark's key, so a mark and its removal never interleave.
+  const outcome = await oneAtATime(`nsfw-mark:${stickerId}`, async () => {
+    const checked = artistsRow(deps, userId, stickerId, "take its 18+ mark off");
+    if ("refused" in checked) return checked;
+    const cleared = deps.db
+      .update(stickers)
+      .set({ nsfw: false, veiledHash: null })
+      .where(and(eq(stickers.id, stickerId), eq(stickers.nsfw, true)))
+      .returning({ id: stickers.id })
+      .get();
+    return { changed: cleared !== undefined };
+  });
+  if ("refused" in outcome) return outcome;
+  if (outcome.changed) logInfo("sticker.nsfw.unmarked", { stickerId, userId });
+  else logInfo("sticker.nsfw.unmark_skipped", { stickerId, userId, reason: "not marked 18+" });
+
+  const sticker = loadStickers(deps.db, [stickerId], stickerViewer(deps, userId)).get(stickerId);
+  if (!sticker) throw new Error(`Sticker ${stickerId} lost its row right after its mark came off`);
+  return { unmarked: { sticker } };
 }
