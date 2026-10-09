@@ -26,6 +26,7 @@ import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { ErrorDetail, ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
+import { useLargeScreen } from "../ui/largeScreen";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { QuietLink } from "../ui/QuietLink";
@@ -37,6 +38,7 @@ import type { GiftForYou } from "./GiftsForYouBadge";
 import { receiveFlow, type GiftPreviewView } from "./receiveFlow";
 import { previewFailedScreen, refusalScreen, type EndScreen } from "./refusals";
 import { usePullTab } from "./usePullTab";
+import { useUnwrapScale } from "./unwrapScale";
 import "./receive-gift-dialog.css";
 
 /** The gift message's link's token, or a gift waiting for you, opened from your board. */
@@ -316,52 +318,56 @@ function Gift({
   const { t } = useTranslation();
   const { giver, sticker } = preview;
   const fit = FIGURE_PX / Math.max(sticker.width, sticker.height);
+  const unwrap = useRef<HTMLDivElement>(null);
+  useUnwrapScale(unwrap, useLargeScreen());
   const openPage = (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     liff.openWindow({ url: e.currentTarget.href, external: false });
   };
   return (
     <>
-      <header className="receive-gift__head">
-        <PhotoSticker src={giver.pictureUrl} name={giver.name} size={46} />
-        <h1 className="receive-gift__title">
-          {t(($) => $.receiving.gift.title, { name: giver.name })}
-        </h1>
-      </header>
-      <div className="receive-gift__stage" {...(closed ? pull.stage : {})}>
-        <GiftBag
-          size="receive"
-          state={closed ? "closed" : "torn"}
-          stickerUrl={reveal === "out" ? undefined : sticker.urls.png}
-          fromHandle={giver.handle ?? undefined}
-          closedAt={preview.expiresAt - GIFT_EXPIRY_MS}
-          nsfw={sticker.nsfw}
-          tear={pull.tear}
-          pullTab={closed ? pull.pullTab : undefined}
-          ref={holdBag}
-        />
-        {!closed && (
-          <span className="receive-gift__figure" aria-hidden="true">
-            <span style={{ width: sticker.width * fit, height: sticker.height * fit }}>
-              <StickerFigure
-                urls={sticker.urls}
-                width={sticker.width}
-                height={sticker.height}
-                foil="detail"
-                nsfw={sticker.nsfw}
-                kyotoSeika={sticker.kyotoSeikaSubjects !== null}
-                no={sticker.no}
-              />
+      <div className="receive-gift__unwrap" ref={unwrap}>
+        <header className="receive-gift__head">
+          <PhotoSticker src={giver.pictureUrl} name={giver.name} size={46} />
+          <h1 className="receive-gift__title">
+            {t(($) => $.receiving.gift.title, { name: giver.name })}
+          </h1>
+        </header>
+        <div className="receive-gift__stage" {...(closed ? pull.stage : {})}>
+          <GiftBag
+            size="receive"
+            state={closed ? "closed" : "torn"}
+            stickerUrl={reveal === "out" ? undefined : sticker.urls.png}
+            fromHandle={giver.handle ?? undefined}
+            closedAt={preview.expiresAt - GIFT_EXPIRY_MS}
+            nsfw={sticker.nsfw}
+            tear={pull.tear}
+            pullTab={closed ? pull.pullTab : undefined}
+            ref={holdBag}
+          />
+          {!closed && (
+            <span className="receive-gift__figure" aria-hidden="true">
+              <span style={{ width: sticker.width * fit, height: sticker.height * fit }}>
+                <StickerFigure
+                  urls={sticker.urls}
+                  width={sticker.width}
+                  height={sticker.height}
+                  foil="detail"
+                  nsfw={sticker.nsfw}
+                  kyotoSeika={sticker.kyotoSeikaSubjects !== null}
+                  no={sticker.no}
+                />
+              </span>
             </span>
-          </span>
-        )}
+          )}
+        </div>
+        <p className="receive-gift__hint keep-phrases" aria-hidden={!closed || undefined}>
+          <Trans
+            i18nKey={($) => $.receiving.gift.pullTabHint}
+            components={{ b: <b />, span: <span /> }}
+          />
+        </p>
       </div>
-      <p className="receive-gift__hint keep-phrases" aria-hidden={!closed || undefined}>
-        <Trans
-          i18nKey={($) => $.receiving.gift.pullTabHint}
-          components={{ b: <b />, span: <span /> }}
-        />
-      </p>
       {!closed && reveal !== "snapped" && (
         <Sheet
           label={t(($) => $.receiving.gift.acceptSheet)}

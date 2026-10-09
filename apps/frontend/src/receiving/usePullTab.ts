@@ -23,8 +23,11 @@ interface Physics {
   tear: number;
   velocity: number;
   target: number;
-  /** The one pointer dragging, where it started and the tear then. */
-  drag: { pointerId: number; x: number; tear: number } | null;
+  /**
+   * The one pointer dragging, where it started, the tear then, and the bag's scale on screen, which
+   * turns the finger's screen px into the strip's.
+   */
+  drag: { pointerId: number; x: number; tear: number; scale: number } | null;
   /** A press on the bag that tears it by itself once it's held long enough. */
   hold: { pointerId: number; x: number; y: number; timer: ReturnType<typeof setTimeout> } | null;
   lastTap: number;
@@ -57,6 +60,13 @@ function hintTear(bag: HTMLDivElement | null): number {
   return clamp01(shiftOf(getComputedStyle(tab).transform) / strip);
 }
 const isArrow = (key: string): key is Parameters<typeof keyTear>[1] => ARROWS.has(key);
+
+/** How much larger than its CSS size the bag is drawn, such as on a large screen's unwrap; 1 on a phone. */
+function scaleOnScreen(bag: HTMLDivElement | null): number {
+  if (!bag) return 1;
+  const scale = bag.getBoundingClientRect().width / parseFloat(getComputedStyle(bag).width);
+  return scale > 0 && Number.isFinite(scale) ? scale : 1;
+}
 
 /**
  * The pull tab, worked by a drag along the strip, a press and hold or a double-tap on the bag, or
@@ -188,12 +198,16 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
     p.frame = requestAnimationFrame(run);
   };
 
+  /** The tear the finger asks for, its travel on screen taken back to the strip's own px. */
+  const dragTear = (drag: NonNullable<Physics["drag"]>, clientX: number) =>
+    tearTarget(drag.tear, (clientX - drag.x) / drag.scale);
+
   /**
    * Where the finger is decides, never the spring's tear, which trails a quick pull: once the finger
    * passes the snap, the tab tears free, whether it's still down or just let go.
    */
   const fingerSnapped = (drag: NonNullable<Physics["drag"]>, clientX: number) =>
-    snapped(tearTarget(drag.tear, clientX - drag.x));
+    snapped(dragTear(drag, clientX));
 
   // Only the dragging pointer ends the drag: its lift, its cancel or its lost capture. Only a lift
   // past the snap opens the bag; anything else springs back.
@@ -224,7 +238,7 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
       stopMoving();
       // A grab mid-hint takes the tab where the hint has it, so it doesn't jump back from under the finger.
       if (hinting && !reduced) show(hintTear(p.bag));
-      p.drag = { pointerId: e.pointerId, x: e.clientX, tear: p.tear };
+      p.drag = { pointerId: e.pointerId, x: e.clientX, tear: p.tear, scale: scaleOnScreen(p.bag) };
       p.target = p.tear;
       setHinting(false);
       setGrip("pull");
@@ -236,7 +250,7 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
       const { drag } = p;
       if (drag?.pointerId !== e.pointerId) return;
       if (fingerSnapped(drag, e.clientX)) return snap();
-      p.target = tearTarget(drag.tear, e.clientX - drag.x);
+      p.target = dragTear(drag, e.clientX);
     },
     onPointerUp: release,
     onPointerCancel: release,
@@ -279,6 +293,7 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
     onPointerMove: (e: ReactPointerEvent) => {
       const { hold } = physics.current;
       if (hold?.pointerId !== e.pointerId) return;
+      // The slop is the finger's wobble, so it stays in screen px whatever the bag's scale.
       if (Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > PULL.holdSlopPx) {
         letGoOfBag();
         setGrip(null);

@@ -1,11 +1,16 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
+import { PULL } from "../src/receiving/pullTab.ts";
 import {
   boardSticker,
+  giftClaimTokenFrom,
+  giftFrom,
   giveFromBoard,
   handleOf,
   openDetail,
   openTheirBoard,
+  pullTabBy,
+  pullTabIn,
   say,
   sealFromBoard,
   sendInLineChat,
@@ -14,10 +19,12 @@ import {
 } from "./helpers.ts";
 import { ipad } from "./ipad.ts";
 
-const { giving, stickerBoard, ui } = strings;
+const { giving, receiving, stickerBoard, ui } = strings;
 const language = "en";
 /** The iPad of ./ipad.ts held on its side. */
 const IPAD_SIDEWAYS = { width: 1180, height: 820 };
+/** The same iPad on its side in Safari, under its toolbar. */
+const IPAD_SIDEWAYS_IN_SAFARI = { width: 1180, height: 734 };
 /** An iPhone's home indicator safe area, standing in for the one Playwright never reports. */
 const HOME_INDICATOR = 34;
 
@@ -111,6 +118,52 @@ test.describe("On an iPad", () => {
     expect(sideways.x).toBeGreaterThanOrEqual(stage.x + stage.width);
     expect(sideways.width).toBeCloseTo(columnW, 0);
   });
+
+  for (const viewport of [IPAD_SIDEWAYS_IN_SAFARI, ipad.viewport]) {
+    test(`at ${viewport.width} × ${viewport.height} the gift unwrap grows, centered above the home indicator, and its tab tears at a finger's pull`, async ({
+      page,
+      friend,
+    }) => {
+      const giver = handleOf(await signIn(friend, "giver", language));
+      const no = await sealFromBoard(friend, language);
+      await giveFromBoard(friend, language, no);
+      const giftClaimToken = giftClaimTokenFrom(friend);
+      await sendInLineChat(friend, language, no);
+      await page.setViewportSize(viewport);
+      await signIn(page, "receiver", language);
+      await page.goto(`/g/${await giftClaimToken}`);
+      const gift = giftFrom(page, language, giver);
+      const tab = pullTabIn(gift, language);
+      await expect(tab).toBeVisible();
+      await page.evaluate((inset) => {
+        document.documentElement.style.setProperty("--foot-inset", `${inset}px`);
+        return new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+      }, HOME_INDICATOR);
+
+      // The bag is drawn larger than its phone's size.
+      const sleeve = gift.locator(".gift-bag__back");
+      const scale = (await restingBox(sleeve)).width / (await lengthOf(sleeve, "--sw"));
+      expect(scale).toBeGreaterThan(1);
+      // The giver down to the hint stand in the middle of the room above the home indicator.
+      const group = await restingBox(gift.locator(".receive-gift__unwrap"));
+      const hint = await restingBox(gift.locator(".receive-gift__hint"));
+      const room = viewport.height - HOME_INDICATOR;
+      expect(Math.abs(group.cx - viewport.width / 2)).toBeLessThanOrEqual(2);
+      expect(Math.abs((group.y + hint.y + hint.height) / 2 - room / 2)).toBeLessThanOrEqual(2);
+      expect(hint.y + hint.height).toBeLessThanOrEqual(room);
+
+      // A pull is as long on screen as the bag is drawn: just short of the snap springs back, just
+      // past it tears the bag, and Accept shows.
+      const toSnap = (PULL.snapAt / PULL.gain) * PULL.travelPx * scale;
+      await pullTabBy(tab, toSnap * 0.9);
+      await expect(tab).toHaveAttribute("aria-valuenow", "0");
+      await pullTabBy(tab, toSnap * 1.1);
+      await expect(tab).toHaveCount(0);
+      await expect(
+        gift.getByRole("button", { name: say(receiving.gift.accept, language), exact: true }),
+      ).toBeVisible();
+    });
+  }
 });
 
 test("a sent gift's detail says it's on its way, and Take it out asks before it puts Give back", async ({

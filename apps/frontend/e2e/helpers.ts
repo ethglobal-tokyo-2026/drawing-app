@@ -374,27 +374,49 @@ export async function openTheirBoard(page: Page, language: Language, handle: str
 }
 
 /** ReceiveGiftDialog, once its preview names the giver. */
-const giftFrom = (page: Page, language: Language, giverHandle: string) =>
+export const giftFrom = (page: Page, language: Language, giverHandle: string) =>
   page.getByRole("dialog", { name: say(receiving.title, language, { name: giverHandle }) });
 
+/** The gift bag's pull tab, a slider in ReceiveGiftDialog. */
+export const pullTabIn = (gift: Locator, language: Language) =>
+  gift.getByRole("slider", { name: say(giving.giftBag.pullTab, language) });
+
 /**
- * Pulls the gift bag's tab along the strip, as a finger does, until it tears free. The tab loops a
- * hint, so it's grabbed where it stands rather than waited on to hold still.
+ * The pull tab's middle once it holds still: an arrow key ends its looping hint, which would move it
+ * out from under a finger between finding it and pressing it.
  */
-async function pullTab(gift: Locator, language: Language) {
-  const tab = gift.getByRole("slider", { name: say(giving.giftBag.pullTab, language) });
-  await expect(tab).toBeVisible();
-  const box = await tab.boundingBox();
-  const page = gift.page();
-  const width = page.viewportSize()?.width;
-  if (!box || !width) throw new Error("The pull tab isn't on screen");
-  const x = box.x + box.width / 2;
-  const y = box.y + box.height / 2;
+async function stillTab(tab: Locator) {
+  await tab.press("ArrowLeft");
+  let last = await tab.boundingBox();
+  await expect
+    .poll(async () => {
+      const box = await tab.boundingBox();
+      const still = box !== null && box.x === last?.x && box.y === last.y;
+      last = box;
+      return still;
+    })
+    .toBe(true);
+  if (!last) throw new Error("The pull tab isn't on screen");
+  return { x: last.x + last.width / 2, y: last.y + last.height / 2 };
+}
+
+/** Drags the pull tab `distance` px along the strip, as a finger does, and lets go. */
+export async function pullTabBy(tab: Locator, distance: number) {
+  const { x, y } = await stillTab(tab);
+  const page = tab.page();
   await page.mouse.move(x, y);
   await page.mouse.down();
-  for (let step = 1; step <= 16; step++)
-    await page.mouse.move(x + ((width - 2 - x) * step) / 16, y);
+  for (let step = 1; step <= 16; step++) await page.mouse.move(x + (distance * step) / 16, y);
   await page.mouse.up();
+}
+
+/** Pulls the gift bag's tab to the screen's edge, as a finger does, until it tears free. */
+async function pullTab(gift: Locator, language: Language) {
+  const tab = pullTabIn(gift, language);
+  const width = gift.page().viewportSize()?.width;
+  if (!width) throw new Error("The page has no viewport");
+  const { x } = await stillTab(tab);
+  await pullTabBy(tab, width - 2 - x);
   await expect(tab).toHaveCount(0);
 }
 
