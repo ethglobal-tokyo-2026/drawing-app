@@ -1,5 +1,5 @@
 import liff from "@line/liff";
-import { liffMockActive } from "./liff";
+import { lineLogin, liffMockActive } from "./liff";
 
 const RECONNECT_TIMEOUT_MS = 15_000;
 
@@ -14,7 +14,7 @@ export async function reconnectLine(to: string = location.href): Promise<void> {
   if (!liff.isInClient()) {
     // Discard the rejected credentials before LINE Login can reuse them.
     liff.logout();
-    liff.login({ redirectUri: to });
+    lineLogin(to);
     return;
   }
 

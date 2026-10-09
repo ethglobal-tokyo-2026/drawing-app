@@ -18,3 +18,7 @@ packageExtensions:
   drizzle-kit:
     dependencies:
       zod: 3.25.76
+# liff.login({ disableAutoLogin }) turns LINE's auto login off (lineLogin in apps/frontend/src/line/liff.ts).
+# Remake the patch with each LIFF upgrade; src/line/liffLoginPatch.test.ts checks it.
+patchedDependencies:
+  "@liff/login@2.31.1": patches/@liff__login@2.31.1.patch

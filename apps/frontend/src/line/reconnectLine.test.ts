@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import liff from "@line/liff";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { lineLogin } from "./liff";
 import { reconnectLine } from "./reconnectLine";
 
 const mock = vi.hoisted(() => ({ active: false }));
@@ -13,13 +14,13 @@ vi.mock("./liff", () => ({
   get liffMockActive() {
     return mock.active;
   },
+  lineLogin: vi.fn(),
 }));
 
 vi.mock("@line/liff", () => ({
   default: {
     isInClient: vi.fn(),
     logout: vi.fn(),
-    login: vi.fn(),
     permanentLink: { createUrlBy: vi.fn() },
   },
 }));
@@ -48,19 +49,19 @@ describe("reconnecting LINE", () => {
 
     expect(liff.permanentLink.createUrlBy).toHaveBeenCalledExactlyOnceWith(currentUrl);
     expect(navigation.replace).toHaveBeenCalledExactlyOnceWith(permanentUrl);
-    expect(liff.login).not.toHaveBeenCalled();
+    expect(lineLogin).not.toHaveBeenCalled();
     expect(liff.logout).not.toHaveBeenCalled();
   });
 
   it("discards external-browser credentials before signing in at the current deep link", async () => {
     vi.mocked(liff.isInClient).mockReturnValue(false);
-    vi.mocked(liff.login).mockImplementation(() => {
+    vi.mocked(lineLogin).mockImplementation(() => {
       expect(liff.logout).toHaveBeenCalledOnce();
     });
 
     await reconnectLine();
 
-    expect(liff.login).toHaveBeenCalledExactlyOnceWith({ redirectUri: location.href });
+    expect(lineLogin).toHaveBeenCalledExactlyOnceWith(location.href);
     expect(liff.permanentLink.createUrlBy).not.toHaveBeenCalled();
     expect(navigation.replace).not.toHaveBeenCalled();
   });
@@ -73,7 +74,7 @@ describe("reconnecting LINE", () => {
     await expect(reconnectLine()).rejects.toBe(failure);
 
     expect(navigation.replace).not.toHaveBeenCalled();
-    expect(liff.login).not.toHaveBeenCalled();
+    expect(lineLogin).not.toHaveBeenCalled();
   });
 
   it("times out a stalled permanent link and ignores its late result", async () => {
@@ -93,13 +94,13 @@ describe("reconnecting LINE", () => {
     await Promise.resolve();
 
     expect(navigation.replace).not.toHaveBeenCalled();
-    expect(liff.login).not.toHaveBeenCalled();
+    expect(lineLogin).not.toHaveBeenCalled();
   });
 
   it("lets external-browser login failures reach the caller", async () => {
     vi.mocked(liff.isInClient).mockReturnValue(false);
     const failure = new Error("LINE Login unavailable");
-    vi.mocked(liff.login).mockImplementation(() => {
+    vi.mocked(lineLogin).mockImplementation(() => {
       throw failure;
     });
 
@@ -117,7 +118,7 @@ describe("reconnecting LINE", () => {
     expect(navigation.reload).toHaveBeenCalledOnce();
     expect(location.href).toBe(currentUrl);
     expect(liff.isInClient).not.toHaveBeenCalled();
-    expect(liff.login).not.toHaveBeenCalled();
+    expect(lineLogin).not.toHaveBeenCalled();
     expect(liff.logout).not.toHaveBeenCalled();
     expect(liff.permanentLink.createUrlBy).not.toHaveBeenCalled();
   });

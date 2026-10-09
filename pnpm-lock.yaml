@@ -164,6 +164,9 @@ settings:
 
 packageExtensionsChecksum: sha256-119helaVYCbyBifmo5S3J8+ZcGZvI50ZtPGkeqWxbjs=
 
+patchedDependencies:
+  '@liff/login@2.31.1': 47c2f0b26f1dc2ea0f34fdc0be11703fcde3070fa0224b5bd09b2172633cd3a0
+
 importers:
 
   .:
@@ -6337,7 +6340,7 @@ snapshots:
       '@liff/is-logged-in': 2.31.1(tslib@2.8.1)
       '@liff/is-sub-window': 2.31.1(tslib@2.8.1)
       '@liff/logger': 2.31.1(tslib@2.8.1)
-      '@liff/login': 2.31.1(tslib@2.8.1)
+      '@liff/login': 2.31.1(patch_hash=47c2f0b26f1dc2ea0f34fdc0be11703fcde3070fa0224b5bd09b2172633cd3a0)(tslib@2.8.1)
       '@liff/logout': 2.31.1(tslib@2.8.1)
       '@liff/message-bus': 2.31.1(tslib@2.8.1)
       '@liff/native-bridge': 2.31.1(tslib@2.8.1)
@@ -6409,7 +6412,7 @@ snapshots:
       '@liff/is-in-client': 2.31.1(tslib@2.8.1)
       '@liff/is-logged-in': 2.31.1(tslib@2.8.1)
       '@liff/is-sub-window': 2.31.1(tslib@2.8.1)
-      '@liff/login': 2.31.1(tslib@2.8.1)
+      '@liff/login': 2.31.1(patch_hash=47c2f0b26f1dc2ea0f34fdc0be11703fcde3070fa0224b5bd09b2172633cd3a0)(tslib@2.8.1)
       '@liff/logout': 2.31.1(tslib@2.8.1)
       '@liff/native-bridge': 2.31.1(tslib@2.8.1)
       '@liff/open-window': 2.31.1(tslib@2.8.1)
@@ -6432,7 +6435,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@liff/login@2.31.1(tslib@2.8.1)':
+  '@liff/login@2.31.1(patch_hash=47c2f0b26f1dc2ea0f34fdc0be11703fcde3070fa0224b5bd09b2172633cd3a0)(tslib@2.8.1)':
     dependencies:
       '@liff/consts': 2.31.1(tslib@2.8.1)
       '@liff/get-version': 2.31.1(tslib@2.8.1)
@@ -6671,7 +6674,7 @@ snapshots:
       '@liff/is-logged-in': 2.31.1(tslib@2.8.1)
       '@liff/is-sub-window': 2.31.1(tslib@2.8.1)
       '@liff/liff-types': 2.31.1(debug@4.4.3)(tslib@2.8.1)
-      '@liff/login': 2.31.1(tslib@2.8.1)
+      '@liff/login': 2.31.1(patch_hash=47c2f0b26f1dc2ea0f34fdc0be11703fcde3070fa0224b5bd09b2172633cd3a0)(tslib@2.8.1)
       '@liff/logout': 2.31.1(tslib@2.8.1)
       '@liff/native-bridge': 2.31.1(tslib@2.8.1)
       '@liff/open-window': 2.31.1(tslib@2.8.1)

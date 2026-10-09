@@ -12,9 +12,62 @@ const newTab = () => {
   };
 };
 
+// LINE in a browser outside LINE.
+const line = {
+  init: async () => {},
+  isLoggedIn: vi.fn(() => false),
+  isInClient: () => false,
+  getDecodedIDToken: () => ({ sub: "U1", name: "Bob" }),
+  getProfile: async () => ({ userId: "U1", displayName: "Bob" }),
+  login: vi.fn<(config: { redirectUri: string; disableAutoLogin?: boolean }) => void>(),
+};
+
+/** The app loading afresh against `line`, logged in or not, with LIFF started. */
+async function openPage({ loggedIn }: { loggedIn: boolean }) {
+  vi.stubEnv("VITE_LIFF_MOCK", "off");
+  line.isLoggedIn.mockReturnValue(loggedIn);
+  vi.resetModules();
+  vi.doMock("@line/liff", () => ({ default: line }));
+  const page = await import("./liff");
+  await page.initLine();
+  return page;
+}
+
+/** What each of LIFF's logins asked LINE Login for. */
+const logins = () => line.login.mock.calls.map(([config]) => config);
+
 afterEach(() => {
   sessionStorage.clear();
+  localStorage.clear();
+  line.login.mockReset();
+  vi.doUnmock("@line/liff");
   vi.unstubAllEnvs();
+});
+
+describe("LINE Login outside LINE", () => {
+  it("uses auto login first, and stays in this browser once a login from it never came back", async () => {
+    (await openPage({ loggedIn: false })).lineLogin();
+    (await openPage({ loggedIn: false })).lineLogin();
+    expect(logins()).toStrictEqual([
+      { redirectUri: location.href },
+      { redirectUri: location.href, disableAutoLogin: true },
+    ]);
+  });
+
+  it("uses auto login again after a login that came back", async () => {
+    (await openPage({ loggedIn: false })).lineLogin();
+    await openPage({ loggedIn: true });
+    (await openPage({ loggedIn: false })).lineLogin();
+    expect(logins().at(-1)).toStrictEqual({ redirectUri: location.href });
+  });
+
+  it("keeps auto login off for good in a browser where a login once didn't come back", async () => {
+    (await openPage({ loggedIn: false })).lineLogin();
+    (await openPage({ loggedIn: false })).lineLogin();
+    await openPage({ loggedIn: true });
+    (await openPage({ loggedIn: false })).lineLogin();
+    expect(logins().at(-1)).toStrictEqual({ redirectUri: location.href, disableAutoLogin: true });
+  });
 });
 
 describe("LIFF Mock's person", () => {

@@ -18,8 +18,11 @@ export function LineGate({ children }: { children: ReactNode }) {
           stillLabel={t(($) => $.line.gate.stillOpening)}
         />
       ) : line.status === "logged-out" ? (
-        <GateNotice title={t(($) => $.line.gate.title)} lead={t(($) => $.line.gate.lead)}>
-          <Key onClick={lineLogin}>{t(($) => $.line.gate.logIn)}</Key>
+        <GateNotice
+          title={t(($) => $.line.gate.title)}
+          lead={line.strayAnswer ? t(($) => $.line.gate.strayAnswer) : t(($) => $.line.gate.lead)}
+        >
+          <Key onClick={() => lineLogin()}>{t(($) => $.line.gate.logIn)}</Key>
         </GateNotice>
       ) : (
         <GateNotice

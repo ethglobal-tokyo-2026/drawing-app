@@ -82,6 +82,26 @@ describe("LineGate", () => {
     expect(host.textContent).toContain("Log in with LINE");
   });
 
+  it("says so in place of its lead when LINE's login answers in a browser that didn't start it", async () => {
+    const lead = i18next.t(($) => $.line.gate.lead);
+    const strayAnswer = i18next.t(($) => $.line.gate.strayAnswer);
+    liff.init.mockResolvedValue();
+    liff.isLoggedIn.mockReturnValueOnce(false);
+    await openApp();
+    await settle();
+    expect(host.textContent).toContain(lead);
+    expect(host.textContent).not.toContain(strayAnswer);
+
+    history.replaceState(null, "", "/?code=x&liffClientId=y");
+    liff.isLoggedIn.mockReturnValueOnce(false);
+    await openApp();
+    await settle();
+    expect(host.textContent).toContain(strayAnswer);
+    expect(host.textContent).not.toContain(lead);
+    expect(host.textContent).toContain("Log in with LINE");
+    history.replaceState(null, "", "/");
+  });
+
   it("asks in Japanese to log in with LINE", async () => {
     liff.init.mockResolvedValue();
     liff.isLoggedIn.mockReturnValueOnce(false);

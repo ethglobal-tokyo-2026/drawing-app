@@ -22,8 +22,11 @@ type LineFailure = { kind: "no-answer" } | { kind: "refused"; message: string };
 
 export type LineState =
   | { status: "loading" }
-  /** Opened in a browser outside LINE, and not logged in yet. */
-  | { status: "logged-out" }
+  /**
+   * Opened in a browser outside LINE, and not logged in yet. `strayAnswer`: LINE's answer to a login
+   * landed here, in a browser that didn't start it, so it couldn't finish.
+   */
+  | { status: "logged-out"; strayAnswer: boolean }
   | { status: "ready"; profile: LineProfile; inClient: boolean }
   | { status: "error"; failure: LineFailure };
 
@@ -64,11 +67,22 @@ export async function initLine(): Promise<void> {
   }
 }
 
+/**
+ * This browser's LINE logins: `started` until one comes back logged in, and `off` for good once one
+ * didn't. Auto login hands the login to the LINE app, which returns to the default browser, maybe not this one.
+ */
+const AUTO_LOGIN_KEY = "draw.lineAutoLogin";
+
 async function startLine(): Promise<LineState> {
+  // LINE Login's answer, which liff.init takes off the address.
+  const query = new URLSearchParams(location.search);
+  const answered = query.has("code") && query.has("liffClientId");
   // False in the build, which drops this branch and LIFF Mock with it.
   if (liffMockActive) await initMock();
   else await liff.init({ liffId: LIFF_ID });
-  if (!liff.isLoggedIn()) return { status: "logged-out" };
+  // An answer LIFF couldn't finish: the login's PKCE verifier is in the browser that started it.
+  if (!liff.isLoggedIn()) return { status: "logged-out", strayAnswer: answered };
+  if (localStorage.getItem(AUTO_LOGIN_KEY) === "started") localStorage.removeItem(AUTO_LOGIN_KEY);
   const inClient = liff.isInClient();
   // The ID token already names the person, so the app opens without waiting on another call to LINE;
   // the profile follows, for a name or picture changed since the token was issued.
@@ -206,9 +220,14 @@ async function initMock() {
   liff.login();
 }
 
-/** LINE Login, for a browser outside LINE. It comes back to this page. */
-export function lineLogin() {
-  liff.login({ redirectUri: location.href });
+/**
+ * LINE Login, for a browser outside LINE. It comes back to `to`, this page unless told otherwise. Once a
+ * login from this browser never came back, the next stays on LINE's page here, without auto login.
+ */
+export function lineLogin(to = location.href) {
+  const retry = localStorage.getItem(AUTO_LOGIN_KEY) !== null;
+  localStorage.setItem(AUTO_LOGIN_KEY, retry ? "off" : "started");
+  liff.login({ redirectUri: to, ...(retry && { disableAutoLogin: true }) });
 }
 
 /**

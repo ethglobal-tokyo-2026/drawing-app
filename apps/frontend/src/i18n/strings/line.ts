@@ -14,6 +14,11 @@ export const line = {
     title: { en: "Your sticker board", ja: "あなたのシールボード" },
     /** LINE sign-in screen, in a browser outside LINE before LINE Login: the line under the heading */
     lead: { en: "It opens with your LINE account.", ja: "LINEアカウントで<wbr/>ひらきます。" },
+    /** LINE sign-in screen, in a browser outside LINE that LINE Login came back to though another browser started it: the line under the heading, in place of the usual one */
+    strayAnswer: {
+      en: "LINE’s login didn’t finish in this browser. Log in again here.",
+      ja: "LINEの<wbr/>ログインが、<wbr/>このブラウザでは<wbr/>完了しませんでした。<wbr/>ここで<wbr/>もう一度<wbr/>ログインしてください。",
+    },
     /** LINE sign-in screen, in a browser outside LINE: the button that starts LINE Login */
     logIn: { en: "Log in with LINE", ja: "LINEでログイン" },
     /** LINE sign-in screen, when LINE (LIFF) fails to start or doesn't start in time: the heading */
