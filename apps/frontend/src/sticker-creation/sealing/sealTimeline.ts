@@ -142,10 +142,11 @@ export function sealFrame(t: number, path: Flight, items: number): SealFrame {
     gloss: easeOut(span(T.rise0 + 80, T.rise1 + 80)),
     spec: { opacity: formed, scale: 1.8 - 0.8 * formed },
     sticker: { x, y, rotate, rotateX: -11 * up, rotateY: 9 * up, scale },
+    // Lifted, it falls farther and fainter; landed, it's the cast as baked, as the sticker then shows.
     shadow: {
-      opacity: t < T.peel0 ? 0 : 0.45 + 0.25 * height,
-      x: x + 3 + 11 * height,
-      y: y + 5 + 20 * height,
+      opacity: t < T.peel0 ? 0 : 1 - 0.3 * height,
+      x: x + 14 * height,
+      y: y + 25 * height,
       rotate,
       scale: scale * (1 + 0.03 * height),
     },

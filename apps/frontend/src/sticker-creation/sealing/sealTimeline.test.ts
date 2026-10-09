@@ -67,6 +67,17 @@ describe("sealTimeline", () => {
     expect(scaleAt(T.land)).toBeGreaterThan(scaleAt(TOTAL));
   });
 
+  it("lands with its cast as baked: under the sticker, at full strength", () => {
+    const { sticker, shadow } = frameAt(TOTAL);
+    expect(shadow).toEqual({
+      opacity: 1,
+      x: sticker.x,
+      y: sticker.y,
+      rotate: sticker.rotate,
+      scale: sticker.scale,
+    });
+  });
+
   it("ends only at the last frame", () => {
     expect(frameAt(TOTAL - 1).done).toBe(false);
     expect(frameAt(TOTAL).done).toBe(true);
