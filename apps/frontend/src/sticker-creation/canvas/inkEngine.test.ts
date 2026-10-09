@@ -54,7 +54,6 @@ const SETTINGS: InkSettings = {
   locked: false,
   paused: false,
   panelOpen: false,
-  armed: false,
   sessionMs: () => 0,
 };
 
@@ -65,7 +64,6 @@ function setup(settings: Partial<InkSettings> = {}) {
     onCommit: vi.fn<(op: Op) => void>(),
     onBlocked: vi.fn(),
     onDismissPanel: vi.fn(),
-    onDisarm: vi.fn(),
   };
   let frame: (() => void) | null = null;
   const engine = new InkEngine(layer, { ...SETTINGS, ...settings }, events, (cb) => {
@@ -212,11 +210,10 @@ describe("InkEngine", () => {
     expect(committed()).toEqual([]);
   });
 
-  it("closes an open panel with the touch that lands, drawing nothing, and disarms the seal", () => {
-    const { engine, stroke, committed, events } = setup({ panelOpen: true, armed: true });
+  it("closes an open panel with the touch that lands, drawing nothing", () => {
+    const { engine, stroke, committed, events } = setup({ panelOpen: true });
     stroke("touch", 1, [0, 0], [100, 0]);
     expect(events.onDismissPanel).toHaveBeenCalledOnce();
-    expect(events.onDisarm).toHaveBeenCalledOnce();
     expect(committed()).toEqual([]);
     engine.settings = { ...engine.settings, panelOpen: false };
     stroke("touch", 2, [0, 0], [100, 0], 1000);

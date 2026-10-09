@@ -35,6 +35,7 @@ export type ScreenHolds = Record<Exclude<Hold, "hidden">, boolean>;
 const SCREEN_HOLDS = [
   "paused",
   "away",
+  "seal",
   "color",
   "smoothing",
   "clear",
@@ -55,6 +56,7 @@ export class SessionClock {
   private holds: ScreenHolds = {
     paused: false,
     away: false,
+    seal: false,
     color: false,
     smoothing: false,
     clear: false,

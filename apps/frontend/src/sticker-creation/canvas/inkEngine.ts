@@ -38,8 +38,6 @@ export interface InkSettings {
   paused: boolean;
   /** A tool panel is open: a touch on the sheet closes it and draws nothing. */
   panelOpen: boolean;
-  /** The seal key took its first tap: any touch disarms it. */
-  armed: boolean;
   /** ms into the session, to stamp each op with. */
   sessionMs: () => number;
 }
@@ -59,7 +57,6 @@ export interface InkEvents {
   /** Someone tried to draw on a paused sheet. */
   onBlocked: () => void;
   onDismissPanel: () => void;
-  onDisarm: () => void;
 }
 
 /** The parts of a PointerEvent the engine reads. */
@@ -231,7 +228,6 @@ export class InkEngine {
     if (s.locked || !this.sheet || (pointerType === "mouse" && e.button !== 0)) return;
     // Pointer ids come back; one that lifted where we couldn't see it starts over.
     this.swallowed.delete(id);
-    if (s.armed) this.events.onDisarm();
     if (pointerType === "touch") {
       if (this.fingersGone) this.forgetTouches();
       if (this.live?.pointerType === "pen") return;

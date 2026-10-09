@@ -1,6 +1,6 @@
 /* The pair as a faint vertical margin note (縦書き) in the sheet's corner, just above the seal key:
    each word alone in its own column, right to left. Non-repro blue, pale enough to sink into the
-   paper under the ink drawn over it. The armed chip opens left of the key, so it never covers it. */
+   paper under the ink drawn over it. The seal chip stands left of its column, so it never covers it. */
 .corner-print {
   position: absolute;
   /* Centered over the seal key, whatever the words' face measures, a little above it. */

@@ -138,18 +138,21 @@ describe("Sheet", () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it("stays up while busy, whichever way it's asked to close, and Back can try again", () => {
-      render(true, { busy: true });
-      press("Escape");
-      back();
-      drag([0, DISMISS_PX * 2]);
-      drag();
-      expect(onClose).not.toHaveBeenCalled();
-      expect(perf()?.getAttribute("aria-disabled")).toBe("true");
+    it.each([{ busy: true }, { closable: false }])(
+      "stays up while %o, whichever way it's asked to close, and Back can try again",
+      (held) => {
+        render(true, held);
+        press("Escape");
+        back();
+        drag([0, DISMISS_PX * 2]);
+        drag();
+        expect(onClose).not.toHaveBeenCalled();
+        expect(perf()?.getAttribute("aria-disabled")).toBe("true");
 
-      render(true);
-      back();
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
+        render(true);
+        back();
+        expect(onClose).toHaveBeenCalledTimes(1);
+      },
+    );
   });
 });

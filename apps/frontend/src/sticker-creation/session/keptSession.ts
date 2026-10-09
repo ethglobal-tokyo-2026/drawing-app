@@ -49,7 +49,7 @@ export interface KeptKyotoSeika {
 interface SessionRecord {
   ticket: number;
   elapsedMs: number;
-  /** The armed chip's 18+ box was left ticked: it seals as an NSFW sticker. */
+  /** The seal sheet's 18+ switch was left on: it seals as an NSFW sticker. */
   nsfw: boolean;
   /** Absent when what's kept holds none, or none that can be read: the drawing still comes back. */
   tools?: KeptTools;

@@ -1,0 +1,182 @@
+import { CheckFat } from "../icons";
+import { useLayoutEffect, useRef } from "react";
+import { useTranslation } from "../i18n/react";
+import { StickerFoil } from "../stickers/StickerFoil";
+import { Key } from "../ui/Key";
+import { QuietLink } from "../ui/QuietLink";
+import { releaseCanvas } from "../ui/releaseCanvas";
+import { Sheet } from "../ui/Sheet";
+import { context2d } from "./canvas/context2d";
+import "./SealSheet.css";
+
+/** The ink's bounds are found on a copy this many pixels on its long side: the sheet is millions. */
+const SCAN_PX = 192;
+/** The white round the drawing, as a share of its long side, as the die-cut's border leaves. */
+const BORDER = 0.08;
+/** The preview's long side in device pixels, enough for a sharp 140px box on a 3× phone. */
+const PREVIEW_PX = 420;
+/** The preview's turn, as a sticker's on a board, which the foil's glint undoes. */
+const TURN_DEG = -3;
+
+interface Props {
+  open: boolean;
+  /** The clock reached 0:00: pencils down, so nothing leads back to the drawing. */
+  timeUp: boolean;
+  /** The sticker seals 18+. */
+  nsfw: boolean;
+  /** A copy of the ink as it is now, which the preview lets go. */
+  ink: () => HTMLCanvasElement | null;
+  onNsfwChange: (on: boolean) => void;
+  onSeal: () => void;
+  onNotYet: () => void;
+}
+
+/**
+ * The seal sheet: the sticker as it will be, the 18+ switch, and Seal, the screen's one key while
+ * it's up. Not yet closes it back to the drawing, until time's up.
+ */
+export function SealSheet({ open, timeUp, nsfw, ink, onNsfwChange, onSeal, onNotYet }: Props) {
+  const { t } = useTranslation();
+  const words = timeUp
+    ? t(($) => $.stickerCreation.sealSheet.timeUp)
+    : t(($) => $.stickerCreation.sealSheet.title);
+  return (
+    <Sheet
+      label={words}
+      open={open}
+      closable={!timeUp}
+      className={`seal-sheet keep-phrases ${timeUp ? "is-time-up" : ""}`}
+      onClose={onNotYet}
+    >
+      <div className="seal-sheet__body">
+        <SealPreview open={open} nsfw={nsfw} ink={ink} />
+        <h2 className="seal-sheet__title">{words}</h2>
+        <label className="seal-sheet__switch">
+          <span aria-hidden="true">{t(($) => $.stickerCreation.sealSheet.nsfw)}</span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={nsfw}
+            data-autofocus
+            aria-label={t(($) => $.stickerCreation.sealSheet.nsfwLabel)}
+            onChange={(e) => onNsfwChange(e.currentTarget.checked)}
+          />
+        </label>
+      </div>
+      <div className="seal-sheet__foot">
+        <Key className="seal-sheet__key" icon={<CheckFat weight="fill" />} onClick={onSeal}>
+          {t(($) => $.stickerCreation.sealSheet.seal)}
+        </Key>
+        {!timeUp && (
+          <QuietLink className="seal-sheet__not-yet" onClick={onNotYet}>
+            {t(($) => $.stickerCreation.sealSheet.notYet)}
+          </QuietLink>
+        )}
+      </div>
+    </Sheet>
+  );
+}
+
+/**
+ * The drawing on white, cropped to its ink with a border as the cut leaves, so it opens at once:
+ * nothing waits on the cut. On an 18+ sticker its edge is pink foil.
+ */
+function SealPreview({ open, nsfw, ink }: Pick<Props, "open" | "nsfw" | "ink">) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  // Drawn as the sheet opens; the drawing can't change while it's up.
+  useLayoutEffect(() => {
+    const target = canvas.current;
+    if (!open || !target) return;
+    const copy = ink();
+    if (!copy) return;
+    try {
+      drawPreview(target, copy);
+    } catch (error) {
+      // The preview is only a picture: the sheet still seals without it.
+      console.error("The seal sheet's preview couldn't be drawn", error);
+    } finally {
+      releaseCanvas(copy);
+    }
+  }, [open, ink]);
+  return (
+    <div className="seal-preview" aria-hidden="true">
+      <span className={`seal-preview__sticker ${nsfw ? "is-nsfw" : ""}`}>
+        {nsfw && <StickerFoil size="board" tone="pink" no={0} turn={TURN_DEG} />}
+        <canvas ref={canvas} className="seal-preview__ink" />
+      </span>
+    </div>
+  );
+}
+
+/** Paints the ink's drawn part on white into `target`, at most PREVIEW_PX on its long side. */
+function drawPreview(target: HTMLCanvasElement, ink: HTMLCanvasElement) {
+  const bounds = inkBounds(ink) ?? { x: 0, y: 0, w: ink.width, h: ink.height };
+  const pad = Math.round(Math.max(bounds.w, bounds.h) * BORDER);
+  const crop = {
+    x: bounds.x - pad,
+    y: bounds.y - pad,
+    w: bounds.w + pad * 2,
+    h: bounds.h + pad * 2,
+  };
+  const k = Math.min(1, PREVIEW_PX / Math.max(crop.w, crop.h));
+  target.width = Math.max(1, Math.round(crop.w * k));
+  target.height = Math.max(1, Math.round(crop.h * k));
+  const g = context2d(target);
+  g.fillStyle = "#fff";
+  g.fillRect(0, 0, target.width, target.height);
+  // Only the part of the crop on the ink is drawn: WebKit draws nothing from a source rectangle past
+  // its canvas's edge.
+  const sx = Math.max(0, crop.x);
+  const sy = Math.max(0, crop.y);
+  const ex = Math.min(ink.width, crop.x + crop.w);
+  const ey = Math.min(ink.height, crop.y + crop.h);
+  if (ex <= sx || ey <= sy) return;
+  g.drawImage(
+    ink,
+    sx,
+    sy,
+    ex - sx,
+    ey - sy,
+    (sx - crop.x) * k,
+    (sy - crop.y) * k,
+    (ex - sx) * k,
+    (ey - sy) * k,
+  );
+}
+
+/** Where the ink has anything drawn, in its own pixels, or null when nothing is. */
+function inkBounds(ink: HTMLCanvasElement) {
+  const scale = Math.min(1, SCAN_PX / Math.max(ink.width, ink.height, 1));
+  const w = Math.max(1, Math.round(ink.width * scale));
+  const h = Math.max(1, Math.round(ink.height * scale));
+  const scan = document.createElement("canvas");
+  scan.width = w;
+  scan.height = h;
+  try {
+    const g = context2d(scan, { willReadFrequently: true });
+    g.drawImage(ink, 0, 0, w, h);
+    const { data } = g.getImageData(0, 0, w, h);
+    let left = w;
+    let top = h;
+    let right = -1;
+    let bottom = -1;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (data[(y * w + x) * 4 + 3] === 0) continue;
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+        top = Math.min(top, y);
+        bottom = Math.max(bottom, y);
+      }
+    }
+    if (right < 0) return null;
+    return {
+      x: left / scale,
+      y: top / scale,
+      w: (right - left + 1) / scale,
+      h: (bottom - top + 1) / scale,
+    };
+  } finally {
+    releaseCanvas(scan);
+  }
+}

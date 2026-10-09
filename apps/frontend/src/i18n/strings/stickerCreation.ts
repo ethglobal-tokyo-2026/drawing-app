@@ -96,10 +96,8 @@ export const stickerCreation = {
   },
   /** The seal key, and the chip over it. */
   seal: {
-    /** Drawing screen, bottom right: the seal key's name for screen readers until its first tap arms it; the key shows a check mark */
-    label: { en: "Seal: tap twice", ja: "仕上げ：2回タップ" },
-    /** Drawing screen, bottom right: the chip beside the seal key after its first tap, under its 18+ box, announced to screen readers and the key's name until the second tap, which seals */
-    tapAgain: { en: "Tap again to seal", ja: "もう一度タップで仕上げ" },
+    /** Drawing screen, bottom right: the seal key's name for screen readers; the key shows a check mark, and a tap opens the seal sheet */
+    label: { en: "Seal", ja: "仕上げ" },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when it's tapped but everything drawn was erased or undone */
     empty: {
       en: "The sheet is empty, so there’s nothing to seal.",
@@ -163,15 +161,23 @@ export const stickerCreation = {
       ja: "シールを<wbr/>仕上げている<wbr/>途中でした。<wbr/>チェックを<wbr/>タップして<wbr/>仕上げてください。",
     },
   },
-  /** The 18+ box in the chip beside the armed seal key, for everyone, unticked on every new sheet. */
-  nsfw: {
-    /** Drawing screen, bottom right, in the chip beside the seal key after its first tap: the 18+ box's only words; ticked, the second tap seals the sticker as 18+. Also the tag after Sealed on the sealed card of a sticker sealed as 18+ */
-    mark: { en: "18+", ja: "18+" },
-    /** Drawing screen, bottom right, in the chip beside the seal key after its first tap: the 18+ box's name for screen readers */
-    label: {
-      en: "18+: seal as sensitive content, blurred for anyone who hasn’t turned on 18+ stickers",
-      ja: "18+：センシティブな内容として仕上げる（18+のシールをオンにしていない人にはぼかして表示）",
+  /** The bottom sheet the seal key opens over the drawing, and that 0:00 raises. */
+  sealSheet: {
+    /** Seal sheet, over the drawing after a tap on the seal key: its title, and its name for screen readers */
+    title: { en: "Seal this sticker?", ja: "このシールを<wbr/>仕上げますか？" },
+    /** Seal sheet, raised by the clock reaching 0:00 (or brought back by a reload then): its title, and its name for screen readers; the drawing can only be sealed now */
+    timeUp: { en: "Time’s up", ja: "時間切れ" },
+    /** Seal sheet: the switch row's only words; on, the sticker seals as 18+, and the preview's edge turns pink foil; off on every new sheet */
+    nsfw: { en: "18+ sticker", ja: "18+のシール" },
+    /** Seal sheet: the 18+ switch's name for screen readers, which starts with its visible words */
+    nsfwLabel: {
+      en: "18+ sticker: blurred for anyone who hasn’t turned on Show 18+ stickers",
+      ja: "18+のシール：「18+のシールを表示する」をオンにしていない人にはぼかして表示",
     },
+    /** Seal sheet: the key, with a check mark, that seals the sticker and starts the seal ceremony */
+    seal: { en: "Seal", ja: "仕上げ" },
+    /** Seal sheet: the quiet link under Seal that closes the sheet back to the drawing; not offered once time's up */
+    notYet: { en: "Not yet", ja: "もう少しかく" },
   },
   /** The tool strip's tiles, named for assistive tech. */
   tools: {

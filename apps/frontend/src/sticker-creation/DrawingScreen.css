@@ -80,6 +80,16 @@
   left: 18px;
 }
 
+/* 0:00 is pencils down: the tools fade as the time's-up sheet rises, and only the clock stays. */
+.drawing-screen.is-time-up :is(.tool-strip, .size-rail, .history-buttons, .my-board-tile) {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 220ms var(--ease-out),
+    visibility 0s linear 220ms;
+}
+
 /* Begin: the tools come back a beat after the deal starts to leave, as after Keep drawing, and My
    board with them, in its own place. */
 .drawing-screen.is-deal-leaving :is(.tool-strip, .size-rail, .history-buttons, .my-board-tile) {

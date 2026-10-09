@@ -7,6 +7,7 @@ import { WARN_AT_SECONDS } from "./useSessionClock";
 const NO_HOLDS = {
   paused: false,
   away: false,
+  seal: false,
   color: false,
   smoothing: false,
   clear: false,
@@ -26,7 +27,7 @@ describe("SessionClock", () => {
 
   it("holds for each hold and counts again when it lets go", () => {
     const { clock, counted } = setup();
-    for (const hold of ["paused", "away", "color", "smoothing", "clear", "size"] as const) {
+    for (const hold of ["paused", "away", "seal", "color", "smoothing", "clear", "size"] as const) {
       clock.setHolds({ ...NO_HOLDS, [hold]: true });
       expect(counted(1000)).toBe(0);
       expect(clock.getView().held).toBe<Hold>(hold);

@@ -33,6 +33,7 @@ const HELD_STATUS = {
   paused: "paused",
   hidden: "paused",
   away: "paused",
+  seal: "paused",
   color: "color",
   smoothing: "smoothing",
   clear: "clear",

@@ -166,21 +166,30 @@ export async function drawStroke(page: Page, language: Language) {
   }).toPass();
 }
 
-/** Taps the seal key once, which arms it and shows the chip with its 18+ box. */
-export async function armSeal(page: Page, language: Language) {
-  await page.getByRole("button", { name: say(stickerCreation.seal.label, language) }).click();
-  return page.getByRole("checkbox", { name: say(stickerCreation.nsfw.label, language) });
-}
+/** The seal sheet's 18+ switch, named for screen readers. */
+export const nsfwSwitch = (page: Page, language: Language) =>
+  page.getByRole("switch", { name: say(stickerCreation.sealSheet.nsfwLabel, language) });
 
 /**
- * The armed key's second tap, which seals. Resolves with the sticker's number from the sealed card.
- * The armed key keeps moving, so it's tapped where it stands rather than waited on to hold still.
+ * The seal sheet, in its regular or time's-up state: found by its 18+ switch, since its title's
+ * Japanese carries phrase breaks.
  */
-export async function sealArmed(page: Page, language: Language) {
-  const armed = page.getByRole("button", { name: say(stickerCreation.seal.tapAgain, language) });
-  const box = await armed.boundingBox();
-  if (!box) throw new Error("The armed seal key isn't on screen");
-  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+const sealSheet = (page: Page, language: Language) =>
+  page.getByRole("dialog").filter({ has: nsfwSwitch(page, language) });
+
+/** Taps the seal key, which opens the seal sheet. Resolves with the sheet. */
+export async function openSealSheet(page: Page, language: Language) {
+  await page.getByRole("button", { name: say(stickerCreation.seal.label, language) }).click();
+  const sheet = sealSheet(page, language);
+  await expect(sheet).toBeVisible();
+  return sheet;
+}
+
+/** The seal sheet's Seal, which seals. Resolves with the sealed card and the sticker's number. */
+export async function sealOnSheet(page: Page, language: Language) {
+  await sealSheet(page, language)
+    .getByRole("button", { name: say(stickerCreation.sealSheet.seal, language), exact: true })
+    .click();
   const card = page.getByRole("dialog", {
     name: startsWith(say(stickerCreation.sealedCard.title, language)),
   });
@@ -194,9 +203,9 @@ export async function sealArmed(page: Page, language: Language) {
 /** Draws a stroke and seals it, 18+ or not. Resolves with the sealed card and the sticker's number. */
 export async function drawAndSeal(page: Page, language: Language, { nsfw = false } = {}) {
   await drawStroke(page, language);
-  const nsfwBox = await armSeal(page, language);
-  if (nsfw) await nsfwBox.check();
-  return sealArmed(page, language);
+  await openSealSheet(page, language);
+  if (nsfw) await nsfwSwitch(page, language).check();
+  return sealOnSheet(page, language);
 }
 
 /**

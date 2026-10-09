@@ -32,7 +32,7 @@ import { CHARRED_AT_ROLL } from "../kyoto-seika/dieMood";
 import { REUNION, TEST_SUBJECTS, WIND } from "../kyoto-seika/testSubjects";
 import { LOAD_TIMEOUT_MS, SessionKeeper, type KeptSession } from "./session/keptSession";
 import { keepSentSeal, sealWentOut } from "./session/sentSeal";
-import { ARM_WINDOW_MS, sessionMs } from "./session/session";
+import { sessionMs } from "./session/session";
 import type { TimerDotHandle } from "./TimerDot";
 import type { Panel } from "./tools/ToolStrip";
 
@@ -294,6 +294,16 @@ const keptAtTimeUp: KeptSession = {
   frame: null,
 };
 const chip = () => document.querySelector(".seal-chip")?.textContent ?? "";
+/** A tap on the seal check, for `countedAfter`, which runs it in act itself. */
+const clickSealKey = () => document.querySelector<HTMLButtonElement>(".seal-key")?.click();
+const tapSealKey = () => act(clickSealKey);
+/** The seal sheet while it's up; a closed one slides away first, which happy-dom never finishes. */
+const sealSheet = () => document.querySelector<HTMLElement>(".seal-sheet:not(.is-leaving)");
+const nsfwSwitch = () => sealSheet()?.querySelector<HTMLInputElement>("input[role='switch']");
+const sheetButton = (words: string) =>
+  [...(sealSheet()?.querySelectorAll("button") ?? [])].find((b) => b.textContent === words);
+const sealOnSheet = () =>
+  act(() => sheetButton(strings.stickerCreation.sealSheet.seal.en)?.click());
 
 describe("the drawing screen after a reload", () => {
   it("stops waiting on a sticker in progress whose seal went out once a read that never answers has had a second wait", async () => {
@@ -321,8 +331,8 @@ describe("the drawing screen after a reload", () => {
     await settle();
     expect(sheet).toBe("held");
 
-    // Back from its pause at 0:00, it seals, and the cut fails.
-    act(() => document.querySelector<HTMLButtonElement>(".timer-stub")?.click());
+    // Back at 0:00, its time's-up sheet seals it, and the cut fails.
+    sealOnSheet();
     await settle(1000);
     expect(sheet).toBe("held");
     const link = startOver();
@@ -401,62 +411,96 @@ const putToolsDown = () => {
   rail.hold(false);
 };
 
-describe("the armed seal chip's 18+ box", () => {
-  const sealKey = () => document.querySelector<HTMLButtonElement>(".seal-key");
-  const tapSealKey = () => act(() => sealKey()?.click());
-  const armed = () =>
-    sealKey()?.getAttribute("aria-label") === strings.stickerCreation.seal.tapAgain.en;
-  const box = () =>
-    [...document.querySelectorAll<HTMLInputElement>("input[type='checkbox']")].find(
-      (input) => input.getAttribute("aria-label") === strings.stickerCreation.nsfw.label.en,
-    );
-  const tick = () => act(() => box()?.click());
-  const seal = vi.fn<ApiClient["seal"]>(() => new Promise(() => {}));
+describe("the seal sheet", () => {
+  const { sealSheet: words } = strings.stickerCreation;
+  /** A drawing kept a moment before 0:00, so a test can let its clock run out. */
+  const keptNearTimeUp = { ...keptHalfway, elapsedMs: sessionMs(false) - 2000 };
 
-  /** Opens `session`, a drawing in progress that the phone cuts, and taps the seal key once. */
-  async function openArmed(session: KeptSession = keptHalfway) {
+  /** Opens `session`, a drawing in progress the phone cuts, whose seal never answers. */
+  async function openDrawing(session: KeptSession = keptHalfway) {
     sealing.cut.mockResolvedValue(cutSticker());
+    const seal = vi.fn<ApiClient["seal"]>(() => new Promise(() => {}));
     reopen(session, {}, TEST_ME, { seal, spendTicket: () => Promise.resolve(spentDaily(false)) });
     await settle();
-    tapSealKey();
-    expect(armed()).toBe(true);
+    return seal;
   }
 
-  it.each([false, true])("seals the sticker 18+ only when ticked: ticked %s", async (ticked) => {
-    await openArmed();
-    expect(box()?.checked).toBe(false);
-    if (ticked) tick();
-    tapSealKey();
-    await settle(1000);
-    expect(seal).toHaveBeenCalledOnce();
-    expect(seal.mock.calls[0]?.[0].nsfw).toBe(ticked);
-  });
+  it.each([false, true])(
+    "opens at one tap on the check, and seals 18+ only with the switch on: on %s",
+    async (on) => {
+      const seal = await openDrawing();
+      tapSealKey();
+      expect(sealSheet()).not.toBeNull();
+      expect(nsfwSwitch()?.checked).toBe(false);
+      await settle(1000);
+      expect(seal).not.toHaveBeenCalled();
 
-  it("neither seals nor disarms when ticked, and is still ticked when the chip comes back", async () => {
-    await openArmed();
-    await settle(ARM_WINDOW_MS - 500);
-    tick();
-    // Past the first tap's window: the tick gave the key a window of its own.
-    await settle(1000);
-    expect(armed()).toBe(true);
+      if (on) act(() => nsfwSwitch()?.click());
+      sealOnSheet();
+      await settle(1000);
+      expect(seal).toHaveBeenCalledOnce();
+      expect(seal.mock.calls[0]?.[0].nsfw).toBe(on);
+    },
+  );
+
+  it("closes at Not yet with the drawing and the 18+ choice kept, on the phone too", async () => {
+    const seal = await openDrawing();
+    tapSealKey();
+    act(() => nsfwSwitch()?.click());
+    act(() => sheetButton(words.notYet.en)?.click());
+    expect(sealSheet()).toBeNull();
+    expect(keptRecord()).toMatchObject({ ticket: 7, nsfw: true });
+
+    tapSealKey();
+    expect(nsfwSwitch()?.checked).toBe(true);
     expect(seal).not.toHaveBeenCalled();
-
-    await settle(ARM_WINDOW_MS);
-    expect(armed()).toBe(false);
-    tapSealKey();
-    expect(box()?.checked).toBe(true);
   });
 
-  it("comes back ticked on a kept drawing marked 18+, and starts unticked on a new sheet", async () => {
-    await openArmed({ ...keptHalfway, nsfw: true });
-    expect(box()?.checked).toBe(true);
+  it("comes back on for a kept drawing marked 18+, and starts off on a new sheet", async () => {
+    await openDrawing({ ...keptHalfway, nsfw: true });
+    tapSealKey();
+    expect(nsfwSwitch()?.checked).toBe(true);
+    act(() => sheetButton(words.notYet.en)?.click());
 
     act(() => drawingScreen.current?.startNewSticker());
     await settle();
     act(() => sheetCalls.stroke());
     tapSealKey();
-    expect(armed()).toBe(true);
-    expect(box()?.checked).toBe(false);
+    expect(nsfwSwitch()?.checked).toBe(false);
+  });
+
+  it("holds a regular sheet's clock while it's open", async () => {
+    await openDrawing();
+    // A reload brings the drawing back paused; a tap on the timer runs it again.
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    expect(await countedAfter(clickSealKey)).toBe(0);
+    expect(await countedAfter(() => sheetButton(words.notYet.en)?.click())).toBeGreaterThan(0);
+  });
+
+  it("rises in its time's-up state at 0:00, without Not yet, and seals nothing by itself", async () => {
+    const seal = await openDrawing(keptNearTimeUp);
+    act(tapTimer);
+    await settle(3000);
+    expect(sealSheet()?.textContent).toContain(words.timeUp.en);
+    expect(sheetButton(words.notYet.en)).toBeUndefined();
+    // Escape, like Back and the perforation, can't put the pencils back in hand.
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    });
+    await settle(10_000);
+    expect(sealSheet()?.textContent).toContain(words.timeUp.en);
+    expect(sealSheet()?.querySelector(".perf")?.getAttribute("aria-disabled")).toBe("true");
+    expect(seal).not.toHaveBeenCalled();
+
+    sealOnSheet();
+    await settle(1000);
+    expect(seal).toHaveBeenCalledOnce();
+  });
+
+  it("comes back in its time's-up state after a reload at 0:00", async () => {
+    await openDrawing({ ...keptHalfway, elapsedMs: sessionMs(false) });
+    expect(sealSheet()?.textContent).toContain(words.timeUp.en);
+    expect(sheetButton(words.notYet.en)).toBeUndefined();
   });
 });
 
@@ -676,13 +720,13 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const seal = vi.fn<ApiClient["seal"]>(() => new Promise(() => {}));
     const part = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
-    // Begun and kept at 0:00, it seals as soon as its clock runs again.
+    // Begun and kept at 0:00, it's back pencils down, and its time's-up sheet seals it.
     const atTimeUp = sessionMs(true);
     await openKyotoSeikaSheet(
       { ...keptAtTimeUp, ticket: 9, elapsedMs: atTimeUp, kyotoSeika: part },
       { seal },
     );
-    act(() => document.querySelector<HTMLButtonElement>(".timer-stub")?.click());
+    sealOnSheet();
     await settle(1000);
     expect(seal).toHaveBeenCalledOnce();
     expect(seal.mock.calls[0]?.[0].kyotoSeikaSubjects).toEqual([pick(WIND), pick(REUNION)]);
@@ -721,9 +765,8 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
 
     act(() => beginKey()?.click());
     await settle(1000);
-    const sealKey = () => document.querySelector<HTMLButtonElement>(".seal-key");
-    act(() => sealKey()?.click());
-    act(() => sealKey()?.click());
+    tapSealKey();
+    sealOnSheet();
     await settle(1000);
     expect(seal).toHaveBeenCalledOnce();
     expect(seal.mock.calls[0]?.[0].kyotoSeikaSubjects).toHaveLength(2);
@@ -737,6 +780,25 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     for (const takeTool of TOOLS_IN_HAND) expect(await countedAfter(takeTool)).toBeGreaterThan(0);
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
     expect(timerCalls.clockRuns).toBe(1);
+  });
+
+  it("runs on under the open seal sheet, as the real test's clock does, and turns it time's up at 0:00", async () => {
+    const begun = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
+    const { notYet, timeUp } = strings.stickerCreation.sealSheet;
+    sealing.cut.mockResolvedValue(cutSticker());
+    await openKyotoSeikaSheet({
+      ...keptHalfway,
+      ticket: 9,
+      elapsedMs: sessionMs(true) - 3000,
+      kyotoSeika: begun,
+    });
+    // A reload's pause lets go at a tap.
+    act(tapTimer);
+    expect(await countedAfter(clickSealKey)).toBeGreaterThan(0);
+    expect(sheetButton(notYet.en)).toBeDefined();
+    await settle(3000);
+    expect(sealSheet()?.textContent).toContain(timeUp.en);
+    expect(sheetButton(notYet.en)).toBeUndefined();
   });
 
   it("names a begun canvas by its pair: each word with its English in English, the words alone in Japanese", async () => {

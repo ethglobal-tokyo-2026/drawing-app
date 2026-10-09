@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useEffectEvent,
   useId,
@@ -37,6 +38,7 @@ import { lazyRadius } from "./canvas/lazyBrush";
 import type { Op, Tool } from "./canvas/ops";
 import type { SheetFrame } from "./canvas/sheetFrame";
 import { SealKey } from "./SealKey";
+import { SealSheet } from "./SealSheet";
 import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
 import { SealCeremony } from "./sealing/SealCeremony";
 import { SealingStatusLabel } from "./sealing/SealingStatusLabel";
@@ -53,7 +55,6 @@ import {
 } from "./session/keptSession";
 import { forgetSentSeal, keepSentSeal, sealWentOut, sentSealOutcome } from "./session/sentSeal";
 import {
-  ARM_WINDOW_MS,
   describeSealFailure,
   FRESH_SESSION,
   sealFailure,
@@ -141,6 +142,8 @@ export function DrawingScreen({
   const { t } = useTranslation();
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<DrawingCanvasHandle>(null);
+  // The seal sheet's preview reads the ink as it opens.
+  const readInk = useCallback(() => canvas.current?.inkForReading() ?? null, []);
   const timer = useRef<TimerDotHandle>(null);
   const undoTile = useRef<HTMLButtonElement>(null);
   const api = useApi();
@@ -212,8 +215,7 @@ export function DrawingScreen({
   );
   // Until a session kept across a reload is back, or known lost, Draw doesn't ask for a ticket.
   const [restoring, setRestoring] = useState(true);
-  // The sheet's 18+ mark, from the armed chip's box; the seal reads the ref, since it runs from the
-  // clock's time-up too.
+  // The sheet's 18+ mark, from the seal sheet's switch; the seal reads the ref, after an await.
   const [nsfwOn, setNsfwOn] = useState(false);
   const nsfw = useRef(false);
   const keepNsfw = (on: boolean) => {
@@ -224,7 +226,18 @@ export function DrawingScreen({
   // A tap on the waiting timer puts "Starts when you draw" under it, until the first stroke.
   const [startsNote, setStartsNote] = useState(false);
 
-  const clock = useSessionClock(() => send({ type: "time-up" }), sessionMs(me.kyotoSeikaPractice));
+  // 0:00 puts the pencils down: the time's-up sheet rises, and the drawing is kept at its full time,
+  // so a reload brings the sheet back. A sheet with nothing on it has nothing to seal: it's spent,
+  // and the fresh one says so.
+  const clock = useSessionClock(() => {
+    if (latest.current.phase === "drawing" && !history.hasInk) {
+      send({ type: "reset" });
+      setSealProblem({ message: t(($) => $.stickerCreation.seal.emptyAtTimeUp) });
+      return;
+    }
+    send({ type: "time-up" });
+    keepProgress();
+  }, sessionMs(me.kyotoSeikaPractice));
   // A blank sheet shows the length its ticket will be spent with, so Settings apply to it in place.
   useEffect(() => {
     if (session.phase === "blank") clock.setLength(sessionMs(me.kyotoSeikaPractice));
@@ -564,7 +577,7 @@ export function DrawingScreen({
   /** Keeps the session on this device while it's in progress, so a reload doesn't lose it. */
   const keepProgress = () => {
     const { phase } = latest.current;
-    if (phase === "drawing" || phase === "armed")
+    if (phase === "drawing" || phase === "seal-sheet" || phase === "time-up")
       keeper.save(canvas.current?.steps() ?? [], clock.elapsed, canvas.current?.frame() ?? null);
   };
   const keepOnHide = useEffectEvent(keepProgress);
@@ -613,17 +626,21 @@ export function DrawingScreen({
       setSmoothing(found.tools.smoothing);
     }
     ticket.current = found.ticket;
+    // Kept at 0:00, it comes back pencils down, its time's-up sheet up, with nothing to pause.
+    const timeUp = drawn && found.elapsedMs >= sessionMs(part !== null);
     send({
       type: "restored",
       drawn,
       sealSent: sealWentOut(me.id, found.ticket),
       dealt: part?.begun === false,
+      timeUp,
     });
     if (!drawn) {
       setPickedUp(null);
       return;
     }
     clock.restore(found.elapsedMs);
+    if (timeUp) return;
     setPaused(true);
     setPickedUp("restored");
   }
@@ -643,7 +660,7 @@ export function DrawingScreen({
     if (kyotoSeika) kyotoSeikaSheet.open(kyotoSeika);
     // A begun pair stays locked in on the fresh sheet, whose clock waits for the first stroke.
     const dealt = kyotoSeika !== null && !kyotoSeika.begun;
-    send({ type: "restored", drawn: false, sealSent: false, dealt });
+    send({ type: "restored", drawn: false, sealSent: false, dealt, timeUp: false });
     setPickedUp("carried");
   }
 
@@ -824,24 +841,20 @@ export function DrawingScreen({
     else setPaused((p) => !p);
   };
 
-  // Every hold stops the clock: the person's pause, the board covering the screen, a tool in hand.
+  // Every hold stops the clock: the person's pause, the board covering the screen, the seal sheet, a
+  // tool in hand.
+  const sealSheet = session.phase === "seal-sheet";
   useEffect(() => {
     clock.setHolds({
       paused,
       away: !active,
+      seal: pausable && sealSheet,
       color: pausable && panel === "color",
       smoothing: pausable && panel === "smoothing",
       clear: pausable && panel === "clear",
       size: pausable && sizing,
     });
-  }, [clock, paused, active, panel, sizing, pausable]);
-
-  const expireArm = useEffectEvent(() => send({ type: "arm-expired", now: performance.now() }));
-  useEffect(() => {
-    if (session.phase !== "armed") return;
-    const id = setTimeout(() => expireArm(), ARM_WINDOW_MS);
-    return () => clearTimeout(id);
-  }, [session]);
+  }, [clock, paused, active, sealSheet, panel, sizing, pausable]);
 
   // Out of tickets: the card comes up as Draw opens on a fresh sheet, and stays until the person picks
   // a way on, even if tickets come back meanwhile.
@@ -889,8 +902,10 @@ export function DrawingScreen({
   if (!ask && askShown && (!active || paywall)) setAskShown(null);
   const sealing = session.phase === "sealing" || session.phase === "sealed";
   const retrying = session.phase === "retry";
-  // Until Start, and while a kept session loads, the sheet takes no ink; nor once it's sealing.
-  const locked = !active || session.phase === "blank" || sealing || retrying;
+  const timeUp = session.phase === "time-up";
+  // Until Start, and while a kept session loads, the sheet takes no ink; nor under the seal sheet, nor
+  // once it's sealing.
+  const locked = !active || session.phase === "blank" || sealSheet || timeUp || sealing || retrying;
 
   // On the first few visits, a started sheet says the timer waits for the first stroke, which peels it off.
   const startsLabel =
@@ -938,7 +953,6 @@ export function DrawingScreen({
     undoTile.current?.focus({ preventScroll: true });
     setPanel(null);
     canvas.current?.clear();
-    send({ type: "clear" });
     setSealProblem(null);
   };
 
@@ -963,7 +977,7 @@ export function DrawingScreen({
   return (
     <div
       ref={root}
-      className={`drawing-screen ${sealing ? "is-sealing" : ""} ${retrying ? "is-retrying" : ""} ${dealt ? "is-dealt" : ""} ${dealLeaving ? "is-deal-leaving" : ""}`}
+      className={`drawing-screen ${sealing ? "is-sealing" : ""} ${retrying ? "is-retrying" : ""} ${timeUp ? "is-time-up" : ""} ${dealt ? "is-dealt" : ""} ${dealLeaving ? "is-deal-leaving" : ""}`}
       style={{ "--draw-color": color }}
       // It stays mounted under the board so a sticker in progress survives; covered, it takes no focus.
       inert={!active}
@@ -983,7 +997,6 @@ export function DrawingScreen({
           // The dealt sheet takes the paused sheet's path, so a touch nudges Begin.
           paused: paused || dealt,
           panelOpen: panel !== null,
-          armed: session.phase === "armed",
           sessionMs: () => clock.elapsed,
         }}
         onHistory={(next) => {
@@ -1004,7 +1017,6 @@ export function DrawingScreen({
           timer.current?.showHint();
         }}
         onDismissPanel={() => setPanel(null)}
-        onDisarm={() => send({ type: "canvas-touch" })}
         onFit={setSheetScale}
       />
       <div className="drawing-top">
@@ -1081,14 +1093,8 @@ export function DrawingScreen({
       />
       <MyBoardTile onOpen={onMyBoardTile} />
       <SealKey
-        shown={retrying || (history.hasInk && !sealing)}
-        armed={session.phase === "armed"}
-        nsfw={nsfwOn}
-        onNsfwChange={(on) => {
-          keepNsfw(on);
-          keeper.keepNsfw(on);
-          send({ type: "nsfw-box", now: performance.now() });
-        }}
+        // The seal sheet's Seal is the screen's one key while it's up.
+        shown={retrying || (history.hasInk && !sealing && !sealSheet && !timeUp)}
         problem={
           sealProblem?.message ?? (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)
         }
@@ -1108,8 +1114,20 @@ export function DrawingScreen({
             );
             return;
           }
-          send({ type: "seal-tap", now: performance.now(), hasInk: history.hasInk });
+          send({ type: "seal-tap", hasInk: history.hasInk });
         }}
+      />
+      <SealSheet
+        open={active && (sealSheet || timeUp)}
+        timeUp={timeUp}
+        nsfw={nsfwOn}
+        ink={readInk}
+        onNsfwChange={(on) => {
+          keepNsfw(on);
+          keeper.keepNsfw(on);
+        }}
+        onSeal={() => send({ type: "seal" })}
+        onNotYet={() => send({ type: "not-yet" })}
       />
       {retrying && canStartOver && (
         <QuietLink

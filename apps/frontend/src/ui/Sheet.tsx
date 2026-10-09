@@ -25,6 +25,11 @@ interface Props {
   onEscape?: () => void;
   /** Its act is on its way: the sheet stays up, and Back keeps its place so it can try again. */
   busy?: boolean;
+  /**
+   * False while there's nothing to go back to, as at 0:00 on the drawing screen: the sheet stays up,
+   * and the perforation, Escape and Back do nothing.
+   */
+  closable?: boolean;
   /** Where focus goes once it closes, for a sheet that opens as another goes, so it never saw the opener. */
   returnFocus?: () => HTMLElement | null;
   /**
@@ -52,6 +57,7 @@ export function Sheet({
   onClose,
   onEscape,
   busy = false,
+  closable = true,
   returnFocus,
   layer,
   head,
@@ -78,15 +84,16 @@ export function Sheet({
     }
   }
   // The perforation, Escape and Back all close it, and all refuse while its act is on its way.
+  const stays = busy || !closable;
   const close = () => {
-    if (!busy) onClose();
+    if (!stays) onClose();
   };
   // The page comes back from inert before the trap gives focus back to it, so this goes first.
   useModalDialog(ref, { layer, active: open });
   useFocusTrap(ref, { active: open, onEscape: onEscape ?? close, returnFocus });
   useBackToClose(open, () => {
     close();
-    return !busy;
+    return !stays;
   });
   if (!shown) return null;
 
@@ -143,7 +150,7 @@ export function Sheet({
         type="button"
         className="perf"
         aria-label={t(($) => $.ui.sheet.close, { label })}
-        aria-disabled={busy || undefined}
+        aria-disabled={stays || undefined}
         {...drag}
         onClick={() => {
           if (dragged.current) dragged.current = false;

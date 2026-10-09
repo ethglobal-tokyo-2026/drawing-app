@@ -75,7 +75,6 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
   const onCommit = useEffectEvent(events.onCommit);
   const onBlocked = useEffectEvent(events.onBlocked);
   const onDismissPanel = useEffectEvent(events.onDismissPanel);
-  const onDisarm = useEffectEvent(events.onDisarm);
   const onFit = useEffectEvent(events.onFit);
   const initialSettings = useEffectEvent(() => settings);
 
@@ -90,7 +89,6 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
       onCommit: (op) => onCommit(op),
       onBlocked: () => onBlocked(),
       onDismissPanel: () => onDismissPanel(),
-      onDisarm: () => onDisarm(),
     });
     ink.current = { engine, surface };
     const detach = engine.attach(sheet);

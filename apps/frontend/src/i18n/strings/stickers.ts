@@ -32,7 +32,7 @@ export const stickers = {
   },
   /** An NSFW sticker, which only someone with Show 18+ stickers on sees plainly. */
   nsfw: {
-    /** Over an NSFW sticker that's blurred because Show 18+ stickers is off, on a sticker board, a sticker's detail, the sticker tray, Explore, and the give sheet's picker: the small mark in its middle */
+    /** Over an NSFW sticker that's blurred because Show 18+ stickers is off, on a sticker board, a sticker's detail, the sticker tray, Explore, and the give sheet's picker: the small mark in its middle. Also the tag after Sealed on the sealed card of a sticker sealed as 18+ */
     mark: { en: "18+", ja: "18+" },
     /** Screen readers only: an NSFW sticker that's blurred because Show 18+ stickers is off, wherever the 18+ mark shows */
     veiled: { en: "Blurred: 18+ sticker", ja: "ぼかし表示：18+のシール" },

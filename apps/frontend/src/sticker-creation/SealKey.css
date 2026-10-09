@@ -34,26 +34,14 @@
   height: 26px;
 }
 
-/* Armed: the key breathes while the chip asks for the second tap. */
-.key.seal-key.is-armed {
-  animation: seal-key-armed 900ms var(--ease-out) infinite;
-}
-
-@keyframes seal-key-armed {
-  0%,
-  100% {
-    scale: 1;
-  }
-  45% {
-    scale: 1.08;
-  }
-}
-
+/* What went wrong with the last seal: above the foot row, so it never covers the tiles there, the
+   way out included, and left of the check's column, where Kyoto Seika's corner print stands. */
 .seal-chip {
   position: absolute;
   right: 88px;
-  bottom: 30px;
+  bottom: 92px;
   z-index: 3;
+  max-width: min(300px, calc(100% - 102px));
   padding: 7px 11px 8px;
   border-radius: var(--r-label);
   background: var(--liner-lift);
@@ -62,11 +50,10 @@
     var(--shadow-label);
   font-size: 13px;
   font-weight: 650;
-  line-height: 1;
+  line-height: 1.25;
   color: var(--ink);
-  white-space: nowrap;
   opacity: 0;
-  transform: translateX(6px);
+  transform: translateY(6px);
   pointer-events: none;
   transition:
     opacity 160ms var(--ease-out),
@@ -76,88 +63,6 @@
 .seal-chip.is-on {
   opacity: 1;
   transform: none;
-}
-
-/* The armed chip's 18+ box: a row over its words, at the chip's end away from the key, so a tap meant
-   for one never lands on the other. A chip that opens right of the key sets --chip-away: flex-end. */
-.seal-chip__row {
-  display: flex;
-  justify-content: var(--chip-away, flex-start);
-}
-
-/* Its label reaches past the row to a 44px touch area. */
-.seal-chip__nsfw {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: -11px -10px -3px;
-  padding: 11px 10px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  touch-action: manipulation;
-  cursor: pointer;
-}
-
-.seal-chip.is-on .seal-chip__nsfw {
-  pointer-events: auto;
-}
-
-.seal-chip__box {
-  display: grid;
-  flex: none;
-}
-
-.seal-chip__box > * {
-  grid-area: 1 / 1;
-}
-
-/* Unticked, a quiet Graphite outline; ticked, Bonbon Pink under an Ink check. */
-.seal-chip__box input {
-  width: 22px;
-  height: 22px;
-  margin: 0;
-  border: 1.5px solid var(--graphite);
-  border-radius: var(--r-label);
-  background: var(--canvas);
-  appearance: none;
-  cursor: pointer;
-  transition:
-    background-color 160ms var(--ease-out),
-    border-color 160ms var(--ease-out);
-}
-
-.seal-chip__box input:checked {
-  border-color: var(--ink);
-  background-color: var(--pink);
-}
-
-.seal-chip__box input:focus-visible {
-  outline-offset: 3px;
-}
-
-.seal-chip__box svg {
-  place-self: center;
-  width: 16px;
-  height: 16px;
-  color: var(--ink);
-  pointer-events: none;
-  opacity: 0;
-  scale: 0.6;
-  transition:
-    opacity 120ms var(--ease-out),
-    scale 220ms var(--ease-spring);
-}
-
-.seal-chip__box input:checked + svg {
-  opacity: 1;
-  scale: 1;
-}
-
-/* A problem can run longer than the prompt; it wraps short of the undo and redo tiles. */
-.seal-chip.is-long {
-  max-width: calc(100% - 226px);
-  line-height: 1.25;
-  white-space: normal;
 }
 
 /* A failed seal's words, for a report: the chip stays out of the drawing's way, but its Copy takes a
@@ -185,10 +90,4 @@
    breaks too, such as at a hyphen or before a bracket, so English wraps as it always has. */
 .seal-chip:not(:lang(ja)) {
   word-break: normal;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .key.seal-key.is-armed {
-    animation: none;
-  }
 }

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../../api/apiClient";
 import {
-  ARM_WINDOW_MS,
   describeSealFailure,
   FRESH_SESSION,
   heldBy,
@@ -24,13 +23,18 @@ const start = { type: "start", kyotoSeika: false } as const;
 const kyotoSeikaStart = { type: "start", kyotoSeika: true } as const;
 const begin = { type: "begin", hasPair: true } as const;
 const ink = { type: "ink" } as const;
-const tap = (now: number, hasInk = true) => ({ type: "seal-tap", now, hasInk }) as const;
+const tap = (hasInk = true) => ({ type: "seal-tap", hasInk }) as const;
+const seal = { type: "seal" } as const;
+const notYet = { type: "not-yet" } as const;
+const timeUp = { type: "time-up" } as const;
 const failed = ({ mayHaveSealed = false, timeUp = false, refused = false } = {}) =>
   ({ type: "seal-failed", mayHaveSealed, timeUp, refused }) as const;
-/** The seal key's second tap started a seal. */
-const sealing = [start, ink, tap(1000), tap(1500)] as const;
-const restored = (drawn: boolean, sealSent = false, dealt = false) =>
-  ({ type: "restored", drawn, sealSent, dealt }) as const;
+/** The seal key opened the seal sheet, and its Seal started a seal. */
+const sealing = [start, ink, tap(), seal] as const;
+/** The clock ran out, and the time's-up sheet's Seal started a seal. */
+const sealedAtTimeUp = [start, ink, timeUp, seal] as const;
+const restored = ({ drawn = false, sealSent = false, dealt = false, timeUp = false } = {}) =>
+  ({ type: "restored", drawn, sealSent, dealt, timeUp }) as const;
 
 describe("transition", () => {
   it("spends a ticket only at Start, and starts the clock only at the first stroke", () => {
@@ -50,7 +54,7 @@ describe("transition", () => {
     });
     expect(run(start, begin)).toEqual({ phase: "primed", effects: [] });
     expect(run(kyotoSeikaStart, begin, ink)).toEqual({ phase: "drawing", effects: [] });
-    expect(run(kyotoSeikaStart, tap(1000))).toEqual({ phase: "dealt", effects: [] });
+    expect(run(kyotoSeikaStart, tap())).toEqual({ phase: "dealt", effects: [] });
   });
 
   it("won't begin before the pair is dealt, since the sheet couldn't seal without it", () => {
@@ -61,88 +65,50 @@ describe("transition", () => {
   });
 
   it("brings a sheet in Kyoto Seika Practice Mode back dealt until Begin, and drawing after it", () => {
-    expect(run(restored(false, false, true)).phase).toBe("dealt");
-    expect(run(restored(true, false, false)).phase).toBe("drawing");
-    expect(run(restored(false, true, true)).phase).toBe("retry");
+    expect(run(restored({ dealt: true })).phase).toBe("dealt");
+    expect(run(restored({ drawn: true })).phase).toBe("drawing");
+    expect(run(restored({ sealSent: true, dealt: true })).phase).toBe("retry");
   });
 
   it("picks a session kept across a reload back up without spending another ticket", () => {
-    expect(run(restored(true))).toEqual({ phase: "drawing", effects: [] });
-    expect(run(restored(false), start).phase).toBe("primed");
-    expect(run(restored(false), ink)).toEqual({
+    expect(run(restored({ drawn: true }))).toEqual({ phase: "drawing", effects: [] });
+    expect(run(restored(), start).phase).toBe("primed");
+    expect(run(restored(), ink)).toEqual({
       phase: "drawing",
       effects: ["start-clock"],
     });
   });
 
-  it("arms at the first tap and seals at a second within the window", () => {
-    expect(run(start, ink, tap(1000))).toEqual({ phase: "armed", effects: [] });
-    expect(run(start, ink, tap(1000), tap(1000 + ARM_WINDOW_MS - 1))).toEqual({
-      phase: "sealing",
-      effects: ["seal"],
-    });
+  it("opens the seal sheet at one tap, and seals only at its Seal", () => {
+    expect(run(start, ink, tap())).toEqual({ phase: "seal-sheet", effects: [] });
+    expect(run(...sealing)).toEqual({ phase: "sealing", effects: ["seal"] });
+    // The sheet's Seal is the only way from drawing to a seal.
+    expect(run(start, ink, seal).phase).toBe("drawing");
   });
 
-  it("disarms when the window lapses, and a late second tap only arms again", () => {
-    expect(
-      run(start, ink, tap(1000), { type: "arm-expired", now: 1000 + ARM_WINDOW_MS }).phase,
-    ).toBe("drawing");
-    expect(run(start, ink, tap(1000), tap(1000 + ARM_WINDOW_MS))).toEqual({
-      phase: "armed",
-      effects: [],
-    });
-    // The first arming's expiry doesn't cut the second one short.
-    expect(
-      run(start, ink, tap(1000), tap(4000), { type: "arm-expired", now: 1000 + ARM_WINDOW_MS })
-        .phase,
-    ).toBe("armed");
+  it("closes the seal sheet back to drawing at Not yet", () => {
+    expect(run(start, ink, tap(), notYet)).toEqual({ phase: "drawing", effects: [] });
+    expect(run(start, ink, tap(), notYet, tap()).phase).toBe("seal-sheet");
   });
 
-  it("stays armed when the armed chip's 18+ box is ticked, for a full window from the tick", () => {
-    const box = (now: number) => ({ type: "nsfw-box", now }) as const;
-    const ticked = [start, ink, tap(1000), box(3000)] as const;
-    expect(run(...ticked)).toEqual({ phase: "armed", effects: [] });
-    expect(run(...ticked, { type: "arm-expired", now: 1000 + ARM_WINDOW_MS }).phase).toBe("armed");
-    expect(run(...ticked, tap(3000 + ARM_WINDOW_MS - 1))).toEqual({
-      phase: "sealing",
-      effects: ["seal"],
-    });
-    expect(run(...ticked, { type: "arm-expired", now: 3000 + ARM_WINDOW_MS }).phase).toBe(
-      "drawing",
-    );
-    // Only the key arms.
-    expect(run(start, ink, box(3000)).phase).toBe("drawing");
+  it("can't open the seal sheet on an empty canvas", () => {
+    expect(run(start, tap()).phase).toBe("primed");
+    expect(run(start, ink, tap(false)).phase).toBe("drawing");
   });
 
-  it("disarms on any touch of the canvas", () => {
-    expect(run(start, ink, tap(1000), { type: "canvas-touch" }).phase).toBe("drawing");
+  it("puts the pencils down at 0:00: the time's-up sheet rises, and nothing seals until its Seal", () => {
+    expect(run(start, ink, timeUp)).toEqual({ phase: "time-up", effects: [] });
+    // A seal sheet already open, as Kyoto Seika Practice Mode's clock runs on under it, turns time's up.
+    expect(run(start, ink, tap(), timeUp)).toEqual({ phase: "time-up", effects: [] });
+    // Nothing leads back to drawing.
+    expect(run(start, ink, timeUp, notYet).phase).toBe("time-up");
+    expect(run(start, ink, timeUp, tap()).phase).toBe("time-up");
+    expect(run(...sealedAtTimeUp)).toEqual({ phase: "sealing", effects: ["seal"] });
   });
 
-  it("disarms on a clear, and otherwise leaves the session as it was", () => {
-    const clear = { type: "clear" } as const;
-    expect(run(start, ink, tap(1000), clear)).toEqual({ phase: "drawing", effects: [] });
-    const before: SessionEvent[][] = [
-      [],
-      [start],
-      [start, ink],
-      [...sealing],
-      [...sealing, failed({ mayHaveSealed: true })],
-    ];
-    for (const events of before)
-      expect(run(...events, clear)).toEqual({ phase: run(...events).phase, effects: [] });
-  });
-
-  it("can't seal an empty canvas", () => {
-    expect(run(start, tap(1000)).phase).toBe("primed");
-    expect(run(start, ink, tap(1000, false)).phase).toBe("drawing");
-  });
-
-  it("seals by itself when time is up, armed or not", () => {
-    expect(run(start, ink, { type: "time-up" })).toEqual({ phase: "sealing", effects: ["seal"] });
-    expect(run(start, ink, tap(1000), { type: "time-up" })).toEqual({
-      phase: "sealing",
-      effects: ["seal"],
-    });
+  it("brings a drawing kept at 0:00 back pencils down, unless its seal had gone out", () => {
+    expect(run(restored({ drawn: true, timeUp: true })).phase).toBe("time-up");
+    expect(run(restored({ drawn: true, timeUp: true, sealSent: true })).phase).toBe("retry");
   });
 
   it("goes back to drawing with the clock running again when the server refused the seal", () => {
@@ -155,40 +121,39 @@ describe("transition", () => {
   });
 
   it("keeps the sheet locked after a seal the server may hold, or one at 0:00, until one lands", () => {
-    const timeUp = [start, ink, { type: "time-up" }] as const;
     for (const held of [
       [...sealing, failed({ mayHaveSealed: true })],
-      [...timeUp, failed({ timeUp: true })],
+      [...sealedAtTimeUp, failed({ timeUp: true })],
     ]) {
       expect(run(...held).phase).toBe("retry");
-      expect(run(...held, ink, { type: "canvas-touch" }).phase).toBe("retry");
-      // The key's first tap tries again, since the sheet can't change.
-      expect(run(...held, tap(9000))).toEqual({ phase: "sealing", effects: ["seal"] });
-      expect(run(...held, tap(9000), { type: "sealed" }).phase).toBe("sealed");
+      expect(run(...held, ink).phase).toBe("retry");
+      // The key's tap tries again at once, since the sheet and its mark can't change.
+      expect(run(...held, tap())).toEqual({ phase: "sealing", effects: ["seal"] });
+      expect(run(...held, tap(), { type: "sealed" }).phase).toBe("sealed");
     }
     // A reload while the seal was on its way brings the sheet back locked too.
-    expect(run(restored(true, true)).phase).toBe("retry");
+    expect(run(restored({ drawn: true, sealSent: true })).phase).toBe("retry");
     // A retry the server refuses proves it holds no seal, so before 0:00 the sheet draws on.
-    expect(run(...sealing, failed({ mayHaveSealed: true }), tap(9000), failed()).phase).toBe(
-      "drawing",
-    );
+    expect(run(...sealing, failed({ mayHaveSealed: true }), tap(), failed()).phase).toBe("drawing");
     expect(
-      run(...timeUp, failed({ timeUp: true }), tap(9000), failed({ timeUp: true })).phase,
+      run(...sealedAtTimeUp, failed({ timeUp: true }), tap(), failed({ timeUp: true })).phase,
     ).toBe("retry");
   });
 
   it("starts a fresh sheet when the server refuses a seal at 0:00, since it refuses it again", () => {
-    const timeUp = [start, ink, { type: "time-up" }] as const;
     const refusedAtTimeUp = failed({ timeUp: true, refused: true });
-    expect(run(...timeUp, refusedAtTimeUp)).toEqual({ phase: "blank", effects: ["reset-sheet"] });
+    expect(run(...sealedAtTimeUp, refusedAtTimeUp)).toEqual({
+      phase: "blank",
+      effects: ["reset-sheet"],
+    });
     // A retry at 0:00 refused too.
-    expect(run(...timeUp, failed({ timeUp: true }), tap(9000), refusedAtTimeUp).phase).toBe(
+    expect(run(...sealedAtTimeUp, failed({ timeUp: true }), tap(), refusedAtTimeUp).phase).toBe(
       "blank",
     );
   });
 
   it("starts a fresh sheet on reset", () => {
-    expect(run(start, ink, tap(1000), tap(1500), { type: "sealed" }, { type: "reset" })).toEqual({
+    expect(run(...sealing, { type: "sealed" }, { type: "reset" })).toEqual({
       phase: "blank",
       effects: ["reset-sheet"],
     });

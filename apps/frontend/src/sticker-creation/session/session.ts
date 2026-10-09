@@ -7,8 +7,6 @@ import { ApiError, type ErrorCode } from "../../api/apiClient";
  */
 export const sessionMs = (kyotoSeika: boolean) =>
   (kyotoSeika ? KYOTO_SEIKA_TIME_USED_S : MAX_TIME_USED_S) * 1000;
-/** After the first tap on the seal key, a second tap within this long seals. */
-export const ARM_WINDOW_MS = 2_500;
 
 /**
  * blank: a fresh sheet asks before a ticket is spent; the sheet takes no ink yet.
@@ -16,20 +14,30 @@ export const ARM_WINDOW_MS = 2_500;
  * Begin, the sheet takes no ink and the tools are hidden.
  * primed: Start spent a regular ticket; the clock waits for the first stroke.
  * drawing: the first stroke or fill started the clock.
- * armed: the seal key took its first tap. sealing: building the sticker. sealed: done.
+ * seal-sheet: the seal key opened the seal sheet over the drawing, which takes no ink while it's up.
+ * time-up: the clock reached 0:00, pencils down: the seal sheet is up in its time's-up state, and
+ * nothing seals until its Seal.
+ * sealing: building the sticker. sealed: done.
  * retry: a seal failed where the sheet mustn't take ink again, since time is up or the server may
  * already hold the seal: the sheet stays locked, and the seal key only tries the seal again. A seal
  * the server refuses at 0:00 gives way to a fresh sheet instead.
  */
-type Phase = "blank" | "dealt" | "primed" | "drawing" | "armed" | "sealing" | "sealed" | "retry";
+type Phase =
+  | "blank"
+  | "dealt"
+  | "primed"
+  | "drawing"
+  | "seal-sheet"
+  | "time-up"
+  | "sealing"
+  | "sealed"
+  | "retry";
 
 export interface Session {
   phase: Phase;
-  /** When the seal key was armed, in ms. */
-  armedAt: number;
 }
 
-export const FRESH_SESSION: Session = { phase: "blank", armedAt: 0 };
+export const FRESH_SESSION: Session = { phase: "blank" };
 
 export type SessionEvent =
   /** A ticket was spent on this sheet, or carried over to it, in Kyoto Seika Practice Mode or not. */
@@ -46,16 +54,15 @@ export type SessionEvent =
    * started, with the clock still waiting for the first stroke. One read late comes back onto the
    * sheet its ticket carried over to, before anything is drawn there. `sealSent`: its seal had gone
    * out with no answer, so the server may hold it. `dealt`: a sheet in Kyoto Seika Practice Mode still
-   * waiting for Begin.
+   * waiting for Begin. `timeUp`: its clock had reached 0:00.
    */
-  | { type: "restored"; drawn: boolean; sealSent: boolean; dealt: boolean }
-  | { type: "seal-tap"; now: number; hasInk: boolean }
-  /** The armed chip's 18+ box was ticked or unticked: the key stays armed, its window starting over. */
-  | { type: "nsfw-box"; now: number }
-  | { type: "arm-expired"; now: number }
-  | { type: "canvas-touch" }
-  /** The sheet was cleared: the seal key disarms, as at a touch on the sheet, and nothing else changes. */
-  | { type: "clear" }
+  | { type: "restored"; drawn: boolean; sealSent: boolean; dealt: boolean; timeUp: boolean }
+  /** The seal key: it opens the seal sheet, or tries a seal again. */
+  | { type: "seal-tap"; hasInk: boolean }
+  /** The seal sheet's Seal. */
+  | { type: "seal" }
+  /** The seal sheet closed back to drawing: Not yet, Escape, Back or its perforation. */
+  | { type: "not-yet" }
   | { type: "time-up" }
   | { type: "sealed" }
   /**
@@ -81,8 +88,8 @@ export type SessionEffect =
 
 type Result = { session: Session; effects: SessionEffect[] };
 
-const to = (phase: Phase, effects: SessionEffect[] = [], armedAt = 0): Result => ({
-  session: { phase, armedAt },
+const to = (phase: Phase, effects: SessionEffect[] = []): Result => ({
+  session: { phase },
   effects,
 });
 
@@ -102,28 +109,19 @@ export function transition(session: Session, event: SessionEvent): Result {
       return phase === "primed" ? to("drawing", ["start-clock"]) : unchanged;
     case "restored":
       if (phase !== "blank" && phase !== "primed" && phase !== "dealt") return unchanged;
-      return to(
-        event.sealSent ? "retry" : event.drawn ? "drawing" : event.dealt ? "dealt" : "primed",
-      );
+      if (event.sealSent) return to("retry");
+      if (event.drawn) return to(event.timeUp ? "time-up" : "drawing");
+      return to(event.dealt ? "dealt" : "primed");
     case "seal-tap":
-      // The sheet can't change any more, so there's no second tap to wait for.
+      // The sheet and its mark can't change any more, so the seal goes again as it was.
       if (phase === "retry") return to("sealing", ["seal"]);
-      if (phase === "armed" && event.now - session.armedAt < ARM_WINDOW_MS)
-        return to("sealing", ["seal"]);
-      if ((phase === "drawing" || phase === "armed") && event.hasInk)
-        return to("armed", [], event.now);
-      return unchanged;
-    case "nsfw-box":
-      return phase === "armed" ? to("armed", [], event.now) : unchanged;
-    case "arm-expired":
-      return phase === "armed" && event.now - session.armedAt >= ARM_WINDOW_MS
-        ? to("drawing")
-        : unchanged;
-    case "canvas-touch":
-    case "clear":
-      return phase === "armed" ? to("drawing") : unchanged;
+      return phase === "drawing" && event.hasInk ? to("seal-sheet") : unchanged;
+    case "seal":
+      return phase === "seal-sheet" || phase === "time-up" ? to("sealing", ["seal"]) : unchanged;
+    case "not-yet":
+      return phase === "seal-sheet" ? to("drawing") : unchanged;
     case "time-up":
-      return phase === "drawing" || phase === "armed" ? to("sealing", ["seal"]) : unchanged;
+      return phase === "drawing" || phase === "seal-sheet" ? to("time-up") : unchanged;
     case "sealed":
       return phase === "sealing" ? to("sealed") : unchanged;
     case "seal-failed":
@@ -187,14 +185,24 @@ export function describeSealFailure(error: unknown, sent: boolean): SealProblem 
 }
 
 /**
- * Why the clock is held: the person's pause, a hidden page, the drawing screen being covered, or a
- * tool in hand (the color sheet, the smoothing bar, the clear bar, a finger on the size rail). Only a
- * started clock is held; before the first stroke it just waits, and nothing shows as paused.
+ * Why the clock is held: the person's pause, a hidden page, the drawing screen being covered, the
+ * seal sheet, or a tool in hand (the color sheet, the smoothing bar, the clear bar, a finger on the
+ * size rail). Only a started clock is held; before the first stroke it just waits, and nothing shows
+ * as paused.
  */
-export type Hold = "paused" | "hidden" | "away" | "color" | "smoothing" | "clear" | "size";
+export type Hold = "paused" | "hidden" | "away" | "seal" | "color" | "smoothing" | "clear" | "size";
 
 /** Which hold the timer shows, most important first. */
-const HOLDS: readonly Hold[] = ["paused", "hidden", "away", "color", "smoothing", "clear", "size"];
+const HOLDS: readonly Hold[] = [
+  "paused",
+  "hidden",
+  "away",
+  "seal",
+  "color",
+  "smoothing",
+  "clear",
+  "size",
+];
 
 /** The hold the timer shows, or null when nothing holds it. */
 export function heldBy(holds: ReadonlySet<Hold>): Hold | null {

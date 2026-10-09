@@ -15,6 +15,7 @@ import { Key } from "../../ui/Key";
 import { LabelButton } from "../../ui/LabelButton";
 import { TearLine } from "../../ui/TearLine";
 import { useFocusTrap } from "../../ui/useFocusTrap";
+import "../../stickers/nsfw-mark.css";
 import "./SealedCard.css";
 
 /** A press shows before the screen changes to the sticker board. */
@@ -130,7 +131,7 @@ export function SealedCard({
       <h2 id={titleId} className="sealed-card__title" data-card-line>
         {t(($) => $.stickerCreation.sealedCard.title)}
         {toSticker(sealed).nsfw && (
-          <span className="sealed-card__nsfw">{t(($) => $.stickerCreation.nsfw.mark)}</span>
+          <span className="nsfw-mark sealed-card__nsfw">{t(($) => $.stickers.nsfw.mark)}</span>
         )}
       </h2>
       {/* A sticker drawn in Kyoto Seika Practice Mode names its pair over the time it took. */}

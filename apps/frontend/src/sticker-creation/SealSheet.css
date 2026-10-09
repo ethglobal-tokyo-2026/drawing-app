@@ -1,0 +1,140 @@
+/* The seal sheet: the sticker as it will be beside the title and the 18+ switch, then Seal centered
+   at the foot with Not yet under it. It stays short, so the drawing still shows above it. */
+.bottom-sheet.seal-sheet {
+  padding-bottom: 18px;
+}
+
+.seal-sheet__body {
+  display: grid;
+  grid-template-columns: 136px minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+  column-gap: 18px;
+  min-height: 136px;
+}
+
+/* The sticker sits on the sheet at a small turn, as stickers do on a board. */
+.seal-preview {
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  width: 136px;
+  height: 136px;
+}
+
+/* A rectangle's silhouette, for the pink foil to grow its band from. */
+.seal-preview__sticker {
+  --m: linear-gradient(#000 0 0);
+  position: relative;
+  display: block;
+  rotate: -3deg;
+}
+
+/* The drawing on white, its edge a kiss-cut with the sticker's cast below. The canvas keeps the
+   crop's own shape inside the box, leaving room for the foil band and the turn. */
+.seal-preview__ink {
+  position: relative;
+  display: block;
+  max-width: 118px;
+  max-height: 118px;
+  border-radius: var(--r-label);
+  filter: var(--sticker-cut) var(--sticker-cast);
+}
+
+/* With foil, the band is the edge: the cut and the cast fall from it instead. */
+.seal-preview .sticker-foil ~ .seal-preview__ink {
+  filter: none;
+}
+
+.seal-preview .sticker-foil {
+  animation: seal-foil-on 260ms var(--ease-out);
+}
+
+@keyframes seal-foil-on {
+  from {
+    opacity: 0;
+    scale: 0.94;
+  }
+}
+
+.seal-sheet__title {
+  align-self: start;
+  margin: 8px 0 0;
+  font-size: 20px;
+  font-weight: 800;
+  font-stretch: var(--w-title);
+  line-height: 1.1;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+
+/* One switch row under a hairline, its words at label weight and the switch at its end. */
+.seal-sheet__switch {
+  align-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  border-top: 1px solid var(--rule);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The switch is a mark, not a setting, so it fills Ink when on: pink is gratitude's field, and the
+   preview's foil carries the 18+. The thumb is a gradient, since a checkbox can't carry a
+   pseudo-element. */
+.seal-sheet__switch input {
+  flex: none;
+  width: 46px;
+  height: 28px;
+  margin: 0;
+  border: 1.5px solid var(--graphite);
+  border-radius: 999px;
+  background-color: var(--canvas);
+  background-image: radial-gradient(circle, var(--graphite) 0 8px, transparent 8.5px);
+  background-repeat: no-repeat;
+  background-size: 22px 22px;
+  background-position: 2px 50%;
+  appearance: none;
+  cursor: pointer;
+  transition:
+    background-color 160ms var(--ease-out),
+    background-position 160ms var(--ease-out);
+}
+
+.seal-sheet__switch input:checked {
+  border-color: var(--ink);
+  background-color: var(--ink);
+  background-image: radial-gradient(circle, var(--canvas) 0 8px, transparent 8.5px);
+  background-position: calc(100% - 2px) 50%;
+}
+
+.seal-sheet__switch input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.seal-sheet__foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 16px;
+}
+
+.seal-sheet__key {
+  min-width: 196px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seal-preview .sticker-foil {
+    animation: none;
+  }
+
+  .seal-sheet__switch input {
+    transition: none;
+  }
+}
