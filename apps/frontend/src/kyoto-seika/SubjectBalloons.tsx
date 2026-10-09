@@ -12,26 +12,24 @@ import { EASE_OUT } from "../ui/easing";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import {
   beadShape,
+  pencilLoop,
   TIGHT_TYPE,
   TYPE,
   wordSizePx,
   type Box,
+  type DealLayout,
   type Fit,
-  type PairLayout,
   type PlacedBalloon,
 } from "./balloonGeometry";
-import type { Balloon, Deal } from "./deal";
+import { PICKS, type Deal } from "./deal";
 import {
   ARRIVE,
-  BEADS_ARRIVE,
   BOIL,
   CLOUD_ARRIVE,
   CLOUD_SQUASH,
   driftKeyframes,
   FLOAT,
-  type DriftReach,
   ROLL,
-  SPRING,
   BOOM_MS,
   COUNT_MS,
   TEASE_MS,
@@ -41,12 +39,11 @@ import {
 } from "./dealMotion";
 import { DieBang, TeaseLine } from "./DieTeasing";
 import { CHARRED_AT_ROLL, dieMood } from "./dieMood";
-import { SMOKE_WISPS } from "./dieArt";
-import { SubjectReroll, Wisp } from "./SubjectReroll";
+import { charCount } from "./subjectList";
+import { spokenSubject } from "./spokenSubject";
+import { SubjectReroll } from "./SubjectReroll";
 import { SubjectWord } from "./SubjectWord";
 import "./subject-balloons.css";
-
-const BALLOONS = [0, 1] as const satisfies readonly Balloon[];
 
 const onVisibility = (onChange: () => void) => {
   document.addEventListener("visibilitychange", onChange);
@@ -54,8 +51,8 @@ const onVisibility = (onChange: () => void) => {
 };
 
 /**
- * A cloud or its bubbles: the white, and the pen line over it in each boil frame, one showing at a
- * time, in an SVG the size of `box`. `phase` shifts the boil, in frames, so two clouds never flick in step.
+ * A cloud: the white, and the pen line over it in each boil frame, one showing at a time, in an SVG
+ * the size of `box`. `phase` shifts the boil, in frames, so no two clouds flick in step.
  */
 function Inked({
   white,
@@ -95,7 +92,6 @@ function Inked({
 function useDrift(
   el: RefObject<HTMLElement | null>,
   seed: number,
-  reach: DriftReach,
   ms: number,
   on: boolean,
   still: boolean,
@@ -103,7 +99,7 @@ function useDrift(
   const motion = useRef<Animation | null>(null);
   useEffect(() => {
     if (!on) return;
-    const playing = el.current?.animate(driftKeyframes(seed, reach), {
+    const playing = el.current?.animate(driftKeyframes(seed, FLOAT.cloud), {
       duration: ms,
       iterations: Infinity,
     });
@@ -114,7 +110,7 @@ function useDrift(
       playing?.cancel();
       motion.current = null;
     };
-  }, [el, seed, reach, ms, on]);
+  }, [el, seed, ms, on]);
   useEffect(() => {
     if (still) motion.current?.pause();
     else motion.current?.play();
@@ -122,7 +118,7 @@ function useDrift(
 }
 
 const SVG = "http://www.w3.org/2000/svg";
-/** The puffs a roll blows out of a cloud, inked like its bubbles: a few sizes, drawn once. */
+/** The puffs a roll blows out of a cloud: a few sizes, drawn once. */
 const PUFFS = [6, 7.5, 9, 11].map((r, i) => ({ r, ...beadShape(r, 61 + i) }));
 
 /** Small puffs burst from a rolled cloud's middle and drift up; random by design, so drawn outside React. */
@@ -162,14 +158,18 @@ function puff(layer: HTMLElement) {
   }
 }
 
+/** The pencil loop's room round the word it circles, in px. */
+const LOOP_ROOM = { x: 9, y: 5 };
+
 interface BalloonProps {
-  balloon: Balloon;
+  place: number;
   placed: PlacedBalloon;
   fit: Fit;
   subject: KyotoSeikaSubject;
-  /** Its die blew up: smoke rises from it. */
-  charred: boolean;
-  wrap: (el: HTMLDivElement | null) => void;
+  picked: boolean;
+  /** Two others are picked: this one takes no pick until one is unpicked. */
+  locked: boolean;
+  onPick: (place: number) => void;
   reduced: boolean;
   /** It drifts once it has arrived; a picture of the deal holds still. */
   drifts: boolean;
@@ -177,14 +177,18 @@ interface BalloonProps {
   still: boolean;
 }
 
-/** One thought cloud: it arrives, drifts, and puffs one word out and the next in at a roll. */
+/**
+ * One thought cloud, a toggle that picks its subject: it arrives, drifts, puffs one word out and the
+ * next in at a roll, and a pick circles its word in pencil.
+ */
 function SubjectBalloon({
-  balloon,
+  place,
   placed,
   fit,
   subject,
-  charred,
-  wrap,
+  picked,
+  locked,
+  onPick,
   reduced,
   drifts,
   still,
@@ -192,28 +196,17 @@ function SubjectBalloon({
   const { spec } = placed;
   const float = useRef<HTMLDivElement>(null);
   const cloud = useRef<HTMLDivElement>(null);
-  const beads = useRef<HTMLDivElement>(null);
   const words = useRef<HTMLDivElement>(null);
   // A rolled word puffs out before the next comes in, so the screen lags the deal by that long.
   const [shown, setShown] = useState(subject);
   const visible = reduced ? subject : shown;
 
-  // The cloud drifts on its own seeded track, and its bubbles a little more on theirs.
-  const seed = FLOAT.seeds[balloon];
-  const drift = drifts && !reduced;
-  useDrift(float, seed, FLOAT.cloud, FLOAT.periodMs[balloon], drift, still);
-  useDrift(beads, seed + 1, FLOAT.beads, FLOAT.beadsPeriodMs[balloon], drift, still);
+  useDrift(float, FLOAT.seeds[place], FLOAT.periodMs[place], drifts && !reduced, still);
 
   useEffect(() => {
     if (reduced) return;
-    const start = ARRIVE.firstMs + balloon * ARRIVE.staggerMs;
+    const start = ARRIVE.firstMs + place * ARRIVE.staggerMs;
     const fill = "backwards";
-    beads.current?.animate(BEADS_ARRIVE, {
-      duration: ARRIVE.beadsMs,
-      delay: start,
-      easing: SPRING,
-      fill,
-    });
     cloud.current?.animate(CLOUD_ARRIVE, {
       duration: ARRIVE.cloudMs,
       delay: start + ARRIVE.cloudAfterMs,
@@ -223,10 +216,10 @@ function SubjectBalloon({
     words.current?.animate(WORD_STAMP, {
       duration: ARRIVE.wordMs,
       delay: start + ARRIVE.wordAfterMs,
-      easing: SPRING,
+      easing: EASE_OUT,
       fill,
     });
-  }, [balloon, reduced]);
+  }, [place, reduced]);
 
   useEffect(() => {
     if (reduced || subject === shown) return;
@@ -237,12 +230,18 @@ function SubjectBalloon({
     words.current?.animate(WORD_OUT, { duration: ROLL.wordOutMs, easing: EASE_OUT, fill });
     const swap = setTimeout(() => {
       setShown(subject);
-      words.current?.animate(WORD_IN, { duration: ROLL.wordInMs, easing: SPRING, fill });
+      words.current?.animate(WORD_IN, { duration: ROLL.wordInMs, easing: EASE_OUT, fill });
     }, ROLL.wordOutMs);
     return () => clearTimeout(swap);
   }, [subject, shown, reduced]);
 
   const type = fit === "roomy" ? TYPE : TIGHT_TYPE;
+  const size = wordSizePx(visible.ja, fit, spec.w);
+  // The loop rings the word as set, and the reading over it, never wider than the word area.
+  const loop = {
+    rx: Math.min(spec.w / 2, (charCount(visible.ja) * size) / 2) + LOOP_ROOM.x,
+    ry: spec.h / 2 + LOOP_ROOM.y,
+  };
   const style = {
     left: placed.center.x,
     top: placed.center.y,
@@ -251,23 +250,19 @@ function SubjectBalloon({
     "--gap": `${type.gapPx}px`,
     "--reading": `${type.readingPx}px`,
   } as CSSProperties;
+  const half = { w: spec.w / 2 + spec.lobe, h: spec.h / 2 + spec.padY };
   return (
-    <div ref={wrap} className="subject-balloon" style={style}>
+    <div
+      className={`subject-balloon ${picked ? "is-picked" : ""} ${locked ? "is-locked" : ""}`}
+      style={style}
+    >
       <div ref={float} className="subject-balloon__float">
-        <div ref={beads} className="subject-balloon__beads">
-          <Inked
-            white={placed.beadsWhite}
-            inks={placed.beadsInks}
-            box={placed.beadsBox}
-            phase={balloon / 2}
-          />
-        </div>
         <div ref={cloud} className="subject-balloon__cloud">
           <Inked
             white={placed.whitePath}
             inks={placed.cloud.inks}
             box={placed.cloudBox}
-            phase={balloon / 2}
+            phase={place / 2}
           />
         </div>
         <div
@@ -275,36 +270,49 @@ function SubjectBalloon({
           className="subject-balloon__words"
           style={{ left: -spec.w / 2, top: -spec.h / 2, width: spec.w, height: spec.h }}
         >
-          <div className="subject-balloon__word" style={{ fontSize: wordSizePx(visible.ja, fit) }}>
+          <div className="subject-balloon__word" style={{ fontSize: size }}>
             <SubjectWord subject={visible} />
           </div>
         </div>
-        {charred &&
-          !reduced &&
-          placed.smoke.map((from, i) => (
-            <div
-              key={i}
-              className="subject-balloon__smoke"
-              style={{ left: from.x, top: from.y }}
-              aria-hidden="true"
-            >
-              <Wisp d={SMOKE_WISPS[i + 1]} at={0} after={i * 0.9} />
-            </div>
-          ))}
+        {picked && (
+          <svg
+            key={visible.ja}
+            className="subject-balloon__loop"
+            viewBox={`${-half.w} ${-half.h} ${half.w * 2} ${half.h * 2}`}
+            width={half.w * 2}
+            height={half.h * 2}
+            style={{ left: -half.w, top: -half.h }}
+            aria-hidden="true"
+          >
+            <path d={pencilLoop(loop.rx, loop.ry, spec.seed)} pathLength={1} />
+          </svg>
+        )}
       </div>
+      <button
+        type="button"
+        className="subject-balloon__pick"
+        style={{ left: -half.w, top: -half.h, width: half.w * 2, height: half.h * 2 }}
+        aria-label={spokenSubject(subject)}
+        aria-pressed={picked}
+        aria-disabled={locked || undefined}
+        onClick={() => {
+          if (!locked) onPick(place);
+        }}
+      />
     </div>
   );
 }
 
 interface Props {
   deal: Deal;
-  layout: PairLayout;
-  onRoll: (balloon: Balloon) => void;
-  /** A picture of the deal, as Kyoto Seika Practice Mode's help shows it: the balloons arrive, then neither drift nor boil. */
+  layout: DealLayout;
+  onRoll: () => void;
+  onPick: (place: number) => void;
+  /** A picture of the deal, as Kyoto Seika Practice Mode's help shows it: the clouds arrive, then neither drift nor boil. */
   picture?: boolean;
 }
 
-/** A die's line, or its countdown's number, from the roll that earned it. */
+/** The die's line, or its countdown's number, from the roll that earned it. */
 interface Tease {
   rolls: number;
   text: string;
@@ -312,63 +320,58 @@ interface Tease {
 }
 
 /**
- * The Kyoto Seika Subjects dealt for a fresh sheet, in two manga thought balloons, each with its own
- * die. The dice come after the balloons, in reading order, and each new subject is read out.
+ * The Kyoto Seika Subjects dealt for a fresh sheet, one of each kind in five manga thought clouds,
+ * each a toggle that picks it, and one die that deals the ones not picked again. Each subject a roll
+ * deals is read out.
  */
-export function SubjectBalloons({ deal, layout, onRoll, picture = false }: Props) {
+export function SubjectBalloons({ deal, layout, onRoll, onPick, picture = false }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const hidden = useSyncExternalStore(onVisibility, () => document.hidden);
 
-  // Each subject a roll deals is read out, with any line the roll earns; the first deal is read with
-  // the group. A roll too many teases, counts down, and at last blows its die up, at once.
+  // Each subject a roll deals is read out, with any line the roll earns. A roll too many teases,
+  // counts down, and at last blows the die up, at once.
   const [lastDeal, setLastDeal] = useState(deal);
   const [said, setSaid] = useState("");
-  const [teases, setTeases] = useState<readonly [Tease | null, Tease | null]>([null, null]);
-  const [bang, setBang] = useState<Balloon | null>(null);
+  const [tease, setTease] = useState<Tease | null>(null);
+  const [bang, setBang] = useState(false);
   if (deal !== lastDeal) {
     setLastDeal(deal);
-    const rolled = BALLOONS.find((balloon) => deal.rolls[balloon] > lastDeal.rolls[balloon]);
-    if (rolled !== undefined) {
-      const rolls = deal.rolls[rolled];
-      const { line, countdown } = dieMood(rolls);
-      const { ja, en } = deal.subjects[rolled];
-      const subject = t(($) => $.kyotoSeika.balloons.subject, { word: ja, english: en });
+    if (deal.rolls > lastDeal.rolls) {
+      const { line, countdown } = dieMood(deal.rolls);
+      const dealt = deal.subjects
+        .filter((subject, place) => subject !== lastDeal.subjects[place])
+        .map(({ ja, en }) => t(($) => $.kyotoSeika.balloons.subject, { word: ja, english: en }));
       const lineSaid = line ? t(($) => $.kyotoSeika.tease[line]) : null;
-      const blewUp = rolls === CHARRED_AT_ROLL;
+      const blewUp = deal.rolls === CHARRED_AT_ROLL;
       const after = blewUp ? t(($) => $.kyotoSeika.balloons.charred) : lineSaid;
-      setSaid(after ? `${subject} ${after}` : subject);
-      const tease: Tease | null = lineSaid
-        ? { rolls, text: lineSaid, count: false }
-        : countdown !== null
-          ? { rolls, text: String(countdown), count: true }
-          : null;
-      setTeases((now) => (rolled === 0 ? [tease, now[1]] : [now[0], tease]));
-      if (blewUp && !reduced) setBang(rolled);
+      setSaid([...dealt, ...(after ? [after] : [])].join(" "));
+      setTease(
+        lineSaid
+          ? { rolls: deal.rolls, text: lineSaid, count: false }
+          : countdown !== null
+            ? { rolls: deal.rolls, text: String(countdown), count: true }
+            : null,
+      );
+      if (blewUp && !reduced) setBang(true);
     }
   }
 
-  // Each line peels off by itself; a new one replaces it sooner.
+  // The line peels off by itself; a new one replaces it sooner.
   useEffect(() => {
-    const timers = BALLOONS.flatMap((balloon) => {
-      const tease = teases[balloon];
-      if (!tease) return [];
-      const clear = () =>
-        setTeases((now) =>
-          now[balloon] !== tease ? now : balloon === 0 ? [null, now[1]] : [now[0], null],
-        );
-      return [setTimeout(clear, tease.count ? COUNT_MS : TEASE_MS)];
-    });
-    return () => timers.forEach(clearTimeout);
-  }, [teases]);
+    if (!tease) return;
+    const clear = setTimeout(() => setTease(null), tease.count ? COUNT_MS : TEASE_MS);
+    return () => clearTimeout(clear);
+  }, [tease]);
 
   // The bang goes off with the roll that blows the die up, and clears once it has played.
   useEffect(() => {
-    if (bang === null) return;
-    const gone = setTimeout(() => setBang(null), BOOM_MS);
+    if (!bang) return;
+    const gone = setTimeout(() => setBang(false), BOOM_MS);
     return () => clearTimeout(gone);
   }, [bang]);
-  const wraps = useRef<[HTMLDivElement | null, HTMLDivElement | null]>([null, null]);
+  const clouds = useRef<HTMLDivElement>(null);
+  const full = deal.picked.length >= PICKS;
 
   return (
     <div
@@ -376,51 +379,39 @@ export function SubjectBalloons({ deal, layout, onRoll, picture = false }: Props
       role="group"
       aria-label={t(($) => $.kyotoSeika.balloons.label)}
     >
-      {BALLOONS.map((balloon) => (
-        <SubjectBalloon
-          key={balloon}
-          balloon={balloon}
-          placed={layout.balloons[balloon]}
-          fit={layout.fit}
-          subject={deal.subjects[balloon]}
-          charred={dieMood(deal.rolls[balloon]).charred}
-          wrap={(el) => {
-            wraps.current[balloon] = el;
-          }}
-          reduced={reduced}
-          drifts={!picture}
-          still={hidden}
-        />
-      ))}
-      {BALLOONS.map((balloon) => {
-        const tease = teases[balloon];
-        return (
-          tease && (
-            <TeaseLine
-              key={`${balloon}-${tease.rolls}`}
-              balloon={balloon}
-              layout={layout}
-              text={tease.text}
-              count={tease.count}
+      <div ref={clouds} className="subject-balloons__clouds">
+        {deal.subjects.map((subject, place) => {
+          const placed = layout.balloons[place];
+          if (!placed) return null;
+          const picked = deal.picked.includes(place);
+          return (
+            <SubjectBalloon
+              key={place}
+              place={place}
+              placed={placed}
+              fit={layout.fit}
+              subject={subject}
+              picked={picked}
+              locked={full && !picked}
+              onPick={onPick}
               reduced={reduced}
+              drifts={!picture}
+              still={hidden}
             />
-          )
-        );
-      })}
-      {bang !== null && (
-        <DieBang balloon={bang} layout={layout} balloonEl={() => wraps.current[bang]} />
-      )}
-      {BALLOONS.map((balloon) => (
-        <SubjectReroll
-          key={balloon}
-          balloon={balloon}
-          subject={deal.subjects[balloon]}
-          rolls={deal.rolls[balloon]}
-          box={layout.balloons[balloon].reroll}
+          );
+        })}
+      </div>
+      {tease && (
+        <TeaseLine
+          key={tease.rolls}
+          layout={layout}
+          text={tease.text}
+          count={tease.count}
           reduced={reduced}
-          onRoll={onRoll}
         />
-      ))}
+      )}
+      {bang && <DieBang layout={layout} balloonEl={() => clouds.current} />}
+      <SubjectReroll rolls={deal.rolls} box={layout.reroll} reduced={reduced} onRoll={onRoll} />
       <p className="visually-hidden" role="status">
         {said}
       </p>

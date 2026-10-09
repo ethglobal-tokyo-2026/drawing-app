@@ -13,15 +13,13 @@ export interface DriftReach {
 }
 
 /**
- * Each cloud drifts on its own, its bubbles a little more on their own: slow seeded noise in sway, rise
- * and tilt, each over its own loop, so the two clouds never fall in step.
+ * Each cloud drifts on its own: slow seeded noise in sway, rise and tilt, each over its own loop, so
+ * no two clouds fall in step. Seeds and loops by the cloud's place in the deal.
  */
 export const FLOAT = {
-  seeds: [11, 47] as const,
+  seeds: [11, 47, 29, 83, 61] as const,
   cloud: { x: 1.8, y: 2.6, deg: 0.7 },
-  periodMs: [23_000, 29_000] as const,
-  beads: { x: 1.1, y: 1.1, deg: 0 },
-  beadsPeriodMs: [13_000, 17_000] as const,
+  periodMs: [23_000, 29_000, 26_000, 31_000, 27_000] as const,
   /** Keyframes in one loop: enough that the straight runs between them never show. */
   keyframes: 96,
 };
@@ -75,21 +73,16 @@ export function driftKeyframes(seed: number, reach: DriftReach): Keyframe[] {
   });
 }
 
-/** Each balloon's beads pop in from the thinker's side, then the cloud puffs out and the word stamps in. */
+/** Each cloud puffs out and its word stamps in, in reading order. */
 export const ARRIVE = {
   firstMs: 120,
-  /** The lower balloon starts this long after the upper. */
-  staggerMs: 260,
-  beadsMs: 220,
-  cloudAfterMs: 140,
+  /** Each cloud starts this long after the one before. */
+  staggerMs: 110,
+  cloudAfterMs: 0,
   cloudMs: 420,
-  wordAfterMs: 380,
+  wordAfterMs: 240,
   wordMs: 260,
 };
-export const BEADS_ARRIVE: Keyframe[] = [
-  { opacity: 0, scale: 0.4 },
-  { opacity: 1, scale: 1 },
-];
 export const CLOUD_ARRIVE: Keyframe[] = [
   { opacity: 0, scale: "0.55 0.5" },
   { opacity: 1, scale: "1.06 0.96", offset: 0.55 },

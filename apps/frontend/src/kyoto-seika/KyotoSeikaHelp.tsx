@@ -11,23 +11,27 @@ import { SessionClock } from "../sticker-creation/session/useSessionClock";
 import { TimerDot } from "../sticker-creation/TimerDot";
 import { TicketCount } from "../tickets/TicketCount";
 import { Sheet } from "../ui/Sheet";
-import { pairLayout } from "./balloonGeometry";
+import { dealLayout } from "./balloonGeometry";
 import { CensorBar } from "./CensorBar";
 import type { Deal } from "./deal";
 import { SubjectBalloons } from "./SubjectBalloons";
 import "./kyoto-seika-help.css";
 
-/** The deal the first panel shows: a pair the real list deals, neither die rolled. */
+/** The deal the first panel shows: the five a past exam set, two of them picked, the die not rolled. */
 const SAMPLE_DEAL: Deal = {
   subjects: [
     { ja: "風", reading: "かぜ", en: "wind" },
     { ja: "再会", reading: "さいかい", en: "reunion" },
+    { ja: "地図", reading: "ちず", en: "map" },
+    { ja: "SNS", reading: "", en: "social media" },
+    { ja: "双子", reading: "ふたご", en: "twins" },
   ],
-  rolls: [0, 0],
+  picked: [0, 1],
+  rolls: 0,
 };
 
-/** The drawing screen the first panel crops: a 390px phone's width, and just the room its roomy pair takes. */
-const DEAL_SCREEN = { width: 390, height: 280 };
+/** The drawing screen the first panel crops: a 390px phone's width, and just the room its roomy deal takes. */
+const DEAL_SCREEN = { width: 390, height: 310 };
 
 const stayPut = () => {};
 
@@ -57,7 +61,7 @@ function BarredLine({ line }: { line: "lead" | "maker" }) {
 function HelpBody() {
   const { t } = useTranslation();
   const [layout] = useState(() =>
-    pairLayout({ width: DEAL_SCREEN.width, top: 0, bottom: DEAL_SCREEN.height }),
+    dealLayout({ width: DEAL_SCREEN.width, top: 0, bottom: DEAL_SCREEN.height }),
   );
   // Never started: it reads the mode's full length, as a dealt sheet's timer does before Begin.
   const [clock] = useState(() => new SessionClock(undefined, sessionMs(true)));
@@ -70,7 +74,13 @@ function HelpBody() {
         <li className="kyoto-seika-help__koma">
           <div className="kyoto-seika-help__panel" aria-hidden="true" inert>
             <div className="kyoto-seika-help__deal" style={DEAL_SCREEN}>
-              <SubjectBalloons deal={SAMPLE_DEAL} layout={layout} onRoll={stayPut} picture />
+              <SubjectBalloons
+                deal={SAMPLE_DEAL}
+                layout={layout}
+                onRoll={stayPut}
+                onPick={stayPut}
+                picture
+              />
             </div>
           </div>
           <span className="kyoto-seika-help__caption keep-phrases">

@@ -16,6 +16,7 @@ import { useMe } from "../api/meContext";
 import type { BeginKeyHandle } from "../kyoto-seika/BeginKey";
 import { CornerPrint } from "../kyoto-seika/CornerPrint";
 import { useCanvasName } from "../kyoto-seika/useCanvasName";
+import { pickedPair } from "../kyoto-seika/deal";
 import { KyotoSeikaDeal } from "../kyoto-seika/KyotoSeikaDeal";
 import { useKyotoSeikaSheet } from "../kyoto-seika/useKyotoSeikaSheet";
 import { useApi } from "../api/useApi";
@@ -52,6 +53,7 @@ import {
   loadKeptSession,
   LOAD_TIMEOUT_MS,
   SessionKeeper,
+  UNDEALT,
   type KeptDrawing,
   type KeptKyotoSeika,
   type KeptSession,
@@ -263,10 +265,7 @@ export function DrawingScreen({
   function run(effect: SessionEffect) {
     switch (effect) {
       case "keep-session":
-        keeper.start(
-          ticket.current,
-          ticketKyotoSeika.current ? { subjects: null, rolls: [0, 0], begun: false } : null,
-        );
+        keeper.start(ticket.current, ticketKyotoSeika.current ? UNDEALT : null);
         if (ticketKyotoSeika.current) kyotoSeikaSheet.open(null);
         // The ticket use is kept with this sheet now, so the spend's key can go.
         tickets.forgetKeptSpend();
@@ -356,7 +355,7 @@ export function DrawingScreen({
     keeper.save(canvas.current?.steps() ?? [], clock.elapsed, frame);
     const marked = nsfw.current;
     // The pair Begin locked in, each subject as the sticker keeps it.
-    const pair = kyotoSeikaSheet.begun ? kyotoSeikaSheet.deal?.subjects : undefined;
+    const pair = kyotoSeikaSheet.pair;
     const kept = ({ ja, reading, en }: KyotoSeikaSubject) => ({ ja, reading, en });
     const subjects = pair && ([kept(pair[0]), kept(pair[1])] as const);
     // A sheet that never showed has no frame, and nothing on it to cut.
@@ -828,7 +827,7 @@ export function DrawingScreen({
   // ticket, until the first stroke.
   const dealt = session.phase === "dealt";
   // Begin locked the pair in: it prints in the sheet's corner, under the ink.
-  const lockedPair = kyotoSeikaSheet.begun ? (kyotoSeikaSheet.deal?.subjects ?? null) : null;
+  const lockedPair = kyotoSeikaSheet.pair;
   const canvasName = useCanvasName(lockedPair);
   const waiting = session.phase === "blank" || session.phase === "primed" || dealt;
   if (pickedUp === "restored" && !paused) setPickedUp(null);
@@ -1074,7 +1073,13 @@ export function DrawingScreen({
           minutes={clock.length / 60_000}
           begin={begin}
           onRoll={kyotoSeikaSheet.roll}
-          onBegin={() => send({ type: "begin", hasPair: kyotoSeikaSheet.deal !== null })}
+          onPick={kyotoSeikaSheet.pick}
+          onBegin={() =>
+            send({
+              type: "begin",
+              hasPair: kyotoSeikaSheet.deal !== null && pickedPair(kyotoSeikaSheet.deal) !== null,
+            })
+          }
           leaving={dealLeaving}
           onLeft={() => setDealLeaving(false)}
         />

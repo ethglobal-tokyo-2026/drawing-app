@@ -1,8 +1,6 @@
-import type { KyotoSeikaSubject } from "@drawing-app/api/client";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "../i18n/react";
 import type { Box } from "./balloonGeometry";
-import type { Balloon } from "./deal";
 import { DIE_TUMBLE, ROLL, SHAKE, TUMBLE_EASE } from "./dealMotion";
 import { brokenDieDrawing, dieDrawing, dieFace, SMOKE_WISPS } from "./dieArt";
 import { dieMood } from "./dieMood";
@@ -28,22 +26,19 @@ const SOUND_LEFT_PX = 34;
 const SOUND_UP_PX = 15;
 
 interface Props {
-  balloon: Balloon;
-  /** The subject a roll would replace. */
-  subject: KyotoSeikaSubject;
   rolls: number;
   /** The die and its lettering, on the screen. */
   box: Box;
   reduced: boolean;
-  onRoll: (balloon: Balloon) => void;
+  onRoll: () => void;
 }
 
 /**
- * A cloud's reroll, fixed on the sheet under the cloud's right edge however the cloud drifts: a die
- * inked in the cloud's own pen, beside hand lettering, as one button that deals the cloud another
- * subject, until rolling too often blows the die up.
+ * The deal's reroll, fixed on the sheet beside the last cloud: a die inked in the clouds' own pen,
+ * beside hand lettering, as one button that deals every subject not picked another of its kind, until
+ * rolling too often blows the die up.
  */
-export function SubjectReroll({ balloon, subject, rolls, box, reduced, onRoll }: Props) {
+export function SubjectReroll({ rolls, box, reduced, onRoll }: Props) {
   const { t } = useTranslation();
   const die = useRef<HTMLSpanElement>(null);
   const { charred, smoking, shake } = dieMood(rolls);
@@ -63,9 +58,9 @@ export function SubjectReroll({ balloon, subject, rolls, box, reduced, onRoll }:
     return () => clearTimeout(gone);
   }, [sound]);
 
-  const face = dieFace(balloon, rolls);
-  const broken = charred ? brokenDieDrawing(balloon, face) : null;
-  const drawing = broken ?? dieDrawing(balloon, face);
+  const face = dieFace(rolls);
+  const broken = charred ? brokenDieDrawing(face) : null;
+  const drawing = broken ?? dieDrawing(face);
   return (
     <>
       <button
@@ -82,14 +77,10 @@ export function SubjectReroll({ balloon, subject, rolls, box, reduced, onRoll }:
             "--shake-ms": `${SHAKE.slowMs - (SHAKE.slowMs - SHAKE.fastMs) * shake}ms`,
           } as CSSProperties
         }
-        aria-label={
-          charred
-            ? t(($) => $.kyotoSeika.balloons.charred)
-            : t(($) => $.kyotoSeika.balloons.roll, { word: subject.ja, english: subject.en })
-        }
+        aria-label={charred ? t(($) => $.kyotoSeika.balloons.charred) : undefined}
         aria-disabled={charred || undefined}
         onClick={() => {
-          if (!charred) onRoll(balloon);
+          if (!charred) onRoll();
         }}
       >
         <span className="subject-reroll__label">{t(($) => $.kyotoSeika.balloons.reroll)}</span>

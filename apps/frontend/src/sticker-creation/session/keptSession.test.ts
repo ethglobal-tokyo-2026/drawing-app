@@ -4,7 +4,7 @@ import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { personKey } from "../../ui/deviceStorage";
 import { CHARRED_AT_ROLL } from "../../kyoto-seika/dieMood";
-import { REUNION, WIND } from "../../kyoto-seika/testSubjects";
+import { REUNION, TEST_SUBJECTS, WIND } from "../../kyoto-seika/testSubjects";
 import { FILL_GAP } from "../canvas/fill";
 import type { FillOp, Op, Step } from "../canvas/ops";
 import { frameFor, SHEET_SHORT_UNITS, type SheetFrame } from "../canvas/sheetFrame";
@@ -14,9 +14,12 @@ import {
   loadKeptSession,
   LOAD_TIMEOUT_MS,
   SessionKeeper,
+  UNDEALT,
 } from "./keptSession";
 
 const stroke = (color: string): Op => ({ tool: "brush", color, pts: [], T: 0 });
+/** A deal of five, one of each kind: the first of each in the test list. */
+const FIVE = TEST_SUBJECTS.filter((s, i, all) => all.findIndex((o) => o.kind === s.kind) === i);
 /** The sheet these drawings are drawn on. */
 const FRAME = frameFor({ width: SHEET_SHORT_UNITS, height: SHEET_SHORT_UNITS * 2 }, 2);
 
@@ -246,17 +249,25 @@ describe("the drawing kept on this device", () => {
     expect(await keptSteps(userId)).toEqual([a, b, c]);
   });
 
-  it("keeps the pair, rolls and Begin of a sheet in Kyoto Seika Practice Mode with its ticket, and reads them back", async () => {
+  it("keeps the deal, picks, rolls and Begin of a sheet in Kyoto Seika Practice Mode with its ticket, and reads them back", async () => {
     const userId = someone();
     const keeper = new SessionKeeper(userId);
-    keeper.start(7, { subjects: null, rolls: [0, 0], begun: false });
-    const part = { subjects: [WIND, REUNION], rolls: [CHARRED_AT_ROLL, 3], begun: true } as const;
-    keeper.keepKyotoSeika(part);
+    keeper.start(7, UNDEALT);
+    const dealt = { subjects: FIVE, picked: [3, 0], rolls: 4, begun: false };
+    keeper.keepKyotoSeika(dealt);
     expect(await loadKeptSession(userId)).toMatchObject({
       status: "found",
       ticket: 7,
-      kyotoSeika: part,
+      kyotoSeika: dealt,
     });
+    const begun = {
+      subjects: [FIVE[3], WIND],
+      picked: [0, 1],
+      rolls: CHARRED_AT_ROLL,
+      begun: true,
+    };
+    keeper.keepKyotoSeika(begun);
+    expect(await loadKeptSession(userId)).toMatchObject({ kyotoSeika: begun });
   });
 
   it("keeps no Kyoto Seika Practice Mode part for a regular sheet", async () => {
@@ -271,7 +282,7 @@ describe("the drawing kept on this device", () => {
 
   it("brings a sheet in Kyoto Seika Practice Mode back in the mode, whatever of its part a later build can read", async () => {
     const userId = someone();
-    new SessionKeeper(userId).start(7, { subjects: [WIND, REUNION], rolls: [2, 0], begun: true });
+    new SessionKeeper(userId).start(7, UNDEALT);
     /** The record as a build that wrote `kyotoSeika` differently would have kept it. */
     const keptAs = (kyotoSeika: unknown) =>
       localStorage.setItem(
@@ -281,23 +292,45 @@ describe("the drawing kept on this device", () => {
     const sent = ({ ja, reading, en }: KyotoSeikaSubject) => ({ ja, reading, en });
 
     // Each subject needs only what the seal sends of it: a kind or flag this build can't read is let go.
-    keptAs({ subjects: [{ ...WIND, kind: "weather" }, sent(REUNION)], rolls: [2, 0], begun: true });
+    keptAs({
+      subjects: [{ ...WIND, kind: "weather" }, sent(REUNION)],
+      picked: [0, 1],
+      rolls: 2,
+      begun: true,
+    });
     expect(await loadKeptSession(userId)).toMatchObject({
-      kyotoSeika: { subjects: [sent(WIND), sent(REUNION)], rolls: [2, 0], begun: true },
+      kyotoSeika: { subjects: [sent(WIND), sent(REUNION)], picked: [0, 1], rolls: 2, begun: true },
     });
 
-    // A pair that can't be read at all is dealt again, so the sheet waits for Begin.
-    const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    keptAs({ subjects: [{ word: WIND.ja }, REUNION], rolls: [2, 0], begun: true });
+    // A build that dealt a pair, each balloon with its own die: its two are the picks, and its die
+    // has rolled as often as the busier of the two.
+    keptAs({ subjects: [WIND, REUNION], rolls: [3, 7], begun: false });
     expect(await loadKeptSession(userId)).toMatchObject({
-      kyotoSeika: { subjects: null, rolls: [0, 0], begun: false },
+      kyotoSeika: { subjects: [WIND, REUNION], picked: [0, 1], rolls: 7, begun: false },
     });
-    expect(error).toHaveBeenCalledOnce();
+    keptAs({ subjects: [WIND, REUNION], rolls: [2, 0], begun: true });
+    expect(await loadKeptSession(userId)).toMatchObject({
+      kyotoSeika: { subjects: [WIND, REUNION], picked: [0, 1], rolls: 2, begun: true },
+    });
+
+    // A deal that can't be read at all is dealt again, so the sheet waits for Begin.
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    for (const unreadable of [
+      { subjects: [{ word: WIND.ja }, REUNION], picked: [0, 1], rolls: 2, begun: true },
+      { subjects: FIVE, picked: [1, 1], rolls: 2, begun: false },
+      { subjects: FIVE, picked: [0, FIVE.length], rolls: 2, begun: false },
+      { subjects: FIVE, picked: [0, 1, 2], rolls: 2, begun: false },
+      { subjects: FIVE, picked: [0], rolls: 2, begun: true },
+    ]) {
+      keptAs(unreadable);
+      expect(await loadKeptSession(userId)).toMatchObject({ kyotoSeika: UNDEALT });
+    }
+    expect(error).toHaveBeenCalledTimes(5);
   });
 
   it("carries a ticket's Kyoto Seika Practice Mode part with it when the drawing isn't read", async () => {
     const userId = someone();
-    const part = { subjects: [WIND, REUNION], rolls: [2, 0], begun: false };
+    const part = { subjects: FIVE, picked: [1], rolls: 2, begun: false };
     const record = { ticket: 7, elapsedMs: 0, nsfw: false, kyotoSeika: part };
     localStorage.setItem(personKey("draw.session", userId), JSON.stringify(record));
     vi.spyOn(indexedDB, "open").mockImplementation(() => {

@@ -1,6 +1,5 @@
 import { seededRandom } from "../ui/seededRandom";
 import { BOIL } from "./dealMotion";
-import type { Balloon } from "./deal";
 import { outline, penStroke, pressure, wobble, type PenPoint, type Pt } from "./pen";
 import { charCount } from "./subjectList";
 
@@ -17,19 +16,29 @@ export interface BalloonSpec {
   lobe: number;
   /** Degrees. */
   tilt: number;
-  /** Seeds its lobes and bubbles, so a cloud is drawn the same every time. */
+  /** Seeds its lobes, so a cloud is drawn the same every time. */
   seed: number;
 }
 
-/** The upper cloud, on the right, and the lower, on the left, by Balloon. */
-export const BALLOONS: readonly [BalloonSpec, BalloonSpec] = [
-  { w: 176, h: 72, padY: 12, lobe: 19, tilt: 2.5, seed: 7 },
-  { w: 176, h: 72, padY: 12, lobe: 19, tilt: -2.5, seed: 23 },
-];
-/** On a short phone the clouds tighten rather than scale: first a shorter word area. */
-const TIGHT = { h: 62 };
-/** Where even that doesn't fit, a shorter one still, with less room round it and flatter lobes. */
-const TIGHTER = { h: 44, padY: 8, lobe: 14 };
+/** Each cloud's lean and seed, by its place in the deal: rows of two, two and one, read left to right. */
+const CLOUDS = [
+  { tilt: 2, seed: 7 },
+  { tilt: -2.5, seed: 23 },
+  { tilt: -1.5, seed: 41 },
+  { tilt: 2.5, seed: 59 },
+  { tilt: -2, seed: 73 },
+] as const satisfies readonly Pick<BalloonSpec, "tilt" | "seed">[];
+/** The places in each row; the die takes the last row's right-hand room. */
+const ROWS = [[0, 1], [2, 3], [4]] as const;
+
+/** How far the clouds tightened, rather than scaled, to fit a space shorter than the deal. */
+export type Fit = "roomy" | "tight" | "tighter";
+/** The word area's height, the room round it, the lobes, and how much lower the right-hand clouds sit. */
+const FITS = {
+  roomy: { h: 54, padY: 10, lobe: 15, stagger: 10 },
+  tight: { h: 46, padY: 7, lobe: 12, stagger: 4 },
+  tighter: { h: 40, padY: 5, lobe: 10, stagger: 0 },
+} as const satisfies Record<Fit, Pick<BalloonSpec, "h" | "padY" | "lobe"> & { stagger: number }>;
 
 export interface Box {
   minX: number;
@@ -71,23 +80,14 @@ const grow = (b: Box, by: number): Box => ({
   maxX: b.maxX + by,
   maxY: b.maxY + by,
 });
-/** How far a cloud's or a bubble's ink reaches past its white, at the pen's heaviest. */
+const shift = (b: Box, by: Pt): Box => ({
+  minX: b.minX + by.x,
+  minY: b.minY + by.y,
+  maxX: b.maxX + by.x,
+  maxY: b.maxY + by.y,
+});
+/** How far a cloud's ink reaches past its white, at the pen's heaviest. */
 const INK_REACH_PX = 4;
-
-/** Where a ray from the cloud's center along `dir` leaves its white. */
-function exitAlong(poly: readonly Pt[], dir: Pt): Pt {
-  let far = 0;
-  for (let i = 0; i < poly.length; i++) {
-    const a = poly[i];
-    const e = sub(poly[(i + 1) % poly.length], a);
-    const den = dir.x * e.y - dir.y * e.x;
-    if (Math.abs(den) < 1e-9) continue;
-    const t = (a.x * e.y - a.y * e.x) / den;
-    const u = (a.x * dir.y - a.y * dir.x) / den;
-    if (u >= 0 && u <= 1 && t > far) far = t;
-  }
-  return mul(dir, far);
-}
 
 /** Down and to the right, away from the app's one light: a pen line sits heavier on that side. */
 const SHADE = unit({ x: 1, y: 1.15 });
@@ -99,6 +99,8 @@ const LOBE_RHYTHM = [1.25, 0.8, 1.05, 1.3, 0.78, 1.12, 0.92, 1.28, 0.82, 1.08, 0
  * far a lobe's stroke starts before its cusp and runs past the next.
  */
 const PEN = { heavy: 2.6, shade: 0.3, fine: 0.55, before: 1.1, after: 2.4, wobble: 0.35 };
+/** The white reaches this far past the word area on each side, before its lobes, in px. */
+const PAD_X = 14;
 
 export interface Cloud {
   /** The cloud's white, as a closed outline round its center. */
@@ -117,7 +119,7 @@ const boilRandom = (seed: number, frame: number) => seededRandom(seed * 7919 + f
  */
 export function cloudShape(spec: BalloonSpec): Cloud {
   const random = seededRandom(spec.seed);
-  const ax = spec.w / 2 + 14;
+  const ax = spec.w / 2 + PAD_X;
   const ay = spec.h / 2 + spec.padY;
   const exp = 2.6;
   const base = (t: number): Pt => {
@@ -211,105 +213,65 @@ export function cloudShape(spec: BalloonSpec): Cloud {
   return { white, inks };
 }
 
-/** One of the bubbles a cloud trails toward the thinker, in the cloud's own frame. */
-interface Bead {
-  at: Pt;
-  r: number;
-}
+/** A puff's pen, in px. */
+const PUFF_PEN = 1.8;
 
-/** The bubbles' sizes from the cloud out, the room before each, and their pen, in px. */
-const BEADS = { radii: [7.5, 5.2, 3.4], gaps: [5, 5, 4.5], pen: 1.8 };
-/**
- * Which way each cloud's bubbles head on the screen: the upper's off to the page's left edge, above the
- * lower cloud, and the lower's down toward the thinker off the page's lower left.
- */
-const BEADS_TOWARD: readonly [Pt, Pt] = [unit({ x: -1, y: 0.22 }), unit({ x: -0.55, y: 1 })];
-/** On a phone too short for that, the lower cloud's bubbles rise toward the page's left edge instead. */
-const BEADS_RISING = unit({ x: -0.75, y: -0.65 });
-
-/** A row of bubbles leaving the cloud's white along `dir`, along a gentle bend. */
-function beadRow(white: readonly Pt[], dir: Pt): Bead[] {
-  const from = exitAlong(white, dir);
-  const side = perp(dir);
-  let at = 0;
-  return BEADS.radii.map((r, i) => {
-    at += (i === 0 ? 0 : BEADS.radii[i - 1]) + BEADS.gaps[i] + r;
-    const bend = 3.5 * Math.sin((at / 70) * Math.PI);
-    return { at: add(add(from, mul(dir, at)), mul(side, bend)), r };
+/** A puff's oval round (0, 0): a little wider than tall, grown by `grow` px. */
+const puffOval =
+  (r: number) =>
+  (t: number, grow = 0) => ({
+    x: (r * 1.07 + grow) * Math.cos(t),
+    y: (r * 0.93 + grow) * Math.sin(t),
   });
-}
 
-/** A bubble's oval: a little wider than tall, turned along its row, grown by `grow` px. */
-const beadOval =
-  ({ at, r }: Bead, turn: number) =>
-  (t: number, grow = 0) =>
-    add(
-      at,
-      rotate({ x: (r * 1.07 + grow) * Math.cos(t), y: (r * 0.93 + grow) * Math.sin(t) }, turn),
-    );
-
-/** One bubble inked: a single pen stroke round its oval, closing a little past and outside where it began. */
-function beadInk(bead: Bead, turn: number, random: () => number, pen = BEADS.pen): string {
-  const oval = beadOval(bead, turn);
+/** A lone puff round (0, 0), white and inked in one stroke closing a little past where it began. */
+export function beadShape(r: number, seed: number): { white: string; ink: string } {
+  const oval = puffOval(r);
+  const random = seededRandom(seed);
   const from = random() * TAU;
-  const count = Math.max(24, Math.round(bead.r * 5));
+  const count = Math.max(24, Math.round(r * 5));
   const pts: PenPoint[] = [];
   for (let i = 0; i <= count; i++) {
     const t = i / count;
     const p = oval(from + t * (TAU + 0.5), -0.25 + 0.7 * t);
-    pts.push({ ...p, w: Math.max(0.22, pen * pressure(t, 0.35, 0.6, 1.2)) });
+    pts.push({ ...p, w: Math.max(0.22, PUFF_PEN * pressure(t, 0.35, 0.6, 1.2)) });
   }
-  return penStroke(pts);
-}
-
-/** A lone bubble round (0, 0), white and inked: the puffs a roll blows out of a cloud. */
-export function beadShape(r: number, seed: number): { white: string; ink: string } {
-  const bead = { at: { x: 0, y: 0 }, r };
-  const oval = beadOval(bead, 0);
   return {
     white: outline(Array.from({ length: 36 }, (_, i) => oval((i / 36) * TAU))),
-    ink: beadInk(bead, 0, seededRandom(seed)),
+    ink: penStroke(pts),
   };
 }
 
-/** The bubbles' white, and their ink once per boil frame. */
-function beadsDrawn(beads: readonly Bead[], dir: Pt, seed: number) {
-  const turn = (Math.atan2(dir.y, dir.x) * 180) / Math.PI;
-  const white = beads
-    .map((bead) =>
-      outline(Array.from({ length: 36 }, (_, i) => beadOval(bead, turn)((i / 36) * TAU))),
-    )
-    .join("");
-  const inks = Array.from({ length: BOIL.frames }, (_, frame) => {
-    const ink = boilRandom(seed, frame);
-    return beads.map((bead) => beadInk(bead, turn, ink)).join("");
+/**
+ * A pencil loop round a picked word, `rx` by `ry` round (0, 0), as SVG path data for a plain stroke:
+ * one turn by hand, starting at the lower left and closing a little outside where it began.
+ */
+export function pencilLoop(rx: number, ry: number, seed: number): string {
+  const random = seededRandom(seed);
+  const from = Math.PI * (0.75 + random() * 0.1);
+  const wob = wobble(random, 2);
+  const count = 64;
+  const pts = Array.from({ length: count + 1 }, (_, i) => {
+    const t = i / count;
+    const grow = 1 + 0.07 * t + 0.015 * wob(t);
+    const ang = from + t * (TAU + 0.45);
+    return { x: rx * grow * Math.cos(ang), y: ry * grow * Math.sin(ang) - 1.5 * t };
   });
-  return { white, inks };
+  return `M${pts.map((p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join("L")}`;
 }
 
-/** Each reroll, in px: its die and lettering side by side under the cloud's right edge. */
-const REROLL = {
-  die: 32,
-  label: 64,
-  gap: 3,
-  height: 32,
-  /** The die's center sits this far in from the cloud's rightmost reach. */
-  inset: 18,
-  /** And its top this far under the cloud's foot there. */
-  below: 6,
-  /** Beside its cloud on a short phone, this far out from the cloud's right reach. */
-  beside: 6,
-};
-/** Room kept between the two clouds, and between one cloud and the other's bubbles or reroll. */
-const CLEAR_PX = 8;
-/** The clouds keep this far from the screen's sides: the lower's left, the upper's right. */
-const SIDE_PX = { left: 26, right: 18 };
-/** Where the pair stands in the space between the timer's label and the task line: a little above the middle. */
-export const PAIR_AT = 0.45;
-/** The room kept between the pair and the timer's label above it, and the task over Begin below it, in px. */
+/** The reroll, in px: the die and its lettering side by side, in the last row's right-hand room. */
+const REROLL = { die: 32, label: 64, gap: 3, height: 32 };
+/** Room kept between two clouds side by side, and between rows, in px. */
+const CLEAR_PX = { x: 6, y: 4 };
+/** The clouds keep this far from the screen's sides, in px. */
+const SIDE_PX = 10;
+/** The narrowest word area a cloud is cut to, in px. */
+const MIN_WORD_W = 80;
+/** Where the deal stands in the space between the timer's label and the task line: a little above the middle. */
+export const DEAL_AT = 0.45;
+/** The room kept between the deal and the timer's label above it, and the task over Begin below it, in px. */
 export const ROOM_PX = 14;
-/** A blown-up die's cloud smokes from its top edge, this far in from its right end, in px. */
-const SMOKE_IN_PX = [62, 36];
 
 export interface PlacedBalloon {
   spec: BalloonSpec;
@@ -319,117 +281,39 @@ export interface PlacedBalloon {
   /** The cloud's white as SVG path data, and its reach round its center, ink included. */
   whitePath: string;
   cloudBox: Box;
-  beads: readonly Bead[];
-  beadsWhite: string;
-  /** The bubbles' ink, once per boil frame. */
-  beadsInks: readonly string[];
-  /** The bubbles' reach in the cloud's frame, ink included. */
-  beadsBox: Box;
-  /** Where smoke rises from the cloud once its die blows up: on its top edge toward its right end, in its frame. */
-  smoke: readonly Pt[];
-  /** The reroll's die and lettering on the screen. */
-  reroll: Box;
-  /** The die's center on the screen. */
-  die: Pt;
   /** The cloud's reach on the screen. */
   reach: Box;
 }
 
-/** How far the clouds tightened, rather than scaled, to fit a space shorter than the pair. */
-export type Fit = "roomy" | "tight" | "tighter";
-
-export interface PairLayout {
-  /** The screen's width the pair was laid out on. */
+export interface DealLayout {
+  /** The screen's width the deal was laid out on. */
   width: number;
   fit: Fit;
-  /** The upper cloud and the lower. */
-  balloons: readonly [PlacedBalloon, PlacedBalloon];
+  /** One cloud per place in the deal. */
+  balloons: readonly PlacedBalloon[];
+  /** The reroll's die and lettering on the screen, and the die's center. */
+  reroll: Box;
+  die: Pt;
 }
 
 /** A point in `placed`'s own frame, on the screen. */
 export const toScreen = (placed: Pick<PlacedBalloon, "center" | "spec">, p: Pt): Pt =>
   add(placed.center, rotate(p, placed.spec.tilt));
 
-/** The highest (`top`) or lowest point of `pts` within `from`..`to` across, or null when none falls there. */
-function edgeWithin(pts: readonly Pt[], from: number, to: number, top: boolean): number | null {
-  let edge: number | null = null;
-  for (const p of pts)
-    if (p.x >= from && p.x <= to)
-      edge = edge === null ? p.y : top ? Math.min(edge, p.y) : Math.max(edge, p.y);
-  return edge;
-}
-
-/** One cloud drawn and turned round its center (0, 0), with its bubbles and reroll. */
-function drawn(balloon: Balloon, spec: BalloonSpec, short = false) {
+/** One cloud drawn and turned round its center (0, 0), and its reach. */
+function drawn(spec: BalloonSpec) {
   const cloud = cloudShape(spec);
-  const turned = cloud.white.map((p) => rotate(p, spec.tilt));
-  const toward = short && balloon === 1 ? BEADS_RISING : BEADS_TOWARD[balloon];
-  const dir = rotate(toward, -spec.tilt);
-  const beads = beadRow(cloud.white, dir);
-  const beadsTurned = beads.map(({ at, r }) => ({ at: rotate(at, spec.tilt), r }));
-  const reach = boxOf(turned);
-  const dieX = reach.maxX - REROLL.inset;
-  const left = dieX - REROLL.die / 2 - REROLL.gap - REROLL.label;
-  const right = dieX + REROLL.die / 2;
-  const foot = edgeWithin(turned, left, right, false) ?? reach.maxY;
-  const top = foot + REROLL.below;
-  return {
-    spec,
-    cloud,
-    turned,
-    beads,
-    beadsTurned,
-    ...beadsDrawn(beads, dir, spec.seed + 101),
-    reroll: { minX: left, minY: top, maxX: right, maxY: top + REROLL.height },
-    die: { x: dieX, y: top + REROLL.height / 2 },
-  };
+  return { spec, cloud, reach: boxOf(cloud.white.map((p) => rotate(p, spec.tilt))) };
 }
 type Drawn = ReturnType<typeof drawn>;
 
 /**
- * The lower cloud with its reroll by its right side, level with its lower half, rather than under it,
- * where a short phone has no room below; never higher than `clearOf`, the upper reroll's foot in the
- * lower cloud's frame, so the two rerolls never meet.
+ * The five clouds between the timer's label (`top`) and the task line (`bottom`) on a screen `width`
+ * wide, in rows of two, two and one, the reroll beside the last; as wide as two side by side allow, and
+ * tightened rather than scaled on a short phone. A deal taller than the space even so keeps its foot on
+ * the task line's room, giving up some of the room under the timer's label.
  */
-function besideItsCloud(lower: Drawn, clearOf: number): Drawn {
-  const reach = boxOf(lower.turned);
-  const left = reach.maxX + REROLL.beside;
-  const right = left + REROLL.label + REROLL.gap + REROLL.die;
-  const top = Math.max(reach.maxY * 0.35 - REROLL.height / 2, clearOf + CLEAR_PX);
-  return {
-    ...lower,
-    reroll: { minX: left, minY: top, maxX: right, maxY: top + REROLL.height },
-    die: { x: right - REROLL.die / 2, y: top + REROLL.height / 2 },
-  };
-}
-
-/**
- * How far below the upper cloud's center the lower's must be, so the clouds, the upper's bubbles and
- * its reroll all keep clear of the lower cloud, `dx` being the lower cloud's center less the upper's.
- */
-function apart(upper: Drawn, lower: Drawn, dx: number): number {
-  let need = 0;
-  const below = (from: number, to: number, bottom: number) => {
-    for (let x = from; x <= to; x += 2) {
-      const top = edgeWithin(lower.turned, x - dx - 1.5, x - dx + 1.5, true);
-      if (top !== null) need = Math.max(need, bottom - top + CLEAR_PX);
-    }
-  };
-  for (let x = Math.min(...upper.turned.map((p) => p.x)); x <= upper.reroll.maxX; x += 2) {
-    const foot = edgeWithin(upper.turned, x - 1.5, x + 1.5, false);
-    if (foot !== null) below(x, x, foot);
-  }
-  below(upper.reroll.minX, upper.reroll.maxX, upper.reroll.maxY);
-  for (const { at, r } of upper.beadsTurned) below(at.x - r, at.x + r, at.y + r);
-  return need;
-}
-
-/**
- * The pair between the timer's label (`top`) and the task line (`bottom`) on a screen `width` wide:
- * the upper cloud to the right, the lower to the left, each with its bubbles and its reroll, about
- * PAIR_AT of the way down the space; tightened on a short phone, and never so close the clouds meet.
- */
-export function pairLayout({
+export function dealLayout({
   width,
   top,
   bottom,
@@ -437,82 +321,77 @@ export function pairLayout({
   width: number;
   top: number;
   bottom: number;
-}): PairLayout {
+}): DealLayout {
   const space = bottom - top;
-  /** The pair with clouds cut to `cut`; `beside` sets the lower reroll by its cloud's right side, not under it. */
-  const arrange = (cut: Partial<BalloonSpec>, beside: boolean) => {
-    const specs = BALLOONS.map((s) => ({ ...s, ...cut }));
-    const upper = drawn(0, specs[0]);
-    const under = drawn(1, specs[1], beside);
-    const x = [
-      width - SIDE_PX.right - Math.max(...upper.turned.map((p) => p.x), upper.reroll.maxX),
-      SIDE_PX.left - Math.min(...under.turned.map((p) => p.x)),
-    ];
-    const dy = apart(upper, under, x[1] - x[0]);
-    const lower = beside ? besideItsCloud(under, upper.reroll.maxY - dy) : under;
-    const extents = [
-      ...upper.turned.map((p) => p.y),
-      ...upper.beadsTurned.flatMap(({ at, r }) => [at.y - r, at.y + r]),
-      upper.reroll.maxY,
-    ];
-    const lowerExtents = [
-      ...lower.turned.map((p) => p.y),
-      ...lower.beadsTurned.map(({ at, r }) => at.y + r),
-      lower.reroll.maxY,
-    ];
-    const head = Math.min(...extents);
-    const foot = Math.max(...extents, ...lowerExtents.map((y) => y + dy));
-    return { upper, lower, x, dy, head, height: foot - head };
-  };
-  let pair = arrange({}, false);
-  let fit: Fit = "roomy";
-  if (pair.height > space) [pair, fit] = [arrange(TIGHT, false), "tight"];
-  // Still too tall: the lower reroll moves up beside its cloud, and then, as on an iPhone SE inside
-  // LINE, the clouds tighten further, so the pair keeps clear of the timer's label and its note.
-  if (pair.height > space) pair = arrange(TIGHT, true);
-  if (pair.height > space) [pair, fit] = [arrange(TIGHTER, true), "tighter"];
-  const room = space - pair.height;
-  // A pair taller than the space even so keeps its foot on the task line's room, giving up some of
-  // the room under the timer's label instead, so nothing ever lands on the task line or Begin.
-  const pairTop =
-    room >= 0 ? top + clamp(PAIR_AT * space - pair.height / 2, 0, room) : bottom - pair.height;
-  const upperY = pairTop - pair.head;
-  const place = (d: Drawn, center: Pt): PlacedBalloon => {
-    const shift = (b: Box): Box => ({
-      minX: b.minX + center.x,
-      minY: b.minY + center.y,
-      maxX: b.maxX + center.x,
-      maxY: b.maxY + center.y,
-    });
-    return {
-      spec: d.spec,
-      center,
-      cloud: d.cloud,
-      whitePath: outline(d.cloud.white),
-      cloudBox: grow(boxOf(d.cloud.white), INK_REACH_PX),
-      beads: d.beads,
-      beadsWhite: d.white,
-      beadsInks: d.inks,
-      beadsBox: grow(
-        boxOf(d.beads.flatMap(({ at, r }) => [add(at, { x: r, y: r }), sub(at, { x: r, y: r })])),
-        INK_REACH_PX,
-      ),
-      smoke: SMOKE_IN_PX.map((inset) => {
-        const x = boxOf(d.cloud.white).maxX - inset;
-        return { x, y: (edgeWithin(d.cloud.white, x - 3, x + 3, true) ?? 0) + 2 };
-      }),
-      reroll: shift(d.reroll),
-      die: add(d.die, center),
-      reach: shift(boxOf(d.turned)),
+  const arrange = (fit: Fit) => {
+    const { stagger, ...cut } = FITS[fit];
+    const draw = (w: number) => CLOUDS.map((c) => drawn({ ...c, ...cut, w }));
+    // The widest word area two clouds side by side leave room for.
+    let w = Math.floor((width - 2 * SIDE_PX - CLEAR_PX.x) / 2 - 2 * PAD_X);
+    let clouds: Drawn[] = draw(w);
+    const across = ({ reach }: Drawn) => reach.maxX - reach.minX;
+    const sideBySide = (cs: readonly Drawn[]) =>
+      ROWS.every((row) => {
+        const [left, right] = row.map((place) => cs[place]);
+        return !right || across(left) + across(right) + CLEAR_PX.x + 2 * SIDE_PX <= width;
+      });
+    while (!sideBySide(clouds) && w > MIN_WORD_W) clouds = draw((w -= 2));
+    const centers: Pt[] = [];
+    let y = 0;
+    for (const row of ROWS) {
+      const height = Math.max(
+        ...row.map((place) => clouds[place].reach.maxY - clouds[place].reach.minY),
+      );
+      row.forEach((place, column) => {
+        const { reach } = clouds[place];
+        const x = column === 0 ? SIDE_PX - reach.minX : width - SIDE_PX - reach.maxX;
+        centers[place] = { x, y: y - reach.minY + column * stagger };
+      });
+      y += height + CLEAR_PX.y;
+    }
+    // The die sits where a sixth cloud would: centered in the right-hand column of the last row.
+    const right = clouds[1];
+    const dieRow = centers[ROWS[2][0]].y + stagger;
+    const middle = width - SIDE_PX - (right.reach.maxX - right.reach.minX) / 2;
+    const rerollW = REROLL.label + REROLL.gap + REROLL.die;
+    const reroll: Box = {
+      minX: middle - rerollW / 2,
+      minY: dieRow - REROLL.height / 2,
+      maxX: middle + rerollW / 2,
+      maxY: dieRow + REROLL.height / 2,
     };
+    const reaches = clouds.map((c, place) => shift(c.reach, centers[place]));
+    const head = Math.min(...reaches.map((r) => r.minY));
+    const foot = Math.max(...reaches.map((r) => r.maxY), reroll.maxY);
+    return { clouds, centers, reroll, head, height: foot - head };
   };
+  let fit: Fit = "roomy";
+  let deal = arrange(fit);
+  for (const tighter of ["tight", "tighter"] as const)
+    if (deal.height > space) [deal, fit] = [arrange(tighter), tighter];
+  const room = space - deal.height;
+  const dealTop =
+    room >= 0 ? top + clamp(DEAL_AT * space - deal.height / 2, 0, room) : bottom - deal.height;
+  const down = { x: 0, y: dealTop - deal.head };
   return {
     width,
     fit,
-    balloons: [
-      place(pair.upper, { x: pair.x[0], y: upperY }),
-      place(pair.lower, { x: pair.x[1], y: upperY + pair.dy }),
-    ],
+    balloons: deal.clouds.map(({ spec, cloud, reach }, place) => {
+      const center = add(deal.centers[place], down);
+      return {
+        spec,
+        center,
+        cloud,
+        whitePath: outline(cloud.white),
+        cloudBox: grow(boxOf(cloud.white), INK_REACH_PX),
+        reach: shift(reach, center),
+      };
+    }),
+    reroll: shift(deal.reroll, down),
+    die: {
+      x: deal.reroll.maxX - REROLL.die / 2,
+      y: (deal.reroll.minY + deal.reroll.maxY) / 2 + down.y,
+    },
   };
 }
 
@@ -520,24 +399,28 @@ export function pairLayout({
 export const FURIGANA_WORD_MIN_PX = 20;
 /**
  * A word's size by its length, one or two characters, then three to six, by how far the clouds
- * tightened: the longer words a size smaller in the tighter clouds.
+ * tightened; a word too long for its cloud's width at that size is set smaller to fit it.
  */
 const WORD_PX = {
-  roomy: [46, 46, 42, 36, 32, 28],
-  tight: [36, 36, 36, 36, 32, 28],
-  tighter: [36, 36, 32, 28, 26, 24],
+  roomy: [36, 36, 32, 28, 26, 24],
+  tight: [32, 32, 28, 26, 24, 22],
+  tighter: [26, 26, 24, 22, 22, 20],
 } as const satisfies Record<Fit, readonly number[]>;
-/** A Latin acronym such as SNS, which sets wider than kana or kanji. */
-const ACRONYM_PX = { roomy: 40, tight: 36, tighter: 32 } as const satisfies Record<Fit, number>;
+/** A Latin acronym such as SNS, which sets narrower than kana or kanji. */
+const ACRONYM_PX = { roomy: 32, tight: 28, tighter: 24 } as const satisfies Record<Fit, number>;
+/** How wide a character sets, in ems: full width with the word's spacing, or a capital letter. */
+const WORD_EM = 1.04;
+const ACRONYM_EM = 0.75;
 
-/** The size a subject's word is set at in its cloud, in px. */
-export function wordSizePx(ja: string, fit: Fit): number {
-  if (/^[A-Z]+$/.test(ja)) return ACRONYM_PX[fit];
+/** The size a subject's word is set at in a cloud whose word area is `w` px wide, in px. */
+export function wordSizePx(ja: string, fit: Fit, w: number): number {
+  const chars = Math.max(charCount(ja), 1);
+  if (/^[A-Z]+$/.test(ja)) return Math.min(ACRONYM_PX[fit], Math.floor(w / (chars * ACRONYM_EM)));
   const sizes = WORD_PX[fit];
-  return sizes[Math.min(Math.max(charCount(ja), 1), sizes.length) - 1];
+  return Math.min(sizes[Math.min(chars, sizes.length) - 1], Math.floor(w / (chars * WORD_EM)));
 }
 
 /** The clouds' type, in px: the reading, and the room between it and the word. */
 export const TYPE = { readingPx: 12, gapPx: 2 };
 /** On a short phone the lines close up rather than scaling, so nothing goes under the 11 px floor. */
-export const TIGHT_TYPE = { ...TYPE, gapPx: 0 };
+export const TIGHT_TYPE = { readingPx: 11, gapPx: 0 };

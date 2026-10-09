@@ -1,8 +1,9 @@
-/* The two thought clouds over a fresh sheet in Kyoto Seika Manga Expression Practice Mode, inked with a
-   G-pen on the sheet's own white, as a manga page draws a balloon: no shadow, the pen line alone sets
-   each apart from the paper. Bubbles trail toward the thinker off the page, and a die waits under each
-   cloud's right edge. Placed from the drawing screen's corner by their centers. */
-.subject-balloons {
+/* The five thought clouds over a fresh sheet in Kyoto Seika Manga Expression Practice Mode, inked with
+   a G-pen on the sheet's own white, as a manga page draws a balloon: no shadow, the pen line alone sets
+   each apart from the paper. One die waits beside the last. Placed from the drawing screen's corner by
+   their centers. */
+.subject-balloons,
+.subject-balloons__clouds {
   position: absolute;
   inset: 0;
   z-index: 30;
@@ -13,14 +14,66 @@
   position: absolute;
   width: 0;
   height: 0;
+  transition: opacity 160ms var(--ease-out);
+}
+
+/* Two picked: the other three wait, faded, until one is unpicked. */
+.subject-balloon.is-locked {
+  opacity: 0.4;
 }
 
 /* Each cloud drifts on its own seeded track, played from SubjectBalloons. */
 .subject-balloon__float,
-.subject-balloon__cloud,
-.subject-balloon__beads {
+.subject-balloon__cloud {
   position: absolute;
   inset: 0;
+}
+
+/* The cloud is the toggle: the button covers it, fixed on the sheet while the cloud drifts. */
+.subject-balloon__pick {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.subject-balloon__pick[aria-disabled="true"] {
+  cursor: default;
+}
+
+.subject-balloon__pick:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* A pick circles the word in pencil, as an answer is circled on an exam sheet: one Graphite loop,
+   drawn round by hand. */
+.subject-balloon__loop {
+  pointer-events: none;
+}
+
+.subject-balloon__loop path {
+  fill: none;
+  stroke: var(--graphite);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation: pencil-loop 240ms var(--ease-out) both;
+}
+
+@keyframes pencil-loop {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .subject-balloon svg {
@@ -104,15 +157,8 @@
   fill: var(--ink);
 }
 
-/* Once a die blows up, smoke rises from its cloud's top edge and from the die: pen-drawn wisps that
-   rise, swell and fade on a loop. */
-.subject-balloon__smoke {
-  position: absolute;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
+/* Through the countdown and once it blows up, smoke rises from the die: pen-drawn wisps that rise,
+   swell and fade on a loop. */
 .smoke-wisp {
   position: absolute;
   bottom: 0;
@@ -140,8 +186,18 @@
   }
 }
 
+/* A picture of the deal shows its picks circled already. */
+.subject-balloons.is-picture .subject-balloon__loop path {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .subject-balloon .shape-ink {
+  .subject-balloon .shape-ink,
+  .subject-balloon__loop path {
     animation: none;
+  }
+
+  .subject-balloon {
+    transition: none;
   }
 }

@@ -16,7 +16,7 @@ interface Props {
   ref?: Ref<BeginKeyHandle>;
   /** The clock's length, which Begin starts. */
   minutes: number;
-  /** The pair is dealt and showing. Until then Begin stays sunk: a sheet begun without its pair could never seal. */
+  /** Two subjects are picked. Until then Begin stays sunk and says so: a sheet begun without its pair could never seal. */
   ready: boolean;
   onBegin: () => void;
 }
@@ -45,13 +45,17 @@ export function BeginKey({ ref, minutes, ready, onBegin }: Props) {
       <div ref={holder}>
         <Key
           icon={<DrawIcon />}
-          aria-label={t(($) => $.kyotoSeika.begin.label, { minutes })}
+          aria-label={
+            ready
+              ? t(($) => $.kyotoSeika.begin.label, { minutes })
+              : t(($) => $.kyotoSeika.begin.pick)
+          }
           disabled={!ready}
           onClick={() => {
             if (ready) onBegin();
           }}
         >
-          {t(($) => $.kyotoSeika.begin.key)}
+          {ready ? t(($) => $.kyotoSeika.begin.key) : t(($) => $.kyotoSeika.begin.pick)}
         </Key>
       </div>
     </div>

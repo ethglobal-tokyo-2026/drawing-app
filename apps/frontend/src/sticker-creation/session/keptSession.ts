@@ -1,5 +1,6 @@
 import { personKey, parseStored, readStored, writeStored } from "../../ui/deviceStorage";
-import { readDealtSubject, type DealtSubject } from "../../kyoto-seika/subjectList";
+import { pickedPair, PICKS } from "../../kyoto-seika/deal";
+import { KINDS, readDealtSubject, type DealtSubject } from "../../kyoto-seika/subjectList";
 import { STRIDE, type Op, type Step } from "../canvas/ops";
 import type { SheetFrame } from "../canvas/sheetFrame";
 
@@ -37,13 +38,21 @@ export interface KeptTools {
  * mode, so the sheet keeps its mode whatever of the part a later build can read.
  */
 export interface KeptKyotoSeika {
-  /** Null until the list loads and deals. Whole list entries, so a later build's list can't lose them. */
-  subjects: readonly [DealtSubject, DealtSubject] | null;
-  /** Each die's rolls; one at CHARRED_AT_ROLL is charred. */
-  rolls: readonly [number, number];
+  /**
+   * Null until the list loads and deals: then one subject of each kind, until Begin keeps only the
+   * picked pair. Whole list entries, so a later build's list can't lose them.
+   */
+  subjects: readonly DealtSubject[] | null;
+  /** The places in `subjects` picked, in the order picked; Begin's pair is [0, 1]. */
+  picked: readonly number[];
+  /** The die's rolls; at CHARRED_AT_ROLL it's charred. */
+  rolls: number;
   /** Begin locked the pair in, and started the clock. */
   begun: boolean;
 }
+
+/** A sheet in Kyoto Seika Practice Mode before the list deals. */
+export const UNDEALT: KeptKyotoSeika = { subjects: null, picked: [], rolls: 0, begun: false };
 
 /** The ticket use the session spent (the server's id), the time drawn, 18+, and the tools' settings. */
 interface SessionRecord {
@@ -249,7 +258,7 @@ export class SessionKeeper {
     if (!this.carried) this.keepRecord();
   }
 
-  /** Keeps the pair, the rolls and Begin; on a carried session's blank sheet, it waits for the first save. */
+  /** Keeps the deal, the picks, the rolls and Begin; on a carried session's blank sheet, it waits for the first save. */
   keepKyotoSeika(kyotoSeika: KeptKyotoSeika): void {
     this.kyotoSeika = kyotoSeika;
     if (!this.carried) this.keepRecord();
@@ -509,8 +518,8 @@ const isBetween = (v: unknown, min: number, max: number): v is number =>
   isFiniteNumber(v) && v >= min && v <= max;
 
 /**
- * The record's Kyoto Seika Practice Mode part, its pair read only as far as the seal needs it. One that
- * can't be read is logged and deals again, so its sheet waits for Begin once more.
+ * The record's Kyoto Seika Practice Mode part, its subjects read only as far as the seal needs them. One
+ * that can't be read is logged and deals again, so its sheet waits for Begin once more.
  */
 function readKyotoSeika(v: unknown): KeptKyotoSeika {
   const part = readKyotoSeikaPart(v);
@@ -519,26 +528,47 @@ function readKyotoSeika(v: unknown): KeptKyotoSeika {
     "The Kyoto Seika Practice Mode part of the drawing in progress is unreadable, so its sheet deals again:",
     v,
   );
-  return { subjects: null, rolls: [0, 0], begun: false };
+  return UNDEALT;
+}
+
+/** The die's rolls, or, from a build that gave each balloon of a pair its own die, the busier one's. */
+function readRolls(v: unknown): number | undefined {
+  if (isCount(v)) return v;
+  if (!Array.isArray(v) || v.length !== 2) return undefined;
+  const counts: readonly unknown[] = v;
+  const [upper, lower] = counts;
+  return isCount(upper) && isCount(lower) ? Math.max(upper, lower) : undefined;
+}
+
+/** The places picked in a deal of `dealt` subjects: distinct, inside the deal, and PICKS at most. */
+function readPicked(v: unknown, dealt: number): readonly number[] | undefined {
+  if (!Array.isArray(v) || v.length > PICKS) return undefined;
+  const places: readonly unknown[] = v;
+  const picked = places.filter((p): p is number => isCount(p) && p < dealt);
+  return picked.length === places.length && new Set(picked).size === picked.length
+    ? picked
+    : undefined;
 }
 
 function readKyotoSeikaPart(v: unknown): KeptKyotoSeika | undefined {
   if (typeof v !== "object" || v === null) return undefined;
   if (!("subjects" in v && "rolls" in v && "begun" in v)) return undefined;
-  const { subjects, rolls, begun } = v;
-  if (typeof begun !== "boolean" || !Array.isArray(rolls) || rolls.length !== 2) return undefined;
-  const rollCounts: readonly unknown[] = rolls;
-  const [upperRolls, lowerRolls] = rollCounts;
-  if (!isCount(upperRolls) || !isCount(lowerRolls)) return undefined;
-  const counts = [upperRolls, lowerRolls] as const;
+  const { subjects, begun } = v;
+  const rolls = readRolls(v.rolls);
+  if (typeof begun !== "boolean" || rolls === undefined) return undefined;
   // Begin locks a pair in, so a sheet without one hasn't begun.
-  if (subjects === null) return begun ? undefined : { subjects: null, rolls: counts, begun };
-  if (!Array.isArray(subjects) || subjects.length !== 2) return undefined;
+  if (subjects === null) return begun ? undefined : { ...UNDEALT, rolls };
+  if (!Array.isArray(subjects) || subjects.length < PICKS || subjects.length > KINDS.length)
+    return undefined;
   const entries: readonly unknown[] = subjects;
-  const [upper, lower] = entries;
-  const first = readDealtSubject(upper);
-  const second = readDealtSubject(lower);
-  return first && second ? { subjects: [first, second], rolls: counts, begun } : undefined;
+  const dealt = entries.flatMap((entry) => readDealtSubject(entry) ?? []);
+  if (dealt.length !== entries.length) return undefined;
+  // A build that dealt a pair kept no picks: its two are the pair, as if picked.
+  const picked =
+    "picked" in v ? readPicked(v.picked, dealt.length) : dealt.length === PICKS ? [0, 1] : [];
+  if (!picked) return undefined;
+  const part = { subjects: dealt, picked, rolls, begun };
+  return begun && !pickedPair(part) ? undefined : part;
 }
 
 /** The tools' settings a record holds, or undefined when it holds none it can read. */

@@ -32,7 +32,12 @@ import { DrawingScreen, type DrawingScreenHandle } from "./DrawingScreen";
 import { keepDrawingHand, penDrew, readInputMode } from "./drawingSettings";
 import { CHARRED_AT_ROLL } from "../kyoto-seika/dieMood";
 import { REUNION, TEST_SUBJECTS, WIND } from "../kyoto-seika/testSubjects";
-import { LOAD_TIMEOUT_MS, SessionKeeper, type KeptSession } from "./session/keptSession";
+import {
+  LOAD_TIMEOUT_MS,
+  SessionKeeper,
+  type KeptKyotoSeika,
+  type KeptSession,
+} from "./session/keptSession";
 import { keepSentSeal, sealWentOut } from "./session/sentSeal";
 import { sessionMs } from "./session/session";
 import type { TimerDotHandle } from "./TimerDot";
@@ -622,6 +627,21 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     await settle();
   }
   const dice = () => [...document.querySelectorAll<HTMLButtonElement>(".subject-reroll")];
+  /** The dealt subjects, each a toggle that picks it. */
+  const subjects = () => [
+    ...document.querySelectorAll<HTMLButtonElement>(".kyoto-seika-deal button[aria-pressed]"),
+  ];
+  /** The test list's subject a toggle is named by: its word, then any English. */
+  const subjectOf = (toggle: HTMLButtonElement | undefined) => {
+    const name = toggle?.getAttribute("aria-label") ?? toggle?.textContent ?? "";
+    return TEST_SUBJECTS.find(
+      (s) => name === s.ja || (name.startsWith(s.ja) && /^[,、]/.test(name.slice(s.ja.length))),
+    );
+  };
+  /** Taps the subjects at `places`, in turn. */
+  const tapSubjects = (...places: number[]) => {
+    for (const place of places) act(() => subjects()[place]?.click());
+  };
   const beginKey = () => document.querySelector<HTMLButtonElement>(".begin-key button");
   /** The sheet still waits for Begin: it takes no ink and its tools are put away. */
   const stillDealt = () =>
@@ -634,40 +654,80 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     String(KYOTO_SEIKA_TIME_USED_S / 60),
   );
   const pick = ({ ja, reading, en }: KyotoSeikaSubject) => ({ ja, reading, en });
+  /** A sheet begun on 風 and 再会. */
+  const BEGUN: KeptKyotoSeika = {
+    subjects: [WIND, REUNION],
+    picked: [0, 1],
+    rolls: 0,
+    begun: true,
+  };
+  const pressed = () => subjects().map((toggle) => toggle.getAttribute("aria-pressed"));
 
-  it("deals the pair of a ticket spent in Kyoto Seika Practice Mode, hides the tools and holds the sheet until Begin", async () => {
+  it("deals five subjects for a ticket spent in Kyoto Seika Practice Mode, hides the tools and holds the sheet until Begin has two picked", async () => {
     loads();
     await openKyotoSeikaSheet();
-    expect(dice()).toHaveLength(2);
+    expect(subjects()).toHaveLength(5);
+    expect(dice()).toHaveLength(1);
     expect(stillDealt()).toBe(true);
     // Above Begin, the task: one sticker with both subjects in it.
     expect(document.querySelector(".drawing-screen")?.textContent).toContain(
       strings.kyotoSeika.begin.task.en,
     );
-    const upper = TEST_SUBJECTS.find((s) =>
-      dice()[0].getAttribute("aria-label")?.includes(`: ${s.ja},`),
-    );
+    tapSubjects(2);
+    act(() => beginKey()?.click());
+    await settle(1000);
+    expect(stillDealt()).toBe(true);
+
+    tapSubjects(4);
+    const first = subjectOf(subjects()[2]);
     act(() => beginKey()?.click());
     await settle(1000);
     expect(sheetCalls.settings?.paused).toBe(false);
-    expect(keptRecord()).toMatchObject({ kyotoSeika: { begun: true } });
-    expect(sheetCalls.label).toContain(upper?.ja);
+    expect(keptRecord()).toMatchObject({ kyotoSeika: { picked: [0, 1], begun: true } });
+    expect(sheetCalls.label).toContain(first?.ja);
   });
 
-  it("brings a reload back to the same balloons, its charred die still charred", async () => {
+  it("brings a reload back to the same subjects and picks, its charred die still charred", async () => {
     loads();
-    const part = { subjects: [WIND, REUNION], rolls: [CHARRED_AT_ROLL, 2], begun: false } as const;
+    const five = TEST_SUBJECTS.filter((s, i, all) => all.findIndex((o) => o.kind === s.kind) === i);
     await openKyotoSeikaSheet({
       status: "found",
       ticket: 9,
       elapsedMs: 0,
       nsfw: false,
-      kyotoSeika: part,
+      kyotoSeika: { subjects: five, picked: [3], rolls: CHARRED_AT_ROLL, begun: false },
       steps: [],
       frame: null,
     });
     expect(dice()[0].getAttribute("aria-disabled")).toBe("true");
-    expect(dice()[1].getAttribute("aria-label")).toContain(REUNION.ja);
+    expect(subjects().map(subjectOf)).toEqual(five);
+    expect(pressed()).toEqual(["false", "false", "false", "true", "false"]);
+  });
+
+  it("deals the rest of the kinds round a pair kept by a build that dealt two, the pair already picked", async () => {
+    loads();
+    const me = someoneNew();
+    vi.useFakeTimers();
+    new SessionKeeper(me.id).save([], 0, FRAME);
+    await settle(1000);
+    localStorage.setItem(
+      personKey("draw.session", me.id),
+      JSON.stringify({
+        ticket: 9,
+        elapsedMs: 0,
+        nsfw: false,
+        kyotoSeika: { subjects: [WIND, REUNION], rolls: [3, 0], begun: false },
+      }),
+    );
+    await openKyotoSeikaSheet(null, {}, me);
+    await settle(1000);
+    expect(subjects()).toHaveLength(5);
+    expect(new Set(subjects().map((toggle) => subjectOf(toggle)?.kind)).size).toBe(5);
+    expect(subjects().slice(0, 2).map(subjectOf)).toEqual([WIND, REUNION]);
+    expect(pressed()).toEqual(["true", "true", "false", "false", "false"]);
+    act(() => beginKey()?.click());
+    await settle(1000);
+    expect(stillDealt()).toBe(false);
   });
 
   it("shows why the subjects didn't load, and tries again on a fresh page, which picks the sheet up and deals", async () => {
@@ -693,12 +753,13 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     view?.unmount();
     await openKyotoSeikaSheet(null, {}, me);
     await settle(1000);
-    expect(dice()).toHaveLength(2);
+    expect(subjects()).toHaveLength(5);
   });
 
   it("hands focus to the clock Begin started, since Begin leaves with the deal", async () => {
     loads();
     await openKyotoSeikaSheet();
+    tapSubjects(0, 1);
     beginKey()?.focus();
     act(() => beginKey()?.click());
     await settle(1000);
@@ -708,6 +769,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
   it("lets the deal go for good once begun, though the board covers the screen as it leaves", async () => {
     loads();
     await openKyotoSeikaSheet();
+    tapSubjects(0, 1);
     act(() => beginKey()?.click());
     const screen = (active: boolean) => (
       <DrawingScreen
@@ -741,6 +803,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     expect(stillDealt()).toBe(true);
 
     await act(async () => deliver({ subjects: TEST_SUBJECTS, notices: "" }));
+    tapSubjects(0, 1);
     act(() => beginKey()?.click());
     await settle(1000);
     expect(stillDealt()).toBe(false);
@@ -751,11 +814,10 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     sealing.cut.mockResolvedValue(cutSticker());
     vi.spyOn(console, "error").mockImplementation(() => {});
     const seal = vi.fn<ApiClient["seal"]>(() => new Promise(() => {}));
-    const part = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
     // Begun and kept at 0:00, it's back pencils down, and its time's-up sheet seals it.
     const atTimeUp = sessionMs(true);
     await openKyotoSeikaSheet(
-      { ...keptAtTimeUp, ticket: 9, elapsedMs: atTimeUp, kyotoSeika: part },
+      { ...keptAtTimeUp, ticket: 9, elapsedMs: atTimeUp, kyotoSeika: BEGUN },
       { seal },
     );
     sealOnSheet();
@@ -764,7 +826,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     expect(seal.mock.calls[0]?.[0].kyotoSeikaSubjects).toEqual([pick(WIND), pick(REUNION)]);
   });
 
-  it("puts a drawing whose pair a later build can't read back at its deal, on its 30-minute clock, and seals it with the pair dealt again", async () => {
+  it("puts a drawing whose pair a later build can't read back at its deal, on its 30-minute clock, and seals it with the pair picked from the deal", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     sealing.cut.mockResolvedValue(cutSticker());
     loads();
@@ -792,21 +854,23 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     await openKyotoSeikaSheet(null, { seal }, me);
     await settle(1000);
     expect(stillDealt()).toBe(true);
-    expect(dice()).toHaveLength(2);
-    expect(beginKey()?.getAttribute("aria-label")).toBe(BEGIN_LABEL);
+    expect(subjects()).toHaveLength(5);
 
+    // Picked in this order, the pair seals in it.
+    tapSubjects(3, 1);
+    const picked = [subjectOf(subjects()[3]), subjectOf(subjects()[1])];
+    expect(beginKey()?.getAttribute("aria-label")).toBe(BEGIN_LABEL);
     act(() => beginKey()?.click());
     await settle(1000);
     tapSealKey();
     sealOnSheet();
     await settle(1000);
     expect(seal).toHaveBeenCalledOnce();
-    expect(seal.mock.calls[0]?.[0].kyotoSeikaSubjects).toHaveLength(2);
+    expect(seal.mock.calls[0]?.[0].kyotoSeikaSubjects).toEqual(picked.map((s) => s && pick(s)));
   });
 
   it("runs a begun sheet's clock on, as the real test's: no tool in hand holds it, and a tap on the timer only says why", async () => {
-    const begun = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
-    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: begun });
+    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: BEGUN });
     // A reload's pause still lets go at a tap.
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
     for (const takeTool of TOOLS_IN_HAND) expect(await countedAfter(takeTool)).toBeGreaterThan(0);
@@ -816,8 +880,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
 
   it("holds a begun sheet's clock while the phone is on its side, as it does under the board", async () => {
     const phone = onTouchScreen({ landscape: false, large: false });
-    const begun = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
-    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: begun });
+    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: BEGUN });
     // A reload's pause lets go at a tap.
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
     expect(await countedAfter(() => phone.landscape.change(true))).toBe(0);
@@ -825,14 +888,13 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
   });
 
   it("runs on under the open seal sheet, as the real test's clock does, and calls pencils down in place at 0:00", async () => {
-    const begun = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
     const { notYet, pencilsDown } = strings.stickerCreation.sealSheet;
     sealing.cut.mockResolvedValue(cutSticker());
     await openKyotoSeikaSheet({
       ...keptHalfway,
       ticket: 9,
       elapsedMs: sessionMs(true) - 3000,
-      kyotoSeika: begun,
+      kyotoSeika: BEGUN,
     });
     // A reload's pause lets go at a tap.
     act(tapTimer);
@@ -849,8 +911,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
   });
 
   it("shows a begun sheet's pair on its seal sheet, whose sticker wears the Kyoto Seika foil, and pink once marked 18+", async () => {
-    const begun = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
-    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: begun });
+    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: BEGUN });
     tapSealKey();
     const pair = sealSheet()?.querySelector(".subject-pair")?.textContent;
     expect(pair).toContain(WIND.ja);
@@ -862,15 +923,14 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
   });
 
   it("names a begun canvas by its pair: each word with its English in English, the words alone in Japanese", async () => {
-    const begun = { subjects: [WIND, REUNION], rolls: [0, 0], begun: true } as const;
-    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: begun });
-    for (const { ja, en } of begun.subjects) {
+    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: BEGUN });
+    for (const { ja, en } of [WIND, REUNION]) {
       expect(sheetCalls.label).toContain(ja);
       expect(sheetCalls.label).toContain(en);
     }
     await act(() => i18next.changeLanguage("ja"));
     try {
-      for (const { ja, en } of begun.subjects) {
+      for (const { ja, en } of [WIND, REUNION]) {
         expect(sheetCalls.label).toContain(ja);
         expect(sheetCalls.label).not.toContain(en);
       }
@@ -879,9 +939,10 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     }
   });
 
-  it("names Begin by what it does", async () => {
+  it("names Begin by what it does once two subjects are picked", async () => {
     loads();
     await openKyotoSeikaSheet();
+    tapSubjects(0, 1);
     expect(beginKey()?.getAttribute("aria-label")).toBe(BEGIN_LABEL);
   });
 });

@@ -1,25 +1,20 @@
 import type { Section } from "../catalog";
 
 export const kyotoSeika = {
-  /** The two thought balloons over a fresh sheet in Kyoto Seika Manga Expression Practice Mode. */
+  /** The five thought clouds over a fresh sheet in Kyoto Seika Manga Expression Practice Mode. */
   balloons: {
-    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the two thought balloons' group name for screen readers */
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the five thought clouds' group name for screen readers */
     label: { en: "Your subjects", ja: "題材" },
-    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: a cloud's reroll, named for screen readers by the lettering it shows and the subject it would replace, such as "Reroll: 風, wind" */
-    roll: {
-      en: "Reroll: {{word}}, {{english}}",
-      ja: "振り直し：{{word}}、{{english}}",
-    },
-    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the hand lettering beside the inked die under each cloud, which deals that cloud another subject; screen readers hear the die's name instead */
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the hand lettering beside the inked die by the last cloud, and the die's name; a roll deals every subject not picked another */
     reroll: { en: "Reroll", ja: "振り直し" },
-    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the sound effect lettered beside a die as it lands, hidden from screen readers; Japanese in both languages, as a drawn manga sound effect */
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the sound effect lettered beside the die as it lands, hidden from screen readers; Japanese in both languages, as a drawn manga sound effect */
     rollSound: { en: "コロッ", ja: "コロッ" },
-    /** Drawing screen, a sheet in Kyoto Seika Practice Mode: a subject as screen readers hear it, such as "風, wind": read out politely as a balloon is dealt it, and in English in the canvas's name once begun */
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode: a subject as screen readers hear it, such as "風, wind": read out politely as a roll deals it, and in English as a cloud's name and in the canvas's name once begun */
     subject: { en: "{{word}}, {{english}}", ja: "{{word}}、{{english}}" },
-    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: a die's name for screen readers once it blew up from rolling too often, and read out as it does; its balloon's subject can't change */
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the die's name for screen readers once it blew up from rolling too often, and read out as it does; the subjects not picked can't change */
     charred: {
-      en: "The die blew up. This subject stays.",
-      ja: "サイコロが爆発しました。この題材で決まりです。",
+      en: "The die blew up. The subjects stay as they are.",
+      ja: "サイコロが爆発しました。題材はもう変わりません。",
     },
     /** Drawing screen, a sheet in Kyoto Seika Practice Mode: the line in place of the balloons when the subject list didn't load */
     loadFailed: { en: "Couldn’t load the subjects.", ja: "題材を読み込めませんでした。" },
@@ -33,7 +28,9 @@ export const kyotoSeika = {
       en: "Begin: start the {{minutes}}-minute timer",
       ja: "はじめ：{{minutes}}分のタイマーをスタート",
     },
-    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the quiet line between the two subjects' balloons and Begin, saying what the test asks of them */
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the sunk yellow key's label and name until two of the five subjects are picked */
+    pick: { en: "Pick 2", ja: "2つ選ぶ" },
+    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the quiet line between the subjects' clouds and Begin, saying what the test asks of the two picked */
     task: { en: "Draw both in one sticker", ja: "2つの題材を1枚にかく" },
   },
   /** A die rolled again and again teases in manga hand lettering beside its balloon, and at last blows up. */

@@ -1,15 +1,14 @@
 import { seededRandom } from "../ui/seededRandom";
-import type { Balloon } from "./deal";
 import { outline, penStroke, pressure, wobble, type PenPoint, type Pt } from "./pen";
 
-/** The face each die shows before its first roll: five pips on the upper cloud's, four on the lower's. */
-const FIRST_FACE: readonly [number, number] = [5, 4];
+/** The face the die shows before its first roll: five pips, as many as the subjects it deals. */
+const FIRST_FACE = 5;
 
-/** The face a die lands on after `rolls` rolls: never the one it left, and the same for the same roll. */
-export function dieFace(balloon: Balloon, rolls: number): number {
-  let face = FIRST_FACE[balloon];
+/** The face the die lands on after `rolls` rolls: never the one it left, and the same for the same roll. */
+export function dieFace(rolls: number): number {
+  let face = FIRST_FACE;
   for (let roll = 1; roll <= rolls; roll++) {
-    const random = seededRandom(roll * 7 + balloon * 1009);
+    const random = seededRandom(roll * 7);
     face = ((face + Math.floor(random() * 5)) % 6) + 1;
   }
   return face;
@@ -94,8 +93,8 @@ export interface DieDrawing {
   pips: string;
 }
 
-function draw(balloon: Balloon, face: number): DieDrawing {
-  const random = seededRandom(1301 + balloon * 17);
+function draw(face: number): DieDrawing {
+  const random = seededRandom(1301);
   const ring = faceRing();
   const quarter = ring.length / 4;
   // Each side is one stroke, from just before one corner's middle to just past the next one's.
@@ -129,14 +128,13 @@ function draw(balloon: Balloon, face: number): DieDrawing {
   return { white: outline(ring), ink, pips };
 }
 
-const drawn = new Map<string, DieDrawing>();
-/** Balloon's die showing `face`, drawn once and kept. */
-export function dieDrawing(balloon: Balloon, face: number): DieDrawing {
-  const key = `${balloon}:${face}`;
-  const known = drawn.get(key);
+const drawn = new Map<number, DieDrawing>();
+/** The die showing `face`, drawn once and kept. */
+export function dieDrawing(face: number): DieDrawing {
+  const known = drawn.get(face);
   if (known) return known;
-  const made = draw(balloon, face);
-  drawn.set(key, made);
+  const made = draw(face);
+  drawn.set(face, made);
   return made;
 }
 
@@ -190,8 +188,8 @@ const SHARDS = [
   ],
 ];
 
-function drawBroken(balloon: Balloon, face: number): BrokenDie {
-  const random = seededRandom(2203 + balloon * 17);
+function drawBroken(face: number): BrokenDie {
+  const random = seededRandom(2203);
   const ring = faceRing();
   // The corner the chip takes is one run of the ring, which starts at the top-left corner.
   const chipEnd = CHIP[CHIP.length - 1];
@@ -223,7 +221,7 @@ function drawBroken(balloon: Balloon, face: number): BrokenDie {
   const chipEdge = penStroke(CHIP.map((p, i) => ({ ...p, w: 1.1 - 0.3 * (i % 2) })));
   const crackInk = (pts: readonly Pt[]) =>
     penStroke(pts.map((p, i) => ({ ...p, w: 1.3 * (1 - i / pts.length) + 0.25 })));
-  const normal = dieDrawing(balloon, face);
+  const normal = dieDrawing(face);
   return {
     white: outline(outlineRing),
     ink: [...strokes, chipEdge].join(""),
@@ -233,14 +231,13 @@ function drawBroken(balloon: Balloon, face: number): BrokenDie {
   };
 }
 
-const broken = new Map<string, BrokenDie>();
-/** Balloon's die blown up on `face`, drawn once and kept. */
-export function brokenDieDrawing(balloon: Balloon, face: number): BrokenDie {
-  const key = `${balloon}:${face}`;
-  const known = broken.get(key);
+const broken = new Map<number, BrokenDie>();
+/** The die blown up on `face`, drawn once and kept. */
+export function brokenDieDrawing(face: number): BrokenDie {
+  const known = broken.get(face);
   if (known) return known;
-  const made = drawBroken(balloon, face);
-  broken.set(key, made);
+  const made = drawBroken(face);
+  broken.set(face, made);
   return made;
 }
 

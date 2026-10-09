@@ -11,6 +11,8 @@ const entry = (
 export const WIND = entry("風", "phenomenon", { en: "wind", reading: "かぜ" });
 export const REUNION = entry("再会", "moment", { en: "reunion", reading: "さいかい" });
 export const SPORTS = entry("スポーツ", "loanword", { en: "sport" });
+const MAP = entry("地図", "thing", { en: "map", reading: "ちず" });
+const TWINS = entry("双子", "people", { en: "twins", reading: "ふたご" });
 
 /** A tiny list: two of each kind. 泉 and 春 share the English "spring". */
 export const TEST_SUBJECTS: readonly KyotoSeikaSubjectEntry[] = [
@@ -18,13 +20,17 @@ export const TEST_SUBJECTS: readonly KyotoSeikaSubjectEntry[] = [
   entry("泉", "phenomenon", { en: "spring", reading: "いずみ" }),
   REUNION,
   entry("春", "moment", { en: "spring", reading: "はる" }),
-  entry("地図", "thing", { en: "map", reading: "ちず" }),
+  MAP,
   entry("果物", "thing", { en: "fruit", reading: "くだもの" }),
   SPORTS,
   entry("SNS", "loanword", { en: "social media" }),
-  entry("双子", "people", { en: "twins", reading: "ふたご" }),
+  TWINS,
   entry("小学生", "people", { en: "schoolchild", reading: "しょうがくせい" }),
 ];
 
-/** A fresh deal of 風 over 再会, neither die rolled. */
-export const DEAL: Deal = { subjects: [WIND, REUNION], rolls: [0, 0] };
+/** A fresh deal of the 2026 exam's five, one of each kind, none picked, the die not rolled. */
+export const DEAL: Deal = {
+  subjects: [WIND, REUNION, MAP, SPORTS, TWINS],
+  picked: [],
+  rolls: 0,
+};

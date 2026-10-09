@@ -4,25 +4,26 @@ import { useTranslation } from "../i18n/react";
 import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { pairLayout, ROOM_PX, type PairLayout } from "./balloonGeometry";
+import { dealLayout, ROOM_PX, type DealLayout } from "./balloonGeometry";
 import { BeginKey, type BeginKeyHandle } from "./BeginKey";
-import type { Balloon, Deal } from "./deal";
+import { pickedPair, type Deal } from "./deal";
 import { SubjectBalloons } from "./SubjectBalloons";
 import type { SubjectListState } from "./useKyotoSeikaSheet";
 import "./kyoto-seika-deal.css";
 
-/** Begin leaves: the key drops this far and fades, as the balloons tuck into the corner print. */
+/** Begin leaves: the key drops this far and fades, as the clouds tuck into the corner print. */
 const LEAVE = { keyDropPx: 56, keyMs: 220, balloonsMs: 360 };
 
 interface Props {
-  /** The drawing screen, which the pair is laid out in. */
+  /** The drawing screen, which the deal is laid out in. */
   screen: RefObject<HTMLDivElement | null>;
   list: SubjectListState;
   deal: Deal | null;
   /** The clock's length, which Begin starts. */
   minutes: number;
   begin: Ref<BeginKeyHandle>;
-  onRoll: (balloon: Balloon) => void;
+  onRoll: () => void;
+  onPick: (place: number) => void;
   onBegin: () => void;
   /** Begin was pressed: the deal tucks away, then says it's gone. */
   leaving: boolean;
@@ -30,7 +31,7 @@ interface Props {
 }
 
 /**
- * A fresh sheet's deal in Kyoto Seika Manga Expression Practice Mode: the two balloons between the
+ * A fresh sheet's deal in Kyoto Seika Manga Expression Practice Mode: the five clouds between the
  * timer's label and the task over Begin, Begin at the sheet's foot, or why the subjects didn't load.
  */
 export function KyotoSeikaDeal({
@@ -40,6 +41,7 @@ export function KyotoSeikaDeal({
   minutes,
   begin,
   onRoll,
+  onPick,
   onBegin,
   leaving,
   onLeft,
@@ -48,7 +50,10 @@ export function KyotoSeikaDeal({
   const reduced = useReducedMotion();
   const balloons = useRef<HTMLDivElement>(null);
   const pairArea = useRef<HTMLDivElement>(null);
-  const [layout, setLayout] = useState<PairLayout | null>(null);
+  const [layout, setLayout] = useState<DealLayout | null>(null);
+  // Begin keeps only the picked pair: the five stay on screen as they were while the deal leaves.
+  const [shown, setShown] = useState(deal);
+  if (!leaving && deal !== shown) setShown(deal);
 
   useLayoutEffect(() => {
     const el = screen.current;
@@ -64,7 +69,7 @@ export function KyotoSeikaDeal({
       const below = el.querySelector(".begin-key");
       if (!above || !below) return;
       setLayout(
-        pairLayout({
+        dealLayout({
           width: area.offsetWidth,
           top: (above.getBoundingClientRect().bottom - box.top) / scale + ROOM_PX,
           bottom: (below.getBoundingClientRect().top - box.top) / scale - ROOM_PX,
@@ -121,10 +126,10 @@ export function KyotoSeikaDeal({
               {t(($) => $.kyotoSeika.balloons.loadFailed)}
             </ErrorLine>
           ) : (
-            deal &&
+            shown &&
             layout &&
             list.status === "loaded" && (
-              <SubjectBalloons deal={deal} layout={layout} onRoll={onRoll} />
+              <SubjectBalloons deal={shown} layout={layout} onRoll={onRoll} onPick={onPick} />
             )
           )}
         </div>
@@ -132,7 +137,7 @@ export function KyotoSeikaDeal({
       <BeginKey
         ref={begin}
         minutes={minutes}
-        ready={deal !== null && list.status === "loaded"}
+        ready={deal !== null && pickedPair(deal) !== null && list.status === "loaded"}
         onBegin={onBegin}
       />
     </>

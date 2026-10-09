@@ -1,8 +1,7 @@
 import { useEffect, useEffectEvent, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "../i18n/react";
 import { EASE_OUT } from "../ui/easing";
-import type { PairLayout } from "./balloonGeometry";
-import type { Balloon } from "./deal";
+import type { DealLayout } from "./balloonGeometry";
 import {
   BURST,
   BURST_MS,
@@ -28,48 +27,28 @@ const SPIKES = 16;
 const BURST_INSIDE = 0.8;
 const CHIPS = 9;
 
-/** Where the cloud, its reroll and its die sit on the screen, from the layout, for its line. */
-function anchorOf(layout: PairLayout, balloon: Balloon) {
-  const { reach, reroll, die } = layout.balloons[balloon];
-  return {
-    cloud: { top: reach.minY, bottom: reach.maxY },
-    reroll,
-    die: [die.x, die.y] as const,
-  };
-}
-
 interface LineProps {
-  balloon: Balloon;
-  layout: PairLayout;
+  layout: DealLayout;
   /** The line, or the countdown's number. */
   text: string;
   count: boolean;
   reduced: boolean;
 }
 
-/** A die's line in manga hand lettering (書き文字), or its countdown's number just over the die. */
-export function TeaseLine({ balloon, layout, text, count, reduced }: LineProps) {
+/** The die's line in manga hand lettering (書き文字), or its countdown's number just by the die. */
+export function TeaseLine({ layout, text, count, reduced }: LineProps) {
   const { i18n } = useTranslation();
   const el = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const line = el.current;
     if (!line) return;
-    const { cloud, reroll } = anchorOf(layout, balloon);
     const size = { w: line.offsetWidth, h: line.offsetHeight };
-    const at = count
-      ? countPlacement(layout, balloon, size)
-      : teasePlacement({
-          balloon,
-          cloud,
-          reroll,
-          size,
-          screenWidth: line.parentElement?.clientWidth ?? 0,
-        });
+    const at = count ? countPlacement(layout, size) : teasePlacement(layout, size);
     line.style.left = `${at.left}px`;
     line.style.top = `${at.top}px`;
     const duration = count ? COUNT_MS : TEASE_MS;
     line.animate(reduced ? FADE_IN_OUT : teaseIn(count ? 0 : -6), { duration, fill: "forwards" });
-  }, [balloon, layout, count, reduced]);
+  }, [layout, count, reduced]);
   return (
     <div
       ref={el}
@@ -93,20 +72,19 @@ function starPoints(outer: number, inner: number, turn: number) {
 }
 
 interface BangProps {
-  balloon: Balloon;
-  layout: PairLayout;
-  /** The cloud whose die blew up, to jolt. */
+  layout: DealLayout;
+  /** The clouds, which jolt. */
   balloonEl: () => HTMLElement | null;
 }
 
 /**
- * The bang, the moment the last roll lands: a manga burst from the die, a spray of its shards, and its
- * cloud jolts. No lettering: the burst says it. Under reduced motion there's none, only the broken die.
+ * The bang, the moment the last roll lands: a manga burst from the die, a spray of its shards, and the
+ * clouds jolt. No lettering: the burst says it. Under reduced motion there's none, only the broken die.
  */
-export function DieBang({ balloon, layout, balloonEl }: BangProps) {
+export function DieBang({ layout, balloonEl }: BangProps) {
   const burst = useRef<HTMLDivElement>(null);
   const chips = useRef<HTMLDivElement>(null);
-  const { die } = anchorOf(layout, balloon);
+  const die = [layout.die.x, layout.die.y] as const;
   // A die near the screen's side bursts a little inward, so the whole star shows.
   const reach = BURST_STARS[0].outer * BURST_INSIDE;
   const x = Math.min(Math.max(die[0], reach), layout.width - reach);
