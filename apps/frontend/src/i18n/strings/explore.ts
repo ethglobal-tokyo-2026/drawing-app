@@ -28,7 +28,7 @@ export const explore = {
     },
   },
   /** Explore tab, on opening it: what screen readers hear while the sticker pile or the leaderboards load */
-  loading: { en: "Loading Explore", ja: "「さがす」を読み込んでいます" },
+  loading: { en: "Loading Explore", ja: "「発見」を読み込んでいます" },
   /** Explore tab, a search result or leaderboard row that is you: under your handle, where other people's rows show their LINE name */
   you: { en: "You", ja: "あなた" },
   /** Says which sticker board a tap opens, for assistive tech. */
@@ -41,7 +41,7 @@ export const explore = {
   /** The switch under the search between Explore's two views. */
   views: {
     /** Explore tab, under the search field: screen readers' name for the switch between the sticker pile and This week */
-    label: { en: "Explore", ja: "さがす" },
+    label: { en: "Explore", ja: "発見" },
     /** Explore tab, under the search field: the switch's first half, which shows the sticker pile */
     stickers: { en: "Stickers", ja: "シール" },
     /** Explore tab, under the search field: the switch's second half, which shows this week's leaderboards */
@@ -160,7 +160,7 @@ export const explore = {
     /** Explore tab, when it fails to load: the alert, before Try again; {{reason}} is why */
     explore: {
       en: "Couldn’t load Explore: {{reason}}",
-      ja: "「さがす」を読み込めませんでした：{{reason}}",
+      ja: "「発見」を読み込めませんでした：{{reason}}",
     },
     /** Explore tab, when a search fails to load: the alert, before Try again; {{reason}} is why */
     searchResults: {

@@ -8,7 +8,7 @@ export const app = {
     /** Page title in LINE's header while your own sticker board is open */
     board: { en: "Your sticker board", ja: "あなたのシールボード" },
     /** Page title in LINE's header while the Explore tab is open */
-    explore: { en: "Explore", ja: "さがす" },
+    explore: { en: "Explore", ja: "発見" },
     /** Page title in LINE's header while the Shop tab is open */
     shop: { en: "Shop", ja: "ショップ" },
     /** Page title in LINE's header while the drawing screen is open */
@@ -20,9 +20,9 @@ export const app = {
     /** Tab bar at the bottom of every screen but the drawing screen: the tab for your own sticker board */
     myBoard: { en: "My board", ja: "マイボード" },
     /** Tab bar at the bottom of every screen but the drawing screen: the tab for Explore, where you find other people's stickers and boards */
-    explore: { en: "Explore", ja: "さがす" },
+    explore: { en: "Explore", ja: "発見" },
     /** Tab bar on a large screen, while someone else's sticker board is open over Explore: screen readers' name for the lit Explore tab, which goes back to Explore */
-    backToExplore: { en: "Back to Explore", ja: "さがすに戻る" },
+    backToExplore: { en: "Back to Explore", ja: "発見に戻る" },
     /** Tab bar at the bottom of every screen but the drawing screen: the tab for the Shop, where tickets are bought */
     shop: { en: "Shop", ja: "ショップ" },
   },

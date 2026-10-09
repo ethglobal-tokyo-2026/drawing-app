@@ -45,7 +45,8 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | Residual (gratitude)             | 作者として                             | The tag on your gratitude events' rows; never a money word such as 印税               |
 | artist (someone who draws)       | アーティスト                           |                                                                                       |
 | Transfer Trail                   | 来歴                                   | Provenance: who held it, and how it passed hand to hand (ad0ll, 2026-09-27)           |
-| Explore / My board               | さがす / マイボード                    | The tab labels; the way back is マイボードに戻る                                      |
+| Explore (the tab)                | 発見                                   | Instagram's name for its Explore; never さがす, which is search (ad0ll, 2026-10-09)   |
+| My board (the tab)               | マイボード                             | The way back is マイボードに戻る                                                      |
 | Sui address                      | Suiアドレス                            | The stat board's address paper, which holds the stickers                              |
 | handle                           | ユーザー名                             | X's word for the @handle; a display name is 名前                                      |
 | LINE friend / chat               | 友だち / トーク                        | LINE's own words                                                                      |

@@ -28,12 +28,12 @@ afterEach(async () => {
 });
 
 describe("TabBar", () => {
-  it("reads マイボード, さがす and ショップ in Japanese, and names itself in Japanese", async () => {
+  it("reads マイボード, 発見 and ショップ in Japanese, and names itself in Japanese", async () => {
     await i18next.changeLanguage("ja");
     act(() => root.render(<TabBar active="board" onChange={() => {}} />));
     const nav = host.querySelector("nav");
     const tabs = [...(nav?.querySelectorAll("button") ?? [])].map((tab) => tab.textContent);
-    expect(tabs).toEqual(["マイボード", "さがす", "ショップ"]);
+    expect(tabs).toEqual(["マイボード", "発見", "ショップ"]);
     expect(nav?.getAttribute("aria-label")).toBe("アプリのセクション");
   });
 });

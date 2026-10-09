@@ -243,7 +243,7 @@ export const errors = {
   /** An artist's sticker board: loading their board or stats (GET /api/sticker-boards/:userId, …/user-stats) for a person who doesn't exist, in “Couldn’t load …’s board” or “Their stats didn’t load” through problemOf */
   user_not_found: {
     en: "Couldn’t find that artist. Search for them in Explore to check the handle.",
-    ja: "そのアーティストが見つかりませんでした。さがすでユーザー名を確認してください。",
+    ja: "そのアーティストが見つかりませんでした。「発見」でユーザー名を確認してください。",
   },
   /** Giving and the reserve ticket checkout: a deposit, take-out or payment (POST /api/gifts/…, /api/ticket-purchases) signed after the server's sponsorship of it lapsed, so it was never sent; Giving packs again by itself first, so it shows only when that fails too, through problemOf */
   sponsorship_expired: {

@@ -901,9 +901,9 @@ export const stickerBoard = {
       ja: "{{name}}さんのシールボードを読み込めませんでした：{{reason}}",
     },
     /** Someone else's sticker board: screen readers' name for the back chip at the top, which returns to Explore */
-    backToExplore: { en: "Back to Explore", ja: "さがすに戻る" },
+    backToExplore: { en: "Back to Explore", ja: "発見に戻る" },
     /** Someone else's sticker board: the back chip at the top that returns to Explore */
-    explore: { en: "Explore", ja: "さがす" },
+    explore: { en: "Explore", ja: "発見" },
     /** Someone else's sticker board: the Give key in Draw's place, which gives them one of your stickers */
     give: { en: "Give", ja: "贈る" },
     /** Someone else's sticker board, a sticker opened large: the fine print under its number; <duration/> is how long it took to draw, <artist/> its Original Artist */

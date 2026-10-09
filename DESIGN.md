@@ -824,7 +824,7 @@ The official account's menu under its chat in LINE, drawn as the board foot. LIN
 - **Returning:** the Draw key (Seal Yellow, Phosphor's pencil-simple-line in fill) sits in the left 1409px, Draw's tap area. My board and Explore are pink and aqua label stock stacked on the right, 10px apart, with smiley-sticker and compass in bold. The house gutter runs round the edges and between the columns.
 - **Tickets:** LINE can't vary an image per person, so each ticket state is its own menu, linked person by person. The tickets tuck 16px behind the key's right end, as on the app's Draw key: a Seal Yellow ticket ×3, ×2 or ×1; the blue reserve ticket, with no count, once only reserve tickets are left; and at none, the used backing printed with Tokyo's midnight (12:00 AM, or 0:00). The key keeps one width (136px) in every ticket state, so only the tickets change; the plain menu has no tickets, and its key fills the area. It shows counts, never the three-a-day rule.
 - **New people:** one large key across the image, Japanese over English (シールボードをひらく, Open Sticker Board), since it can't know their language, with the sticker board icon as tall as both lines (30px). It uses the greeting's words.
-- **Words:** the app's own (Draw, My board and Explore; かく, マイボード and さがす). Each tap area's screen-reader label says what the image shows, in at most 20 characters ("Draw, 2 tickets left").
+- **Words:** the app's own (Draw, My board and Explore; かく, マイボード and 発見). Each tap area's screen-reader label says what the image shows, in at most 20 characters ("Draw, 2 tickets left").
 
 ### Mocked platform screens
 
