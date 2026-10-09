@@ -198,7 +198,7 @@
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);
-  background: rgba(28, 24, 36, 0.36);
+  background: var(--scrim);
   opacity: 0;
   visibility: hidden;
   transition:
