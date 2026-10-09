@@ -160,11 +160,6 @@
   user-select: text;
 }
 
-/* Under Pay, where the payment happens. */
-.reserve-checkout__credit {
-  margin-top: 6px;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .reserve-checkout__pack {
     transition: none;

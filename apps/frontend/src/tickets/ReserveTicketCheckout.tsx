@@ -8,7 +8,6 @@ import { ArrowClockwise, BuyTicketsIcon, DrawIcon } from "../icons";
 import { usePrivyStatus } from "../identity/privy";
 import { useSuiWalletFailure } from "../identity/suiWallet";
 import type { JpycPayment } from "../payments/jpyc";
-import { SuiCredit } from "../shop/SuiCredit";
 import { ErrorDetail, ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
@@ -510,7 +509,6 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
                 ? t(($) => $.tickets.checkout.payPrice, { price: formatYen(pack.priceYen) })
                 : t(($) => $.tickets.checkout.pay)}
           </Key>
-          <SuiCredit className="reserve-checkout__credit" />
           {close}
         </div>
       </>

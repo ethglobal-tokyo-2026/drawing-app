@@ -8,7 +8,6 @@ import { useTickets } from "../tickets/useTickets";
 import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { TearLine } from "../ui/TearLine";
-import { SuiCredit } from "./SuiCredit";
 
 const FAN: TicketStub[] = [
   { used: false, kind: "reserve" },
@@ -64,7 +63,6 @@ export function ReserveTicketsHero({ onBuy }: { onBuy: () => void }) {
         <Key className="reserve-hero__key" tone="blue" icon={<BuyTicketsIcon />} onClick={onBuy}>
           {t(($) => $.shop.reserve.buy)}
         </Key>
-        <SuiCredit />
       </div>
     </section>
   );

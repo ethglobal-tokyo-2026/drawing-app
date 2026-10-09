@@ -27,7 +27,7 @@
 .reserve-hero {
   --card-pad: 18px;
   margin: 0 12px;
-  padding: 14px var(--card-pad) 10px;
+  padding: 14px var(--card-pad) var(--card-pad);
   border-radius: 14px;
   background: var(--liner-lift);
   box-shadow:

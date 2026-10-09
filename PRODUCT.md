@@ -92,7 +92,7 @@ You can hand someone a physical drawing, but nothing makes a digital drawing sca
 
 - **The name is Croquis, クロッキー in Japanese.** A sticker board is a person's board of stickers, never the app.
 - **The interface never says NFT, crypto, token, wallet, mint or burn.** Its words are sticker, sticker board, seal, give, receive and Gratitude.
-- **The chain appears only where a person needs it, as a plain fact:** a person's Sui address on their stat board, as a QR code with its explorer; JPYC and the Sui credit ("Payments on" with Sui's full logo, a credit, never a link) in the Shop and its checkout; and "on-chain" when a seal isn't confirmed there.
+- **The chain appears only where a person needs it, as a plain fact:** a person's Sui address on their stat board, as a QR code with its explorer; JPYC in the Shop and its checkout; and "on-chain" when a seal isn't confirmed there.
 - **No financial framing** where a person can see it. Gratitude flows "to" people and never takes money words; Residual, in your gratitude events, is the one exception. The only prices are reserve tickets', in yen.
 
 ## Product Principles
