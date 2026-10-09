@@ -50,7 +50,8 @@ function reportUnlessCancelled(error: unknown) {
 
 /**
  * Turns the Sticker Board over to its stat board and back. The face turning away goes inert as
- * the turn starts; a tap mid-turn runs it back from wherever it is. Reduced motion crossfades.
+ * the turn starts, and the front comes back out of inert as it lands; a tap mid-turn runs it back
+ * from wherever it is. Reduced motion crossfades.
  */
 export function BoardFlip({
   turned,
@@ -67,7 +68,11 @@ export function BoardFlip({
   const running = useRef<Animation[]>([]);
   // The side the board rests on, or is turning toward.
   const heading = useRef(turned);
-  const [resting, setResting] = useState<BoardSide>(turned ? "back" : "front");
+  // Set anew by every landing, even on the side it left, so the landing's focus follows its render.
+  const [landed, setLanded] = useState<{ side: BoardSide }>({ side: turned ? "back" : "front" });
+  const resting = landed.side;
+  // Focused once the landing's render has lifted inert from the face it lands on.
+  const landingFocus = useRef<RefObject<HTMLElement | null> | undefined>(undefined);
   const reduced = useReducedMotion();
   // The turn lands after later renders, so it reads their props.
   const latest = useRef({ turned, onTurnEnd, frontFocus, backFocus });
@@ -87,9 +92,9 @@ export function BoardFlip({
       for (const animation of running.current) animation.cancel();
       running.current = [];
       const now = latest.current;
-      setResting(now.turned ? "back" : "front");
+      landingFocus.current = now.turned ? now.backFocus : now.frontFocus;
+      setLanded({ side: now.turned ? "back" : "front" });
       now.onTurnEnd?.(now.turned);
-      (now.turned ? now.backFocus : now.frontFocus)?.current?.focus({ preventScroll: true });
     };
     const board = flip.current;
     if (reduced || !board || !frontShade.current || !rearShade.current) {
@@ -109,6 +114,11 @@ export function BoardFlip({
     ];
     turn.finished.then(land, reportUnlessCancelled);
   }, [turned, reduced]);
+
+  useLayoutEffect(() => {
+    landingFocus.current?.current?.focus({ preventScroll: true });
+    landingFocus.current = undefined;
+  }, [landed]);
 
   useEffect(
     () => () => {
@@ -131,7 +141,9 @@ export function BoardFlip({
     >
       <RestingSide value={resting}>
         <div className="board-flip" ref={flip}>
-          <div className="board-front" inert={turned}>
+          {/* Turning back, the front stays inert until it lands: lifting inert restyles every sticker,
+              which costs the turn's first frame. */}
+          <div className="board-front" inert={turned || resting === "back"}>
             {front}
             <i className="board-shade" ref={frontShade} aria-hidden />
           </div>
