@@ -1,6 +1,6 @@
-import { MAX_LARGE_LAYOUT_BATCH } from "@drawing-app/api/client";
+import { MAX_LARGE_LAYOUT_BATCH, MAX_SCALE } from "@drawing-app/api/client";
 import { describe, expect, it, vi } from "vitest";
-import { boardSticker } from "../api/testFixtures";
+import { boardSticker, sticker } from "../api/testFixtures";
 import { emptyApi } from "../api/testing";
 import { toApiPlacement } from "../api/views";
 import { placeUnplaced, toBoardSticker, type PlacedBoardSticker } from "./boardSticker";
@@ -13,8 +13,9 @@ import {
 } from "./largeLayout";
 import {
   fieldOf,
+  LARGE_LANDING_GROWTH,
+  maxSOf,
   PHONE_BOARD,
-  sizeOf,
   stickerBox,
   unitOf,
   type BoardSize,
@@ -44,18 +45,33 @@ const largeOf = (stickers: readonly PlacedBoardSticker[], board: BoardSize) =>
   new Map(deriveLargeLayout(stickers, board).derived.map((d) => [d.id, d.placement]));
 
 describe("the large layout derived from the phone's", () => {
-  it("spreads the phone's arrangement across the board's field, centered, at the phone size", () => {
+  it("spreads the phone's arrangement across the board's field, centered, a size larger", () => {
     const [corner, far] = [spot(0, 0), spot(1, 1)];
     const edge = (1 - LARGE_SPREAD) / 2;
     for (const ipad of IPADS) {
-      expect(largeSpotFrom(corner)).toMatchObject({ x: edge, y: edge });
-      expect(largeSpotFrom(far)).toMatchObject({ x: 1 - edge, y: 1 - edge });
-      expect(largeSpotFrom(spot(0.5, 0.5))).toMatchObject({ x: 0.5, y: 0.5 });
-      const [sticker] = holding(corner);
-      const large = largeOf([sticker], ipad).get(sticker.id);
+      expect(largeSpotFrom(corner, Infinity)).toMatchObject({ x: edge, y: edge });
+      expect(largeSpotFrom(far, Infinity)).toMatchObject({ x: 1 - edge, y: 1 - edge });
+      expect(largeSpotFrom(spot(0.5, 0.5), Infinity)).toMatchObject({ x: 0.5, y: 0.5 });
+      const [held] = holding(corner);
+      const large = largeOf([held], ipad).get(held.id);
       expect(large).toMatchObject({ on: corner.on, r: corner.r, z: corner.z });
-      expect(sizeOf(ipad.U, large?.s ?? 0, sticker)).toEqual(sizeOf(PHONE.U, corner.s, sticker));
+      expect(large?.s).toBeCloseTo(corner.s * LARGE_LANDING_GROWTH);
     }
+  });
+
+  it("derives no sticker past its largest size on the board", () => {
+    const turned = IPADS[2];
+    const [tall] = placeUnplaced([
+      toBoardSticker(
+        boardSticker({
+          sticker: sticker({ width: 300, height: 1000 }),
+          placement: toApiPlacement(spot(0.5, 0.5, MAX_SCALE)),
+        }),
+      ),
+    ]).stickers;
+    const largest = maxSOf(tall, "large", fieldOf(turned.W, turned.H), turned.U);
+    expect(largest).toBeLessThan(MAX_SCALE * LARGE_LANDING_GROWTH);
+    expect(largeOf([tall], turned).get(tall.id)?.s).toBe(largest);
   });
 
   it("pulls apart stickers the spread pushed together, and leaves stacked ones stacked", () => {
@@ -71,7 +87,11 @@ describe("the large layout derived from the phone's", () => {
     const phones: [Placement, Placement] = [top.placements.phone, below.placements.phone];
     expect(overlapOn(PHONE, [top, below], phones)).toBe(false);
     expect(
-      overlapOn(turned, [top, below], [largeSpotFrom(phones[0]), largeSpotFrom(phones[1])]),
+      overlapOn(
+        turned,
+        [top, below],
+        [largeSpotFrom(phones[0], Infinity), largeSpotFrom(phones[1], Infinity)],
+      ),
     ).toBe(true);
     const large = largeOf([top, below, onTop], turned);
     const at = (s: PlacedBoardSticker) => large.get(s.id) ?? s.placements.phone;

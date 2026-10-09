@@ -1,4 +1,4 @@
-import { MAX_HITS, stickerPlacements } from "@drawing-app/db";
+import { MAX_HITS, MAX_LARGE_SCALE, MAX_SCALE, stickerPlacements } from "@drawing-app/db";
 import { insertUser, packGift } from "@drawing-app/db/testing";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -310,6 +310,29 @@ describe("PATCH /api/sticker-boards/me/sticker-placements/:stickerId", () => {
     await patchPlacement(me, stickerId, { largePlacement: moved });
     const [onBoard] = (await boardOf(me, "me")).boardStickers;
     expect(onBoard).toMatchObject({ placement: SPOT, largePlacement: moved });
+  });
+
+  it("takes a sticker as large as each layout allows, and refuses one larger", async () => {
+    const me = insertUser(test.db);
+    const stickerId = seal(me);
+    const largest = {
+      placement: { ...SPOT, scale: MAX_SCALE },
+      largePlacement: { ...LARGE_SPOT, scale: MAX_LARGE_SCALE },
+    };
+    const saved = await bodyOf(
+      await patchPlacement(me, stickerId, largest),
+      placementResponseSchema,
+    );
+    expect(saved.stickerPlacement).toMatchObject(largest);
+    for (const body of [
+      { placement: { ...SPOT, scale: MAX_SCALE + 0.01 } },
+      { largePlacement: { ...LARGE_SPOT, scale: MAX_LARGE_SCALE + 0.01 } },
+    ]) {
+      expect(await refusalOf(await patchPlacement(me, stickerId, body))).toMatchObject({
+        status: 400,
+        error: "invalid_request",
+      });
+    }
   });
 
   it("refuses a sticker that never reached you, a body naming no layout, and a spot outside the board", async () => {

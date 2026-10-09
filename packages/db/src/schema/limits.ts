@@ -34,3 +34,12 @@ export const DAILY_TICKETS_PER_DAY = 3;
 export const KYOTO_SEIKA_DAILY_TICKETS_PER_DAY = 10;
 /** The drawing clock on a ticket spent in Kyoto Seika Manga Expression Practice Mode, in seconds. */
 export const KYOTO_SEIKA_TIME_USED_S = 30 * 60;
+/**
+ * The longest a sticker's long side gets in the phone's layout, whatever its shape, as a share of
+ * the board's unit: about the phone board's field's height, so a tall sticker can fill it. The app
+ * keeps each sticker to the board's field, and the sticker_placements CHECK holds every row to it,
+ * so changing it needs a migration.
+ */
+export const MAX_SCALE = 1.4;
+/** The same in the large layout, as a share of the phone board's width. Held by the same CHECK. */
+export const MAX_LARGE_SCALE = 2;

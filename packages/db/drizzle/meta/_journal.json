@@ -43,6 +43,13 @@
       "when": 1791528712304,
       "tag": "0005_drop_kyoto_seika_dark_subjects",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791546192799,
+      "tag": "0006_bigger_stickers",
+      "breakpoints": true
     }
   ]
 }

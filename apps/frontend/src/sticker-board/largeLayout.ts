@@ -10,6 +10,8 @@ import {
 } from "./boardSticker";
 import {
   fieldOf,
+  largeLandingSize,
+  maxSOf,
   PHONE_BOARD,
   sizeOf,
   toPx,
@@ -27,13 +29,15 @@ export const LARGE_SPREAD = 0.88;
 
 /**
  * Where a sticker's phone spot lands in a large layout derived from the phone's: the phone's
- * arrangement spread across the large board's field, the sticker at its phone size, so the room is board.
+ * arrangement spread across the large board's field, the sticker a size larger, as a new sticker
+ * lands there, up to `maxS`.
  */
-export function largeSpotFrom(phone: Placement): Placement {
+export function largeSpotFrom(phone: Placement, maxS: number): Placement {
   return {
     ...phone,
     x: round4(0.5 + (phone.x - 0.5) * LARGE_SPREAD),
     y: round4(0.5 + (phone.y - 0.5) * LARGE_SPREAD),
+    s: Math.min(largeLandingSize(phone.s), maxS),
   };
 }
 
@@ -135,13 +139,14 @@ export interface LargeSpot {
  * spread across the board, and the stickers on it pulled clear of each other where they were on the phone.
  */
 export function deriveLargeLayout(stickers: readonly PlacedBoardSticker[], board: BoardSize) {
+  const field = fieldOf(board.W, board.H);
   const deriving = stickers
     .filter((s) => s.held && !s.placements.large)
     .map((s) => ({
       id: s.id,
       art: s,
       phone: s.placements.phone,
-      large: largeSpotFrom(s.placements.phone),
+      large: largeSpotFrom(s.placements.phone, maxSOf(s, "large", field, board.U)),
     }));
   const pulled = pulledApart(
     deriving.filter(({ art, phone }) => phone.on && !onItsWay(art)),

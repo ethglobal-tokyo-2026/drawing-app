@@ -6,6 +6,7 @@ import { EASE_PEEL } from "../ui/easing";
 import type { Placement } from "./placement";
 import {
   dragBounds,
+  keptOnField,
   normalizeTurn,
   passedSlop,
   pinchBy,
@@ -16,7 +17,16 @@ import {
   type Step,
 } from "./boardGesture";
 import type { BoardSticker } from "./boardSticker";
-import { sizeOf, toFrac, toPx, transformAt, type BoardSize, type Field } from "./placement";
+import {
+  maxSOf,
+  sizeOf,
+  toFrac,
+  toPx,
+  transformAt,
+  type BoardLayout,
+  type BoardSize,
+  type Field,
+} from "./placement";
 import { focusStep, readingOrder } from "./stickerOrder";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 
@@ -26,6 +36,8 @@ interface Options {
   stickers: readonly BoardSticker[];
   field: Field | null;
   size: BoardSize | null;
+  /** The layout on screen, whose size limits a resize keeps to. */
+  layout: BoardLayout;
   selected: string | null;
   reduced: boolean;
   /** The sticker tray: a sticker let go over it goes back into its used sticker silhouette. */
@@ -129,6 +141,17 @@ export function useBoardGestures(options: Options) {
 
     const stickerOf = (id: string) => latest.current.stickers.find((s) => s.id === id);
     const liveOf = (p: Placement, field: Field): Live => ({ ...toPx(field, p), s: p.s, r: p.r });
+    /** The largest a resize can make this sticker on the board as it's measured now. */
+    const maxSFor = (sticker: BoardSticker, field: Field) => {
+      const { layout, size } = latest.current;
+      return size ? maxSOf(sticker, layout, field, size.U) : sticker.placement.s;
+    };
+    /** `live` at its new size: grown past `from`'s, it moves in so its handles stay on the board. */
+    const grownOnField = (sticker: BoardSticker, field: Field, from: Live, live: Live): Live => {
+      const unit = latest.current.size?.U;
+      if (!unit || live.s <= from.s) return live;
+      return { ...live, ...keptOnField(live, sizeOf(unit, live.s, sticker), field) };
+    };
 
     const local = (e: PointerEvent): Pt => ({
       x: (e.clientX - origin.left) / origin.k,
@@ -202,9 +225,12 @@ export function useBoardGestures(options: Options) {
       if (!field || !sticker || !el || leaving.has(id)) return;
       if (stepped && stepped.id !== id) saveSteps();
       const from = stepped?.live ?? liveOf(sticker.placement, field);
-      const next = stepBy(from, by);
+      const next = stepBy(from, by, maxSFor(sticker, field));
       // Past the field's edge it holds at the edge, as a drag does.
-      const live = { ...next, ...toPx(field, toFrac(field, next)) };
+      const live = grownOnField(sticker, field, from, {
+        ...next,
+        ...toPx(field, toFrac(field, next)),
+      });
       draw(el, sticker, live);
       if (stepped) clearTimeout(stepped.timer);
       const last: SettledStep =
@@ -440,14 +466,15 @@ export function useBoardGestures(options: Options) {
           return;
         }
       } else if (g.mode === "scale") {
-        g.live = { ...g.b0, s: scaleBy(g.b0, g.from, pt, g.b0.s) };
+        const s = scaleBy(g.b0, g.from, pt, g.b0.s, maxSFor(sticker, field));
+        g.live = grownOnField(sticker, field, g.b0, { ...g.b0, s });
       } else if (g.mode === "rotate") {
         g.live = { ...g.b0, r: turnBy(g.b0, g.from, pt, g.b0.r) };
       } else if (g.mode === "pinch") {
         const a = pointers.get(g.pair[0]);
         const b = pointers.get(g.pair[1]);
         if (!a || !b) return;
-        const next = pinchBy(g.start, [a, b], g.b0);
+        const next = pinchBy(g.start, [a, b], g.b0, maxSFor(sticker, field));
         const at = toPx(field, toFrac(field, next));
         g.live = { ...next, ...at };
       }

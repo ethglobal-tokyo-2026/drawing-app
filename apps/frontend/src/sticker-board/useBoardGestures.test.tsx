@@ -104,6 +104,7 @@ describe("useBoardGestures", () => {
           size={{ W: 390, H: 657, U: 390 }}
           selected="a"
           reduced
+          layout="phone"
           tray={noTray}
           onSelect={() => {}}
           onOpen={() => {}}
@@ -153,6 +154,7 @@ describe("useBoardGestures", () => {
           size={{ W: 390, H: 657, U: 390 }}
           selected="a"
           reduced
+          layout="phone"
           tray={tray}
           onSelect={() => {}}
           onOpen={() => {}}
@@ -197,6 +199,7 @@ describe("useBoardGestures", () => {
             size={{ W: 390, H: 657, U: 390 }}
             selected={selected}
             reduced
+            layout="phone"
             tray={noTray}
             onSelect={onSelect}
             onOpen={() => {}}
@@ -241,6 +244,7 @@ describe("useBoardGestures", () => {
           size={large}
           selected="a"
           reduced
+          layout="phone"
           tray={noTray}
           onSelect={() => {}}
           onOpen={() => {}}
@@ -271,6 +275,7 @@ describe("useBoardGestures", () => {
             size={{ W: 390, H: 657, U: 390 }}
             selected="a"
             reduced
+            layout="phone"
             tray={noTray}
             onSelect={() => {}}
             onOpen={() => {}}

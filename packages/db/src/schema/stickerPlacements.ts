@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { timestamps } from "./columns.ts";
+import { literal, timestamps } from "./columns.ts";
+import { MAX_LARGE_SCALE, MAX_SCALE } from "./limits.ts";
 import { stickers } from "./stickers.ts";
 import { users } from "./users.ts";
 
@@ -51,13 +52,13 @@ export const stickerPlacements = sqliteTable(
       "sticker_placements_placement",
       sql`(${t.onBoard} is null and ${t.x} is null and ${t.y} is null and ${t.scale} is null and ${t.rotation} is null and ${t.z} is null)
         or (${t.onBoard} is not null and ${t.x} between 0 and 1 and ${t.y} between 0 and 1
-          and ${t.scale} > 0 and ${t.scale} <= 1 and ${t.rotation} is not null and ${t.z} is not null)`,
+          and ${t.scale} > 0 and ${t.scale} <= ${literal(MAX_SCALE)} and ${t.rotation} is not null and ${t.z} is not null)`,
     ),
     check(
       "sticker_placements_large_placement",
       sql`(${t.largeOnBoard} is null and ${t.largeX} is null and ${t.largeY} is null and ${t.largeScale} is null and ${t.largeRotation} is null and ${t.largeZ} is null)
         or (${t.largeOnBoard} is not null and ${t.largeX} between 0 and 1 and ${t.largeY} between 0 and 1
-          and ${t.largeScale} > 0 and ${t.largeScale} <= 1 and ${t.largeRotation} is not null and ${t.largeZ} is not null)`,
+          and ${t.largeScale} > 0 and ${t.largeScale} <= ${literal(MAX_LARGE_SCALE)} and ${t.largeRotation} is not null and ${t.largeZ} is not null)`,
     ),
   ],
 );

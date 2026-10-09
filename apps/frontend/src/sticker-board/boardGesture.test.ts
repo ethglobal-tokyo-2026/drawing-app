@@ -1,8 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { passedSlop, pinchBy, scaleBy, stepBy, turnBy, type Pt } from "./boardGesture";
-import { S_MAX } from "./placement";
+import {
+  keptOnField,
+  passedSlop,
+  pinchBy,
+  scaleBy,
+  stepBy,
+  turnBy,
+  type Pt,
+  type Step,
+} from "./boardGesture";
 
 const center = { x: 100, y: 100 };
+/** A sticker's largest `s`, as the board works it out for it. */
+const MAX_S = 0.9;
 
 describe("board gestures", () => {
   it("settles a nearly upright turn upright, and leaves a real turn alone", () => {
@@ -21,19 +31,35 @@ describe("board gestures", () => {
     expect(turnBy(center, from, nudged, 350)).toBeCloseTo(352.5);
   });
 
-  it("steps undo each other, and a size step stops at the board's limits", () => {
+  it("steps undo each other, and a size step stops at the sticker's largest", () => {
     const at = { x: 100, y: 100, s: 0.3, r: 10 };
-    expect(stepBy(stepBy(at, "left"), "right")).toEqual(at);
-    expect(stepBy(stepBy(at, "up"), "down")).toEqual(at);
-    expect(stepBy(stepBy(at, "turnLeft"), "turnRight")).toEqual(at);
-    expect(stepBy(at, "bigger").s).toBeGreaterThan(at.s);
-    expect(stepBy(at, "smaller").s).toBeLessThan(at.s);
-    expect(stepBy({ ...at, s: S_MAX }, "bigger").s).toBe(S_MAX);
+    const step = (from: typeof at, by: Step) => stepBy(from, by, MAX_S);
+    expect(step(step(at, "left"), "right")).toEqual(at);
+    expect(step(step(at, "up"), "down")).toEqual(at);
+    expect(step(step(at, "turnLeft"), "turnRight")).toEqual(at);
+    expect(step(at, "bigger").s).toBeGreaterThan(at.s);
+    expect(step(at, "smaller").s).toBeLessThan(at.s);
+    expect(step({ ...at, s: MAX_S }, "bigger").s).toBe(MAX_S);
   });
 
-  it("scales with the handle's distance from the centre, within the board's limits", () => {
-    expect(scaleBy(center, { x: 120, y: 100 }, { x: 140, y: 100 }, 0.2)).toBeCloseTo(0.4);
-    expect(scaleBy(center, { x: 120, y: 100 }, { x: 200, y: 100 }, 0.3)).toBe(S_MAX);
+  it("scales with the handle's distance from the centre, up to the sticker's largest", () => {
+    expect(scaleBy(center, { x: 120, y: 100 }, { x: 140, y: 100 }, 0.2, MAX_S)).toBeCloseTo(0.4);
+    expect(scaleBy(center, { x: 120, y: 100 }, { x: 2000, y: 100 }, 0.3, MAX_S)).toBe(MAX_S);
+  });
+
+  it("moves a sticker grown past the field's edge back onto it, turned or not", () => {
+    const field = { left: 16, top: 86, w: 334, h: 549 };
+    const size = { w: 200, h: 120 };
+    for (const r of [0, 30]) {
+      const at = keptOnField({ x: 340, y: 620, r }, size, field);
+      const turn = (r * Math.PI) / 180;
+      const [cos, sin] = [Math.abs(Math.cos(turn)), Math.abs(Math.sin(turn))];
+      const reach = { x: (cos * size.w + sin * size.h) / 2, y: (sin * size.w + cos * size.h) / 2 };
+      expect(at.x + reach.x).toBeCloseTo(field.left + field.w);
+      expect(at.y + reach.y).toBeCloseTo(field.top + field.h);
+    }
+    const inside = { x: 180, y: 300, r: 0 };
+    expect(keptOnField(inside, size, field)).toEqual({ x: inside.x, y: inside.y });
   });
 
   it("turns with two fingers without settling", () => {
@@ -46,7 +72,7 @@ describe("board gestures", () => {
       { x: 100 - 10 * Math.cos(a), y: 100 - 10 * Math.sin(a) },
       { x: 100 + 10 * Math.cos(a), y: 100 + 10 * Math.sin(a) },
     ];
-    expect(pinchBy(start, now, { x: 100, y: 100, s: 0.3, r: 0 }).r).toBeCloseTo(2);
+    expect(pinchBy(start, now, { x: 100, y: 100, s: 0.3, r: 0 }, MAX_S).r).toBeCloseTo(2);
   });
 
   it("starts a drag only past the slop", () => {

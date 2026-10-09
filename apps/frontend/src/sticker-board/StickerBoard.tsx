@@ -700,6 +700,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     stickers: onBoard,
     field,
     size,
+    layout,
     selected,
     reduced,
     tray,
@@ -742,7 +743,10 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       if (!stickers || !sticker || !field) return Promise.resolve(null);
       const spot = at
         ? { ...toFrac(field, at), s: sticker.placement.s, r: normalizeTurn(at.r) }
-        : freeSpot(onBoard.map((s) => s.placement));
+        : freeSpot(
+            onBoard.map((s) => s.placement),
+            layout,
+          );
       const placement: Placement = {
         on: true,
         x: round4(spot.x),

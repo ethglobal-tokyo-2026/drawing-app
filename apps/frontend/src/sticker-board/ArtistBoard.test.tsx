@@ -11,7 +11,7 @@ import { PREPARING_SLOW_MS } from "../giving/giveFlow";
 import { onLargeScreen } from "../ui/testing";
 import { forgetGreetings } from "./artistChipGreeting";
 import { ArtistBoard } from "./ArtistBoard";
-import { fieldOf, PHONE_BOARD, unitOf } from "./placement";
+import { fieldOf, LARGE_LANDING_GROWTH, PHONE_BOARD, unitOf } from "./placement";
 import { shortAddress } from "./stat-board/addresses";
 
 // Someone's stat board mounts behind the front; nothing here needs LINE.
@@ -293,7 +293,7 @@ describe("ArtistBoard's layouts", () => {
     expect((await visit(three())).querySelector(".explore-chip")).toBeNull();
   });
 
-  it("shows a large screen a board with no large layout yet as its phone's arrangement spread across it, at the phone size", async () => {
+  it("shows a large screen a board with no large layout yet as its phone's arrangement spread across it, a size larger", async () => {
     onLargeScreen();
     const [W, H] = [1180, 662];
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(W);
@@ -307,6 +307,9 @@ describe("ArtistBoard's layouts", () => {
     );
     // Farther apart than the phone's whole field is wide: the arrangement has the large board's room.
     expect(centerX(right) - centerX(left)).toBeGreaterThan(fieldOf(PHONE_BOARD.W, PHONE_BOARD.H).w);
-    expect(parseFloat(left.style.width)).toBeCloseTo(a.scale * unitOf("phone", PHONE_BOARD.W), 0);
+    expect(parseFloat(left.style.width)).toBeCloseTo(
+      a.scale * LARGE_LANDING_GROWTH * unitOf("phone", PHONE_BOARD.W),
+      0,
+    );
   });
 });

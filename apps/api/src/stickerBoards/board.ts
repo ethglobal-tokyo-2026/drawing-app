@@ -5,6 +5,7 @@ import {
   giftSchema,
   isoTimeSchema,
   largeColumns,
+  largePlacementSchema,
   personSchema,
   placementSchema,
   stickerPlacementSchema,
@@ -53,7 +54,10 @@ export const seenRequestSchema = z.object({
 
 /** The body that saves a sticker's spot: in the phone's layout, the large layout, or both at once. */
 export const placementsRequestSchema = z
-  .object({ placement: placementSchema.optional(), largePlacement: placementSchema.optional() })
+  .object({
+    placement: placementSchema.optional(),
+    largePlacement: largePlacementSchema.optional(),
+  })
   .refine(
     (body) => body.placement !== undefined || body.largePlacement !== undefined,
     "placement or largePlacement: say at least one",
@@ -66,7 +70,7 @@ export const largeLayoutRequestSchema = z.object({
     .array(
       z.object({
         stickerId: stickerPlacementSchema.shape.stickerId.min(1),
-        largePlacement: placementSchema,
+        largePlacement: largePlacementSchema,
       }),
     )
     .min(1)

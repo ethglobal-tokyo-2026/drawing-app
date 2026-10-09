@@ -27,10 +27,11 @@ const STEP_TURN = 5;
 const STEP_GROW = 1.08;
 const STEP_SHRINK = 0.92;
 
-/** A sticker's spot as one step changes it: its center, size and turn. */
+/** A sticker's spot as one step changes it, no larger than `maxS`: its center, size and turn. */
 export function stepBy<T extends { x: number; y: number; s: number; r: number }>(
   at: T,
   step: Step,
+  maxS: number,
 ): T {
   switch (step) {
     case "left":
@@ -46,10 +47,30 @@ export function stepBy<T extends { x: number; y: number; s: number; r: number }>
     case "turnRight":
       return { ...at, r: at.r + STEP_TURN };
     case "smaller":
-      return { ...at, s: clampS(at.s * STEP_SHRINK) };
+      return { ...at, s: clampS(at.s * STEP_SHRINK, maxS) };
     case "bigger":
-      return { ...at, s: clampS(at.s * STEP_GROW) };
+      return { ...at, s: clampS(at.s * STEP_GROW, maxS) };
   }
+}
+
+/**
+ * A growing sticker's center, moved in as far as its turned box needs to stay on the field, so its
+ * handles stay on the board. A box too big for the field centers on it.
+ */
+export function keptOnField(
+  at: { x: number; y: number; r: number },
+  size: { w: number; h: number },
+  field: Field,
+): Pt {
+  const turn = (at.r * Math.PI) / 180;
+  const [cos, sin] = [Math.abs(Math.cos(turn)), Math.abs(Math.sin(turn))];
+  const reach = { x: (cos * size.w + sin * size.h) / 2, y: (sin * size.w + cos * size.h) / 2 };
+  const fit = (c: number, lo: number, span: number, e: number) =>
+    2 * e >= span ? lo + span / 2 : Math.min(lo + span - e, Math.max(lo + e, c));
+  return {
+    x: fit(at.x, field.left, field.w, reach.x),
+    y: fit(at.y, field.top, field.h, reach.y),
+  };
 }
 
 /** Degrees, in [0, 360). */
@@ -58,9 +79,9 @@ export const normalizeTurn = (r: number) => ((r % 360) + 360) % 360;
 export const passedSlop = (from: Pt, to: Pt) => Math.hypot(to.x - from.x, to.y - from.y) > SLOP;
 
 /** A corner handle moved from `from` to `to`: the size follows its distance from the center. */
-export function scaleBy(center: Pt, from: Pt, to: Pt, s0: number): number {
+export function scaleBy(center: Pt, from: Pt, to: Pt, s0: number, maxS: number): number {
   const d0 = Math.hypot(from.x - center.x, from.y - center.y) || 1;
-  return clampS((s0 * Math.hypot(to.x - center.x, to.y - center.y)) / d0);
+  return clampS((s0 * Math.hypot(to.x - center.x, to.y - center.y)) / d0, maxS);
 }
 
 /** The knob moved from `from` to `to` about the center; nearly upright settles upright. */
@@ -77,6 +98,7 @@ export function pinchBy(
   start: readonly [Pt, Pt],
   now: readonly [Pt, Pt],
   p0: { x: number; y: number; s: number; r: number },
+  maxS: number,
 ) {
   const [a0, b0] = start;
   const [a, b] = now;
@@ -85,7 +107,7 @@ export function pinchBy(
   return {
     x: p0.x + (a.x + b.x - a0.x - b0.x) / 2,
     y: p0.y + (a.y + b.y - a0.y - b0.y) / 2,
-    s: clampS((p0.s * Math.hypot(b.x - a.x, b.y - a.y)) / spread0),
+    s: clampS((p0.s * Math.hypot(b.x - a.x, b.y - a.y)) / spread0, maxS),
     r: normalizeTurn(p0.r + turn),
   };
 }

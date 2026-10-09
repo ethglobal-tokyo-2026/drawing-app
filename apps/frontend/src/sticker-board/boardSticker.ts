@@ -143,9 +143,16 @@ export const onTheBoard = <
 /** How a person is printed: their handle, or their name until they've chosen one. */
 export const handleOf = (p: PersonView) => (p.handle === null ? p.name : formatHandle(p.handle));
 
-/** A free spot on top of `taken`, which it joins: on the board, or at that spot in the tray. */
-function landIn(taken: Placement[], on: boolean): Placement {
-  const placement = { on, ...freeSpot(taken.filter((p) => p.on)), z: nextZ(taken) };
+/** A free spot in `layout` on top of `taken`, which it joins: on the board, or at that spot in the tray. */
+function landIn(taken: Placement[], on: boolean, layout: BoardLayout): Placement {
+  const placement = {
+    on,
+    ...freeSpot(
+      taken.filter((p) => p.on),
+      layout,
+    ),
+    z: nextZ(taken),
+  };
   taken.push(placement);
   return placement;
 }
@@ -170,10 +177,10 @@ export function placeUnplaced(
   const placed: GivenSpots[] = [];
   const stickers = list.map((s): PlacedBoardSticker => {
     const spots: Spots = {};
-    const phone = s.placements.phone ?? (spots.phone = landIn(taken.phone, true));
+    const phone = s.placements.phone ?? (spots.phone = landIn(taken.phone, true, "phone"));
     const inLarge =
       s.placements.large ??
-      (large && s.held ? (spots.large = landIn(taken.large, phone.on)) : null);
+      (large && s.held ? (spots.large = landIn(taken.large, phone.on, "large")) : null);
     const sticker = { ...s, placements: { phone, large: inLarge } };
     if (spots.phone || spots.large) placed.push({ sticker, spots });
     return sticker;

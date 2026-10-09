@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { boardSticker, people, sticker, TEST_KYOTO_SEIKA_SUBJECTS } from "../api/testFixtures";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
 import { placeUnplaced, shownIn, toBoardSticker } from "./boardSticker";
-import { LAID_OUT_SPOTS, TAKEN_WITHIN } from "./placement";
+import { LAID_OUT_SPOTS, LARGE_LANDING_GROWTH, TAKEN_WITHIN } from "./placement";
 
 /** A spot on the board, as the API sends it. */
 const onBoardAt = (x: number) => ({ onBoard: true, x, y: 0.5, scale: 0.3, rotation: 0, z: 1 });
@@ -107,6 +107,13 @@ describe("placeUnplaced", () => {
     const backSpots = spotsGiven.get(back.stickerId) ?? {};
     expect(Object.keys(backSpots)).toEqual(["large"]);
     expect(backSpots.large?.on).toBe(false);
+  });
+
+  it("lands a new sticker larger in the large layout than at the same spot on the phone", () => {
+    const placed = boardSticker({ placement: onBoardAt(0.5), largePlacement: onBoardAt(0.5) });
+    const [{ spots }] = placeUnplaced([placed, boardSticker()].map(toBoardSticker)).placed;
+    expect(spots.large?.s).toBeGreaterThan(spots.phone?.s ?? Infinity);
+    expect(spots.large?.s).toBeCloseTo((spots.phone?.s ?? 0) * LARGE_LANDING_GROWTH);
   });
 
   it("leaves the large layout to be derived while the board has none", () => {

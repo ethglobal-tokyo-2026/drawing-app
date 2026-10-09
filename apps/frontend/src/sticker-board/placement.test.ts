@@ -5,6 +5,8 @@ import {
   freeSpot,
   knobHidden,
   LAID_OUT_SPOTS,
+  LARGE_LANDING_GROWTH,
+  maxSOf,
   nextZ,
   PHONE_BOARD,
   PHONE_UNIT_MAX,
@@ -21,23 +23,71 @@ const at = (x: number, y: number): Placement => ({ on: true, x, y, s: 0.3, r: 0,
 describe("placement", () => {
   it("puts a new sticker away from the ones already there", () => {
     const taken = [at(0.72, 0.8), at(0.28, 0.8)];
-    const spot = freeSpot(taken);
+    const spot = freeSpot(taken, "phone");
     for (const t of taken)
       expect(Math.hypot(spot.x - t.x, (spot.y - t.y) * 1.4)).toBeGreaterThan(0.3);
   });
 
   it("lands the first sticker on the empty board's dashed spot", () => {
-    expect(freeSpot([])).toMatchObject(FIRST_SPOT);
+    expect(freeSpot([], "phone")).toMatchObject(FIRST_SPOT);
   });
 
   it("gives the same spot for the same board", () => {
-    expect(freeSpot([at(0.5, 0.45)])).toEqual(freeSpot([at(0.5, 0.45)]));
+    expect(freeSpot([at(0.5, 0.45)], "phone")).toEqual(freeSpot([at(0.5, 0.45)], "phone"));
+  });
+
+  it("lands a new sticker larger in the large layout, at the spot a phone gives it", () => {
+    for (const taken of [[], [at(0.5, 0.45)], [at(0.72, 0.8), at(0.28, 0.8)]]) {
+      const phone = freeSpot(taken, "phone");
+      const large = freeSpot(taken, "large");
+      expect(large).toMatchObject({ x: phone.x, y: phone.y, r: phone.r });
+      expect(large.s).toBeGreaterThan(phone.s);
+      expect(large.s).toBeCloseTo(phone.s * LARGE_LANDING_GROWTH);
+    }
+  });
+
+  describe("a sticker's largest size", () => {
+    const SMILEY = { width: 90, height: 96 };
+    const FULL_SHEET = { width: 1170, height: 1953 };
+    const BOARDS = [
+      { layout: "phone", W: PHONE_BOARD.W, H: PHONE_BOARD.H },
+      { layout: "large", W: 1024, H: 1180 },
+    ] as const;
+    const largest = (art: { width: number; height: number }, board: (typeof BOARDS)[number]) => {
+      const field = fieldOf(board.W, board.H);
+      const unit = unitOf(board.layout, board.W);
+      const { w, h } = sizeOf(unit, maxSOf(art, board.layout, field, unit), art);
+      return { w, h, field };
+    };
+
+    it("covers the same area for a small-drawn sticker and a full-sheet one", () => {
+      for (const board of BOARDS) {
+        const smiley = largest(SMILEY, board);
+        const fullSheet = largest(FULL_SHEET, board);
+        expect(Math.sqrt(fullSheet.w * fullSheet.h)).toBeCloseTo(Math.sqrt(smiley.w * smiley.h));
+      }
+    });
+
+    it("stays inside the board's field, however thin the sticker", () => {
+      for (const board of BOARDS)
+        for (const art of [
+          SMILEY,
+          FULL_SHEET,
+          { width: 1200, height: 90 },
+          { width: 90, height: 1200 },
+        ]) {
+          const { w, h, field } = largest(art, board);
+          expect(w).toBeLessThanOrEqual(field.w + 1e-9);
+          expect(h).toBeLessThanOrEqual(field.h + 1e-9);
+        }
+    });
   });
 
   it("gives each sticker past the laid-out spots its own, inside their bounds, the same each time", () => {
     const fill = () => {
       const board: Placement[] = [];
-      for (let z = 1; z <= LAID_OUT_SPOTS * 3; z++) board.push({ on: true, ...freeSpot(board), z });
+      for (let z = 1; z <= LAID_OUT_SPOTS * 3; z++)
+        board.push({ on: true, ...freeSpot(board, "phone"), z });
       return board;
     };
     const board = fill();

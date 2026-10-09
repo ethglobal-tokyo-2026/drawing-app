@@ -3,8 +3,10 @@ import {
   gratitude,
   KYOTO_SEIKA_TIME_USED_S,
   MAX_HITS,
+  MAX_LARGE_SCALE,
   MAX_PEAK_MULT,
   MAX_PEAK_TIER,
+  MAX_SCALE,
   stickerPlacements,
   stickers,
   suiTransactions,
@@ -229,18 +231,21 @@ export const stickerSchema = z.object({
 });
 export type Sticker = z.infer<typeof stickerSchema>;
 
-/**
- * A placement's six values, all set, with the table's CHECK ranges: StickerPlacement's `placement`
- * and `largePlacement`, and the bodies that save them.
- */
-export const placementSchema = createSelectSchema(stickerPlacements, {
-  onBoard: z.boolean(),
-  x: z.number().min(0).max(1),
-  y: z.number().min(0).max(1),
-  scale: z.number().gt(0).max(1),
-  rotation: z.number(),
-  z: z.int(),
-}).pick({ onBoard: true, x: true, y: true, scale: true, rotation: true, z: true });
+/** A placement's six values, all set, with the table's CHECK ranges, its size up to `maxScale`. */
+const placementUpTo = (maxScale: number) =>
+  createSelectSchema(stickerPlacements, {
+    onBoard: z.boolean(),
+    x: z.number().min(0).max(1),
+    y: z.number().min(0).max(1),
+    scale: z.number().gt(0).max(maxScale),
+    rotation: z.number(),
+    z: z.int(),
+  }).pick({ onBoard: true, x: true, y: true, scale: true, rotation: true, z: true });
+
+/** StickerPlacement's `placement`, in the phone's layout, and the bodies that save it. */
+export const placementSchema = placementUpTo(MAX_SCALE);
+/** StickerPlacement's `largePlacement`, whose stickers can be made larger, and the bodies that save it. */
+export const largePlacementSchema = placementUpTo(MAX_LARGE_SCALE);
 
 export type Placement = z.infer<typeof placementSchema>;
 
@@ -249,7 +254,7 @@ export const stickerPlacementSchema = z.object({
   /** Its spot in the phone's layout; null until the board first places it. */
   placement: placementSchema.nullable(),
   /** Its spot in the large layout a large screen shows; null until that layout first places it. */
-  largePlacement: placementSchema.nullable(),
+  largePlacement: largePlacementSchema.nullable(),
   /** Null shows NEW. */
   seenAt: isoTimeSchema.nullable(),
   /** The sticker tray's order. */

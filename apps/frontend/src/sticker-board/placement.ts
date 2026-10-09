@@ -1,3 +1,4 @@
+import { MAX_LARGE_SCALE, MAX_SCALE } from "@drawing-app/api/client";
 import { clamp, clamp01 } from "../ui/easing";
 import { seededRandom } from "../ui/seededRandom";
 
@@ -103,7 +104,14 @@ const FOOT = 16;
 /** The right edge belongs to the sticker tray. */
 const TRAY_EDGE = 40;
 const S_MIN = 0.16;
-export const S_MAX = 0.72;
+/**
+ * A sticker's largest size in each layout, as the side of the square of its area, a share of the
+ * unit: every sticker can cover the same area whatever its shape, unless the field stops it first.
+ * A square one at the phone's spans the phone board's field.
+ */
+const AREA_MAX: Record<BoardLayout, number> = { phone: 0.85, large: 1.3 };
+/** The longest a sticker's long side gets in each layout, whatever its shape; the API refuses past it. */
+const S_CEILING: Record<BoardLayout, number> = { phone: MAX_SCALE, large: MAX_LARGE_SCALE };
 
 export const fieldOf = (width: number, height: number): Field => ({
   left: INSET + 4,
@@ -112,7 +120,26 @@ export const fieldOf = (width: number, height: number): Field => ({
   h: Math.max(120, height - FOOT - HEADER),
 });
 
-export const clampS = (s: number) => Math.min(S_MAX, Math.max(S_MIN, s));
+/**
+ * The largest `s` a sticker with this art takes in `layout`, on a board with this field and unit:
+ * its area at AREA_MAX, as long as it fits the field and the layout's ceiling.
+ */
+export function maxSOf(
+  art: { width: number; height: number },
+  layout: BoardLayout,
+  field: Field,
+  unit: number,
+) {
+  const wide = art.width >= art.height;
+  const shortShare = Math.min(art.width, art.height) / Math.max(art.width, art.height);
+  const fits = Math.min(
+    (wide ? field.w : field.h) / unit,
+    (wide ? field.h : field.w) / unit / shortShare,
+  );
+  return Math.min(AREA_MAX[layout] / Math.sqrt(shortShare), fits, S_CEILING[layout]);
+}
+
+export const clampS = (s: number, max: number) => Math.min(max, Math.max(S_MIN, s));
 
 export const toPx = (f: Field, p: { x: number; y: number }) => ({
   x: f.left + p.x * f.w,
@@ -293,12 +320,21 @@ function seededSpots(count: number): Spot[] {
   ]);
 }
 
+/** How much larger a new sticker lands in the large layout than on a phone, which has less room. */
+export const LARGE_LANDING_GROWTH = 1.25;
+
+/** A sticker's size as it lands in the large layout, from its size on a phone. */
+export const largeLandingSize = (s: number) => Number((s * LARGE_LANDING_GROWTH).toFixed(3));
+
 /**
- * Where a new sticker goes: the laid-out spot farthest from every sticker already on the board. Once
- * each of those is taken, the clearest of a few seeded spots, so stickers that arrive together each
- * get their own instead of stacking on one.
+ * Where a new sticker goes in `layout`: the laid-out spot farthest from every sticker already on the
+ * board. Once each of those is taken, the clearest of a few seeded spots, so stickers that arrive
+ * together each get their own instead of stacking on one.
  */
-export function freeSpot(taken: readonly Placement[]): Pick<Placement, "x" | "y" | "s" | "r"> {
+export function freeSpot(
+  taken: readonly Placement[],
+  layout: BoardLayout,
+): Pick<Placement, "x" | "y" | "s" | "r"> {
   const laidOut = clearest(SPOTS, taken);
   let best = laidOut.spot;
   if (laidOut.score < TAKEN_WITHIN) {
@@ -306,7 +342,7 @@ export function freeSpot(taken: readonly Placement[]): Pick<Placement, "x" | "y"
     if (seeded.score > laidOut.score) best = seeded.spot;
   }
   const [x, y, s, r] = best;
-  return { x, y, s, r };
+  return { x, y, s: layout === "large" ? largeLandingSize(s) : s, r };
 }
 
 /** The stacking order that puts a sticker above all the others. */
