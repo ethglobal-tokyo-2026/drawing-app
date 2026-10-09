@@ -49,6 +49,8 @@ interface Props {
   stamp?: GiftStamp;
   /** Makes the tab a slider the receiver pulls, outside the bag's picture. */
   pullTab?: PullTab;
+  /** Leaves the pull tab off a gift that can't be opened here, so nothing invites a pull. */
+  withoutPullTab?: boolean;
   /** An NSFW sticker's bag: pink, embossed, and closed without a glimpse of the sticker. */
   nsfw?: boolean;
   /** The bag's own box, which a pull writes the tear onto as it moves. */
@@ -100,6 +102,7 @@ export function GiftBag({
   tear,
   stamp,
   pullTab,
+  withoutPullTab = false,
   nsfw = false,
   ref,
 }: Props) {
@@ -145,6 +148,7 @@ export function GiftBag({
           insideUrl={inside}
           tear={tear ?? 0}
           pullTab={state === "torn" ? undefined : pullTab}
+          withoutPullTab={withoutPullTab}
           hidden={Boolean(pullTab)}
         />
       )}
@@ -219,6 +223,8 @@ interface TearStripProps {
   insideUrl?: string;
   tear: number;
   pullTab?: PullTab;
+  /** No pull tab: the tape ends at the bag's edge. */
+  withoutPullTab: boolean;
   /** Out of the accessibility tree, beside a slider tab. */
   hidden: boolean;
 }
@@ -227,7 +233,7 @@ interface TearStripProps {
  * A clear film band across the mouth, with the aqua tear tape through it and its pull tab. As the
  * tape tears out, the film splits behind it onto the bag's inside.
  */
-function TearStrip({ date, insideUrl, tear, pullTab, hidden }: TearStripProps) {
+function TearStrip({ date, insideUrl, tear, pullTab, withoutPullTab, hidden }: TearStripProps) {
   const { t } = useTranslation();
   return (
     <span className="gift-bag__part gift-strip">
@@ -256,33 +262,35 @@ function TearStrip({ date, insideUrl, tear, pullTab, hidden }: TearStripProps) {
           </span>
         </span>
       </span>
-      <span className="gift-strip__tab">
-        {pullTab && (
-          <button
-            type="button"
-            className="gift-strip__grip"
-            role="slider"
-            aria-label={t(($) => $.giving.giftBag.pullTab)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(tear * 100)}
-            {...pullTab.handlers}
-          />
-        )}
-        <svg className="gift-strip__loop" viewBox="0 0 72 48" aria-hidden="true">
-          <path className="gift-strip__loop-edge" d={LOOP} pathLength={100} />
-          <path className="gift-strip__loop-body" d={LOOP} pathLength={100} />
-        </svg>
-        <i className="gift-strip__neck" />
-        <span className="gift-strip__lobe" aria-hidden={hidden || undefined}>
-          <svg className="gift-strip__ribs" viewBox="0 0 11 13" fill="currentColor">
-            <rect width="2" height="13" rx="1" />
-            <rect x="4" width="2" height="13" rx="1" />
-            <rect x="8" width="2" height="13" rx="1" />
+      {!withoutPullTab && (
+        <span className="gift-strip__tab">
+          {pullTab && (
+            <button
+              type="button"
+              className="gift-strip__grip"
+              role="slider"
+              aria-label={t(($) => $.giving.giftBag.pullTab)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(tear * 100)}
+              {...pullTab.handlers}
+            />
+          )}
+          <svg className="gift-strip__loop" viewBox="0 0 72 48" aria-hidden="true">
+            <path className="gift-strip__loop-edge" d={LOOP} pathLength={100} />
+            <path className="gift-strip__loop-body" d={LOOP} pathLength={100} />
           </svg>
-          <span>{t(($) => $.giving.giftBag.pull)}</span>
+          <i className="gift-strip__neck" />
+          <span className="gift-strip__lobe" aria-hidden={hidden || undefined}>
+            <svg className="gift-strip__ribs" viewBox="0 0 11 13" fill="currentColor">
+              <rect width="2" height="13" rx="1" />
+              <rect x="4" width="2" height="13" rx="1" />
+              <rect x="8" width="2" height="13" rx="1" />
+            </svg>
+            <span>{t(($) => $.giving.giftBag.pull)}</span>
+          </span>
         </span>
-      </span>
+      )}
     </span>
   );
 }

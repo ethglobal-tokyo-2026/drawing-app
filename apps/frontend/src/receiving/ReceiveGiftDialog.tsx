@@ -453,7 +453,10 @@ interface RefusalProps {
   onTryAgain: () => void;
 }
 
-/** A gift that can't be received here: why, the bag as it stands, and the one way on. */
+/**
+ * A gift that can't be received here: why, the bag as it stands but without its pull tab, and the
+ * one way on.
+ */
 function Refusal({ end, giverHandle, leave, onLeave, onBoard, onTryAgain }: RefusalProps) {
   const { t } = useTranslation();
   return (
@@ -471,6 +474,7 @@ function Refusal({ end, giverHandle, leave, onLeave, onBoard, onTryAgain }: Refu
             stamp={end.bag.stamp}
             nsfw={end.bag.nsfw}
             fromHandle={giverHandle}
+            withoutPullTab
           />
         )}
       </div>
