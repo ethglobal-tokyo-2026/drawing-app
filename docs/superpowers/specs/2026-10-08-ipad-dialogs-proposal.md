@@ -1,55 +1,58 @@
-# iPad dialogs: design proposal
+# iPad dialogs: shaped brief
 
-**Status:** for ad0ll's review, 2026-10-08. Covers the screens no iPad plan has: the sticker detail, Giving, Receiving, the Gratitude Mini-game and its replay, and Explore's lifted sticker. Feeds `docs/superpowers/plans/2026-10-08-ipad-dialogs.md` (to write). Direction: `2026-10-08-ipad-design-brief.md` (the same world, composed for the room; controls keep phone sizes; cards rise to the middle at 400px). Every rule sits behind foundations' large-screen query, so phones are unchanged.
+**Status:** shaped with impeccable 2026-10-09; awaiting ad0ll's confirmation of changes. Decisions 1–8 were approved as proposed on 2026-10-08 and are marked kept or changed below; 9 is new. Feeds `docs/superpowers/plans/2026-10-08-ipad-dialogs.md` (to write).
 
-**Captures:** the draft (`spike/ipad-board`), where none of these screens has a large-screen rule yet, so each capture is the phone layout at iPad size. Chromium (WebKit can't render pages on this Mac), English, at 820×1094 and 1180×734, in `.claude/worktrees/ipad-research/data/scratch/board/me/dialogs/` (gitignored) as `<state>-<size>.png`. Its `dialogs.js` takes them again without changing the research database: it holds `POST /api/gifts`, refuses `POST /api/gifts/receive`, and plays the Mini-game as the developer slip's demo. Not captured: Japanese, the Send gratitude sheet and the gift received notice (both need a real Accept).
+- **Who:** artists on an iPad, by finger or Apple Pencil, in LINE or Safari, opening a sticker's detail, giving, receiving and sending Gratitude (Operate mode). Success: the sticker, its one act and its trail read as one group at a phone's sizes, nothing stretched across the room.
+- **Authority:** DESIGN.md's world and `2026-10-08-ipad-design-brief.md`: controls keep phone sizes; cards rise to the middle at 400px. Every rule but decision 9 sits behind foundations' large-screen query, so phones are unchanged; decision 9 is for every size.
+- **Untouched:** each screen's content, copy, order and motion; the gift bag, pull tab and Mini-game rules.
+- **Captures of today:** the draft (`spike/ipad-board`), Chromium, English, 820×1094 and 1180×734, in `.claude/worktrees/ipad-research/data/scratch/board/me/dialogs/` (gitignored) as `<state>-<size>.png`; its `dialogs.js` takes them again. Not captured: Japanese, the Send gratitude sheet, the gift received notice.
 
 ## Decisions
 
-1. **One card rule for every sheet these screens open.**
-   - Today: Giving's sheets, the Accept sheet and the Send gratitude sheet are the shared `Sheet` (`ui/sheet.css`, `left: 0; right: 0`), and the lifted sticker's sheet is pinned the same way (`lifted-sticker.css`). Each spans the screen with its title and X at the screen's edges, at the foot, far from the sticker it's about.
-   - A: rise to the middle at 400px, as the checkout, ticket cards and Sealed card do. The perforation stays only for keyboards and screen readers, as the gratitude events card's tear strip does; the scrim, X, Escape and Back close it. The scrim covers the tab row and its lead key. At most the screen's height, its body scrolling, its key in view.
-   - B: keep bottom sheets at the foot, 400px wide and centered.
-   - **Recommend A.** Covers the give sheet, the sticker picker, Can't find them?, Preparing your gift, the Accept sheet, the lifted sticker and the Mini-game's receipt; uncaptured, the same for the Send gratitude sheet and the gift received notice.
+1. **Changed: one card rule for every sheet these screens open.** A 400px card in the middle, over a scrim that dims the tab row and its lead key; at most the screen's height, its body scrolling, its key in view. The scrim, X, Escape, Back and a downward swipe on the card's head close it (the phone's perforation drag), all refused while its act is on its way; the perforation row shows only to keyboards and screen readers. One card at a time: a flow's next step replaces the card's content, as Giving's steps already do, never a card over a card. Covers the give sheet, the sticker picker, Can't find them?, Preparing your gift, the Accept card (placed by decision 6), the lifted sticker, the Mini-game's receipt, the Send gratitude sheet and the gift received notice.
+   - Changed: the proposal dropped the phone's drag, and Apple's HIG says "Support swiping to dismiss a sheet. People expect to swipe vertically to dismiss a sheet instead of tapping a dismiss button." The rest follows the HIG's iPad sheets, centered "on top of a dimmed background view", "one sheet at a time".
+   - Not popovers: these are multistep flows whose acts can't be tapped away, and the HIG keeps popovers to "a small amount of information or functionality" that closes on a tap outside.
+2. **Kept, sharpened: the sticker detail in two panes when the window is wider than tall; one column otherwise.** Left pane: the sticker, its carets and Timelapse playing in place, centered. Right pane: a phone-width column that scrolls on its own: heading, fine print, the act (the key, or decision 9's note), the Transfer Trail, Mark 18+…. Otherwise one centered phone-width column, the sticker over it growing up to 1.5×. The thumbnail rail stays at the left edge.
+   - Sharpened: "sideways" is the window's shape, not the device's (CSS orientation reads the viewport), so a Stage Manager window splits by its own shape; the HIG: "Determine layout based on size classes, not device type or orientation."
+   - Captures: sideways, opening a replay scrolls the sticker off the top (`detail-replay-1180x734`); Give and Send gratitude run nearly edge to edge (`detail-*`, `detail-owed-*`). Media beside its conversation is how Instagram's iPad app opens comments.
+3. **Kept: the replay plays at a phone's scale,** since decision 2's column gives the card a phone's width; no new scale rule. Today オーバーヒート's caption spans the column-wide stage (`detail-replay-*`).
+4. **Kept, clarified: Giving from your board is one card with the sticker at its head,** lifted just above the card's top edge with its peel shadow, the two centered as one group. Packing drops the sticker into the bag inside the same card, which then holds Preparing, In the bag, Not sent yet, Taking it out and sent. Today half the upright screen of scrim parts the sticker from its Give, and Preparing's note runs nearly the screen's width (`give-sheet-*`, `gift-bag-*`).
+5. **Kept: the sticker picker on someone else's board is decision 1's card,** tiles at a phone's size, four a row, the scrim dimming the tab row and its lead Give, so one key shows. Today the lead's Give and Give No.0037 are both lit, and the picked tile is a wide aqua slab (`give-picker-picked-1180x734`).
+6. **Kept, clarified: Receiving is one centered group:** the header centered over the bag, the bag and pull tab at a phone's size, the tab's travel a phone's. Torn, the Accept card (decision 1's, 400px) rises under the bag's mouth, over its lower half as the phone's sheet does; the group centers, not the card alone. Today the header sits in the corner and Accept at the foot, with a band of empty Liner between (`receive-*`).
+7. **Kept, clarified: the Mini-game in a phone-width band, the game growing with its stage.** The header with its X, the HUD and the receipt share one centered phone-width column. The heart, lettering, pop-in words, mini hearts and the touch rules (a first tap's slop, a stroke's least run) scale by the stage's smaller side over a phone stage's, up to 1.5×; shake's thresholds stay, since a shake is the device's own motion. The X and the receipt's label keep phone sizes; the receipt is decision 1's card. Today the amount and the multiplier sit at opposite edges of a full-width HUD (`minigame-combo-1180x734`).
+   - Clarified: the smaller side keeps a grown heart inside a sideways stage 734px tall. The rule and ad0ll's call on the heart are the deleted plan's decisions 15.1–15.2 (`git show 22de7791:docs/superpowers/plans/2026-10-07-ipad-explore-and-dialogs.md`).
+8. **Kept: Explore's lifted sticker is decision 1's card in the middle,** its carets just outside the sticker's square; the flight lands in the card and Put back flies it home. Today the sheet spans both columns and hides This week and the sticker's ghost spot (`lifted-1180x734`); a card is modal either way.
+9. **New: a gift in flight shows in its sticker's detail, on every size, and the board's "On its way" badge goes.**
+   - **Where:** the act slot, where Give sits: the phone's column, the iPad's column, the right pane sideways. Not a Transfer Trail row; the trail gains its row when the gift is received.
+   - **States,** from the board's sticker data (its open gift, and who it's for):
+     - Sent, waiting for someone (picked in the app, or whoever first opened its link): the closed bag's frosted sleeve and "On its way to @bob".
+     - Sent through LINE's picker, no one yet: the sleeve and "On its way".
+     - Packed, not sent (LINE's picker closed without sending, or LINE didn't say): the open bag's sleeve and "In the bag", with Give still the key; Giving takes the sticker out of this bag before packing a new one, as it does today. "In the bag" stays true whether or not a message LINE didn't answer for went out.
+     - Each says its state only: no expiry date, no "whoever opens it first", no tip.
+   - **Take it out:** a quiet link under the note in all three states, with Giving's words and icon (arrow-u-up-left). No confirm, as in Giving: the sticker comes back and can be given again. While it runs it reads "Taking it out…" and takes no second press, and leaving the detail doesn't stop it. A failure is an error line under the note with Try again, kept on that sticker's detail until retried or dismissed, as a Gratitude refusal is. When it lands, the note goes, Give returns as the key with focus on it, the sticker is back where it was (its board spot or its tray spot), and screen readers hear it.
+   - **The board:** the header keeps only gifts for you; on an iPad its one row is the name, then that badge. A sticker on its way stays off the board, as now.
+   - **The tray's spot:** today bare paper; now the sticker under the sleeve's frost, inside its own cut line, so the packing never moves. It never peels; a tap opens its detail among your stickers, named like "No.0147, on its way to @bob. Open it". Once received it becomes the given sticker's dashed cut line; taken out, or back after its week, a hole or the sticker again.
+   - **Reduced motion:** the frost and note go in one frame.
+   - **Goes (hard deprecation):** `PendingGiftsNotificationBadge`, its CSS, the `giving.pendingGifts` strings, the board's pending gifts query, and `GET /api/gifts/pending` if nothing else reads it. The server already takes a sent gift back (`apps/api/src/gifts/takeOut.ts`: "from the bag or after sending"), and its receiver then sees "@alice took this one back".
+   - **Docs when built:** DESIGN.md's Gifts on the board and On its way; PRODUCT.md's "Until it's sent, you can take the sticker back out" becomes "until it's received"; the board plan's two-badge header step and its pass line; the board feedback backlog's item 1 goes.
 
-2. **Sticker detail** (`detail-*`, `detail-owed-*`, `detail-timelapse-*`).
-   - Today: a page whose column runs the screen's width beside the thumbnail rail. Give and Send gratitude stretch nearly edge to edge, wider than any key on a phone; the open trail row puts Replay the screen's width from its amount. The sticker centers on the screen while the heading, artist chip and fine print hug the left edge. Upright, a third of the screen stays empty under the trail; sideways, the Transfer Trail starts at the fold, and opening a replay scrolls the sticker off the top.
-   - A: one centered column at a phone's width, both ways, the sticker over it growing up to 1.5×, as the tray's sheets do.
-   - B: sideways, two panes: the sticker, its paging carets and Timelapse playing in place, centered on the left; the heading, fine print, key, Transfer Trail and Mark 18+… in a phone-width column on the right that scrolls on its own. Upright, A.
-   - **Recommend B.** Sideways, the sticker, its key and the open trail row with its replay are all in view, and the sticker never scrolls away; upright, the phone's order and measure. The key keeps the column's width; the rail stays at the left edge.
+## Constraints
 
-3. **The Transfer Trail's replay** (`detail-replay-*`).
-   - Today: the stage is the card's width, the whole column, by 300px, and the replay scales by the card's width over a phone's. Sideways, オーバーヒート's caption runs nearly across the stage, far larger than on a phone, and the stage drops below the fold.
-   - A: decision 2's phone-width column gives the card a phone's width, so the replay plays at a phone's scale with no new rule.
-   - B: scale by the replay heart's width over a phone's live heart, at any card width (`replayScale` in the deleted plan, `git show 22de7791:docs/superpowers/plans/2026-10-07-ipad-explore-and-dialogs.md`, decision 15.6).
-   - **Recommend A,** which comes with decision 2. If decision 6 grows the live game, the replay still plays at its card's scale.
+- WebKit decides. Japanese runs longer: the note and Take it out wrap within the column, never truncate.
+- One key per screen: decision 9's sent states have none; packed keeps Give.
+- New words: only the tray spot's names and the spoken take-out line; the rest reuse the detail's and Giving's.
 
-4. **Giving from your board: the give sheet and the gift bag** (`give-sheet-*`, `gift-bag-*`).
-   - Today: the sticker floats at the screen's top and the sheet sits at its foot, with about half the upright screen of scrim between the sticker and the act that gives it. Title and X sit the screen's width apart. Preparing your gift grows the sheet round the bag, and its note runs one line nearly the screen's width (DESIGN.md caps notes at 28–44ch); sideways, the sheet cuts across the sticker's ghost outline.
-   - A: a phone's page in the middle, sticker over sheet, as the deleted plan had.
-   - B: decision 1's card with the sticker at its head over the give sheet's rows. Packing drops the sticker into the bag inside the same card, which then holds Preparing, sent and Take it out.
-   - **Recommend B.** The sticker and its Give sit together, the drop into the bag stays in one place, and no phone frame floats in the room.
+## Open questions for ad0ll
 
-5. **Give on someone else's board: the sticker picker** (`give-picker-*`, `give-picker-picked-*`).
-   - Today: the picker's four columns stretch with the sheet, so two stickers sit far apart and the picked tile becomes a wide aqua slab. The sheet stops above the tab row, which stays lit and live: the lead's Give and the sheet's Give No.0037 show together, two keys on one screen. The first capture, 3s after Give, caught the sheet taller than the screen at 1180×734, its perforation above the top edge; it had settled by the next.
-   - A: decision 1's card, tiles at the phone's size, four a row; the scrim dims the tab row and the lead, as the out-of-tickets card does (foundations, decision 5).
-   - B: keep the full-width sheet, with as many phone-size tiles a row as fit.
-   - **Recommend A.**
+1. Take it out on a sent gift with no confirm, as in Giving? The friend's Gift Message then says you took it back. Mark 18+'s in-place confirm is the alternative.
+2. Decision 1's swipe-down also fits the shop-and-cards plan's gratitude events card, which hides its tear strip with no swipe. Align it there?
+3. Minimal copy, past this brief's layout scope: the give sheet's lines around Send in a LINE chat ("Pick your chat with them. The first to open it gets it.", "It comes off your board and into a gift bag.") and the picker's "Pick one of yours, then send it to @… in a LINE chat." are sublines and glosses. Cut them, on every size?
 
-6. **Receiving: opening a gift, the pull tab, Accept** (`receive-closed-*`, `receive-open-*`; torn through the pull tab's slider, Accept untouched).
-   - Today: a phone page pinned to the top left. The giver's picture and "Ipad-bob sent you a sticker" sit in the corner, the bag in the upper middle, and half the upright screen is empty under the hint. Torn, the risen sticker sits at the top and the Accept sheet at the foot, a band of empty Liner between them upright, the sheet across the full width.
-   - A: a phone's page in the middle, as 4A.
-   - B: one centered group: the header centered over the bag, the bag and pull tab at the phone's size in the middle of the screen. Torn, the Accept panel rises as a 400px card under the bag's mouth, over its lower half as the phone's sheet does, so the risen sticker, its fine print and Accept read as one group.
-   - **Recommend B.** The pull tab keeps a phone's travel, so the tear feels the same.
+## Sources
 
-7. **The Gratitude Mini-game** (`minigame-start-*`, `minigame-combo-*`, `minigame-receipt-*`).
-   - Today: the HUD spans the screen. The drain bar runs nearly edge to edge, the amount sits at the far left and the hit counter and multiplier at the far right, so the eye can't hold both while tapping the heart in the middle. The heart and pop-in words keep a phone's size in a room nearly three times a phone's, and the mini hearts thin out across it; the speed lines, ground and hearts filling the screen is right. The header and the X sit in opposite top corners. The receipt is a card nearly the screen's width, its Back to My board label as wide.
-   - A: a phone-width band: the header with its X, the HUD and the receipt in one centered column; the heart and effects at a phone's scale.
-   - B: A, and the game grows with its stage up to 1.5×: the heart, lettering, pop-in words, mini hearts, and the touch rules (a first tap's slop, a stroke's least run) with them. The deleted plan records the heart growing as ad0ll's call (decision 15.1).
-   - **Recommend B,** the receipt as decision 1's card. "Controls keep phone sizes" holds for the X and the receipt's label; the heart is the game's stage piece, and a larger one only widens its target.
-
-8. **Explore's lifted sticker** (`lifted-*`).
-   - Today: a full-width bottom sheet with its paging carets at the screen's edges, far from the 210px sticker between them. Sideways, it covers most of the height across both columns, This week included, and hides the sticker's ghost spot in the pile.
-   - A: decision 1's card in the middle, the carets just outside the sticker's square; the flight lands in the card, and Put back flies it home.
-   - B: sideways, a 400px card over the pile's column, so This week stays in view and the flight stays short; upright, A.
-   - **Recommend A:** one place for every card, and the card is modal either way.
+- Apple HIG, Sheets: https://developer.apple.com/design/human-interface-guidelines/sheets
+- Apple HIG, Popovers: https://developer.apple.com/design/human-interface-guidelines/popovers
+- Apple HIG, Modality: https://developer.apple.com/design/human-interface-guidelines/modality
+- Apple HIG, Layout: https://developer.apple.com/design/human-interface-guidelines/layout
+- Apple HIG, Split views: https://developer.apple.com/design/human-interface-guidelines/split-views
+- Instagram for iPad, comments beside the media: https://www.idownloadblog.com/2025/09/03/instagram-app-for-ipad/ and https://techcrunch.com/2025/09/03/instagram-is-finally-launching-an-ipad-app/
