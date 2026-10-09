@@ -83,7 +83,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   function placeOf(s: Slot): Box {
     if (s.pos) return { x: s.pos.x, y: s.pos.y, r: s.pos.r, w: s.pos.w, h: s.pos.h };
     const [x, y, r] = STAND_IN[s.slot];
-    // From the foot of a page grown taller, as packing fills it.
+    // From the foot of a page grown taller.
     return { x, y: y + ui.sheetH - SHEET.h, r, ...fitOf(s) };
   }
   let drawnH = 0;

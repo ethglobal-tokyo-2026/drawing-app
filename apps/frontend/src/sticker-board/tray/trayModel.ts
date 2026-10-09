@@ -406,7 +406,7 @@ export function createTrayModel(
   function packWith(shapes: readonly Shape[]) {
     const items = ui.model.slots.map((s, i) => ({ id: s.id, shape: shapes[i] }));
     const packOn = (h: number) =>
-      packSheets(items, { sheet: { w: SHEET.w, h }, margin: PACK_MARGIN });
+      packSheets(items, { sheet: { w: SHEET.w, h }, margin: PACK_MARGIN, spread: true });
     // The more sheets, the deeper the stack's foot and the shorter the page above it: packed on the
     // tallest page first, then on each shorter one until the stack it makes fits.
     let sheetH = sheetHeightFor(ui.fit, 1);

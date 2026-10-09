@@ -3,10 +3,12 @@
  * as many to a sheet as the shapes allow. Pure and deterministic.
  * - Order: a later sticker never sits on an earlier sheet; a sheet reads in lines from its fill edge,
  *   left to right, so the newest sits highest.
- * - Stable: a spot depends only on the stickers before it, so appending moves nothing. Given stickers
- *   stay in the list, so the blanks they leave stay put.
+ * - Stable: a spot depends only on the stickers before it, so appending moves nothing but a spread
+ *   sheet's lines. Given stickers stay in the list, so the blanks they leave stay put.
  * - Clear: cut lines keep `clearance` apart, and `margin` from the paper's edge.
  * - Legible: never shrunk to fit; a sheet that can't take the next sticker turns.
+ * - Spread: a sheet with room for another line can share that paper evenly under, between and over
+ *   its lines, as a printed sheet lays out a few stickers; a full one stays packed.
  * Each sheet keeps a skyline, every column's highest point grown by the clearance. A new sticker is
  * lowered onto it at every x and settles on its own cut line, nesting into the valleys below.
  */
@@ -80,6 +82,8 @@ export interface PackOptions {
   fill?: "up" | "down";
   /** The most stickers one sheet takes. */
   max?: number;
+  /** A sheet with room for another line spreads its lines over its page. */
+  spread?: boolean;
 }
 
 interface Resolved {
@@ -94,6 +98,7 @@ interface Resolved {
   inset: number;
   fill: "up" | "down";
   max: number;
+  spread: boolean;
 }
 
 /** Added to the clearance to cover tracing error in the cut shapes. */
@@ -123,6 +128,7 @@ const DEFAULTS: Omit<Resolved, "sheet" | "margin"> = {
   inset: 12,
   fill: "up",
   max: Infinity,
+  spread: false,
 };
 
 /** FNV-1a: a string as a 32-bit seed. */
@@ -394,6 +400,7 @@ function options(opts: PackOptions): Resolved {
     inset: opts.inset ?? DEFAULTS.inset,
     fill: opts.fill ?? DEFAULTS.fill,
     max: opts.max ?? DEFAULTS.max,
+    spread: opts.spread ?? DEFAULTS.spread,
   };
 }
 
@@ -402,6 +409,11 @@ interface Sheet {
   /** Per column, the highest point taken, grown by the clearance. */
   sky: Float64Array;
   last: { x: number; y: number; pf: Profile } | null;
+  /** How many lines it holds, and each sticker's line, counted from the fill edge. */
+  lines: number;
+  lineOf: number[];
+  /** The highest point of any cut line on it. */
+  high: number;
 }
 
 /** A sticker's seeded breathing room. */
@@ -428,7 +440,6 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
   }
 
   const sheets: Sheet[] = [];
-  const byId: Packed["byId"] = new Map();
 
   function spotFor(sheet: Sheet, pf: Profile, seed: Seed) {
     const prev = sheet.last;
@@ -450,7 +461,7 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
       toNext = prev.x + prev.pf.maxx + c + seed.gap - pf.minx;
     }
     const toLeft = m.left + seed.inset - pf.minx;
-    let best: { x: number; y: number } | null = null;
+    let best: { x: number; y: number; same: boolean } | null = null;
     let bestCost = Infinity;
     for (let x = lo; x <= hi; x++) {
       let rest = Infinity;
@@ -463,7 +474,7 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
         -y + (same ? PULL_LINE * Math.abs(x - toNext) : PULL_START * Math.abs(x - toLeft));
       if (cost < bestCost) {
         bestCost = cost;
-        best = { x, y };
+        best = { x, y, same };
       }
     }
     return best;
@@ -484,8 +495,29 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
     sheet.last = { x: at.x, y: at.y, pf };
   }
 
+  /**
+   * Shares the paper over a sheet's last line evenly under, between and over its lines. Each line
+   * rises at least as far as the lines before it, which it sits above, so cut lines only part.
+   */
+  function spreadLines(sheet: Sheet) {
+    const free = sheet.high - m.top;
+    // Too little for a sticker at the fit's height, clear of the line below: the sheet is full.
+    if (free < o.fit.h + c) return;
+    sheet.items.forEach((it, i) => {
+      const lift = ((sheet.lineOf[i] + 1) * free) / (sheet.lines + 1);
+      it.y += up ? -lift : lift;
+    });
+  }
+
   const newSheet = (): Sheet => {
-    const sheet = { items: [], sky: new Float64Array(W).fill(H - m.bottom), last: null };
+    const sheet: Sheet = {
+      items: [],
+      sky: new Float64Array(W).fill(H - m.bottom),
+      last: null,
+      lines: 0,
+      lineOf: [],
+      high: H - m.bottom,
+    };
     sheets.push(sheet);
     return sheet;
   };
@@ -513,12 +545,27 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
       at = spotFor(sheet, pf, seed) ?? {
         x: Math.round(W / 2),
         y: H - m.bottom - (pf.tmin + pf.h),
+        same: false,
       };
     }
     settle(sheet, pf, at);
-    const rec = { id: it.id, n, x: at.x, y: up ? at.y : H - at.y, r, s, w: sh.w * s, h: sh.h * s };
-    sheet.items.push(rec);
-    byId.set(it.id, { ...rec, f: sheets.length - 1 });
+    sheet.lineOf.push(at.same ? sheet.lines - 1 : sheet.lines++);
+    sheet.high = Math.min(sheet.high, at.y + pf.tmin);
+    sheet.items.push({
+      id: it.id,
+      n,
+      x: at.x,
+      y: up ? at.y : H - at.y,
+      r,
+      s,
+      w: sh.w * s,
+      h: sh.h * s,
+    });
+  });
+  if (o.spread) for (const sheet of sheets) spreadLines(sheet);
+  const byId: Packed["byId"] = new Map();
+  sheets.forEach((sheet, f) => {
+    for (const it of sheet.items) byId.set(it.id, { ...it, f });
   });
   return { sheets: sheets.map((sh) => ({ items: sh.items })), byId };
 }
