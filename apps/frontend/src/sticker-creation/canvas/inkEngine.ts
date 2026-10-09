@@ -3,9 +3,9 @@ import { previewWidth, StrokeBuilder, type PenPressure } from "./brush";
 import { FILL_GAP } from "./fill";
 import { isPalm, TapRecognizer } from "./gestures";
 import { History, type Surface } from "./history";
-import { STRIDE, type FillOp, type Op, type Step, type StrokeOp, type Tool } from "./ops";
+import type { FillOp, Op, Step, StrokeOp, Tool } from "./ops";
 import { areaFrame, frameFor, type SheetArea, type SheetFrame } from "./sheetFrame";
-import { CATCH_UP_MS, Stabilizer } from "./stabilizer";
+import { PAUSE_MS, Stabilizer } from "./stabilizer";
 
 /** A fill takes a tap: a pointer that lifts within this many sheet units of where it landed. */
 const TAP_SLOP = 10;
@@ -34,16 +34,6 @@ export interface InkLayer extends Surface<unknown> {
   paint: (op: StrokeOp, from: number, to: number) => void;
   /** Floods from the op's point; false when nothing changed. */
   fill: (op: FillOp) => boolean;
-}
-
-/**
- * Where the line's lead shows: from its end to the nib, and on to the browser's guess at a pen's next
- * samples, painted for one frame on an overlay over the ink, never the ink.
- */
-export interface PredictionLayer {
-  /** Wipes what it showed, then paints this path. */
-  paint: (op: StrokeOp) => void;
-  clear: () => void;
 }
 
 /** What the drawing screen has set; the engine reads it as each pointer lands. */
@@ -114,8 +104,6 @@ export interface PointerInput {
   height: number;
   timeStamp: number;
   getCoalescedEvents?: () => PointerInput[];
-  /** Where the browser expects the pointer next, where it says. */
-  getPredictedEvents?: () => PointerInput[];
   preventDefault: () => void;
 }
 
@@ -154,18 +142,15 @@ interface LiveStroke {
   y: number;
   pressure: number;
   t: number;
-  /** When the line's latest catch-up point was, in the samples' ms. */
-  caughtUp: number;
-  /** The browser's latest guess at the pen's next samples, flat: x, y. */
-  predicted: number[];
   /** A pen's brush stroke: the ink as it landed, which goes back on lift under its narrowed tail. */
   before: { ink: unknown } | null;
 }
 
 /**
  * Turns pointer input into ink. Pointer events only queue samples; one animation frame at a time
- * feeds them through Smoothing's stabilizer and the width model and paints just the new segments. It
- * never touches React: it reads `settings` as pointers land and reports through `events`.
+ * feeds them through Smoothing's stabilizer and the width model and paints just the new segments.
+ * Ink lies only where the stabilized line has reached, never ahead of it toward the nib. It never
+ * touches React: it reads `settings` as pointers land and reports through `events`.
  *
  * Ink is in sheet units: a pointer's offset on the paper over the CSS px a unit spans there. The
  * sheet's frame follows its area while the sheet is blank, and is fixed from the first mark.
@@ -180,7 +165,6 @@ export class InkEngine {
   private readonly history: History<unknown>;
   private readonly events: InkEvents;
   private readonly requestFrame: RequestFrame;
-  private readonly prediction: PredictionLayer | null;
   private readonly taps = new TapRecognizer();
   private live: LiveStroke | null = null;
   private fillTap: { id: number; x: number; y: number } | null = null;
@@ -211,13 +195,11 @@ export class InkEngine {
     settings: InkSettings,
     events: InkEvents,
     requestFrame: RequestFrame = browserFrame,
-    prediction: PredictionLayer | null = null,
   ) {
     this.layer = layer;
     this.settings = settings;
     this.events = events;
     this.requestFrame = requestFrame;
-    this.prediction = prediction;
     this.history = new History(layer);
   }
 
@@ -373,10 +355,6 @@ export class InkEngine {
       live.pressure = sample.pressure;
       live.t = sample.timeStamp;
     }
-    live.predicted.length = 0;
-    if (live.pointerType === "pen")
-      for (const guess of e.getPredictedEvents?.() ?? [])
-        live.predicted.push(...this.toSheet(guess));
     if (!this.cancelFrame) this.cancelFrame = this.requestFrame(this.paintFrame);
   }
 
@@ -644,8 +622,6 @@ export class InkEngine {
       y,
       pressure: e.pressure,
       t: e.timeStamp,
-      caughtUp: e.timeStamp,
-      predicted: [],
       before,
     };
     // The dot shows as the pointer lands, not a frame later.
@@ -661,7 +637,6 @@ export class InkEngine {
       if (live.queue.length > 0) this.feed(live);
       else this.catchUp(live, time);
       this.paintNew(live);
-      this.paintPrediction(live);
     });
     // Until the line is on the nib, each frame brings it closer.
     if (!live.stabilizer.settled || !live.builder.settled)
@@ -673,23 +648,22 @@ export class InkEngine {
     const { queue, stabilizer, builder } = live;
     if (queue.length === 0) return;
     for (let i = 0; i < queue.length; i += 4) {
-      const [x, y] = stabilizer.add(queue[i], queue[i + 1], queue[i + 3]);
-      builder.add(x, y, queue[i + 2], queue[i + 3]);
+      const nib = { x: queue[i], y: queue[i + 1], t: queue[i + 3] };
+      const [x, y] = stabilizer.add(nib.x, nib.y, nib.t);
+      builder.add(x, y, queue[i + 2], stabilizer.time, nib);
     }
     queue.length = 0;
-    live.caughtUp = live.t;
   }
 
   /**
-   * A frame at `time` with no new sample: the line glides toward the nib as far as the time since
-   * says, and once there, curves all the way to it.
+   * A frame at `time` with no new sample. Frames come between a moving nib's samples too, so only a
+   * nib silent for `PAUSE_MS` has stopped: its line glides to it, and once there, curves all the way.
    */
   private catchUp(live: LiveStroke, time: number): void {
     const { stabilizer, builder } = live;
-    if (!stabilizer.settled) {
-      live.caughtUp = Math.max(live.caughtUp, time);
-      const [x, y] = stabilizer.hold(live.caughtUp);
-      builder.add(x, y, live.pressure, live.caughtUp);
+    if (!stabilizer.settled && time - live.t >= PAUSE_MS) {
+      const [x, y] = stabilizer.hold(time);
+      builder.add(x, y, live.pressure, stabilizer.time, null);
     }
     if (stabilizer.settled) builder.settle(live.x, live.y);
   }
@@ -703,31 +677,6 @@ export class InkEngine {
     }
   }
 
-  /**
-   * What the line hasn't reached yet, painted for this frame at its last width: from its end to the
-   * nib, for every pointer, and on to a pen's predicted samples. The next frame wipes it, and none of
-   * it reaches the ink or the op.
-   */
-  private paintPrediction(live: LiveStroke): void {
-    const prediction = this.prediction;
-    if (!prediction) return;
-    const ahead = live.predicted.splice(0);
-    const { pts, tool, color, T } = live.builder.op;
-    const last = (live.builder.count - 1) * STRIDE;
-    const behind = live.x !== pts[last] || live.y !== pts[last + 1];
-    if (tool !== "brush" || (!behind && ahead.length === 0)) {
-      prediction.clear();
-      return;
-    }
-    const width = pts[last + 2];
-    const guess = [pts[last], pts[last + 1], width, 0];
-    if (behind) guess.push(live.x, live.y, width, 0);
-    for (let i = 0; i < ahead.length; i += 2) guess.push(ahead[i], ahead[i + 1], width, 0);
-    prediction.paint({ tool, color, pts: guess, T });
-    // The next frame wipes it, whether or not a new sample comes.
-    this.cancelFrame ??= this.requestFrame(this.paintFrame);
-  }
-
   /** Commits the stroke in progress, or takes it back off the ink. */
   private endStroke(takeBack: boolean): void {
     const live = this.live;
@@ -735,7 +684,6 @@ export class InkEngine {
     this.live = null;
     this.cancelFrame?.();
     this.cancelFrame = null;
-    this.prediction?.clear();
     // A pen whose pressure moved senses it: its next strokes start at their first sample's width.
     if (live.builder.pressured) this.pressurePen = true;
     if (takeBack) {
@@ -745,9 +693,9 @@ export class InkEngine {
     }
     timeOurWork(INK_WORK.paint, () => {
       this.feed(live);
-      let t = live.caughtUp;
-      for (const [x, y] of live.stabilizer.finish(live.x, live.y))
-        live.builder.add(x, y, live.pressure, (t += CATCH_UP_MS));
+      // The way to the lift point is the line catching up, not the pointer moving: it keeps the width.
+      for (const [x, y, t] of live.stabilizer.finish(live.x, live.y))
+        live.builder.add(x, y, live.pressure, t, null);
       live.builder.settle(live.x, live.y);
       this.paintNew(live);
     });

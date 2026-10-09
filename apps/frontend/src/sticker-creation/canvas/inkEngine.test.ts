@@ -8,7 +8,6 @@ import {
   type InkLayer,
   type InkSettings,
   type PointerInput,
-  type PredictionLayer,
 } from "./inkEngine";
 import { STRIDE, type FillOp, type Op, type StrokeOp } from "./ops";
 import {
@@ -18,7 +17,7 @@ import {
   type SheetArea,
   type SheetFrame,
 } from "./sheetFrame";
-import { SMOOTH_WINDOW_MS } from "./stabilizer";
+import { FIRST_SMOOTHING, PAUSE_MS, Stabilizer } from "./stabilizer";
 
 /** The labels the engine's work was timed under, as the performance recorder hears them. */
 const timed = vi.hoisted((): string[] => []);
@@ -34,6 +33,8 @@ class FakeLayer implements InkLayer {
   paints = 0;
   /** The stroke last painted, as it stood then. */
   painting: StrokeOp | null = null;
+  /** The furthest right any painted point reached, in sheet units. */
+  reach = -Infinity;
   /** Every frame the ink was sized to, and how often it was blanked to be rebuilt. */
   frames: SheetFrame[] = [];
   restores = 0;
@@ -41,9 +42,10 @@ class FakeLayer implements InkLayer {
     this.frames.push(frame);
     return true;
   }
-  paint(op: StrokeOp) {
+  paint(op: StrokeOp, from: number, to: number) {
     this.paints++;
     this.painting = op;
+    for (let i = from; i < to; i++) this.reach = Math.max(this.reach, op.pts[i * STRIDE]);
   }
   fill(_op: FillOp) {
     return true;
@@ -61,21 +63,16 @@ class FakeLayer implements InkLayer {
   }
 }
 
-/** Records what the prediction overlay shows. */
-class FakePrediction implements PredictionLayer {
-  shown: StrokeOp | null = null;
-  paint(op: StrokeOp) {
-    this.shown = op;
-  }
-  clear() {
-    this.shown = null;
-  }
-}
-
 /** Smoothing at its Smooth end. */
 const SMOOTH = 100;
 /** ms between a display's frames. */
 const FRAME_MS = 1000 / 60;
+/** A row of this many steps, this many sheet units each: a stroke a finger draws quickly or slowly. */
+const ROW_STEPS = 24;
+const ROW_STEP = 10;
+/** ms between a quick finger's samples, and a slow one's. */
+const QUICK_MS = 1;
+const SLOW_MS = 60;
 /** The sheet's room on screen: a sheet that fits it exactly shows at scale 1. */
 const AREA: SheetArea = { width: SHEET_SHORT_UNITS, height: SHEET_SHORT_UNITS * 2 };
 /** The same room with the screen turned. */
@@ -104,7 +101,7 @@ const SETTINGS: InkSettings = {
   sessionMs: () => 0,
 };
 
-function setup(settings: Partial<InkSettings> = {}, prediction: PredictionLayer | null = null) {
+function setup(settings: Partial<InkSettings> = {}) {
   const layer = new FakeLayer();
   const events = {
     onHistory: vi.fn(),
@@ -117,16 +114,10 @@ function setup(settings: Partial<InkSettings> = {}, prediction: PredictionLayer 
   let frame: ((time: number) => void) | null = null;
   /** The latest time an input was stamped with: a frame runs at it unless told otherwise. */
   let latest = 0;
-  const engine = new InkEngine(
-    layer,
-    { ...SETTINGS, ...settings },
-    events,
-    (cb) => {
-      frame = cb;
-      return () => (frame = null);
-    },
-    prediction,
-  );
+  const engine = new InkEngine(layer, { ...SETTINGS, ...settings }, events, (cb) => {
+    frame = cb;
+    return () => (frame = null);
+  });
   engine.fit(AREA, 1);
   const at = (
     pointerType: string,
@@ -238,26 +229,64 @@ describe("InkEngine", () => {
     expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false));
   });
 
-  it("at Smooth, starts a line where the pointer lands and glides it to a paused nib over the window, pen and finger alike", () => {
+  it("at Smooth, inks nothing past the stabilized line while the pointer moves, and glides the line to it once it stops, pen and finger alike", () => {
     for (const pointerType of ["pen", "touch"]) {
       const { engine, at, runFrame, layer, committed } = setup({ smoothing: SMOOTH });
-      const painted = () => (layer.painting ? lastPoint(layer.painting) : []);
+      const stabilized = new Stabilizer(0, 0, 0, SMOOTH);
       engine.down(at(pointerType, 1, 0, 0, 0));
+      let t = 0;
       for (let i = 1; i <= 20; i++) {
-        engine.move(at(pointerType, 1, i * 10, 0, i * 16));
+        t = i * 16;
+        engine.move(at(pointerType, 1, i * 10, 0, t));
         runFrame();
+        const [line] = stabilized.add(i * 10, 0, t);
+        expect(layer.reach).toBeLessThanOrEqual(line);
+        expect(line).toBeLessThan(i * 10);
       }
-      // Moving, the line trails the nib; paused, it glides there as time passes, with no new sample.
-      const trailing = painted()[0];
-      expect(trailing).toBeLessThan(200);
-      runFrame(320 + FRAME_MS);
-      expect(painted()[0]).toBeGreaterThan(trailing);
-      expect(painted()[0]).toBeLessThan(200);
-      runFrame(320 + SMOOTH_WINDOW_MS.slow);
-      expect(painted()).toEqual([200, 0]);
-      engine.up(at(pointerType, 1, 200, 0, 400));
+      // A frame before the nib has been silent long enough leaves the line where its samples put it.
+      const trailing = layer.reach;
+      runFrame(t + FRAME_MS);
+      expect(layer.reach).toBe(trailing);
+      // Stopped, it glides there with no new sample, and lands on the nib.
+      runFrame(t + PAUSE_MS);
+      expect(layer.reach).toBeGreaterThan(trailing);
+      for (let time = t + PAUSE_MS; layer.reach < 200 && time < t + 10_000; time += FRAME_MS)
+        runFrame(time);
+      expect(layer.painting && lastPoint(layer.painting)).toEqual([200, 0]);
+      engine.up(at(pointerType, 1, 200, 0, t + 10_000));
       const op = committed()[0];
       expect(op.tool === "fill" ? [] : op.pts.slice(0, 2)).toEqual([0, 0]);
+    }
+  });
+
+  it("draws a quick finger stroke thinner than a slow one at any Smoothing, and keeps the width it lifted with as the line catches up", () => {
+    /** A finger's row of `ROW_STEPS` steps, `ms` apart, under a display's frames: its points' widths and times. */
+    const row = (smoothing: number, ms: number) => {
+      const { engine, at, runFrame, committed } = setup({ smoothing });
+      engine.down(at("touch", 1, 0, 0, 0));
+      let frame = 0;
+      for (let i = 1; i <= ROW_STEPS; i++) {
+        for (; frame + FRAME_MS <= i * ms; frame += FRAME_MS) runFrame(frame + FRAME_MS);
+        engine.move(at("touch", 1, i * ROW_STEP, 0, i * ms));
+      }
+      engine.up(at("touch", 1, ROW_STEPS * ROW_STEP, 0, ROW_STEPS * ms + 1));
+      const op = committed()[0];
+      if (op.tool === "fill") throw new Error("Expected a stroke, got a fill");
+      return Array.from({ length: op.pts.length / STRIDE }, (_, i) => ({
+        width: op.pts[i * STRIDE + 2],
+        t: op.pts[i * STRIDE + 3],
+      }));
+    };
+    const middle = (widths: number[]) => widths.toSorted((a, b) => a - b)[widths.length >> 1];
+    for (const smoothing of [0, FIRST_SMOOTHING, SMOOTH]) {
+      const quick = row(smoothing, QUICK_MS);
+      const slow = row(smoothing, SLOW_MS);
+      expect(middle(quick.map((p) => p.width))).toBeLessThan(middle(slow.map((p) => p.width)));
+      // Past the finger's last sample the line only catches up to where it lifted.
+      const lifted = ROW_STEPS * QUICK_MS;
+      const width = quick.findLast((p) => p.t <= lifted)?.width;
+      for (const p of quick.filter((point) => point.t > lifted))
+        expect(p.width).toBeCloseTo(width ?? NaN);
     }
   });
 
@@ -372,50 +401,6 @@ describe("InkEngine", () => {
     stroke("mouse", 2, [0, 0], [100, 0], 1000);
     engine.undo();
     expect(new Set(timed)).toEqual(new Set(Object.values(INK_WORK)));
-  });
-
-  it("shows the span the line holds back, from its end to a finger's nib, until the line gets there", () => {
-    const prediction = new FakePrediction();
-    const { engine, at, runFrame, layer } = setup({}, prediction);
-    engine.down(at("touch", 1, 0, 0, 0));
-    for (let i = 1; i <= 5; i++) {
-      engine.move(at("touch", 1, i * 10, 0, i * 16));
-      runFrame();
-    }
-    const shown = prediction.shown?.pts ?? [];
-    expect(shown.slice(0, 2)).toEqual(layer.painting && lastPoint(layer.painting));
-    expect(shown.slice(-STRIDE, -2)).toEqual([50, 0]);
-    // The finger rests: the line reaches it, and nothing is left to show.
-    runFrame();
-    expect(prediction.shown).toBeNull();
-  });
-
-  it("paints a pen's predicted points ahead of its nib for one frame, and never keeps them", () => {
-    const prediction = new FakePrediction();
-    const { engine, at, runFrame, committed } = setup({ smoothing: SMOOTH }, prediction);
-    const shownXs = () => prediction.shown?.pts.filter((_, i) => i % STRIDE === 0) ?? [];
-    const guessing = (input: PointerInput, ...ahead: [number, number][]): PointerInput => ({
-      ...input,
-      getPredictedEvents: () => ahead.map(([x, y]) => ({ ...input, clientX: x, clientY: y })),
-    });
-    engine.down(at("pen", 1, 0, 0, 0));
-    engine.move(guessing(at("pen", 1, 10, 0, 16), [20, 0], [30, 0]));
-    runFrame();
-    // From the line's end, through the nib, to the guess.
-    expect(shownXs().slice(-3)).toEqual([10, 20, 30]);
-    // The guess lasts a frame; the span up to the nib shows until the line gets there.
-    runFrame();
-    expect(Math.max(...shownXs())).toBe(10);
-    runFrame(16 + SMOOTH_WINDOW_MS.slow);
-    expect(prediction.shown).toBeNull();
-    engine.up(at("pen", 1, 10, 0, 40));
-    expect(lastPoint(committed()[0])).toEqual([10, 0]);
-    // A guess at erasing can't show on an overlay, so the eraser shows none.
-    engine.settings = { ...engine.settings, tool: "eraser" };
-    engine.down(at("pen", 2, 0, 50, 100));
-    engine.move(guessing(at("pen", 2, 10, 50, 116), [20, 50]));
-    runFrame();
-    expect(prediction.shown).toBeNull();
   });
 
   it("marks nothing while paused, hinting at once for a mouse and on lift for a touch", () => {

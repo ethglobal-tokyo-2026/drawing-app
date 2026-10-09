@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { PALM_CONTACT_PX } from "../src/sticker-creation/canvas/gestures.ts";
 
 /** A point on screen, in CSS px. */
@@ -300,7 +300,7 @@ const BAND = 48;
  * How many CSS px of ink a short vertical line through `point` crosses on the canvas `selector`
  * names: how thick a roughly horizontal stroke there came out.
  */
-export function inkAt(page: Page, point: At, selector = ".ink-canvas:not(.ink-prediction)") {
+export function inkAt(page: Page, point: At, selector = ".ink-canvas") {
   return page.evaluate(
     ({ selector, x, y, band }) => {
       const canvas = document.querySelector<HTMLCanvasElement>(selector);
@@ -322,7 +322,7 @@ export function inkAt(page: Page, point: At, selector = ".ink-canvas:not(.ink-pr
 }
 
 /** The furthest right, in CSS px, that ink reaches along screen row `y`; null on a blank row. */
-export function inkReach(page: Page, y: number, selector = ".ink-canvas:not(.ink-prediction)") {
+export function inkReach(page: Page, y: number, selector = ".ink-canvas") {
   return page.evaluate(
     ({ selector, y }) => {
       const canvas = document.querySelector<HTMLCanvasElement>(selector);
@@ -338,17 +338,10 @@ export function inkReach(page: Page, y: number, selector = ".ink-canvas:not(.ink
   );
 }
 
-/** Waits out `frames` animation frames, two unless said, so samples already sent are painted. */
-export const nextFrames = (page: Page, frames = 2) =>
-  page.evaluate(
-    (frames) =>
-      new Promise<void>((done) => {
-        const wait = (left: number) =>
-          left > 0 ? requestAnimationFrame(() => wait(left - 1)) : done();
-        wait(frames);
-      }),
-    frames,
-  );
+/** Waits until the ink shows at every point, so a stroke's width is read once it's painted. */
+export async function inkShows(page: Page, ...points: At[]) {
+  for (const point of points) await expect.poll(() => inkAt(page, point)).toBeGreaterThan(0);
+}
 
 /** Pixels holding ink anywhere on the canvas `selector` names. */
 export function inkedPixels(page: Page, selector: string) {
@@ -361,40 +354,4 @@ export function inkedPixels(page: Page, selector: string) {
     for (let i = 3; i < data.length; i += 4) if (data[i] > 0) inked++;
     return inked;
   }, selector);
-}
-
-/**
- * From now on, counts the animation frames in which the canvas `selector` names holds ink near
- * screen y; resolves with what reads the count. A frame's guess is gone by the next, so only a
- * watch in every frame can see one.
- */
-export async function countInkedFrames(page: Page, selector: string, y: number) {
-  await page.evaluate(
-    ({ selector, y, band }) => {
-      const seen = window as Window & { inkedFrames?: number };
-      seen.inkedFrames = 0;
-      const look = () => {
-        const canvas = document.querySelector<HTMLCanvasElement>(selector);
-        const ctx = canvas?.getContext("2d");
-        if (canvas && ctx && canvas.width > 0) {
-          const box = canvas.getBoundingClientRect();
-          const k = canvas.height / box.height;
-          const top = Math.max(0, Math.round((y - band - box.top) * k));
-          const rows = Math.min(canvas.height - top, Math.round(2 * band * k));
-          if (rows > 0) {
-            const { data } = ctx.getImageData(0, top, canvas.width, rows);
-            for (let i = 3; i < data.length; i += 4)
-              if (data[i] > 0) {
-                seen.inkedFrames = (seen.inkedFrames ?? 0) + 1;
-                break;
-              }
-          }
-        }
-        requestAnimationFrame(look);
-      };
-      requestAnimationFrame(look);
-    },
-    { selector, y, band: BAND },
-  );
-  return () => page.evaluate(() => (window as Window & { inkedFrames?: number }).inkedFrames ?? 0);
 }

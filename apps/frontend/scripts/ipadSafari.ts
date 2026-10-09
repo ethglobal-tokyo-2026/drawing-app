@@ -400,7 +400,7 @@ ${LIB}
   };
   const inkedPixels = async () =>
     Number(
-      await page(`const canvas = document.querySelector(".ink-canvas:not(.ink-prediction)");
+      await page(`const canvas = document.querySelector(".ink-canvas");
         const ctx = canvas?.getContext("2d");
         if (!canvas || !ctx || canvas.width === 0) return 0;
         const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);

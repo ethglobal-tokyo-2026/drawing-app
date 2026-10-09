@@ -2,20 +2,18 @@ import { DAILY_TICKETS_PER_DAY } from "@drawing-app/api/client";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { PALM_CONTACT_PX } from "../src/sticker-creation/canvas/gestures.ts";
-import { SMOOTH_WINDOW_MS } from "../src/sticker-creation/canvas/stabilizer.ts";
 import { canvas, drawKeyName, openSettings, say, signIn } from "./helpers.ts";
 import { ipad } from "./ipad.ts";
 import {
   along,
   at,
-  countInkedFrames,
   FINGERTIP,
   hand,
   inkAt,
   inkedPixels,
   inkReach,
+  inkShows,
   middle,
-  nextFrames,
   pencil,
   penStroke,
   touchStroke,
@@ -127,11 +125,13 @@ test("pen pressure: a pen whose pressure never moves draws by speed; then stroke
   const quick = along(box, 0.15, 0.6, 0.9);
   await penStroke(page, pen, slow, () => 0.5, 60);
   await penStroke(page, pen, quick, () => 0.5, 0);
+  await inkShows(page, middle(slow), middle(quick));
   expect(await inkAt(page, middle(quick))).toBeLessThan(await inkAt(page, middle(slow)));
 
   // Pressure that moves sets the width: wider where it's pressed harder.
   const rising = along(box, 0.35, 0.1, 0.9);
   await penStroke(page, pen, rising, (i) => 0.1 + (0.9 * i) / rising.length);
+  await inkShows(page, rising[4], rising[rising.length - 4]);
   expect(await inkAt(page, rising[4])).toBeLessThan(await inkAt(page, rising[rising.length - 4]));
 
   // From now on a stroke starts at its first sample's width: a light one starts thin.
@@ -139,25 +139,11 @@ test("pen pressure: a pen whose pressure never moves draws by speed; then stroke
   const firm = along(box, 0.6, 0.6, 0.9);
   await penStroke(page, pen, light, () => 0.1);
   await penStroke(page, pen, firm, () => 0.9);
+  await inkShows(page, light[2], firm[2]);
   expect(await inkAt(page, light[2])).toBeLessThan(await inkAt(page, firm[2]));
 });
 
-test("prediction paints a guess ahead of the pen while it moves, and none of it stays", async ({
-  page,
-}) => {
-  const box = await openSheet(page, "prediction");
-  const pen = await pencil(page);
-  const row = along(box, 0.5, 0.1, 0.6, 30);
-  const lift = row[row.length - 1];
-  const inkedFrames = await countInkedFrames(page, ".ink-prediction", lift.y);
-  await penStroke(page, pen, row, () => 0.5, 8);
-  expect(await inkedFrames()).toBeGreaterThan(0);
-  await expect.poll(() => inkedPixels(page, ".ink-prediction")).toBe(0);
-  // The stroke ends where the pen lifted.
-  expect(await inkAt(page, { x: lift.x + 24, y: lift.y })).toBe(0);
-});
-
-test("at Smooth, a pen's line catches up to its nib as it pauses, and ends where it lifts", async ({
+test("at Smooth, a pen's line trails its nib with no ink ahead of it, catches up as it pauses, and ends where it lifts", async ({
   page,
 }) => {
   const box = await openSheet(page, "smooth-pen");
@@ -178,10 +164,12 @@ test("at Smooth, a pen's line catches up to its nib as it pauses, and ends where
     await pen.move(row[i], 0.5, t0 + i * 16);
     await page.waitForTimeout(16);
   }
-  // The line glides to the paused nib over the window, then a frame paints it there.
-  await page.waitForTimeout(SMOOTH_WINDOW_MS.slow);
-  await nextFrames(page);
-  expect(nib.x - ((await inkReach(page, nib.y)) ?? row[0].x)).toBeLessThanOrEqual(1);
+  // Moving, the ink stops short of the nib: nothing is drawn ahead of the line.
+  expect((await inkReach(page, nib.y)) ?? row[0].x).toBeLessThan(nib.x - 1);
+  // Paused, the line glides the rest of the way.
+  await expect
+    .poll(async () => nib.x - ((await inkReach(page, nib.y)) ?? row[0].x))
+    .toBeLessThanOrEqual(1);
   await pen.up(nib, t0 + row.length * 16);
   expect(await inkReach(page, nib.y)).toBeGreaterThanOrEqual(nib.x - 1);
 });

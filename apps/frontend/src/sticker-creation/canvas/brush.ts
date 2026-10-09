@@ -79,6 +79,13 @@ export const previewWidth = (response: PenPressure, pressureVaries: boolean) =>
       ? pressureWidth(MID_PRESSURE, response)
       : (SPEED_WIDTHS.fast + SPEED_WIDTHS.slow) / 2;
 
+/** Where the pointer itself was, in sheet units, and when, in ms. */
+export interface Nib {
+  x: number;
+  y: number;
+  t: number;
+}
+
 interface StrokeStart {
   tool: StrokeOp["tool"];
   color: string;
@@ -110,7 +117,8 @@ export class StrokeBuilder {
   readonly op: StrokeOp;
   private readonly size: number;
   private readonly t0: number;
-  private lastT: number;
+  /** The pointer's own sample as the last point went in, which a speed-drawn width measures from. */
+  private nib: Nib;
   private readonly pen: boolean;
   private readonly response: PenPressure;
   private readonly firstPressure: number;
@@ -131,7 +139,7 @@ export class StrokeBuilder {
       start;
     this.size = size;
     this.t0 = t;
-    this.lastT = t;
+    this.nib = { x, y, t };
     this.pen = pointerType === "pen";
     this.response = response;
     this.firstPressure = pressure;
@@ -157,14 +165,17 @@ export class StrokeBuilder {
     return this.pressed;
   }
 
-  /** Adds a point unless it's within half a unit of the last one; says whether it did. */
-  add(x: number, y: number, pressure: number, t: number): boolean {
+  /**
+   * Adds a point unless it's within half a unit of the last one; says whether it did. `nib` is the
+   * pointer's own sample, whose motion since the last point sets a speed-drawn width, as the line
+   * lags it under Smoothing; null for a point the line glides to with no new sample, which keeps
+   * the width.
+   */
+  add(x: number, y: number, pressure: number, t: number, nib: Nib | null = { x, y, t }): boolean {
     const { tool } = this.op;
     const n = this.points;
     const dist = Math.hypot(x - this.curve.x, y - this.curve.y);
     if (dist < MIN_STEP) return false;
-    const dt = Math.max(1, t - this.lastT);
-    this.lastT = t;
     let width = this.size;
     if (tool === "brush") {
       if (this.pen && Math.abs(pressure - this.firstPressure) > PRESSURE_STEP) this.pressed = true;
@@ -172,7 +183,8 @@ export class StrokeBuilder {
       const off = this.pen && this.response === "off";
       if (off || !this.pressed) {
         this.pressedWidths.length = 0;
-        this.smoothed = 0.7 * this.smoothed + 0.3 * (off ? 1 : speedWidth(dist / dt));
+        if (nib)
+          this.smoothed = 0.7 * this.smoothed + 0.3 * (off ? 1 : speedWidth(this.speedTo(nib)));
       } else if (pressure > 0) {
         // Pressure shows at the nib at once; speed, under a finger, eases in so it never jumps. A
         // pressing pen that reads no pressure, as it can while lifting, keeps its width.
@@ -188,9 +200,16 @@ export class StrokeBuilder {
       width *=
         this.smoothed * (this.pen ? penTaper(this.reach) : Math.min(1, FIRST_DOT + TAPER_STEP * n));
     }
+    if (nib) this.nib = nib;
     this.curve.add(x, y, width, Math.round(t - this.t0));
     this.points++;
     return true;
+  }
+
+  /** How fast the pointer itself moved since the last point, in sheet units per ms. */
+  private speedTo(nib: Nib): number {
+    const was = this.nib;
+    return Math.hypot(nib.x - was.x, nib.y - was.y) / Math.max(1, nib.t - was.t);
   }
 
   /**
