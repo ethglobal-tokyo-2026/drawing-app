@@ -21,46 +21,45 @@
   -webkit-user-drag: none;
 }
 
-/* A lifted corner: the image and its foil clipped at the fold, the backing under it, and the flap's
-   paper back. */
-.sticker-figure__spot,
-.sticker-figure__flapw {
-  display: none;
-}
-
-.sticker-figure.is-curled :is(.sticker-figure__img, .sticker-foil) {
-  clip-path: var(--clip-in);
-}
-
-.sticker-figure.is-curled .sticker-figure__spot {
-  position: absolute;
-  inset: 0;
-  display: block;
-  pointer-events: none;
-  clip-path: var(--clip-out);
+/* Stuck to a board, a sticker sits close to it. Its image shows only inside its cut, leaving out the
+   cast baked round it, and a still copy of its silhouette casts the kiss-cut and the board's short
+   cast, as a foil band does. Its resin's highlights are fainter, so the laminate reads thin. */
+.sticker-figure.is-stuck .sticker-figure__img {
   -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
   mask: var(--m) 0 0 / 100% 100% no-repeat;
-  /* The paper under the lifted corner, shaded by the flap. */
-  background: var(--liner-deep);
+  filter: none;
 }
 
-.sticker-figure.is-curled .sticker-figure__flapw {
+.sticker-figure__cast {
   position: absolute;
   inset: 0;
-  display: block;
   pointer-events: none;
-  filter: drop-shadow(1.2px 2.2px 1.4px rgba(28, 24, 36, 0.26));
+  filter: var(--sticker-cut) var(--sticker-cast-board);
 }
 
-.sticker-figure__flap {
+.sticker-figure__cast::before {
+  content: "";
   position: absolute;
   inset: 0;
-  clip-path: var(--clip-out);
   -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
   mask: var(--m) 0 0 / 100% 100% no-repeat;
-  transform-origin: var(--fx) var(--fy);
-  transform: var(--refl);
-  background: linear-gradient(135deg, #ffffff 0 76%, #f1f0f5 86%, #d9d6e1 100%);
+  background: var(--canvas);
+}
+
+.sticker-figure.is-stuck .sticker-foil__cast {
+  filter: var(--sticker-cut) var(--sticker-cast-board);
+}
+
+.sticker-figure.is-stuck .live-resin__lens {
+  opacity: 0.6;
+}
+
+.sticker-figure.is-stuck .live-resin__spec {
+  opacity: 0.6;
+}
+
+.sticker-figure.is-stuck .live-resin__rim {
+  opacity: 0.5;
 }
 
 /* The gloss sweep that presses a sticker flat when it sticks. */

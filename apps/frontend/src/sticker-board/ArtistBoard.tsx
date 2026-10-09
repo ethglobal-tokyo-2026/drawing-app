@@ -400,7 +400,6 @@ export function ArtistBoard({ person, onBack }: Props) {
                 field={field}
                 unit={size.U}
                 stack={s.id === selected ? stickers.length : stickers.indexOf(s)}
-                curled={false}
                 selected={s.id === selected}
                 knobBelow={false}
                 landing={false}

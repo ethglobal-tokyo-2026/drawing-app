@@ -1,7 +1,7 @@
 /* Holo foil: the sticker's silhouette dilated into a band just past its white edge. The band is the
    sticker's edge: the kiss-cut and the cast shadow fall from its outer edge, and the image it sits
-   under shows only inside its own cut. Its box is the image's, so a lifted corner clips it along the
-   same fold; the band spills past that box by its width. Six bands of color flow on their own clock
+   under shows only inside its own cut. Its box is the image's, and the band spills past that box by
+   its width. Six bands of color flow on their own clock
    under a fine, still grating, so the band glitters rather than crawls; the glint follows the app's
    one light (light.ts). Both move by transform only and hold still under reduced motion. */
 .sticker-foil {

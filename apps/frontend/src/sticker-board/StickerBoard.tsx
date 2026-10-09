@@ -11,7 +11,6 @@ import {
 } from "react";
 import { useMyNsfwOptIn, veiledFor, withoutNsfwDrawings } from "../stickers/nsfw";
 import { flushSync } from "react-dom";
-import { tokyoTicketDay } from "@drawing-app/api/client";
 import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
@@ -144,25 +143,6 @@ interface Props {
 
 /** Stickers that have landed this session. */
 const landed = new Set<string>();
-/** Stickers touched this session, which press their lifted corner down. */
-const settled = new Set<string>();
-
-/**
- * The newest of today's stickers that hasn't been touched: it has a lifted corner, which passes to
- * the next-newest once it's touched.
- */
-function curledToday(stickers: readonly BoardSticker[], now: Date) {
-  const today = tokyoTicketDay(now);
-  let newest: BoardSticker | undefined;
-  for (const s of stickers)
-    if (
-      !settled.has(s.id) &&
-      tokyoTicketDay(new Date(s.createdAt)) === today &&
-      (!newest || s.createdAt > newest.createdAt)
-    )
-      newest = s;
-  return newest?.id;
-}
 
 const round4 = (v: number) => Number(v.toFixed(4));
 
@@ -669,7 +649,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     setSelected(id);
     if (id) setChipsDone(true);
     if (!id || !stickers) return;
-    settled.add(id);
     const sticker = stickers.find((s) => s.id === id);
     const z = zOnTop(stickers, id);
     if (sticker && z !== sticker.placement.z) setPlacement(id, { ...sticker.placement, z });
@@ -805,7 +784,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const knobBelow = Boolean(
     chosen && chosenBox && name && knobHidden({ ...chosenBox, r: chosen.placement.r }, name),
   );
-  const curled = curledToday(onBoard, new Date());
   // The empty board's dashed spot, where the first sticker lands; a load error shows in it too.
   const blankAt = field && toPx(field, FIRST_SPOT);
   const blankStyle = blankAt ? { left: blankAt.x, top: blankAt.y } : undefined;
@@ -923,7 +901,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                 field={field}
                 unit={size.U}
                 stack={stack.get(s.id) ?? 0}
-                curled={s.id === curled}
                 selected={s.id === selected}
                 knobBelow={s.id === selected && knobBelow}
                 held={hold?.id === s.id ? hold.kind : undefined}

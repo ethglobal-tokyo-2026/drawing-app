@@ -80,6 +80,9 @@
   --sticker-cut: drop-shadow(0 0 0.5px rgba(28, 24, 36, 0.55)); /* the kiss-cut groove */
   --sticker-cast: drop-shadow(1px 2px 1.5px rgba(28, 24, 36, 0.16))
     drop-shadow(2px 6px 8px rgba(28, 24, 36, 0.1));
+  /* A sticker stuck to a board, close to it: a contact line and a short, faint throw */
+  --sticker-cast-board: drop-shadow(0.5px 1px 1px rgba(28, 24, 36, 0.2))
+    drop-shadow(1px 2.5px 3px rgba(28, 24, 36, 0.08));
 
   /* Motion beyond the contract */
   --t-turn: 500ms;
