@@ -260,11 +260,19 @@ describe("the Settings note's Kyoto Seika Practice Mode", () => {
     expect(row(host).querySelector("legend, p")).toBeNull();
   });
 
-  it("has its help right after its name, and a tap on it leaves the switch alone", async () => {
+  it("has its help right after its name, and a tap on it opens the help sheet and leaves the switch alone", async () => {
     const host = renderNote({});
     const button = help(host);
+    const sheet = () => host.querySelector("[role=dialog]");
     expect(button?.previousElementSibling?.matches(`label[for="${switchIn(host).id}"]`)).toBe(true);
+    expect(sheet()).toBeNull();
     await act(async () => button?.click());
+    // Its code loads on the first tap.
+    await vi.waitFor(() =>
+      expect(sheet()?.getAttribute("aria-label")).toBe(
+        stickerBoard.settings.kyotoSeika.spokenName.en,
+      ),
+    );
     expect(switchIn(host).checked).toBe(false);
   });
 });

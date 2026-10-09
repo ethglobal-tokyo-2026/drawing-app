@@ -1,5 +1,5 @@
 import type { Me } from "@drawing-app/api/client";
-import { useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { Suspense, useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { apiError } from "../../api/apiClient";
 import { useMe, useSetMe } from "../../api/meContext";
 import { useApi } from "../../api/useApi";
@@ -11,6 +11,7 @@ import { Question } from "../../icons";
 import { CensorBar } from "../../kyoto-seika/CensorBar";
 import { useTickets } from "../../tickets/useTickets";
 import { ErrorLine } from "../../ui/ErrorLine";
+import { lazyWithPreload } from "../../ui/lazyWithPreload";
 import { Switch } from "../../ui/Switch";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { forget as forgetKeptBoard } from "../lastBoard";
@@ -20,6 +21,11 @@ import { statsClearPeek } from "./settingsPeek";
 import "./settings-note.css";
 
 const CHOICES: readonly Language[] = ["en", "ja"];
+
+// Its own chunk, with the deal's balloons and the clock it shows, so the stat board doesn't carry them.
+const KyotoSeikaHelp = lazyWithPreload("Kyoto Seika Practice Mode's help", () =>
+  import("../../kyoto-seika/KyotoSeikaHelp").then((m) => m.KyotoSeikaHelp),
+);
 
 /** How much of the paper under its title peeks above the cork's foot, in px. */
 const PEEK_UNDER_TITLE = 10;
@@ -108,7 +114,8 @@ export function SettingsNote() {
   const saves = useRef(Promise.resolve());
   /** Each setting's latest change: only its outcome is that setting's status. */
   const latestChanges = useRef(new Map<Setting, object>());
-  const [helpOpen, setHelpOpen] = useState(false);
+  // Null until "?" is first tapped: only then does the help sheet's code load. It stays mounted after.
+  const [helpOpen, setHelpOpen] = useState<boolean | null>(null);
   const { refresh: refreshTickets } = useTickets();
   const reveal = usePeek(note, title);
 
@@ -274,6 +281,7 @@ export function SettingsNote() {
                 className="settings-note__help"
                 aria-haspopup="dialog"
                 aria-label={t(($) => $.stickerBoard.settings.kyotoSeika.help)}
+                onPointerDown={() => void KyotoSeikaHelp.preload()}
                 onClick={() => setHelpOpen(true)}
               >
                 <Question weight={helpOpen ? "fill" : "bold"} aria-hidden focusable="false" />
@@ -288,6 +296,11 @@ export function SettingsNote() {
             />
           </div>
           {problem("kyotoSeika")}
+          {helpOpen !== null && (
+            <Suspense fallback={null}>
+              <KyotoSeikaHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
+            </Suspense>
+          )}
         </div>
         <DrawingSettings />
       </div>

@@ -122,7 +122,7 @@ export async function openSettings(page: Page, language: Language) {
 
 /**
  * Chooses `to` as Croquis's language in the open Settings note, which reads in `from`, and waits for
- * the note's status line to say, in `to`, that the app has switched.
+ * the note to read in `to`, with that choice picked and taking picks again.
  */
 export async function chooseLanguage(page: Page, from: Language, to: Language) {
   const { language } = stickerBoard.settings;
