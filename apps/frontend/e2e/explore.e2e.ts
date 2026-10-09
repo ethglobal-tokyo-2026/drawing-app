@@ -82,7 +82,7 @@ test("Search: Bob finds Alice by her handle and opens her sticker board", async 
   await expectTheirBoard(bob, aliceHandle);
 });
 
-test("This week: Bob's combo puts Alice first on Most gratitude and him first on Best combo, and Alice, who sealed today, is on Streak", async ({
+test("This week: Bob's combo puts Alice on Most gratitude and him on Best combo, and Alice, who sealed today, is on Streak", async ({
   page: alice,
   friend: bob,
 }) => {
@@ -95,7 +95,8 @@ test("This week: Bob's combo puts Alice first on Most gratitude and him first on
   const bobHandle = handleOf(await signIn(bob, "bob", language));
   await bob.goto(`/g/${await giftClaimToken}`);
   await unpackageAndAccept(bob, language, aliceHandle);
-  // Longer than the suite's other combos, so these two lead whatever else has run this week.
+  // Longer than the suite's other combos, so these two stay on the leaderboards beside the other
+  // browser's run of this spec, which shares this week's leaderboards: rows are found by handle, not place.
   const { combo, receipt } = await playCombo(bob, language, aliceHandle, 3 * GAME_CONFIG.burst);
   await receipt.getByRole("button", { name: say(ui.backToBoard, language) }).click();
 
@@ -108,8 +109,7 @@ test("This week: Bob's combo puts Alice first on Most gratitude and him first on
   };
 
   // She gave a sticker she drew, so the whole combo is hers.
-  const mostGratitude = (await rows("mostGratitude")).first();
-  await expect(mostGratitude).toContainText(aliceHandle);
+  const mostGratitude = (await rows("mostGratitude")).filter({ hasText: aliceHandle });
   await expect(
     mostGratitude.getByText(
       say(explore.figure.gratitude, language, { amount: combo.total.toLocaleString(language) }),
@@ -117,8 +117,7 @@ test("This week: Bob's combo puts Alice first on Most gratitude and him first on
     ),
   ).toBeVisible();
 
-  const bestCombo = (await rows("bestCombo")).first();
-  await expect(bestCombo).toContainText(bobHandle);
+  const bestCombo = (await rows("bestCombo")).filter({ hasText: bobHandle });
   await expect(
     bestCombo.getByText(
       say(ui.hitCounter.spoken_other, language, { hits: combo.hits.toLocaleString(language) }),
