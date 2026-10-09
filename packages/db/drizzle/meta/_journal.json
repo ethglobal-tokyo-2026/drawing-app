@@ -22,6 +22,13 @@
       "when": 1791475986278,
       "tag": "0002_cdn_purge_due",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791498176067,
+      "tag": "0003_drop_language_choice",
+      "breakpoints": true
     }
   ]
 }

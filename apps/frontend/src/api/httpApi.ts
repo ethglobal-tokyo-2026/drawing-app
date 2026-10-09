@@ -103,7 +103,7 @@ function claimOf(body: GiftOpening) {
 
 /** Signing in and your account, which the app needs before any screen can load. */
 export interface SessionApi {
-  /** POST /api/session: LINE's ID token, and LINE's language, which the account takes while it follows LINE's. */
+  /** POST /api/session: LINE's ID token, and LINE's language, which a new account starts in. */
   signIn: (
     request: InferRequestType<ServerClient["session"]["$post"]>["json"],
   ) => Promise<{ me: Me }>;
@@ -148,10 +148,8 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
   const gift = (giftId: string) => ({ param: { giftId } });
 
   return {
-    setLanguageChoice: async (languageChoice, language) => {
-      const response = await api.me["language-choice"].$post({
-        json: { languageChoice, language },
-      });
+    setLanguageChoice: async (language) => {
+      const response = await api.me["language-choice"].$post({ json: { language } });
       if (!response.ok) throw await refusal(response, "POST /api/me/language-choice");
       return (await response.json()).me;
     },

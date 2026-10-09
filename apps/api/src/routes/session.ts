@@ -1,6 +1,6 @@
 import { users, type Db } from "@drawing-app/db";
 import { MAX_ID_TOKEN_LENGTH } from "@drawing-app/line-auth/line";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -28,7 +28,7 @@ const userInput = createInsertSchema(users, {
   handle: z.string(),
 });
 
-// `language` is LINE's on the device, which the account takes while its choice follows LINE's.
+// `language` is LINE's, or the device's own outside LINE: a new account starts in it.
 const signInBody = userInput
   .pick({ language: true })
   .required()
@@ -40,9 +40,8 @@ const meHeaders = z.object({
 
 const handleBody = userInput.pick({ handle: true });
 
-// Required, so a body that leaves either out is refused rather than clearing the choice.
-// `language` is LINE's on the device, which the account takes while the choice follows LINE's.
-const languageChoiceBody = userInput.pick({ languageChoice: true, language: true }).required();
+/** The language picked in Settings, English or Japanese. */
+const languageChoiceBody = userInput.pick({ language: true }).required();
 
 /** Show 18+ stickers, in Settings: on or off. */
 const nsfwOptInBody = z.object({ nsfwOptIn: z.boolean() });
@@ -118,11 +117,11 @@ export const sessionRoutes = (deps: AppDeps) =>
       };
       const user = deps.db.transaction(
         (tx) => {
-          // A deleted account has no line_user_id, so signing in again makes a new person. The app
-          // switches to the person's language choice once it's signed in, so that's their language.
+          // A deleted account has no line_user_id, so signing in again makes a new person. Only a new
+          // person takes the sign-in's language: a returning one keeps theirs, whatever LINE's is now.
           const returning = tx
             .update(users)
-            .set({ ...lineProfile, language: sql`coalesce(${users.languageChoice}, ${language})` })
+            .set(lineProfile)
             .where(eq(users.lineUserId, profile.sub))
             .returning()
             .get();
@@ -191,11 +190,11 @@ export const sessionRoutes = (deps: AppDeps) =>
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
     .post("/me/language-choice", validate("json", languageChoiceBody), (c) => {
-      const { languageChoice, language } = c.req.valid("json");
+      const { language } = c.req.valid("json");
       // The person's language outside the app too, such as their chat menu's, from now on.
       const user = deps.db
         .update(users)
-        .set({ languageChoice, language: languageChoice ?? language })
+        .set({ language })
         .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
         .returning()
         .get();

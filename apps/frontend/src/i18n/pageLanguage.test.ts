@@ -47,11 +47,11 @@ describe("the page's language", () => {
     expect(japaneseFontLinks()).toHaveLength(1);
   });
 
-  it("switches to a language choice, or to LINE's for none, even when this phone kept it already", async () => {
+  it("switches to a language choice, even when this phone kept it already", async () => {
     keepChosenLanguage("ja");
     await followLanguageChoice("ja");
     expect(currentLanguage()).toBe("ja");
-    await followLanguageChoice(null);
+    await followLanguageChoice("en");
     expect(currentLanguage()).toBe("en");
   });
 });

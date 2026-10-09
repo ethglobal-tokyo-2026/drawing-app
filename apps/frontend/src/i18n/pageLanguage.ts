@@ -28,24 +28,23 @@ export function startInLineLanguage(lineTag: string): void {
   void switchTo(startLanguage(readChosenLanguage(), line));
 }
 
-/** Switches the app to the language `choice` picks: the choice, else LINE's. */
-export const followLanguageChoice = (choice: Language | null): Promise<void> =>
-  switchTo(startLanguage(choice, line));
+/** Switches the app to the language picked in Settings. */
+export const followLanguageChoice = (choice: Language): Promise<void> => switchTo(choice);
 
 /**
- * After sign-in, the account's language choice wins over this device's: the device keeps it for the
- * next start, and the app switches to it before it opens.
+ * After sign-in, the account's language wins over this device's: the device keeps it for the next
+ * start, and the app switches to it before it opens.
  */
-export async function followAccountLanguage(choice: Language | null): Promise<void> {
-  if (choice === readChosenLanguage()) return;
+export async function followAccountLanguage(language: Language): Promise<void> {
+  if (language === readChosenLanguage()) return;
   try {
-    keepChosenLanguage(choice);
+    keepChosenLanguage(language);
   } catch (error) {
     // Nothing on screen can fix storage, and the app still switches: only the next start's first
     // screen, before sign-in, is in the old language.
-    console.error("The account's language choice couldn't be kept on this device", error);
+    console.error("The account's language couldn't be kept on this device", error);
   }
-  await followLanguageChoice(choice);
+  await followLanguageChoice(language);
 }
 
 /**

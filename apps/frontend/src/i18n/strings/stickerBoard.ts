@@ -181,13 +181,11 @@ export const stickerBoard = {
     language: {
       /** Settings note: the language row's name, before the choice it shows, which opens the list of choices */
       title: { en: "Language", ja: "言語" },
-      /** Settings note: the first language choice, which follows LINE's language; {{language}} is that language's own name, such as "日本語" */
-      sameAsLine: { en: "Same as LINE ({{language}})", ja: "LINEと同じ（{{language}}）" },
       /** Each language is named in its own language. */
       names: {
-        /** Settings note: the English choice, named in English; also LINE's language in Same as LINE */
+        /** Settings note: the English choice, named in English */
         en: { en: "English", ja: "English" },
-        /** Settings note: the Japanese choice, named in Japanese; also LINE's language in Same as LINE */
+        /** Settings note: the Japanese choice, named in Japanese */
         ja: { en: "日本語", ja: "日本語" },
       },
       /** Settings note: the status line once a language choice has saved and the app has switched to it; {{language}} is that language's own name, such as "日本語" */

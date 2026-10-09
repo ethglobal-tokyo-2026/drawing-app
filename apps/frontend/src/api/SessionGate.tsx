@@ -37,15 +37,11 @@ const needsLine = (error: ApiError) =>
   error.code === "line_reconnect_failed" ||
   error.code === "signed_out";
 
-/**
- * What signing in with LINE would change on your account: LINE's name and picture, and LINE's
- * language while your choice follows LINE's.
- */
+/** What signing in with LINE would change on your account: LINE's name and picture. */
 const outOfDate = (me: Me, claims: LineClaims | null) =>
   claims !== null &&
   (me.lineDisplayName !== (claims.name ?? me.lineDisplayName) ||
-    me.linePictureUrl !== (claims.picture ?? null) ||
-    (me.languageChoice === null && me.language !== lineLanguage()));
+    me.linePictureUrl !== (claims.picture ?? null));
 
 /**
  * Signs you in to the app's server, inside LineGate, and holds the app until it has, it's in your
@@ -102,12 +98,12 @@ export function SessionGate({
           detail: "LINE gave no ID token, though it's logged in",
         });
       }
-      // LINE's language, never a choice this phone kept: the account takes it while it follows LINE's.
+      // LINE's language, never one this phone kept: a new account starts in it.
       return session.signIn({ idToken: token, language: lineLanguage() });
     };
     /** A session resumed without LINE's token; signing in again, behind it, brings LINE's news. */
     const resumed = async (me: Me) => {
-      await followAccountLanguage(me.languageChoice);
+      await followAccountLanguage(me.language);
       if (current && outOfDate(me, claims())) {
         signIn().then(
           (signedIn) => {
@@ -157,7 +153,7 @@ export function SessionGate({
       if (!current) return null;
       const { me } = await signIn();
       // Before the app opens, so it opens in the account's language.
-      await followAccountLanguage(me.languageChoice);
+      await followAccountLanguage(me.language);
       return me;
     })();
     signingIn.then(

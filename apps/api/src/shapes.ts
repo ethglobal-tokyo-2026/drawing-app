@@ -142,9 +142,8 @@ export const meSchema = personSchema.extend({
    * LIFF logged in. Yours alone: Person leaves it out.
    */
   lineUserId: userRow.shape.lineUserId,
+  /** Settings' language, which the app opens in on every device: LINE's until you pick one. */
   language: userRow.shape.language,
-  /** Settings' language; null follows LINE's. */
-  languageChoice: userRow.shape.languageChoice,
   /** The stat board's "Since". */
   createdAt: isoTimeSchema,
   /** True until the handle prompt is answered. */
@@ -170,7 +169,6 @@ export const toMe = (
   ...toPerson(user),
   lineUserId: user.lineUserId,
   language: user.language,
-  languageChoice: user.languageChoice,
   createdAt: toIsoTime(user.createdAt),
   needsHandle: user.handle === null,
   ...counts,

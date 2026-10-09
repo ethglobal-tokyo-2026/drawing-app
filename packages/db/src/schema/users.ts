@@ -24,12 +24,10 @@ export const users = sqliteTable(
      */
     handle: text("handle"),
     /**
-     * The language the server writes to the person in outside the app: set at sign-in, and by a
-     * Settings choice.
+     * The app's language on every device, and the one the server writes to the person in outside
+     * it: LINE's at the first sign-in, then whichever they pick in Settings.
      */
     language: text("language", { enum: ["en", "ja"] }).notNull(),
-    /** The language picked in Settings, which the app starts in on every device; null follows LINE's. */
-    languageChoice: text("language_choice", { enum: ["en", "ja"] }),
     /**
      * When the person turned on Show 18+ stickers in Settings; null while it's off. Only someone
      * with it on marks, sees unblurred or receives NSFW stickers. Cleared on account deletion.

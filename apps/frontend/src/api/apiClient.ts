@@ -71,11 +71,8 @@ interface StartedPurchase {
 
 /** The REST API, one method per route the app calls. */
 export interface ApiClient {
-  /** POST /api/me/language-choice: Settings' language, or null to follow LINE's, whose `language` the account then takes. */
-  setLanguageChoice: (
-    languageChoice: Me["languageChoice"],
-    language: Me["language"],
-  ) => Promise<Me>;
+  /** POST /api/me/language-choice: the language picked in Settings, the account's from then on. */
+  setLanguageChoice: (language: Me["language"]) => Promise<Me>;
   /** POST /api/me/nsfw-opt-in: Show 18+ stickers, in Settings. */
   setNsfwOptIn: (nsfwOptIn: boolean) => Promise<Me>;
   /** POST /api/me/kyoto-seika-practice: Kyoto Seika Practice Mode and its dark subjects, in Settings; a switch left out stays. */

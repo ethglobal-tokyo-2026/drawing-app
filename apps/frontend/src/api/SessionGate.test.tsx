@@ -25,7 +25,6 @@ const me: Me = {
   nsfwOptIn: false,
   lineUserId: "line-alice",
   language: "en",
-  languageChoice: null,
   createdAt: "2026-09-26T00:00:00.000Z",
   needsHandle: false,
   newStickerCount: 0,
@@ -168,28 +167,28 @@ describe("SessionGate", () => {
       const host = render(session({ signIn }));
       expect(host.textContent).not.toContain("Board");
       await settle();
-      // An account that follows LINE takes it, so a choice this phone kept can't stand in for LINE's.
+      // A new account starts in it, so a language this phone kept can't stand in for LINE's.
       expect(signIn).toHaveBeenCalledWith({ idToken: "token", language: line });
       expect(host.textContent).toContain("Board of @alice");
     },
   );
 
   it.each([
-    ["ja", "en", "ja"],
-    [null, "ja", "en"],
+    ["ja", "en"],
+    ["en", "ja"],
   ] as const)(
-    "opens in the account's language choice (%s) over this device's (%s), which then keeps it",
-    async (account, device, opensIn) => {
+    "opens in the account's language (%s) over this device's (%s), which then keeps it",
+    async (account, device) => {
       keepChosenLanguage(device);
       await i18next.changeLanguage(device);
       onTestFinished(async () => {
         localStorage.clear();
         await i18next.changeLanguage("en");
       });
-      const signIn = () => Promise.resolve({ me: { ...me, languageChoice: account } });
+      const signIn = () => Promise.resolve({ me: { ...me, language: account } });
       const host = render(session({ signIn }));
       await settle();
-      expect(host.querySelector("p")?.lang).toBe(opensIn);
+      expect(host.querySelector("p")?.lang).toBe(account);
       expect(readChosenLanguage()).toBe(account);
     },
   );
@@ -277,7 +276,7 @@ describe("SessionGate", () => {
     const host = render(
       session({
         me: () =>
-          Promise.resolve({ me: { ...me, handle: null, needsHandle: true, languageChoice: "ja" } }),
+          Promise.resolve({ me: { ...me, handle: null, needsHandle: true, language: "ja" } }),
       }),
     );
     await settle();
@@ -436,15 +435,14 @@ describe("SessionGate with the cookie from the last visit", () => {
   });
 
   it.each([
-    ["a new LINE name", { ...ALICE_CLAIMS, name: "Alice B" }, me],
-    ["a new LINE picture", { ...ALICE_CLAIMS, picture: "https://profile.line-scdn.net/a" }, me],
-    ["LINE's language changing", ALICE_CLAIMS, { ...me, language: "ja" as const }],
+    ["a new LINE name", { ...ALICE_CLAIMS, name: "Alice B" }],
+    ["a new LINE picture", { ...ALICE_CLAIMS, picture: "https://profile.line-scdn.net/a" }],
   ])(
     "opens at once after %s, and signs in with LINE behind it to bring it to the account",
-    async (_change, claims, cookies) => {
-      const { signIn, finish } = pendingSignIn({ ...cookies, handle: "alice-renamed" });
+    async (_change, claims) => {
+      const { signIn, finish } = pendingSignIn({ ...me, handle: "alice-renamed" });
       const host = render(session({ signIn }), undefined, undefined, {
-        early: earlyAs(cookies),
+        early: earlyAs(me),
         claims,
       });
       await settle();

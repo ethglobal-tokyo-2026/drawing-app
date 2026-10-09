@@ -9,8 +9,8 @@ import { useMe, useSetMe } from "../../api/meContext";
 import { useApi } from "../../api/useApi";
 import { problemOf } from "../../i18n/errorMessage";
 import { currentLanguage } from "../../i18n/i18n";
-import { keepChosenLanguage, type Language } from "../../i18n/language";
-import { followLanguageChoice, lineLanguage } from "../../i18n/pageLanguage";
+import { keepChosenLanguage, languageOf, type Language } from "../../i18n/language";
+import { followLanguageChoice } from "../../i18n/pageLanguage";
 import { Trans, useTranslation } from "../../i18n/react";
 import { CaretDown, Question } from "../../icons";
 import { CensorBar } from "../../kyoto-seika/CensorBar";
@@ -22,10 +22,7 @@ import { forget as forgetKeptBoard } from "../lastBoard";
 import { statsClearPeek } from "./settingsPeek";
 import "./settings-note.css";
 
-/** A language, or null to follow LINE's. */
-type Choice = Language | null;
-
-const CHOICES: readonly Choice[] = [null, "en", "ja"];
+const CHOICES: readonly Language[] = ["en", "ja"];
 
 /** How much of the paper under its title peeks above the cork's foot, in px. */
 const PEEK_UNDER_TITLE = 10;
@@ -36,10 +33,7 @@ const PEEK_UNDER_TITLE = 10;
  */
 type Setting = "language" | "nsfw" | "kyotoSeika" | "kyotoSeikaDark";
 /** The account's settings as the note shows them: a saving one shows its new value. */
-type Shown = Pick<
-  Me,
-  "languageChoice" | "nsfwOptIn" | "kyotoSeikaPractice" | "kyotoSeikaDarkSubjects"
->;
+type Shown = Pick<Me, "language" | "nsfwOptIn" | "kyotoSeikaPractice" | "kyotoSeikaDarkSubjects">;
 /** Why a setting didn't take: kept as it failed, so its words follow the app's language. */
 type Failure = { kind: "notSaved" | "notKept"; error: unknown };
 /** A setting's last change, until it's changed again: saving, waiting its turn included, then in place or why not. */
@@ -153,11 +147,11 @@ export function SettingsNote() {
     });
   };
 
-  const choose = (choice: Choice) =>
+  const choose = (choice: Language) =>
     save(
       "language",
-      { languageChoice: choice },
-      () => api.setLanguageChoice(choice, lineLanguage()),
+      { language: choice },
+      () => api.setLanguageChoice(choice),
       async () => {
         let failure: Failure | null = null;
         try {
@@ -205,10 +199,6 @@ export function SettingsNote() {
     );
 
   const named = (language: Language) => t(($) => $.stickerBoard.settings.language.names[language]);
-  const label = (choice: Choice) =>
-    choice === null
-      ? t(($) => $.stickerBoard.settings.language.sameAsLine, { language: named(lineLanguage()) })
-      : named(choice);
   const shown: Shown = Object.values(statuses).reduce<Shown>(
     (all, status) => (status?.step === "saving" ? { ...all, ...status.to } : all),
     me,
@@ -267,21 +257,19 @@ export function SettingsNote() {
           <div className="settings-note__option settings-note__choice">
             <span id={`${id}-language`}>{t(($) => $.stickerBoard.settings.language.title)}</span>
             <span className="settings-note__picked" aria-hidden>
-              <span lang={shown.languageChoice ?? undefined}>{label(shown.languageChoice)}</span>
+              <span lang={shown.language}>{named(shown.language)}</span>
               <CaretDown size={16} weight="bold" />
             </span>
             <select
               className="settings-note__select"
               aria-labelledby={`${id}-language`}
-              value={shown.languageChoice ?? ""}
-              onChange={(event) =>
-                choose(CHOICES.find((choice) => (choice ?? "") === event.target.value) ?? null)
-              }
+              value={shown.language}
+              onChange={(event) => choose(languageOf(event.target.value))}
             >
               {CHOICES.map((choice) => (
                 // A language's own name is in that language, for screen readers too.
-                <option key={choice ?? "line"} value={choice ?? ""} lang={choice ?? undefined}>
-                  {label(choice)}
+                <option key={choice} value={choice} lang={choice}>
+                  {named(choice)}
                 </option>
               ))}
             </select>

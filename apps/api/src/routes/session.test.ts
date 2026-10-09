@@ -93,18 +93,9 @@ describe("signing in", () => {
     });
   });
 
-  it("keeps LINE's language as the sign-in sends it, and takes a returning sign-in's new one", async () => {
+  it("starts a new person in the sign-in's language, and a later sign-in in another leaves it", async () => {
     expect((await meIn(await signIn(ALICE, "ja"))).language).toBe("ja");
-    expect((await meIn(await signIn(ALICE, "en"))).language).toBe("en");
-  });
-
-  it("keeps a returning person's language choice, which is their language whatever the device says", async () => {
-    const headers = sessionCookie(await signIn(ALICE));
-    await setLanguageChoice(headers, { languageChoice: "ja", language: "en" });
-    expect(await meIn(await signIn(ALICE, "en"))).toMatchObject({
-      languageChoice: "ja",
-      language: "ja",
-    });
+    expect((await meIn(await signIn(ALICE, "en"))).language).toBe("ja");
   });
 
   it.each([
@@ -260,26 +251,15 @@ describe("your handle", () => {
 });
 
 describe("your language choice", () => {
-  it("is null until you choose, comes with you, and null takes LINE's language from the device", async () => {
+  it("sets your language on your account, so it comes with you", async () => {
     const headers = await test.signInAs(insertUser(test.db, { language: "en" }));
-    const me = () => getMe(headers);
-    expect((await meIn(await me())).languageChoice).toBeNull();
-    expect(
-      await meIn(await setLanguageChoice(headers, { languageChoice: "ja", language: "en" })),
-    ).toMatchObject({ languageChoice: "ja", language: "ja" });
-    expect((await meIn(await me())).languageChoice).toBe("ja");
-    expect(
-      await meIn(await setLanguageChoice(headers, { languageChoice: null, language: "en" })),
-    ).toMatchObject({ languageChoice: null, language: "en" });
+    expect((await meIn(await setLanguageChoice(headers, { language: "ja" }))).language).toBe("ja");
+    expect((await meIn(await getMe(headers))).language).toBe("ja");
   });
 
-  it("refuses a language the app doesn't speak, and a body that leaves either out", async () => {
+  it("refuses a language the app doesn't speak, none, and a body that leaves it out", async () => {
     const headers = await test.signInAs(insertUser(test.db));
-    for (const body of [
-      { languageChoice: "fr", language: "en" },
-      { language: "en" },
-      { languageChoice: null },
-    ]) {
+    for (const body of [{ language: "fr" }, { language: null }, {}]) {
       expect(await refusalOf(await setLanguageChoice(headers, body))).toMatchObject({
         status: 400,
         error: "invalid_request",

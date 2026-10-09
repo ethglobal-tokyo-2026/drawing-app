@@ -8,7 +8,7 @@ import { toPerson } from "../../api/views";
 import { errors } from "../../i18n/strings/errors";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import { currentLanguage, i18next } from "../../i18n/i18n";
-import { keepChosenLanguage, readChosenLanguage } from "../../i18n/language";
+import { readChosenLanguage } from "../../i18n/language";
 import { keepBoard, keptBoardFor, readKeptBoardAgain } from "../lastBoard";
 import { SettingsNote } from "./SettingsNote";
 import { statsClearPeek } from "./settingsPeek";
@@ -36,16 +36,12 @@ function renderNote(overrides: Partial<ApiClient>, me: Me = TEST_ME) {
   return view.host;
 }
 
-/** The note, for someone whose account chose `languageChoice`, saving through `setLanguageChoice`. */
-const render = (
-  setLanguageChoice: ApiClient["setLanguageChoice"],
-  languageChoice: Me["languageChoice"] = null,
-) => renderNote({ setLanguageChoice }, { ...TEST_ME, languageChoice });
+/** The note, saving the language through `setLanguageChoice`. */
+const render = (setLanguageChoice: ApiClient["setLanguageChoice"]) =>
+  renderNote({ setLanguageChoice });
 
 const saving = () =>
-  vi.fn<ApiClient["setLanguageChoice"]>((choice) =>
-    Promise.resolve({ ...TEST_ME, languageChoice: choice }),
-  );
+  vi.fn<ApiClient["setLanguageChoice"]>((language) => Promise.resolve({ ...TEST_ME, language }));
 
 const picker = (host: HTMLElement) => {
   const found = host.querySelector("select");
@@ -84,25 +80,13 @@ describe("the Settings note's language", () => {
     const setLanguageChoice = saving();
     const host = render(setLanguageChoice);
     await choose(host, "日本語");
-    expect(setLanguageChoice).toHaveBeenCalledExactlyOnceWith("ja", "en");
+    expect(setLanguageChoice).toHaveBeenCalledExactlyOnceWith("ja");
     expect(readChosenLanguage()).toBe("ja");
     expect(currentLanguage()).toBe("ja");
     expect(picked(host)).toBe("日本語");
     expect(statuses(host)[0]).toBe(
       i18next.t(($) => $.stickerBoard.settings.language.applied, { language: "日本語" }),
     );
-  });
-
-  it("goes back to following LINE", async () => {
-    keepChosenLanguage("ja");
-    await i18next.changeLanguage("ja");
-    const setLanguageChoice = saving();
-    const host = render(setLanguageChoice, "ja");
-    expect(picked(host)).toBe("日本語");
-    await choose(host, "LINEと同じ（English）");
-    expect(setLanguageChoice).toHaveBeenCalledExactlyOnceWith(null, "en");
-    expect(readChosenLanguage()).toBeNull();
-    expect(currentLanguage()).toBe("en");
   });
 
   it("says why a choice wasn't saved, and leaves this phone's choice and the app as they were", async () => {
@@ -113,7 +97,7 @@ describe("the Settings note's language", () => {
     expect(alert(host)).toContain(errors.network.en);
     expect(host.textContent).toContain("Failed to fetch");
     expect(readChosenLanguage()).toBeNull();
-    expect(picked(host)).toBe("Same as LINE (English)");
+    expect(picked(host)).toBe("English");
     expect(currentLanguage()).toBe("en");
   });
 
@@ -138,11 +122,7 @@ describe("the Settings note's language", () => {
     expect(host.querySelector("h3")?.textContent).toBe("設定");
     const name = picker(host).getAttribute("aria-labelledby") ?? "";
     expect(document.getElementById(name)?.textContent).toBe("言語");
-    expect([...picker(host).options].map((o) => o.textContent)).toEqual([
-      "LINEと同じ（English）",
-      "English",
-      "日本語",
-    ]);
+    expect([...picker(host).options].map((o) => o.textContent)).toEqual(["English", "日本語"]);
   });
 });
 
@@ -276,9 +256,7 @@ describe("the Settings note's saves", () => {
       return Promise.resolve(account);
     };
     return {
-      setLanguageChoice: vi.fn<ApiClient["setLanguageChoice"]>((languageChoice, language) =>
-        keep({ languageChoice, language: languageChoice ?? language }),
-      ),
+      setLanguageChoice: vi.fn<ApiClient["setLanguageChoice"]>((language) => keep({ language })),
       setNsfwOptIn: vi.fn<ApiClient["setNsfwOptIn"]>((nsfwOptIn) => keep({ nsfwOptIn })),
     };
   }
@@ -296,8 +274,9 @@ describe("the Settings note's saves", () => {
     await flip(host);
     expect(nsfwProblem(host)).toContain("Your 18+ setting couldn’t be saved");
 
-    await choose(host, "English");
-    expect(nsfwProblem(host)).toContain("Your 18+ setting couldn’t be saved");
+    // The failure stays, in the app's new language.
+    await choose(host, "日本語");
+    expect(nsfwProblem(host)).toContain("18+の設定を保存できなかった");
     expect(switchOf(host).checked).toBe(false);
 
     await flip(host);
@@ -316,7 +295,7 @@ describe("the Settings note's saves", () => {
         }),
     );
     const host = renderNote(server);
-    await choose(host, "English");
+    await choose(host, "日本語");
     await flip(host);
     // It shows the change, says it's saving, and waits for the language's answer.
     expect(switchOf(host).checked).toBe(true);
@@ -325,11 +304,11 @@ describe("the Settings note's saves", () => {
 
     await act(async () => answerLanguage());
     expect(server.setNsfwOptIn).toHaveBeenCalledExactlyOnceWith(true);
-    expect(picked(host)).toBe("English");
+    expect(picked(host)).toBe("日本語");
     expect(switchOf(host).checked).toBe(true);
     expect(statuses(host)).toEqual([
-      i18next.t(($) => $.stickerBoard.settings.language.applied, { language: "English" }),
-      stickerBoard.settings.nsfw.shown.en,
+      i18next.t(($) => $.stickerBoard.settings.language.applied, { language: "日本語" }),
+      stickerBoard.settings.nsfw.shown.ja,
       "",
     ]);
   });
