@@ -490,6 +490,27 @@ describe("SealCeremony", () => {
     expect(host.querySelector(".sealed-card__pair")).toBeNull();
   });
 
+  it.each([
+    ["a sticker made plainly", {}, null],
+    ["an 18+ sticker", { nsfw: true }, "pink"],
+    ["a Kyoto Seika sticker", { kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS }, "kyoto-seika"],
+    [
+      "a Kyoto Seika 18+ sticker",
+      { nsfw: true, kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS },
+      "pink",
+    ],
+  ])("lands %s on the card in the foil that marks how it was made", async (_, made, tone) => {
+    await seal(1, { answer: { ...sealed, ...made } });
+    playThrough();
+    const foil = host.querySelector<HTMLElement>(".seal-ceremony__sticker .sticker-foil");
+    if (tone === null) {
+      expect(foil).toBeNull();
+      return;
+    }
+    expect(foil?.classList).toContain(`sticker-foil--${tone}`);
+    expect(foil?.style.opacity).toBe("1");
+  });
+
   it("prints the sticker's number, drawing time and seal day in the card's fine print", async () => {
     await seal(1);
     expect(shownText(".sealed-card__fine")).toBe(
