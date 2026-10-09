@@ -12,22 +12,56 @@ import {
   openSettings,
   say,
   signIn,
-  startsWith,
 } from "./helpers.ts";
 
 const { kyotoSeika, stickerBoard, stickerCreation, ui } = strings;
 const language = "ja";
 test.use({ locale: "ja-JP" });
 
-/** What a cloud's reroll is named before its subject, such as "振り直し：". */
-const rollPrefix = say(kyotoSeika.balloons.roll, language).replace(/、$/, "");
+/** The deal's clouds, a group named for screen readers. */
+const subjectGroup = (page: Page) =>
+  page.getByRole("group", { name: say(kyotoSeika.balloons.label, language) });
 
-/** The pair dealt to the sheet, as each cloud's reroll names it: "word、english". */
-async function dealtPair(page: Page) {
-  const rolls = page.getByRole("button", { name: startsWith(rollPrefix) });
-  await expect(rolls).toHaveCount(2);
-  const names = await rolls.evaluateAll((keys) => keys.map((key) => key.ariaLabel ?? ""));
-  return names.map((name) => name.slice(rollPrefix.length));
+/** Each cloud is a toggle, named by its word: in Japanese the word alone. */
+const toggles = (page: Page) => subjectGroup(page).locator("[aria-pressed]");
+const toggle = (page: Page, word: string) =>
+  subjectGroup(page).getByRole("button", { name: word, exact: true });
+
+interface Dealt {
+  word: string;
+  picked: boolean;
+}
+
+/**
+ * The subjects dealt, in their places, each with whether it's picked. The clouds all come at once, so
+ * the first one showing means they all are.
+ */
+async function dealt(page: Page): Promise<Dealt[]> {
+  await expect(toggles(page).first()).toBeAttached();
+  return toggles(page).evaluateAll((keys) =>
+    keys.map((key) => ({ word: key.ariaLabel ?? "", picked: key.ariaPressed === "true" })),
+  );
+}
+
+/**
+ * Rolls the die and waits until every place not picked was dealt another word, and every picked one
+ * kept its word and its pick. Resolves with the new deal.
+ */
+async function roll(page: Page) {
+  const before = await dealt(page);
+  await page
+    .getByRole("button", { name: say(kyotoSeika.balloons.reroll, language), exact: true })
+    .click();
+  await expect
+    .poll(async () =>
+      (await dealt(page)).every(({ word, picked }, place) =>
+        before[place].picked
+          ? picked && word === before[place].word
+          : !picked && word !== before[place].word,
+      ),
+    )
+    .toBe(true);
+  return dealt(page);
 }
 
 const runningClock = new RegExp(
@@ -48,7 +82,7 @@ async function secondsLeft(page: Page) {
   return match ? Number(match[1]) * 60 + Number(match[2]) : null;
 }
 
-test("Kyoto Seika Practice Mode: switched on in Settings, dealt, timed and sealed with its pair", async ({
+test("Kyoto Seika Practice Mode: switched on in Settings, dealt, picked, timed and sealed with its pair", async ({
   page,
 }) => {
   await signIn(page, "kyoto", language);
@@ -73,26 +107,57 @@ test("Kyoto Seika Practice Mode: switched on in Settings, dealt, timed and seale
     .getByRole("button", { name: drawKeyName(language, KYOTO_SEIKA_DAILY_TICKETS_PER_DAY) })
     .click();
 
-  // Two subjects; a reroll changes its own and leaves the other.
-  const dealt = await dealtPair(page);
-  await page.getByRole("button", { name: `${rollPrefix}${dealt[0]}` }).click();
-  await expect.poll(async () => (await dealtPair(page))[0]).not.toBe(dealt[0]);
-  const rerolled = await dealtPair(page);
-  expect(rerolled[1]).toBe(dealt[1]);
+  // No two subjects alike, none picked, and Begin waits for two picks.
+  const pickTwo = page.getByRole("button", {
+    name: say(kyotoSeika.begin.pick, language),
+    exact: true,
+  });
+  const begin = page.getByRole("button", {
+    name: say(kyotoSeika.begin.label, language, { minutes: KYOTO_SEIKA_TIME_USED_S / 60 }),
+  });
+  const first = await dealt(page);
+  expect(first.some(({ picked }) => picked)).toBe(false);
+  expect(new Set(first.map(({ word }) => word)).size).toBe(first.length);
+  await expect(pickTwo).toBeDisabled();
 
-  // A reload lands on the board, whose Draw key now continues the waiting sheet, with the same pair.
+  // With nothing picked, a roll deals every place again.
+  const rolled = await roll(page);
+
+  // Picked in this order, so the pair keeps it rather than the places'.
+  const [firstPick, secondPick] = [rolled[3].word, rolled[0].word];
+  await toggle(page, firstPick).click();
+  await expect(toggle(page, firstPick)).toHaveAttribute("aria-pressed", "true");
+  await expect(pickTwo).toBeDisabled();
+  await toggle(page, secondPick).click();
+  await expect(toggle(page, secondPick)).toHaveAttribute("aria-pressed", "true");
+  await expect(begin).toBeEnabled();
+
+  // With two picked, the rest refuse a tap until one is unpicked.
+  const rest = rolled.map(({ word }) => word).filter((w) => w !== firstPick && w !== secondPick);
+  for (const word of rest)
+    await expect(toggle(page, word)).toHaveAttribute("aria-disabled", "true");
+  await toggle(page, rest[0]).click({ force: true });
+  await expect(toggle(page, rest[0])).toHaveAttribute("aria-pressed", "false");
+  await toggle(page, secondPick).click();
+  await expect(toggle(page, secondPick)).toHaveAttribute("aria-pressed", "false");
+  await expect(toggle(page, rest[0])).not.toHaveAttribute("aria-disabled", "true");
+  await expect(pickTwo).toBeDisabled();
+  await toggle(page, secondPick).click();
+  await expect(begin).toBeEnabled();
+
+  // A roll deals the rest again and never touches a pick.
+  const kept = await roll(page);
+
+  // A reload lands on the board, whose Draw key now continues the waiting sheet, with the same five
+  // and the same picks.
   await page.reload();
   await page
     .getByRole("button", { name: say(stickerBoard.board.continueDrawing, language) })
     .click();
-  expect(await dealtPair(page)).toEqual(rerolled);
+  expect(await dealt(page)).toEqual(kept);
 
   // Begin starts the full clock at once, and a tool sheet doesn't stop it.
-  await page
-    .getByRole("button", {
-      name: say(kyotoSeika.begin.label, language, { minutes: KYOTO_SEIKA_TIME_USED_S / 60 }),
-    })
-    .click();
+  await begin.click();
   await expect.poll(() => secondsLeft(page)).toBeGreaterThan(KYOTO_SEIKA_TIME_USED_S - 60);
   await page
     .getByRole("button", { name: say(stickerCreation.tools.color, language), exact: true })
@@ -114,15 +179,14 @@ test("Kyoto Seika Practice Mode: switched on in Settings, dealt, timed and seale
     .click();
   await expect(colorSheet).toBeHidden();
 
-  // The begun canvas carries the pair, and so does the sealed sticker's detail.
-  const [first, second] = rerolled.map((subject) => subject.split("、")[0]);
+  // The begun canvas carries the picked pair in the order picked, and so does the sealed sticker's
+  // detail.
+  const pair = { first: firstPick, second: secondPick };
   await expect(canvas(page, language)).toHaveAccessibleName(
-    say(kyotoSeika.print.canvas, language, { first, second }),
+    say(kyotoSeika.print.canvas, language, pair),
   );
   const { card, no } = await drawAndSeal(page, language);
   await card.getByRole("button", { name: say(ui.backToBoard, language) }).click();
   const detail = await openDetail(page, language, no);
-  await expect(
-    detail.getByText(say(kyotoSeika.tag.spoken, language, { first, second })),
-  ).toBeAttached();
+  await expect(detail.getByText(say(kyotoSeika.tag.spoken, language, pair))).toBeAttached();
 });
