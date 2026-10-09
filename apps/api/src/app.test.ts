@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createServer, STICKER_IMAGES_PATH } from "./app.ts";
 import { validate } from "./errors.ts";
-import { createDiskImageStore, drawingUrls } from "./services/imageStore.ts";
+import { cdnDrawingUrls, createDiskImageStore, drawingUrls } from "./services/imageStore.ts";
 import { setSessionCookie, type AppEnv } from "./session.ts";
 import type { StickerImages } from "./shapes.ts";
 import { markNsfwResponseSchema } from "./stickers/markNsfw.ts";
@@ -309,7 +309,7 @@ describe("sticker images", () => {
         const refused = await get(new URL(url).pathname);
         expect(await refusalOf(refused)).toMatchObject({ status: 403, error: "nsfw_not_opted_in" });
       }
-      const purged = drawingUrls(test.images.urls(scene.contentHash));
+      const purged = cdnDrawingUrls(test.images.urls(scene.contentHash));
       expect(scene.purge.urls.toSorted()).toEqual(purged.toSorted());
       const { sharp } = test.images.urls(scene.contentHash);
       expect(scene.purge.urls).toEqual(expect.arrayContaining([sharp?.png, sharp?.webp]));

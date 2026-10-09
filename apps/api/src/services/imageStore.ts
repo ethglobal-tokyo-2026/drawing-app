@@ -92,6 +92,14 @@ export const drawingUrls = ({ png, flat, webp, sharp }: StickerImages) => [
   webp.sticker,
   ...(sharp ? [sharp.png, sharp.webp] : []),
 ];
+/**
+ * Every URL the CDN may hold a sticker's drawing at, which a mark purges: its drawing's files, and the
+ * WebPs it showed at before display WebPs, `{contentHash}.webp` and `.sharp.webp`, still cached.
+ */
+export const cdnDrawingUrls = (images: StickerImages) => {
+  const stem = images.png.replace(/\.png$/, "");
+  return [...drawingUrls(images), `${stem}.webp`, `${stem}.sharp.webp`];
+};
 /** A sticker's image URLs for each viewer, under `imageBaseUrl`. */
 export function imageUrls(imageBaseUrl: string): Pick<ImageStore, "urls" | "veiledUrls"> {
   return {

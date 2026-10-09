@@ -4,7 +4,7 @@ import type { AppDeps } from "../deps.ts";
 import { logInfo } from "../diagnostics.ts";
 import type { Schedule } from "../midnightJob.ts";
 import { startRepeatingJob } from "../repeatingJob.ts";
-import { drawingUrls } from "../services/imageStore.ts";
+import { cdnDrawingUrls } from "../services/imageStore.ts";
 import { oneAtATime } from "../sui/oneAtATime.ts";
 
 /** Between the sweeps that retry the CDN purges still due. */
@@ -52,7 +52,7 @@ export function purgeDueDrawing(
   return oneAtATime(`cdn-purge:${contentHash}`, async () => {
     if (!purgeIsDue(db, contentHash)) return true;
     const began = clock.now();
-    if (!(await cdnPurge.purge(drawingUrls(images.urls(contentHash))))) return false;
+    if (!(await cdnPurge.purge(cdnDrawingUrls(images.urls(contentHash))))) return false;
     db.update(stickers)
       .set({ cdnPurgeDueAt: null })
       .where(and(eq(stickers.contentHash, contentHash), lte(stickers.cdnPurgeDueAt, began)))
