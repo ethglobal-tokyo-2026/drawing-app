@@ -12,24 +12,28 @@
   margin-top: 6px;
 }
 
+/* --pin is the droplet's height. Sui's kit keeps half of it clear round the droplet. */
 .address-papers__note {
+  --pin: 18px;
   flex: none;
   width: 148px;
 }
 
 /* White label stock hanging from its pin. The 16px of white around the code is its quiet zone, without
-   which scanners miss it. The tilt stays on the face, where the dialog reads it. */
+   which scanners miss it; the top margin holds the pin above that. It hangs and swings from where the
+   pin goes through, under the droplet's round. The tilt stays on the face, where the dialog reads it. */
 .address-papers__note > .address-papers__face {
   display: block;
   width: 100%;
   margin: 0;
-  padding: 16px 16px 12px;
+  padding: calc(var(--pin) * 1.5 + 16px) 16px 12px;
   border: 0;
   border-radius: 3px;
   background: var(--canvas);
   color: var(--ink);
   text-align: center;
   transform: rotate(1.6deg);
+  transform-origin: 50% calc(var(--pin) * 1.11);
   touch-action: manipulation;
 }
 
@@ -133,33 +137,24 @@
   bottom: 0;
 }
 
-/* The pin stays on the cork when its paper lifts off, so it's the note's, not the face's. Its head
-   covers the paper's top edge, as the round pins do. */
+/* The pin stays on the cork when its paper lifts off, so it's the note's, not the face's. It goes
+   through the paper's top margin, its clear space in from the edge, and lets taps through to the face. */
 .address-papers__pin {
   position: absolute;
   z-index: 3;
   left: 50%;
-  top: -8px;
-  margin-left: -11px;
+  top: calc(var(--pin) / 2);
+  translate: -50% 0;
+  pointer-events: none;
 }
 
-/* A push pin whose plastic head is Sui's mark: Liner Lift plastic in the drawings' ink line, a glint
-   of the top-left light, and a cast on the paper. */
+/* A push pin whose head is Sui's droplet, standing just off the paper: an Ink contact line and a soft
+   cast down and to the right. */
 .chain-pin {
-  overflow: visible;
-  filter: drop-shadow(2px 3px 2px rgba(28, 24, 36, 0.32));
-}
-
-/* The fill covers the stroke's inner half, so the line shows about 1.1px outside the mark, near the
-   round pins' ring. */
-.chain-pin__head {
-  fill: var(--liner-lift);
-  stroke: var(--ink);
-  stroke-width: 2.4;
-  stroke-linejoin: round;
-  paint-order: stroke;
-}
-
-.chain-pin__glint {
-  fill: rgba(255, 255, 255, 0.8);
+  display: block;
+  width: auto;
+  height: var(--pin);
+  user-select: none;
+  filter: drop-shadow(0 0.5px 0 rgba(28, 24, 36, 0.16))
+    drop-shadow(1px 2px 1.5px rgba(28, 24, 36, 0.14));
 }
