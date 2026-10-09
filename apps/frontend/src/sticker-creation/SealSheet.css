@@ -201,6 +201,8 @@
   background: var(--scrim);
   opacity: 0;
   visibility: hidden;
+  /* Fading out, it lets the next stroke through to the sheet. */
+  pointer-events: none;
   transition:
     opacity var(--t-peel) var(--ease-out),
     visibility 0s linear var(--t-peel);
@@ -209,6 +211,7 @@
 .seal-sheet-layer__scrim.is-shown {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
   transition: opacity var(--t-peel) var(--ease-out);
 }
 

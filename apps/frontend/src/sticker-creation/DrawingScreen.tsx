@@ -184,6 +184,8 @@ export function DrawingScreen({
     canRedo: false,
     hasInk: false,
   });
+  // The engine's latest word on ink, for 0:00, which can't wait for the render a stroke ending there makes.
+  const hasInk = useRef(false);
   const [session, setSession] = useState(FRESH_SESSION);
   // Transitions start from here, so one sent after an await still starts from the latest session.
   const latest = useRef(FRESH_SESSION);
@@ -236,11 +238,12 @@ export function DrawingScreen({
   // A tap on the waiting timer puts "Starts when you draw" under it, until the first stroke.
   const [startsNote, setStartsNote] = useState(false);
 
-  // 0:00 puts the pencils down: the time's-up sheet rises, and the drawing is kept at its full time,
-  // so a reload brings the sheet back. A sheet with nothing on it has nothing to seal: it's spent,
-  // and the fresh one says so.
+  // 0:00 puts the pencils down: a stroke being drawn ends where it stands, the time's-up sheet rises,
+  // and the drawing is kept at its full time, so a reload brings the sheet back. A sheet with nothing
+  // on it has nothing to seal: it's spent, and the fresh one says so.
   const clock = useSessionClock(() => {
-    if (latest.current.phase === "drawing" && !history.hasInk) {
+    canvas.current?.finishStroke();
+    if (latest.current.phase === "drawing" && !hasInk.current) {
       send({ type: "reset" });
       setSealProblem({ message: t(($) => $.stickerCreation.seal.emptyAtTimeUp) });
       return;
@@ -916,6 +919,9 @@ export function DrawingScreen({
   // Until Start, and while a kept session loads, the sheet takes no ink; nor under the seal sheet, nor
   // once it's sealing.
   const locked = !active || session.phase === "blank" || sealSheet || timeUp || sealing || retrying;
+  // A sheet that takes no ink takes no tool either, as at 0:00 on a begun sheet, whose tools never
+  // hold its clock.
+  if (panel !== null && locked) setPanel(null);
 
   // On the first few visits, a started sheet says the timer waits for the first stroke, which peels it off.
   const startsLabel =
@@ -1021,6 +1027,7 @@ export function DrawingScreen({
           sessionMs: () => clock.elapsed,
         }}
         onHistory={(next) => {
+          hasInk.current = next.hasInk;
           setHistory((h) =>
             h.canUndo === next.canUndo && h.canRedo === next.canRedo && h.hasInk === next.hasInk
               ? h

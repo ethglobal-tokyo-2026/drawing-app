@@ -49,6 +49,11 @@
   transition-duration: 220ms;
 }
 
+/* The timer and the tool strip take touches of their own, which the row's none doesn't reach. */
+.drawing-screen:is(.is-sealing, .is-retrying) .drawing-top > * {
+  pointer-events: none;
+}
+
 /* Once faded, the tools leave the tab order and the screen reader's too, so only the seal key is left. */
 .drawing-screen:is(.is-sealing, .is-retrying)
   :is(.drawing-top, .smoothing-bar, .clear-bar, .size-rail, .history-buttons) {

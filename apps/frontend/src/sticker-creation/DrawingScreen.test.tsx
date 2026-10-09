@@ -48,6 +48,8 @@ const kept = vi.hoisted(() => ({
 }));
 const sheetCalls = vi.hoisted(() => ({
   cleared: 0,
+  /** A stroke is being drawn: the sheet's finishStroke lands it. */
+  live: false,
   settings: null as {
     paused: boolean;
     sessionMs: () => number;
@@ -109,7 +111,11 @@ vi.mock("./canvas/DrawingCanvas", () => ({
       },
       ops: () => [],
       steps: () => [],
-      finishStroke() {},
+      finishStroke() {
+        if (!sheetCalls.live) return;
+        sheetCalls.live = false;
+        sheetCalls.stroke();
+      },
       inkForReading: () => document.createElement("canvas"),
       frame: () => FRAME,
     }));
@@ -219,6 +225,7 @@ afterEach(() => {
   view = undefined;
   localStorage.clear();
   sheetCalls.cleared = 0;
+  sheetCalls.live = false;
   sheetCalls.settings = null;
   sheetCalls.label = undefined;
   timerCalls.hints = 0;
@@ -560,6 +567,16 @@ describe("the seal sheet", () => {
     await openDrawing({ ...keptHalfway, elapsedMs: sessionMs(false) });
     expect(sealSheet()?.textContent).toContain(words.timeUp.en);
     expect(sheetButton(words.notYet.en)).toBeUndefined();
+  });
+
+  it("ends the stroke being drawn at 0:00 and keeps it, even when it's the only ink on the sheet", async () => {
+    // Cleared, then drawing again as the clock runs out.
+    await openDrawing({ ...keptNearTimeUp, steps: [] });
+    act(tapTimer);
+    sheetCalls.live = true;
+    await settle(3000);
+    expect(sheetCalls.live).toBe(false);
+    expect(sealSheet()?.querySelector("h2")?.textContent).toBe(words.timeUp.en);
   });
 });
 
@@ -935,6 +952,23 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     // never to Seal, so Enter can't seal blind.
     expect(notYetLink?.closest("[inert]")).not.toBeNull();
     expect(document.activeElement).toBe(nsfwSwitch());
+  });
+
+  it("puts a tool in hand down at 0:00, since a begun sheet's tools never hold its clock", async () => {
+    await openKyotoSeikaSheet({
+      ...keptHalfway,
+      ticket: 9,
+      elapsedMs: sessionMs(true) - 2000,
+      kyotoSeika: BEGUN,
+    });
+    act(tapTimer);
+    act(openPanel("color"));
+    expect(document.querySelector(".color-sheet")).not.toBeNull();
+    await settle(3000);
+    expect(sealSheet()?.querySelector("h2")?.textContent).toBe(
+      strings.stickerCreation.sealSheet.pencilsDown.en,
+    );
+    expect(document.querySelector(".color-sheet")).toBeNull();
   });
 
   it("shows a begun sheet's pair on its seal sheet, whose sticker wears the Kyoto Seika foil, and pink once marked 18+", async () => {

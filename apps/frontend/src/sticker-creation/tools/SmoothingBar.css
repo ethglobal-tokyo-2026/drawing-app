@@ -19,6 +19,8 @@
   opacity: 0;
   transform: translateY(-6px);
   visibility: hidden;
+  /* Closing, it takes no touch while it fades, so a stroke started there reaches the sheet. */
+  pointer-events: none;
   transition:
     opacity 160ms var(--ease-out),
     transform 220ms var(--ease-out),
@@ -29,6 +31,7 @@
   opacity: 1;
   transform: none;
   visibility: visible;
+  pointer-events: auto;
   transition:
     opacity 160ms var(--ease-out),
     transform 220ms var(--ease-out),
