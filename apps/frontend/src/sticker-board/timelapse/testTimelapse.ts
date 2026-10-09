@@ -1,5 +1,6 @@
 import type { TimelapseV1 } from "@drawing-app/api/client";
 import type { FrameSource } from "../../ui/frameSource";
+import { layoutFor, type TimelapseLayout } from "./timelapseFrame";
 import type { TimelapsePlayer, TimelapsePlayerOptions } from "./timelapsePlayer";
 
 /** For tests: a timelapse of nothing, which the fake players never read. */
@@ -32,6 +33,8 @@ interface FakeTimelapsePlayer extends TimelapsePlayer {
   prepared: ReturnType<typeof deferred<void>>;
   /** Paints the last op: a pending `play` resolves "done". */
   finish: () => void;
+  /** What `layout` answers: the sticker in its spot, until a test sets another. */
+  laidOut: TimelapseLayout;
 }
 
 /** For tests: players that do nothing on their own; a test settles `prepare` and `play`. */
@@ -41,7 +44,11 @@ export function fakeTimelapsePlayers() {
     const prepared = deferred<void>();
     const played = deferred<"done" | "stopped">();
     const calls: Call[] = [];
+    const [x, y, w, h] = TEST_TIMELAPSE.place;
+    const place = { x, y, w, h };
     const player: FakeTimelapsePlayer = {
+      laidOut: layoutFor({ frame: place, place, stage: options.stage, figure: options.figure }),
+      layout: () => player.laidOut,
       options,
       calls,
       prepared,

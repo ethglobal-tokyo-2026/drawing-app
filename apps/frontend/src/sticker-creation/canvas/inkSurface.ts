@@ -73,6 +73,11 @@ export class InkSurface implements Surface<HTMLCanvasElement> {
 
   /** Floods from the op's point; false when nothing changed. */
   fill(op: FillOp): boolean {
+    return this.flood(op) !== null;
+  }
+
+  /** Floods from the op's point: the box it changed, in device px, or null when nothing changed. */
+  flood(op: FillOp): Rect | null {
     const read = (box: Rect) => {
       const { copy, ctx } = copyOf(this.canvas, box, { willReadFrequently: true });
       try {
@@ -90,10 +95,10 @@ export class InkSurface implements Surface<HTMLCanvasElement> {
       op.gap * this.dpr,
       Math.round(FILL_NEAR * this.dpr),
     );
-    if (!flood) return false;
+    if (!flood) return null;
     const { pixels, at, changed } = flood;
     this.ctx.putImageData(pixels, at.x, at.y, changed.x, changed.y, changed.w, changed.h);
-    return true;
+    return { x: at.x + changed.x, y: at.y + changed.y, w: changed.w, h: changed.h };
   }
 
   /** A copy of the ink to read pixels from, as sealing does. */

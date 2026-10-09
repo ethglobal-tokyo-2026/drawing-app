@@ -26,14 +26,16 @@ vi.mock("../../performance/performanceRecorder", async (importOriginal) => ({
 
 /** The sheet is 100 sheet units square, drawn at density 1; the sticker's image covers `PLACE`. */
 const PLACE = { x: 20, y: 30, w: 60, h: 40 };
-/** The figure's box, CSS px: 2 per sheet px. */
-const BOX = { width: 120, height: 80 };
+/** The stage, CSS px, which the figure fills at 2 px per sheet unit. */
+const STAGE = { width: 120, height: 80 };
+const FIGURE = { x: 0, y: 0, w: STAGE.width, h: STAGE.height };
 
+/** A stroke that stays well inside the sticker's cut, as every mark of one drawn within it does. */
 const stroke = (T: number, ms: readonly number[]): StrokeOp => ({
   tool: "brush",
   color: "#1c1824",
   T,
-  pts: ms.flatMap((t, i) => [30 + i, 40, 4, t]),
+  pts: ms.flatMap((t, i) => [35 + (i % 30), 45, 4, t]),
 });
 const steady = (ms: number, step = 16) =>
   Array.from({ length: Math.floor(ms / step) + 1 }, (_, i) => i * step);
@@ -48,7 +50,8 @@ function setup(ops: Op[], { reduced = false } = {}) {
   const player = createTimelapsePlayer({
     timelapse,
     canvas,
-    width: BOX.width,
+    stage: STAGE,
+    figure: FIGURE,
     reduced,
     kyotoSeika: false,
     frames: clock.source,
@@ -97,12 +100,15 @@ describe("the timelapse player", () => {
     [2, 2],
     [4, MAX_DPR],
   ])(
-    "sizes the canvas to its box at a screen density of %s, and draws the sheet through the sticker's crop",
+    "covers the stage at a screen density of %s, and plays a sticker drawn within its cut in its spot",
     (screen, density) => {
       vi.stubGlobal("devicePixelRatio", screen);
       const { canvas, display } = setup([stroke(0, steady(100))]);
-      expect([canvas.width, canvas.height]).toEqual([BOX.width * density, BOX.height * density]);
-      const scale = (density * BOX.width) / PLACE.w;
+      expect([canvas.width, canvas.height]).toEqual([
+        STAGE.width * density,
+        STAGE.height * density,
+      ]);
+      const scale = (density * FIGURE.w) / PLACE.w;
       expect(display?.calls).toContainEqual([
         "setTransform",
         scale,
@@ -202,6 +208,26 @@ describe("the timelapse player", () => {
     await expect(playing).rejects.toThrow("The timelapse stopped at op 1 of 2: the canvas is lost");
   });
 
+  it("shows a stroke drawn outside the sticker's cut whole, shrinking the sheet to fit the stage", () => {
+    const outside: StrokeOp = {
+      ...stroke(0, steady(32)),
+      pts: [5, 10, 4, 0, 90, 95, 4, 16, 50, 50, 4, 32],
+    };
+    const { canvas, display, player } = setup([outside, stroke(500, steady(100))]);
+    const { playing, inSpot } = player.layout();
+    expect(playing.scale).toBeLessThan(inSpot.scale);
+    const shown = display?.calls.findLast(([name]) => name === "setTransform") ?? [];
+    const [, a = 0, , , d = 0, e = 0, f = 0] = shown.map(Number);
+    for (let i = 0; i < outside.pts.length; i += STRIDE) {
+      const x = a * outside.pts[i] + e;
+      const y = d * outside.pts[i + 1] + f;
+      expect(x).toBeGreaterThan(0);
+      expect(x).toBeLessThan(canvas.width);
+      expect(y).toBeGreaterThan(0);
+      expect(y).toBeLessThan(canvas.height);
+    }
+  });
+
   it("is prepared at once when there are no fills, making no canvas", async () => {
     const { player, display } = setup([stroke(0, steady(900))]);
     await expect(player.prepare()).resolves.toBeUndefined();
@@ -237,9 +263,13 @@ describe("the timelapse player's fills", () => {
 
     const circles = clips(display);
     expect(circles.length).toBeGreaterThan(1);
-    // At a screen density of 1, the box shows 2 px per sheet px.
-    const tap = [(TAP.x - PLACE.x) * 2, (TAP.y - PLACE.y) * 2];
-    for (const [, x, y] of circles) expect([x, y]).toEqual(tap);
+    // At a screen density of 1, the stage's px are the display's.
+    const at = player.layout().playing;
+    const tap = [at.left + TAP.x * at.scale, at.top + TAP.y * at.scale];
+    for (const [, x, y] of circles) {
+      expect(x).toBeCloseTo(tap[0]);
+      expect(y).toBeCloseTo(tap[1]);
+    }
     const radii = circles.map(([, , , r]) => Number(r));
     expect(radii).toEqual(radii.toSorted((a, b) => a - b));
     expect(draws(display)).toHaveLength(circles.length + 1);
@@ -250,7 +280,7 @@ describe("the timelapse player's fills", () => {
     await player.prepare();
     expect(notePerformance).toHaveBeenCalledWith(
       "timelapse",
-      expect.stringMatching(/^prepared 1 fill in \d+ ms$/),
+      expect.stringMatching(/^prepared 1 fill in \d+ ms/),
     );
   });
 
@@ -324,8 +354,8 @@ describe("the timelapse player's fills", () => {
   });
 
   it("fails to prepare and to play, saying which fill failed", async () => {
-    vi.spyOn(InkSurface.prototype, "apply").mockImplementation((op) => {
-      if (op.tool === "fill") throw new Error("out of memory");
+    vi.spyOn(InkSurface.prototype, "flood").mockImplementation(() => {
+      throw new Error("out of memory");
     });
     const { player } = setup(sticker());
     const failure = "Preparing the timelapse's fill 1 of 1 failed: out of memory";

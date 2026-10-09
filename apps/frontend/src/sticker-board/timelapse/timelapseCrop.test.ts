@@ -3,8 +3,9 @@ import type { Pixels } from "../../sticker-creation/canvas/fill";
 import { MAX_DPR, MAX_INK_PIXELS, maxInkDensity } from "../../sticker-creation/canvas/sheetFrame";
 import {
   changedArea,
-  displayCanvas,
+  displayBox,
   displayPoint,
+  displayView,
   drawingDensity,
   revealRadius,
   sheetCrop,
@@ -93,28 +94,36 @@ describe("the reveal's circle", () => {
 });
 
 describe("the display canvas", () => {
-  /** Layers laid out in fractions of a CSS px, as the detail sizes a sticker by its aspect. */
-  const LAYERS = [
-    [146.66, 216],
-    [70.5, 216],
-    [93.51, 216],
-    [216, 146.94],
-    [216, 61.37],
-  ];
-
   it.each([1, 2, 2.625, 3])(
-    "maps the ink's place onto the whole layer, to half a pixel, at a density of %s",
+    "covers the stage, and shows each sheet point where the layout puts it, at a density of %s",
     (density) => {
-      for (const [width, height] of LAYERS) {
-        const place = { x: 12.3, y: 40.5, w: 60, h: (60 * height) / width };
-        // The figure's offset width, which layout rounds to whole CSS px.
-        const display = displayCanvas(place, Math.round(width), density);
-        // The canvas covers the layer, so the ink ends where the canvas does, on both axes.
-        expect(Math.abs(place.w * display.scale - display.width)).toBeLessThanOrEqual(0.5);
-        expect(Math.abs(place.h * display.scale - display.height)).toBeLessThanOrEqual(0.5);
-      }
+      // A stage laid out in fractions of a CSS px, and a sheet shrunk and slid to fit it.
+      const stage = { width: 303.66, height: 240 };
+      const at = { left: -41.2, top: 12.5, scale: 0.77 };
+      const view = displayView(stage, at, density);
+      expect(Math.abs(view.width - stage.width * density)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(view.height - stage.height * density)).toBeLessThanOrEqual(0.5);
+      const point = { x: 150, y: 333 };
+      const shown = displayPoint(view.origin, view.scale, point);
+      expect(shown.x).toBeCloseTo((at.left + point.x * at.scale) * density);
+      expect(shown.y).toBeCloseTo((at.top + point.y * at.scale) * density);
     },
   );
+
+  it("holds a sheet box's pixels, one to spare for scaling, and only on the display", () => {
+    const view = { width: 100, height: 80, scale: 2, origin: { x: 10, y: 10 } };
+    const box = { x: 20, y: 20, w: 5.2, h: 3 };
+    const on = displayBox(view, box);
+    if (!on) throw new Error("the box is on the display");
+    const from = displayPoint(view.origin, view.scale, box);
+    const to = displayPoint(view.origin, view.scale, { x: box.x + box.w, y: box.y + box.h });
+    expect(on.x).toBe(Math.floor(from.x) - 1);
+    expect(on.y).toBe(Math.floor(from.y) - 1);
+    expect(on.x + on.w).toBe(Math.ceil(to.x) + 1);
+    expect(on.y + on.h).toBe(Math.ceil(to.y) + 1);
+    expect(displayBox(view, { x: 0, y: 0, w: 200, h: 200 })).toEqual({ x: 0, y: 0, w: 100, h: 80 });
+    expect(displayBox(view, { x: 500, y: 0, w: 5, h: 5 })).toBeNull();
+  });
 });
 
 describe("a point on the display", () => {

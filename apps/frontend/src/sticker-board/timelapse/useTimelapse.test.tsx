@@ -14,7 +14,10 @@ import { TimelapseButton, TimelapseFailure } from "./TimelapseButton";
 import { TimelapseLayer } from "./TimelapseLayer";
 import {
   FADE_MS,
+  FLIGHT_MS,
   HOLD_MS,
+  LAND_MS,
+  PEEL_MS,
   REDUCED_FADE_MS,
   useTimelapse,
   type TimelapseSticker,
@@ -122,6 +125,34 @@ async function playing({ reduced = false } = {}) {
   return players.last();
 }
 
+/** A sheet shrunk and slid on the stage, as one drawn on far past its sticker plays. */
+const ON_SHEET = { left: 10, top: 5, scale: 0.5 };
+const figure = () => {
+  const el = document.querySelector<HTMLElement>(".sticker-figure");
+  if (!el) throw new Error("no figure");
+  return el;
+};
+/** The figure on its place on the sheet: the fake player's sticker sits at the sheet's corner. */
+const onSheet = () => `translate(${ON_SHEET.left}px, ${ON_SHEET.top}px) scale(${ON_SHEET.scale})`;
+
+/** Presses Timelapse with a sheet laid out away from the sticker's spot, and lets it take off. */
+async function flying({ reduced = false } = {}) {
+  render(reduced);
+  press();
+  await settle();
+  const player = players.last();
+  // The figure measures nothing in happy-dom, so its spot is the stage's corner at scale 1.
+  player.laidOut = {
+    ...player.laidOut,
+    inSpot: { left: 0, top: 0, scale: 1 },
+    playing: ON_SHEET,
+  };
+  player.prepared.resolve();
+  await settle();
+  expect(phase()).toBe("playing");
+  return player;
+}
+
 /** The player paints its last op, and the ending starts. */
 async function finish() {
   act(() => players.last().finish());
@@ -183,10 +214,64 @@ describe("useTimelapse", () => {
     expect(player.calls.at(-1)).toBe("stop");
   });
 
-  it("cuts its layer to the sticker's mask, out of screen readers' way", async () => {
-    await playing();
-    expect(layer()?.style.getPropertyValue("--m")).toContain(STICKER.urls.mask);
+  it("plays the paper of the part of the sheet drawn on, out of screen readers' way", async () => {
+    render();
+    press();
+    await settle();
+    const player = players.last();
+    player.laidOut = { ...player.laidOut, playing: ON_SHEET };
+    player.prepared.resolve();
+    await settle();
+    const paper = document.querySelector<HTMLElement>(".timelapse-layer__paper");
+    const { frame } = player.laidOut;
+    expect(paper?.style.width).toBe(`${frame.w * ON_SHEET.scale}px`);
+    expect(paper?.style.left).toBe(`${ON_SHEET.left + frame.x * ON_SHEET.scale}px`);
     expect(layer()?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("flies the sticker onto its sheet, then plays its ink with the sticker gone", async () => {
+    const player = await flying();
+    expect(player.calls).toEqual(["prepare"]);
+    advance(FLIGHT_MS);
+    await settle();
+    expect(figure().style.transform).toBe(onSheet());
+    expect(player.calls).toEqual(["prepare", "play"]);
+    advance(LAND_MS);
+    expect(figure().style.opacity).toBe("0");
+  });
+
+  it("peels the sticker back into its spot as the sheet fades, then sweeps its sheen", async () => {
+    await flying();
+    advance(FLIGHT_MS + LAND_MS);
+    const swept = vi.spyOn(sheen(), "animate");
+    await finish();
+    advance(HOLD_MS + LAND_MS + PEEL_MS / 2);
+    const fading = Number(layer()?.style.opacity);
+    expect(fading).toBeGreaterThan(0);
+    expect(fading).toBeLessThan(1);
+    expect(figure().style.opacity).toBe("1");
+    advance(PEEL_MS / 2);
+    expect(phase()).toBe("idle");
+    expect(figure().getAttribute("style") ?? "").not.toMatch(/transform|opacity|z-index/);
+    expect(swept).toHaveBeenCalledOnce();
+  });
+
+  it("puts the sticker back in its spot at once when stopped mid-flight", async () => {
+    await flying();
+    advance(FLIGHT_MS / 2);
+    expect(figure().style.transform).not.toBe("");
+    act(() => control("stop").click());
+    expect(figure().getAttribute("style") ?? "").not.toMatch(/transform|opacity|z-index/);
+  });
+
+  it("never flies the sticker under reduced motion", async () => {
+    await flying({ reduced: true });
+    advance(FLIGHT_MS + LAND_MS);
+    expect(figure().style.transform).toBe("");
+    await finish();
+    advance(HOLD_MS + REDUCED_FADE_MS);
+    expect(phase()).toBe("idle");
+    expect(figure().style.transform).toBe("");
   });
 
   it("skips to the finished ink when the sticker is tapped", async () => {

@@ -140,10 +140,8 @@
   will-change: transform;
 }
 
-/* Its own shape, inside the --figure square; the timelapse's layer over it, and the gift dot's, take
-   the same box. */
+/* Its own shape, inside the --figure square; the gift dot's layer takes the same box. */
 .sticker-detail__slide .sticker-figure,
-.sticker-detail__slide .timelapse-layer,
 .sticker-detail__dot-layer {
   width: calc(var(--figure) * min(1, var(--ar)));
   max-width: 100%;
@@ -159,8 +157,9 @@
 }
 
 /* While the sticker flies to or from its spot, the figure waits hidden and the flyer copies only the
-   figure, so the dot waits with it. */
-.sticker-detail:has(+ .detail-lift__flyer) .sticker-detail__dot-layer {
+   figure, so the dot waits with it; and while its timelapse plays, the sticker is on its sheet. */
+.sticker-detail:has(+ .detail-lift__flyer) .sticker-detail__dot-layer,
+.sticker-detail__slide:has(> .timelapse-layer) .sticker-detail__dot-layer {
   visibility: hidden;
 }
 

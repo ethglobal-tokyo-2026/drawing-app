@@ -7,8 +7,10 @@ import { paintStroke } from "../../sticker-creation/canvas/paintStroke";
 import { decodeTimelapse } from "../../sticker-creation/sealing/timelapse";
 import { browserFrames, type FrameSource } from "../../ui/frameSource";
 import { releaseCanvas } from "../../ui/releaseCanvas";
+import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
 import { prepareFillSnapshots, type FillSnapshot } from "./fillSnapshots";
-import { displayCanvas, displayPoint, drawingDensity, revealRadius } from "./timelapseCrop";
+import { displayPoint, displayView, drawingDensity, revealRadius } from "./timelapseCrop";
+import { layoutFor, strokeFrame, type TimelapseLayout } from "./timelapseFrame";
 import {
   playbackDone,
   scheduleTimelapse,
@@ -22,10 +24,12 @@ export const MAX_FRAME_MS = 50;
 
 export interface TimelapsePlayerOptions {
   timelapse: TimelapseV1;
-  /** The canvas the ink plays on. The player sizes its backing store to `width` at the screen's density. */
+  /** The canvas the ink plays on, covering the stage: the player sizes its backing store to it. */
   canvas: HTMLCanvasElement;
-  /** The sticker figure's width, CSS px: the canvas covers the figure's box exactly. */
-  width: number;
+  /** The detail's stage, CSS px. */
+  stage: { width: number; height: number };
+  /** The sticker's figure on the stage, CSS px. */
+  figure: Rect;
   reduced: boolean;
   /** A sticker drawn in Kyoto Seika Manga Expression Practice Mode, whose timelapse may play longer. */
   kyotoSeika: boolean;
@@ -43,6 +47,8 @@ export interface TimelapsePlayer {
   stop: () => void;
   /** From now on, fills appear whole at once; strokes play on at the same pace. */
   setReduced: (reduced: boolean) => void;
+  /** Where the sheet plays on the stage and where the sticker's spot is: final once prepared. */
+  layout: () => TimelapseLayout;
 }
 
 type Outcome = { result: "done" | "stopped" } | { error: Error };
@@ -52,27 +58,37 @@ const TAU = Math.PI * 2;
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /**
- * Plays a sticker's timelapse on `canvas`, blank to finished, through the sticker's crop. The ink
- * stays transparent, so the paper under the canvas shows where the eraser went. It plays once;
- * skipped before it plays, it paints the finished ink as soon as `play` is called.
+ * Plays a sticker's timelapse on `canvas`, blank to finished, showing the part of the sheet that was
+ * drawn on where its layout puts it on the stage. The ink stays transparent, so the paper under the
+ * canvas shows where the eraser went. It plays once; skipped before it plays, it paints the finished
+ * ink as soon as `play` is called.
  */
 export function createTimelapsePlayer(options: TimelapsePlayerOptions): TimelapsePlayer {
   const { canvas, frames = browserFrames } = options;
+  const { stage, figure } = options;
   const timelapse = decodeTimelapse(options.timelapse);
-  const { place } = timelapse;
+  const { place, ink } = timelapse;
+  const sheet = { width: ink.width, height: ink.height };
   const schedule = scheduleTimelapse(timelapse.ops, {
     reduced: options.reduced,
     kyotoSeika: options.kyotoSeika,
   });
   // Turned on mid-play, fills appear whole but keep their beats, so the strokes' pace never jumps.
   let reduced = options.reduced;
-  const display = displayCanvas(place, options.width, Math.min(devicePixelRatio || 1, MAX_DPR));
-  canvas.width = display.width;
-  canvas.height = display.height;
-  /** Display px per sheet unit. */
-  const { scale } = display;
+  const density = Math.min(devicePixelRatio || 1, MAX_DPR);
+  const layoutOf = (frame: Rect) => layoutFor({ frame, place, stage, figure });
+  const viewOf = (frame: Rect) => displayView(stage, layoutOf(frame).playing, density);
+  // Until the fills are flooded, the frame is the strokes' and the place's.
+  let layout = layoutOf(strokeFrame(timelapse.ops, place, sheet));
+  let view = viewOf(layout.frame);
+  canvas.width = view.width;
+  canvas.height = view.height;
   const g = context2d(canvas);
-  g.setTransform(scale, 0, 0, scale, -place.x * scale, -place.y * scale);
+  const showFrame = () => {
+    const { scale, origin } = view;
+    g.setTransform(scale, 0, 0, scale, -origin.x * scale, -origin.y * scale);
+  };
+  showFrame();
 
   const cursor = startOfPlayback();
   let snapshots = new Map<number, FillSnapshot>();
@@ -96,7 +112,7 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
     g.save();
     g.setTransform(1, 0, 0, 1, 0, 0);
     if (progress < 1) {
-      const tap = displayPoint(place, scale, op);
+      const tap = displayPoint(view.origin, view.scale, op);
       g.beginPath();
       g.arc(tap.x, tap.y, revealRadius(reach, progress), 0, TAU);
       g.clip();
@@ -179,19 +195,28 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
     const prepared = await prepareFillSnapshots(
       {
         ops: timelapse.ops,
-        ink: timelapse.ink,
-        place,
+        ink: sheet,
         density: drawingDensity(timelapse),
-        display,
+        frame: layout.frame,
+        viewOf,
       },
       { now: () => frames.now(), stopped: () => outcome !== null },
     );
-    snapshots = prepared ?? snapshots;
+    if (prepared) {
+      snapshots = prepared.snapshots;
+      layout = layoutOf(prepared.frame);
+      view = viewOf(prepared.frame);
+      showFrame();
+    }
     // Stopped after the pass's last check: nothing will play them.
     if (outcome) letGoOfSnapshots();
     if (prepared) {
       const ms = Math.round(performance.now() - began);
-      notePerformance("timelapse", `prepared ${fills} fill${fills === 1 ? "" : "s"} in ${ms} ms`);
+      const twice = prepared.passes > 1 ? ", twice: a fill reached past the strokes" : "";
+      notePerformance(
+        "timelapse",
+        `prepared ${fills} fill${fills === 1 ? "" : "s"} in ${ms} ms${twice}`,
+      );
     }
   };
 
@@ -224,5 +249,6 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
     setReduced: (next) => {
       reduced = next;
     },
+    layout: () => layout,
   };
 }

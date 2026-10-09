@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { hexToRgb } from "../../sticker-creation/canvas/color";
 import { InkSurface } from "../../sticker-creation/canvas/inkSurface";
 import type { FillOp, Op, StrokeOp } from "../../sticker-creation/canvas/ops";
+import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
 import {
   PREPARE_TIMEOUT_MS,
   prepareFillSnapshots,
@@ -23,6 +24,10 @@ vi.mock("../../sticker-creation/canvas/inkSurface", async (importOriginal) => {
     override apply(op: Op): void {
       if (failing.has(op)) throw new Error("out of memory");
       super.apply(op);
+    }
+    override flood(op: FillOp) {
+      if (failing.has(op)) throw new Error("out of memory");
+      return super.flood(op);
     }
   }
   return { ...real, InkSurface: FailingInkSurface };
@@ -45,13 +50,17 @@ const fill = (color: string, T: number): FillOp => ({
 const RED = "#ff0000";
 const BLUE = "#0000ff";
 
-/** A 100 × 100 sheet drawn at density 1, whose sticker covers `place`, shown 1:1. */
-const input = (ops: Op[], place = { x: 20, y: 30, w: 60, h: 40 }): PrepareInput => ({
+/** A 100 × 100 sheet drawn at density 1. The fake canvas paints no paths, so a fill floods it all. */
+const SHEET = { x: 0, y: 0, w: 100, h: 100 };
+/** The frame the strokes and the sticker's place make. */
+const STROKES = { x: 20, y: 30, w: 60, h: 40 };
+/** Each frame shown 1:1 from its own top left. */
+const input = (ops: Op[], frame: Rect = SHEET): PrepareInput => ({
   ops,
-  ink: { width: 100, height: 100 },
-  place,
+  ink: { width: SHEET.w, height: SHEET.h },
   density: 1,
-  display: { width: 60, height: 40, scale: 1 },
+  frame,
+  viewOf: (f) => ({ width: f.w, height: f.h, scale: 1, origin: { x: f.x, y: f.y } }),
 });
 const control = (overrides: Partial<PrepareControl> = {}): PrepareControl => ({
   now: () => 0,
@@ -59,8 +68,10 @@ const control = (overrides: Partial<PrepareControl> = {}): PrepareControl => ({
   yieldToPage: async () => {},
   ...overrides,
 });
-const prepare = (ops: Op[], overrides?: Partial<PrepareControl>) =>
-  prepareFillSnapshots(input(ops), control(overrides));
+const prepare = (
+  ops: Op[],
+  { frame, ...overrides }: Partial<PrepareControl> & { frame?: Rect } = {},
+) => prepareFillSnapshots(input(ops, frame), control(overrides));
 
 /** The color of a canvas's first pixel. */
 const firstPixel = (canvas: HTMLCanvasElement) => [
@@ -81,34 +92,51 @@ afterEach(() => {
 describe("the prepare pass", () => {
   it("keeps each fill's change to the display, by its op, and none for a fill that changed nothing", async () => {
     const applied = vi.spyOn(InkSurface.prototype, "apply");
+    const flooded = vi.spyOn(InkSurface.prototype, "flood");
     const ops = [line, fill(RED, 100), fill(RED, 200), fill(BLUE, 300), line];
-    const snapshots = await prepare(ops);
-    if (!snapshots) throw new Error("it wasn't stopped");
+    const prepared = await prepare(ops);
+    if (!prepared) throw new Error("it wasn't stopped");
 
-    expect([...snapshots.keys()]).toEqual([1, 3]);
-    for (const { box, reach } of snapshots.values()) {
-      expect(box).toEqual({ x: 0, y: 0, w: 60, h: 40 });
-      // The tap, (40, 50) on the sheet, is (20, 20) on the display; the fill reached its far corner.
-      expect(reach).toBeCloseTo(Math.hypot(60 - 20, 40 - 20), 9);
+    expect(prepared.passes).toBe(1);
+    expect([...prepared.snapshots.keys()]).toEqual([1, 3]);
+    for (const { box, reach } of prepared.snapshots.values()) {
+      expect(box).toEqual({ x: 0, y: 0, w: SHEET.w, h: SHEET.h });
+      // The tap is (40, 50); each fill reached the sheet's far corner.
+      expect(reach).toBeCloseTo(Math.hypot(SHEET.w - 40, SHEET.h - 50), 9);
     }
-    const blue = snapshots.get(3)?.canvas;
+    const blue = prepared.snapshots.get(3)?.canvas;
     if (!blue) throw new Error("the blue fill changed the display");
     expect(firstPixel(blue)).toEqual([...hexToRgb(BLUE)]);
     // Every op up to the last fill went on the sheet, in order; nothing after it is needed.
-    expect(applied.mock.calls.map(([op]) => op)).toEqual(ops.slice(0, 4));
+    const order = (spy: typeof applied | typeof flooded) =>
+      spy.mock.calls.map(([op], i) => [spy.mock.invocationCallOrder[i], op] as const);
+    const onSheet = [...order(applied), ...order(flooded)].toSorted(([a], [b]) => a - b);
+    expect(onSheet.map(([, op]) => op)).toEqual(ops.slice(0, 4));
   });
 
-  it("reads only the sheet where the sticker reaches past its edge", async () => {
-    const snapshots = await prepareFillSnapshots(
-      input([fill(RED, 0)], { x: -10, y: -5, w: 60, h: 40 }),
-      control(),
-    );
-    expect(snapshots?.get(0)?.box).toEqual({ x: 10, y: 5, w: 50, h: 35 });
+  it("grows the frame to hold a fill that reached past the strokes, and cuts its snapshots in that", async () => {
+    const prepared = await prepare([line, fill(RED, 100)], { frame: STROKES });
+    expect(prepared?.passes).toBe(2);
+    expect(prepared?.frame).toEqual(SHEET);
+    expect(prepared?.snapshots.get(1)?.box).toEqual({ x: 0, y: 0, w: SHEET.w, h: SHEET.h });
+  });
+
+  it("reads only the sheet where the frame reaches past its edge", async () => {
+    const past = { x: -10, y: -5, w: 60, h: 40 };
+    const prepared = await prepare([fill(RED, 0)], { frame: past });
+    // The fill grew the frame to the sheet's far corner; the sheet starts 10 and 5 px in.
+    expect(prepared?.frame).toEqual({
+      x: past.x,
+      y: past.y,
+      w: SHEET.w - past.x,
+      h: SHEET.h - past.y,
+    });
+    expect(prepared?.snapshots.get(0)?.box).toEqual({ x: 10, y: 5, w: SHEET.w, h: SHEET.h });
   });
 
   it("lets go of its own canvases when done, keeping only the snapshots", async () => {
-    const snapshots = await prepare([line, fill(RED, 100), fill(BLUE, 200)]);
-    const kept = [...(snapshots?.values() ?? [])].map((s) => s.canvas);
+    const prepared = await prepare([line, fill(RED, 100), fill(BLUE, 200)], { frame: STROKES });
+    const kept = [...(prepared?.snapshots.values() ?? [])].map((s) => s.canvas);
     expect(heldCanvases()).toEqual(kept);
   });
 

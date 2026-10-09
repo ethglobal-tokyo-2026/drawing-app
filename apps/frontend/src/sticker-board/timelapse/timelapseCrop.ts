@@ -1,11 +1,12 @@
 /**
- * Where a timelapse's ink lands on the sticker: the density it was drawn at, the window of the full
+ * Where a timelapse's ink lands on the display: the density it was drawn at, the window of the full
  * sheet the display shows, and what a fill changed there. Pure numbers and pixel arrays.
  */
 import type { Pixels } from "../../sticker-creation/canvas/fill";
 import { MAX_DPR, maxInkDensity } from "../../sticker-creation/canvas/sheetFrame";
 import type { DecodedTimelapse } from "../../sticker-creation/sealing/timelapse";
 import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
+import type { Placement } from "./timelapseFrame";
 
 /**
  * Device pixels per sheet unit where the sticker was drawn, which its fills flood at, kept up to the
@@ -23,39 +24,38 @@ interface SheetCanvas {
   density: number;
 }
 
-/** The display canvas: px, and px per sheet unit. */
-export interface DisplayCanvas {
+/** The display canvas: px, px per sheet unit, and the sheet point at its top left. */
+export interface DisplayView {
   width: number;
   height: number;
   scale: number;
+  origin: { x: number; y: number };
 }
 
-/**
- * The display canvas over a box `width` CSS px wide, at `density` px per CSS px. Both sides come from
- * one scale, so the canvas has the ink's aspect and CSS stretches it evenly onto the box, whatever
- * fractions of a px the box's layout has.
- */
-export function displayCanvas(place: Rect, width: number, density: number): DisplayCanvas {
-  const scale = (density * width) / place.w;
-  return {
-    width: Math.max(1, Math.round(place.w * scale)),
-    height: Math.max(1, Math.round(place.h * scale)),
-    scale,
-  };
-}
+/** The display canvas over the stage, at `density` px per CSS px, showing the sheet where `at` puts it. */
+export const displayView = (
+  stage: { width: number; height: number },
+  at: Placement,
+  density: number,
+): DisplayView => ({
+  width: Math.max(1, Math.round(stage.width * density)),
+  height: Math.max(1, Math.round(stage.height * density)),
+  scale: at.scale * density,
+  origin: { x: -at.left / at.scale, y: -at.top / at.scale },
+});
 
 /**
- * The window of the sheet's canvas the display shows from `place`, and where it lands, clipped to the
+ * The window of the sheet's canvas the display shows from `origin`, and where it lands, clipped to the
  * sheet: older Safari draws nothing for a source rectangle reaching past its image. Null off the sheet.
  */
 export function sheetCrop(
-  place: { x: number; y: number },
+  origin: { x: number; y: number },
   sheet: SheetCanvas,
-  display: DisplayCanvas,
+  display: Pick<DisplayView, "width" | "height" | "scale">,
 ): { source: Rect; target: Rect } | null {
   const perSheetPixel = display.scale / sheet.density;
-  const x0 = place.x * sheet.density;
-  const y0 = place.y * sheet.density;
+  const x0 = origin.x * sheet.density;
+  const y0 = origin.y * sheet.density;
   const left = Math.max(0, x0);
   const top = Math.max(0, y0);
   const right = Math.min(sheet.width, x0 + display.width / perSheetPixel);
@@ -72,12 +72,26 @@ export function sheetCrop(
   };
 }
 
-/** A point of the sheet on the display, px, where the crop from `place` at `scale` puts it. */
+/** A point of the sheet on the display, px, where the crop from `origin` at `scale` puts it. */
 export const displayPoint = (
-  place: { x: number; y: number },
+  origin: { x: number; y: number },
   scale: number,
   point: { x: number; y: number },
-) => ({ x: (point.x - place.x) * scale, y: (point.y - place.y) * scale });
+) => ({ x: (point.x - origin.x) * scale, y: (point.y - origin.y) * scale });
+
+/**
+ * A box of the sheet on the display, px, grown a pixel for what scaling spreads and clipped to the
+ * display; null off it.
+ */
+export function displayBox(view: DisplayView, box: Rect): Rect | null {
+  const from = displayPoint(view.origin, view.scale, box);
+  const to = displayPoint(view.origin, view.scale, { x: box.x + box.w, y: box.y + box.h });
+  const x0 = Math.max(0, Math.floor(from.x) - 1);
+  const y0 = Math.max(0, Math.floor(from.y) - 1);
+  const x1 = Math.min(view.width, Math.ceil(to.x) + 1);
+  const y1 = Math.min(view.height, Math.ceil(to.y) + 1);
+  return x1 > x0 && y1 > y0 ? { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } : null;
+}
 
 /**
  * What a fill changed between two same-sized images: the box around every pixel that differs, and

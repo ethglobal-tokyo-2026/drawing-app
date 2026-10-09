@@ -1,18 +1,15 @@
-/* The timelapse: the sticker's ink played back in its own spot, over its figure. */
+/* The timelapse: the sheet a sticker was drawn on, played back over the detail's stage. */
 
-/* The layer shares the figure's grid cell; auto-placed beside it, the figure would drop a row. */
-.sticker-detail__slide > .sticker-figure,
-.timelapse-layer {
+/* The figure keeps its grid cell, which the gift dot's layer shares. */
+.sticker-detail__slide > .sticker-figure {
   grid-area: 1 / 1;
 }
 
-/* White paper cut to the sticker's silhouette and sized with the figure, so the figure's kiss-cut,
-   cast shadow and foil stay around the ink as it plays. Positioned, so it paints over the figure. */
+/* Over the whole stage, so marks drawn beside the sticker show beside it. Positioned after the
+   figure, so it paints over it, except while the sticker flies onto or off its paper. */
 .timelapse-layer {
-  position: relative;
-  background: var(--canvas);
-  -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
-  mask: var(--m) 0 0 / 100% 100% no-repeat;
+  position: absolute;
+  inset: 0;
   cursor: pointer;
 }
 
@@ -21,9 +18,20 @@
   visibility: hidden;
 }
 
-/* The sticker wipes to white paper as the first strokes land. */
+/* The paper comes up as the sticker leaves its spot. */
 .timelapse-layer[data-phase="playing"] {
   animation: timelapse-paper-in 160ms var(--ease-out);
+}
+
+/* The part of the sheet that was drawn on, as the drawing screen shows the sheet. */
+.timelapse-layer__paper {
+  position: absolute;
+  background: var(--canvas);
+  border-radius: var(--r-paper);
+  box-shadow:
+    0 0 0 1px rgba(28, 24, 36, 0.05),
+    0 1px 2px rgba(28, 24, 36, 0.06),
+    1px 3px 10px rgba(28, 24, 36, 0.05);
 }
 
 .timelapse-layer__ink {
