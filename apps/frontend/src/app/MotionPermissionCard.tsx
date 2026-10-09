@@ -8,10 +8,10 @@ import { pressCommitted } from "../ui/press";
 import "./motion-permission-card.css";
 
 /**
- * Asks once, where the platform asks at all (iOS), whether the app may read the phone's motion.
+ * Asks once, where the platform asks at all (iOS), whether the app may read the device's motion.
  * iOS shows its prompt only from inside a tap, and the shared press fires a key's click just after
  * the release, so Allow asks on a pointerup that commits the press as well; asking twice doesn't
- * prompt twice.
+ * prompt twice. On a large screen it's the shared card, so its keys keep a phone's width.
  */
 export function MotionPermissionCard() {
   const { t } = useTranslation();
@@ -19,7 +19,7 @@ export function MotionPermissionCard() {
   if (permission !== "unasked") return null;
   const allow = () => void askForMotion();
   return (
-    <Sheet label={t(($) => $.app.motionPermission.label)} onClose={declineMotion}>
+    <Sheet label={t(($) => $.app.motionPermission.label)} onClose={declineMotion} card>
       <div className="motion-card">
         <p className="motion-card__text">{t(($) => $.app.motionPermission.question)}</p>
         <Key
