@@ -106,7 +106,7 @@ export function floodFill(
   // Half the widest opening closed, in thirds of a pixel. A fill on a color closes none, so a stroke
   // thinner than the gap still recolors whole.
   const reach = empty ? Math.min((gap * SIDE) / 2, FAR - 1) : 0;
-  const lines = reach > 0 ? lineDistances(img, cut, reach) : null;
+  const lines = reach > 0 ? lineDistances(img, cut, reach, reach * ROOM) : null;
   const far = lines?.far ?? null;
   // Lines past a cut side are unseen, so paper this near one may be nearer them than it looks.
   const margin = reach > 0 ? Math.max(CLEAR, Math.ceil((reach * ROOM) / SIDE) + 1) : CLEAR;
@@ -352,49 +352,125 @@ function closeGaps(
 }
 
 /**
- * Each pixel's chamfer distance to the nearest line, in thirds of a pixel and at most FAR, and the
- * paper within `reach` of one. Lines are pixels as opaque as EMPTY_ALPHA, and the sheet's edge past
- * each side that isn't cut, which closes a gap as a line does. Chamfer distances come within a few
- * percent of true ones, in a byte a pixel.
+ * Each pixel's chamfer distance to the nearest line, in thirds of a pixel, and the paper within
+ * `reach` of one. Lines are pixels as opaque as EMPTY_ALPHA, and the sheet's edge past each side
+ * that isn't cut, which closes a gap as a line does. Chamfer distances come within a few percent of
+ * true ones, in a byte a pixel. No distance past `room` decides anything, so only the paper that
+ * near a line or an uncut side is measured (`measuredRuns`), and the rest reads FAR.
  */
 function lineDistances(
-  { width: w, height: h, data }: Pixels,
+  img: Pixels,
   cut: Cut | undefined,
   reach: number,
+  room: number,
 ): { far: Uint8Array; near: number[] } {
-  const far = new Uint8Array(w * h);
+  const { width: w, height: h, data } = img;
+  const far = new Uint8Array(w * h).fill(FAR);
   const near: number[] = [];
   // Past a cut side the lines are unseen, so none is counted there.
   const left = cut?.left ? FAR : 0;
   const top = cut?.top ? FAR : 0;
   const right = cut?.right ? FAR : 0;
   const bottom = cut?.bottom ? FAR : 0;
+  // Every step costs at least SIDE, so a distance up to `room` spans at most this many pixels.
+  const span = Math.floor(Math.min(Math.floor(room), FAR - 1) / SIDE);
+  const { start, cols } = measuredRuns(img, cut, span);
   for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const p = y * w + x;
-      if (data[p * 4 + 3] >= EMPTY_ALPHA) continue;
-      let d = Math.min((x > 0 ? far[p - 1] : left) + SIDE, (y > 0 ? far[p - w] : top) + SIDE);
-      if (y > 0 && x > 0) d = Math.min(d, far[p - w - 1] + CORNER);
-      if (y > 0 && x < w - 1) d = Math.min(d, far[p - w + 1] + CORNER);
-      far[p] = Math.min(d, FAR);
+    for (let r = start[y]; r < start[y + 1]; r += 2) {
+      for (let x = cols[r]; x <= cols[r + 1]; x++) {
+        const p = y * w + x;
+        if (data[p * 4 + 3] >= EMPTY_ALPHA) {
+          far[p] = 0;
+          continue;
+        }
+        let d = Math.min((x > 0 ? far[p - 1] : left) + SIDE, (y > 0 ? far[p - w] : top) + SIDE);
+        if (y > 0 && x > 0) d = Math.min(d, far[p - w - 1] + CORNER);
+        if (y > 0 && x < w - 1) d = Math.min(d, far[p - w + 1] + CORNER);
+        far[p] = Math.min(d, FAR);
+      }
     }
   }
   for (let y = h - 1; y >= 0; y--) {
-    for (let x = w - 1; x >= 0; x--) {
-      const p = y * w + x;
-      if (far[p] === 0) continue;
-      let d = Math.min(
-        far[p],
-        (x < w - 1 ? far[p + 1] : right) + SIDE,
-        (y < h - 1 ? far[p + w] : bottom) + SIDE,
-      );
-      if (y < h - 1 && x < w - 1) d = Math.min(d, far[p + w + 1] + CORNER);
-      if (y < h - 1 && x > 0) d = Math.min(d, far[p + w - 1] + CORNER);
-      far[p] = d;
-      if (d <= reach) near.push(p);
+    for (let r = start[y + 1] - 2; r >= start[y]; r -= 2) {
+      for (let x = cols[r + 1]; x >= cols[r]; x--) {
+        const p = y * w + x;
+        if (far[p] === 0) continue;
+        let d = Math.min(
+          far[p],
+          (x < w - 1 ? far[p + 1] : right) + SIDE,
+          (y < h - 1 ? far[p + w] : bottom) + SIDE,
+        );
+        if (y < h - 1 && x < w - 1) d = Math.min(d, far[p + w + 1] + CORNER);
+        if (y < h - 1 && x > 0) d = Math.min(d, far[p + w - 1] + CORNER);
+        far[p] = d;
+        if (d <= reach) near.push(p);
+      }
     }
   }
   return { far, near };
+}
+
+/**
+ * The columns `lineDistances` measures, as runs of [first, last] in `cols`, row y's from `start[y]`
+ * up to `start[y + 1]`: those within `span` pixels of a line, found from each row's first and last
+ * line pixel, and the `span` pixels by each side that isn't cut.
+ */
+function measuredRuns(
+  { width: w, height: h, data }: Pixels,
+  cut: Cut | undefined,
+  span: number,
+): { start: Int32Array; cols: Int32Array } {
+  // Each row's first and last line pixel; a row with none keeps its first past its last.
+  const first = new Int32Array(h).fill(w);
+  const last = new Int32Array(h).fill(-1);
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    let x = 0;
+    while (x < w && data[(row + x) * 4 + 3] < EMPTY_ALPHA) x++;
+    if (x === w) continue;
+    first[y] = x;
+    x = w - 1;
+    while (data[(row + x) * 4 + 3] < EMPTY_ALPHA) x--;
+    last[y] = x;
+  }
+  const leftStrip = cut?.left ? 0 : span;
+  const topStrip = cut?.top ? 0 : span;
+  const rightStrip = cut?.right ? 0 : span;
+  const bottomStrip = cut?.bottom ? 0 : span;
+  const start = new Int32Array(h + 1);
+  const cols = new Int32Array(h * 6);
+  let n = 0;
+  /** Adds columns a to z to the row whose runs begin at `row`, given in order of their first column. */
+  const add = (row: number, a: number, z: number) => {
+    if (a > z) return;
+    if (n > row && a <= cols[n - 1] + 1) cols[n - 1] = Math.max(cols[n - 1], z);
+    else {
+      cols[n++] = a;
+      cols[n++] = z;
+    }
+  };
+  for (let y = 0; y < h; y++) {
+    const row = n;
+    start[y] = row;
+    if (y < topStrip || y >= h - bottomStrip) {
+      add(row, 0, w - 1);
+      continue;
+    }
+    let a = w;
+    let z = -1;
+    for (let k = Math.max(0, y - span); k <= Math.min(h - 1, y + span); k++) {
+      a = Math.min(a, first[k]);
+      z = Math.max(z, last[k]);
+    }
+    const lineFrom = Math.max(0, a - span);
+    const rightFrom = Math.max(0, w - rightStrip);
+    add(row, 0, Math.min(leftStrip, w) - 1);
+    // Columns near lines that start inside the right strip add nothing to it.
+    if (z >= 0 && lineFrom <= rightFrom) add(row, lineFrom, Math.min(w - 1, z + span));
+    add(row, rightFrom, w - 1);
+  }
+  start[h] = n;
+  return { start, cols };
 }
 
 /** Calls `visit` with each pixel beside p, left, right, above and below, that's on the image. */
