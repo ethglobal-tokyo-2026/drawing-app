@@ -382,6 +382,8 @@ export const stickerBoard = {
     yourStats: { en: "{{name}}: your stats", ja: "{{name}}：あなたの記録" },
     /** Your sticker board: the Draw key's visible label; your tickets tuck behind the key's right end */
     draw: { en: "Draw", ja: "かく" },
+    /** Your sticker board while a drawing you started waits on the drawing screen: the Draw key's label, and its name for screen readers, which takes you back to it */
+    continueDrawing: { en: "Continue drawing", ja: "続きをかく" },
     /** Your sticker board: screen readers' name for the Draw key while your tickets haven't loaded */
     drawLabel: { en: "Draw a new sticker", ja: "新しいシールをかく" },
     /** Your sticker board: screen readers' name for the Draw key; {{tickets}} names the tickets the next drawing can use, such as "2 daily tickets left" or "no tickets until 12:00 AM" */

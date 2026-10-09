@@ -342,6 +342,18 @@ export class SessionKeeper {
   }
 }
 
+/**
+ * Whether this device keeps a session in progress for `userId`, from its record alone: a read the
+ * board can make at once, before the drawing screen has loaded the drawing.
+ */
+export function keepsSession(userId: string): boolean {
+  const { text } = readStored(
+    recordKey(userId),
+    "Can't tell whether a drawing was in progress on this device",
+  );
+  return text !== null;
+}
+
 /** The session kept for `userId` from before a reload, if a drawing was in progress. */
 export async function loadKeptSession(userId: string): Promise<KeptSession> {
   const record = readRecord(userId);

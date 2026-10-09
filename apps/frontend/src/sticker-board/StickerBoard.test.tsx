@@ -5,7 +5,8 @@ import type {
   Person,
   StickerPlacement,
 } from "@drawing-app/api/client";
-import { act } from "react";
+import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
+import { act, useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { boardSticker, people, sticker, trailEntry } from "../api/testFixtures";
 import { ApiError, type ApiClient } from "../api/apiClient";
@@ -16,6 +17,9 @@ import { i18next, withBreakHints } from "../i18n/i18n";
 import { api as apiStrings } from "../i18n/strings/api";
 import { errors } from "../i18n/strings/errors";
 import { stickerBoard } from "../i18n/strings/stickerBoard";
+import { SessionKeeper } from "../sticker-creation/session/keptSession";
+import type { Sheet } from "../tickets/ticketsContext";
+import { useTickets } from "../tickets/useTickets";
 import { TabsLeadSlot } from "../ui/TabsLead";
 import { onLargeScreen } from "../ui/testing";
 import { forgetGreetings } from "./artistChipGreeting";
@@ -243,6 +247,55 @@ describe("StickerBoard's tickets", () => {
     await act(async () => again?.click());
     expect(tickets).toHaveBeenCalledTimes(2);
     expect(alert()).toBeUndefined();
+  });
+});
+
+describe("StickerBoard while a drawing waits", () => {
+  /** The drawing screen under the board, saying what its sheet needs from Draw. */
+  function DrawingScreenSays({ sheet }: { sheet: Sheet }) {
+    const { setSheet } = useTickets();
+    useEffect(() => setSheet(sheet), [setSheet, sheet]);
+    return null;
+  }
+  /** Your board with no stickers yet, over a drawing screen whose sheet is `sheet`. */
+  const board = (sheet: Sheet) => (
+    <>
+      <DrawingScreenSays sheet={sheet} />
+      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />
+    </>
+  );
+  const openBoard = async (sheet: Sheet) => {
+    const api = emptyApi({
+      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [] }),
+    });
+    const view = renderWithApi(board(sheet), api);
+    unmount = view.unmount;
+    await act(async () => {});
+    return {
+      rerender: (next: Sheet) => view.rerender(board(next)),
+      drawKey: () => view.host.querySelector(".board-draw .key")?.textContent,
+      tip: () => view.host.querySelector(".board-nudge")?.textContent,
+    };
+  };
+  const { draw, continueDrawing, firstSticker } = stickerBoard.board;
+
+  it("says Draw continues the drawing the drawing screen holds, with no first-sticker tip, until its sheet is fresh", async () => {
+    const shown = await openBoard("held");
+    expect(shown.drawKey()).toBe(continueDrawing.en);
+    expect(shown.tip()).toBeUndefined();
+
+    shown.rerender("fresh");
+    expect(shown.drawKey()).toBe(draw.en);
+    expect(shown.tip()).toBe(firstSticker.en);
+  });
+
+  it("says so after a reload, from the drawing this phone keeps, before the drawing screen has said", async () => {
+    vi.stubGlobal("indexedDB", new FakeIndexedDB());
+    onTestFinished(() => void vi.unstubAllGlobals());
+    new SessionKeeper(TEST_ME.id).start(7);
+    const shown = await openBoard(null);
+    expect(shown.drawKey()).toBe(continueDrawing.en);
+    expect(shown.tip()).toBeUndefined();
   });
 });
 

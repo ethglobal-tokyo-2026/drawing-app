@@ -809,8 +809,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // The empty board's dashed spot, where the first sticker lands; a load error shows in it too.
   const blankAt = field && toPx(field, FIRST_SPOT);
   const blankStyle = blankAt ? { left: blankAt.x, top: blankAt.y } : undefined;
-  // Until the first sticker, Draw says where to start.
-  const firstVisit = stickers?.length === 0;
+  // Until the first sticker, Draw says where to start; a drawing in progress has started.
+  const firstVisit = stickers?.length === 0 && !drawKey.inProgress;
   // An empty board that still has stickers in the sticker tray points to the tray, not to Draw.
   const inTray = (stickers ?? []).some((s) => s.held && !onTheBoard(s));
   const unsavedStickers = (stickers ?? []).filter((s) => unsaved.has(s.id));
@@ -858,14 +858,18 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
           icon={<DrawIcon />}
           onClick={drawKey.draw}
           aria-label={
-            tickets
-              ? t(($) => $.stickerBoard.board.drawLabelWithTickets, {
-                  tickets: describeTickets(tickets),
-                })
-              : t(($) => $.stickerBoard.board.drawLabel)
+            drawKey.inProgress
+              ? undefined
+              : tickets
+                ? t(($) => $.stickerBoard.board.drawLabelWithTickets, {
+                    tickets: describeTickets(tickets),
+                  })
+                : t(($) => $.stickerBoard.board.drawLabel)
           }
         >
-          {t(($) => $.stickerBoard.board.draw)}
+          {drawKey.inProgress
+            ? t(($) => $.stickerBoard.board.continueDrawing)
+            : t(($) => $.stickerBoard.board.draw)}
         </Key>
         {drawKey.shown && <DrawKeyTickets tickets={drawKey.shown} peel={drawKey.peeling} />}
       </span>
