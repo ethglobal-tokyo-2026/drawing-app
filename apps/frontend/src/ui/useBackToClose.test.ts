@@ -6,6 +6,11 @@ function fakeWindow() {
   const entries: { state: unknown; url: string }[] = [{ state: { app: "start" }, url: "/g/abc" }];
   let at = 0;
   const listeners: ((e: { state: unknown }) => void)[] = [];
+  // The window's own timers, which closing it cancels, and its history reads once it's closed.
+  const timers = new Map<number, ReturnType<typeof setTimeout>>();
+  let made = 0;
+  let closed = false;
+  let readsAfterClose = 0;
   const traverse = (by: number) =>
     setTimeout(() => {
       const to = at + by;
@@ -16,6 +21,7 @@ function fakeWindow() {
   return {
     history: {
       get state() {
+        if (closed) readsAfterClose++;
         return entries[at].state;
       },
       pushState(state: unknown, _unused: string, url?: string | URL | null) {
@@ -28,6 +34,28 @@ function fakeWindow() {
       back: () => traverse(-1),
     },
     forward: () => traverse(1),
+    setTimeout: (run: () => void, ms: number) => {
+      const id = ++made;
+      timers.set(
+        id,
+        setTimeout(() => {
+          timers.delete(id);
+          run();
+        }, ms),
+      );
+      return id;
+    },
+    clearTimeout: (id: number) => {
+      clearTimeout(timers.get(id));
+      timers.delete(id);
+    },
+    /** Closes the window as a test's teardown does: its timers stop. */
+    close: () => {
+      closed = true;
+      for (const timer of timers.values()) clearTimeout(timer);
+      timers.clear();
+    },
+    readsAfterClose: () => readsAfterClose,
     addEventListener: (_type: "popstate", listener: (e: { state: unknown }) => void) =>
       void listeners.push(listener),
     /** The current entry, and how many entries lie ahead of it. */
@@ -83,6 +111,18 @@ describe("createBackStack", () => {
     expect(closeGiving).toHaveBeenCalledOnce();
     expect(closeDetail).not.toHaveBeenCalled();
     expect(win.where().at).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it("steps back on its window's own timers, so nothing runs once the window is closed", async () => {
+    vi.useFakeTimers();
+    const win = fakeWindow();
+    const stack = createBackStack(win);
+    // An overlay closing on its own holds a step back; the page goes before it's due.
+    stack.release(stack.open(vi.fn()));
+    win.close();
+    await settle();
+    expect(win.readsAfterClose()).toBe(0);
     vi.useRealTimers();
   });
 

@@ -12,6 +12,9 @@ const STEP_BACK_HOLD_MS = 250;
 interface BackWindow {
   history: Pick<History, "state" | "pushState" | "replaceState" | "back">;
   addEventListener: (type: "popstate", listener: (e: { state: unknown }) => void) => void;
+  /** The window's own timers, which a closed window cancels, so no step back outlives its page. */
+  setTimeout: (run: () => void, ms: number) => number;
+  clearTimeout: (timer: number) => void;
 }
 
 interface Overlay {
@@ -42,7 +45,7 @@ export function createBackStack(win: BackWindow) {
   let ownPops = 0;
   const waiting: Overlay[] = [];
   /** A closed overlay's step back, held STEP_BACK_HOLD_MS while its entry is the current one. */
-  let pending: { id: string; timer: ReturnType<typeof setTimeout> } | null = null;
+  let pending: { id: string; timer: number } | null = null;
 
   const flush = () => {
     if (ownPops === 0) for (const overlay of waiting.splice(0)) push(overlay);
@@ -59,7 +62,7 @@ export function createBackStack(win: BackWindow) {
     const marked = { ...(isRecord(state) ? state : {}), [KEY]: overlay.id };
     // An overlay opening as another closes takes the closed one's entry, with no step back to race.
     if (pending) {
-      clearTimeout(pending.timer);
+      win.clearTimeout(pending.timer);
       pending = null;
       win.history.replaceState(marked, "");
     } else win.history.pushState(marked, "");
@@ -76,7 +79,7 @@ export function createBackStack(win: BackWindow) {
     const at = markerOf(e.state);
     // A Back beat a close's held step to the entry: the entry's gone, so the step is too.
     if (pending && at !== pending.id) {
-      clearTimeout(pending.timer);
+      win.clearTimeout(pending.timer);
       pending = null;
     }
     if (ownPops > 0) ownPops--;
@@ -121,7 +124,7 @@ export function createBackStack(win: BackWindow) {
       const id = overlay.id;
       pending = {
         id,
-        timer: setTimeout(() => {
+        timer: win.setTimeout(() => {
           pending = null;
           if (markerOf(win.history.state) === id) goBack();
           else flush();
