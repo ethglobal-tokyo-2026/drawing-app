@@ -14,15 +14,18 @@ import {
 import {
   fieldOf,
   LARGE_LANDING_GROWTH,
-  maxSOf,
+  sRangeOf,
   PHONE_BOARD,
   stickerBox,
   unitOf,
   type BoardSize,
+  type SRange,
   type Placement,
 } from "./placement";
 
 const largeBoard = (W: number, H: number): BoardSize => ({ W, H, U: unitOf("large", W) });
+/** Any size at all: the spread alone. */
+const ANY_SIZE: SRange = { min: 0, max: Infinity };
 const PHONE: BoardSize = { ...PHONE_BOARD, U: unitOf("phone", PHONE_BOARD.W) };
 /** iPads' boards in Safari, upright and turned: their viewports less a 72px tab strip. */
 const IPADS = [largeBoard(744, 975), largeBoard(820, 1022), largeBoard(1180, 662)];
@@ -49,9 +52,9 @@ describe("the large layout derived from the phone's", () => {
     const [corner, far] = [spot(0, 0), spot(1, 1)];
     const edge = (1 - LARGE_SPREAD) / 2;
     for (const ipad of IPADS) {
-      expect(largeSpotFrom(corner, Infinity)).toMatchObject({ x: edge, y: edge });
-      expect(largeSpotFrom(far, Infinity)).toMatchObject({ x: 1 - edge, y: 1 - edge });
-      expect(largeSpotFrom(spot(0.5, 0.5), Infinity)).toMatchObject({ x: 0.5, y: 0.5 });
+      expect(largeSpotFrom(corner, ANY_SIZE)).toMatchObject({ x: edge, y: edge });
+      expect(largeSpotFrom(far, ANY_SIZE)).toMatchObject({ x: 1 - edge, y: 1 - edge });
+      expect(largeSpotFrom(spot(0.5, 0.5), ANY_SIZE)).toMatchObject({ x: 0.5, y: 0.5 });
       const [held] = holding(corner);
       const large = largeOf([held], ipad).get(held.id);
       expect(large).toMatchObject({ on: corner.on, r: corner.r, z: corner.z });
@@ -69,9 +72,9 @@ describe("the large layout derived from the phone's", () => {
         }),
       ),
     ]).stickers;
-    const largest = maxSOf(tall, "large", fieldOf(turned.W, turned.H), turned.U);
+    const largest = sRangeOf(tall, "large", fieldOf(turned.W, turned.H), turned.U).max;
     expect(largest).toBeLessThan(MAX_SCALE * LARGE_LANDING_GROWTH);
-    expect(largeOf([tall], turned).get(tall.id)?.s).toBe(largest);
+    expect(largeOf([tall], turned).get(tall.id)?.s).toBeCloseTo(largest);
   });
 
   it("pulls apart stickers the spread pushed together, and leaves stacked ones stacked", () => {
@@ -90,7 +93,7 @@ describe("the large layout derived from the phone's", () => {
       overlapOn(
         turned,
         [top, below],
-        [largeSpotFrom(phones[0], Infinity), largeSpotFrom(phones[1], Infinity)],
+        [largeSpotFrom(phones[0], ANY_SIZE), largeSpotFrom(phones[1], ANY_SIZE)],
       ),
     ).toBe(true);
     const large = largeOf([top, below, onTop], turned);

@@ -103,13 +103,6 @@ const INSET = 12;
 const FOOT = 16;
 /** The right edge belongs to the sticker tray. */
 export const TRAY_EDGE = 40;
-export const S_MIN = 0.16;
-/**
- * A sticker's largest size in each layout, as the side of the square of its area, a share of the
- * unit: every sticker can cover the same area whatever its shape, unless the field stops it first.
- * A square one at the phone's spans the phone board's field.
- */
-const AREA_MAX: Record<BoardLayout, number> = { phone: 0.85, large: 1.3 };
 /** The longest a sticker's long side gets in each layout, whatever its shape; the API refuses past it. */
 const S_CEILING: Record<BoardLayout, number> = { phone: MAX_SCALE, large: MAX_LARGE_SCALE };
 
@@ -120,26 +113,59 @@ export const fieldOf = (width: number, height: number): Field => ({
   h: Math.max(120, height - FOOT - HEADER),
 });
 
+/** A sticker's art as a board sizes it: its image's shape, and its drawn size on the sheet, in units. */
+export interface Art {
+  width: number;
+  height: number;
+  drawnWidth: number;
+  drawnHeight: number;
+}
+
 /**
- * The largest `s` a sticker with this art takes in `layout`, on a board with this field and unit:
- * its area at AREA_MAX, as long as it fits the field and the layout's ceiling.
+ * Board px per sheet unit at a sticker's natural size, on the phone board: every sticker shows at the
+ * same share of the size it was drawn, so line weights match from sticker to sticker. A quarter lands
+ * a sticker drawn at the usual size where every new sticker landed when they all landed alike.
  */
-export function maxSOf(
-  art: { width: number; height: number },
-  layout: BoardLayout,
-  field: Field,
-  unit: number,
-) {
+export const NATURAL_SCALE = 0.25;
+
+/** How much larger a new sticker lands in the large layout than on a phone, which has less room. */
+export const LARGE_LANDING_GROWTH = 1.25;
+
+/** A sticker's natural size in `layout`, as `s`: its drawn long side at NATURAL_SCALE on the phone board. */
+export function naturalSOf(art: Pick<Art, "drawnWidth" | "drawnHeight">, layout: BoardLayout) {
+  const s = (Math.max(art.drawnWidth, art.drawnHeight) * NATURAL_SCALE) / PHONE_BOARD.W;
+  return layout === "large" ? s * LARGE_LANDING_GROWTH : s;
+}
+
+/** A resize takes a sticker down to its natural size over this, and up to its natural size times this. */
+export const RESIZE_REACH = 2;
+
+/** The sizes a sticker can take, as `s`. */
+export interface SRange {
+  min: number;
+  max: number;
+}
+
+/**
+ * The sizes a sticker takes in `layout`, on a board with this field and unit: half to twice its
+ * natural size, as long as it fits the field and the layout's ceiling, which win.
+ */
+export function sRangeOf(art: Art, layout: BoardLayout, field: Field, unit: number): SRange {
   const wide = art.width >= art.height;
   const shortShare = Math.min(art.width, art.height) / Math.max(art.width, art.height);
   const fits = Math.min(
     (wide ? field.w : field.h) / unit,
     (wide ? field.h : field.w) / unit / shortShare,
   );
-  return Math.min(AREA_MAX[layout] / Math.sqrt(shortShare), fits, S_CEILING[layout]);
+  const natural = naturalSOf(art, layout);
+  return {
+    min: natural / RESIZE_REACH,
+    max: Math.min(natural * RESIZE_REACH, fits, S_CEILING[layout]),
+  };
 }
 
-export const clampS = (s: number, max: number) => Math.min(max, Math.max(S_MIN, s));
+/** `s` kept in `range`; where the field leaves less than its least, the field wins. */
+export const clampS = (s: number, range: SRange) => Math.min(range.max, Math.max(range.min, s));
 
 export const toPx = (f: Field, p: { x: number; y: number }) => ({
   x: f.left + p.x * f.w,
@@ -268,16 +294,16 @@ export function toolbarSpot(
 }
 
 /**
- * Spots for new stickers, as x, y, s and r: calm, and clear of the header and Draw. The empty board
+ * Spots for new stickers, as x, y and r: calm, and clear of the header and Draw. The empty board
  * shows the first as a dashed spot, so the first sticker lands in it.
  */
 const SPOTS = [
-  [0.5, 0.42, 0.36, 2],
-  [0.72, 0.8, 0.34, 3],
-  [0.28, 0.8, 0.32, -4],
-  [0.26, 0.4, 0.3, -3],
-  [0.75, 0.3, 0.3, 5],
-  [0.5, 0.15, 0.3, -6],
+  [0.5, 0.42, 2],
+  [0.72, 0.8, 3],
+  [0.28, 0.8, -4],
+  [0.26, 0.4, -3],
+  [0.75, 0.3, 5],
+  [0.5, 0.15, -6],
 ] as const;
 
 /** Where the empty board's dashed spot sits: the first sticker's spot. */
@@ -286,39 +312,21 @@ export const FIRST_SPOT = { x: SPOTS[0][0], y: SPOTS[0][1] };
 /** How many spots are laid out for new stickers. */
 export const LAID_OUT_SPOTS = SPOTS.length;
 
-/** A laid-out spot is taken once a sticker's center sits this near it. */
-export const TAKEN_WITHIN = 0.15;
-
 /** Seeded spots tried for a new sticker once every laid-out spot is taken; the clearest wins. */
 const SEEDED_TRIES = 24;
 
-type Spot = readonly [x: number, y: number, s: number, r: number];
+type Spot = readonly [x: number, y: number, r: number];
 
-const span = (i: 0 | 1 | 2 | 3) => {
+const span = (i: 0 | 1 | 2) => {
   const values = SPOTS.map((spot) => spot[i]);
   return [Math.min(...values), Math.max(...values)] as const;
 };
 
 /**
- * The laid-out spots' bounds for x, y, s and r: seeded spots stay inside them, as calm and as clear
- * of the header and Draw.
+ * The laid-out spots' bounds for x, y and r: seeded spots stay inside them, as calm and as clear of
+ * the header and Draw.
  */
-export const SPOT_BOUNDS = { x: span(0), y: span(1), s: span(2), r: span(3) };
-
-/** How far a spot is from the nearest sticker. Height counts for more, since the field is taller. */
-const clearance = (x: number, y: number, taken: readonly Placement[]) =>
-  taken.length ? Math.min(...taken.map((t) => Math.hypot(x - t.x, (y - t.y) * 1.4))) : 1;
-
-/** The spot farthest from every sticker; the first wins a tie. */
-function clearest(spots: readonly Spot[], taken: readonly Placement[]) {
-  let spot = spots[0];
-  let score = -1;
-  for (const s of spots) {
-    const c = clearance(s[0], s[1], taken);
-    if (c > score) [spot, score] = [s, c];
-  }
-  return { spot, score };
-}
+export const SPOT_BOUNDS = { x: span(0), y: span(1), r: span(2) };
 
 /**
  * Seeded spots inside the laid-out ones' bounds, seeded by how many stickers the board holds: the
@@ -328,39 +336,89 @@ function seededSpots(count: number): Spot[] {
   const random = seededRandom(count);
   const within = ([lo, hi]: readonly [number, number], places: number) =>
     Number((lo + random() * (hi - lo)).toFixed(places));
-  const { x, y, s, r } = SPOT_BOUNDS;
-  return Array.from({ length: SEEDED_TRIES }, () => [
-    within(x, 4),
-    within(y, 4),
-    within(s, 2),
-    within(r, 0),
-  ]);
+  const { x, y, r } = SPOT_BOUNDS;
+  return Array.from({ length: SEEDED_TRIES }, () => [within(x, 4), within(y, 4), within(r, 0)]);
 }
-
-/** How much larger a new sticker lands in the large layout than on a phone, which has less room. */
-export const LARGE_LANDING_GROWTH = 1.25;
 
 /** A sticker's size as it lands in the large layout, from its size on a phone. */
 export const largeLandingSize = (s: number) => Number((s * LARGE_LANDING_GROWTH).toFixed(3));
 
+/** The phone board, measured: where a layout that isn't on screen lands its stickers. */
+export const PHONE_BOARD_SIZE: BoardSize = { ...PHONE_BOARD, U: unitOf("phone", PHONE_BOARD.W) };
+
+/** A sticker already on the board: its spot, and its art's shape. */
+export interface Taken {
+  placement: Placement;
+  art: Pick<Art, "width" | "height">;
+}
+
+/** A box's center and the half extents of its turned box, in board px. */
+export interface Footprint {
+  x: number;
+  y: number;
+  ex: number;
+  ey: number;
+}
+
+export function footprintOf(
+  field: Field,
+  unit: number,
+  p: Pick<Placement, "x" | "y" | "s" | "r">,
+  art: Pick<Art, "width" | "height">,
+): Footprint {
+  const { x, y } = toPx(field, p);
+  const { w, h } = sizeOf(unit, p.s, art);
+  const turn = (p.r * Math.PI) / 180;
+  const [cos, sin] = [Math.abs(Math.cos(turn)), Math.abs(Math.sin(turn))];
+  return { x, y, ex: (cos * w + sin * h) / 2, ey: (sin * w + cos * h) / 2 };
+}
+
+/** How far apart two footprints are, in px, on the axis they're furthest apart on; below zero, they overlap. */
+const gapOf = (a: Footprint, b: Footprint) =>
+  Math.max(Math.abs(a.x - b.x) - a.ex - b.ex, Math.abs(a.y - b.y) - a.ey - b.ey);
+
+/** A center moved in as far as a footprint this big needs to stay on the field; too big, it centers. */
+const fitIn = (c: number, lo: number, span: number, e: number) =>
+  2 * e >= span ? lo + span / 2 : Math.min(lo + span - e, Math.max(lo + e, c));
+
 /**
- * Where a new sticker goes in `layout`: the laid-out spot farthest from every sticker already on the
- * board. Once each of those is taken, the clearest of a few seeded spots, so stickers that arrive
- * together each get their own instead of stacking on one.
+ * Where a new sticker goes in `layout`, at its natural size: the laid-out spot with the most room
+ * around it for a sticker that size, moved in to keep it on the field. Once each of those overlaps a
+ * sticker, the roomiest of a few seeded spots, so stickers that arrive together each get their own
+ * instead of stacking on one.
  */
 export function freeSpot(
-  taken: readonly Placement[],
+  taken: readonly Taken[],
+  art: Art,
   layout: BoardLayout,
+  board: BoardSize,
 ): Pick<Placement, "x" | "y" | "s" | "r"> {
-  const laidOut = clearest(SPOTS, taken);
-  let best = laidOut.spot;
-  if (laidOut.score < TAKEN_WITHIN) {
-    const seeded = clearest(seededSpots(taken.length), taken);
-    if (seeded.score > laidOut.score) best = seeded.spot;
-  }
-  const [x, y, s, r] = best;
-  return { x, y, s: layout === "large" ? largeLandingSize(s) : s, r };
+  const field = fieldOf(board.W, board.H);
+  const s = clampS(naturalSOf(art, layout), sRangeOf(art, layout, field, board.U));
+  const others = taken.map((t) => footprintOf(field, board.U, t.placement, t.art));
+  /** A spot's place on the field for this sticker, and the room it leaves to the nearest sticker. */
+  const scored = ([x0, y0, r]: Spot) => {
+    const at = footprintOf(field, board.U, { x: x0, y: y0, s, r }, art);
+    at.x = fitIn(at.x, field.left, field.w, at.ex);
+    at.y = fitIn(at.y, field.top, field.h, at.ey);
+    const room = others.length ? Math.min(...others.map((o) => gapOf(at, o))) : Infinity;
+    return { spot: { ...toFrac(field, at), s, r }, room };
+  };
+  /** The roomiest spot; the first wins a tie. */
+  const roomiest = (spots: readonly Spot[]) =>
+    spots.map(scored).reduce((best, next) => (next.room > best.room ? next : best));
+  const laidOut = roomiest(SPOTS);
+  if (laidOut.room >= 0) return round4Spot(laidOut.spot);
+  const seeded = roomiest(seededSpots(taken.length));
+  return round4Spot(seeded.room > laidOut.room ? seeded.spot : laidOut.spot);
 }
+
+const round4Spot = (p: Pick<Placement, "x" | "y" | "s" | "r">) => ({
+  x: Number(p.x.toFixed(4)),
+  y: Number(p.y.toFixed(4)),
+  s: Number(p.s.toFixed(4)),
+  r: p.r,
+});
 
 /** The stacking order that puts a sticker above all the others. */
 export const nextZ = (placements: readonly Placement[]) =>

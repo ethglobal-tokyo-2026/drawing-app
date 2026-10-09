@@ -19,6 +19,8 @@ const sticker = (id: string): PlacedBoardSticker => ({
   no: 1,
   createdAt: 0,
   timeUsed: 60,
+  drawnWidth: 480,
+  drawnHeight: 480,
   width: 600,
   height: 600,
   nsfw: false,

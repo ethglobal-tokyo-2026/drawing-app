@@ -66,6 +66,7 @@ import { KeepAnimations } from "./keepAnimations";
 import { PlacedSticker } from "./PlacedSticker";
 import {
   FIRST_SPOT,
+  PHONE_BOARD_SIZE,
   boxOf,
   fieldOf,
   freeSpot,
@@ -241,6 +242,8 @@ const asGiver = (p: PersonView) => ({
 
 /** A board sticker as the gift screens draw it. */
 const viewOf = (s: PlacedBoardSticker): StickerView => ({
+  drawnWidth: s.drawnWidth,
+  drawnHeight: s.drawnHeight,
   id: s.id,
   no: s.no,
   artist: s.artist,
@@ -450,6 +453,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     const { stickers: next, placed } = placeUnplaced(
       answer.boardStickers.map(toBoardSticker),
       heldOver(loaded, adopted),
+      size ? { [layout]: size } : {},
     );
     setAdopted({ owner: toPerson(answer.owner), stickers: next });
     setStickers(next);
@@ -764,8 +768,10 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       const spot = at
         ? { ...toFrac(field, at), s: sticker.placement.s, r: normalizeTurn(at.r) }
         : freeSpot(
-            onBoard.map((s) => s.placement),
+            onBoard.map((s) => ({ placement: s.placement, art: s })),
+            sticker,
             layout,
+            size ?? PHONE_BOARD_SIZE,
           );
       const placement: Placement = {
         on: true,

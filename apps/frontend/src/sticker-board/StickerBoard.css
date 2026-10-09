@@ -108,6 +108,17 @@
   outline: none;
 }
 
+/* A sticker drawn smaller than a fingertip shows at its own size, and still takes a 44px touch. */
+.placed-sticker::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
 /* A layer of its own only while it moves; at rest every sticker's would sit in memory for nothing. */
 .placed-sticker:is(.is-dragging, .is-handling, .is-landing) {
   will-change: transform;

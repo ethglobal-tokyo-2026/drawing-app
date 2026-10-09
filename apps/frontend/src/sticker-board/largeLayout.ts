@@ -8,17 +8,18 @@ import {
   type UnplacedBoardSticker,
 } from "./boardSticker";
 import {
+  clampS,
   fieldOf,
+  footprintOf,
   largeLandingSize,
-  maxSOf,
-  PHONE_BOARD,
-  sizeOf,
-  toPx,
-  unitOf,
+  PHONE_BOARD_SIZE,
+  sRangeOf,
+  type Art,
   type BoardLayout,
   type BoardSize,
-  type Field,
+  type Footprint,
   type Placement,
+  type SRange,
 } from "./placement";
 
 const round4 = (v: number) => Number(v.toFixed(4));
@@ -29,33 +30,15 @@ export const LARGE_SPREAD = 0.88;
 /**
  * Where a sticker's phone spot lands in a large layout derived from the phone's: the phone's
  * arrangement spread across the large board's field, the sticker a size larger, as a new sticker
- * lands there, up to `maxS`.
+ * lands there, inside its `range` there.
  */
-export function largeSpotFrom(phone: Placement, maxS: number): Placement {
+export function largeSpotFrom(phone: Placement, range: SRange): Placement {
   return {
     ...phone,
     x: round4(0.5 + (phone.x - 0.5) * LARGE_SPREAD),
     y: round4(0.5 + (phone.y - 0.5) * LARGE_SPREAD),
-    s: Math.min(largeLandingSize(phone.s), maxS),
+    s: round4(clampS(largeLandingSize(phone.s), range)),
   };
-}
-
-/** A sticker's center and the half extents of its turned box, in board pixels. */
-interface Footprint {
-  x: number;
-  y: number;
-  ex: number;
-  ey: number;
-}
-
-type Art = Pick<PlacedBoardSticker, "width" | "height">;
-
-function footprintOf(field: Field, unit: number, p: Placement, art: Art): Footprint {
-  const { x, y } = toPx(field, p);
-  const { w, h } = sizeOf(unit, p.s, art);
-  const turn = (p.r * Math.PI) / 180;
-  const [cos, sin] = [Math.abs(Math.cos(turn)), Math.abs(Math.sin(turn))];
-  return { x, y, ex: (cos * w + sin * h) / 2, ey: (sin * w + cos * h) / 2 };
 }
 
 /** How deep two footprints overlap on each axis; at or below zero on either, they're clear. */
@@ -84,8 +67,8 @@ function pulledApart(
   board: BoardSize,
 ): Map<string, Placement> {
   const items = [...shown].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-  const phoneField = fieldOf(PHONE_BOARD.W, PHONE_BOARD.H);
-  const phoneUnit = unitOf("phone", PHONE_BOARD.W);
+  const phoneField = fieldOf(PHONE_BOARD_SIZE.W, PHONE_BOARD_SIZE.H);
+  const phoneUnit = PHONE_BOARD_SIZE.U;
   const phone = items.map((s) => footprintOf(phoneField, phoneUnit, s.phone, s.art));
   const pairs: [number, number][] = [];
   for (let i = 0; i < items.length; i++)
@@ -145,7 +128,7 @@ export function deriveLargeLayout(stickers: readonly PlacedBoardSticker[], board
       id: s.id,
       art: s,
       phone: s.placements.phone,
-      large: largeSpotFrom(s.placements.phone, maxSOf(s, "large", field, board.U)),
+      large: largeSpotFrom(s.placements.phone, sRangeOf(s, "large", field, board.U)),
     }));
   // Only the stickers the board shows: one in a gift has left it.
   const pulled = pulledApart(

@@ -18,7 +18,7 @@ import {
 } from "./boardGesture";
 import type { BoardSticker } from "./boardSticker";
 import {
-  maxSOf,
+  sRangeOf,
   sizeOf,
   toFrac,
   toPx,
@@ -142,10 +142,11 @@ export function useBoardGestures(options: Options) {
 
     const stickerOf = (id: string) => latest.current.stickers.find((s) => s.id === id);
     const liveOf = (p: Placement, field: Field): Live => ({ ...toPx(field, p), s: p.s, r: p.r });
-    /** The largest a resize can make this sticker on the board as it's measured now. */
-    const maxSFor = (sticker: BoardSticker, field: Field) => {
+    /** The sizes a resize can give this sticker on the board as it's measured now. */
+    const rangeFor = (sticker: BoardSticker, field: Field) => {
       const { layout, size } = latest.current;
-      return size ? maxSOf(sticker, layout, field, size.U) : sticker.placement.s;
+      const s = sticker.placement.s;
+      return size ? sRangeOf(sticker, layout, field, size.U) : { min: s, max: s };
     };
     /** `live` at its new size: grown past `from`'s, it moves in so its handles stay on the board. */
     const grownOnField = (sticker: BoardSticker, field: Field, from: Live, live: Live): Live => {
@@ -226,7 +227,7 @@ export function useBoardGestures(options: Options) {
       if (!field || !sticker || !el || leaving.has(id)) return;
       if (stepped && stepped.id !== id) saveSteps();
       const from = stepped?.live ?? liveOf(sticker.placement, field);
-      const next = stepBy(from, by, maxSFor(sticker, field));
+      const next = stepBy(from, by, rangeFor(sticker, field));
       // Past the field's edge it holds at the edge, as a drag does.
       const live = grownOnField(sticker, field, from, {
         ...next,
@@ -467,7 +468,7 @@ export function useBoardGestures(options: Options) {
           return;
         }
       } else if (g.mode === "scale") {
-        const s = scaleBy(g.b0, g.from, pt, g.b0.s, maxSFor(sticker, field));
+        const s = scaleBy(g.b0, g.from, pt, g.b0.s, rangeFor(sticker, field));
         g.live = grownOnField(sticker, field, g.b0, { ...g.b0, s });
       } else if (g.mode === "rotate") {
         g.live = { ...g.b0, r: turnBy(g.b0, g.from, pt, g.b0.r) };
@@ -475,7 +476,7 @@ export function useBoardGestures(options: Options) {
         const a = pointers.get(g.pair[0]);
         const b = pointers.get(g.pair[1]);
         if (!a || !b) return;
-        const next = pinchBy(g.start, [a, b], g.b0, maxSFor(sticker, field));
+        const next = pinchBy(g.start, [a, b], g.b0, rangeFor(sticker, field));
         const at = toPx(field, toFrac(field, next));
         g.live = { ...next, ...at };
       }

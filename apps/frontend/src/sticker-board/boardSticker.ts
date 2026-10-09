@@ -9,7 +9,17 @@ import {
 } from "../api/views";
 import { formatHandle } from "../stickers/format";
 import type { StickerUrls } from "../stickers/stickerUrls";
-import { freeSpot, nextZ, type BoardLayout, type Placement, type Spots } from "./placement";
+import {
+  freeSpot,
+  nextZ,
+  PHONE_BOARD_SIZE,
+  type Art,
+  type BoardLayout,
+  type BoardSize,
+  type Placement,
+  type Spots,
+  type Taken,
+} from "./placement";
 
 /** A sticker at its spot, as a Sticker Board's parts draw it. */
 export interface BoardSticker {
@@ -21,6 +31,9 @@ export interface BoardSticker {
   timeUsed: number;
   width: number;
   height: number;
+  /** Its image's size on the sheet it was drawn on, in sheet units: what sizes it on a board. */
+  drawnWidth: number;
+  drawnHeight: number;
   /** The cut line, an SVG path in image pixels. The board kept on this phone carries none. */
   outline?: string;
   urls: StickerUrls;
@@ -109,6 +122,8 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
     timeUsed: s.timeUsed,
     width: s.width,
     height: s.height,
+    drawnWidth: s.drawnWidth,
+    drawnHeight: s.drawnHeight,
     outline: s.outline,
     urls: s.urls,
     nsfw: s.nsfw,
@@ -148,44 +163,64 @@ export const onTheBoard = <
 /** How a person is printed: their handle, or their name until they've chosen one. */
 export const handleOf = (p: PersonView) => (p.handle === null ? p.name : formatHandle(p.handle));
 
-/** A free spot in `layout` on top of `taken`, which it joins: on the board, or at that spot in the tray. */
-function landIn(taken: Placement[], on: boolean, layout: BoardLayout): Placement {
+/**
+ * A free spot in `layout` for `art`, on top of `taken`, which it joins: on the board, or at that spot
+ * in the tray.
+ */
+function landIn(
+  taken: Taken[],
+  art: Art,
+  on: boolean,
+  layout: BoardLayout,
+  board: BoardSize,
+): Placement {
   const placement = {
     on,
     ...freeSpot(
-      taken.filter((p) => p.on),
+      taken.filter((t) => t.placement.on),
+      art,
       layout,
+      board,
     ),
-    z: nextZ(taken),
+    z: nextZ(taken.map((t) => t.placement)),
   };
-  taken.push(placement);
+  taken.push({ placement, art });
   return placement;
 }
 
 /**
  * Every sticker at a spot in the phone's layout, and in the large layout once the board has one. One
  * the board already holds keeps its spots, since the board's moves are newer than any load. One never
- * placed lands on top in each layout; one you hold that the large layout is missing goes there on the
- * board or in the tray, as on the phone. Each spot given is listed for saving.
+ * placed lands on top in each layout, clear of the others for its size on `boards`; one you hold that
+ * the large layout is missing goes there on the board or in the tray, as on the phone. Each spot given
+ * is listed for saving.
  */
 export function placeUnplaced(
   loaded: readonly UnplacedBoardSticker[],
   held: readonly PlacedBoardSticker[] = [],
+  boards: Partial<Record<BoardLayout, BoardSize>> = {},
 ): { stickers: PlacedBoardSticker[]; placed: GivenSpots[] } {
   const heldSpots = new Map(held.map((s) => [s.id, s.placements]));
   const list = loaded.map((s) => ({ ...s, placements: heldSpots.get(s.id) ?? s.placements }));
   const large = hasLargeLayout(list);
-  const taken = {
-    phone: list.flatMap((s) => s.placements.phone ?? []),
-    large: list.flatMap((s) => s.placements.large ?? []),
-  };
+  const takenIn = (layout: BoardLayout) =>
+    list.flatMap((s) => {
+      const placement = s.placements[layout];
+      return placement ? [{ placement, art: s }] : [];
+    });
+  const taken = { phone: takenIn("phone"), large: takenIn("large") };
+  const boardFor = (layout: BoardLayout) => boards[layout] ?? PHONE_BOARD_SIZE;
   const placed: GivenSpots[] = [];
   const stickers = list.map((s): PlacedBoardSticker => {
     const spots: Spots = {};
-    const phone = s.placements.phone ?? (spots.phone = landIn(taken.phone, true, "phone"));
+    const phone =
+      s.placements.phone ??
+      (spots.phone = landIn(taken.phone, s, true, "phone", boardFor("phone")));
     const inLarge =
       s.placements.large ??
-      (large && s.held ? (spots.large = landIn(taken.large, phone.on, "large")) : null);
+      (large && s.held
+        ? (spots.large = landIn(taken.large, s, phone.on, "large", boardFor("large")))
+        : null);
     const sticker = { ...s, placements: { phone, large: inLarge } };
     if (spots.phone || spots.large) placed.push({ sticker, spots });
     return sticker;

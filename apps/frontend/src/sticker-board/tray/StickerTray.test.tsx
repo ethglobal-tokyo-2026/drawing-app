@@ -58,6 +58,8 @@ const sticker = (
   arrivedAt,
   seenAt: null,
   timeUsed: 120,
+  drawnWidth: 480,
+  drawnHeight: 480,
   nsfw: false,
   kyotoSeikaSubjects: null,
   width: 100,

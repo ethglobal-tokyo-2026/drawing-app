@@ -17,6 +17,8 @@ const boardSticker = (z: number, on = true): BoardStickerView => {
     createdAt: 0,
     arrivedAt: 0,
     timeUsed: 60,
+    drawnWidth: 480,
+    drawnHeight: 480,
     width: 100,
     height: 100,
     nsfw: false,

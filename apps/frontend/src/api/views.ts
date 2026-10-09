@@ -32,6 +32,9 @@ export interface StickerView {
   timeUsed: number;
   width: number;
   height: number;
+  /** Its image's size on the sheet it was drawn on, in sheet units: what sizes it on a sticker board. */
+  drawnWidth: number;
+  drawnHeight: number;
   outline: string;
   urls: StickerUrls;
   /** Milliseconds. */
@@ -62,6 +65,8 @@ export const toSticker = (s: Sticker): StickerView => ({
   timeUsed: s.timeUsed,
   width: s.width,
   height: s.height,
+  drawnWidth: s.drawnWidth,
+  drawnHeight: s.drawnHeight,
   outline: s.outline,
   urls: {
     png: s.images.webp.sticker,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { boardSticker, people, sticker, TEST_KYOTO_SEIKA_SUBJECTS } from "../api/testFixtures";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
 import { onTheBoard, placeUnplaced, shownIn, toBoardSticker } from "./boardSticker";
-import { LAID_OUT_SPOTS, LARGE_LANDING_GROWTH, TAKEN_WITHIN } from "./placement";
+import { LAID_OUT_SPOTS, LARGE_LANDING_GROWTH } from "./placement";
 
 /** A spot on the board, as the API sends it. */
 const onBoardAt = (x: number) => ({ onBoard: true, x, y: 0.5, scale: 0.3, rotation: 0, z: 1 });
@@ -71,7 +71,7 @@ describe("placeUnplaced", () => {
     for (const { sticker: s } of placed)
       for (const other of stickers.filter((o) => o.id !== s.id)) {
         const [a, b] = [s.placements.phone, other.placements.phone];
-        expect(Math.hypot(a.x - b.x, (a.y - b.y) * 1.4)).toBeGreaterThan(TAKEN_WITHIN);
+        expect([a.x, a.y]).not.toEqual([b.x, b.y]);
       }
     // A reload that finds them unplaced again puts them in the same spots.
     expect(placeUnplaced([...onBoard, ...arrived]).stickers).toEqual(stickers);

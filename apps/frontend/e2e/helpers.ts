@@ -184,7 +184,7 @@ export const canvas = (page: Page, language: Language) =>
  * no ink until the server answers its ticket's spend, so a stroke it refused is drawn again. Undo gets
  * a few seconds, since a stroke the sheet took can take that long to show in a loaded WebKit.
  */
-export async function drawStroke(page: Page, language: Language) {
+export async function drawStroke(page: Page, language: Language, reach = 1) {
   const sheet = canvas(page, language);
   const undo = page.getByRole("button", { name: say(stickerCreation.history.undo, language) });
   await drawingScreenUp(page);
@@ -197,7 +197,8 @@ export async function drawStroke(page: Page, language: Language) {
     const y = box.y + box.height * 0.4;
     await page.mouse.move(x, y);
     await page.mouse.down();
-    for (let step = 1; step <= 12; step++) await page.mouse.move(x + step * 12, y + step * 8);
+    for (let step = 1; step <= 12; step++)
+      await page.mouse.move(x + step * 12 * reach, y + step * 8 * reach);
     await page.mouse.up();
     await expect(undo).toBeEnabled({ timeout: 5_000 });
   }).toPass();
@@ -254,8 +255,12 @@ export async function sealOnSheet(page: Page, language: Language) {
 }
 
 /** Draws a stroke and seals it, 18+ or not. Resolves with the sealed card and the sticker's number. */
-export async function drawAndSeal(page: Page, language: Language, { nsfw = false } = {}) {
-  await drawStroke(page, language);
+export async function drawAndSeal(
+  page: Page,
+  language: Language,
+  { nsfw = false, reach = 1 } = {},
+) {
+  await drawStroke(page, language, reach);
   await openSealSheet(page, language);
   if (nsfw) await nsfwSwitch(page, language).check();
   return sealOnSheet(page, language);
@@ -288,9 +293,9 @@ export async function openDetail(page: Page, language: Language, no: string) {
 }
 
 /** Draw from the board, one stroke, seal, and back to the board. Resolves with the sticker's number. */
-export async function sealFromBoard(page: Page, language: Language) {
+export async function sealFromBoard(page: Page, language: Language, { reach = 1 } = {}) {
   await tapKey(drawKey(page, language));
-  const { card, no } = await drawAndSeal(page, language);
+  const { card, no } = await drawAndSeal(page, language, { reach });
   await card.getByRole("button", { name: say(ui.backToBoard, language) }).click();
   await expect(boardSticker(page, language, no)).toBeVisible();
   return no;

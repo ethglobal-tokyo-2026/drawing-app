@@ -50,6 +50,8 @@ export const TEST_KYOTO_SEIKA_SUBJECTS: [KyotoSeikaSubject, KyotoSeikaSubject] =
 ];
 
 const ART_PX = 224;
+/** A test sticker's drawn size on the sheet, in units: the usual size, so it lands at the usual size. */
+const DRAWN_UNITS = 480;
 
 /** Every PNG of a test sticker at one URL, and every WebP file at another. */
 const imagesOf = (url: string): Sticker["images"] => {
@@ -75,6 +77,8 @@ export function sticker(overrides: Partial<Sticker> = {}): Sticker {
     ownerId: people.mika.id,
     timeUsed: 172,
     width: ART_PX,
+    drawnWidth: DRAWN_UNITS,
+    drawnHeight: DRAWN_UNITS,
     height: ART_PX,
     // Point pairs only, as the seal writes a cut line and the sticker tray reads one.
     outline: `M0 0L${ART_PX} 0L${ART_PX} ${ART_PX}L0 ${ART_PX}Z`,

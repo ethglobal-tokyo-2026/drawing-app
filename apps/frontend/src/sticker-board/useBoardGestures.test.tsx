@@ -21,6 +21,8 @@ const sticker: BoardSticker = {
   no: 1,
   createdAt: 1,
   timeUsed: 60,
+  drawnWidth: 480,
+  drawnHeight: 480,
   ...yoursHeld,
   width: 100,
   height: 80,

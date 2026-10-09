@@ -59,6 +59,8 @@ const sticker = (
   createdAt,
   arrivedAt: createdAt,
   timeUsed: 292,
+  drawnWidth: 480,
+  drawnHeight: 480,
   width: 120,
   height: 100,
   nsfw: false,
