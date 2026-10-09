@@ -1,8 +1,7 @@
 import { Component, type ReactNode } from "react";
 import { useTranslation } from "../i18n/react";
-import { GateNotice } from "../line/GateParts";
+import { GateNotice, GatePaper } from "../line/GateParts";
 import { Key } from "../ui/Key";
-import "../line/LineGate.css";
 
 interface State {
   crashed: { error: unknown } | null;
@@ -29,7 +28,7 @@ export class AppCrashBoundary extends Component<{ children: ReactNode }, State> 
 function AppCrashed({ error }: { error: unknown }) {
   const { t } = useTranslation();
   return (
-    <main className="line-gate">
+    <GatePaper>
       <GateNotice
         title={t(($) => $.app.crash.title)}
         lead={t(($) => $.app.crash.lead)}
@@ -37,6 +36,6 @@ function AppCrashed({ error }: { error: unknown }) {
       >
         <Key onClick={() => location.reload()}>{t(($) => $.app.crash.reload)}</Key>
       </GateNotice>
-    </main>
+    </GatePaper>
   );
 }

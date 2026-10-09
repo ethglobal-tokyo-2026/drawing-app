@@ -1,7 +1,7 @@
 /* ---------- The handle prompt, on the bare paper before the app opens ---------- */
 
 /* One track that can shrink, so a long handle in the key or the field never widens the form past the
-   screen: the gate is fixed and doesn't scroll. */
+   screen. */
 .handle-prompt__form {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

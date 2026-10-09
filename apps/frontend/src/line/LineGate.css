@@ -4,24 +4,36 @@
   position: fixed;
   inset: 0;
   isolation: isolate;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 12px;
-  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  /* What the on-screen keyboard hides pads the paper, so the stack centers in what's left
+     (visibleArea.ts). */
+  padding: calc(32px + var(--hidden-top, 0px)) 24px calc(32px + var(--hidden-bottom, 0px));
+  scroll-padding: var(--hidden-top, 0px) 0 var(--hidden-bottom, 0px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--liner-grain), var(--liner);
   text-align: center;
 }
 
-/* The maker print, barely there, as on the board. */
+/* The maker print, barely there, as on the board; fixed, so it stays put while the paper scrolls. */
 .line-gate::before {
   content: "";
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: -1;
   background: var(--liner-print);
   opacity: 0.55;
   pointer-events: none;
+}
+
+/* Auto margins center the stack while it fits and give way when it doesn't, so a tall one starts at
+   the top and scrolls rather than losing its head. */
+.line-gate__stack {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin-block: auto;
 }
 
 .line-gate h1 {

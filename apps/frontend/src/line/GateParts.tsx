@@ -1,9 +1,24 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { ErrorDetail } from "../ui/ErrorLine";
+import { useVisibleArea } from "../ui/visibleArea";
 import "./LineGate.css";
 
 /** A wait this long gets a second line, so a stall doesn't read as a frozen app. */
 export const STILL_OPENING_MS = 6_000;
+
+/**
+ * The bare paper every gate stands on. What it holds centers while it fits; taller than the window, it
+ * starts at the top and scrolls. It keeps it where the on-screen keyboard leaves it visible.
+ */
+export function GatePaper({ className, children, ...rest }: ComponentPropsWithoutRef<"main">) {
+  const paper = useRef<HTMLElement>(null);
+  useVisibleArea(paper);
+  return (
+    <main ref={paper} className={className ? `line-gate ${className}` : "line-gate"} {...rest}>
+      <div className="line-gate__stack">{children}</div>
+    </main>
+  );
+}
 
 /**
  * The gates' status line while they wait. Once the wait has run long, `stillLabel` joins it inside

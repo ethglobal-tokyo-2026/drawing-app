@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { followAccountLanguage, lineLanguage } from "../i18n/pageLanguage";
 import { useTranslation } from "../i18n/react";
-import { GateNotice, GateOpening } from "../line/GateParts";
+import { GateNotice, GateOpening, GatePaper } from "../line/GateParts";
 import { lineClaims, lineIdToken, lineUserId, type LineClaims } from "../line/liff";
 import { reconnectLine } from "../line/reconnectLine";
 import { Key } from "../ui/Key";
@@ -13,7 +13,6 @@ import { HandlePrompt } from "./HandlePrompt";
 import type { SessionApi } from "./httpApi";
 import { MeContext, SetMeContext } from "./meContext";
 import { onSessionLost } from "./sessionLoss";
-import "../line/LineGate.css";
 
 const describe = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -230,7 +229,7 @@ export function SessionGate({
     );
   }
   return (
-    <main className="line-gate" aria-busy={state.step !== "failed"}>
+    <GatePaper aria-busy={state.step !== "failed"}>
       {state.step === "signing-in" ? (
         <GateOpening
           label={t(($) => $.api.signIn.opening)}
@@ -251,6 +250,6 @@ export function SessionGate({
           </Key>
         </GateNotice>
       )}
-    </main>
+    </GatePaper>
   );
 }

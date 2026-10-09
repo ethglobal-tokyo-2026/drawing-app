@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "../i18n/react";
 import { Key } from "../ui/Key";
-import { GateNotice, GateOpening } from "./GateParts";
+import { GateNotice, GateOpening, GatePaper } from "./GateParts";
 import { lineLogin, START_TIMEOUT_MS, useLine } from "./liff";
 import "./LineGate.css";
 
@@ -11,7 +11,7 @@ export function LineGate({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   if (line.status === "ready") return children;
   return (
-    <main className="line-gate" aria-busy={line.status === "loading"}>
+    <GatePaper aria-busy={line.status === "loading"}>
       {line.status === "loading" ? (
         <GateOpening
           label={t(($) => $.line.gate.opening)}
@@ -34,6 +34,6 @@ export function LineGate({ children }: { children: ReactNode }) {
           <Key onClick={() => location.reload()}>{t(($) => $.line.gate.tryAgain)}</Key>
         </GateNotice>
       )}
-    </main>
+    </GatePaper>
   );
 }

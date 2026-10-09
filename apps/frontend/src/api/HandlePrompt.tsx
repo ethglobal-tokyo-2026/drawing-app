@@ -3,11 +3,11 @@ import { useState, type FormEvent } from "react";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { At } from "../icons";
+import { GatePaper } from "../line/GateParts";
 import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { apiError, type ApiError } from "./apiClient";
 import { HANDLE_MAX_LENGTH, type Me } from "@drawing-app/api/client";
-import "../line/LineGate.css";
 import "./HandlePrompt.css";
 
 interface Props {
@@ -66,7 +66,7 @@ export function HandlePrompt({ me, setHandle, onChosen }: Props) {
   };
 
   return (
-    <main className="line-gate handle-prompt">
+    <GatePaper className="handle-prompt">
       <h1 className="title-label">{t(($) => $.api.handle.title)}</h1>
       <p className="line-gate__lead keep-phrases">
         {me.lineDisplayName
@@ -108,6 +108,6 @@ export function HandlePrompt({ me, setHandle, onChosen }: Props) {
           </span>
         </Key>
       </form>
-    </main>
+    </GatePaper>
   );
 }
