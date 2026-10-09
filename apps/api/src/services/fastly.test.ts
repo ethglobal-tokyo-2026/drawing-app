@@ -150,15 +150,15 @@ describe("Fastly's purge", () => {
     expect(logs.raw.join("\n")).not.toContain(TOKEN);
   });
 
-  /** Fastly's API as a fake fetch plays it: `answer` picks each reply by the purge's path and its count of requests. */
-  function fakePurge(answer: (path: string, sent: number) => Answer) {
-    const requests: { method: string; path: string; token: string | null; at: number }[] = [];
+  /** Fastly as a fake fetch plays it: `answer` picks each reply by the URL purged and its count of requests. */
+  function fakePurge(answer: (url: string, sent: number) => Answer) {
+    const requests: { method: string; url: string; token: string | null; at: number }[] = [];
     const fetchImpl = vi.fn<typeof fetch>((input, init) => {
       const request = new Request(input, init);
-      const path = new URL(request.url).pathname;
+      const { url } = request;
       const token = request.headers.get("Fastly-Key");
-      requests.push({ method: request.method, path, token, at: Date.now() });
-      const reply = answer(path, requests.filter((sent) => sent.path === path).length);
+      requests.push({ method: request.method, url, token, at: Date.now() });
+      const reply = answer(url, requests.filter((sent) => sent.url === url).length);
       if (reply instanceof Error) return Promise.reject(reply);
       if (reply === STALL) {
         return new Promise<Response>((_, reject) => {
@@ -171,9 +171,9 @@ describe("Fastly's purge", () => {
   }
   const purged = () => Response.json({ status: "ok", id: PURGE_ID });
   const busy = () => new Response("busy", { status: 503 });
-  /** The requests that purged `url`, by its host and path. */
-  const sentTo = <Sent extends { path: string }>(requests: Sent[], url: string) =>
-    requests.filter(({ path }) => path === `/purge/${url.slice("https://".length)}`);
+  /** The requests that purged `url`. */
+  const sentTo = <Sent extends { url: string }>(requests: Sent[], url: string) =>
+    requests.filter((sent) => sent.url === url);
 
   /** Runs the purge to its end, timers included. */
   async function settled(work: Promise<boolean>) {
@@ -182,14 +182,14 @@ describe("Fastly's purge", () => {
     return outcome;
   }
 
-  it("purges each URL by its host and path with the token, and again after a pause, logging the IDs Fastly answers", async () => {
+  it("purges each URL with a PURGE sent to it with the token, and again after a pause, logging the IDs Fastly answers", async () => {
     const { requests, cdnPurge } = fakePurge(() => purged());
     expect(await settled(cdnPurge.purge([PNG, WEBP]))).toEqual({ value: true });
     expect(requests).toHaveLength(4);
     for (const url of [PNG, WEBP]) {
       const [first, second] = sentTo(requests, url);
       for (const sent of [first, second])
-        expect(sent).toMatchObject({ method: "POST", token: TOKEN });
+        expect(sent).toMatchObject({ method: "PURGE", token: TOKEN });
       expect(second.at - first.at).toBeGreaterThanOrEqual(CDN_PURGE_AGAIN_AFTER_MS);
       logs.expectLogged("cdn.purge.completed", { imageUrl: url, purgeId: PURGE_ID });
     }
@@ -206,8 +206,8 @@ describe("Fastly's purge", () => {
   it("gives up within its deadline when either purge keeps failing or stalling, logging each URL, and answers false", async () => {
     // The PNG's first purge takes its last try, and its second stalls on every try: the longest a
     // purge can run. Every try of the WebP's first purge fails, so it has no second.
-    const { requests, cdnPurge } = fakePurge((path, sent) => {
-      if (path.endsWith(".webp")) return busy();
+    const { requests, cdnPurge } = fakePurge((url, sent) => {
+      if (url.endsWith(".webp")) return busy();
       return sent === CDN_PURGE_TRIES ? purged() : STALL;
     });
     const started = Date.now();

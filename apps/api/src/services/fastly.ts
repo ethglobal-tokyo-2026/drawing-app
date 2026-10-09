@@ -77,19 +77,36 @@ interface FastlyApi {
   fetchImpl?: typeof fetch;
 }
 
+interface CallOptions {
+  body?: URLSearchParams;
+  timeoutMs?: number;
+}
+
 /** One call to Fastly's API; rejects with what failed, in Fastly's words when it answered. */
-async function callFastly<T>(
-  { token, url = FASTLY_API_URL, fetchImpl = fetch }: FastlyApi,
+function callFastly<T>(
+  api: FastlyApi,
   method: "GET" | "PUT" | "POST",
   path: string,
   schema: z.ZodType<T>,
-  { body, timeoutMs = FASTLY_CALL_TIMEOUT_MS }: { body?: URLSearchParams; timeoutMs?: number } = {},
+  options?: CallOptions,
 ): Promise<T> {
   const what = `Fastly's ${method} ${path.split("?")[0]}`;
+  return askFastly(api, method, `${api.url ?? FASTLY_API_URL}${path}`, what, schema, options);
+}
+
+/** One request to Fastly with the token; rejects with what failed, in Fastly's words when it answered. */
+async function askFastly<T>(
+  { token, fetchImpl = fetch }: FastlyApi,
+  method: "GET" | "PUT" | "POST" | "PURGE",
+  target: string,
+  what: string,
+  schema: z.ZodType<T>,
+  { body, timeoutMs = FASTLY_CALL_TIMEOUT_MS }: CallOptions = {},
+): Promise<T> {
   let text: string;
   let status: number;
   try {
-    const response = await fetchImpl(`${url}${path}`, {
+    const response = await fetchImpl(target, {
       method,
       headers: { "Fastly-Key": token, Accept: "application/json" },
       body,
@@ -162,17 +179,18 @@ export function createFastlyCdn({
 }
 
 /**
- * Purges URLs from every Fastly location through its API, by host and path, each twice,
- * CDN_PURGE_AGAIN_AFTER_MS apart. Each purge gets CDN_PURGE_TRIES tries, with a growing pause between
- * them, all within CDN_PURGE_DEADLINE_MS.
+ * Purges URLs from every Fastly location by a PURGE sent to each, twice, CDN_PURGE_AGAIN_AFTER_MS
+ * apart. Each purge gets CDN_PURGE_TRIES tries, with a growing pause between them, all within
+ * CDN_PURGE_DEADLINE_MS. Not through the API's POST /purge/<url>: it finds a service by the domains
+ * on its versions, and the site's domains are the account's (Fastly's domains/v1), so it answers 404.
  */
 export function createFastlyPurge(api: FastlyApi): CdnPurge {
   /** One purge of `imageUrl`, retried; true once Fastly took it. */
   async function purgeOnce(imageUrl: string): Promise<boolean> {
     for (let tried = 1; ; tried++) {
       try {
-        const { host, pathname } = new URL(imageUrl);
-        const { id } = await callFastly(api, "POST", `/purge/${host}${pathname}`, purgeSchema, {
+        const what = `Fastly's PURGE of ${new URL(imageUrl).pathname}`;
+        const { id } = await askFastly(api, "PURGE", imageUrl, what, purgeSchema, {
           timeoutMs: CDN_PURGE_TRY_TIMEOUT_MS,
         });
         logInfo("cdn.purge.completed", { imageUrl, purgeId: id });
