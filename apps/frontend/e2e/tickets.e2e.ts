@@ -77,7 +77,11 @@ test("spending a reserve ticket: with no daily ticket left Draw asks first; Not 
   await expect(
     reserve.getByText(sayCount(shop.reserve, "heldSpoken", language, pack.tickets)),
   ).toBeAttached();
-  await page.getByRole("button", { name: say(app.tabs.myBoard, language), exact: true }).click();
+  // The tab row's, since the drawing screen under the board has a My board tile of its own.
+  await page
+    .getByRole("navigation", { name: say(app.tabs.sections, language) })
+    .getByRole("button", { name: say(app.tabs.myBoard, language), exact: true })
+    .click();
 
   // Draw is tapped once the drawing screen has loaded under the board, as it does a moment after the
   // board, so the board knows the sheet is fresh and decides itself whether to spend.
