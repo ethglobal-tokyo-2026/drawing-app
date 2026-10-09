@@ -302,7 +302,8 @@
   background-color: var(--face-shade);
 }
 
-/* Disabled: sunk flush into the page, with no lip, ink or shadow; enabling springs it up. */
+/* Disabled: sunk flush into the page, with no lip, ink or shadow; enabling springs it up. Its label
+   takes the Graphite that reads 4.5:1 and more on Liner Deep. */
 .key:disabled,
 .key[aria-disabled="true"]:not([aria-busy="true"]),
 .label-btn:disabled,
@@ -310,7 +311,7 @@
   --face: var(--liner-deep);
   --edge: rgba(110, 104, 120, 0.34);
   cursor: not-allowed;
-  color: var(--graphite);
+  color: var(--graphite-on-deep);
   translate: 0 var(--lip);
 }
 
