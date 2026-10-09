@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** written 2026-10-08 from `docs/superpowers/specs/2026-10-08-ipad-dialogs-proposal.md`, confirmed by ad0ll 2026-10-09 with his answers to its three questions. Builds after the board and Shop-and-cards plans merge (Base).
+**Status:** written 2026-10-08 from `docs/superpowers/specs/2026-10-08-ipad-dialogs-proposal.md`, confirmed by ad0ll 2026-10-09 with his answers to its three questions. Builds after the board plan merges (Base); the Shop and cards plan merged at 7cb26186.
 
 **Goal:** On a large screen every sheet the sticker detail, Giving, Receiving, the Mini-game and Explore open is one 400px card in the middle; the sticker detail splits in two panes when the window is wider than tall; the Mini-game grows with its stage inside a phone-width band. On every size a gift in flight shows in its sticker's detail and its tray spot, the board's "On its way" badge and `GET /api/gifts/pending` go, and three sublines go. Plus four items no plan owned: device-neutral words, sheets padding the home indicator, `overflow: clip` on card hosts, the developer slip's Device paper.
 
@@ -41,14 +41,14 @@ This plan's readings, none open unless listed under Open:
 - R3. **Window shape** is CSS `(orientation: landscape)` inside the large-screen query: it reads the viewport, so a Stage Manager window splits by its own shape.
 - R4. **Take-out state** lives in memory for the visit (`giving/takeOuts.ts`): it outlives its detail, and a failure stays on that sticker's detail until Try again or Dismiss. The gift's state is the server's, so a reload reads it again from the board.
 - R5. **Mini-game scale:** on a stage at least 600×600, `min(W/390, H/741)` clamped to [1, 1.5], else 1 (the deleted plan's decision 15.1 without its short-stage shrink: phones stay as they are). Shake thresholds stay (15.2).
-- R6. **The seal sheet** hadn't landed on main at `637f4aef` (2026-10-08): main still arms the seal chip, and no branch holds a seal sheet. Task 12 is written against its expected shape and checks first.
+- R6. **The seal sheet** is another session's `feat/seal-sheet` (WIP at ceb7382c): `SealSheet` (`sticker-creation/SealSheet.tsx`, `.seal-sheet`), opened by the seal key and raised at 0:00, on `Sheet` with a new `closable` prop (false once time's up). Task 12 is written against those names and checks them first.
 
 ## Base
 
 - Branch from `origin/main` once all of these hold (Task 0 checks):
   - foundations merged (on main: `LARGE_SCREEN`, `useLargeScreen()`, `onLargeScreen()`, `ui/TabsLead.tsx`, `--gutter-large`);
-  - **the board plan merged** (`2026-10-08-ipad-board-and-stat-board.md` gone from main): its header task still renders both gift badges in `.board-head`, which Task 9 removes, and its tray tasks edit the files Task 8 edits;
-  - **the Shop and cards plan merged** (`2026-10-08-ipad-shop-and-cards.md` gone from main): `Sheet`'s `head`, `.bottom-sheet__head`, `dragBy()` in `ui/testing.ts`, the gratitude events card's large-screen block (`feat/ipad-shop-cards`, 2ce30e85 and fde90163).
+  - **the board plan merged** (`2026-10-08-ipad-board-and-stat-board.md` gone from main): its header task (6be3d665 on `feat/ipad-board`) renders both gift badges in `.board-head`, which Task 9 removes; its Give stands in the tab row's lead, which Task 3's scrim covers; its tray tasks edit the files Task 8 edits;
+  - the Shop and cards plan, merged at 7cb26186: `Sheet`'s `head`, `.bottom-sheet__head`, `dragBy()` in `ui/testing.ts`, the gratitude events card's large-screen block.
 - Task 12 also waits for the seal sheet on main; every other task runs without it.
 - Names this plan reads, as the lanes named them. Where a landed name differs, use the landed one and note it beside the task.
 
@@ -72,11 +72,11 @@ Under `apps/frontend/src/` unless shown.
 - **Receiving:** `receiving/ReceiveGiftDialog.tsx`, `receive-gift-dialog.css`, `SendGratitudeSheet.tsx`, `send-gratitude-sheet.css`, `SendGratitudeSheet.test.tsx`.
 - **Notice:** `giving/GiftReceivedNotice.tsx`, `gift-received-notice.css`, `GiftReceivedNotice.test.tsx`.
 - **Detail:** `sticker-board/StickerDetail.tsx`, `sticker-detail.css`, `StickerDetail.test.tsx`; create `giving/takeOuts.ts`; modify `giving/giftBackend.ts`, `i18n/strings/stickerBoard.ts`.
-- **Tray:** `sticker-board/tray/traySlots.ts`, `traySlots.test.ts`, `trayModel.ts`, `traySheets.ts`, `trayPresses.ts`, `StickerTray.tsx`, `sticker-tray.css`, `StickerTray.test.tsx`, `sticker-board/StickerBoard.tsx`.
+- **Tray:** `sticker-board/tray/traySlots.ts`, `traySlots.test.ts`, `trayModel.ts`, `traySheets.ts`, `trayPresses.ts`, `StickerTray.tsx`, `sticker-tray.css`, `StickerTray.test.tsx`, `sticker-board/StickerBoard.tsx`, `i18n/strings/stickerBoard.ts`.
 - **Badge goes:** delete `giving/PendingGiftsNotificationBadge.tsx`, its test, `pending-gifts-badge.css`; modify `sticker-board/StickerBoard.tsx`, `StickerBoard.css`, `StickerBoard.test.tsx`, `api/apiClient.ts`, `httpApi.ts`, `httpApi.test.ts`, `testing.tsx`, `i18n/strings/giving.ts`; `apps/api/src/routes/gifts.ts`, `gifts/packaging.ts`, `client.ts`, `requestDiagnostics.ts`, `routes/giving.test.ts`, `routes/giftsForYou.test.ts`; `apps/frontend/e2e/giving.e2e.ts`.
 - **Mini-game:** `gratitude/stageLayout.ts`, `stageLayout.test.ts`, `miniGameEngine.ts`, `miniGameEngine.test.ts`, `tierBackground.ts`, `tierBackground.test.ts`, `gratitude-mini-game.css`, `GratitudeMiniGame.tsx`, `GratitudeMiniGame.test.tsx`, `testCombos.ts`, `replay/replayFeed.ts`, `replay/replayFeed.test.ts`, `replay/mountGratitudeReplay.ts`.
 - **Lifted sticker:** `explore/LiftedSticker.tsx`, `lifted-sticker.css`, `LiftedSticker.test.tsx`.
-- **Seal sheet:** as it landed (Task 12).
+- **Seal sheet:** `sticker-creation/SealSheet.tsx`, `SealSheet.css`; create `SealSheet.test.tsx` (Task 12).
 - **Words:** `i18n/strings/app.ts`, `errors.ts`, `gratitude.ts`, `stickerBoard.ts`, `stickerCreation.ts`, `i18n/glossary.md`, `sticker-creation/session/session.ts`, `session.test.ts`, `sticker-creation/DrawingScreen.test.tsx`, `gratitude/GratitudeMiniGame.test.tsx`, `ui/motionPermission.ts`.
 - **Clip:** `sticker-board/StickerBoard.css`, `sticker-creation/DrawingScreen.css`, `app/App.css`.
 - **Device paper:** create `performance/deviceFacts.ts`, `deviceFacts.test.ts`, `sticker-board/stat-board/DeviceDetails.tsx`, `DeviceDetails.test.tsx`, `device-details.css`; modify `stat-board/StatBoard.tsx`, `i18n/strings/stickerBoard.ts`, `performance/performanceRecorder.ts`, `performanceRecorder.test.ts`, `performanceReport.ts`.
@@ -96,12 +96,10 @@ Under `apps/frontend/src/` unless shown.
 
 ```bash
 git -C "$R" fetch origin
-for p in ipad-board-and-stat-board ipad-shop-and-cards; do
-  git -C "$R" cat-file -e "origin/main:docs/superpowers/plans/2026-10-08-$p.md" 2>/dev/null && echo "NOT MERGED: $p"
-done
+git -C "$R" cat-file -e origin/main:docs/superpowers/plans/2026-10-08-ipad-board-and-stat-board.md 2>/dev/null && echo "NOT MERGED: board"
 ```
 
-Expected: no output. Any `NOT MERGED` line: stop and report.
+Expected: no output. `NOT MERGED`: stop and report.
 
 - [ ] **Step 2: Worktree.** `git -C "$R" worktree add -b feat/ipad-dialogs "$W" origin/main && pnpm -C "$W" install`. An isolated agent already in a fresh worktree runs `git switch -c feat/ipad-dialogs origin/main` and `pnpm install` in its own.
 - [ ] **Step 3: Names.**
@@ -203,7 +201,7 @@ export function useSheetDrag(close: () => void) {
   card?: boolean;
 ```
 
-In the body: `const close = …` moves above `const drag = useSheetDrag(close);`; `press`, `dragged`, `dy`, `leaveFrom`, `release`, the Shop lane's `drag` object and the `DISMISS_PX`/`TAP_SLOP_PX` constants go; the reopen branch calls `drag.reset()` in place of `setLeaveFrom(0)`; the root's `className` list gains `card && "sheet-card"` after `"bottom-sheet"`, its `style` is `drag.style`; the perforation takes `{...drag.handlers}` and `onClick={() => { if (!drag.tookClick()) close(); }}`; the head takes `{...(large ? drag.handlers : {})}`. `Sheet.test.tsx` and `GratitudeEvents.test.tsx` import `DISMISS_PX` from `./useSheetDrag` / `../../ui/useSheetDrag`.
+In the body, `close` and `const drag = useSheetDrag(close);` go first, so the hook runs before `if (!shown) return null` and the reopen branch can call `drag.reset()` in place of `setLeaveFrom(0)`; `press`, `dragged`, `dy`, `leaveFrom`, `release`, the Shop lane's `drag` object and the `DISMISS_PX`/`TAP_SLOP_PX` constants go; if the seal sheet landed first, its `closable` stays and `close` keeps refusing while it's false; the root's `className` list gains `card && "sheet-card"` after `"bottom-sheet"`, its `style` is `drag.style`; the perforation takes `{...drag.handlers}` and `onClick={() => { if (!drag.tookClick()) close(); }}`; the head takes `{...(large ? drag.handlers : {})}`. `Sheet.test.tsx` and `GratitudeEvents.test.tsx` import `DISMISS_PX` from `./useSheetDrag` / `../../ui/useSheetDrag`.
 
 - [ ] **Step 4: The rule.** `styles/tokens.css`, beside `--gutter-large`:
 
@@ -354,7 +352,7 @@ it("on an iPad waits as a card over a scrim, which says Later", () => {
 ```
 
 - [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/receiving/SendGratitudeSheet.test.tsx` → FAIL: no scrim.
-- [ ] **Step 3: `SendGratitudeSheet.tsx`.** Its `<Sheet>` gains `card`, `head` (its `.send-gratitude-sheet__from` block) and, on a large screen, `layer`; there it renders inside a layer over the whole phone:
+- [ ] **Step 3: `SendGratitudeSheet.tsx`.** Its `<Sheet>` gains `card`, `head` (the `.send-gratitude-sheet__from` block, moved there whole) and, on a large screen, `layer`; there it renders inside a layer over the whole phone:
 
 ```tsx
 const large = useLargeScreen();
@@ -366,9 +364,9 @@ const sheet = (
     className="send-gratitude-sheet"
     card
     layer={large ? layer : undefined}
-    head={from}
+    head={<div className="send-gratitude-sheet__from">{/* as now */}</div>}
   >
-    {rest}
+    <div className="send-gratitude-sheet__acts">{/* as now */}</div>
   </Sheet>
 );
 if (!large) return sheet;
@@ -638,7 +636,7 @@ describe("a gift in flight", () => {
   });
 
   it("goes on once the detail closes, and says why it failed there until tried again", async () => {
-    const refusal = new ApiError(409, { error: "take_out_not_landed", detail: "Not landed yet" });
+    const refusal = new ApiError(503, { error: "take_out_not_landed", detail: "Not landed yet" });
     let refuse: (error: unknown) => void = () => {};
     const startTakeOut = vi
       .fn<ApiClient["startTakeOut"]>()
@@ -648,7 +646,8 @@ describe("a gift in flight", () => {
     openInFlight(packed, startTakeOut);
     press(takeOut());
     act(() => root.render(null));
-    await act(async () => refuse(refusal));
+    refuse(refusal);
+    await settle();
     openInFlight(packed, startTakeOut);
     expect(alert()).toContain(
       i18next.t(($) => $.giving.inTheBag.couldntTakeOut, {
@@ -668,13 +667,13 @@ describe("a gift in flight", () => {
     await settle();
     expect(document.activeElement?.textContent).toBe("Give");
     expect(document.querySelector(".sticker-detail__taken-out")?.textContent).toBe(
-      i18next.t(($) => $.stickerBoard.detail.takeOut.back.onBoard, { no: "No.0133" }),
+      i18next.t(($) => $.stickerBoard.detail.takeOut.backOnBoard, { no: "No.0133" }),
     );
   });
 });
 ```
 
-`take_out_not_landed` is one of the take-out route's refusals (`apps/api/src/gifts/takeOut.ts`); if `ErrorBody` types its `error` another way, take its spelling there.
+`take_out_not_landed` is the take-out route's 503 refusal (`apps/api/src/gifts/takeOut.ts`, `routes/gifts.ts`).
 
 - [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board/StickerDetail.test.tsx -t "in flight"` → FAIL: no `takeOut` strings, no note for a packed gift, no Take it out.
 - [ ] **Step 3: Strings.** `stickerBoard.ts`, in `detail`, after `onItsWayTo`:
@@ -686,19 +685,14 @@ describe("a gift in flight", () => {
       title: { en: "Take {{no}} out?", ja: "{{no}}を取り出しますか？" },
       /** Sticker detail, Take it out's confirm: the quiet link that closes it with nothing taken out */
       cancel: { en: "Cancel", ja: "キャンセル" },
-      /** Where the sticker went once Take it out landed, said to screen readers. */
-      back: {
-        /** Sticker detail: said to screen readers once Take it out landed and the sticker is back on your board; {{no}} is its number */
-        onBoard: { en: "{{no}} is back on your board", ja: "{{no}}をボードに戻しました" },
-        /** Sticker detail: said to screen readers once Take it out landed and the sticker is back in your sticker tray; {{no}} is its number */
-        inTray: { en: "{{no}} is back in your tray", ja: "{{no}}をトレイに戻しました" },
-      },
+      /** Sticker detail: said to screen readers once Take it out landed and the sticker is back on your board; {{no}} is its number */
+      backOnBoard: { en: "{{no}} is back on your board", ja: "{{no}}をボードに戻しました" },
     },
 ```
 
-`onItsWay`'s and `onItsWayTo`'s comments become "Sticker detail, a sticker you've sent that hasn't been received (… to someone in the app): the note in place of Give, beside its sleeve". In `giving.ts` the comments of `inTheBag.title`, `inTheBag.takeOut`, `takingOut.button` and `inTheBag.couldntTakeOut` add the sticker detail's use: "; and the sticker detail of a sticker in a packed gift: its note" / "…: the quiet link under its note, and its confirm's key" / "…: that link's words while it runs" / "…: the alert under its note, with Try again and Dismiss".
+Back in the tray it says `tray.status.returned` ("{{no}} is back in your tray", the same words), whose comment adds "; and the sticker detail, once Take it out landed and the sticker is back in your sticker tray". `onItsWay`'s and `onItsWayTo`'s comments become "Sticker detail, a sticker you've sent that hasn't been received (… to someone in the app): the note in place of Give, beside its sleeve". In `giving.ts` the comments of `inTheBag.title`, `inTheBag.takeOut`, `takingOut.button` and `inTheBag.couldntTakeOut` add the sticker detail's use: "; and the sticker detail of a sticker in a packed gift: its note" / "…: the quiet link under its note, and its confirm's key" / "…: that link's words while it runs" / "…: the alert under its note, with Try again and Dismiss".
 
-- [ ] **Step 4: One take-out per gift.** In `giftBackend.ts`, the backend's `takeOut` becomes a module function, which the backend calls as `takeOut: (giftId) => takeOutGift({ api, userId, sign }, giftId)`:
+- [ ] **Step 4: One take-out per gift.** In `giftBackend.ts`, the backend's `takeOut` becomes a module function; inside `createApiGiftBackend`, `const takeOut = (giftId: string) => takeOutGift({ api, userId, sign }, giftId);` replaces its own, so `pack`'s recovery and the returned `takeOut` both go through it:
 
 ```ts
 /**
@@ -806,7 +800,7 @@ export function onTakenOut(listener: (stickerId: string) => void) {
 - [ ] **Step 6: The detail.** In `StickerDetail.tsx` (imports: `ArrowUUpLeft`, `takeOutFromDetail`, `dismissTakeOut`, `onTakenOut`, `useTakeOut`). Take it out shows where `ownerId` is set, which the board always passes for your own stickers; the take-out's person is `ownerId` (no `useMe()`: the detail renders outside a SessionGate in its tests).
   - State: `takenOut` (`ReadonlySet<string>`, stickers whose take-out landed here, until the board's reload drops their gift), `takeOutAsk` (the sticker id whose confirm is up), `takenOutSaid` (`{ stickerId, words }`), and `takeOut = useTakeOut(sticker?.id ?? null)`.
   - `const openGift = sticker && !takenOut.has(sticker.id) ? sticker.openGift : null;` and `const sent = openGift?.status === "sent";`. `owed`'s `!onItsWay(sticker)` becomes `!sent`; the lift's `given` keeps `s.openGift?.status === "sent"`.
-  - An effect `onTakenOut((id) => …)`: for an id among `stickers`, add it to `takenOut`, set `takenOutSaid` to `back.onBoard` or `back.inTray` by that sticker's `placement.on`, and, if it's the shown sticker, focus the act's key after the render (`root.current?.querySelector<HTMLElement>(".sticker-detail__acts .key")?.focus({ preventScroll: true })` in a layout effect keyed on `takenOutSaid`).
+  - An effect `onTakenOut((id) => …)`: for an id among `stickers`, add it to `takenOut`, set `takenOutSaid` to `detail.takeOut.backOnBoard` or `tray.status.returned` by that sticker's `placement.on`, and, if it's the shown sticker, focus the act's key after the render (`root.current?.querySelector<HTMLElement>(".sticker-detail__acts .key")?.focus({ preventScroll: true })` in a layout effect keyed on `takenOutSaid`).
   - The act slot, in place of the `onItsWay(sticker) ? … :` branch, in `mode === "yours"`:
 
 ```tsx
@@ -917,7 +911,7 @@ it("shows a sticker on its way under frost in its spot, which opens it among you
 ```
 
 - [ ] **Step 4: The state.** `traySlots.ts`: `TraySlotState` gains `"onItsWay"` (its doc: "on its way" — its spot shows it under frost); `state` becomes `!s.held ? "given" : onItsWay(s) ? "onItsWay" : s.placement.on ? "used" : "here"`; `newSlots` keeps only `"here"` and `"used"` (its filter `s.state !== "given"` becomes `s.state === "here" || s.state === "used"`).
-- [ ] **Step 5: The spot.** `trayModel.ts`: `TraySticker` gains `/** On its way: who it waits for, printed, when the app knows. */ onItsWayTo?: string;` and the tray's api `/** Opens a sticker on its way among your stickers. */ openYours: (id: string) => void;`. `StickerTray.tsx` sets `sticker.onItsWayTo = handleOf(…)` from `s.openGift.to` for an `onItsWay` slot. `traySheets.ts`: `sheetEl` appends `onItsWay` slots too; `slotEl` for one, before the given branch: the shared press, its `aria-label` from `onItsWay`/`onItsWayTo`, the sticker's image (as a `here` slot draws it, never peelable) under `<i class="tray__frost">`, and its cut line (`cutLineEl`). `trayPresses.ts`: a click on `.tray__slot[data-state="onItsWay"]` calls `api.openYours(id)` (beside `openGivenAt`); `holdPress` and the slot-tap guard treat it as `given` (opens on click, never peels). `StickerBoard.tsx`'s tray api gains `openYours`. `sticker-tray.css`:
+- [ ] **Step 5: The spot.** `trayModel.ts`: `TraySticker` gains `/** On its way: who it waits for, printed, when the app knows. */ onItsWayTo?: string;` and `TrayBoard` `/** Opens a sticker on its way among your stickers. */ openYours: (id: string) => void;`. `StickerTray.tsx`'s `trayStickers` sets `sticker.onItsWayTo = formatHandle(s.openGift.to)` for an `onItsWay` slot whose gift has a `to` (a handle string, not a person). `traySheets.ts`: `sheetEl` appends `onItsWay` slots too; `slotEl` names one from `onItsWay`/`onItsWayTo` and gives it the shared press (`data-press`), draws its image as a `here` slot's with `<i class="tray__frost">` after it inside `.tray__fit` (in the `imagesOn` branch, where `--m` is set), and appends its cut line (`cutLineEl`). `trayPresses.ts`: a click on `.tray__slot[data-state="onItsWay"]` calls `api.openYours(id)` (beside `openGivenAt`); `holdPress` and the keydown's slot guard treat it as `given` (it opens on its click and never peels; a drag on it already pulls, since only `here` peels). `StickerBoard.tsx`: `trayBoard` gains `openYours`, and `givenSpot` matches `:is([data-state="given"], [data-state="onItsWay"])`, so the detail lifts out of the spot and gives focus back to it. `sticker-tray.css`:
 
 ```css
 /* A sticker on its way: in its spot under the sleeve's frost, inside its own cut line, so its sheet's
@@ -926,18 +920,20 @@ it("shows a sticker on its way under frost in its spot, which opens it among you
   cursor: pointer;
 }
 
+/* The sleeve's frost over the sticker, inside its cut: the fit's own mask (--m), as the used
+   sticker silhouette's. */
 .tray__frost {
   position: absolute;
   inset: 0;
-  -webkit-mask: var(--src) center / contain no-repeat;
-  mask: var(--src) center / contain no-repeat;
+  -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
+  mask: var(--m) 0 0 / 100% 100% no-repeat;
   background: rgba(246, 245, 250, 0.62);
   backdrop-filter: blur(4px);
   pointer-events: none;
 }
 ```
 
-(`--src` is the slot's image URL, set on the frost as Giving's silhouette sets it.) Reduced motion: the frost appears in one frame (no transition).
+Reduced motion: the frost appears in one frame (no transition).
 
 - [ ] **Step 6:** Step 2's command → PASS; `src/sticker-board` and typecheck → PASS.
 - [ ] **Step 7: Commit.** `feat(frontend): a sticker on its way waits under frost in its tray spot, which opens its detail`
@@ -952,7 +948,10 @@ it("shows a sticker on its way under frost in its spot, which opens it among you
 
 ```ts
 // The giver's board says who the gift waits for.
-const board = await bodyOf(await test.get(giverId, "/api/sticker-boards/me"), stickerBoardSchema);
+const board = await bodyOf(
+  await test.send("GET", `/api/sticker-boards/${giverId}`, { as: giverId }),
+  stickerBoardSchema,
+);
 expect(board.boardStickers.find((s) => s.sticker.id === gift.stickerId)?.openGift).toMatchObject({
   id: gift.id,
   status: "sent",
@@ -960,7 +959,7 @@ expect(board.boardStickers.find((s) => s.sticker.id === gift.stickerId)?.openGif
 });
 ```
 
-(use the file's or `stickerBoards.test.ts`'s way of reading `/api/sticker-boards/me` and its schema; if `test.get` is rooted at `/api/gifts`, call the board route the way `stickerBoards.test.ts` does).
+(`test.get` is rooted at `/api/gifts`, so the board goes through `test.send`, as `stickerBoards.test.ts`'s `boardOf` does; `stickerBoardSchema` from `../stickerBoards/board.ts`.)
 
 - [ ] **Step 4: E2E.** `e2e/giving.e2e.ts`'s badge lines become the detail's, through another sticker's detail and its strip:
 
@@ -1160,28 +1159,44 @@ it("on an iPad puts the sticker back at a swipe down the card's head", async () 
 
 ### Task 12: The seal sheet on a large screen (decision 1; once the seal sheet is on main)
 
-Not on main when this plan was written (R6). Expected shape: one tap on ✓ raises a sheet with the preview, an 18+ switch, Seal and Not yet; at 0:00 its title is "Time's up" and only Seal is left.
+The seal sheet (R6): ✓ raises it over the drawing with the preview, an 18+ switch, Seal and Not yet; at 0:00 its title is "Time's up", only Seal is left, and its `Sheet` takes `closable={!timeUp}`.
 
-**Files:** the seal sheet's component and CSS as landed; its test file.
+**Files:** `sticker-creation/SealSheet.tsx`, `SealSheet.css`; create `SealSheet.test.tsx`.
 
-- [ ] **Step 1: Find it.** `git -C "$W" fetch origin && git -C "$W" rebase origin/main`, then `rg -n -i "sealsheet|seal-sheet|timeIsUp" "$W/apps/frontend/src/sticker-creation"`. Nothing: leave this task unchecked, say so in the hand-off, and go on.
-- [ ] **Step 2: Write the failing test** in its test file, with its render: on a large screen at 0:00 neither the scrim nor a swipe down its head closes it, and before 0:00 the swipe does.
+- [ ] **Step 1: Find it.** `git -C "$W" fetch origin && git -C "$W" rebase origin/main`, then `rg -n "export function SealSheet|closable" "$W/apps/frontend/src/sticker-creation" "$W/apps/frontend/src/ui/Sheet.tsx"`. Nothing: leave this task unchecked, say so in the hand-off, and go on. A name that landed differently replaces this task's.
+- [ ] **Step 2: Write the failing test,** `SealSheet.test.tsx`, with `GiftReceivedNotice.test.tsx`'s `host`/`root` setup (its `afterEach` also calls `vi.restoreAllMocks()`); `onLargeScreen`, `dragBy` from `../ui/testing`, `DISMISS_PX` from `../ui/useSheetDrag`:
 
 ```tsx
-it("on an iPad closes from a swipe down its head, but not once time's up", () => {
+it("on an iPad closes from a swipe down its head, but neither that nor its scrim once time's up", () => {
   onLargeScreen();
-  // …raise the seal sheet with time left, as the file does…
-  dragBy(document.querySelector(".seal-sheet .bottom-sheet__head"), [0, DISMISS_PX * 2]);
-  expect(/* the sheet */).toBeNull();
-  // …raise it at 0:00…
-  dragBy(document.querySelector(".seal-sheet .bottom-sheet__head"), [0, DISMISS_PX * 2]);
-  expect(/* the sheet */).not.toBeNull();
+  const onNotYet = vi.fn();
+  const show = (timeUp: boolean) =>
+    act(() =>
+      root.render(
+        <SealSheet
+          open
+          timeUp={timeUp}
+          nsfw={false}
+          ink={() => null}
+          onNsfwChange={() => {}}
+          onSeal={() => {}}
+          onNotYet={onNotYet}
+        />,
+      ),
+    );
+  const swipe = () =>
+    dragBy(document.querySelector(".seal-sheet .bottom-sheet__head"), [0, DISMISS_PX * 2]);
+  show(true);
+  swipe();
+  act(() => document.querySelector<HTMLElement>(".seal-sheet-layer__scrim")?.click());
+  expect(onNotYet).not.toHaveBeenCalled();
+  show(false);
+  swipe();
+  expect(onNotYet).toHaveBeenCalledOnce();
 });
 ```
 
-Use its landed class and the file's way of reaching 0:00; the two expectations stand.
-
-- [ ] **Step 3: Implement.** A `Sheet`: `card`, `head` (its preview and title), `busy` while the seal is on its way and at 0:00 (nothing but Seal closes it then). Its own markup: the card's large-screen block as Task 11's, reading `--card-w`, with `useSheetDrag` on its head. Over the drawing screen its scrim dims the tucked tab strip and the sidebar.
+- [ ] **Step 3: Implement.** Its `Sheet` gains `card` and `head` (the `.seal-sheet__body`: preview, title and switch, its grid as it is). On a large screen it renders in a layer over the whole drawing screen, the foot row's My board tile included, as Task 4's Send gratitude layer (`.seal-sheet-layer`, `.seal-sheet-layer__scrim`, the layer passed as the Sheet's `layer`); the scrim calls `onNotYet` only while `!timeUp`.
 - [ ] **Step 4:** its test file → PASS. **Step 5: Commit.** `feat(frontend): on an iPad the seal sheet is a card in the middle`
 
 ### Task 13: Words that name no device (every size)
@@ -1204,7 +1219,7 @@ The Oct 7 foundations plan's Task 7 (`git show 22de7791:docs/superpowers/plans/2
 
 The Oct 7 foundations plan's Task 5 and its finding (`sed -n '32p;1971,1981p'` of the same `git show`): WebKit under reduced motion scrolls `.board` (`overflow: hidden`, still a scroll container) by 42px to show the key the rising out-of-tickets card focuses, so the scrim ends short of the tabs.
 
-- [ ] **Step 1:** `.board`'s `overflow: hidden;` (StickerBoard.css line 9) becomes `overflow: clip;`, its comment ending "It clips without being a scroll container, so a card focused as it rises from past its foot can't scroll it."; `.drawing-screen`'s likewise ("…so a ticket card focused as it rises can't scroll it."); App.css's desktop frame `.phone`'s `overflow: hidden;` becomes `overflow: clip;`.
+- [ ] **Step 1:** `.board`'s `overflow: hidden;` (StickerBoard.css) becomes `overflow: clip;`, its comment ending "It clips without being a scroll container, so a card focused as it rises from past its foot can't scroll it."; `.drawing-screen`'s likewise ("…so a ticket card focused as it rises can't scroll it."); App.css's desktop frame `.phone`'s `overflow: hidden;` becomes `overflow: clip;`.
 - [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board src/sticker-creation` → PASS. Its test is Task 17's "board stays put" WebKit line.
 - [ ] **Step 3: Commit.** `fix(frontend): the out-of-tickets card no longer scrolls the board up in WebKit`
 
@@ -1430,4 +1445,4 @@ Scratch only: `data/scratch/ipad-dialogs/` (gitignored), untracked `apps/fronten
 1. **Layout calls to confirm on the captures:** a packed gift's act slot runs note, Take it out, then Give (the brief puts the link under the note and keeps Give the key); `--accept-over` (Task 4) is measured from the phone, not designed.
 2. **No swipe on Giving's sent step** (R2): it has no head; its Back to board, the scrim, Escape and Back close it.
 3. **The take-out confirm's words** are new (answer 1): "Take No.0147 out?", Cancel, and Giving's "Take it out" as its key, with no line on what the friend's Gift Message then says.
-4. **The seal sheet** (Task 12) waits for its own work on main; the drawing plan's seal chip steps (`2026-10-08-ipad-drawing.md` Step 3 of its large layout task) become moot once the sheet replaces the chip.
+4. **The seal sheet** (Task 12) waits for `feat/seal-sheet` on main; the drawing plan's Tasks 7, 8, 9 and 12 are being revised for it too.
