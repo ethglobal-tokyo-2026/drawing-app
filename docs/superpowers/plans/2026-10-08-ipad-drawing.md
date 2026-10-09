@@ -12,6 +12,8 @@
 
 ---
 
+> **Tasks 1–6 merged (804e1184, with a fix: a drawing kept without a frame has none until its area is measured). Tasks 10–11 are built on `feat/ipad-drawing`, held until Task 12 so the drawing hand never ships without its effect. Tasks 7, 8, 9 and 12 wait for the phone's seal sheet and My board tile (another session) and get revised for them.**
+
 ## Decisions
 
 1. **One sheet for every device,** as the draft built it from the approved sheet plan: a 374-unit short side (`SHEET_SHORT_UNITS`), the long side following the area's shape at the first mark (1 to 2.2×), a blank sheet following its area; shown scaled to fit, so turning only rescales; ink density the screen's own at the shown size, at most `MAX_INK_PIXELS` (4.2 MP); strokes, sizes and the die-cut border (`BORDER_UNITS` 23) in units; the size rail's "px" are a 390 px phone's; a drawing kept without a frame opens on its area at scale 1; fills replay at their recorded density.
@@ -58,50 +60,50 @@ git cat-file -e 609020e0 && git cat-file -e c34494ea && echo "spike objects pres
 
 ### Task 1: The sheet's frame (609020e0)
 
-- [ ] **Step 1:** `git show 609020e0 | git apply -3`: `canvas/sheetFrame.ts` and its test (new), `MAX_DPR` moving from `inkSurface.ts`, the timelapse imports. Conflicts: none.
-- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation/canvas/sheetFrame.test.ts src/sticker-board/timelapse` and `pnpm -C apps/frontend typecheck` → pass.
-- [ ] **Step 3:** Commit: `feat(frontend): the drawing sheet's frame, in sheet units, with its fit and ink density`
+- [x] **Step 1:** `git show 609020e0 | git apply -3`: `canvas/sheetFrame.ts` and its test (new), `MAX_DPR` moving from `inkSurface.ts`, the timelapse imports. Conflicts: none.
+- [x] **Step 2:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation/canvas/sheetFrame.test.ts src/sticker-board/timelapse` and `pnpm -C apps/frontend typecheck` → pass.
+- [x] **Step 3:** Commit: `feat(frontend): the drawing sheet's frame, in sheet units, with its fit and ink density`
 
 ### Task 2: One frame per drawing, the paper scaled to fit (5f4c2085)
 
-- [ ] **Step 1:** `git show 5f4c2085 | git apply -3`: the engine's frame, `fit`, `screenToSheet` and mapping; `InkSurface.setFrame`; DrawingCanvas's `.ink-area` (with `touch-action: none`) around the fitted `.ink-sheet`; unit comments.
-- [ ] **Step 2: Conflict, `canvas/DrawingCanvas.tsx`'s returned JSX.** Main prints `under` on the paper and names the canvas `label ?? catalog`. Keep the draft's `.ink-area` > `.ink-sheet` nesting, with `{under}` first inside `.ink-sheet` and the canvas's `aria-label={label ?? t(($) => $.stickerCreation.canvas)}`. The signature keeps main's `under, label`.
-- [ ] **Step 3:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation/canvas src/sticker-board/timelapse` and typecheck → pass.
-- [ ] **Step 4:** Commit: `feat(frontend): a drawing keeps one frame in sheet units, and its paper scales to fit`
+- [x] **Step 1:** `git show 5f4c2085 | git apply -3`: the engine's frame, `fit`, `screenToSheet` and mapping; `InkSurface.setFrame`; DrawingCanvas's `.ink-area` (with `touch-action: none`) around the fitted `.ink-sheet`; unit comments.
+- [x] **Step 2: Conflict, `canvas/DrawingCanvas.tsx`'s returned JSX.** Main prints `under` on the paper and names the canvas `label ?? catalog`. Keep the draft's `.ink-area` > `.ink-sheet` nesting, with `{under}` first inside `.ink-sheet` and the canvas's `aria-label={label ?? t(($) => $.stickerCreation.canvas)}`. The signature keeps main's `under, label`.
+- [x] **Step 3:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation/canvas src/sticker-board/timelapse` and typecheck → pass.
+- [x] **Step 4:** Commit: `feat(frontend): a drawing keeps one frame in sheet units, and its paper scales to fit`
 
 ### Task 3: Sealing in sheet units (bd02a3b3)
 
-- [ ] **Step 1:** `git show bd02a3b3 | git apply -3`: `BORDER_UNITS`, `cutInk` and its test, the density through `makeSticker` and the sealing worker, the timelapse recording the frame, `inkDensity` leaving the handle.
-- [ ] **Step 2: Conflicts.**
+- [x] **Step 1:** `git show bd02a3b3 | git apply -3`: `BORDER_UNITS`, `cutInk` and its test, the density through `makeSticker` and the sealing worker, the timelapse recording the frame, `inkDensity` leaving the handle.
+- [x] **Step 2: Conflicts.**
   - `DrawingScreen.tsx` imports: drop the draft's `NsfwToggle` import (main has none); keep `import type { SheetFrame } from "./canvas/sheetFrame";`.
   - `DrawingScreen.tsx` `cutFromSheet`: keep main's Kyoto Seika lines (`pair`, `kept`, `subjects`), then the draft's comment and `if (!frame) return null;`.
   - `DrawingScreen.test.tsx` imports: main's, plus `import { frameFor, SHEET_SHORT_UNITS } from "./canvas/sheetFrame";` after the `./canvas/ops` import.
   - `DrawingScreen.test.tsx` hoisted values: main's (`sheetCalls` through `rail`), then the draft's `FRAME` and its comment.
   - `sealing/makeSticker.ts` merges clean over main's own `new Worker(new URL("./sealWorker.ts", import.meta.url), …)`; check `cutInWorker(ink, density)` still starts it that way, not through `startWorker`.
-- [ ] **Step 3:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation src/sticker-board/timelapse` and typecheck → pass.
-- [ ] **Step 4:** Commit: `feat(frontend): stickers are cut with their border in sheet units, and the timelapse records the frame`
+- [x] **Step 3:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation src/sticker-board/timelapse` and typecheck → pass.
+- [x] **Step 4:** Commit: `feat(frontend): stickers are cut with their border in sheet units, and the timelapse records the frame`
 
 ### Task 4: The size ghost at the sheet's scale (b9caf92b)
 
-- [ ] **Step 1:** `git show b9caf92b | git apply -3`. Conflict, `canvas/DrawingCanvas.tsx`'s `Props`: keep main's `under` and `label`, then add the draft's `onFit`.
-- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation/tools src/sticker-creation/DrawingScreen.test.tsx` and typecheck → pass.
-- [ ] **Step 3:** Commit: `feat(frontend): the size rail's ghost shows the brush at its size on the sheet`
+- [x] **Step 1:** `git show b9caf92b | git apply -3`. Conflict, `canvas/DrawingCanvas.tsx`'s `Props`: keep main's `under` and `label`, then add the draft's `onFit`.
+- [x] **Step 2:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation/tools src/sticker-creation/DrawingScreen.test.tsx` and typecheck → pass.
+- [x] **Step 3:** Commit: `feat(frontend): the size rail's ghost shows the brush at its size on the sheet`
 
 ### Task 5: The kept drawing keeps its frame (1f96da7f)
 
-- [ ] **Step 1:** `git show 1f96da7f | git apply -3`.
-- [ ] **Step 2: Conflicts.**
+- [x] **Step 1:** `git show 1f96da7f | git apply -3`.
+- [x] **Step 2: Conflicts.**
   - `DrawingScreen.tsx` `putBack`: keep main's Kyoto Seika lines; its `canvas.current?.load(found.steps);` becomes `canvas.current?.load(found.steps, found.frame);`.
   - `session/keptSession.ts` `loadKeptSession`: keep main's multi-line `lost` return (with `kyotoSeika: null`), and take the draft's `readDrawing(userId).then(({ steps, frame }): KeptDrawing => ({ status: "found", steps, frame, ...record }),`.
-- [ ] **Step 3: What typecheck then asks for** in `DrawingScreen.test.tsx`: the Kyoto Seika reload fixture (`kyotoSeika: part, steps: []`) gains `frame: null`, and `new SessionKeeper(me.id).save([...], halfway)` gains `FRAME` as its third argument.
-- [ ] **Step 4:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation` and typecheck → pass.
-- [ ] **Step 5:** Commit: `feat(frontend): the drawing kept on the device keeps the frame it's drawn in`
+- [x] **Step 3: What typecheck then asks for** in `DrawingScreen.test.tsx`: the Kyoto Seika reload fixture (`kyotoSeika: part, steps: []`) gains `frame: null`, and `new SessionKeeper(me.id).save([...], halfway)` gains `FRAME` as its third argument.
+- [x] **Step 4:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-creation` and typecheck → pass.
+- [x] **Step 5:** Commit: `feat(frontend): the drawing kept on the device keeps the frame it's drawn in`
 
 ### Task 6: Fills replay at the density they were drawn at (8cab7634)
 
-- [ ] **Step 1:** `git show 8cab7634 | git apply -3`. Conflicts: none.
-- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-board/timelapse` and typecheck → pass.
-- [ ] **Step 3:** Commit: `fix(frontend): a timelapse floods its fills at the density they were drawn at`
+- [x] **Step 1:** `git show 8cab7634 | git apply -3`. Conflicts: none.
+- [x] **Step 2:** `TZ=Asia/Tokyo pnpm -C apps/frontend exec vitest run src/sticker-board/timelapse` and typecheck → pass.
+- [x] **Step 3:** Commit: `fix(frontend): a timelapse floods its fills at the density they were drawn at`
 
 ### Task 7: My board in the drawing screen's top bar (c34494ea)
 
