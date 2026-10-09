@@ -17,7 +17,7 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | seal (a sticker)                 | 仕上げる                               | The Seal key: 仕上げ. Sealed: 仕上がった                                              |
 | draw                             | かく                                   | In hiragana, as on the Draw key                                                       |
 | the check (the seal key)         | チェック                               | In words naming the key; the act it does is 仕上げ                                    |
-| Time's up                        | 時間切れ                               | The drawing clock at 0:00                                                             |
+| Time's up                        | タイムアップ                           | The seal sheet's title at 0:00; a Kyoto Seika sheet's is Pencils down, やめ           |
 | clear (the sheet)                | 消去                                   | Clip Studio Paint's word for its Clear; the eraser stays 消しゴム                     |
 | two fingers                      | 2本指                                  | Undo on the drawing screen; three fingers (3本指) redo                                |
 | Pencil only / Pencil and finger  | ペンのみ / ペンと指                    | The two inputs: Settings' Input (入力), and the drawing screen's pen tile             |
@@ -51,7 +51,7 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | LINE friend / chat               | 友だち / トーク                        | LINE's own words                                                                      |
 | Official Account                 | 公式アカウント                         |                                                                                       |
 | Terms / Privacy Policy           | 利用規約 / プライバシーポリシー        |                                                                                       |
-| NSFW sticker / 18+               | 18+のシール / 18+                      | The toggle at sealing reads 18+ in both languages                                     |
+| NSFW sticker / 18+               | 18+のシール / 18+                      | Marking one, at sealing or on its detail, is Mark 18+, 18+にする                      |
 | NSFW opt-in (Settings)           | 18+のシールを表示する                  | The switch's label; on and off are オン / オフ                                        |
 | subject (Kyoto Seika Subject)    | 題材                                   | The guide's word; "subject" in English                                                |
 | Begin (the drawing screen's key) | はじめ                                 | The proctor's word                                                                    |

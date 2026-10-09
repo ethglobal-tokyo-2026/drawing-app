@@ -29,6 +29,8 @@ export const stickerCreation = {
         en: "{{time}} left, starts when you press Begin",
         ja: "残り{{time}}、はじめを押すとスタート",
       },
+      /** Drawing screen, top left: read by screen readers after the timer dot's name once the clock reaches 0:00, under the time's-up seal sheet */
+      timeUp: { en: "Time’s up", ja: "タイムアップ" },
       /** Drawing screen, top left: read by screen readers after the timer dot's name while the clock is stopped by a tap on the timer, by the app going to the background, or by another screen covering the drawing screen */
       paused: { en: "{{time}} left, paused", ja: "残り{{time}}、一時停止中" },
       /** Drawing screen, top left: read by screen readers after the timer dot's name while the color sheet is open, which stops the clock */
@@ -165,14 +167,16 @@ export const stickerCreation = {
   sealSheet: {
     /** Seal sheet, over the drawing after a tap on the seal key: its title, and its name for screen readers */
     title: { en: "Seal this sticker?", ja: "このシールを<wbr/>仕上げますか？" },
-    /** Seal sheet, raised by the clock reaching 0:00 (or brought back by a reload then): its title, and its name for screen readers; the drawing can only be sealed now */
-    timeUp: { en: "Time’s up", ja: "時間切れ" },
-    /** Seal sheet: the switch row's only words; on, the sticker seals as 18+, and the preview's edge turns pink foil; off on every new sheet */
-    nsfw: { en: "18+ sticker", ja: "18+のシール" },
+    /** Seal sheet, raised by the clock reaching 0:00 (or brought back by a reload then): its title, and its name for screen readers, also announced when it turns in place; the drawing can only be sealed now */
+    timeUp: { en: "Time’s up", ja: "タイムアップ" },
+    /** Seal sheet, a sheet in Kyoto Seika Practice Mode at 0:00: its title in hand lettering, the proctor's call that ends the test as はじめ began it, and its name for screen readers, also announced when it turns in place */
+    pencilsDown: { en: "Pencils down", ja: "やめ" },
+    /** Seal sheet: the switch row's only words, the sticker detail's own; on, the sticker seals as 18+, and the preview's edge turns pink foil; off on every new sheet */
+    nsfw: { en: "Mark 18+", ja: "18+にする" },
     /** Seal sheet: the 18+ switch's name for screen readers, which starts with its visible words */
     nsfwLabel: {
-      en: "18+ sticker: blurred for anyone who hasn’t turned on Show 18+ stickers",
-      ja: "18+のシール：「18+のシールを表示する」をオンにしていない人にはぼかして表示",
+      en: "Mark 18+: blurred for anyone who hasn’t turned on Show 18+ stickers",
+      ja: "18+にする：「18+のシールを表示する」をオンにしていない人にはぼかして表示",
     },
     /** Seal sheet: the key, with a check mark, that seals the sticker and starts the seal ceremony */
     seal: { en: "Seal", ja: "仕上げ" },

@@ -68,7 +68,7 @@ export const kyotoSeika = {
   pair: {
     /** Sticker detail's tag and the sealed card, a sticker drawn in Kyoto Seika Practice Mode: one subject of its pair as English screen readers hear it, such as "風, wind"; Japanese says the word alone */
     subject: { en: "{{word}}, {{english}}" },
-    /** Sealed card, a sticker drawn in Kyoto Seika Practice Mode: what screen readers hear for the pair under Sealed; in English each subject comes with its English, such as "風, wind" */
+    /** Seal sheet and sealed card, a sticker drawn in Kyoto Seika Practice Mode: what screen readers hear for the pair under the title; in English each subject comes with its English, such as "風, wind" */
     spoken: { en: "Subjects: {{first}}, and {{second}}.", ja: "題材：{{first}}と{{second}}。" },
   },
   /** The tag beside Timelapse on the detail of a sticker drawn in Kyoto Seika Practice Mode. */

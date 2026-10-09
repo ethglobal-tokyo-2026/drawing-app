@@ -1148,6 +1148,7 @@ export function DrawingScreen({
         open={active && (sealSheet || timeUp)}
         timeUp={timeUp}
         nsfw={nsfwOn}
+        subjects={lockedPair}
         ink={readInk}
         onNsfwChange={(on) => {
           keepNsfw(on);
