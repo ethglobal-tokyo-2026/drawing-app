@@ -2,28 +2,28 @@
 
 A max-effort `code-review` of `apps/frontend/src/sticker-creation/` at main `3f2c21bd`, plus where its ink pipeline can be simplified or made faster. Each lane's full text is in `data/scratch/drawing-review/` (gitignored). This record goes once its findings are fixed or decided.
 
-Status: finder lanes running; nothing below is verified yet.
+Status: every finder lane has reported; verifiers are checking each candidate against current main. Nothing below is verified yet.
 
 ## Lanes
 
 | Lane | Angle                                          | Status   |
 | ---- | ---------------------------------------------- | -------- |
-| A1   | Line by line: canvas engine                    | running  |
-| A2   | Line by line: screen and tools                 | running  |
+| A1   | Line by line: canvas engine                    | reported |
+| A2   | Line by line: screen and tools                 | reported |
 | A3   | Line by line: sealing                          | reported |
 | A4   | Line by line: kept drawing and clock           | reported |
-| B    | What recent rewrites removed                   | running  |
-| C    | Cross-file contracts and wrappers              | running  |
-| D    | Language and platform pitfalls                 | running  |
-| R    | Reuse                                          | running  |
+| B    | What recent rewrites removed                   | reported |
+| C    | Cross-file contracts and wrappers              | reported |
+| D    | Language and platform pitfalls                 | reported |
+| R    | Reuse                                          | reported |
 | S    | Simplification: screen, sealing, session       | reported |
 | P    | Ink pipeline: simplify without losing anything | reported |
-| H    | Performance: the drawing hot path              | running  |
+| H    | Performance: the drawing hot path              | reported |
 | O    | Performance: fill, undo, seal, save            | reported |
-| M    | Profiling scripted strokes                     | running  |
+| M    | Profiling scripted strokes                     | reported |
 | T    | Fixes at the wrong depth                       | reported |
 | K    | Comments, i18n, docs                           | reported |
-| X    | Tests                                          | running  |
+| X    | Tests                                          | reported |
 | Z    | Dead code, deprecation, naming                 | reported |
 
 ## Candidates
@@ -115,3 +115,109 @@ JavaScript times from V8 on this Mac (probes in `data/scratch/drawing-review/`),
 - **K-6** (medium): comments in the screen's CSS and tests restate values set elsewhere.
 - **K-7** (medium) `DrawingScreen.css:113`, `brush.ts:20-30`, `SealKey.css:97`, `ClearBar.css:48`: comments that log what happened instead of a standing reason.
 - **K-8** to **K-12** (low): research precedents as reasons, long doc comments, Smoothing's capital, an inline printed pattern, "drawings" in the burn-sticker plan.
+
+### Profiling (M)
+
+Chromium with a 4x CPU throttle and a software canvas, at an iPhone (DPR 3) and an iPad (DPR 2) viewport, scripted pen and finger strokes on a production build; WebKit unthrottled, frame intervals only. No device was measured. Scripts and results: `data/scratch/drawing-review/drawing-profiling/`, `drawing-profiling-measurements.txt`.
+
+- **M-1** (high in Chromium) `canvas/inkEngine.ts:705-708`: a pen lift repaints the whole stroke: 42-47 ms for a 6 s stroke, 20-24 ms for 3 s; the only frames over 33 ms while drawing. Finger strokes skip it and had no task over 20 ms.
+- **M-2** (medium) `canvas/inkEngine.ts:606-609`: every pen down copies the whole ink (11-12 MB at these sizes): 4-5 ms each, worst 26 ms with a GC sweep.
+- **M-3** (high) `canvas/history.ts:166-176`: an undo after long strokes replays up to 24 of them: 29-56 ms.
+- **M-4** (medium) `canvas/history.ts:186-187`: the checkpoint every 24th stroke makes a 28-33 ms lift.
+- **M-5** (high) `canvas/fill.ts:508,544`: a fill on a large open region takes 398-416 ms (`dilate` 151 ms of it); 117 ms in WebKit unthrottled.
+- **M-6** (ruled out): the clock's tick, saving the kept drawing (1 ms or less) and the Smoothing level.
+- **M-7** (low) `ui/press.ts:229` and React's root dispatch run on every pointermove: a steady 2%, never a spike.
+- **M-8** (low): opening the color sheet takes 20-30 ms.
+
+### Canvas engine, line by line (A1)
+
+Reproduced with probes driving the real engine (`data/scratch/drawing-review/raw-smoothing-settle-experiment/`), except A1-12 and A1-13.
+
+- **A1-1** (high) `canvas/inkEngine.ts:297-300,566-567`: in Pencil only, a two-finger tap begun just before the Pencil lands completes as undo on lift, taking back the Pencil's stroke and the step before it.
+- **A1-2** (high) `canvas/fill.ts:135-152`: the fill's tuck turns transparent paper opaque within 2 px: recoloring a stroke fattens it each time (3, 7, 11, 15 px), and a paper fill leaves a rim past lines thinner than 2 px.
+- **A1-3** (high): 0:00 doesn't end a stroke or a fill tap in progress (with A2-1, D-1).
+- **A1-4** (high mechanism) `canvas/inkEngine.ts:662-669`: at Raw, every frame without a sample settles the curve, so with 120 Hz frames and 60 Hz input a curve becomes chords (25 points, turns up to 28.6°, against 95 points at 60 Hz frames). Also B-2.
+- **A1-5** (high mechanism) `canvas/gestures.ts:4,10,65,79`: YOUNG_PX (26) is larger than TAP_SLOP (14), so a 14-26 px finger dash is lost when another finger lands, with no undo.
+- **A1-6** (high mechanism) `canvas/inkEngine.ts:297-301,575-580`: in Pencil and finger, a resting finger's fill tap survives the Pencil landing, blocks the Pencil, and fills where the hand rested.
+- **A1-7**: deep undo replays the whole page (O-1).
+- **A1-8**: the pen's copy and repaint (P-1, M-1, M-2).
+- **A1-9** (medium) `canvas/inkEngine.ts:533-547`: every hover move forces a layout reading the paper's rect after the ring's style writes.
+- **A1-10** (low) `canvas/inkEngine.ts:591`: a taken-back first stroke leaves a blank sheet's frame fixed.
+- **A1-11** (medium) `canvas/inkEngine.ts:689-692`: a taken-back Pencil stroke replays history though `before` already holds the ink as it was.
+- **A1-12** (low, not reproduced): a resize mid-stroke places the rest of the stroke with the old scale.
+- **A1-13** (low): a Pencil landing at pressure 0 starts at a full press's width (also D-5).
+
+### Screen and tools, line by line (A2)
+
+- **A2-1** (high) `DrawingScreen.tsx:242-250`: at 0:00 the stroke in progress isn't ended, so ink drawn after time's up reaches the sticker, the time's-up sheet's preview misses it, and in Kyoto Seika Practice Mode it breaks the exam's やめ. If that stroke is the sheet's only ink, the reset wipes it and the ticket. Found by A1, A2 and D.
+- **A2-2** (high) `DrawingScreen.tsx:242-250,859-869`: in Kyoto Seika Practice Mode after Begin, an open panel neither holds the clock nor closes at 0:00, so the color sheet stays over the time's-up sheet, both modal.
+- **A2-3** (medium) `tools/SmoothingBar.css:19-26`: the closing Smoothing bar takes pointers through its fade, so a stroke started there can change Smoothing (also R-3).
+- **A2-4** (medium) `SealSheet.css:197-213`: on a large screen the seal sheet's scrim swallows the first Pencil stroke after Not yet.
+- **A2-5** (low) `tools/useDrag.ts:16-37`: lost capture or unmount mid-drag never ends the drag.
+- **A2-6** (low) `DrawingScreen.css:34-50`: the timer and tool strip take taps for 220 ms after Seal.
+
+### What recent rewrites removed (B)
+
+- **B-1** (high) `canvas/inkEngine.ts:149-153,671-678`, `strokeCurve.ts:51-56`: since d6d190f4 removed the overlay, nothing paints the curve's one-point hold-back, so ink trails the nib by one sample's travel on top of Smoothing, at Raw too (16.7 units at 1000 u/s with 60 Hz input).
+- **B-2**: Raw settles every sample-less frame (A1-4).
+- **B-3** (medium) `canvas/stabilizer.ts:113-123`: `finish()` stamps its catch-up in invented 8 ms steps, so at Smooth an op's last point lands up to about 1 s after the lift and the timelapse plays that tail.
+- **B-4** (high) `apps/frontend/e2e/pen.ts:124-125,173-175,196-197,209`: the e2e Pencil still makes predicted events that nothing reads.
+- **B-5** (high) `PRODUCT.md:41`: still describes Smoothing as averaging the latest samples.
+
+### Cross-file contracts and wrappers (C)
+
+- **C-1** (medium, measured) `canvas/inkEngine.ts:672-678`: strokes painted in per-frame chunks carry different edge alpha from their whole replay; 32-40 pixels of a 240-point stroke cross the fill's 128 threshold in Chromium and WebKit (also P-2).
+- **C-2**: the server refuses a seal over its timelapse (A3-3).
+- **C-3**: full-ink canvases per pen stroke and per fill (M-2, H-1).
+- **C-4** (high) `sticker-board/timelapse/testCanvas.ts:114-124`: the fake context's `putImageData` ignores the dirty rect `InkSurface.fill` passes.
+- **C-5** (low) `canvas/inkEngine.ts:30-37`: `InkLayer extends Surface<unknown>` drops the snapshot type.
+- **C-6**: the frame source written four times (R-1).
+
+### Language and platform pitfalls (D)
+
+- **D-1**: 0:00 doesn't end the stroke (A2-1).
+- **D-3**: the pen's copy and checkpoints (M-1, M-2, M-4).
+- **D-4** (medium-low) `SealSheet.tsx:178-191`: the seal sheet's preview makes a full CPU-backed copy of the ink in a layout effect for a 192 px scan (also O-5).
+- **D-5** (low): pressure 0 at a Pencil's landing (A1-13).
+- **D-6** (medium-low) `canvas/inkEngine.ts:481-489`: the missed-lift recovery ends only a finger's stroke; a Pencil stroke whose lift WebKit drops stays live and blocks pen and fingers.
+- **D-7**: the clock's per-frame allocations (S-4).
+- **D-8** (medium) `canvas/inkEngine.ts:11`, `canvas/gestures.ts:4`: two TAP_SLOPs in different units.
+
+### Reuse (R)
+
+- **R-1** (high) `canvas/inkEngine.ts:117-123`: `RequestFrame` copies `ui/frameSource.ts`.
+- **R-2** (high) `sticker-board/timelapse/fillSnapshots.ts:46-58`: `copyOf` again; a canvas of a size made by hand in seven places.
+- **R-3** (high) `tools/ClearBar.css:2-36`: copies the Smoothing bar's panel block, and the copies drifted (A2-3).
+- **R-4** (high) `tools/SizeRail.tsx:13`: the size step twice (S-7), and `aria-valuemin={1}` where the rail's least is 2.
+- **R-5** (medium) `SealSheet.tsx:21,207`: the preview pads by 0.08 of the drawing, the die-cut by 23 units.
+- **R-6** (medium) `canvas/sheetFrame.ts:27-30`, `sealing/timelapse.ts:14-24`: the recording precision defined twice.
+- **R-7** (medium): duplicate `Pixels`, `Rect`/`Box` and `Box`/`Bounds` types.
+- **R-8** (high) `canvas/stabilizer.test.ts:26-34`: re-implements `ui/seededRandom.ts`; repeated test builders.
+- Lower value: `useTimelapse.ts:151-156` hand-rolls `releaseCanvas`; inline clamps and lerps; one error-to-message helper under three names.
+
+### Hot path (H)
+
+Nearly every candidate lands at pen down or lift; only GC can land mid-stroke. A 10 s stroke at 240 Hz builds about 2,400 points.
+
+- **H-1**: the checkpoint every 24th stroke (M-4).
+- **H-2**: the whole-stroke repaint at lift (M-1); repainting only the tail's box would keep the cost flat.
+- **H-3**: the full copy at pen down (M-2).
+- **H-4** (low-medium) `strokeCurve.ts:89,110-153`: 10-20 short-lived objects per point.
+- **H-5** (medium) `canvas/inkEngine.ts:297-299,689-692`: a pen landing takes back a palm's finger stroke with a history replay inside its own pointerdown.
+- **H-6**: the clock's per-frame allocations (S-4).
+- **H-7** (low): the kept drawing's save at lift (M-6 measured it at 1 ms or less).
+- **H-8** (low): hover forces layout (A1-9).
+- **H-9** (medium) `performance/performanceRecorder.ts`: the recorder times only script, not WebKit's raster, and labels the pen's copy and checkpoints alike.
+
+### Tests (X)
+
+- **X-1** (high) `DrawingScreen.tsx:447,499,502`: no screen test of a seal retry; breaking it left 36 tests green.
+- **X-2** (high) `canvas/inkEngine.ts:457-472`: no test of undo after a reload through the engine; breaking `load()` left 22 tests green.
+- **X-3** (high) `canvas/inkEngine.ts:366,555-585`: no test of stroke cancel; making cancel act like a lift left 22 tests green.
+- **X-4** (high): tests copy private tuning numbers (sealTimeline, gestures, useSessionClock, brush, SealingStatusLabel, fill, SealCeremony).
+- **X-5** (high): English copy hard-coded in assertions (SealCeremony, SealingStatusLabel, TimerDot).
+- **X-6** (medium): tests for kept records from older builds (Z-1).
+- **X-7** (high): three redundant assertion pairs.
+- **X-8** (high): repeated setup in DrawingScreen.test.tsx.
+- **X-9** (medium): four test files build their own React root where `renderWithApi` does it.
+- **X-10** (low): foil precedence checked in three places; `Math.random()` input.
