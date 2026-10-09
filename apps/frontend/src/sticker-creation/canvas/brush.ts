@@ -1,5 +1,6 @@
 import { clamp } from "../../ui/easing";
 import { STRIDE, type StrokeOp } from "./ops";
+import { StrokeCurve } from "./strokeCurve";
 
 /**
  * The size rail's value (0–1) as a width in sheet units, the px the rail shows, squared so the
@@ -91,6 +92,10 @@ export class StrokeBuilder {
   private smoothed: number;
   /** A pressing pen's latest widths, newest last, that its width is the mean of. */
   private readonly pressedWidths: number[] = [];
+  /** The curve through the points, which adds the points the stroke paints along it. */
+  private readonly curve: StrokeCurve;
+  /** Points added so far, the first included: the taper counts these, not the curve's pieces between them. */
+  private points = 1;
 
   constructor(start: StrokeStart) {
     const { tool, color, size, x, y, t, T, pressure, pointerType, pressureVaries, response } =
@@ -105,10 +110,16 @@ export class StrokeBuilder {
     this.smoothed = this.pressed ? pressureWidth(pressure, response) : 1;
     const dot = tool === "eraser" ? 1 : FIRST_DOT * this.smoothed;
     this.op = { tool, color, pts: [x, y, size * dot, 0], T };
+    this.curve = new StrokeCurve(this.op.pts);
   }
 
   get count(): number {
     return this.op.pts.length / STRIDE;
+  }
+
+  /** The line reaches the newest point: nothing waits for the next one to set its curve. */
+  get settled(): boolean {
+    return this.curve.settled;
   }
 
   /** Whether pressure set this stroke's width: its pen senses pressure. */
@@ -118,9 +129,9 @@ export class StrokeBuilder {
 
   /** Adds a point unless it's within half a unit of the last one; says whether it did. */
   add(x: number, y: number, pressure: number, t: number): boolean {
-    const { pts, tool } = this.op;
-    const n = this.count;
-    const dist = Math.hypot(x - pts[(n - 1) * STRIDE], y - pts[(n - 1) * STRIDE + 1]);
+    const { tool } = this.op;
+    const n = this.points;
+    const dist = Math.hypot(x - this.curve.x, y - this.curve.y);
     if (dist < MIN_STEP) return false;
     const dt = Math.max(1, t - this.lastT);
     this.lastT = t;
@@ -143,7 +154,16 @@ export class StrokeBuilder {
       }
       width *= this.smoothed * Math.min(1, FIRST_DOT + TAPER_STEP * n);
     }
-    pts.push(x, y, width, Math.round(t - this.t0));
+    this.curve.add(x, y, width, Math.round(t - this.t0));
+    this.points++;
     return true;
+  }
+
+  /**
+   * The nib paused or lifted at x, y: the line ends there, curved all the way. The point before
+   * waits for the next one until then, which sets the curve's way through it.
+   */
+  settle(x: number, y: number): void {
+    this.curve.settle(x, y);
   }
 }

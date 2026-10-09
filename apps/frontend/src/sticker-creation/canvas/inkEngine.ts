@@ -3,9 +3,9 @@ import { previewWidth, StrokeBuilder, type PenPressure } from "./brush";
 import { FILL_GAP } from "./fill";
 import { isPalm, TapRecognizer } from "./gestures";
 import { History, type Surface } from "./history";
-import { LazyBrush } from "./lazyBrush";
 import { STRIDE, type FillOp, type Op, type Step, type StrokeOp, type Tool } from "./ops";
 import { areaFrame, frameFor, type SheetArea, type SheetFrame } from "./sheetFrame";
+import { Stabilizer } from "./stabilizer";
 
 /** A fill takes a tap: a pointer that lifts within this many sheet units of where it landed. */
 const TAP_SLOP = 10;
@@ -13,7 +13,10 @@ const TAP_SLOP = 10;
 const BLOCKED_DRAG = 8;
 /** When the browser takes a pointer mid-stroke, the stroke stays if it had gone this many units. */
 const CANCEL_KEEPS = 4;
-/** The catch-up on lift moves like a steady hand, so its width follows the same speed model. */
+/**
+ * The line's catch-up to a paused or lifted nib moves like a steady hand, so its width follows the
+ * same speed model.
+ */
 const CATCH_UP_MS = 8;
 
 /** How the sheet takes input: Pencil only, where fingers only tap, or Pencil and finger. */
@@ -39,8 +42,8 @@ export interface InkLayer extends Surface<unknown> {
 }
 
 /**
- * Where prediction shows: the browser's guess at a pen's next samples, painted ahead of the stroke for
- * one frame on an overlay over the ink, never the ink.
+ * Where the line's lead shows: from its end to the nib, and on to the browser's guess at a pen's next
+ * samples, painted for one frame on an overlay over the ink, never the ink.
  */
 export interface PredictionLayer {
   /** Wipes what it showed, then paints this path. */
@@ -54,8 +57,8 @@ export interface InkSettings {
   color: string;
   /** Brush or eraser width, in sheet units. */
   size: number;
-  /** How far the brush trails a finger, in sheet units; a pen's trails by a share of it. */
-  lazyRadius: number;
+  /** Smoothing, from 0 (Raw) to 100 (Smooth). */
+  smoothing: number;
   /** No input at all: sealing, sealed, or the ticket card is up. */
   locked: boolean;
   /** The person paused the clock: the sheet takes no marks. */
@@ -140,7 +143,7 @@ interface LiveStroke {
   id: number;
   pointerType: string;
   builder: StrokeBuilder;
-  lazy: LazyBrush;
+  stabilizer: Stabilizer;
   /** Samples since the last frame, flat: x, y, pressure, t. */
   queue: number[];
   /** Points already on the ink. */
@@ -156,14 +159,16 @@ interface LiveStroke {
   y: number;
   pressure: number;
   t: number;
+  /** When the line's latest catch-up point was, in the samples' ms. */
+  caughtUp: number;
   /** The browser's latest guess at the pen's next samples, flat: x, y. */
   predicted: number[];
 }
 
 /**
  * Turns pointer input into ink. Pointer events only queue samples; one animation frame at a time
- * feeds them through the lazy brush and the width model and paints just the new segments. It never
- * touches React: it reads `settings` as pointers land and reports through `events`.
+ * feeds them through Smoothing's stabilizer and the width model and paints just the new segments. It
+ * never touches React: it reads `settings` as pointers land and reports through `events`.
  *
  * Ink is in sheet units: a pointer's offset on the paper over the CSS px a unit spans there. The
  * sheet's frame follows its area while the sheet is blank, and is fixed from the first mark.
@@ -626,10 +631,7 @@ export class InkEngine {
       id: e.pointerId,
       pointerType: e.pointerType,
       builder,
-      lazy:
-        e.pointerType === "pen"
-          ? LazyBrush.forPen(x, y, s.lazyRadius)
-          : new LazyBrush(x, y, s.lazyRadius),
+      stabilizer: new Stabilizer(x, y, e.timeStamp, s.smoothing),
       queue: [],
       painted: 1,
       t0: e.timeStamp,
@@ -640,6 +642,7 @@ export class InkEngine {
       y,
       pressure: e.pressure,
       t: e.timeStamp,
+      caughtUp: e.timeStamp,
       predicted: [],
     };
     // The dot shows as the pointer lands, not a frame later.
@@ -651,19 +654,41 @@ export class InkEngine {
     const live = this.live;
     if (!live) return;
     timeOurWork(INK_WORK.paint, () => {
+      if (live.queue.length > 0) this.feed(live);
+      else this.catchUp(live);
       this.paintNew(live);
       this.paintPrediction(live);
     });
+    // Until the line is on the nib, each frame brings it closer.
+    if (!live.stabilizer.settled || !live.builder.settled)
+      this.cancelFrame ??= this.requestFrame(this.paintFrame);
   };
 
-  /** Feeds the queued samples through the lazy brush and paints the segments they add. */
-  private paintNew(live: LiveStroke): void {
-    const { queue, lazy, builder } = live;
+  /** Feeds the queued samples through the stabilizer to the stroke. */
+  private feed(live: LiveStroke): void {
+    const { queue, stabilizer, builder } = live;
+    if (queue.length === 0) return;
     for (let i = 0; i < queue.length; i += 4) {
-      if (lazy.follow(queue[i], queue[i + 1]))
-        builder.add(lazy.x, lazy.y, queue[i + 2], queue[i + 3]);
+      const [x, y] = stabilizer.add(queue[i], queue[i + 1], queue[i + 3]);
+      builder.add(x, y, queue[i + 2], queue[i + 3]);
     }
     queue.length = 0;
+    live.caughtUp = live.t;
+  }
+
+  /** A frame with the nib still: the line moves toward it, and once there, curves all the way to it. */
+  private catchUp(live: LiveStroke): void {
+    const { stabilizer, builder } = live;
+    if (!stabilizer.settled) {
+      const [x, y] = stabilizer.hold();
+      builder.add(x, y, live.pressure, (live.caughtUp += CATCH_UP_MS));
+    }
+    if (stabilizer.settled) builder.settle(live.x, live.y);
+  }
+
+  /** Paints the segments the stroke has added since the last paint. */
+  private paintNew(live: LiveStroke): void {
+    const { builder } = live;
     if (builder.count > live.painted) {
       this.layer.paint(builder.op, live.painted, builder.count);
       live.painted = builder.count;
@@ -671,23 +696,24 @@ export class InkEngine {
   }
 
   /**
-   * The browser's guess at where the pen goes next, painted ahead of the stroke for this frame at
-   * its last width: from the stroke's end through the nib, which Smoothing barely trails, to the
-   * guess. The next frame wipes it, and none of it reaches the ink or the op.
+   * What the line hasn't reached yet, painted for this frame at its last width: from its end to the
+   * nib, for every pointer, and on to a pen's predicted samples. The next frame wipes it, and none of
+   * it reaches the ink or the op.
    */
   private paintPrediction(live: LiveStroke): void {
     const prediction = this.prediction;
     if (!prediction) return;
     const ahead = live.predicted.splice(0);
     const { pts, tool, color, T } = live.builder.op;
-    if (ahead.length === 0 || tool !== "brush") {
+    const last = (live.builder.count - 1) * STRIDE;
+    const behind = live.x !== pts[last] || live.y !== pts[last + 1];
+    if (tool !== "brush" || (!behind && ahead.length === 0)) {
       prediction.clear();
       return;
     }
-    const last = (live.builder.count - 1) * STRIDE;
     const width = pts[last + 2];
     const guess = [pts[last], pts[last + 1], width, 0];
-    if (live.x !== pts[last] || live.y !== pts[last + 1]) guess.push(live.x, live.y, width, 0);
+    if (behind) guess.push(live.x, live.y, width, 0);
     for (let i = 0; i < ahead.length; i += 2) guess.push(ahead[i], ahead[i + 1], width, 0);
     prediction.paint({ tool, color, pts: guess, T });
     // The next frame wipes it, whether or not a new sample comes.
@@ -709,10 +735,11 @@ export class InkEngine {
       return;
     }
     timeOurWork(INK_WORK.paint, () => {
-      this.paintNew(live);
-      let t = live.t;
-      for (const [x, y] of live.lazy.catchUp(live.x, live.y))
+      this.feed(live);
+      let t = live.caughtUp;
+      for (const [x, y] of live.stabilizer.finish(live.x, live.y))
         live.builder.add(x, y, live.pressure, (t += CATCH_UP_MS));
+      live.builder.settle(live.x, live.y);
       this.paintNew(live);
     });
     timeOurWork(INK_WORK.snapshot, () => this.history.commit(live.builder.op));

@@ -2,8 +2,7 @@ import { DAILY_TICKETS_PER_DAY } from "@drawing-app/api/client";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { PALM_CONTACT_PX } from "../src/sticker-creation/canvas/gestures.ts";
-import { lazyRadius, PEN_TRAIL_SHARE } from "../src/sticker-creation/canvas/lazyBrush.ts";
-import { SHEET_SHORT_UNITS } from "../src/sticker-creation/canvas/sheetFrame.ts";
+import { CATCH_UP_FRAMES } from "../src/sticker-creation/canvas/stabilizer.ts";
 import { canvas, drawKeyName, openSettings, say, signIn } from "./helpers.ts";
 import { ipad } from "./ipad.ts";
 import {
@@ -158,7 +157,7 @@ test("prediction paints a guess ahead of the pen while it moves, and none of it 
   expect(await inkAt(page, { x: lift.x + 24, y: lift.y })).toBe(0);
 });
 
-test("at Smooth, a pen's line stays under its nib as it moves, and ends where it lifts", async ({
+test("at Smooth, a pen's line catches up to its nib as it pauses, and ends where it lifts", async ({
   page,
 }) => {
   const box = await openSheet(page, "smooth-pen");
@@ -179,10 +178,9 @@ test("at Smooth, a pen's line stays under its nib as it moves, and ends where it
     await pen.move(row[i], 0.5, t0 + i * 16);
     await page.waitForTimeout(16);
   }
-  await nextFrames(page);
-  // Before it lifts, the ink is within the pen's trail of the nib, in CSS px.
-  const trail = lazyRadius(100) * PEN_TRAIL_SHARE * (box.width / SHEET_SHORT_UNITS);
-  expect(nib.x - ((await inkReach(page, nib.y)) ?? row[0].x)).toBeLessThanOrEqual(trail + 1);
+  // One frame paints the samples already sent; the line reaches the paused nib in the catch-up's.
+  await nextFrames(page, 1 + CATCH_UP_FRAMES);
+  expect(nib.x - ((await inkReach(page, nib.y)) ?? row[0].x)).toBeLessThanOrEqual(1);
   await pen.up(nib, t0 + row.length * 16);
   expect(await inkReach(page, nib.y)).toBeGreaterThanOrEqual(nib.x - 1);
 });

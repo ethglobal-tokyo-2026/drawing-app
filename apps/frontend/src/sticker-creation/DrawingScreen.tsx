@@ -38,9 +38,9 @@ import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas"
 import type { HistoryState, InputMode } from "./canvas/inkEngine";
 import { penDrew, useDrawingHand, useInputMode, usePenPressure } from "./drawingSettings";
 import { isFirstVisit } from "./drawVisits";
-import { lazyRadius } from "./canvas/lazyBrush";
 import type { Op, Tool } from "./canvas/ops";
 import type { SheetFrame } from "./canvas/sheetFrame";
+import { FIRST_SMOOTHING } from "./canvas/stabilizer";
 import { SealKey } from "./SealKey";
 import { SealSheet } from "./SealSheet";
 import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
@@ -83,7 +83,6 @@ import "./DrawingScreen.css";
 
 /** Where the size rail starts for each tool, remembered per tool from then on. */
 const FIRST_SIZES = { brush: 0.34, eraser: 0.52 };
-const FIRST_SMOOTHING = 30;
 /** How far [ and ] move the size rail. */
 const SIZE_STEP = 0.04;
 
@@ -1011,7 +1010,7 @@ export function DrawingScreen({
           tool,
           color,
           size: sizePx(sizes[sizeKey]),
-          lazyRadius: lazyRadius(smoothing),
+          smoothing,
           locked,
           // The dealt sheet takes the paused sheet's path, so a touch nudges Begin.
           paused: paused || dealt,

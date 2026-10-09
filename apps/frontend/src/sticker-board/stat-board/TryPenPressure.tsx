@@ -32,7 +32,14 @@ export function TryPenPressure({
   const reduced = useReducedMotion();
   const canvas = useRef<HTMLCanvasElement>(null);
   const ctx = useRef<CanvasRenderingContext2D | null>(null);
-  const live = useRef<{ id: number; builder: StrokeBuilder; painted: number } | null>(null);
+  /** The stroke in progress, and where its latest sample was. */
+  const live = useRef<{
+    id: number;
+    builder: StrokeBuilder;
+    painted: number;
+    x: number;
+    y: number;
+  } | null>(null);
   // Whether this pen senses pressure, learned as the drawing screen learns it.
   const sensed = useRef(false);
   const fade = useRef<number | undefined>(undefined);
@@ -100,7 +107,7 @@ export function TryPenPressure({
       pressureVaries: sensed.current,
       response,
     });
-    live.current = { id: e.pointerId, builder, painted: 0 };
+    live.current = { id: e.pointerId, builder, painted: 0, x, y };
     paint();
   };
 
@@ -112,6 +119,7 @@ export function TryPenPressure({
     for (const sample of samples.length ? samples : [native]) {
       const { x, y } = point(e.currentTarget, sample);
       stroke.builder.add(x, y, sample.pressure, sample.timeStamp);
+      [stroke.x, stroke.y] = [x, y];
     }
     paint();
   };
@@ -119,6 +127,9 @@ export function TryPenPressure({
   const end = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const stroke = live.current;
     if (stroke?.id !== e.pointerId) return;
+    // The line curves all the way to the last sample.
+    stroke.builder.settle(stroke.x, stroke.y);
+    paint();
     live.current = null;
     if (stroke.builder.pressured) sensed.current = true;
     const el = e.currentTarget;

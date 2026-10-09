@@ -338,11 +338,16 @@ export function inkReach(page: Page, y: number, selector = ".ink-canvas:not(.ink
   );
 }
 
-/** Waits out two animation frames, so samples already sent are painted. */
-export const nextFrames = (page: Page) =>
+/** Waits out `frames` animation frames, two unless said, so samples already sent are painted. */
+export const nextFrames = (page: Page, frames = 2) =>
   page.evaluate(
-    () =>
-      new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))),
+    (frames) =>
+      new Promise<void>((done) => {
+        const wait = (left: number) =>
+          left > 0 ? requestAnimationFrame(() => wait(left - 1)) : done();
+        wait(frames);
+      }),
+    frames,
   );
 
 /** Pixels holding ink anywhere on the canvas `selector` names. */

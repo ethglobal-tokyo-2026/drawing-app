@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PEN_PRESSURE_SAMPLES, StrokeBuilder, type PenPressure } from "./brush";
 import { STRIDE } from "./ops";
+import { CURVE_FLATNESS } from "./strokeCurve";
 
 const SIZE = 10;
 
@@ -51,11 +52,22 @@ function widths(n: number, drawn: Drawn = {}): number[] {
     response,
   });
   for (let i = 1; i <= n; i++) stroke.add(i * 10, 0, pressed(i), i * ms);
+  stroke.settle(n * 10, 0);
   const { pts } = stroke.op;
   return Array.from({ length: pts.length / STRIDE }, (_, i) => pts[i * STRIDE + 2] / SIZE);
 }
 
 const last = (list: number[]) => list[list.length - 1];
+
+/** The most a sharp corner's line may turn at any one point, in radians: less than the corner's own. */
+const CORNER_TURN = Math.PI / 3;
+
+/** A stroke's points, as x, y. */
+const pointsOf = ({ op: { pts } }: StrokeBuilder) =>
+  Array.from({ length: pts.length / STRIDE }, (_, i): [number, number] => [
+    pts[i * STRIDE],
+    pts[i * STRIDE + 1],
+  ]);
 
 describe("StrokeBuilder", () => {
   it("sets a pen's width from pressure, from 0.28 of the size to all of it", () => {
@@ -79,10 +91,49 @@ describe("StrokeBuilder", () => {
     expect(widths(8, { tool: "eraser", ms: 0.5 }).every((w) => w === 1)).toBe(true);
   });
 
+  it("curves a sharp corner, turning across several points rather than all at one", () => {
+    const stroke = builder();
+    const corner = [
+      ...Array.from({ length: 8 }, (_, i) => [(i + 1) * 10, 0]),
+      ...Array.from({ length: 8 }, (_, i) => [80, (i + 1) * 10]),
+    ];
+    corner.forEach(([x, y], i) => stroke.add(x, y, 0.5, (i + 1) * 16));
+    stroke.settle(80, 80);
+    const points = pointsOf(stroke);
+    const heading = (i: number) =>
+      Math.atan2(points[i + 1][1] - points[i][1], points[i + 1][0] - points[i][0]);
+    const turns = points.slice(2).map((_, i) => Math.abs(heading(i + 1) - heading(i)));
+    expect(Math.max(...turns)).toBeLessThanOrEqual(CORNER_TURN);
+    // Still through the corner, and on to where it ends.
+    expect(points).toContainEqual([80, 0]);
+    expect(points.at(-1)).toEqual([80, 80]);
+  });
+
+  it("rounds a circle drawn in few samples: nothing it paints strays further from it than the curve's flatness", () => {
+    const [samples, radius] = [30, 60];
+    const around = (i: number) => {
+      const angle = (2 * Math.PI * i) / samples;
+      return [radius * Math.cos(angle), radius * Math.sin(angle)] as const;
+    };
+    const stroke = builder({ x: radius, y: 0 });
+    for (let i = 1; i <= samples; i++) stroke.add(...around(i), 0.5, i * 16);
+    stroke.settle(...around(samples));
+    const points = pointsOf(stroke);
+    // Each point, and each chord's middle, where a straight capsule strays most.
+    const strays = points.flatMap(([x, y], i) => {
+      const [px, py] = points[Math.max(0, i - 1)];
+      return [Math.hypot(x, y), Math.hypot((x + px) / 2, (y + py) / 2)].map((r) =>
+        Math.abs(r - radius),
+      );
+    });
+    expect(Math.max(...strays)).toBeLessThanOrEqual(CURVE_FLATNESS);
+  });
+
   it("skips points within half a pixel of the last", () => {
     const stroke = builder();
     expect(stroke.add(0.3, 0.3, 0.5, 16)).toBe(false);
     expect(stroke.add(0.6, 0, 0.5, 32)).toBe(true);
+    stroke.settle(0.6, 0);
     expect(stroke.op.pts.length / STRIDE).toBe(2);
   });
 

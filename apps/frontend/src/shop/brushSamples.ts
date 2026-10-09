@@ -61,6 +61,7 @@ export function brushSample(kind: BrushKind, side: number): StrokeOp {
         const pressure = Math.sin((Math.PI * (i + 1)) / path.length) ** 0.8;
         stroke.add(px, py, pressure, (i + 1) * 12);
       });
+      stroke.settle(...path[path.length - 1]);
       return stroke.op;
     }
     case "marker": {
