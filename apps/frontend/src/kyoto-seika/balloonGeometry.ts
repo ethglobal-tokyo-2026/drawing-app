@@ -95,10 +95,19 @@ const SHADE = unit({ x: 1, y: 1.15 });
 /** The lobes' rhythm round the cloud, big and small, as a hand varies them. */
 const LOBE_RHYTHM = [1.25, 0.8, 1.05, 1.3, 0.78, 1.12, 0.92, 1.28, 0.82, 1.08, 0.95];
 /**
- * The G-pen, in px: its line at its heaviest before the shade side adds to it, at its finest, and how
- * far a lobe's stroke starts before its cusp and runs past the next.
+ * The G-pen, in px: its line at its heaviest before the shade side adds to it, at its finest, how far a
+ * lobe's stroke starts before its cusp and runs past the next, give or take half `runOnJitter`, so the
+ * lines cross at each cusp with nothing sticking out into the white, and how far it wanders off the lobe.
  */
-const PEN = { heavy: 2.6, shade: 0.3, fine: 0.55, before: 1.1, after: 2.4, wobble: 0.35 };
+export const PEN = {
+  heavy: 2.6,
+  shade: 0.3,
+  fine: 0.55,
+  before: 0.5,
+  after: 0.9,
+  runOnJitter: 0.3,
+  wobble: 0.35,
+};
 /** The white reaches this far past the word area on each side, before its lobes, in px. */
 const PAD_X = 14;
 
@@ -193,8 +202,8 @@ export function cloudShape(spec: BalloonSpec): Cloud {
     // Each inking of the lobe lands, runs on and presses a little differently.
     strokes.push((ink) => {
       const heavy = PEN.heavy * (1 + PEN.shade * dot(out, SHADE)) * (1 + (ink() - 0.5) * 0.12);
-      const before = (PEN.before + (ink() - 0.5) * 0.8) / radius;
-      const after = (PEN.after + (ink() - 0.5) * 0.8) / radius;
+      const before = (PEN.before + (ink() - 0.5) * PEN.runOnJitter) / radius;
+      const after = (PEN.after + (ink() - 0.5) * PEN.runOnJitter) / radius;
       const wob = wobble(ink, 2);
       const pts: PenPoint[] = [];
       for (let i = 0; i <= count; i++) {

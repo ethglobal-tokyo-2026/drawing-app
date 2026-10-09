@@ -218,9 +218,15 @@ function drawBroken(face: number): BrokenDie {
     return penStroke(pts);
   });
   // The chip's raw edge, in a thinner, unsteady line.
-  const chipEdge = penStroke(CHIP.map((p, i) => ({ ...p, w: 1.1 - 0.3 * (i % 2) })));
+  const chipEdge = penStroke(
+    CHIP.map((p, i) => ({ ...p, w: 1.1 - 0.3 * (i % 2) })),
+    { jagged: true },
+  );
   const crackInk = (pts: readonly Pt[]) =>
-    penStroke(pts.map((p, i) => ({ ...p, w: 1.3 * (1 - i / pts.length) + 0.25 })));
+    penStroke(
+      pts.map((p, i) => ({ ...p, w: 1.3 * (1 - i / pts.length) + 0.25 })),
+      { jagged: true },
+    );
   const normal = dieDrawing(face);
   return {
     white: outline(outlineRing),
@@ -272,6 +278,7 @@ function shardShape(seed: number): { white: string; ink: string } {
   const loop = [...ring, ring[0], ring[1]];
   const ink = penStroke(
     loop.map((p, i) => ({ ...p, w: i === 0 || i === loop.length - 1 ? 0.5 : 1.15 })),
+    { jagged: true },
   );
   return { white: outline(ring), ink };
 }

@@ -4,6 +4,7 @@ import {
   DEAL_AT,
   dealLayout,
   FURIGANA_WORD_MIN_PX,
+  PEN,
   TIGHT_TYPE,
   toScreen,
   TYPE,
@@ -72,6 +73,23 @@ function expectHolds(placed: PlacedBalloon, layout: DealLayout, word: string, re
   ).toBe(true);
 }
 
+/** Each pen stroke's two ends in ink path data: the middles of its round ends' arcs. */
+const strokeEnds = (ink: string): Pt[] =>
+  [...ink.matchAll(/(-?[\d.]+) (-?[\d.]+)A[\d.]+ [\d.]+ 0 0 [01] (-?[\d.]+) (-?[\d.]+)/g)].map(
+    ([, x0, y0, x1, y1]) => ({ x: (+x0 + +x1) / 2, y: (+y0 + +y1) / 2 }),
+  );
+
+/** The white's cusps: the corners where its outline turns in, between two lobes. */
+function cusps(white: readonly Pt[]): Pt[] {
+  const next = (i: number) => white[(i + 1) % white.length];
+  const area = white.reduce((s, p, i) => s + p.x * next(i).y - next(i).x * p.y, 0);
+  return white.filter((p, i) => {
+    const [a, c] = [white[(i + white.length - 1) % white.length], next(i)];
+    const turn = (p.x - a.x) * (c.y - p.y) - (p.y - a.y) * (c.x - p.x);
+    return Math.sign(turn) === -Math.sign(area);
+  });
+}
+
 describe("a G-pen cloud", () => {
   it("is drawn the same every time, and boils: each frame redraws the line round the same white", () => {
     const { spec } = dealLayout(TALL).balloons[0];
@@ -79,6 +97,22 @@ describe("a G-pen cloud", () => {
     const { inks } = cloudShape(spec);
     expect(inks.length).toBeGreaterThan(1);
     expect(new Set(inks).size).toBe(inks.length);
+  });
+
+  it("runs each lobe's line a little past its cusps into the white, no further than the pen's run-on", () => {
+    const reach = Math.max(PEN.before, PEN.after) + PEN.runOnJitter / 2 + PEN.wobble;
+    for (const { cloud } of dealLayout(TALL).balloons) {
+      const corners = cusps(cloud.white);
+      for (const ink of cloud.inks) {
+        const ends = strokeEnds(ink);
+        expect(ends).toHaveLength(2 * corners.length);
+        for (const end of ends) {
+          expect(inside(end, cloud.white)).toBe(true);
+          const nearest = Math.min(...corners.map((c) => Math.hypot(c.x - end.x, c.y - end.y)));
+          expect(nearest).toBeLessThanOrEqual(reach);
+        }
+      }
+    }
   });
 });
 

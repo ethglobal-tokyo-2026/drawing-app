@@ -27,30 +27,63 @@ const area2 = (pts: readonly Pt[]) =>
   }, 0);
 
 /**
- * A pen stroke through `pts` as SVG path data: one outline round the stroke, offset by half its width
- * on each side, with round ends. Every stroke runs the same way round, so strokes that cross fill as
- * one under the nonzero rule.
+ * Point `i` along `pts`, running on past either end as the line would: curving on as through the end's
+ * last three points, or straight on when it's `jagged`.
  */
-export function penStroke(pts: readonly PenPoint[]): string {
-  const left: Pt[] = [];
-  const right: Pt[] = [];
-  const cap = (p: PenPoint, along: Pt, sign: number) => {
-    const r = p.w / 2;
-    return [0.25, 0.5, 0.75].map((f) => {
-      const a = f * Math.PI;
-      const side = { x: -along.y, y: along.x };
-      return {
-        x: p.x + r * (Math.cos(a) * side.x * sign + Math.sin(a) * along.x * sign),
-        y: p.y + r * (Math.cos(a) * side.y * sign + Math.sin(a) * along.y * sign),
-      };
-    });
+function runOn(pts: readonly Pt[], jagged: boolean): (i: number) => Pt {
+  const last = pts.length - 1;
+  return (i) => {
+    if (i >= 0 && i <= last) return pts[i];
+    const [end, next, after] =
+      i < 0 ? [pts[0], pts[1], pts[2]] : [pts[last], pts[last - 1], pts[last - 2]];
+    return after && !jagged
+      ? { x: 3 * (end.x - next.x) + after.x, y: 3 * (end.y - next.y) + after.y }
+      : { x: 2 * end.x - next.x, y: 2 * end.y - next.y };
   };
+}
+
+/**
+ * One side of a stroke on from its first point, as SVG path data: Catmull-Rom curves through `side` as
+ * cubic Béziers, or straight lines when it's `jagged`.
+ */
+function sideOf(side: readonly Pt[], jagged: boolean): string {
+  if (jagged) return side.map((p, i) => (i ? `L${xy(p)}` : "")).join("");
+  const at = runOn(side, jagged);
+  // A curve leaves point i along its neighbors' chord, its handle a sixth of that chord.
+  const handle = (i: number): Pt => ({
+    x: (at(i + 1).x - at(i - 1).x) / 6,
+    y: (at(i + 1).y - at(i - 1).y) / 6,
+  });
+  return side
+    .map((p, i) => {
+      if (!i) return "";
+      const c2 = { x: p.x - handle(i).x, y: p.y - handle(i).y };
+      // Each curve leaves its point the way the last arrived there, which `S` mirrors.
+      if (i > 1) return `S${xy(c2)} ${xy(p)}`;
+      const c1 = { x: side[0].x + handle(0).x, y: side[0].y + handle(0).y };
+      return `C${xy(c1)} ${xy(c2)} ${xy(p)}`;
+    })
+    .join("");
+}
+
+/** Half a circle of radius `r` on to `to`, turning clockwise on the screen when `sweep` is 1. */
+const roundEnd = (r: number, sweep: 0 | 1, to: Pt) => `A${n(r)} ${n(r)} 0 0 ${sweep} ${xy(to)}`;
+
+/**
+ * A pen stroke through `pts` as SVG path data: one outline round the stroke, offset by half its width
+ * on each side, in curves, or in straight lines when it's `jagged` like a crack, with round ends. Every
+ * stroke runs the same way round, so strokes that cross fill as one under the nonzero rule.
+ */
+export function penStroke(pts: readonly PenPoint[], { jagged = false } = {}): string {
+  const at = runOn(pts, jagged);
   const tangent = (i: number): Pt => {
-    const a = pts[Math.max(0, i - 1)];
-    const b = pts[Math.min(pts.length - 1, i + 1)];
+    const a = at(i - 1);
+    const b = at(i + 1);
     const l = Math.hypot(b.x - a.x, b.y - a.y) || 1;
     return { x: (b.x - a.x) / l, y: (b.y - a.y) / l };
   };
+  const left: Pt[] = [];
+  const right: Pt[] = [];
   pts.forEach((p, i) => {
     const t = tangent(i);
     const r = p.w / 2;
@@ -58,13 +91,22 @@ export function penStroke(pts: readonly PenPoint[]): string {
     right.push({ x: p.x + t.y * r, y: p.y - t.x * r });
   });
   const last = pts.length - 1;
+  const tip = (p: PenPoint, along: Pt, sign: number) => ({
+    x: p.x + (sign * along.x * p.w) / 2,
+    y: p.y + (sign * along.y * p.w) / 2,
+  });
   const ring = [
     ...left,
-    ...cap(pts[last], tangent(last), 1),
+    tip(pts[last], tangent(last), 1),
     ...right.toReversed(),
-    ...cap(pts[0], tangent(0), -1),
+    tip(pts[0], tangent(0), -1),
   ];
-  return outline(area2(ring) < 0 ? ring.toReversed() : ring);
+  const [first, end] = [pts[0].w / 2, pts[last].w / 2];
+  return area2(ring) < 0
+    ? `M${xy(left[0])}${roundEnd(first, 1, right[0])}${sideOf(right, jagged)}` +
+        `${roundEnd(end, 1, left[last])}${sideOf(left.toReversed(), jagged)}Z`
+    : `M${xy(left[0])}${sideOf(left, jagged)}${roundEnd(end, 0, right[last])}` +
+        `${sideOf(right.toReversed(), jagged)}${roundEnd(first, 0, left[0])}Z`;
 }
 
 /**
