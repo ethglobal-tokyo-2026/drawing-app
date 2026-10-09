@@ -47,13 +47,17 @@ export function KyotoSeikaDeal({
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const balloons = useRef<HTMLDivElement>(null);
+  const pairArea = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<PairLayout | null>(null);
 
   useLayoutEffect(() => {
     const el = screen.current;
-    if (!el) return;
+    const area = pairArea.current;
+    if (!el || !area) return;
     const measure = () => {
-      const box = el.getBoundingClientRect();
+      // The pair is laid out in its own area, which a large screen narrows and scales up (CSS).
+      const box = area.getBoundingClientRect();
+      const scale = box.width / area.offsetWidth || 1;
       // The timer's label, which keeps the start note's room while off, since a touch brings it.
       const above = el.querySelector(".timer-hint-label") ?? el.querySelector(".drawing-top");
       // Begin with the task line over it.
@@ -61,15 +65,16 @@ export function KyotoSeikaDeal({
       if (!above || !below) return;
       setLayout(
         pairLayout({
-          width: box.width,
-          top: above.getBoundingClientRect().bottom - box.top + ROOM_PX,
-          bottom: below.getBoundingClientRect().top - box.top - ROOM_PX,
+          width: area.offsetWidth,
+          top: (above.getBoundingClientRect().bottom - box.top) / scale + ROOM_PX,
+          bottom: (below.getBoundingClientRect().top - box.top) / scale - ROOM_PX,
         }),
       );
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
+    observer.observe(area);
     return () => observer.disconnect();
   }, [screen]);
 
@@ -106,21 +111,23 @@ export function KyotoSeikaDeal({
   return (
     <>
       <div ref={balloons} className="kyoto-seika-deal">
-        {list.status === "failed" ? (
-          <ErrorLine
-            className="kyoto-seika-deal__failure"
-            detail={problemOf(list.error).detail}
-            onRetry={list.retry}
-          >
-            {t(($) => $.kyotoSeika.balloons.loadFailed)}
-          </ErrorLine>
-        ) : (
-          deal &&
-          layout &&
-          list.status === "loaded" && (
-            <SubjectBalloons deal={deal} layout={layout} onRoll={onRoll} />
-          )
-        )}
+        <div ref={pairArea} className="kyoto-seika-deal__pair">
+          {list.status === "failed" ? (
+            <ErrorLine
+              className="kyoto-seika-deal__failure"
+              detail={problemOf(list.error).detail}
+              onRetry={list.retry}
+            >
+              {t(($) => $.kyotoSeika.balloons.loadFailed)}
+            </ErrorLine>
+          ) : (
+            deal &&
+            layout &&
+            list.status === "loaded" && (
+              <SubjectBalloons deal={deal} layout={layout} onRoll={onRoll} />
+            )
+          )}
+        </div>
       </div>
       <BeginKey
         ref={begin}

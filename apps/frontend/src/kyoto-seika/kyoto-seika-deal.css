@@ -8,10 +8,27 @@
   transform-origin: 40px calc(100% - 270px);
 }
 
+/* Where the pair is laid out (KyotoSeikaDeal measures it): the whole screen on a phone. */
+.kyoto-seika-deal__pair {
+  position: absolute;
+  inset: 0;
+}
+
 .kyoto-seika-deal__failure {
   position: absolute;
   top: 38%;
   left: 24px;
   right: 24px;
   pointer-events: auto;
+}
+
+/* A large screen keeps the phone's composition: the pair is laid out a phone's width wide over Begin,
+   so the clouds stagger as one pair rather than parting to the screen's sides, then drawn larger. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .kyoto-seika-deal__pair {
+    left: calc(50% - 210px);
+    right: calc(50% - 210px);
+    scale: 1.25;
+    transform-origin: 50% 0;
+  }
 }
