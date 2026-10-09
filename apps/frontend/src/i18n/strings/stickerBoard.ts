@@ -211,25 +211,25 @@ export const stickerBoard = {
     kyotoSeika: {
       /** Settings note: Kyoto Seika Practice Mode's switch row, one character of its university blacked out by <bar/>, with "?" after it */
       name: {
-        en: "Kyoto <bar/>ka University Entrance Exam Mode",
-        ja: "京都<bar/>華大学<wbr/>入試モード",
+        en: "Kyoto <bar/>ka Manga Expression Practice Mode",
+        ja: "京都<bar/>華大学<wbr/>マンガ表現<wbr/>練習モード",
       },
       /** Settings note: the characters under the censor bar in Kyoto Seika Practice Mode's name, never shown */
       hidden: { en: "Sei", ja: "精" },
       /** Settings note: what screen readers hear as the name of Kyoto Seika Practice Mode's switch, since the bar is a sight gag */
       spokenName: {
-        en: "Kyoto Seika University Entrance Exam Mode",
-        ja: "京都精華大学 入試モード",
+        en: "Kyoto Seika Manga Expression Practice Mode",
+        ja: "京都精華大学 マンガ表現練習モード",
       },
       /** Settings note: screen readers' name for the "?" after Kyoto Seika Practice Mode's name, which opens its help sheet */
       help: { en: "About this mode", ja: "このモードについて" },
       /** Settings note: the alert when Kyoto Seika Practice Mode's switch didn't save to your account, with the reason */
       notSaved: {
-        en: "Your entrance exam setting couldn’t be saved, so it hasn’t changed: {{reason}}",
-        ja: "入試の設定を保存できなかったため、変更していません：{{reason}}",
+        en: "Your Manga Expression Practice Mode setting couldn’t be saved, so it hasn’t changed: {{reason}}",
+        ja: "マンガ表現練習モードの設定を保存できなかったため、変更していません：{{reason}}",
       },
     },
-    /** The Drawing group, after the entrance exam: settings this device keeps for drawing, not your account. */
+    /** The Drawing group, after Kyoto Seika Practice Mode: settings this device keeps for drawing, not your account. */
     drawing: {
       /** Settings note: the legend over the Drawing group, the drawing screen's settings this device keeps */
       title: { en: "Drawing", ja: "かく画面" },

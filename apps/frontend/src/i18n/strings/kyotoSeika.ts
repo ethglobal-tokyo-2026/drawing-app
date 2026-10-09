@@ -68,11 +68,11 @@ export const kyotoSeika = {
   },
   /** The help sheet Settings' "?" opens beside Kyoto Seika Practice Mode's legend: three manga panels of the real screens, each captioned. */
   help: {
-    /** Kyoto Seika Practice Mode's help sheet: the character under the censor bar in its lines' "Kyoto S■ika", never shown */
-    hidden: { en: "e", ja: "精" },
+    /** Kyoto Seika Practice Mode's help sheet: the characters under the censor bar in its lines' "Kyoto ■ka", never shown */
+    hidden: { en: "Sei", ja: "精" },
     /** Kyoto Seika Practice Mode's help sheet, under its title: what the mode is for; <bar/> blacks out one character of the university's name */
     lead: {
-      en: "Practice for Kyoto S<bar/>ika University’s manga expression entrance exam.",
+      en: "Practice for Kyoto <bar/>ka University’s manga expression entrance exam.",
       ja: "京都<bar/>華大学マンガ表現入試の練習モードです。",
     },
     /** Kyoto Seika Practice Mode's help sheet: the caption under the first panel, the two subject balloons a sheet deals */
@@ -86,7 +86,7 @@ export const kyotoSeika = {
     tickets: { en: "{{tickets}} daily tickets", ja: "無償チケット<wbr/>1日{{tickets}}枚" },
     /** Kyoto Seika Practice Mode's help sheet, fine print: in its maker's voice, that Croquis has no connection with the university; <bar/> blacks out one character of its name */
     maker: {
-      en: "Croquis isn’t affiliated with Kyoto S<bar/>ika. I’m applying there myself, and made this mode to practice.",
+      en: "Croquis isn’t affiliated with Kyoto <bar/>ka. I’m applying there myself, and made this mode to practice.",
       ja: "クロッキーは京都<bar/>華大学とは関係ありません。作者も受験生で、自分の練習のために作りました。",
     },
     /** Kyoto Seika Practice Mode's help sheet, fine print at its foot: the subject list's credit, a link that opens its sources and licenses */
@@ -95,11 +95,11 @@ export const kyotoSeika = {
   /** The tag beside Timelapse on the detail of a sticker drawn in Kyoto Seika Practice Mode. */
   tag: {
     /** Sticker detail of a sticker drawn in Kyoto Seika Practice Mode: the ink label-tape tag beside Timelapse */
-    label: { en: "Entrance exam practice", ja: "入試練習" },
+    label: { en: "Manga expression practice", ja: "マンガ表現練習" },
     /** Sticker detail of a sticker drawn in Kyoto Seika Practice Mode: what screen readers hear for the tag and its pair; in English each subject comes with its English, such as "風, wind" */
     spoken: {
-      en: "Entrance exam practice. Subjects: {{first}}, and {{second}}.",
-      ja: "入試練習。題材：{{first}}と{{second}}。",
+      en: "Manga expression practice. Subjects: {{first}}, and {{second}}.",
+      ja: "マンガ表現練習。題材：{{first}}と{{second}}。",
     },
   },
 } as const satisfies Section;
