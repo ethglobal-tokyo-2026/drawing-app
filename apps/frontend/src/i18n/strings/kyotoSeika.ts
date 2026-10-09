@@ -71,6 +71,32 @@ export const kyotoSeika = {
     /** Seal sheet and sealed card, a sticker drawn in Kyoto Seika Practice Mode: what screen readers hear for the pair under the title; in English each subject comes with its English, such as "風, wind" */
     spoken: { en: "Subjects: {{first}}, and {{second}}.", ja: "題材：{{first}}と{{second}}。" },
   },
+  /** The help sheet Settings' "?" opens beside Kyoto Seika Practice Mode's legend: three manga panels of the real screens, each captioned. */
+  help: {
+    /** Kyoto Seika Practice Mode's help sheet: the character under the censor bar in its lines' "Kyoto S■ika", never shown */
+    hidden: { en: "e", ja: "精" },
+    /** Kyoto Seika Practice Mode's help sheet, under its title: what the mode is for; <bar/> blacks out one character of the university's name */
+    lead: {
+      en: "Practice for Kyoto S<bar/>ika University’s manga expression entrance exam.",
+      ja: "京都<bar/>華大学マンガ表現入試の練習モードです。",
+    },
+    /** Kyoto Seika Practice Mode's help sheet: the caption under the first panel, the two subject balloons a sheet deals */
+    subjects: {
+      en: "Two subjects to combine in every sticker",
+      ja: "題材を2つ<wbr/>組み合わせてかく",
+    },
+    /** Kyoto Seika Practice Mode's help sheet: the caption under the second panel, the timer at the clock's full length; {{minutes}} is that length */
+    clock: { en: "{{minutes}} minutes on the clock", ja: "タイマー{{minutes}}分" },
+    /** Kyoto Seika Practice Mode's help sheet: the caption under the third panel, the daily ticket count; {{tickets}} is the day's daily tickets in the mode */
+    tickets: { en: "{{tickets}} daily tickets", ja: "無償チケット<wbr/>1日{{tickets}}枚" },
+    /** Kyoto Seika Practice Mode's help sheet, fine print: in its maker's voice, that Croquis has no connection with the university; <bar/> blacks out one character of its name */
+    maker: {
+      en: "Croquis isn’t affiliated with Kyoto S<bar/>ika. I’m applying there myself, and made this mode to practice.",
+      ja: "クロッキーは京都<bar/>華大学とは関係ありません。作者も受験生で、自分の練習のために作りました。",
+    },
+    /** Kyoto Seika Practice Mode's help sheet, fine print at its foot: the subject list's credit, a link that opens its sources and licenses */
+    credit: { en: "Subjects: JMdict (EDRDG)", ja: "題材：JMdict（EDRDG）" },
+  },
   /** The tag beside Timelapse on the detail of a sticker drawn in Kyoto Seika Practice Mode. */
   tag: {
     /** Sticker detail of a sticker drawn in Kyoto Seika Practice Mode: the ink label-tape tag beside Timelapse */

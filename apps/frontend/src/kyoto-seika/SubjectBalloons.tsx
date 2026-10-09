@@ -171,6 +171,8 @@ interface BalloonProps {
   charred: boolean;
   wrap: (el: HTMLDivElement | null) => void;
   reduced: boolean;
+  /** It drifts once it has arrived; a picture of the deal holds still. */
+  drifts: boolean;
   /** The page is hidden: the drift holds. */
   still: boolean;
 }
@@ -184,6 +186,7 @@ function SubjectBalloon({
   charred,
   wrap,
   reduced,
+  drifts,
   still,
 }: BalloonProps) {
   const { spec } = placed;
@@ -197,8 +200,9 @@ function SubjectBalloon({
 
   // The cloud drifts on its own seeded track, and its bubbles a little more on theirs.
   const seed = FLOAT.seeds[balloon];
-  useDrift(float, seed, FLOAT.cloud, FLOAT.periodMs[balloon], !reduced, still);
-  useDrift(beads, seed + 1, FLOAT.beads, FLOAT.beadsPeriodMs[balloon], !reduced, still);
+  const drift = drifts && !reduced;
+  useDrift(float, seed, FLOAT.cloud, FLOAT.periodMs[balloon], drift, still);
+  useDrift(beads, seed + 1, FLOAT.beads, FLOAT.beadsPeriodMs[balloon], drift, still);
 
   useEffect(() => {
     if (reduced) return;
@@ -296,6 +300,8 @@ interface Props {
   deal: Deal;
   layout: PairLayout;
   onRoll: (balloon: Balloon) => void;
+  /** A picture of the deal, as Kyoto Seika Practice Mode's help shows it: the balloons arrive, then neither drift nor boil. */
+  picture?: boolean;
 }
 
 /** A die's line, or its countdown's number, from the roll that earned it. */
@@ -309,7 +315,7 @@ interface Tease {
  * The Kyoto Seika Subjects dealt for a fresh sheet, in two manga thought balloons, each with its own
  * die. The dice come after the balloons, in reading order, and each new subject is read out.
  */
-export function SubjectBalloons({ deal, layout, onRoll }: Props) {
+export function SubjectBalloons({ deal, layout, onRoll, picture = false }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const hidden = useSyncExternalStore(onVisibility, () => document.hidden);
@@ -366,7 +372,7 @@ export function SubjectBalloons({ deal, layout, onRoll }: Props) {
 
   return (
     <div
-      className={`subject-balloons ${hidden ? "is-still" : ""}`}
+      className={`subject-balloons ${hidden ? "is-still" : ""} ${picture ? "is-picture" : ""}`}
       role="group"
       aria-label={t(($) => $.kyotoSeika.balloons.label)}
     >
@@ -382,6 +388,7 @@ export function SubjectBalloons({ deal, layout, onRoll }: Props) {
             wraps.current[balloon] = el;
           }}
           reduced={reduced}
+          drifts={!picture}
           still={hidden}
         />
       ))}
