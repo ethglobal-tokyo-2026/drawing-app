@@ -147,7 +147,7 @@ function Figure({
   const { t } = useTranslation();
   const mark = compact ? 14 : 17;
   if (board === "bestCombo")
-    return <HitCounter hits={value} size={compact ? 19 : 23} className="figure" />;
+    return <HitCounter hits={value} size={compact ? 20 : 23} className="figure" />;
   if (board === "longestStreak")
     return (
       <span className="figure figure--streak">

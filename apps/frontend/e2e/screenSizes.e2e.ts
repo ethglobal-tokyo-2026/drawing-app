@@ -243,7 +243,7 @@ for (const size of SIZES) {
     });
 
     if (upright) {
-      test.fixme("the Shop's Buy key keeps a phone's width", async ({ page }) => {
+      test("the Shop's Buy key keeps a phone's width", async ({ page }) => {
         await signIn(page, "sizes", language);
         await page.getByRole("button", { name: say(app.tabs.shop, language), exact: true }).click();
         await expect(
