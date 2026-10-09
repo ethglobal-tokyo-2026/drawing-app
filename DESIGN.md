@@ -507,7 +507,7 @@ Every key is at least 54px tall. A label's face carries invisible bands above an
 
 ### Dot badges
 
-Round flat stickers stuck at -4°: a 26px pill in a coded hue with Ink puffy numerals and a light inset gloss. NEW dots mark stickers you haven't seen yet, and a 10px pip marks new items.
+Round flat stickers stuck at -4°: a 26px pill in a coded hue with a light inset gloss, carrying Ink puffy lettering or a filled Ink icon, and 20px on a sticker sheet. NEW dots mark stickers you haven't seen yet, and a 10px pip marks new items.
 
 ### Index tabs
 
