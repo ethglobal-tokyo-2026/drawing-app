@@ -10,6 +10,7 @@ import {
   along,
   at,
   countInkedFrames,
+  FINGERTIP,
   hand,
   inkAt,
   inkedPixels,
@@ -25,8 +26,6 @@ import {
 
 const { stickerBoard, stickerCreation } = strings;
 const language = "en";
-/** A fingertip's contact radius, well under a palm's. */
-const FINGERTIP = PALM_CONTACT_PX / 8;
 
 // An iPad in portrait, the Pencil's own device.
 test.use(ipad);

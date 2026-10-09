@@ -78,10 +78,17 @@ export const normalizeTurn = (r: number) => ((r % 360) + 360) % 360;
 
 export const passedSlop = (from: Pt, to: Pt) => Math.hypot(to.x - from.x, to.y - from.y) > SLOP;
 
-/** A corner handle moved from `from` to `to`: the size follows its distance from the center. */
+/**
+ * A corner handle moved from `from` to `to`: the size, up to `maxS`, follows how far out the handle
+ * is along its corner's line from the center, so moving across that line keeps the size, and dragged
+ * past the center the sticker stays at its smallest rather than growing again.
+ */
 export function scaleBy(center: Pt, from: Pt, to: Pt, s0: number, maxS: number): number {
-  const d0 = Math.hypot(from.x - center.x, from.y - center.y) || 1;
-  return clampS((s0 * Math.hypot(to.x - center.x, to.y - center.y)) / d0, maxS);
+  const cx = from.x - center.x;
+  const cy = from.y - center.y;
+  const d0 = Math.hypot(cx, cy) || 1;
+  const along = ((to.x - center.x) * cx + (to.y - center.y) * cy) / d0;
+  return clampS((s0 * along) / d0, maxS);
 }
 
 /** The knob moved from `from` to `to` about the center; nearly upright settles upright. */

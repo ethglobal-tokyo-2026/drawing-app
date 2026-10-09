@@ -9,10 +9,14 @@ import {
   type Pt,
   type Step,
 } from "./boardGesture";
+import { S_MIN } from "./placement";
 
 const center = { x: 100, y: 100 };
 /** A sticker's largest `s`, as the board works it out for it. */
 const MAX_S = 0.9;
+/** A corner handle up and to the right of `center`, and a size between the smallest and `MAX_S`. */
+const topRight = { x: 140, y: 60 };
+const midSize = (S_MIN + MAX_S) / 2;
 
 describe("board gestures", () => {
   it("settles a nearly upright turn upright, and leaves a real turn alone", () => {
@@ -42,9 +46,18 @@ describe("board gestures", () => {
     expect(step({ ...at, s: MAX_S }, "bigger").s).toBe(MAX_S);
   });
 
-  it("scales with the handle's distance from the centre, up to the sticker's largest", () => {
+  it("scales with the handle's distance from the center, up to the sticker's largest", () => {
     expect(scaleBy(center, { x: 120, y: 100 }, { x: 140, y: 100 }, 0.2, MAX_S)).toBeCloseTo(0.4);
     expect(scaleBy(center, { x: 120, y: 100 }, { x: 2000, y: 100 }, 0.3, MAX_S)).toBe(MAX_S);
+  });
+
+  it("keeps a corner dragged in past the center at the smallest size, rather than growing again", () => {
+    expect(scaleBy(center, topRight, { x: 20, y: 180 }, midSize, MAX_S)).toBe(S_MIN);
+  });
+
+  it("keeps the size while a corner moves across its line from the center", () => {
+    expect(scaleBy(center, topRight, { x: 160, y: 80 }, midSize, MAX_S)).toBeCloseTo(midSize);
+    expect(scaleBy(center, topRight, { x: 120, y: 40 }, midSize, MAX_S)).toBeCloseTo(midSize);
   });
 
   it("moves a sticker grown past the field's edge back onto it, turned or not", () => {

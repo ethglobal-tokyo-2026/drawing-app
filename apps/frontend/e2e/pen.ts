@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { PALM_CONTACT_PX } from "../src/sticker-creation/canvas/gestures.ts";
 
 /** A point on screen, in CSS px. */
 export type At = { x: number; y: number };
@@ -28,6 +29,9 @@ export interface Pencil {
 
 /** A finger or a palm on the glass: its id, where it is, and its contact's radius in CSS px. */
 export type Contact = At & { id: number; radius: number };
+
+/** A fingertip's contact radius, well under a palm's. */
+export const FINGERTIP = PALM_CONTACT_PX / 8;
 
 /**
  * Fingers and palms. A start or a move lists every contact still down, and presses what's new; an

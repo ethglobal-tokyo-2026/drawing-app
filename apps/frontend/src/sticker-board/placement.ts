@@ -103,7 +103,7 @@ const INSET = 12;
 const FOOT = 16;
 /** The right edge belongs to the sticker tray. */
 const TRAY_EDGE = 40;
-const S_MIN = 0.16;
+export const S_MIN = 0.16;
 /**
  * A sticker's largest size in each layout, as the side of the square of its area, a share of the
  * unit: every sticker can cover the same area whatever its shape, unless the field stops it first.
