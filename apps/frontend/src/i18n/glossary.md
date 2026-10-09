@@ -48,6 +48,7 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | Explore (the tab)                | 発見                                   | Instagram's name for its Explore; never さがす, which is search (ad0ll, 2026-10-09)   |
 | My board (the tab)               | マイボード                             | The way back is マイボードに戻る                                                      |
 | Sui address                      | Suiアドレス                            | The stat board's address paper, which holds the stickers                              |
+| Deposit (the Shop)               | 入金                                   | Holds up your Sui address, to send JPYC to (ad0ll, 2026-10-09)                        |
 | handle                           | ユーザー名                             | X's word for the @handle; a display name is 名前                                      |
 | LINE friend / chat               | 友だち / トーク                        | LINE's own words                                                                      |
 | Official Account                 | 公式アカウント                         |                                                                                       |

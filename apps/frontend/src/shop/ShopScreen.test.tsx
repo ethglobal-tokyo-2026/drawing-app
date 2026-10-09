@@ -7,6 +7,7 @@ import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
 import { setPrivyStatus } from "../identity/privy";
 import { getTicketPayments } from "../payments/jpyc";
 import { useTickets } from "../tickets/useTickets";
+import { ToastProvider } from "../ui/ToastProvider";
 import { ShopScreen } from "./ShopScreen";
 
 vi.mock("../payments/jpyc", () => ({ getTicketPayments: vi.fn() }));
@@ -128,6 +129,23 @@ describe("ShopScreen", () => {
     await settle();
     expect(getTicketPayments).toHaveBeenCalledTimes(2);
     expect(rows()).toHaveLength(1);
+  });
+
+  it("offers Deposit once your Sui address is known, which holds that address up", async () => {
+    view = renderWithApi(
+      <ToastProvider>
+        <ShopScreen onBuyReserveTickets={() => {}} />
+      </ToastProvider>,
+      emptyApi({ ticketShop: () => Promise.resolve(SHOP) }),
+    );
+    await settle();
+    expect(buttonNamed("Deposit")).toBeUndefined();
+
+    act(() => setPrivyStatus({ state: "signed-in", userId: "privy-me", suiWallet: SUI_WALLET }));
+    click("Deposit");
+    expect(document.querySelector("[role=dialog] .address-dialog__address")?.textContent).toBe(
+      SUI_WALLET,
+    );
   });
 
   it("says when your tickets didn't load, instead of reading as if you hold none, and loads them again", async () => {

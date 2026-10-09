@@ -103,6 +103,10 @@
   width: 100%;
 }
 
+.reserve-hero__deposit {
+  margin-top: 10px;
+}
+
 /* Your ticket purchases, under the reserve tickets and as wide as their card. */
 .shop__purchases {
   margin-inline: 12px;

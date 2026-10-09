@@ -28,6 +28,8 @@ export const shop = {
     },
     /** Reserve tickets section: the blue key that opens the reserve ticket checkout */
     buy: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
+    /** Reserve tickets section, under the Buy key: the label button that holds up your Sui address and its QR code, to send JPYC to */
+    deposit: { en: "Deposit", ja: "入金" },
   },
   /** The Shop: the one pill over the coming-soon shelves, saying nothing on them is on sale yet */
   comingSoon: { en: "Coming soon", ja: "近日登場" },
