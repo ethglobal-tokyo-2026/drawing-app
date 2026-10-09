@@ -79,7 +79,7 @@
   align-self: flex-start;
   padding-left: 2px;
   font-family: var(--font-puffy);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 400;
   font-stretch: normal;
   line-height: 22px;
@@ -98,7 +98,7 @@
 }
 
 .seal-sheet__title.is-lettered.is-turned {
-  animation: seal-title-letter 320ms var(--ease-spring) both;
+  animation: seal-title-letter 320ms var(--ease-out) both;
 }
 
 @keyframes seal-title-turn {
