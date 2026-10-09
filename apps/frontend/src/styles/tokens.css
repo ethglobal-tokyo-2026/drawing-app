@@ -103,6 +103,9 @@
   --tabs-pad-top: 10px;
   --tabs-pad-foot: max(12px, env(safe-area-inset-bottom));
   --tabs-strip: calc(var(--tabs-pad-top) + var(--tab-h) + var(--tabs-pad-foot));
+  /* The home indicator's safe area under a layer that reaches the screen's foot. Inside .screen, which
+     ends above the tab strip, it's 0 (App.css): the strip clears the indicator there. */
+  --foot-inset: env(safe-area-inset-bottom);
   /* On a large screen the strip's left end holds a board's key: Draw with its widest tickets tucked
      behind. */
   --tabs-lead-w: 228px;

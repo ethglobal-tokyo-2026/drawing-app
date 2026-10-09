@@ -172,7 +172,7 @@
 
 /* The Accept sheet rises under the sticker. */
 .receive-gift__sheet.bottom-sheet {
-  padding-bottom: 30px;
+  padding-bottom: calc(30px + var(--sheet-foot-inset));
   text-align: center;
   animation-duration: 440ms;
 }
@@ -282,6 +282,48 @@
   align-items: center;
   gap: 8px;
   padding: 0 24px 34px;
+}
+
+/* On a large screen one group in the middle: the header centered over the bag, the bag and its pull
+   tab at a phone's size, and once torn the Accept card under the bag's mouth, over its lower half as
+   the phone's sheet is. The group centers, not the card alone. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .receive-gift {
+    --accept-over: 150px;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .receive-gift > :not(.bottom-sheet) {
+    width: min(390px, 100%);
+  }
+
+  .receive-gift__head,
+  .receive-gift__end-head {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+
+  /* The heading keeps to its words, so the giver's picture and it center as one. */
+  .receive-gift__head > .receive-gift__title {
+    flex: 0 1 auto;
+  }
+
+  /* Under the low bag as on a phone, but taking no room, so the group centers on the header and the
+     bag, and the Accept card meets the stage. */
+  .receive-gift__hint {
+    position: relative;
+    inset: calc(92px + 28px) auto auto;
+    height: 0;
+  }
+
+  .receive-gift__sheet.bottom-sheet.sheet-card {
+    position: relative;
+    inset: auto;
+    flex: none;
+    margin: calc(-1 * var(--accept-over)) 0 0;
+  }
 }
 
 /* Reduced motion: the snap and the reveal are a 150ms fade. */

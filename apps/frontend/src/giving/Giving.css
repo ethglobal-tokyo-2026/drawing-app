@@ -102,8 +102,9 @@
   flex: 0 1 auto;
 }
 
-.giving__pinned > .giving__head,
-.giving__pinned > .giving__acts {
+.giving__pinned > .giving__acts,
+.giving .bottom-sheet__head,
+.giving__sheet--give > .bottom-sheet__head {
   flex: none;
 }
 
@@ -114,7 +115,7 @@
   scrollbar-width: thin;
 }
 
-.giving__body.is-in {
+:is(.giving__body, .giving__head).is-in {
   animation: giving-body-in 320ms var(--ease-peel);
 }
 
@@ -186,17 +187,6 @@
 .giving__icon-btn--back {
   margin-left: -10px;
   color: var(--ink);
-}
-
-/* The line under the key: what pressing it does. */
-.giving__hint {
-  max-width: 32ch;
-  margin: 0;
-  color: var(--graphite);
-  font-size: 13px;
-  line-height: 1.35;
-  text-align: center;
-  text-wrap: pretty;
 }
 
 .giving__icon-btn:focus-visible,
@@ -277,16 +267,6 @@
   color: var(--graphite);
 }
 
-.giving__leaves {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 18px 0 0;
-  font-size: 13px;
-  color: var(--graphite);
-}
-
 .giving__acts {
   display: flex;
   flex-direction: column;
@@ -338,8 +318,41 @@
   margin: 12px 0 0;
 }
 
+/* On a large screen the sticker and its card are one group in the middle: the sticker at the card's
+   head, just above its top edge with its peel shadow, and every step in the same card. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .giving {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: var(--gutter-large);
+  }
+
+  .giving__sticker {
+    position: relative;
+    flex: none;
+    padding-top: 0;
+  }
+
+  .giving .bottom-sheet.sheet-card {
+    position: relative;
+    inset: auto;
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: none;
+    margin: 0;
+  }
+
+  /* The give sheet keeps the card rule's room from the layer's edges. */
+  .bottom-sheet.giving__sheet.sheet-card {
+    max-height: calc(100% - 2 * var(--gutter-large));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .giving__body.is-in {
+  :is(.giving__body, .giving__head).is-in {
     animation: giving-fade-in 150ms linear;
   }
 }

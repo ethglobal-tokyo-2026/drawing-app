@@ -36,11 +36,6 @@ export const giving = {
   giveSheet: {
     /** The give sheet, opened by Give on someone else's sticker board: its title */
     title: { en: "Give {{name}} a sticker", ja: "{{name}}さんにシールを贈る" },
-    /** The give sheet on someone else's sticker board: the line under its title */
-    lead: {
-      en: "Pick one of yours, then send it to {{name}} in a LINE chat.",
-      ja: "あなたのシールを<wbr/>1枚選んで、<wbr/>LINEのトークで<wbr/>{{name}}さんに<wbr/>送りましょう。",
-    },
     /** The give sheet on someone else's sticker board: the name of the grid of your stickers, for assistive tech */
     yourStickers: { en: "Your stickers", ja: "あなたのシール" },
     /** The give sheet on someone else's sticker board: in the grid's place when you have no sticker to give */
@@ -83,16 +78,6 @@ export const giving = {
   sheet: {
     /** Giving's first screen: the bold title of the aqua row that packs the sticker and opens LINE's friend picker */
     sendInChat: { en: "Send in a LINE chat", ja: "LINEのトークで送る" },
-    /** Giving's first screen: the small line under "Send in a LINE chat" */
-    sendInChatHint: {
-      en: "Pick your chat with them. The first to open it gets it.",
-      ja: "相手との<wbr/>トークを<wbr/>選んでください。<wbr/>最初に<wbr/>ひらいた人が<wbr/>受け取れます。",
-    },
-    /** Giving's first screen: the note at the bottom, beside a sticker icon */
-    leaves: {
-      en: "It comes off your board and into a gift bag.",
-      ja: "シールは<wbr/>ボードから<wbr/>はがれて、<wbr/>ギフト袋に<wbr/>入ります。",
-    },
   },
   /** "Can’t find them?", in the give sheet's place: for a friend LINE's picker leaves out. */
   cantFind: {

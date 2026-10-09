@@ -1,10 +1,12 @@
 .bottom-sheet {
+  /* The home indicator's safe area the paper runs down over, under its content. */
+  --sheet-foot-inset: var(--foot-inset, 0px);
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: var(--z-sheet);
-  padding: 0 20px 24px;
+  padding: 0 20px calc(24px + var(--sheet-foot-inset));
   border-radius: 16px 16px 0 0;
   background: var(--liner);
   box-shadow: var(--shadow-sheet);

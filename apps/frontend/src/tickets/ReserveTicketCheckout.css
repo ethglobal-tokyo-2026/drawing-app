@@ -29,11 +29,6 @@
   padding: 0 var(--card-pad) 18px;
 }
 
-/* Over the Shop the card sits on the phone itself, over the tabs, so it clears the home indicator. */
-.phone > .reserve-checkout {
-  padding-bottom: calc(14px + env(safe-area-inset-bottom));
-}
-
 .reserve-checkout__balance {
   display: flex;
   align-items: baseline;

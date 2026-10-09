@@ -4,6 +4,8 @@ import { act, useState, type ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { people, sticker } from "../api/testFixtures";
 import { renderWithApi, shownText, TEST_OWNER } from "../api/testing";
+import { dragBy, onLargeScreen } from "../ui/testing";
+import { DISMISS_PX } from "../ui/useSheetDrag";
 import { LiftedSticker } from "./LiftedSticker";
 
 /** Newest first: @mika's, then @ken's that @bob was given, then one you drew. */
@@ -50,7 +52,10 @@ function Pile({ start, onGoToBoard }: { start: number; onGoToBoard: (artist: Per
 }
 
 let rendered: ReturnType<typeof renderWithApi> | undefined;
-afterEach(() => rendered?.unmount());
+afterEach(() => {
+  rendered?.unmount();
+  vi.restoreAllMocks();
+});
 
 const onGoToBoard = vi.fn<(artist: Person) => void>();
 /** Lifts the pile's sticker at `start`, with focus on its button as a tap or a key press leaves it. */
@@ -138,6 +143,15 @@ describe("LiftedSticker", () => {
   ])("puts the sticker back on %s", async (_, putBack) => {
     lift(1);
     putBack();
+    await landed();
+    expect(sheet()).toBeNull();
+    expect(document.activeElement).toBe(buttonOf(pile[1]?.sticker.id ?? ""));
+  });
+
+  it("on an iPad puts the sticker back at a swipe down the card's head", async () => {
+    onLargeScreen();
+    lift(1);
+    dragBy(document.querySelector(".lifted-sticker__about"), [0, DISMISS_PX * 2]);
     await landed();
     expect(sheet()).toBeNull();
     expect(document.activeElement).toBe(buttonOf(pile[1]?.sticker.id ?? ""));

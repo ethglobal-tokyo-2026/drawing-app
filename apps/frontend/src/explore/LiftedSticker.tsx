@@ -16,9 +16,11 @@ import { StickerFigure } from "../stickers/StickerFigure";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
 import { EASE_OUT, EASE_PEEL, clamp } from "../ui/easing";
+import { useLargeScreen } from "../ui/largeScreen";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
+import { useSheetDrag } from "../ui/useSheetDrag";
 import "../ui/sheet.css";
 import "./lifted-sticker.css";
 
@@ -93,7 +95,8 @@ const nameOf = (person: Person) =>
  * A sticker lifted off Explore's pile into a sheet: large, with live resin under the one light, its
  * artist, its fine print and the way to their sticker board. A sideways swipe, the arrows or the arrow
  * keys lift the next or previous one; Put back, the scrim, the perforation, Escape and LINE's Back
- * fly it back onto its spot.
+ * fly it back onto its spot, and so does a swipe down the artist and fine print on a large screen,
+ * where the sheet is a card in the middle.
  */
 export function LiftedSticker({
   stickers,
@@ -106,6 +109,7 @@ export function LiftedSticker({
   const { t } = useTranslation();
   const me = useMe();
   const reduced = useReducedMotion();
+  const large = useLargeScreen();
   const optedIn = useMyNsfwOptIn();
   useLight();
   const root = useRef<HTMLDivElement>(null);
@@ -121,6 +125,7 @@ export function LiftedSticker({
     reduced,
     onClose,
   });
+  const drag = useSheetDrag(close);
   useBackToClose(true, close);
   useFocusTrap(root, {
     onEscape: close,
@@ -160,7 +165,7 @@ export function LiftedSticker({
       }}
     >
       <div className="lifted-sticker__scrim" aria-hidden="true" onClick={close} />
-      <div className="lifted-sticker__sheet">
+      <div className="lifted-sticker__sheet" style={large ? drag.style : undefined}>
         <button
           type="button"
           className="perf"
@@ -214,7 +219,10 @@ export function LiftedSticker({
           })}
         </p>
 
-        <div className="lifted-sticker__about lifted-sticker__rise">
+        <div
+          className="lifted-sticker__about lifted-sticker__rise"
+          {...(large ? drag.handlers : {})}
+        >
           <ArtistChip artist={toPerson(artist)} plain />
           <p className="fine lifted-sticker__fine keep-phrases">
             {entry.givenTo ? (

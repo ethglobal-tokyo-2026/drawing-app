@@ -95,7 +95,6 @@ export {
   SignOut,
   SkipForward,
   StarFour,
-  Sticker,
   Stop,
   Vibrate,
   WaveSine,

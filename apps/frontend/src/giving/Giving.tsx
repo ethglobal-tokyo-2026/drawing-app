@@ -1,17 +1,10 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import type { Problem } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
-import {
-  ArrowUUpLeft,
-  PaperPlaneTilt,
-  Question,
-  StickerBoardIcon,
-  Sticker as StickerGlyph,
-  X,
-} from "../icons";
+import { ArrowUUpLeft, PaperPlaneTilt, Question, StickerBoardIcon, X } from "../icons";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { Handle } from "../stickers/Handle";
@@ -22,7 +15,7 @@ import { QuietLink } from "../ui/QuietLink";
 import { Sheet } from "../ui/Sheet";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { CantFindThem } from "./CantFindThem";
+import { CantFindThem, CantFindThemHead } from "./CantFindThem";
 import { GiftBag } from "./GiftBag";
 import type { GiftSender } from "./giftSender";
 import type { GiveFlowState } from "./giveFlow";
@@ -97,7 +90,6 @@ export function Giving({
   const motion = reduced ? 1 : 0;
   const api = useApi();
   const { id: userId } = useMe();
-  const hintId = useId();
   const { state, flow } = useGiveFlow(() => ({
     sticker,
     sender,
@@ -193,45 +185,50 @@ export function Giving({
   let title: string;
   /** What screen readers hear after the title when the step changes. */
   let lead: string | null = null;
+  // The view's header: the sheet's head, which a swipe down closes on a large screen. It slides in
+  // with the body.
+  let head: ReactNode = null;
+  const slide = slideIn ? "is-in" : undefined;
+  const titleHead = (heading: string) => (
+    <header key={view} className={`giving__head ${slide ?? ""}`}>
+      <h2 className="giving__title">{heading}</h2>
+    </header>
+  );
   let content: ReactNode;
   if (view === "cantFind") {
     title = t(($) => $.giving.cantFind.title);
-    content = <CantFindThem onBack={() => setCantFind(false)} />;
+    head = <CantFindThemHead key={view} className={slide} onBack={() => setCantFind(false)} />;
+    content = <CantFindThem />;
   } else if (state.step === "sheet") {
     title = t(($) => $.giving.give, { no: formatNo(sticker.no) });
+    head = (
+      <header key={view} className={`giving__head ${slide ?? ""}`}>
+        <h2 className="giving__title">{title}</h2>
+        <button
+          type="button"
+          className="giving__icon-btn"
+          onClick={close}
+          aria-label={t(($) => $.giving.close)}
+        >
+          <X size={20} />
+        </button>
+      </header>
+    );
     content = (
       <>
-        <header className="giving__head">
-          <h2 className="giving__title">{title}</h2>
-          <button
-            type="button"
-            className="giving__icon-btn"
-            onClick={close}
-            aria-label={t(($) => $.giving.close)}
-          >
-            <X size={20} />
-          </button>
-        </header>
         <div className="giving__acts">
           <Key
             tone="aqua"
             icon={<PaperPlaneTilt weight="fill" />}
             onClick={() => flow?.chooseLineChat()}
-            aria-describedby={hintId}
             data-autofocus
           >
             {t(($) => $.giving.sheet.sendInChat)}
           </Key>
-          <p className="giving__hint keep-phrases" id={hintId}>
-            {t(($) => $.giving.sheet.sendInChatHint)}
-          </p>
           <QuietLink onClick={() => setCantFind(true)}>
             <Question /> {t(($) => $.giving.cantFind.title)}
           </QuietLink>
         </div>
-        <p className="giving__leaves keep-phrases">
-          <StickerGlyph size={16} /> {t(($) => $.giving.sheet.leaves)}
-        </p>
         {sticker.nsfw && (
           <p className="fine giving__nsfw-note keep-phrases">
             {t(($) => $.giving.nsfw.whoCanOpen)}
@@ -268,11 +265,9 @@ export function Giving({
     // No Send in LINE: if the gift message went out, a second one would put its link in two chats.
     title = t(($) => $.giving.maybeSent.title);
     lead = t(($) => $.giving.maybeSent.lead);
+    head = titleHead(title);
     content = (
       <>
-        <header className="giving__head">
-          <h2 className="giving__title">{title}</h2>
-        </header>
         <div className="giving__scroll">
           <p className="giving__sub keep-phrases">{lead}</p>
           {bag("open")}
@@ -326,12 +321,10 @@ export function Giving({
         : state.step === "notSent" && state.recordError
           ? [couldntRecord(state.recordError)]
           : [];
+    head = titleHead(title);
     content = (
       <>
         {/* Take it out is the quiet link under the key, its one control. */}
-        <header className="giving__head">
-          <h2 className="giving__title">{title}</h2>
-        </header>
         <div className="giving__scroll">
           <p className="giving__sub keep-phrases">{lead}</p>
           {problems.map(({ message, detail }) => (
@@ -399,6 +392,8 @@ export function Giving({
         onEscape={view === "cantFind" ? () => setCantFind(false) : undefined}
         busy={busy}
         returnFocus={returnFocus}
+        head={head ?? undefined}
+        card
       >
         <div
           key={view}

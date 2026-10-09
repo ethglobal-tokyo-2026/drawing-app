@@ -1,11 +1,12 @@
-/* Out of tickets (OutOfTickets.tsx): a liner card risen over the canvas, behind an Ink scrim. */
+/* Out of tickets (OutOfTickets.tsx): a liner card risen over the canvas, behind an Ink scrim. Over
+   the tabs, as the checkout is over the Shop, it clears the home indicator. */
 .out-of-tickets {
   position: absolute;
   inset: 0;
   z-index: 30;
   display: flex;
   align-items: flex-end;
-  padding: 14px;
+  padding: 14px 14px calc(14px + var(--foot-inset, 0px));
 }
 
 .out-of-tickets__scrim {

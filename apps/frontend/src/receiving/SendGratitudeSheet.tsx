@@ -1,3 +1,5 @@
+import { useRef } from "react";
+import { createPortal } from "react-dom";
 import { Clock, GratitudeIcon } from "../icons";
 import type { PersonView, StickerView } from "../api/views";
 import { Trans, useTranslation } from "../i18n/react";
@@ -6,6 +8,7 @@ import { formatHandle } from "../stickers/format";
 import { Key } from "../ui/Key";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { keepNameWhole } from "../ui/keepNameWhole";
+import { useLargeScreen } from "../ui/largeScreen";
 import { QuietLink } from "../ui/QuietLink";
 import { Sheet } from "../ui/Sheet";
 import "./send-gratitude-sheet.css";
@@ -23,34 +26,45 @@ interface Props {
 /**
  * Asks, once a received sticker has stuck to the board, whether to send its giver gratitude now. It
  * floats over the board, which stays in view around it; Later, Back and the perforation all leave it
- * for the sticker's detail.
+ * for the sticker's detail, and on a large screen so does its scrim.
  */
 export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
   const { t } = useTranslation();
+  const large = useLargeScreen();
+  const layer = useRef<HTMLDivElement>(null);
   const who = giver.handle === null ? giver.name : formatHandle(giver.handle);
   const title = t(($) => $.receiving.sendGratitude.title, { name: who });
-  return (
-    <Sheet label={title} onClose={onLater} className="send-gratitude-sheet">
-      <div className="send-gratitude-sheet__from">
-        <PhotoSticker src={giver.pictureUrl} name={giver.name} size={60} />
-        <div className="send-gratitude-sheet__text">
-          <h2 className="title-label send-gratitude-sheet__title">{keepNameWhole(title, who)}</h2>
-          <p className="send-gratitude-sheet__line">
-            {giver.id === sticker.artist.id ? (
-              <Trans
-                i18nKey={($) => $.receiving.sendGratitude.lineFromOriginalArtist}
-                components={{
-                  // A name is a component's text, not a value: Trans would read markup in a value.
-                  name: <>{who}</>,
-                  duration: <Duration seconds={sticker.timeUsed} />,
-                }}
-              />
-            ) : (
-              t(($) => $.receiving.sendGratitude.line, { name: who })
-            )}
-          </p>
-        </div>
+  const from = (
+    <div className="send-gratitude-sheet__from">
+      <PhotoSticker src={giver.pictureUrl} name={giver.name} size={60} />
+      <div className="send-gratitude-sheet__text">
+        <h2 className="title-label send-gratitude-sheet__title">{keepNameWhole(title, who)}</h2>
+        <p className="send-gratitude-sheet__line">
+          {giver.id === sticker.artist.id ? (
+            <Trans
+              i18nKey={($) => $.receiving.sendGratitude.lineFromOriginalArtist}
+              components={{
+                // A name is a component's text, not a value: Trans would read markup in a value.
+                name: <>{who}</>,
+                duration: <Duration seconds={sticker.timeUsed} />,
+              }}
+            />
+          ) : (
+            t(($) => $.receiving.sendGratitude.line, { name: who })
+          )}
+        </p>
       </div>
+    </div>
+  );
+  const sheet = (
+    <Sheet
+      label={title}
+      onClose={onLater}
+      className="send-gratitude-sheet"
+      card
+      layer={large ? layer : undefined}
+      head={from}
+    >
       <div className="send-gratitude-sheet__acts">
         <Key tone="pink" size="lg" icon={<GratitudeIcon />} onClick={onSend} data-autofocus>
           {t(($) => $.receiving.sendGratitude.send)}
@@ -61,4 +75,14 @@ export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
       </div>
     </Sheet>
   );
+  if (!large) return sheet;
+  // On a large screen it's a card in the middle, over a scrim that dims the board and the tab row.
+  const phone = document.querySelector<HTMLElement>(".phone");
+  const layered = (
+    <div className="send-gratitude-layer" ref={layer}>
+      <div className="send-gratitude-layer__scrim" onClick={onLater} />
+      {sheet}
+    </div>
+  );
+  return phone ? createPortal(layered, phone) : layered;
 }

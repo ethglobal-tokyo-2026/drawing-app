@@ -368,28 +368,31 @@ function Gift({
           onClose={onNotNow}
           busy={receiving}
           className="receive-gift__sheet"
+          card
+          head={
+            <div className="receive-gift__copy">
+              <p className="receive-gift__for">
+                <Trans
+                  i18nKey={($) => $.receiving.gift.forYou}
+                  components={{
+                    // Names are components' text, not values: Trans would read markup in a value.
+                    name: <b>{opener}</b>,
+                  }}
+                />
+              </p>
+              <p className="fine receive-gift__fine">
+                <Trans
+                  i18nKey={($) => $.receiving.gift.finePrint}
+                  values={{ no: formatNo(sticker.no), day: formatDay(sticker.sealedAt) }}
+                  components={{
+                    duration: <Duration seconds={sticker.timeUsed} />,
+                    artist: <Handle name={printed(sticker.artist)} />,
+                  }}
+                />
+              </p>
+            </div>
+          }
         >
-          <div className="receive-gift__copy">
-            <p className="receive-gift__for">
-              <Trans
-                i18nKey={($) => $.receiving.gift.forYou}
-                components={{
-                  // Names are components' text, not values: Trans would read markup in a value.
-                  name: <b>{opener}</b>,
-                }}
-              />
-            </p>
-            <p className="fine receive-gift__fine">
-              <Trans
-                i18nKey={($) => $.receiving.gift.finePrint}
-                values={{ no: formatNo(sticker.no), day: formatDay(sticker.sealedAt) }}
-                components={{
-                  duration: <Duration seconds={sticker.timeUsed} />,
-                  artist: <Handle name={printed(sticker.artist)} />,
-                }}
-              />
-            </p>
-          </div>
           <div className="receive-gift__acts">
             {failed && (
               <ErrorLine className="receive-gift__problem" detail={failed.detail}>

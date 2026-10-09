@@ -137,7 +137,51 @@
 
 .gift-received-notice__act {
   flex: none;
-  padding: 0 24px calc(34px + env(safe-area-inset-bottom));
+  padding: 0 24px calc(34px + var(--foot-inset, 0px));
+}
+
+/* The notice's page on a phone; a card on a large screen. */
+.gift-received-notice__card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* On a large screen the board stays behind a scrim, and the notice is the shared card (ui/sheet.css)
+   in the middle, its head the swipe that closes it. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .gift-received-notice {
+    justify-content: center;
+    align-items: center;
+    padding: var(--gutter-large);
+    background: none;
+  }
+
+  .gift-received-notice__scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(28, 24, 36, 0.36);
+  }
+
+  .gift-received-notice__card {
+    position: relative;
+    flex: none;
+    width: min(var(--card-w), 100%);
+    max-height: 100%;
+    padding-bottom: 24px;
+    border-radius: 16px;
+    background: var(--liner);
+    box-shadow: var(--shadow-sheet);
+  }
+
+  .gift-received-notice__head {
+    touch-action: none;
+  }
+
+  .gift-received-notice__act {
+    padding-bottom: 0;
+  }
 }
 
 /* On first view, once the sticker has arced in, the picture sticks on and the rest comes in. */

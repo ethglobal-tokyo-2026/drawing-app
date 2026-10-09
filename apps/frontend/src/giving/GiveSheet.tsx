@@ -1,5 +1,6 @@
 import { GiveIcon, X } from "../icons";
 import { Suspense, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useMe } from "../api/meContext";
 import { Trans, useTranslation } from "../i18n/react";
 import { LIFF_ID } from "../line/liff";
@@ -11,6 +12,7 @@ import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { keepNameWhole } from "../ui/keepNameWhole";
+import { useLargeScreen } from "../ui/largeScreen";
 import { Sheet } from "../ui/Sheet";
 // Giving.css goes first, even ahead of the give-sheet.css StickerPicker brings, so the sheet's
 // resets come after its margins wherever this loads.
@@ -49,6 +51,7 @@ export function GiveSheet({ to, toId, toNsfwOptIn, onClose, returnFocus }: Props
   const me = useMe();
   const sender = useGiftSender();
   const layer = useRef<HTMLDivElement>(null);
+  const large = useLargeScreen();
 
   if (giving && sender) {
     return (
@@ -69,7 +72,7 @@ export function GiveSheet({ to, toId, toNsfwOptIn, onClose, returnFocus }: Props
 
   const name = formatHandle(to);
   const title = t(($) => $.giving.giveSheet.title, { name });
-  return (
+  const sheet = (
     <div className="board-sheet-layer" ref={layer}>
       <div className="giving__scrim" onClick={onClose} />
       <Sheet
@@ -78,8 +81,8 @@ export function GiveSheet({ to, toId, toNsfwOptIn, onClose, returnFocus }: Props
         onClose={onClose}
         returnFocus={returnFocus}
         className="giving__sheet giving__sheet--give"
-      >
-        <div className="board-sheet-body giving__pinned">
+        card
+        head={
           <header className="giving__head">
             <h2 className="giving__title">{keepNameWhole(title, name)}</h2>
             <button
@@ -91,8 +94,9 @@ export function GiveSheet({ to, toId, toNsfwOptIn, onClose, returnFocus }: Props
               <X size={20} />
             </button>
           </header>
-          <p className="giving__sub keep-phrases">{t(($) => $.giving.giveSheet.lead, { name })}</p>
-
+        }
+      >
+        <div className="board-sheet-body giving__pinned">
           {loadError && (
             <ErrorLine className="giving__problem" detail={loadError.detail}>
               {loadError.message}
@@ -141,4 +145,7 @@ export function GiveSheet({ to, toId, toNsfwOptIn, onClose, returnFocus }: Props
       </Sheet>
     </div>
   );
+  // On a large screen its scrim dims the tab row too, where Give stands.
+  const phone = large ? document.querySelector<HTMLElement>(".phone") : null;
+  return phone ? createPortal(sheet, phone) : sheet;
 }
