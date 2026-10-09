@@ -61,6 +61,7 @@ import {
   type GivenSpots,
   type PlacedBoardSticker,
 } from "./boardSticker";
+import { KeepAnimations } from "./keepAnimations";
 import { PlacedSticker } from "./PlacedSticker";
 import {
   FIRST_SPOT,
@@ -923,56 +924,58 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
           </div>
         )}
         <CreasesContext value={creases}>
-          {field &&
-            size &&
-            inOrder.map((s) => (
-              <Fragment key={s.id}>
-                <PlacedSticker
-                  sticker={s}
-                  field={field}
-                  unit={size.U}
-                  stack={stack.get(s.id) ?? 0}
-                  selected={s.id === selected}
-                  knobBelow={s.id === selected && knobBelow}
-                  held={hold?.id === s.id ? hold.kind : undefined}
-                  landing={s.id === landingId}
-                  onLanded={landedNow}
-                  reduced={reduced}
-                  tabbable={s.id === tabbable}
-                  position={order.indexOf(s.id) + 1}
-                  setSize={order.length}
-                  hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
-                  foil={byOther(s)}
-                  veiled={veiledFor(s, optedIn)}
-                  by={byOther(s) ? printedArtist(s) : undefined}
-                />
-                {/* Right after its sticker, so Tab reaches it next. */}
-                {s.id === selected && !hold && (
-                  <StickerToolbar
-                    label={formatNo(s.no)}
-                    sticker={{ ...stickerBox(field, size.U, s.placement, s), r: s.placement.r }}
-                    board={size}
-                    knobBelow={knobBelow}
-                    clearOf={draw}
-                    {...(giftSender && { onGive: () => setGiving(s) })}
-                    onView={() => openYours(s.id)}
-                    onRemove={() => stow(s.id)}
-                    arrange={{
-                      open: arrangeOpen,
-                      onOpen: openArrange,
-                      onStep: (step) => arrange(s.id, step),
-                    }}
-                    {...(byOther(s) && { artist: s.artist })}
-                    onEscape={() =>
-                      stage.current
-                        ?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(s.id)}"]`)
-                        ?.focus()
-                    }
+          <KeepAnimations order={order.join(" ")} root={stage}>
+            {field &&
+              size &&
+              inOrder.map((s) => (
+                <Fragment key={s.id}>
+                  <PlacedSticker
+                    sticker={s}
+                    field={field}
+                    unit={size.U}
+                    stack={stack.get(s.id) ?? 0}
+                    selected={s.id === selected}
+                    knobBelow={s.id === selected && knobBelow}
+                    held={hold?.id === s.id ? hold.kind : undefined}
+                    landing={s.id === landingId}
+                    onLanded={landedNow}
                     reduced={reduced}
+                    tabbable={s.id === tabbable}
+                    position={order.indexOf(s.id) + 1}
+                    setSize={order.length}
+                    hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
+                    foil={byOther(s)}
+                    veiled={veiledFor(s, optedIn)}
+                    by={byOther(s) ? printedArtist(s) : undefined}
                   />
-                )}
-              </Fragment>
-            ))}
+                  {/* Right after its sticker, so Tab reaches it next. */}
+                  {s.id === selected && !hold && (
+                    <StickerToolbar
+                      label={formatNo(s.no)}
+                      sticker={{ ...stickerBox(field, size.U, s.placement, s), r: s.placement.r }}
+                      board={size}
+                      knobBelow={knobBelow}
+                      clearOf={draw}
+                      {...(giftSender && { onGive: () => setGiving(s) })}
+                      onView={() => openYours(s.id)}
+                      onRemove={() => stow(s.id)}
+                      arrange={{
+                        open: arrangeOpen,
+                        onOpen: openArrange,
+                        onStep: (step) => arrange(s.id, step),
+                      }}
+                      {...(byOther(s) && { artist: s.artist })}
+                      onEscape={() =>
+                        stage.current
+                          ?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(s.id)}"]`)
+                          ?.focus()
+                      }
+                      reduced={reduced}
+                    />
+                  )}
+                </Fragment>
+              ))}
+          </KeepAnimations>
         </CreasesContext>
         <p ref={stepsSaid} className="board-steps-status visually-hidden" role="status" />
       </div>
