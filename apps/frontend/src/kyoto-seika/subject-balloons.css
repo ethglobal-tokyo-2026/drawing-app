@@ -29,7 +29,8 @@
   inset: 0;
 }
 
-/* The cloud is the toggle: the button covers it, fixed on the sheet while the cloud drifts. */
+/* The cloud is the toggle, fixed on the sheet while the cloud drifts: the button rings it for focus,
+   and the cloud's white inside it takes the tap, so a tap on any of the cloud reaches it. */
 .subject-balloon__pick {
   position: absolute;
   margin: 0;
@@ -37,12 +38,20 @@
   border: 0;
   border-radius: 50%;
   background: none;
-  pointer-events: auto;
-  cursor: pointer;
+  pointer-events: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-.subject-balloon__pick[aria-disabled="true"] {
+/* The white, grown past its pen line and the cloud's drift. */
+.subject-balloon__pick path {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 7px;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.subject-balloon__pick[aria-disabled="true"] path {
   cursor: default;
 }
 
@@ -51,28 +60,24 @@
   outline-offset: 3px;
 }
 
-/* A pick circles the word in pencil, as an answer is circled on an exam sheet: one Graphite loop,
-   drawn round by hand. */
-.subject-balloon__loop {
-  pointer-events: none;
+/* A pick washes the cloud in Seal Yellow, the color of selected text, inks it heavier and pops it. */
+.subject-balloon.is-picked .shape-fill {
+  fill: color-mix(in srgb, var(--seal) 35%, var(--canvas));
 }
 
-.subject-balloon__loop path {
-  fill: none;
-  stroke: var(--graphite);
-  stroke-width: 2.2;
-  stroke-linecap: round;
+.subject-balloon.is-picked .shape-ink {
+  stroke: var(--ink);
+  stroke-width: 1.4px;
   stroke-linejoin: round;
-  stroke-dasharray: 1;
-  animation: pencil-loop 240ms var(--ease-out) both;
 }
 
-@keyframes pencil-loop {
-  from {
-    stroke-dashoffset: 1;
-  }
-  to {
-    stroke-dashoffset: 0;
+.subject-balloon.is-picked .subject-balloon__float {
+  animation: subject-pop 260ms var(--ease-out);
+}
+
+@keyframes subject-pop {
+  40% {
+    scale: 1.04;
   }
 }
 
@@ -186,14 +191,14 @@
   }
 }
 
-/* A picture of the deal shows its picks circled already. */
-.subject-balloons.is-picture .subject-balloon__loop path {
+/* A picture of the deal shows its picks already washed. */
+.subject-balloons.is-picture .subject-balloon__float {
   animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .subject-balloon .shape-ink,
-  .subject-balloon__loop path {
+  .subject-balloon.is-picked .subject-balloon__float {
     animation: none;
   }
 

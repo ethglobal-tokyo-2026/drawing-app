@@ -12,7 +12,6 @@ import { EASE_OUT } from "../ui/easing";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import {
   beadShape,
-  pencilLoop,
   TIGHT_TYPE,
   TYPE,
   wordSizePx,
@@ -40,7 +39,6 @@ import {
 } from "./dealMotion";
 import { DieBang, TeaseLine } from "./DieTeasing";
 import { CHARRED_AT_ROLL, dieMood } from "./dieMood";
-import { charCount } from "./subjectList";
 import { spokenSubject } from "./spokenSubject";
 import { SubjectReroll } from "./SubjectReroll";
 import { SubjectWord } from "./SubjectWord";
@@ -159,11 +157,6 @@ function puff(layer: HTMLElement) {
   }
 }
 
-/** The pencil loop's room round the word it circles, in px. */
-const LOOP_ROOM = { x: 12, y: 9 };
-/** Group ruby spreads a reading over its word: how much wider than its kana set it runs, at most. */
-const READING_SPREAD = 1.5;
-
 interface BalloonProps {
   place: number;
   placed: PlacedBalloon;
@@ -182,7 +175,7 @@ interface BalloonProps {
 
 /**
  * One thought cloud, a toggle that picks its subject: it arrives, drifts, puffs one word out and the
- * next in at a roll, and a pick circles its word in pencil.
+ * next in at a roll, and a pick washes it in Seal Yellow.
  */
 function SubjectBalloon({
   place,
@@ -240,15 +233,6 @@ function SubjectBalloon({
 
   const type = fit === "roomy" ? TYPE : TIGHT_TYPE;
   const size = wordSizePx(visible.ja, fit, spec.w);
-  // The loop rings the word as set and the reading over it, which spaces its kana wider than they set.
-  const wide = Math.max(
-    charCount(visible.ja) * size,
-    charCount(visible.reading) * type.readingPx * READING_SPREAD,
-  );
-  const loop = {
-    rx: Math.min(spec.w, wide) / 2 + LOOP_ROOM.x,
-    ry: spec.h / 2 + LOOP_ROOM.y,
-  };
   const style = {
     left: placed.center.x,
     top: placed.center.y,
@@ -258,6 +242,7 @@ function SubjectBalloon({
     "--reading": `${type.readingPx}px`,
   } as CSSProperties;
   const half = { w: spec.w / 2 + spec.lobe, h: spec.h / 2 + spec.padY };
+  const box = placed.cloudBox;
   return (
     <div
       className={`subject-balloon ${picked ? "is-picked" : ""} ${locked ? "is-locked" : ""}`}
@@ -281,19 +266,6 @@ function SubjectBalloon({
             <SubjectWord subject={visible} />
           </div>
         </div>
-        {picked && (
-          <svg
-            key={visible.ja}
-            className="subject-balloon__loop"
-            viewBox={`${-half.w} ${-half.h} ${half.w * 2} ${half.h * 2}`}
-            width={half.w * 2}
-            height={half.h * 2}
-            style={{ left: -half.w, top: -half.h }}
-            aria-hidden="true"
-          >
-            <path d={pencilLoop(loop.rx, loop.ry, spec.seed)} pathLength={1} />
-          </svg>
-        )}
       </div>
       <button
         type="button"
@@ -305,7 +277,18 @@ function SubjectBalloon({
         onClick={() => {
           if (!locked) onPick(place);
         }}
-      />
+      >
+        {/* The cloud's own white takes the tap, so all of it picks, lobes and corners too. */}
+        <svg
+          viewBox={`${box.minX} ${box.minY} ${box.maxX - box.minX} ${box.maxY - box.minY}`}
+          width={box.maxX - box.minX}
+          height={box.maxY - box.minY}
+          style={{ left: box.minX + half.w, top: box.minY + half.h }}
+          aria-hidden="true"
+        >
+          <path d={placed.whitePath} />
+        </svg>
+      </button>
     </div>
   );
 }

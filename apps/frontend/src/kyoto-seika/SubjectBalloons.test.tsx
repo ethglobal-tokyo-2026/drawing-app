@@ -99,7 +99,6 @@ describe("the Kyoto Seika clouds", () => {
       null,
       "true",
     ]);
-    expect(host.querySelectorAll(".subject-balloon__loop")).toHaveLength(2);
     act(() => toggles(host)[1].click());
     expect(dealtNow.picked).toEqual([3, 0]);
     act(() => toggles(host)[3].click());

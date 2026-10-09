@@ -242,24 +242,6 @@ export function beadShape(r: number, seed: number): { white: string; ink: string
   };
 }
 
-/**
- * A pencil loop round a picked word, `rx` by `ry` round (0, 0), as SVG path data for a plain stroke:
- * one turn by hand, starting at the lower left and closing a little outside where it began.
- */
-export function pencilLoop(rx: number, ry: number, seed: number): string {
-  const random = seededRandom(seed);
-  const from = Math.PI * (0.75 + random() * 0.1);
-  const wob = wobble(random, 2);
-  const count = 64;
-  const pts = Array.from({ length: count + 1 }, (_, i) => {
-    const t = i / count;
-    const grow = 1 + 0.07 * t + 0.015 * wob(t);
-    const ang = from + t * (TAU + 0.45);
-    return { x: rx * grow * Math.cos(ang), y: ry * grow * Math.sin(ang) - 1.5 * t };
-  });
-  return `M${pts.map((p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join("L")}`;
-}
-
 /** The reroll, in px: the die and its lettering side by side, in the last row's right-hand room. */
 const REROLL = { die: 32, label: 64, gap: 3, height: 32 };
 /** Room kept between two clouds side by side, and between rows, in px. */

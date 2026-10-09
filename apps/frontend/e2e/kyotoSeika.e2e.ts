@@ -27,6 +27,32 @@ const toggles = (page: Page) => subjectGroup(page).locator("[aria-pressed]");
 const toggle = (page: Page, word: string) =>
   subjectGroup(page).getByRole("button", { name: word, exact: true });
 
+/**
+ * A point near the edge of the cloud named `word`, on the screen: the point of its white farthest
+ * from its middle, stepped in past the cloud's drift. Where a tap meant for the cloud is likeliest to
+ * miss it.
+ */
+async function cloudEdge(page: Page, word: string) {
+  return toggle(page, word).evaluate((key) => {
+    const STEP_IN_PX = 6;
+    const fill = key.closest(".subject-balloon")?.querySelector<SVGPathElement>(".shape-fill");
+    const toUser = fill?.getScreenCTM()?.inverse();
+    if (!fill || !toUser) throw new Error("The cloud has no white");
+    const box = fill.getBoundingClientRect();
+    const middle = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    const reach = (p: { x: number; y: number }) => Math.hypot(p.x - middle.x, p.y - middle.y);
+    let edge = middle;
+    for (let i = 0; i <= 40; i++)
+      for (let j = 0; j <= 40; j++) {
+        const at = { x: box.left + (box.width * i) / 40, y: box.top + (box.height * j) / 40 };
+        const inside = fill.isPointInFill(new DOMPoint(at.x, at.y).matrixTransform(toUser));
+        if (inside && reach(at) > reach(edge)) edge = at;
+      }
+    const step = STEP_IN_PX / reach(edge);
+    return { x: edge.x + (middle.x - edge.x) * step, y: edge.y + (middle.y - edge.y) * step };
+  });
+}
+
 interface Dealt {
   word: string;
   picked: boolean;
@@ -143,6 +169,15 @@ test("Kyoto Seika Practice Mode: switched on in Settings, dealt, picked, timed a
   await expect(toggle(page, rest[0])).not.toHaveAttribute("aria-disabled", "true");
   await expect(pickTwo).toBeDisabled();
   await toggle(page, secondPick).click();
+  await expect(begin).toBeEnabled();
+
+  // With two picked, a tap at the edge of a picked cloud's white unpicks it, and another can be picked.
+  const edge = await cloudEdge(page, secondPick);
+  await page.mouse.click(edge.x, edge.y);
+  await expect(toggle(page, secondPick)).toHaveAttribute("aria-pressed", "false");
+  await expect(pickTwo).toBeDisabled();
+  await page.mouse.click(edge.x, edge.y);
+  await expect(toggle(page, secondPick)).toHaveAttribute("aria-pressed", "true");
   await expect(begin).toBeEnabled();
 
   // A roll deals the rest again and never touches a pick.
