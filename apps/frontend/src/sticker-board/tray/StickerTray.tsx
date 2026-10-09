@@ -84,10 +84,13 @@ export function StickerTray({ board, stickers, ownerId, api, onSeen, onProblem, 
     latest.current = { stickers, ownerId, optedIn, api, onSeen, onProblem };
   });
 
+  // What the sheets show: a sticker moved, raised or dropped on the board leaves it as it was, so the
+  // tray doesn't repack and redraw for it.
+  const shown = JSON.stringify(trayStickers(stickers, ownerId, optedIn));
   // Before the engine's own effect, so a new engine doesn't redraw what it has just drawn.
   useLayoutEffect(() => {
     engine.current?.refresh();
-  }, [stickers, optedIn]);
+  }, [shown]);
 
   useLayoutEffect(() => {
     if (!board) return;
