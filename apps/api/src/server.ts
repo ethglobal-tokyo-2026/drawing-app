@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { openDb } from "@drawing-app/db";
+import { openDb, stickers } from "@drawing-app/db";
 import { migrateDatabase } from "@drawing-app/db/migrate";
 import { serve } from "@hono/node-server";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
@@ -18,7 +18,7 @@ import { giverNoticeFor, startGiverNoticeSweeps } from "./gifts/giverNotice.ts";
 import { chooseLineVerifier } from "./services/devSignIn.ts";
 import { createFastlyCdn, createFastlyPurge } from "./services/fastly.ts";
 import { createShinamiGasStation } from "./services/gasStation.ts";
-import { createDiskImageStore } from "./services/imageStore.ts";
+import { createDiskImageStore, writeMissingStickerWebps } from "./services/imageStore.ts";
 import { journalLog } from "./services/journal.ts";
 import { retryKeyFor } from "./services/lineMessaging.ts";
 import { createLineVerifier } from "./services/lineVerifier.ts";
@@ -238,6 +238,16 @@ if (fastly) {
   logInfo("cdn.cap.off", { reason: "no Fastly settings" });
   logInfo("cdn.purge.off", { reason: "no Fastly settings" });
 }
+
+// The WebP files stored stickers lack, such as a display copy under a new name, made from their PNGs
+// on disk, in the background: until each is made, its URL is a 404.
+void writeMissingStickerWebps(
+  env.IMAGE_DIR,
+  db
+    .selectDistinct({ contentHash: stickers.contentHash, veiledHash: stickers.veiledHash })
+    .from(stickers)
+    .all(),
+);
 
 // Only a proxy on this machine reaches it: Vite's in development, HAProxy's on the box.
 serve(

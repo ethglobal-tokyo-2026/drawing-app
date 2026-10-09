@@ -72,10 +72,11 @@ const serverLogQuerySchema = z.object({
 });
 
 /**
- * The files that show a sticker's drawing, by its content hash: its PNG, its WebP, the flat sheet,
- * and its sharp copy's PNG and WebP.
+ * The files that show a sticker's drawing, by its content hash: its PNG and display WebP, the flat
+ * sheet, its sharp copy's PNG and display WebP, and the WebPs that showed the resin dome.
  */
-const DRAWING_FILE = /^\/(0x[0-9a-f]{64})(?:\.png|\.webp|\.flat\.png|\.sharp\.png|\.sharp\.webp)$/;
+const DRAWING_FILE =
+  /^\/(0x[0-9a-f]{64})(?:(?:\.sharp)?(?:\.png|\.display\.webp|\.webp)|\.flat\.png)$/;
 
 /**
  * Serves the files that show a drawing only NSFW stickers show to an opted-in session alone, never
