@@ -325,11 +325,6 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/take-out`);
       return (await response.json()).gift;
     },
-    pendingGifts: async () => {
-      const response = await api.gifts.pending.$get();
-      if (!response.ok) throw await refusal(response, "GET /api/gifts/pending");
-      return response.json();
-    },
     previewGift: async (body) => {
       const response = await api.gifts.preview.$post({ json: claimOf(body) });
       if (!response.ok) throw await refusal(response, "POST /api/gifts/preview");

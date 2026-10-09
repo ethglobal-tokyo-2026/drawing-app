@@ -32,6 +32,8 @@ export interface TraySticker extends TraySlot {
   seen: boolean;
   /** Given away and received: who has it, printed. Its spot opens it among the stickers you gave. */
   givenTo?: string;
+  /** On its way: who it waits for, printed, when the app knows. */
+  onItsWayTo?: string;
 }
 
 export interface Point {
@@ -76,6 +78,8 @@ export interface TrayBoard {
   pulse: (id: string) => void;
   /** Opens a given sticker's detail, among the stickers you gave. */
   openGiven: (id: string) => void;
+  /** Opens a sticker on its way among your stickers. */
+  openYours: (id: string) => void;
 }
 
 /**
@@ -261,7 +265,7 @@ export const SHEET = { w: 156, h: 364 };
 /** Packing keeps clear of the sheet's tear strip at the top and its dated foot. */
 const PACK = { sheet: SHEET, margin: { top: 30, right: 10, bottom: 24, left: 10 } };
 /** The tray runs from under the board's header and its gifts badge to its foot; a large screen's header
- * row, where the gifts sit side by side, is taller (sticker-tray.css sets --tray-top to match). */
+ * row, where the gifts sit beside your name, is taller (sticker-tray.css sets --tray-top to match). */
 export const trayTop = () => (window.matchMedia(LARGE_SCREEN).matches ? 80 : 72);
 /** The tray's column: wide enough for the left row's full travel. */
 export const COL = 205;

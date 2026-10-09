@@ -2,6 +2,8 @@
    binding, and its fine print and key, over the whole phone. */
 
 .sticker-detail {
+  /* The sticker's box: a phone's, grown on a large screen. */
+  --figure: 216px;
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);
@@ -117,7 +119,7 @@
 /* Only a vertical pan goes to the page; a sideways swipe pages between stickers. */
 .sticker-detail__stage {
   position: relative;
-  height: 240px;
+  height: calc(var(--figure) + 24px);
   margin: 0 -6px;
   touch-action: pan-y;
   cursor: grab;
@@ -132,10 +134,10 @@
   will-change: transform;
 }
 
-/* Its own shape, inside a 216px square; the timelapse's layer over it takes the same box. */
+/* Its own shape, inside the --figure square; the timelapse's layer over it takes the same box. */
 .sticker-detail__slide .sticker-figure,
 .sticker-detail__slide .timelapse-layer {
-  width: calc(216px * min(1, var(--ar)));
+  width: calc(var(--figure) * min(1, var(--ar)));
   max-width: 100%;
   height: auto;
   aspect-ratio: var(--ar);
@@ -339,15 +341,29 @@
   gap: 16px;
 }
 
-/* A sent sticker's note, on a label lifted off the liner: its sleeve, then "On its way". */
+/* A gift in flight: its note, Take it out under it, and why a take-out failed. */
+.sticker-detail__in-flight {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.sticker-detail__in-flight > .sticker-detail__mark-ask {
+  margin-top: 0;
+}
+
+.sticker-detail__in-flight > .label-btn--quiet {
+  justify-self: start;
+}
+
+/* A gift's note, on a label lifted off the liner: its sleeve, then "On its way" or "In the bag". */
 .sticker-detail__on-its-way {
   display: flex;
-  flex: 1;
   align-items: center;
   gap: 10px;
   min-height: 54px;
   margin: 0;
-  padding: 0 14px;
+  padding: 8px 14px;
   border-radius: var(--r-label);
   background: var(--liner-lift);
   box-shadow: inset 0 0 0 1px var(--rule);
@@ -400,9 +416,66 @@
   background: var(--aqua);
 }
 
+/* In the bag, not sent: no tape across its mouth yet. */
+.sticker-detail__sleeve.is-open::after {
+  display: none;
+}
+
+/* The words wrap beside the sleeve, as Japanese and a long handle need. */
+.sticker-detail__on-its-way > span:last-child {
+  min-width: 0;
+}
+
 .sticker-detail__none {
   margin: 24px 0 0;
   color: var(--graphite);
+}
+
+/* ---------- Large screens ---------- */
+
+/* The sticker grows up to 1.5×, and what's about it keeps a phone's width: never across the room. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .sticker-detail {
+    --figure: 324px;
+    --column-w: 390px;
+  }
+}
+
+/* Upright: one centered column under the sticker. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) and (orientation: portrait) {
+  .sticker-detail__column {
+    width: min(var(--column-w), 100%);
+    margin-inline: auto;
+  }
+}
+
+/* Wider than tall: the sticker, its carets and its timelapse centered on the left; the column beside
+   it scrolls on its own, so a trail opened or a replay played never scrolls the sticker away. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) and (orientation: landscape) {
+  .sticker-detail__main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) min(var(--column-w), 50%);
+    grid-template-rows: minmax(0, 1fr);
+    column-gap: var(--gutter-large);
+    padding: 0 var(--gutter-large) 0 18px;
+    overflow: hidden;
+  }
+
+  .sticker-detail__sticker-pane {
+    align-self: center;
+  }
+
+  .sticker-detail__column {
+    min-height: 0;
+    padding-bottom: 44px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+
+  .sticker-detail__column::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @media (hover: hover) {

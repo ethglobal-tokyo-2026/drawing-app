@@ -138,7 +138,6 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
     reportShared: unanswered("reportShared"),
     startTakeOut: unanswered("startTakeOut"),
     takeOutGift: unanswered("takeOutGift"),
-    pendingGifts: () => Promise.resolve({ gifts: [] }),
     previewGift: unanswered("previewGift"),
     receiveGift: unanswered("receiveGift"),
     recordGratitude: (body) => Promise.resolve(gratitudeOf(body)),

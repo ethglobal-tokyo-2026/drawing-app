@@ -387,8 +387,7 @@
   outline-offset: 0;
 }
 
-/* Gifts for you, then gifts on their way, sit in the header opposite your name, above the sticker
-   tray's pull. */
+/* Gifts for you sit in the header opposite your name, above the sticker tray's pull. */
 .board-gifts {
   position: absolute;
   z-index: 800;
@@ -654,7 +653,7 @@
   }
 
   /* Your name and the gifts share one row, clear of the zipper's rail: the gifts keep their whole
-     length and the name gives way, down to where it would say too little, when the gifts stack. */
+     length and the name gives way, down to where it would say too little. */
   .board-head {
     position: absolute;
     z-index: 800;
@@ -686,24 +685,10 @@
     margin-left: auto;
   }
 
-  /* Each as long as what it says rather than cut to a phone's width, and side by side at one height. */
-  .board-gifts :is(.gifts-for-you-badge, .pending-gifts-badge) {
+  /* As long as what it says rather than cut to a phone's width. */
+  .board-gifts .gifts-for-you-badge {
     width: auto;
     max-width: 300px;
-  }
-
-  .board-gifts .pending-gifts-badge {
-    height: 56px;
-    padding-block: 5px;
-  }
-}
-
-/* A window too narrow for a long name beside both gifts stacks them, as a phone does. */
-@media (min-width: 600px) and (max-width: 699px) and (min-height: 600px) and (any-pointer: coarse) {
-  .board-head > .board-gifts {
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
   }
 }
 

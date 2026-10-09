@@ -134,6 +134,32 @@ async function retrying<T>(step: () => Promise<T>, pending: (error: unknown) => 
   }
 }
 
+/**
+ * Takes a gift back out, from the bag or after sending: one operation per gift, whoever asks, so a
+ * sticker's detail and Giving share it.
+ */
+export function takeOutGift(
+  {
+    api,
+    userId,
+    sign = signWithSuiWallet,
+  }: { api: ApiClient; userId: string; sign?: SignSponsored },
+  giftId: string,
+): Promise<void> {
+  const pending = takingOut.get(giftId);
+  if (pending) return pending;
+  const operation = (async () => {
+    // The server answers a take-out for the giver's wallet to sign, or none when the sticker never
+    // went into the escrow.
+    const { takeOut } = await api.startTakeOut(giftId);
+    if (takeOut) await api.takeOutGift(giftId, await sign(takeOut));
+    tokens.delete(giftId);
+    forgetKeptGift(userId, giftId);
+  })().finally(() => takingOut.delete(giftId));
+  takingOut.set(giftId, operation);
+  return operation;
+}
+
 const refusedWith = (code: string) => (error: unknown) =>
   error instanceof ApiError && error.code === code;
 /** No answer, or the server failing: what was sent may not have landed. */
@@ -187,19 +213,7 @@ export function createApiGiftBackend({
     settle(giftId);
   };
 
-  const takeOut = (giftId: string) => {
-    const pending = takingOut.get(giftId);
-    if (pending) return pending;
-    const operation = (async () => {
-      // The server answers a take-out for the giver's wallet to sign, or none when the sticker
-      // never went into the escrow.
-      const { takeOut: sponsored } = await api.startTakeOut(giftId);
-      if (sponsored) await api.takeOutGift(giftId, await sign(sponsored));
-      settle(giftId);
-    })().finally(() => takingOut.delete(giftId));
-    takingOut.set(giftId, operation);
-    return operation;
-  };
+  const takeOut = (giftId: string) => takeOutGift({ api, userId, sign }, giftId);
 
   /** `again`: the deposit's sponsorship may lapse once more before the pack gives up. */
   const pack = async (

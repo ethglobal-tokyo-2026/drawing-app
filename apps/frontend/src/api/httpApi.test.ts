@@ -352,7 +352,6 @@ describe("NFT request diagnostics", () => {
     const logs = captureDiagnostics();
     for (const [path, method] of [
       ["/api/session", "POST"],
-      ["/api/gifts/pending", "GET"],
       [`/gift/${giftClaimToken}`, "POST"],
       ["/api/gifts/unknown-private-route", "POST"],
     ]) {

@@ -12,6 +12,7 @@ import type {
 } from "@drawing-app/api/client";
 import { MeContext } from "../api/meContext";
 import {
+  gift,
   gratitude as gratitudeFixture,
   people,
   sticker as apiSticker,
@@ -21,7 +22,7 @@ import {
 import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toPerson, toSticker } from "../api/views";
 import { resendPendingGratitude, sendGratitude } from "../gratitude/gratitudeOutbox";
-import { errorDetail } from "../i18n/errorMessage";
+import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
 import { strings } from "../i18n/strings";
 import { kyotoSeika } from "../i18n/strings/kyotoSeika";
@@ -262,16 +263,96 @@ describe("StickerDetail", () => {
     expect(button("Give")).toBeUndefined();
   });
 
-  it("shows a sent sticker on its way in place of Give, and gives a packed one", () => {
-    const sent = sticker(133, day(14), { openGift: { id: "g-133", status: "sent" } });
-    open({ stickers: [sent] });
-    expect(document.querySelector(".sticker-detail__acts")?.textContent).toBe("On its way");
-    expect(button("Give")).toBeUndefined();
+  describe("a gift in flight", () => {
+    const inFlight = (no: number, status: "packed" | "sent", to?: string) =>
+      sticker(no, day(14), { openGift: { id: `g-${no}`, status, ...(to && { to }) } });
+    /** The detail of `s`, opened by its owner, whose take-outs go to `startTakeOut`. */
+    const openInFlight = (s: BoardStickerView, startTakeOut?: ApiClient["startTakeOut"]) =>
+      open(
+        { stickers: [s], startId: s.id, ownerId: you.id },
+        emptyApi(startTakeOut && { startTakeOut }),
+      );
+    const takeOut = () => i18next.t(($) => $.giving.inTheBag.takeOut);
+    const note = () => document.querySelector(".sticker-detail__on-its-way")?.textContent;
+    const alert = () => document.querySelector(".sticker-detail__take-out-failed")?.textContent;
+    const landsOut = (giftId: string) =>
+      Promise.resolve({ gift: gift({ id: giftId, status: "taken_out" }) });
 
-    const packed = sticker(133, day(14), { openGift: { id: "g-133", status: "packed" } });
-    open({ stickers: [packed] });
-    press("Give");
-    expect(onGive).toHaveBeenCalledExactlyOnceWith(packed);
+    it("says its state only, Take it out under it, and keeps Give the key while it's in the bag", () => {
+      openInFlight(inFlight(133, "sent", "bob"));
+      expect(note()).toBe(i18next.t(($) => $.stickerBoard.detail.onItsWayTo, { receiver: "@bob" }));
+      expect(button("Give")).toBeUndefined();
+      expect(button(takeOut())).toBeDefined();
+      openInFlight(inFlight(133, "sent"));
+      expect(note()).toBe(i18next.t(($) => $.stickerBoard.detail.onItsWay));
+      const packed = inFlight(133, "packed");
+      openInFlight(packed);
+      expect(note()).toBe(i18next.t(($) => $.giving.inTheBag.title));
+      expect(button(takeOut())).toBeDefined();
+      press("Give");
+      expect(onGive).toHaveBeenCalledExactlyOnceWith(packed);
+    });
+
+    it("takes a gift in the bag out at once, and a sent one only once its confirm says so", async () => {
+      const startTakeOut = vi.fn<ApiClient["startTakeOut"]>(landsOut);
+      openInFlight(inFlight(133, "packed"), startTakeOut);
+      press(takeOut());
+      await settle();
+      expect(startTakeOut).toHaveBeenCalledExactlyOnceWith("g-133");
+
+      openInFlight(inFlight(147, "sent"), startTakeOut);
+      press(takeOut());
+      expect(startTakeOut).toHaveBeenCalledOnce();
+      // Cancel takes focus first, so Enter alone never takes it back.
+      expect(document.activeElement?.textContent).toBe(
+        i18next.t(($) => $.stickerBoard.detail.takeOut.cancel),
+      );
+      press(takeOut());
+      await settle();
+      expect(startTakeOut).toHaveBeenLastCalledWith("g-147");
+    });
+
+    it("goes on once the detail closes, and says why it failed there until tried again", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const refusal = new ApiError(503, { error: "take_out_not_landed", detail: "Not landed yet" });
+      let refuse: (error: unknown) => void = () => {};
+      const startTakeOut = vi
+        .fn<ApiClient["startTakeOut"]>()
+        .mockImplementationOnce(
+          () =>
+            new Promise((_, reject) => {
+              refuse = reject;
+            }),
+        )
+        .mockImplementationOnce(landsOut);
+      const packed = inFlight(117, "packed");
+      openInFlight(packed, startTakeOut);
+      press(takeOut());
+      act(() => root.render(null));
+      refuse(refusal);
+      await settle();
+      openInFlight(packed, startTakeOut);
+      expect(alert()).toContain(
+        i18next.t(($) => $.giving.inTheBag.couldntTakeOut, {
+          no: "No.0117",
+          reason: errorMessage(refusal),
+        }),
+      );
+      press("Try again");
+      await settle();
+      expect(startTakeOut).toHaveBeenCalledTimes(2);
+      expect(alert()).toBeUndefined();
+    });
+
+    it("puts Give back with focus once it's out, and says the sticker is back on the board", async () => {
+      openInFlight(inFlight(133, "packed"), landsOut);
+      press(takeOut());
+      await settle();
+      expect(document.activeElement?.textContent).toBe("Give");
+      expect(document.querySelector(".sticker-detail__taken-out")?.textContent).toBe(
+        i18next.t(($) => $.stickerBoard.detail.takeOut.backOnBoard, { no: "No.0133" }),
+      );
+    });
   });
 
   it("offers Send gratitude over Give for a received sticker with no gratitude yet", async () => {

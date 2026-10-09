@@ -9,13 +9,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { useMyNsfwOptIn, useNsfwOptInKey, veiledFor, withoutNsfwDrawings } from "../stickers/nsfw";
+import { useMyNsfwOptIn, veiledFor, withoutNsfwDrawings } from "../stickers/nsfw";
 import { flushSync } from "react-dom";
 import { tokyoTicketDay } from "@drawing-app/api/client";
 import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
-import { toApiSpots, toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
+import { toApiSpots, toPerson, type PersonView, type StickerView } from "../api/views";
 import { GiftReceivedNotice } from "../giving/GiftReceivedNotice";
 import {
   markNoticed,
@@ -23,7 +23,6 @@ import {
   noticeReceivesFromNow,
   receiveOf,
 } from "../giving/noticedGifts";
-import { PendingGiftsNotificationBadge } from "../giving/PendingGiftsNotificationBadge";
 import { useGiftSender } from "../giving/useGiftSender";
 import { FEEL_CONFIG } from "../gratitude/gameConfig";
 import { readMiniGameDemoSettings } from "../gratitude/miniGameDemoSettings";
@@ -525,8 +524,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     if (failed) markBoardComplete();
   }, [failed]);
   /**
-   * A gift went out, so the board loads again to leave its sticker off: at once, or once a load in
-   * flight lands, since that one may have read the board before the gift left.
+   * A gift went out or its bag changed, so the board loads again where its gift is: at once, or once a
+   * load in flight lands, since that one may have read the board before the gift moved.
    */
   const [reloadForGift, setReloadForGift] = useState(false);
   if (reloadForGift && board.state !== "loading") {
@@ -535,36 +534,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     else board.retry();
   }
 
-  const pending = useApiQuery(useNsfwOptInKey("pending-gifts"), (client) => client.pendingGifts());
-  // The gifts on their way load again the same way, after a load that may have read them too early.
-  const [reloadPending, setReloadPending] = useState(false);
-  if (reloadPending && pending.state !== "loading") {
-    setReloadPending(false);
-    if (pending.state === "ready") pending.refresh();
-    else pending.retry();
-  }
-  // A Gift Message's send the server heard only late, as the app started, left both behind too.
-  useEffect(
-    () =>
-      onMyStickerBoardChanged(() => {
-        setReloadForGift(true);
-        setReloadPending(true);
-      }),
-    [],
-  );
+  // A Gift Message's send the server heard only late, as the app started, left the board behind too.
+  useEffect(() => onMyStickerBoardChanged(() => setReloadForGift(true)), []);
   // A preview can make a gift wait here even when the person chooses Not now.
   const forYou = useApiQuery(`gifts-for-you:${giftClosures}`, (client) => client.giftsForYou());
   const waiting = forYou.state === "ready" ? forYou.data.gifts : [];
-  const onTheirWay =
-    pending.state === "ready"
-      ? pending.data.gifts
-          .filter((p) => p.gift.status === "sent")
-          .map((p) => ({
-            giftId: p.gift.id,
-            sticker: toSticker(p.sticker),
-            ...(p.for && { to: toPerson(p.for) }),
-          }))
-      : [];
 
   // Each gift someone received since this device last said so, newest first, one notice at a time.
   // From the stickers as they show: the same given stickers as the load's, with no NSFW drawing
@@ -648,7 +622,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     if (landingId) landed.add(landingId);
   }, [landingId]);
 
-  // A given sticker has left the board: on its way, for the badge; received, for good.
+  // A given sticker has left the board: on its way, for its spot in the tray; received, for good.
   const onBoard = (stickers ?? []).filter(onTheBoard);
   // The gratitude mini-game's demo always sends gratitude for whichever sticker landed most recently.
   const newest = onBoard.reduce<BoardSticker | null>(
@@ -745,10 +719,13 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   });
   const stickerEl = (id: string) =>
     stage.current?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`) ?? null;
-  /** A given sticker's spot on the sticker tray's front sheet, or the sheet pulled out. */
+  /**
+   * The spot of a sticker given, or on its way, on the sticker tray's front sheet or the sheet pulled
+   * out.
+   */
   const givenSpot = (id: string) =>
     face?.querySelector<HTMLElement>(
-      `.tray__sheet.is-top .tray__slot[data-state="given"][data-id="${CSS.escape(id)}"]`,
+      `.tray__sheet.is-top .tray__slot:is([data-state="given"], [data-state="onItsWay"])[data-id="${CSS.escape(id)}"]`,
     ) ?? null;
   // What the sticker tray asks of the board, all in board pixels.
   const trayBoard: TrayBoard = {
@@ -787,6 +764,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     },
     remove: removeFromBoard,
     openGiven: (id) => setOpen({ id, mode: "given" }),
+    openYours,
     pulse: (id) => {
       const sticker = stickerEl(id);
       // Its hole's Show it: a screen reader can't see the pulse, so focus goes to the sticker.
@@ -843,7 +821,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       <button
         ref={nameButton}
         // Its width is its own until a gifts badge needs the room opposite.
-        className={`board-who ${waiting.length > 0 || onTheirWay.length > 0 ? "" : "is-roomy"}`}
+        className={`board-who ${waiting.length > 0 ? "" : "is-roomy"}`}
         onClick={() => turn(!turned)}
         onPointerDown={() => void StatBoard.preload()}
         onFocus={() => void StatBoard.preload()}
@@ -856,11 +834,10 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         <CaretRight className="board-who-cue" size={14} weight="bold" aria-hidden />
       </button>
 
-      {(waiting.length > 0 || onTheirWay.length > 0) && (
+      {waiting.length > 0 && (
         <div className="board-gifts">
-          {/* Gifts for you first: they ask to be opened, where gifts on their way only report. */}
+          {/* Gifts for you: they ask to be opened. */}
           <GiftsForYouBadge gifts={waiting} onOpen={onOpenGift} nudging={idle} />
-          <PendingGiftsNotificationBadge gifts={onTheirWay} onOpen={openYours} />
         </div>
       )}
     </>
@@ -1083,13 +1060,10 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             liffId={LIFF_ID}
             onClose={(sent) => {
               setGiving(null);
-              // Given, it has left the board, and the board loads where its gift is.
-              if (sent) {
-                setSelected(null);
-                setReloadForGift(true);
-              }
-              // The bag's gift may have been packed, sent or taken out.
-              setReloadPending(true);
+              // Given, it has left the board.
+              if (sent) setSelected(null);
+              // The bag's gift may have been packed, sent or taken out: the board loads where it is.
+              setReloadForGift(true);
             }}
           />
         </Suspense>

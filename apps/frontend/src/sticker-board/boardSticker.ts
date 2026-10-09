@@ -129,7 +129,7 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
   };
 }
 
-/** Sent and not received yet: it has left the board and the tray for the badge. */
+/** Sent and not received yet: it has left the board, and waits in its tray spot under frost. */
 export const onItsWay = (s: Pick<BoardStickerView, "held" | "openGift">) =>
   s.held && s.openGift?.status === "sent";
 

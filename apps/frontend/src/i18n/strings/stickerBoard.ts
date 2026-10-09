@@ -553,6 +553,13 @@ export const stickerBoard = {
         en: "{{no}}, given to {{recipient}}. Open it",
         ja: "{{no}}、{{recipient}}さんへ贈ったシールをひらく",
       },
+      /** Sticker tray: screen readers' name for the spot of a sticker you sent that no one has received yet, a button that opens it among your stickers */
+      onItsWay: { en: "{{no}}, on its way. Open it", ja: "{{no}}、お届け中のシールをひらく" },
+      /** Sticker tray: screen readers' name for the spot of a sticker you sent to someone that they haven't received yet, a button that opens it among your stickers; {{recipient}} is who it waits for, such as "@bob" */
+      onItsWayTo: {
+        en: "{{no}}, on its way to {{recipient}}. Open it",
+        ja: "{{no}}、{{recipient}}さんへお届け中のシールをひらく",
+      },
     },
     /** Sticker tray: screen readers' name for the +1 button under the stack, which spreads every sheet out over the board */
     moreSheets_one: { en: "{{count}} more sheet. Spread every sheet out" },
@@ -627,7 +634,7 @@ export const stickerBoard = {
       filtered_other: { en: "{{filter}}: {{count}} sheets", ja: "{{filter}}：{{count}}枚のシート" },
       /** Sticker tray, after a sticker is stuck on the board from a sheet: what screen readers are told; {{no}} is its number, such as "No.0147" */
       stuckOn: { en: "{{no}} is on your board", ja: "{{no}}をボードに貼りました" },
-      /** Sticker tray, after a board sticker goes back into its sheet: what screen readers are told; {{no}} is its number, such as "No.0147" */
+      /** Sticker tray, after a board sticker goes back into its sheet: what screen readers are told; {{no}} is its number, such as "No.0147"; and the sticker detail, once Take it out landed and the sticker is back in your sticker tray */
       returned: { en: "{{no}} is back in your tray", ja: "{{no}}をトレイに戻しました" },
     },
   },
@@ -663,10 +670,19 @@ export const stickerBoard = {
       en: "You gave it to <receiver/> · {{day}}",
       ja: "<receiver/>さんに贈りました・{{day}}",
     },
-    /** Sticker detail, a sticker you've sent that hasn't been received: shown in place of Give, beside its sleeve */
+    /** Sticker detail, a sticker you've sent that hasn't been received: the note in place of Give, beside its sleeve */
     onItsWay: { en: "On its way", ja: "お届け中" },
-    /** Sticker detail, a sticker you've sent to someone in the app that hasn't been received: shown in place of Give, beside its sleeve */
+    /** Sticker detail, a sticker you've sent to someone in the app that hasn't been received: the note in place of Give, beside its sleeve */
     onItsWayTo: { en: "On its way to {{receiver}}", ja: "{{receiver}}さんへお届け中" },
+    /** Take it out, on the detail of a sticker in a gift you sent or packed. */
+    takeOut: {
+      /** Sticker detail, a sticker you sent: the in-place confirm Take it out opens, its title; {{no}} is its number, such as "No.0147" */
+      title: { en: "Take {{no}} out?", ja: "{{no}}を取り出しますか？" },
+      /** Sticker detail, Take it out's confirm: the quiet link that closes it with nothing taken out */
+      cancel: { en: "Cancel", ja: "キャンセル" },
+      /** Sticker detail: said to screen readers once Take it out landed and the sticker is back on your board; {{no}} is its number */
+      backOnBoard: { en: "{{no}} is back on your board", ja: "{{no}}をボードに戻しました" },
+    },
     /** Sticker detail, a sticker you received and haven't sent gratitude for: the pink key that opens the Gratitude Mini-game */
     sendGratitude: { en: "Send gratitude", ja: "感謝を送る" },
     /** Sticker detail, a sticker you hold: the Give key, or the smaller Give button under Send gratitude */

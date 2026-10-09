@@ -13,7 +13,6 @@ import type {
   Me,
   OpenGiftBody,
   PackagedGift,
-  PendingGifts,
   Person,
   PilePage,
   PlacementsRequest,
@@ -134,8 +133,6 @@ export interface ApiClient {
   startTakeOut: (giftId: string) => Promise<TakeOutStart>;
   /** POST /api/gifts/:giftId/take-out: the signed take-out, which the server runs. */
   takeOutGift: (giftId: string, signed: SignedTransaction) => Promise<Gift>;
-  /** GET /api/gifts/pending */
-  pendingGifts: () => Promise<PendingGifts>;
   /** POST /api/gifts/preview */
   previewGift: (body: GiftOpening) => Promise<GiftPreview>;
   /** POST /api/gifts/receive */

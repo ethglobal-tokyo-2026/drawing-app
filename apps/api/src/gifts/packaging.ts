@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { GIFT_EXPIRY_MS, gifts, stickers, users, type Db } from "@drawing-app/db";
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import type { AppDeps } from "../deps.ts";
@@ -8,14 +8,9 @@ import {
   bytes32Schema,
   giftSchema,
   optedIntoNsfw,
-  personSchema,
   refuse,
   sponsoredTransactionSchema,
-  stickerLookup,
-  stickerSchema,
-  stickerViewer,
   toGift,
-  toPerson,
   toSponsoredTransaction,
   type Refusal,
 } from "../shapes.ts";
@@ -107,18 +102,6 @@ export type TakeOutStart = z.infer<typeof takeOutStartSchema>;
 
 export const sharedBodySchema = z.object({ outcome: z.enum(["sent", "cancelled"]) });
 type SharedOutcome = z.infer<typeof sharedBodySchema>["outcome"];
-
-export const pendingGiftsSchema = z.object({
-  gifts: z.array(
-    z.object({
-      gift: giftSchema,
-      sticker: stickerSchema,
-      /** Who it waits for: the person picked in the app, or who first opened its link. */
-      for: personSchema.nullable(),
-    }),
-  ),
-});
-export type PendingGifts = z.infer<typeof pendingGiftsSchema>;
 
 export type Packaging =
   | Refusal<
@@ -414,28 +397,4 @@ export function reportShared(
     },
     { behavior: "immediate" },
   );
-}
-
-/** Your gifts in the bag or on their way, newest first, each with its sticker. */
-export function pendingGifts(deps: AppDeps, userId: string): PendingGifts {
-  const { db } = deps;
-  const rows = db
-    .select({ gift: gifts, for: users })
-    .from(gifts)
-    .leftJoin(users, eq(users.id, gifts.forUserId))
-    .where(and(eq(gifts.giverId, userId), inArray(gifts.status, ["packed", "sent"])))
-    .orderBy(desc(gifts.createdAt))
-    .all();
-  const stickerOf = stickerLookup(
-    db,
-    rows.map(({ gift }) => gift.stickerId),
-    stickerViewer(deps, userId),
-  );
-  return {
-    gifts: rows.map(({ gift, for: forUser }) => ({
-      gift: toGift(gift),
-      sticker: stickerOf(gift.stickerId),
-      for: forUser ? toPerson(forUser) : null,
-    })),
-  };
 }

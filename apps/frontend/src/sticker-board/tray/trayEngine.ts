@@ -1,9 +1,10 @@
 /**
  * The sticker tray: zipped down the Sticker Board's right edge, opened by its Zipper.
  * Inside, a stack of loose sticker sheets holds every sticker you've had, in arrival order, each in
- * its packed spot: a used sticker silhouette where one is out on the board, its faint cut line where
- * one was given, which opens it among the stickers you gave. You page the stack, pull a sheet out
- * over the board, spread every sheet out, peel stickers onto the board and put them back.
+ * its packed spot: a used sticker silhouette where one is out on the board, the sticker under frost
+ * while it's on its way, its faint cut line where one was given, which opens it among the stickers
+ * you gave. You page the stack, pull a sheet out over the board, spread every sheet out, peel
+ * stickers onto the board and put them back.
  * Everything is in board pixels, in the board's stacking context.
  */
 import { i18next } from "../../i18n/i18n";

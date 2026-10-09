@@ -5,6 +5,7 @@ import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
+import { dismissTakeOut, onTakenOut, takeOutFromDetail, useTakeOut } from "../giving/takeOuts";
 import { isGratitudeWaiting, onGratitudeLeftOutbox } from "../gratitude/gratitudeOutbox";
 import {
   forgetGratitudeRefusal,
@@ -15,7 +16,14 @@ import {
 import { refusalNote } from "../gratitude/refusalNote";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
-import { CaretLeft, CaretRight, GiveIcon, GratitudeIcon, StickerBoardIcon } from "../icons";
+import {
+  ArrowUUpLeft,
+  CaretLeft,
+  CaretRight,
+  GiveIcon,
+  GratitudeIcon,
+  StickerBoardIcon,
+} from "../icons";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
@@ -31,7 +39,7 @@ import { QuietLink } from "../ui/QuietLink";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { handleOf, onItsWay, type BoardStickerView } from "./boardSticker";
+import { handleOf, type BoardStickerView } from "./boardSticker";
 import { useDetailLift, type LiftView } from "./detailLift";
 import { useSwipePaging } from "./detailPaging";
 import { forget as forgetKeptBoard } from "./lastBoard";
@@ -84,7 +92,9 @@ function enterAround(detail: HTMLElement): Animation[] {
     );
   const strip = detail.querySelector(".sticker-detail__strip");
   if (strip) enter(strip, "translateX(-12px)", 200, 40);
-  for (const part of detail.querySelectorAll(".sticker-detail__meta, .sticker-detail__acts"))
+  for (const part of detail.querySelectorAll(
+    ".sticker-detail__meta, .sticker-detail__in-flight, .sticker-detail__acts",
+  ))
     enter(part, "translateY(8px)", 160, 120);
   return animations;
 }
@@ -163,6 +173,19 @@ export function StickerDetail({
   const [marking, setMarking] = useState<Marking | null>(null);
   // What the status line at the foot says about a mark that landed, under that sticker only.
   const [markedSaid, setMarkedSaid] = useState<{ stickerId: string; words: string } | null>(null);
+  // A gift in flight: the stickers whose take-out landed, until the board's reload drops their
+  // gift; the sticker whose Take it out confirm is up; and what the status line says once one lands,
+  // and whether it landed on the sticker shown.
+  const [takenOut, setTakenOut] = useState<ReadonlySet<string>>(() => new Set());
+  const [takeOutAsk, setTakeOutAsk] = useState<string | null>(null);
+  const [takenOutSaid, setTakenOutSaid] = useState<{
+    stickerId: string;
+    words: string;
+    shown: boolean;
+  } | null>(null);
+  const takeOut = useTakeOut(sticker?.id ?? null);
+  const openGift = sticker && !takenOut.has(sticker.id) ? sticker.openGift : null;
+  const sent = openGift?.status === "sent";
   // Gratitude kept on this phone that the server has since recorded or refused: counted, whatever
   // the read of the detail is doing, so a read that went out before one left can be told apart.
   const [combosLeft, setCombosLeft] = useState(0);
@@ -185,7 +208,7 @@ export function StickerDetail({
   }, [read, predatesCombo, readAgain]);
   const trail = useMemo(() => (loaded ? toTrailRows(loaded.transferTrail) : []), [loaded]);
   const owed =
-    mode === "yours" && onSendGratitude && sticker && !onItsWay(sticker) && loaded && !predatesCombo
+    mode === "yours" && onSendGratitude && sticker && !sent && loaded && !predatesCombo
       ? owedGratitude(loaded)
       : null;
   // Why the server refused gratitude this phone sent, which may have come once its receipt was gone.
@@ -295,12 +318,65 @@ export function StickerDetail({
     root.current?.focus({ preventScroll: true });
   };
 
+  // Take it out: a gift still in the bag comes out at once; a sent one asks first, in place, its
+  // confirm opening on Cancel as Mark 18+'s does. The take-out goes on if the detail closes.
+  const takeOutLink = useRef<HTMLButtonElement>(null);
+  const cancelTakeOut = useRef<HTMLButtonElement>(null);
+  const askingTakeOut = takeOutAsk === sticker?.id && sent && takeOut?.step !== "takingOut";
+  const backToTakeOut = useRef(false);
+  useEffect(() => {
+    if (askingTakeOut) cancelTakeOut.current?.focus({ preventScroll: true });
+    else if (backToTakeOut.current) takeOutLink.current?.focus({ preventScroll: true });
+    backToTakeOut.current = false;
+  }, [askingTakeOut]);
+  const stopAskingTakeOut = () => {
+    backToTakeOut.current = true;
+    setTakeOutAsk(null);
+  };
+  const startTakeOut = (stickerId: string, giftId: string) => {
+    if (!ownerId) return;
+    if (askingTakeOut) backToTakeOut.current = true;
+    setTakeOutAsk(null);
+    takeOutFromDetail({ api, userId: ownerId }, stickerId, giftId);
+  };
+  // One landed, from this detail or from one closed since: Give is back, and the status line says
+  // where the sticker went.
+  useEffect(
+    () =>
+      onTakenOut((id) => {
+        const s = stickers.find((x) => x.id === id);
+        if (!s) return;
+        setTakenOut((ids) => new Set(ids).add(id));
+        const no = formatNo(s.no);
+        setTakenOutSaid({
+          stickerId: id,
+          words: s.placement.on
+            ? t(($) => $.stickerBoard.detail.takeOut.backOnBoard, { no })
+            : t(($) => $.stickerBoard.tray.status.returned, { no }),
+          shown: id === shownStickerId,
+        });
+      }),
+    [stickers, t, shownStickerId],
+  );
+  // Take it out goes with the gift shown, so focus goes to the key back in its place. Decided as it
+  // lands: paging back to that sticker later moves no focus.
+  useLayoutEffect(() => {
+    if (!takenOutSaid?.shown) return;
+    const dialog = root.current;
+    const key = dialog?.querySelector<HTMLElement>(".sticker-detail__acts .key");
+    if (key) key.focus({ preventScroll: true });
+    else if (dialog && !dialog.contains(document.activeElement))
+      dialog.focus({ preventScroll: true });
+  }, [takenOutSaid]);
+
   useBackToClose(true, close);
   useFocusTrap(root, {
-    // Escape steps back out of Mark 18+'s confirm first, unless the mark is on its way.
+    // Escape steps back out of a confirm first: Take it out's, then Mark 18+'s, unless the mark is
+    // on its way.
     onEscape: () => {
-      if (marking?.step === "sending") return;
-      if (marking) stopAsking();
+      if (askingTakeOut) stopAskingTakeOut();
+      else if (marking?.step === "sending") return;
+      else if (marking) stopAsking();
       else close();
     },
     returnFocus,
@@ -329,6 +405,7 @@ export function StickerDetail({
       const target = stickers[next];
       if (target) setShownId(target.id);
       setMarking((m) => (m?.step === "sending" ? m : null));
+      setTakeOutAsk(null);
     },
   });
 
@@ -401,273 +478,356 @@ export function StickerDetail({
       <div className="sticker-detail__main">
         {sticker ? (
           <>
-            <div className="sticker-detail__stage" {...stage}>
-              <div ref={slide} className="sticker-detail__slide">
-                <StickerFigure
-                  ref={figure}
-                  key={sticker.id}
-                  urls={sticker.urls}
-                  width={sticker.width}
-                  height={sticker.height}
-                  foil={byOther ? "detail" : undefined}
-                  nsfw={sticker.nsfw}
-                  kyotoSeika={sticker.kyotoSeikaSubjects !== null}
-                  veiled={veiledFor(sticker, optedIn)}
-                  no={sticker.no}
-                />
-                <TimelapseLayer timelapse={timelapse} />
+            {/* The sticker and its pager, and the column about it: on a phone two plain blocks in
+                one scroll, and side by side on a large screen wider than tall (sticker-detail.css). */}
+            <div className="sticker-detail__sticker-pane">
+              <div className="sticker-detail__stage" {...stage}>
+                <div ref={slide} className="sticker-detail__slide">
+                  <StickerFigure
+                    ref={figure}
+                    key={sticker.id}
+                    urls={sticker.urls}
+                    width={sticker.width}
+                    height={sticker.height}
+                    foil={byOther ? "detail" : undefined}
+                    nsfw={sticker.nsfw}
+                    kyotoSeika={sticker.kyotoSeikaSubjects !== null}
+                    veiled={veiledFor(sticker, optedIn)}
+                    no={sticker.no}
+                  />
+                  <TimelapseLayer timelapse={timelapse} />
+                </div>
+              </div>
+
+              {/* aria-disabled rather than disabled, so a key press at either end keeps its focus. */}
+              <div className="sticker-detail__pager">
+                <button
+                  type="button"
+                  aria-label={t(($) => $.stickerBoard.detail.previous)}
+                  aria-disabled={index === 0}
+                  onClick={() => go(index - 1)}
+                >
+                  <CaretLeft size={20} aria-hidden />
+                </button>
+                {/* Paging announces which sticker it landed on, not only where in the list. */}
+                <span className="sticker-detail__count" aria-live="polite">
+                  <span aria-hidden="true">
+                    {t(($) => $.stickerBoard.detail.count, {
+                      position: index + 1,
+                      setSize: stickers.length,
+                    })}
+                  </span>
+                  <span className="visually-hidden">
+                    {t(($) => $.stickerBoard.detail.countSpoken, {
+                      no: formatNo(sticker.no),
+                      position: index + 1,
+                      setSize: stickers.length,
+                    })}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  aria-label={t(($) => $.stickerBoard.detail.next)}
+                  aria-disabled={index === last}
+                  onClick={() => go(index + 1)}
+                >
+                  <CaretRight size={20} aria-hidden />
+                </button>
               </div>
             </div>
 
-            {/* aria-disabled rather than disabled, so a key press at either end keeps its focus. */}
-            <div className="sticker-detail__pager">
-              <button
-                type="button"
-                aria-label={t(($) => $.stickerBoard.detail.previous)}
-                aria-disabled={index === 0}
-                onClick={() => go(index - 1)}
-              >
-                <CaretLeft size={20} aria-hidden />
-              </button>
-              {/* Paging announces which sticker it landed on, not only where in the list. */}
-              <span className="sticker-detail__count" aria-live="polite">
-                <span aria-hidden="true">
-                  {t(($) => $.stickerBoard.detail.count, {
-                    position: index + 1,
-                    setSize: stickers.length,
-                  })}
-                </span>
-                <span className="visually-hidden">
-                  {t(($) => $.stickerBoard.detail.countSpoken, {
-                    no: formatNo(sticker.no),
-                    position: index + 1,
-                    setSize: stickers.length,
-                  })}
-                </span>
-              </span>
-              <button
-                type="button"
-                aria-label={t(($) => $.stickerBoard.detail.next)}
-                aria-disabled={index === last}
-                onClick={() => go(index + 1)}
-              >
-                <CaretRight size={20} aria-hidden />
-              </button>
-            </div>
-
-            <section className="sticker-detail__meta">
-              <h2 className="title-label sticker-detail__title">
-                <Trans
-                  i18nKey={($) => $.stickerBoard.detail.title}
-                  components={{
-                    no: <span className="sticker-detail__no">{formatNo(sticker.no)}</span>,
-                  }}
-                />
-              </h2>
-              {/* Its own line, so a long handle wraps rather than being cut short. */}
-              {byOther && (
-                <p className="sticker-detail__artist">
-                  <ArtistChip artist={sticker.artist} wrap />
-                </p>
-              )}
-              <p className="fine sticker-detail__fine-print">
-                {!byOther && (
-                  <>
-                    <span className="sticker-detail__by">
-                      <Trans
-                        i18nKey={($) => $.stickerBoard.detail.by}
-                        components={{
-                          artist: <span className="handle">{handleOf(sticker.artist)}</span>,
-                        }}
-                      />
-                    </span>{" "}
-                  </>
-                )}
-                <span>
+            <div className="sticker-detail__column">
+              <section className="sticker-detail__meta">
+                <h2 className="title-label sticker-detail__title">
                   <Trans
-                    i18nKey={($) => $.stickerBoard.detail.drawnIn}
-                    components={{ duration: <Duration seconds={sticker.timeUsed} /> }}
-                  />
-                </span>{" "}
-                <span>
-                  {t(($) => $.stickerBoard.detail.sealedOn, { day: formatDay(sticker.createdAt) })}
-                </span>
-                <TimelapseButton timelapse={timelapse} />
-              </p>
-              {sticker.kyotoSeikaSubjects && (
-                <KyotoSeikaTag subjects={sticker.kyotoSeikaSubjects} />
-              )}
-              {/* The Transfer Trail says it too, once it's in. */}
-              {mode === "given" && sticker.givenTo && trail.length === 0 && (
-                <p className="fine sticker-detail__fine-print">
-                  <Trans
-                    i18nKey={($) => $.stickerBoard.detail.youGaveIt}
-                    values={{ day: formatMonthDay(sticker.givenTo.receivedAt) }}
+                    i18nKey={($) => $.stickerBoard.detail.title}
                     components={{
-                      receiver: (
-                        <span className="handle">{handleOf(sticker.givenTo.receiver)}</span>
-                      ),
+                      no: <span className="sticker-detail__no">{formatNo(sticker.no)}</span>,
                     }}
                   />
+                </h2>
+                {/* Its own line, so a long handle wraps rather than being cut short. */}
+                {byOther && (
+                  <p className="sticker-detail__artist">
+                    <ArtistChip artist={sticker.artist} wrap />
+                  </p>
+                )}
+                <p className="fine sticker-detail__fine-print">
+                  {!byOther && (
+                    <>
+                      <span className="sticker-detail__by">
+                        <Trans
+                          i18nKey={($) => $.stickerBoard.detail.by}
+                          components={{
+                            artist: <span className="handle">{handleOf(sticker.artist)}</span>,
+                          }}
+                        />
+                      </span>{" "}
+                    </>
+                  )}
+                  <span>
+                    <Trans
+                      i18nKey={($) => $.stickerBoard.detail.drawnIn}
+                      components={{ duration: <Duration seconds={sticker.timeUsed} /> }}
+                    />
+                  </span>{" "}
+                  <span>
+                    {t(($) => $.stickerBoard.detail.sealedOn, {
+                      day: formatDay(sticker.createdAt),
+                    })}
+                  </span>
+                  <TimelapseButton timelapse={timelapse} />
                 </p>
+                {sticker.kyotoSeikaSubjects && (
+                  <KyotoSeikaTag subjects={sticker.kyotoSeikaSubjects} />
+                )}
+                {/* The Transfer Trail says it too, once it's in. */}
+                {mode === "given" && sticker.givenTo && trail.length === 0 && (
+                  <p className="fine sticker-detail__fine-print">
+                    <Trans
+                      i18nKey={($) => $.stickerBoard.detail.youGaveIt}
+                      values={{ day: formatMonthDay(sticker.givenTo.receivedAt) }}
+                      components={{
+                        receiver: (
+                          <span className="handle">{handleOf(sticker.givenTo.receiver)}</span>
+                        ),
+                      }}
+                    />
+                  </p>
+                )}
+              </section>
+              <TimelapseFailure timelapse={timelapse} />
+
+              {/* Where the key would be: without the check, the call to send gratitude can't show. */}
+              {detail.state === "failed" && (
+                <ErrorLine
+                  className="sticker-detail__check-failed"
+                  detail={errorDetail(detail.error)}
+                  // It goes as it retries, so focus moves to the dialog, which holds its keys.
+                  onRetry={() => {
+                    root.current?.focus({ preventScroll: true });
+                    detail.retry();
+                  }}
+                >
+                  {t(($) => $.stickerBoard.detail.checkFailed, {
+                    reason: errorMessage(detail.error),
+                  })}
+                </ErrorLine>
               )}
-            </section>
-            <TimelapseFailure timelapse={timelapse} />
 
-            {/* Where the key would be: without the check, the call to send gratitude can't show. */}
-            {detail.state === "failed" && (
-              <ErrorLine
-                className="sticker-detail__check-failed"
-                detail={errorDetail(detail.error)}
-                // It goes as it retries, so focus moves to the dialog, which holds its keys.
-                onRetry={() => {
-                  root.current?.focus({ preventScroll: true });
-                  detail.retry();
-                }}
-              >
-                {t(($) => $.stickerBoard.detail.checkFailed, {
-                  reason: errorMessage(detail.error),
-                })}
-              </ErrorLine>
-            )}
+              {youId && refused && (
+                <ErrorLine
+                  className="sticker-detail__gratitude-refused"
+                  detail={errorDetail(refusalError(refused.refusal))}
+                  action={{
+                    label: t(($) => $.stickerBoard.detail.dismiss),
+                    onClick: () => forgetGratitudeRefusal(youId, refused.refusal.giftId),
+                  }}
+                >
+                  {refusalNote(t, refusalError(refused.refusal), handleOf(refused.giver)).text}
+                </ErrorLine>
+              )}
 
-            {youId && refused && (
-              <ErrorLine
-                className="sticker-detail__gratitude-refused"
-                detail={errorDetail(refusalError(refused.refusal))}
-                action={{
-                  label: t(($) => $.stickerBoard.detail.dismiss),
-                  onClick: () => forgetGratitudeRefusal(youId, refused.refusal.giftId),
-                }}
-              >
-                {refusalNote(t, refusalError(refused.refusal), handleOf(refused.giver)).text}
-              </ErrorLine>
-            )}
-
-            {mode === "yours" &&
-              (onItsWay(sticker) ? (
-                <div className="sticker-detail__acts">
-                  {/* Sent, it waits for its friend: nothing to give until it comes back. */}
+              {/* A gift in flight says its state only, with Take it out under it. Sent, it waits
+                  for its friend: nothing to give until it comes back. */}
+              {mode === "yours" && openGift && (
+                <div className="sticker-detail__in-flight">
                   <p className="sticker-detail__on-its-way">
-                    <span className="sticker-detail__sleeve" aria-hidden="true">
+                    <span
+                      className={`sticker-detail__sleeve ${sent ? "" : "is-open"}`}
+                      aria-hidden="true"
+                    >
                       <img src={sticker.urls.png} alt="" draggable={false} />
                     </span>
                     <span>
-                      {sticker.openGift?.to
-                        ? t(($) => $.stickerBoard.detail.onItsWayTo, {
-                            receiver: formatHandle(sticker.openGift.to),
-                          })
-                        : t(($) => $.stickerBoard.detail.onItsWay)}
+                      {!sent
+                        ? t(($) => $.giving.inTheBag.title)
+                        : openGift.to
+                          ? t(($) => $.stickerBoard.detail.onItsWayTo, {
+                              receiver: formatHandle(openGift.to),
+                            })
+                          : t(($) => $.stickerBoard.detail.onItsWay)}
                     </span>
                   </p>
-                </div>
-              ) : owed && onSendGratitude ? (
-                // Gratitude comes first; Give stays within reach as label stock.
-                <div className="sticker-detail__acts sticker-detail__acts--stack">
-                  <Key
-                    tone="pink"
-                    icon={<GratitudeIcon />}
-                    onClick={() => onSendGratitude(owed.gift, owed.sticker, owed.giver)}
-                  >
-                    {t(($) => $.stickerBoard.detail.sendGratitude)}
-                  </Key>
-                  {onGive && (
-                    <LabelButton
-                      size="sm"
-                      icon={<GiveIcon size={18} />}
-                      onClick={() => onGive(sticker)}
-                    >
-                      {t(($) => $.stickerBoard.detail.give)}
-                    </LabelButton>
-                  )}
-                </div>
-              ) : (
-                onGive && (
-                  <div className="sticker-detail__acts">
-                    <Key tone="aqua" icon={<GiveIcon />} onClick={() => onGive(sticker)}>
-                      {t(($) => $.stickerBoard.detail.give)}
-                    </Key>
-                  </div>
-                )
-              ))}
-            {trail.length > 0 && ownerId && (
-              // Mounted once its rows are in, so the open row is picked from them.
-              <TransferTrail
-                key={sticker.id}
-                rows={trail}
-                viewerId={ownerId}
-                artist={sticker.artist}
-              />
-            )}
-
-            {/* At the very foot, quiet until asked: only its confirm carries the tomato. */}
-            {canMark &&
-              (mark ? (
-                <div
-                  className="sticker-detail__mark-ask"
-                  role="group"
-                  aria-labelledby={`${markId}-title`}
-                  aria-describedby={`${markId}-lines`}
-                  aria-busy={mark.step === "sending"}
-                >
-                  <p className="sticker-detail__mark-title" id={`${markId}-title`}>
-                    {t(($) => $.stickerBoard.detail.markNsfw.title, { no: formatNo(sticker.no) })}
-                  </p>
-                  <div className="sticker-detail__mark-lines" id={`${markId}-lines`}>
-                    <p>{t(($) => $.stickerBoard.detail.markNsfw.does)}</p>
-                    <p className="sticker-detail__mark-undo">
-                      {t(($) => $.stickerBoard.detail.markNsfw.cantUndo)}
-                    </p>
-                    <p>{t(($) => $.stickerBoard.detail.markNsfw.copies)}</p>
-                  </div>
-                  <div className="sticker-detail__mark-actions">
-                    <QuietLink
-                      ref={cancelMark}
-                      aria-disabled={mark.step === "sending"}
-                      onClick={() => {
-                        if (mark.step !== "sending") stopAsking();
-                      }}
-                    >
-                      {t(($) => $.stickerBoard.detail.markNsfw.cancel)}
-                    </QuietLink>
-                    <LabelButton
-                      tone="tomato"
-                      size="sm"
-                      aria-busy={mark.step === "sending"}
-                      aria-disabled={mark.step === "sending"}
-                      onClick={() => {
-                        if (mark.step !== "sending") void markNsfw(sticker);
-                      }}
-                    >
-                      {mark.step === "sending"
-                        ? t(($) => $.stickerBoard.detail.markNsfw.sending)
-                        : t(($) => $.stickerBoard.detail.markNsfw.confirm)}
-                    </LabelButton>
-                  </div>
-                  {mark.step === "failed" && (
+                  {ownerId &&
+                    (askingTakeOut ? (
+                      <div
+                        className="sticker-detail__mark-ask"
+                        role="group"
+                        aria-labelledby={`${markId}-take-out`}
+                      >
+                        <p className="sticker-detail__mark-title" id={`${markId}-take-out`}>
+                          {t(($) => $.stickerBoard.detail.takeOut.title, {
+                            no: formatNo(sticker.no),
+                          })}
+                        </p>
+                        <div className="sticker-detail__mark-actions">
+                          <QuietLink ref={cancelTakeOut} onClick={stopAskingTakeOut}>
+                            {t(($) => $.stickerBoard.detail.takeOut.cancel)}
+                          </QuietLink>
+                          <LabelButton
+                            size="sm"
+                            onClick={() => startTakeOut(sticker.id, openGift.id)}
+                          >
+                            {t(($) => $.giving.inTheBag.takeOut)}
+                          </LabelButton>
+                        </div>
+                      </div>
+                    ) : (
+                      <QuietLink
+                        ref={takeOutLink}
+                        aria-busy={takeOut?.step === "takingOut" || undefined}
+                        aria-disabled={takeOut?.step === "takingOut" || undefined}
+                        onClick={() => {
+                          if (takeOut?.step === "takingOut") return;
+                          if (sent) setTakeOutAsk(sticker.id);
+                          else startTakeOut(sticker.id, openGift.id);
+                        }}
+                      >
+                        <ArrowUUpLeft />{" "}
+                        {takeOut?.step === "takingOut"
+                          ? t(($) => $.giving.takingOut.button)
+                          : t(($) => $.giving.inTheBag.takeOut)}
+                      </QuietLink>
+                    ))}
+                  {takeOut?.step === "failed" && (
                     <ErrorLine
-                      className="sticker-detail__mark-failed"
-                      detail={errorDetail(mark.error)}
+                      className="sticker-detail__take-out-failed"
+                      detail={errorDetail(takeOut.error)}
+                      // It goes as it retries or is dismissed, so focus moves to Take it out.
+                      onRetry={() => {
+                        takeOutLink.current?.focus({ preventScroll: true });
+                        startTakeOut(sticker.id, takeOut.giftId);
+                      }}
+                      action={{
+                        label: t(($) => $.stickerBoard.detail.dismiss),
+                        onClick: () => {
+                          takeOutLink.current?.focus({ preventScroll: true });
+                          dismissTakeOut(sticker.id);
+                        },
+                      }}
                     >
-                      {t(($) => $.stickerBoard.detail.markNsfw.failed, {
-                        reason: errorMessage(mark.error),
+                      {t(($) => $.giving.inTheBag.couldntTakeOut, {
+                        no: formatNo(sticker.no),
+                        reason: errorMessage(takeOut.error),
                       })}
                     </ErrorLine>
                   )}
                 </div>
-              ) : (
-                <div className="sticker-detail__mark">
-                  <QuietLink
-                    ref={markButton}
-                    onClick={() => setMarking({ stickerId: sticker.id, step: "asking" })}
+              )}
+              {mode === "yours" &&
+                !sent &&
+                (owed && onSendGratitude ? (
+                  // Gratitude comes first; Give stays within reach as label stock.
+                  <div className="sticker-detail__acts sticker-detail__acts--stack">
+                    <Key
+                      tone="pink"
+                      icon={<GratitudeIcon />}
+                      onClick={() => onSendGratitude(owed.gift, owed.sticker, owed.giver)}
+                    >
+                      {t(($) => $.stickerBoard.detail.sendGratitude)}
+                    </Key>
+                    {onGive && (
+                      <LabelButton
+                        size="sm"
+                        icon={<GiveIcon size={18} />}
+                        onClick={() => onGive(sticker)}
+                      >
+                        {t(($) => $.stickerBoard.detail.give)}
+                      </LabelButton>
+                    )}
+                  </div>
+                ) : (
+                  onGive && (
+                    <div className="sticker-detail__acts">
+                      <Key tone="aqua" icon={<GiveIcon />} onClick={() => onGive(sticker)}>
+                        {t(($) => $.stickerBoard.detail.give)}
+                      </Key>
+                    </div>
+                  )
+                ))}
+              {trail.length > 0 && ownerId && (
+                // Mounted once its rows are in, so the open row is picked from them.
+                <TransferTrail
+                  key={sticker.id}
+                  rows={trail}
+                  viewerId={ownerId}
+                  artist={sticker.artist}
+                />
+              )}
+
+              {/* At the very foot, quiet until asked: only its confirm carries the tomato. */}
+              {canMark &&
+                (mark ? (
+                  <div
+                    className="sticker-detail__mark-ask"
+                    role="group"
+                    aria-labelledby={`${markId}-title`}
+                    aria-describedby={`${markId}-lines`}
+                    aria-busy={mark.step === "sending"}
                   >
-                    {t(($) => $.stickerBoard.detail.markNsfw.open)}
-                  </QuietLink>
-                </div>
-              ))}
-            <p className="sticker-detail__marked" role="status">
-              {markedSaid?.stickerId === sticker.id ? markedSaid.words : ""}
-            </p>
+                    <p className="sticker-detail__mark-title" id={`${markId}-title`}>
+                      {t(($) => $.stickerBoard.detail.markNsfw.title, { no: formatNo(sticker.no) })}
+                    </p>
+                    <div className="sticker-detail__mark-lines" id={`${markId}-lines`}>
+                      <p>{t(($) => $.stickerBoard.detail.markNsfw.does)}</p>
+                      <p className="sticker-detail__mark-undo">
+                        {t(($) => $.stickerBoard.detail.markNsfw.cantUndo)}
+                      </p>
+                      <p>{t(($) => $.stickerBoard.detail.markNsfw.copies)}</p>
+                    </div>
+                    <div className="sticker-detail__mark-actions">
+                      <QuietLink
+                        ref={cancelMark}
+                        aria-disabled={mark.step === "sending"}
+                        onClick={() => {
+                          if (mark.step !== "sending") stopAsking();
+                        }}
+                      >
+                        {t(($) => $.stickerBoard.detail.markNsfw.cancel)}
+                      </QuietLink>
+                      <LabelButton
+                        tone="tomato"
+                        size="sm"
+                        aria-busy={mark.step === "sending"}
+                        aria-disabled={mark.step === "sending"}
+                        onClick={() => {
+                          if (mark.step !== "sending") void markNsfw(sticker);
+                        }}
+                      >
+                        {mark.step === "sending"
+                          ? t(($) => $.stickerBoard.detail.markNsfw.sending)
+                          : t(($) => $.stickerBoard.detail.markNsfw.confirm)}
+                      </LabelButton>
+                    </div>
+                    {mark.step === "failed" && (
+                      <ErrorLine
+                        className="sticker-detail__mark-failed"
+                        detail={errorDetail(mark.error)}
+                      >
+                        {t(($) => $.stickerBoard.detail.markNsfw.failed, {
+                          reason: errorMessage(mark.error),
+                        })}
+                      </ErrorLine>
+                    )}
+                  </div>
+                ) : (
+                  <div className="sticker-detail__mark">
+                    <QuietLink
+                      ref={markButton}
+                      onClick={() => setMarking({ stickerId: sticker.id, step: "asking" })}
+                    >
+                      {t(($) => $.stickerBoard.detail.markNsfw.open)}
+                    </QuietLink>
+                  </div>
+                ))}
+              <p className="sticker-detail__marked" role="status">
+                {markedSaid?.stickerId === sticker.id ? markedSaid.words : ""}
+              </p>
+              <p className="visually-hidden sticker-detail__taken-out" role="status">
+                {takenOutSaid?.stickerId === sticker.id ? takenOutSaid.words : ""}
+              </p>
+            </div>
           </>
         ) : (
           <p className="sticker-detail__none">{t(($) => $.stickerBoard.detail.none)}</p>

@@ -7,7 +7,6 @@ import { submitDeposit } from "../gifts/deposit.ts";
 import {
   packageBodySchema,
   packageGift,
-  pendingGifts,
   reportShared,
   sharedBodySchema,
 } from "../gifts/packaging.ts";
@@ -77,7 +76,6 @@ function received(c: Context<AppEnv>, receiving: Receiving) {
 /** Giving and Receiving. */
 export const giftRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
-    .get("/pending", (c) => c.json(pendingGifts(deps, c.var.userId), 200))
     .post("/preview", validate("json", openGiftBodySchema), async (c) => {
       const previewing = await previewGift(deps, c.var.userId, c.req.valid("json"));
       if (previewing.refusal !== null) return refused(c, previewing);
