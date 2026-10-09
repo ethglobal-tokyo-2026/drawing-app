@@ -195,7 +195,7 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
   - `src/explore` — Explore: artist search, the pile of stickers by the day they were sealed, paging back by day (`pilePages.ts`), and this week's leaderboards
   - `src/giving` — Giving: the give sheet and gift bag, the gift message, and sending it through LINE's friend picker; the give sheet and sticker picker on someone else's board
   - `src/gratitude` — the (Gratitude) Mini-game: its rules, input, effects and screen; how it plays, scores and records, and where to tune it, is in `docs/gratitude-mini-game-design-doc.md`. `replay/` plays a recorded combo back through the same engine, inside the Transfer Trail's open card (the gratitude replay)
-  - `src/performance` — the performance recorder, switched on from the stat board's developer slip: frame intervals, slow frames and what happened around each, for phones where LINE's browser has no developer tools
+  - `src/performance` — the performance recorder, switched on from the stat board's developer slip: frame intervals, slow frames and what happened around each, and a summary of each kind of pointer, for phones and iPads where LINE's browser has no developer tools
   - `src/line` — LIFF: starts before the app renders and holds it until LINE has logged the person in. The dev server uses real LINE too, through a LIFF app whose endpoint is the dev server (`apps/frontend/.env.example`)
   - `src/identity` — who the person is: the LINE profile, and the Privy sign-in, which trades LINE's ID token at the auth server for a Privy JWT (Privy's SDK loads only after the board)
   - `src/shop` — the Shop: the reserve tickets section and your ticket purchases, the coming-soon shelves and their previews, and the Sui credit
