@@ -108,7 +108,7 @@ export const stickerCreation = {
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when time runs out after everything drawn was erased or undone; the sheet is fresh again and the chip goes with its first stroke */
     emptyAtTimeUp: {
       en: "Time’s up. The sheet was empty, so nothing was sealed.",
-      ja: "時間切れです。<wbr/>キャンバスが<wbr/>真っ白だったので、<wbr/>何も<wbr/>仕上がり<wbr/>ませんでした。",
+      ja: "タイムアップです。<wbr/>キャンバスが<wbr/>真っ白だったので、<wbr/>何も<wbr/>仕上がり<wbr/>ませんでした。",
     },
     /** The chip beside the seal key when a seal failed: what failed, then what to do. Its technical detail goes to the console. */
     failed: {
@@ -149,13 +149,13 @@ export const stickerCreation = {
       ja: "仕上げられ<wbr/>ませんでした。<wbr/>{{reason}}",
     },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when a seal failed at 0:00, in front of that chip's words; {{problem}} is the words */
-    timeUp: { en: "Time’s up. {{problem}}", ja: "時間切れです。<wbr/>{{problem}}" },
+    timeUp: { en: "Time’s up. {{problem}}", ja: "タイムアップです。<wbr/>{{problem}}" },
     /** Drawing screen, bottom left, at 0:00 after a seal that never reached the server failed: the quiet link that lets the sticker in progress go, and its ticket with it, for a fresh sheet */
     startOver: { en: "Start a new sticker", ja: "新しい<wbr/>シールをかく" },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when the server refused the seal at 0:00; the sheet is fresh again and the chip goes with its first stroke; {{reason}} is the refusal's message */
     refusedAtTimeUp: {
       en: "Time’s up. Croquis didn’t accept the seal, so nothing was sealed. {{reason}}",
-      ja: "時間切れです。<wbr/>クロッキーが<wbr/>仕上げを<wbr/>受け付け<wbr/>なかったので、<wbr/>何も<wbr/>仕上がり<wbr/>ませんでした。<wbr/>{{reason}}",
+      ja: "タイムアップです。<wbr/>クロッキーが<wbr/>仕上げを<wbr/>受け付け<wbr/>なかったので、<wbr/>何も<wbr/>仕上がり<wbr/>ませんでした。<wbr/>{{reason}}",
     },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when a reload brings back a drawing whose seal was on its way, so the sheet stays as it was sealed; tapping the check finishes the seal */
     interrupted: {

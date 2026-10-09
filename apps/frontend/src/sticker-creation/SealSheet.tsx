@@ -84,12 +84,21 @@ export function SealSheet({
       <div className="seal-sheet__body">
         <SealPreview open={open} nsfw={nsfw} kyotoSeika={subjects !== null} ink={ink} />
         <div className="seal-sheet__side">
-          <h2
-            key={words}
-            className={`seal-sheet__title ${lettered ? "is-lettered" : ""} ${turned ? "is-turned" : ""}`}
-          >
-            {words}
-          </h2>
+          {/* Turned in place, the title it had stays unseen in the same cell, so a shorter one
+              keeps the sheet's height. */}
+          <div className="seal-sheet__titles">
+            {turned && (
+              <span className="seal-sheet__title is-outgoing" aria-hidden="true">
+                {t(($) => $.stickerCreation.sealSheet.title)}
+              </span>
+            )}
+            <h2
+              key={words}
+              className={`seal-sheet__title ${lettered ? "is-lettered" : ""} ${turned ? "is-turned" : ""}`}
+            >
+              {words}
+            </h2>
+          </div>
           {subjects && (
             <p className="seal-sheet__pair">
               <SubjectPair subjects={subjects} />

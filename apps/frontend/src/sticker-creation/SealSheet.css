@@ -63,6 +63,16 @@
   min-width: 0;
 }
 
+/* The title's cell. Turned in place, the outgoing title lies unseen under the new one, so the cell
+   keeps the taller of the two. */
+.seal-sheet__titles {
+  display: grid;
+}
+
+.seal-sheet__titles > * {
+  grid-area: 1 / 1;
+}
+
 .seal-sheet__title {
   margin: 0;
   font-size: 20px;
@@ -73,10 +83,15 @@
   text-wrap: balance;
 }
 
+.seal-sheet__title.is-outgoing {
+  visibility: hidden;
+}
+
 /* A Kyoto Seika sheet's やめ: the proctor's call in the deal's hand lettering (書き文字), as
-   はじめ began it. One line in the plain title's line box, so turning in place keeps the height. */
+   はじめ began it, on one line in the plain title's line box. */
 .seal-sheet__title.is-lettered {
-  align-self: flex-start;
+  justify-self: start;
+  align-self: center;
   padding-left: 2px;
   font-family: var(--font-puffy);
   font-size: 22px;
