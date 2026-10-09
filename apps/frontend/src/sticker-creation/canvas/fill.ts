@@ -126,11 +126,10 @@ export function floodFill(
       return data[i + 3] >= EMPTY_ALPHA && rgbDistance(data, i, target) < REGION_TOLERANCE;
     return data[i + 3] < EMPTY_ALPHA && (far === null || far[p] > reach);
   };
-  let box: Box | "past";
-  if (lines === null) {
-    const plain = scanFill(region, w, h, sx, sy, open, false);
-    box = nearCut(plain.x0, plain.y0, plain.x1, plain.y1) ? "past" : plain;
-  } else box = closeGaps(region, lines.far, lines.near, reach, w, h, sx, sy, open, nearCut);
+  const box =
+    lines === null
+      ? scanFill(region, w, h, sx, sy, open, false, nearCut)
+      : closeGaps(region, lines.far, lines.near, reach, w, h, sx, sy, open, nearCut);
   if (box === "past") return "past";
 
   const bx0 = Math.max(0, box.x0 - TUCK);
@@ -157,7 +156,8 @@ export function floodFill(
 
 /**
  * Marks IN in `region` what `open` takes in from (sx, sy), a run along a row at a time; with
- * `corners`, a run reaches the rows beside it across a corner too. Returns the box it marked.
+ * `corners`, a run reaches the rows beside it across a corner too. Returns the box it marked, or
+ * "past" as soon as that box comes near a cut side.
  */
 function scanFill(
   region: Uint8Array,
@@ -167,7 +167,8 @@ function scanFill(
   sy: number,
   open: (p: number) => boolean,
   corners: boolean,
-): Box {
+  nearCut: NearCut,
+): Box | "past" {
   const box: Box = { x0: sx, y0: sy, x1: sx, y1: sy };
   const stack = [sx, sy];
   while (stack.length) {
@@ -206,6 +207,7 @@ function scanFill(
     }
     if (y < box.y0) box.y0 = y;
     if (y > box.y1) box.y1 = y;
+    if (nearCut(box.x0, box.y0, box.x1, box.y1)) return "past";
   }
   return box;
 }
@@ -263,8 +265,8 @@ function closeGaps(
     for (const p of searched) region[p] = 0;
     start = found;
   }
-  const box = scanFill(region, w, h, start % w, Math.floor(start / w), open, true);
-  if (nearCut(box.x0, box.y0, box.x1, box.y1)) return "past";
+  const box = scanFill(region, w, h, start % w, Math.floor(start / w), open, true, nearCut);
+  if (box === "past") return "past";
 
   // Paper near a line by a cut side may be nearer open paper past it.
   const claims: number[] = [];
