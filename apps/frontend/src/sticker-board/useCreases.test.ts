@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CREASE_SIDES } from "../stickers/crease";
 import type { Affine, CreaseJob, CreaseReply } from "../stickers/creaseWorker";
 import { testStickerUrls } from "../stickers/testStickerUrls";
 import { fieldOf, PHONE_BOARD, stickerBox, unitOf, type Placement } from "./placement";
@@ -83,6 +84,18 @@ describe("creaseJobs", () => {
     }
   });
 
+  it("lights a turned sticker's crease from each side's light on screen, turned into its frame", () => {
+    const r = 30;
+    const [job] = jobsFor([sticker("lower", { x: 0.4 }), sticker("top", { x: 0.6, r })]);
+
+    for (const side of ["topLeft", "bottomRight", "topRight", "bottomLeft"] as const) {
+      // Turned back by the sticker's own turn, the light on screen lies in the sticker's frame.
+      const [x, y] = clockwise(-r, CREASE_SIDES[side]);
+      expect(job.lights[side][0]).toBeCloseTo(x, 2);
+      expect(job.lights[side][1]).toBeCloseTo(y, 2);
+    }
+  });
+
   it("gives no job to stickers that don't touch", () => {
     const apart = [sticker("a", { x: 0.15, y: 0.2 }), sticker("b", { x: 0.85, y: 0.8 })];
     expect(jobsFor(apart)).toEqual([]);
@@ -138,14 +151,20 @@ describe("CreaseStore", () => {
 
   const [job] = jobsFor([sticker("lower", { x: 0.4 }), sticker("top", { x: 0.6 })]);
 
-  /** The worker's answer to `of`: a crease and its lit side, or neither when nothing showed a step. */
+  /** The worker's answer to `of`: the crease lit from each side, or none when nothing showed a step. */
   const bake = (of: CreaseJob, made = true): Extract<CreaseReply, { ok: true }> => ({
     ok: true,
     board: "board",
     id: of.id,
     key: of.key,
-    crease: made ? new Blob(["crease"]) : null,
-    shine: made ? new Blob(["shine"]) : null,
+    crease: made
+      ? {
+          topLeft: new Blob(["topLeft"]),
+          bottomRight: new Blob(["bottomRight"]),
+          topRight: new Blob(["topRight"]),
+          bottomLeft: new Blob(["bottomLeft"]),
+        }
+      : null,
     timings: { decode: 0, draw: 0, shade: 0, encode: 0, total: 0 },
   });
 
@@ -188,9 +207,8 @@ describe("CreaseStore", () => {
     store.clear();
 
     for (const crease of [first, second]) {
-      expect(crease).toBeDefined();
-      expect(revoke).toHaveBeenCalledWith(crease?.url);
-      expect(revoke).toHaveBeenCalledWith(crease?.shine);
+      if (!crease) throw new Error("A bake left no crease");
+      for (const url of Object.values(crease)) expect(revoke).toHaveBeenCalledWith(url);
     }
   });
 });

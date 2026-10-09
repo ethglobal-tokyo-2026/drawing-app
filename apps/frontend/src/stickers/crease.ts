@@ -10,6 +10,20 @@
 /** Toward the one light at the top left, as the baked gloss has it, on screen. */
 export const CREASE_LIGHT = unit(-0.5, -0.7);
 
+/** The sides a crease is baked lit from: the one light at rest, its opposite, and the two across. */
+export type CreaseSide = "topLeft" | "bottomRight" | "topRight" | "bottomLeft";
+
+/**
+ * Toward each side's light, on screen. The board blends the four by where the one light is, so the
+ * crease follows the tilt without being baked again.
+ */
+export const CREASE_SIDES: Record<CreaseSide, readonly [number, number]> = {
+  topLeft: CREASE_LIGHT,
+  bottomRight: [-CREASE_LIGHT[0], -CREASE_LIGHT[1]],
+  topRight: [-CREASE_LIGHT[1], CREASE_LIGHT[0]],
+  bottomLeft: [CREASE_LIGHT[1], -CREASE_LIGHT[0]],
+};
+
 /** How far a sticker's ramp reaches beside a step one sticker high, in CSS px. */
 export const RAMP = 4;
 
@@ -47,9 +61,7 @@ const MOST = { lit: 0.5, shade: 0.3 };
 const FLOOR = 0.03;
 
 /** Scales every tone: how much the crease shows. */
-const STRENGTH = 1;
-/** How opaque the shine's mask is at its peak. */
-const SHINE = 0.6;
+const STRENGTH = 0.4;
 
 /** Rises as `v` does, easing into `most` rather than piling up where edges cross. */
 const ease = (v: number, most: number) => most * (1 - Math.exp(-v / most));
@@ -248,16 +260,22 @@ export interface CreaseInput {
   own: Float32Array;
   /** Pixels per CSS px. */
   scale: number;
-  /** Toward the light, in this sticker's frame (lightIn). */
-  light: readonly [number, number];
+  /** Toward each side's light, in this sticker's frame (lightIn of CREASE_SIDES). */
+  lights: Record<CreaseSide, readonly [number, number]>;
 }
 
-export interface CreasePixels {
-  /** RGBA, not premultiplied: white where the laminate catches the light, ink where it falls into shade. */
-  crease: Uint8ClampedArray<ArrayBuffer>;
-  /** The lit side's mask, white, where the live resin's highlights catch the crease. */
-  shine: Uint8ClampedArray<ArrayBuffer>;
-}
+/**
+ * The crease lit from each side, as RGBA, not premultiplied: white where the laminate catches that
+ * light, ink where it falls into shade.
+ */
+export type CreasePixels = Record<CreaseSide, Uint8ClampedArray<ArrayBuffer>>;
+
+const SIDES = [
+  "topLeft",
+  "bottomRight",
+  "topRight",
+  "bottomLeft",
+] as const satisfies readonly CreaseSide[];
 
 /** The crease of the sticker laid over `surface`, or null when nothing underneath shows a step. */
 export function creasePixels({
@@ -266,13 +284,14 @@ export function creasePixels({
   surface,
   own,
   scale,
-  light,
+  lights,
 }: CreaseInput): CreasePixels | null {
   const field = drape(surface, width, height, scale);
   const unitStep = stepResponse(scale);
-  const [lx, ly] = light;
-  const out = new Uint8ClampedArray(width * height * 4);
-  const shine = new Uint8ClampedArray(width * height * 4);
+  const bakes = SIDES.map((side) => ({
+    light: lights[side],
+    out: new Uint8ClampedArray(width * height * 4),
+  }));
   let any = false;
   for (let y = 1; y < height - 1; y++) {
     for (let x = 1; x < width - 1; x++) {
@@ -284,30 +303,31 @@ export function creasePixels({
       const gy = (field[i + width] - field[i - width]) / 2 / unitStep.slope;
       const bend =
         (field[i + 1] + field[i - 1] + field[i + width] + field[i - width] - 4 * h) / unitStep.bend;
-      // Rising toward the light's far side faces the light.
-      const facing = -(gx * lx + gy * ly);
-      const lit = Math.max(0, facing) * CREASE_TONE.lit + Math.max(0, -bend) * CREASE_TONE.shoulder;
-      const dark = Math.max(0, -facing) * CREASE_TONE.shade + Math.max(0, bend) * CREASE_TONE.foot;
-      const raw = (lit - dark) * o * STRENGTH;
-      const net = Math.sign(raw) * Math.max(0, Math.abs(raw) - FLOOR);
-      const glint = Math.max(0, lit * o * STRENGTH - FLOOR);
-      if (Math.abs(net) < 0.004 && glint < 0.004) continue;
-      any = true;
       const q = i * 4;
-      if (glint > 0) {
-        shine[q] = shine[q + 1] = shine[q + 2] = 255;
-        shine[q + 3] = Math.min(1, glint / CREASE_TONE.lit) * SHINE * 255;
-      }
-      if (net > 0) {
-        out[q] = out[q + 1] = out[q + 2] = 255;
-        out[q + 3] = ease(net, MOST.lit) * 255;
-      } else if (net < 0) {
-        out[q] = INK[0];
-        out[q + 1] = INK[1];
-        out[q + 2] = INK[2];
-        out[q + 3] = ease(-net, MOST.shade) * 255;
+      for (const { light, out } of bakes) {
+        // Rising toward the light's far side faces the light.
+        const facing = -(gx * light[0] + gy * light[1]);
+        const lit =
+          Math.max(0, facing) * CREASE_TONE.lit + Math.max(0, -bend) * CREASE_TONE.shoulder;
+        const dark =
+          Math.max(0, -facing) * CREASE_TONE.shade + Math.max(0, bend) * CREASE_TONE.foot;
+        const raw = (lit - dark) * o * STRENGTH;
+        const net = Math.sign(raw) * Math.max(0, Math.abs(raw) - FLOOR);
+        if (Math.abs(net) < 0.004) continue;
+        any = true;
+        if (net > 0) {
+          out[q] = out[q + 1] = out[q + 2] = 255;
+          out[q + 3] = ease(net, MOST.lit) * 255;
+        } else {
+          out[q] = INK[0];
+          out[q + 1] = INK[1];
+          out[q + 2] = INK[2];
+          out[q + 3] = ease(-net, MOST.shade) * 255;
+        }
       }
     }
   }
-  return any ? { crease: out, shine } : null;
+  if (!any) return null;
+  const [topLeft, bottomRight, topRight, bottomLeft] = bakes.map(({ out }) => out);
+  return { topLeft, bottomRight, topRight, bottomLeft };
 }

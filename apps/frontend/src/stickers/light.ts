@@ -9,15 +9,15 @@ import { sheenIn, sweepSheen } from "./resinSheen";
 /**
  * The app's one light: `--lx` and `--ly` (-1 to 1) follow the phone's tilt where the browser shares it,
  * or a mouse or pen. A finger never moves it: a finger drags stickers, and the light sweeping with it
- * would change the gloss on every other sticker. They're set on each live resin and foil rather than the
- * root, so a move restyles only the highlights that read them; without them a highlight rests at its own
- * default. The light listens only while a screen with stickers holds it, so the pointer and the motion
- * sensor rest everywhere else.
+ * would change the gloss on every other sticker. They're set on each live resin, foil and crease rather
+ * than the root, so a move restyles only what reads them; without them each rests at its own default.
+ * The light listens only while a screen with stickers holds it, so the pointer and the motion sensor
+ * rest everywhere else.
  */
 
 const REDUCED = "(prefers-reduced-motion: reduce)";
-/** The elements whose highlights read the light: each live resin, and each foil's glint. */
-const LIT = ".live-resin, .sticker-foil";
+/** The elements that read the light: each live resin, each foil's glint, and each crease. */
+const LIT = ".live-resin, .sticker-foil, .sticker-crease";
 /** The light is written at most this often; the highlights' transitions glide between writes. */
 const BEAT_MS = 45;
 /** A move shorter than this, on the -1 to 1 scale, isn't written, so the hand's tremor keeps still. */
@@ -115,7 +115,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     return resins.length;
   };
 
-  /** Sets the light from `lit` on every live resin; returns how many. Made once, not per write. */
+  /** Sets the light from `lit` on every lit element; returns how many. Made once, not per write. */
   const lightFromLit = () => (lit ? setOnResins(written(lit.x), written(lit.y)) : 0);
 
   /** Lights the resins from `lit` as our work, and marks how many it lit while recording. */

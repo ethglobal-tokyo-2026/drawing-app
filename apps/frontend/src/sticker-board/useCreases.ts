@@ -9,7 +9,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { isPerformanceRecorderOn, notePerformance } from "../performance/performanceRecorder";
-import { lightIn } from "../stickers/crease";
+import { CREASE_SIDES, lightIn, type CreaseSide } from "../stickers/crease";
 import type { Affine, CreaseBatch, CreaseJob, CreaseReply } from "../stickers/creaseWorker";
 import type { Crease } from "../stickers/StickerFigure";
 import type { StickerUrls } from "../stickers/stickerUrls";
@@ -24,8 +24,11 @@ interface CreaseSticker {
   placement: Placement;
 }
 
-/** The crease's pixels per CSS px at most: it's soft, so a phone's third pixel adds nothing. */
-const MAX_SCALE = 2;
+/**
+ * The crease's pixels per CSS px at most: it's soft, so a finer bake looks the same on a denser
+ * screen and only takes more memory.
+ */
+const MAX_SCALE = 1;
 /** How long the board holds still before its creases are baked again. */
 const SETTLE_MS = 90;
 /** How far past its box a foil sticker's band reaches, in CSS px, on the board. */
@@ -95,6 +98,14 @@ function overlaps(a: Box, b: Box, reach: number) {
   return true;
 }
 
+/** A value for each side a crease is baked lit from. */
+const bySide = <T>(of: (side: CreaseSide) => T): Record<CreaseSide, T> => ({
+  topLeft: of("topLeft"),
+  bottomRight: of("bottomRight"),
+  topRight: of("topRight"),
+  bottomLeft: of("bottomLeft"),
+});
+
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const roundAffine = ([a, b, c, d, e, f]: Affine): Affine => [
   r2(a),
@@ -139,13 +150,16 @@ export function creaseJobs<S extends CreaseSticker>(
       return [{ url: silhouette(s), w: r2(a.w), h: r2(a.h), at: roundAffine(steps.reduce(mul)) }];
     });
     if (!under.length) return;
-    const [lightX, lightY] = lightIn(b.r);
-    const light: [number, number] = [r2(lightX), r2(lightY)];
+    // Each side's light is on screen; the bake is in the sticker's frame, which its turn moves.
+    const lights = bySide((side): [number, number] => {
+      const [x, y] = lightIn(b.r, [...CREASE_SIDES[side]]);
+      return [r2(x), r2(y)];
+    });
     const shape = {
       width: Math.ceil(b.w * scale),
       height: Math.ceil(b.h * scale),
       scale,
-      light,
+      lights,
       own: silhouette(top),
       under,
     };
@@ -199,16 +213,11 @@ export class CreaseStore {
   }
 
   /** Shows a bake's crease, unless the sticker's stack has changed since it was posted. */
-  land({ id, key, crease, shine }: Extract<CreaseReply, { ok: true }>) {
+  land({ id, key, crease }: Extract<CreaseReply, { ok: true }>) {
     if (this.#wanted.get(id) !== key) return;
     this.#put(id, {
       key,
-      ...(crease && {
-        crease: {
-          url: URL.createObjectURL(crease),
-          shine: shine && URL.createObjectURL(shine),
-        },
-      }),
+      ...(crease && { crease: bySide((side) => URL.createObjectURL(crease[side])) }),
     });
   }
 
@@ -220,10 +229,7 @@ export class CreaseStore {
 
   #put(id: string, baked: Baked | null) {
     const old = this.#baked.get(id);
-    if (old?.crease) {
-      URL.revokeObjectURL(old.crease.url);
-      if (old.crease.shine) URL.revokeObjectURL(old.crease.shine);
-    }
+    if (old?.crease) for (const url of Object.values(old.crease)) URL.revokeObjectURL(url);
     if (baked) this.#baked.set(id, baked);
     else this.#baked.delete(id);
     // A sticker with no crease before or after has nothing to redraw.

@@ -4,7 +4,7 @@
  * replaces whatever of the last one hasn't started.
  */
 import { releaseCanvas } from "../ui/releaseCanvas";
-import { creasePixels, stackedSurface } from "./crease";
+import { creasePixels, stackedSurface, type CreaseSide } from "./crease";
 
 /** A 2D affine, as setTransform takes it. */
 export type Affine = [number, number, number, number, number, number];
@@ -19,8 +19,8 @@ export interface CreaseJob {
   height: number;
   /** Pixels per CSS px. */
   scale: number;
-  /** Toward the light, in its frame. */
-  light: [number, number];
+  /** Toward each side's light, in its frame. */
+  lights: Record<CreaseSide, [number, number]>;
   /** Its own silhouette's mask. */
   own: string;
   /**
@@ -39,18 +39,14 @@ export interface CreaseTimings {
   total: number;
 }
 
-/**
- * A baked crease, null when nothing underneath shows a step, and the mask of its lit side, where the
- * live resin's highlights catch it.
- */
+/** A baked crease, lit from each side; null when nothing underneath shows a step. */
 export type CreaseReply =
   | {
       ok: true;
       board: string;
       id: string;
       key: string;
-      crease: Blob | null;
-      shine: Blob | null;
+      crease: Record<CreaseSide, Blob> | null;
       timings: CreaseTimings;
     }
   | { ok: false; board: string; id: string; key: string; error: string };
@@ -144,11 +140,15 @@ async function bake(board: string, job: CreaseJob): Promise<CreaseReply> {
       surface: stackedSurface(layers, job.width, job.height, job.scale),
       own: ownAlpha,
       scale: job.scale,
-      light: job.light,
+      lights: job.lights,
     });
     const t3 = performance.now();
-    const crease = pixels && (await pngOf(canvas, pixels.crease));
-    const shine = pixels && (await pngOf(canvas, pixels.shine));
+    const crease = pixels && {
+      topLeft: await pngOf(canvas, pixels.topLeft),
+      bottomRight: await pngOf(canvas, pixels.bottomRight),
+      topRight: await pngOf(canvas, pixels.topRight),
+      bottomLeft: await pngOf(canvas, pixels.bottomLeft),
+    };
     const t4 = performance.now();
     return {
       ok: true,
@@ -156,7 +156,6 @@ async function bake(board: string, job: CreaseJob): Promise<CreaseReply> {
       id: job.id,
       key: job.key,
       crease,
-      shine,
       timings: { decode: t1 - t0, draw: t2 - t1, shade: t3 - t2, encode: t4 - t3, total: t4 - t0 },
     };
   } finally {
