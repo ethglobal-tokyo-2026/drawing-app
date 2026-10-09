@@ -42,12 +42,34 @@ export function onLargeScreen() {
   return large;
 }
 
+/** Each device's screen in CSS px, portrait, as `screen` reports it whatever the window. */
+const DEVICE_SCREENS = { phone: [390, 844], iPad: [1024, 1366] } as const;
+
 /**
  * A touch screen for a test, landscape or not and large or not, since happy-dom has no touch screen:
  * answers LANDSCAPE_TOUCH and LARGE_SCREEN by the switches it returns, and every other query through
- * happy-dom's own, until the test ends. `landscape.change(true)` turns it on its side.
+ * happy-dom's own, until the test ends. `landscape.change(true)` turns it on its side. The device is an
+ * iPad when the window is large, and a phone otherwise unless it says so.
  */
-export function onTouchScreen({ landscape, large }: { landscape: boolean; large: boolean }) {
+export function onTouchScreen({
+  landscape,
+  large,
+  device = large ? "iPad" : "phone",
+}: {
+  landscape: boolean;
+  large: boolean;
+  device?: keyof typeof DEVICE_SCREENS;
+}) {
+  const [width, height] = DEVICE_SCREENS[device];
+  const sized = Object.entries({ width, height }).map(([side, px]) => {
+    const own = Object.getOwnPropertyDescriptor(window.screen, side);
+    Object.defineProperty(window.screen, side, { configurable: true, get: () => px });
+    return () =>
+      own
+        ? Object.defineProperty(window.screen, side, own)
+        : Reflect.deleteProperty(window.screen, side);
+  });
+  onTestFinished(() => sized.forEach((restore) => restore()));
   const matchMedia = window.matchMedia.bind(window);
   const screen = {
     landscape: new SwitchedQuery(LANDSCAPE_TOUCH, landscape),

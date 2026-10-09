@@ -184,7 +184,7 @@ it("keeps Explore's search while another tab shows, asks nothing for it then, an
 
 describe("the upright cover", () => {
   /** The app on the board, on a touch screen shaped as `screen` says. */
-  const openOn = async (screen: { landscape: boolean; large: boolean }) => {
+  const openOn = async (screen: Parameters<typeof onTouchScreen>[0]) => {
     history.replaceState(null, "", "/");
     const switches = onTouchScreen(screen);
     const view = renderWithApi(<App />, emptyApi());
@@ -209,7 +209,11 @@ describe("the upright cover", () => {
   it.each([
     ["an upright phone", { landscape: false, large: false }],
     ["an iPad on its side, which has the room", { landscape: true, large: true }],
-  ])("never shows on %s", async (_, screen) => {
+    [
+      "an iPad's short, wide window, where turning the iPad wouldn't help",
+      { landscape: true, large: false, device: "iPad" },
+    ],
+  ] as const)("never shows on %s", async (_, screen) => {
     const { cover, phone } = await openOn(screen);
     expect(cover()).toBeNull();
     expect(phone()?.hasAttribute("inert")).toBe(false);

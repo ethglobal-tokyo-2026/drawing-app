@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
-import { useLargeScreen } from "./largeScreen";
+import { LARGE_MIN_PX } from "./largeScreen";
 
-/** A touch screen wider than it's tall. Without the large layout's room, it's a phone on its side. */
+/** A touch screen's window wider than it's tall. */
 export const LANDSCAPE_TOUCH = "(orientation: landscape) and (any-pointer: coarse)";
 
 const query = () => window.matchMedia(LANDSCAPE_TOUCH);
@@ -14,13 +14,15 @@ const subscribe = (onChange: () => void) => {
 
 const isLandscapeTouch = () => query().matches;
 
+/** A phone's own screen, whatever its window: its short side is under the large layout's room. */
+const onPhoneScreen = () => Math.min(screen.width, screen.height) < LARGE_MIN_PX;
+
 /**
  * Whether the phone is on its side now. The app is laid out upright only, and inside LINE no web app
- * can lock the orientation, so the upright cover asks for it back. An iPad has the large layout's room
- * either way, and a desktop and LINE's sheet on an iPad are never on their side.
+ * can lock the orientation, so the upright cover asks for it back. It goes by the device's screen: an
+ * iPad's window can be short and wide in Stage Manager, where turning the iPad wouldn't help, so it
+ * keeps the phone layout there.
  */
 export function useSideways(): boolean {
-  const landscape = useSyncExternalStore(subscribe, isLandscapeTouch);
-  const large = useLargeScreen();
-  return landscape && !large;
+  return useSyncExternalStore(subscribe, isLandscapeTouch) && onPhoneScreen();
 }
