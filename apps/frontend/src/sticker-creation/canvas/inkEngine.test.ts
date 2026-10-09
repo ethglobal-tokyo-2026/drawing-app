@@ -18,7 +18,7 @@ import {
   type SheetArea,
   type SheetFrame,
 } from "./sheetFrame";
-import { CATCH_UP_FRAMES } from "./stabilizer";
+import { SMOOTH_WINDOW_MS } from "./stabilizer";
 
 /** The labels the engine's work was timed under, as the performance recorder hears them. */
 const timed = vi.hoisted((): string[] => []);
@@ -74,6 +74,8 @@ class FakePrediction implements PredictionLayer {
 
 /** Smoothing at its Smooth end. */
 const SMOOTH = 100;
+/** ms between a display's frames. */
+const FRAME_MS = 1000 / 60;
 /** The sheet's room on screen: a sheet that fits it exactly shows at scale 1. */
 const AREA: SheetArea = { width: SHEET_SHORT_UNITS, height: SHEET_SHORT_UNITS * 2 };
 /** The same room with the screen turned. */
@@ -112,7 +114,9 @@ function setup(settings: Partial<InkSettings> = {}, prediction: PredictionLayer 
     onPen: vi.fn(),
     onHover: vi.fn<(ring: HoverRing | null) => void>(),
   };
-  let frame: (() => void) | null = null;
+  let frame: ((time: number) => void) | null = null;
+  /** The latest time an input was stamped with: a frame runs at it unless told otherwise. */
+  let latest = 0;
   const engine = new InkEngine(
     layer,
     { ...SETTINGS, ...settings },
@@ -131,8 +135,9 @@ function setup(settings: Partial<InkSettings> = {}, prediction: PredictionLayer 
     y: number,
     t: number,
     pressure = pointerType === "pen" ? 0.6 : 0,
-  ) =>
-    ({
+  ): PointerInput => {
+    latest = Math.max(latest, t);
+    return {
       pointerId,
       pointerType,
       button: 0,
@@ -144,12 +149,13 @@ function setup(settings: Partial<InkSettings> = {}, prediction: PredictionLayer 
       height: pointerType === "touch" ? FINGERTIP : 1,
       timeStamp: t,
       preventDefault() {},
-    }) satisfies PointerInput;
-  /** Runs the animation frame the engine asked for, if it asked. */
-  const runFrame = () => {
+    };
+  };
+  /** Runs the animation frame the engine asked for, if it asked, at `time`. */
+  const runFrame = (time = latest) => {
     const run = frame;
     frame = null;
-    run?.();
+    run?.(time);
   };
   /**
    * A pointer landing at `from`, moving in 10px steps 16ms apart, and lifting at `to`; a pen presses
@@ -232,7 +238,7 @@ describe("InkEngine", () => {
     expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false));
   });
 
-  it("at Smooth, starts a line where the pointer lands and paints it up to a paused nib within its catch-up frames, pen and finger alike", () => {
+  it("at Smooth, starts a line where the pointer lands and glides it to a paused nib over the window, pen and finger alike", () => {
     for (const pointerType of ["pen", "touch"]) {
       const { engine, at, runFrame, layer, committed } = setup({ smoothing: SMOOTH });
       const painted = () => (layer.painting ? lastPoint(layer.painting) : []);
@@ -241,9 +247,13 @@ describe("InkEngine", () => {
         engine.move(at(pointerType, 1, i * 10, 0, i * 16));
         runFrame();
       }
-      // Moving, the line trails the nib; paused, it catches up with no new sample.
+      // Moving, the line trails the nib; paused, it glides there as time passes, with no new sample.
+      const trailing = painted()[0];
+      expect(trailing).toBeLessThan(200);
+      runFrame(320 + FRAME_MS);
+      expect(painted()[0]).toBeGreaterThan(trailing);
       expect(painted()[0]).toBeLessThan(200);
-      for (let frame = 0; frame < CATCH_UP_FRAMES; frame++) runFrame();
+      runFrame(320 + SMOOTH_WINDOW_MS.slow);
       expect(painted()).toEqual([200, 0]);
       engine.up(at(pointerType, 1, 200, 0, 400));
       const op = committed()[0];
@@ -396,7 +406,7 @@ describe("InkEngine", () => {
     // The guess lasts a frame; the span up to the nib shows until the line gets there.
     runFrame();
     expect(Math.max(...shownXs())).toBe(10);
-    for (let frame = 1; frame < CATCH_UP_FRAMES; frame++) runFrame();
+    runFrame(16 + SMOOTH_WINDOW_MS.slow);
     expect(prediction.shown).toBeNull();
     engine.up(at("pen", 1, 10, 0, 40));
     expect(lastPoint(committed()[0])).toEqual([10, 0]);

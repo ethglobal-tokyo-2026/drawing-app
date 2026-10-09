@@ -1,10 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { StrokeBuilder } from "./brush";
 import { STRIDE } from "./ops";
-import { CATCH_UP_FRAMES, FIRST_SMOOTHING, SMOOTH_WINDOW_MS, Stabilizer } from "./stabilizer";
+import { FIRST_SMOOTHING, SMOOTH_WINDOW_MS, Stabilizer } from "./stabilizer";
 
 /** ms between an Apple Pencil's samples. */
 const SAMPLE_MS = 1000 / 240;
+/** ms between a mouse's samples, and between a display's frames. */
+const MOUSE_MS = 1000 / 60;
+const FRAME_MS = 1000 / 60;
+/** A slow nib's step between samples, in sheet units: slow enough for the whole slow window. */
+const SLOW_STEP = 0.2;
+/** Enough samples to fill the slowest window, with some to spare. */
+const ROW_SAMPLES = 2 * Math.ceil(SMOOTH_WINDOW_MS.slow / SAMPLE_MS);
+/** A slow stroke's lag at Smooth is within this share of a third of the window, its weights' mean age. */
+const LAG_BAND = 0.1;
+/** A slow stroke's lag at the first Smoothing, in ms: a steady hand's, as Clip Studio's daily settings give. */
+const FIRST_LAG_MS = { least: 10, most: 20 } as const;
+/** Steady nib speeds, in sheet units per ms, from a slow hand to a flick. */
+const SPEEDS = Array.from({ length: 40 }, (_, i) => (i + 1) * 0.05);
 /** Smoothing's ends. */
 const RAW = 0;
 const SMOOTH = 100;
@@ -73,13 +86,29 @@ function drawn(samples: Point[], smoothing: number): Point[] {
   ]);
 }
 
-/** A stabilizer at Smooth that has followed a nib along a row, `SAMPLE_MS` apart; and where the nib is. */
-function followedRow(): { stabilizer: Stabilizer; nib: Point; t: number } {
-  const row = Array.from({ length: 40 }, (_, i): Point => [i * 2, 0]);
-  const stabilizer = new Stabilizer(0, 0, 0, SMOOTH);
-  row.slice(1).forEach(([x, y], i) => stabilizer.add(x, y, (i + 1) * SAMPLE_MS));
-  return { stabilizer, nib: row[row.length - 1], t: (row.length - 1) * SAMPLE_MS };
+/**
+ * A stabilizer that has followed a nib along a row, `step` units each `SAMPLE_MS`, long enough to
+ * fill its window; and where the nib is, and when.
+ */
+function followedRow(step: number, smoothing = SMOOTH) {
+  const row = Array.from({ length: ROW_SAMPLES }, (_, i): Point => [i * step, 0]);
+  const stabilizer = new Stabilizer(0, 0, 0, smoothing);
+  let line: Point = [0, 0];
+  row.slice(1).forEach(([x, y], i) => (line = stabilizer.add(x, y, (i + 1) * SAMPLE_MS)));
+  return { stabilizer, line, nib: row[row.length - 1], t: (row.length - 1) * SAMPLE_MS };
 }
+
+const gapTo = (nib: Point, [x, y]: Point) => Math.hypot(x - nib[0], y - nib[1]);
+
+/** How far the line trails a nib moving steadily at `speed` units per ms, in sheet units. */
+function steadyGap(smoothing: number, speed: number): number {
+  const { line, nib } = followedRow(speed * SAMPLE_MS, smoothing);
+  return gapTo(nib, line);
+}
+
+/** How long the line trails a slow nib, in ms. */
+const slowLagMs = (smoothing: number) =>
+  steadyGap(smoothing, SLOW_STEP / SAMPLE_MS) / (SLOW_STEP / SAMPLE_MS);
 
 const mean = (values: number[]) => values.reduce((sum, v) => sum + v, 0) / values.length;
 
@@ -110,31 +139,62 @@ describe("Stabilizer", () => {
     expect(drawn(jitteryRow(30, 2, 1), SMOOTH)[0]).toEqual(jitteryRow(1, 2, 1)[0]);
   });
 
-  it("catches the line up to a nib that pauses: within the window's samples while it samples, within its catch-up frames while it doesn't", () => {
-    /** How many steps it takes the line to reach the nib. */
-    const stepsToNib = (nib: Point, step: () => [number, number]) => {
-      for (let steps = 1; steps <= 1000; steps++) {
-        const [x, y] = step();
-        if (Math.hypot(x - nib[0], y - nib[1]) < ON_NIB) return steps;
-      }
-      return Infinity;
-    };
-    const sampling = followedRow();
-    let t = sampling.t;
-    const samples = stepsToNib(sampling.nib, () =>
-      sampling.stabilizer.add(...sampling.nib, (t += SAMPLE_MS)),
-    );
+  it("glides the line to a nib that pauses over the window's time, frame by frame, and reaches one that keeps sampling within the window", () => {
+    const { stabilizer, nib, t } = followedRow(SLOW_STEP);
+    const gaps: number[] = [];
+    for (let frame = 1; frame * FRAME_MS <= SMOOTH_WINDOW_MS.slow; frame++)
+      gaps.push(gapTo(nib, stabilizer.hold(t + frame * FRAME_MS)));
+    gaps.push(gapTo(nib, stabilizer.hold(t + SMOOTH_WINDOW_MS.slow)));
+    // Each frame closer, and on the nib once the window has passed.
+    gaps.slice(1).forEach((gap, i) => expect(gap).toBeLessThan(gaps[i]));
+    expect(gaps.at(-1)).toBeLessThan(ON_NIB);
+    expect(stabilizer.settled).toBe(true);
+    const halfway = followedRow(SLOW_STEP);
+    const half = halfway.stabilizer.hold(halfway.t + SMOOTH_WINDOW_MS.slow / 2);
+    expect(gapTo(halfway.nib, half)).toBeGreaterThan(ON_NIB);
+
+    const sampling = followedRow(SLOW_STEP);
+    let time = sampling.t;
+    let samples = 0;
+    while (
+      gapTo(sampling.nib, sampling.stabilizer.add(...sampling.nib, (time += SAMPLE_MS))) >= ON_NIB
+    )
+      samples++;
     expect(samples).toBeLessThanOrEqual(Math.ceil(SMOOTH_WINDOW_MS.slow / SAMPLE_MS));
-    const still = followedRow();
-    expect(stepsToNib(still.nib, () => still.stabilizer.hold())).toBeLessThanOrEqual(
-      CATCH_UP_FRAMES,
-    );
+  });
+
+  it("leaves the line where its samples put it through frames that bring none, as a mouse's do on a faster display", () => {
+    const row = jitteryRow(80, 2, 5);
+    const steady = new Stabilizer(...row[0], 0, SMOOTH);
+    const framed = new Stabilizer(...row[0], 0, SMOOTH);
+    row.slice(1).forEach(([x, y], i) => {
+      const t = (i + 1) * MOUSE_MS;
+      framed.hold(t - MOUSE_MS / 2);
+      expect(framed.add(x, y, t)).toEqual(steady.add(x, y, t));
+    });
+  });
+
+  it("lags a slow stroke by a third of its window at Smooth, and by a steady hand's at the first Smoothing", () => {
+    expect(Math.abs(slowLagMs(SMOOTH) / (SMOOTH_WINDOW_MS.slow / 3) - 1)).toBeLessThan(LAG_BAND);
+    const first = slowLagMs(FIRST_SMOOTHING);
+    expect(first).toBeGreaterThanOrEqual(FIRST_LAG_MS.least);
+    expect(first).toBeLessThanOrEqual(FIRST_LAG_MS.most);
+  });
+
+  it("never closes the line's gap on its nib as the nib speeds up, so a quickening stroke doesn't lurch", () => {
+    for (const smoothing of [FIRST_SMOOTHING, SMOOTH]) {
+      const gaps = SPEEDS.map((speed) => steadyGap(smoothing, speed));
+      gaps.slice(1).forEach((gap, i) => expect(gap).toBeGreaterThanOrEqual(gaps[i]));
+    }
   });
 
   it("ends the stroke on the lift point, whatever the Smoothing", () => {
     const row = jitteryRow(60, 3, 3);
     for (const smoothing of [RAW, FIRST_SMOOTHING, SMOOTH])
       expect(drawn(row, smoothing).at(-1)).toEqual(row.at(-1));
+    // Lifting mid-stroke, the line's way there ends on the lift point too.
+    const { stabilizer, nib } = followedRow(SLOW_STEP);
+    expect(stabilizer.finish(...nib).at(-1)).toEqual(nib);
   });
 
   it("rounds a circle a browser gave in whole pixels, at the Smoothing a fresh sheet starts at", () => {

@@ -5,7 +5,7 @@ import { isPalm, TapRecognizer } from "./gestures";
 import { History, type Surface } from "./history";
 import { STRIDE, type FillOp, type Op, type Step, type StrokeOp, type Tool } from "./ops";
 import { areaFrame, frameFor, type SheetArea, type SheetFrame } from "./sheetFrame";
-import { Stabilizer } from "./stabilizer";
+import { CATCH_UP_MS, Stabilizer } from "./stabilizer";
 
 /** A fill takes a tap: a pointer that lifts within this many sheet units of where it landed. */
 const TAP_SLOP = 10;
@@ -13,11 +13,6 @@ const TAP_SLOP = 10;
 const BLOCKED_DRAG = 8;
 /** When the browser takes a pointer mid-stroke, the stroke stays if it had gone this many units. */
 const CANCEL_KEEPS = 4;
-/**
- * The line's catch-up to a paused or lifted nib moves like a steady hand, so its width follows the
- * same speed model.
- */
-const CATCH_UP_MS = 8;
 
 /** How the sheet takes input: Pencil only, where fingers only tap, or Pencil and finger. */
 export const INPUT_MODES = ["pencilOnly", "pencilAndFinger"] as const;
@@ -131,8 +126,8 @@ interface PaperRect {
   width: number;
 }
 
-/** Asks for one animation frame; returns a function that withdraws the request. */
-export type RequestFrame = (frame: () => void) => () => void;
+/** Asks for one animation frame, which hears its time; returns a function that withdraws the request. */
+export type RequestFrame = (frame: (time: number) => void) => () => void;
 
 const browserFrame: RequestFrame = (frame) => {
   const id = requestAnimationFrame(frame);
@@ -657,13 +652,14 @@ export class InkEngine {
     timeOurWork(INK_WORK.paint, () => this.layer.paint(builder.op, 0, 1));
   }
 
-  private readonly paintFrame = (): void => {
+  /** `time` is the frame's, on the clock pointer samples are stamped with. */
+  private readonly paintFrame = (time: number): void => {
     this.cancelFrame = null;
     const live = this.live;
     if (!live) return;
     timeOurWork(INK_WORK.paint, () => {
       if (live.queue.length > 0) this.feed(live);
-      else this.catchUp(live);
+      else this.catchUp(live, time);
       this.paintNew(live);
       this.paintPrediction(live);
     });
@@ -684,12 +680,16 @@ export class InkEngine {
     live.caughtUp = live.t;
   }
 
-  /** A frame with the nib still: the line moves toward it, and once there, curves all the way to it. */
-  private catchUp(live: LiveStroke): void {
+  /**
+   * A frame at `time` with no new sample: the line glides toward the nib as far as the time since
+   * says, and once there, curves all the way to it.
+   */
+  private catchUp(live: LiveStroke, time: number): void {
     const { stabilizer, builder } = live;
     if (!stabilizer.settled) {
-      const [x, y] = stabilizer.hold();
-      builder.add(x, y, live.pressure, (live.caughtUp += CATCH_UP_MS));
+      live.caughtUp = Math.max(live.caughtUp, time);
+      const [x, y] = stabilizer.hold(live.caughtUp);
+      builder.add(x, y, live.pressure, live.caughtUp);
     }
     if (stabilizer.settled) builder.settle(live.x, live.y);
   }

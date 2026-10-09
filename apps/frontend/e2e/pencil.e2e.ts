@@ -2,7 +2,7 @@ import { DAILY_TICKETS_PER_DAY } from "@drawing-app/api/client";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { PALM_CONTACT_PX } from "../src/sticker-creation/canvas/gestures.ts";
-import { CATCH_UP_FRAMES } from "../src/sticker-creation/canvas/stabilizer.ts";
+import { SMOOTH_WINDOW_MS } from "../src/sticker-creation/canvas/stabilizer.ts";
 import { canvas, drawKeyName, openSettings, say, signIn } from "./helpers.ts";
 import { ipad } from "./ipad.ts";
 import {
@@ -178,8 +178,9 @@ test("at Smooth, a pen's line catches up to its nib as it pauses, and ends where
     await pen.move(row[i], 0.5, t0 + i * 16);
     await page.waitForTimeout(16);
   }
-  // One frame paints the samples already sent; the line reaches the paused nib in the catch-up's.
-  await nextFrames(page, 1 + CATCH_UP_FRAMES);
+  // The line glides to the paused nib over the window, then a frame paints it there.
+  await page.waitForTimeout(SMOOTH_WINDOW_MS.slow);
+  await nextFrames(page);
   expect(nib.x - ((await inkReach(page, nib.y)) ?? row[0].x)).toBeLessThanOrEqual(1);
   await pen.up(nib, t0 + row.length * 16);
   expect(await inkReach(page, nib.y)).toBeGreaterThanOrEqual(nib.x - 1);
