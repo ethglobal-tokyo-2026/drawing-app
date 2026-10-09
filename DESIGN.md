@@ -7,6 +7,7 @@ colors:
   liner-lift: "#F8F7FB"
   ink: "#1C1824"
   graphite: "#6E6878"
+  graphite-on-deep: "#635D6D"
   canvas: "#FFFFFF"
   seal-yellow: "#FFD93B"
   soda-aqua: "#38D3DC"
@@ -165,7 +166,7 @@ components:
     size: "58px"
   key-disabled:
     backgroundColor: "{colors.liner-deep}"
-    textColor: "{colors.graphite}"
+    textColor: "{colors.graphite-on-deep}"
     rounded: "{rounded.key}"
   button-label:
     backgroundColor: "{colors.liner-lift}"
@@ -379,7 +380,7 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 
 ### Hierarchy
 
-- **Display** (400, 20px; 23px on the large key, 17px on the compact key; line-height 1): the key's label. It also sets dot badges (12–19px; the draw screen's timer dot at 13px), the gratitude multiplier (×8.0, 27px), the giver's gratitude tag, the outlined 袋文字 tier captions (46px, pink inside white inside ink), and the deal's 書き文字 hand lettering: a die's outlined lines at 22px and countdown at 46px, and in plain Ink the reroll's 振り直し / Reroll at 15px and a roll's コロッ at 13px.
+- **Display** (400, 20px; 23px on the large key, 17px on the compact key; line-height 1): the key's label. It also sets dot badges (11–19px: the tray's NEW at the 11px floor, the draw screen's timer dot and Explore's day badges at 13px), the gratitude multiplier (×8.0, 27px), the giver's gratitude tag, the outlined 袋文字 tier captions (46px, pink inside white inside ink), and the deal's 書き文字 hand lettering: a die's outlined lines at 22px and countdown at 46px, and in plain Ink the reroll's 振り直し / Reroll at 15px and a roll's コロッ at 13px.
 - **Figure** (900, 26px on the stat board's stamps up to two characters, stepping down from three and never under 11px, 27px in the open trail row and its replay stage, 40px for the gratitude receipt's total and 58px on the streak leaf; line-height about 0.95, width 125, proportional figures): gratitude amounts in the combo, the receipt and the sticker's trail, the counts pinned on the stat board, and the hit counter (23px on the leaderboard, 20px in the stat board's Bests).
 - **Headline** (800, 26px, line-height 1.08, width 112, balanced wrap): screen and dialog titles such as "Sealed" and "Out of tickets for today", the sticker detail's heading and the name printed on a gift's tag.
 - **Title** (800, 18–22px, line-height 1.1, width 112): sheet titles, the board header's name, and the notebook scrap and Settings headings on the stat board (18px).
@@ -416,13 +417,15 @@ The sticker board is free-form, not a grid. Stickers sit wherever they were drop
 
 On a large screen the board keeps a layout of its own, the large layout, beside the phone's. Stickers keep their phone size, a share of the phone board's 390px width, and the extra room is board, as in a phone-layout window wider than a phone, such as LINE's sheet on an iPad, where they keep the widest phone's size. The first time a large screen shows your board, its large layout starts as your phone's arrangement, centered on the board and fitted to a side too short for it. From then on each layout is arranged on its own, down to which stickers are on the board and which are in the tray. A new sticker lands on both, and visitors see the layout for their own screen. Turning the screen keeps each sticker's share of the board and its size. The header is one row, your name and then the gift badges, clear of the zipper's rail, and the tray starts under it. Draw, or Give on someone else's board, leads the tab strip (see Index tabs).
 
+The phone layout is upright only. A phone on its side (a landscape touch screen without the large layout's room, `ui/sideways.ts`) shows the upright cover over everything: Liner, Phosphor's device-rotate at 64px and one Headline line, "Turn your phone upright" (スマホを縦にしてください), centered, with the app inert under it. Turning the phone back takes it away.
+
 The gallery around the phones (a sticky flow index, a 260px story column beside rows of scaled phone frames, and a viewer with a 300px strip) collapses to one column at 1100px and stacks the viewer at 760px. Each phone's caption is a plain annotation: the element, where it is in parentheses, and what was just done to it and what that shows, with a quiet step number the gallery adds. It belongs to the design review, not the app.
 
 ## Elevation & Depth
 
 Depth is physical, and it comes from a single light at the top left. Every cast shadow falls down and to the right, uses neutral Ink alpha and is layered in two parts, a tight contact and a soft throw. Controls get their depth from thickness, not shading: a key sits on a 6px lip and a label on 3px of paper, and the base casts the shadow, so pressing never darkens the lip. Stickers get their edge from a 0.5px kiss-cut groove drawn as a drop-shadow on the alpha, so the silhouette casts the shadow rather than a box. On a foil sticker the band is the edge: the kiss-cut and the cast fall from the band's outer edge, and nothing lies between the white edge and the foil.
 
-Stickers and the gratitude heart also respond to the app's one moving light. The shared light variables run from -1 to 1. They follow the pointer or touch, and device tilt where the browser already allows it without a prompt, and they idle-sway on an 11s loop so stills look alive. Buttons don't follow the light; they have no highlight to move.
+Stickers and the gratitude heart also respond to the app's one moving light. The shared light variables run from -1 to 1. They follow the phone's tilt where the browser allows it, read from gravity's direction so they never jump as the phone passes upright, easing into the edges and gliding to each new tilt; a mouse or pen moves them too, but never a finger, which is busy dragging and turning stickers. They idle-sway on an 11s loop so stills look alive. Buttons don't follow the light; they have no highlight to move.
 
 ### Shadow Vocabulary
 
@@ -459,8 +462,8 @@ A cartoon keycap: the screen's one primary act.
 
 - **Construction:** a flat face in a coded hue with a 2.5px Ink outline, over a 6px front wall (the lip) in the hue's deep partner with its own ink outline. The layout box includes the lip, so nothing hangs outside it. The face is 60px tall (68 large, 48 compact), padded 30px, with a 20px Phosphor icon and an 8px gap before the label.
 - **Round:** the seal check, a 58px round key with Phosphor's check-fat (fill) at 26px. One tap opens the seal sheet (see Draw screen), whose Seal is then the screen's one key; the check steps back while the sheet is up.
-- **Compact:** Draw on your own board, a Seal Yellow compact key at the lower left over the stickers, or at the tab strip's left end on a large screen. It carries only its icon and "Draw"; its tickets tuck behind its right end (see The Draw key's tickets). On a new artist's first visit it hops and a pulse ring surrounds it, held by a wrapper so the key keeps its own lip; the tickets sit in the same wrapper, so they hop along.
-- **Disabled:** sunk flush with the page, with no lip and no ink: a Liner Deep face and a graphite label. Enabling springs it up out of the page.
+- **Compact:** Draw on your own board, a Seal Yellow compact key at the lower left over the stickers, or at the tab strip's left end on a large screen. It carries only its icon and "Draw", or "Continue drawing" (続きをかく) while a drawing waits on the drawing screen; its tickets tuck behind its right end (see The Draw key's tickets). On a new artist's first visit, unless a drawing waits, it hops and a pulse ring surrounds it, held by a wrapper so the key keeps its own lip; the tickets sit in the same wrapper, so they hop along.
+- **Disabled:** sunk flush with the page, with no lip and no ink: a Liner Deep face and its label in `--graphite-on-deep`, which reads 5.0:1 there. Enabling springs it up out of the page.
 - **Busy:** while its act is on its way to the server, such as spending a ticket, the key keeps its face, lip and ink, and takes no second press. It's marked `aria-busy` and `aria-disabled`, never `disabled`, which would sink it grey as if the act weren't there.
 - **Hover and focus:** hover shades the face 6% toward Ink. Focus draws a 2px Ink outline at a 3px offset.
 - **Visiting:** on someone else's board, a Soda Aqua compact Give key sits in Draw's slot, and it's that board's one key.
@@ -650,7 +653,7 @@ The one card that sells reserve tickets, in the out-of-tickets card's stock. The
 
 ### Artist chip
 
-Who drew a foil sticker: a Liner Lift pill (40px) with the artist's LINE picture in a white edge inside a turning foil ring, then a fine-print ARTIST caption over "@name" (700, 13px). Without a picture, their first letter stands in on the paper, in the photo sticker's puffy capital (12px, and 11px in the By variant), never a blank disc. A one-line "By @name" variant is for tight spaces. The copy is "artist" or "By", never "from".
+Who drew a foil sticker: a Liner Lift pill (40px) with the artist's LINE picture in a white edge inside a turning foil ring, then a fine-print ARTIST caption over "@name" (700, 13px). Without a picture, their first letter stands in on the paper, in the photo sticker's puffy capital (at the 11px floor in both variants), never a blank disc. A one-line "By @name" variant is for tight spaces. The copy is "artist" or "By", never "from".
 
 - **First load:** when a board opens, each foil sticker's chip pops in at its top-left corner, top to bottom 80ms apart, holds about 2s and fades (3.2s in all), in one layer above every sticker and the name header. It happens once per app open for each board, yours and each one you visit, and not under a failure card. A received sticker landing always names its own artist, alone, even after the greeting has played. Nothing plays while the board is turned over: a board that opens on its stat board greets when its front first shows, and turning it over ends a greeting under way. Reduced motion shows and hides it without the pop.
 - **Tapped:** the chip heads the selected sticker's menu, above its actions, until you deselect.
