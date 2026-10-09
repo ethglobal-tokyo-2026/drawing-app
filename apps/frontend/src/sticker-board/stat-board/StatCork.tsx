@@ -1,5 +1,6 @@
 import {
   createContext,
+  memo,
   useContext,
   useId,
   useImperativeHandle,
@@ -107,8 +108,11 @@ function swing(paper: Element, k: number, delay = 0) {
   );
 }
 
-/** A Sticker Board's back: cork with someone's User Stats pinned on as paper. */
-export function StatCork({
+/**
+ * A Sticker Board's back: cork with someone's User Stats pinned on as paper. Memoized: the board's
+ * turns re-render its stat board, which keeps the cork's props the same while nothing on it changes.
+ */
+export const StatCork = memo(function StatCork({
   figures: f,
   onFlipBack,
   flipBackRef,
@@ -380,4 +384,4 @@ export function StatCork({
       </div>
     </Loading>
   );
-}
+});

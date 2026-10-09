@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { retryPrivySignIn, usePrivyStatus } from "../../identity/privy";
 import { askForSuiWalletAgain, useSuiWalletFailure } from "../../identity/suiWallet";
 
@@ -37,12 +37,16 @@ export function useSuiAddress(): ChainAddress {
   const refused = useSuiWalletFailure() !== undefined;
   const address = privy.state === "signed-in" ? privy.suiWallet : undefined;
   const late = useLate(privy.state === "signed-in" && !address && !refused, "The Sui address");
-  if (privy.state === "failed") return { state: "failed", retry: () => retryPrivySignIn() };
-  if (address) return { state: "ready", address };
-  if (refused) return { state: "failed", retry: askForSuiWalletAgain };
-  // Privy may still answer, and asking it twice at once could make two wallets.
-  if (late) return { state: "failed" };
-  return { state: "loading" };
+  const privyFailed = privy.state === "failed";
+  // One object while nothing changes, so the papers showing it skip the renders of a board's turns.
+  return useMemo((): ChainAddress => {
+    if (privyFailed) return { state: "failed", retry: () => retryPrivySignIn() };
+    if (address) return { state: "ready", address };
+    if (refused) return { state: "failed", retry: askForSuiWalletAgain };
+    // Privy may still answer, and asking it twice at once could make two wallets.
+    if (late) return { state: "failed" };
+    return { state: "loading" };
+  }, [privyFailed, address, refused, late]);
 }
 
 /** 0x3F2a…9c1B: enough of each end to tell two addresses apart. */

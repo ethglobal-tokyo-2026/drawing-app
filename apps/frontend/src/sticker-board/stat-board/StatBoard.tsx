@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState, type Ref } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type Ref } from "react";
 import { logOut } from "../../api/logOut";
 import { useMe } from "../../api/meContext";
 import { useApiQuery } from "../../api/useApiQuery";
@@ -65,55 +65,58 @@ export const StatBoard = memo(function StatBoard({
     shown.current = turned;
   }, [turned, stats]);
 
-  const figures: CorkFigures = {
-    name: me.displayName,
-    handle: account.handle ?? me.displayName,
-    own: true,
-    loading: stats.state === "loading",
-    failure: stats.state === "failed" ? { ...problemOf(stats.error), retry: stats.retry } : null,
-    ...statFigures(stats.state === "ready" ? stats.data : null),
-    since: Date.parse(stats.state === "ready" ? stats.data.since : account.createdAt),
-  };
+  // The cork's props, and the papers pinned to it, stay the same objects while nothing they show
+  // changes, so a turn of the board alone redraws none of them.
+  const loading = stats.state === "loading";
+  const data = stats.state === "ready" ? stats.data : null;
+  const error = stats.state === "failed" ? stats.error : null;
+  const retry = stats.state === "failed" ? stats.retry : null;
+  const figures = useMemo<CorkFigures>(
+    () => ({
+      name: me.displayName,
+      handle: account.handle ?? me.displayName,
+      own: true,
+      loading,
+      failure: error && retry ? { ...problemOf(error), retry } : null,
+      ...statFigures(data),
+      since: Date.parse(data ? data.since : account.createdAt),
+    }),
+    [me.displayName, account.handle, account.createdAt, loading, data, error, retry],
+  );
 
   const [showingGratitude, setShowingGratitude] = useState(false);
+  const showGratitude = useCallback(() => setShowingGratitude(true), []);
   const sui = useSuiAddress();
   const suiPaper = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+  const openAddress = useCallback(() => setOpen(true), []);
   const held = open && sui.state === "ready" ? sui.address : null;
   // The address lost while its dialog is up, as when Privy signs you out, takes the dialog with it for
   // good, so it doesn't reopen by itself when the address comes back.
   if (open && !held) setOpen(false);
+  const lifted = held !== null;
 
-  return (
-    <>
-      <StatCork
-        ref={ref}
-        figures={figures}
-        onFlipBack={onFlipBack}
-        flipBackRef={flipBackRef}
-        onShowGratitude={() => setShowingGratitude(true)}
-        afterFlipBack={
-          // Outside LINE's app it's the only way to switch LINE accounts, so it's never behind the dev flag.
-          !me.inClient && (
-            <LabelButton
-              size="sm"
-              icon={<SignOut />}
-              className="stat-board__logout"
-              onClick={() => void logOut()}
-            >
-              {t(($) => $.stickerBoard.statBoard.logOut)}
-            </LabelButton>
-          )
-        }
-      >
+  const logOutButton = useMemo(
+    () =>
+      // Outside LINE's app it's the only way to switch LINE accounts, so it's never behind the dev flag.
+      !me.inClient && (
+        <LabelButton
+          size="sm"
+          icon={<SignOut />}
+          className="stat-board__logout"
+          onClick={() => void logOut()}
+        >
+          {t(($) => $.stickerBoard.statBoard.logOut)}
+        </LabelButton>
+      ),
+    [me.inClient, t],
+  );
+  const papers = useMemo(
+    () => (
+      <>
         {/* Settings first, since it's the paper people come back to. */}
         <SettingsNote />
-        <AddressPapers
-          sui={sui}
-          lifted={held !== null}
-          paperRef={suiPaper}
-          onOpen={() => setOpen(true)}
-        />
+        <AddressPapers sui={sui} lifted={lifted} paperRef={suiPaper} onOpen={openAddress} />
         {DEV_SLIP && (
           <DeveloperSlip>
             <SendTestMessage senderName={me.displayName} />
@@ -125,6 +128,22 @@ export const StatBoard = memo(function StatBoard({
             <PerformanceRecorderControls />
           </DeveloperSlip>
         )}
+      </>
+    ),
+    [sui, lifted, openAddress, me.displayName, onTryGratitudeMiniGame],
+  );
+
+  return (
+    <>
+      <StatCork
+        ref={ref}
+        figures={figures}
+        onFlipBack={onFlipBack}
+        flipBackRef={flipBackRef}
+        onShowGratitude={showGratitude}
+        afterFlipBack={logOutButton}
+      >
+        {papers}
       </StatCork>
       {/* Beside the cork rather than in it, so its taps and Escape never reach the cork's own. */}
       {held && <AddressDialog address={held} from={suiPaper} onClose={() => setOpen(false)} />}
