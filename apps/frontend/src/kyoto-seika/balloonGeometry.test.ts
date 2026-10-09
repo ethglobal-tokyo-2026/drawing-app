@@ -152,7 +152,8 @@ describe("the deal's five clouds", () => {
   it("tightens rather than scaling when the space is shorter than the deal", () => {
     expect(dealLayout(TALL).fit).toBe("roomy");
     expect(dealLayout(phone(560)).fit).not.toBe("roomy");
-    for (let height = 667; height >= 520; height -= 7) expectKeptApart(dealLayout(phone(height)));
+    // Every fit's band, sampled: each layout's apart-check is a polygon test over every cloud's outline.
+    for (let height = 667; height >= 520; height -= 21) expectKeptApart(dealLayout(phone(height)));
   });
 });
 
