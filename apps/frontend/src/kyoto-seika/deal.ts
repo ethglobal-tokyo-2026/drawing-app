@@ -98,10 +98,6 @@ export function rollDie(list: List, deal: Deal, options: DealOptions): Deal | nu
   return { subjects, picked: deal.picked, rolls: deal.rolls + 1 };
 }
 
-/** The places a roll would deal again: every one not picked. */
-export const unpicked = (deal: Deal) =>
-  deal.subjects.flatMap((_, place) => (deal.picked.includes(place) ? [] : [place]));
-
 /**
  * A tap on the subject at `place`: picked, it's unpicked; otherwise it's picked, unless PICKS are
  * already, when the tap is refused (null).

@@ -7,7 +7,7 @@ import { dieMood } from "./dieMood";
 import "./subject-reroll.css";
 
 /** A wisp of smoke rising and fading on a loop, `at` px across from where it starts and `after` s late. */
-export function Wisp({ d, at, after }: { d: string; at: number; after: number }) {
+function Wisp({ d, at, after }: { d: string; at: number; after: number }) {
   return (
     <svg
       className="smoke-wisp"

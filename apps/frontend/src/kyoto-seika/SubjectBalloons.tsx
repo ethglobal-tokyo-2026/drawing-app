@@ -30,6 +30,7 @@ import {
   driftKeyframes,
   FLOAT,
   ROLL,
+  SPRING,
   BOOM_MS,
   COUNT_MS,
   TEASE_MS,
@@ -216,7 +217,7 @@ function SubjectBalloon({
     words.current?.animate(WORD_STAMP, {
       duration: ARRIVE.wordMs,
       delay: start + ARRIVE.wordAfterMs,
-      easing: EASE_OUT,
+      easing: SPRING,
       fill,
     });
   }, [place, reduced]);
@@ -230,7 +231,7 @@ function SubjectBalloon({
     words.current?.animate(WORD_OUT, { duration: ROLL.wordOutMs, easing: EASE_OUT, fill });
     const swap = setTimeout(() => {
       setShown(subject);
-      words.current?.animate(WORD_IN, { duration: ROLL.wordInMs, easing: EASE_OUT, fill });
+      words.current?.animate(WORD_IN, { duration: ROLL.wordInMs, easing: SPRING, fill });
     }, ROLL.wordOutMs);
     return () => clearTimeout(swap);
   }, [subject, shown, reduced]);

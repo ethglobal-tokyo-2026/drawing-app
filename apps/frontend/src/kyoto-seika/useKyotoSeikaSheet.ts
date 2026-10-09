@@ -92,13 +92,13 @@ export function useKyotoSeikaSheet({ userId, keeper }: Options) {
     else load(sheet);
   };
 
-  /** The die rolls: every subject not picked is dealt again. */
   /** The deal while it waits for Begin, or null before it's dealt and once begun. */
   const waiting = () => {
     const current = part.current;
     return current && !current.begun ? dealOf(current) : null;
   };
 
+  /** The die rolls: every subject not picked is dealt again. */
   const roll = () => {
     const now = waiting();
     if (!subjects.current || !now) return;
