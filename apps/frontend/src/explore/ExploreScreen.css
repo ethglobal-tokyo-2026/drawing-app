@@ -359,3 +359,150 @@
   margin: 0;
   color: var(--graphite);
 }
+
+/* ---------- Large screens ---------- */
+
+/* In one column the search's and the results' boxes step aside, so the field, the view switch and the
+   results stack in Explore's column as the view does. */
+.explore-search,
+.explore-results {
+  display: contents;
+}
+
+/* The search, the view switch, search results and This week keep to a readable width in the middle;
+   the pile runs edge to edge under them, showing more stickers rather than bigger ones. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .explore-search > .artist-search,
+  .explore > .view-switch,
+  .explore-results > .explore-section,
+  .explore-view > .explore-section {
+    width: 100%;
+    max-width: 540px;
+    margin-inline: auto;
+  }
+
+  /* All three boards side by side take the room they need. */
+  .explore-view > .this-week--all {
+    max-width: 1040px;
+  }
+}
+
+/* A large screen's This week: all three boards at once, side by side in one column and stacked in
+   two, each under its name stuck on as its tab's label is. */
+.leaderboard-boards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.leaderboard-board {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.leaderboard-title {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  margin: 0;
+  padding: 0 12px;
+  border-radius: var(--r-label);
+  background: var(--pink);
+  box-shadow: var(--shadow-label);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.leaderboard-title[data-board="longestStreak"] {
+  background: var(--tangerine);
+}
+
+/* Three boards side by side are narrow, so their rows step down a size and tighten. */
+.this-week--compact .artist-row {
+  gap: 6px;
+  min-height: 54px;
+  padding-inline: 8px;
+}
+
+.this-week--compact .rank {
+  width: 14px;
+  font-size: 13px;
+}
+
+.this-week--compact .figure {
+  font-size: 16px;
+}
+
+.this-week--compact .row-names span {
+  font-size: 11px;
+}
+
+/* Two columns, as an iPad's split view: the search runs across the top, the pile (or a search's
+   results) leads, and This week trails it. Each column scrolls on its own, so This week stays in view
+   while the pile pages on. */
+.explore[data-columns="2"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  grid-template-rows: auto minmax(0, 1fr);
+  column-gap: 32px;
+  padding: 0 24px;
+  overflow: hidden;
+}
+
+/* Its inline padding is room for the field's focus ring, which draws 5px outside it. */
+.explore[data-columns="2"] > .explore-search {
+  display: block;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  padding: 16px 6px 0;
+}
+
+.explore[data-columns="2"] > .explore-search > .artist-search {
+  max-width: none;
+  margin: 0;
+}
+
+.explore[data-columns="2"] > :is(.explore-view, .explore-results, .explore-week) {
+  grid-row: 2;
+  min-height: 0;
+  padding: 16px 0 28px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.explore[data-columns="2"] > :is(.explore-view, .explore-results) {
+  grid-column: 1;
+}
+
+.explore[data-columns="2"] > .explore-results {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-inline: 6px;
+}
+
+.explore[data-columns="2"] > .explore-week {
+  grid-column: 2;
+  padding-inline: 6px;
+}
+
+.explore[data-columns="2"] :is(.explore-results, .explore-week) > .explore-section {
+  max-width: none;
+  margin: 0;
+}
+
+.explore[data-columns="2"] .leaderboard-boards {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+}
+
+/* In its column the pile no longer runs under the screen's side padding. */
+.explore[data-columns="2"] .sticker-pile {
+  margin: 0;
+}

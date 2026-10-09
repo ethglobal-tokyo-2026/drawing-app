@@ -14,6 +14,8 @@ import {
   type Box,
   type PileItem,
   type PiledSticker,
+  LARGE_PILE_SCALE,
+  pileFit,
 } from "./pileLayout";
 
 type Point = [number, number];
@@ -249,5 +251,17 @@ describe("tagLines", () => {
     expect(tagLines("@Crit-tap-700-90")).toEqual(["@Crit-tap-700-90"]);
     // Without a break that fills the line well, it breaks between letters instead.
     expect(tagLines("@ab_cdefghijklmnopqrstuvwxyz")).toEqual(["@ab_cdefghijklmn", "opqrstuvwxyz"]);
+  });
+});
+
+describe("pileFit", () => {
+  it("scales a phone's 360-unit pile to its width, and keeps a large screen's scale across more units", () => {
+    for (const px of [375, 390, 430]) {
+      expect(pileFit(px, false)).toEqual({ k: px / PILE_WIDTH, units: PILE_WIDTH });
+    }
+    const [mini, wide] = [pileFit(744, true), pileFit(1180, true)];
+    expect([mini.k, wide.k]).toEqual([LARGE_PILE_SCALE, LARGE_PILE_SCALE]);
+    expect(wide.units).toBeGreaterThan(mini.units);
+    expect(mini.units).toBeGreaterThan(PILE_WIDTH);
   });
 });

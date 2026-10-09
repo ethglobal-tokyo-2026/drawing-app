@@ -42,20 +42,6 @@ export function onLargeScreen() {
 }
 
 /**
- * A stand-in for localStorage that refuses every write, as a full or blocked one does: a test passes
- * it to `vi.stubGlobal("localStorage", …)`, since spying on happy-dom's own can leave it unable to
- * write for later tests.
- */
-export const refusingStorage = {
-  getItem: () => null,
-  removeItem: () => {},
-  clear: () => {},
-  setItem: () => {
-    throw new DOMException("The storage is full", "QuotaExceededError");
-  },
-};
-
-/**
  * ResizeObservers a test reports to, since happy-dom's never call back: `resize(el)` tells each
  * observer watching `el`, and `resize()` every observer watching anything. Gone when the test ends.
  */
@@ -91,6 +77,20 @@ export function stubResizeObservers() {
     },
   };
 }
+
+/**
+ * A stand-in for localStorage that refuses every write, as a full or blocked one does: a test passes
+ * it to `vi.stubGlobal("localStorage", …)`, since spying on happy-dom's own can leave it unable to
+ * write for later tests.
+ */
+export const refusingStorage = {
+  getItem: () => null,
+  removeItem: () => {},
+  clear: () => {},
+  setItem: () => {
+    throw new DOMException("The storage is full", "QuotaExceededError");
+  },
+};
 
 /**
  * A finger on `el`, moved by each of `path`'s offsets in turn, then lifted there; the browser's click

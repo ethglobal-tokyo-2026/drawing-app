@@ -131,13 +131,13 @@ export const explore = {
       },
     },
   },
-  /** The leaderboards' tabs. */
+  /** The leaderboards' names: their tabs on a phone, and the label over each board on an iPad. */
   leaderboards: {
-    /** Explore tab, This week view: the first tab, ranking people by the gratitude they earned this week */
+    /** Explore tab, This week view: the first board, ranking people by the gratitude they earned this week; its tab on a phone, the label over its board on an iPad */
     mostGratitude: { en: "Most gratitude", ja: "感謝の数" },
-    /** Explore tab, This week view: the second tab, ranking people by the most hits in one gratitude combo this week */
+    /** Explore tab, This week view: the second board, ranking people by the most hits in one gratitude combo this week; its tab on a phone, the label over its board on an iPad */
     bestCombo: { en: "Best combo", ja: "最高コンボ" },
-    /** Explore tab, This week view: the third tab, ranking people by their current streak of days sealing a sticker */
+    /** Explore tab, This week view: the third board, ranking people by their current streak of days sealing a sticker; its tab on a phone, the label over its board on an iPad */
     longestStreak: { en: "Streak", ja: "連続日数" },
   },
   /** A leaderboard row's figure. A unit in <small> is set small beside its number. */

@@ -9,6 +9,7 @@ import {
   useState,
   type CSSProperties,
   type ReactNode,
+  type Ref,
 } from "react";
 import { useMe } from "../api/meContext";
 import { useApiQuery, type Query } from "../api/useApiQuery";
@@ -22,10 +23,12 @@ import { useNsfwOptInKey } from "../stickers/nsfw";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
+import { useLargeScreen } from "../ui/largeScreen";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { HitCounter } from "../ui/HitCounter";
+import { useExploreColumns } from "./exploreColumns";
 import { matchIn } from "./handleMatch";
 import { competitionRanks } from "./leaderboardRanks";
 import { LiftedSticker } from "./LiftedSticker";
@@ -34,6 +37,7 @@ import { textWidth } from "./pileLayout";
 import { pileOrigin } from "./pileOrigin";
 import { shownDays, usePilePages } from "./pilePages";
 import { LoadingHeap, StickerPile } from "./StickerPile";
+import { useKeptPlace } from "./useKeptPlace";
 import "./ExploreScreen.css";
 
 interface Props {
@@ -130,13 +134,24 @@ function PersonRow({
   );
 }
 
-function Figure({ board, value }: { board: Leaderboard; value: number }) {
+/** A row's figure; `compact` sets it a size down, for three boards side by side. */
+function Figure({
+  board,
+  value,
+  compact,
+}: {
+  board: Leaderboard;
+  value: number;
+  compact?: boolean;
+}) {
   const { t } = useTranslation();
-  if (board === "bestCombo") return <HitCounter hits={value} size={23} className="figure" />;
+  const mark = compact ? 14 : 17;
+  if (board === "bestCombo")
+    return <HitCounter hits={value} size={compact ? 19 : 23} className="figure" />;
   if (board === "longestStreak")
     return (
       <span className="figure figure--streak">
-        <StreakIcon size={17} />
+        <StreakIcon size={mark} />
         <span aria-hidden="true">
           <Trans
             i18nKey={($) => $.explore.figure.streak}
@@ -151,7 +166,7 @@ function Figure({ board, value }: { board: Leaderboard; value: number }) {
     );
   return (
     <span className="figure figure--gratitude">
-      <GratitudeIcon size={17} />
+      <GratitudeIcon size={mark} />
       <Trans
         i18nKey={($) => $.explore.figure.gratitude}
         values={{ amount: formatCount(value) }}
@@ -315,24 +330,77 @@ function useRowDeal(first: Leaderboard) {
   return { board, shown, select, list };
 }
 
-function ThisWeek({
-  leaderboards,
+/** One board's rows, ranked; a board nobody is on yet says so. */
+function LeaderboardRows({
+  board,
+  rows,
   meId,
   open,
+  listRef,
+  compact,
 }: {
+  board: Leaderboard;
+  rows: LeaderboardRow[];
+  meId: string;
+  open: Open;
+  listRef?: Ref<HTMLOListElement>;
+  compact?: boolean;
+}) {
+  const { t } = useTranslation();
+  const ranks = competitionRanks(rows.map((row) => row.value));
+  return (
+    <ol ref={listRef} className="leaderboard">
+      {rows.length === 0 && (
+        <li className="leaderboard-empty">{t(($) => $.explore.thisWeek.empty[board])}</li>
+      )}
+      {rows.map((row, i) => (
+        <PersonRow
+          key={row.person.id}
+          person={row.person}
+          meId={meId}
+          open={open}
+          lead={
+            <>
+              <span className="rank">{ranks[i]}</span>
+              <Avatar person={row.person} size={compact ? 30 : 40} />
+            </>
+          }
+          trail={<Figure board={board} value={row.value} compact={compact} />}
+        />
+      ))}
+    </ol>
+  );
+}
+
+/**
+ * When the week's boards start over: Tokyo's Monday midnight, in the person's own time, as the tickets'
+ * refill line is. Streaks are counted as they stand, so Streak has no such line.
+ */
+function WeekResets({ weekStart }: { weekStart: string }) {
+  const { t } = useTranslation();
+  const resets = new Date(Date.parse(weekStart) + WEEK_MS);
+  return (
+    <p className="fine muted week-resets">
+      {t(($) => $.explore.thisWeek.resets, {
+        day: formatWeekday(resets),
+        time: formatTimeOfDay(resets),
+      })}
+    </p>
+  );
+}
+
+interface WeekProps {
   leaderboards: Explore["leaderboards"];
   meId: string;
   open: Open;
-}) {
+}
+
+/** A phone's This week: tabs pick one board at a time. */
+function ThisWeekTabs({ leaderboards, meId, open }: WeekProps) {
   const { t } = useTranslation();
   const { board, shown, select, list } = useRowDeal("mostGratitude");
-  const rows: LeaderboardRow[] = leaderboards[shown];
-  const ranks = competitionRanks(rows.map((row) => row.value));
-  // In the person's own time, as the tickets' refill line is, from the week that began in Tokyo.
-  const resets = new Date(Date.parse(leaderboards.weekStart) + WEEK_MS);
-
   return (
-    <section className={`${REVEAL} explore-section`}>
+    <section className={`${REVEAL} explore-section this-week`}>
       <h2 className="visually-hidden">{t(($) => $.explore.thisWeek.title)}</h2>
       <SlidingTabs
         tabs={LEADERBOARDS}
@@ -344,36 +412,48 @@ function ThisWeek({
         className="leaderboard-tabs"
       />
       <div role="tabpanel" id="leaderboard-panel" aria-labelledby={`leaderboard-${board}`}>
-        <ol ref={list} className="leaderboard">
-          {rows.length === 0 && (
-            <li className="leaderboard-empty">{t(($) => $.explore.thisWeek.empty[shown])}</li>
-          )}
-          {rows.map((row, i) => (
-            <PersonRow
-              key={row.person.id}
-              person={row.person}
+        <LeaderboardRows
+          board={shown}
+          rows={leaderboards[shown]}
+          meId={meId}
+          open={open}
+          listRef={list}
+        />
+      </div>
+      {shown !== "longestStreak" && <WeekResets weekStart={leaderboards.weekStart} />}
+    </section>
+  );
+}
+
+/**
+ * A large screen's This week: all three boards at once, each under its name, with no tabs. Side by
+ * side (`compact`) their rows step down a size to keep handles on one line.
+ */
+function ThisWeekAll({ leaderboards, meId, open, compact }: WeekProps & { compact: boolean }) {
+  const { t } = useTranslation();
+  const id = useId();
+  return (
+    <section
+      className={`${REVEAL} explore-section this-week this-week--all${compact ? " this-week--compact" : ""}`}
+    >
+      <h2 className="visually-hidden">{t(($) => $.explore.thisWeek.title)}</h2>
+      <div className="leaderboard-boards">
+        {LEADERBOARDS.map((board) => (
+          <section key={board} className="leaderboard-board" aria-labelledby={`${id}-${board}`}>
+            <h3 className="leaderboard-title" data-board={board} id={`${id}-${board}`}>
+              {t(($) => $.explore.leaderboards[board])}
+            </h3>
+            <LeaderboardRows
+              board={board}
+              rows={leaderboards[board]}
               meId={meId}
               open={open}
-              lead={
-                <>
-                  <span className="rank">{ranks[i]}</span>
-                  <Avatar person={row.person} size={40} />
-                </>
-              }
-              trail={<Figure board={shown} value={row.value} />}
+              compact={compact}
             />
-          ))}
-        </ol>
+            {board !== "longestStreak" && <WeekResets weekStart={leaderboards.weekStart} />}
+          </section>
+        ))}
       </div>
-      {/* Streaks are counted as they stand, so they don't start over with the week. */}
-      {shown !== "longestStreak" && (
-        <p className="fine muted week-resets">
-          {t(($) => $.explore.thisWeek.resets, {
-            day: formatWeekday(resets),
-            time: formatTimeOfDay(resets),
-          })}
-        </p>
-      )}
     </section>
   );
 }
@@ -404,29 +484,43 @@ function LoadingStatus() {
   );
 }
 
-/** This week in outline while it loads. */
-function ThisWeekLoading() {
+/** This week in outline while it loads: the tabs on a phone, all three boards on a large screen. */
+function ThisWeekLoading({ all }: { all: boolean }) {
   const { t } = useTranslation();
-  return (
-    <>
-      <LoadingStatus />
-      <section className="explore-section" aria-hidden="true">
-        <div
-          className="sliding-tabs leaderboard-tabs"
-          style={{ "--i": 0, "--n": 3 } as CSSProperties}
-        >
-          <span className="sliding-tabs__label" />
-          {LEADERBOARDS.map((b, i) => (
-            <button key={b} type="button" className={i === 0 ? "selected" : ""} disabled>
-              {t(($) => $.explore.leaderboards[b])}
-            </button>
+  if (all)
+    return (
+      <section className="explore-section this-week this-week--all" aria-hidden="true">
+        <div className="leaderboard-boards">
+          {LEADERBOARDS.map((board) => (
+            <div key={board} className="leaderboard-board">
+              <span className="leaderboard-title" data-board={board}>
+                {t(($) => $.explore.leaderboards[board])}
+              </span>
+              <ol className="leaderboard">
+                <PersonRowsLoading rows={3} ranked />
+              </ol>
+            </div>
           ))}
         </div>
-        <ol className="leaderboard">
-          <PersonRowsLoading rows={3} ranked />
-        </ol>
       </section>
-    </>
+    );
+  return (
+    <section className="explore-section this-week" aria-hidden="true">
+      <div
+        className="sliding-tabs leaderboard-tabs"
+        style={{ "--i": 0, "--n": 3 } as CSSProperties}
+      >
+        <span className="sliding-tabs__label" />
+        {LEADERBOARDS.map((b, i) => (
+          <button key={b} type="button" className={i === 0 ? "selected" : ""} disabled>
+            {t(($) => $.explore.leaderboards[b])}
+          </button>
+        ))}
+      </div>
+      <ol className="leaderboard">
+        <PersonRowsLoading rows={3} ranked />
+      </ol>
+    </section>
   );
 }
 
@@ -435,17 +529,14 @@ function PileLoading() {
   const { t } = useTranslation();
   const [date] = useState(() => dayBadge(ticketDayNumber(Date.now())));
   return (
-    <>
-      <LoadingStatus />
-      <div className="sticker-pile" aria-hidden="true">
-        <div className="pile-day__edge">
-          <span className="pile-day__badge is-today">
-            {t(($) => $.explore.pile.todayBadge, { date })}
-          </span>
-        </div>
-        <LoadingHeap />
+    <div className="sticker-pile" aria-hidden="true">
+      <div className="pile-day__edge">
+        <span className="pile-day__badge is-today">
+          {t(($) => $.explore.pile.todayBadge, { date })}
+        </span>
       </div>
-    </>
+      <LoadingHeap />
+    </div>
   );
 }
 
@@ -618,80 +709,116 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
   const explore = useApiQuery(useNsfwOptInKey("explore"), (api) => api.explore());
   const open: Open = (person) => (person.id === me.id ? onOpenMyBoard() : onOpenArtist(person));
 
-  const shown =
-    explore.state === "failed" ? (
-      <Failed said={(reason) => t(($) => $.explore.failed.explore, { reason })} query={explore} />
-    ) : view === "stickers" ? (
-      explore.state === "ready" ? (
-        <Stickers explore={explore.data} meId={me.id} open={open} />
-      ) : (
-        <PileLoading />
-      )
-    ) : explore.state === "ready" ? (
-      <ThisWeek leaderboards={explore.data.leaderboards} meId={me.id} open={open} />
+  const scroller = useRef<HTMLDivElement>(null);
+  const columns = useExploreColumns(scroller);
+  useKeptPlace(scroller, columns);
+  const large = useLargeScreen();
+
+  // Beside each other both show; otherwise the switch picks one.
+  const showsPile = columns === 2 || view === "stickers";
+  const showsWeek = columns === 2 || view === "thisWeek";
+  const week = !showsWeek ? null : explore.state === "ready" ? (
+    large ? (
+      <ThisWeekAll
+        leaderboards={explore.data.leaderboards}
+        meId={me.id}
+        open={open}
+        compact={columns === 1}
+      />
     ) : (
-      <ThisWeekLoading />
-    );
+      <ThisWeekTabs leaderboards={explore.data.leaderboards} meId={me.id} open={open} />
+    )
+  ) : explore.state === "loading" ? (
+    <ThisWeekLoading all={large} />
+  ) : null;
+  const pile = !showsPile ? null : explore.state === "ready" ? (
+    <Stickers explore={explore.data} meId={me.id} open={open} />
+  ) : explore.state === "loading" ? (
+    <PileLoading />
+  ) : null;
+  // With no switch there's no tab panel either.
+  const panel =
+    columns === 1
+      ? { role: "tabpanel", id: "explore-view-panel", "aria-labelledby": `explore-view-${view}` }
+      : {};
 
   return (
-    <div className="explore">
-      <label className="text-field artist-search">
-        <At size={20} aria-hidden />
-        <input
-          ref={field}
-          type="search"
-          placeholder={t(($) => $.explore.search.placeholder)}
-          aria-label={t(($) => $.explore.search.label)}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-        />
-        {query && (
-          <button
-            type="button"
-            className="search-clear"
-            aria-label={t(($) => $.explore.search.clear)}
-            onClick={() => {
-              setQuery("");
-              // The button goes with the query, so focus moves to where a new search starts.
-              field.current?.focus();
-            }}
-          >
-            <X size={16} aria-hidden />
-          </button>
-        )}
-      </label>
-      <p className="visually-hidden" role="status">
-        {searchStatus}
-      </p>
-
-      {q ? (
-        searched && (
-          <SearchResults query={searched} meId={me.id} open={open} announce={setSearchStatus} />
-        )
-      ) : (
-        <>
-          <SlidingTabs
-            tabs={VIEWS}
-            value={view}
-            onChange={setView}
-            label={t(($) => $.explore.views.label)}
-            labelOf={(v) => t(($) => $.explore.views[v])}
-            id="explore-view"
-            className="view-switch"
+    <div ref={scroller} className="explore" data-columns={columns}>
+      {/* The search runs across the top: over the view switch in one column, over the pile and This
+          week in two. */}
+      <div className="explore-search">
+        <label className="text-field artist-search">
+          <At size={20} aria-hidden />
+          <input
+            ref={field}
+            type="search"
+            placeholder={t(($) => $.explore.search.placeholder)}
+            aria-label={t(($) => $.explore.search.label)}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
           />
-          <div
-            className="explore-view"
-            role="tabpanel"
-            id="explore-view-panel"
-            aria-labelledby={`explore-view-${view}`}
-          >
-            {shown}
-          </div>
-        </>
+          {query && (
+            <button
+              type="button"
+              className="search-clear"
+              aria-label={t(($) => $.explore.search.clear)}
+              onClick={() => {
+                setQuery("");
+                // The button goes with the query, so focus moves to where a new search starts.
+                field.current?.focus();
+              }}
+            >
+              <X size={16} aria-hidden />
+            </button>
+          )}
+        </label>
+        <p className="visually-hidden" role="status">
+          {searchStatus}
+        </p>
+      </div>
+      {columns === 1 && !q && (
+        <SlidingTabs
+          tabs={VIEWS}
+          value={view}
+          onChange={setView}
+          label={t(($) => $.explore.views.label)}
+          labelOf={(v) => t(($) => $.explore.views[v])}
+          id="explore-view"
+          className="view-switch"
+        />
       )}
+      {/* A search's results take the whole screen in one column, and the pile's column in two, with
+          This week staying beside them. */}
+      {q ? (
+        <div className="explore-results">
+          {searched ? (
+            <SearchResults query={searched} meId={me.id} open={open} announce={setSearchStatus} />
+          ) : null}
+        </div>
+      ) : null}
+      {/* The pile keeps its place here in either layout, so a turn or a search never remounts it or
+          the pages it has loaded; in two columns a search only hides it. */}
+      {!(q && columns === 1) && (
+        <div className="explore-view" hidden={columns === 2 && q !== ""} {...panel}>
+          {/* One loading line for the view, however many columns it shows. */}
+          {explore.state === "loading" && <LoadingStatus />}
+          {explore.state === "failed" ? (
+            <Failed
+              said={(reason) => t(($) => $.explore.failed.explore, { reason })}
+              query={explore}
+            />
+          ) : (
+            <>
+              {columns === 1 && week}
+              {pile}
+            </>
+          )}
+        </div>
+      )}
+      {columns === 2 && <div className="explore-week">{week}</div>}
     </div>
   );
 }

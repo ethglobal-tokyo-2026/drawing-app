@@ -6,6 +6,8 @@ import { ApiError, type ApiClient } from "../api/apiClient";
 import { people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { i18next } from "../i18n/i18n";
+import { onLargeScreen, stubResizeObservers } from "../ui/testing";
+import { TWO_COLUMNS_MIN_WIDTH } from "./exploreColumns";
 import { ExploreScreen } from "./ExploreScreen";
 
 // 21:00 on 9.26 in Tokyo.
@@ -504,5 +506,103 @@ describe("ExploreScreen's search", () => {
 
     expect(host.querySelector(".search-clear")).toBeNull();
     expect(document.activeElement).toBe(host.querySelector('input[type="search"]'));
+  });
+});
+
+describe("ExploreScreen on an iPad", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** An iPad held sideways with just room for the split view, and the same iPad upright. */
+  const SIDEWAYS = {
+    width: TWO_COLUMNS_MIN_WIDTH,
+    height: Math.round(TWO_COLUMNS_MIN_WIDTH * 0.7),
+  };
+  const UPRIGHT = { width: SIDEWAYS.height, height: SIDEWAYS.width };
+
+  /** A large screen whose every box measures `size`; `turn()` swaps its sides, as turning the iPad does. */
+  function onIpad(size: { width: number; height: number }) {
+    onLargeScreen();
+    const resizes = stubResizeObservers();
+    const box = { ...size };
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => box.width);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(() => box.height);
+    return {
+      turn() {
+        [box.width, box.height] = [box.height, box.width];
+        act(() => resizes.resize());
+      },
+    };
+  }
+
+  const BOARDS: Partial<Explore["leaderboards"]> = {
+    mostGratitude: [{ person: people.mika, value: 1234 }],
+    bestCombo: [{ person: people.ken, value: 64 }],
+    longestStreak: [{ person: people.bob, value: 3 }],
+  };
+
+  /** Explore on today's sticker and every board, with an older page loaded: its pile as laid out. */
+  async function withOlderPage() {
+    const older = { stickers: unGiven(sticker({ sealedAt: minutesAgo(50 * 60) })), before: null };
+    const explorePile = vi.fn<ApiClient["explorePile"]>(() => Promise.resolve(older));
+    const first = exploreWith(unGiven(sticker({ sealedAt: minutesAgo(5) })), BOARDS, CURSOR);
+    const host = await openExplore(first, { explorePile });
+    await reachEnd();
+    return { host, explorePile, layers: layersOf(host) };
+  }
+
+  const childClasses = (host: HTMLElement) =>
+    [...(host.querySelector(".explore")?.children ?? [])].map((child) => child.className);
+
+  /** Each board This week shows: its name, then the handles on it. */
+  const boardsShown = (root: Element | null) =>
+    [...(root?.querySelectorAll(".leaderboard-board") ?? [])].map((board) => [
+      board.querySelector(".leaderboard-title")?.textContent,
+      ...[...board.querySelectorAll(".row-names b")].map((name) => name.textContent),
+    ]);
+
+  it("splits sideways: the search across the top, then the pile, then This week, in reading order", async () => {
+    onIpad(SIDEWAYS);
+    const { host } = await withOlderPage();
+    expect(host.querySelector(".view-switch")).toBeNull();
+    expect(childClasses(host)).toEqual(["explore-search", "explore-view", "explore-week"]);
+    expect(boardsShown(host.querySelector(".explore-week"))).toHaveLength(3);
+  });
+
+  it("shows This week's three boards at once upright, each under its name, with no tabs", async () => {
+    onIpad(UPRIGHT);
+    const host = await openExplore(exploreWith([], BOARDS));
+    act(() => tab(host, "This week").click());
+    expect(boardsShown(host)).toEqual([
+      ["Most gratitude", "@mika"],
+      ["Best combo", "@ken"],
+      ["Streak", "@bob"],
+    ]);
+    expect(host.querySelector(".leaderboard-tabs")).toBeNull();
+  });
+
+  it("puts a search's results in the pile's column, with This week beside them and the pile's pages kept", async () => {
+    onIpad(SIDEWAYS);
+    const { host, explorePile, layers } = await withOlderPage();
+    await searchFor(host, "mi");
+    expect(textsOf(host, ".explore-results .row-names b")).toEqual(["@mika"]);
+    expect(host.querySelector<HTMLElement>(".explore-view")?.hidden).toBe(true);
+    expect(host.querySelector(".explore-week .this-week")).not.toBeNull();
+
+    await searchFor(host, "");
+    expect(host.querySelector<HTMLElement>(".explore-view")?.hidden).toBe(false);
+    expect(layersOf(host)).toEqual(layers);
+    expect(explorePile).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the pile and the pages it loaded through a turn", async () => {
+    const ipad = onIpad(UPRIGHT);
+    const { host, explorePile, layers } = await withOlderPage();
+    expect(host.querySelector(".explore-week")).toBeNull();
+    ipad.turn();
+    expect(host.querySelector(".explore-week")).not.toBeNull();
+    expect(layersOf(host)).toEqual(layers);
+    expect(explorePile).toHaveBeenCalledTimes(1);
   });
 });

@@ -26,11 +26,13 @@ import { EASE_PEEL } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
 import { REVEAL, revealOnLoad } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
+import { useLargeScreen } from "../ui/largeScreen";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { dayBadge, dayKey, spokenDay, type PileDay } from "./pileDays";
 import type { PileEnd } from "./pilePages";
 import {
   PILE_WIDTH,
+  pileFit,
   pileStickers,
   tagGroup,
   type PiledSticker,
@@ -100,7 +102,12 @@ function toLabel(template: string, handle: string) {
 }
 
 /** Each day's heap, laid out once per payload and language. */
-function layDays(days: readonly PileDay[], today: number, toTemplate: string): LaidDay[] {
+function layDays(
+  days: readonly PileDay[],
+  today: number,
+  toTemplate: string,
+  units: number,
+): LaidDay[] {
   // Today's floor shows even before anyone seals.
   const withToday = days[0]?.day === today ? days : [{ day: today, stickers: [] }, ...days];
   return withToday.map(({ day, stickers }) => {
@@ -118,7 +125,7 @@ function layDays(days: readonly PileDay[], today: number, toTemplate: string): L
       const tags = tagGroup(name, givenTo === null ? null : toLabel(toTemplate, givenTo));
       return { id: sticker.id, shape, tag: tags, tags, pile, name, givenTo };
     });
-    const layer = pileStickers(items, { seed: dayKey(day) });
+    const layer = pileStickers(items, { seed: dayKey(day), width: units });
     const laid = layer.items.map((spot, i) => ({ ...items[i], spot })).reverse();
     const height = stickers.length ? HEADROOM - layer.top : EMPTY_HEAP;
     return { day, laid, height };
@@ -496,7 +503,13 @@ export function StickerPile({ days, today, end, onReachEnd, meId, onLift }: Prop
   const floor = useRef<HTMLDivElement>(null);
   const [now] = useState(() => Date.now());
   const toTemplate = t(($) => $.explore.pile.to);
-  const laidDays = useMemo(() => layDays(days, today, toTemplate), [days, today, toTemplate]);
+  const large = useLargeScreen();
+  /** The pile's width in units, from pileFit. */
+  const [units, setUnits] = useState(PILE_WIDTH);
+  const laidDays = useMemo(
+    () => layDays(days, today, toTemplate, units),
+    [days, today, toTemplate, units],
+  );
   // Read once as the pile opens: the last look, what's new since, and what falls.
   const [seen] = useState(() => lastSeen(meId));
   const [arrivals] = useState(() => arrivalsOf(days, today, seen));
@@ -529,16 +542,21 @@ export function StickerPile({ days, today, end, onReachEnd, meId, onLift }: Prop
 
   useNearEnd(floor, end.state === "more" || end.state === "loading", laidDays, onReachEnd);
 
-  // The pile is PILE_WIDTH units across whatever the phone; this scales every unit to it.
+  // A phone's pile is PILE_WIDTH units across, scaled to its width; a large screen's keeps about a
+  // phone's scale and spans as many units as fit.
   useLayoutEffect(() => {
     const pile = root.current;
     if (!pile) return;
-    const scale = () => pile.style.setProperty("--k", String(pile.clientWidth / PILE_WIDTH));
-    scale();
-    const resized = new ResizeObserver(scale);
+    const fit = () => {
+      const { k, units } = pileFit(pile.clientWidth, large);
+      pile.style.setProperty("--k", String(k));
+      setUnits(units);
+    };
+    fit();
+    const resized = new ResizeObserver(fit);
     resized.observe(pile);
     return () => resized.disconnect();
-  }, []);
+  }, [large]);
 
   useFallIn(
     root,
