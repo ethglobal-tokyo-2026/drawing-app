@@ -220,7 +220,7 @@ describe("ArtistBoard's Give key", () => {
 
   it("gets focus back when the give sheet closes", async () => {
     const give = await tapGive();
-    tap(".giving__icon-btn");
+    tap(".perf");
     expect(document.querySelector(".board-sheet-layer")).toBeNull();
     expect(document.activeElement).toBe(give);
   });
@@ -228,9 +228,9 @@ describe("ArtistBoard's Give key", () => {
   it("gets focus back after backing out of the gift bag to the give sheet, and closing that", async () => {
     const give = await tapGive();
     await giveYourSticker();
-    tap(".giving__icon-btn");
+    tap(".perf");
     expect(document.querySelector(".board-sheet-layer")).not.toBeNull();
-    tap(".giving__icon-btn");
+    tap(".perf");
     expect(document.querySelector(".board-sheet-layer")).toBeNull();
     expect(document.activeElement).toBe(give);
   });

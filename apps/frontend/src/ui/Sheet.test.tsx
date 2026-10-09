@@ -2,6 +2,7 @@
 import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LARGE_SCREEN } from "./largeScreen";
 import { Sheet } from "./Sheet";
 import { dragBy } from "./testing";
 import { DISMISS_PX } from "./useSheetDrag";
@@ -60,9 +61,22 @@ afterEach(() => {
   host.remove();
   opener.remove();
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("Sheet", () => {
+  it("draws an X that closes a card on a large screen, and none on a card that can't close", () => {
+    const matchMedia = window.matchMedia.bind(window);
+    vi.spyOn(window, "matchMedia").mockImplementation((query) =>
+      matchMedia(query === LARGE_SCREEN ? "all" : query),
+    );
+    render(true, { card: true });
+    act(() => host.querySelector<HTMLElement>(".sheet-x")?.click());
+    expect(onClose).toHaveBeenCalledTimes(1);
+    render(true, { card: true, closable: false });
+    expect(host.querySelector(".sheet-x")).toBeNull();
+  });
+
   it("slides a closing sheet away before it goes", () => {
     render(true);
     render(false);

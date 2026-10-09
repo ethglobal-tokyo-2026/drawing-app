@@ -30,8 +30,6 @@ export const giving = {
   },
   /** Giving's first screen: the sheet's title ("Give No.0147"); and the give sheet's key once a sticker is picked */
   give: { en: "Give {{no}}", ja: "{{no}}を贈る" },
-  /** Giving's first screen and the give sheet: the X button's name for assistive tech */
-  close: { en: "Close", ja: "閉じる" },
   /** Giving from someone else's sticker board: picking one of yours first. */
   giveSheet: {
     /** The give sheet, opened by Give on someone else's sticker board: its title */

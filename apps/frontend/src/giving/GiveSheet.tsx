@@ -1,4 +1,4 @@
-import { GiveIcon, X } from "../icons";
+import { GiveIcon } from "../icons";
 import { Suspense, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMe } from "../api/meContext";
@@ -85,14 +85,6 @@ export function GiveSheet({ to, toId, toNsfwOptIn, onClose, returnFocus }: Props
         head={
           <header className="giving__head">
             <h2 className="giving__title">{keepNameWhole(title, name)}</h2>
-            <button
-              type="button"
-              className="giving__icon-btn"
-              onClick={onClose}
-              aria-label={t(($) => $.giving.close)}
-            >
-              <X size={20} />
-            </button>
           </header>
         }
       >

@@ -97,7 +97,7 @@
 
 /* One card rule for a large screen (Sheet's `card`): in the middle of its layer at a phone's width,
    by layout alone, as the Sealed card is, and no taller than the layer, its body scrolling. No tear
-   strip: the perforation stays for keyboards and screen readers, and a swipe down the head closes it. */
+   strip: Sheet draws an X in its corner instead, and a swipe down the head closes it. */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
   .bottom-sheet.sheet-card {
     --sheet-foot-inset: 0px;
@@ -118,5 +118,46 @@
     height: 1px;
     overflow: hidden;
     clip-path: inset(50%);
+  }
+
+  /* The card's X: a flat Liner Lift disc in its top corner, with a thumb's reach. */
+  .sheet-x {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    appearance: none;
+    background: var(--liner-lift);
+    box-shadow:
+      0 0 0 0.5px rgba(28, 24, 36, 0.26),
+      1px 2px 3px rgba(28, 24, 36, 0.18);
+    color: var(--ink);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sheet-x::before {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    border-radius: 50%;
+  }
+
+  .sheet-x:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  /* The head's last words stay clear of the X. */
+  .sheet-x ~ .bottom-sheet__head {
+    padding-right: 24px;
   }
 }

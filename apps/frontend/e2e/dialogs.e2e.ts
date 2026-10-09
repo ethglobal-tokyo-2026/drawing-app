@@ -70,7 +70,10 @@ test.describe("On an iPad", () => {
     const group = await restingBox(page.locator(".giving__sticker"));
     const view = page.viewportSize()?.height ?? 0;
     expect(Math.abs((group.y + cardBox.y + cardBox.height) / 2 - view / 2)).toBeLessThanOrEqual(2);
-    await card.getByRole("button", { name: say(giving.close, language), exact: true }).tap();
+    const label = say(giving.give, language, { no });
+    await card
+      .getByRole("button", { name: say(ui.sheet.close, language, { label }), exact: true })
+      .tap();
     await expect(card).toBeHidden();
   });
 

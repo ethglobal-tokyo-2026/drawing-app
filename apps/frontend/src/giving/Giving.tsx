@@ -4,7 +4,7 @@ import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import type { Problem } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
-import { ArrowUUpLeft, PaperPlaneTilt, Question, StickerBoardIcon, X } from "../icons";
+import { ArrowUUpLeft, PaperPlaneTilt, Question, StickerBoardIcon } from "../icons";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { Handle } from "../stickers/Handle";
@@ -201,19 +201,7 @@ export function Giving({
     content = <CantFindThem />;
   } else if (state.step === "sheet") {
     title = t(($) => $.giving.give, { no: formatNo(sticker.no) });
-    head = (
-      <header key={view} className={`giving__head ${slide ?? ""}`}>
-        <h2 className="giving__title">{title}</h2>
-        <button
-          type="button"
-          className="giving__icon-btn"
-          onClick={close}
-          aria-label={t(($) => $.giving.close)}
-        >
-          <X size={20} />
-        </button>
-      </header>
-    );
+    head = titleHead(title);
     content = (
       <>
         <div className="giving__acts">

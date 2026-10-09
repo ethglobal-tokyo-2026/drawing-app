@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode, type RefObject } from "react";
+import { X } from "../icons";
 import { useTranslation } from "../i18n/react";
 import { useLargeScreen } from "./largeScreen";
 import { useBackToClose } from "./useBackToClose";
@@ -15,7 +16,7 @@ interface Props {
    * unmounts it leaves this out and simply goes.
    */
   open?: boolean;
-  /** What the perforation, Escape and Back do. */
+  /** What the perforation (a card's X on a large screen), Escape and Back do. */
   onClose: () => void;
   /** Escape's own answer, where it steps back inside the sheet before it closes it. */
   onEscape?: () => void;
@@ -38,7 +39,10 @@ interface Props {
    * does, for a sheet that shows there as a card without its tear strip.
    */
   head?: ReactNode;
-  /** On a large screen it shows as a card in the middle of its layer (sheet.css's `.sheet-card`). */
+  /**
+   * On a large screen it shows as a card in the middle of its layer (sheet.css's `.sheet-card`), with
+   * an X in its corner while it can close.
+   */
   card?: boolean;
   className?: string;
   children: ReactNode;
@@ -108,7 +112,18 @@ export function Sheet({
         if (leaving && e.target === e.currentTarget) setShown(false);
       }}
     >
-      {closable ? (
+      {closable && card && large ? (
+        // A card has no tear strip to tap, so its X takes the perforation's place.
+        <button
+          type="button"
+          className="sheet-x"
+          aria-label={t(($) => $.ui.sheet.close, { label })}
+          aria-disabled={busy || undefined}
+          onClick={close}
+        >
+          <X size={16} />
+        </button>
+      ) : closable ? (
         <button
           type="button"
           className="perf"
