@@ -58,6 +58,26 @@ describe("KyotoSeikaHelp", () => {
     expect(dialog()).toBeNull();
   });
 
+  it("keeps its taps and Escape from what it's in, as the stat board's cork, and Escape closes it", () => {
+    // The cork's own Escape stops there, and flips the board back.
+    const cork = vi.fn((e: { stopPropagation: () => void }) => e.stopPropagation());
+    act(() =>
+      root.render(
+        <div onClick={cork} onKeyDown={cork}>
+          <KyotoSeikaHelp open onClose={onClose} />
+        </div>,
+      ),
+    );
+    const perf = host.querySelector(".perf");
+    act(
+      () =>
+        void perf?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })),
+    );
+    act(() => host.querySelector<HTMLElement>(".kyoto-seika-help__lead")?.click());
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(cork).not.toHaveBeenCalled();
+  });
+
   it("shows the mode's clock and daily tickets, in its panels and their captions", () => {
     render(true);
     const minutes = KYOTO_SEIKA_TIME_USED_S / 60;

@@ -132,7 +132,18 @@ export function KyotoSeikaHelp({ open, onClose }: { open: boolean; onClose: () =
   const [phone] = useState(() => document.querySelector<HTMLElement>(".phone"));
   const layer = useRef<HTMLDivElement>(null);
   const sheet = (
-    <div ref={layer} className={`kyoto-seika-help-layer${open ? " is-open" : ""}`}>
+    // Its taps and Escape stop here: from inside the stat board's cork, React would pass them on to
+    // the cork's own, which flip the board back, and Escape would never reach the sheet's.
+    <div
+      ref={layer}
+      className={`kyoto-seika-help-layer${open ? " is-open" : ""}`}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (e.key !== "Escape") return;
+        e.stopPropagation();
+        onClose();
+      }}
+    >
       <div className="kyoto-seika-help__scrim" onClick={onClose} />
       <Sheet
         label={t(($) => $.stickerBoard.settings.kyotoSeika.spokenName)}
