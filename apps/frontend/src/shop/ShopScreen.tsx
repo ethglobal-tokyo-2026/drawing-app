@@ -1,6 +1,5 @@
 import { useId, type ReactNode } from "react";
 import { useTranslation } from "../i18n/react";
-import { useLight } from "../stickers/light";
 import { Skeleton } from "../ui/Skeleton";
 import { BrushStrokeSample } from "./BrushStrokeSample";
 import type { BrushKind } from "./brushSamples";
@@ -26,7 +25,6 @@ export function ShopScreen({ onBuyReserveTickets }: { onBuyReserveTickets: () =>
   const { t } = useTranslation();
   const soonId = useId();
   const sticker = useShopSticker();
-  useLight(sticker !== null);
 
   // Until your sticker is in, its swatches stay in outline, so no stand-in shows first.
   const onSticker = (preview: (s: ShopSticker) => ReactNode) =>

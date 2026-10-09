@@ -347,11 +347,62 @@
   image-rendering: pixelated;
 }
 
+/* The Shop's own light, which every preview takes in place of the app's one light: a swatch is too
+   small to tilt, so the light circles it slowly, leaning top left like the house light. Registered so
+   it glides; at rest, as under reduced motion, it's top left, where the app's light rests too. */
+@property --finish-lx {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: -0.6;
+}
+
+@property --finish-ly {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: -0.6;
+}
+
 .finish-preview {
   display: grid;
   place-items: center;
   width: 100%;
   height: 100%;
+  /* Each axis swings and back on a sine's ease, a quarter turn apart, so the light rides an ellipse. */
+  animation:
+    finish-light-x 5s cubic-bezier(0.37, 0, 0.63, 1) infinite alternate,
+    finish-light-y 5s cubic-bezier(0.37, 0, 0.63, 1) -2.5s infinite alternate;
+}
+
+/* Important, since the app's light writes its own on each resin and foil inline. */
+.finish-preview :is(.live-resin, .sticker-foil, .laminate-haze) {
+  --lx: var(--finish-lx) !important;
+  --ly: var(--finish-ly) !important;
+}
+
+/* The light moves every frame, so nothing glides after it. */
+.finish-preview .live-resin > i > b,
+.finish-preview .sticker-foil__glint::before {
+  transition: none;
+}
+
+@keyframes finish-light-x {
+  from {
+    --finish-lx: -0.9;
+  }
+
+  to {
+    --finish-lx: 0.7;
+  }
+}
+
+@keyframes finish-light-y {
+  from {
+    --finish-ly: -0.85;
+  }
+
+  to {
+    --finish-ly: 0.45;
+  }
 }
 
 /* The sticker at the house tilt, as if one hand stuck it on. */
@@ -361,7 +412,8 @@
   rotate: var(--tilt);
 }
 
-/* Matte: no live resin, and a fine white haze over the print that flattens its gloss. */
+/* Matte: no live resin, and a fine white haze over the print that flattens its gloss. Its light is a
+   broad, dim bloom, as a matte film scatters it. */
 .laminate--matte .live-resin {
   display: none;
 }
@@ -377,8 +429,16 @@
   -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
   mask: var(--m) 0 0 / 100% 100% no-repeat;
   background-color: rgba(255, 255, 255, 0.2);
-  background-image: var(--liner-grain);
-  background-size: 90px 90px;
+  background-image:
+    radial-gradient(
+      75% 65% at calc(50% + var(--lx, -0.6) * 42%) calc(50% + var(--ly, -0.6) * 42%),
+      rgba(255, 255, 255, 0.36),
+      rgba(255, 255, 255, 0) 72%
+    ),
+    var(--liner-grain);
+  background-size:
+    100% 100%,
+    90px 90px;
 }
 
 /* A film blends on its outer span, never on the masked layer inside it: WebKit composites that layer
@@ -416,7 +476,6 @@
     rgba(0, 0, 0, 0.35) 62%
   );
   translate: calc(var(--lx, 0) * 4%) calc(var(--ly, 0) * 4%);
-  transition: translate 280ms var(--ease-out);
 }
 
 /* Prism: facets of the foil's colors over the print, turning a little with the light. */
@@ -440,9 +499,6 @@
   );
   translate: calc(var(--lx, 0) * 10%) calc(var(--ly, 0) * 10%);
   rotate: calc(var(--lx, 0) * 10deg);
-  transition:
-    translate 280ms var(--ease-out),
-    rotate 280ms var(--ease-out);
 }
 
 /* Backing foils: the foil's six bands in metal. Holo is the foil as it is. */
@@ -473,8 +529,9 @@
   --foil-lilac: var(--foil-rose-gold-6);
 }
 
+/* A still frame, lit from the top left. */
 @media (prefers-reduced-motion: reduce) {
-  .laminate-film > i > b {
-    transition: none;
+  .finish-preview {
+    animation: none;
   }
 }
