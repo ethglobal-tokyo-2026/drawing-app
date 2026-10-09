@@ -23,7 +23,7 @@
 
 /* Stuck to a board, a sticker sits close to it. Its image shows only inside its cut, leaving out the
    cast baked round it, and a still copy of its silhouette casts the kiss-cut and the board's short
-   cast, as a foil band does. Its resin's highlights are fainter, so the laminate reads thin. */
+   cast, as a foil band does. */
 .sticker-figure.is-stuck .sticker-figure__img {
   -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
   mask: var(--m) 0 0 / 100% 100% no-repeat;
@@ -48,18 +48,6 @@
 
 .sticker-figure.is-stuck .sticker-foil__cast {
   filter: var(--sticker-cut) var(--sticker-cast-board);
-}
-
-.sticker-figure.is-stuck .live-resin__lens {
-  opacity: 0.6;
-}
-
-.sticker-figure.is-stuck .live-resin__spec {
-  opacity: 0.6;
-}
-
-.sticker-figure.is-stuck .live-resin__rim {
-  opacity: 0.5;
 }
 
 /* The gloss sweep that presses a sticker flat when it sticks. */

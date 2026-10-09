@@ -103,8 +103,8 @@ function need<E extends Element>(el: E | null, what: string): E {
 }
 
 /**
- * The seal ceremony, over the drawing screen: the cut runs around the ink, clear resin pours and
- * domes, the sticker peels off its backing and lands on the sealed card. It starts as soon as the
+ * The seal ceremony, over the drawing screen: the cut runs around the ink, clear laminate pours over
+ * it, the sticker peels off its backing and lands on the sealed card. It starts as soon as the
  * sticker is cut, then waits at the cut, the cutter still running round it pass after pass, until
  * the server has sealed the sticker: only then does the resin pour. One animation-frame loop writes
  * each frame of the timeline straight to the canvases, images and transforms; React only hears when
@@ -156,14 +156,11 @@ export function SealCeremony({
       shadow: el<HTMLElement>(".seal-ceremony__shadow"),
       sticker: el<HTMLElement>(".seal-ceremony__sticker"),
       plain: el<HTMLElement>(".seal-ceremony__plain"),
-      tint: el<HTMLElement>(".seal-ceremony__tint"),
       gloss: el<HTMLElement>(".seal-ceremony__gloss"),
       pour: el<HTMLElement>(".seal-ceremony__pour"),
       front: el<HTMLElement>(".seal-ceremony__pour > b"),
-      lens: el<HTMLElement>(".live-resin__lens"),
       spec: el<HTMLElement>(".live-resin__spec"),
       specFace: el<HTMLElement>(".live-resin__spec > b"),
-      rim: el<HTMLElement>(".live-resin__rim"),
       sheen: el<HTMLElement>(".live-resin__sheen > b"),
     };
 
@@ -237,15 +234,12 @@ export function SealCeremony({
       opacity(parts.plain, f.plain);
       parts.front.style.transform = `scale(${f.pour.scale.toFixed(4)}) rotate(${f.pour.turn.toFixed(2)}deg)`;
       opacity(parts.pour, f.pour.opacity);
-      opacity(parts.tint, f.tint);
-      opacity(parts.lens, f.lens);
       opacity(parts.gloss, f.gloss);
       opacity(parts.spec, f.spec.opacity);
       parts.specFace.style.scale = String(f.spec.scale);
-      opacity(parts.rim, f.rim);
-      // A foil that marks how the sticker was made comes with the seal's answer, and rises with the resin.
+      // A foil that marks how the sticker was made comes with the seal's answer.
       const foil = parts.sticker.querySelector<HTMLElement>(".sticker-foil");
-      if (foil) opacity(foil, f.tint);
+      if (foil) opacity(foil, f.foil);
       const p = f.sticker;
       parts.sticker.style.transform = `perspective(1000px) translate(${p.x}px, ${p.y}px) rotate(${p.rotate}deg) rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg) scale(${p.scale})`;
       const s = f.shadow;
@@ -331,8 +325,6 @@ export function SealCeremony({
   const resin: CSSProperties = {
     ...boxStyle(box),
     "--m": `url("${layers.mask}")`,
-    "--mt": `url("${layers.spec}")`,
-    "--mb": `url("${layers.rim}")`,
   };
 
   // Pink on an 18+ sticker, else the Kyoto Seika Practice Mode foil on one drawn in that mode: the
@@ -394,7 +386,6 @@ export function SealCeremony({
         <div className="seal-ceremony__sticker" style={resin} aria-hidden="true">
           {foil && sealed && <StickerFoil size="board" tone={foil} turn={LANDED_TURN_DEG} />}
           <img className="seal-ceremony__plain" src={layers.plain} alt="" decoding="sync" />
-          <img className="seal-ceremony__tint" src={layers.tint} alt="" decoding="sync" />
           <img className="seal-ceremony__gloss" src={layers.gloss} alt="" decoding="sync" />
           <span className="seal-ceremony__pour">
             <b style={boxStyle(pour)} />

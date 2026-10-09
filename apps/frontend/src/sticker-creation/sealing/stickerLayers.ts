@@ -1,7 +1,7 @@
 /**
  * A sticker's layers, from its die-cut and the ink: the print (white border, kiss-cut groove, ink), the
- * print under its resin, the baked gloss, the cast shadow, the mask, the finished sticker, and the bands
- * the live resin is masked by. Pure functions over pixel arrays.
+ * baked gloss of its thin laminate, the cast shadow, the mask, the finished sticker, and the bands the
+ * live resin is masked by. Pure functions over pixel arrays.
  */
 import { clamp01 } from "../../ui/easing";
 import type { DieCut } from "./dieCut";
@@ -35,15 +35,13 @@ export interface StickerLayers {
   place: Rect;
   /** The print: white paper to the cut, the kiss-cut groove, and the ink where it was drawn. */
   plain: Layer;
-  /** The print under its resin: darker, richer and cooler where the resin pools at the edge. */
-  tint: Layer;
-  /** Baked and still: a broad sheen, the rim light, a faint top specular, refraction and the meniscus. */
+  /** Baked and still, and only ever light: a faint broad sheen and a slim highlight on the edges facing the light. */
   gloss: Layer;
   /** The cast shadow, as it falls on the sheet. */
   shadow: Layer;
   /** The cut's shape: white, with the cut as its alpha. */
   mask: Layer;
-  /** The finished sticker: the shadow, the print under its resin, and the gloss. */
+  /** The finished sticker: the shadow, the print, and the gloss. */
   sticker: Layer;
   bands: Bands;
 }
@@ -59,15 +57,19 @@ export const SHARP_SIDE = 1600;
 export const PAD = 0.05;
 const INK = [28, 24, 36];
 const PAPER = [255, 255, 255];
-/** The resin's faint cool cast. */
-const LAVENDER = [222, 217, 238];
+/** The one light, from the top left, across the sticker. */
+const LIGHT = { x: -0.58, y: -0.81 };
+/** The laminate's edge highlight: how bright, and how far in it reaches, as a share of the long side. */
+const EDGE_LIGHT = 0.5;
+const EDGE_REACH = 0.01;
+/** The broad sheen's brightest. */
+const SHEEN = 0.1;
+/** A thin sticker's cast, as shares of its long side: its throw across and down, and its blur. */
+const CAST_X = 0.0015;
+const CAST_Y = 0.004;
+const CAST_BLUR = 0.012;
 /** The live resin's bands are measured at most this big; CSS stretches them to the sticker. */
 const BAND_SIDE = 420;
-
-function norm3(x: number, y: number, z: number): [number, number, number] {
-  const l = Math.hypot(x, y, z) || 1;
-  return [x / l, y / l, z / l];
-}
 
 /** Where the image falls on the die-cut's grid: pixel (x, y) is centered on grid (x0 + (x + ½)/k, …). */
 interface Frame {
@@ -106,8 +108,9 @@ function upscale(field: ArrayLike<number>, w: number, h: number, f: Frame): Floa
 }
 
 /**
- * The baked gloss on the die-cut's grid, premultiplied: the resin is a dome over the cut, lit from the
- * top left. It's broad and soft, so it's worked out at the grid's size and scaled up.
+ * The baked gloss on the die-cut's grid, premultiplied: a thin laminate lit from the top left, so a faint
+ * broad sheen and a slim highlight along the edges that face the light, and no shade anywhere. It's soft,
+ * so it's worked out at the grid's size and scaled up.
  */
 function glossPlanes(cut: DieCut): Float32Array[] {
   const { width: w, height: h, mask, distanceIn: depth, bounds } = cut;
@@ -115,65 +118,33 @@ function glossPlanes(cut: DieCut): Float32Array[] {
   const [pr, pg, pb, pa] = planes;
   const mw = bounds.x1 - bounds.x0 + 1;
   const mh = bounds.y1 - bounds.y0 + 1;
-  const S = Math.max(mw, mh);
-  const D = Math.max(8, 0.2 * S);
-  const H0 = 0.5;
-  const L = norm3(-0.5, -0.7, 0.9);
-  const lxy = Math.hypot(L[0], L[1]);
-  const Lx = L[0] / lxy;
-  const Ly = L[1] / lxy;
+  const reach = Math.max(1, EDGE_REACH * Math.max(mw, mh));
   const wcx = bounds.x0 + mw * 0.34;
   const wcy = bounds.y0 + mh * 0.3;
   const wrx = mw * 0.42;
   const wry = Math.max(4, mh * 0.2);
   const wc = Math.cos(-0.45);
   const ws = Math.sin(-0.45);
-  const rimAt = 0.022 * S;
-  const rimW = 0.013 * S;
-  const topAt = 0.013 * S;
-  const topW = 0.014 * S;
-  const refAt = 0.017 * S;
-  const refW = 0.009 * S;
   for (let y = 1; y < h - 1; y++) {
     for (let x = 1; x < w - 1; x++) {
       const i = y * w + x;
       if (!mask[i]) continue;
-      const d = depth[i];
-      const u = Math.min(Math.max(d / D, 0.02), 1);
       const gx = (depth[i + 1] - depth[i - 1]) / 2;
       const gy = (depth[i + w] - depth[i - w]) / 2;
       const gl = Math.hypot(gx, gy) || 1;
-      // Pointing inward.
-      const ix = gx / gl;
-      const iy = gy / gl;
-      const slope = u >= 1 ? 0 : (H0 * (1 - u)) / Math.sqrt(1 - (1 - u) * (1 - u));
-      // The dome leans outward at its rim.
-      const N = norm3(-ix * slope, -iy * slope, 1);
-      const diffuse = N[0] * L[0] + N[1] * L[1] + N[2] * L[2] - L[2];
-      const facing = ix * Lx + iy * Ly;
-      const away = Math.max(0, facing);
-      const toward = Math.max(0, -facing);
-      const rim = Math.pow(away, 1.3) * Math.exp(-(((d - rimAt) / rimW) ** 2)) * 0.62;
-      const top = Math.pow(toward, 1.6) * Math.exp(-(((d - topAt) / topW) ** 2)) * 0.52;
+      // The edge faces the light where the way in points away from it.
+      const toward = Math.max(0, -(gx * LIGHT.x + gy * LIGHT.y) / gl);
+      const edge = Math.pow(toward, 1.6) * Math.exp(-((depth[i] / reach) ** 2)) * EDGE_LIGHT;
       const ex = x - wcx;
       const ey = y - wcy;
       const qx = (ex * wc - ey * ws) / wrx;
       const qy = (ex * ws + ey * wc) / wry;
       const q2 = qx * qx + qy * qy;
-      const sheen = q2 < 1 ? 0.19 * Math.pow(1 - q2, 1.5) : 0;
-      const lip = Math.pow(1 - u, 9) * 0.12;
-      // Where the thick resin meets the border it refracts: a soft darker band just inside the cut,
-      // heaviest on the side away from the light, so the dome reads even when nothing moves.
-      const refraction =
-        Math.exp(-(((d - refAt) / refW) ** 2)) * (0.07 + 0.11 * away) * (1 - 0.6 * toward);
-      const light = Math.min(0.9, rim + top + sheen + Math.max(0, diffuse) * 0.06);
-      const dark = Math.min(0.3, Math.max(0, -diffuse) * 0.15 + lip + refraction);
-      const alpha = Math.min(1, light + dark);
-      if (alpha <= 0.004) continue;
-      pr[i] = 255 * light + INK[0] * dark;
-      pg[i] = 255 * light + INK[1] * dark;
-      pb[i] = 255 * light + INK[2] * dark;
-      pa[i] = alpha;
+      const sheen = q2 < 1 ? SHEEN * Math.pow(1 - q2, 1.5) : 0;
+      const light = Math.min(0.9, edge + sheen);
+      if (light <= 0.004) continue;
+      pr[i] = pg[i] = pb[i] = 255 * light;
+      pa[i] = light;
     }
   }
   return planes;
@@ -284,7 +255,7 @@ export function sharpSticker(ink: Pixels, cut: DieCut): SharpSticker | null {
 type Painted<All extends boolean> = {
   place: Rect;
   sticker: Layer;
-  layers: All extends true ? Record<"plain" | "tint" | "gloss" | "shadow" | "mask", Layer> : null;
+  layers: All extends true ? Record<"plain" | "gloss" | "shadow" | "mask", Layer> : null;
 };
 
 /**
@@ -313,7 +284,6 @@ function paint(
 
   const up = (field: ArrayLike<number>) => upscale(field, cut.width, cut.height, frame);
   const soft = up(cut.soft);
-  const depth = up(cut.distanceIn);
   const clearance = up(cut.distanceOut);
   const place: Rect = {
     x: (frame.x0 - gridPad) / scale,
@@ -329,20 +299,18 @@ function paint(
   const glossGrid = glossPlanes(cut).map(up);
 
   const body = Math.max(mw, mh) * k;
-  const offX = Math.round(body * 0.004 + unit);
-  const offY = Math.round(body * 0.01 + 2 * unit);
-  const blur = body * 0.035;
-  const edgeZone = Math.max(4 * unit, body * 0.08);
+  const offX = Math.round(body * CAST_X + 0.5 * unit);
+  const offY = Math.round(body * CAST_Y + unit);
+  const blur = Math.max(unit, body * CAST_BLUR);
 
   // Only the finished sticker when `all` is false: the sharp copy is large, and needs no other layer.
   const layer = () => new Uint8ClampedArray(all ? n * 4 : 0);
   const plain = layer();
-  const tint = layer();
   const gloss = layer();
   const shadow = layer();
   const mask = layer();
   const sticker = new Uint8ClampedArray(n * 4);
-  const tinted = [0, 0, 0];
+  const printColor = [0, 0, 0];
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -361,33 +329,22 @@ function paint(
 
       if (printed > 0) {
         const inkAlpha = print[q + 3] / 255;
-        const resin = Math.pow(1 - Math.min((depth[i] * k) / edgeZone, 1), 1.6);
         for (let c = 0; c < 3; c++) {
           const base = (PAPER[c] * a + INK[c] * groove * (1 - a)) / printed;
-          const v = print[q + c] + base * (1 - inkAlpha);
-          // Resin pools deeper at the edge: the print there multiplies with itself and cools.
-          tinted[c] =
-            resin <= 0.002
-              ? v
-              : v *
-                (1 + (v / 255 - 1) * 0.62 * resin) *
-                (1 + (LAVENDER[c] / 255 - 1) * 0.75 * resin);
-          if (all) {
-            plain[q + c] = v;
-            tint[q + c] = tinted[c];
-          }
+          printColor[c] = print[q + c] + base * (1 - inkAlpha);
+          if (all) plain[q + c] = printColor[c];
         }
-        if (all) plain[q + 3] = tint[q + 3] = printed * 255;
+        if (all) plain[q + 3] = printed * 255;
       }
 
-      // The cast shadow falls down and to the right, soft, with a tight contact line at the cut.
+      // The cast shadow falls a little down and to the right, with a tight contact line at the cut.
       const j =
         Math.min(height - 1, Math.max(0, y - offY)) * width +
         Math.min(width - 1, Math.max(0, x - offX));
       const under = soft[j] > 0.5;
       const throwOff = under ? 0 : clamp01((clearance[j] * k) / blur);
       const contact = under ? 1 : 1 - clamp01((clearance[i] * k) / (2.2 * unit));
-      const shade = Math.min(1, 0.2 * (1 - throwOff) * (1 - throwOff) + 0.16 * contact);
+      const shade = Math.min(1, 0.16 * (1 - throwOff) * (1 - throwOff) + 0.16 * contact);
       if (all) {
         shadow[q] = INK[0];
         shadow[q + 1] = INK[1];
@@ -403,7 +360,7 @@ function paint(
       for (let c = 0; c < 3; c++) {
         const g = glossGrid[c][i] * a;
         if (all && glossAlpha > 0) gloss[q + c] = g / glossAlpha;
-        const p = printed > 0 ? tinted[c] * printAlpha : 0;
+        const p = printed > 0 ? printColor[c] * printAlpha : 0;
         const premultiplied = g + (p + INK[c] * below) * (1 - glossAlpha);
         sticker[q + c] = alpha > 0 ? premultiplied / alpha : 0;
       }
@@ -412,5 +369,5 @@ function paint(
     }
   }
 
-  return { place, sticker, layers: all ? { plain, tint, gloss, shadow, mask } : null };
+  return { place, sticker, layers: all ? { plain, gloss, shadow, mask } : null };
 }

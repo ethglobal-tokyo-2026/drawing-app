@@ -7,7 +7,7 @@ import { BORDER_UNITS, dieCut, type Point } from "./dieCut";
 import type { Pixels } from "./pixels";
 import { sharpSticker, stickerLayers, type Rect } from "./stickerLayers";
 
-export type LayerName = "plain" | "tint" | "gloss" | "shadow" | "mask" | "spec" | "rim";
+export type LayerName = "plain" | "gloss" | "shadow" | "mask" | "spec" | "rim";
 
 /** A blank canvas, on either thread, to paint and encode as a PNG. */
 interface PngCanvas {
@@ -102,11 +102,10 @@ export async function cutSticker(ink: Ink, make: MakeCanvas): Promise<CutSticker
     g.putImageData(new ImageData(layer, w, h), 0, 0);
     return png();
   };
-  const [png, flat, plain, tint, gloss, shadow, spec, rim, mask] = await Promise.all([
+  const [png, flat, plain, gloss, shadow, spec, rim, mask] = await Promise.all([
     encoded(layers.sticker),
     flatten(ink, make),
     encoded(layers.plain),
-    encoded(layers.tint),
     encoded(layers.gloss),
     encoded(layers.shadow),
     encoded(bands.spec, bands.width, bands.height),
@@ -120,7 +119,7 @@ export async function cutSticker(ink: Ink, make: MakeCanvas): Promise<CutSticker
     png,
     sharp: sharpPng,
     flat,
-    layers: { plain, tint, gloss, shadow, mask, spec, rim },
+    layers: { plain, gloss, shadow, mask, spec, rim },
     maskPixels: layers.mask,
     outline: outlinePath(inImage),
     width,

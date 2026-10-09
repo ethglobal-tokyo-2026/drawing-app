@@ -35,7 +35,7 @@ interface Props {
   veiled?: boolean;
   /** Degrees it's turned on screen, which its foil's glint undoes. */
   turn?: number;
-  /** Stuck to a board: it sits close to it, with the board's short cast and thinner resin. */
+  /** Stuck to a board: it sits close to it, with the board's short cast. */
   stuck?: boolean;
   /** Held back, every layer, until its image has loaded, then faded in. */
   reveal?: boolean;
@@ -49,8 +49,8 @@ const cssUrl = (url: string) => `url("${url}")`;
 
 /**
  * A sticker as material, filling its box: its foil when someone else drew it, it's NSFW or it was drawn in
- * Kyoto Seika Practice Mode, the image with its kiss-cut and cast shadow, live resin under the one light,
- * and the gloss sweep that plays when it sticks. Memoized: a board sticker re-renders as it's selected,
+ * Kyoto Seika Practice Mode, the image with its kiss-cut and cast shadow, a thin laminate's live resin under
+ * the one light, and the gloss sweep that plays when it sticks. Memoized: a board sticker re-renders as it's selected,
  * held or restacked, none of which changes its figure.
  */
 export const StickerFigure = memo(function StickerFigure({
@@ -69,7 +69,7 @@ export const StickerFigure = memo(function StickerFigure({
   ref,
 }: Props) {
   const { t } = useTranslation();
-  const { mask, spec, rim } = urls;
+  const { mask } = urls;
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   // Its sharp copy once it shows larger than its image holds: the detail, or a board sticker that big.
   const src = useSharpSrc(img, urls, width);
@@ -88,8 +88,6 @@ export const StickerFigure = memo(function StickerFigure({
   const style: CSSProperties = {
     "--ar": (width / height).toFixed(4),
     "--m": cssUrl(mask),
-    "--mt": cssUrl(spec),
-    "--mb": cssUrl(rim),
   };
   const classes = [
     "sticker-figure",

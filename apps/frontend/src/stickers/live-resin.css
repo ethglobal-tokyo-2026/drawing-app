@@ -1,10 +1,12 @@
-/* Live resin, shaped by the silhouette: a lens over it all, a specular along the top edge, a rim light
-   inside the lower edge, and a sheen that sweeps when the sticker lands. The highlights read the app's
-   shared light (--lx, --ly, -1 to 1) and rest in the middle without one. */
+/* Live resin, shaped by the silhouette: a thin laminate's slim specular along the edges facing the
+   light, and a faint sheen that sweeps when the sticker lands. The specular reads the app's shared light
+   (--lx, --ly, -1 to 1) and rests in the middle without one. Its band is measured in the sticker's own
+   size, so it's a container. */
 .live-resin {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  container-type: size;
 }
 
 .live-resin > i {
@@ -22,26 +24,17 @@
   display: block;
 }
 
+/* The silhouette less itself moved down and right: a slim band along the edges that face the light. It
+   comes from the cut alone, so it's the same on every sticker. WebKit composites with its own keywords. */
 .live-resin > .live-resin__spec {
-  -webkit-mask: var(--mt) 0 0 / 100% 100% no-repeat;
-  mask: var(--mt) 0 0 / 100% 100% no-repeat;
-}
-
-.live-resin > .live-resin__rim {
-  -webkit-mask: var(--mb) 0 0 / 100% 100% no-repeat;
-  mask: var(--mb) 0 0 / 100% 100% no-repeat;
-}
-
-.live-resin__lens > b {
-  inset: -20%;
-  background: radial-gradient(
-    34% 30% at 50% 48%,
-    rgba(255, 255, 255, 0.17),
-    rgba(255, 255, 255, 0.05) 55%,
-    rgba(255, 255, 255, 0) 76%
-  );
-  translate: calc(var(--lx, 0) * 5%) calc(var(--ly, 0) * 4%);
-  transition: translate 280ms var(--ease-out);
+  -webkit-mask:
+    var(--m) 0 0 / 100% 100% no-repeat,
+    var(--m) 1.1cqmin 1.6cqmin / 100% 100% no-repeat;
+  mask:
+    var(--m) 0 0 / 100% 100% no-repeat,
+    var(--m) 1.1cqmin 1.6cqmin / 100% 100% no-repeat;
+  -webkit-mask-composite: source-out;
+  mask-composite: subtract;
 }
 
 /* The ceremony gathers the specular frame by frame, so only the light's moves glide. */
@@ -65,18 +58,6 @@
   transition: translate 280ms var(--ease-out);
 }
 
-.live-resin__rim > b {
-  inset: -40%;
-  background: radial-gradient(
-    34% 26% at 62% 66%,
-    rgba(255, 255, 255, 0.92),
-    rgba(255, 255, 255, 0.32) 45%,
-    rgba(255, 255, 255, 0) 72%
-  );
-  translate: calc(var(--lx, 0) * -14%) calc(var(--ly, 0) * -6%);
-  transition: translate 280ms var(--ease-out);
-}
-
 .live-resin__sheen > b {
   top: -30%;
   bottom: -30%;
@@ -86,7 +67,7 @@
   background: linear-gradient(
     100deg,
     rgba(255, 255, 255, 0) 15%,
-    rgba(255, 255, 255, 0.74) 50%,
+    rgba(255, 255, 255, 0.3) 50%,
     rgba(255, 255, 255, 0) 85%
   );
   transform: translateX(-140%) skewX(-16deg);

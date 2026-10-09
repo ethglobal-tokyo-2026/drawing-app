@@ -3,8 +3,8 @@ import { lightUp } from "./light";
 import "./live-resin.css";
 
 /**
- * Live resin over a sticker, shaped by the silhouette its container sets as `--m`: a lens, a
- * specular and a rim light, shaped by its highlight masks (`--mt`, `--mb`), and a sheen that sweeps.
+ * Live resin over a sticker, shaped by the silhouette its container sets as `--m`: a thin laminate's
+ * slim specular along the edges facing the light, and a sheen that sweeps.
  */
 export function LiveResin() {
   const resin = useRef<HTMLSpanElement>(null);
@@ -14,13 +14,7 @@ export function LiveResin() {
   }, []);
   return (
     <span ref={resin} className="live-resin" aria-hidden="true">
-      <i className="live-resin__lens">
-        <b />
-      </i>
       <i className="live-resin__spec">
-        <b />
-      </i>
-      <i className="live-resin__rim">
         <b />
       </i>
       <i className="live-resin__sheen">

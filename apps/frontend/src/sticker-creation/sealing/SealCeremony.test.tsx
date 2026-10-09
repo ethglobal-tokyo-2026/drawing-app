@@ -35,7 +35,6 @@ const sticker: SealedSticker = {
   ],
   layers: {
     plain: "blob:plain",
-    tint: "blob:tint",
     gloss: "blob:gloss",
     shadow: "blob:shadow",
     mask: "blob:mask",
