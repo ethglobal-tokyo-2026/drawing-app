@@ -30,6 +30,9 @@ export const FLOAT = {
  */
 export const BOIL = { frames: 3, frameMs: 180 };
 
+/** A pick's ink pools out from the tap; an unpick drains it back into the tap, quicker. */
+export const POOL = { inMs: 180, drainMs: 110, drainEase: "ease-in" };
+
 const TAU = Math.PI * 2;
 /** Each axis mixes one slow wave, one middling and one quick, as harmonics of its loop. */
 const WAVES = [

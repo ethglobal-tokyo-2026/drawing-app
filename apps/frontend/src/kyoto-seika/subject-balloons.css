@@ -60,25 +60,26 @@
   outline-offset: 3px;
 }
 
-/* A pick washes the cloud in Seal Yellow, the color of selected text, inks it heavier and pops it. */
-.subject-balloon.is-picked .shape-fill {
-  fill: color-mix(in srgb, var(--seal) 35%, var(--canvas));
+/* A pick inks the cloud solid inside its pen line (ベタ), and letters its word white out of the ink
+   (白抜き). Both are clipped to one pool, played from SubjectBalloons, so the word turns white just
+   where the ink has reached; the pen line stays round the ink as the cloud's edge. */
+.subject-balloon__ink {
+  fill: var(--ink);
 }
 
-.subject-balloon.is-picked .shape-ink {
-  stroke: var(--ink);
-  stroke-width: 1.4px;
-  stroke-linejoin: round;
+.subject-balloon__lettered {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--gap);
+  color: var(--canvas);
 }
 
-.subject-balloon.is-picked .subject-balloon__float {
-  animation: subject-pop 260ms var(--ease-out);
-}
-
-@keyframes subject-pop {
-  40% {
-    scale: 1.04;
-  }
+/* The reading on Ink: a pale tone of Ink's own violet-grey, quieter than the white word. */
+.subject-balloon__lettered .subject-balloon__word rt {
+  color: #c9c4d2;
 }
 
 .subject-balloon svg {
@@ -191,14 +192,8 @@
   }
 }
 
-/* A picture of the deal shows its picks already washed. */
-.subject-balloons.is-picture .subject-balloon__float {
-  animation: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .subject-balloon .shape-ink,
-  .subject-balloon.is-picked .subject-balloon__float {
+  .subject-balloon .shape-ink {
     animation: none;
   }
 

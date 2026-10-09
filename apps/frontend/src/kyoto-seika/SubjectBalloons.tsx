@@ -1,10 +1,12 @@
 import type { KyotoSeikaSubject } from "@drawing-app/api/client";
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
   type CSSProperties,
+  type Ref,
   type RefObject,
 } from "react";
 import { useTranslation } from "../i18n/react";
@@ -19,6 +21,7 @@ import {
   type DealLayout,
   type Fit,
   type PlacedBalloon,
+  type Pt,
 } from "./balloonGeometry";
 import { PICKS, type Deal } from "./deal";
 import {
@@ -28,6 +31,7 @@ import {
   CLOUD_SQUASH,
   driftKeyframes,
   FLOAT,
+  POOL,
   ROLL,
   SPRING,
   BOOM_MS,
@@ -58,16 +62,19 @@ function Inked({
   inks,
   box,
   phase,
+  ref,
 }: {
   white: string;
   inks: readonly string[];
   box: Box;
   phase: number;
+  ref?: Ref<SVGSVGElement>;
 }) {
   const width = box.maxX - box.minX;
   const height = box.maxY - box.minY;
   return (
     <svg
+      ref={ref}
       viewBox={`${box.minX} ${box.minY} ${width} ${height}`}
       width={width}
       height={height}
@@ -157,6 +164,35 @@ function puff(layer: HTMLElement) {
   }
 }
 
+/**
+ * Where a click landed in a cloud's own frame, through the cloud's drawn SVG, drift and lean included.
+ * A key press clicks at detail 0, with no point, so it lands in the cloud's middle.
+ */
+function clickedAt(
+  cloud: SVGSVGElement | null,
+  click: { detail: number; clientX: number; clientY: number },
+): Pt {
+  const toCloud = click.detail > 0 ? cloud?.getScreenCTM()?.inverse() : null;
+  if (!toCloud) return { x: 0, y: 0 };
+  const { a, b, c, d, e, f } = toCloud;
+  return {
+    x: a * click.clientX + c * click.clientY + e,
+    y: b * click.clientX + d * click.clientY + f,
+  };
+}
+
+/** How far a pool of ink from `at` spreads to cover all of `box`: to its farthest corner. */
+const poolReach = (box: Box, at: Pt) =>
+  Math.max(
+    ...[box.minX, box.maxX].flatMap((x) =>
+      [box.minY, box.maxY].map((y) => Math.hypot(x - at.x, y - at.y)),
+    ),
+  );
+
+/** A pool of ink round `at` as a clip for a layer whose top-left sits at `corner`, in the cloud's frame. */
+const poolClip = (at: Pt, reach: number, corner: Pt) =>
+  `circle(${reach}px at ${at.x - corner.x}px ${at.y - corner.y}px)`;
+
 interface BalloonProps {
   place: number;
   placed: PlacedBalloon;
@@ -175,7 +211,7 @@ interface BalloonProps {
 
 /**
  * One thought cloud, a toggle that picks its subject: it arrives, drifts, puffs one word out and the
- * next in at a roll, and a pick washes it in Seal Yellow.
+ * next in at a roll, and a pick inks it solid from where it was tapped, its word lettered white.
  */
 function SubjectBalloon({
   place,
@@ -190,12 +226,53 @@ function SubjectBalloon({
   still,
 }: BalloonProps) {
   const { spec } = placed;
+  const box = placed.cloudBox;
   const float = useRef<HTMLDivElement>(null);
   const cloud = useRef<HTMLDivElement>(null);
+  const drawnCloud = useRef<SVGSVGElement>(null);
+  const ink = useRef<SVGSVGElement>(null);
   const words = useRef<HTMLDivElement>(null);
+  const lettered = useRef<HTMLDivElement>(null);
   // A rolled word puffs out before the next comes in, so the screen lags the deal by that long.
   const [shown, setShown] = useState(subject);
   const visible = reduced ? subject : shown;
+
+  // Where the last pick or unpick landed: its ink pools out from there, or drains back into it.
+  const tapped = useRef<Pt>({ x: 0, y: 0 });
+  // An unpicked cloud keeps its ink until it has drained.
+  const [draining, setDraining] = useState(false);
+  const [wasPicked, setWasPicked] = useState(picked);
+  if (picked !== wasPicked) {
+    setWasPicked(picked);
+    setDraining(!picked && !reduced);
+  }
+  const inked = picked || draining;
+
+  // Before paint, so a new pick's ink never shows whole for a frame before it pools.
+  const pooled = useRef(picked);
+  useLayoutEffect(() => {
+    if (pooled.current === picked) return;
+    pooled.current = picked;
+    if (reduced) return;
+    const at = tapped.current;
+    const reach = poolReach(box, at);
+    const [from, to] = picked ? [0, reach] : [reach, 0];
+    const timing: KeyframeAnimationOptions = picked
+      ? { duration: POOL.inMs, easing: EASE_OUT }
+      : { duration: POOL.drainMs, easing: POOL.drainEase, fill: "forwards" };
+    const layers = [
+      { layer: ink.current, corner: { x: box.minX, y: box.minY } },
+      { layer: lettered.current, corner: { x: -spec.w / 2, y: -spec.h / 2 } },
+    ];
+    const played = layers.map(({ layer, corner }) =>
+      layer?.animate({ clipPath: [poolClip(at, from, corner), poolClip(at, to, corner)] }, timing),
+    );
+    // Drained, or cut short by a pick or a new layout, the ink goes. Cancelling rejects `finished`
+    // with an AbortError: that's the cancel asked for, not a failure.
+    const settle = picked ? () => {} : () => setDraining(false);
+    for (const motion of played) motion?.finished.then(settle, settle);
+    return () => played.forEach((motion) => motion?.cancel());
+  }, [picked, reduced, box, spec.w, spec.h]);
 
   useDrift(float, FLOAT.seeds[place], FLOAT.periodMs[place], drifts && !reduced, still);
 
@@ -242,20 +319,30 @@ function SubjectBalloon({
     "--reading": `${type.readingPx}px`,
   } as CSSProperties;
   const half = { w: spec.w / 2 + spec.lobe, h: spec.h / 2 + spec.padY };
-  const box = placed.cloudBox;
   return (
-    <div
-      className={`subject-balloon ${picked ? "is-picked" : ""} ${locked ? "is-locked" : ""}`}
-      style={style}
-    >
+    <div className={`subject-balloon ${locked ? "is-locked" : ""}`} style={style}>
       <div ref={float} className="subject-balloon__float">
         <div ref={cloud} className="subject-balloon__cloud">
           <Inked
+            ref={drawnCloud}
             white={placed.whitePath}
             inks={placed.cloud.inks}
-            box={placed.cloudBox}
+            box={box}
             phase={place / 2}
           />
+          {inked && (
+            <svg
+              ref={ink}
+              className="subject-balloon__ink"
+              viewBox={`${box.minX} ${box.minY} ${box.maxX - box.minX} ${box.maxY - box.minY}`}
+              width={box.maxX - box.minX}
+              height={box.maxY - box.minY}
+              style={{ left: box.minX, top: box.minY }}
+              aria-hidden="true"
+            >
+              <path d={placed.whitePath} />
+            </svg>
+          )}
         </div>
         <div
           ref={words}
@@ -265,6 +352,13 @@ function SubjectBalloon({
           <div className="subject-balloon__word" style={{ fontSize: size }}>
             <SubjectWord subject={visible} />
           </div>
+          {inked && (
+            <div ref={lettered} className="subject-balloon__lettered" aria-hidden="true">
+              <div className="subject-balloon__word" style={{ fontSize: size }}>
+                <SubjectWord subject={visible} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <button
@@ -274,8 +368,10 @@ function SubjectBalloon({
         aria-label={spokenSubject(subject)}
         aria-pressed={picked}
         aria-disabled={locked || undefined}
-        onClick={() => {
-          if (!locked) onPick(place);
+        onClick={(event) => {
+          if (locked) return;
+          tapped.current = clickedAt(drawnCloud.current, event);
+          onPick(place);
         }}
       >
         {/* The cloud's own white takes the tap, so all of it picks, lobes and corners too. */}

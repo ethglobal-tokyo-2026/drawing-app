@@ -106,6 +106,22 @@ describe("the Kyoto Seika clouds", () => {
     expect(dealtNow.picked).toEqual([0, 1]);
   });
 
+  it("under reduced motion, inks a picked cloud at once, its white word for sight only, and an unpick takes the ink off at once", () => {
+    reduceMotion();
+    const { host } = render(<Harness />);
+    const inked = () =>
+      [...host.querySelectorAll(".subject-balloon")].map(
+        (cloud) => cloud.querySelector(".subject-balloon__ink") !== null,
+      );
+    act(() => toggles(host)[1].click());
+    expect(inked()).toEqual([false, true, false, false, false]);
+    expect(host.querySelector(".subject-balloon__lettered")?.getAttribute("aria-hidden")).toBe(
+      "true",
+    );
+    act(() => toggles(host)[1].click());
+    expect(inked()).toEqual([false, false, false, false, false]);
+  });
+
   it("gives the deal one die, named by its lettering, that deals again only what isn't picked, and reads each new subject out", async () => {
     const { host } = render(<Harness />);
     expect(host.querySelectorAll(".subject-reroll")).toHaveLength(1);
