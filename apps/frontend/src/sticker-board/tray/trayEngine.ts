@@ -247,16 +247,37 @@ export function createTrayEngine(
   const trayModel = createTrayModel(ui, seen, problem);
   const { newIds, applyPack, relayout, resetOrder } = trayModel;
 
-  const Wb = () => board.clientWidth || 390;
-  const Hb = () => board.clientHeight || 657;
+  /**
+   * The board's size and place on screen, measured as they change: a drag reading them would lay the
+   * page out before the board's own changes are drawn, and the frame would lay out twice.
+   */
+  const placed = { w: 0, h: 0, view: { left: 0, top: 0, k: 1 } as BoardView };
+  const measure = () => {
+    const r = board.getBoundingClientRect();
+    placed.w = board.clientWidth;
+    placed.h = board.clientHeight;
+    placed.view = { left: r.left, top: r.top, k: r.width / (board.offsetWidth || r.width || 1) };
+  };
+  measure();
+  const resizes = new win.ResizeObserver(measure);
+  resizes.observe(board);
+  // The board moves without resizing as the screen turns or scales it, and as anything above it scrolls.
+  win.addEventListener("resize", measure, { signal: listening.signal });
+  win.addEventListener("scroll", measure, {
+    capture: true,
+    passive: true,
+    signal: listening.signal,
+  });
+  // And measured as each gesture begins, ahead of the gesture's own handlers changing anything: the
+  // layout is still clean, and whatever else moved the board, it can't have moved since.
+  board.addEventListener("pointerdown", measure, { capture: true, signal: listening.signal });
+  const Wb = () => placed.w || 390;
+  const Hb = () => placed.h || 657;
   const colLeft = () => Wb() - COL * ui.fit.grow;
   /** Where the open pouch ends, as the board's y: where its mouth closes in. */
   let openFoot = 0;
   const pouchFoot = () => openFoot || Hb();
-  const boardView = (): BoardView => {
-    const r = board.getBoundingClientRect();
-    return { left: r.left, top: r.top, k: r.width / (board.offsetWidth || r.width || 1) };
-  };
+  const boardView = () => placed.view;
   const tray: Tray = {
     board,
     api,
@@ -566,6 +587,7 @@ export function createTrayEngine(
       ui.pulled?.listening.abort();
       traySpread.destroy();
       large.removeEventListener("change", fitForScreen);
+      resizes.disconnect();
       listening.abort();
       zip.destroy();
       root.remove();

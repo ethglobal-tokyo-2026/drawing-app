@@ -32,6 +32,7 @@ import { testStickerUrls } from "../../stickers/testStickerUrls";
 import { NUDGE_AFTER } from "./trayNudge";
 import { trayProblemWords, type TrayProblem } from "./trayProblem";
 import { countVisit } from "./traySeen";
+import { stubResizeObservers } from "../../ui/testing";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -268,6 +269,32 @@ describe("StickerTray", () => {
 
     act(() => root.unmount());
     expect(board.querySelector(".tray")).toBeNull();
+  });
+
+  it("follows the board's size as it resizes, for a sticker dragged to the shut tray's edge", () => {
+    const observers = stubResizeObservers();
+    render([sticker("a", 1, true)]);
+    const atEdge = (x: number) => tray.current?.boardDrag("a", { x, y: 600 })?.over;
+    expect(atEdge(370)).toBe(true);
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(800);
+    boardReads.mockReturnValue(new DOMRect(0, 0, 800, 657));
+    act(() => observers.resize(board));
+    expect(atEdge(370)).toBe(false);
+    expect(atEdge(780)).toBe(true);
+  });
+
+  it("measures a board that moved without resizing as the next gesture begins, and never mid-drag", () => {
+    render([sticker("a", 1, true)]);
+    const reads = () => boardReads.mock.calls.length;
+    const moved = new DOMRect(0, 120, 390, 657);
+    boardReads.mockReturnValue(moved);
+    const before = reads();
+    pointer(board, "pointerdown", 200, 300);
+    expect(reads()).toBe(before + 1);
+    tray.current?.boardDrag("a", { x: 200, y: 300 });
+    tray.current?.boardDrag("a", { x: 380, y: 600 });
+    expect(reads()).toBe(before + 1);
+    expect(boardReads.mock.results.at(-1)?.value).toBe(moved);
   });
 
   it("refuses a second drop of a sticker already on its way into its used sticker silhouette", async () => {
