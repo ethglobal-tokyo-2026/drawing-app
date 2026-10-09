@@ -246,3 +246,23 @@
 .settings-note__credit a {
   color: inherit;
 }
+
+/* A large screen keeps the card at a readable width rather than across the cork. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .stat-board__note.settings-note {
+    width: 100%;
+    max-width: 460px;
+    margin-inline: auto;
+  }
+}
+
+/* Where the papers are composed across the cork, the whole card is in view beside the stats or under
+   them, so it lies where it's pinned and doesn't peek. */
+@media (min-width: 660px) and (min-height: 600px) and (any-pointer: coarse) and (orientation: portrait),
+  (min-width: 1000px) and (min-height: 600px) and (any-pointer: coarse) and (orientation: landscape) {
+  .stat-board__note.settings-note {
+    position: relative;
+    bottom: auto;
+    margin-top: 0;
+  }
+}

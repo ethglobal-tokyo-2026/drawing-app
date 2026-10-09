@@ -175,7 +175,7 @@ export function StatCork({
     <Loading value={f.loading}>
       <div
         ref={dialog}
-        className="stat-board"
+        className={f.own ? "stat-board stat-board--own" : "stat-board"}
         role="dialog"
         aria-label={t(($) => $.stickerBoard.statBoard.label, { name: f.name })}
         tabIndex={-1}

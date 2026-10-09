@@ -303,9 +303,10 @@ export function SettingsNote() {
             </button>
           </legend>
           <div className="settings-note__note" id={`${id}-kyoto-seika-note`} hidden={!aboutOpen}>
-            <p>
+            <p id={`${id}-kyoto-seika-how`}>
               {t(($) => $.stickerBoard.settings.kyotoSeika.how, {
                 minutes: KYOTO_SEIKA_TIME_USED_S / 60,
+                tickets: KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
               })}
             </p>
             <p>{t(($) => $.stickerBoard.settings.kyotoSeika.maker)}</p>
@@ -322,16 +323,11 @@ export function SettingsNote() {
             <Switch
               checked={shown.kyotoSeikaPractice}
               aria-label={t(($) => $.stickerBoard.settings.kyotoSeika.spokenName)}
-              aria-describedby={`${id}-kyoto-seika-about`}
+              // The help note says how the mode works; a screen reader hears it with the switch, open or not.
+              aria-describedby={`${id}-kyoto-seika-how`}
               onChange={switchKyotoSeika}
             />
           </label>
-          <p className="settings-note__about" id={`${id}-kyoto-seika-about`}>
-            {t(($) => $.stickerBoard.settings.kyotoSeika.about, {
-              minutes: KYOTO_SEIKA_TIME_USED_S / 60,
-              tickets: KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
-            })}
-          </p>
           <p className="fine settings-note__status" role="status">
             {statusLine("kyotoSeika")}
           </p>
