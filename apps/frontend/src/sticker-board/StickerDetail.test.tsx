@@ -276,6 +276,33 @@ describe("StickerDetail", () => {
     const alert = () => document.querySelector(".sticker-detail__take-out-failed")?.textContent;
     const landsOut = (giftId: string) =>
       Promise.resolve({ gift: gift({ id: giftId, status: "taken_out" }) });
+    /** The gift state the big sticker's dot badge shows; undefined when it wears none. */
+    const giftDot = () =>
+      document.querySelector<HTMLElement>(".sticker-detail__slide [data-gift]")?.dataset.gift;
+
+    it("sticks a dot badge on the big sticker that says whether its gift is in the bag or on its way", () => {
+      for (const status of ["packed", "sent"] as const) {
+        openInFlight(inFlight(133, status));
+        expect(giftDot()).toBe(status);
+      }
+      openInFlight(sticker(133, day(14)));
+      expect(giftDot()).toBeUndefined();
+      // A sticker you gave shows only where it went.
+      open({ mode: "given", stickers: [inFlight(133, "packed")], startId: "s-133" });
+      expect(giftDot()).toBeUndefined();
+    });
+
+    it("sticks the dot where the sticker's cut line comes nearest its top-right corner", () => {
+      const layer = () => document.querySelector<HTMLElement>(".sticker-detail__dot-layer");
+      // A diamond leaves its box's corner empty: the nearest point is halfway along its top-right side.
+      const diamond = { width: 100, height: 100, outline: "M50 0L100 50L50 100L0 50Z" };
+      openInFlight(
+        sticker(150, day(14), { openGift: { id: "g-150", status: "packed" }, ...diamond }),
+      );
+      expect(
+        ["--spot-x", "--spot-y"].map((p) => Number(layer()?.style.getPropertyValue(p))),
+      ).toEqual([0.75, 0.25]);
+    });
 
     it("says its state only, Take it out under it, and keeps Give the key while it's in the bag", () => {
       openInFlight(inFlight(133, "sent", "bob"));
@@ -343,10 +370,13 @@ describe("StickerDetail", () => {
       expect(alert()).toBeUndefined();
     });
 
-    it("puts Give back with focus once it's out, and says the sticker is back on the board", async () => {
+    it("takes its dot off and puts Give back with focus once it's out, and says the sticker is back on the board", async () => {
       openInFlight(inFlight(133, "packed"), landsOut);
       press(takeOut());
+      // On its way out, it's still in the gift.
+      expect(giftDot()).toBe("packed");
       await settle();
+      expect(giftDot()).toBeUndefined();
       expect(document.activeElement?.textContent).toBe("Give");
       expect(document.querySelector(".sticker-detail__taken-out")?.textContent).toBe(
         i18next.t(($) => $.stickerBoard.detail.takeOut.backOnBoard, { no: "No.0133" }),

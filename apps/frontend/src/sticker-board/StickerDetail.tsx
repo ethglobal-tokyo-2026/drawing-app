@@ -29,6 +29,7 @@ import {
   CaretRight,
   GiveIcon,
   GratitudeIcon,
+  PaperPlaneTilt,
   StickerBoardIcon,
 } from "../icons";
 import { Duration } from "../stickers/Duration";
@@ -57,6 +58,7 @@ import { TimelapseLayer } from "./timelapse/TimelapseLayer";
 import { useTimelapse } from "./timelapse/useTimelapse";
 import { TransferTrail } from "./TransferTrail";
 import { toTrailRows } from "./trailRows";
+import { dotSpot } from "./tray/stickerShape";
 import "./sticker-detail.css";
 
 interface Props {
@@ -195,6 +197,10 @@ export function StickerDetail({
   const takeOut = useTakeOut(sticker?.id ?? null);
   const openGift = sticker && !takenOut.has(sticker.id) ? sticker.openGift : null;
   const sent = openGift?.status === "sent";
+  const giftDot =
+    mode === "yours" && sticker && openGift
+      ? { status: openGift.status, spot: dotSpot(sticker) }
+      : null;
   // Gratitude kept on this phone that the server has since recorded or refused: counted, whatever
   // the read of the detail is doing, so a read that went out before one left can be told apart.
   const combosLeft = useSyncExternalStore(onGratitudeLeftOutbox, combosLeftNow);
@@ -232,8 +238,8 @@ export function StickerDetail({
       const el = originOf?.(id);
       const s = stickers.find((x) => x.id === id);
       if (!el || !s) return null;
-      // A given sticker fades in out of its spot in the sticker tray, which stays.
-      return { el, turn: s.placement.r, given: !s.held || s.openGift?.status === "sent" };
+      // A given sticker, or one in a gift, fades in out of its spot in the sticker tray, which stays.
+      return { el, turn: s.placement.r, given: !s.held || s.openGift !== null };
     },
     into: DETAIL,
     reduced,
@@ -460,7 +466,8 @@ export function StickerDetail({
     if (dialog && !dialog.contains(document.activeElement)) dialog.focus({ preventScroll: true });
   }, [shownId]);
 
-  // The shown sticker's thumb scrolls to the strip's middle.
+  // The shown sticker's thumb scrolls to the strip's middle, again when its place in the list moves,
+  // as a sticker taken out of its gift goes back among the rest.
   useLayoutEffect(() => {
     const nav = strip.current;
     const current = nav?.querySelector<HTMLElement>('[aria-current="true"]');
@@ -469,7 +476,7 @@ export function StickerDetail({
         0,
         current.offsetTop - nav.clientHeight / 2 + current.offsetHeight / 2,
       );
-  }, [shownId]);
+  }, [shownId, index]);
 
   const byOther = Boolean(ownerId && sticker && sticker.artist.id !== ownerId);
   const page = (
@@ -540,6 +547,26 @@ export function StickerDetail({
                     veiled={veiledFor(sticker, optedIn)}
                   />
                   <TimelapseLayer timelapse={timelapse} />
+                  {/* A gift's state, stuck on the sticker as it pages; its note says it in words. */}
+                  {giftDot && (
+                    <span
+                      className="sticker-detail__dot-layer"
+                      style={{
+                        "--ar": (sticker.width / sticker.height).toFixed(4),
+                        "--spot-x": giftDot.spot.x.toFixed(4),
+                        "--spot-y": giftDot.spot.y.toFixed(4),
+                      }}
+                      aria-hidden="true"
+                    >
+                      <span className="sticker-detail__gift-dot" data-gift={giftDot.status}>
+                        {giftDot.status === "sent" ? (
+                          <PaperPlaneTilt weight="fill" />
+                        ) : (
+                          <GiveIcon weight="fill" />
+                        )}
+                      </span>
+                    </span>
+                  )}
                 </div>
               </div>
 

@@ -18,7 +18,7 @@ import { errors } from "../../i18n/strings/errors";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
-import { TUG_VISITS, type TrayBoard } from "./trayEngine";
+import { ICONS, TUG_VISITS, type TrayBoard } from "./trayEngine";
 import { LARGE_SCREEN } from "../../ui/largeScreen";
 import {
   MAX_STACK_SCALE,
@@ -108,6 +108,9 @@ const openAndShut = async () => {
 };
 const slotOf = (id: string) => board.querySelector(`.tray__slot[data-id="${id}"]`);
 const stateOf = (id: string) => slotOf(id)?.getAttribute("data-state");
+/** A sticker's dot badge, NEW or its gift's, in its sheet's layer of dots. */
+const dotOf = (id: string) =>
+  board.querySelector<HTMLElement>(`.tray__dot-spot[data-id="${id}"] > *`);
 /** One finger's move at (x, y) in board pixels: the board is drawn at its own size. */
 const pointer = (on: Element | null, type: string, x: number, y: number, pointerId = 1) =>
   act(() => {
@@ -350,17 +353,46 @@ describe("StickerTray", () => {
     }
   });
 
-  it("shows a sticker on its way under frost in its spot, which opens it among your stickers", async () => {
-    const openYours = vi.fn();
-    render([sentSticker("sent", 3)], { openYours });
-    await openTray();
-    const spot = board.querySelector<HTMLElement>('.tray__slot[data-id="sent"]');
-    expect(spot?.getAttribute("aria-label")).toBe("No.0001, on its way. Open it");
-    expect(spot?.querySelector(".tray__frost")).not.toBeNull();
-    expect(spot?.querySelector(".tray__given-outline")).not.toBeNull();
-    act(() => spot?.click());
-    expect(openYours).toHaveBeenCalledExactlyOnceWith("sent");
-  });
+  it.each([
+    ["in the bag", "packed", "inTheBag", "No.0001, in the bag. Open it"],
+    ["on its way", "sent", "onItsWay", "No.0001, on its way. Open it"],
+  ] as const)(
+    "shows a sticker %s under frost in its spot, with its dot, which a tap opens among your stickers and nothing peels",
+    async (_, status, state, name) => {
+      const openYours = vi.fn();
+      const place = vi.fn((_id: string) => Promise.resolve(null));
+      // Stuck on before it was packed, it still waits in its spot.
+      render(
+        [sticker("gift", 3, true, { openGift: { id: "g", status } }), sticker("newer", 4, false)],
+        { openYours, place },
+      );
+      await openTray();
+      const spot = board.querySelector<HTMLElement>('.tray__slot[data-id="gift"]');
+      expect(spot?.getAttribute("aria-label")).toBe(name);
+      expect(spot?.querySelector(".tray__frost")).not.toBeNull();
+      expect(spot?.querySelector(".tray__given-outline")).not.toBeNull();
+      const dot = dotOf("gift");
+      expect(dot?.querySelector("path")?.getAttribute("d")).toBe(ICONS[state]);
+      // It sticks on its cut line's corner, not on the empty corner of its image.
+      expect(["--spot-x", "--spot-y"].map((p) => Number(dot?.style.getPropertyValue(p)))).toEqual([
+        0.9, 0.125,
+      ]);
+      // Its dot lies over the newer sticker beside it, which comes before the dot in the page.
+      const newer = slotOf("newer");
+      if (!dot || !newer) throw new Error("The dot or the newer sticker isn't on the sheet");
+      expect(newer.compareDocumentPosition(dot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+      pointer(spot, "pointerdown", 100, 200);
+      pointer(stackEl(), "pointerup", 100, 200);
+      act(() => spot?.click());
+      expect(openYours).toHaveBeenCalledExactlyOnceWith("gift");
+      // Drawn toward the board, it stays in its spot.
+      pointer(spot, "pointerdown", 100, 200);
+      pointer(stackEl(), "pointermove", 40, 200);
+      expect(flyers()).toHaveLength(0);
+      expect(place).not.toHaveBeenCalled();
+    },
+  );
 
   it("puts a sticker in hand back on its pulled-out sheet when the sheet is sent home", async () => {
     endAnimationsAtOnce();
@@ -1093,12 +1125,11 @@ describe("StickerTray", () => {
 
   it("marks a sticker that just landed on the board as new on its hole, until the tray shows it", async () => {
     render([sticker("fresh", Date.now(), true)]);
-    const hole = () => board.querySelector(".tray__slot");
-    expect(hole()?.querySelector(".tray__new")).not.toBeNull();
-    expect(hole()?.getAttribute("aria-label")).toMatch(/, new, on your board\. Show it$/);
+    expect(dotOf("fresh")?.className).toBe("tray__new");
+    expect(slotOf("fresh")?.getAttribute("aria-label")).toMatch(/, new, on your board\. Show it$/);
 
     await openAndShut();
-    expect(hole()?.querySelector(".tray__new")).toBeNull();
+    expect(dotOf("fresh")).toBeNull();
   });
 
   it("reports what the open tray showed as seen once it shuts, once", async () => {
@@ -1122,7 +1153,7 @@ describe("StickerTray", () => {
     await act(() => i18next.changeLanguage("ja"));
     expect(onSeen).toHaveBeenCalledExactlyOnceWith(["new"]);
     // The rebuilt tray shows it as seen, and has nothing more to report.
-    expect(slotOf("new")?.querySelector(".tray__new")).toBeNull();
+    expect(dotOf("new")).toBeNull();
     await openAndShut();
     expect(onSeen).toHaveBeenCalledTimes(1);
   });

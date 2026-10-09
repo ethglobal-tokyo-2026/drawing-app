@@ -98,7 +98,7 @@ import { keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { arrangeLeftOpen, keepArrangeOpen } from "./arrangeOpen";
-import { readingOrder } from "./stickerOrder";
+import { inGiftsLast, readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
 import { SendGratitudeSheet } from "../receiving/SendGratitudeSheet";
 import { GiftsForYouBadge, type GiftForYou } from "../receiving/GiftsForYouBadge";
@@ -729,12 +729,12 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const stickerEl = (id: string) =>
     stage.current?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`) ?? null;
   /**
-   * The spot of a sticker given, or on its way, on the sticker tray's front sheet or the sheet pulled
+   * The spot of a sticker given, or in a gift, on the sticker tray's front sheet or the sheet pulled
    * out.
    */
   const givenSpot = (id: string) =>
     face?.querySelector<HTMLElement>(
-      `.tray__sheet.is-top .tray__slot:is([data-state="given"], [data-state="onItsWay"])[data-id="${CSS.escape(id)}"]`,
+      `.tray__sheet.is-top .tray__slot:is([data-state="given"], [data-state="inTheBag"], [data-state="onItsWay"])[data-id="${CSS.escape(id)}"]`,
     ) ?? null;
   // What the sticker tray asks of the board, all in board pixels.
   const trayBoard: TrayBoard = {
@@ -1150,8 +1150,12 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       {open && (
         <Suspense fallback={null}>
           <StickerDetail
-            // In the order they arrived, as the board loads them.
-            stickers={(stickers ?? []).filter((s) => (open.mode === "given") !== s.held)}
+            // In the order they arrived, as the board loads them; among yours, those in a gift last.
+            stickers={
+              open.mode === "given"
+                ? (stickers ?? []).filter((s) => !s.held)
+                : inGiftsLast((stickers ?? []).filter((s) => s.held))
+            }
             startId={open.id}
             mode={open.mode}
             // It lifts off from where the sticker sits: on the board, or given, its spot in the tray.

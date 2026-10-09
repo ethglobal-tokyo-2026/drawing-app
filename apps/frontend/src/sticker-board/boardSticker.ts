@@ -132,16 +132,15 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
   };
 }
 
-/** Sent and not received yet: it has left the board, and waits in its tray spot under frost. */
-export const onItsWay = (s: Pick<BoardStickerView, "held" | "openGift">) =>
-  s.held && s.openGift?.status === "sent";
-
-/** On the board: stuck on, and still held rather than given away or on its way. */
+/**
+ * On the board: stuck on, and still held. A sticker in a gift, packed or on its way, has left it for
+ * its tray spot, whatever its spot on the board.
+ */
 export const onTheBoard = <
   S extends Pick<BoardStickerView, "held" | "openGift"> & { placement: Placement | null },
 >(
   s: S,
-): s is S & { placement: Placement } => s.placement?.on === true && s.held && !onItsWay(s);
+): s is S & { placement: Placement } => s.placement?.on === true && s.held && !s.openGift;
 
 /** How a person is printed: their handle, or their name until they've chosen one. */
 export const handleOf = (p: PersonView) => (p.handle === null ? p.name : formatHandle(p.handle));

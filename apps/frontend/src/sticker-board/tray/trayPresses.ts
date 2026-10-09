@@ -233,19 +233,20 @@ export function createTrayPresses(
       void bringToFront(f);
       return;
     }
-    // A given sticker's spot, or one on its way, opens on its click, which the press sends as it pops.
+    // A given sticker's spot, or one in a gift, opens on its click, which the press sends as it pops.
     const slot = target?.closest<HTMLElement>(".tray__slot");
     if (slot && !opens(slot)) {
       e.preventDefault();
       tapSlot(slot);
     }
   });
-  /** A given sticker's spot, or one on its way: it opens on its click, and never peels. */
+  /** A given sticker's spot, or one in a gift, packed or sent: it opens on its click, and never peels. */
   function opens(el: HTMLElement) {
-    return el.dataset.state === "given" || el.dataset.state === "onItsWay";
+    const { state } = el.dataset;
+    return state === "given" || state === "inTheBag" || state === "onItsWay";
   }
   /**
-   * A click on a given sticker's spot opens it among the stickers you gave; on a sticker on its way,
+   * A click on a given sticker's spot opens it among the stickers you gave; on a sticker in a gift,
    * among your stickers.
    */
   function openSpotAt(e: Event) {
@@ -253,7 +254,7 @@ export function createTrayPresses(
     const id = spot?.dataset.id;
     if (!spot || id === undefined) return;
     if (spot.dataset.state === "given") api.openGiven(id);
-    else if (spot.dataset.state === "onItsWay") api.openYours(id);
+    else if (opens(spot)) api.openYours(id);
   }
   /**
    * A press on a spot that opens, turned into a drag, isn't a tap: its shared press lets go without

@@ -18,6 +18,7 @@ import { api as apiStrings } from "../i18n/strings/api";
 import { errors } from "../i18n/strings/errors";
 import { stickerBoard } from "../i18n/strings/stickerBoard";
 import { SessionKeeper } from "../sticker-creation/session/keptSession";
+import { formatNo } from "../stickers/format";
 import type { Sheet } from "../tickets/ticketsContext";
 import { useTickets } from "../tickets/useTickets";
 import { TabsLeadSlot } from "../ui/TabsLead";
@@ -470,6 +471,41 @@ describe("StickerBoard's Arrange", () => {
     expect(view.host.querySelector(".board-steps-status")?.textContent).toBe(
       stickerBoard.toolbar.arrange.moved.right.en,
     );
+  });
+});
+
+describe("StickerBoard's sticker detail", () => {
+  it("opens on the sticker viewed, and pages through yours with the ones in a gift last", async () => {
+    const inTheBag = boardSticker({
+      placement: at(0.2),
+      openGift: { id: "g-packed", status: "packed", for: null },
+    });
+    const viewed = boardSticker({ placement: at(0.5) });
+    const after = boardSticker({ placement: at(0.8) });
+    const view = await visitBoard(inTheBag, viewed, after);
+    selectByKeys(view.host, viewed.stickerId);
+    const viewKey = [...view.host.querySelectorAll<HTMLElement>(".sticker-toolbar button")].find(
+      (b) => b.textContent === stickerBoard.toolbar.view.en,
+    );
+    act(() => viewKey?.click());
+    await act(() => vi.dynamicImportSettled());
+
+    const shown = () =>
+      document.querySelector(".sticker-detail h2 .sticker-detail__no")?.textContent;
+    const page = (to: "next" | "previous") =>
+      act(() =>
+        [...document.querySelectorAll<HTMLElement>(".sticker-detail__pager button")]
+          .find((b) => b.getAttribute("aria-label") === stickerBoard.detail[to].en)
+          ?.click(),
+      );
+    const no = (s: ApiBoardSticker) => formatNo(s.sticker.number);
+    expect(shown()).toBe(no(viewed));
+    page("next");
+    expect(shown()).toBe(no(after));
+    page("next");
+    expect(shown()).toBe(no(inTheBag));
+    page("previous");
+    expect(shown()).toBe(no(after));
   });
 });
 

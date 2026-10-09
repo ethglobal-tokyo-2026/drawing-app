@@ -1,3 +1,5 @@
+import type { BoardStickerView } from "./boardSticker";
+
 /** A sticker's center on the board, in board pixels. */
 export interface StickerPoint {
   id: string;
@@ -23,6 +25,11 @@ function rowsOf(points: readonly StickerPoint[]): StickerPoint[][] {
 /** The stickers in reading order: rows from the top, each row from the left. */
 export const readingOrder = (points: readonly StickerPoint[]) =>
   rowsOf(points).flatMap((row) => row.map((p) => p.id));
+
+/** The stickers in a gift after the rest, each part in the order it came: how the detail pages yours. */
+export const inGiftsLast = <S extends Pick<BoardStickerView, "openGift">>(
+  stickers: readonly S[],
+) => [...stickers.filter((s) => !s.openGift), ...stickers.filter((s) => s.openGift)];
 
 /**
  * Where a key sends focus from the sticker `from`: Left and Right step through reading order, Up and

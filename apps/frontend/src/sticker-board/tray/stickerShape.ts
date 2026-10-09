@@ -35,6 +35,35 @@ export function knownShape(sticker: ShapeSource): Shape | undefined {
   return shape;
 }
 
+/**
+ * Where a dot badge sticks on a sticker, in 0-1 units of its image: the point on its cut line nearest
+ * the top-right corner, since a drawn shape rarely fills that corner. The corner itself until its cut
+ * line is known.
+ */
+export function dotSpot(sticker: ShapeSource): { x: number; y: number } {
+  const ring = knownShape(sticker)?.poly ?? [];
+  const { width: w, height: h } = sticker;
+  let spot = { x: 1, y: 0 };
+  if (ring.length < 3) return spot;
+  let nearest = Infinity;
+  ring.forEach(([ax, ay], i) => {
+    const [bx, by] = ring[(i + 1) % ring.length];
+    // Measured in pixels, so a long sticker's sides count as they look.
+    const dx = (bx - ax) * w;
+    const dy = (by - ay) * h;
+    const along = ((1 - ax) * w * dx - ay * h * dy) / (dx * dx + dy * dy || 1);
+    const t = Math.min(1, Math.max(0, along));
+    const x = ax + (bx - ax) * t;
+    const y = ay + (by - ay) * t;
+    const away = ((1 - x) * w) ** 2 + (y * h) ** 2;
+    if (away < nearest) {
+      nearest = away;
+      spot = { x, y };
+    }
+  });
+  return spot;
+}
+
 /** A sticker's shape: its stored outline, or else its mask, traced once. */
 export function stickerShape(
   sticker: ShapeSource,

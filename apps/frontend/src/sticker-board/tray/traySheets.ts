@@ -5,7 +5,7 @@
 import { i18next } from "../../i18n/i18n";
 import { formatMonthDay, formatNo } from "../../stickers/format";
 import { lightUp } from "../../stickers/light";
-import { knownShape } from "./stickerShape";
+import { dotSpot, knownShape } from "./stickerShape";
 import {
   COL,
   GMAX,
@@ -110,6 +110,15 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     svg.append(path);
     return decorative(svg);
   }
+  /** Puts `el` where a sticker sits on its sheet: centered on its place, its size, and turned with it. */
+  function placeAt(el: HTMLElement, q: Box) {
+    el.style.setProperty("--x", px(q.x));
+    el.style.setProperty("--y", px(q.y));
+    el.style.setProperty("--r", `${q.r.toFixed(2)}deg`);
+    el.style.width = px(q.w);
+    el.style.height = px(q.h);
+    el.style.margin = `${px(-q.h / 2)} 0 0 ${px(-q.w / 2)}`;
+  }
   function slotEl(s: Slot, isNew: boolean, use: SlotUse) {
     const q = placeOf(s);
     const el: HTMLElement = make(
@@ -122,12 +131,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     else if (use === "behind") el.setAttribute("inert", "");
     el.dataset.id = s.id;
     el.dataset.state = s.state;
-    el.style.setProperty("--x", px(q.x));
-    el.style.setProperty("--y", px(q.y));
-    el.style.setProperty("--r", `${q.r.toFixed(2)}deg`);
-    el.style.width = px(q.w);
-    el.style.height = px(q.h);
-    el.style.margin = `${px(-q.h / 2)} 0 0 ${px(-q.w / 2)}`;
+    placeAt(el, q);
     const no = { no: formatNo(s.no) };
     // A given sticker's spot shows only its cut line, faint, and takes the shared press.
     if (s.givenTo !== undefined) {
@@ -142,24 +146,27 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       if (cut) el.append(cut);
       return el;
     }
-    const onItsWay = s.state === "onItsWay";
+    const inAGift = s.state === "inTheBag" || s.state === "onItsWay";
     if (use !== "picture") {
-      const name = onItsWay
-        ? s.onItsWayTo === undefined
-          ? i18next.t(($) => $.stickerBoard.tray.slot.onItsWay, no)
-          : i18next.t(($) => $.stickerBoard.tray.slot.onItsWayTo, {
-              ...no,
-              recipient: s.onItsWayTo,
-            })
-        : s.state === "used"
-          ? isNew
-            ? i18next.t(($) => $.stickerBoard.tray.slot.usedNew, no)
-            : i18next.t(($) => $.stickerBoard.tray.slot.used, no)
-          : isNew
-            ? i18next.t(($) => $.stickerBoard.tray.slot.newOnSheet, no)
-            : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no);
-      // A sticker on its way opens, as a given one's spot does: it takes the shared press.
-      if (onItsWay) el.dataset.press = "";
+      const name =
+        s.state === "inTheBag"
+          ? i18next.t(($) => $.stickerBoard.tray.slot.inTheBag, no)
+          : s.state === "onItsWay"
+            ? s.onItsWayTo === undefined
+              ? i18next.t(($) => $.stickerBoard.tray.slot.onItsWay, no)
+              : i18next.t(($) => $.stickerBoard.tray.slot.onItsWayTo, {
+                  ...no,
+                  recipient: s.onItsWayTo,
+                })
+            : s.state === "used"
+              ? isNew
+                ? i18next.t(($) => $.stickerBoard.tray.slot.usedNew, no)
+                : i18next.t(($) => $.stickerBoard.tray.slot.used, no)
+              : isNew
+                ? i18next.t(($) => $.stickerBoard.tray.slot.newOnSheet, no)
+                : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no);
+      // A sticker in a gift opens, as a given one's spot does: it takes the shared press.
+      if (inAGift) el.dataset.press = "";
       // A used sticker silhouette shows no sticker, so nothing on it is blurred.
       const blurred = s.veiled && s.state !== "used";
       el.setAttribute(
@@ -208,8 +215,8 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       img.alt = "";
       img.draggable = false;
       fit.append(img);
-      // On its way, it lies under the sleeve's frost.
-      if (onItsWay) fit.append(decorative(make("i", "tray__frost")));
+      // In a gift, it lies under the sleeve's frost.
+      if (inAGift) fit.append(decorative(make("i", "tray__frost")));
       // Its image is the veiled one: the mark says why it's blurred, as on the board.
       if (s.veiled) {
         fit.append(
@@ -227,12 +234,33 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     fit.style.height = px(q.h);
     if (ui.imagesOn) fit.style.setProperty("--m", cssUrl(s.urls.mask));
     el.append(fit);
-    if (onItsWay) {
+    if (inAGift) {
       const cut = cutLineEl(s, q);
       if (cut) el.append(cut);
     }
-    if (isNew) el.append(decorative(make("span", "tray__new", words.new)));
     return el;
+  }
+  /**
+   * A sticker's dot badge, turned with its spot: NEW on its corner, or where its gift is (its spot's
+   * name says so too) on its cut line, as on its detail; null when it wears none.
+   */
+  function dotOf(s: Slot, isNew: boolean) {
+    let dot: HTMLElement | null = null;
+    if (s.state === "inTheBag" || s.state === "onItsWay") {
+      dot = make(
+        "span",
+        "tray__gift-dot",
+        icon(s.state === "inTheBag" ? ICONS.inTheBag : ICONS.onItsWay),
+      );
+      const at = dotSpot(s);
+      dot.style.setProperty("--spot-x", at.x.toFixed(4));
+      dot.style.setProperty("--spot-y", at.y.toFixed(4));
+    } else if (isNew) dot = make("span", "tray__new", words.new);
+    if (!dot) return null;
+    const spot = make("span", `tray__dot-spot${matches(s) ? "" : " is-out"}`, dot);
+    spot.dataset.id = s.id;
+    placeAt(spot, placeOf(s));
+    return spot;
   }
   function rangeOf(f: number) {
     const ats = sheetItems(f).map((s) => s.arrivedAt);
@@ -289,10 +317,17 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   ) {
     sizePages();
     const paper = make("div", "tray__paper", decorative(make("i", "tray__tear")));
+    // The dot badges lie over every sticker on the sheet: in its own spot, a dot would be covered by
+    // any later sticker beside it.
+    const dots = decorative(make("span", "tray__dots"));
     // A sticker received leaves its spot, which opens it, when the board says who has it.
     for (const s of sheetItems(f))
-      if (s.state !== "given" || s.givenTo !== undefined)
+      if (s.state !== "given" || s.givenTo !== undefined) {
         paper.append(slotEl(s, news.has(s.id), use));
+        const dot = dotOf(s, news.has(s.id));
+        if (dot) dots.append(dot);
+      }
+    paper.append(dots);
     // Nothing to put on the only sheet yet: it says what will be.
     if (ui.model.slots.length === 0)
       paper.append(make("p", "fine tray__empty keep-phrases", words.empty));

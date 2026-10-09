@@ -30,15 +30,15 @@ describe("traySlots", () => {
     ]);
   });
 
-  it("marks stickers out on the board, on their way or received, or here", () => {
+  it("marks stickers out on the board, in the bag, on their way or received, or here", () => {
     const slots = traySlots([
       sticker("on", 1, true),
       sticker("sent", 2, true, sent),
       sticker("received", 3, true, { held: false }),
       sticker("here", 4),
-      sticker("bagged", 5, false, packed),
+      sticker("bagged", 5, true, packed),
     ]);
-    expect(slots.map((s) => s.state)).toEqual(["used", "onItsWay", "given", "here", "here"]);
+    expect(slots.map((s) => s.state)).toEqual(["used", "onItsWay", "given", "here", "inTheBag"]);
   });
 });
 
@@ -47,7 +47,8 @@ describe("newSlots", () => {
     const slots = traySlots([
       sticker("old", 1),
       sticker("seen", 2),
-      sticker("given", 2, false, sent),
+      sticker("sent", 2, false, sent),
+      sticker("bagged", 2, true, packed),
       sticker("on the board", 2, true),
       sticker("new", 2),
     ]);

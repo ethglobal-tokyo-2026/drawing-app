@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { focusStep, readingOrder } from "./stickerOrder";
+import type { BoardStickerView } from "./boardSticker";
+import { focusStep, inGiftsLast, readingOrder } from "./stickerOrder";
 
 // A board of three rows, each a little uneven, the way stickers get stuck on.
 const board = [
@@ -14,6 +15,32 @@ const board = [
 describe("readingOrder", () => {
   it("reads rows from the top and each row from the left, however uneven the row", () => {
     expect(readingOrder(board)).toEqual(["cat", "onigiri", "whale", "moon", "star", "sunset"]);
+  });
+});
+
+describe("inGiftsLast", () => {
+  type GiftStatus = NonNullable<BoardStickerView["openGift"]>["status"];
+  const yours = (id: string, gift?: GiftStatus) => ({
+    id,
+    openGift: gift ? { id: `gift-${id}`, status: gift } : null,
+  });
+
+  it("puts the stickers in a gift after the rest, each part in the order it came", () => {
+    // In the order they arrived, the one on its way ahead of the one in the bag.
+    const arrived = [
+      yours("onigiri"),
+      yours("cat", "sent"),
+      yours("moon"),
+      yours("whale", "packed"),
+      yours("star"),
+    ];
+    expect(inGiftsLast(arrived).map((s) => s.id)).toEqual([
+      "onigiri",
+      "moon",
+      "star",
+      "cat",
+      "whale",
+    ]);
   });
 });
 

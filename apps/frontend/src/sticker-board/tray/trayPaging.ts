@@ -201,9 +201,10 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
   function syncTabs() {
     for (const t of tabs) t.setAttribute("aria-pressed", String(t.dataset.filter === ui.filter));
   }
+  /** Each sticker the filter leaves out fades on the sheets `els`, with its dot badge. */
   const fadeSlots = (els: readonly HTMLElement[], f: Filter) => {
     for (const el of els)
-      for (const sl of el.querySelectorAll<HTMLElement>(".tray__slot")) {
+      for (const sl of el.querySelectorAll<HTMLElement>(".tray__slot, .tray__dot-spot")) {
         const s = sl.dataset.id === undefined ? null : itemOf(sl.dataset.id);
         if (s) sl.classList.toggle("is-out", !matchesFilter(s, f));
       }

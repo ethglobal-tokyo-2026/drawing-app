@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { boardSticker, people, sticker, TEST_KYOTO_SEIKA_SUBJECTS } from "../api/testFixtures";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
-import { placeUnplaced, shownIn, toBoardSticker } from "./boardSticker";
+import { onTheBoard, placeUnplaced, shownIn, toBoardSticker } from "./boardSticker";
 import { LAID_OUT_SPOTS, LARGE_LANDING_GROWTH, TAKEN_WITHIN } from "./placement";
 
 /** A spot on the board, as the API sends it. */
@@ -122,6 +122,20 @@ describe("placeUnplaced", () => {
     );
     expect(placed.map((p) => Object.keys(p.spots))).toEqual([["phone"]]);
     expect(stickers.map((s) => s.placements.large)).toEqual([null, null]);
+  });
+});
+
+describe("onTheBoard", () => {
+  it("takes a sticker you hold stuck on, and none in a gift, packed or on its way, nor one given away", () => {
+    const inAGift = (status: "packed" | "sent") => ({ id: `gift-${status}`, status, for: null });
+    const stuckOn = [
+      {},
+      { openGift: inAGift("packed") },
+      { openGift: inAGift("sent") },
+      { held: false },
+    ].map((rest) => toBoardSticker(boardSticker({ placement: onBoardAt(0.5), ...rest })));
+    const shown = shownIn("phone", placeUnplaced(stuckOn).stickers);
+    expect(shown.map((s) => onTheBoard(s))).toEqual([true, false, false, false]);
   });
 });
 

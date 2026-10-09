@@ -515,6 +515,8 @@ export const stickerBoard = {
         en: "{{no}}, given to {{recipient}}. Open it",
         ja: "{{no}}、{{recipient}}さんへ贈ったシールをひらく",
       },
+      /** Sticker tray: screen readers' name for the spot of a sticker packed in a gift you haven't sent yet, a button that opens it among your stickers */
+      inTheBag: { en: "{{no}}, in the bag. Open it", ja: "{{no}}、ギフト袋に入れたシールをひらく" },
       /** Sticker tray: screen readers' name for the spot of a sticker you sent that no one has received yet, a button that opens it among your stickers */
       onItsWay: { en: "{{no}}, on its way. Open it", ja: "{{no}}、お届け中のシールをひらく" },
       /** Sticker tray: screen readers' name for the spot of a sticker you sent to someone that they haven't received yet, a button that opens it among your stickers; {{recipient}} is who it waits for, such as "@bob" */

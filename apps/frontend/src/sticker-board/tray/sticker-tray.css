@@ -273,9 +273,11 @@
   cursor: pointer;
 }
 
-/* As the mouth relaxes to a crack the stack's foot fades, so the crack shows no cut-off dates, NEW or +N. */
+/* As the mouth relaxes to a crack the stack's foot fades, so the crack shows no cut-off dates, dot
+   badges or +N. */
 .tray__foot .fine,
 .tray__new,
+.tray__gift-dot,
 .tray__depth {
   opacity: var(--foot, 1);
 }
@@ -484,7 +486,8 @@
   cursor: pointer;
 }
 
-.tray__slot.is-out {
+.tray__slot.is-out,
+.tray__dot-spot.is-out {
   opacity: 0.2;
 }
 
@@ -505,9 +508,9 @@
   stroke-dasharray: 3 2.4;
 }
 
-/* A sticker on its way: in its spot under the sleeve's frost, inside its own cut line, so its sheet's
-   packing never moves. It opens, never peels. */
-.tray__slot[data-state="onItsWay"] {
+/* A sticker in a gift, in the bag or on its way: in its spot under the sleeve's frost, inside its own
+   cut line, so its sheet's packing never moves. It opens, never peels. */
+.tray__slot:is([data-state="inTheBag"], [data-state="onItsWay"]) {
   cursor: pointer;
 }
 
@@ -566,28 +569,61 @@
   pointer-events: none;
 }
 
-/* A dot badge, stuck on by the same hand as every other. */
-.tray__new {
+/* A sheet's dot badges, in one layer over all its stickers. */
+.tray__dots {
   position: absolute;
-  right: -9px;
-  top: -8px;
-  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Where a dot badge's sticker sits, placed and turned as its spot is, so the dot keeps its place. */
+.tray__dot-spot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(var(--x), var(--y)) rotate(var(--r));
+  transition: opacity 200ms linear;
+}
+
+/* A dot badge, stuck on by the same hand as every other. */
+.tray__new,
+.tray__gift-dot {
+  position: absolute;
   display: inline-grid;
   place-items: center;
   height: 20px;
-  padding: 0 7px;
   border-radius: 999px;
-  background: var(--seal);
   color: var(--ink);
-  white-space: nowrap;
-  font: 400 var(--fs-fine) / 1 var(--font-puffy);
-  letter-spacing: 0.02em;
   transform: rotate(var(--tilt));
   box-shadow:
     inset 0 0 0 1px rgba(28, 24, 36, 0.14),
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
     1px 2px 3px rgba(28, 24, 36, 0.16);
   pointer-events: none;
+}
+
+.tray__new {
+  right: -9px;
+  top: -8px;
+  padding: 0 7px;
+  background: var(--seal);
+  white-space: nowrap;
+  font: 400 var(--fs-fine) / 1 var(--font-puffy);
+  letter-spacing: 0.02em;
+}
+
+/* A sticker in a gift wears a round Soda Aqua dot: the gift in the bag, the paper plane on its way.
+   It sits a little inside its cut line's top-right spot, as on the sticker's detail. */
+.tray__gift-dot {
+  left: calc(var(--spot-x) * 100% - 12px);
+  top: calc(var(--spot-y) * 100% - 8px);
+  width: 20px;
+  background: var(--aqua);
+}
+
+.tray__gift-dot .tray__ic {
+  width: 58%;
+  height: 58%;
 }
 
 /* A used sticker silhouette: the kiss-cut outline with plain backing paper inside, a hair of shadow
@@ -867,6 +903,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .tray__slot,
+  .tray__dot-spot,
   .tray__tab span {
     transition: none;
   }
@@ -884,7 +921,7 @@
   }
 }
 
-/* On a large screen the sheets grow; the NEW dots stuck on them and a pulled-out sheet's X keep their
+/* On a large screen the sheets grow; the dot badges stuck on them and a pulled-out sheet's X keep their
    size, stuck on by the same hand as every other. The header row is taller, so the tray starts lower
    (trayTop() in trayModel.ts reads the same query). */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
@@ -893,6 +930,7 @@
   }
 
   .tray__new,
+  .tray__gift-dot,
   .tray__x {
     scale: calc(1 / var(--scale, 1));
   }

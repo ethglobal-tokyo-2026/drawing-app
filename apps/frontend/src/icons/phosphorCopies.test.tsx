@@ -1,6 +1,8 @@
 import {
+  Gift,
   HandSwipeRight,
   Heart,
+  PaperPlaneTilt,
   Stack,
   Vibrate,
   X,
@@ -26,6 +28,8 @@ describe("copies of Phosphor's icons", () => {
     ["the shake tip and marks", VIBRATE_SVG, Vibrate, "fill"],
     ["the tray's stack mark", `<path d="${TRAY_ICONS.stack}"/>`, Stack, "bold"],
     ["the tray's close mark", `<path d="${TRAY_ICONS.x}"/>`, X, "bold"],
+    ["the tray's in-the-bag dot", `<path d="${TRAY_ICONS.inTheBag}"/>`, Gift, "fill"],
+    ["the tray's on-its-way dot", `<path d="${TRAY_ICONS.onItsWay}"/>`, PaperPlaneTilt, "fill"],
   ] as const)("%s is Phosphor's, byte for byte", (_, copy, Glyph, weight) => {
     expect(pathsOf(copy)).toEqual(published(Glyph, weight));
   });

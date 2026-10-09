@@ -140,13 +140,55 @@
   will-change: transform;
 }
 
-/* Its own shape, inside the --figure square; the timelapse's layer over it takes the same box. */
+/* Its own shape, inside the --figure square; the timelapse's layer over it, and the gift dot's, take
+   the same box. */
 .sticker-detail__slide .sticker-figure,
-.sticker-detail__slide .timelapse-layer {
+.sticker-detail__slide .timelapse-layer,
+.sticker-detail__dot-layer {
   width: calc(var(--figure) * min(1, var(--ar)));
   max-width: 100%;
   height: auto;
   aspect-ratio: var(--ar);
+}
+
+/* In the figure's cell, over it and the timelapse; taps go through to them. */
+.sticker-detail__dot-layer {
+  grid-area: 1 / 1;
+  position: relative;
+  pointer-events: none;
+}
+
+/* While the sticker flies to or from its spot, the figure waits hidden and the flyer copies only the
+   figure, so the dot waits with it. */
+.sticker-detail:has(+ .detail-lift__flyer) .sticker-detail__dot-layer {
+  visibility: hidden;
+}
+
+/* A sticker in a gift: In the bag or On its way, as a dot badge stuck on by the same hand as every
+   other, at its top-right spot. Centered a little inside that spot, so it sits over the sticker and
+   rises no further than the stage's room above it, past which the scrolling column cuts it off. */
+.sticker-detail__gift-dot {
+  position: absolute;
+  left: calc(var(--spot-x) * 100% - 16px);
+  top: calc(var(--spot-y) * 100% - 10px);
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--aqua);
+  color: var(--ink);
+  rotate: var(--tilt);
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 36, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    1px 2px 3px rgba(28, 24, 36, 0.16);
+}
+
+.sticker-detail__gift-dot svg {
+  display: block;
+  width: 58%;
+  height: 58%;
 }
 
 .sticker-detail__pager {

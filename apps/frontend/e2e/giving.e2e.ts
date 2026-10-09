@@ -42,6 +42,7 @@ test("Gift link: Alice gives from her board, and Bob opens the Gift Message's li
   // The detail is named for the sticker it shows.
   const onItsWay = alice.getByRole("dialog", { name: no });
   await expect(onItsWay.getByText(say(stickerBoard.detail.onItsWay, language))).toBeVisible();
+  await expect(onItsWay.locator('.sticker-detail__slide [data-gift="sent"]')).toBeVisible();
   await onItsWay.getByRole("button", { name: say(ui.backToBoard, language) }).click();
 
   await signIn(bob, "bob", language);

@@ -3,7 +3,6 @@ import type { ApiClient } from "../api/apiClient";
 import { toApiPlacement } from "../api/views";
 import {
   hasLargeLayout,
-  onItsWay,
   placeUnplaced,
   type PlacedBoardSticker,
   type UnplacedBoardSticker,
@@ -148,8 +147,9 @@ export function deriveLargeLayout(stickers: readonly PlacedBoardSticker[], board
       phone: s.placements.phone,
       large: largeSpotFrom(s.placements.phone, maxSOf(s, "large", field, board.U)),
     }));
+  // Only the stickers the board shows: one in a gift has left it.
   const pulled = pulledApart(
-    deriving.filter(({ art, phone }) => phone.on && !onItsWay(art)),
+    deriving.filter(({ art, phone }) => phone.on && !art.openGift),
     board,
   );
   const spots = new Map(deriving.map(({ id, large }) => [id, pulled.get(id) ?? large]));
