@@ -4,55 +4,55 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 
 ## Words
 
-| English                            | Japanese                               | Notes                                                                                 |
-| ---------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------- |
-| Croquis (the app)                  | クロッキー                             |                                                                                       |
-| sticker                            | シール                                 |                                                                                       |
-| sticker board                      | シールボード                           | A person's board of stickers, never the app                                           |
-| stat board (the board's cork back) | コルクボード                           |                                                                                       |
-| User Stats                         | 記録                                   |                                                                                       |
-| sticker tray                       | シールトレイ                           |                                                                                       |
-| sticker sheet                      | シールシート                           |                                                                                       |
-| Zipper                             | ファスナー                             |                                                                                       |
-| seal (a sticker)                   | 仕上げる                               | The Seal key: 仕上げ. Sealed: 仕上がった                                              |
-| draw                               | かく                                   | In hiragana, as on the Draw key                                                       |
-| the check (the seal key)           | チェック                               | In words naming the key; the act it does is 仕上げ                                    |
-| Time's up                          | 時間切れ                               | The drawing clock at 0:00                                                             |
-| clear (the sheet)                  | 消去                                   | Clip Studio Paint's word for its Clear; the eraser stays 消しゴム                     |
-| two fingers                        | 2本指                                  | Undo on the drawing screen; three fingers (3本指) redo                                |
-| Timelapse                          | タイムラプス                           | The sticker detail's replay of how it was drawn                                       |
-| gift / Gift Message                | ギフト / ギフトメッセージ              |                                                                                       |
-| give (a sticker)                   | 贈る                                   |                                                                                       |
-| receive                            | 受け取る                               |                                                                                       |
-| gift bag                           | ギフト袋                               | It closes (封); 仕上げる is only for a sticker                                        |
-| pull tab                           | つまみ                                 | Only for opening a gift bag                                                           |
-| open (a gift, the app)             | ひらく                                 | In hiragana                                                                           |
-| Gratitude                          | 感謝                                   | "Send gratitude": 感謝を送る                                                          |
-| (Gratitude) Mini-game              | 感謝ミニゲーム                         |                                                                                       |
-| hits                               | ヒット                                 |                                                                                       |
-| combo                              | コンボ                                 | One run of hits; the Mini-game's notes say 今回の感謝                                 |
-| Best combo                         | 最高コンボ                             | The most hits in one combo; never 最大コンボ                                          |
-| streak                             | 連続日数                               | Days in a row you sealed a sticker; the longest: 最長連続日数                         |
-| ticket / daily / reserve           | チケット / 無償チケット / 有償チケット | Gacha's words for free and bought; 無償チケットから先に使われます (ad0ll, 2026-09-27) |
-| Shop (the tab)                     | ショップ                               |                                                                                       |
-| laminate / backing foil            | ラミネート / ホイル                    | The Shop's coming-soon shelves                                                        |
-| Original Artist                    | 作者                                   |                                                                                       |
-| Direct / Residual (gratitude)      | 直接 / 作者として                      | The stat board's receipt rows; never a money word such as 印税                        |
-| artist (someone who draws)         | アーティスト                           |                                                                                       |
-| Transfer Trail                     | 来歴                                   | Provenance: who held it, and how it passed hand to hand (ad0ll, 2026-09-27)           |
-| Explore / My board                 | さがす / マイボード                    | The tab labels; the way back is マイボードに戻る                                      |
-| Sui address                        | Suiアドレス                            | The stat board's address paper, which keeps your stickers and pays                    |
-| handle                             | ユーザー名                             | X's word for the @handle; a display name is 名前                                      |
-| LINE friend / chat                 | 友だち / トーク                        | LINE's own words                                                                      |
-| Official Account                   | 公式アカウント                         |                                                                                       |
-| Terms / Privacy Policy             | 利用規約 / プライバシーポリシー        |                                                                                       |
-| NSFW sticker / 18+                 | 18+のシール / 18+                      | The toggle at sealing reads 18+ in both languages                                     |
-| NSFW opt-in (Settings)             | 18+のシールを表示する                  | The switch's label; on and off are オン / オフ                                        |
-| subject (Kyoto Seika Subject)      | 題材                                   | The guide's word; "subject" in English                                                |
-| Begin (the drawing screen's key)   | はじめ                                 | The proctor's word                                                                    |
-| Reroll (a subject's die)           | 振り直し                               | The lettering beside each die, and the start of its name for screen readers           |
-| entrance exam (Settings' legend)   | 入試                                   | Kyoto Seika Practice Mode's setting; its tag on a sticker's detail is 入試練習        |
-| censor bar                         | 伏せ字                                 | The bar over the university's name; its label says 大人の事情により伏せています       |
+| English                          | Japanese                               | Notes                                                                                 |
+| -------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------- |
+| Croquis (the app)                | クロッキー                             |                                                                                       |
+| sticker                          | シール                                 |                                                                                       |
+| sticker board                    | シールボード                           | A person's board of stickers, never the app                                           |
+| stat board (the board's back)    | コルクボード                           |                                                                                       |
+| User Stats                       | 記録                                   |                                                                                       |
+| sticker tray                     | シールトレイ                           |                                                                                       |
+| sticker sheet                    | シールシート                           |                                                                                       |
+| Zipper                           | ファスナー                             |                                                                                       |
+| seal (a sticker)                 | 仕上げる                               | The Seal key: 仕上げ. Sealed: 仕上がった                                              |
+| draw                             | かく                                   | In hiragana, as on the Draw key                                                       |
+| the check (the seal key)         | チェック                               | In words naming the key; the act it does is 仕上げ                                    |
+| Time's up                        | 時間切れ                               | The drawing clock at 0:00                                                             |
+| clear (the sheet)                | 消去                                   | Clip Studio Paint's word for its Clear; the eraser stays 消しゴム                     |
+| two fingers                      | 2本指                                  | Undo on the drawing screen; three fingers (3本指) redo                                |
+| Timelapse                        | タイムラプス                           | The sticker detail's replay of how it was drawn                                       |
+| gift / Gift Message              | ギフト / ギフトメッセージ              |                                                                                       |
+| give (a sticker)                 | 贈る                                   |                                                                                       |
+| receive                          | 受け取る                               |                                                                                       |
+| gift bag                         | ギフト袋                               | It closes (封); 仕上げる is only for a sticker                                        |
+| pull tab                         | つまみ                                 | Only for opening a gift bag                                                           |
+| open (a gift, the app)           | ひらく                                 | In hiragana                                                                           |
+| Gratitude                        | 感謝                                   | "Send gratitude": 感謝を送る                                                          |
+| (Gratitude) Mini-game            | 感謝ミニゲーム                         |                                                                                       |
+| hits                             | ヒット                                 |                                                                                       |
+| combo                            | コンボ                                 | One run of hits; the Mini-game's notes say 今回の感謝                                 |
+| Best combo                       | 最高コンボ                             | The most hits in one combo; never 最大コンボ                                          |
+| streak                           | 連続日数                               | Days in a row you sealed a sticker; the longest: 最長連続日数                         |
+| ticket / daily / reserve         | チケット / 無償チケット / 有償チケット | Gacha's words for free and bought; 無償チケットから先に使われます (ad0ll, 2026-09-27) |
+| Shop (the tab)                   | ショップ                               |                                                                                       |
+| laminate / backing foil          | ラミネート / ホイル                    | The Shop's coming-soon shelves                                                        |
+| Original Artist                  | 作者                                   |                                                                                       |
+| Residual (gratitude)             | 作者として                             | The tag on your gratitude events' rows; never a money word such as 印税               |
+| artist (someone who draws)       | アーティスト                           |                                                                                       |
+| Transfer Trail                   | 来歴                                   | Provenance: who held it, and how it passed hand to hand (ad0ll, 2026-09-27)           |
+| Explore / My board               | さがす / マイボード                    | The tab labels; the way back is マイボードに戻る                                      |
+| Sui address                      | Suiアドレス                            | The stat board's address paper, which holds the stickers                              |
+| handle                           | ユーザー名                             | X's word for the @handle; a display name is 名前                                      |
+| LINE friend / chat               | 友だち / トーク                        | LINE's own words                                                                      |
+| Official Account                 | 公式アカウント                         |                                                                                       |
+| Terms / Privacy Policy           | 利用規約 / プライバシーポリシー        |                                                                                       |
+| NSFW sticker / 18+               | 18+のシール / 18+                      | The toggle at sealing reads 18+ in both languages                                     |
+| NSFW opt-in (Settings)           | 18+のシールを表示する                  | The switch's label; on and off are オン / オフ                                        |
+| subject (Kyoto Seika Subject)    | 題材                                   | The guide's word; "subject" in English                                                |
+| Begin (the drawing screen's key) | はじめ                                 | The proctor's word                                                                    |
+| Reroll (a subject's die)         | 振り直し                               | The lettering beside each die, and the start of its name for screen readers           |
+| entrance exam (Settings' legend) | 入試                                   | Kyoto Seika Practice Mode's setting; its tag on a sticker's detail is 入試練習        |
+| censor bar                       | 伏せ字                                 | The bar over the university's name; its label says 大人の事情により伏せています       |
 
 ## Style
 

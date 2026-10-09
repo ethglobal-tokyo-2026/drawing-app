@@ -1,9 +1,9 @@
 import type { Section } from "../catalog";
 
 export const stickerBoard = {
-  /** The Sticker Board's cork back: your own, or someone else's. */
+  /** The stat board, the back of a sticker board: your own, or someone else's. */
   statBoard: {
-    /** Stat board (a sticker board's cork back, yours or someone else's): screen readers' name for the dialog; {{name}} is the board owner's LINE name */
+    /** Stat board (the back of a sticker board, yours or someone else's): screen readers' name for the dialog; {{name}} is the board owner's LINE name */
     label: { en: "{{name}}’s stats", ja: "{{name}}さんの記録" },
     /** Your stat board, while your User Stats load: the one line screen readers hear, in place of the figures */
     loadingOwn: { en: "Loading your stats", ja: "あなたの記録を読み込んでいます" },
