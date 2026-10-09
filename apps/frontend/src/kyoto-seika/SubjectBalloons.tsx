@@ -160,7 +160,9 @@ function puff(layer: HTMLElement) {
 }
 
 /** The pencil loop's room round the word it circles, in px. */
-const LOOP_ROOM = { x: 9, y: 5 };
+const LOOP_ROOM = { x: 12, y: 9 };
+/** Group ruby spreads a reading over its word: how much wider than its kana set it runs, at most. */
+const READING_SPREAD = 1.5;
 
 interface BalloonProps {
   place: number;
@@ -238,9 +240,13 @@ function SubjectBalloon({
 
   const type = fit === "roomy" ? TYPE : TIGHT_TYPE;
   const size = wordSizePx(visible.ja, fit, spec.w);
-  // The loop rings the word as set, and the reading over it, never wider than the word area.
+  // The loop rings the word as set and the reading over it, which spaces its kana wider than they set.
+  const wide = Math.max(
+    charCount(visible.ja) * size,
+    charCount(visible.reading) * type.readingPx * READING_SPREAD,
+  );
   const loop = {
-    rx: Math.min(spec.w / 2, (charCount(visible.ja) * size) / 2) + LOOP_ROOM.x,
+    rx: Math.min(spec.w, wide) / 2 + LOOP_ROOM.x,
     ry: spec.h / 2 + LOOP_ROOM.y,
   };
   const style = {
