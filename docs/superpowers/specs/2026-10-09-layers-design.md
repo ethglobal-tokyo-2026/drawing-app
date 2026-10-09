@@ -11,46 +11,78 @@ Artists use layers to sketch and then ink, to color under the lines, and to shad
 - **Mode:** Operate. An extension of the drawing screen: it inherits the screen's world (flat label stock, paper, the one light), so no concept round and no DESIGN.md change.
 - **Job:** pick the layer you draw on, see what's on each, fade or hide one, reorder them, and set one to lock its transparent pixels or clip to the layer below, mid-drawing, in a few taps, while the canvas stays nearly bare.
 - **Signature move:** selecting a layer flashes its ink in the world's one light, under whatever covers it.
-- **Must not:** lag a stroke, take more of the sheet than one more strip under the tools, or lose a stroke to a reload.
+- **Must not:** lag a stroke, take room from the top of the sheet, or lose a stroke to a reload.
+
+## Performance and memory
+
+- **Drawing stays lag-free.** A stroke on any layer paints only that layer's canvas, so it costs what a stroke costs today. Nothing else runs inside a stroke's frames: thumbnails, composites, the flash, keeping the drawing on the device.
+- **Every other path gets a budget** measured in WebKit and on the iPad simulator, with the performance recorder:
+  - switching layers, which rebuilds the composites;
+  - the flash;
+  - thumbnails;
+  - an opacity drag;
+  - undo and redo with ten layers;
+  - the seal's composite;
+  - the timelapse's prepare pass and playback.
+- **Memory stays under the old iOS canvas cap with ten inked layers** (see Memory). Past it, the app drops undo copies first and never loses ink.
+- **Research comes first.** The plan opens by measuring today's memory and frame costs: the ink canvas, the undo checkpoints, the seal's copies and the timelapse player. Today's use may already be wasteful, and any changes to memory or structure that the research calls for go into the plan before layers are built on top.
 
 ## Decisions
 
 ### The layer panel
 
-1. **Placement.** One flat label strip under the tool strip, right-aligned with it; with a left drawing hand it follows the tool strip to the top left. Its slots line up under the tool tiles: on the right hand, a gap before **+** matches the hairline before the tool strip's Clear.
-   - The Smoothing bar, the clear bar and the options bar open under the panel, never over it.
-   - On a large screen it's one row in the top bar, before the tool strip, with the slider before the chips, so nothing hangs into the sheet.
+1. **Placement: a column on the edge away from the drawing hand, under the size rail.** impeccable layout's assessment chose it over three other placements (renders in WebKit, measured):
+   - a strip under the tool strip, which took a second band from the top of the sheet;
+   - a row above undo, which crowded undo and ran into the Kyoto Seika corner print;
+   - a column anchored at the foot, whose **+** moved with every layer added.
+
+   It groups the controls by job down that edge: what you draw with (size), what you draw on (layers), then undo. The top keeps only the tool strip, and the Smoothing and clear bars stay where they are.
+   - A left drawing hand mirrors it to the right edge, with the rail.
+   - On a large screen it sits in the sidebar between the size rail and undo, and the rail rises to make room.
+   - On a Kyoto Seika sheet it stops above the corner print and scrolls.
    - It hides with the tools: while a Kyoto Seika sheet waits for Begin, at time's up and while sealing. The seal sheet covers it like the rest.
-   - The panel leaves room for the current chip's ring.
-2. **Chips.** Back on the left, front on the right, then **+**. Every layer stack in the apps surveyed is vertical, so the rule is stated: right is in front.
-   - A chip is a tiny sheet of paper showing its layer's ink cropped to the ink, as ibisPaint's "Only Contents" thumbnails are (https://ibispaint.com/lecture/index.jsp?no=81&lang=en), with the layer's number in fine print. An empty layer shows only its number.
+   - With one layer it covers under 1% of the sheet; with four, 3.5%.
+
+2. **Chips.** Front on top, **+** above the column, the order every layer app uses.
+   - No backing strip: each chip is its own tiny sheet of paper (white, 4px corners, a hairline edge and the label's contact shadow). It shows its layer's ink cropped to the ink, as ibisPaint's "Only Contents" thumbnails are (https://ibispaint.com/lecture/index.jsp?no=81&lang=en), with the layer's number in fine print. An empty layer shows only its number.
+   - **+** is a small flat tile.
    - A fresh sheet has one layer, 1.
    - A faded layer's chip fades with it, but never below half, so a faint sketch still reads. A hidden layer's chip is dimmer still and wears an eye-slash.
-   - Chips sit on the tool strip's 40px pitch. When there are more than fit (on a phone, past about seven), they scroll and **+** stays at the end.
-   - The strip is one Tab stop, like the tool strip. Arrow keys move between chips; Enter selects one, or opens the current chip's options.
+   - Chips sit on a 42px pitch. When there are more than fit (past nine on an 844px phone, seven on 753px), the column scrolls, and a half-shown chip at its foot says so.
+   - The column is one Tab stop, after the size rail and before undo. Up and Down move between chips; Enter selects one, or opens the current chip's options.
 3. **Numbers.** A layer keeps its number for life: moving it never renumbers it. A new layer takes one more than the highest number the sheet has used, so an undone delete can't collide with a newer layer.
 4. **Up to 10 layers.** **+** dims at 10. A 30-minute Kyoto Seika sheet needs more than Linea Sketch's 5 (https://linea-app.com/).
 5. **+ adds a layer directly above the current one and makes it current.** Procreate Pocket (https://help.procreate.com/pocket/handbook/layers/layers-create), Sketchbook (https://help.sketchbook.com/docs/adding-layers), ibisPaint and Kleki all do this.
 6. **Tap a chip** to make it current: its ink flashes (19). **Tap the current chip** to open or close its options bar, as Procreate's Layer Options open (https://help.procreate.com/procreate/handbook/layers/layers-mask).
-7. **The options bar:** one row of flat tiles, like the tool strip, under the panel:
+7. **The options bar:** one row of flat tiles, like the tool strip, out beside the current chip, toward the sheet:
    - Lock transparent pixels, Clip to layer below;
-   - Move back, Move forward;
+   - Move back (down), Move forward (up);
    - Delete layer.
 
-   A pressed toggle is reversed out of Ink, like the current tool. Any tap elsewhere closes it, as it closes the Smoothing bar.
+   It's label stock with the lift shadow, held over the sheet like the Smoothing bar. A pressed toggle is reversed out of Ink with its icon's fill weight, like the current tool. Any tap elsewhere closes it, as it closes the Smoothing bar.
 
-8. **The opacity slider** sits under the chips and sets the current layer's opacity.
+   **Icons**, from Phosphor:
+   - **Clip to layer below:** `SelectionBackground`, a solid square under a dashed one. That's Clip Studio's own mark (https://help.clip-studio.com/en-us/manual_en/180_layers/Other_layer_settings.htm). ibisPaint's bent arrow read as "merge" in review.
+   - **Lock transparent pixels:** `Checkerboard`, the mark Photoshop, Krita and Clip Studio share. Its fill weight, shown when on, is a true checkerboard.
+   - **Move back, Move forward:** `CaretDown`, `CaretUp`.
+   - **Delete layer:** `Trash`.
+
+   Each tile's accessible name is its full Clip Studio name.
+
+8. **The opacity slider** is a thin vertical line beside the chips, starting level with the front chip, with a small thumb like the size rail's. It sets the current layer's opacity.
+   - Its thumb's touch area leans toward the sheet, clear of the chips' own.
    - It shows once the sheet has two layers, since with one it would only fade the whole sticker. It also shows while the current layer isn't at 100%, so a hidden layer left on its own can still be brought back.
    - Arrow keys step it; Home and End go to 0% and 100%.
    - **Thumb only:** you drag the thumb from where you grab it, as on the size rail; a tap on the track does nothing. UIKit's slider and WebKit's range input work this way (https://github.com/WebKit/WebKit/blob/main/Source/WebCore/html/shadow/SliderThumbElement.cpp). Beside the canvas, jumping to a tapped spot would turn a palm, or a stroke starting next to the slider, into an opacity change.
    - **Ends:** dragging past either end lands exactly on it. It doesn't snap near 0 or 100: no app surveyed does, iOS's browser can't give the haptic tick that makes a snap legible, and a stray snap to 0 hides the layer.
-   - **Value:** shown at the row's end while you drag.
+   - **Value:** shown beside the thumb while you drag.
    - **Reset:** a double-tap on the thumb resets it to 100%, as Lightroom and Fresco do.
    - **One step:** the value lands on release, as one undo step.
 9. **0% hides a layer, and a hidden layer takes no ink.** A stroke, fill or erase on it is blocked; the slider nudges and a short hint shows beside it, as the paused sheet's hint does. Infinite Painter blocks drawing at zero the same way (https://docs.infinitestudio.art/painter/layers/). There's no eye button.
 10. **Delete layer** takes one tap and asks nothing; undo restores it. Procreate, MediBang, ibisPaint and Kleki do the same. The last layer can't be deleted. The layer below the deleted one becomes current, or the one above if it was at the back.
-11. **Reorder:** hold a chip to lift it, drag it along the strip and drop it (Procreate: https://help.procreate.com/procreate/handbook/layers/layers-organize).
-    - While a chip is lifted, its neighbors slide apart, and an overflowing strip scrolls at its ends.
+11. **Reorder:** hold a chip to lift it, drag it up or down the column and drop it (Procreate: https://help.procreate.com/procreate/handbook/layers/layers-organize).
+    - The hold is what tells a lift from a scroll of an overflowing column.
+    - While a chip is lifted, its neighbors slide apart, and the column scrolls at its ends.
     - Move back and Move forward are the way without dragging, which WCAG 2.5.7 requires (https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html).
     - It runs on pointer events, not the browser's drag and drop, which WebKit may not enable in LINE's web view.
 12. **Clear** (the tool strip's tile) clears the current layer. It asks first, as today, and leaves the layer's opacity alone; Procreate resetting it to 100% is a reported trap.
@@ -66,7 +98,7 @@ Artists use layers to sketch and then ink, to color under the lines, and to shad
     - It fades with that layer: their opacities multiply, as in Clip Studio (https://help.clip-studio.com/en-us/manual_en/180_layers/Other_layer_settings.htm).
     - Several clipped layers can share one base.
     - The bottom layer can't clip. A clipped layer moved to the bottom stops clipping until a layer goes under it (Procreate).
-    - Its chip slides left inside its slot to touch the chip it clips to, a little smaller, like a sticker stuck to the edge of another. The slots stay on the tool tiles' columns, and its number stays at 11px.
+    - Its chip steps in toward the sheet and down to touch the chip it clips to, as ibisPaint indents a clipped layer. Its number stays at 11px.
 17. **Undo covers every layer change:** add, delete, move, opacity, lock, clip and clear are one step each.
     - Back-to-back opacity changes to one layer merge into one step, as Kleki does.
     - Undo never leaves a deleted layer current, and a layer it brings back comes back current.
@@ -82,8 +114,8 @@ Artists use layers to sketch and then ink, to color under the lines, and to shad
     - A stroke that starts cancels it, an empty layer doesn't flash, and under reduced motion nothing flashes: the chip's ring shows the current layer.
 20. **A hovering pen magnifies the chips,** as the macOS Dock does.
     - The chip under the pen grows, and its neighbors grow less and part to make room, so the chip stays under the pen.
-    - Chips grow toward the sheet. On a phone, where the slider sits under them, the slider fades while the pen hovers the chips.
-    - Touching down freezes the strip, so the tap lands where it hovered, and leaving lets it settle.
+    - Chips grow toward the sheet, over the slider, which fades while the pen hovers the chips.
+    - Touching down freezes the column, so the tap lands where it hovered, and leaving lets it settle.
     - Pen only, never a finger or a mouse. Hover only previews, as Apple asks (https://developer.apple.com/design/human-interface-guidelines/apple-pencil-and-scribble).
     - iPad Safari has delivered Pencil hover since 16.1 (https://webkit.org/blog/13399/webkit-features-in-safari-16-1/). Whether LINE's in-app browser does is unverified.
 
@@ -100,8 +132,11 @@ Artists use layers to sketch and then ink, to color under the lines, and to shad
     - Each event takes a short beat out of the timelapse's length, as a fill's reveal does.
     - It starts where the sheet was last blank, meaning no layer had ink, as today's starts after the last clear.
 24. **Timelapse format v2** (below).
-    - Stored v1 timelapses stay as they are and play as one layer. With no backups, rewriting every stored timelapse isn't worth the risk.
-    - The API reads and accepts both formats, so a page loaded before a deploy can still seal.
+    - **Stored v1 timelapses are converted to v2** (one layer) by a one-shot script. The conversion loses nothing.
+      - It's a dry run unless told otherwise.
+      - It keeps the original blobs in a file until the converted ones are checked to play the same.
+      - After it, the API and the player know only v2.
+    - **A page loaded before the deploy still sends v1 when it seals.** The API converts that with the same function and logs it, so no seal fails because of a deploy. That conversion goes once the log shows no more.
 
 ### Vocabulary
 
@@ -170,7 +205,7 @@ Artists use layers to sketch and then ink, to color under the lines, and to shad
 
 ### Pen hover
 
-- Transforms on the chips only, from the pen's position over the strip (pointer events with `pointerType` pen and no buttons).
+- Transforms on the chips only, from the pen's position over the column (pointer events with `pointerType` pen and no buttons).
 - Distances are measured from each chip's resting center, so the chips don't jitter as they grow.
 
 ### Memory
@@ -215,7 +250,7 @@ So:
   ] }
 ```
 
-- **API:** `apps/api/src/stickers/timelapse.ts` gets `timelapseV2Schema` and a union of v1 and v2 for reading and sealing. No table changes: the timelapse is stored gzipped as sent. `MAX_TIMELAPSE_BYTES` stays.
+- **API:** `apps/api/src/stickers/timelapse.ts` gets `timelapseV2Schema`. Reading takes only v2; sealing takes v2, plus v1 through the conversion while it lasts. No table changes: the timelapse is stored gzipped. `MAX_TIMELAPSE_BYTES` stays.
 - **Player:** keeps a canvas per layer at the display's size and composites them each frame through the same compositing function.
 - **Fills' prepare pass:** replays every layer in order at the drawn density, since each fill reads them all.
 
@@ -225,7 +260,7 @@ So:
 - **Tiles, as Krita and MyPaint use.** Memory would follow the inked area, at the cost of rewriting the engine.
 - **Storing each fill's result,** as Klecks and Drawpile do, so a layer replays alone. That means heavier steps and timelapses.
 - **A fill that reads only the current layer,** Procreate's default. It floods a fresh layer whole, the trap that coloring under the lines falls into.
-- **A vertical layer column,** every app's stack. The drawing hand covers one side and the size rail holds the other.
+- **A horizontal strip,** under the tool strip or above undo. It took room from the top of the sheet, or crowded undo and the Kyoto Seika corner print, and it needed a stated rule for which end is in front.
 - **Merging,** by drag or by command. No phone painting app merges by drag, and on a 40px chip the drop zone is about 3 mm against a fingertip's 7–12 mm (https://www.uxmatters.com/mt/archives/2017/07/design-for-fingers-touch-and-people-part-3.php).
 - **A visibility toggle;** 0% hides a layer instead.
 - **On the slider,** jumping to a tapped spot and snapping near 0 or 100.
@@ -250,7 +285,7 @@ So:
   - a hidden layer blocks ink and nudges the slider.
 - Timelapse:
   - v2 encodes and decodes;
-  - v1 decodes as one layer;
+  - a v1 timelapse converts to a v2 one that plays the same, one layer;
   - layer events get beats;
   - it starts at the last blank sheet.
 - Kept session: layer steps and the current layer round-trip; a kept drawing without layers loads as layer 1.
@@ -265,7 +300,7 @@ So:
   - hold and drag reorders as one step;
   - Move back and Move forward work;
   - names and states are read out.
-- API: a v2 seal is stored and served; a stored v1 still reads.
+- API: a v2 seal is stored and served; a v1 seal is stored as v2; the migration's dry run changes nothing, and its run converts every v1 row.
 
 **End to end, in Chromium and WebKit**
 
@@ -280,14 +315,15 @@ So:
 - The sealed sticker shows a lower layer under an upper one, and leaves a hidden layer out.
 - A layered sticker's timelapse plays.
 - In Kyoto Seika Practice Mode, nothing in the panel holds the clock.
-- With a left drawing hand, the panel is mirrored.
-- On an iPad, the panel sits in the top bar, and synthesized pen hover magnifies the chips.
+- With a left drawing hand, the column moves to the right edge.
+- On an iPad, the column sits in the sidebar, and synthesized pen hover magnifies the chips.
+- On a Kyoto Seika sheet, the column stops above the corner print.
 
 **iPadOS Safari** (`test:ipad-safari`): the panel against Safari's toolbars, and a touch drag that reorders.
 
 ## Build order
 
-1. **Spike:** measure (below), and set the checkpoint budget.
+1. **Research and measure** (Performance and memory): today's costs first, then any memory or structure changes they call for, and the checkpoint budget.
 2. **Renames** (26).
 3. **Layer stack, steps, undo and the kept session,** with one layer and no visible change.
 4. **The three-canvas display and the compositing function.** The seal and the fill read the composite.
@@ -310,13 +346,13 @@ So:
 
 - **Before the build,** with ten inked layers:
   - canvas memory in the iPad simulator's Web Inspector, including whether a shown canvas holds a second backing store;
-  - frame times drawing on the top and bottom layers in WebKit.
+  - frame times drawing on the top and bottom layers in WebKit;
+  - deep undo on a 30-minute Kyoto Seika drawing with fills.
 - **During the build,** reported as values for ad0ll to judge in use. These are unverified guesses to tune:
   - the lift hold, about 400 ms, with 8px of slop;
   - magnification: ×1.5 under the pen, ×1.25 beside it, ×1.1 next;
   - the flash: about 240 ms, with a 500 ms tail;
   - the timelapse's beats for layer events.
-- **Deep undo** on a 30-minute Kyoto Seika drawing with ten layers and fills, timed with the performance recorder.
 
 ## Docs and strings
 
