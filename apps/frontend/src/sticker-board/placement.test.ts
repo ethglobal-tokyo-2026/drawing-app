@@ -6,10 +6,13 @@ import {
   knobHidden,
   LAID_OUT_SPOTS,
   nextZ,
+  PHONE_BOARD,
+  PHONE_UNIT_MAX,
   sizeOf,
   SPOT_BOUNDS,
   toFrac,
   toolbarSpot,
+  unitOf,
   type Placement,
 } from "./placement";
 
@@ -121,5 +124,13 @@ describe("placement", () => {
 
   it("stacks a raised sticker above all the others", () => {
     expect(nextZ([at(0, 0), { ...at(0, 0), z: 7 }])).toBe(8);
+  });
+});
+
+describe("unitOf", () => {
+  it("sizes a phone layout's stickers by the board's width, up to the widest phone's", () => {
+    for (const width of [375, PHONE_BOARD.W, PHONE_UNIT_MAX])
+      expect(unitOf("phone", width)).toBe(width);
+    expect(unitOf("phone", PHONE_UNIT_MAX + 100)).toBe(PHONE_UNIT_MAX);
   });
 });

@@ -48,12 +48,16 @@ export interface BoardSize {
   U: number;
 }
 
+/** The widest iPhone's width: a phone layout wider than it, such as LINE's sheet on an iPad, sizes stickers by it. */
+export const PHONE_UNIT_MAX = 440;
+
 /**
  * What a sticker's size is a share of: the board's width on a phone; in the large layout the phone
- * board's, so a sticker keeps its phone size either way up and the room goes to the board.
+ * board's, so a sticker keeps its phone size either way up and the room goes to the board. A phone
+ * layout wider than the widest phone keeps that phone's unit, and the extra width is board.
  */
 export const unitOf = (layout: BoardLayout, boardWidth: number) =>
-  layout === "large" ? PHONE_BOARD.W : boardWidth;
+  layout === "large" ? PHONE_BOARD.W : Math.min(boardWidth, PHONE_UNIT_MAX);
 
 /** Every layout, in the order a body that saves spots names them. */
 const BOARD_LAYOUTS = ["phone", "large"] as const satisfies readonly BoardLayout[];

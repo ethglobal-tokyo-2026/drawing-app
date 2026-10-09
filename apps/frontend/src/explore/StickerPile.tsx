@@ -26,7 +26,6 @@ import { EASE_PEEL } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
 import { REVEAL, revealOnLoad } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
-import { useLargeScreen } from "../ui/largeScreen";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { dayBadge, dayKey, spokenDay, type PileDay } from "./pileDays";
 import type { PileEnd } from "./pilePages";
@@ -503,7 +502,6 @@ export function StickerPile({ days, today, end, onReachEnd, meId, onLift }: Prop
   const floor = useRef<HTMLDivElement>(null);
   const [now] = useState(() => Date.now());
   const toTemplate = t(($) => $.explore.pile.to);
-  const large = useLargeScreen();
   /** The pile's width in units, from pileFit. */
   const [units, setUnits] = useState(PILE_WIDTH);
   const laidDays = useMemo(
@@ -542,13 +540,13 @@ export function StickerPile({ days, today, end, onReachEnd, meId, onLift }: Prop
 
   useNearEnd(floor, end.state === "more" || end.state === "loading", laidDays, onReachEnd);
 
-  // A phone's pile is PILE_WIDTH units across, scaled to its width; a large screen's keeps about a
-  // phone's scale and spans as many units as fit.
+  // A pile is PILE_WIDTH units across, scaled to its width up to about a phone's scale; a wider one
+  // spans as many units as fit.
   useLayoutEffect(() => {
     const pile = root.current;
     if (!pile) return;
     const fit = () => {
-      const { k, units } = pileFit(pile.clientWidth, large);
+      const { k, units } = pileFit(pile.clientWidth);
       pile.style.setProperty("--k", String(k));
       setUnits(units);
     };
@@ -556,7 +554,7 @@ export function StickerPile({ days, today, end, onReachEnd, meId, onLift }: Prop
     const resized = new ResizeObserver(fit);
     resized.observe(pile);
     return () => resized.disconnect();
-  }, [large]);
+  }, []);
 
   useFallIn(
     root,
