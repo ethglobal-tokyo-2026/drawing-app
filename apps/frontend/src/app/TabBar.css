@@ -158,14 +158,15 @@
   }
 
   /* The compact key's 48px face centers on the tabs, its 6px lip below their foot, but never inside the
-     home indicator's safe area. It stacks over the screens, since a key's nudge and tickets reach up
-     past the strip, and under the sheets that cover the whole phone. */
+     home indicator's safe area, not even when the first-visit hop's tilt tips a bottom corner below
+     where it rests. It stacks over the screens, since a key's nudge and tickets reach up past the
+     strip, and under the sheets that cover the whole phone. */
   .tabs-lead {
     position: absolute;
     z-index: calc(var(--z-sheet) - 1);
     left: var(--gutter-large);
     bottom: max(
-      env(safe-area-inset-bottom),
+      calc(env(safe-area-inset-bottom) + 2px),
       calc(var(--tabs-pad-foot) + var(--tab-h) / 2 - 24px - 6px)
     );
     display: flex;
