@@ -24,6 +24,11 @@
   text-wrap: balance;
 }
 
+/* The giver, the bag and the hint: one group on a large screen, laid out as a phone's on a phone. */
+.receive-gift__unwrap {
+  display: contents;
+}
+
 .receive-gift__head {
   display: flex;
   align-items: center;
@@ -284,14 +289,31 @@
   padding: 0 24px 34px;
 }
 
-/* On a large screen one group in the middle: the header centered over the bag, the bag and its pull
-   tab at a phone's size, and once torn the Accept card under the bag's mouth, over its lower half as
-   the phone's sheet is. The group centers, not the card alone. */
+/* On a large screen one group in the middle, above the home indicator: the header centered over the
+   bag, the two grown with the room (useUnwrapScale), and once torn the Accept card under the bag's
+   mouth, over its lower half as the phone's sheet is. The group centers, not the card alone. */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
   .receive-gift {
     --accept-over: 150px;
     justify-content: center;
     align-items: center;
+    padding-bottom: var(--foot-inset, 0px);
+  }
+
+  /* Grown from its top middle, its box grown to match, so it centers as drawn: with the hint under the
+     closed bag, then without it once the Accept card meets the stage. */
+  .receive-gift__unwrap {
+    position: relative;
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    transform: scale(var(--unwrap-scale, 1));
+    transform-origin: 50% 0;
+    margin-bottom: calc(var(--unwrap-group-h, 0px) * var(--unwrap-scale, 1) - var(--unwrap-h, 0px));
+  }
+
+  .receive-gift.is-rising .receive-gift__unwrap {
+    margin-bottom: calc((var(--unwrap-scale, 1) - 1) * var(--unwrap-h, 0px));
   }
 
   .receive-gift > :not(.bottom-sheet) {
@@ -310,19 +332,16 @@
     flex: 0 1 auto;
   }
 
-  /* Under the low bag as on a phone, but taking no room, so the group centers on the header and the
-     bag, and the Accept card meets the stage. */
+  /* Under the low bag as on a phone, taking no room, so the Accept card meets the stage. */
   .receive-gift__hint {
-    position: relative;
-    inset: calc(92px + 28px) auto auto;
-    height: 0;
+    top: calc(100% + 92px + 28px);
   }
 
   .receive-gift__sheet.bottom-sheet.sheet-card {
     position: relative;
     inset: auto;
     flex: none;
-    margin: calc(-1 * var(--accept-over)) 0 0;
+    margin: calc(-1 * var(--accept-over) * var(--unwrap-scale, 1)) 0 0;
   }
 }
 

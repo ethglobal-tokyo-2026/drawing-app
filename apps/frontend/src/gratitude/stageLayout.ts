@@ -40,15 +40,27 @@ export function heartRest(
 }
 
 /**
- * The live game's scale on a `width` × `height` stage: 1 on a phone's; on a large screen's, its
- * smaller share of LIVE_STAGE, from 1 up to MAX_LIVE_SCALE. Read from the stage alone, so a replay
- * finds the heart a combo was recorded on from the stage it recorded.
+ * How far a layout drawn at scale 1 on a `madeFor` stage grows on a `width` × `height` one: 1 on a
+ * phone's; on a large screen's, its smaller share of `madeFor`, from 1 up to `max`.
  */
-export function liveScale(width: number, height: number): number {
+export function grownScale(
+  width: number,
+  height: number,
+  madeFor: { width: number; height: number },
+  max: number,
+): number {
   if (width < LARGE_STAGE_MIN || height < LARGE_STAGE_MIN) return 1;
-  const grown = Math.min(width / LIVE_STAGE.width, height / LIVE_STAGE.height);
-  return Math.min(MAX_LIVE_SCALE, Math.max(1, grown));
+  const grown = Math.min(width / madeFor.width, height / madeFor.height);
+  return Math.min(max, Math.max(1, grown));
 }
+
+/**
+ * The live game's scale on a `width` × `height` stage, grown from LIVE_STAGE up to MAX_LIVE_SCALE.
+ * Read from the stage alone, so a replay finds the heart a combo was recorded on from the stage it
+ * recorded.
+ */
+export const liveScale = (width: number, height: number): number =>
+  grownScale(width, height, LIVE_STAGE, MAX_LIVE_SCALE);
 
 /** The live game's heart at rest, as wide as its scale lets it be. */
 export const liveHeartRest = (width: number, height: number) =>
