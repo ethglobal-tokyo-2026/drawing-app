@@ -268,6 +268,54 @@ describe("useBoardGestures", () => {
     expect(parseFloat(el.style.width)).toBeCloseTo(sizeOf(large.U, sticker.placement.s, sticker).w);
   });
 
+  describe("when the stage can't capture a pointer", () => {
+    /** The board, with its stage's `setPointerCapture` throwing `error`; returns its sticker. */
+    const boardCapturing = (error: Error, onCommit: Options["onCommit"] = () => {}) => {
+      act(() =>
+        root.render(
+          <Board
+            stickers={[sticker]}
+            field={fieldOf(390, 657)}
+            size={{ W: 390, H: 657, U: 390 }}
+            selected="a"
+            reduced
+            layout="phone"
+            tray={noTray}
+            onSelect={() => {}}
+            onOpen={() => {}}
+            onCommit={onCommit}
+            onRemove={() => {}}
+          />,
+        ),
+      );
+      const stage = host.querySelector(".board-stage");
+      const el = host.querySelector(".placed-sticker");
+      if (!(stage instanceof HTMLElement) || !el) throw new Error("the board didn't render");
+      stage.getBoundingClientRect = () => new DOMRect(0, 0, 390, 657);
+      stage.setPointerCapture = () => {
+        throw error;
+      };
+      return el;
+    };
+
+    it("carries a drag on uncaptured when WebKit no longer has its pointer", async () => {
+      const onCommit = vi.fn<Options["onCommit"]>();
+      const el = boardCapturing(
+        new DOMException("The object can not be found here.", "NotFoundError"),
+        onCommit,
+      );
+      await act(async () => dragAcross(el, 1, 100, 160));
+      expect(onCommit).toHaveBeenCalledOnce();
+      expect(onCommit.mock.calls[0][1].x).toBeGreaterThan(sticker.placement.x);
+    });
+
+    it("lets any other error from capturing it surface", () => {
+      const error = new DOMException("The object is in an invalid state.", "InvalidStateError");
+      const el = boardCapturing(error);
+      expect(() => act(() => void point(el, "pointerdown", 1, 100, 300))).toThrow(error);
+    });
+  });
+
   describe("steps, from keys and from Arrange", () => {
     const board = (
       onCommit: Options["onCommit"],

@@ -57,7 +57,7 @@ async function blurred(stickerPng: Uint8Array) {
 }
 
 /** The cut's alpha, from the sticker's mask. */
-async function cutAlpha(maskPng: Uint8Array, width: number, height: number) {
+export async function cutAlpha(maskPng: Uint8Array, width: number, height: number) {
   const { data, info } = await sharp(maskPng)
     .ensureAlpha()
     .extractChannel(3)

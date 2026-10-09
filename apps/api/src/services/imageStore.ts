@@ -3,7 +3,8 @@ import { mkdirSync } from "node:fs";
 import { access, link, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
-import type { ImageStore } from "../deps.ts";
+import type { DisplayWebp, ImageStore } from "../deps.ts";
+import { logFailure, logInfo } from "../diagnostics.ts";
 import {
   bytes32Schema,
   stickerPngsSchema,
@@ -12,8 +13,16 @@ import {
   type StickerPngKind,
   type StickerWebpKind,
 } from "../shapes.ts";
+import {
+  domedPaper,
+  flatPaper,
+  flattenDomedSeal,
+  liftPaper,
+  paperOnly,
+  type Pixels,
+} from "../stickers/flattenDomedSeal.ts";
 import { foilMaskAlpha } from "./foilMask.ts";
-import { veiledPng } from "./veil.ts";
+import { cutAlpha, veiledPng } from "./veil.ts";
 
 // A sticker's images are small and made once, so libvips keeps no cache of them between calls.
 sharp.cache(false);
@@ -24,21 +33,28 @@ const webpKinds = stickerWebpsSchema.keyof().options;
 /** The sticker's WebP quality: its colors hide the loss, where the masks' edges would show it. */
 const STICKER_WEBP_QUALITY = 85;
 
+/** How many stickers a run of makeMissingDisplayWebps logs its progress after. */
+const WEBP_PROGRESS_EVERY = 100;
+
 /** `{contentHash}.png` for the sticker PNG, `{contentHash}.{kind}.png` for the rest. */
 export const pngName = (contentHash: string, kind: StickerPngKind) =>
   kind === "png" ? `${contentHash}.png` : `${contentHash}.${kind}.png`;
 
 /**
- * `{contentHash}.webp` for the sticker, `{contentHash}.{kind}.webp` for the rest. Every image is
- * cached for good, so a WebP made a new way needs a new name.
+ * `{contentHash}.display.webp` for the sticker, `{contentHash}.{kind}.webp` for the rest. Every image
+ * is cached for good, so a WebP made a new way needs a new name: the sticker's was
+ * `{contentHash}.webp` while it showed the resin dome sealed into its PNG.
  */
 const webpName = (contentHash: string, kind: StickerWebpKind) =>
-  kind === "sticker" ? `${contentHash}.webp` : `${contentHash}.${kind}.webp`;
+  kind === "sticker" ? `${contentHash}.display.webp` : `${contentHash}.${kind}.webp`;
 
-/** The sharp copy: `{contentHash}.sharp.png`, and its WebP copy `{contentHash}.sharp.webp`. */
+/**
+ * The sharp copy: `{contentHash}.sharp.png`, and its display WebP `{contentHash}.sharp.display.webp`,
+ * named anew like the sticker's when it stopped showing the resin dome.
+ */
 const sharpNames = (contentHash: string) => ({
   png: `${contentHash}.sharp.png`,
-  webp: `${contentHash}.sharp.webp`,
+  webp: `${contentHash}.sharp.display.webp`,
 });
 
 /** A sticker's image URLs under `baseUrl`. */
@@ -76,7 +92,14 @@ export const drawingUrls = ({ png, flat, webp, sharp }: StickerImages) => [
   webp.sticker,
   ...(sharp ? [sharp.png, sharp.webp] : []),
 ];
-
+/**
+ * Every URL the CDN may hold a sticker's drawing at, which a mark purges: its drawing's files, and the
+ * WebPs it showed at before display WebPs, `{contentHash}.webp` and `.sharp.webp`, still cached.
+ */
+export const cdnDrawingUrls = (images: StickerImages) => {
+  const stem = images.png.replace(/\.png$/, "");
+  return [...drawingUrls(images), `${stem}.webp`, `${stem}.sharp.webp`];
+};
 /** A sticker's image URLs for each viewer, under `imageBaseUrl`. */
 export function imageUrls(imageBaseUrl: string): Pick<ImageStore, "urls" | "veiledUrls"> {
   return {
@@ -144,6 +167,70 @@ async function foilWebp(maskPng: Uint8Array): Promise<Uint8Array> {
     .toBuffer();
 }
 
+/** A PNG's pixels, RGBA. */
+async function pixelsOf(png: Uint8Array): Promise<Pixels> {
+  const { data, info } = await sharp(png)
+    .ensureAlpha()
+    .raw({ depth: "uchar" })
+    .toBuffer({ resolveWithObject: true });
+  return { data: new Uint8Array(data), width: info.width, height: info.height };
+}
+
+const rawOf = ({ width, height }: Pixels) => ({ raw: { width, height, channels: 4 } }) as const;
+
+const stickerWebpOf = (image: Uint8Array | Pixels) =>
+  (image instanceof Uint8Array ? sharp(image) : sharp(image.data, rawOf(image)))
+    .webp({ quality: STICKER_WEBP_QUALITY })
+    .toBuffer();
+
+/** The sticker's WebP: its PNG, with the paper flat where it was sealed under the resin dome. */
+async function stickerWebp(png: Uint8Array, maskPng: Uint8Array): Promise<Uint8Array> {
+  const sticker = await pixelsOf(png);
+  const flat = flattenDomedSeal(sticker, await cutAlpha(maskPng, sticker.width, sticker.height));
+  return stickerWebpOf(flat ? { ...sticker, data: flat } : png);
+}
+
+/** The cut's alpha at another image's size: the mask is the sticker's, smaller than its sharp copy. */
+async function resizedCutAlpha(maskPng: Uint8Array, width: number, height: number) {
+  const alpha = await sharp(maskPng)
+    .ensureAlpha()
+    .extractChannel(3)
+    .resize(width, height, { fit: "fill", kernel: "linear" })
+    .raw({ depth: "uchar" })
+    .toBuffer();
+  return new Uint8Array(alpha);
+}
+
+/** The sharp copy's WebP, flattened like the sticker's, at its own size. */
+async function sharpWebp(sharpPng: Uint8Array, maskPng: Uint8Array): Promise<Uint8Array> {
+  const copy = await pixelsOf(sharpPng);
+  const flat = flattenDomedSeal(copy, await resizedCutAlpha(maskPng, copy.width, copy.height));
+  return stickerWebpOf(flat ? { ...copy, data: flat } : sharpPng);
+}
+
+/**
+ * The veiled image's WebP. Where the sticker was sealed under the resin dome, its paper is lifted the
+ * same way, from the dome's paper as the veil shows it to white paper as the veil shows it.
+ */
+async function veiledWebp(veiled: Uint8Array, png: Uint8Array, maskPng: Uint8Array) {
+  const sticker = await pixelsOf(png);
+  const cut = await cutAlpha(maskPng, sticker.width, sticker.height);
+  const paper = domedPaper(sticker, cut);
+  if (!paper) return stickerWebpOf(veiled);
+  const veiledPaper = async (color: ArrayLike<number>) => {
+    const alone = await sharp(paperOnly(sticker, cut, color), rawOf(sticker))
+      .png()
+      .toBuffer();
+    return (await pixelsOf(await veiledPng(alone, maskPng))).data;
+  };
+  const [sealedPaper, whitePaper, shown] = await Promise.all([
+    veiledPaper(paper),
+    veiledPaper(flatPaper(cut.length)),
+    pixelsOf(veiled),
+  ]);
+  return stickerWebpOf({ ...shown, data: liftPaper(shown.data, cut, sealedPaper, whitePaper) });
+}
+
 /** One WebP file, made from the sticker's PNGs. */
 async function makeWebp(
   kind: StickerWebpKind,
@@ -151,9 +238,7 @@ async function makeWebp(
 ): Promise<Uint8Array> {
   switch (kind) {
     case "sticker":
-      return sharp(await readPng("png"))
-        .webp({ quality: STICKER_WEBP_QUALITY })
-        .toBuffer();
+      return stickerWebp(await readPng("png"), await readPng("mask"));
     case "mask":
     case "spec":
     case "rim":
@@ -165,13 +250,15 @@ async function makeWebp(
   }
 }
 
+const pngReader = (imageDir: string, contentHash: string) => (kind: StickerPngKind) =>
+  readFile(join(imageDir, pngName(contentHash, kind))).then((bytes) => new Uint8Array(bytes));
+
 /**
  * Makes the WebP files a stored sticker lacks from its PNGs on disk, the first seal's, so a save cut
  * off before its WebPs is finished by the next one.
  */
 async function writeMissingWebps(imageDir: string, contentHash: string) {
-  const readPng = (kind: StickerPngKind) =>
-    readFile(join(imageDir, pngName(contentHash, kind))).then((bytes) => new Uint8Array(bytes));
+  const readPng = pngReader(imageDir, contentHash);
   await Promise.all(
     webpKinds.map(async (kind) => {
       const path = join(imageDir, webpName(contentHash, kind));
@@ -180,37 +267,118 @@ async function writeMissingWebps(imageDir: string, contentHash: string) {
   );
 }
 
+/** Makes the veiled image's WebP, unless it's there, from its PNG and the sticker's on disk. */
+async function writeVeiledWebp(imageDir: string, contentHash: string, veiledHash: string) {
+  checkContentHash(veiledHash);
+  const path = join(imageDir, webpName(veiledHash, "sticker"));
+  if (await exists(path)) return;
+  const readPng = pngReader(imageDir, contentHash);
+  const [veiled, png, mask] = await Promise.all([
+    pngReader(imageDir, veiledHash)("png"),
+    readPng("png"),
+    readPng("mask"),
+  ]);
+  await writeIfAbsent(path, await veiledWebp(veiled, png, mask));
+}
+
 /**
  * Makes the veiled image of the sticker stored under `contentHash`, from its PNG and mask on disk, and
  * stores it with its WebP copy under its own content hash, which it answers.
  */
 async function saveVeiled(imageDir: string, contentHash: string): Promise<string> {
   checkContentHash(contentHash);
-  const readPng = (kind: StickerPngKind) =>
-    readFile(join(imageDir, pngName(contentHash, kind))).then((bytes) => new Uint8Array(bytes));
+  const readPng = pngReader(imageDir, contentHash);
   const veiled = await veiledPng(await readPng("png"), await readPng("mask"));
   const veiledHash = `0x${createHash("sha256").update(veiled).digest("hex")}`;
   await writeIfAbsent(join(imageDir, pngName(veiledHash, "png")), veiled);
-  const webp = join(imageDir, webpName(veiledHash, "sticker"));
-  if (!(await exists(webp))) {
-    await writeIfAbsent(webp, await makeWebp("sticker", () => Promise.resolve(veiled)));
-  }
+  await writeVeiledWebp(imageDir, contentHash, veiledHash);
   return veiledHash;
+}
+
+/** Makes the sharp copy's WebP, unless it's there, from its PNG and the sticker's mask on disk. */
+async function writeSharpWebp(imageDir: string, contentHash: string) {
+  const names = sharpNames(contentHash);
+  const path = join(imageDir, names.webp);
+  if (await exists(path)) return;
+  const [sharpPng, mask] = await Promise.all([
+    readFile(join(imageDir, names.png)).then((bytes) => new Uint8Array(bytes)),
+    pngReader(imageDir, contentHash)("mask"),
+  ]);
+  await writeIfAbsent(path, await sharpWebp(sharpPng, mask));
 }
 
 /** The sharp copy and its WebP, made from the PNG on disk, the first seal's, as writeMissingWebps does. */
 async function saveSharp(imageDir: string, contentHash: string, sharpPng: Uint8Array) {
-  const names = sharpNames(contentHash);
-  await writeIfAbsent(join(imageDir, names.png), sharpPng);
-  const webp = join(imageDir, names.webp);
-  if (await exists(webp)) return;
-  const stored = await readFile(join(imageDir, names.png));
-  await writeIfAbsent(webp, await sharp(stored).webp({ quality: STICKER_WEBP_QUALITY }).toBuffer());
+  await writeIfAbsent(join(imageDir, sharpNames(contentHash).png), sharpPng);
+  await writeSharpWebp(imageDir, contentHash);
+}
+
+/** Makes a display WebP from its sticker's PNGs on disk, unless it's there. */
+async function writeDisplayWebp(imageDir: string, webp: DisplayWebp) {
+  checkContentHash(webp.contentHash);
+  switch (webp.of) {
+    case "sticker": {
+      const path = join(imageDir, webpName(webp.contentHash, "sticker"));
+      if (await exists(path)) return;
+      const readPng = pngReader(imageDir, webp.contentHash);
+      return writeIfAbsent(path, await stickerWebp(await readPng("png"), await readPng("mask")));
+    }
+    case "veiled":
+      return writeVeiledWebp(imageDir, webp.contentHash, webp.veiledHash);
+    case "sharp":
+      return writeSharpWebp(imageDir, webp.contentHash);
+  }
+}
+
+/** A stored sticker's content hash, its veiled image's when it's NSFW, and whether it has a sharp copy. */
+interface StoredSticker {
+  contentHash: string;
+  veiledHash: string | null;
+  hasSharpCopy: boolean;
+}
+
+/**
+ * Makes the display WebPs stored stickers lack from their PNGs on disk, one sticker at a time, as
+ * when they're named anew. A sticker whose files can't be made is logged and skipped.
+ */
+export async function makeMissingDisplayWebps(
+  images: Pick<ImageStore, "makeDisplayWebp">,
+  stored: StoredSticker[],
+) {
+  logInfo("images.webp.start", { count: stored.length });
+  let done = 0;
+  let failed = 0;
+  for (const { contentHash, veiledHash, hasSharpCopy } of stored) {
+    try {
+      await images.makeDisplayWebp({ of: "sticker", contentHash });
+      if (veiledHash) await images.makeDisplayWebp({ of: "veiled", contentHash, veiledHash });
+      if (hasSharpCopy) await images.makeDisplayWebp({ of: "sharp", contentHash });
+    } catch (error) {
+      failed++;
+      const which = veiledHash ? `${contentHash}, veiled as ${veiledHash}` : contentHash;
+      logFailure("images.webp.failed", error, { reason: `The WebPs of ${which} failed` });
+    }
+    done++;
+    if (done % WEBP_PROGRESS_EVERY === 0) {
+      logInfo("images.webp.progress", { count: done, left: stored.length - done, failed });
+    }
+  }
+  logInfo("images.webp.done", { count: done, failed });
 }
 
 /** Writes sticker images into the folder the box serves at `imageBaseUrl`. */
 export function createDiskImageStore(imageDir: string, imageBaseUrl: string): ImageStore {
   mkdirSync(imageDir, { recursive: true });
+  // One making of each file at a time, however many requests ask for it at once.
+  const making = new Map<string, Promise<void>>();
+  const makeDisplayWebp = (webp: DisplayWebp) => {
+    const key = JSON.stringify(webp);
+    const known = making.get(key);
+    if (known) return known;
+    const made = writeDisplayWebp(imageDir, webp).finally(() => making.delete(key));
+    making.set(key, made);
+    return made;
+  };
   return {
     save: async (contentHash, pngs, sharp) => {
       checkContentHash(contentHash);
@@ -223,6 +391,7 @@ export function createDiskImageStore(imageDir: string, imageBaseUrl: string): Im
       if (sharp) await saveSharp(imageDir, contentHash, sharp);
     },
     saveVeiled: (contentHash) => saveVeiled(imageDir, contentHash),
+    makeDisplayWebp,
     ...imageUrls(imageBaseUrl),
   };
 }

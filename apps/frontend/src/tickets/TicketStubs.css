@@ -93,7 +93,7 @@
   stroke: rgba(28, 24, 36, 0.22);
 }
 
-/* A reserve ticket is bought, and looks it: Blue under the stickers' resin, with a full Ink outline. */
+/* A reserve ticket is bought, and looks it: Blue under resin, with a full Ink outline. */
 .ticket-stub--reserve .ticket-stub__face .ticket-stub__paper {
   fill: var(--blue);
 }

@@ -448,7 +448,12 @@ export function useBoardGestures(options: Options) {
         gesture.current = { mode: "bg", p0: pt };
       }
       startHold(gesture.current);
-      stage.setPointerCapture(e.pointerId);
+      try {
+        stage.setPointerCapture(e.pointerId);
+      } catch (error) {
+        // WebKit can't capture a pointer that's gone; its lift on the stage still ends the gesture.
+        if (!(error instanceof DOMException && error.name === "NotFoundError")) throw error;
+      }
       e.preventDefault();
     };
 

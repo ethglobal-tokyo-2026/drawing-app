@@ -81,11 +81,10 @@ export interface SealFrame {
   plain: number;
   /** The resin's wet front. */
   pour: { scale: number; turn: number; opacity: number };
-  tint: number;
-  lens: number;
+  /** A foil that marks how the sticker was made, which rises with the resin. */
+  foil: number;
   gloss: number;
   spec: { opacity: number; scale: number };
-  rim: number;
   sticker: {
     x: number;
     y: number;
@@ -139,16 +138,15 @@ export function sealFrame(t: number, path: Flight, items: number): SealFrame {
       turn: -10 + 22 * pf,
       opacity: pf <= 0 ? 0 : 1 - span(T.flow1 - 40, T.flow1 + 220),
     },
-    tint: risen,
-    lens: risen,
+    foil: risen,
     gloss: easeOut(span(T.rise0 + 80, T.rise1 + 80)),
     spec: { opacity: formed, scale: 1.8 - 0.8 * formed },
-    rim: easeOut(span(T.form0 + 90, T.form1 + 40)),
     sticker: { x, y, rotate, rotateX: -11 * up, rotateY: 9 * up, scale },
+    // Lifted, it falls farther and fainter; landed, it's the cast as baked, as the sticker then shows.
     shadow: {
-      opacity: t < T.peel0 ? 0 : 0.45 + 0.25 * height,
-      x: x + 3 + 11 * height,
-      y: y + 5 + 20 * height,
+      opacity: t < T.peel0 ? 0 : 1 - 0.3 * height,
+      x: x + 14 * height,
+      y: y + 25 * height,
       rotate,
       scale: scale * (1 + 0.03 * height),
     },

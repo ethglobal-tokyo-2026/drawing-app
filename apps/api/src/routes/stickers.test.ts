@@ -476,8 +476,9 @@ describe("POST /api/stickers/:stickerId/nsfw", () => {
     });
     const { png, flat, webp, sharp } = test.images.urls(sticker.contentHash);
     expect(sharp).not.toBeNull();
+    const earlierWebps = [png.replace(/\.png$/, ".webp"), png.replace(/\.png$/, ".sharp.webp")];
     const drawing = [png, flat, webp.sticker, ...(sharp ? [sharp.png, sharp.webp] : [])];
-    expect(purge.urls.toSorted()).toEqual(drawing.toSorted());
+    expect(purge.urls.toSorted()).toEqual([...drawing, ...earlierWebps].toSorted());
     const optedInId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
     const seen = await bodyOf(await getSticker(optedInId, sticker.id), stickerDetailSchema);
     expect(seen.sticker.images).toEqual(test.images.urls(sticker.contentHash));

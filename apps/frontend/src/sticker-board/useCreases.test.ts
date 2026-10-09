@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CREASE_SIDES } from "../stickers/crease";
 import type { Affine, CreaseJob, CreaseReply } from "../stickers/creaseWorker";
-import { kyotoSeikaBandWidth, type FoilTone } from "../stickers/StickerFoil";
+import { kyotoSeikaBandWidth } from "../stickers/kyotoSeikaFoil";
+import type { FoilTone } from "../stickers/StickerFoil";
 import { testStickerUrls } from "../stickers/testStickerUrls";
 import { fieldOf, PHONE_BOARD, stickerBox, unitOf, type Placement } from "./placement";
 import { CreaseStore, creaseJobs, FOIL_REACH } from "./useCreases";

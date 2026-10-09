@@ -1,10 +1,13 @@
+import { stickers } from "@drawing-app/db";
 import { serveStatic } from "@hono/node-server/serve-static";
+import { eq, or } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { except } from "hono/combine";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
 import { IMMUTABLE_MAX_AGE_S } from "./cacheControl.ts";
-import type { AppDeps } from "./deps.ts";
+import type { AppDeps, DisplayWebp } from "./deps.ts";
+import { logFailure } from "./diagnostics.ts";
 import { apiError, limitBody, notFound, onError, validate } from "./errors.ts";
 import { exploreRoutes } from "./routes/explore.ts";
 import { giftRoutes } from "./routes/gifts.ts";
@@ -72,10 +75,11 @@ const serverLogQuerySchema = z.object({
 });
 
 /**
- * The files that show a sticker's drawing, by its content hash: its PNG, its WebP, the flat sheet,
- * and its sharp copy's PNG and WebP.
+ * The files that show a sticker's drawing, by its content hash: its PNG and display WebP, the flat
+ * sheet, its sharp copy's PNG and display WebP, and the WebPs that showed the resin dome.
  */
-const DRAWING_FILE = /^\/(0x[0-9a-f]{64})(?:\.png|\.webp|\.flat\.png|\.sharp\.png|\.sharp\.webp)$/;
+const DRAWING_FILE =
+  /^\/(0x[0-9a-f]{64})(?:(?:\.sharp)?(?:\.png|\.display\.webp|\.webp)|\.flat\.png)$/;
 
 /**
  * Serves the files that show a drawing only NSFW stickers show to an opted-in session alone, never
@@ -100,6 +104,44 @@ const imageAccess = (deps: AppDeps) =>
     c.header("Cache-Control", `${scope}, max-age=${IMMUTABLE_MAX_AGE_S}, immutable`);
   });
 
+/** A display WebP, by its content hash: a sticker's or its veiled image's, or a sharp copy's. */
+const DISPLAY_WEBP = /^\/(0x[0-9a-f]{64})(\.sharp)?\.display\.webp$/;
+
+/** Which display WebP a name asks for, by the sticker the database has under its hash; null for none. */
+function displayWebpNamed(deps: AppDeps, hash: string, sharpCopy: boolean): DisplayWebp | null {
+  const row = deps.db
+    .select({ contentHash: stickers.contentHash, hasSharpCopy: stickers.hasSharpCopy })
+    .from(stickers)
+    .where(or(eq(stickers.contentHash, hash), eq(stickers.veiledHash, hash)))
+    .get();
+  if (!row) return null;
+  if (row.contentHash !== hash) {
+    return sharpCopy ? null : { of: "veiled", contentHash: row.contentHash, veiledHash: hash };
+  }
+  if (!sharpCopy) return { of: "sticker", contentHash: hash };
+  return row.hasSharpCopy ? { of: "sharp", contentHash: hash } : null;
+}
+
+/**
+ * Makes a stored sticker's display WebP from its PNGs before it's served, when the pass at start
+ * hasn't made it yet; 500 image_not_made when it can't be.
+ */
+const displayWebps = (deps: AppDeps) =>
+  createMiddleware(async (c, next) => {
+    const display = DISPLAY_WEBP.exec(c.req.path.slice(STICKER_IMAGES_PATH.length));
+    const webp = display && displayWebpNamed(deps, display[1], display[2] !== undefined);
+    if (webp) {
+      try {
+        await deps.images.makeDisplayWebp(webp);
+      } catch (error) {
+        logFailure("images.webp.failed", error, { reason: `${c.req.path} couldn't be made` });
+        const detail = `${c.req.path} couldn't be made from its sticker's PNGs: ${String(error)}`;
+        return apiError(c, 500, "image_not_made", detail);
+      }
+    }
+    await next();
+  });
+
 /**
  * The REST API as the server runs it, with the sticker images in `imageDir` served in front of it,
  * as imageAccess allows. A name with no image is a 404 there, never the API's session check. The
@@ -111,6 +153,7 @@ export function createServer(deps: AppDeps, imageDir: string) {
   const images = `${STICKER_IMAGES_PATH}/*`;
   return new Hono()
     .use(images, imageAccess(deps))
+    .use(images, displayWebps(deps))
     .use(
       images,
       serveStatic({

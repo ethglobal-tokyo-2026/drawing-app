@@ -1,14 +1,14 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { insertUser } from "@drawing-app/db/testing";
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createServer, STICKER_IMAGES_PATH } from "./app.ts";
 import { validate } from "./errors.ts";
-import { createDiskImageStore, drawingUrls } from "./services/imageStore.ts";
+import { cdnDrawingUrls, createDiskImageStore, drawingUrls } from "./services/imageStore.ts";
 import { setSessionCookie, type AppEnv } from "./session.ts";
 import type { StickerImages } from "./shapes.ts";
 import { markNsfwResponseSchema } from "./stickers/markNsfw.ts";
@@ -232,6 +232,22 @@ describe("sticker images", () => {
     }
   });
 
+  it("make a stored sticker's missing display WebPs from its PNGs as they're asked for", async () => {
+    const { store, contentHash } = await savedImages();
+    insertSealedSticker(test.db, insertUser(test.db), { contentHash, hasSharpCopy: true });
+    const { webp, sharp } = store.urls(contentHash);
+    const files = [webp.sticker, sharp?.webp ?? ""].map((url) => new URL(url).pathname);
+    const made = files.map((path) => readFileSync(join(imageDir, basename(path))));
+    for (const path of files) unlinkSync(join(imageDir, basename(path)));
+    const server = createServer({ ...test.deps, images: store }, imageDir);
+    const answers = await Promise.all(
+      [...files, ...files].map(async (path) =>
+        Buffer.from(await (await server.request(path)).arrayBuffer()),
+      ),
+    );
+    expect(answers).toEqual([...made, ...made]);
+  });
+
   it("answer a name with no image with 404, not the session check, and uncached", async () => {
     const response = await get(`${STICKER_IMAGES_PATH}/${sha256Hex(new Uint8Array([9]))}.png`);
     expect(response.headers.get("cache-control")).toBeNull();
@@ -293,7 +309,7 @@ describe("sticker images", () => {
         const refused = await get(new URL(url).pathname);
         expect(await refusalOf(refused)).toMatchObject({ status: 403, error: "nsfw_not_opted_in" });
       }
-      const purged = drawingUrls(test.images.urls(scene.contentHash));
+      const purged = cdnDrawingUrls(test.images.urls(scene.contentHash));
       expect(scene.purge.urls.toSorted()).toEqual(purged.toSorted());
       const { sharp } = test.images.urls(scene.contentHash);
       expect(scene.purge.urls).toEqual(expect.arrayContaining([sharp?.png, sharp?.webp]));

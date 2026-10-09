@@ -26,10 +26,9 @@ describe("sealTimeline", () => {
     ["the paper outside the cut dims", (f) => f.dim, T.dim0, T.dim1],
     ["the wet front spreads", (f) => f.pour.scale, T.flow0, T.flow1],
     ["the wet front fades", (f) => f.pour.opacity, T.flow1 - 40, T.flow1 + 220],
-    ["the resin tint rises", (f) => f.tint, T.rise0, T.rise1],
+    ["a made foil rises with the resin", (f) => f.foil, T.rise0, T.rise1],
     ["the gloss follows", (f) => f.gloss, T.rise0 + 80, T.rise1 + 80],
     ["the specular gathers", (f) => f.spec.scale, T.form0, T.form1],
-    ["the rim light comes up", (f) => f.rim, T.form0 + 90, T.form1 + 40],
     ["the sticker peels up", (f) => f.sticker.rotateX, T.peel0, T.peel1],
     ["the cut line fades", (f) => f.cut.alpha, T.peel0, T.peel0 + 220],
     ["the dim clears", (f) => f.dim, T.peel0, T.peel0 + 320],
@@ -68,6 +67,17 @@ describe("sealTimeline", () => {
     expect(scaleAt(T.land)).toBeGreaterThan(scaleAt(TOTAL));
   });
 
+  it("lands with its cast as baked: under the sticker, at full strength", () => {
+    const { sticker, shadow } = frameAt(TOTAL);
+    expect(shadow).toEqual({
+      opacity: 1,
+      x: sticker.x,
+      y: sticker.y,
+      rotate: sticker.rotate,
+      scale: sticker.scale,
+    });
+  });
+
   it("ends only at the last frame", () => {
     expect(frameAt(TOTAL - 1).done).toBe(false);
     expect(frameAt(TOTAL).done).toBe(true);
@@ -77,7 +87,7 @@ describe("sealTimeline", () => {
     const f = frameAt(HOLD);
     expect(f.cut).toEqual({ progress: 1, alpha: 1 });
     expect(f.pour.opacity).toBe(0);
-    expect(f.tint).toBe(0);
+    expect(f.foil).toBe(0);
     expect(f.lifted).toBe(false);
     expect(f.card.opacity).toBe(0);
   });

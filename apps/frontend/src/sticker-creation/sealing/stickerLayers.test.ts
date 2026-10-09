@@ -11,20 +11,28 @@ import {
 } from "./stickerLayers";
 
 const RED = [255, 0, 0];
+const GRAY = [120, 120, 120];
 /** The white border on this sheet, in ink pixels. */
 const BORDER = 6;
+/** The disks' middle and radius on their 200 × 200 sheet, in ink pixels. */
+const MIDDLE = 100;
+const RADIUS = 40;
+/** How far the cut runs from the middle. */
+const CUT_RADIUS = RADIUS + BORDER;
 
-/** A `side` px square sheet with a red disk of `radius` in the middle: 200 and 40 unless given. */
-function redDisk(side = 200, radius = 40): Pixels {
+/** A `side` px square sheet with a disk of `color` and `radius` in the middle: 200 and 40 unless given. */
+function disk(color: number[], side = 2 * MIDDLE, radius = RADIUS): Pixels {
   const width = side;
   const height = side;
   const data = new Uint8ClampedArray(width * height * 4);
   for (let y = 0; y < height; y++)
     for (let x = 0; x < width; x++)
       if (Math.hypot(x + 0.5 - side / 2, y + 0.5 - side / 2) <= radius)
-        data.set([...RED, 255], (y * width + x) * 4);
+        data.set([...color, 255], (y * width + x) * 4);
   return { data, width, height };
 }
+
+const redDisk = (side?: number, radius?: number) => disk(RED, side, radius);
 
 function layersOf(ink: Pixels) {
   const cut = dieCut(ink, BORDER);
@@ -83,15 +91,52 @@ describe("stickerLayers", () => {
       }
   });
 
-  it("darkens the print where the resin pools at the edge, and leaves the middle as printed", () => {
+  it("keeps the border paper white all the way to the cut", () => {
+    const { plain, mask, sticker, width, height } = layersOf(redDisk()).layers;
+    let paper = 0;
+    let tinted = 0;
+    for (let q = 0; q < width * height * 4; q += 4) {
+      const isPaper = mask[q + 3] === 255 && plain.slice(q, q + 3).every((v) => v === 255);
+      if (!isPaper) continue;
+      paper++;
+      if (sticker.slice(q, q + 3).some((v) => v !== 255)) tinted++;
+    }
+    expect(paper).toBeGreaterThan(0);
+    expect(tinted).toBe(0);
+  });
+
+  it("never darkens the print inside the cut, so no edge is darker than the middle", () => {
+    const { plain, mask, sticker, width, height } = layersOf(disk(GRAY)).layers;
+    let darkened = 0;
+    for (let q = 0; q < width * height * 4; q += 4) {
+      if (mask[q + 3] < 255) continue;
+      for (let c = 0; c < 3; c++) if (sticker[q + c] < plain[q + c]) darkened++;
+    }
+    expect(darkened).toBe(0);
+  });
+
+  it("lights the edge that faces the light, and nothing on the side away from it", () => {
     const { layers } = layersOf(redDisk());
-    const brightness = (layer: Uint8ClampedArray, point: [number, number]) =>
-      at(layers, layer, point)
-        .slice(0, 3)
-        .reduce((sum, v) => sum + v, 0);
-    expect(brightness(layers.tint, [100, 100])).toBe(brightness(layers.plain, [100, 100]));
-    const edge: [number, number] = [100, 100 - 44];
-    expect(brightness(layers.tint, edge)).toBeLessThan(brightness(layers.plain, edge));
+    // Just inside the cut, on the diagonal toward the light (top left) and away from it.
+    const inside = (CUT_RADIUS - 1) / Math.SQRT2;
+    const glossAt = (sign: number) =>
+      at(layers, layers.gloss, [MIDDLE + sign * inside, MIDDLE + sign * inside])[3];
+    expect(glossAt(-1)).toBeGreaterThan(0);
+    expect(glossAt(1)).toBe(0);
+  });
+
+  it("casts a thin sticker's short shadow, ending in the inner half of the clear margin", () => {
+    const { shadow, mask, width, height, pad } = layersOf(redDisk()).layers;
+    // Straight down the middle: the cut's last row, and the cast's.
+    const column = Math.floor(width / 2);
+    let cutEnds = 0;
+    let castEnds = 0;
+    for (let y = 0; y < height; y++) {
+      if (mask[(y * width + column) * 4 + 3] > 0) cutEnds = y;
+      if (shadow[(y * width + column) * 4 + 3] > 0) castEnds = y;
+    }
+    expect(castEnds).toBeGreaterThan(cutEnds);
+    expect(castEnds - cutEnds).toBeLessThanOrEqual(pad / 2);
   });
 
   it("cuts the live resin's bands from the silhouette: the specular up top, the rim light below", () => {

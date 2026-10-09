@@ -159,7 +159,6 @@ export async function makeSticker(
 
   const urls: Record<LayerName, string> = {
     plain: URL.createObjectURL(layers.plain),
-    tint: URL.createObjectURL(layers.tint),
     gloss: URL.createObjectURL(layers.gloss),
     shadow: URL.createObjectURL(layers.shadow),
     mask: URL.createObjectURL(layers.mask),

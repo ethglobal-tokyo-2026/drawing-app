@@ -1,7 +1,7 @@
 import { bytes32, insertUser } from "@drawing-app/db/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Schedule } from "../midnightJob.ts";
-import { drawingUrls } from "../services/imageStore.ts";
+import { cdnDrawingUrls } from "../services/imageStore.ts";
 import { createTestApp } from "../testing/createTestApp.ts";
 import { fakeCdnPurge } from "../testing/fakes.ts";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
@@ -22,7 +22,7 @@ async function appWithPurge(purged: boolean) {
   const purge = fakeCdnPurge(purged);
   const test = await createTestApp({ cdnPurge: purge });
   const contentHash = bytes32("a drawing");
-  const drawing = drawingUrls(test.images.urls(contentHash));
+  const drawing = cdnDrawingUrls(test.images.urls(contentHash));
   /** What the CDN was asked to purge once it had purged the drawing `times` times. */
   const purgedTimes = (times: number) => Array.from({ length: times }, () => drawing).flat();
   return { test, purge, contentHash, purgedTimes, sweep: () => sweepCdnPurges(test.deps) };

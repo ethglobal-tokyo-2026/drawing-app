@@ -67,7 +67,6 @@ const CUT: CutSticker = {
   flat: png(),
   layers: {
     plain: png(),
-    tint: png(),
     gloss: png(),
     shadow: png(),
     mask: png(),

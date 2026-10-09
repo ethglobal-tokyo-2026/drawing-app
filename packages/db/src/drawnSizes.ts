@@ -13,7 +13,7 @@ export interface DrawnSize {
 }
 
 /** The drawn size a gzipped timelapse records. Throws when it records none. */
-export function drawnSizeOf(gzippedTimelapse: Uint8Array): DrawnSize {
+function drawnSizeOf(gzippedTimelapse: Uint8Array): DrawnSize {
   const json: unknown = JSON.parse(gunzipSync(gzippedTimelapse).toString());
   const place: unknown =
     typeof json === "object" && json !== null && "place" in json ? json.place : null;
