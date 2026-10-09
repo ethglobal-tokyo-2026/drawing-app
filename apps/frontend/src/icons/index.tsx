@@ -1,15 +1,15 @@
 import {
   ArrowsOutCardinal,
-  Compass,
   Eye,
   Fire,
   Gift,
   Heart,
+  MapTrifold,
   PenNib,
   Spinner,
-  Tag,
+  Sticker,
   Ticket,
-  TrayArrowDown,
+  ToteSimple,
   type IconProps,
 } from "@phosphor-icons/react";
 
@@ -22,10 +22,12 @@ export type { Icon, IconProps } from "@phosphor-icons/react";
 
 /** The Explore tab and ways into Explore. */
 export const ExploreIcon = (props: IconProps) => (
-  <Compass aria-hidden focusable="false" {...props} />
+  <MapTrifold aria-hidden focusable="false" {...props} />
 );
 /** The Shop tab and ways into the Shop. */
-export const ShopIcon = (props: IconProps) => <Tag aria-hidden focusable="false" {...props} />;
+export const ShopIcon = (props: IconProps) => (
+  <ToteSimple aria-hidden focusable="false" {...props} />
+);
 /** Gratitude, beside gratitude figures and on Send gratitude. Fill at every size: it's a mark, not a control. */
 export const GratitudeIcon = (props: IconProps) => (
   <Heart weight="fill" aria-hidden focusable="false" {...props} />
@@ -44,7 +46,7 @@ export const BuyTicketsIcon = (props: IconProps) => (
 );
 /** Remove: a sticker off the board and back into the tray. */
 export const RemoveIcon = (props: IconProps) => (
-  <TrayArrowDown aria-hidden focusable="false" {...props} />
+  <Sticker aria-hidden focusable="false" {...props} />
 );
 /** Arrange: the selected sticker's toolbar tile that opens its step tiles. */
 export const ArrangeIcon = (props: IconProps) => (
