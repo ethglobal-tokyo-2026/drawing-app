@@ -1,0 +1,39 @@
+/* A sticker's crease where it lies over another's edge: the baked line, pressed in as it's shown. */
+.sticker-crease {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--crease) 0 0 / 100% 100% no-repeat;
+  animation: sticker-crease-in 360ms var(--ease-out) both;
+}
+
+/* The crease's lit side catches the resin's own specular and rim light as they slide with the light,
+   as one more mask under each: no layer of its own. */
+.sticker-figure.has-crease-shine .live-resin__spec {
+  -webkit-mask-image: var(--mt), var(--mc);
+  mask-image: var(--mt), var(--mc);
+}
+
+.sticker-figure.has-crease-shine .live-resin__rim {
+  -webkit-mask-image: var(--mb), var(--mc);
+  mask-image: var(--mb), var(--mc);
+}
+
+/* Lifted in a hand, it clears the stickers it lay over. */
+.placed-sticker:is(.is-dragging, .is-handling) .sticker-crease {
+  opacity: 0;
+  animation: none;
+  transition: opacity 90ms linear;
+}
+
+@keyframes sticker-crease-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticker-crease {
+    animation: none;
+  }
+}

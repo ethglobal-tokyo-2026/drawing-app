@@ -1,0 +1,338 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { isPerformanceRecorderOn, notePerformance } from "../performance/performanceRecorder";
+import { lightIn } from "../stickers/crease";
+import type { Affine, CreaseBatch, CreaseJob, CreaseReply } from "../stickers/creaseWorker";
+import type { Crease } from "../stickers/StickerFigure";
+import type { StickerUrls } from "../stickers/stickerUrls";
+import { stickerBox, type Field, type Placement } from "./placement";
+
+interface CreaseSticker {
+  id: string;
+  width: number;
+  height: number;
+  urls: StickerUrls;
+  placement: Placement;
+}
+
+/** The crease's pixels per CSS px at most: it's soft, so a phone's third pixel adds nothing. */
+const MAX_SCALE = 2;
+/** How long the board holds still before its creases are baked again. */
+const SETTLE_MS = 90;
+/** How far past its box a foil sticker's band reaches, in CSS px, on the board. */
+export const FOIL_REACH = 5;
+
+type Box = { x: number; y: number; w: number; h: number; r: number };
+
+/** `p` after `q`. */
+const mul = (p: Affine, q: Affine): Affine => [
+  p[0] * q[0] + p[2] * q[1],
+  p[1] * q[0] + p[3] * q[1],
+  p[0] * q[2] + p[2] * q[3],
+  p[1] * q[2] + p[3] * q[3],
+  p[0] * q[4] + p[2] * q[5] + p[4],
+  p[1] * q[4] + p[3] * q[5] + p[5],
+];
+const move = (x: number, y: number): Affine => [1, 0, 0, 1, x, y];
+/** Clockwise on screen, as CSS turns a sticker. */
+const turn = (deg: number): Affine => {
+  const t = (deg * Math.PI) / 180;
+  return [Math.cos(t), Math.sin(t), -Math.sin(t), Math.cos(t), 0, 0];
+};
+
+/** The corners of a box turned about its middle, grown by `reach`, on the board. */
+function corners(b: Box, reach: number): [number, number][] {
+  const t = (b.r * Math.PI) / 180;
+  const [c, s] = [Math.cos(t), Math.sin(t)];
+  const [hw, hh] = [b.w / 2 + reach, b.h / 2 + reach];
+  return [
+    [-hw, -hh],
+    [hw, -hh],
+    [hw, hh],
+    [-hw, hh],
+  ].map(([x, y]) => [b.x + x * c - y * s, b.y + x * s + y * c]);
+}
+
+/** Whether two turned boxes overlap: no edge of either separates them. */
+function overlaps(a: Box, b: Box, reach: number) {
+  const pa = corners(a, reach);
+  const pb = corners(b, reach);
+  const span = (pts: [number, number][], nx: number, ny: number) => {
+    const d = pts.map(([x, y]) => x * nx + y * ny);
+    return [Math.min(...d), Math.max(...d)];
+  };
+  for (const poly of [pa, pb]) {
+    for (let i = 0; i < 2; i++) {
+      const [[x0, y0], [x1, y1]] = [poly[i], poly[i + 1]];
+      const [nx, ny] = [y0 - y1, x1 - x0];
+      const [a0, a1] = span(pa, nx, ny);
+      const [b0, b1] = span(pb, nx, ny);
+      if (a1 < b0 || b1 < a0) return false;
+    }
+  }
+  return true;
+}
+
+const r2 = (v: number) => Math.round(v * 100) / 100;
+const roundAffine = ([a, b, c, d, e, f]: Affine): Affine => [
+  r2(a),
+  r2(b),
+  r2(c),
+  r2(d),
+  r2(e),
+  r2(f),
+];
+
+/**
+ * Each sticker's crease job, from the stickers under it; `stickers` go bottom to top. A sticker that
+ * wears foil is drawn as its foil band, which reaches past its cut.
+ */
+export function creaseJobs<S extends CreaseSticker>(
+  stickers: readonly S[],
+  field: Field,
+  unit: number,
+  wearsFoil: (s: S) => boolean,
+  scale: number,
+): CreaseJob[] {
+  const boxes = stickers.map((s) => ({
+    ...stickerBox(field, unit, s.placement, s),
+    r: s.placement.r,
+  }));
+  const silhouette = (s: S) => (wearsFoil(s) && s.urls.foil) || s.urls.mask;
+  const jobs: CreaseJob[] = [];
+  stickers.forEach((top, i) => {
+    const b = boxes[i];
+    const under = stickers.slice(0, i).flatMap((s, j) => {
+      const a = boxes[j];
+      if (!overlaps(a, b, FOIL_REACH)) return [];
+      // The one underneath's box, from its middle, into this one's frame, then into pixels.
+      const steps: Affine[] = [
+        [scale, 0, 0, scale, 0, 0],
+        move(b.w / 2, b.h / 2),
+        turn(-b.r),
+        move(a.x - b.x, a.y - b.y),
+        turn(a.r),
+        move(-a.w / 2, -a.h / 2),
+      ];
+      return [{ url: silhouette(s), w: r2(a.w), h: r2(a.h), at: roundAffine(steps.reduce(mul)) }];
+    });
+    if (!under.length) return;
+    const [lightX, lightY] = lightIn(b.r);
+    const light: [number, number] = [r2(lightX), r2(lightY)];
+    const shape = {
+      width: Math.ceil(b.w * scale),
+      height: Math.ceil(b.h * scale),
+      scale,
+      light,
+      own: silhouette(top),
+      under,
+    };
+    jobs.push({ id: top.id, key: JSON.stringify(shape), ...shape });
+  });
+  return jobs;
+}
+
+/** What a bake left for a sticker. */
+interface Baked {
+  /** The stack it was baked for. */
+  key: string;
+  /** Absent when nothing underneath showed a step. */
+  crease?: Crease;
+}
+
+/** One board's baked creases, by sticker, and who watches each. */
+export class CreaseStore {
+  /** Includes a sticker whose bake left nothing to show, so its stack isn't baked again. */
+  readonly #baked = new Map<string, Baked>();
+  readonly #watchers = new Map<string, Set<() => void>>();
+  /** The key each sticker's crease must match to show: the board's stack now. */
+  #wanted = new Map<string, string>();
+
+  /** A sticker's crease, once it's baked. */
+  creaseOf(id: string): Crease | undefined {
+    return this.#baked.get(id)?.crease;
+  }
+
+  /** Calls `onChange` when that sticker's crease changes; returns what stops it. */
+  watch(id: string, onChange: () => void): () => void {
+    const watchers = this.#watchers.get(id) ?? new Set<() => void>();
+    this.#watchers.set(id, watchers);
+    watchers.add(onChange);
+    return () => {
+      watchers.delete(onChange);
+      if (!watchers.size && this.#watchers.get(id) === watchers) this.#watchers.delete(id);
+    };
+  }
+
+  /**
+   * Takes the jobs the board's stack calls for now. A crease baked for another stack goes at once, so
+   * none outlives what it was baked for. Returns the jobs not yet baked.
+   */
+  want(jobs: readonly CreaseJob[]): CreaseJob[] {
+    this.#wanted = new Map(jobs.map((j) => [j.id, j.key]));
+    for (const [id, baked] of this.#baked) {
+      if (this.#wanted.get(id) !== baked.key) this.#put(id, null);
+    }
+    return jobs.filter((j) => this.#baked.get(j.id)?.key !== j.key);
+  }
+
+  /** Shows a bake's crease, unless the sticker's stack has changed since it was posted. */
+  land({ id, key, crease, shine }: Extract<CreaseReply, { ok: true }>) {
+    if (this.#wanted.get(id) !== key) return;
+    this.#put(id, {
+      key,
+      ...(crease && {
+        crease: {
+          url: URL.createObjectURL(crease),
+          shine: shine && URL.createObjectURL(shine),
+        },
+      }),
+    });
+  }
+
+  /** Lets go of every crease, as the board goes. */
+  clear() {
+    this.#wanted = new Map();
+    for (const id of [...this.#baked.keys()]) this.#put(id, null);
+  }
+
+  #put(id: string, baked: Baked | null) {
+    const old = this.#baked.get(id);
+    if (old?.crease) {
+      URL.revokeObjectURL(old.crease.url);
+      if (old.crease.shine) URL.revokeObjectURL(old.crease.shine);
+    }
+    if (baked) this.#baked.set(id, baked);
+    else this.#baked.delete(id);
+    // A sticker with no crease before or after has nothing to redraw.
+    if (!old?.crease && !baked?.crease) return;
+    for (const onChange of this.#watchers.get(id) ?? []) onChange();
+  }
+}
+
+/** The creases of the board the calling sticker is on; none outside a board that bakes them. */
+export const CreasesContext = createContext<CreaseStore | null>(null);
+
+const nothing = () => {};
+
+/** A sticker's crease, shown once it's baked; only that sticker redraws when it lands. */
+export function useCrease(id: string): Crease | undefined {
+  const store = useContext(CreasesContext);
+  const watch = useCallback(
+    (onChange: () => void) => (store ? store.watch(id, onChange) : nothing),
+    [store, id],
+  );
+  const creaseOf = useCallback(() => store?.creaseOf(id), [store, id]);
+  return useSyncExternalStore(watch, creaseOf);
+}
+
+/** The mounted boards' stores, by the board id their batches carry back in the worker's replies. */
+const stores = new Map<string, CreaseStore>();
+let worker: Worker | null = null;
+let batches = 0;
+
+function heard(reply: CreaseReply) {
+  if (!reply.ok) {
+    console.error(`Baking sticker ${reply.id}'s crease failed:`, reply.error);
+    return;
+  }
+  if (isPerformanceRecorderOn()) {
+    notePerformance("crease", `baked ${reply.id} in ${reply.timings.total.toFixed(1)} ms`);
+  }
+  stores.get(reply.board)?.land(reply);
+}
+
+/** The one worker every board's batches go to. */
+function creaseWorker() {
+  if (!worker) {
+    worker = new Worker(new URL("../stickers/creaseWorker.ts", import.meta.url), {
+      type: "module",
+    });
+    worker.onmessage = (event: MessageEvent<CreaseReply>) => heard(event.data);
+    worker.onerror = (event) => console.error("The crease worker failed:", event.message);
+  }
+  return worker;
+}
+
+/**
+ * Bakes the creases of a board's stickers off the main thread once the board holds still, again for
+ * each sticker whose stack changes, and none for the sticker in hand. Returns the board's creases,
+ * which its stickers read through `CreasesContext`.
+ */
+export function useCreases<S extends CreaseSticker>({
+  stickers,
+  field,
+  unit,
+  wearsFoil,
+  held,
+}: {
+  /** On the board, bottom to top. */
+  stickers: readonly S[];
+  field: Field | null;
+  unit: number | null;
+  /** Whether it wears a foil band, which is then its silhouette. */
+  wearsFoil: (s: S) => boolean;
+  /** The sticker in hand, which has no crease and lies under none. */
+  held?: string;
+}): CreaseStore {
+  const board = useId();
+  const [store] = useState(() => new CreaseStore());
+  const scale = Math.min(MAX_SCALE, window.devicePixelRatio || 1);
+  const signature = [
+    held,
+    field && `${field.left},${field.top},${field.w},${field.h}`,
+    unit,
+    scale,
+    ...stickers.map((s) => {
+      const p = s.placement;
+      return `${s.id}:${p.x},${p.y},${p.s},${p.r},${wearsFoil(s)}`;
+    }),
+  ].join("|");
+
+  useEffect(() => {
+    stores.set(board, store);
+    return () => {
+      stores.delete(board);
+      store.clear();
+    };
+  }, [board, store]);
+
+  const bake = useEffectEvent(() => {
+    const jobs =
+      field && unit
+        ? creaseJobs(
+            stickers.filter((s) => s.id !== held),
+            field,
+            unit,
+            wearsFoil,
+            scale,
+          )
+        : [];
+    const todo = store.want(jobs);
+    if (!todo.length) return undefined;
+    const timer = window.setTimeout(() => {
+      const message: CreaseBatch = { board, batch: ++batches, jobs: todo };
+      // Creases are decoration: a worker that can't start leaves the board without them, and says so.
+      try {
+        creaseWorker().postMessage(message);
+      } catch (error) {
+        console.error(
+          `The crease worker didn't start, so ${todo.length} stickers show no crease`,
+          error,
+        );
+      }
+    }, SETTLE_MS);
+    return () => window.clearTimeout(timer);
+  });
+  useEffect(() => bake(), [signature]);
+
+  return store;
+}

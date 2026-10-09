@@ -7,6 +7,7 @@ import { StickerFigure } from "../stickers/StickerFigure";
 import type { BoardSticker } from "./boardSticker";
 import { stickerBox, type Field } from "./placement";
 import type { Hold } from "./useBoardGestures";
+import { useCrease } from "./useCreases";
 
 interface Props {
   sticker: BoardSticker;
@@ -65,6 +66,7 @@ export const PlacedSticker = memo(function PlacedSticker({
   by,
 }: Props) {
   const { t } = useTranslation();
+  const crease = useCrease(sticker.id);
   const lift = useRef<HTMLDivElement>(null);
   const box = stickerBox(field, unit, sticker.placement, sticker);
 
@@ -137,6 +139,7 @@ export const PlacedSticker = memo(function PlacedSticker({
           stuck
           // A landing sticker's stick animation shows it arrive; it isn't held back as well.
           reveal={!landing}
+          crease={crease}
         />
       </div>
       {/* A clear frame, four corners to resize and a knob on a stem to turn. */}

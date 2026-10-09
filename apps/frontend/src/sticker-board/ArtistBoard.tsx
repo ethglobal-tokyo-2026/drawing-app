@@ -48,6 +48,7 @@ import { statFigures } from "./stat-board/statFigures";
 import { focusStep, readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
 import { useBoardLayout, useBoardSize } from "./useBoardSize";
+import { CreasesContext, useCreases } from "./useCreases";
 import "./ArtistBoard.css";
 
 interface Props {
@@ -205,6 +206,16 @@ export function ArtistBoard({ person, onBack }: Props) {
   const inOrder = order.flatMap((id) => stickers.filter((s) => s.id === id));
   const tabbable = [tabStop, selected].find((id) => id && order.includes(id)) ?? order[0];
   const byOther = (s: BoardStickerView) => s.artist.id !== person.id;
+  const creases = useCreases({
+    // Bottom to top as they're drawn: the selected one is on top.
+    stickers: [
+      ...stickers.filter((s) => s.id !== selected),
+      ...stickers.filter((s) => s.id === selected),
+    ],
+    field,
+    unit: size?.U ?? null,
+    wearsFoil: (s) => byOther(s) || s.nsfw || s.kyotoSeikaSubjects !== null,
+  });
   const chips =
     chipsDone || board.state === "failed" || !field || !size
       ? []
@@ -391,44 +402,46 @@ export function ArtistBoard({ person, onBack }: Props) {
             </ErrorLine>
           </div>
         )}
-        {field &&
-          size &&
-          inOrder.map((s) => (
-            <Fragment key={s.id}>
-              <PlacedSticker
-                sticker={s}
-                field={field}
-                unit={size.U}
-                stack={s.id === selected ? stickers.length : stickers.indexOf(s)}
-                selected={s.id === selected}
-                knobBelow={false}
-                landing={false}
-                onLanded={() => {}}
-                reduced={reduced}
-                tabbable={s.id === tabbable}
-                position={order.indexOf(s.id) + 1}
-                setSize={order.length}
-                hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
-                foil={byOther(s)}
-                veiled={veiledFor(s, optedIn)}
-                by={byOther(s) ? artistName(s.artist) : undefined}
-              />
-              {/* Right after its sticker, so Tab reaches it next. */}
-              {s.id === selected && (
-                <StickerToolbar
-                  label={formatNo(s.no)}
-                  sticker={{ ...stickerBox(field, size.U, s.placement, s), r: s.placement.r }}
-                  board={size}
+        <CreasesContext value={creases}>
+          {field &&
+            size &&
+            inOrder.map((s) => (
+              <Fragment key={s.id}>
+                <PlacedSticker
+                  sticker={s}
+                  field={field}
+                  unit={size.U}
+                  stack={s.id === selected ? stickers.length : stickers.indexOf(s)}
+                  selected={s.id === selected}
                   knobBelow={false}
-                  clearOf={give}
-                  onView={() => setViewing(s)}
-                  {...(byOther(s) && { artist: s.artist })}
-                  onEscape={() => stickerEl(s.id)?.focus()}
+                  landing={false}
+                  onLanded={() => {}}
                   reduced={reduced}
+                  tabbable={s.id === tabbable}
+                  position={order.indexOf(s.id) + 1}
+                  setSize={order.length}
+                  hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
+                  foil={byOther(s)}
+                  veiled={veiledFor(s, optedIn)}
+                  by={byOther(s) ? artistName(s.artist) : undefined}
                 />
-              )}
-            </Fragment>
-          ))}
+                {/* Right after its sticker, so Tab reaches it next. */}
+                {s.id === selected && (
+                  <StickerToolbar
+                    label={formatNo(s.no)}
+                    sticker={{ ...stickerBox(field, size.U, s.placement, s), r: s.placement.r }}
+                    board={size}
+                    knobBelow={false}
+                    clearOf={give}
+                    onView={() => setViewing(s)}
+                    {...(byOther(s) && { artist: s.artist })}
+                    onEscape={() => stickerEl(s.id)?.focus()}
+                    reduced={reduced}
+                  />
+                )}
+              </Fragment>
+            ))}
+        </CreasesContext>
       </div>
 
       {chips.length > 0 && size && (

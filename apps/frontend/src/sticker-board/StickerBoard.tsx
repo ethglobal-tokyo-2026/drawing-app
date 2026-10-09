@@ -106,6 +106,7 @@ import type { TrayBoard } from "./tray/trayEngine";
 import { trayProblemKey, trayProblemWords, type TrayProblem } from "./tray/trayProblem";
 import { useBoardGestures, type SettledStep } from "./useBoardGestures";
 import { useBoardLayout, useBoardSize } from "./useBoardSize";
+import { CreasesContext, useCreases } from "./useCreases";
 import { onMyStickerBoardChanged, useMyStickerBoard } from "./useMyStickerBoard";
 import "./StickerBoard.css";
 
@@ -783,6 +784,13 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     },
   };
   const stack = stackOf(onBoard);
+  const creases = useCreases({
+    stickers: onBoard.toSorted((a, b) => (stack.get(a.id) ?? 0) - (stack.get(b.id) ?? 0)),
+    field,
+    unit: size?.U ?? null,
+    wearsFoil: (s) => byOther(s) || s.nsfw || s.kyotoSeikaSubjects !== null,
+    held: hold?.id,
+  });
   // Screen readers and the arrow keys take the stickers in reading order, which is the DOM's too.
   const order = field
     ? readingOrder(onBoard.map((s) => ({ id: s.id, ...toPx(field, s.placement) })))
@@ -910,56 +918,58 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             </span>
           </div>
         )}
-        {field &&
-          size &&
-          inOrder.map((s) => (
-            <Fragment key={s.id}>
-              <PlacedSticker
-                sticker={s}
-                field={field}
-                unit={size.U}
-                stack={stack.get(s.id) ?? 0}
-                selected={s.id === selected}
-                knobBelow={s.id === selected && knobBelow}
-                held={hold?.id === s.id ? hold.kind : undefined}
-                landing={s.id === landingId}
-                onLanded={landedNow}
-                reduced={reduced}
-                tabbable={s.id === tabbable}
-                position={order.indexOf(s.id) + 1}
-                setSize={order.length}
-                hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
-                foil={byOther(s)}
-                veiled={veiledFor(s, optedIn)}
-                by={byOther(s) ? printedArtist(s) : undefined}
-              />
-              {/* Right after its sticker, so Tab reaches it next. */}
-              {s.id === selected && !hold && (
-                <StickerToolbar
-                  label={formatNo(s.no)}
-                  sticker={{ ...stickerBox(field, size.U, s.placement, s), r: s.placement.r }}
-                  board={size}
-                  knobBelow={knobBelow}
-                  clearOf={draw}
-                  {...(giftSender && { onGive: () => setGiving(s) })}
-                  onView={() => openYours(s.id)}
-                  onRemove={() => stow(s.id)}
-                  arrange={{
-                    open: arrangeOpen,
-                    onOpen: openArrange,
-                    onStep: (step) => arrange(s.id, step),
-                  }}
-                  {...(byOther(s) && { artist: s.artist })}
-                  onEscape={() =>
-                    stage.current
-                      ?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(s.id)}"]`)
-                      ?.focus()
-                  }
+        <CreasesContext value={creases}>
+          {field &&
+            size &&
+            inOrder.map((s) => (
+              <Fragment key={s.id}>
+                <PlacedSticker
+                  sticker={s}
+                  field={field}
+                  unit={size.U}
+                  stack={stack.get(s.id) ?? 0}
+                  selected={s.id === selected}
+                  knobBelow={s.id === selected && knobBelow}
+                  held={hold?.id === s.id ? hold.kind : undefined}
+                  landing={s.id === landingId}
+                  onLanded={landedNow}
                   reduced={reduced}
+                  tabbable={s.id === tabbable}
+                  position={order.indexOf(s.id) + 1}
+                  setSize={order.length}
+                  hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
+                  foil={byOther(s)}
+                  veiled={veiledFor(s, optedIn)}
+                  by={byOther(s) ? printedArtist(s) : undefined}
                 />
-              )}
-            </Fragment>
-          ))}
+                {/* Right after its sticker, so Tab reaches it next. */}
+                {s.id === selected && !hold && (
+                  <StickerToolbar
+                    label={formatNo(s.no)}
+                    sticker={{ ...stickerBox(field, size.U, s.placement, s), r: s.placement.r }}
+                    board={size}
+                    knobBelow={knobBelow}
+                    clearOf={draw}
+                    {...(giftSender && { onGive: () => setGiving(s) })}
+                    onView={() => openYours(s.id)}
+                    onRemove={() => stow(s.id)}
+                    arrange={{
+                      open: arrangeOpen,
+                      onOpen: openArrange,
+                      onStep: (step) => arrange(s.id, step),
+                    }}
+                    {...(byOther(s) && { artist: s.artist })}
+                    onEscape={() =>
+                      stage.current
+                        ?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(s.id)}"]`)
+                        ?.focus()
+                    }
+                    reduced={reduced}
+                  />
+                )}
+              </Fragment>
+            ))}
+        </CreasesContext>
         <p ref={stepsSaid} className="board-steps-status visually-hidden" role="status" />
       </div>
 
