@@ -34,7 +34,14 @@ const line: StrokeOp = {
   T: 0,
   pts: [30, 40, 4, 0, 60, 40, 4, 16],
 };
-const fill = (color: string, T: number): FillOp => ({ tool: "fill", color, x: 40, y: 50, T });
+const fill = (color: string, T: number): FillOp => ({
+  tool: "fill",
+  color,
+  x: 40,
+  y: 50,
+  gap: 0,
+  T,
+});
 const RED = "#ff0000";
 const BLUE = "#0000ff";
 

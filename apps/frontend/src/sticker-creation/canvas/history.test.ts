@@ -30,7 +30,7 @@ class FakeSurface implements Surface<string[]> {
 }
 
 const stroke = (color: string): Op => ({ tool: "brush", color, pts: [], T: 0 });
-const fill = (color: string): Op => ({ tool: "fill", x: 0, y: 0, color, T: 0 });
+const fill = (color: string): Op => ({ tool: "fill", x: 0, y: 0, color, gap: 0, T: 0 });
 
 /** A history over a fake surface, with `ops` drawn on it as the ink engine draws them. */
 function setup(ops: Op[], checkpointCost = 25) {

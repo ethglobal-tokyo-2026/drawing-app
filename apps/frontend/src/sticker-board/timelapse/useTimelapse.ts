@@ -194,7 +194,6 @@ export function useTimelapse({
         timelapse,
         canvas: ink,
         width: box.offsetWidth,
-        image: { width: target.width, height: target.height },
         reduced: still,
         kyotoSeika,
         frames: clock,

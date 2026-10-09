@@ -160,7 +160,6 @@ describe("useTimelapse", () => {
     expect(phase()).toBe("preparing");
     const player = players.last();
     expect(player.options.canvas.parentElement).toBe(layer());
-    expect(player.options.image).toEqual({ width: STICKER.width, height: STICKER.height });
     expect(player.calls).toEqual(["prepare"]);
 
     player.prepared.resolve();

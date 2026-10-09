@@ -87,6 +87,7 @@ export class InkSurface implements Surface<HTMLCanvasElement> {
       Math.floor(op.x * this.dpr),
       Math.floor(op.y * this.dpr),
       hexToRgb(op.color),
+      op.gap * this.dpr,
       Math.round(FILL_NEAR * this.dpr),
     );
     if (!flood) return false;

@@ -1,5 +1,6 @@
 import { MAX_TIMELAPSE_BYTES, type TimelapseV1 } from "@drawing-app/api/client";
 import { describe, expect, it, vi } from "vitest";
+import { FILL_GAP } from "../canvas/fill";
 import type { Op } from "../canvas/ops";
 import { decodeTimelapse, encodeTimelapse, gzipTimelapse } from "./timelapse";
 
@@ -10,7 +11,7 @@ const stroke: Op = {
   pts: [10, 20, 4, 0, 10.5, 21.25, 4, 16],
 };
 const eraser: Op = { tool: "eraser", color: "#ffffff", T: 5000, pts: [3, 4, 12, 0] };
-const fill: Op = { tool: "fill", color: "#00ff00", T: 9000.4, x: 30.26, y: 40 };
+const fill: Op = { tool: "fill", color: "#00ff00", T: 9000.4, x: 30.26, y: 40, gap: FILL_GAP };
 
 /** A sheet backed at density 2: the sticker's place is in the ink canvas's device pixels. */
 const DENSITY = 2;
@@ -51,7 +52,7 @@ describe("the timelapse", () => {
     (density) => {
       // At density 3, 10.334 seeded pixel 31, which 10.33 would miss.
       const taps = [10.334, 30.26, 40, 99.999];
-      const ops = taps.map((x): Op => ({ tool: "fill", color: "#00ff00", T: 0, x, y: x }));
+      const ops = taps.map((x): Op => ({ tool: "fill", color: "#00ff00", T: 0, x, y: x, gap: 0 }));
       const frame = { ...input.frame, density };
       const decoded = decodeTimelapse(encodeTimelapse({ ...input, ops, frame })).ops;
       const seeded = (n: number) => Math.floor(n * density);
@@ -80,7 +81,17 @@ describe("the timelapse", () => {
     expect(decoded.ops).toEqual([
       { tool: "brush", color: "#ff0000", T: 1200, pts: [10, 20, 4, 0, 10.5, 21.3, 4, 16] },
       { tool: "eraser", color: "#ffffff", T: 5000, pts: [3, 4, 12, 0] },
-      { tool: "fill", color: "#00ff00", T: 9000, x: 30.25, y: 40.25 },
+      { tool: "fill", color: "#00ff00", T: 9000, x: 30.25, y: 40.25, gap: FILL_GAP },
+    ]);
+  });
+
+  it("reads a fill sealed before fills recorded their gap as one that closed none", () => {
+    const older: TimelapseV1 = {
+      ...encodeTimelapse(input),
+      ops: [["fill", "#00ff00", 9000, 30.25, 40.25]],
+    };
+    expect(decodeTimelapse(older).ops).toEqual([
+      { tool: "fill", color: "#00ff00", T: 9000, x: 30.25, y: 40.25, gap: 0 },
     ]);
   });
 

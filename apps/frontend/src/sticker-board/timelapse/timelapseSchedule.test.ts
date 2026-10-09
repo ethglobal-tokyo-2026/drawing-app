@@ -30,7 +30,7 @@ const stroke = (T: number, ms: readonly number[]): StrokeOp => ({
 /** Point times every `step` ms for `ms` ms: a steady hand that never holds still. */
 const steady = (ms: number, step = 16) =>
   Array.from({ length: Math.floor(ms / step) + 1 }, (_, i) => i * step);
-const fill = (T: number): FillOp => ({ tool: "fill", color: "#ff7eb6", x: 5, y: 5, T });
+const fill = (T: number): FillOp => ({ tool: "fill", color: "#ff7eb6", x: 5, y: 5, gap: 0, T });
 const pointCount = (op: StrokeOp) => op.pts.length / STRIDE;
 
 const schedule = (ops: Op[], reduced = false, kyotoSeika = false) =>

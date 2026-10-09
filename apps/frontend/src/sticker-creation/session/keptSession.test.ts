@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { personKey } from "../../ui/deviceStorage";
 import { CHARRED_AT_ROLL } from "../../kyoto-seika/dieMood";
 import { REUNION, WIND } from "../../kyoto-seika/testSubjects";
-import type { Op, Step } from "../canvas/ops";
+import { FILL_GAP } from "../canvas/fill";
+import type { FillOp, Op, Step } from "../canvas/ops";
 import { frameFor, SHEET_SHORT_UNITS, type SheetFrame } from "../canvas/sheetFrame";
 import {
   firstChanged,
@@ -52,15 +53,33 @@ async function keptSteps(userId: string) {
   return kept.status === "found" ? kept.steps : kept.status;
 }
 
-/** Holds the one database's stores in a transaction until the returned release, as a slow disk would. */
-async function holdStores() {
+/** A second connection to the one database kept, as another tab would open. */
+async function openKept(): Promise<IDBDatabase> {
   const [{ name } = {}] = await indexedDB.databases();
-  if (!name) throw new Error("Nothing is kept to hold");
-  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+  if (!name) throw new Error("Nothing is kept");
+  return new Promise((resolve, reject) => {
     const req = indexedDB.open(name);
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
+}
+
+/** Writes `step` as step `i` of the drawing kept, as an older build would have kept it. */
+async function keepStepAs(i: number, step: unknown) {
+  const db = await openKept();
+  await new Promise<void>((resolve, reject) => {
+    // keptSession.ts's store of steps.
+    const tx = db.transaction("ops", "readwrite");
+    tx.objectStore("ops").put(step, i);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+/** Holds the one database's stores in a transaction until the returned release, as a slow disk would. */
+async function holdStores() {
+  const db = await openKept();
   const stores = [...db.objectStoreNames];
   const store = db.transaction(stores, "readwrite").objectStore(stores[0]);
   let held = true;
@@ -76,7 +95,7 @@ async function holdStores() {
 
 describe("keptColor", () => {
   it("picks a drawing back up in the color it was last drawn in", () => {
-    const fill: Op = { tool: "fill", x: 0, y: 0, color: "#00868B", T: 0 };
+    const fill: Op = { tool: "fill", x: 0, y: 0, color: "#00868B", gap: 0, T: 0 };
     const erase: Op = { tool: "eraser", color: "#E8484F", pts: [], T: 0 };
     expect(keptColor([stroke("#1478C8"), stroke("#B4299A")])).toBe("#B4299A");
     // A fill counts; the eraser doesn't draw in a color.
@@ -118,6 +137,15 @@ describe("the drawing kept on this device", () => {
     const steps: Step[] = [stroke("a"), { tool: "clear" }, stroke("b")];
     draw(userId, steps);
     expect(await keptSteps(userId)).toEqual(steps);
+  });
+
+  it("keeps each fill's gap, and reads a fill kept before fills recorded one as closing none", async () => {
+    const userId = someone();
+    const fill: FillOp = { tool: "fill", x: 4, y: 5, color: "#00868B", gap: FILL_GAP, T: 0 };
+    draw(userId, [fill]);
+    expect(await keptSteps(userId)).toEqual([fill]);
+    await keepStepAs(0, { tool: "fill", x: 4, y: 5, color: "#00868B", T: 0 });
+    expect(await keptSteps(userId)).toEqual([{ ...fill, gap: 0 }]);
   });
 
   it("keeps the frame a drawing is drawn in with it, and has none for one kept without", async () => {

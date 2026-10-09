@@ -49,7 +49,6 @@ function setup(ops: Op[], { reduced = false } = {}) {
     timelapse,
     canvas,
     width: BOX.width,
-    image: { width: PLACE.w, height: PLACE.h },
     reduced,
     kyotoSeika: false,
     frames: clock.source,
@@ -215,7 +214,7 @@ describe("the timelapse player's fills", () => {
   const TAP = { x: 40.5, y: 50.5 };
   /** A line, a fill, and a line over it. */
   const sticker = (): Op[] => {
-    const fill: FillOp = { tool: "fill", color: "#ff0000", ...TAP, T: 500 };
+    const fill: FillOp = { tool: "fill", color: "#ff0000", ...TAP, gap: 0, T: 500 };
     return [stroke(0, steady(300)), fill, stroke(800, steady(300))];
   };
   /** The circles the display was clipped to, in order: the arc just before each clip. */

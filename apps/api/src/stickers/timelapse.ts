@@ -28,6 +28,16 @@ export const timelapseV1Schema = z.object({
   ops: z.array(
     z.union([
       z.tuple([z.enum(["brush", "eraser"]), z.string(), z.number(), strokePoints]),
+      // A fill: its color, ms and tap, then the widest opening it closed, in units.
+      z.tuple([
+        z.literal("fill"),
+        z.string(),
+        z.number(),
+        z.number(),
+        z.number(),
+        z.number().nonnegative(),
+      ]),
+      // A fill sealed before fills recorded their gap: it closed none.
       z.tuple([z.literal("fill"), z.string(), z.number(), z.number(), z.number()]),
     ]),
   ),

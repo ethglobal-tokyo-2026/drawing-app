@@ -21,6 +21,8 @@ export interface FillOp {
   x: number;
   y: number;
   color: string;
+  /** The widest opening, in sheet units, it treated as closed; 0 for a fill that closed none. */
+  gap: number;
   T: number;
 }
 

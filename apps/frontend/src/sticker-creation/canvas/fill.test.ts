@@ -19,6 +19,8 @@ const KEY: Record<string, Rgba> = {
   // …and outside it (sums to 105).
   q: [200, 40, 54, 255],
 };
+/** The widest opening, in pixels, the tests' fills close. */
+const GAP = 2;
 
 /** Pixels from rows of characters, one per pixel, colored by `KEY`. */
 function image(rows: string[]): Pixels {
@@ -50,15 +52,15 @@ function blit(
   }
 }
 
-/** The whole image flooded in place, as every fill once was. */
-function wholeImageFill(img: Pixels, x: number, y: number): Pixels {
+/** The whole image flooded in place, closing openings up to `gap`, as a fill reading the whole sheet. */
+function wholeImageFill(img: Pixels, x: number, y: number, gap: number): Pixels {
   const out = copyOf(img);
-  floodFill(out, x, y, RED);
+  floodFill(out, x, y, RED, gap);
   return out;
 }
 
 /** A fill as the ink takes one: `floodSheet` reads boxes of `img`, and only the changed box is written back. */
-function sheetFill(img: Pixels, x: number, y: number, near: number) {
+function sheetFill(img: Pixels, x: number, y: number, gap: number, near: number) {
   const reads: Rect[] = [];
   const read = (box: Rect) => {
     reads.push(box);
@@ -67,7 +69,7 @@ function sheetFill(img: Pixels, x: number, y: number, near: number) {
     return pixels;
   };
   const out = copyOf(img);
-  const flood = floodSheet(img, read, x, y, RED, near);
+  const flood = floodSheet(img, read, x, y, RED, gap, near);
   if (flood) {
     const { pixels, at: box, changed } = flood;
     blit(pixels, changed.x, changed.y, out, box.x + changed.x, box.y + changed.y, changed);
@@ -90,6 +92,69 @@ const SHEET = image([
   "...........................",
 ]);
 
+/** A shape whose bottom line has an opening `across` pixels wide, with open paper round it. */
+const shapeWithOpening = (across: number) =>
+  image([
+    "....................",
+    "....................",
+    "..###########.......",
+    "..#.........#.......",
+    "..#.........#.......",
+    "..#.........#.......",
+    "..#.........#.......",
+    `..####${".".repeat(across)}${"#".repeat(7 - across)}.......`,
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+  ]);
+
+/** A shape whose opening the tests' fills close. */
+const OPENING = shapeWithOpening(GAP);
+
+/** A closed triangle with sharp corners. */
+const TRIANGLE = image([
+  "..................",
+  ".################.",
+  "..#.............#.",
+  "...#............#.",
+  "....#...........#.",
+  ".....#..........#.",
+  "......#.........#.",
+  ".......#........#.",
+  "........#.......#.",
+  ".........#......#.",
+  "..........#.....#.",
+  "...........#....#.",
+  "............#...#.",
+  ".............#..#.",
+  "..............#.#.",
+  "...............##.",
+  "..................",
+]);
+
+/** A closed loop with no room inside as wide as the gaps it's filled with. */
+const LOOP = image([
+  "..........",
+  "..#####...",
+  "..#...#...",
+  "..#...#...",
+  "..#####...",
+  "..........",
+]);
+
+/** One color in two blobs, joined by a stroke narrower than the gap. */
+const DUMBBELL = image([
+  "...............",
+  ".ooooo...ooooo.",
+  ".ooooo...ooooo.",
+  ".ooooooooooooo.",
+  ".ooooo...ooooo.",
+  ".ooooo...ooooo.",
+  "...............",
+]);
+
 describe("floodFill", () => {
   it("fills empty paper up to the line, counting faint pixels as empty", () => {
     const img = image([
@@ -103,7 +168,7 @@ describe("floodFill", () => {
       ".########.",
       "..........",
     ]);
-    expect(floodFill(img, 3, 3, RED)).not.toBeNull();
+    expect(floodFill(img, 3, 3, RED, 0)).not.toBeNull();
     expect(at(img, 3, 3)).toEqual([...RED, 255]);
     expect(at(img, 6, 5)).toEqual([...RED, 255]);
     expect(at(img, 4, 4)).toEqual([...RED, 255]);
@@ -114,7 +179,7 @@ describe("floodFill", () => {
 
   it("fills a colored region across small color differences but not large ones", () => {
     const img = image(["oopoq", "ooooq"]);
-    floodFill(img, 0, 0, RED);
+    floodFill(img, 0, 0, RED, 0);
     expect(at(img, 2, 0)).toEqual([...RED, 255]);
     expect(at(img, 4, 0)).toEqual(KEY.q);
   });
@@ -122,13 +187,13 @@ describe("floodFill", () => {
   it("does nothing on a color already within 8 of the fill color", () => {
     const img = image(["ooo"]);
     const before = [...img.data];
-    expect(floodFill(img, 1, 0, [255, 93, 55])).toBeNull();
+    expect(floodFill(img, 1, 0, [255, 93, 55], 0)).toBeNull();
     expect([...img.data]).toEqual(before);
   });
 
   it("tucks the fill 2px under a line's soft edge", () => {
     const img = image(["....eeee...."]);
-    floodFill(img, 0, 0, RED);
+    floodFill(img, 0, 0, RED, 0);
     for (const x of [4, 5]) {
       const [r, g, b, a] = at(img, x, 0);
       expect(a).toBe(255);
@@ -142,22 +207,66 @@ describe("floodFill", () => {
   });
 });
 
+describe("floodFill closing gaps", () => {
+  it("holds a fill on paper in a shape whose opening is as wide as the gap", () => {
+    const filled = wholeImageFill(OPENING, 5, 4, GAP);
+    expect(at(filled, 5, 4)).toEqual([...RED, 255]);
+    // Past the tuck under the opening, and round the shape.
+    expect(at(filled, 6, 10)).toEqual(KEY["."]);
+    expect(at(filled, 0, 0)).toEqual(KEY["."]);
+  });
+
+  it("lets a fill out through an opening wider than the gap", () => {
+    expect(at(wholeImageFill(shapeWithOpening(GAP + 1), 5, 4, GAP), 0, 0)).toEqual([...RED, 255]);
+  });
+
+  it("holds a fill on paper at a line that stops as near the sheet's edge as the gap", () => {
+    const img = image([
+      "............",
+      "............",
+      "............",
+      "##########..",
+      "............",
+      "............",
+      "............",
+    ]);
+    expect(at(wholeImageFill(img, 5, 1, GAP), 5, 6)).toEqual(KEY["."]);
+    expect(at(wholeImageFill(img, 5, 1, 0), 5, 6)).toEqual([...RED, 255]);
+  });
+
+  it.each([
+    ["a closed shape with soft edges", SHEET, 6, 5, GAP],
+    ["a closed shape's sharp corners", TRIANGLE, 12, 4, 2 * GAP],
+    ["a closed loop with no room as wide as the gap", LOOP, 4, 2, 2 * GAP],
+    ["a color joined narrower than the gap", DUMBBELL, 3, 3, GAP],
+  ])("fills %s as it would without closing gaps", (_, img, x, y, gap) => {
+    expect(wholeImageFill(img, x, y, gap).data).toEqual(wholeImageFill(img, x, y, 0).data);
+  });
+});
+
 describe("floodSheet", () => {
   it.each([
-    ["inside the closed shape", 6, 5],
-    ["on open paper", 0, 0],
-    ["on the colored patch", 19, 4],
-  ])("gives the whole-image fill's pixels %s, whatever box it reads first", (_, x, y) => {
-    const expected = wholeImageFill(SHEET, x, y).data;
+    ["inside the closed shape", SHEET, 6, 5, 0],
+    ["on open paper", SHEET, 0, 0, 0],
+    ["on the colored patch", SHEET, 19, 4, 0],
+    ["inside the closed shape, closing gaps", SHEET, 6, 5, GAP],
+    ["inside a shape whose opening it closes", OPENING, 5, 4, GAP],
+    ["outside that shape", OPENING, 15, 10, GAP],
+    ["in that shape's opening", OPENING, 6, 7, GAP],
+  ])("gives the whole-image fill's pixels %s, whatever box it reads first", (_, img, x, y, gap) => {
+    const expected = wholeImageFill(img, x, y, gap).data;
     // Every size moves the box's sides across the region: cutting it, touching it or its tuck, clearing it.
-    for (let near = 1; near <= SHEET.width + 2; near++) {
-      expect(sheetFill(SHEET, x, y, near).out.data, `near ${near}`).toEqual(expected);
+    for (let near = 1; near <= img.width + 2; near++) {
+      expect(sheetFill(img, x, y, gap, near).out.data, `near ${near}`).toEqual(expected);
     }
   });
 
-  it("reads only the box around the seed when the region and its tuck fit inside it", () => {
-    const { reads } = sheetFill(SHEET, 6, 5, 16);
-    expect(reads).toHaveLength(1);
-    expect(reads[0].w * reads[0].h).toBeLessThan(SHEET.width * SHEET.height);
-  });
+  it.each([0, GAP])(
+    "reads only the box around the seed when the region and its tuck fit inside it, closing gaps of %s",
+    (gap) => {
+      const { reads } = sheetFill(SHEET, 6, 5, gap, 16);
+      expect(reads).toHaveLength(1);
+      expect(reads[0].w * reads[0].h).toBeLessThan(SHEET.width * SHEET.height);
+    },
+  );
 });

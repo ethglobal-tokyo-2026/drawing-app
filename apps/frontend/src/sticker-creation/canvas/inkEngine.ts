@@ -1,5 +1,6 @@
 import { timeOurWork } from "../../performance/performanceRecorder";
 import { previewWidth, StrokeBuilder, type PenPressure } from "./brush";
+import { FILL_GAP } from "./fill";
 import { isPalm, TapRecognizer } from "./gestures";
 import { History, type Surface } from "./history";
 import { LazyBrush } from "./lazyBrush";
@@ -728,6 +729,7 @@ export class InkEngine {
       x,
       y,
       color: this.settings.color,
+      gap: FILL_GAP,
       T: this.settings.sessionMs(),
     };
     if (!timeOurWork(INK_WORK.fill, () => this.layer.fill(op))) return;

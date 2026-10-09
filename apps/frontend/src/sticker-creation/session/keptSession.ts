@@ -429,10 +429,13 @@ function readStep(v: unknown): Step | undefined {
   if (!("color" in v) || !("T" in v)) return undefined;
   const { color, T, tool } = v;
   if (typeof color !== "string" || !isFiniteNumber(T)) return undefined;
-  if (tool === "fill")
-    return "x" in v && isFiniteNumber(v.x) && "y" in v && isFiniteNumber(v.y)
-      ? { tool, x: v.x, y: v.y, color, T }
-      : undefined;
+  if (tool === "fill") {
+    if (!("x" in v) || !isFiniteNumber(v.x) || !("y" in v) || !isFiniteNumber(v.y))
+      return undefined;
+    // A fill kept before fills recorded their gap closed none.
+    const gap = "gap" in v ? v.gap : 0;
+    return isFiniteNumber(gap) && gap >= 0 ? { tool, x: v.x, y: v.y, color, gap, T } : undefined;
+  }
   if ((tool !== "brush" && tool !== "eraser") || !("pts" in v) || !Array.isArray(v.pts))
     return undefined;
   const pts: unknown[] = v.pts;

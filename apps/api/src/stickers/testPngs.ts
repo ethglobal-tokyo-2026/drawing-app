@@ -63,7 +63,7 @@ export const sealImages = () => ({
   flat: testPng(SHEET_SIZE.width, SHEET_SIZE.height, "flat"),
 });
 
-/** How the tests' sticker was drawn: one brush stroke of two points, then a fill. */
+/** How the tests' sticker was drawn: one brush stroke of two points, then two fills. */
 export const TEST_TIMELAPSE: TimelapseV1 = {
   v: 1,
   ink: [SHEET_SIZE.width, SHEET_SIZE.height],
@@ -71,7 +71,9 @@ export const TEST_TIMELAPSE: TimelapseV1 = {
   density: 2,
   ops: [
     ["brush", "#ff3366", 0, [100, 200, 60, 0, 50, 25, 0, 16]],
+    // Sealed before fills recorded their gap, as stored timelapses may be.
     ["fill", "#33aaff", 1500, 40.5, 60],
+    ["fill", "#ffcc00", 2100, 80.5, 30, 2],
   ],
 };
 
