@@ -1,10 +1,10 @@
 # iPad dialogs: shaped brief
 
-**Status:** shaped with impeccable 2026-10-09; awaiting ad0ll's confirmation of changes. Decisions 1–8 were approved as proposed on 2026-10-08 and are marked kept or changed below; 9 is new. Feeds `docs/superpowers/plans/2026-10-08-ipad-dialogs.md` (to write).
+**Status:** confirmed by ad0ll 2026-10-09, with his answers below. Decisions 1–8 were approved as proposed on 2026-10-08 and are marked kept or changed below; 9 is new. Feeds `docs/superpowers/plans/2026-10-08-ipad-dialogs.md`.
 
 - **Who:** artists on an iPad, by finger or Apple Pencil, in LINE or Safari, opening a sticker's detail, giving, receiving and sending Gratitude (Operate mode). Success: the sticker, its one act and its trail read as one group at a phone's sizes, nothing stretched across the room.
 - **Authority:** DESIGN.md's world and `2026-10-08-ipad-design-brief.md`: controls keep phone sizes; cards rise to the middle at 400px. Every rule but decision 9 sits behind foundations' large-screen query, so phones are unchanged; decision 9 is for every size.
-- **Untouched:** each screen's content, copy, order and motion; the gift bag, pull tab and Mini-game rules.
+- **Untouched:** each screen's content, copy (but answer 2's three lines), order and motion; the gift bag, pull tab and Mini-game rules.
 - **Captures of today:** the draft (`spike/ipad-board`), Chromium, English, 820×1094 and 1180×734, in `.claude/worktrees/ipad-research/data/scratch/board/me/dialogs/` (gitignored) as `<state>-<size>.png`; its `dialogs.js` takes them again. Not captured: Japanese, the Send gratitude sheet, the gift received notice.
 
 ## Decisions
@@ -29,7 +29,7 @@
      - Sent through LINE's picker, no one yet: the sleeve and "On its way".
      - Packed, not sent (LINE's picker closed without sending, or LINE didn't say): the open bag's sleeve and "In the bag", with Give still the key; Giving takes the sticker out of this bag before packing a new one, as it does today. "In the bag" stays true whether or not a message LINE didn't answer for went out.
      - Each says its state only: no expiry date, no "whoever opens it first", no tip.
-   - **Take it out:** a quiet link under the note in all three states, with Giving's words and icon (arrow-u-up-left). No confirm, as in Giving: the sticker comes back and can be given again. While it runs it reads "Taking it out…" and takes no second press, and leaving the detail doesn't stop it. A failure is an error line under the note with Try again, kept on that sticker's detail until retried or dismissed, as a Gratitude refusal is. When it lands, the note goes, Give returns as the key with focus on it, the sticker is back where it was (its board spot or its tray spot), and screen readers hear it.
+   - **Take it out:** a quiet link under the note in all three states, with Giving's words and icon (arrow-u-up-left). In the bag, no confirm, as in Giving: the sticker comes back and can be given again. Sent, it asks first, in place, as Mark 18+'s confirm does (answer 1). While it runs it reads "Taking it out…" and takes no second press, and leaving the detail doesn't stop it. A failure is an error line under the note with Try again, kept on that sticker's detail until retried or dismissed, as a Gratitude refusal is. When it lands, the note goes, Give returns as the key with focus on it, the sticker is back where it was (its board spot or its tray spot), and screen readers hear it.
    - **The board:** the header keeps only gifts for you; on an iPad its one row is the name, then that badge. A sticker on its way stays off the board, as now.
    - **The tray's spot:** today bare paper; now the sticker under the sleeve's frost, inside its own cut line, so the packing never moves. It never peels; a tap opens its detail among your stickers, named like "No.0147, on its way to @bob. Open it". Once received it becomes the given sticker's dashed cut line; taken out, or back after its week, a hole or the sticker again.
    - **Reduced motion:** the frost and note go in one frame.
@@ -42,11 +42,11 @@
 - One key per screen: decision 9's sent states have none; packed keeps Give.
 - New words: only the tray spot's names and the spoken take-out line; the rest reuse the detail's and Giving's.
 
-## Open questions for ad0ll
+## ad0ll's answers (2026-10-09)
 
-1. Take it out on a sent gift with no confirm, as in Giving? The friend's Gift Message then says you took it back. Mark 18+'s in-place confirm is the alternative.
-2. Decision 1's swipe-down also fits the shop-and-cards plan's gratitude events card, which hides its tear strip with no swipe. Align it there?
-3. Minimal copy, past this brief's layout scope: the give sheet's lines around Send in a LINE chat ("Pick your chat with them. The first to open it gets it.", "It comes off your board and into a gift bag.") and the picker's "Pick one of yours, then send it to @… in a LINE chat." are sublines and glosses. Cut them, on every size?
+1. Taking back a gift that's already sent asks first, with an in-place confirm like Mark 18+'s. A gift still in the bag comes out with no question, as today.
+2. These lines go, on every size, with their catalog strings: the give sheet's "Pick your chat with them. The first to open it gets it." and "It comes off your board and into a gift bag.", and the picker's "Pick one of yours, then send it to @… in a LINE chat."
+3. The gratitude events card's swipe-down is built by the Shop and cards lane, so the dialogs plan leaves it out.
 
 ## Sources
 
