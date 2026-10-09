@@ -65,7 +65,6 @@ This is the known vocab in the project. When relevant you should use the termino
 - User-facing text goes in the catalog, never inline: `apps/frontend/src/i18n/strings/`, one file per section (a feature folder, plus `errors` and `pages`), joined in `strings/index.ts`. Each string is `{ en, ja? }`: without `ja`, Japanese shows the English. Strings under a `developer` key are the developer slip's, and stay English.
 - Every string but the developer slip's has a one-line `/** … */` comment above it, naming the screen it's on and the interaction it appears in, e.g. `/** LINE sign-in screen, in a browser outside LINE: the button that starts LINE Login */`.
 - Japanese uses the words and style in `apps/frontend/src/i18n/glossary.md`, so the app says one thing one way.
-- `pnpm --filter frontend i18n:export <file.csv>` writes a sheet for a translator: each string's key, where, English, Japanese and notes. `pnpm --filter frontend i18n:import <file>` reads back either that sheet, which sets Japanese only, or a work file, `{ "<section>.<path>": { "where": "…", "ja": "…" } }`, which sets each string's comment and Japanese and clears the Japanese it leaves out. The import checks keys, `{{variables}}` and `<tags>` first (a Japanese string's `<wbr/>` phrase breaks aside), writes nothing if anything's wrong, and edits only the strings that change.
 
 ### Banned words
 
@@ -201,7 +200,7 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
   - `src/identity` — who the person is: the LINE profile, and the Privy sign-in, which trades LINE's ID token at the auth server for a Privy JWT (Privy's SDK loads only after the board)
   - `src/shop` — the Shop: the reserve tickets section and your ticket purchases, the coming-soon shelves and their previews, and Deposit, which shows your Sui address
   - `src/tickets` (the tickets, their cards, the reserve ticket checkout and the ticket purchases list), `src/stickers` (display formatting, and the sticker's material: the figure, its live resin and the shared light), `src/payments`
-  - `src/i18n` — the catalog (`strings/`), the i18next instance, the app's language and its formatters; `apps/frontend/scripts/` holds the catalog's export and import
+  - `src/i18n` — the catalog (`strings/`), the i18next instance, the app's language and its formatters
   - `src/ui` — shared controls and hooks, among them the large-screen query every layout reads (`largeScreen.ts`) and what the on-screen keyboard leaves visible (`visibleArea.ts`)
   - `src/icons` — one icon per file; `src/styles` — CSS shared across features
 - `packages/db` — Drizzle schema (`src/schema/`), migrations (`drizzle/`) and typed database client (`@drawing-app/db`)

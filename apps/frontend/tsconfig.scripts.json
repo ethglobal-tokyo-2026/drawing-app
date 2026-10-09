@@ -8,7 +8,7 @@
     "skipLibCheck": true,
     "jsx": "react-jsx",
 
-    /* The scripts, and the catalog their tests import, import without extensions, and tsx runs them */
+    /* The scripts, and the catalog they import, import without extensions, and tsx runs them */
     "module": "esnext",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,

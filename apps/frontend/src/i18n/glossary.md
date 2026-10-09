@@ -1,6 +1,6 @@
 # Japanese glossary
 
-The Japanese in the catalog was written by an LLM (2026-09-27) and needs a native speaker's review before launch: export it with `i18n:export`, and import the reviewed sheet with `i18n:import`. Every translator, human or LLM, uses these words so the app says one thing one way.
+The Japanese in the catalog was written by an LLM (2026-09-27) and needs a native speaker's review before launch. Every translator, human or LLM, uses these words so the app says one thing one way.
 
 ## Words
 
