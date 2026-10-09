@@ -536,7 +536,6 @@ const give = (giver, receiver, no) =>
     const sheet = page.getByRole("dialog", { name: named(S.giving.giveSheet.title) });
     await sheet.getByRole("radio", { name: no }).tap();
     await sheet.getByRole("button", { name: say(S.giving.give, { no }) }).tap();
-    await page.getByRole("button", { name: say(S.giving.sheet.sendInChat) }).tap();
     await page.getByRole("button", { name: say(S.ui.backToBoard) }).waitFor({ timeout: 60_000 });
     await L.shot(page, "gift-sent", AT);
     L.log(`SEED ${giver} gave ${no} to ${receiver}`);
