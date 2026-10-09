@@ -476,8 +476,6 @@ export const stickerBoard = {
   tray: {
     /** Your sticker board: screen readers' name for the Zipper's pull down the right edge, which opens the sticker tray */
     zipper: { en: "Your stickers", ja: "手持ちのシール" },
-    /** Your sticker board: screen readers' name for the Zipper's pull while the sticker tray holds something new, which a yellow pip on the pull shows */
-    zipperNew: { en: "Your stickers, something new inside", ja: "手持ちのシール、新着あり" },
     /** Sticker tray, before any sticker: the note printed on its one blank sheet */
     empty: {
       en: "Stickers you make or receive collect here",

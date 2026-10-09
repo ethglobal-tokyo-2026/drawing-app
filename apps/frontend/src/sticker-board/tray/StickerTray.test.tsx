@@ -1090,19 +1090,13 @@ describe("StickerTray", () => {
     );
   });
 
-  it("marks a sticker that just landed on the board as new, on its hole and on the pull, until the tray shows it", async () => {
+  it("marks a sticker that just landed on the board as new on its hole, until the tray shows it", async () => {
     render([sticker("fresh", Date.now(), true)]);
-    const pull = board.querySelector(".zip__slider");
-    const pip = board.querySelector<HTMLElement>(".zip__pip");
     const hole = () => board.querySelector(".tray__slot");
-    expect(pip?.hidden).toBe(false);
-    expect(pull?.getAttribute("aria-label")).toBe("Your stickers, something new inside");
     expect(hole()?.querySelector(".tray__new")).not.toBeNull();
     expect(hole()?.getAttribute("aria-label")).toMatch(/, new, on your board\. Show it$/);
 
     await openAndShut();
-    expect(pip?.hidden).toBe(true);
-    expect(pull?.getAttribute("aria-label")).toBe("Your stickers");
     expect(hole()?.querySelector(".tray__new")).toBeNull();
   });
 

@@ -467,9 +467,7 @@ export function createTrayEngine(
     return true;
   }
   zip.on("closed", () => {
-    if (!seeShown()) return;
-    renderStack();
-    updateBadge();
+    if (seeShown()) renderStack();
   });
   // A hand on the pull decides for itself.
   zip.on("grab", () => {
@@ -477,7 +475,6 @@ export function createTrayEngine(
     cancel(ui.shutTimer);
   });
   const hasNew = () => newIds().size > 0;
-  const updateBadge = () => zip.badge(hasNew());
 
   const trayPeel = createTrayPeel(tray, trayModel, traySheets, cancelTugs);
   const trayPresses = createTrayPresses(tray, trayModel, traySheets, trayPaging, trayPeel, {
@@ -546,15 +543,11 @@ export function createTrayEngine(
     if (ui.destroyed) return;
     ui.model = modelOf(read(), seen);
     syncTabsShown();
-    const apply = () => {
-      updateBadge();
-      redraw();
-    };
-    if (applyPack()) apply();
+    if (applyPack()) redraw();
     else
       relayout().then(
         (ok) => {
-          if (ok) apply();
+          if (ok) redraw();
         },
         (error: unknown) => console.error("Laying out the sticker sheets failed", error),
       );
@@ -562,7 +555,6 @@ export function createTrayEngine(
 
   /* ---------------------------------------------------------------- start: the stand-in spots at once, packed as soon as every cut line is known */
   syncTabsShown();
-  updateBadge();
   // Packed at once when every cut line is known; else on stand-in spots until they are.
   const packed = applyPack();
   resetOrder();

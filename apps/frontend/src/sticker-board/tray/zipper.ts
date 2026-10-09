@@ -106,8 +106,6 @@ export interface Zipper {
   relax: (k?: number) => void;
   /** One idle tug; the caller rations them. Returns whether it tugged. */
   hint: () => boolean;
-  /** The pip on the pull that marks something new inside. */
-  badge: (on: boolean) => void;
   geometry: () => ZipperGeometry;
   /**
    * Where the fully open mouth shows through, as the host's y from top to bottom, and its foot, where
@@ -602,11 +600,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   const win = windowOf(doc);
   // Its own copy: `reshape` moves the chain line, the travel and where the mouth closes in.
   const o = { mouthShort: 0, ...options };
-  /** The pull's name, which says so when the pip marks something new. */
-  const names = {
-    plain: i18next.t(($) => $.stickerBoard.tray.zipper),
-    fresh: i18next.t(($) => $.stickerBoard.tray.zipperNew),
-  };
   const id = ++uid;
   const reducedMotion = win.matchMedia(REDUCED_MOTION);
   const reduced = () => reducedMotion.matches;
@@ -647,15 +640,12 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   const stopFar = make(doc, "i", "zip__stop zip__stop--bottom");
   const tabShadow = make(doc, "i", "zip__tabshadow");
   const shadowPart = make(doc, "span", "zip__part zip__shadowpart", tabShadow);
-  const pip = make(doc, "i", "zip__pip");
-  pip.hidden = true;
   const flop = make(
     doc,
     "span",
     "zip__flop",
     pullFace(doc, id, "front"),
     pullFace(doc, id, "back"),
-    pip,
   );
   const pull = make(doc, "span", "zip__pull", flop);
   pull.style.transform = `translateY(${HINGE}px)`;
@@ -669,7 +659,10 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     make(doc, "i", "zip__ring"),
   );
   slider.type = "button";
-  slider.setAttribute("aria-label", names.plain);
+  slider.setAttribute(
+    "aria-label",
+    i18next.t(($) => $.stickerBoard.tray.zipper),
+  );
   // The slider leads, so Tab goes from it into what the open mouth shows; the layers stack by z-index.
   const root = make(
     doc,
@@ -1393,10 +1386,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
         wake();
       }, TUG.ms);
       return true;
-    },
-    badge(on) {
-      pip.hidden = !on;
-      slider.setAttribute("aria-label", on ? names.fresh : names.plain);
     },
     geometry,
     openWindow(short = o.mouthShort) {
