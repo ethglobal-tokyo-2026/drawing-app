@@ -91,6 +91,12 @@
   animation-play-state: paused;
 }
 
+/* Landed behind the stat board, until it lands back, they stop and start over: a paused one keeps its
+   own layer, and under the turn back those layers' tiles stall the compositor as the face comes round. */
+.board-front[data-away] :is(.live-resin__spec > b, .sticker-foil__sheen) {
+  animation: none;
+}
+
 /* A sticker at its placement. The lift is what rises in your hand and what sticks. */
 .placed-sticker {
   position: absolute;

@@ -142,8 +142,12 @@ export function BoardFlip({
       <RestingSide value={resting}>
         <div className="board-flip" ref={flip}>
           {/* Turning back, the front stays inert until it lands: lifting inert restyles every sticker,
-              which costs the turn's first frame. */}
-          <div className="board-front" inert={turned || resting === "back"}>
+              which costs the turn's first frame. Rested out of sight, it's away until it lands again. */}
+          <div
+            className="board-front"
+            inert={turned || resting === "back"}
+            data-away={resting === "back" ? "" : undefined}
+          >
             {front}
             <i className="board-shade" ref={frontShade} aria-hidden />
           </div>
