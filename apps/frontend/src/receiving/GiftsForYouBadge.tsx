@@ -52,19 +52,11 @@ export function GiftsForYouBadge({ gifts, onOpen, nudging = false }: Props) {
           {t(($) => $.receiving.giftsForYou.title, { count })}
         </span>
         <span className="fine gifts-for-you-badge__from">
-          {/* The handle keeps its own case in the fine print's capitals. */}
-          {count > 1 ? (
-            <Trans
-              i18nKey={($) => $.receiving.giftsForYou.fromAndMore}
-              values={{ count: count - 1 }}
-              components={{ name: <span className="handle">{name}</span> }}
-            />
-          ) : (
-            <Trans
-              i18nKey={($) => $.receiving.giftsForYou.from}
-              components={{ name: <span className="handle">{name}</span> }}
-            />
-          )}
+          {/* The handle keeps its own case in the fine print's capitals; the badge counts the rest. */}
+          <Trans
+            i18nKey={($) => $.receiving.giftsForYou.from}
+            components={{ name: <span className="handle">{name}</span> }}
+          />
         </span>
       </span>
     </button>

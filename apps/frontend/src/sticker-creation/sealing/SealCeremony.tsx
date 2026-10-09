@@ -58,7 +58,6 @@ interface Props {
   onLeft: () => void;
   /** The sheet the sticker was cut from, in the ceremony's own pixels. */
   sheet: Box;
-  handle: string;
   onKeepDrawing: () => void;
   onBoard: () => void;
   onShop: () => void;
@@ -117,7 +116,6 @@ export function SealCeremony({
   leaving,
   onLeft,
   sheet,
-  handle,
   onKeepDrawing,
   onBoard,
   onShop,
@@ -355,7 +353,6 @@ export function SealCeremony({
         {sealed && (
           <SealedCard
             sealed={sealed}
-            handle={handle}
             keyShown={keyShown}
             leaving={leaving}
             cardRef={card}

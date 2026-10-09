@@ -21,12 +21,11 @@ export const useReservePacks = () => useApiQuery(KEY, loadPacks, answers, { ownL
 /** The same packs for the Shop to show: the last ones loaded at once, loaded again once they're stale. */
 export const useShownReservePacks = () => useApiQuery(KEY, loadPacks, answers);
 
-/** Loads the packs ahead, so the Shop opens on its prices. */
+/** Loads the packs ahead, so the reserve ticket checkout opens on its prices. */
 export const preloadReservePacks = (api: ApiClient) => preloadQuery(api, KEY, loadPacks, answers);
 
-/** The price of one reserve ticket bought alone, and whether a bigger pack costs less a ticket. */
+/** The price of one reserve ticket bought alone. */
 export function singleTicketPrice(packs: ReservePacks["packs"]) {
   const single = packs.find((p) => p.tickets === 1);
-  if (!single) return null;
-  return { priceYen: single.priceYen, lessInPacks: packs.some((p) => p.discountPercent > 0) };
+  return single ? { priceYen: single.priceYen } : null;
 }

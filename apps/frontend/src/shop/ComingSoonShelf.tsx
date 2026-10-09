@@ -10,8 +10,6 @@ interface ShelfItem {
 
 interface Props {
   title: string;
-  /** One line on what the things on it are. */
-  lead: string;
   /** The first is the one you have now. */
   items: readonly ShelfItem[];
   /** "white" for swatches you draw on; stickers sit on label stock. */
@@ -22,18 +20,14 @@ interface Props {
  * A shelf of things coming to the Shop: a row of swatches that scrolls sideways, led by the one you
  * have now. Nothing on it is for sale yet, so it has no prices and nothing to tap.
  */
-export function ComingSoonShelf({ title, lead, items, swatch = "label" }: Props) {
+export function ComingSoonShelf({ title, items, swatch = "label" }: Props) {
   const { t } = useTranslation();
   const id = useId();
   return (
     <section className="shelf" aria-labelledby={`${id}-title`}>
-      <header className="shelf__head">
-        <h2 className="shelf__title" id={`${id}-title`}>
-          {title}
-        </h2>
-        <span className="shelf__soon fine">{t(($) => $.shop.comingSoon)}</span>
-      </header>
-      <p className="shelf__lead">{lead}</p>
+      <h3 className="shelf__title" id={`${id}-title`}>
+        {title}
+      </h3>
       <ul className="shelf__row">
         {items.map((item, i) => (
           <li key={item.id} className="shelf-item">

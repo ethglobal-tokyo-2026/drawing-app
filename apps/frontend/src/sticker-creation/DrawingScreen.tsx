@@ -1116,7 +1116,6 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           leaving={ceremony.leaving}
           onLeft={() => dropCeremony(ceremony)}
           sheet={ceremony.sheet}
-          handle={me.handle ?? ""}
           onKeepDrawing={() => {
             handOver(ceremony);
             startRightAway({ reserve: false });

@@ -3,17 +3,13 @@ import {
   FIRST_SPOT,
   fieldOf,
   freeSpot,
-  hintSpot,
   knobHidden,
   LAID_OUT_SPOTS,
   nextZ,
-  S_MAX,
   sizeOf,
   SPOT_BOUNDS,
   toFrac,
   toolbarSpot,
-  toPx,
-  type Box,
   type Placement,
 } from "./placement";
 
@@ -109,102 +105,6 @@ describe("placement", () => {
         const { top } = toolbarSpot(sticker, board, bar, { clearOf: draw });
         expect(top > y + 22 || top + bar.h < y - 22).toBe(true);
       }
-  });
-
-  describe("the first selection's hint", () => {
-    const hint = { w: 321, h: 48 };
-    const bar = { w: 296, h: 94 };
-    const name = { left: 14, top: 12, right: 150, bottom: 68 };
-    const overlap = (a: Box, b: Box) =>
-      a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
-    /** Draw sits at the board's lower left, as StickerBoard.css puts it. */
-    const drawOn = (board: { W: number; H: number }): Box => ({
-      left: 14,
-      top: board.H - 68,
-      right: 172,
-      bottom: board.H - 14,
-    });
-    /** The sticker's toolbar and hint, placed as the toolbar places them. */
-    const placed = (board: { W: number; H: number }, sticker: StickerSpot) => {
-      const clearOf = drawOn(board);
-      const knobBelow = knobHidden(sticker, name);
-      const { left, top } = toolbarSpot(sticker, board, bar, { knobBelow, clearOf });
-      const toolbar = { left, top, right: left + bar.w, bottom: top + bar.h };
-      const spot = hintSpot(sticker, board, hint, toolbar, { knobBelow, clearOf });
-      return { toolbar, spot, knobBelow, clearOf };
-    };
-    type StickerSpot = { x: number; y: number; w: number; h: number; r: number };
-    const stickerAt = (
-      board: { W: number; H: number },
-      at: { x: number; y: number },
-      s: number,
-    ) => {
-      const { w, h } = sizeOf(board.W, s, { width: 4, height: 3 });
-      return { ...toPx(fieldOf(board.W, board.H), at), w, h, r: 0 };
-    };
-
-    it("covers none of the sticker, its handles and knob, the toolbar or Draw, wherever the sticker sits", () => {
-      let shown = 0;
-      for (const board of [
-        { W: 375, H: 523 },
-        { W: 390, H: 673 },
-      ])
-        for (const s of [0.2, 0.36, 0.5])
-          for (let y = 0; y <= 1; y += 0.125)
-            for (let x = 0; x <= 1; x += 0.25) {
-              const sticker = stickerAt(board, { x, y }, s);
-              const { toolbar, spot, knobBelow, clearOf } = placed(board, sticker);
-              if (!spot) continue;
-              shown++;
-              const box = {
-                left: spot.left,
-                top: spot.top,
-                right: spot.left + hint.w,
-                bottom: spot.top + hint.h,
-              };
-              // The frame and its handles reach 20px past the sticker; the knob's disc stands 42.5px past it.
-              const frame = {
-                left: sticker.x - sticker.w / 2 - 20,
-                top: sticker.y - sticker.h / 2 - 20,
-                right: sticker.x + sticker.w / 2 + 20,
-                bottom: sticker.y + sticker.h / 2 + 20,
-              };
-              const knobY = sticker.y + (knobBelow ? 1 : -1) * (sticker.h / 2 + 42.5);
-              const knob = {
-                left: sticker.x - 14,
-                top: knobY - 14,
-                right: sticker.x + 14,
-                bottom: knobY + 14,
-              };
-              for (const covered of [frame, knob, toolbar, clearOf])
-                expect(overlap(box, covered)).toBe(false);
-              expect(box.left).toBeGreaterThanOrEqual(10);
-              expect(box.right).toBeLessThanOrEqual(board.W - 40);
-            }
-      expect(shown).toBeGreaterThan(0);
-    });
-
-    it("hangs under the toolbar when the board has room, and above the knob where Draw leaves none", () => {
-      const roomy = { W: 390, H: 673 };
-      const first = stickerAt(roomy, FIRST_SPOT, 0.36);
-      const under = placed(roomy, first);
-      expect(under.toolbar.top).toBeGreaterThan(first.y);
-      expect(under.spot?.top).toBeGreaterThanOrEqual(under.toolbar.bottom);
-      expect(under.spot?.top).toBeLessThan(under.toolbar.bottom + hint.h);
-
-      // On a short phone the toolbar fills the way down to Draw, so the hint goes over the sticker.
-      const short = { W: 375, H: 523 };
-      const centered = stickerAt(short, FIRST_SPOT, 0.36);
-      const over = placed(short, centered);
-      expect(over.toolbar.top).toBeGreaterThan(centered.y);
-      expect(over.spot?.top).toBeLessThan(centered.y - centered.h / 2);
-    });
-
-    it("finds no spot, rather than covering something, when the sticker leaves no room", () => {
-      const short = { W: 375, H: 523 };
-      // The biggest sticker, mid-field: too little board is left above its knob or below it.
-      expect(placed(short, stickerAt(short, { x: 0.5, y: 0.5 }, S_MAX)).spot).toBeNull();
-    });
   });
 
   it("finds the knob out of reach off the board's top or under the name, and nowhere else", () => {

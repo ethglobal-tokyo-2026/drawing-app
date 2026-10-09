@@ -24,7 +24,9 @@ import {
   SHEET,
   STACK_FOOT,
   STACK_Y,
+  stackFootFor,
   SVG_NS,
+  TOP,
   createTrayModel,
   modelOf,
   type BoardView,
@@ -68,6 +70,8 @@ export interface TrayEngine {
  * edge, kept at the fine-print floor, still sit beside the sheet's number.
  */
 const MIN_SHRINK = 0.5;
+/** The open mouth keeps this much lining under the stack's foot, where the +N button's reach ends. */
+export const POUCH_LINING = 24;
 /** The stack's foot (dates, NEW, +N) is hidden below this share of the mouth's open width, whole above the other. */
 const FOOT_FADE = { hidden: 0.35, whole: 0.7 };
 /** The pull tugs itself, and the front sheet's grip nudges, on this many visits to the tray. */
@@ -250,6 +254,9 @@ export function createTrayEngine(
   const Wb = () => board.clientWidth || 390;
   const Hb = () => board.clientHeight || 657;
   const colLeft = () => Wb() - COL;
+  /** Where the open pouch ends, as the board's y: where its slider stops. */
+  let openFoot = 0;
+  const pouchFoot = () => openFoot || Hb();
   const boardView = (): BoardView => {
     const r = board.getBoundingClientRect();
     return { left: r.left, top: r.top, k: r.width / (board.offsetWidth || r.width || 1) };
@@ -282,6 +289,7 @@ export function createTrayEngine(
     Wb,
     Hb,
     colLeft,
+    pouchFoot,
     boardView,
   };
   const traySheets = createTraySheets(tray, trayModel);
@@ -300,27 +308,43 @@ export function createTrayEngine(
     w1.toggleAttribute("inert", now);
   }
   let footShown = "1.00";
-  let shrunkFor = 0;
+  let fittedFor = 0;
+  let fittedSheets = -1;
+  let stoppedShort = 0;
   /**
-   * Shrinks the stack until its sheets, the edges behind them and the +N button all fit the open mouth:
-   * on a short board the mouth's window ends above where the stack would.
+   * Fits the stack to the open mouth: shrunk until its sheets, the edges behind them and the +N button
+   * all fit on a short board, whose mouth ends above where the stack would. Opened, the slider stops
+   * just below the stack, so the pouch holds no bare lining under the sheets. True when that moved
+   * the stop: the Zipper redrawn for it has drawn this frame already.
    */
-  function shrinkStack(height: number) {
-    if (!height || height === shrunkFor) return;
-    shrunkFor = height;
-    const room = zip.openWindow();
+  function fitStack(height: number) {
+    // The stop follows the sheets there are: a short stack shows fewer edges behind its front sheet.
+    const sheets = ui.model.count;
+    if (!height || (height === fittedFor && sheets === fittedSheets)) return false;
+    fittedFor = height;
+    fittedSheets = sheets;
+    const room = zip.openWindow(0);
     const next = room ? clamp((room.bot - 2 - STACK_Y - STACK_FOOT) / SHEET.h, MIN_SHRINK, 1) : 1;
-    if (Math.abs(next - ui.shrink) < 0.001) return;
-    ui.shrink = next;
-    stack.style.setProperty("--shrink", ui.shrink.toFixed(4));
-    if (ui.model && ui.order.length) renderStack();
+    if (Math.abs(next - ui.shrink) >= 0.001) {
+      ui.shrink = next;
+      stack.style.setProperty("--shrink", ui.shrink.toFixed(4));
+      if (ui.model && ui.order.length) renderStack();
+    }
+    const stackFoot = 2 + STACK_Y + ui.shrink * SHEET.h + stackFootFor(sheets) + POUCH_LINING;
+    const stopShort = room ? Math.max(0, Math.floor(room.bot - stackFoot)) : 0;
+    const moved = stopShort !== stoppedShort;
+    stoppedShort = stopShort;
+    if (moved) zip.reshape({ stopShort });
+    const stop = zip.openWindow();
+    openFoot = stop ? TOP + stop.slider : 0;
+    return moved;
   }
   function onFrame(g: Geometry) {
+    if (fitStack(g.H)) return;
     ui.geo = g;
     const G = g.G;
     const k = showsFrom(g.spread);
     const open = clamp(G / (0.97 * GMAX), 0, 1);
-    shrinkStack(g.H);
     const range = G > 3 ? mouthRange(g, G, k) : null;
     const show = range !== null;
     // A mouth sagged to a crack rings through shut for a few frames: the stack stays as it was, so it

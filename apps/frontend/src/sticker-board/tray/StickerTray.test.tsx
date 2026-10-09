@@ -18,8 +18,8 @@ import { errors } from "../../i18n/strings/errors";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
-import { TUG_VISITS, type TrayBoard } from "./trayEngine";
-import { SHEET, STACK_FOOT, TOP } from "./trayModel";
+import { POUCH_LINING, TUG_VISITS, type TrayBoard } from "./trayEngine";
+import { SHEET, STACK_FOOT, stackFootFor, TOP } from "./trayModel";
 import { testStickerUrls } from "../../stickers/testStickerUrls";
 import { NUDGE_AFTER } from "./trayNudge";
 import { trayProblemWords, type TrayProblem } from "./trayProblem";
@@ -858,6 +858,45 @@ describe("StickerTray", () => {
       await openOn(700);
       const [, , scale] = numbersIn(stackEl());
       expect(scale).toBe(1);
+    });
+
+    // A phone's browser outside LINE gives the board more height than the stack needs.
+    it.each([
+      ["one sheet", 1],
+      ["a deep stack", 60],
+    ])("opens a tall board's mouth only as far as %s, full size", async (_, stickers) => {
+      await openOn(776, stickers);
+      const [, stackTop = NaN, scale = NaN] = numbersIn(stackEl());
+      const [, mouthFootShift = NaN] = numbersIn(board.querySelector(".tray__w2"));
+      const mouthFoot = 776 - TOP + mouthFootShift;
+      const hidden = Number(
+        stackEl()?.querySelector(".tray__depth span")?.textContent?.slice(1) ?? 0,
+      );
+      const sheets = (stackEl()?.querySelectorAll(".tray__sheet").length ?? 0) + hidden;
+      const stackFoot = stackTop + scale * SHEET.h + stackFootFor(sheets);
+      expect(scale).toBe(1);
+      // The slider stopped short of the rail's foot: only a little lining under the sheets.
+      expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
+      expect(mouthFoot - stackFoot).toBeLessThan(2 * POUCH_LINING);
+    });
+
+    it("takes a sticker back beside the open mouth, and not from below its slider", async () => {
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.classList.contains("tray__col") ? 776 - TOP : 776;
+      });
+      render([sticker("a", 1, true), sticker("b", 2, true)]);
+      await openTray();
+      const putBack = async (id: string, y: number) => {
+        let back: boolean | undefined;
+        await act(async () => {
+          back = await tray.current?.boardDrop(id, { x: 380, y });
+        });
+        return back;
+      };
+      expect(await putBack("a", 770)).toBe(false);
+      expect(await putBack("b", 300)).toBe(true);
     });
 
     // An iPhone SE inside LINE has the shortest board the tray is made for; the other is shorter.

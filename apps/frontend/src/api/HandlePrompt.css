@@ -15,41 +15,9 @@
   width: 100%;
 }
 
-/* White label stock, as Explore's search: it takes the house focus ring while you type in it. */
+/* The text field (styles/text-field.css), across the form. */
 .handle-prompt__field {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   width: 100%;
-  height: 48px;
-  padding: 0 12px;
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--r-label);
-  background: var(--canvas);
-  box-shadow: var(--shadow-label);
-}
-
-.handle-prompt__field:has(input:focus-visible) {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
-}
-
-.handle-prompt__field input {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  outline: none;
-  background: none;
-  color: var(--ink);
-  font: 500 16px var(--font-ui);
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-.handle-prompt__field input::placeholder {
-  color: var(--graphite);
 }
 
 /* The key's label names the handle, so a long one shortens with an ellipsis rather than growing the

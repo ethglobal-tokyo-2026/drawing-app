@@ -6,6 +6,7 @@ import "./styles/fonts.css";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/keys.css";
+import "./styles/text-field.css";
 import { ApiRoot } from "./api/ApiRoot";
 import { openSessionEarly } from "./api/serverClients";
 import App from "./app/App.tsx";

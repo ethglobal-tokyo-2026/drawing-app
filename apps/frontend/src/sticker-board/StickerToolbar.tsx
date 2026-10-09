@@ -21,7 +21,7 @@ import { EASE_OUT } from "../ui/easing";
 import { LabelButton } from "../ui/LabelButton";
 import { useHeldRepeat } from "../ui/useHeldRepeat";
 import type { Step } from "./boardGesture";
-import { hintRoom, hintSpot, toolbarSpot, type Box } from "./placement";
+import { toolbarSpot, type Box } from "./placement";
 
 interface Props {
   /** Names the toolbar after its sticker. */
@@ -51,10 +51,6 @@ interface Props {
   reduced: boolean;
   /** Its Original Artist, when someone other than the board's owner drew it: the chip heads the toolbar. */
   artist?: PersonView;
-  /** The first selection on this device: a hint says how to go on, placed clear of what it mustn't cover. */
-  hinted?: boolean;
-  /** The hint found room and is on screen. */
-  onHintShown?: () => void;
 }
 
 /** Arrange's step tiles in the order they read: moves on the first row, sizes and turns on the second. */
@@ -87,18 +83,13 @@ export function StickerToolbar({
   onEscape,
   reduced,
   artist,
-  hinted = false,
-  onHintShown,
 }: Props) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
-  const hint = useRef<HTMLSpanElement>(null);
   const tiles = useRef<HTMLDivElement>(null);
   const tilesId = useId();
-  const hintShown = useEffectEvent(() => onHintShown?.());
 
-  // Placed once it's measured, before it's painted: its width follows the labels it shows. The hint
-  // hugs its words up to the room the board has, and is placed once the toolbar is.
+  // Placed once it's measured, before it's painted: its width follows the labels it shows.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -108,35 +99,19 @@ export function StickerToolbar({
     // The step tiles open on the row's far side from the sticker, so where the open toolbar fits,
     // opening them leaves the row in place.
     el.dataset.over = String(top + bar.h / 2 < sticker.y);
-    const note = hint.current;
-    if (!note) return;
-    note.style.maxWidth = `${hintRoom(board.W)}px`;
-    const spot = hintSpot(
-      sticker,
-      board,
-      { w: note.offsetWidth, h: note.offsetHeight },
-      { left, top, right: left + bar.w, bottom: top + bar.h },
-      { knobBelow, clearOf },
-    );
-    // With no room it stays hidden, and the board doesn't count it as shown.
-    note.style.visibility = spot ? "visible" : "hidden";
-    if (!spot) return;
-    note.style.transform = `translate(${spot.left.toFixed(1)}px, ${spot.top.toFixed(1)}px)`;
-    hintShown();
   });
 
   // It comes in when it first shows. Selection moving straight to another sticker swaps one toolbar
   // for another in the same commit, and that one moves over without coming in again.
   const reveal = useEffectEvent(() => {
     if (reduced || performance.now() - lastHidden < HANDOFF_MS) return;
-    for (const el of [ref.current, hint.current])
-      el?.animate(
-        [
-          { opacity: 0, translate: "0 -4px" },
-          { opacity: 1, translate: "0 0" },
-        ],
-        { duration: 160, easing: EASE_OUT },
-      );
+    ref.current?.animate(
+      [
+        { opacity: 0, translate: "0 -4px" },
+        { opacity: 1, translate: "0 0" },
+      ],
+      { duration: 160, easing: EASE_OUT },
+    );
   });
   useLayoutEffect(() => {
     reveal();
@@ -224,12 +199,6 @@ export function StickerToolbar({
           </div>
         )}
       </div>
-      {/* Hidden from screen readers, who hear the sticker's own description of its keys instead. */}
-      {hinted && (
-        <span ref={hint} className="sticker-toolbar__hint keep-phrases" aria-hidden>
-          {t(($) => $.stickerBoard.toolbar.firstSelectionHint)}
-        </span>
-      )}
     </>
   );
 }

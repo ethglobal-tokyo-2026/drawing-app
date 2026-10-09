@@ -28,6 +28,11 @@ export interface ZipperOptions {
   insets: readonly [top: number, bottom: number];
   /** How far the left row travels when fully open and spread flat. */
   maxGap: number;
+  /**
+   * Opened, the slider stops this many px short of the far stop, and the teeth below it stay meshed:
+   * the run's overshoot and knock happen there.
+   */
+  stopShort?: number;
 }
 
 interface RunOptions {
@@ -106,8 +111,14 @@ export interface Zipper {
   /** The pip on the pull that marks something new inside. */
   badge: (on: boolean) => void;
   geometry: () => ZipperGeometry;
-  /** Where the fully open mouth shows through, as the host's y from top to foot; null before it's laid out. */
-  openWindow: () => { top: number; bot: number } | null;
+  /**
+   * Where the fully open mouth shows through, as the host's y from top to foot, and where its slider
+   * stops: with the slider stopping `short` px short of the far stop, or where it does now; null before
+   * the host is laid out.
+   */
+  openWindow: (short?: number) => { top: number; bot: number; slider: number } | null;
+  /** Moves where the opened slider stops: it redraws at once. */
+  reshape: (options: Required<Pick<ZipperOptions, "stopShort">>) => void;
   on: <K extends keyof ZipperEvents>(event: K, fn: Listener<K>) => () => void;
   destroy: () => void;
 }
@@ -147,8 +158,9 @@ const STOP_GAP = 1.5;
 const SHOULDER = 12;
 /** The pull's hinge on the slider's bridge, below the slider's center. */
 const HINGE = 2;
-/** However short the host, the track is at least this long. */
+/** However short the host, the track is at least this long, and an opening slider runs at least this far. */
 const MIN_TRACK = 80;
+const MIN_RUN = 48;
 /** The lining: a sliver every `step` px, `half` px either side of its place, shown once the mouth is
  * `minGap` wide; it tucks under the left lip and the right row, and its CSS box is `width` px wide. */
 const LINING = { step: 4, half: 2.5, minGap: 2.5, underLip: 3, underChain: 2, width: 100 };
@@ -559,7 +571,8 @@ function windowOf(doc: Document): Window & typeof globalThis {
 export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper {
   const doc = host.ownerDocument;
   const win = windowOf(doc);
-  const o = options;
+  // Its own copy: `reshape` moves the stop.
+  const o = { stopShort: 0, ...options };
   /** The pull's name, which says so when the pip marks something new. */
   const names = {
     plain: i18next.t(($) => $.stickerBoard.tray.zipper),
@@ -657,6 +670,9 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   let slivers: Sliver[] = [];
   const yOf = (a: number) => o.insets[0] + a;
   const aOf = (y: number) => y - o.insets[0];
+  /** Where an open slider's center stops on a track this long, `short` px short of the far stop. */
+  const stopOf = (track: number, short: number) =>
+    Math.max(STOP + SLIDER / 2 + MIN_RUN, track - STOP - SLIDER / 2 - short);
 
   function segment(row: "a" | "b", a: number): Segment {
     const tape = make(doc, "i", "zip__tape");
@@ -685,7 +701,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     }
     lining.replaceChildren(...slivers.map((s) => s.el));
     S0 = STOP + SLIDER / 2;
-    S1 = L - STOP - SLIDER / 2;
+    S1 = stopOf(L, o.stopShort);
     travel = Math.max(1, S1 - S0);
     // New teeth have never been drawn.
     drawn.S = NaN;
@@ -1373,12 +1389,21 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
       slider.setAttribute("aria-label", on ? names.fresh : names.plain);
     },
     geometry,
-    openWindow() {
+    openWindow(short = o.stopShort) {
       if (!L && !build()) return null;
+      const S = stopOf(L, short);
       const open: MouthShape = { S: 0, sM: 0, Ts: 1, Te: 1, ms: 0.8, me: 1.2, G: 0 };
-      fillShape(open, 1, 1, o.maxGap, 0);
+      fillShape(open, (S - S0) / travel, 1, o.maxGap, 0);
       const range = mouthRange({ sM: open.sM, gap: (a) => gapOf(open, a) }, open.G, showsFrom(1));
-      return range && { top: yOf(range.from), bot: yOf(range.to) };
+      return range && { top: yOf(range.from), bot: yOf(range.to), slider: yOf(S) };
+    },
+    reshape({ stopShort }) {
+      if (destroyed || stopShort === o.stopShort) return;
+      o.stopShort = stopShort;
+      L = 0;
+      if (build()) render();
+      // An open mouth settles to its new shape.
+      wake();
     },
     on(event, fn) {
       listeners[event].add(fn);

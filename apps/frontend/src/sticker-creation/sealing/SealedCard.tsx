@@ -4,7 +4,7 @@ import { BuyTicketsIcon, DrawIcon, StickerBoardIcon } from "../../icons";
 import { spokenSubject } from "../../kyoto-seika/spokenSubject";
 import { SubjectPair } from "../../kyoto-seika/SubjectPair";
 import { Duration } from "../../stickers/Duration";
-import { formatDay, formatHandle, formatNo } from "../../stickers/format";
+import { formatDay, formatNo } from "../../stickers/format";
 import type { Sticker } from "@drawing-app/api/client";
 import { toSticker } from "../../api/views";
 import { formatRefillTime } from "../../tickets/refill";
@@ -22,7 +22,6 @@ const ACT_AFTER_MS = 160;
 
 interface Props {
   sealed: Sticker;
-  handle: string;
   /** Its first key has faded up: until then nothing on the card takes a press, focus or Escape. */
   keyShown: boolean;
   /** It's on its way out, over the fresh sheet: it takes no presses and keeps what it showed. */
@@ -80,7 +79,6 @@ function TicketRow({ tickets, peel }: { tickets: Tickets; peel: boolean }) {
  */
 export function SealedCard({
   sealed,
-  handle,
   keyShown,
   leaving,
   cardRef,
@@ -151,12 +149,7 @@ export function SealedCard({
         <Trans
           i18nKey={($) => $.stickerCreation.sealedCard.finePrint}
           values={{ no: formatNo(sealed.number), day: formatDay(Date.parse(sealed.sealedAt)) }}
-          components={{
-            duration: <Duration seconds={sealed.timeUsed} />,
-            // A handle is a component's text, not a value: Trans would read markup in a value. It
-            // keeps its own case in the fine print's capitals.
-            handle: <span className="handle">{formatHandle(handle)}</span>,
-          }}
+          components={{ duration: <Duration seconds={sealed.timeUsed} /> }}
         />
       </p>
       <div data-card-line>

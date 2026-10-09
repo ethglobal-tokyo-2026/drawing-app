@@ -74,7 +74,7 @@ export function HandlePrompt({ me, setHandle, onChosen }: Props) {
           : t(($) => $.api.handle.lead)}
       </p>
       <form className="handle-prompt__form" onSubmit={(e) => void submit(e)}>
-        <label className="handle-prompt__field">
+        <label className="text-field handle-prompt__field">
           <At size={20} />
           <input
             value={draft}

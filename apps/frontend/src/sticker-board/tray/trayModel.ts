@@ -242,6 +242,8 @@ export interface Tray {
   Wb: () => number;
   Hb: () => number;
   colLeft: () => number;
+  /** Where the open pouch ends, as the board's y: where its slider stops. */
+  pouchFoot: () => number;
   boardView: () => BoardView;
 }
 
@@ -249,13 +251,19 @@ export interface Tray {
 export const PEEK = 15;
 /** Sheets shown behind the front one; deeper ones become the stack's depth, a button that spreads them. */
 export const PEEKS = 3;
-/** Under the front sheet: the edges behind it, and the +N button with its gap. */
-export const STACK_FOOT = PEEKS * PEEK + 3 + 22;
+/** The +N button under the edges behind the front sheet, with its gap. */
+const DEPTH_ROOM = 3 + 22;
+/** Under the front sheet of a deep stack: the edges behind it, and the +N button. */
+export const STACK_FOOT = PEEKS * PEEK + DEPTH_ROOM;
+/** Under the front sheet of a stack of `sheets`: the edges shown behind it, and the +N button once deeper ones hide. */
+export const stackFootFor = (sheets: number) =>
+  Math.min(PEEKS, Math.max(0, sheets - 1)) * PEEK + (sheets - 1 > PEEKS ? DEPTH_ROOM : 0);
 export const SHEET = { w: 156, h: 364 };
 /** Packing keeps clear of the sheet's tear strip at the top and its dated foot. */
 const PACK = { sheet: SHEET, margin: { top: 30, right: 10, bottom: 24, left: 10 } };
-/** The tray runs from just under the board's header to its foot. */
-export const TOP = 64;
+/** The tray runs from under the board's header and its gifts badge to its foot (sticker-tray.css sets
+ * --tray-top to match). */
+export const TOP = 72;
 /** The tray's column: wide enough for the left row's full travel. */
 export const COL = 205;
 /** How far the left row travels open: the tray takes about half the screen. */

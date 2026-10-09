@@ -17,44 +17,9 @@
   background: var(--liner);
 }
 
-/* White label stock: the search sits on the page like a stuck-on label, and takes the house focus
-   ring while you type in it. */
+/* The search is the text field (styles/text-field.css); it keeps its height in Explore's column. */
 .artist-search {
   flex: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 48px;
-  padding: 0 12px;
-  border: 1px solid var(--rule-strong);
-  border-radius: 6px;
-  background: var(--canvas);
-  box-shadow: var(--shadow-label);
-}
-
-.artist-search:has(input:focus-visible) {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
-}
-
-.artist-search input {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  padding: 0;
-  border: none;
-  outline: none;
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  font-size: 16px;
-  font-weight: 500;
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-.artist-search input::placeholder {
-  color: var(--graphite);
 }
 
 .artist-search input::-webkit-search-cancel-button {
@@ -284,8 +249,10 @@
   font-stretch: var(--w-figure);
 }
 
-/* The streak's figure: its fire in the streak's tangerine, then the days in Ink. */
-.figure--streak {
+/* The streak's figure: its fire in the streak's tangerine, then the days in Ink. Gratitude's: its
+   heart in Bonbon Pink, as gratitude wears it everywhere, then the amount in Ink. */
+.figure--streak,
+.figure--gratitude {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -294,6 +261,11 @@
 .figure--streak svg {
   flex: none;
   color: var(--tangerine);
+}
+
+.figure--gratitude svg {
+  flex: none;
+  color: var(--pink);
 }
 
 .figure small {

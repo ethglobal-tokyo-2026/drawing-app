@@ -29,7 +29,8 @@ export function createTrayBoardDrop(
   trayPeel: TrayPeel,
   trayPresses: TrayPresses,
 ) {
-  const { reduced, later, cancel, zip, api, root, stack, ui, Wb, colLeft, boardView } = tray;
+  const { reduced, later, cancel, zip, api, root, stack, ui, Wb, colLeft, pouchFoot, boardView } =
+    tray;
   const { itemOf, topF } = trayModel;
   const { renderStack, rerenderPulled, sayReturned } = traySheets;
   const { bringToFront } = trayPaging;
@@ -37,6 +38,8 @@ export function createTrayBoardDrop(
   const { sendHome } = trayPresses;
 
   /* ---------------------------------------------------------------- putting a board sticker back */
+  /** Beside the open mouth, not the meshed teeth below its slider. */
+  const besidePouch = (pt: Point) => pt.y < pouchFoot() + 20;
   function clearTarget() {
     for (const el of root.querySelectorAll(".tray__slot.is-target"))
       el.classList.remove("is-target");
@@ -100,7 +103,7 @@ export function createTrayBoardDrop(
     const size = api.sizeFor(s.id);
     const lip = colLeft() + ui.geo.chainX - ui.geo.G;
     const dist = Math.hypot(pt.x - silhouette.x, pt.y - silhouette.y);
-    const over = onPulled ? onPulled.over : pt.x > lip - 12;
+    const over = onPulled ? onPulled.over : pt.x > lip - 12 && besidePouch(pt);
     if (dist < SNAP && over) {
       const k = Math.pow(1 - dist / SNAP, 1.6) * 0.92;
       const from = api.stickerRect(s.id)?.r ?? 0;
@@ -138,7 +141,7 @@ export function createTrayBoardDrop(
     if (!s || ui.destroyed) return false;
     const lip = ui.geo ? colLeft() + ui.geo.chainX - ui.geo.G : Wb() - 30;
     const onPulled = pulledFor(s, pt, boardView())?.over === true;
-    const into = onPulled || (zip.isOpen ? pt.x > lip - 12 : pt.x > Wb() - 74);
+    const into = onPulled || (zip.isOpen ? pt.x > lip - 12 && besidePouch(pt) : pt.x > Wb() - 74);
     if (!into) {
       clearTarget();
       // It opened for this sticker, which went elsewhere.

@@ -2,11 +2,7 @@
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyApi, FRESH_TICKETS, renderWithApi, shownText } from "../../api/testing";
-import {
-  MARKUP_LIKE_NAME,
-  sticker as apiSticker,
-  TEST_KYOTO_SEIKA_SUBJECTS,
-} from "../../api/testFixtures";
+import { sticker as apiSticker, TEST_KYOTO_SEIKA_SUBJECTS } from "../../api/testFixtures";
 import type { Sticker, Tickets } from "@drawing-app/api/client";
 import { formatDay, formatDuration, formatNo } from "../../stickers/format";
 import { formatRefillTime } from "../../tickets/refill";
@@ -64,11 +60,8 @@ let mountedAt = 0;
 // One sheet for every render: a new one would be a new ceremony.
 const SHEET = { x: 8, y: 8, w: 374, h: 788 };
 
-/** The ceremony with the server's answer, as `handle`: null while the seal is on its way. */
-const ceremony = (
-  answer: Sticker | null,
-  { handle = "alice", failed = false, leaving = false } = {},
-) => (
+/** The ceremony with the server's answer: null while the seal is on its way. */
+const ceremony = (answer: Sticker | null, { failed = false, leaving = false } = {}) => (
   <SealCeremony
     sticker={sticker}
     sealed={answer}
@@ -76,7 +69,6 @@ const ceremony = (
     leaving={leaving}
     onLeft={onLeft}
     sheet={SHEET}
-    handle={handle}
     onKeepDrawing={onKeepDrawing}
     onBoard={onBoard}
     onShop={onShop}
@@ -92,12 +84,11 @@ const use = (dayIndex: number, kind: "daily" | "reserve" = "daily") => ({
 });
 
 /**
- * Opens the ceremony as `handle`, with `used` of the day's three tickets used, then `reserveUsed` reserve tickets,
+ * Opens the ceremony with `used` of the day's three tickets used, then `reserveUsed` reserve tickets,
  * and `reserveLeft` held. `answer` is the server's: null while the seal is on its way.
  */
 async function seal(
   used: number,
-  handle = "alice",
   {
     answer = sealed,
     reserveLeft = 0,
@@ -108,10 +99,7 @@ async function seal(
     use(i, i < used ? "daily" : "reserve"),
   );
   const tickets = { ...FRESH_TICKETS, dailyLeft: 3 - used, reserveLeft, usedToday };
-  view = renderWithApi(
-    ceremony(answer, { handle }),
-    emptyApi({ tickets: () => Promise.resolve(tickets) }),
-  );
+  view = renderWithApi(ceremony(answer), emptyApi({ tickets: () => Promise.resolve(tickets) }));
   host = view.host;
   mountedAt = Date.now();
   // The tickets load before the card can show them.
@@ -393,7 +381,7 @@ describe("SealCeremony", () => {
 
   it("says when daily tickets come back only when this sticker used the day's last one", async () => {
     const refill = `New daily tickets at ${formatRefillTime(new Date(FRESH_TICKETS.nextRefillAt))}`;
-    await seal(3, "alice", { reserveLeft: 2 });
+    await seal(3, { reserveLeft: 2 });
     playThrough();
     expect(host.textContent).toContain(refill);
     // One reserve ticket in the daily slots' place, with its count.
@@ -404,14 +392,14 @@ describe("SealCeremony", () => {
     view?.unmount();
 
     // A reserve ticket sealed this one: the daily tickets were already gone.
-    await seal(3, "alice", { reserveLeft: 1, reserveUsed: 1 });
+    await seal(3, { reserveLeft: 1, reserveUsed: 1 });
     playThrough();
     expect(button("Keep drawing")).toBeTruthy();
     expect(host.textContent).not.toContain("New daily tickets at");
   });
 
   it("waits at the cut while the seal is on its way, then peels onto the card", async () => {
-    await seal(1, "alice", { answer: null });
+    await seal(1, { answer: null });
     wait(20_000);
     expect(card()).toBeNull();
     expect(root()?.hasAttribute("data-lifted")).toBe(false);
@@ -428,7 +416,7 @@ describe("SealCeremony", () => {
   });
 
   it("skips to the wait at a tap, and on to the card once sealed", async () => {
-    await seal(1, "alice", { answer: null });
+    await seal(1, { answer: null });
     wait(100);
     tap();
     expect(host.querySelector<HTMLElement>(".seal-ceremony__plain")?.style.opacity).toBe("1");
@@ -468,7 +456,7 @@ describe("SealCeremony", () => {
   });
 
   it("fades back to the drawing when the seal fails", async () => {
-    await seal(1, "alice", { answer: null });
+    await seal(1, { answer: null });
     wait(3000);
     view?.rerender(ceremony(null, { failed: true }));
     expect(root()?.classList.contains("is-failed")).toBe(true);
@@ -479,7 +467,7 @@ describe("SealCeremony", () => {
   it("names the pair a sticker drawn in Kyoto Seika Practice Mode was dealt, under Sealed, as a line of the card", async () => {
     const [first, second] = TEST_KYOTO_SEIKA_SUBJECTS;
     const kyotoSeika = { ...sealed, kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS };
-    await seal(1, "alice", { answer: kyotoSeika });
+    await seal(1, { answer: kyotoSeika });
     const pair = host.querySelector(".sealed-card__pair");
     if (!pair) throw new Error("The sealed card names no pair");
     expect([...pair.querySelectorAll("rt")].map((rt) => rt.textContent)).toEqual([
@@ -502,14 +490,10 @@ describe("SealCeremony", () => {
     expect(host.querySelector(".sealed-card__pair")).toBeNull();
   });
 
-  it("prints a handle that reads as markup as it is, in the card's fine print", async () => {
-    await seal(1, MARKUP_LIKE_NAME);
+  it("prints the sticker's number, drawing time and seal day in the card's fine print", async () => {
+    await seal(1);
     expect(shownText(".sealed-card__fine")).toBe(
-      `${formatNo(sealed.number)} · ${formatDuration(sealed.timeUsed)} · ${formatDay(NOW.getTime())} · @${MARKUP_LIKE_NAME}`,
-    );
-    // The handle keeps its own case in the fine print's capitals.
-    expect(host.querySelector(".sealed-card__fine .handle")?.textContent).toBe(
-      `@${MARKUP_LIKE_NAME}`,
+      `${formatNo(sealed.number)} · ${formatDuration(sealed.timeUsed)} · ${formatDay(NOW.getTime())}`,
     );
   });
 });

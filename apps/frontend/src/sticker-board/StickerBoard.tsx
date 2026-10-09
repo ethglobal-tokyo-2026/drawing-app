@@ -92,7 +92,6 @@ import { keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { arrangeLeftOpen, keepArrangeOpen } from "./arrangeOpen";
-import { markSelectionHintShown, owesSelectionHint } from "./selectionHint";
 import { readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
 import { SendGratitudeSheet } from "../receiving/SendGratitudeSheet";
@@ -314,9 +313,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   /** The sticker landing as this visit opened. `landingId` clears once it sticks; its chip plays on. */
   const [arrivedId] = useState(landingId);
   const [selected, setSelected] = useState<string | null>(null);
-  /** This selection owes the hint on how to go on, which stays until the selection ends. */
-  const [hinting, setHinting] = useState(false);
-  if (hinting && selected === null) setHinting(false);
   /** The sticker the detail shows, among your stickers or among the ones you gave. */
   const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
   const openYours = (id: string) => setOpen({ id, mode: "yours" });
@@ -601,7 +597,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const select = (id: string | null) => {
     setSelected(id);
     if (id) setChipsDone(true);
-    if (id && owesSelectionHint(account.id)) setHinting(true);
     if (!id || !stickers) return;
     settled.add(id);
     const sticker = stickers.find((s) => s.id === id);
@@ -856,8 +851,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                   knobBelow={knobBelow}
                   clearOf={draw}
                   {...(giftSender && { onGive: () => setGiving(s) })}
-                  hinted={hinting}
-                  onHintShown={() => markSelectionHintShown(account.id)}
                   onView={() => openYours(s.id)}
                   onRemove={() => stow(s.id)}
                   arrange={{

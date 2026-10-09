@@ -340,11 +340,8 @@ export const stickerCreation = {
   sealedCard: {
     /** Sealed card, the backing card the new sticker lands on at the end of the seal ceremony: its title, under the sticker */
     title: { en: "Sealed", ja: "仕上がりました" },
-    /** Sealed card: the fine print under the title; {{no}} is the sticker's number (No.0012), <duration/> its drawing time (3分12秒), {{day}} the day it was sealed (2026.09.27) and <handle/> your @handle */
-    finePrint: {
-      en: "{{no}} · <duration/> · {{day}} · <handle/>",
-      ja: "{{no}}・<duration/>・{{day}}・<handle/>",
-    },
+    /** Sealed card: the fine print under the title; {{no}} is the sticker's number (No.0012), <duration/> its drawing time (3分12秒) and {{day}} the day it was sealed (2026.09.27) */
+    finePrint: { en: "{{no}} · <duration/> · {{day}}", ja: "{{no}}・<duration/>・{{day}}" },
     /** Sealed card: the main key while you have tickets left; it opens a fresh sheet for the next sticker */
     keepDrawing: { en: "Keep drawing", ja: "もう1枚かく" },
     /** Sealed card: the small button at the bottom after your last ticket, with a ticket icon; it opens the reserve ticket checkout */

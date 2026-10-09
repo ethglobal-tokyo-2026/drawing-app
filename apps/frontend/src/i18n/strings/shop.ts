@@ -12,7 +12,7 @@ export const shop = {
       en: "Keep drawing after your daily tickets run out.",
       ja: "無償チケットを<wbr/>使い切っても、<wbr/>かき続けられます。",
     },
-    /** Reserve tickets section, under the fanned tickets: the ones you hold; `<count/>` is the reserve ticket mark and ×count */
+    /** Reserve tickets section, over the Buy key: the ones you hold; `<count/>` is the reserve ticket mark and ×count */
     held: { en: "You have <count/>", ja: "所持数<count/>" },
     /** Reserve tickets section: what the line above says, for screen readers, when you hold one */
     heldSpoken_one: { en: "You have {{count}} reserve ticket." },
@@ -26,19 +26,12 @@ export const shop = {
       en: "Couldn’t load your tickets: {{reason}}",
       ja: "チケットを読み込めませんでした：{{reason}}",
     },
-    /** Reserve tickets section: the one-ticket price, while a bigger pack is discounted; `price` is in yen */
-    priceWithPacks: {
-      en: "{{price}} each, less in packs",
-      ja: "1枚{{price}}、まとめ買いでお得",
-    },
-    /** Reserve tickets section: the one-ticket price, while no pack is discounted; `price` is in yen */
-    price: { en: "{{price}} each", ja: "1枚{{price}}" },
     /** Reserve tickets section: the blue key that opens the reserve ticket checkout */
     buy: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
   },
   /** The Sui credit, under the checkout's Pay key and at the foot of the reserve tickets section; `<logo/>` is Sui's logo, which Japanese puts first */
   paymentsOn: { en: "Payments on <logo/>", ja: "<logo/>で決済" },
-  /** Beside each coming-soon shelf's name: nothing on it is on sale yet */
+  /** The Shop: the one pill over the coming-soon shelves, saying nothing on them is on sale yet */
   comingSoon: { en: "Coming soon", ja: "近日登場" },
   /** On the first swatch of each coming-soon shelf: the one you have now */
   yours: { en: "Yours", ja: "使用中" },
@@ -47,11 +40,6 @@ export const shop = {
     laminates: {
       /** Laminates shelf: its name */
       title: { en: "Laminates", ja: "ラミネート" },
-      /** Laminates shelf: the line under its name */
-      lead: {
-        en: "The finish your stickers are sealed with.",
-        ja: "シールを仕上げるときの表面加工です。",
-      },
       items: {
         /** Laminates shelf: the first swatch's name, the laminate every sticker is sealed with now */
         gloss: { en: "Gloss", ja: "グロス" },
@@ -66,8 +54,6 @@ export const shop = {
     brushes: {
       /** Brushes shelf: its name */
       title: { en: "Brushes", ja: "ブラシ" },
-      /** Brushes shelf: the line under its name */
-      lead: { en: "More ways to lay down ink.", ja: "もっといろいろな線がかけます。" },
       items: {
         /** Brushes shelf: the first swatch's name, the brush the drawing screen has now */
         brush: { en: "Brush", ja: "ブラシ" },
@@ -82,11 +68,6 @@ export const shop = {
     backingFoils: {
       /** Backing foils shelf: its name */
       title: { en: "Backing foils", ja: "ホイル" },
-      /** Backing foils shelf: the line under its name */
-      lead: {
-        en: "The foil your stickers wear on other people’s sticker boards.",
-        ja: "ほかの人のシールボードで、あなたのシールのふちに光るホイルです。",
-      },
       items: {
         /** Backing foils shelf: the first swatch's name, the foil every sticker wears now */
         holo: { en: "Holo", ja: "ホロ" },

@@ -73,6 +73,25 @@ afterEach(() => {
 });
 
 describe("ShopScreen", () => {
+  it("leads reserve tickets with their name, holds your count over Buy, and says Coming soon once", async () => {
+    view = renderWithApi(
+      <ShopScreen onBuyReserveTickets={() => {}} />,
+      emptyApi({
+        tickets: () => Promise.resolve({ ...FRESH_TICKETS, reserveLeft: 2 }),
+        ticketShop: () => Promise.resolve(SHOP),
+      }),
+    );
+    await settle();
+    const lines = [...(document.querySelector(".reserve-hero")?.children ?? [])].map(
+      (el) => el.textContent ?? "",
+    );
+    const at = (text: string) => lines.findIndex((line) => line.includes(text));
+    expect(at("Reserve tickets")).toBeGreaterThan(-1);
+    expect(at("Reserve tickets")).toBeLessThan(at("You have"));
+    expect(at("You have")).toBeLessThan(at("Buy reserve tickets"));
+    expect(document.body.textContent?.split("Coming soon")).toHaveLength(2);
+  });
+
   it("lists your ticket purchases from Sui under the reserve tickets, and reads them again after a purchase", async () => {
     vi.mocked(getTicketPayments).mockResolvedValue({
       payments: [{ digest: "D".repeat(44), paidAt: Date.now(), amount: BigInt(PACK.priceJpyc) }],

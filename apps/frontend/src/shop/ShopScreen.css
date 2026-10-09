@@ -73,7 +73,7 @@
   line-height: 1.2;
 }
 
-/* Tickets that didn't load: in the count's place, above the title. */
+/* Tickets that didn't load: in the count's place, over the Buy key. */
 .reserve-hero__problem {
   margin: 0 0 10px;
 }
@@ -96,17 +96,6 @@
   text-wrap: balance;
 }
 
-/* Holds its line while the price loads, or if it doesn't. */
-.reserve-hero__price {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 22px;
-  margin: 8px 0 0;
-  font-size: 15px;
-  font-weight: 800;
-}
-
 .reserve-hero__key {
   width: 100%;
 }
@@ -118,39 +107,33 @@
 
 /* ---------- Coming-soon shelves ---------- */
 
-.shelf {
-  margin-top: 28px;
-}
-
-.shelf__head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 18px;
-}
-
-.shelf__title {
-  margin: 0;
-  font-size: 19px;
-  line-height: 1.1;
-  font-weight: 800;
-  font-stretch: var(--w-title);
-  letter-spacing: -0.012em;
-}
-
-/* A quiet pressed pill, in the Graphite that reads on Liner Deep (plain Graphite reads only 4.2:1 there). */
-.shelf__soon {
+/* One "Coming soon" over every shelf: a quiet pressed pill, in the Graphite that reads on Liner Deep
+   (plain Graphite reads only 4.2:1 there). */
+.shop__soon {
+  width: fit-content;
+  margin: 28px 18px 0;
   padding: 3px 8px;
   border-radius: 999px;
   background: var(--liner-deep);
   color: var(--graphite-on-deep);
 }
 
-.shelf__lead {
-  margin: 4px 18px 0;
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--graphite);
+.shelf {
+  margin-top: 28px;
+}
+
+.shop__soon + .shelf {
+  margin-top: 12px;
+}
+
+.shelf__title {
+  margin: 0;
+  padding: 0 18px;
+  font-size: 19px;
+  line-height: 1.1;
+  font-weight: 800;
+  font-stretch: var(--w-title);
+  letter-spacing: -0.012em;
 }
 
 /* A row that scrolls sideways; the last swatch peeks past the edge, so there's plainly more. */

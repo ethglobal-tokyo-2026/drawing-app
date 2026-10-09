@@ -16,7 +16,7 @@ import { toPerson } from "../api/views";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { formatCount, formatTimeOfDay, formatWeekday } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
-import { At, StreakIcon, X } from "../icons";
+import { At, GratitudeIcon, StreakIcon, X } from "../icons";
 import { formatHandle } from "../stickers/format";
 import { useNsfwOptInKey } from "../stickers/nsfw";
 import { PhotoSticker } from "../ui/PhotoSticker";
@@ -150,7 +150,8 @@ function Figure({ board, value }: { board: Leaderboard; value: number }) {
       </span>
     );
   return (
-    <span className="figure">
+    <span className="figure figure--gratitude">
+      <GratitudeIcon size={17} />
       <Trans
         i18nKey={($) => $.explore.figure.gratitude}
         values={{ amount: formatCount(value) }}
@@ -634,7 +635,7 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
 
   return (
     <div className="explore">
-      <label className="artist-search">
+      <label className="text-field artist-search">
         <At size={20} aria-hidden />
         <input
           ref={field}

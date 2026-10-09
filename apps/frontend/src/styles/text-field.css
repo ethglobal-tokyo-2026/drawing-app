@@ -1,0 +1,38 @@
+/* ---------- The text field: wherever a person types (Explore's search, the handle prompt) ---------- */
+
+/* A Canvas face on the label shadow that takes the house focus ring while you type. Its text is
+   16px, the size below which iOS zooms the page into a focused field. */
+.text-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-label);
+  background: var(--canvas);
+  box-shadow: var(--shadow-label);
+}
+
+.text-field:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.text-field input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--ink);
+  font: 500 16px var(--font-ui);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.text-field input::placeholder {
+  color: var(--graphite);
+}

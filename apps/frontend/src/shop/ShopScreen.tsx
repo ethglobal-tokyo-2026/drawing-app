@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { useTranslation } from "../i18n/react";
 import { useLight } from "../stickers/light";
 import { Skeleton } from "../ui/Skeleton";
@@ -24,6 +24,7 @@ const BACKING_FOILS: readonly BackingFoil[] = ["holo", "gold", "silver", "roseGo
  */
 export function ShopScreen({ onBuyReserveTickets }: { onBuyReserveTickets: () => void }) {
   const { t } = useTranslation();
+  const soonId = useId();
   const sticker = useShopSticker();
   useLight(sticker !== null);
 
@@ -36,36 +37,41 @@ export function ShopScreen({ onBuyReserveTickets }: { onBuyReserveTickets: () =>
       <h1 className="shop__title">{t(($) => $.shop.title)}</h1>
       <ReserveTicketsHero onBuy={onBuyReserveTickets} />
       <ShopTicketPurchases />
-      <ComingSoonShelf
-        title={t(($) => $.shop.shelves.laminates.title)}
-        lead={t(($) => $.shop.shelves.laminates.lead)}
-        items={LAMINATES.map((laminate) => ({
-          id: laminate,
-          name: t(($) => $.shop.shelves.laminates.items[laminate]),
-          preview: onSticker((s) => (
-            <FinishPreview sticker={s} side={SWATCH} finish={{ laminate }} />
-          )),
-        }))}
-      />
-      <ComingSoonShelf
-        title={t(($) => $.shop.shelves.brushes.title)}
-        lead={t(($) => $.shop.shelves.brushes.lead)}
-        swatch="white"
-        items={BRUSHES.map((kind) => ({
-          id: kind,
-          name: t(($) => $.shop.shelves.brushes.items[kind]),
-          preview: <BrushStrokeSample kind={kind} side={SWATCH} />,
-        }))}
-      />
-      <ComingSoonShelf
-        title={t(($) => $.shop.shelves.backingFoils.title)}
-        lead={t(($) => $.shop.shelves.backingFoils.lead)}
-        items={BACKING_FOILS.map((foil) => ({
-          id: foil,
-          name: t(($) => $.shop.shelves.backingFoils.items[foil]),
-          preview: onSticker((s) => <FinishPreview sticker={s} side={SWATCH} finish={{ foil }} />),
-        }))}
-      />
+      {/* Nothing on the shelves is on sale yet: one "Coming soon" says so for all three. */}
+      <section className="shop__shelves" aria-labelledby={soonId}>
+        <h2 className="shop__soon fine" id={soonId}>
+          {t(($) => $.shop.comingSoon)}
+        </h2>
+        <ComingSoonShelf
+          title={t(($) => $.shop.shelves.laminates.title)}
+          items={LAMINATES.map((laminate) => ({
+            id: laminate,
+            name: t(($) => $.shop.shelves.laminates.items[laminate]),
+            preview: onSticker((s) => (
+              <FinishPreview sticker={s} side={SWATCH} finish={{ laminate }} />
+            )),
+          }))}
+        />
+        <ComingSoonShelf
+          title={t(($) => $.shop.shelves.brushes.title)}
+          swatch="white"
+          items={BRUSHES.map((kind) => ({
+            id: kind,
+            name: t(($) => $.shop.shelves.brushes.items[kind]),
+            preview: <BrushStrokeSample kind={kind} side={SWATCH} />,
+          }))}
+        />
+        <ComingSoonShelf
+          title={t(($) => $.shop.shelves.backingFoils.title)}
+          items={BACKING_FOILS.map((foil) => ({
+            id: foil,
+            name: t(($) => $.shop.shelves.backingFoils.items[foil]),
+            preview: onSticker((s) => (
+              <FinishPreview sticker={s} side={SWATCH} finish={{ foil }} />
+            )),
+          }))}
+        />
+      </section>
     </div>
   );
 }
