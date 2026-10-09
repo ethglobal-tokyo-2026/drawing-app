@@ -7,6 +7,9 @@
   overscroll-behavior: contain;
   padding: 18px 0 32px;
   background: var(--liner);
+  /* A shelf's swatch and the gap between swatches, which a large screen's column is sized by. */
+  --shelf-swatch: 104px;
+  --shelf-gap: 10px;
 }
 
 .shop__title {
@@ -139,7 +142,7 @@
 /* A row that scrolls sideways; the last swatch peeks past the edge, so there's plainly more. */
 .shelf__row {
   display: flex;
-  gap: 10px;
+  gap: var(--shelf-gap);
   margin: 0;
   padding: 14px 18px 6px;
   list-style: none;
@@ -166,8 +169,8 @@
 .shelf-item__swatch {
   display: grid;
   place-items: center;
-  width: 104px;
-  height: 104px;
+  width: var(--shelf-swatch);
+  height: var(--shelf-swatch);
   border-radius: 10px;
   background: var(--liner);
   box-shadow:
@@ -199,6 +202,139 @@
     var(--shadow-label);
   color: var(--ink);
   rotate: var(--tilt);
+}
+
+/* ---------- Large screens ---------- */
+
+/* Nothing stretches across an iPad. Upright the page is one centered column, the reserve tickets
+   over the shelves, as wide as a shelf's four swatches with the row's sides, so none is cut off. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .shop {
+    padding-inline: max(
+      0px,
+      calc((100% - 4 * var(--shelf-swatch) - 3 * var(--shelf-gap) - 36px) / 2)
+    );
+  }
+}
+
+/* In landscape the page reads as one spread: reserve tickets as a banner across the top, the fan, the
+   words, then the key past a perforation like a ticket's stub, and under it the three shelves side by
+   side, each with its swatches two by two, so the whole Shop fits the screen. */
+@media (min-width: 800px) and (min-height: 600px) and (any-pointer: coarse) and (orientation: landscape) {
+  .shop {
+    --shelf-swatch: 96px;
+    --spread-w: min(1040px, 100% - 2 * var(--gutter-large));
+    padding: 20px calc((100% - var(--spread-w)) / 2) 24px;
+  }
+
+  .shop__title {
+    margin: 0 0 12px;
+  }
+
+  .reserve-hero {
+    display: flex;
+    align-items: center;
+    column-gap: 28px;
+    margin: 0;
+    padding: var(--card-pad) 28px;
+    text-align: start;
+  }
+
+  /* The front ticket's star reaches past the fan's box; its margin keeps air between the star and the
+     title. */
+  .reserve-hero .reserve-hero__fan {
+    flex: none;
+    margin: 0 16px 0 0;
+  }
+
+  .reserve-hero__text {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* The perforation turns upright and runs the banner's full height. */
+  .reserve-hero > .tear-line {
+    flex: none;
+    align-self: stretch;
+    width: 10px;
+    height: auto;
+    margin: calc(-1 * var(--card-pad)) 0;
+    background: radial-gradient(circle, rgba(28, 24, 36, 0.16) 1.4px, #0000 1.9px) 50% 0 / 4px 9px
+      repeat-y;
+  }
+
+  .reserve-hero__buy {
+    flex: none;
+    width: calc(var(--ph-w) - 60px);
+  }
+
+  .shop__purchases {
+    max-width: calc(var(--ph-w) - 24px);
+    margin-inline: 0;
+  }
+
+  /* Each shelf as wide as its swatches, the three spread to the banner's edges under the one "Coming
+     soon"; their titles and swatches share rows, so a title that wraps lowers every shelf's swatches
+     together. */
+  .shop__shelves {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, max-content));
+    justify-content: space-between;
+    column-gap: 32px;
+    margin-top: 24px;
+  }
+
+  .shop__shelves > :not(.shelf) {
+    grid-column: 1 / -1;
+    justify-self: start;
+    margin: 0 0 8px;
+  }
+
+  .shop__shelves > .shelf {
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    align-content: start;
+    margin-top: 0;
+  }
+
+  .shelf__title {
+    padding-inline: 0;
+  }
+
+  /* Two by two, every swatch in view, so the row has nothing to scroll. */
+  .shelf__row {
+    display: grid;
+    grid-template-columns: repeat(2, var(--shelf-swatch));
+    gap: 12px var(--shelf-gap);
+    padding: 14px 0 0;
+    overflow: visible;
+  }
+}
+
+/* A short landscape, an iPad mini's: the spread draws closer, so nothing scrolls. The key and the
+   swatches keep their sizes. */
+@media (min-width: 800px) and (min-height: 600px) and (max-height: 699px) and (any-pointer: coarse) and (orientation: landscape) {
+  .shop {
+    padding-block: 14px 16px;
+  }
+
+  .shop__title {
+    margin-bottom: 8px;
+  }
+
+  .reserve-hero {
+    --card-pad: 12px;
+  }
+
+  .shop__shelves {
+    margin-top: 16px;
+  }
+
+  .shelf__row {
+    padding-top: 10px;
+    row-gap: 8px;
+  }
 }
 
 /* ---------- Previews ---------- */

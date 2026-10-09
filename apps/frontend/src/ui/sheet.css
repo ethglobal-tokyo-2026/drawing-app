@@ -74,3 +74,11 @@
   outline: 2px solid var(--ink);
   outline-offset: -4px;
 }
+
+/* On a large screen a swipe down the sheet's head drags it, as the perforation does (Sheet.tsx), so
+   the browser leaves that swipe to it. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .bottom-sheet__head {
+    touch-action: none;
+  }
+}

@@ -29,34 +29,43 @@ export function ReserveTicketsHero({ onBuy }: { onBuy: () => void }) {
   return (
     <section className="reserve-hero" aria-labelledby={`${id}-title`}>
       <TicketStubs className="reserve-hero__fan" size="large" stubs={FAN} stars="front" />
-      <h2 className="reserve-hero__title" id={`${id}-title`}>
-        {t(($) => $.shop.reserve.title)}
-      </h2>
-      <p className="reserve-hero__lead keep-phrases">{t(($) => $.shop.reserve.lead)}</p>
+      {/* The words, then the key: one column on a phone, a banner's row across an iPad held sideways. */}
+      <div className="reserve-hero__text">
+        <h2 className="reserve-hero__title" id={`${id}-title`}>
+          {t(($) => $.shop.reserve.title)}
+        </h2>
+        <p className="reserve-hero__lead keep-phrases">{t(($) => $.shop.reserve.lead)}</p>
+      </div>
       <TearLine />
-      {/* With no tickets loaded the Shop would read as if you hold none, so a failed load says so. */}
-      {error && (
-        <ErrorLine className="reserve-hero__problem" detail={errorDetail(error)} onRetry={refresh}>
-          {t(($) => $.shop.reserve.heldProblem, { reason: errorMessage(error) })}
-        </ErrorLine>
-      )}
-      {held > 0 && (
-        <p className="reserve-hero__held">
-          <span aria-hidden="true">
-            <Trans
-              i18nKey={($) => $.shop.reserve.held}
-              components={{ count: <TicketCount kind="reserve" count={held} /> }}
-            />
-          </span>
-          <span className="visually-hidden">
-            {t(($) => $.shop.reserve.heldSpoken, { count: held })}
-          </span>
-        </p>
-      )}
-      <Key className="reserve-hero__key" tone="blue" icon={<BuyTicketsIcon />} onClick={onBuy}>
-        {t(($) => $.shop.reserve.buy)}
-      </Key>
-      <SuiCredit />
+      <div className="reserve-hero__buy">
+        {/* With no tickets loaded the Shop would read as if you hold none, so a failed load says so. */}
+        {error && (
+          <ErrorLine
+            className="reserve-hero__problem"
+            detail={errorDetail(error)}
+            onRetry={refresh}
+          >
+            {t(($) => $.shop.reserve.heldProblem, { reason: errorMessage(error) })}
+          </ErrorLine>
+        )}
+        {held > 0 && (
+          <p className="reserve-hero__held">
+            <span aria-hidden="true">
+              <Trans
+                i18nKey={($) => $.shop.reserve.held}
+                components={{ count: <TicketCount kind="reserve" count={held} /> }}
+              />
+            </span>
+            <span className="visually-hidden">
+              {t(($) => $.shop.reserve.heldSpoken, { count: held })}
+            </span>
+          </p>
+        )}
+        <Key className="reserve-hero__key" tone="blue" icon={<BuyTicketsIcon />} onClick={onBuy}>
+          {t(($) => $.shop.reserve.buy)}
+        </Key>
+        <SuiCredit />
+      </div>
     </section>
   );
 }

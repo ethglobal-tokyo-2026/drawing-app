@@ -92,11 +92,18 @@ export function GratitudeEventsSheet({ onClose }: { onClose: () => void }) {
   const sheet = (
     <div className="gratitude-events-layer" ref={layer}>
       <div className="gratitude-events__scrim" onClick={onClose} />
-      <Sheet label={title} layer={layer} onClose={onClose} className="gratitude-events">
-        <h2 className="gratitude-events__title">
-          <GratitudeIcon className="gratitude-events__heart" size={18} />
-          {title}
-        </h2>
+      <Sheet
+        label={title}
+        layer={layer}
+        onClose={onClose}
+        className="gratitude-events"
+        head={
+          <h2 className="gratitude-events__title">
+            <GratitudeIcon className="gratitude-events__heart" size={18} />
+            {title}
+          </h2>
+        }
+      >
         <p className="visually-hidden" role="status">
           {first.state === "loading" || olderStatus.step === "loading"
             ? t(($) => $.stickerBoard.statBoard.gratitude.events.loading)

@@ -170,9 +170,12 @@ export function SealCeremony({
     const cutLine = makeCutLine(parts.cut, size, contour, r);
 
     // The card comes with the sealed sticker, so its slot is measured once the card is there, and
-    // again whenever the card changes size: it grows upward from its foot, moving the slot.
+    // again whenever the card or the ceremony changes size: the card grows upward from its foot, and
+    // a turn moves a card centered on a large screen without resizing it.
     let slotAt: ReturnType<typeof trackSlot> | null = null;
     let cardEl: HTMLElement | null = null;
+    // No frame draws once the ceremony has ended, so a resize draws its last one again.
+    let redraw = () => {};
     const cardReady = () => {
       if (slotAt) return true;
       const c = card.current;
@@ -187,8 +190,12 @@ export function SealCeremony({
           h: s.offsetHeight,
         }),
         (onResize) => {
-          const resizes = new ResizeObserver(onResize);
+          const resizes = new ResizeObserver(() => {
+            onResize();
+            redraw();
+          });
           resizes.observe(c);
+          resizes.observe(host);
           return () => resizes.disconnect();
         },
       );
@@ -265,6 +272,9 @@ export function SealCeremony({
         stopKeys();
         setKeyShown(true);
       }
+    };
+    redraw = () => {
+      if (ended) show();
     };
 
     let raf = 0;

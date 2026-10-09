@@ -1,5 +1,6 @@
-import { useRef, useState, type ReactNode, type RefObject } from "react";
+import { useRef, useState, type DOMAttributes, type ReactNode, type RefObject } from "react";
 import { useTranslation } from "../i18n/react";
+import { useLargeScreen } from "./largeScreen";
 import { useBackToClose } from "./useBackToClose";
 import { useFocusTrap } from "./useFocusTrap";
 import { useModalDialog } from "./useModalDialog";
@@ -31,6 +32,11 @@ interface Props {
    * to tap, or a screen that closes it). The rest of the page goes inert.
    */
   layer?: RefObject<HTMLElement | null>;
+  /**
+   * Its heading, over the rest. On a large screen a swipe down it drags the sheet as the perforation
+   * does, for a sheet that shows there as a card without its tear strip.
+   */
+  head?: ReactNode;
   className?: string;
   children: ReactNode;
 }
@@ -48,10 +54,12 @@ export function Sheet({
   busy = false,
   returnFocus,
   layer,
+  head,
   className,
   children,
 }: Props) {
   const { t } = useTranslation();
+  const large = useLargeScreen();
   const ref = useRef<HTMLDivElement>(null);
   // The press on the perforation: where it started, how far down it is now, and whether it moved.
   const press = useRef<{ x: number; y: number; dy: number; moved: boolean } | null>(null);
@@ -93,6 +101,28 @@ export function Sheet({
     setLeaveFrom(held.dy);
     close();
   };
+  // A finger's drag on the perforation, or on a large screen's head: past DISMISS_PX down, it closes.
+  const drag: DOMAttributes<HTMLElement> = {
+    onPointerDown: (e) => {
+      press.current = { x: e.clientX, y: e.clientY, dy: 0, moved: false };
+      dragged.current = false;
+      e.currentTarget.setPointerCapture(e.pointerId);
+    },
+    onPointerMove: (e) => {
+      const held = press.current;
+      if (!held) return;
+      const x = e.clientX - held.x;
+      const y = e.clientY - held.y;
+      held.moved ||= Math.hypot(x, y) > TAP_SLOP_PX;
+      held.dy = Math.max(0, y);
+      setDy(held.dy);
+    },
+    onPointerUp: release,
+    onPointerCancel: () => {
+      press.current = null;
+      setDy(0);
+    },
+  };
 
   const leaving = !open;
   return (
@@ -114,30 +144,17 @@ export function Sheet({
         className="perf"
         aria-label={t(($) => $.ui.sheet.close, { label })}
         aria-disabled={busy || undefined}
-        onPointerDown={(e) => {
-          press.current = { x: e.clientX, y: e.clientY, dy: 0, moved: false };
-          dragged.current = false;
-          e.currentTarget.setPointerCapture(e.pointerId);
-        }}
-        onPointerMove={(e) => {
-          const held = press.current;
-          if (!held) return;
-          const x = e.clientX - held.x;
-          const y = e.clientY - held.y;
-          held.moved ||= Math.hypot(x, y) > TAP_SLOP_PX;
-          held.dy = Math.max(0, y);
-          setDy(held.dy);
-        }}
-        onPointerUp={release}
-        onPointerCancel={() => {
-          press.current = null;
-          setDy(0);
-        }}
+        {...drag}
         onClick={() => {
           if (dragged.current) dragged.current = false;
           else close();
         }}
       />
+      {head !== undefined && (
+        <div className="bottom-sheet__head" {...(large ? drag : {})}>
+          {head}
+        </div>
+      )}
       {children}
     </div>
   );

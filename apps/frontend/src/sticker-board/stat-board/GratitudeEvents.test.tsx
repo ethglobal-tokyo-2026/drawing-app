@@ -7,6 +7,8 @@ import { emptyApi, renderWithApi } from "../../api/testing";
 import { people, sticker } from "../../api/testFixtures";
 import { problemOf } from "../../i18n/errorMessage";
 import { formatHandle } from "../../stickers/format";
+import { DISMISS_PX } from "../../ui/Sheet";
+import { dragBy, onLargeScreen } from "../../ui/testing";
 import { GratitudeEventsSheet } from "./GratitudeEvents";
 import { StatCork } from "./StatCork";
 import { statFigures } from "./statFigures";
@@ -69,7 +71,10 @@ function YourReceipt() {
 }
 
 let unmount = () => {};
-afterEach(() => unmount());
+afterEach(() => {
+  unmount();
+  vi.restoreAllMocks();
+});
 
 const buttonIn = (host: Element, text: string) =>
   [...host.querySelectorAll("button")].find((button) => button.textContent === text);
@@ -115,4 +120,14 @@ it("says why your gratitude events didn't load, with Try again, which loads them
   expect(gratitudeEvents).toHaveBeenCalledTimes(2);
   expect(host.querySelector('.gratitude-events [role="alert"]')).toBeNull();
   expect(rowsIn(host)).toHaveLength(EVENTS.events.length);
+});
+
+it("closes as a card on an iPad at a swipe down its head past the perforation's drag, not a shorter one", async () => {
+  onLargeScreen();
+  const host = await openEvents(() => Promise.resolve(EVENTS));
+  const head = host.querySelector(".gratitude-events .bottom-sheet__head");
+  dragBy(head, [0, DISMISS_PX]);
+  expect(host.querySelector(".gratitude-events")).not.toBeNull();
+  dragBy(head, [0, DISMISS_PX * 2]);
+  expect(host.querySelector(".gratitude-events")).toBeNull();
 });

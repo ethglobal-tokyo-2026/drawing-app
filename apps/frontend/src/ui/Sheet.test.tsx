@@ -3,6 +3,7 @@ import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DISMISS_PX, Sheet } from "./Sheet";
+import { dragBy } from "./testing";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -39,23 +40,7 @@ const animationEnds = () =>
   act(() => void sheet()?.dispatchEvent(new Event("animationend", { bubbles: true })));
 
 /** A finger on the perforation, moved by each of `path`'s offsets in turn, then lifted there. */
-const drag = (...path: [dx: number, dy: number][]) => {
-  const perf = host.querySelector(".perf");
-  const at = { clientX: 100, clientY: 100, pointerId: 1, bubbles: true };
-  const send = (type: string, dx = 0, dy = 0) =>
-    act(
-      () =>
-        void perf?.dispatchEvent(
-          new PointerEvent(type, { ...at, clientX: at.clientX + dx, clientY: at.clientY + dy }),
-        ),
-    );
-  send("pointerdown");
-  for (const [dx, dy] of path) send("pointermove", dx, dy);
-  const [dx, dy] = path.at(-1) ?? [0, 0];
-  send("pointerup", dx, dy);
-  // The browser's click follows the lift.
-  act(() => void perf?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-};
+const drag = (...path: [dx: number, dy: number][]) => dragBy(perf(), ...path);
 
 beforeEach(() => {
   // A closed sheet's step back in history waits on a timer; none of these tests wants it to run.

@@ -109,6 +109,35 @@
   margin-top: 8px;
 }
 
+/* A large screen raises it to the middle as a card of its own width, as the ticket cards rise. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .gratitude-events-layer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  /* The tear strip gave the sheet its top room; the card takes its side padding there instead. */
+  .gratitude-events.bottom-sheet {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    padding-top: 20px;
+    border-radius: 16px;
+  }
+
+  /* A card has no tear strip: the perforation's button stays for keyboards and screen readers, unseen
+     until it's focused, and the scrim, Escape, Back and a swipe down its head close it too. */
+  .gratitude-events.bottom-sheet > .perf:not(:focus-visible) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gratitude-events__scrim {
     animation-duration: 1ms;

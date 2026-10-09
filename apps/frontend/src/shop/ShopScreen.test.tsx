@@ -82,9 +82,10 @@ describe("ShopScreen", () => {
       }),
     );
     await settle();
-    const lines = [...(document.querySelector(".reserve-hero")?.children ?? [])].map(
-      (el) => el.textContent ?? "",
-    );
+    // The section's heading, lines and keys in reading order, whichever box each sits in.
+    const lines = [
+      ...(document.querySelector(".reserve-hero")?.querySelectorAll("h2, p, button") ?? []),
+    ].map((el) => el.textContent ?? "");
     const at = (text: string) => lines.findIndex((line) => line.includes(text));
     expect(at("Reserve tickets")).toBeGreaterThan(-1);
     expect(at("Reserve tickets")).toBeLessThan(at("You have"));

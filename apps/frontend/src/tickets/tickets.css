@@ -192,6 +192,19 @@
   }
 }
 
+/* On a large screen a ticket card rises to the middle at about a phone's width, rather than running
+   across the screen's foot. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .out-of-tickets {
+    justify-content: center;
+    align-items: center;
+  }
+
+  .out-of-tickets__card {
+    max-width: 400px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .out-of-tickets__scrim,
   .out-of-tickets__card {

@@ -111,3 +111,14 @@
 .sealed-card__buy {
   margin-top: 12px;
 }
+
+/* On a large screen the card rises to the middle at about a phone's width, as the ticket cards do.
+   Centered by layout alone: the ceremony aims the sticker's flight at the card's offsets. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .sealed-card {
+    inset: 0;
+    width: min(400px, calc(100% - 28px));
+    height: fit-content;
+    margin: auto;
+  }
+}

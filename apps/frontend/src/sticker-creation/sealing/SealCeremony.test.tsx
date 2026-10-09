@@ -7,7 +7,7 @@ import type { Sticker, Tickets } from "@drawing-app/api/client";
 import { formatDay, formatDuration, formatNo } from "../../stickers/format";
 import { formatRefillTime } from "../../tickets/refill";
 import { useTickets } from "../../tickets/useTickets";
-import { ReducedMotion } from "../../ui/testing";
+import { ReducedMotion, stubResizeObservers } from "../../ui/testing";
 import type { SealedSticker } from "./makeSticker";
 import { SealCeremony } from "./SealCeremony";
 import { lineShownAt, T, TOTAL } from "./sealTimeline";
@@ -495,5 +495,30 @@ describe("SealCeremony", () => {
     expect(shownText(".sealed-card__fine")).toBe(
       `${formatNo(sealed.number)} · ${formatDuration(sealed.timeUsed)} · ${formatDay(NOW.getTime())}`,
     );
+  });
+});
+
+/** Where the sticker's transform puts it: its translate, px. */
+function stickerPlace() {
+  const transform =
+    host.querySelector<HTMLElement>(".seal-ceremony__sticker")?.style.transform ?? "";
+  const [, x, y] = /translate\((-?[\d.e+-]+)px, (-?[\d.e+-]+)px\)/.exec(transform) ?? [];
+  return { x: Number(x), y: Number(y) };
+}
+
+describe("SealCeremony as the screen turns", () => {
+  it("keeps the sticker on the sealed card's slot when a turn moves the card", async () => {
+    const resizes = stubResizeObservers();
+    await seal(1);
+    playThrough();
+    const sealedCard = card();
+    if (!(sealedCard instanceof HTMLElement)) throw new Error("no sealed card");
+    const before = stickerPlace();
+    // A turn re-lays the ceremony and moves the card, centered in it, without resizing the card.
+    const moved = 240;
+    Object.defineProperty(sealedCard, "offsetTop", { value: sealedCard.offsetTop + moved });
+    act(() => resizes.resize(root()));
+    expect(stickerPlace().y - before.y).toBeCloseTo(moved);
+    expect(stickerPlace().x).toBeCloseTo(before.x);
   });
 });
