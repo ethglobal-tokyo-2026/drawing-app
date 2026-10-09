@@ -409,7 +409,11 @@ Nothing else is set at 75.
 
 ## Layout
 
-Every screen is a 390 × 844 iPhone viewport. From top to bottom there's a 47px status bar, LINE's 56px LIFF header, the screen, and the index-tab strip (Liner, under a 14% hairline): the 46px tabs with their padding, over the home-indicator safe area. Its height comes from the strip tokens (`--tab-h`, `--tabs-pad-top`, `--tabs-pad-foot`, `--tabs-strip`), and the toast sits 16px above it. Full-screen LINE chrome hides the LIFF header and the tabs, and a bare LIFF screen hides only the tabs. The drawing screen has no strip, so the sheet gets the room: it runs down to the home indicator's safe area, and its My board tile (see Draw screen) is the way back to the board.
+Croquis lays out by the window, never the device (`ui/largeScreen.ts`). A touch screen at least 600 × 600, such as an iPad's browser either way up, is a large screen: the same Sticker Trade Book composed for the room rather than stretched, where controls keep their phone sizes and the room goes to the board, the pile and the drawing sheet. Anything smaller keeps the phone layout: Split View, Slide Over, a short Stage Manager window and LINE's sheet on an iPad. There, in a window wider than a phone, stickers stay the widest phone's size. A computer with a mouse and no touch screen shows the phone layout in a phone frame. The layout follows the window as it turns or resizes, and each component's section says how it's composed on a large screen.
+
+The phone layout is designed on a 390 × 844 iPhone viewport. From top to bottom there's a 47px status bar, LINE's 56px LIFF header, the screen, and the index-tab strip (Liner, under a 14% hairline): the 46px tabs with their padding, over the home-indicator safe area. Its height comes from the strip tokens (`--tab-h`, `--tabs-pad-top`, `--tabs-pad-foot`, `--tabs-strip`), and the toast sits 16px above it. Full-screen LINE chrome hides the LIFF header and the tabs, and a bare LIFF screen hides only the tabs. The drawing screen has no strip, so the sheet gets the room: it runs down to the home indicator's safe area, and its My board tile (see Draw screen) is the way back to the board.
+
+The sign-in gates center on the paper, scroll when what they hold is taller than the window, and keep the focused field above the on-screen keyboard (`ui/visibleArea.ts`).
 
 The spacing rhythm steps in 4px units, and 12px is the house gutter. Tabs sit on a 12px inset with an 8px gap, and sheets pad 18–20px on the sides and 24px at the foot, over the home indicator's safe area where a sheet reaches the screen's foot. Controls anchor to the thumb zone. The key sits low, usually bottom right or centered at a sheet's foot, with any secondary label or quiet link directly beneath it.
 
@@ -417,7 +421,7 @@ The sticker board is free-form, not a grid. Stickers sit wherever they were drop
 
 On a large screen the board keeps a layout of its own, the large layout, beside the phone's. Stickers keep their phone size, a share of the phone board's 390px width, and the extra room is board, as in a phone-layout window wider than a phone, such as LINE's sheet on an iPad, where they keep the widest phone's size. The first time a large screen shows your board, its large layout starts as your phone's arrangement, centered on the board and fitted to a side too short for it. From then on each layout is arranged on its own, down to which stickers are on the board and which are in the tray. A new sticker lands on both, and visitors see the layout for their own screen. Turning the screen keeps each sticker's share of the board and its size. The header is one row, your name and then the gifts badge, clear of the zipper's rail, and the tray starts under it. Draw, or Give on someone else's board, leads the tab strip (see Index tabs).
 
-The phone layout is upright only. A phone on its side (a landscape touch window on a screen whose short side is under the large layout's room, `ui/sideways.ts`; an iPad's short Stage Manager window keeps the phone layout instead) shows the upright cover over everything: Liner, Phosphor's device-rotate at 64px and one Headline line, "Turn your phone upright" (スマホを縦にしてください), centered, with the app inert under it. Turning the phone back takes it away.
+The phone layout is upright only. A phone on its side (a landscape touch window on a screen whose short side is under a large screen's 600px, `ui/sideways.ts`; an iPad's short Stage Manager window keeps the phone layout instead) shows the upright cover over everything: Liner, Phosphor's device-rotate at 64px and one Headline line, "Turn your phone upright" (スマホを縦にしてください), centered, with the app inert under it. Turning the phone back takes it away.
 
 The gallery around the phones (a sticky flow index, a 260px story column beside rows of scaled phone frames, and a viewer with a 300px strip) collapses to one column at 1100px and stacks the viewer at 760px. Each phone's caption is a plain annotation: the element, where it is in parentheses, and what was just done to it and what that shows, with a quiet step number the gallery adds. It belongs to the design review, not the app.
 
@@ -858,6 +862,7 @@ Designs the app doesn't show yet. PRODUCT.md's Not built yet lists them too.
 - **Do** use icons from the registry only: Phosphor bold at rest, fill for an active state, regular inside the LINE and iOS mocks.
 - **Do** give every touch target a 44px hit area, including small labels, quiet links, sticker handles, folder tabs, the +N stack button, a floating sheet's X and the zip pull.
 - **Do** put foil on every sticker drawn by someone other than the board's owner, and name its artist with the artist chip.
+- **Do** lay out by the window: a touch screen at least 600 × 600 is a large screen; anything smaller, and a computer's phone frame, keeps the phone layout.
 - **Do** honor reduced motion. Durations collapse to 1ms, presses halve and lose their spring, the tray, paging and tab changes fade, the board's turn crossfades, the foil holds still, and the gift's snap becomes a fade.
 
 ### Don't:
@@ -870,6 +875,7 @@ Designs the app doesn't show yet. PRODUCT.md's Not built yet lists them too.
 - **Don't** set headings or body text in Dela Gothic One.
 - **Don't** put a second key on a screen, or give a key to a tomato (can't-undo) action.
 - **Don't** put a zipper on anything but the tray. The gift bag tears open along its tape.
+- **Don't** stretch a key, card or sheet across a large screen: controls keep their phone sizes, and the room goes to the board, the pile and the drawing sheet.
 - **Don't** put stats in a sheet or a big-number card; they live on the stat board as paper.
 - **Don't** show grid paper anywhere; hint paper with liner stock and the faint maker print.
 - **Don't** describe gratitude with money words (royalty, earn, reward, cut, share, %). It flows "to" people. "Residual", the tag on your gratitude events' Original Artist Gratitude Share rows, is the one allowed exception (ad0ll, 2026-09-26).
