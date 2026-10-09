@@ -69,6 +69,7 @@ export const toSticker = (s: Sticker): StickerView => ({
     spec: s.images.webp.spec,
     rim: s.images.webp.rim,
     foil: s.images.webp.foil,
+    ...(s.images.sharp && { sharp: s.images.sharp.webp }),
   },
   sealedAt: toMs(s.sealedAt),
   nsfw: s.nsfw,

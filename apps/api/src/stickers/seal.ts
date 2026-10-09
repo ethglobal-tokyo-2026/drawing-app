@@ -83,6 +83,18 @@ function checkImages(pngs: StickerPngs, { width, height }: SealForm): SealRefusa
   return null;
 }
 
+/** A sharp copy must be a PNG larger than the sticker's on both sides. */
+function checkSharp(sharp: Uint8Array, { width, height }: SealForm): SealRefusal | null {
+  const size = pngSize(sharp);
+  if (!size) return invalid("sharp: not a PNG");
+  if (size.width <= width || size.height <= height) {
+    return invalid(
+      `sharp: ${size.width}×${size.height} px, not larger than the sticker's ${width}×${height}`,
+    );
+  }
+  return null;
+}
+
 /** Whether the person can seal on this ticket: theirs, and not yet a sticker. */
 function checkTicket(
   db: Pick<Db, "select">,
@@ -203,6 +215,9 @@ export async function sealSticker(
   };
   const imageRefusal = checkImages(pngs, form);
   if (imageRefusal) return { refused: imageRefusal };
+  const sharp = form.sharp ? await bytesOf(form.sharp) : undefined;
+  const sharpRefusal = sharp && checkSharp(sharp, form);
+  if (sharpRefusal) return { refused: sharpRefusal };
   const timelapse = form.timelapse ? Buffer.from(await form.timelapse.arrayBuffer()) : null;
   const badTimelapse = timelapse && timelapseProblem(timelapse);
   if (badTimelapse) return { refused: invalid(badTimelapse) };
@@ -211,7 +226,7 @@ export async function sealSticker(
   // store keeps a name's first files, so a PNG sealed before keeps its first seal's images.
   const contentHash = `0x${createHash("sha256").update(pngs.png).digest("hex")}`;
   await diagnosticStep("sticker.images.save", { userId }, () =>
-    deps.images.save(contentHash, pngs),
+    deps.images.save(contentHash, pngs, sharp),
   );
   // What anyone without the NSFW opt-in sees in its place, made before any row can name the sticker.
   const veiledHash = form.nsfw
@@ -247,6 +262,7 @@ export async function sealSticker(
           nsfw: form.nsfw,
           veiledHash,
           kyotoSeikaSubjects: form.kyotoSeikaSubjects ?? null,
+          hasSharpCopy: sharp !== undefined,
         })
         .run();
       tx.update(ticketUses).set({ stickerId }).where(eq(ticketUses.id, form.ticketUseId)).run();

@@ -50,6 +50,8 @@ export function testPng(width: number, height: number, comment?: string): Uint8A
 
 /** The test sticker's size. */
 export const STICKER_SIZE = { width: 320, height: 240 };
+/** The test sticker's sharp copy: larger on both sides. */
+export const SHARP_SIZE = { width: 800, height: 600 };
 /** The live resin's band-sized masks, and the flat sheet: neither is the sticker's size. */
 const BAND_SIZE = { width: 352, height: 272 };
 const SHEET_SIZE = { width: 1100, height: 800 };
@@ -62,6 +64,9 @@ export const sealImages = () => ({
   rim: testPng(BAND_SIZE.width, BAND_SIZE.height, "rim"),
   flat: testPng(SHEET_SIZE.width, SHEET_SIZE.height, "flat"),
 });
+
+/** The test sticker's sharp copy. */
+export const sharpImage = () => testPng(SHARP_SIZE.width, SHARP_SIZE.height, "sharp");
 
 /** How the tests' sticker was drawn: one brush stroke of two points, then two fills. */
 export const TEST_TIMELAPSE: TimelapseV1 = {
@@ -96,6 +101,7 @@ export function sealUpload(ticketUseId: number) {
     height: String(STICKER_SIZE.height),
     outline: "M0 0L1 0L1 1Z",
     png: pngFile(images.png, "png"),
+    sharp: pngFile(sharpImage(), "sharp"),
     mask: pngFile(images.mask, "mask"),
     spec: pngFile(images.spec, "spec"),
     rim: pngFile(images.rim, "rim"),

@@ -7,6 +7,8 @@ import { MAX_TIMELAPSE_BYTES } from "./timelapseLimit.ts";
 // Generous bounds, not measured: makeSticker caps the sticker and its flat sheet well below them.
 const MAX_IMAGE_SIDE = 4096;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+/** The sharp copy is larger: room for its raw pixels at its largest, never reached as a PNG. */
+const MAX_SHARP_IMAGE_BYTES = 16 * 1024 * 1024;
 const MAX_OUTLINE_LENGTH = 200_000;
 /** The whole multipart body. */
 export const MAX_SEAL_BYTES = 32 * 1024 * 1024;
@@ -56,6 +58,8 @@ export const sealForm = z.object({
   height: digits(stickerColumns.height),
   outline: stickerColumns.outline,
   png,
+  /** The sticker again, larger, from ink that holds more than `png`. */
+  sharp: z.file().mime("image/png").max(MAX_SHARP_IMAGE_BYTES).optional(),
   mask: png,
   spec: png,
   rim: png,

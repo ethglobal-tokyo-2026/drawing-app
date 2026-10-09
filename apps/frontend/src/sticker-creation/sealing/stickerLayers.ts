@@ -49,9 +49,14 @@ export interface StickerLayers {
 }
 
 /** The cut's long side in the image, at most. */
-const MAX_SIDE = 640;
+export const MAX_SIDE = 640;
+/**
+ * The cut's long side in the sharp copy, at most: the sticker detail's largest figure on an iPad,
+ * at 2×. Only the sticker gets a sharp copy, since the ink's edge is what reads as soft.
+ */
+export const SHARP_SIDE = 1600;
 /** The margin around the cut, as a share of its long side. */
-const PAD = 0.05;
+export const PAD = 0.05;
 const INK = [28, 24, 36];
 const PAPER = [255, 255, 255];
 /** The resin's faint cool cast. */
@@ -229,17 +234,81 @@ function cutBands(mask: Layer, width: number, height: number): Bands {
   return { width: W, height: H, spec, rim };
 }
 
-/** Lays the sticker out from its cut: every layer, the same size and in the same place. */
-export function stickerLayers(ink: Pixels, cut: DieCut): StickerLayers {
-  const { bounds, scale, pad: gridPad } = cut;
+/** The image's frame with the cut's long side at most `maxSide`, and its clear margin. */
+function frameOf({ bounds, scale }: DieCut, maxSide: number): Frame & { pad: number } {
   const mw = bounds.x1 - bounds.x0 + 1;
   const mh = bounds.y1 - bounds.y0 + 1;
   // Never larger than the ink was drawn.
-  const k = Math.min(MAX_SIDE / Math.max(mw, mh), 1 / scale);
+  const k = Math.min(maxSide / Math.max(mw, mh), 1 / scale);
   const pad = Math.ceil(Math.max(mw, mh) * k * PAD);
   const width = Math.round(mw * k) + pad * 2;
   const height = Math.round(mh * k) + pad * 2;
-  const frame: Frame = { x0: bounds.x0 - pad / k, y0: bounds.y0 - pad / k, k, width, height };
+  return { x0: bounds.x0 - pad / k, y0: bounds.y0 - pad / k, k, width, height, pad };
+}
+
+/** Lays the sticker out from its cut: every layer, the same size and in the same place. */
+export function stickerLayers(ink: Pixels, cut: DieCut): StickerLayers {
+  const frame = frameOf(cut, MAX_SIDE);
+  const { width, height, pad } = frame;
+  const { layers, sticker, place } = paint(ink, cut, frame, 1, true);
+  return {
+    width,
+    height,
+    pad,
+    place,
+    ...layers,
+    sticker,
+    bands: cutBands(layers.mask, width, height),
+  };
+}
+
+/** The finished sticker alone, larger than its stored image, for screens that show it larger. */
+export interface SharpSticker {
+  width: number;
+  height: number;
+  sticker: Layer;
+}
+
+/**
+ * The finished sticker with its cut's long side up to SHARP_SIDE, as stickerLayers lays it out; null
+ * when the ink holds no more pixels than the stored image already has.
+ */
+export function sharpSticker(ink: Pixels, cut: DieCut): SharpSticker | null {
+  const frame = frameOf(cut, SHARP_SIDE);
+  const base = frameOf(cut, MAX_SIDE);
+  if (frame.width <= base.width) return null;
+  const { sticker } = paint(ink, cut, frame, frame.k / base.k, false);
+  return { width: frame.width, height: frame.height, sticker };
+}
+
+type Painted<All extends boolean> = {
+  place: Rect;
+  sticker: Layer;
+  layers: All extends true ? Record<"plain" | "tint" | "gloss" | "shadow" | "mask", Layer> : null;
+};
+
+/**
+ * Paints the finished sticker into `frame`, and every other layer too when `all`. The groove, the
+ * contact line and the cast's offset keep the stored image's widths, `unit` image px to each of its.
+ */
+function paint<All extends boolean>(
+  ink: Pixels,
+  cut: DieCut,
+  frame: Frame,
+  unit: number,
+  all: All,
+): Painted<All>;
+function paint(
+  ink: Pixels,
+  cut: DieCut,
+  frame: Frame,
+  unit: number,
+  all: boolean,
+): Painted<boolean> {
+  const { scale, pad: gridPad } = cut;
+  const { k, width, height } = frame;
+  const mw = cut.bounds.x1 - cut.bounds.x0 + 1;
+  const mh = cut.bounds.y1 - cut.bounds.y0 + 1;
   const n = width * height;
 
   const up = (field: ArrayLike<number>) => upscale(field, cut.width, cut.height, frame);
@@ -260,16 +329,18 @@ export function stickerLayers(ink: Pixels, cut: DieCut): StickerLayers {
   const glossGrid = glossPlanes(cut).map(up);
 
   const body = Math.max(mw, mh) * k;
-  const offX = Math.round(body * 0.004 + 1);
-  const offY = Math.round(body * 0.01 + 2);
+  const offX = Math.round(body * 0.004 + unit);
+  const offY = Math.round(body * 0.01 + 2 * unit);
   const blur = body * 0.035;
-  const edgeZone = Math.max(4, body * 0.08);
+  const edgeZone = Math.max(4 * unit, body * 0.08);
 
-  const plain = new Uint8ClampedArray(n * 4);
-  const tint = new Uint8ClampedArray(n * 4);
-  const gloss = new Uint8ClampedArray(n * 4);
-  const shadow = new Uint8ClampedArray(n * 4);
-  const mask = new Uint8ClampedArray(n * 4);
+  // Only the finished sticker when `all` is false: the sharp copy is large, and needs no other layer.
+  const layer = () => new Uint8ClampedArray(all ? n * 4 : 0);
+  const plain = layer();
+  const tint = layer();
+  const gloss = layer();
+  const shadow = layer();
+  const mask = layer();
   const sticker = new Uint8ClampedArray(n * 4);
   const tinted = [0, 0, 0];
 
@@ -280,11 +351,13 @@ export function stickerLayers(ink: Pixels, cut: DieCut): StickerLayers {
       // The signed distance to the cut, in image pixels, positive inside.
       const sd = (soft[i] - 0.5) * 5 * k;
       const a = clamp01(0.5 + sd);
-      const groove = (clamp01(0.5 + sd + 1.15) - a) * 0.5;
+      const groove = (clamp01(0.5 + sd + 1.15 * unit) - a) * 0.5;
       const printed = a + groove * (1 - a);
 
-      mask[q] = mask[q + 1] = mask[q + 2] = 255;
-      mask[q + 3] = a * 255;
+      if (all) {
+        mask[q] = mask[q + 1] = mask[q + 2] = 255;
+        mask[q + 3] = a * 255;
+      }
 
       if (printed > 0) {
         const inkAlpha = print[q + 3] / 255;
@@ -292,7 +365,6 @@ export function stickerLayers(ink: Pixels, cut: DieCut): StickerLayers {
         for (let c = 0; c < 3; c++) {
           const base = (PAPER[c] * a + INK[c] * groove * (1 - a)) / printed;
           const v = print[q + c] + base * (1 - inkAlpha);
-          plain[q + c] = v;
           // Resin pools deeper at the edge: the print there multiplies with itself and cools.
           tinted[c] =
             resin <= 0.002
@@ -300,9 +372,12 @@ export function stickerLayers(ink: Pixels, cut: DieCut): StickerLayers {
               : v *
                 (1 + (v / 255 - 1) * 0.62 * resin) *
                 (1 + (LAVENDER[c] / 255 - 1) * 0.75 * resin);
-          tint[q + c] = tinted[c];
+          if (all) {
+            plain[q + c] = v;
+            tint[q + c] = tinted[c];
+          }
         }
-        plain[q + 3] = tint[q + 3] = printed * 255;
+        if (all) plain[q + 3] = tint[q + 3] = printed * 255;
       }
 
       // The cast shadow falls down and to the right, soft, with a tight contact line at the cut.
@@ -311,12 +386,14 @@ export function stickerLayers(ink: Pixels, cut: DieCut): StickerLayers {
         Math.min(width - 1, Math.max(0, x - offX));
       const under = soft[j] > 0.5;
       const throwOff = under ? 0 : clamp01((clearance[j] * k) / blur);
-      const contact = under ? 1 : 1 - clamp01((clearance[i] * k) / 2.2);
+      const contact = under ? 1 : 1 - clamp01((clearance[i] * k) / (2.2 * unit));
       const shade = Math.min(1, 0.2 * (1 - throwOff) * (1 - throwOff) + 0.16 * contact);
-      shadow[q] = INK[0];
-      shadow[q + 1] = INK[1];
-      shadow[q + 2] = INK[2];
-      shadow[q + 3] = shade * 255;
+      if (all) {
+        shadow[q] = INK[0];
+        shadow[q + 1] = INK[1];
+        shadow[q + 2] = INK[2];
+        shadow[q + 3] = shade * 255;
+      }
 
       // The gloss, clipped to the cut; then shadow, print and gloss, one over the other.
       const glossAlpha = glossGrid[3][i] * a;
@@ -325,27 +402,15 @@ export function stickerLayers(ink: Pixels, cut: DieCut): StickerLayers {
       const alpha = glossAlpha + (printAlpha + below) * (1 - glossAlpha);
       for (let c = 0; c < 3; c++) {
         const g = glossGrid[c][i] * a;
-        if (glossAlpha > 0) gloss[q + c] = g / glossAlpha;
+        if (all && glossAlpha > 0) gloss[q + c] = g / glossAlpha;
         const p = printed > 0 ? tinted[c] * printAlpha : 0;
         const premultiplied = g + (p + INK[c] * below) * (1 - glossAlpha);
         sticker[q + c] = alpha > 0 ? premultiplied / alpha : 0;
       }
-      gloss[q + 3] = glossAlpha * 255;
+      if (all) gloss[q + 3] = glossAlpha * 255;
       sticker[q + 3] = alpha * 255;
     }
   }
 
-  return {
-    width,
-    height,
-    pad,
-    place,
-    plain,
-    tint,
-    gloss,
-    shadow,
-    mask,
-    sticker,
-    bands: cutBands(mask, width, height),
-  };
+  return { place, sticker, layers: all ? { plain, tint, gloss, shadow, mask } : null };
 }

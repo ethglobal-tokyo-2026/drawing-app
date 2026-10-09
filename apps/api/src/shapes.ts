@@ -197,7 +197,14 @@ export const stickerWebpsSchema = z.object({
 export type StickerWebpKind = keyof z.infer<typeof stickerWebpsSchema>;
 
 /** A sticker's files on the CDN, named by its content hash. */
-const stickerImagesSchema = stickerPngsSchema.extend({ webp: stickerWebpsSchema });
+const stickerImagesSchema = stickerPngsSchema.extend({
+  webp: stickerWebpsSchema,
+  /**
+   * Its sharp copy, larger than `png`, as a PNG and its WebP copy, for screens that show it larger
+   * than `png` holds; null for a sticker sealed without one, and for a veiled sticker.
+   */
+  sharp: z.object({ png: z.url(), webp: z.url() }).nullable(),
+});
 export type StickerImages = z.infer<typeof stickerImagesSchema>;
 
 const stickerRow = createSelectSchema(stickers, {
@@ -310,7 +317,9 @@ type StickerRow = typeof stickers.$inferSelect;
 export interface StickerViewer {
   veils: (sticker: Pick<StickerRow, "nsfw">) => boolean;
   /** Its image URLs: the veiled image in place of each that shows the drawing, when it's veiled. */
-  images: (sticker: Pick<StickerRow, "nsfw" | "contentHash" | "veiledHash">) => StickerImages;
+  images: (
+    sticker: Pick<StickerRow, "nsfw" | "contentHash" | "veiledHash" | "hasSharpCopy">,
+  ) => StickerImages;
 }
 
 function viewerOf(images: AppDeps["images"], optedIn: boolean): StickerViewer {
@@ -318,7 +327,10 @@ function viewerOf(images: AppDeps["images"], optedIn: boolean): StickerViewer {
   return {
     veils,
     images: (sticker) => {
-      if (!sticker.nsfw || optedIn) return images.urls(sticker.contentHash);
+      if (!sticker.nsfw || optedIn) {
+        const urls = images.urls(sticker.contentHash);
+        return sticker.hasSharpCopy ? urls : { ...urls, sharp: null };
+      }
       // The database holds every NSFW sticker to its veil, so a row without one is a fault.
       if (sticker.veiledHash === null) {
         throw new Error(`The NSFW sticker with content hash ${sticker.contentHash} has no veil`);

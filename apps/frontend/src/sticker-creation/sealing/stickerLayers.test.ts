@@ -1,20 +1,27 @@
 import { describe, expect, it } from "vitest";
 import { dieCut } from "./dieCut";
 import type { Pixels } from "./pixels";
-import { stickerLayers, type StickerLayers } from "./stickerLayers";
+import {
+  MAX_SIDE,
+  PAD,
+  SHARP_SIDE,
+  sharpSticker,
+  stickerLayers,
+  type StickerLayers,
+} from "./stickerLayers";
 
 const RED = [255, 0, 0];
 /** The white border on this sheet, in ink pixels. */
 const BORDER = 6;
 
-/** A 200 × 200 sheet with a red disk of radius 40 in the middle. */
-function redDisk(): Pixels {
-  const width = 200;
-  const height = 200;
+/** A `side` px square sheet with a red disk of `radius` in the middle: 200 and 40 unless given. */
+function redDisk(side = 200, radius = 40): Pixels {
+  const width = side;
+  const height = side;
   const data = new Uint8ClampedArray(width * height * 4);
   for (let y = 0; y < height; y++)
     for (let x = 0; x < width; x++)
-      if (Math.hypot(x + 0.5 - 100, y + 0.5 - 100) <= 40)
+      if (Math.hypot(x + 0.5 - side / 2, y + 0.5 - side / 2) <= radius)
         data.set([...RED, 255], (y * width + x) * 4);
   return { data, width, height };
 }
@@ -106,5 +113,46 @@ describe("stickerLayers", () => {
     const r = halves(rim);
     expect(s.top).toBeGreaterThan(4 * s.bottom);
     expect(r.bottom).toBeGreaterThan(4 * r.top);
+  });
+});
+
+/** Cutting a sheet larger than the stored image takes seconds while the whole suite runs. */
+const LARGE_INK_TIMEOUT_MS = 30_000;
+
+describe("sharpSticker", () => {
+  /** The long side an image whose cut's long side is `cutSide` comes out at, margins and all. */
+  const sideFor = (cutSide: number) => Math.round(cutSide) + 2 * Math.ceil(cutSide * PAD);
+  const longSide = ({ width, height }: { width: number; height: number }) =>
+    Math.max(width, height);
+
+  it(
+    "holds the cut's long side to SHARP_SIDE, from ink that has more",
+    () => {
+      const ink = redDisk(2000, 950);
+      const sharp = sharpSticker(ink, layersOf(ink).cut);
+      expect(sharp && longSide(sharp)).toBe(sideFor(SHARP_SIDE));
+      expect(sharp?.sticker.length).toBe((sharp?.width ?? 0) * (sharp?.height ?? 0) * 4);
+    },
+    LARGE_INK_TIMEOUT_MS,
+  );
+
+  it(
+    "is never larger than the ink was drawn",
+    () => {
+      const ink = redDisk(1000, 400);
+      const { cut, layers } = layersOf(ink);
+      const inkSide = (cut.bounds.x1 - cut.bounds.x0 + 1) / cut.scale;
+      expect(inkSide).toBeGreaterThan(MAX_SIDE);
+      expect(inkSide).toBeLessThan(SHARP_SIDE);
+      const sharp = sharpSticker(ink, cut);
+      expect(sharp && longSide(sharp)).toBe(sideFor(inkSide));
+      expect(longSide(layers)).toBe(sideFor(MAX_SIDE));
+    },
+    LARGE_INK_TIMEOUT_MS,
+  );
+
+  it("is null when the ink holds no more than the stored image", () => {
+    const ink = redDisk();
+    expect(sharpSticker(ink, layersOf(ink).cut)).toBeNull();
   });
 });

@@ -1,0 +1,1 @@
+ALTER TABLE `stickers` ADD `has_sharp_copy` integer DEFAULT false NOT NULL;

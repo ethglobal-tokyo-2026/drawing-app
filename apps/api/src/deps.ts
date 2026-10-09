@@ -118,10 +118,14 @@ export interface LineVerifier {
 
 export interface ImageStore {
   /**
-   * Saves a sticker's five PNGs under the content hash of its sticker PNG, and the WebP files made
-   * from them, keeping any already there.
+   * Saves a sticker's five PNGs under the content hash of its sticker PNG, its sharp copy when it
+   * has one, and the WebP files made from them, keeping any already there.
    */
-  save: (contentHash: string, pngs: Record<StickerPngKind, Uint8Array>) => Promise<void>;
+  save: (
+    contentHash: string,
+    pngs: Record<StickerPngKind, Uint8Array>,
+    sharp?: Uint8Array,
+  ) => Promise<void>;
   /**
    * Makes an NSFW sticker's veiled image from its saved PNG and mask, and saves it under its own
    * content hash, which it resolves to. Rejects when the sticker's images aren't saved.

@@ -63,6 +63,7 @@ async function sealInWorker() {
 const png = () => new Blob([], { type: "image/png" });
 const CUT: CutSticker = {
   png: png(),
+  sharp: null,
   flat: png(),
   layers: {
     plain: png(),

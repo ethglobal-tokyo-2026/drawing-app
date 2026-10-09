@@ -11,4 +11,6 @@ export interface StickerUrls {
    * the Shop's bundled sample lacks one, and its foil grows the silhouette itself.
    */
   foil?: string;
+  /** The sticker again, larger, for where it shows larger than `png` holds; absent without one. */
+  sharp?: string;
 }

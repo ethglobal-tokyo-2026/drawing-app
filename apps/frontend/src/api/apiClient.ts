@@ -46,6 +46,8 @@ interface SealRequest {
   height: number;
   outline: string;
   png: Blob;
+  /** The sticker, larger, when the ink holds more than `png`. */
+  sharp?: Blob;
   mask: Blob;
   spec: Blob;
   rim: Blob;

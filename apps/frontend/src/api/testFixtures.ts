@@ -61,6 +61,7 @@ const imagesOf = (url: string): Sticker["images"] => {
     rim: url,
     flat: url,
     webp: { sticker: webp, mask: webp, spec: webp, rim: webp, foil: webp },
+    sharp: null,
   };
 };
 let made = 0;

@@ -385,6 +385,7 @@ export function DrawingScreen({
       height: cut.height,
       outline: cut.outline,
       png: cut.png,
+      ...(cut.sharp && { sharp: cut.sharp }),
       mask: cut.mask,
       spec: cut.spec,
       rim: cut.rim,

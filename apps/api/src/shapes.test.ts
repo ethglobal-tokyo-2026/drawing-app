@@ -58,7 +58,8 @@ describe("shapes", () => {
     const viewer = stickerViewer({ db, images }, artistId);
     const sticker = stickerSchema.parse(loadStickers(db, [stickerId], viewer).get(stickerId));
     expect(sticker.artist).toMatchObject({ id: artistId, handle: "alice" });
-    expect(sticker.images).toEqual(images.urls(sticker.contentHash));
+    // Sealed without a sharp copy.
+    expect(sticker.images).toEqual({ ...images.urls(sticker.contentHash), sharp: null });
     expect(sticker.images.png).toContain(`${sticker.contentHash}.png`);
   });
 

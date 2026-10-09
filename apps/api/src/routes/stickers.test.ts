@@ -32,6 +32,8 @@ import {
   sealFormData,
   sealImages,
   sealParts,
+  SHARP_SIZE,
+  sharpImage,
   STICKER_SIZE,
   TEST_TIMELAPSE,
   testPng,
@@ -155,6 +157,19 @@ describe("POST /api/stickers", () => {
     expect(second.sticker.number).toBe(first.sticker.number + 1);
   });
 
+  it("stores a sharp copy beside the PNG, and names it only on a sticker sealed with one", async () => {
+    const artistId = insertUser(test.db);
+    const { sticker } = await seal(artistId);
+    expect(test.images.savedSharp.get(sticker.contentHash)).toEqual(sharpImage());
+    expect(sticker.images.sharp).toEqual(test.images.urls(sticker.contentHash).sharp);
+    expect(sticker.images.sharp).not.toBeNull();
+
+    const png = testPng(STICKER_SIZE.width, STICKER_SIZE.height, "no sharp copy");
+    const without = await seal(artistId, { png: pngFile(png, "png"), sharp: undefined });
+    expect(without.sticker.images.sharp).toBeNull();
+    expect(test.images.savedSharp.has(without.sticker.contentHash)).toBe(false);
+  });
+
   it("takes the timelapse as optional", async () => {
     const { sticker } = await seal(insertUser(test.db), { timelapse: undefined });
     expect(timelapseOf(sticker.id)).toBeUndefined();
@@ -248,6 +263,11 @@ describe("POST /api/stickers", () => {
       overrides: { png: pngFile(testPng(STICKER_SIZE.width + 1, STICKER_SIZE.height), "png") },
     },
     { part: "flat", why: "missing", overrides: { flat: undefined } },
+    {
+      part: "sharp",
+      why: "no larger than the sticker",
+      overrides: { sharp: pngFile(testPng(SHARP_SIZE.width, STICKER_SIZE.height), "sharp") },
+    },
     {
       part: "timelapse",
       why: "not a timelapse",
@@ -450,8 +470,10 @@ describe("POST /api/stickers/:stickerId/nsfw", () => {
       sticker: { ...sticker, nsfw: true, images: veiled },
       cdnPurged: true,
     });
-    const { png, flat, webp } = test.images.urls(sticker.contentHash);
-    expect(purge.urls.toSorted()).toEqual([png, flat, webp.sticker].toSorted());
+    const { png, flat, webp, sharp } = test.images.urls(sticker.contentHash);
+    expect(sharp).not.toBeNull();
+    const drawing = [png, flat, webp.sticker, ...(sharp ? [sharp.png, sharp.webp] : [])];
+    expect(purge.urls.toSorted()).toEqual(drawing.toSorted());
     const optedInId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
     const seen = await bodyOf(await getSticker(optedInId, sticker.id), stickerDetailSchema);
     expect(seen.sticker.images).toEqual(test.images.urls(sticker.contentHash));

@@ -1,8 +1,9 @@
-import { memo, type CSSProperties, type Ref } from "react";
+import { memo, useCallback, useState, type CSSProperties, type Ref } from "react";
 import { useTranslation } from "../i18n/react";
 import type { CreaseSide } from "./crease";
 import { LiveResin } from "./LiveResin";
 import { madeFoil } from "./madeFoil";
+import { useSharpSrc } from "./sharpImage";
 import { StickerCrease } from "./StickerCrease";
 import { StickerFoil, type FoilSize } from "./StickerFoil";
 import type { StickerUrls } from "./stickerUrls";
@@ -69,6 +70,17 @@ export const StickerFigure = memo(function StickerFigure({
 }: Props) {
   const { t } = useTranslation();
   const { mask, spec, rim } = urls;
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
+  // Its sharp copy once it shows larger than its image holds: the detail, or a board sticker that big.
+  const src = useSharpSrc(img, urls, width);
+  // Stable, so React hands it the image only as it mounts and unmounts.
+  const imgRef = useCallback(
+    (el: HTMLImageElement | null) => {
+      setImg(el);
+      if (reveal) revealOnLoad(el, el?.closest(".sticker-figure") ?? null);
+    },
+    [reveal],
+  );
   // A foil that marks how it was made shows whoever drew it; holo marks someone else's hand.
   const made = madeFoil({ nsfw, kyotoSeika });
   const foilSize = foil ?? (made ? "board" : undefined);
@@ -92,15 +104,7 @@ export const StickerFigure = memo(function StickerFigure({
       {foilSize && <StickerFoil size={foilSize} turn={turn} tone={tone} mask={urls.foil} />}
       {/* A foil's band casts for it. */}
       {stuck && !foilSize && <span className="sticker-figure__cast" aria-hidden="true" />}
-      <img
-        ref={
-          reveal ? (img) => revealOnLoad(img, img?.closest(".sticker-figure") ?? null) : undefined
-        }
-        className="sticker-figure__img"
-        src={urls.png}
-        alt=""
-        draggable={false}
-      />
+      <img ref={imgRef} className="sticker-figure__img" src={src} alt="" draggable={false} />
       {nsfw && <span className="sticker-figure__gloss" aria-hidden="true" />}
       {/* Keyed by its images, so a rebaked crease presses in again. */}
       {crease && <StickerCrease key={crease.topLeft} crease={crease} />}

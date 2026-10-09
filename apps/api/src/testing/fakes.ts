@@ -39,9 +39,11 @@ export const fakeLineVerifier = createDevLineVerifier;
  */
 export function fakeImageStore() {
   const saved = new Map<string, Record<StickerPngKind, Uint8Array>>();
+  const savedSharp = new Map<string, Uint8Array>();
   const store: ImageStore = {
-    save: (contentHash, pngs) => {
+    save: (contentHash, pngs, sharp) => {
       if (!saved.has(contentHash)) saved.set(contentHash, pngs);
+      if (sharp && !savedSharp.has(contentHash)) savedSharp.set(contentHash, sharp);
       return Promise.resolve();
     },
     saveVeiled: (contentHash) =>
@@ -50,7 +52,7 @@ export function fakeImageStore() {
         : Promise.reject(new Error(`No images are saved under ${contentHash}`)),
     ...imageUrls("https://box.test/api/images"),
   };
-  return { ...store, saved };
+  return { ...store, saved, savedSharp };
 }
 
 /** The Sui wallet the fakes give a person: made from their user id, as Privy's lookup answers it. */

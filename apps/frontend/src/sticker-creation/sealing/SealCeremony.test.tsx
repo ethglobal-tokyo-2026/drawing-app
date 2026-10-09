@@ -16,6 +16,7 @@ const NOW = new Date(2026, 8, 26, 21, 4);
 
 const sticker: SealedSticker = {
   png: new Blob(),
+  sharp: null,
   mask: new Blob(),
   spec: new Blob(),
   rim: new Blob(),

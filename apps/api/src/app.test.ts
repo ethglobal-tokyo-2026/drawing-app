@@ -13,7 +13,7 @@ import { setSessionCookie, type AppEnv } from "./session.ts";
 import type { StickerImages } from "./shapes.ts";
 import { markNsfwResponseSchema } from "./stickers/markNsfw.ts";
 import { sweepCdnPurges } from "./stickers/nsfwDrawing.ts";
-import { sealImages } from "./stickers/testPngs.ts";
+import { sealImages, sharpImage } from "./stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
 import { fakeCdnPurge, fakeServerLog } from "./testing/fakes.ts";
 import { captureLogLines } from "./testing/logLines.ts";
@@ -172,14 +172,15 @@ describe("sticker images", () => {
     const pngs = sealImages();
     const store = createDiskImageStore(imageDir, base);
     const contentHash = sha256Hex(pngs.png);
-    await store.save(contentHash, pngs);
+    await store.save(contentHash, pngs, sharpImage());
     return { store, pngs, contentHash };
   }
 
   /** Every URL among a sticker's images. */
-  const urlsIn = ({ webp, ...pngs }: StickerImages) => [
+  const urlsIn = ({ webp, sharp, ...pngs }: StickerImages) => [
     ...Object.values(pngs),
     ...Object.values(webp),
+    ...(sharp ? [sharp.png, sharp.webp] : []),
   ];
 
   /** Asserts the server answers `url`'s path to anyone, cached for good. */
@@ -214,6 +215,7 @@ describe("sticker images", () => {
       });
     const urls = store.urls(contentHash);
     const drawing = drawingUrls(urls);
+    expect(drawing).toEqual(expect.arrayContaining([urls.sharp?.png, urls.sharp?.webp]));
 
     for (const url of drawing) {
       for (const viewer of [undefined, insertUser(test.db)]) {
@@ -293,6 +295,8 @@ describe("sticker images", () => {
       }
       const purged = drawingUrls(test.images.urls(scene.contentHash));
       expect(scene.purge.urls.toSorted()).toEqual(purged.toSorted());
+      const { sharp } = test.images.urls(scene.contentHash);
+      expect(scene.purge.urls).toEqual(expect.arrayContaining([sharp?.png, sharp?.webp]));
     });
   });
 });

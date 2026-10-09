@@ -35,6 +35,12 @@ export const pngName = (contentHash: string, kind: StickerPngKind) =>
 const webpName = (contentHash: string, kind: StickerWebpKind) =>
   kind === "sticker" ? `${contentHash}.webp` : `${contentHash}.${kind}.webp`;
 
+/** The sharp copy: `{contentHash}.sharp.png`, and its WebP copy `{contentHash}.sharp.webp`. */
+const sharpNames = (contentHash: string) => ({
+  png: `${contentHash}.sharp.png`,
+  webp: `${contentHash}.sharp.webp`,
+});
+
 /** A sticker's image URLs under `baseUrl`. */
 function stickerImageUrls(baseUrl: string, contentHash: string): StickerImages {
   const base = baseUrl.replace(/\/+$/, "");
@@ -53,11 +59,23 @@ function stickerImageUrls(baseUrl: string, contentHash: string): StickerImages {
       rim: webp("rim"),
       foil: webp("foil"),
     },
+    sharp: {
+      png: `${base}/${sharpNames(contentHash).png}`,
+      webp: `${base}/${sharpNames(contentHash).webp}`,
+    },
   };
 }
 
-/** The URLs among a sticker's images that show its drawing: its PNG, its WebP and the flat sheet. */
-export const drawingUrls = ({ png, flat, webp }: StickerImages) => [png, flat, webp.sticker];
+/**
+ * The URLs among a sticker's images that show its drawing: its PNG, its WebP, the flat sheet, and
+ * its sharp copy's PNG and WebP.
+ */
+export const drawingUrls = ({ png, flat, webp, sharp }: StickerImages) => [
+  png,
+  flat,
+  webp.sticker,
+  ...(sharp ? [sharp.png, sharp.webp] : []),
+];
 
 /** A sticker's image URLs for each viewer, under `imageBaseUrl`. */
 export function imageUrls(imageBaseUrl: string): Pick<ImageStore, "urls" | "veiledUrls"> {
@@ -71,6 +89,7 @@ export function imageUrls(imageBaseUrl: string): Pick<ImageStore, "urls" | "veil
         png: veiled.png,
         flat: veiled.png,
         webp: { ...shared.webp, sticker: veiled.webp.sticker },
+        sharp: null,
       };
     },
   };
@@ -179,11 +198,21 @@ async function saveVeiled(imageDir: string, contentHash: string): Promise<string
   return veiledHash;
 }
 
+/** The sharp copy and its WebP, made from the PNG on disk, the first seal's, as writeMissingWebps does. */
+async function saveSharp(imageDir: string, contentHash: string, sharpPng: Uint8Array) {
+  const names = sharpNames(contentHash);
+  await writeIfAbsent(join(imageDir, names.png), sharpPng);
+  const webp = join(imageDir, names.webp);
+  if (await exists(webp)) return;
+  const stored = await readFile(join(imageDir, names.png));
+  await writeIfAbsent(webp, await sharp(stored).webp({ quality: STICKER_WEBP_QUALITY }).toBuffer());
+}
+
 /** Writes sticker images into the folder the box serves at `imageBaseUrl`. */
 export function createDiskImageStore(imageDir: string, imageBaseUrl: string): ImageStore {
   mkdirSync(imageDir, { recursive: true });
   return {
-    save: async (contentHash, pngs) => {
+    save: async (contentHash, pngs, sharp) => {
       checkContentHash(contentHash);
       await Promise.all(
         pngKinds.map((kind) =>
@@ -191,6 +220,7 @@ export function createDiskImageStore(imageDir: string, imageBaseUrl: string): Im
         ),
       );
       await writeMissingWebps(imageDir, contentHash);
+      if (sharp) await saveSharp(imageDir, contentHash, sharp);
     },
     saveVeiled: (contentHash) => saveVeiled(imageDir, contentHash),
     ...imageUrls(imageBaseUrl),

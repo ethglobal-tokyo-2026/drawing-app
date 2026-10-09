@@ -5,7 +5,7 @@
  */
 import { BORDER_UNITS, dieCut, type Point } from "./dieCut";
 import type { Pixels } from "./pixels";
-import { stickerLayers, type Rect } from "./stickerLayers";
+import { sharpSticker, stickerLayers, type Rect } from "./stickerLayers";
 
 export type LayerName = "plain" | "tint" | "gloss" | "shadow" | "mask" | "spec" | "rim";
 
@@ -28,6 +28,8 @@ interface Ink {
 /** The cut sticker. What it shares with SealedSticker means the same there. */
 export interface CutSticker {
   png: Blob;
+  /** The sticker again, larger, for screens that show it larger than `png`; null when the ink holds no more. */
+  sharp: Blob | null;
   flat: Blob;
   /** The ceremony's layers, as PNGs. */
   layers: Record<LayerName, Blob>;
@@ -111,8 +113,12 @@ export async function cutSticker(ink: Ink, make: MakeCanvas): Promise<CutSticker
     encoded(bands.rim, bands.width, bands.height),
     encoded(layers.mask),
   ]);
+  // Once the layers are encoded, so its canvas is never held beside theirs.
+  const sharp = sharpSticker(pixels, cut);
+  const sharpPng = sharp && (await encoded(sharp.sticker, sharp.width, sharp.height));
   return {
     png,
+    sharp: sharpPng,
     flat,
     layers: { plain, tint, gloss, shadow, mask, spec, rim },
     maskPixels: layers.mask,

@@ -224,6 +224,7 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
             height: String(request.height),
             outline: request.outline,
             png: png(request.png, "sticker.png"),
+            ...(request.sharp && { sharp: png(request.sharp, "sharp.png") }),
             mask: png(request.mask, "mask.png"),
             spec: png(request.spec, "spec.png"),
             rim: png(request.rim, "rim.png"),

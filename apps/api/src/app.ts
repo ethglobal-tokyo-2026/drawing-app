@@ -71,8 +71,11 @@ const serverLogQuerySchema = z.object({
   lines: z.coerce.number().int().positive().max(MAX_SERVER_LOG_LINES).default(SERVER_LOG_LINES),
 });
 
-/** The files that show a sticker's drawing, by its content hash: its PNG, its WebP and the flat sheet. */
-const DRAWING_FILE = /^\/(0x[0-9a-f]{64})(?:\.png|\.webp|\.flat\.png)$/;
+/**
+ * The files that show a sticker's drawing, by its content hash: its PNG, its WebP, the flat sheet,
+ * and its sharp copy's PNG and WebP.
+ */
+const DRAWING_FILE = /^\/(0x[0-9a-f]{64})(?:\.png|\.webp|\.flat\.png|\.sharp\.png|\.sharp\.webp)$/;
 
 /**
  * Serves the files that show a drawing only NSFW stickers show to an opted-in session alone, never

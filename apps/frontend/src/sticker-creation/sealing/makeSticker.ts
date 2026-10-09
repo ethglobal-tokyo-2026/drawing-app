@@ -9,6 +9,8 @@ import type { Rect } from "./stickerLayers";
 export interface SealedSticker {
   /** The finished sticker, cast shadow and all. */
   png: Blob;
+  /** The finished sticker, larger, for screens that show it larger than `png`; null when the ink holds no more. */
+  sharp: Blob | null;
   /** The cut's shape (white, with the cut as alpha), the same size and place as `png`. */
   mask: Blob;
   /** The live resin's specular mask, along the top edge. */
@@ -166,6 +168,7 @@ export async function makeSticker(
   };
   return {
     png: cut.png,
+    sharp: cut.sharp,
     mask: layers.mask,
     spec: layers.spec,
     rim: layers.rim,

@@ -168,7 +168,11 @@ describe("GET /api/explore", () => {
     expect(await imagesOnPageTwo(optedOut)).toEqual(
       test.images.veiledUrls(contentHash, veiledHash),
     );
-    expect(await imagesOnPageTwo(optedIn)).toEqual(test.images.urls(contentHash));
+    // Sealed without a sharp copy.
+    expect(await imagesOnPageTwo(optedIn)).toEqual({
+      ...test.images.urls(contentHash),
+      sharp: null,
+    });
   });
 
   it("starts the week as Monday's ticket day starts, the last one before now", async () => {

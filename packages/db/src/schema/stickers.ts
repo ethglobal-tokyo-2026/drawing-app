@@ -75,6 +75,11 @@ export const stickers = sqliteTable(
      * after it has cleared them.
      */
     cdnPurgeDueAt: integer("cdn_purge_due_at", { mode: "timestamp_ms" }),
+    /**
+     * Sealed with a sharp copy of its PNG, larger, stored beside it under its content hash, for
+     * screens that show it larger than the PNG holds. Not on Sui.
+     */
+    hasSharpCopy: integer("has_sharp_copy", { mode: "boolean" }).notNull().default(false),
   },
   (t) => [
     index("stickers_owner").on(t.ownerId),
