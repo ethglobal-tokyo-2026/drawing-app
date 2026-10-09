@@ -91,6 +91,36 @@ export const drawKey = (page: Page, language: Language) =>
   });
 
 /**
+ * Taps a key at its middle once two looks in a row find it in one place, on top there. A key that
+ * hops, such as Draw on a first visit, can fail Playwright's own frame-by-frame stability check for
+ * a whole test in a loaded WebKit, whose frames come seconds apart.
+ */
+export async function tapKey(key: Locator) {
+  const middleOf = async () => {
+    const box = await key.boundingBox();
+    return box && { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  let last = await middleOf();
+  await expect
+    .poll(async () => {
+      const now = await middleOf();
+      const was = last;
+      last = now;
+      if (now === null || now.x !== was?.x || now.y !== was.y) return false;
+      // Nothing, such as a board still turning back over, covers it.
+      return key.evaluate((el, at) => el.contains(document.elementFromPoint(at.x, at.y)), now);
+    })
+    .toBe(true);
+  if (!last) throw new Error("The key isn't on screen");
+  await key.page().touchscreen.tap(last.x, last.y);
+}
+
+/** The drawing screen once it's up over the board: under it, the screen is inert. */
+async function drawingScreenUp(page: Page) {
+  await expect(page.locator(".drawing-screen")).not.toHaveAttribute("inert");
+}
+
+/**
  * Opens Croquis on a phone as someone new: LIFF Mock signs them in with a dev ID token for `?as=`,
  * which the API trusts under DEV_SIGN_IN. Resolves once their board is up.
  */
@@ -151,11 +181,13 @@ export const canvas = (page: Page, language: Language) =>
 
 /**
  * Draws one stroke across the middle of the canvas, and waits for Undo to hold it. A fresh sheet takes
- * no ink until the server answers its ticket's spend, so a stroke it refused is drawn again.
+ * no ink until the server answers its ticket's spend, so a stroke it refused is drawn again. Undo gets
+ * a few seconds, since a stroke the sheet took can take that long to show in a loaded WebKit.
  */
 export async function drawStroke(page: Page, language: Language) {
   const sheet = canvas(page, language);
   const undo = page.getByRole("button", { name: say(stickerCreation.history.undo, language) });
+  await drawingScreenUp(page);
   await expect(async () => {
     // Waits until nothing, such as the last sealed card on its way out, covers the canvas.
     await sheet.hover();
@@ -167,7 +199,7 @@ export async function drawStroke(page: Page, language: Language) {
     await page.mouse.down();
     for (let step = 1; step <= 12; step++) await page.mouse.move(x + step * 12, y + step * 8);
     await page.mouse.up();
-    await expect(undo).toBeEnabled({ timeout: 1_000 });
+    await expect(undo).toBeEnabled({ timeout: 5_000 });
   }).toPass();
 }
 
@@ -257,7 +289,7 @@ export async function openDetail(page: Page, language: Language, no: string) {
 
 /** Draw from the board, one stroke, seal, and back to the board. Resolves with the sticker's number. */
 export async function sealFromBoard(page: Page, language: Language) {
-  await drawKey(page, language).click();
+  await tapKey(drawKey(page, language));
   const { card, no } = await drawAndSeal(page, language);
   await card.getByRole("button", { name: say(ui.backToBoard, language) }).click();
   await expect(boardSticker(page, language, no)).toBeVisible();
