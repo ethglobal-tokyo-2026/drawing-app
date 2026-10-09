@@ -1,0 +1,84 @@
+/* A sticker's pair in the deal's thought clouds, G-pen on the paper's white, with a trail of bubbles
+   back to the sticker: a peek over it on a board, or in its detail's column. Placed from its own
+   top-left by the clouds' centers, as the deal is. */
+.subject-thought {
+  position: relative;
+  pointer-events: none;
+}
+
+.subject-thought--peek {
+  position: absolute;
+}
+
+.subject-thought--detail {
+  margin: 14px 0 2px;
+}
+
+.subject-thought__cloud {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.subject-thought__puff {
+  position: absolute;
+  inset: 0;
+}
+
+.subject-thought svg {
+  position: absolute;
+  display: block;
+  overflow: visible;
+}
+
+.subject-thought .shape-fill {
+  fill: var(--canvas);
+}
+
+/* The ink boils while a peek plays, as the deal's clouds do; the detail's holds its line at rest. */
+.subject-thought .shape-ink {
+  fill: var(--ink);
+  animation: ink-boil calc(var(--boil-frame) * 3) step-end infinite;
+}
+
+.subject-thought .shape-ink + .shape-ink {
+  visibility: hidden;
+}
+
+.subject-thought.is-still .shape-ink {
+  animation: none;
+}
+
+.subject-thought__words {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  text-align: center;
+  color: var(--ink);
+  font-family: var(--font-jp);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  font-feature-settings: "palt";
+  white-space: nowrap;
+}
+
+.subject-thought__words rt {
+  padding-bottom: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--graphite);
+}
+
+/* English as a manga's English edition letters a balloon: capitals, line by line as laid out. */
+.subject-thought__words.is-english {
+  font-family: var(--font-ui);
+  line-height: 1.08;
+  letter-spacing: 0.04em;
+}
+
+.subject-thought__line {
+  display: block;
+}

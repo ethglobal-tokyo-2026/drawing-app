@@ -78,6 +78,7 @@ import {
   stickerBox,
   toFrac,
   toPx,
+  TRAY_EDGE,
   type BoardLayout,
   type Box,
   type Placement,
@@ -133,7 +134,11 @@ const StatBoard = lazyWithPreload("the stat board", () =>
 const GratitudeMiniGame = lazyWithPreload("the Gratitude Mini-game", () =>
   import("../gratitude/GratitudeMiniGame").then((m) => m.GratitudeMiniGame),
 );
-const OPENED_FROM_BOARD = [StickerDetail, Giving, StatBoard, GratitudeMiniGame];
+// A tap on a sticker drawn in Kyoto Seika Practice Mode peeks at its subjects.
+const ThoughtLayer = lazyWithPreload("the subjects' peek", () =>
+  import("./ThoughtLayer").then((m) => m.ThoughtLayer),
+);
+const OPENED_FROM_BOARD = [StickerDetail, Giving, StatBoard, GratitudeMiniGame, ThoughtLayer];
 
 interface Props {
   /** The sticker that was just sealed; it lands on the board the first time the board shows it. */
@@ -350,6 +355,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   /** The sticker landing as this visit opened. `landingId` clears once it sticks; its chip plays on. */
   const [arrivedId] = useState(landingId);
   const [selected, setSelected] = useState<string | null>(null);
+  /** The sticker drawn in Kyoto Seika Practice Mode a tap just selected, peeking at its subjects; each peek its own. */
+  const [peek, setPeek] = useState<{ id: string; n: number } | null>(null);
   /** The sticker the detail shows, among your stickers or among the ones you gave. */
   const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
   const openYours = (id: string) => setOpen({ id, mode: "yours" });
@@ -669,12 +676,15 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         ) ?? null,
     );
 
-  // Selecting raises a sticker above the rest; the raise is saved with its next move.
-  const select = (id: string | null) => {
+  // Selecting raises a sticker above the rest; the raise is saved with its next move. A tap that
+  // selects a sticker drawn in Kyoto Seika Practice Mode peeks at its subjects.
+  const select = (id: string | null, by?: "tap") => {
     setSelected(id);
     if (id) setChipsDone(true);
     if (!id || !stickers) return;
     const sticker = stickers.find((s) => s.id === id);
+    if (by === "tap" && sticker?.kyotoSeikaSubjects)
+      setPeek((was) => ({ id, n: (was?.n ?? 0) + 1 }));
     const z = zOnTop(stickers, id);
     if (sticker && z !== sticker.placement.z) setPlacement(id, { ...sticker.placement, z });
   };
@@ -825,6 +835,9 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const knobBelow = Boolean(
     chosen && chosenBox && name && knobHidden({ ...chosenBox, r: chosen.placement.r }, name),
   );
+  // A peek ends at once on a drag or a handle, letting go, another selection, the detail or a turn.
+  if (peek && (peek.id !== selected || hold || open || turned)) setPeek(null);
+  const peeked = peek && chosen?.id === peek.id ? chosen.kyotoSeikaSubjects : null;
   // The empty board's dashed spot, where the first sticker lands; a load error shows in it too.
   const blankAt = field && toPx(field, FIRST_SPOT);
   const blankStyle = blankAt ? { left: blankAt.x, top: blankAt.y } : undefined;
@@ -989,6 +1002,21 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         </CreasesContext>
         <p ref={stepsSaid} className="board-steps-status visually-hidden" role="status" />
       </div>
+
+      {peek && peeked && chosen && chosenBox && size && (
+        <Suspense fallback={null}>
+          <ThoughtLayer
+            key={peek.n}
+            subjects={peeked}
+            sticker={{ ...chosenBox, r: chosen.placement.r }}
+            board={size}
+            knobBelow={knobBelow}
+            trayEdge={TRAY_EDGE}
+            reduced={reduced}
+            onDone={() => setPeek(null)}
+          />
+        </Suspense>
+      )}
 
       {chips.length > 0 && size && (
         <ArtistChipLayer

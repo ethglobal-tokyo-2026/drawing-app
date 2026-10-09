@@ -221,8 +221,9 @@ describe("useBoardGestures", () => {
     expect(onSelect).not.toHaveBeenCalled();
     expect(onCommit).not.toHaveBeenCalled();
 
+    // Enter selects as a tap does, which a peek at a Kyoto Seika pair follows.
     press("Enter");
-    expect(onSelect).toHaveBeenLastCalledWith("b");
+    expect(onSelect).toHaveBeenLastCalledWith("b", "tap");
     render("b");
     press("ArrowLeft");
     expect(document.activeElement).toBe(el("b"));

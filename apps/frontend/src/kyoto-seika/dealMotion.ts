@@ -321,3 +321,20 @@ export const JOLT: Keyframe[] = [
   { translate: "0 0" },
 ];
 export const JOLT_MS = 360;
+
+/**
+ * A peek at a sticker's subjects on a board: its trail pops in, its clouds puff up and its words stamp
+ * in, then it holds and fades; under reduced motion it fades in place. In ms.
+ */
+export const PEEK = {
+  beadMs: 150,
+  beadStaggerMs: 45,
+  cloudAfterMs: 80,
+  cloudMs: 270,
+  cloudStaggerMs: 50,
+  wordAfterMs: 190,
+  wordMs: 210,
+  holdMs: 1500,
+  fadeMs: 200,
+  reducedInMs: 150,
+};

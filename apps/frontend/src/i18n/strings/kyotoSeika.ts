@@ -92,11 +92,9 @@ export const kyotoSeika = {
     /** Kyoto Seika Practice Mode's help sheet, fine print at its foot: the subject list's credit, a link that opens its sources and licenses */
     credit: { en: "Subjects: JMdict (EDRDG)", ja: "題材：JMdict（EDRDG）" },
   },
-  /** The tag beside Timelapse on the detail of a sticker drawn in Kyoto Seika Practice Mode. */
-  tag: {
-    /** Sticker detail of a sticker drawn in Kyoto Seika Practice Mode: the ink label-tape tag beside Timelapse */
-    label: { en: "Manga expression practice", ja: "マンガ表現練習" },
-    /** Sticker detail of a sticker drawn in Kyoto Seika Practice Mode: what screen readers hear for the tag and its pair; in English each subject comes with its English, such as "風, wind" */
+  /** The pair a sticker drawn in Kyoto Seika Practice Mode was dealt, in thought clouds on its detail and peeking from it on a board. */
+  thought: {
+    /** Sticker detail and sticker boards, a sticker drawn in Kyoto Seika Practice Mode: what screen readers hear for its pair, in place of the thought clouds, and in the sticker's name on a board; in English each subject comes with its English, such as "風, wind" */
     spoken: {
       en: "Manga expression practice. Subjects: {{first}}, and {{second}}.",
       ja: "マンガ表現練習。題材：{{first}}と{{second}}。",

@@ -4,7 +4,9 @@ import {
 } from "@drawing-app/api/client";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
+import { PEEK } from "../src/kyoto-seika/dealMotion.ts";
 import {
+  boardSticker,
   canvas,
   drawAndSeal,
   drawKeyName,
@@ -223,5 +225,69 @@ test("Kyoto Seika Practice Mode: switched on in Settings, dealt, picked, timed a
   const { card, no } = await drawAndSeal(page, language);
   await card.getByRole("button", { name: say(ui.backToBoard, language) }).click();
   const detail = await openDetail(page, language, no);
-  await expect(detail.getByText(say(kyotoSeika.tag.spoken, language, pair))).toBeAttached();
+  await expect(detail.getByText(say(kyotoSeika.thought.spoken, language, pair))).toBeAttached();
+});
+
+/** A sticker drawn in Kyoto Seika Practice Mode, sealed from a fresh deal's first two subjects. */
+async function sealKyotoSeikaSticker(page: Page) {
+  const on = await page.request.post("/api/me/kyoto-seika-practice", {
+    data: { kyotoSeikaPractice: true },
+  });
+  expect(on.ok()).toBe(true);
+  await page.reload();
+  await page
+    .getByRole("button", { name: drawKeyName(language, KYOTO_SEIKA_DAILY_TICKETS_PER_DAY) })
+    .click();
+  const [first, second] = await dealt(page);
+  await toggle(page, first.word).click();
+  await toggle(page, second.word).click();
+  await page
+    .getByRole("button", {
+      name: say(kyotoSeika.begin.label, language, { minutes: KYOTO_SEIKA_TIME_USED_S / 60 }),
+    })
+    .click();
+  const { card, no } = await drawAndSeal(page, language);
+  await card.getByRole("button", { name: say(ui.backToBoard, language) }).click();
+  const sticker = boardSticker(page, language, no);
+  await expect(sticker).toBeVisible();
+  return { sticker, words: [first.word, second.word] };
+}
+
+/** How long a peek plays, from the tap to the end of its fade. */
+const PEEK_MS = PEEK.wordAfterMs + PEEK.cloudStaggerMs + PEEK.wordMs + PEEK.holdMs + PEEK.fadeMs;
+
+test("Kyoto Seika Practice Mode: a tap that selects its sticker peeks at the pair, and a drag doesn't", async ({
+  page,
+}) => {
+  await signIn(page, "peek", language);
+  const { sticker, words } = await sealKyotoSeikaSticker(page);
+  // Hidden from screen readers, so found by its class; the sticker's name says the pair instead.
+  const thought = page.locator(".thought-layer .subject-thought");
+  await expect(sticker).toHaveAccessibleName(
+    new RegExp(say(kyotoSeika.thought.spoken, language, { first: words[0], second: words[1] })),
+  );
+
+  await sticker.click();
+  await expect(sticker).toHaveAttribute("aria-pressed", "true");
+  await expect(thought).toBeVisible();
+  for (const word of words) await expect(thought).toContainText(word);
+  await expect(thought).toHaveCount(0, { timeout: PEEK_MS * 2 });
+
+  // Let go of, then picked up by a drag: selected, with no peek.
+  await page.keyboard.press("Escape");
+  await expect(sticker).toHaveAttribute("aria-pressed", "false");
+  const box = await sticker.boundingBox();
+  if (!box) throw new Error("The sticker has no box");
+  const from = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 30, from.y + 40, { steps: 8 });
+  await expect(sticker).toHaveAttribute("aria-pressed", "true");
+  // Counted once each, after a peek would have arrived: a retried count would pass once one faded.
+  const arrived = PEEK.wordAfterMs + PEEK.cloudStaggerMs + PEEK.wordMs;
+  await page.waitForTimeout(arrived);
+  expect(await thought.count()).toBe(0);
+  await page.mouse.up();
+  await page.waitForTimeout(arrived);
+  expect(await thought.count()).toBe(0);
 });

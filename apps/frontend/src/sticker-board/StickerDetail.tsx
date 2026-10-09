@@ -35,7 +35,9 @@ import {
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
-import { KyotoSeikaTag } from "../kyoto-seika/KyotoSeikaTag";
+import { spokenPair } from "../kyoto-seika/spokenSubject";
+import { SubjectThought } from "../kyoto-seika/SubjectThought";
+import { DETAIL_TOWARD } from "../kyoto-seika/thoughtLayout";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { useMyNsfwOptIn, veiledFor, withoutNsfwDrawings } from "../stickers/nsfw";
 import { StickerFigure } from "../stickers/StickerFigure";
@@ -665,7 +667,15 @@ export function StickerDetail({
                   <TimelapseButton timelapse={timelapse} />
                 </p>
                 {sticker.kyotoSeikaSubjects && (
-                  <KyotoSeikaTag subjects={sticker.kyotoSeikaSubjects} />
+                  <>
+                    <SubjectThought
+                      subjects={sticker.kyotoSeikaSubjects}
+                      size="detail"
+                      toward={DETAIL_TOWARD}
+                      reduced={reduced}
+                    />
+                    <p className="visually-hidden">{spokenPair(sticker.kyotoSeikaSubjects)}</p>
+                  </>
                 )}
                 {/* The Transfer Trail says it too, once it's in or while its place is held. */}
                 {mode === "given" && sticker.givenTo && trail.length === 0 && !trailHeld && (

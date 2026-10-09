@@ -2,6 +2,7 @@ import { CaretLeft, CaretRight, GiveIcon } from "../icons";
 import { useMyNsfwOptIn, veiledFor } from "../stickers/nsfw";
 import {
   Fragment,
+  Suspense,
   useEffect,
   useId,
   useLayoutEffect,
@@ -28,6 +29,7 @@ import { StickerFigure } from "../stickers/StickerFigure";
 import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { useLargeScreen } from "../ui/largeScreen";
+import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { QuietLink } from "../ui/QuietLink";
 import { TabsLead } from "../ui/TabsLead";
@@ -51,6 +53,11 @@ import { StickerToolbar } from "./StickerToolbar";
 import { useBoardLayout, useBoardSize } from "./useBoardSize";
 import { CreasesContext, useCreases } from "./useCreases";
 import "./ArtistBoard.css";
+
+// A tap on a sticker drawn in Kyoto Seika Practice Mode peeks at its subjects.
+const ThoughtLayer = lazyWithPreload("the subjects' peek", () =>
+  import("./ThoughtLayer").then((m) => m.ThoughtLayer),
+);
 
 interface Props {
   /** Whose board it is, as Explore found them. */
@@ -160,6 +167,8 @@ export function ArtistBoard({ person, onBack }: Props) {
   const [give, setGive] = useState<Box | null>(null);
   const [turned, setTurned] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+  /** The sticker drawn in Kyoto Seika Practice Mode a tap just selected, peeking at its subjects; each peek its own. */
+  const [peek, setPeek] = useState<{ id: string; n: number } | null>(null);
   /** The sticker last focused, which Tab comes back to. */
   const [tabStop, setTabStop] = useState<string | null>(null);
   const [viewing, setViewing] = useState<BoardStickerView | null>(null);
@@ -255,6 +264,13 @@ export function ArtistBoard({ person, onBack }: Props) {
     return el?.dataset.stickerId === undefined ? null : { id: el.dataset.stickerId, el };
   };
 
+  // A tap or Enter that selects a sticker drawn in Kyoto Seika Practice Mode peeks at its subjects.
+  const select = (id: string) => {
+    setSelected(id);
+    setChipsDone(true);
+    if (stickers.find((s) => s.id === id)?.kyotoSeikaSubjects)
+      setPeek((was) => ({ id, n: (was?.n ?? 0) + 1 }));
+  };
   // A tap selects a sticker and shows its toolbar, or lets go of it; so does a tap on bare board.
   const onStageClick = (e: MouseEvent<HTMLDivElement>) => {
     if (e.target instanceof Element && e.target.closest(".sticker-toolbar")) return;
@@ -263,8 +279,7 @@ export function ArtistBoard({ person, onBack }: Props) {
       setSelected(null);
       return;
     }
-    setSelected(tapped.id);
-    setChipsDone(true);
+    select(tapped.id);
     tapped.el.focus({ preventScroll: true, focusVisible: false });
   };
   const onStageKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -272,8 +287,8 @@ export function ArtistBoard({ person, onBack }: Props) {
     if (!from || !field) return;
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      setSelected(from.id === selected ? null : from.id);
-      setChipsDone(true);
+      if (from.id === selected) setSelected(null);
+      else select(from.id);
     } else if (e.key === "Escape") {
       if (selected) setSelected(null);
     } else {
@@ -288,6 +303,14 @@ export function ArtistBoard({ person, onBack }: Props) {
     const focused = stickerAt(e.target);
     if (focused) setTabStop(focused.id);
   };
+
+  // A peek ends at once on letting go, another selection, the sticker's view or a turn.
+  if (peek && (peek.id !== selected || viewing || turned)) setPeek(null);
+  const peeked = peek ? stickers.find((s) => s.id === peek.id) : undefined;
+  const hasKyotoSeika = stickers.some((s) => s.kyotoSeikaSubjects);
+  useEffect(() => {
+    if (hasKyotoSeika) void ThoughtLayer.preload();
+  }, [hasKyotoSeika]);
 
   const statsProblem =
     stats.state === "failed" ? { ...problemOf(stats.error), retry: stats.retry } : null;
@@ -445,6 +468,24 @@ export function ArtistBoard({ person, onBack }: Props) {
             ))}
         </CreasesContext>
       </div>
+
+      {peek && peeked?.kyotoSeikaSubjects && field && size && (
+        <Suspense fallback={null}>
+          <ThoughtLayer
+            key={peek.n}
+            subjects={peeked.kyotoSeikaSubjects}
+            sticker={{
+              ...stickerBox(field, size.U, peeked.placement, peeked),
+              r: peeked.placement.r,
+            }}
+            board={size}
+            knobBelow={false}
+            trayEdge={0}
+            reduced={reduced}
+            onDone={() => setPeek(null)}
+          />
+        </Suspense>
+      )}
 
       {chips.length > 0 && size && (
         <ArtistChipLayer

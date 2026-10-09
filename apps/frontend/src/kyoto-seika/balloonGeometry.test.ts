@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { seededRandom } from "../ui/seededRandom";
 import {
+  CAPS_EM,
   cloudShape,
+  PAIR_MAX_W,
+  pairLayout,
+  type ThoughtWord,
   DEAL_AT,
   DIE_CLEAR_PX,
   dealLayout,
@@ -241,5 +245,37 @@ describe("a subject's word", () => {
     expect(sizes).toEqual(sizes.toSorted((a, b) => b - a));
     for (const { ja } of SUBJECTS.filter((s) => hasKanji(s.ja)))
       expect(wordSizePx(ja, tall.fit, w), ja).toBeGreaterThanOrEqual(FURIGANA_WORD_MIN_PX);
+  });
+});
+
+describe("a pair's thought clouds", () => {
+  const english = (text: string): ThoughtWord => ({ text, reading: "", english: true });
+  const LONGEST = [english("meeting with a view to marriage"), english("hospitalization")] as const;
+
+  it("breaks English into lines and keeps the pair inside its widest reach", () => {
+    for (const size of ["peek", "detail"] as const) {
+      const layout = pairLayout(LONGEST, size, { x: -0.6, y: 0.8 });
+      expect(layout.clouds.maxX - layout.clouds.minX).toBeLessThanOrEqual(PAIR_MAX_W[size]);
+      const [phrase, word] = layout.balloons;
+      expect(phrase.lines.length).toBeGreaterThan(1);
+      expect(word.lines).toEqual(["HOSPITALIZATION"]);
+      for (const { lines, fontPx, spec } of layout.balloons)
+        for (const line of lines)
+          expect(line.length * fontPx * CAPS_EM).toBeLessThanOrEqual(spec.w);
+    }
+  });
+
+  it("runs its trail from the cloud on the sticker's side, its tip farthest that way", () => {
+    for (const toward of [
+      { x: -0.6, y: 0.8 },
+      { x: 0.6, y: -0.8 },
+    ]) {
+      const { balloons, trail, tip } = pairLayout(LONGEST, "peek", toward);
+      const [near, far] = toward.x > 0 ? [balloons[1], balloons[0]] : [balloons[0], balloons[1]];
+      const from = (p: Pt) => Math.hypot(trail[0].x - p.x, trail[0].y - p.y);
+      expect(from(near.center)).toBeLessThan(from(far.center));
+      const along = (p: Pt) => p.x * toward.x + p.y * toward.y;
+      for (const bead of trail) expect(along(tip)).toBeGreaterThan(along(bead));
+    }
   });
 });

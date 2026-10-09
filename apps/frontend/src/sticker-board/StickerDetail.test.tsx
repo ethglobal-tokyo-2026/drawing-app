@@ -532,18 +532,14 @@ describe("StickerDetail", () => {
 
   describe("beside Timelapse", () => {
     const openOn = (shown: BoardStickerView) => open({ stickers: [shown], startId: shown.id });
-    const tag = () => host.querySelector(".kyoto-seika-tag");
+    const thought = () => host.querySelector(".subject-thought");
 
-    it("tags a sticker drawn in Kyoto Seika Practice Mode, with its pair and their readings", async () => {
+    it("thinks of a sticker drawn in Kyoto Seika Practice Mode's pair, which screen readers hear", async () => {
       openOn(sticker(150, day(20), { kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS }));
       const [first, second] = TEST_KYOTO_SEIKA_SUBJECTS;
-      expect(tag()?.textContent).toContain(kyotoSeika.tag.label.en);
-      expect([...(tag()?.querySelectorAll("rt") ?? [])].map((rt) => rt.textContent)).toEqual([
-        first.reading,
-        second.reading,
-      ]);
-      // The pair shows only in Japanese: in English, screen readers hear each word's English too.
-      const spoken = () => tag()?.querySelector(".visually-hidden")?.textContent;
+      expect(thought()).not.toBeNull();
+      // In English, screen readers hear each word's English too.
+      const spoken = () => thought()?.nextElementSibling?.textContent;
       expect(spoken()).toContain(`${first.ja}, ${first.en}, and ${second.ja}, ${second.en}`);
       await act(async () => {
         await i18next.changeLanguage("ja");
@@ -552,13 +548,15 @@ describe("StickerDetail", () => {
         await i18next.changeLanguage("en");
       });
       expect(spoken()).toBe(
-        kyotoSeika.tag.spoken.ja.replace("{{first}}", first.ja).replace("{{second}}", second.ja),
+        kyotoSeika.thought.spoken.ja
+          .replace("{{first}}", first.ja)
+          .replace("{{second}}", second.ja),
       );
     });
 
-    it("tags no other sticker", () => {
+    it("thinks of nothing on any other sticker", () => {
       openOn(sticker(151, day(20)));
-      expect(tag()).toBeNull();
+      expect(thought()).toBeNull();
     });
   });
 
@@ -811,7 +809,7 @@ describe("StickerDetail", () => {
         emptyApi({ stickerDetail: () => new Promise(() => {}) }),
       );
       expect(timelapseButton()).not.toBeNull();
-      expect(document.querySelector(".kyoto-seika-tag .subject-pair")).not.toBeNull();
+      expect(document.querySelector(".subject-thought")).not.toBeNull();
     });
 
     it("keeps focus in the dialog when paging from Timelapse takes the button away", async () => {

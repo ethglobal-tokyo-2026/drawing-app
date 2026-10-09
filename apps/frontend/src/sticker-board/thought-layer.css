@@ -1,0 +1,8 @@
+/* A peek at a sticker's subjects: over every sticker and the header, under the toolbar, and the
+   pointer passes through it, as the artist chips' layer does. */
+.thought-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+}

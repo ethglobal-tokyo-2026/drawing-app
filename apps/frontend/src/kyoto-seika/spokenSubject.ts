@@ -9,3 +9,10 @@ export const spokenSubject = (subject: KyotoSeikaSubject) =>
   currentLanguage() === "ja"
     ? subject.ja
     : i18next.t(($) => $.kyotoSeika.pair.subject, { word: subject.ja, english: subject.en });
+
+/** The pair a sticker drawn in Kyoto Seika Practice Mode was dealt, as screen readers hear it with the sticker. */
+export const spokenPair = ([first, second]: readonly [KyotoSeikaSubject, KyotoSeikaSubject]) =>
+  i18next.t(($) => $.kyotoSeika.thought.spoken, {
+    first: spokenSubject(first),
+    second: spokenSubject(second),
+  });

@@ -42,7 +42,8 @@ interface Options {
   reduced: boolean;
   /** The sticker tray: a sticker let go over it goes back into its used sticker silhouette. */
   tray: RefObject<StickerTrayHandle | null>;
-  onSelect: (id: string | null) => void;
+  /** `tap` when a tap or Enter selected it, rather than a drag, a pinch or a handle. */
+  onSelect: (id: string | null, by?: "tap") => void;
   onOpen: (id: string) => void;
   /** Where a sticker was put; the board keeps it on top of the others. */
   onCommit: (id: string, placement: Placement) => void;
@@ -377,8 +378,8 @@ export function useBoardGestures(options: Options) {
     stowing.current = (id) => void stow(id);
 
     /** A sticker a pointer picked: selected, and focused so the arrow keys reach it, with no ring. */
-    const pick = (id: string, el: HTMLElement) => {
-      if (latest.current.selected !== id) latest.current.onSelect(id);
+    const pick = (id: string, el: HTMLElement, by?: "tap") => {
+      if (latest.current.selected !== id) latest.current.onSelect(id, by);
       el.focus({ preventScroll: true, focusVisible: false });
     };
 
@@ -513,7 +514,7 @@ export function useBoardGestures(options: Options) {
       if (g.mode === "maybe") {
         if (!tap) return;
         if (latest.current.selected === g.id) latest.current.onOpen(g.id);
-        else pick(g.id, g.el);
+        else pick(g.id, g.el, "tap");
         // Its toolbar mustn't sit under the tray.
         closeTray();
         return;
@@ -533,7 +534,7 @@ export function useBoardGestures(options: Options) {
         e.preventDefault();
         saveSteps();
         if (selected === sticker.id) latest.current.onOpen(sticker.id);
-        else latest.current.onSelect(sticker.id);
+        else latest.current.onSelect(sticker.id, "tap");
         return;
       }
       if (e.key === "Escape") {

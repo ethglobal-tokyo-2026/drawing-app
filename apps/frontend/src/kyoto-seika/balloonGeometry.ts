@@ -806,3 +806,227 @@ export function wordSizePx(ja: string, fit: Fit, w: number): number {
 export const TYPE = { readingPx: 12, gapPx: 2 };
 /** On a short phone the lines close up rather than scaling, so nothing goes under the 11 px floor. */
 export const TIGHT_TYPE = { readingPx: 11, gapPx: 0 };
+
+/** A word as a pair's cloud letters it: the Japanese as the test prints it, or its English. */
+export interface ThoughtWord {
+  text: string;
+  /** Furigana over the word; empty for none. */
+  reading: string;
+  /** English, lettered in capitals and broken into lines, rather than Japanese. */
+  english: boolean;
+}
+
+/** A pair's clouds: a peek over a sticker on a board, or the sticker detail's. */
+export type PairSize = "peek" | "detail";
+
+/**
+ * A size's type and reach, in px: Japanese by its length as WORD_PX does, English capitals, the
+ * widest word area before English breaks or shrinks, the narrowest, and the white and lobes round it.
+ */
+interface PairFit {
+  ja: readonly number[];
+  enPx: number;
+  maxW: number;
+  wordMaxW: number;
+  minW: number;
+  padY: number;
+  lobe: number;
+}
+const PEEK_FIT: PairFit = {
+  ja: [22, 22, 20, 18, 17, 16],
+  enPx: 13,
+  maxW: 112,
+  wordMaxW: 150,
+  minW: 34,
+  padY: 6,
+  lobe: 10,
+};
+const DETAIL_FIT: PairFit = {
+  ja: WORD_PX.tight,
+  enPx: 17,
+  maxW: 150,
+  wordMaxW: 190,
+  minW: 44,
+  padY: 8,
+  lobe: 13,
+};
+const PAIR_FITS: Record<PairSize, PairFit> = { peek: PEEK_FIT, detail: DETAIL_FIT };
+/**
+ * The widest a pair's clouds reach: inside a phone's board, and inside the detail's column on a
+ * phone. A wider pair sets its words smaller until it fits.
+ */
+export const PAIR_MAX_W: Record<PairSize, number> = { peek: 300, detail: 280 };
+/** A peek's trail, finer than the deal's: its bubbles' radii, largest by its cloud, in px. */
+const PEEK_TRAIL = [5, 3.6, 2.5] as const;
+/** How far the two clouds' outlines cross where they meet, in px. */
+const PAIR_KISS_PX = 7;
+/** How far the second cloud sits above the first, as a share of its half height: a pair, not a row. */
+const PAIR_RISE = 0.45;
+/** English capitals' width, in ems, their tracking included; and English lines' height, in ems. */
+export const CAPS_EM = 0.78;
+const EN_LINE = 1.08;
+/** Japanese lines' height in ems, and the reading's room over the word, in px. */
+const JA_LINE = 1.05;
+const READING_ROOM_PX = 5;
+/** English breaks into at most this many lines. */
+const EN_MAX_LINES = 3;
+
+/** One cloud of a pair, placed: its outline as PlacedBalloon has it, and the lines it letters. */
+interface PairBalloon extends Omit<PlacedBalloon, "reach" | "stack"> {
+  lines: readonly string[];
+  fontPx: number;
+}
+
+export interface PairLayout {
+  balloons: readonly [PairBalloon, PairBalloon];
+  /** The trail, largest bubble by its cloud, toward the sticker. */
+  trail: readonly Bead[];
+  /** Its whole reach, clouds and trail, from (0, 0). */
+  w: number;
+  h: number;
+  /** The trail's tip: the far edge of its smallest bubble. */
+  tip: Pt;
+  /** The clouds' reach alone. */
+  clouds: Box;
+}
+
+/** English in capitals, split where a reader would: at spaces, and after a hyphen. */
+function enTokens(text: string) {
+  return text
+    .toUpperCase()
+    .split(/\s+/)
+    .flatMap((word) =>
+      word.split(/(?<=-)/).map((part, i, all) => ({ part, glued: i < all.length - 1 })),
+    );
+}
+
+/** English in at most EN_MAX_LINES lines: as few as fit `maxChars`, the evenest of those. */
+function enLines(text: string, maxChars: number): string[] {
+  const tokens = enTokens(text);
+  const join = (from: number, to: number) =>
+    tokens
+      .slice(from, to)
+      .map((t, i, run) => t.part + (i < run.length - 1 && !t.glued ? " " : ""))
+      .join("");
+  const splits: string[][] = [];
+  const split = (from: number, lines: string[]) => {
+    if (from === tokens.length) splits.push(lines);
+    else if (lines.length < EN_MAX_LINES)
+      for (let to = from + 1; to <= tokens.length; to++) split(to, [...lines, join(from, to)]);
+  };
+  split(0, []);
+  const widest = (lines: string[]) => Math.max(...lines.map((l) => l.length));
+  const fitting = splits.filter((lines) => widest(lines) <= maxChars);
+  const [best] = (fitting.length > 0 ? fitting : splits).toSorted(
+    fitting.length > 0
+      ? (a, b) => a.length - b.length || widest(a) - widest(b)
+      : (a, b) => widest(a) - widest(b) || a.length - b.length,
+  );
+  return best ?? [text.toUpperCase()];
+}
+
+/** A word's lines, size and word area at `size`. */
+function letter(word: ThoughtWord, size: PairSize, scale: number) {
+  const fit = PAIR_FITS[size];
+  const maxW = fit.maxW * scale;
+  if (word.english) {
+    const enPx = fit.enPx * scale;
+    const lines = enLines(word.text, Math.floor(maxW / (enPx * CAPS_EM)));
+    const longest = Math.max(...lines.map((l) => l.length));
+    // One word too long for a line widens the word area as far as `wordMaxW` before it shrinks.
+    const fontPx = Math.min(enPx, (fit.wordMaxW * scale) / (longest * CAPS_EM));
+    return { lines, fontPx, w: longest * fontPx * CAPS_EM, h: lines.length * fontPx * EN_LINE };
+  }
+  const chars = Math.max(charCount(word.text), 1);
+  const em = isAcronym(word.text) ? ACRONYM_EM : WORD_EM;
+  const byLength = fit.ja[Math.min(chars, fit.ja.length) - 1] * scale;
+  const fontPx = Math.min(byLength, maxW / (chars * em));
+  const { readingPx } = TIGHT_TYPE;
+  const reading = word.reading ? charCount(word.reading) * readingPx * READING_EM : 0;
+  return {
+    lines: [word.text],
+    fontPx,
+    w: Math.max(chars * fontPx * em, reading),
+    h: fontPx * JA_LINE + (word.reading ? readingPx + READING_ROOM_PX : 0),
+  };
+}
+
+/** A seed from a word, so a subject's cloud is drawn the same wherever it shows. */
+const wordSeed = (text: string, salt: number) =>
+  mixSeed(salt, ...Array.from({ length: text.length }, (_, i) => text.charCodeAt(i))) % 99_991;
+
+/**
+ * Two subjects' clouds side by side, the second a little higher, their outlines crossing where they
+ * meet, and a trail from the cloud on `toward`'s side running `toward` (a direction) to the sticker.
+ * Each word area fits its word: English breaks into lines, and shrinks only when one word is wider
+ * than the widest word area.
+ */
+export function pairLayout(
+  pair: readonly [ThoughtWord, ThoughtWord],
+  size: PairSize,
+  toward: Pt,
+): PairLayout {
+  const fit = PAIR_FITS[size];
+  const clustered = (scale: number) => {
+    const lettered = pair.map((word) => letter(word, size, scale));
+    const specs = lettered.map((l, i): BalloonSpec => ({
+      w: Math.ceil(Math.max(fit.minW * scale, l.w)),
+      h: Math.ceil(l.h),
+      padY: fit.padY,
+      lobe: fit.lobe,
+      tilt: i === 0 ? -2 : 2.5,
+      seed: wordSeed(pair[i].text, i),
+    }));
+    const [a, b] = specs;
+    const across = unit({ x: 1, y: -PAIR_RISE * (halfH(b) / halfW(b)) });
+    const apart = reachToward(a, across) + reachToward(b, mul(across, -1)) - PAIR_KISS_PX;
+    const centers = [{ x: 0, y: 0 }, mul(across, apart)];
+    const whites = specs.map(cloudWhite);
+    const reaches = whites.map((white, i) =>
+      grow(boxOf(white.map((p) => add(rotate(p, specs[i].tilt), centers[i]))), INK_REACH_PX),
+    );
+    return { lettered, specs, centers, whites, clouds: union(reaches) };
+  };
+  // Too wide, the words set smaller, the lobes and the white round them staying as they are.
+  let laid = clustered(1);
+  for (let scale = 1, tries = 0; tries < 3; tries++) {
+    const width = laid.clouds.maxX - laid.clouds.minX;
+    if (width <= PAIR_MAX_W[size]) break;
+    scale *= (PAIR_MAX_W[size] - 2) / width;
+    laid = clustered(scale);
+  }
+  const { lettered, specs, centers, whites, clouds } = laid;
+
+  // The trail leaves the cloud on the sticker's side.
+  const from = toward.x > 0 ? 1 : 0;
+  const way = unit(toward);
+  const radii = size === "peek" ? PEEK_TRAIL : TRAIL.radii;
+  let d = reachToward(specs[from], way) - 2;
+  const trail = radii.map((r, i) => {
+    d += r + (i === 0 ? 4 : 3);
+    const bead = { ...add(centers[from], mul(way, d)), r };
+    d += r;
+    return bead;
+  });
+  const last = trail[trail.length - 1];
+  const beadReach = (t: Bead) => grow({ minX: t.x, minY: t.y, maxX: t.x, maxY: t.y }, t.r + 2);
+  const all = union([clouds, ...trail.map(beadReach)]);
+  const by = { x: -all.minX, y: -all.minY };
+  const placed = (i: number): PairBalloon => ({
+    spec: specs[i],
+    center: add(centers[i], by),
+    white: whites[i],
+    whitePath: outline(whites[i]),
+    cloudBox: grow(boxOf(whites[i]), INK_REACH_PX),
+    lines: lettered[i].lines,
+    fontPx: lettered[i].fontPx,
+  });
+  return {
+    balloons: [placed(0), placed(1)],
+    trail: trail.map((t) => ({ ...add(t, by), r: t.r })),
+    w: all.maxX - all.minX,
+    h: all.maxY - all.minY,
+    tip: add(add(last, mul(way, last.r)), by),
+    clouds: shift(clouds, by),
+  };
+}

@@ -1,6 +1,7 @@
 import { ArrowClockwise } from "../icons";
 import { memo, useEffectEvent, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "../i18n/react";
+import { spokenPair } from "../kyoto-seika/spokenSubject";
 import { formatNo, spokenDuration } from "../stickers/format";
 import { playStick } from "../stickers/stick";
 import { StickerFigure } from "../stickers/StickerFigure";
@@ -114,6 +115,7 @@ export const PlacedSticker = memo(function PlacedSticker({
           ? t(($) => $.stickerBoard.placedSticker.labelBy, { ...named, artist: by })
           : t(($) => $.stickerBoard.placedSticker.label, named),
         veiled && t(($) => $.stickers.nsfw.veiled),
+        sticker.kyotoSeikaSubjects && spokenPair(sticker.kyotoSeikaSubjects),
       ]
         .filter(Boolean)
         .join(", ")}

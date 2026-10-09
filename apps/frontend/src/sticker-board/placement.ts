@@ -102,7 +102,7 @@ const INSET = 12;
 /** Draw floats over the field's lower left rather than taking a band, so the field reaches almost to the foot. */
 const FOOT = 16;
 /** The right edge belongs to the sticker tray. */
-const TRAY_EDGE = 40;
+export const TRAY_EDGE = 40;
 export const S_MIN = 0.16;
 /**
  * A sticker's largest size in each layout, as the side of the square of its area, a share of the
@@ -196,6 +196,23 @@ export function knobHidden(sticker: { x: number; y: number; h: number; r: number
     y + KNOB_TOUCH > name.top &&
     y - KNOB_TOUCH < name.bottom
   );
+}
+
+/** The rotate knob's touch area, above the sticker's top edge or hanging below it, turned with it. */
+export function knobBox(
+  sticker: { x: number; y: number; h: number; r: number },
+  below: boolean,
+): Box {
+  const turn = ((sticker.r + (below ? 180 : 0)) * Math.PI) / 180;
+  const reach = sticker.h / 2 + KNOB_REACH;
+  const x = sticker.x + Math.sin(turn) * reach;
+  const y = sticker.y - Math.cos(turn) * reach;
+  return {
+    left: x - KNOB_TOUCH,
+    top: y - KNOB_TOUCH,
+    right: x + KNOB_TOUCH,
+    bottom: y + KNOB_TOUCH,
+  };
 }
 
 /** How far the toolbar keeps from what it must stay clear of. */

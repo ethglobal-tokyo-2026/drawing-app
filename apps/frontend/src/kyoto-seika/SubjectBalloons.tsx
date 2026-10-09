@@ -8,7 +8,6 @@ import {
   useState,
   useSyncExternalStore,
   type CSSProperties,
-  type Ref,
   type RefObject,
 } from "react";
 import { useTranslation } from "../i18n/react";
@@ -20,7 +19,6 @@ import {
   TIGHT_TYPE,
   TYPE,
   wordSizePx,
-  type Bead,
   type Box,
   type DealLayout,
   type Fit,
@@ -50,56 +48,13 @@ import { CHARRED_AT_ROLL, dieMood } from "./dieMood";
 import { spokenSubject } from "./spokenSubject";
 import { SubjectReroll } from "./SubjectReroll";
 import { SubjectWord } from "./SubjectWord";
+import { Inked, ThoughtTrail } from "./ThoughtCloud";
 import "./subject-balloons.css";
 
 const onVisibility = (onChange: () => void) => {
   document.addEventListener("visibilitychange", onChange);
   return () => document.removeEventListener("visibilitychange", onChange);
 };
-
-/**
- * A cloud: the white, and the pen line over it in each boil frame, one showing at a time, in an SVG
- * the size of `box`. `phase` shifts the boil, in frames, so no two clouds flick in step. `line` is the
- * pen line's opacity: a cloud fades its line, never its white.
- */
-function Inked({
-  white,
-  inks,
-  box,
-  phase,
-  line = 1,
-  ref,
-}: {
-  white: string;
-  inks: readonly string[];
-  box: Box;
-  phase: number;
-  line?: number;
-  ref?: Ref<SVGSVGElement>;
-}) {
-  const width = box.maxX - box.minX;
-  const height = box.maxY - box.minY;
-  return (
-    <svg
-      ref={ref}
-      viewBox={`${box.minX} ${box.minY} ${width} ${height}`}
-      width={width}
-      height={height}
-      style={{ left: box.minX, top: box.minY }}
-      aria-hidden="true"
-    >
-      <path className="shape-fill" d={white} />
-      {inks.map((ink, frame) => (
-        <path
-          key={frame}
-          className="shape-ink"
-          d={ink}
-          style={{ animationDelay: `${-(frame + phase) * BOIL.frameMs}ms`, opacity: line }}
-        />
-      ))}
-    </svg>
-  );
-}
 
 /** A seeded drift, looping for good while `on`, held while the page is hidden. */
 function useDrift(
@@ -501,36 +456,6 @@ function SubjectBalloon({
         </svg>
       </button>
     </div>
-  );
-}
-
-/**
- * The thought trail: three bubbles from the cluster toward the artist, still while the clouds drift.
- * They pop in from the smallest, as a thought rises, before the clouds arrive.
- */
-function ThoughtTrail({ trail, reduced }: { trail: readonly Bead[]; reduced: boolean }) {
-  const layer = useRef<SVGSVGElement>(null);
-  const drawings = useMemo(() => trail.map((bead, i) => beadShape(bead.r, 90 + i)), [trail]);
-  useEffect(() => {
-    if (reduced) return;
-    [...(layer.current?.children ?? [])].toReversed().forEach((bead, i) =>
-      bead.animate(CLOUD_ARRIVE, {
-        duration: ARRIVE.cloudMs,
-        delay: i * ARRIVE.staggerMs,
-        easing: EASE_OUT,
-        fill: "backwards",
-      }),
-    );
-  }, [reduced]);
-  return (
-    <svg ref={layer} className="subject-trail" aria-hidden="true">
-      {trail.map((bead, i) => (
-        <g key={i} transform={`translate(${bead.x} ${bead.y})`}>
-          <path className="subject-puff__white" d={drawings[i].white} />
-          <path className="subject-puff__ink" d={drawings[i].ink} />
-        </g>
-      ))}
-    </svg>
   );
 }
 
