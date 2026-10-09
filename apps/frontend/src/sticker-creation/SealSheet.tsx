@@ -78,6 +78,7 @@ export function SealSheet({
       label={words}
       open={open}
       closable={!timeUp}
+      card
       className={`seal-sheet keep-phrases ${timeUp ? "is-time-up" : ""}`}
       onClose={onNotYet}
     >
