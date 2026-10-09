@@ -116,6 +116,12 @@ export interface LineVerifier {
   verifyAccessToken: (accessToken: string) => Promise<LineProfile>;
 }
 
+/** A WebP the app shows a sticker by: its own, its veiled image's, or its sharp copy's. */
+export type DisplayWebp =
+  | { of: "sticker"; contentHash: string }
+  | { of: "veiled"; contentHash: string; veiledHash: string }
+  | { of: "sharp"; contentHash: string };
+
 export interface ImageStore {
   /**
    * Saves a sticker's five PNGs under the content hash of its sticker PNG, its sharp copy when it
@@ -131,6 +137,11 @@ export interface ImageStore {
    * content hash, which it resolves to. Rejects when the sticker's images aren't saved.
    */
   saveVeiled: (contentHash: string) => Promise<string>;
+  /**
+   * Makes a display WebP from its sticker's PNGs on disk unless it's there, once at a time however
+   * many ask for it. Rejects when the PNGs it's made from aren't saved.
+   */
+  makeDisplayWebp: (webp: DisplayWebp) => Promise<void>;
   /** Where they load from. The box serves an NSFW sticker's drawing only to the NSFW opt-in. */
   urls: (contentHash: string) => StickerImages;
   /** What a viewer without the NSFW opt-in gets for an NSFW sticker: `urls` with its veiled image in place. */

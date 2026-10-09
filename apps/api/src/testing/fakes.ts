@@ -50,6 +50,7 @@ export function fakeImageStore() {
       saved.has(contentHash)
         ? Promise.resolve(bytes32(`veiled ${contentHash}`))
         : Promise.reject(new Error(`No images are saved under ${contentHash}`)),
+    makeDisplayWebp: () => Promise.resolve(),
     ...imageUrls("https://box.test/api/images"),
   };
   return { ...store, saved, savedSharp };

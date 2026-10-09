@@ -18,7 +18,7 @@ import { giverNoticeFor, startGiverNoticeSweeps } from "./gifts/giverNotice.ts";
 import { chooseLineVerifier } from "./services/devSignIn.ts";
 import { createFastlyCdn, createFastlyPurge } from "./services/fastly.ts";
 import { createShinamiGasStation } from "./services/gasStation.ts";
-import { createDiskImageStore, writeMissingStickerWebps } from "./services/imageStore.ts";
+import { createDiskImageStore, makeMissingDisplayWebps } from "./services/imageStore.ts";
 import { journalLog } from "./services/journal.ts";
 import { retryKeyFor } from "./services/lineMessaging.ts";
 import { createLineVerifier } from "./services/lineVerifier.ts";
@@ -241,10 +241,14 @@ if (fastly) {
 
 // The WebP files stored stickers lack, such as a display copy under a new name, made from their PNGs
 // on disk, in the background: until each is made, its URL is a 404.
-void writeMissingStickerWebps(
-  env.IMAGE_DIR,
+void makeMissingDisplayWebps(
+  images,
   db
-    .selectDistinct({ contentHash: stickers.contentHash, veiledHash: stickers.veiledHash })
+    .selectDistinct({
+      contentHash: stickers.contentHash,
+      veiledHash: stickers.veiledHash,
+      hasSharpCopy: stickers.hasSharpCopy,
+    })
     .from(stickers)
     .all(),
 );

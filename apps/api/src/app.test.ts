@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { insertUser } from "@drawing-app/db/testing";
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -230,6 +230,22 @@ describe("sticker images", () => {
     for (const url of urlsIn(urls).filter((url) => !drawing.includes(url))) {
       await expectPublic(url);
     }
+  });
+
+  it("make a stored sticker's missing display WebPs from its PNGs as they're asked for", async () => {
+    const { store, contentHash } = await savedImages();
+    insertSealedSticker(test.db, insertUser(test.db), { contentHash, hasSharpCopy: true });
+    const { webp, sharp } = store.urls(contentHash);
+    const files = [webp.sticker, sharp?.webp ?? ""].map((url) => new URL(url).pathname);
+    const made = files.map((path) => readFileSync(join(imageDir, basename(path))));
+    for (const path of files) unlinkSync(join(imageDir, basename(path)));
+    const server = createServer({ ...test.deps, images: store }, imageDir);
+    const answers = await Promise.all(
+      [...files, ...files].map(async (path) =>
+        Buffer.from(await (await server.request(path)).arrayBuffer()),
+      ),
+    );
+    expect(answers).toEqual([...made, ...made]);
   });
 
   it("answer a name with no image with 404, not the session check, and uncached", async () => {
