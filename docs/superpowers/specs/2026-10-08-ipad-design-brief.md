@@ -56,9 +56,8 @@ Below 600×600 the phone layout, with a short-height pass so the size rail and c
 
 ## Plans
 
-Built and merged: Phase 0, foundations, the board and stat board, the Shop and cards, Explore, the drawing screen and the Pencil. Open: the dialogs plan (the seal sheet card, e2e, checks, docs) and the small windows plan (the finish).
+Built and merged: Phase 0, foundations, the board and stat board, the Shop and cards, Explore, the drawing screen and the Pencil. Built and merged too: the dialogs. Open: the small windows plan (the finish).
 
-| Plan                               | Covers                                                                                                       |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `2026-10-08-ipad-dialogs.md`       | the sticker detail, giving, receiving, the Mini-game and its replay, and Explore's lifted sticker on an iPad |
-| `2026-10-08-ipad-small-windows.md` | Split View, LINE's sheet, short heights, the finish                                                          |
+| Plan                               | Covers                                              |
+| ---------------------------------- | --------------------------------------------------- |
+| `2026-10-08-ipad-small-windows.md` | Split View, LINE's sheet, short heights, the finish |
