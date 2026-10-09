@@ -1,6 +1,6 @@
 /** Every finger must lift within this long of the gesture's start… */
 const TAP_MS = 420;
-/** …each having moved less than this. */
+/** …each having moved less than this many CSS px. */
 const TAP_SLOP = 14;
 /** A stroke younger and shorter than this when a second finger lands was the start of a tap. */
 const YOUNG_MS = 260;
@@ -23,7 +23,7 @@ export type TapGesture = "undo" | "redo";
 interface LiveStroke {
   /** ms since it began. */
   age: number;
-  /** px from where it began. */
+  /** CSS px from where it began. */
   moved: number;
 }
 

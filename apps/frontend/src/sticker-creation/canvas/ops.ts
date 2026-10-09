@@ -5,7 +5,7 @@ export type Tool = "brush" | "eraser" | "fill";
 export const STRIDE = 4;
 
 /**
- * One stroke, in sheet pixels. `pts` is flat, `STRIDE` numbers per point: position, width, and ms
+ * One stroke, in sheet units. `pts` is flat, `STRIDE` numbers per point: position, width, and ms
  * since the stroke began. `T` is ms into the session when it began.
  */
 export interface StrokeOp {
@@ -15,7 +15,7 @@ export interface StrokeOp {
   T: number;
 }
 
-/** A fill seeded at a point in sheet pixels, `T` ms into the session. */
+/** A fill seeded at a point in sheet units, `T` ms into the session. */
 export interface FillOp {
   tool: "fill";
   x: number;

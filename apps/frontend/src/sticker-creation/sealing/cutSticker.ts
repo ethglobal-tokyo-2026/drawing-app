@@ -3,7 +3,8 @@
  * worker runs it on OffscreenCanvas; where there's no worker for it, the main thread runs it on canvas
  * elements. Nothing here touches the document, so the worker can import it.
  */
-import { dieCut, type Point } from "./dieCut";
+import { BORDER_UNITS, dieCut, type Point } from "./dieCut";
+import type { Pixels } from "./pixels";
 import { stickerLayers, type Rect } from "./stickerLayers";
 
 export type LayerName = "plain" | "tint" | "gloss" | "shadow" | "mask" | "spec" | "rim";
@@ -17,10 +18,11 @@ interface PngCanvas {
 
 export type MakeCanvas = (width: number, height: number) => PngCanvas;
 
-/** The ink: its pixels to cut from, and the image the flat sheet scales down. */
+/** The ink: its pixels to cut from, the image the flat sheet scales down, and pixels per unit. */
 interface Ink {
   pixels: ImageData;
   image: CanvasImageSource;
+  density: number;
 }
 
 /** The cut sticker. What it shares with SealedSticker means the same there. */
@@ -67,12 +69,21 @@ function outlinePath(points: Point[]): string {
   return `M${kept.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join("L")}Z`;
 }
 
+/**
+ * The die-cut and the sticker's layers from ink backed at `density` pixels per sheet unit, its
+ * white border BORDER_UNITS wide on any device; null when there's no ink to cut.
+ */
+export function cutInk(pixels: Pixels, density: number) {
+  const cut = dieCut(pixels, BORDER_UNITS * density);
+  return cut && { cut, layers: stickerLayers(pixels, cut) };
+}
+
 /** Cuts the sticker from the ink; null when there's no ink to cut. */
 export async function cutSticker(ink: Ink, make: MakeCanvas): Promise<CutSticker | null> {
   const { pixels } = ink;
-  const cut = dieCut(pixels);
-  if (!cut) return null;
-  const layers = stickerLayers(pixels, cut);
+  const inked = cutInk(pixels, ink.density);
+  if (!inked) return null;
+  const { cut, layers } = inked;
   const { width, height, place, bands } = layers;
 
   const contour = cut.contour.map(([x, y]): Point => [

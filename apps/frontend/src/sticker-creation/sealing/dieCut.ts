@@ -39,8 +39,8 @@ export interface DieCut {
 const GRID = 512;
 /** Alpha above which a cell counts as ink. */
 const INK_ALPHA = 18;
-/** The white border, as a share of the ink's long side. */
-const BORDER = 0.03;
+/** The white border's width, in sheet units: what a 390 px phone's sticker has. */
+export const BORDER_UNITS = 23;
 /** Each try dilates a little wider, until the parts join into one piece. */
 const TRIES = [1, 1.5, 2.1];
 /** The closing that rounds the concave corners, as a share of the dilation. */
@@ -235,13 +235,13 @@ function trace(m: Uint8Array, w: number, h: number): Point[] {
   return line;
 }
 
-/** Cuts the ink on a sheet; null when there's no ink to cut. */
-export function dieCut(ink: Pixels): DieCut | null {
+/** Cuts the ink on a sheet, its white border `borderPx` ink px wide; null when there's no ink. */
+export function dieCut(ink: Pixels, borderPx: number): DieCut | null {
   const scale = Math.min(1, GRID / Math.max(ink.width, ink.height));
   const iw = Math.max(1, Math.ceil(ink.width * scale));
   const ih = Math.max(1, Math.ceil(ink.height * scale));
   const long = Math.max(iw, ih);
-  const border = BORDER * long;
+  const border = borderPx * scale;
   // Room for the widest try and the smoothing, so the cut can grow past the sheet's edge.
   const pad = Math.ceil(border * 4.2 + 0.07 * long + 6);
   const width = iw + 2 * pad;

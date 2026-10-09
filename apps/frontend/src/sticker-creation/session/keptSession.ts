@@ -1,23 +1,26 @@
 import { personKey, parseStored, readStored, writeStored } from "../../ui/deviceStorage";
 import { readDealtSubject, type DealtSubject } from "../../kyoto-seika/subjectList";
 import { STRIDE, type Op, type Step } from "../canvas/ops";
+import type { SheetFrame } from "../canvas/sheetFrame";
 
 /*
  * The session in progress, kept on this device for the person signed in, so a reload or logging out
  * and back in doesn't lose it, and wiped once it's over. Each person's is their own: someone else signing in on
  * this device never gets it, and theirs leaves it be. Its steps, the ops and the clears between them,
- * live in IndexedDB, one record per step, so a stroke writes only itself. The ticket the session
- * spent and the time drawn live in localStorage: it writes at once, where an IndexedDB write started
- * as the page unloads never lands, and it can still be read when the steps can't, so a drawing that
- * can't be picked back up can still carry its ticket over to the next sheet.
+ * live in IndexedDB, one record per step, so a stroke writes only itself, with the frame they're
+ * drawn in beside them, in the same transaction. The ticket the session spent and the time drawn
+ * live in localStorage: it writes at once, where an IndexedDB write started as the page unloads
+ * never lands, and it can still be read when the steps can't, so a drawing that can't be picked
+ * back up can still carry its ticket over to the next sheet.
  */
 
 const dbName = (userId: string) => `drawing-session.${userId}`;
 /** The store of steps. Renaming it would take a database upgrade. */
 const OPS = "ops";
 const PROGRESS = "progress";
-/** The progress store holds one record: how many steps are kept. */
+/** The progress store's records: how many steps are kept, and the frame they were drawn in. */
 const PROGRESS_KEY = 0;
+const FRAME_KEY = 1;
 const recordKey = (userId: string) => personKey("draw.session", userId);
 /** A kept drawing whose steps haven't loaded by then carries its ticket over, so Draw never waits on it for good. */
 export const LOAD_TIMEOUT_MS = 5_000;
@@ -56,7 +59,8 @@ interface SessionRecord {
 
 /** What's kept of a drawing that was in progress. */
 export type KeptDrawing =
-  | ({ status: "found"; steps: Step[] } & SessionRecord)
+  /** `frame` is null for a drawing kept without one: it was drawn on this device's own sheet. */
+  | ({ status: "found"; steps: Step[]; frame: SheetFrame | null } & SessionRecord)
   /** What's kept of it can't be read back. */
   | { status: "lost"; ticket: number | null; kyotoSeika: KeptKyotoSeika | null; error: unknown }
   /**
@@ -261,8 +265,8 @@ export class SessionKeeper {
     if (this.ticket !== null && !this.carried) this.keepRecord();
   }
 
-  /** Keeps the time drawn, and any steps that changed since the last save. */
-  save(steps: readonly Step[], elapsedMs: number): void {
+  /** Keeps the time drawn, the steps changed since the last save, and the frame they're in. */
+  save(steps: readonly Step[], elapsedMs: number, frame: SheetFrame | null): void {
     this.elapsedMs = elapsedMs;
     this.carried = false;
     this.keepRecord();
@@ -273,6 +277,7 @@ export class SessionKeeper {
     this.write(from === 0, (stepStore, progressStore) => {
       for (let i = from; i < steps.length; i++) stepStore.put(steps[i], i);
       progressStore.put(steps.length, PROGRESS_KEY);
+      if (frame) progressStore.put(frame, FRAME_KEY);
     });
   }
 
@@ -348,8 +353,8 @@ export async function loadKeptSession(userId: string): Promise<KeptSession> {
       kyotoSeika: null,
       error: new Error("Its record is unreadable"),
     };
-  const read = readSteps(userId).then(
-    (steps): KeptDrawing => ({ status: "found", steps, ...record }),
+  const read = readDrawing(userId).then(
+    ({ steps, frame }): KeptDrawing => ({ status: "found", steps, frame, ...record }),
     (error: unknown): KeptDrawing =>
       error instanceof UnreadableDrawing
         ? { status: "lost", ticket: record.ticket, kyotoSeika: record.kyotoSeika, error }
@@ -370,9 +375,10 @@ export async function loadKeptSession(userId: string): Promise<KeptSession> {
   }));
 }
 
-async function readSteps(userId: string): Promise<Step[]> {
+async function readDrawing(userId: string): Promise<{ steps: Step[]; frame: SheetFrame | null }> {
   let stored: unknown[] = [];
   let count: unknown;
+  let frame: unknown;
   await transact(userId, "readonly", (stepStore, progressStore) => {
     const all = stepStore.getAll();
     all.onsuccess = () => {
@@ -381,6 +387,10 @@ async function readSteps(userId: string): Promise<Step[]> {
     const one = progressStore.get(PROGRESS_KEY);
     one.onsuccess = () => {
       count = one.result;
+    };
+    const drawnIn = progressStore.get(FRAME_KEY);
+    drawnIn.onsuccess = () => {
+      frame = drawnIn.result;
     };
   });
   if (!isCount(count))
@@ -395,7 +405,7 @@ async function readSteps(userId: string): Promise<Step[]> {
     if (!step) throw new UnreadableDrawing(`Step ${steps.length} is unreadable`);
     steps.push(step);
   }
-  return steps;
+  return { steps, frame: readFrame(frame) };
 }
 
 /** `work`'s result, or `late()`'s once `ms` pass without one. `work` must not reject. */
@@ -428,6 +438,22 @@ function readStep(v: unknown): Step | undefined {
   const pts: unknown[] = v.pts;
   if (pts.length % STRIDE !== 0 || !pts.every(isFiniteNumber)) return undefined;
   return { tool, color, pts, T };
+}
+
+const isPositive = (v: unknown): v is number => isFiniteNumber(v) && v > 0;
+
+/**
+ * The frame a kept drawing was drawn in; null when none was kept. One that can't be read is said,
+ * and taken as none: the drawing still comes back, on this device's own sheet.
+ */
+function readFrame(v: unknown): SheetFrame | null {
+  if (v === undefined) return null;
+  if (typeof v === "object" && v !== null && "w" in v && "h" in v && "density" in v) {
+    const { w, h, density } = v;
+    if (isPositive(w) && isPositive(h) && isPositive(density)) return { w, h, density };
+  }
+  console.error("The kept drawing's frame is unreadable, so it opens on this device's sheet:", v);
+  return null;
 }
 
 const isTicketUseId = (v: unknown): v is number =>

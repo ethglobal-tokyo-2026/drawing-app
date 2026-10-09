@@ -3,7 +3,7 @@
  * sheet the display shows, and what a fill changed there. Pure numbers and pixel arrays.
  */
 import type { Pixels } from "../../sticker-creation/canvas/fill";
-import { MAX_DPR } from "../../sticker-creation/canvas/inkSurface";
+import { MAX_DPR, maxInkDensity } from "../../sticker-creation/canvas/sheetFrame";
 import type { DecodedTimelapse } from "../../sticker-creation/sealing/timelapse";
 import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
 
@@ -14,27 +14,31 @@ import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
 export const CAPPED_IMAGE_SIDE = 704;
 
 /**
- * Device pixels per sheet pixel where the sticker was drawn, which its fills flood at: recorded,
- * or read off an image cut at the ink's own resolution, or else the densest screen.
+ * Device pixels per sheet unit where the sticker was drawn, which its fills flood at: recorded, or
+ * read off an image cut at the ink's own resolution, or else the densest screen. A recorded one is
+ * kept up to the densest any sheet that size was backed at, so a replay floods as the drawing did.
  */
 export function drawingDensity(
-  timelapse: Pick<DecodedTimelapse, "density" | "place">,
+  timelapse: Pick<DecodedTimelapse, "density" | "place" | "ink">,
   image: { width: number; height: number },
 ): number {
-  if (timelapse.density !== null) return Math.min(timelapse.density, MAX_DPR);
+  if (timelapse.density !== null) {
+    const most = maxInkDensity({ w: timelapse.ink.width, h: timelapse.ink.height });
+    return Math.min(timelapse.density, Math.max(MAX_DPR, most));
+  }
   const estimate = image.width / timelapse.place.w;
   const inkResolution = Math.max(image.width, image.height) < CAPPED_IMAGE_SIDE;
   return inkResolution && estimate > 0 ? Math.min(estimate, MAX_DPR) : MAX_DPR;
 }
 
-/** The full sheet as its canvas holds it: device px, and device px per sheet px. */
+/** The full sheet as its canvas holds it: device px, and device px per sheet unit. */
 interface SheetCanvas {
   width: number;
   height: number;
   density: number;
 }
 
-/** The display canvas: px, and px per sheet px. */
+/** The display canvas: px, and px per sheet unit. */
 export interface DisplayCanvas {
   width: number;
   height: number;

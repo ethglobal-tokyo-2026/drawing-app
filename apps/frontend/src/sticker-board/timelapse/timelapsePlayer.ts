@@ -1,7 +1,7 @@
 import type { TimelapseV1 } from "@drawing-app/api/client";
 import { notePerformance, timeOurWork } from "../../performance/performanceRecorder";
 import { context2d } from "../../sticker-creation/canvas/context2d";
-import { MAX_DPR } from "../../sticker-creation/canvas/inkSurface";
+import { MAX_DPR } from "../../sticker-creation/canvas/sheetFrame";
 import type { FillOp } from "../../sticker-creation/canvas/ops";
 import { paintStroke } from "../../sticker-creation/canvas/paintStroke";
 import { decodeTimelapse } from "../../sticker-creation/sealing/timelapse";
@@ -71,7 +71,7 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
   const display = displayCanvas(place, options.width, Math.min(devicePixelRatio || 1, MAX_DPR));
   canvas.width = display.width;
   canvas.height = display.height;
-  /** Display px per sheet px. */
+  /** Display px per sheet unit. */
   const { scale } = display;
   const g = context2d(canvas);
   g.setTransform(scale, 0, 0, scale, -place.x * scale, -place.y * scale);

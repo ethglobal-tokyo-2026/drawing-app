@@ -1,10 +1,25 @@
+// @vitest-environment happy-dom
 import { describe, expect, it, vi } from "vitest";
 import { InkEngine, type InkLayer, type InkSettings, type PointerInput } from "./inkEngine";
-import { STRIDE, type FillOp, type Op } from "./ops";
+import { STRIDE, type FillOp, type Op, type StrokeOp } from "./ops";
+import {
+  areaFrame,
+  frameFor,
+  SHEET_SHORT_UNITS,
+  type SheetArea,
+  type SheetFrame,
+} from "./sheetFrame";
 
 /** Records what reaches the ink; the pixels themselves are the surface's business. */
 class FakeLayer implements InkLayer {
   paints = 0;
+  /** Every frame the ink was sized to, and how often it was blanked to be rebuilt. */
+  frames: SheetFrame[] = [];
+  restores = 0;
+  setFrame(frame: SheetFrame) {
+    this.frames.push(frame);
+    return true;
+  }
   paint() {
     this.paints++;
   }
@@ -12,7 +27,9 @@ class FakeLayer implements InkLayer {
     return true;
   }
   apply() {}
-  restore() {}
+  restore() {
+    this.restores++;
+  }
   snapshot() {
     return null;
   }
@@ -21,6 +38,13 @@ class FakeLayer implements InkLayer {
     return 1;
   }
 }
+
+/** The sheet's room on screen: a sheet that fits it exactly shows at scale 1. */
+const AREA: SheetArea = { width: SHEET_SHORT_UNITS, height: SHEET_SHORT_UNITS * 2 };
+/** The same room with the screen turned. */
+const TURNED: SheetArea = { width: AREA.height, height: AREA.width };
+/** A stroke kept from before a reload. */
+const KEPT: StrokeOp = { tool: "brush", color: "#1C1824", pts: [10, 10, 7, 0], T: 0 };
 
 const SETTINGS: InkSettings = {
   tool: "brush",
@@ -48,6 +72,7 @@ function setup(settings: Partial<InkSettings> = {}) {
     frame = cb;
     return () => (frame = null);
   });
+  engine.fit(AREA, 1);
   const at = (pointerType: string, pointerId: number, x: number, y: number, t: number) =>
     ({
       pointerId,
@@ -59,6 +84,12 @@ function setup(settings: Partial<InkSettings> = {}) {
       timeStamp: t,
       preventDefault() {},
     }) satisfies PointerInput;
+  /** Runs the animation frame the engine asked for, if it asked. */
+  const runFrame = () => {
+    const run = frame;
+    frame = null;
+    run?.();
+  };
   /** A pointer landing at `from`, moving in 10px steps 16ms apart, and lifting at `to`. */
   const stroke = (
     pointerType: string,
@@ -73,11 +104,22 @@ function setup(settings: Partial<InkSettings> = {}) {
       const x = from[0] + ((to[0] - from[0]) * i) / steps;
       const y = from[1] + ((to[1] - from[1]) * i) / steps;
       engine.move(at(pointerType, id, x, y, t0 + i * 16));
-      const run = frame;
-      frame = null;
-      run?.();
+      runFrame();
     }
     engine.up(at(pointerType, id, to[0], to[1], t0 + steps * 16 + 16));
+  };
+  /** A pointer landing on the first point, through the rest 16ms apart, lifting on the last. */
+  const trace = (pointerType: string, id: number, points: [number, number][]) => {
+    points.forEach(([x, y], i) => {
+      const sample = at(pointerType, id, x, y, i * 16);
+      if (i === 0) engine.down(sample);
+      else {
+        engine.move(sample);
+        runFrame();
+      }
+    });
+    const [x, y] = points[points.length - 1];
+    engine.up(at(pointerType, id, x, y, points.length * 16));
   };
   /** Fingers landing together at `t`, 60px apart, and lifting 100ms later. */
   const tap = (fingers: number, t: number) => {
@@ -86,7 +128,21 @@ function setup(settings: Partial<InkSettings> = {}) {
     for (let id = 1; id <= fingers; id++) engine.up(at("touch", 100 + id, id * 60, 300, t + 100));
   };
   const committed = () => events.onCommit.mock.calls.map(([op]) => op);
-  return { engine, layer, events, at, stroke, tap, committed };
+  return { engine, layer, events, at, trace, stroke, tap, committed };
+}
+
+/** The engine's frame, which every sheet here has from the start. */
+function framed(engine: InkEngine): SheetFrame {
+  const { frame } = engine;
+  if (!frame) throw new Error("The sheet has no frame");
+  return frame;
+}
+
+/** Paper at `left`, `top`, `scale` CSS px to the unit, as the drawing screen shows it. */
+function paperAt(frame: SheetFrame, left: number, top: number, scale: number) {
+  const paper = document.createElement("div");
+  paper.getBoundingClientRect = () => new DOMRect(left, top, frame.w * scale, frame.h * scale);
+  return paper;
 }
 
 const lastPoint = (op: Op) => {
@@ -226,5 +282,72 @@ describe("InkEngine", () => {
     expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false, false));
     engine.undo();
     expect(engine.ops).toHaveLength(2);
+  });
+
+  it("measures a stroke in sheet units, whatever size the sheet is shown at", () => {
+    /** A pen stroke along the same units, on paper shown `scale` CSS px to the unit. */
+    const drawnAt = (scale: number) => {
+      const { engine, trace, committed } = setup();
+      const [left, top] = [30, 40];
+      const detach = engine.attach(paperAt(framed(engine), left, top, scale));
+      trace(
+        "pen",
+        1,
+        Array.from({ length: 11 }, (_, i) => [left + (20 + 10 * i) * scale, top + 50 * scale]),
+      );
+      detach();
+      return committed();
+    };
+    const ops = drawnAt(1);
+    expect(ops.map(lastPoint)).toEqual([[120, 50]]);
+    expect(drawnAt(2.5)).toEqual(ops);
+  });
+
+  it("lets a blank sheet's frame follow its area until the first mark, and again after a reset", () => {
+    const { engine, stroke } = setup();
+    engine.fit(TURNED, 1);
+    expect(engine.frame).toEqual(frameFor(TURNED, 1));
+    stroke("mouse", 1, [0, 0], [100, 0]);
+    engine.fit(AREA, 1);
+    expect(engine.frame).toEqual(frameFor(TURNED, 1));
+    engine.reset();
+    engine.fit(AREA, 1);
+    expect(engine.frame).toEqual(frameFor(AREA, 1));
+  });
+
+  it("keeps a drawing's frame through any change of size, so nothing clears or replays", () => {
+    const { engine, layer, stroke } = setup();
+    stroke("mouse", 1, [0, 0], [100, 0]);
+    const frame = engine.frame;
+    const [sized, rebuilt] = [layer.frames.length, layer.restores];
+    engine.fit(TURNED, 2);
+    engine.fit({ width: AREA.width / 2, height: AREA.height / 2 }, 1);
+    expect(engine.frame).toBe(frame);
+    expect([layer.frames.length, layer.restores]).toEqual([sized, rebuilt]);
+    expect(engine.ops).toHaveLength(1);
+  });
+
+  it("puts a kept drawing back in its own frame, and one kept without a frame in its area", () => {
+    const { engine } = setup();
+    const own = frameFor(TURNED, 2);
+    engine.load([KEPT], own);
+    engine.fit(AREA, 1);
+    expect(engine.frame).toBe(own);
+
+    const area = { width: AREA.width * 1.5, height: AREA.height };
+    engine.load([KEPT], null);
+    engine.fit(area, 2);
+    engine.fit(AREA, 1);
+    expect(engine.frame).toEqual(areaFrame(area, 2));
+    expect(engine.ops).toEqual([KEPT]);
+  });
+
+  it("gives a drawing kept without a frame none until its area is measured, so a save can't keep a blank sheet's", () => {
+    const { engine } = setup();
+    // The blank sheet that showed before the drawing was put back.
+    expect(engine.frame).toEqual(frameFor(AREA, 1));
+    engine.load([KEPT], null);
+    // What the drawing screen's next save keeps with the steps.
+    expect(engine.frame).toBeNull();
   });
 });

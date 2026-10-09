@@ -1,8 +1,17 @@
-/* The sheet: white paper with thin Liner margins, so a swipe in from the screen's edge never starts a
-   stroke. The ink canvas over it is transparent; the paper is this element. */
-.ink-sheet {
+/* The room the drawing screen gives the sheet, inside thin Liner margins, so a swipe in from the
+   screen's edge never starts a stroke. The sheet sits in its middle, scaled to fit. */
+.ink-area {
   position: absolute;
   inset: 8px 8px 14px;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+}
+
+/* The sheet: white paper in its frame's shape, which DrawingCanvas sizes to fit the area. The ink
+   canvas over it is transparent; the paper is this element. */
+.ink-sheet {
+  position: relative;
   background: var(--canvas);
   border-radius: 3px;
   box-shadow:

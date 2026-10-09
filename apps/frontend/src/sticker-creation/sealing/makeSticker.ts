@@ -73,7 +73,7 @@ const workerCanCut = () =>
 class WorkerDidNotStart extends Error {}
 
 /** The cut in the sealing worker: this thread only snapshots the ink and hands it over. */
-async function cutInWorker(ink: HTMLCanvasElement): Promise<CutSticker | null> {
+async function cutInWorker(ink: HTMLCanvasElement, density: number): Promise<CutSticker | null> {
   const image = await createImageBitmap(ink);
   // A worker per seal, stopped once it answers, fails or times out, so none sits holding memory.
   const worker = new Worker(new URL("./sealWorker.ts", import.meta.url), { type: "module" });
@@ -102,7 +102,7 @@ async function cutInWorker(ink: HTMLCanvasElement): Promise<CutSticker | null> {
           ),
         WORKER_TIMEOUT_MS,
       );
-      const request: SealRequest = { ink: image };
+      const request: SealRequest = { ink: image, density };
       worker.postMessage(request, [image]);
     });
   } finally {
@@ -112,14 +112,14 @@ async function cutInWorker(ink: HTMLCanvasElement): Promise<CutSticker | null> {
 }
 
 /** The cut on this thread, where the sealing worker can't run. */
-function cutHere(ink: HTMLCanvasElement): Promise<CutSticker | null> {
+function cutHere(ink: HTMLCanvasElement, density: number): Promise<CutSticker | null> {
   const pixels = context2d(ink, { willReadFrequently: true }).getImageData(
     0,
     0,
     ink.width,
     ink.height,
   );
-  return cutSticker({ pixels, image: ink }, elementCanvas);
+  return cutSticker({ pixels, image: ink, density }, elementCanvas);
 }
 
 /**
@@ -127,23 +127,29 @@ function cutHere(ink: HTMLCanvasElement): Promise<CutSticker | null> {
  * since before a deploy asks for the old build's worker, which the deploy removed. The seal goes on
  * rather than failing, and the console says why it held the screen.
  */
-async function cutInWorkerOrHere(ink: HTMLCanvasElement): Promise<CutSticker | null> {
+async function cutInWorkerOrHere(
+  ink: HTMLCanvasElement,
+  density: number,
+): Promise<CutSticker | null> {
   try {
-    return await cutInWorker(ink);
+    return await cutInWorker(ink, density);
   } catch (error) {
     if (!(error instanceof WorkerDidNotStart)) throw error;
     console.error("The sticker is cut on the main thread instead", error);
-    return cutHere(ink);
+    return cutHere(ink, density);
   }
 }
 
 /**
- * Cuts the sticker from a copy of the ink made for reading, which is read back once. Null when
- * there's no ink on it. The cut runs in the sealing worker where the browser can, so the screen
- * keeps moving.
+ * Cuts the sticker from a copy of the ink made for reading, `density` pixels to the sheet unit,
+ * which is read back once. Null when there's no ink on it. The cut runs in the sealing worker where
+ * the browser can, so the screen keeps moving.
  */
-export async function makeSticker(ink: HTMLCanvasElement): Promise<SealedSticker | null> {
-  const cut = workerCanCut() ? await cutInWorkerOrHere(ink) : await cutHere(ink);
+export async function makeSticker(
+  ink: HTMLCanvasElement,
+  density: number,
+): Promise<SealedSticker | null> {
+  const cut = workerCanCut() ? await cutInWorkerOrHere(ink, density) : await cutHere(ink, density);
   if (!cut) return null;
   const { width, height, layers } = cut;
   const { canvas: maskImage, g } = blankCanvas(width, height);

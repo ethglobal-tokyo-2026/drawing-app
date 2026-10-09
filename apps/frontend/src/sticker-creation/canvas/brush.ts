@@ -1,10 +1,13 @@
 import { clamp } from "../../ui/easing";
 import { STRIDE, type StrokeOp } from "./ops";
 
-/** The size rail's value (0–1) as a width in px, squared so the fine sizes get most of the travel. */
+/**
+ * The size rail's value (0–1) as a width in sheet units, the px the rail shows, squared so the
+ * fine sizes get most of the travel.
+ */
 export const sizePx = (value: number) => 1.5 + 46.5 * value * value;
 
-/** Points closer than this to the last one add cost and nothing else. */
+/** Points closer than this many sheet units to the last one add cost and nothing else. */
 const MIN_STEP = 0.5;
 /** A stroke starts as a dot this fraction of the size, then widens by `TAPER_STEP` a point. */
 const FIRST_DOT = 0.6;
@@ -20,7 +23,7 @@ function widthFactor(pressure: number, pointerType: string, speed: number): numb
 interface StrokeStart {
   tool: StrokeOp["tool"];
   color: string;
-  /** Width in px. */
+  /** Width in sheet units. */
   size: number;
   x: number;
   y: number;
@@ -52,7 +55,7 @@ export class StrokeBuilder {
     return this.op.pts.length / STRIDE;
   }
 
-  /** Adds a point unless it's within half a pixel of the last one; says whether it did. */
+  /** Adds a point unless it's within half a unit of the last one; says whether it did. */
   add(x: number, y: number, pressure: number, pointerType: string, t: number): boolean {
     const { pts, tool } = this.op;
     const n = this.count;

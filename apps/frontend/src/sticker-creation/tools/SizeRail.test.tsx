@@ -2,6 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { sizePx } from "../canvas/brush";
 import { SizeRail } from "./SizeRail";
 
 declare global {
@@ -10,6 +11,8 @@ declare global {
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const VALUE = 0.5;
+/** CSS px per sheet unit, as on an iPad. */
+const SCALE = 2;
 let host: HTMLDivElement;
 let root: Root;
 const onChange = vi.fn<(value: number) => void>();
@@ -47,7 +50,14 @@ beforeEach(() => {
   onHold.mockReset();
   act(() =>
     root.render(
-      <SizeRail value={VALUE} eraser={false} active={false} onChange={onChange} onHold={onHold} />,
+      <SizeRail
+        value={VALUE}
+        eraser={false}
+        active={false}
+        scale={SCALE}
+        onChange={onChange}
+        onHold={onHold}
+      />,
     ),
   );
   rail().getBoundingClientRect = () => new DOMRect(0, 104, 40, 222);
@@ -71,6 +81,15 @@ describe("SizeRail", () => {
     dragThumb(200, 190, 180);
     expect(onHold.mock.calls).toEqual([[true], [false]]);
     expect(onChange).toHaveBeenCalledOnce();
+  });
+
+  it("shows the ghost at the size the brush draws on the sheet as it's shown", () => {
+    const ghost = () =>
+      host.querySelector<HTMLElement>(".size-ghost")?.style.getPropertyValue("--d");
+    expect(ghost()).toBe(`${sizePx(VALUE) * SCALE}px`);
+    dragThumb(205, 180);
+    const [[dragged]] = onChange.mock.calls;
+    expect(ghost()).toBe(`${sizePx(dragged) * SCALE}px`);
   });
 
   it("moves the thumb with the finger from where it took hold, and never past the ends", () => {

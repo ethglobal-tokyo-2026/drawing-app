@@ -4,6 +4,9 @@ import type { Pixels } from "./pixels";
 
 type Shape = (x: number, y: number) => boolean;
 
+/** The white border on these small sheets, in ink pixels. */
+const BORDER = 6;
+
 /** A transparent sheet with opaque ink wherever `inked` says. */
 function sheet(width: number, height: number, inked: Shape, alpha = 255): Pixels {
   const data = new Uint8ClampedArray(width * height * 4);
@@ -27,7 +30,7 @@ const union =
     shapes.some((s) => s(x, y));
 
 function cutOf(ink: Pixels): DieCut {
-  const cut = dieCut(ink);
+  const cut = dieCut(ink, BORDER);
   if (!cut) throw new Error("expected a cut");
   return cut;
 }
@@ -53,8 +56,10 @@ function holdsAllInk(cut: DieCut, ink: Pixels) {
 
 describe("dieCut", () => {
   it("finds nothing to cut on a blank sheet, or one with only ink too faint to show", () => {
-    expect(dieCut(sheet(80, 60, () => false))).toBeNull();
-    expect(dieCut(sheet(80, 60, disk(40, 30, 10), 12))).toBeNull();
+    const blank = sheet(80, 60, () => false);
+    const faint = sheet(80, 60, disk(40, 30, 10), 12);
+    expect(dieCut(blank, BORDER)).toBeNull();
+    expect(dieCut(faint, BORDER)).toBeNull();
   });
 
   it("cuts the same shape wherever the ink sits on the sheet", () => {

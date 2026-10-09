@@ -6,14 +6,13 @@ import { floodSheet } from "./fill";
 import type { Surface } from "./history";
 import type { FillOp, Op, StrokeOp } from "./ops";
 import { paintStroke } from "./paintStroke";
+import type { SheetFrame } from "./sheetFrame";
 
-/** Past this density a sharper canvas costs memory and shows nothing more. */
-export const MAX_DPR = 3;
 /** A fill reads, floods and rewrites pixels, far more work than painting a stroke. */
 const FILL_COST = 24;
 /**
- * Sheet px on a side of the square a fill reads first, around its seed: room for a shape drawn to be
- * filled. A region reaching past it costs one more read, of the whole sheet.
+ * Sheet units on a side of the square a fill reads first, around its seed: room for a shape drawn to
+ * be filled. A region reaching past it costs one more read, of the whole sheet.
  */
 const FILL_NEAR = 160;
 
@@ -35,8 +34,8 @@ function copyOf(source: HTMLCanvasElement, box: Rect, settings?: CanvasRendering
 }
 
 /**
- * The ink: a transparent canvas over the white paper, drawn in sheet pixels and backed at the
- * screen's density. It's painted every frame, so it's never read back itself: fills and the seal read
+ * The ink: a transparent canvas over the white paper, drawn in sheet units and backed at its
+ * frame's density. It's painted every frame, so it's never read back itself: fills and the seal read
  * a copy made for reading, which keeps this one on the GPU.
  */
 export class InkSurface implements Surface<HTMLCanvasElement> {
@@ -49,21 +48,21 @@ export class InkSurface implements Surface<HTMLCanvasElement> {
     this.ctx = context2d(canvas);
   }
 
-  /** Device pixels per sheet pixel. */
+  /** Device pixels per sheet unit. */
   get density(): number {
     return this.dpr;
   }
 
-  /** Sizes the canvas to the sheet, which clears it; says whether the size changed. */
-  resize(width: number, height: number, devicePixelRatio: number): boolean {
-    const dpr = Math.min(devicePixelRatio || 1, MAX_DPR);
-    const w = Math.max(1, Math.round(width * dpr));
-    const h = Math.max(1, Math.round(height * dpr));
-    if (w === this.canvas.width && h === this.canvas.height && dpr === this.dpr) return false;
-    this.dpr = dpr;
-    this.canvas.width = w;
-    this.canvas.height = h;
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  /** Sizes the canvas to the frame, which clears it; says whether its size changed. */
+  setFrame({ w, h, density }: SheetFrame): boolean {
+    const width = Math.max(1, Math.round(w * density));
+    const height = Math.max(1, Math.round(h * density));
+    if (width === this.canvas.width && height === this.canvas.height && density === this.dpr)
+      return false;
+    this.dpr = density;
+    this.canvas.width = width;
+    this.canvas.height = height;
+    this.ctx.setTransform(density, 0, 0, density, 0, 0);
     return true;
   }
 

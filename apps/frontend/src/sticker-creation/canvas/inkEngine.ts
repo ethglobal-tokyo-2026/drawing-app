@@ -3,18 +3,21 @@ import { TapRecognizer } from "./gestures";
 import { History, type Surface } from "./history";
 import { LazyBrush } from "./lazyBrush";
 import type { FillOp, Op, Step, StrokeOp, Tool } from "./ops";
+import { areaFrame, frameFor, type SheetArea, type SheetFrame } from "./sheetFrame";
 
-/** A fill takes a tap: a pointer that lifts within this many px of where it landed. */
+/** A fill takes a tap: a pointer that lifts within this many sheet units of where it landed. */
 const TAP_SLOP = 10;
-/** A touch on a paused sheet that drags this far gets the paused hint without waiting to lift. */
+/** A touch on a paused sheet that drags this many CSS px gets the paused hint before it lifts. */
 const BLOCKED_DRAG = 8;
-/** When the browser takes a pointer away mid-stroke, the stroke stays if it had gone this far. */
+/** When the browser takes a pointer mid-stroke, the stroke stays if it had gone this many units. */
 const CANCEL_KEEPS = 4;
 /** The catch-up on lift moves like a steady hand, so its width follows the same speed model. */
 const CATCH_UP_MS = 8;
 
 /** What the engine paints on: the ink canvas in the app, a record of calls in tests. */
 export interface InkLayer extends Surface<unknown> {
+  /** Sizes the ink to a frame, which clears it; says whether its size changed. */
+  setFrame: (frame: SheetFrame) => boolean;
   /** Paints points [from, to) of a stroke in progress. */
   paint: (op: StrokeOp, from: number, to: number) => void;
   /** Floods from the op's point; false when nothing changed. */
@@ -25,9 +28,9 @@ export interface InkLayer extends Surface<unknown> {
 export interface InkSettings {
   tool: Tool;
   color: string;
-  /** Brush or eraser width, in px. */
+  /** Brush or eraser width, in sheet units. */
   size: number;
-  /** How far the brush trails the finger, in px. */
+  /** How far the brush trails the finger, in sheet units. */
   lazyRadius: number;
   /** No input at all: sealing, sealed, or the ticket card is up. */
   locked: boolean;
@@ -72,6 +75,13 @@ export interface PointerInput {
   preventDefault: () => void;
 }
 
+/** Where the sheet's paper is on screen, in CSS px. */
+interface PaperRect {
+  left: number;
+  top: number;
+  width: number;
+}
+
 /** Asks for one animation frame; returns a function that withdraws the request. */
 export type RequestFrame = (frame: () => void) => () => void;
 
@@ -93,7 +103,7 @@ interface LiveStroke {
   t0: number;
   x0: number;
   y0: number;
-  /** The furthest it has gone from where it landed, in px. */
+  /** The furthest it has gone from where it landed, in sheet units. */
   moved: number;
   /** The latest sample: where the stroke ends if the pointer lifts now. */
   x: number;
@@ -107,6 +117,9 @@ interface LiveStroke {
  * feeds them through the lazy brush and the width model and paints just the new segments. It never
  * touches React: it reads `settings` as pointers land and reports through `events`.
  *
+ * Ink is in sheet units: a pointer's offset on the paper over the CSS px a unit spans there. The
+ * sheet's frame follows its area while the sheet is blank, and is fixed from the first mark.
+ *
  * Touch: two fingers tap to undo, three to redo, and a second finger landing early takes back the
  * first one's stroke. Once a pen has drawn, fingers only tap, and a finger stroke a pen interrupts
  * was a resting palm.
@@ -119,7 +132,7 @@ export class InkEngine {
   private readonly requestFrame: RequestFrame;
   private readonly taps = new TapRecognizer();
   private live: LiveStroke | null = null;
-  private fillTap: { id: number; x: number; y: number; cx: number; cy: number } | null = null;
+  private fillTap: { id: number; x: number; y: number } | null = null;
   /** Pointers that closed a panel or met a paused sheet: they do nothing more until they lift. */
   private readonly swallowed = new Set<number>();
   /** A touch on a paused sheet, waiting a beat before the hint in case a second finger makes a tap. */
@@ -128,8 +141,16 @@ export class InkEngine {
   /** Every finger left the screen: the next touch to land is the only one down. */
   private fingersGone = false;
   private cancelFrame: (() => void) | null = null;
-  private locate: () => { left: number; top: number } = () => ({ left: 0, top: 0 });
-  private origin = { left: 0, top: 0 };
+  /** The sheet's frame; null until its area is measured or a kept drawing brings one. */
+  private sheet: SheetFrame | null = null;
+  /**
+   * How the frame is decided at the next measure: it follows the area while the sheet is blank,
+   * takes the area itself for a drawing kept without one, and stays once the drawing has marks.
+   */
+  private frameRule: "follows" | "area" | "fixed" = "follows";
+  private locate: () => PaperRect = () => ({ left: 0, top: 0, width: this.sheet?.w ?? 1 });
+  /** Where the paper was and how many CSS px a unit spanned there, as the pointer landed. */
+  private origin = { left: 0, top: 0, scale: 1 };
 
   constructor(
     layer: InkLayer,
@@ -207,7 +228,7 @@ export class InkEngine {
   down(e: PointerInput): void {
     const s = this.settings;
     const { pointerId: id, pointerType } = e;
-    if (s.locked || (pointerType === "mouse" && e.button !== 0)) return;
+    if (s.locked || !this.sheet || (pointerType === "mouse" && e.button !== 0)) return;
     // Pointer ids come back; one that lifted where we couldn't see it starts over.
     this.swallowed.delete(id);
     if (s.armed) this.events.onDisarm();
@@ -215,12 +236,15 @@ export class InkEngine {
       if (this.fingersGone) this.forgetTouches();
       if (this.live?.pointerType === "pen") return;
       const stroke = this.live?.pointerType === "touch" ? this.live : null;
+      // The tap recognizer judges fingers on the glass, so the stroke's reach goes to it in CSS px.
       const result = this.taps.down(
         id,
         e.clientX,
         e.clientY,
         e.timeStamp,
-        stroke ? { age: e.timeStamp - stroke.t0, moved: stroke.moved } : undefined,
+        stroke
+          ? { age: e.timeStamp - stroke.t0, moved: stroke.moved * this.origin.scale }
+          : undefined,
       );
       if (result === "cancel-stroke") this.endStroke(true);
       if (result === "cancel-stroke" || result === "gesture") {
@@ -246,9 +270,9 @@ export class InkEngine {
       else this.events.onBlocked();
       return;
     }
-    this.origin = this.locate();
+    this.origin = this.place();
     const [x, y] = this.toSheet(e);
-    if (s.tool === "fill") this.fillTap = { id, x, y, cx: e.clientX, cy: e.clientY };
+    if (s.tool === "fill") this.fillTap = { id, x, y };
     else this.beginStroke(e, x, y);
   }
 
@@ -328,26 +352,63 @@ export class InkEngine {
     return this.history.steps;
   }
 
-  /** A fresh sheet: no ink, nothing to undo or redo. */
-  reset(): void {
-    this.load([]);
+  /**
+   * The sheet's size in units and its ink's density; null until its area is measured or a kept
+   * drawing brings one.
+   */
+  get frame(): SheetFrame | null {
+    return this.sheet;
   }
 
-  /** A sheet with these steps on it and nothing to redo, as a drawing picked up after a reload has. */
-  load(steps: readonly Step[]): void {
+  /**
+   * The sheet's area was measured on screen, in CSS px. A blank sheet's frame follows it, and a
+   * drawing kept without a frame takes it as its own. A drawing with marks keeps its frame: the
+   * paper only rescales, so nothing clears or replays.
+   */
+  fit(area: SheetArea, devicePixelRatio: number): void {
+    if (this.frameRule === "fixed") return;
+    if (this.frameRule === "follows") {
+      this.useFrame(frameFor(area, devicePixelRatio));
+      return;
+    }
+    this.frameRule = "fixed";
+    this.useFrame(areaFrame(area, devicePixelRatio));
+  }
+
+  /** Where a point on screen falls on the sheet, in units; null until the sheet has a frame. */
+  screenToSheet(clientX: number, clientY: number): [x: number, y: number] | null {
+    if (!this.sheet) return null;
+    const { left, top, scale } = this.place();
+    return [(clientX - left) / scale, (clientY - top) / scale];
+  }
+
+  /** A fresh sheet: no ink, nothing to undo or redo, its frame following its area again. */
+  reset(): void {
+    this.load([], null);
+  }
+
+  /**
+   * A sheet with these steps on it and nothing to redo, as a drawing picked up after a reload has,
+   * in the frame it was drawn in. A drawing kept without a frame has none until the next measure
+   * takes its area as its frame, so a save can't keep the last sheet's with it; with no steps, the
+   * frame follows the area.
+   */
+  load(steps: readonly Step[], frame: SheetFrame | null): void {
     this.endStroke(true);
     this.fillTap = null;
     this.blocked = null;
     this.swallowed.clear();
     this.taps.clear();
+    if (steps.length === 0) this.frameRule = "follows";
+    else if (frame) {
+      this.frameRule = "fixed";
+      this.useFrame(frame);
+    } else {
+      this.frameRule = "area";
+      this.sheet = null;
+    }
     this.history.load(steps);
     this.notifyHistory();
-  }
-
-  /** The layer was resized, which cleared it: every op goes back on. */
-  resized(): void {
-    this.history.invalidate();
-    if (this.live) this.layer.paint(this.live.builder.op, 0, this.live.painted);
   }
 
   /** The sheet is going: its undo snapshots are freed now rather than when they're collected. */
@@ -377,8 +438,27 @@ export class InkEngine {
     );
   }
 
+  /** Sizes the ink to a new frame; sized afresh, it clears, so what was on it goes back on. */
+  private useFrame(frame: SheetFrame): void {
+    const was = this.sheet;
+    if (was?.w === frame.w && was.h === frame.h && was.density === frame.density) return;
+    this.sheet = frame;
+    if (this.layer.setFrame(frame)) this.history.invalidate();
+  }
+
+  /** Where the paper is now, and how many CSS px a unit spans on it. */
+  private place(): { left: number; top: number; scale: number } {
+    const paper = this.locate();
+    return {
+      left: paper.left,
+      top: paper.top,
+      scale: paper.width / (this.sheet?.w ?? paper.width),
+    };
+  }
+
   private toSheet(e: PointerInput): [number, number] {
-    return [e.clientX - this.origin.left, e.clientY - this.origin.top];
+    const { left, top, scale } = this.origin;
+    return [(e.clientX - left) / scale, (e.clientY - top) / scale];
   }
 
   private lift(e: PointerInput, cancelled: boolean): void {
@@ -404,8 +484,8 @@ export class InkEngine {
     const tap = this.fillTap;
     if (tap?.id === id) {
       this.fillTap = null;
-      if (!cancelled && Math.hypot(e.clientX - tap.cx, e.clientY - tap.cy) < TAP_SLOP)
-        this.applyFill(tap.x, tap.y);
+      const [x, y] = this.toSheet(e);
+      if (!cancelled && Math.hypot(x - tap.x, y - tap.y) < TAP_SLOP) this.applyFill(tap.x, tap.y);
       return;
     }
     const live = this.live;
@@ -416,6 +496,8 @@ export class InkEngine {
 
   private beginStroke(e: PointerInput, x: number, y: number): void {
     const s = this.settings;
+    // The first mark fixes the frame for the life of the drawing.
+    this.frameRule = "fixed";
     const builder = new StrokeBuilder({
       tool: s.tool === "eraser" ? "eraser" : "brush",
       color: s.color,
@@ -494,6 +576,7 @@ export class InkEngine {
       T: this.settings.sessionMs(),
     };
     if (!this.layer.fill(op)) return;
+    this.frameRule = "fixed";
     this.history.commit(op);
     this.events.onCommit(op);
     this.notifyHistory();

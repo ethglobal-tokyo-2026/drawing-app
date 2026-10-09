@@ -5,9 +5,10 @@
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { cutSticker, type CutSticker, type MakeCanvas } from "./cutSticker";
 
-/** The ink to cut, handed over rather than copied. */
+/** The ink to cut, handed over rather than copied, and its pixels per sheet unit. */
 export interface SealRequest {
   ink: ImageBitmap;
+  density: number;
 }
 
 /** The cut, null when the ink was empty, or what went wrong. */
@@ -42,9 +43,9 @@ function pixelsOf(ink: ImageBitmap): ImageData {
   return pixels;
 }
 
-async function answer(ink: ImageBitmap) {
+async function answer({ ink, density }: SealRequest) {
   try {
-    const cut = await cutSticker({ pixels: pixelsOf(ink), image: ink }, offscreenCanvas);
+    const cut = await cutSticker({ pixels: pixelsOf(ink), image: ink, density }, offscreenCanvas);
     self.postMessage({ ok: true, cut }, cut ? [cut.maskPixels.buffer] : []);
   } catch (error) {
     self.postMessage(
@@ -56,4 +57,4 @@ async function answer(ink: ImageBitmap) {
   }
 }
 
-self.onmessage = ({ data }) => void answer(data.ink);
+self.onmessage = ({ data }) => void answer(data);

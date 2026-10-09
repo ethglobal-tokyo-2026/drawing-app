@@ -19,12 +19,15 @@ const thumbCenter = (value: number, height: number) =>
 const sizeAt = (center: number, height: number) =>
   clamp01(1 - (center - THUMB_TOP) / (height - THUMB_TOP - THUMB_BOTTOM));
 
-/** The size as CSS draws it: the thumb's place, the tip's dot, the ghost's width and the px label. */
-function sizeStyle(value: number): CSSProperties {
+/**
+ * The size as CSS draws it: the thumb's place, the tip's dot, the px label, and the ghost's width,
+ * the size the brush draws at on the sheet as it's shown, `scale` CSS px to the unit.
+ */
+function sizeStyle(value: number, scale: number): CSSProperties {
   const px = sizePx(value);
   return {
     "--v": value,
-    "--d": `${px}px`,
+    "--d": `${px * scale}px`,
     "--tip": `${Math.min(24, Math.max(5, px))}px`,
     "--px": Math.round(px),
   };
@@ -36,16 +39,18 @@ interface Props {
   eraser: boolean;
   /** A finger is on the rail: it lifts and the size shows mid-sheet. */
   active: boolean;
+  /** How many CSS px a sheet unit spans on screen. */
+  scale: number;
   onChange: (value: number) => void;
   onHold: (holding: boolean) => void;
 }
 
 /**
- * The size rail: a groove down the left edge, a thumb that is the brush tip itself, and the size in px
- * at its foot. While a finger is on it, a ghost of the tip shows mid-sheet at its real size. Only the
- * thumb takes a finger, so a stroke that starts beside it is a stroke.
+ * The size rail: a groove down the left edge, a thumb that is the brush tip itself, and the size
+ * in sheet units, shown as px, at its foot. While a finger is on it, a ghost of the tip shows
+ * mid-sheet at the size it draws. Only the thumb takes a finger, so a stroke beside it is a stroke.
  */
-export function SizeRail({ value, eraser, active, onChange, onHold }: Props) {
+export function SizeRail({ value, eraser, active, scale, onChange, onHold }: Props) {
   const { t } = useTranslation();
   const rail = useRef<HTMLDivElement>(null);
   const ghost = useRef<HTMLDivElement>(null);
@@ -67,7 +72,7 @@ export function SizeRail({ value, eraser, active, onChange, onHold }: Props) {
       if (!box) return;
       dragged.current = sizeAt(y - grabbed.current - box.top, box.height);
       for (const el of [rail.current, ghost.current])
-        for (const [name, v] of Object.entries(sizeStyle(dragged.current)))
+        for (const [name, v] of Object.entries(sizeStyle(dragged.current, scale)))
           el?.style.setProperty(name, String(v));
     },
     onEnd: () => {
@@ -84,7 +89,7 @@ export function SizeRail({ value, eraser, active, onChange, onHold }: Props) {
   };
 
   const px = Math.round(sizePx(value));
-  const style = sizeStyle(value);
+  const style = sizeStyle(value, scale);
   return (
     <>
       <div

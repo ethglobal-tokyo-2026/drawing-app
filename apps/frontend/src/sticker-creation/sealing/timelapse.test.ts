@@ -12,23 +12,22 @@ const stroke: Op = {
 const eraser: Op = { tool: "eraser", color: "#ffffff", T: 5000, pts: [3, 4, 12, 0] };
 const fill: Op = { tool: "fill", color: "#00ff00", T: 9000.4, x: 30.26, y: 40 };
 
-/** The sheet at twice the density: the ink canvas and the sticker's place are in device pixels. */
+/** A sheet backed at density 2: the sticker's place is in the ink canvas's device pixels. */
 const DENSITY = 2;
 const input = {
   ops: [stroke, eraser, fill],
-  ink: { width: 800, height: 1200 },
+  frame: { w: 400, h: 600, density: DENSITY },
   place: { x: 100, y: 200, w: 300, h: 400 },
-  density: DENSITY,
 };
 
 const gunzip = async (blob: Blob): Promise<unknown> =>
   JSON.parse(await new Response(blob.stream().pipeThrough(new DecompressionStream("gzip"))).text());
 
 describe("the timelapse", () => {
-  it("puts the sheet and the sticker's place in sheet pixels, the ops' own space", () => {
+  it("puts the sheet and the sticker's place in sheet units, the ops' own space", () => {
     const timelapse = encodeTimelapse(input);
     expect(timelapse.v).toBe(1);
-    expect(timelapse.ink).toEqual([800 / DENSITY, 1200 / DENSITY]);
+    expect(timelapse.ink).toEqual([input.frame.w, input.frame.h]);
     expect(timelapse.place).toEqual([100 / DENSITY, 200 / DENSITY, 300 / DENSITY, 400 / DENSITY]);
   });
 
@@ -53,7 +52,8 @@ describe("the timelapse", () => {
       // At density 3, 10.334 seeded pixel 31, which 10.33 would miss.
       const taps = [10.334, 30.26, 40, 99.999];
       const ops = taps.map((x): Op => ({ tool: "fill", color: "#00ff00", T: 0, x, y: x }));
-      const decoded = decodeTimelapse(encodeTimelapse({ ...input, ops, density })).ops;
+      const frame = { ...input.frame, density };
+      const decoded = decodeTimelapse(encodeTimelapse({ ...input, ops, frame })).ops;
       const seeded = (n: number) => Math.floor(n * density);
       expect(decoded.map((op) => (op.tool === "fill" ? [seeded(op.x), seeded(op.y)] : []))).toEqual(
         taps.map((x) => [seeded(x), seeded(x)]),
@@ -65,9 +65,9 @@ describe("the timelapse", () => {
     expect(encodeTimelapse(input).density).toBe(DENSITY);
   });
 
-  it("decodes back to the drawing screen's ops, in sheet pixels", () => {
+  it("decodes back to the drawing screen's ops, in sheet units", () => {
     const decoded = decodeTimelapse(encodeTimelapse(input));
-    expect(decoded.ink).toEqual({ width: 800 / DENSITY, height: 1200 / DENSITY });
+    expect(decoded.ink).toEqual({ width: input.frame.w, height: input.frame.h });
     expect(decoded.place).toEqual({
       x: 100 / DENSITY,
       y: 200 / DENSITY,

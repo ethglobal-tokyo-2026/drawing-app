@@ -35,6 +35,7 @@ import type { HistoryState } from "./canvas/inkEngine";
 import { isFirstVisit } from "./drawVisits";
 import { lazyRadius } from "./canvas/lazyBrush";
 import type { Op, Tool } from "./canvas/ops";
+import type { SheetFrame } from "./canvas/sheetFrame";
 import { SealKey } from "./SealKey";
 import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
 import { SealCeremony } from "./sealing/SealCeremony";
@@ -148,6 +149,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const [panel, setPanel] = useState<Panel>(null);
   const [paused, setPaused] = useState(false);
   const [sizing, setSizing] = useState(false);
+  // How many CSS px a sheet unit spans on screen: the size rail's ghost shows the brush at it.
+  const [sheetScale, setSheetScale] = useState(1);
   const [history, setHistory] = useState<HistoryState>({
     canUndo: false,
     canRedo: false,
@@ -297,14 +300,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   }
 
   /** How the sticker was drawn, gzipped; null when it can't be made, and the sticker seals without it. */
-  async function timelapseOf(
-    ops: readonly Op[],
-    ink: { width: number; height: number },
-    sticker: SealedSticker,
-    density: number,
-  ) {
+  async function timelapseOf(ops: readonly Op[], frame: SheetFrame, sticker: SealedSticker) {
     try {
-      return await gzipTimelapse(encodeTimelapse({ ops, ink, place: sticker.place, density }));
+      return await gzipTimelapse(encodeTimelapse({ ops, frame, place: sticker.place }));
     } catch (error) {
       console.error("The timelapse couldn’t be made, so the sticker seals without it", error);
       return null;
@@ -319,23 +317,24 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   async function cutFromSheet(timeUsed: number) {
     canvas.current?.finishStroke();
     const ops = [...(canvas.current?.ops() ?? [])];
+    const frame = canvas.current?.frame() ?? null;
     // The drawing kept on this device holds what the sticker is cut from, the stroke just ended too.
-    keeper.save(canvas.current?.steps() ?? [], clock.elapsed);
-    const density = canvas.current?.inkDensity() ?? 1;
+    keeper.save(canvas.current?.steps() ?? [], clock.elapsed, frame);
     const marked = nsfw.current;
     // The pair Begin locked in, each subject as the sticker keeps it.
     const pair = kyotoSeikaSheet.begun ? kyotoSeikaSheet.deal?.subjects : undefined;
     const kept = ({ ja, reading, en }: KyotoSeikaSubject) => ({ ja, reading, en });
     const subjects = pair && ([kept(pair[0]), kept(pair[1])] as const);
+    // A sheet that never showed has no frame, and nothing on it to cut.
+    if (!frame) return null;
     const ink = canvas.current?.inkForReading();
     if (!ink) return null;
-    const size = { width: ink.width, height: ink.height };
     let sticker: SealedSticker | null;
     try {
       // Handing the ink to the sealing worker, or the whole cut where that can't run, holds the main
       // thread a moment: the key's pop and the tools stepping back paint first.
       await afterPaint();
-      sticker = await makeSticker(ink);
+      sticker = await makeSticker(ink, frame.density);
     } finally {
       releaseCanvas(ink);
     }
@@ -346,7 +345,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       throw new Error("this sheet has no ticket to seal it on");
     }
     const cut = sticker;
-    const request = timelapseOf(ops, size, cut, density).then((timelapse): SealRequest => ({
+    const request = timelapseOf(ops, frame, cut).then((timelapse): SealRequest => ({
       ticketUseId,
       timeUsed,
       width: cut.width,
@@ -555,7 +554,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const keepProgress = () => {
     const { phase } = latest.current;
     if (phase === "drawing" || phase === "armed")
-      keeper.save(canvas.current?.steps() ?? [], clock.elapsed);
+      keeper.save(canvas.current?.steps() ?? [], clock.elapsed, canvas.current?.frame() ?? null);
   };
   const keepOnHide = useEffectEvent(keepProgress);
   useEffect(() => {
@@ -581,7 +580,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     clock.setLength(sessionMs(part !== null));
     ticketKyotoSeika.current = part !== null;
     if (part) kyotoSeikaSheet.open(part);
-    canvas.current?.load(found.steps);
+    canvas.current?.load(found.steps, found.frame);
     // It keeps its own color rather than the one a fresh sheet would start in.
     const own = keptColor(found.steps);
     if (own) {
@@ -995,6 +994,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         }}
         onDismissPanel={() => setPanel(null)}
         onDisarm={() => send({ type: "canvas-touch" })}
+        onFit={setSheetScale}
       />
       <div className="drawing-top">
         <TimerDot
@@ -1057,6 +1057,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         value={sizes[sizeKey]}
         eraser={tool === "eraser"}
         active={sizing}
+        scale={sheetScale}
         onChange={setSize}
         onHold={setSizing}
       />

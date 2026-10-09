@@ -25,6 +25,7 @@ import { useTickets } from "../tickets/useTickets";
 import { personKey } from "../ui/deviceStorage";
 import type { HistoryState } from "./canvas/inkEngine";
 import type { Op } from "./canvas/ops";
+import { frameFor, SHEET_SHORT_UNITS } from "./canvas/sheetFrame";
 import { DrawingScreen, type DrawingScreenHandle } from "./DrawingScreen";
 import { CHARRED_AT_ROLL } from "../kyoto-seika/dieMood";
 import { REUNION, TEST_SUBJECTS, WIND } from "../kyoto-seika/testSubjects";
@@ -52,6 +53,8 @@ const sealing = vi.hoisted(() => ({ cut: vi.fn() }));
 const timerCalls = vi.hoisted(() => ({ hints: 0, clockRuns: 0 }));
 /** The size rail's hold, as the drawing screen handed it over. */
 const rail = vi.hoisted(() => ({ hold: (_held: boolean) => {} }));
+/** The sheet every drawing here is on. */
+const FRAME = frameFor({ width: SHEET_SHORT_UNITS, height: SHEET_SHORT_UNITS * 2 }, 1);
 
 vi.mock("./canvas/DrawingCanvas", () => ({
   DrawingCanvas: forwardRef(function Sheet(
@@ -96,7 +99,7 @@ vi.mock("./canvas/DrawingCanvas", () => ({
       steps: () => [],
       finishStroke() {},
       inkForReading: () => document.createElement("canvas"),
-      inkDensity: () => 1,
+      frame: () => FRAME,
     }));
     return <div className="ink-sheet" />;
   }),
@@ -278,6 +281,7 @@ const keptAtTimeUp: KeptSession = {
   nsfw: false,
   kyotoSeika: null,
   steps: [],
+  frame: null,
 };
 const chip = () => document.querySelector(".seal-chip")?.textContent ?? "";
 
@@ -346,6 +350,7 @@ const keptHalfway: KeptSession = {
   nsfw: false,
   kyotoSeika: null,
   steps: [{ tool: "brush", color: "#1C1824", pts: [], T: 0 }],
+  frame: FRAME,
 };
 const buttonSaying = (words: string) =>
   [...document.querySelectorAll("button")].find((button) => button.textContent === words);
@@ -556,6 +561,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
       nsfw: false,
       kyotoSeika: part,
       steps: [],
+      frame: null,
     });
     expect(dice()[0].getAttribute("aria-disabled")).toBe("true");
     expect(dice()[1].getAttribute("aria-label")).toContain(REUNION.ja);
@@ -662,7 +668,11 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     // Halfway through a begun sheet, kept by a build whose subjects this one can't read.
     vi.useFakeTimers();
     const halfway = sessionMs(true) / 2;
-    new SessionKeeper(me.id).save([{ tool: "brush", color: "#1C1824", pts: [], T: 0 }], halfway);
+    new SessionKeeper(me.id).save(
+      [{ tool: "brush", color: "#1C1824", pts: [], T: 0 }],
+      halfway,
+      FRAME,
+    );
     await settle(1000);
     const pair = [{ word: WIND.ja }, { word: REUNION.ja }];
     localStorage.setItem(

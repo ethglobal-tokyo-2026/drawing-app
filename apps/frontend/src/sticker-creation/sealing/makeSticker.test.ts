@@ -32,6 +32,8 @@ class FakeWorker {
 }
 
 const answer = (reply: SealReply) => new MessageEvent("message", { data: reply });
+/** The ink's pixels per sheet unit. */
+const DENSITY = 2;
 
 const hasWorker = () => vi.stubGlobal("Worker", FakeWorker);
 // happy-dom's own OffscreenCanvas has no 2D context.
@@ -49,7 +51,7 @@ const canPaintOffscreen = () =>
 async function sealInWorker() {
   hasWorker();
   canPaintOffscreen();
-  const sealing = makeSticker(document.createElement("canvas"));
+  const sealing = makeSticker(document.createElement("canvas"), DENSITY);
   const worker = await vi.waitFor(() => {
     const [started] = FakeWorker.started;
     if (!started) throw new Error("no worker started yet");
@@ -108,7 +110,7 @@ describe("makeSticker", () => {
     ["an OffscreenCanvas that can't paint", hasWorker],
   ])("cuts on the main thread where there's %s", async (_, browser) => {
     browser();
-    await expect(makeSticker(document.createElement("canvas"))).resolves.toBeNull();
+    await expect(makeSticker(document.createElement("canvas"), DENSITY)).resolves.toBeNull();
     expect(FakeWorker.started).toHaveLength(0);
   });
 
@@ -117,6 +119,8 @@ describe("makeSticker", () => {
     const ink = worker.sent?.request.ink;
     expect(ink).toBeInstanceOf(ImageBitmap);
     expect(worker.sent?.transfer).toEqual([ink]);
+    // The cut measures its border in sheet units, so the worker hears the ink's density.
+    expect(worker.sent?.request.density).toBe(DENSITY);
 
     worker.onmessage?.(answer({ ok: true, cut: CUT }));
     const sticker = await sealing;

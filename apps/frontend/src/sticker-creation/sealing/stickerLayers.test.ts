@@ -4,6 +4,8 @@ import type { Pixels } from "./pixels";
 import { stickerLayers, type StickerLayers } from "./stickerLayers";
 
 const RED = [255, 0, 0];
+/** The white border on this sheet, in ink pixels. */
+const BORDER = 6;
 
 /** A 200 × 200 sheet with a red disk of radius 40 in the middle. */
 function redDisk(): Pixels {
@@ -18,7 +20,7 @@ function redDisk(): Pixels {
 }
 
 function layersOf(ink: Pixels) {
-  const cut = dieCut(ink);
+  const cut = dieCut(ink, BORDER);
   if (!cut) throw new Error("expected a cut");
   return { cut, layers: stickerLayers(ink, cut) };
 }

@@ -6,6 +6,7 @@ import { personKey } from "../../ui/deviceStorage";
 import { CHARRED_AT_ROLL } from "../../kyoto-seika/dieMood";
 import { REUNION, WIND } from "../../kyoto-seika/testSubjects";
 import type { Op, Step } from "../canvas/ops";
+import { frameFor, SHEET_SHORT_UNITS, type SheetFrame } from "../canvas/sheetFrame";
 import {
   firstChanged,
   keptColor,
@@ -15,6 +16,8 @@ import {
 } from "./keptSession";
 
 const stroke = (color: string): Op => ({ tool: "brush", color, pts: [], T: 0 });
+/** The sheet these drawings are drawn on. */
+const FRAME = frameFor({ width: SHEET_SHORT_UNITS, height: SHEET_SHORT_UNITS * 2 }, 2);
 
 // The module keeps its connections for the page's life, so each test draws as someone new.
 let people = 0;
@@ -31,11 +34,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** `userId` starts a session on ticket 7 and draws `steps`. */
-function draw(userId: string, steps: Step[], onKept?: (kept: boolean) => void) {
+/** `userId` starts a session on ticket 7 and draws `steps`, on `frame`. */
+function draw(
+  userId: string,
+  steps: Step[],
+  { frame = FRAME, onKept }: { frame?: SheetFrame | null; onKept?: (kept: boolean) => void } = {},
+) {
   const keeper = new SessionKeeper(userId, onKept);
   keeper.start(7);
-  keeper.save(steps, 1000);
+  keeper.save(steps, 1000, frame);
   return keeper;
 }
 
@@ -113,6 +120,14 @@ describe("the drawing kept on this device", () => {
     expect(await keptSteps(userId)).toEqual(steps);
   });
 
+  it("keeps the frame a drawing is drawn in with it, and has none for one kept without", async () => {
+    const [framed, unframed] = [someone(), someone()];
+    draw(framed, [stroke("a")]);
+    draw(unframed, [stroke("a")], { frame: null });
+    expect(await loadKeptSession(framed)).toMatchObject({ status: "found", frame: FRAME });
+    expect(await loadKeptSession(unframed)).toMatchObject({ status: "found", frame: null });
+  });
+
   it("keeps how the tools were set, and a screen's first render clears nothing kept", async () => {
     const userId = someone();
     const tools = { brushSize: 0.7, eraserSize: 0.2, smoothing: 55 };
@@ -184,10 +199,10 @@ describe("the drawing kept on this device", () => {
       if (opened?.type !== "return") throw new Error("Nothing was opened");
       opened.value.result.close();
     };
-    const keeper = draw(userId, [a], onKept);
+    const keeper = draw(userId, [a], { onKept });
     expect(await keptSteps(userId)).toEqual([a]);
     closeLast();
-    keeper.save([a, b], 2000);
+    keeper.save([a, b], 2000, FRAME);
     expect(await keptSteps(userId)).toEqual([a, b]);
     expect(onKept).not.toHaveBeenCalled();
 
@@ -195,10 +210,10 @@ describe("the drawing kept on this device", () => {
     open.mockImplementation(() => {
       throw new DOMException("Connection to Indexed Database server lost", "UnknownError");
     });
-    keeper.save([a, b, c], 3000);
+    keeper.save([a, b, c], 3000, FRAME);
     await vi.waitFor(() => expect(onKept).toHaveBeenLastCalledWith(false));
     open.mockRestore();
-    keeper.save([a, b, c], 4000);
+    keeper.save([a, b, c], 4000, FRAME);
     await vi.waitFor(() => expect(onKept).toHaveBeenLastCalledWith(true));
     expect(await keptSteps(userId)).toEqual([a, b, c]);
   });

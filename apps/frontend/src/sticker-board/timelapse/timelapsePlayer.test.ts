@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { InkSurface, MAX_DPR } from "../../sticker-creation/canvas/inkSurface";
+import { InkSurface } from "../../sticker-creation/canvas/inkSurface";
 import { STRIDE, type FillOp, type Op, type StrokeOp } from "../../sticker-creation/canvas/ops";
 import { paintStroke } from "../../sticker-creation/canvas/paintStroke";
+import { MAX_DPR } from "../../sticker-creation/canvas/sheetFrame";
 import { decodeTimelapse, encodeTimelapse } from "../../sticker-creation/sealing/timelapse";
 import { notePerformance } from "../../performance/performanceRecorder";
 import { contextOf, forgetContexts, madeContexts, type FakeContext } from "./testCanvas";
@@ -23,7 +24,7 @@ vi.mock("../../performance/performanceRecorder", async (importOriginal) => ({
   notePerformance: vi.fn(),
 }));
 
-/** The sheet is 100 sheet px square, drawn at density 1; the sticker's image covers `PLACE`. */
+/** The sheet is 100 sheet units square, drawn at density 1; the sticker's image covers `PLACE`. */
 const PLACE = { x: 20, y: 30, w: 60, h: 40 };
 /** The figure's box, CSS px: 2 per sheet px. */
 const BOX = { width: 120, height: 80 };
@@ -41,12 +42,7 @@ const pointCount = (op: StrokeOp) => op.pts.length / STRIDE;
 const sameObject = (a: object, b: object | undefined) => a === b;
 
 function setup(ops: Op[], { reduced = false } = {}) {
-  const timelapse = encodeTimelapse({
-    ops,
-    ink: { width: 100, height: 100 },
-    place: PLACE,
-    density: 1,
-  });
+  const timelapse = encodeTimelapse({ ops, frame: { w: 100, h: 100, density: 1 }, place: PLACE });
   const canvas = document.createElement("canvas");
   const clock = handFrames();
   const player = createTimelapsePlayer({

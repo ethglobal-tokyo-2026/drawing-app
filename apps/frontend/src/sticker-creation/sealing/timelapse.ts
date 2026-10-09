@@ -1,22 +1,21 @@
 import { MAX_TIMELAPSE_BYTES, type TimelapseV1 } from "@drawing-app/api/client";
 import { STRIDE, type Op } from "../canvas/ops";
+import type { SheetFrame } from "../canvas/sheetFrame";
 import type { Rect } from "./stickerLayers";
 
 interface TimelapseInput {
   ops: readonly Op[];
-  /** The ink canvas, in device pixels. */
-  ink: { width: number; height: number };
-  /** Where makeSticker cut the sticker from, in device pixels. */
+  /** The sheet the ops were drawn on: its size in units and its ink's density. */
+  frame: SheetFrame;
+  /** Where makeSticker cut the sticker from, in the ink canvas's device pixels. */
   place: Rect;
-  /** Device pixels per sheet pixel. */
-  density: number;
 }
 
 const tenths = (n: number) => Math.round(n * 10);
 /** A length to the tenth of a pixel, as JSON keeps it short. */
 const toTenth = (n: number) => tenths(n) / 10;
 /**
- * A fill's tap as the middle of the device pixel it seeded, to the hundredth of a sheet pixel: the
+ * A fill's tap as the middle of the device pixel it seeded, to the hundredth of a sheet unit: the
  * tap itself, rounded, could land in the pixel beside it.
  */
 const seededPixel = (n: number, density: number) =>
@@ -37,11 +36,12 @@ function pointChanges(pts: readonly number[]): number[] {
   return changes;
 }
 
-export function encodeTimelapse({ ops, ink, place, density }: TimelapseInput): TimelapseV1 {
+export function encodeTimelapse({ ops, frame, place }: TimelapseInput): TimelapseV1 {
+  const { density } = frame;
   const sheet = (n: number) => toTenth(n / density);
   return {
     v: 1,
-    ink: [sheet(ink.width), sheet(ink.height)],
+    ink: [toTenth(frame.w), toTenth(frame.h)],
     place: [sheet(place.x), sheet(place.y), sheet(place.w), sheet(place.h)],
     density: toThousandth(density),
     ops: ops.map((op) =>
@@ -58,11 +58,11 @@ export function encodeTimelapse({ ops, ink, place, density }: TimelapseInput): T
   };
 }
 
-/** A timelapse as the drawing screen's own ops again, in sheet pixels. */
+/** A timelapse as the drawing screen's own ops again, in sheet units. */
 export interface DecodedTimelapse {
   ink: { width: number; height: number };
   place: Rect;
-  /** Device pixels per sheet pixel where it was drawn; null before densities were recorded. */
+  /** Device pixels per sheet unit where it was drawn; null before densities were recorded. */
   density: number | null;
   ops: Op[];
 }

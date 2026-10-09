@@ -1,7 +1,7 @@
-/** How far the brush trails the finger, in px, for a smoothing setting from 0 (Raw) to 100 (Smooth). */
+/** How far the brush trails the finger, in sheet units, for Smoothing from 0 (Raw) to 100 (Smooth). */
 export const lazyRadius = (smoothing: number) => 30 * (smoothing / 100) ** 1.35;
 
-/** The lift's catch-up steps are at most this far apart, so the tail keeps the stroke's texture. */
+/** The lift's catch-up steps are at most this many units apart, so the tail keeps its texture. */
 const CATCH_UP_STEP = 3;
 /** Closer than this, the brush is already under the finger. */
 const SETTLED = 0.5;

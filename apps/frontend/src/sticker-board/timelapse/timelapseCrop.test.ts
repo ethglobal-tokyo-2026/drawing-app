@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Pixels } from "../../sticker-creation/canvas/fill";
-import { MAX_DPR } from "../../sticker-creation/canvas/inkSurface";
-import { dieCut } from "../../sticker-creation/sealing/dieCut";
+import { MAX_DPR, MAX_INK_PIXELS, maxInkDensity } from "../../sticker-creation/canvas/sheetFrame";
+import { BORDER_UNITS, dieCut } from "../../sticker-creation/sealing/dieCut";
 import { stickerLayers } from "../../sticker-creation/sealing/stickerLayers";
 import { decodeTimelapse, encodeTimelapse } from "../../sticker-creation/sealing/timelapse";
 import {
@@ -14,7 +14,7 @@ import {
   sheetCrop,
 } from "./timelapseCrop";
 
-/** A square sheet drawn at `density`, ink over a square of `side` sheet px in its middle, as sealing would cut it. */
+/** A square sheet drawn at `density`, inked over a `side`-unit square in its middle, cut as sealing cuts. */
 function sealedSquare(density: number, sheetSide: number, side: number) {
   const size = Math.round(sheetSide * density);
   const data = new Uint8ClampedArray(size * size * 4);
@@ -24,20 +24,31 @@ function sealedSquare(density: number, sheetSide: number, side: number) {
     for (let x = from; x < to; x++) data.set([28, 24, 36, 255], (y * size + x) * 4);
   }
   const ink: Pixels = { width: size, height: size, data };
-  const cut = dieCut(ink);
+  const cut = dieCut(ink, BORDER_UNITS * density);
   if (!cut) throw new Error("the sheet has ink, so it cuts");
   const layers = stickerLayers(ink, cut);
   const timelapse = decodeTimelapse(
-    encodeTimelapse({ ops: [], ink: { width: size, height: size }, place: layers.place, density }),
+    encodeTimelapse({
+      ops: [],
+      frame: { w: sheetSide, h: sheetSide, density },
+      place: layers.place,
+    }),
   );
   return { timelapse, image: { width: layers.width, height: layers.height } };
 }
 
 describe("the density a sticker was drawn at", () => {
-  it("is the recorded one, up to the ink surface's cap", () => {
+  it("is the recorded one, up to the densest any sheet that size was backed at", () => {
     const { timelapse, image } = sealedSquare(2, 150, 50);
-    expect(drawingDensity({ ...timelapse, density: 2.625 }, image)).toBe(2.625);
-    expect(drawingDensity({ ...timelapse, density: MAX_DPR + 1 }, image)).toBe(MAX_DPR);
+    const most = maxInkDensity({ w: timelapse.ink.width, h: timelapse.ink.height });
+    // An iPad's sheet is backed denser than any screen's own pixels, and its fills flood at that.
+    expect(drawingDensity({ ...timelapse, density: most - 1 }, image)).toBe(most - 1);
+    expect(drawingDensity({ ...timelapse, density: most + 1 }, image)).toBe(most);
+    // A sheet the size of a big screen, backed at the screen's own density, floods as it did.
+    const side = Math.sqrt(MAX_INK_PIXELS);
+    const big = { ...timelapse, ink: { width: side, height: side } };
+    expect(drawingDensity({ ...big, density: MAX_DPR - 1 }, image)).toBe(MAX_DPR - 1);
+    expect(drawingDensity({ ...big, density: MAX_DPR + 1 }, image)).toBe(MAX_DPR);
   });
 
   it.each([2, 2.625])(

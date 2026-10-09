@@ -8,14 +8,14 @@ import type { StickerViewer } from "../shapes.ts";
 /** A timelapse's JSON, unzipped, at most: a gzip that grows past it is refused, not read. */
 const MAX_TIMELAPSE_JSON_BYTES = 16 * 1024 * 1024;
 
-/** A stroke's points: x, y and width in tenths of a pixel, plus ms, each a change from the point before. */
+/** A stroke's points: x, y and width in tenths of a unit, plus ms, each a change from the one before. */
 const strokePoints = z
   .array(z.number())
   .refine((points) => points.length % 4 === 0, "expected 4 numbers per point");
 
 /**
  * How a sticker was drawn: the ink canvas's ops, in order, as the app uploads them at seal.
- * Lengths are sheet pixels.
+ * Lengths are sheet units.
  */
 export const timelapseV1Schema = z.object({
   v: z.literal(1),
@@ -23,7 +23,7 @@ export const timelapseV1Schema = z.object({
   ink: z.tuple([z.number().positive(), z.number().positive()]),
   /** Where the sticker image sits on the sheet. */
   place: z.tuple([z.number(), z.number(), z.number().positive(), z.number().positive()]),
-  /** Device pixels per sheet pixel where it was drawn: fills flood at it. */
+  /** Device pixels per sheet unit where it was drawn: fills flood at it. */
   density: z.number().positive(),
   ops: z.array(
     z.union([

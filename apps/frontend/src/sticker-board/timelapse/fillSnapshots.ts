@@ -23,11 +23,11 @@ export interface FillSnapshot {
 
 export interface PrepareInput {
   ops: readonly Op[];
-  /** The sheet, sheet px. */
+  /** The sheet, in sheet units. */
   ink: { width: number; height: number };
-  /** Where the sticker's image sits on the sheet, sheet px. */
+  /** Where the sticker's image sits on the sheet, in sheet units. */
   place: Rect;
-  /** Device px per sheet px to flood at: the density the sticker was drawn at. */
+  /** Device px per sheet unit to flood at: the density the sticker was drawn at. */
   density: number;
   display: DisplayCanvas;
 }
@@ -80,7 +80,7 @@ export async function prepareFillSnapshots(
   let nth = 0;
   try {
     const sheet = new InkSurface(sheetCanvas);
-    sheet.resize(ink.width, ink.height, density);
+    sheet.setFrame({ w: ink.width, h: ink.height, density });
     const crop = sheetCrop(
       place,
       { width: sheetCanvas.width, height: sheetCanvas.height, density: sheet.density },
