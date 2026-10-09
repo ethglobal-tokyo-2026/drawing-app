@@ -802,7 +802,8 @@ export function StickerDetail({
 
               {/* A section of its own at the very foot, past a rule, so it never reads as Give's
                   alternative: plain label stock across the column, its confirm opening in its place,
-                  and the status line there once the mark lands. Only the confirm carries the tomato. */}
+                  and the status line there once the mark lands. Its confirm is plain label stock too,
+                  since a mark can be taken off again. */}
               {(canChangeMark || markedSaid?.stickerId === sticker.id) && (
                 <section className="sticker-detail__mark">
                   <hr className="sticker-detail__mark-rule" />
@@ -847,7 +848,6 @@ export function StickerDetail({
                               : t(($) => $.stickerBoard.detail.markNsfw.cancel)}
                           </QuietLink>
                           <LabelButton
-                            tone="tomato"
                             size="sm"
                             aria-busy={mark.step === "sending"}
                             aria-disabled={mark.step === "sending"}
