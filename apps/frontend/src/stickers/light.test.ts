@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { acquireLight, installLight, lightUp } from "./light";
+import { acquireLight, GLIDE_MS, installLight, lightUp } from "./light";
 
 const root = document.documentElement;
 let uninstall = () => {};
@@ -22,8 +22,9 @@ const lightOn = (el: HTMLElement) => [
   el.style.getPropertyValue("--ly"),
 ];
 const lightAt = () => lightOn(resin);
-const pointAt = (x: number, y: number) =>
-  window.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y }));
+/** A pointer moved to (x, y): a mouse unless it says it's a pen or a finger. */
+const pointAt = (x: number, y: number, pointerType = "mouse", type = "pointermove") =>
+  window.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerType }));
 const tiltTo = (gamma: number, beta: number) =>
   window.dispatchEvent(Object.assign(new Event("deviceorientation"), { gamma, beta }));
 /** A screen with stickers showing: it holds the light, and returns what closes it. */
@@ -63,13 +64,29 @@ afterEach(() => {
 });
 
 describe("the shared light", () => {
-  it("follows the pointer to the window's edge on the resins, never the root", () => {
+  it.each(["mouse", "pen"])(
+    "follows a %s to the window's edge on the resins, never the root",
+    (pointerType) => {
+      uninstall = installLight(root);
+      showScreen();
+      pointAt(window.innerWidth, window.innerHeight / 2, pointerType);
+      vi.advanceTimersByTime(16);
+      expect(lightAt()).toEqual(["1.000", "0.000"]);
+      expect(lightOn(root)).toEqual(["", ""]);
+    },
+  );
+
+  it("never follows a finger, which is moving stickers, though the tilt still moves it", () => {
     uninstall = installLight(root);
     showScreen();
-    pointAt(window.innerWidth, window.innerHeight / 2);
-    vi.advanceTimersByTime(16);
+    pointAt(window.innerWidth, 0, "touch", "pointerdown");
+    pointAt(0, window.innerHeight, "touch");
+    vi.advanceTimersByTime(100);
+    expect(lightAt()).toEqual(["", ""]);
+
+    tiltTo(32, 40);
+    vi.advanceTimersByTime(100);
     expect(lightAt()).toEqual(["1.000", "0.000"]);
-    expect(lightOn(root)).toEqual(["", ""]);
   });
 
   it("ignores the pointer while no screen shows stickers", () => {
@@ -90,6 +107,32 @@ describe("the shared light", () => {
     pointAt(window.innerWidth, 0);
     vi.advanceTimersByTime(100);
     expect(writes.mock.calls.filter(([name]) => name === "--lx")).toEqual([["--lx", "1.000"]]);
+  });
+
+  it("lights a phone held upright and leaning sideways the same, whichever way the sensor writes it", () => {
+    uninstall = installLight(root);
+    showScreen();
+    // Near upright the sensor can write one tilt two ways: gamma flips as beta passes 90°.
+    tiltTo(89.9, 80);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
+    const before = lightAt();
+    tiltTo(-89.9, 100);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
+    expect(lightAt()).toEqual(before);
+  });
+
+  it("glides to a new tilt rather than jumping, and lands on it", () => {
+    uninstall = installLight(root);
+    showScreen();
+    tiltTo(0, 40);
+    vi.advanceTimersByTime(100);
+    tiltTo(32, 40);
+    vi.advanceTimersByTime(60);
+    const across = Number(lightAt()[0]);
+    expect(across).toBeGreaterThan(0);
+    expect(across).toBeLessThan(1);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
+    expect(lightAt()).toEqual(["1.000", "0.000"]);
   });
 
   it("keeps still for the hand's tremor", () => {
