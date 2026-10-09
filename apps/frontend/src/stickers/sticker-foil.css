@@ -50,55 +50,83 @@
   --band-6: var(--foil-magenta);
 }
 
-/* Kyoto Seika Practice Mode foil: manga tone. A dot screen over a gradient that darkens away from the
-   app's one light; contrast() turns the blurred dots into crisp ones that grow toward the shadow.
-   The shading turns with the light, and white sparkles scraped out of the tone slide with it. The
-   tone itself doesn't move, so it's painted only when the light does. */
-.sticker-foil--kyoto-seika {
-  --band-6: #fbfbfd;
-}
-
-/* The tone measures itself against the band. */
-.sticker-foil--kyoto-seika .sticker-foil__band {
+/* Kyoto Seika Practice Mode foil: manga screentone. Round ink dots on a 45° screen, printed on paper as
+   a gradation tone that darkens away from the house light, on a band narrower than holo's so the tone
+   never outweighs the sticker. The live light glares the dots out where it falls and slides two
+   scraped highlights through the glare, by transform alone, so the tone is painted once. */
+.sticker-foil.sticker-foil--kyoto-seika {
+  /* A size container, so the band keeps to a share of the sticker's long side, as holo's does. */
   container-type: size;
+  --foil-w: max(2px, 2.4cqmax);
+  --band-6: var(--canvas);
 }
 
-/* The screen turns 45° in a box past each of the band's edges, grown for a long sticker until it
-   reaches the band's corners. The shading keeps the length the ungrown box gives it, so growing the
-   box only fills the corners. */
+/* The band grows from the cut here, narrower than the server's mask: the center and eight copies a
+   band's width away, which round as evenly at this width as sixteen do at holo's. */
+.sticker-foil--kyoto-seika .sticker-foil__band,
+.sticker-foil--kyoto-seika .sticker-foil__cast::before {
+  --foil-copies:
+    var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m);
+  --foil-at:
+    var(--foil-w) var(--foil-w), calc(var(--foil-w) * 2) var(--foil-w),
+    calc(var(--foil-w) * 1.7071) calc(var(--foil-w) * 1.7071),
+    var(--foil-w) calc(var(--foil-w) * 2),
+    calc(var(--foil-w) * 0.2929) calc(var(--foil-w) * 1.7071), 0 var(--foil-w),
+    calc(var(--foil-w) * 0.2929) calc(var(--foil-w) * 0.2929), var(--foil-w) 0,
+    calc(var(--foil-w) * 1.7071) calc(var(--foil-w) * 0.2929);
+}
+
+/* A light tone all round, and a dense one on the same dots that comes in toward the bottom-right,
+   whatever the sticker's turn. The tile is whole device pixels at 2x and 3x, so no dot smears. */
 .sticker-foil--kyoto-seika .sticker-foil__sheen {
-  /* Half the side of the smallest square, turned 45°, round the band. */
-  --tone-reach: calc((100cqw + 100cqh) / 2.8284);
-  --tone-angle: calc(
-    atan2(calc(-1 * var(--lx, -0.6)), var(--ly, -0.6)) - 45deg - var(--foil-turn, 0) * 1deg
-  );
-  /* The gradient line's length in the ungrown box. */
-  --tone-length: calc(
-    160cqw * max(sin(var(--tone-angle)), -1 * sin(var(--tone-angle))) + 160cqh *
-      max(cos(var(--tone-angle)), -1 * cos(var(--tone-angle)))
-  );
-  inset: calc(-1 * max(30cqh, var(--tone-reach) - 50cqh))
-    calc(-1 * max(30cqw, var(--tone-reach) - 50cqw));
-  rotate: 45deg;
+  inset: 0;
   animation: none;
   background:
-    radial-gradient(closest-side, #000, #fff) 0 0 / 3.2px 3.2px,
-    linear-gradient(
-      var(--tone-angle),
-      #fff calc(50% - 0.32 * var(--tone-length)),
-      #4d4d4d calc(50% + 0.5 * var(--tone-length))
-    );
-  background-blend-mode: multiply;
-  filter: contrast(16);
+    var(--kyoto-seika-tone-light) 0 0 / 3px 3px,
+    var(--canvas);
 }
 
-/* The sparkles scraped out of the tone, in place of the holo's grating. */
+.sticker-foil--kyoto-seika .sticker-foil__sheen::before {
+  --tone-fade: linear-gradient(
+    calc(135deg - var(--foil-turn, 0) * 1deg),
+    transparent 30%,
+    #000 80%
+  );
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--kyoto-seika-tone-dense) 0 0 / 3px 3px;
+  -webkit-mask-image: var(--tone-fade);
+  mask-image: var(--tone-fade);
+}
+
+/* No grating: its hairlines would beat against the dots. */
 .sticker-foil--kyoto-seika .sticker-foil__band::after {
-  inset: -40px;
-  background: var(--kyoto-seika-sparkles) 0 0 / 60px 60px;
-  translate: calc(var(--lx, -0.6) * 18px) calc(var(--ly, -0.6) * 18px);
-  transition: translate 280ms var(--ease-out);
-  filter: drop-shadow(0 0 0.6px rgba(150, 200, 255, 0.9));
+  content: none;
+}
+
+/* Two highlights scraped out of the tone, a broad one and a fine one, across the screen's rows as a
+   cutter scrapes. The light slides them along their normal only, so they always cross its glare. */
+.sticker-foil--kyoto-seika .sticker-foil__glint::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    112.5deg,
+    transparent 46.6%,
+    #fff 46.8% 49.6%,
+    transparent 49.8% 51.2%,
+    #fff 51.4% 52.6%,
+    transparent 52.8%
+  );
+  translate: calc(var(--lx, -0.6) * 21.3% + var(--ly, -0.6) * 8.85%)
+    calc(var(--lx, -0.6) * 8.84% + var(--ly, -0.6) * 3.67%);
+  transition: translate 420ms var(--ease-out);
+}
+
+/* The glare dims the tone without wiping it, so the band reads all round. */
+.sticker-foil--kyoto-seika .sticker-foil__glint::before {
+  opacity: 0.8;
 }
 
 /* The band's mask made on the server: the silhouette grown by an even distance, at the image's size.
@@ -240,7 +268,7 @@
   }
 
   .sticker-foil__glint::before,
-  .sticker-foil--kyoto-seika .sticker-foil__band::after {
+  .sticker-foil--kyoto-seika .sticker-foil__glint::after {
     transition: none;
   }
 }
