@@ -18,7 +18,8 @@ import type {
   Silhouette,
 } from "../stickers/creaseWorker";
 import type { Crease } from "../stickers/StickerFigure";
-import { kyotoSeikaBandWidth, type FoilTone } from "../stickers/StickerFoil";
+import { kyotoSeikaBandWidth } from "../stickers/kyotoSeikaFoil";
+import type { FoilTone } from "../stickers/StickerFoil";
 import type { StickerUrls } from "../stickers/stickerUrls";
 import { deviceSetting } from "../ui/deviceSetting";
 import { stickerBox, type Field, type Placement } from "./placement";
