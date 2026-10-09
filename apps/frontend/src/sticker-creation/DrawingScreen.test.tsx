@@ -510,7 +510,8 @@ describe("the seal sheet", () => {
     });
     await settle(10_000);
     expect(sealSheet()?.textContent).toContain(words.timeUp.en);
-    expect(sealSheet()?.querySelector(".perf")?.getAttribute("aria-disabled")).toBe("true");
+    // Its perforation is plain holes, not a control.
+    expect(sealSheet()?.querySelector(".perf")?.matches("button")).toBe(false);
     expect(seal).not.toHaveBeenCalled();
 
     sealOnSheet();

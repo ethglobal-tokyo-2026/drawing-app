@@ -75,6 +75,16 @@
   outline-offset: -4px;
 }
 
+/* A sheet that can't close (Sheet's `closable`): only the plain holes, with no grab to take hold of. */
+.perf--plain {
+  cursor: auto;
+  touch-action: auto;
+}
+
+.perf--plain::after {
+  content: none;
+}
+
 /* On a large screen a swipe down the sheet's head drags it, as the perforation does (Sheet.tsx), so
    the browser leaves that swipe to it. */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {

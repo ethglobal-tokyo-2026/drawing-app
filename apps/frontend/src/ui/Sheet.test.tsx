@@ -148,12 +148,27 @@ describe("Sheet", () => {
         drag([0, DISMISS_PX * 2]);
         drag();
         expect(onClose).not.toHaveBeenCalled();
-        expect(perf()?.getAttribute("aria-disabled")).toBe("true");
 
         render(true);
         back();
         expect(onClose).toHaveBeenCalledTimes(1);
       },
     );
+
+    it("keeps its perforation a control, disabled, while its act is on its way", () => {
+      render(true, { busy: true });
+      expect(perf()?.getAttribute("aria-disabled")).toBe("true");
+    });
+
+    it("keeps its perforation out of the Tab order when it can't close, so focus starts past it", () => {
+      render(true, { closable: false });
+      const last = document.getElementById("last");
+      expect(perf()).not.toBeNull();
+      expect(document.activeElement).toBe(last);
+      press("Tab");
+      expect(document.activeElement).toBe(last);
+      press("Tab", true);
+      expect(document.activeElement).toBe(last);
+    });
   });
 });

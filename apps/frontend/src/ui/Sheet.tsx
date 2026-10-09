@@ -23,7 +23,7 @@ interface Props {
   busy?: boolean;
   /**
    * False while there's nothing to go back to, as at 0:00 on the drawing screen: the sheet stays up,
-   * and the perforation, Escape and Back do nothing.
+   * its perforation is only plain holes, and Escape and Back do nothing.
    */
   closable?: boolean;
   /** Where focus goes once it closes, for a sheet that opens as another goes, so it never saw the opener. */
@@ -108,16 +108,21 @@ export function Sheet({
         if (leaving && e.target === e.currentTarget) setShown(false);
       }}
     >
-      <button
-        type="button"
-        className="perf"
-        aria-label={t(($) => $.ui.sheet.close, { label })}
-        aria-disabled={stays || undefined}
-        {...drag.handlers}
-        onClick={() => {
-          if (!drag.tookClick()) close();
-        }}
-      />
+      {closable ? (
+        <button
+          type="button"
+          className="perf"
+          aria-label={t(($) => $.ui.sheet.close, { label })}
+          aria-disabled={busy || undefined}
+          {...drag.handlers}
+          onClick={() => {
+            if (!drag.tookClick()) close();
+          }}
+        />
+      ) : (
+        // Nothing to go back to: plain holes, with no grab, and no stop for Tab.
+        <span className="perf perf--plain" aria-hidden="true" />
+      )}
       {head !== undefined && (
         <div className="bottom-sheet__head" {...(large ? drag.handlers : {})}>
           {head}
