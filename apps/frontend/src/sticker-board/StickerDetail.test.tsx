@@ -736,17 +736,47 @@ describe("StickerDetail", () => {
     };
     const showSwitch = strings.stickerBoard.settings.nsfw.show.en;
 
-    it("is offered to its Original Artist only, on a sticker not marked yet, as label stock at the foot", () => {
-      openOn(vi.fn());
+    it("is offered to its Original Artist only, on a sticker not marked yet, in a section of its own at the foot", async () => {
+      const rule = () => document.querySelector(".sticker-detail__main hr");
+      const before = (a: Node | null | undefined, b: Node | null | undefined) =>
+        Boolean(a && b && a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      open(
+        { ownerId: TEST_OWNER.id, stickers: [sticker(133, day(14))], startId: "s-133" },
+        withTrail([trailEntry({ giftId: "g-1", giver: people.mika, receiver: people.ken })]),
+      );
+      await settle();
       const opener = button(words.open.en);
-      // A quiet link reads as text, not something to press.
-      expect(opener?.classList).not.toContain("label-btn--quiet");
+      // Past a rule that follows Give and the Transfer Trail, so it never reads as Give's alternative.
+      expect(rows()).toHaveLength(1);
+      for (const earlier of [button("Give"), ...rows()]) expect(before(earlier, rule())).toBe(true);
+      expect(before(rule(), opener)).toBe(true);
       const controls = [...document.querySelectorAll(".sticker-detail__main button")];
       expect(controls.at(-1)).toBe(opener);
+      // Regular label stock as wide as the column: not a quiet link, nor Timelapse's small stock.
+      const stock = [...(opener?.classList ?? [])].filter((c) => c.startsWith("label-btn"));
+      expect(stock).toEqual(["label-btn", "label-btn--block"]);
+
+      // Without it, no rule is left standing over nothing.
       openOn(vi.fn(), sticker(133, day(14), { artist: toPerson(people.mika) }));
       expect(button(words.open.en)).toBeUndefined();
+      expect(rule()).toBeNull();
       openOn(vi.fn(), sticker(133, day(14), { nsfw: true }));
       expect(button(words.open.en)).toBeUndefined();
+      expect(rule()).toBeNull();
+    });
+
+    it("brings its confirm's buttons into view as it opens, with focus on Cancel", () => {
+      const scroll = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+      openOn(vi.fn());
+      press(words.open.en);
+      expect(scroll).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ block: "nearest" }));
+      const shown = scroll.mock.contexts[0];
+      if (!(shown instanceof Element)) throw new Error("nothing was scrolled into view");
+      expect(confirm()?.contains(shown)).toBe(true);
+      const cancel = button(words.cancel.en);
+      for (const held of [cancel, button(words.confirm.en)])
+        expect(held && shown.contains(held)).toBe(true);
+      expect(document.activeElement).toBe(cancel);
     });
 
     it("asks first, saying it can't be undone and that a copy may have been kept, and Cancel marks nothing", () => {

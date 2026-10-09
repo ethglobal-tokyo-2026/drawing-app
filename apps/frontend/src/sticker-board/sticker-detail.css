@@ -282,16 +282,24 @@
   margin: 18px 0 0;
 }
 
-/* Mark 18+, plain label stock at the very foot, and the confirm it opens in its place: a label lifted
-   off the liner. */
-.sticker-detail__mark,
-.sticker-detail__mark-ask {
-  margin-top: 22px;
+/* Mark 18+, a section of its own at the very foot: a hairline across the column, then plain label
+   stock as wide as it, which its confirm takes the place of. */
+.sticker-detail__mark {
+  display: grid;
+  gap: 16px;
+  margin-top: 26px;
+}
+
+.sticker-detail__mark-rule {
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--rule);
 }
 
 /* Once a mark lands, a supporting note where Mark 18+ was. */
 .sticker-detail__marked {
-  margin: 22px 0 0;
+  margin: 0;
   color: var(--graphite);
   font-size: 13px;
   line-height: 1.42;
@@ -302,6 +310,7 @@
   display: none;
 }
 
+/* A confirm in place, Mark 18+'s or Take it out's: a label lifted off the liner. */
 .sticker-detail__mark-ask {
   display: grid;
   gap: 8px;
@@ -334,11 +343,13 @@
   font-weight: 700;
 }
 
+/* Scrolled up to as Mark 18+'s confirm opens: with the confirm's foot, clear of the home indicator. */
 .sticker-detail__mark-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 16px;
+  scroll-margin-bottom: calc(12px + max(16px, env(safe-area-inset-bottom)));
 }
 
 /* A gift in flight: its note, Take it out under it, and why a take-out failed. */
@@ -346,10 +357,6 @@
   display: grid;
   gap: 10px;
   margin-top: 18px;
-}
-
-.sticker-detail__in-flight > .sticker-detail__mark-ask {
-  margin-top: 0;
 }
 
 .sticker-detail__in-flight > .label-btn--quiet {

@@ -660,7 +660,7 @@ export const stickerBoard = {
     none: { en: "No sticker here yet.", ja: "まだシールがありません。" },
     /** Mark 18+, at the foot of the detail of a sticker you drew that isn't 18+ yet, and the confirm it opens. */
     markNsfw: {
-      /** Sticker detail, a sticker you drew that isn't 18+: the quiet link at the detail's foot that opens the confirm to mark it 18+ */
+      /** Sticker detail, a sticker you drew that isn't 18+: the button in its own section at the detail's foot, past a rule, that opens the confirm to mark it 18+ */
       open: { en: "Mark 18+…", ja: "18+にする…" },
       /** Sticker detail, Mark 18+'s confirm: its title; {{no}} is the sticker's number, such as "No.0147" */
       title: { en: "Mark {{no}} 18+?", ja: "{{no}}を18+にしますか？" },

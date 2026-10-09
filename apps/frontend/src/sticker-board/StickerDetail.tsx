@@ -255,6 +255,7 @@ export function StickerDetail({
   const markId = useId();
   const markButton = useRef<HTMLButtonElement>(null);
   const cancelMark = useRef<HTMLButtonElement>(null);
+  const markActions = useRef<HTMLDivElement>(null);
   const canMark = Boolean(ownerId && sticker && sticker.artist.id === ownerId && !sticker.nsfw);
   const mark = marking && marking.stickerId === sticker?.id ? marking : null;
   const asking = mark !== null;
@@ -264,6 +265,14 @@ export function StickerDetail({
     else if (backToMark.current) markButton.current?.focus({ preventScroll: true });
     backToMark.current = false;
   }, [asking]);
+  // On a short phone the confirm opens past the fold, so its buttons come up into view.
+  useEffect(() => {
+    if (asking)
+      markActions.current?.scrollIntoView({
+        block: "nearest",
+        behavior: reduced ? "auto" : "smooth",
+      });
+  }, [asking, reduced]);
   const stopAsking = () => {
     backToMark.current = true;
     setMarking(null);
@@ -760,75 +769,82 @@ export function StickerDetail({
                 />
               )}
 
-              {/* At the very foot, on plain label stock: only its confirm carries the tomato. */}
-              {canMark &&
-                (mark ? (
-                  <div
-                    className="sticker-detail__mark-ask"
-                    role="group"
-                    aria-labelledby={`${markId}-title`}
-                    aria-describedby={`${markId}-lines`}
-                    aria-busy={mark.step === "sending"}
-                  >
-                    <p className="sticker-detail__mark-title" id={`${markId}-title`}>
-                      {t(($) => $.stickerBoard.detail.markNsfw.title, { no: formatNo(sticker.no) })}
-                    </p>
-                    <div className="sticker-detail__mark-lines" id={`${markId}-lines`}>
-                      <p>{t(($) => $.stickerBoard.detail.markNsfw.does)}</p>
-                      <p className="sticker-detail__mark-undo">
-                        {t(($) => $.stickerBoard.detail.markNsfw.cantUndo)}
-                      </p>
-                      <p>{t(($) => $.stickerBoard.detail.markNsfw.copies)}</p>
-                    </div>
-                    <div className="sticker-detail__mark-actions">
-                      <QuietLink
-                        ref={cancelMark}
-                        aria-disabled={mark.step === "sending"}
-                        onClick={() => {
-                          if (mark.step !== "sending") stopAsking();
-                        }}
-                      >
-                        {t(($) => $.stickerBoard.detail.markNsfw.cancel)}
-                      </QuietLink>
-                      <LabelButton
-                        tone="tomato"
-                        size="sm"
+              {/* A section of its own at the very foot, past a rule, so it never reads as Give's
+                  alternative: plain label stock across the column, its confirm opening in its place,
+                  and the status line there once the mark lands. Only the confirm carries the tomato. */}
+              {(canMark || markedSaid?.stickerId === sticker.id) && (
+                <section className="sticker-detail__mark">
+                  <hr className="sticker-detail__mark-rule" />
+                  {canMark &&
+                    (mark ? (
+                      <div
+                        className="sticker-detail__mark-ask"
+                        role="group"
+                        aria-labelledby={`${markId}-title`}
+                        aria-describedby={`${markId}-lines`}
                         aria-busy={mark.step === "sending"}
-                        aria-disabled={mark.step === "sending"}
-                        onClick={() => {
-                          if (mark.step !== "sending") void markNsfw(sticker);
-                        }}
                       >
-                        {mark.step === "sending"
-                          ? t(($) => $.stickerBoard.detail.markNsfw.sending)
-                          : t(($) => $.stickerBoard.detail.markNsfw.confirm)}
+                        <p className="sticker-detail__mark-title" id={`${markId}-title`}>
+                          {t(($) => $.stickerBoard.detail.markNsfw.title, {
+                            no: formatNo(sticker.no),
+                          })}
+                        </p>
+                        <div className="sticker-detail__mark-lines" id={`${markId}-lines`}>
+                          <p>{t(($) => $.stickerBoard.detail.markNsfw.does)}</p>
+                          <p className="sticker-detail__mark-undo">
+                            {t(($) => $.stickerBoard.detail.markNsfw.cantUndo)}
+                          </p>
+                          <p>{t(($) => $.stickerBoard.detail.markNsfw.copies)}</p>
+                        </div>
+                        <div ref={markActions} className="sticker-detail__mark-actions">
+                          <QuietLink
+                            ref={cancelMark}
+                            aria-disabled={mark.step === "sending"}
+                            onClick={() => {
+                              if (mark.step !== "sending") stopAsking();
+                            }}
+                          >
+                            {t(($) => $.stickerBoard.detail.markNsfw.cancel)}
+                          </QuietLink>
+                          <LabelButton
+                            tone="tomato"
+                            size="sm"
+                            aria-busy={mark.step === "sending"}
+                            aria-disabled={mark.step === "sending"}
+                            onClick={() => {
+                              if (mark.step !== "sending") void markNsfw(sticker);
+                            }}
+                          >
+                            {mark.step === "sending"
+                              ? t(($) => $.stickerBoard.detail.markNsfw.sending)
+                              : t(($) => $.stickerBoard.detail.markNsfw.confirm)}
+                          </LabelButton>
+                        </div>
+                        {mark.step === "failed" && (
+                          <ErrorLine
+                            className="sticker-detail__mark-failed"
+                            detail={errorDetail(mark.error)}
+                          >
+                            {t(($) => $.stickerBoard.detail.markNsfw.failed, {
+                              reason: errorMessage(mark.error),
+                            })}
+                          </ErrorLine>
+                        )}
+                      </div>
+                    ) : (
+                      <LabelButton
+                        ref={markButton}
+                        block
+                        onClick={() => setMarking({ stickerId: sticker.id, step: "asking" })}
+                      >
+                        {t(($) => $.stickerBoard.detail.markNsfw.open)}
                       </LabelButton>
-                    </div>
-                    {mark.step === "failed" && (
-                      <ErrorLine
-                        className="sticker-detail__mark-failed"
-                        detail={errorDetail(mark.error)}
-                      >
-                        {t(($) => $.stickerBoard.detail.markNsfw.failed, {
-                          reason: errorMessage(mark.error),
-                        })}
-                      </ErrorLine>
-                    )}
-                  </div>
-                ) : (
-                  <div className="sticker-detail__mark">
-                    <LabelButton
-                      ref={markButton}
-                      size="sm"
-                      onClick={() => setMarking({ stickerId: sticker.id, step: "asking" })}
-                    >
-                      {t(($) => $.stickerBoard.detail.markNsfw.open)}
-                    </LabelButton>
-                  </div>
-                ))}
-              <p className="sticker-detail__marked" role="status">
-                {markedSaid?.stickerId === sticker.id ? markedSaid.words : ""}
-              </p>
+                    ))}
+                  <p className="sticker-detail__marked" role="status">
+                    {markedSaid?.stickerId === sticker.id ? markedSaid.words : ""}
+                  </p>
+                </section>
+              )}
               <p className="visually-hidden sticker-detail__taken-out" role="status">
                 {takenOutSaid?.stickerId === sticker.id ? takenOutSaid.words : ""}
               </p>
