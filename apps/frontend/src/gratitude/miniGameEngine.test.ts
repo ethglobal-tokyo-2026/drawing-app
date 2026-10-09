@@ -3,11 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReplayV1 } from "@drawing-app/api/client";
 import { i18next } from "../i18n/i18n";
 import { fullBarSeconds, type ComboRecord } from "./combo";
-import { GAME_CONFIG } from "./gameConfig";
+import { FEEL_CONFIG, GAME_CONFIG } from "./gameConfig";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
 import { mountGratitudeReplay } from "./replay/mountGratitudeReplay";
 import { REPLAY_REAL_TIME_MS } from "./replay/replayFeed";
 import { handFrames } from "./replay/testing";
+import { liveHeartRest, liveScale } from "./stageLayout";
 import { TIER_NAMES } from "./tierNames";
 
 const { log, watch } = vi.hoisted(() => {
@@ -102,7 +103,7 @@ const pointer = (type: string, x: number, y: number, t = performance.now()) => {
   stage.dispatchEvent(e);
 };
 /**
- * A thumb stroking up and down from `from`, which is already down: `passes` runs of 60px, each
+ * A thumb stroking up and down from `from`, which is already down: `passes` runs of `span` px, each
  * `msPerPass` long in three moves. With `at`, the moves carry made-up times from it and no time
  * passes; without, time passes as they're made.
  */
@@ -111,11 +112,12 @@ const strokeFrom = async (
   passes: number,
   msPerPass: number,
   at?: number,
+  span = 60,
 ) => {
   let t = at ?? 0;
   for (let i = 0; i < passes; i++) {
-    const start = i % 2 === 0 ? from.y : from.y + 60;
-    const end = i % 2 === 0 ? from.y + 60 : from.y;
+    const start = i % 2 === 0 ? from.y : from.y + span;
+    const end = i % 2 === 0 ? from.y + span : from.y;
     for (let k = 1; k <= 3; k++) {
       t += msPerPass / 3;
       if (at === undefined) await play(msPerPass / 3);
@@ -177,23 +179,15 @@ const live = () => document.getElementById("live")?.textContent;
 /** Long enough for one tap's combo to run its bar out. */
 const ONE_TAP_RUNS_OUT_MS = 3000;
 
-beforeEach(() => {
-  vi.useFakeTimers({
-    toFake: [
-      "setTimeout",
-      "clearTimeout",
-      "requestAnimationFrame",
-      "cancelAnimationFrame",
-      "performance",
-    ],
-  });
-  // happy-dom runs no Web Animations; a stand-in keeps the effects' calls harmless.
-  vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
-  Object.defineProperty(document, "fonts", {
-    value: { ready: Promise.resolve() },
-    configurable: true,
-  });
+/** Mounts the live game on a stage of happy-dom's, sizeless as a phone's fallback, or of `size`. */
+function mountOn(size?: { width: number; height: number }) {
   host = document.createElement("div");
+  if (size) {
+    Object.defineProperties(host, {
+      clientWidth: { value: size.width },
+      clientHeight: { value: size.height },
+    });
+  }
   document.body.append(host);
   const part = () => host.appendChild(document.createElement("div"));
   const page = part();
@@ -225,6 +219,25 @@ beforeEach(() => {
       onError,
     },
   );
+}
+
+beforeEach(() => {
+  vi.useFakeTimers({
+    toFake: [
+      "setTimeout",
+      "clearTimeout",
+      "requestAnimationFrame",
+      "cancelAnimationFrame",
+      "performance",
+    ],
+  });
+  // happy-dom runs no Web Animations; a stand-in keeps the effects' calls harmless.
+  vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
+  Object.defineProperty(document, "fonts", {
+    value: { ready: Promise.resolve() },
+    configurable: true,
+  });
+  mountOn();
 });
 
 afterEach(() => {
@@ -663,5 +676,41 @@ describe("in Japanese", () => {
     expect(pops.length).toBeGreaterThan(0);
     for (const pop of pops) expect(pop.querySelector(".gr-cap-gloss")?.textContent).toBe("");
     expect(live()).toBe(jp);
+  });
+});
+
+describe("on a stage drawn bigger", () => {
+  /** A portrait iPad's stage, which the game draws at MAX_LIVE_SCALE. */
+  const IPAD = { width: 820, height: 1180 };
+  const grown = liveScale(IPAD.width, IPAD.height);
+  const remount = () => {
+    engine.destroy();
+    host.remove();
+    mountOn(IPAD);
+  };
+
+  it("takes a first tap that slides past a phone's slop but inside the stage's", async () => {
+    remount();
+    const heart = liveHeartRest(IPAD.width, IPAD.height);
+    const slide = (FEEL_CONFIG.tapSlopPx * (1 + grown)) / 2;
+    pointer("pointerdown", heart.x, heart.y);
+    pointer("pointermove", heart.x + slide, heart.y);
+    pointer("pointerup", heart.x + slide, heart.y);
+    await play(16);
+    expect(host.dataset.phase).toBe("running");
+  });
+
+  it("unlocks stroke for passes grown with the stage, not for a phone's", async () => {
+    remount();
+    pressHeart();
+    const phoneRun = FEEL_CONFIG.stroke.minRunPx * 1.2;
+    pointer("pointerdown", OFF_HEART.x, OFF_HEART.y);
+    await strokeFrom(OFF_HEART, 3, 40, undefined, phoneRun);
+    expect(live()).not.toBe("Stroke unlocked.");
+    // Three runs leave the thumb a run below where it went down.
+    pointer("pointerup", OFF_HEART.x, OFF_HEART.y + phoneRun);
+    pointer("pointerdown", OFF_HEART.x, OFF_HEART.y);
+    await strokeFrom(OFF_HEART, 3, 40, undefined, phoneRun * grown);
+    expect(live()).toBe("Stroke unlocked.");
   });
 });

@@ -2,7 +2,7 @@
 .gr {
   position: absolute;
   inset: 0;
-  /* clip, not hidden: the speed field's 1100px would make it scrollable */
+  /* clip, not hidden: the speed field's square runs past the stage, and would make it scrollable */
   overflow: hidden;
   overflow: clip;
   isolation: isolate;
@@ -223,9 +223,9 @@
 .gr-beam-shaft {
   position: absolute;
   top: -40px;
-  width: 190px;
+  width: calc(190px * var(--gr-scale, 1));
   height: var(--beam-h, 520px);
-  margin-left: -95px;
+  margin-left: calc(-95px * var(--gr-scale, 1));
   background: linear-gradient(
     180deg,
     rgba(255, 255, 255, 0.96) 0%,
@@ -778,9 +778,9 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 150px;
-  height: 150px;
-  margin: -75px 0 0 -75px;
+  width: calc(150px * var(--gr-scale, 1));
+  height: calc(150px * var(--gr-scale, 1));
+  margin: calc(-75px * var(--gr-scale, 1)) 0 0 calc(-75px * var(--gr-scale, 1));
   border-radius: 50%;
   opacity: 0;
   pointer-events: none;
@@ -871,7 +871,7 @@
   padding: 0 16px;
   text-align: center;
   pointer-events: none;
-  font-size: 22px;
+  font-size: calc(22px * var(--gr-scale, 1));
   line-height: 1.2;
   font-weight: 800;
   font-stretch: var(--w-title, 112%);
@@ -989,9 +989,9 @@
 .gr-dent {
   position: absolute;
   z-index: 2;
-  width: 112px;
-  height: 30px;
-  margin-left: -56px;
+  width: calc(112px * var(--gr-scale, 1));
+  height: calc(30px * var(--gr-scale, 1));
+  margin-left: calc(-56px * var(--gr-scale, 1));
   pointer-events: none;
   transform-origin: 50% 0;
   opacity: 0;
@@ -1014,9 +1014,9 @@
 .gr-shakemarks svg {
   position: absolute;
   top: 50%;
-  width: 30px;
-  height: 30px;
-  margin-top: -15px;
+  width: calc(30px * var(--gr-scale, 1));
+  height: calc(30px * var(--gr-scale, 1));
+  margin-top: calc(-15px * var(--gr-scale, 1));
   opacity: 0.8;
   animation: gr-wiggle 0.23s linear infinite paused; /* runs only while the marks show */
 }
@@ -1064,7 +1064,7 @@
   opacity: 0;
   pointer-events: none;
   white-space: nowrap;
-  font-size: 26px;
+  font-size: calc(26px * var(--gr-scale, 1));
   font-weight: 500;
   font-stretch: var(--w-title, 112%);
   font-style: italic;
@@ -1072,11 +1072,11 @@
   color: var(--ink);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: calc(6px * var(--gr-scale, 1));
 }
 .gr-fuu svg {
-  width: 26px;
-  height: 26px;
+  width: calc(26px * var(--gr-scale, 1));
+  height: calc(26px * var(--gr-scale, 1));
   display: block;
 }
 
@@ -1310,26 +1310,6 @@
 .gr[data-mode="replay"] .gr-mult span {
   font-size: 13px;
 }
-/* what the stylesheet sizes in px, at the stage's scale (the engine's --gr-scale) */
-.gr[data-mode="replay"] .gr-thumb-glow {
-  width: calc(150px * var(--gr-scale));
-  height: calc(150px * var(--gr-scale));
-  margin: calc(-75px * var(--gr-scale)) 0 0 calc(-75px * var(--gr-scale));
-}
-.gr[data-mode="replay"] .gr-dent {
-  width: calc(112px * var(--gr-scale));
-  height: calc(30px * var(--gr-scale));
-  margin-left: calc(-56px * var(--gr-scale));
-}
-.gr[data-mode="replay"] .gr-beam-shaft {
-  width: calc(190px * var(--gr-scale));
-  margin-left: calc(-95px * var(--gr-scale));
-}
-.gr[data-mode="replay"] .gr-shakemarks svg {
-  width: calc(30px * var(--gr-scale));
-  height: calc(30px * var(--gr-scale));
-  margin-top: calc(-15px * var(--gr-scale));
-}
 
 /* ------------------------------------------------------------------ reduced motion: no shake, no haze */
 .gr[data-reduced="1"] .gr-page {
@@ -1361,5 +1341,33 @@
   .gr-hint-beat,
   .gr-receipt.is-on {
     animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ large screens
+   The top band with its X, the HUD and the receipt share one centered phone-width band; the ground,
+   the heart and its effects keep the whole stage. The receipt is a card at the shared card's width. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .gr:not([data-mode="replay"]) .gr-top {
+    left: max(0px, calc(50% - 195px));
+    right: max(0px, calc(50% - 195px));
+  }
+
+  /* The HUD keeps its phone's 20px inside the band. */
+  .gr:not([data-mode="replay"]) .gr-hud {
+    left: max(20px, calc(50% - 175px));
+    right: max(20px, calc(50% - 175px));
+  }
+
+  .gr:not([data-mode="replay"]) .gr-receipt,
+  .gr:not([data-mode="replay"]) .gr-receipt:is(.has-note, .has-detail) {
+    inset: 0;
+    width: min(var(--card-w), calc(100% - 48px));
+    height: fit-content;
+    margin: auto;
+  }
+
+  .gr:not([data-mode="replay"]) .gr-receipt .gr-rc-row {
+    touch-action: none;
   }
 }

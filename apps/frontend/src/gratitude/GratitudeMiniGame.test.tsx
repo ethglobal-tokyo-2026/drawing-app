@@ -9,7 +9,8 @@ import { MeContext } from "../api/meContext";
 import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_ME } from "../api/testing";
 import { errorDetail } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
-import { refusingStorage } from "../ui/testing";
+import { dragBy, onLargeScreen, refusingStorage } from "../ui/testing";
+import { DISMISS_PX } from "../ui/useSheetDrag";
 import { testStickerUrls } from "../stickers/testStickerUrls";
 import { GratitudeMiniGame } from "./GratitudeMiniGame";
 import { isGratitudeWaiting, resendPendingGratitude } from "./gratitudeOutbox";
@@ -237,6 +238,17 @@ describe("GratitudeMiniGame", () => {
     expect(receiptLabel()).toBe("Gratitude saved");
     expect(live()).toBe(kept);
     expect(live()).not.toMatch(/^Sent/);
+  });
+
+  it("on an iPad closes from a swipe down its receipt's head", async () => {
+    onLargeScreen();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    recordGratitude.mockRejectedValue(new TypeError("Failed to fetch"));
+    open({ giftId: "g1" });
+    tapOnce();
+    await play(ONE_TAP_ENDS_MS);
+    dragBy(document.querySelector(".gr-receipt .gr-rc-row"), [0, DISMISS_PX * 2]);
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it("says the gratitude was neither sent nor saved when the server can't be reached and the device can't keep it", async () => {

@@ -4,8 +4,8 @@ import type { ComboRecord } from "../combo";
 import { createFrameTimeReadout } from "../frameTimeReadout";
 import { GAME_CONFIG, PLAYED_CONFIGS } from "../gameConfig";
 import { readMiniGameDemoSettings } from "../miniGameDemoSettings";
-import { LIVE_STAGE_WIDTH, mountReplayEngine, type StageLayout } from "../miniGameEngine";
-import { heartRest, LIVE_FRAME } from "../stageLayout";
+import { mountReplayEngine, type StageLayout } from "../miniGameEngine";
+import { heartRest, LIVE_STAGE, liveHeartRest, liveScale } from "../stageLayout";
 import { createReplayClock } from "./replayClock";
 import { createReplayFeed, replaySpeed } from "./replayFeed";
 import { createReplayDriver } from "./replayInput";
@@ -88,8 +88,7 @@ export function mountGratitudeReplay(
 
   const width = root.clientWidth || REPLAY_LAYOUT.fallback.width;
   const height = root.clientHeight || REPLAY_LAYOUT.fallback.height;
-  const scale = width / LIVE_STAGE_WIDTH;
-  root.style.setProperty("--gr-scale", scale.toFixed(3));
+  const scale = width / LIVE_STAGE.width;
   const heart = heartRest(width, height, REPLAY_LAYOUT.frame);
   const feed = createFeed(replay, {
     x: heart.x,
@@ -98,7 +97,10 @@ export function mountGratitudeReplay(
     height: heart.height,
   });
   // The feed places each input by the heart, so the recording's strokes shrink as its heart does.
-  const recorded = heartRest(replay.stage[0], replay.stage[1], LIVE_FRAME);
+  const [recordedWidth, recordedHeight] = replay.stage;
+  const recorded = liveHeartRest(recordedWidth, recordedHeight);
+  // The live game's rules played at its own scale, so a phone's px reach this stage through both.
+  const inputScale = (heart.width / recorded.width) * liveScale(recordedWidth, recordedHeight);
   const speed = replaySpeed(replay.durationMs);
   const readout = readMiniGameDemoSettings().showFrameTimes ? createFrameTimeReadout(root) : null;
   const clock = createReplayClock(
@@ -125,7 +127,7 @@ export function mountGratitudeReplay(
       speed,
       layout: REPLAY_LAYOUT,
       scale,
-      inputScale: heart.width / recorded.width,
+      inputScale,
       miniHearts: REPLAY_MINI_HEARTS,
       landAt: options.landAt,
       drive: createReplayDriver(feed, {
