@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { blob, check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { blob, check, index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { isBytes32, literal, timestamps } from "./columns.ts";
 import { KYOTO_SEIKA_TIME_USED_S } from "./limits.ts";
 import { users } from "./users.ts";
@@ -80,6 +80,13 @@ export const stickers = sqliteTable(
      * screens that show it larger than the PNG holds. Not on Sui.
      */
     hasSharpCopy: integer("has_sharp_copy", { mode: "boolean" }).notNull().default(false),
+    /**
+     * The sticker image's size on the sheet it was drawn on, in sheet units, from the cut's place:
+     * what sizes it on a sticker board, so line weights match from sticker to sticker. One sealed
+     * before sheet frames has its drawing device's CSS px, which its brush widths share.
+     */
+    drawnWidth: real("drawn_width").notNull(),
+    drawnHeight: real("drawn_height").notNull(),
   },
   (t) => [
     index("stickers_owner").on(t.ownerId),
@@ -101,6 +108,7 @@ export const stickers = sqliteTable(
       sql`${t.kyotoSeikaSubjects} is null or (json_valid(${t.kyotoSeikaSubjects}) and json_array_length(${t.kyotoSeikaSubjects}) = 2)`,
     ),
     check("stickers_size", sql`${t.width} > 0 and ${t.height} > 0`),
+    check("stickers_drawn_size", sql`${t.drawnWidth} > 0 and ${t.drawnHeight} > 0`),
     check("stickers_content_hash", isBytes32(t.contentHash)),
     check("stickers_veiled", sql`${t.nsfw} = (${t.veiledHash} is not null)`),
     check("stickers_object_id", sql`${t.objectId} is null or (${isBytes32(t.objectId)})`),

@@ -222,6 +222,8 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
             timeUsed: String(request.timeUsed),
             width: String(request.width),
             height: String(request.height),
+            drawnWidth: String(request.drawnWidth),
+            drawnHeight: String(request.drawnHeight),
             outline: request.outline,
             png: png(request.png, "sticker.png"),
             ...(request.sharp && { sharp: png(request.sharp, "sharp.png") }),

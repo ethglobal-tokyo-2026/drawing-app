@@ -211,6 +211,8 @@ const stickerRow = createSelectSchema(stickers, {
   timeUsed: (schema) => schema.min(0).max(KYOTO_SEIKA_TIME_USED_S),
   width: (schema) => schema.positive(),
   height: (schema) => schema.positive(),
+  drawnWidth: (schema) => schema.positive(),
+  drawnHeight: (schema) => schema.positive(),
 });
 
 export const stickerSchema = z.object({
@@ -221,6 +223,8 @@ export const stickerSchema = z.object({
     timeUsed: true,
     width: true,
     height: true,
+    drawnWidth: true,
+    drawnHeight: true,
     outline: true,
     contentHash: true,
     objectId: true,
@@ -367,6 +371,8 @@ export function toSticker(
     timeUsed: sticker.timeUsed,
     width: sticker.width,
     height: sticker.height,
+    drawnWidth: sticker.drawnWidth,
+    drawnHeight: sticker.drawnHeight,
     outline: sticker.outline,
     contentHash: sticker.contentHash,
     images: viewer.images(sticker),

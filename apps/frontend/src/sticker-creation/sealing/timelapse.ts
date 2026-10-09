@@ -36,9 +36,21 @@ function pointChanges(pts: readonly number[]): number[] {
   return changes;
 }
 
+/** A length on the ink canvas in sheet units, to the tenth, as the timelapse and the drawn size keep it. */
+const inUnits = (n: number, density: number) => toTenth(n / density);
+
+/**
+ * The sticker image's size on the sheet, in units, from where it was cut: its drawn size, which sizes
+ * it on a sticker board. The same as its timelapse's `place`, and recorded without one.
+ */
+export const drawnSizeOf = (place: Rect, density: number) => ({
+  drawnWidth: inUnits(place.w, density),
+  drawnHeight: inUnits(place.h, density),
+});
+
 export function encodeTimelapse({ ops, frame, place }: TimelapseInput): TimelapseV1 {
   const { density } = frame;
-  const sheet = (n: number) => toTenth(n / density);
+  const sheet = (n: number) => inUnits(n, density);
   return {
     v: 1,
     ink: [toTenth(frame.w), toTenth(frame.h)],

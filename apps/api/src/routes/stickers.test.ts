@@ -34,6 +34,7 @@ import {
   sealParts,
   SHARP_SIZE,
   sharpImage,
+  STICKER_DRAWN_SIZE,
   STICKER_SIZE,
   TEST_TIMELAPSE,
   testPng,
@@ -170,9 +171,12 @@ describe("POST /api/stickers", () => {
     expect(test.images.savedSharp.has(without.sticker.contentHash)).toBe(false);
   });
 
-  it("takes the timelapse as optional", async () => {
+  it("takes the timelapse as optional, and records the drawn size without it", async () => {
     const { sticker } = await seal(insertUser(test.db), { timelapse: undefined });
     expect(timelapseOf(sticker.id)).toBeUndefined();
+    const drawn = { drawnWidth: STICKER_DRAWN_SIZE.width, drawnHeight: STICKER_DRAWN_SIZE.height };
+    expect(rowOf(sticker.id)).toMatchObject(drawn);
+    expect(sticker).toMatchObject(drawn);
   });
 
   it("keeps the first seal's files when a later seal uploads the same PNG", async () => {

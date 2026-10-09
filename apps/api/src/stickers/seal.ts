@@ -257,6 +257,8 @@ export async function sealSticker(
           timeUsed: form.timeUsed,
           width: form.width,
           height: form.height,
+          drawnWidth: form.drawnWidth,
+          drawnHeight: form.drawnHeight,
           outline: form.outline,
           contentHash,
           nsfw: form.nsfw,

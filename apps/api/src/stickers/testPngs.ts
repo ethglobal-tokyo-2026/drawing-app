@@ -52,6 +52,8 @@ export function testPng(width: number, height: number, comment?: string): Uint8A
 export const STICKER_SIZE = { width: 320, height: 240 };
 /** The test sticker's sharp copy: larger on both sides. */
 export const SHARP_SIZE = { width: 800, height: 600 };
+/** Its size on the sheet, in sheet units: the timelapse's place, at two image px per unit. */
+export const STICKER_DRAWN_SIZE = { width: 160, height: 120.5 };
 /** The live resin's band-sized masks, and the flat sheet: neither is the sticker's size. */
 const BAND_SIZE = { width: 352, height: 272 };
 const SHEET_SIZE = { width: 1100, height: 800 };
@@ -72,7 +74,7 @@ export const sharpImage = () => testPng(SHARP_SIZE.width, SHARP_SIZE.height, "sh
 export const TEST_TIMELAPSE: TimelapseV1 = {
   v: 1,
   ink: [SHEET_SIZE.width, SHEET_SIZE.height],
-  place: [10, 20, STICKER_SIZE.width, STICKER_SIZE.height],
+  place: [10, 20, STICKER_DRAWN_SIZE.width, STICKER_DRAWN_SIZE.height],
   density: 2,
   ops: [
     ["brush", "#ff3366", 0, [100, 200, 60, 0, 50, 25, 0, 16]],
@@ -99,6 +101,8 @@ export function sealUpload(ticketUseId: number) {
     timeUsed: String(MAX_TIME_USED_S),
     width: String(STICKER_SIZE.width),
     height: String(STICKER_SIZE.height),
+    drawnWidth: String(STICKER_DRAWN_SIZE.width),
+    drawnHeight: String(STICKER_DRAWN_SIZE.height),
     outline: "M0 0L1 0L1 1Z",
     png: pngFile(images.png, "png"),
     sharp: pngFile(sharpImage(), "sharp"),

@@ -47,7 +47,7 @@ import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
 import { SealCeremony } from "./sealing/SealCeremony";
 import { SealingStatusLabel } from "./sealing/SealingStatusLabel";
 import { LEAVE_MS, type Box } from "./sealing/sealTimeline";
-import { encodeTimelapse, gzipTimelapse } from "./sealing/timelapse";
+import { drawnSizeOf, encodeTimelapse, gzipTimelapse } from "./sealing/timelapse";
 import {
   keptColor,
   loadKeptSession,
@@ -383,6 +383,7 @@ export function DrawingScreen({
       timeUsed,
       width: cut.width,
       height: cut.height,
+      ...drawnSizeOf(cut.place, frame.density),
       outline: cut.outline,
       png: cut.png,
       ...(cut.sharp && { sharp: cut.sharp }),

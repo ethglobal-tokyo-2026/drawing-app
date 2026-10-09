@@ -10,6 +10,8 @@ const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 /** The sharp copy is larger: room for its raw pixels at its largest, never reached as a PNG. */
 const MAX_SHARP_IMAGE_BYTES = 16 * 1024 * 1024;
 const MAX_OUTLINE_LENGTH = 200_000;
+/** A drawn side, in sheet units: the sheet's long side with the cut's band past it is well under it. */
+const MAX_DRAWN_SIDE = 4096;
 /** The whole multipart body. */
 export const MAX_SEAL_BYTES = 32 * 1024 * 1024;
 
@@ -21,6 +23,8 @@ const stickerColumns = createInsertSchema(stickers, {
   timeUsed: (schema) => schema.min(0).max(KYOTO_SEIKA_TIME_USED_S),
   width: (schema) => schema.min(1).max(MAX_IMAGE_SIDE),
   height: (schema) => schema.min(1).max(MAX_IMAGE_SIDE),
+  drawnWidth: (schema) => schema.positive().max(MAX_DRAWN_SIDE),
+  drawnHeight: (schema) => schema.positive().max(MAX_DRAWN_SIDE),
   outline: (schema) =>
     schema.max(MAX_OUTLINE_LENGTH).regex(OUTLINE_PATH, "expected an SVG path of M, L and Z"),
 }).shape;
@@ -30,6 +34,14 @@ const digits = (column: z.ZodType<number, number>) =>
   z
     .string()
     .regex(/^\d+$/, "expected decimal digits")
+    .transform((text) => Number(text))
+    .pipe(column);
+
+/** A form field of a decimal number, checked as the real column it fills. */
+const decimal = (column: z.ZodType<number, number>) =>
+  z
+    .string()
+    .regex(/^\d+(\.\d+)?$/, "expected a decimal number")
     .transform((text) => Number(text))
     .pipe(column);
 
@@ -56,6 +68,9 @@ export const sealForm = z.object({
   timeUsed: digits(stickerColumns.timeUsed),
   width: digits(stickerColumns.width),
   height: digits(stickerColumns.height),
+  /** The image's size on the sheet it was drawn on, in sheet units: what sizes it on a sticker board. */
+  drawnWidth: decimal(stickerColumns.drawnWidth),
+  drawnHeight: decimal(stickerColumns.drawnHeight),
   outline: stickerColumns.outline,
   png,
   /** The sticker again, larger, from ink that holds more than `png`. */

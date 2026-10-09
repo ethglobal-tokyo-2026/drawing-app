@@ -299,7 +299,7 @@ const cutSticker = () => ({
   height: 10,
   pad: 0,
   inkWidth: 10,
-  place: { x: 0, y: 0, w: 10, h: 10 },
+  place: { x: 2, y: 3, w: 24, h: 18 },
   contour: [],
   layers: {},
   maskImage: document.createElement("canvas"),
@@ -468,6 +468,11 @@ describe("the seal sheet", () => {
       await settle(1000);
       expect(seal).toHaveBeenCalledOnce();
       expect(seal.mock.calls[0]?.[0].nsfw).toBe(on);
+      // Its drawn size is where it was cut on the sheet, in units, whatever its image's size.
+      expect(seal.mock.calls[0]?.[0]).toMatchObject({
+        drawnWidth: 24 / FRAME.density,
+        drawnHeight: 18 / FRAME.density,
+      });
     },
   );
 

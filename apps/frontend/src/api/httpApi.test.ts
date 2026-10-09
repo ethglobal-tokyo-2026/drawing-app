@@ -149,6 +149,8 @@ describe("sealing", () => {
     timeUsed: 60,
     width: 10,
     height: 10,
+    drawnWidth: 24.5,
+    drawnHeight: 18,
     outline: "M0 0L1 1Z",
     png: new Blob(["png"]),
     mask: new Blob(["mask"]),

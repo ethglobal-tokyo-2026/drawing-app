@@ -29,6 +29,8 @@ const request = {
   timeUsed: 1,
   width: 1,
   height: 1,
+  drawnWidth: 1,
+  drawnHeight: 1,
   outline: "M0 0Z",
   png: image,
   mask: image,

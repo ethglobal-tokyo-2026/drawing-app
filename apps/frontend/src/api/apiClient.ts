@@ -44,6 +44,9 @@ interface SealRequest {
   timeUsed: number;
   width: number;
   height: number;
+  /** The image's size on the sheet it was drawn on, in sheet units. */
+  drawnWidth: number;
+  drawnHeight: number;
   outline: string;
   png: Blob;
   /** The sticker, larger, when the ink holds more than `png`. */

@@ -73,6 +73,8 @@ export function insertSticker(
       timeUsed: 0,
       width: 1,
       height: 1,
+      drawnWidth: 1,
+      drawnHeight: 1,
       outline: "M0 0Z",
       nsfw,
       contentHash: bytes32(id),
