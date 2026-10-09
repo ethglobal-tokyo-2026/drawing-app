@@ -20,6 +20,18 @@ function suiWalletAddress(user: User): string | null {
   return wallet?.type === "wallet" ? normalizeSuiAddress(wallet.address) : null;
 }
 
+/**
+ * Keeps a looked-up wallet on the person's row, where their stat board reads it. A failed write
+ * costs only that, so it's logged and the lookup still answers.
+ */
+function keepAddress(db: Db, userId: string, address: string) {
+  try {
+    db.update(users).set({ suiAddress: address }).where(eq(users.id, userId)).run();
+  } catch (error) {
+    logFailure("wallet.keep.failed", error, { userId });
+  }
+}
+
 /** Reads each person's Sui wallet from Privy, by the custom auth ID their LINE sign-in made. */
 export function createPrivySuiWallets({
   db,
@@ -78,6 +90,7 @@ export function createPrivySuiWallets({
         elapsedMs: Math.round(performance.now() - started),
         status: address ? "found" : "missing_sui_wallet",
       });
+      if (address) keepAddress(db, userId, address);
       return address;
     },
   };

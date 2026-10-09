@@ -280,6 +280,11 @@ export const errors = {
     en: "Your Sui address isn’t ready yet. Try again in a moment.",
     ja: "Suiアドレスの準備がまだできていません。少し待ってから、もう一度お試しください。",
   },
+  /** Someone else's stat board: loading their Sui address (GET /api/sticker-boards/:userId/sui-address) when Privy, which keeps the wallets, didn't answer; the address paper says it didn't load, with Try again */
+  wallet_lookup_failed: {
+    en: "Couldn’t get the Sui address just now. Try again in a moment.",
+    ja: "Suiアドレスをいま取得できません。少し待ってから、もう一度お試しください。",
+  },
   /** Any error line, when what failed isn't the server's answer but something on this phone or in a library, such as LINE's picker; its own English words follow as details for a report (made by the app itself, shown through problemOf) */
   unexpected: {
     en: "Something went wrong. Try again in a moment.",

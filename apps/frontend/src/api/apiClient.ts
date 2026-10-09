@@ -6,6 +6,7 @@ import type {
   GiftPreview,
   GiftsForYou,
   Gratitude,
+  GratitudeEvents,
   GratitudeWithReplay,
   KyotoSeikaSubject,
   Me,
@@ -87,6 +88,10 @@ export interface ApiClient {
   stickerBoard: (userId?: string) => Promise<StickerBoard>;
   /** GET /api/sticker-boards/:userId/user-stats */
   userStats: (userId?: string) => Promise<UserStats>;
+  /** GET /api/gratitude/events: your gratitude, combo by combo; `before` is the last page's `next`. */
+  gratitudeEvents: (before?: string) => Promise<GratitudeEvents>;
+  /** GET /api/sticker-boards/:userId/sui-address: null while they have no wallet. */
+  suiAddress: (userId: string) => Promise<string | null>;
   /** PATCH /api/sticker-boards/me/sticker-placements/:stickerId */
   saveStickerPlacement: (stickerId: string, placement: Placement) => Promise<StickerPlacement>;
   /** POST /api/sticker-boards/me/sticker-tray/seen */

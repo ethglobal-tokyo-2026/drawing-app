@@ -55,6 +55,7 @@ export type {
   ReceivedGift,
   ReceiveRefusal,
 } from "./gifts/receiving.ts";
+export type { GratitudeEvents } from "./gratitude/events.ts";
 export type { GratitudeWithReplay, UnseenGratitude } from "./gratitude/feed.ts";
 export type { RecordGratitude } from "./gratitude/record.ts";
 export type { ReplayV1 } from "./gratitude/replay.ts";

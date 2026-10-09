@@ -102,6 +102,8 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
     setKyotoSeikaPractice: unanswered("setKyotoSeikaPractice"),
     stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [] }),
     userStats: unanswered("userStats"),
+    suiAddress: unanswered("suiAddress"),
+    gratitudeEvents: unanswered("gratitudeEvents"),
     saveStickerPlacement: (stickerId, placement) =>
       Promise.resolve({ stickerId, placement, seenAt: null, arrivedAt: new Date(0).toISOString() }),
     markTraySeen: () => Promise.resolve({ newStickerCount: 0 }),

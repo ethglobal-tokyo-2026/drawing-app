@@ -1,3 +1,4 @@
+import { users } from "@drawing-app/db";
 import { createTestDb, insertUser } from "@drawing-app/db/testing";
 import { privySubject } from "@drawing-app/line-auth/line-privy-jwt";
 import { APIConnectionTimeoutError, type User } from "@privy-io/node";
@@ -36,7 +37,9 @@ async function setup(fetchImpl: typeof fetch) {
     privyAppSecret: APP_SECRET,
     fetchImpl,
   });
-  return { userId, wallets };
+  /** The wallet kept on the person's row. */
+  const kept = () => db.select({ suiAddress: users.suiAddress }).from(users).get()?.suiAddress;
+  return { userId, wallets, kept };
 }
 
 /** Privy answering every lookup with a user who has `accounts`. */
@@ -44,7 +47,7 @@ const privyWith = (...accounts: User["linked_accounts"]) =>
   vi.fn<typeof fetch>(async () => Response.json(privyUser(accounts)));
 
 describe("Privy Sui wallets", () => {
-  it("finds the person by their LINE sign-in, and answers their Sui wallet, normalized", async () => {
+  it("finds the person by their LINE sign-in, and answers and keeps their Sui wallet, normalized", async () => {
     const fetchImpl = privyWith(
       privyEmbeddedWallet(`0x${"1".repeat(64)}`, "aptos"),
       privySmartWallet(`0x${"2".repeat(40)}`),
@@ -52,6 +55,7 @@ describe("Privy Sui wallets", () => {
     );
     const test = await setup(fetchImpl);
     await expect(test.wallets.addressFor(test.userId)).resolves.toBe(SUI_ADDRESS.toLowerCase());
+    expect(test.kept()).toBe(SUI_ADDRESS.toLowerCase());
     const [input, init] = fetchImpl.mock.calls[0] ?? [];
     expect(await new Request(input ?? "", init).json()).toEqual({
       custom_user_id: privySubject(CHANNEL_ID, LINE_USER_ID),

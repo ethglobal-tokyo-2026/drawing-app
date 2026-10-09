@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import type { AppDeps } from "../deps.ts";
+import { failureCause } from "../diagnostics.ts";
 import { apiError, validate } from "../errors.ts";
 import type { AppEnv } from "../session.ts";
 import {
@@ -8,6 +9,7 @@ import {
   placementSchema,
   stickerPlacementSchema,
   stickerViewer,
+  suiIdSchema,
   toStickerPlacement,
 } from "../shapes.ts";
 import {
@@ -23,8 +25,14 @@ import { loadUserStats } from "../stickerBoards/userStats.ts";
 const ownerParamSchema = z.object({ userId: personSchema.shape.id });
 const placementParamSchema = z.object({ stickerId: stickerPlacementSchema.shape.stickerId });
 
-/** Sticker Boards, your sticker tray and the stat board's User Stats. */
-export const stickerBoardRoutes = ({ db, clock, images }: AppDeps) =>
+/**
+ * GET /api/sticker-boards/:userId/sui-address's answer: null while the person has no wallet, and
+ * once their account is deleted.
+ */
+export const suiAddressResponseSchema = z.object({ suiAddress: suiIdSchema.nullable() });
+
+/** Sticker Boards, your sticker tray, and the stat board's User Stats and Sui address. */
+export const stickerBoardRoutes = ({ db, clock, images, suiWallets }: AppDeps) =>
   new Hono<AppEnv>()
     .get("/:userId", validate("param", ownerParamSchema), (c) => {
       const { userId } = c.req.valid("param");
@@ -38,6 +46,20 @@ export const stickerBoardRoutes = ({ db, clock, images }: AppDeps) =>
       const owner = findBoardOwner(db, userId, c.var.userId);
       if (!owner) return apiError(c, 404, "user_not_found", `There's no person ${userId}`);
       return c.json({ userStats: loadUserStats(db, owner, clock.now()) }, 200);
+    })
+    // Apart from the stats, so they never wait on Privy. Null while the person has no wallet.
+    .get("/:userId/sui-address", validate("param", ownerParamSchema), async (c) => {
+      const { userId } = c.req.valid("param");
+      const owner = findBoardOwner(db, userId, c.var.userId);
+      if (!owner) return apiError(c, 404, "user_not_found", `There's no person ${userId}`);
+      // A deleted account's row keeps its wallet, for its stickers, but its board no longer shows it.
+      if (owner.deletedAt) return c.json({ suiAddress: null }, 200);
+      if (owner.suiAddress) return c.json({ suiAddress: owner.suiAddress }, 200);
+      try {
+        return c.json({ suiAddress: await suiWallets.addressFor(owner.id) }, 200);
+      } catch (error) {
+        return apiError(c, 502, "wallet_lookup_failed", `Privy: ${failureCause(error)}`);
+      }
     })
     .patch(
       "/me/sticker-placements/:stickerId",

@@ -8,11 +8,18 @@ import {
   unseenGratitudeCount,
   unseenGratitudeSchema,
 } from "../gratitude/feed.ts";
+import { GRATITUDE_EVENTS_PAGE, gratitudeEventsSchema } from "../gratitude/events.ts";
 import { gzipReplay } from "../gratitude/replay.ts";
 import { tapReplay } from "../gratitude/testReplays.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
-import { giveSticker, insertSealedSticker } from "../testing/rows.ts";
+import {
+  giveSticker,
+  insertSealedSticker,
+  OWN_TAP,
+  sendGratitude,
+  SHARED_TAP,
+} from "../testing/rows.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
 /** When the older and newer combos were recorded. */
@@ -73,6 +80,73 @@ describe("GET /api/gratitude/unseen", () => {
         receiver: { id: secondReceiverId },
       },
     ]);
+  });
+});
+
+describe("GET /api/gratitude/events", () => {
+  it("lists the combos that gave you gratitude, newest first: Direct as the giver, Residual as the Original Artist", async () => {
+    const me = insertUser(test.db);
+    const friend = insertUser(test.db);
+    const other = insertUser(test.db);
+    const direct = giftWithGratitude(me, friend, { ...OWN_TAP, createdAt: OLDER });
+    // A sticker you drew that someone else gave on: your share of its combo is Residual.
+    const drawn = insertSealedSticker(test.db, me);
+    giveSticker(test.db, drawn, me, other);
+    sendGratitude(test.db, drawn, other, friend, { ...SHARED_TAP, createdAt: NEWER });
+    // Gratitude you sent, and gratitude on someone else's sticker, went to others.
+    giftWithGratitude(friend, me);
+    giftWithGratitude(other, friend);
+
+    const response = await test.send("GET", "/api/gratitude/events", { as: me });
+    const { events, next } = await bodyOf(response, gratitudeEventsSchema);
+    expect(events).toMatchObject([
+      {
+        part: "residual",
+        amount: SHARED_TAP.originalArtistGratitudeShare,
+        sticker: { id: drawn },
+        from: { id: friend },
+        recordedAt: NEWER.toISOString(),
+      },
+      {
+        part: "direct",
+        amount: OWN_TAP.total,
+        giftId: direct.giftId,
+        from: { id: friend },
+        recordedAt: OLDER.toISOString(),
+      },
+    ]);
+    expect(next).toBeNull();
+  });
+
+  it("pages back through every combo once, newest first, Direct and Residual together", async () => {
+    const me = insertUser(test.db);
+    const friend = insertUser(test.db);
+    const other = insertUser(test.db);
+    // More than a page, half recorded at each time, so a page ends among combos recorded together.
+    const count = GRATITUDE_EVENTS_PAGE + 2;
+    const giftIds = Array.from({ length: count }, (_, i) => {
+      const createdAt = i < count / 2 ? NEWER : OLDER;
+      if (i % 2 === 0) return giftWithGratitude(me, friend, { ...OWN_TAP, createdAt }).giftId;
+      const drawn = insertSealedSticker(test.db, me);
+      return sendGratitude(test.db, drawn, other, friend, { ...SHARED_TAP, createdAt }).giftId;
+    });
+
+    const shown: { giftId: string; recordedAt: string }[] = [];
+    let pages = 0;
+    let before: string | null = null;
+    do {
+      const query: string = before === null ? "" : `?before=${before}`;
+      const response = await test.send("GET", `/api/gratitude/events${query}`, { as: me });
+      const page = await bodyOf(response, gratitudeEventsSchema);
+      shown.push(...page.events);
+      before = page.next;
+      pages++;
+    } while (before !== null);
+
+    expect(pages).toBeGreaterThan(1);
+    expect(shown.map((event) => event.giftId).sort()).toEqual(giftIds.sort());
+    const times = shown.map((event) => Date.parse(event.recordedAt));
+    expect(times).toEqual(times.toSorted((a, b) => b - a));
   });
 });
 

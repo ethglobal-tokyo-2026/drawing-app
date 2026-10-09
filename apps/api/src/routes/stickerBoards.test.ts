@@ -8,6 +8,7 @@ import { MAX_SEEN_BATCH, newStickerCount, stickerBoardSchema } from "../stickerB
 import { simplifiedOutline } from "../stickers/outline.ts";
 import { stickerDetailSchema } from "../stickers/stickerDetail.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
+import { fakeSuiWallets } from "../testing/fakes.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import {
   FEW_HITS,
@@ -20,6 +21,7 @@ import {
   SPOT,
 } from "../testing/rows.ts";
 import { addDays, tokyoTicketDay, tokyoTicketDayStart } from "../ticketDays.ts";
+import { suiAddressResponseSchema } from "./stickerBoards.ts";
 
 /** Back in the sticker tray, with every value moved from SPOT. */
 const IN_TRAY = { onBoard: false, x: 0.6, y: 0.1, scale: 0.8, rotation: 12, z: 5 };
@@ -227,7 +229,11 @@ describe("GET /api/sticker-boards/:userId", () => {
 
   it("refuses a person who doesn't exist, for their board and their stats", async () => {
     const me = insertUser(test.db);
-    for (const path of ["/api/sticker-boards/nobody", "/api/sticker-boards/nobody/user-stats"]) {
+    for (const path of [
+      "/api/sticker-boards/nobody",
+      "/api/sticker-boards/nobody/user-stats",
+      "/api/sticker-boards/nobody/sui-address",
+    ]) {
       expect(await refusalOf(await test.send("GET", path, { as: me }))).toMatchObject({
         status: 404,
         error: "user_not_found",
@@ -319,6 +325,67 @@ describe("POST /api/sticker-boards/me/sticker-tray/seen", () => {
     const given = giveSticker(test.db, insertSealedSticker(test.db, me), me, friend);
     expect(newStickerCount(test.db, me)).toBe(unseen.length);
     expect(newStickerCount(test.db, friend)).toBe([given].length);
+  });
+});
+
+describe("GET /api/sticker-boards/:userId/sui-address", () => {
+  /** The test app, looking wallets up through `addressFor`, which counts its lookups. */
+  const withWallets = async (
+    addressFor: (
+      wallets: ReturnType<typeof fakeSuiWallets>,
+      userId: string,
+    ) => Promise<string | null>,
+  ) => {
+    const lookups: string[] = [];
+    test = await createTestApp((base) => {
+      const wallets = fakeSuiWallets(base.db);
+      return {
+        suiWallets: {
+          addressFor: (userId) => {
+            lookups.push(userId);
+            return addressFor(wallets, userId);
+          },
+        },
+      };
+    });
+    return lookups;
+  };
+  const addressOf = (viewerId: string, userId: string) =>
+    test.send("GET", `/api/sticker-boards/${userId}/sui-address`, { as: viewerId });
+  /** The Sui address `viewerId` is shown on `userId`'s stat board. */
+  const shownAddress = async (viewerId: string, userId: string) =>
+    (await bodyOf(await addressOf(viewerId, userId), suiAddressResponseSchema)).suiAddress;
+
+  it("answers someone's wallet, asking Privy only until it's kept", async () => {
+    const lookups = await withWallets((wallets, userId) => wallets.addressFor(userId));
+    const [me, them] = [insertUser(test.db), insertUser(test.db)];
+    const first = await shownAddress(me, them);
+    expect(first).not.toBeNull();
+    expect(await shownAddress(me, them)).toBe(first);
+    expect(lookups).toEqual([them]);
+  });
+
+  it("answers null while they have no wallet, and says when Privy can't be asked", async () => {
+    const stalls = new Set<string>();
+    await withWallets((_, userId) =>
+      stalls.has(userId) ? Promise.reject(new Error("Privy timed out")) : Promise.resolve(null),
+    );
+    const [me, them, stalled] = [insertUser(test.db), insertUser(test.db), insertUser(test.db)];
+    stalls.add(stalled);
+    expect(await shownAddress(me, them)).toBeNull();
+    expect(await refusalOf(await addressOf(me, stalled))).toMatchObject({
+      status: 502,
+      error: "wallet_lookup_failed",
+    });
+  });
+
+  it("answers null once they delete their account, though their row keeps the wallet", async () => {
+    const lookups = await withWallets((wallets, userId) => wallets.addressFor(userId));
+    const [me, them] = [insertUser(test.db), insertUser(test.db)];
+    expect(await shownAddress(me, them)).not.toBeNull();
+    expect((await test.send("DELETE", "/api/me", { as: them })).status).toBe(204);
+    expect(await shownAddress(me, them)).toBeNull();
+    expect(lookups).toEqual([them]);
   });
 });
 

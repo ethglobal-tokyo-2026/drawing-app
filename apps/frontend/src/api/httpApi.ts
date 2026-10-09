@@ -178,6 +178,13 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       }
       return (await response.json()).userStats;
     },
+    suiAddress: async (userId) => {
+      const response = await boards[":userId"]["sui-address"].$get({ param: { userId } });
+      if (!response.ok) {
+        throw await refusal(response, `GET /api/sticker-boards/${userId}/sui-address`);
+      }
+      return (await response.json()).suiAddress;
+    },
     saveStickerPlacement: async (stickerId, placement) => {
       const response = await boards.me["sticker-placements"][":stickerId"].$patch({
         param: { stickerId },
@@ -357,6 +364,13 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
     unseenGratitude: async () => {
       const response = await api.gratitude.unseen.$get();
       if (!response.ok) throw await refusal(response, "GET /api/gratitude/unseen");
+      return response.json();
+    },
+    gratitudeEvents: async (before) => {
+      const response = await api.gratitude.events.$get({
+        query: before === undefined ? {} : { before },
+      });
+      if (!response.ok) throw await refusal(response, "GET /api/gratitude/events");
       return response.json();
     },
     gratitude: async (giftId) => {
