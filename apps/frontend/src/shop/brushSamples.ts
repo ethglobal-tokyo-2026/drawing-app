@@ -62,6 +62,7 @@ export function brushSample(kind: BrushKind, side: number): StrokeOp {
         stroke.add(px, py, pressure, (i + 1) * 12);
       });
       stroke.settle(...path[path.length - 1]);
+      stroke.taperEnd();
       return stroke.op;
     }
     case "marker": {

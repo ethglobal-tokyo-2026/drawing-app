@@ -2,6 +2,7 @@ import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react
 import { useTranslation } from "../../i18n/react";
 import { StrokeBuilder, type PenPressure } from "../../sticker-creation/canvas/brush";
 import { context2d } from "../../sticker-creation/canvas/context2d";
+import type { StrokeOp } from "../../sticker-creation/canvas/ops";
 import { paintStroke } from "../../sticker-creation/canvas/paintStroke";
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { useReducedMotion } from "../../ui/useReducedMotion";
@@ -40,6 +41,8 @@ export function TryPenPressure({
     x: number;
     y: number;
   } | null>(null);
+  /** The strokes on the strip, painted again when a pen's tail narrows as it lifts. */
+  const strokes = useRef<StrokeOp[]>([]);
   // Whether this pen senses pressure, learned as the drawing screen learns it.
   const sensed = useRef(false);
   const fade = useRef<number | undefined>(undefined);
@@ -90,7 +93,10 @@ export function TryPenPressure({
     // Sized to the strip at the screen's density, which clears it: what's left would fade anyway.
     const density = devicePixelRatio || 1;
     const [w, h] = [Math.round(el.clientWidth * density), Math.round(el.clientHeight * density)];
-    if (el.width !== w || el.height !== h) [el.width, el.height] = [w, h];
+    if (el.width !== w || el.height !== h) {
+      [el.width, el.height] = [w, h];
+      strokes.current = [];
+    }
     ctx.current ??= context2d(el);
     ctx.current.setTransform(density, 0, 0, density, 0, 0);
     const { x, y } = point(el, e);
@@ -133,6 +139,13 @@ export function TryPenPressure({
     live.current = null;
     if (stroke.builder.pressured) sensed.current = true;
     const el = e.currentTarget;
+    const { op, count } = stroke.builder;
+    if (stroke.builder.taperEnd() < count && ctx.current) {
+      ctx.current.clearRect(0, 0, el.clientWidth, el.clientHeight);
+      for (const done of strokes.current) paintStroke(ctx.current, done);
+      paintStroke(ctx.current, op);
+    }
+    strokes.current.push(op);
     fade.current = window.setTimeout(() => {
       if (reduced) releaseCanvas(el);
       else el.classList.add("is-fading");

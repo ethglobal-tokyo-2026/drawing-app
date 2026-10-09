@@ -1,4 +1,4 @@
-import { clamp } from "../../ui/easing";
+import { clamp, clamp01 } from "../../ui/easing";
 import { STRIDE, type StrokeOp } from "./ops";
 import { StrokeCurve } from "./strokeCurve";
 
@@ -14,12 +14,20 @@ export type PenPressure = (typeof PEN_PRESSURES)[number];
 
 /** Points closer than this many sheet units to the last one add cost and nothing else. */
 const MIN_STEP = 0.5;
-/** A stroke starts as a dot this fraction of its first width, then widens by `TAPER_STEP` a point. */
+/** A finger's or a mouse's stroke starts as a dot this fraction of its first width, then widens by `TAPER_STEP` a point. */
 const FIRST_DOT = 0.6;
 const TAPER_STEP = 0.08;
 /**
- * Each curve's exponent on the pressure: under 1 a light touch already draws wide, over 1 full width
- * takes more force. Normal is the curve a pen has always had.
+ * A pen's stroke widens from a dot this share of its width until it reaches `travel` sheet units from
+ * where it landed, and narrows back to one over its last `travel` units. By distance, not points: a
+ * Pencil samples so often that a tap's wobble made points enough to reach full width.
+ */
+export const PEN_TAPER = { dot: 0.35, travel: 8 } as const;
+/** A pen's width at a feather-light touch, as a fraction of the size. */
+const PRESSURE_FLOOR = 0.28;
+/**
+ * Each curve's exponent on the pressure up to a half press: under 1 a light touch already draws
+ * wide, over 1 the width takes more force. Normal is the curve a pen has always had.
  */
 const PRESSURE_EXPONENTS = {
   light: 0.5,
@@ -28,6 +36,8 @@ const PRESSURE_EXPONENTS = {
 } as const satisfies Record<Exclude<PenPressure, "off">, number>;
 /** A pen pressed halfway: what the hover ring previews, as Apple's guidance asks of a preview. */
 const MID_PRESSURE = 0.5;
+/** A full press draws at most this many times a half press's width, which the hover ring shows. */
+export const PRESSURE_CAP = 1.2;
 /** A pen's pressure moving less than this within a stroke is a pen that senses none. */
 const PRESSURE_STEP = 0.01;
 /** A pressing pen's width is the mean of its last this-many samples' widths: steady, and a step lands in full by then. */
@@ -35,9 +45,25 @@ export const PEN_PRESSURE_SAMPLES = 2;
 /** Touch, mouse and a pen with no pressure draw between these fractions of the size: thin when quick. */
 const SPEED_WIDTHS = { fast: 0.68, slow: 1.1 } as const;
 
-/** How wide a pen draws at this pressure under `response`, as a fraction of the size; Off is the size. */
-const pressureWidth = (pressure: number, response: PenPressure) =>
-  response === "off" ? 1 : 0.28 + 0.72 * pressure ** PRESSURE_EXPONENTS[response];
+/**
+ * How wide a pen draws at this pressure under `response`, as a fraction of the size; Off is the size.
+ * Up to a half press it follows the curve's exponent; past it, the width eases out to `PRESSURE_CAP`
+ * times a half press's, at first as steeply, so pressing harder adds less and less.
+ */
+const pressureWidth = (pressure: number, response: PenPressure) => {
+  if (response === "off") return 1;
+  const exponent = PRESSURE_EXPONENTS[response];
+  const range = 1 - PRESSURE_FLOOR;
+  if (pressure <= MID_PRESSURE) return PRESSURE_FLOOR + range * pressure ** exponent;
+  const half = PRESSURE_FLOOR + range * MID_PRESSURE ** exponent;
+  const rise = (PRESSURE_CAP - 1) * half;
+  const slope = range * exponent * MID_PRESSURE ** (exponent - 1);
+  const past = clamp01((pressure - MID_PRESSURE) / (1 - MID_PRESSURE));
+  return half + rise * (1 - (1 - past) ** ((slope * (1 - MID_PRESSURE)) / rise));
+};
+/** The share of a pen stroke's width at this many units from where it lands or lifts. */
+const penTaper = (travel: number) =>
+  PEN_TAPER.dot + (1 - PEN_TAPER.dot) * Math.min(1, travel / PEN_TAPER.travel);
 /** Touch, mouse and a pen with no pressure: a quick flick draws thinner, the way ink runs thin. */
 const speedWidth = (speed: number) =>
   clamp(1.12 - 0.15 * speed, SPEED_WIDTHS.fast, SPEED_WIDTHS.slow);
@@ -76,8 +102,9 @@ interface StrokeStart {
 /**
  * Builds a stroke point by point. A brush's width follows a pen's pressure through its curve within
  * a few samples, or the speed for touch, mouse and a pen whose pressure never moves, smoothed so it
- * never jumps, and tapers in from a dot. It starts from the first sample's width, so a light start stays light. The eraser
- * keeps one width, and so does a pen with its pressure Off.
+ * never jumps, and tapers in from a dot. It starts from the first sample's width, so a light start
+ * stays light; a pen's also tapers out once it lifts (`taperEnd`). The eraser keeps one width, and so
+ * does a pen with its pressure Off.
  */
 export class StrokeBuilder {
   readonly op: StrokeOp;
@@ -96,6 +123,8 @@ export class StrokeBuilder {
   private readonly curve: StrokeCurve;
   /** Points added so far, the first included: the taper counts these, not the curve's pieces between them. */
   private points = 1;
+  /** How far a pen's stroke has reached from where it landed, which its taper in goes by. */
+  private reach = 0;
 
   constructor(start: StrokeStart) {
     const { tool, color, size, x, y, t, T, pressure, pointerType, pressureVaries, response } =
@@ -108,8 +137,9 @@ export class StrokeBuilder {
     this.firstPressure = pressure;
     this.pressed = this.pen && pressureVaries && pressure > 0;
     this.smoothed = this.pressed ? pressureWidth(pressure, response) : 1;
-    const dot = tool === "eraser" ? 1 : FIRST_DOT * this.smoothed;
-    this.op = { tool, color, pts: [x, y, size * dot, 0], T };
+    const dot = this.pen ? penTaper(0) : FIRST_DOT;
+    const width = tool === "eraser" ? size : size * dot * this.smoothed;
+    this.op = { tool, color, pts: [x, y, width, 0], T };
     this.curve = new StrokeCurve(this.op.pts);
   }
 
@@ -140,19 +170,23 @@ export class StrokeBuilder {
       if (this.pen && Math.abs(pressure - this.firstPressure) > PRESSURE_STEP) this.pressed = true;
       // Off, a pen draws the brush's size, whatever it reports.
       const off = this.pen && this.response === "off";
-      if (!off && this.pressed && pressure > 0) {
-        // Pressure shows at the nib at once; speed, under a finger, eases in so it never jumps.
+      if (off || !this.pressed) {
+        this.pressedWidths.length = 0;
+        this.smoothed = 0.7 * this.smoothed + 0.3 * (off ? 1 : speedWidth(dist / dt));
+      } else if (pressure > 0) {
+        // Pressure shows at the nib at once; speed, under a finger, eases in so it never jumps. A
+        // pressing pen that reads no pressure, as it can while lifting, keeps its width.
         const widths = this.pressedWidths;
         if (widths.length === 0) widths.push(this.smoothed);
         widths.push(pressureWidth(pressure, this.response));
         if (widths.length > PEN_PRESSURE_SAMPLES)
           widths.splice(0, widths.length - PEN_PRESSURE_SAMPLES);
         this.smoothed = widths.reduce((sum, w) => sum + w, 0) / widths.length;
-      } else {
-        this.pressedWidths.length = 0;
-        this.smoothed = 0.7 * this.smoothed + 0.3 * (off ? 1 : speedWidth(dist / dt));
       }
-      width *= this.smoothed * Math.min(1, FIRST_DOT + TAPER_STEP * n);
+      const { pts } = this.op;
+      if (this.pen) this.reach = Math.max(this.reach, Math.hypot(x - pts[0], y - pts[1]));
+      width *=
+        this.smoothed * (this.pen ? penTaper(this.reach) : Math.min(1, FIRST_DOT + TAPER_STEP * n));
     }
     this.curve.add(x, y, width, Math.round(t - this.t0));
     this.points++;
@@ -165,5 +199,36 @@ export class StrokeBuilder {
    */
   settle(x: number, y: number): void {
     this.curve.settle(x, y);
+  }
+
+  /**
+   * The pen lifted and the line settled: narrows a pen's brush stroke over the last
+   * `PEN_TAPER.travel` units along its curve, never past the dot it landed with. Returns the first
+   * point it narrowed, the count when it narrowed none, so what was painted from there can be
+   * painted again. Once per stroke.
+   */
+  taperEnd(): number {
+    const { pts, tool } = this.op;
+    const count = this.count;
+    if (tool !== "brush" || !this.pen) return count;
+    // Each point's share of its width from the taper in, by how far the line had reached there.
+    const tapersIn: number[] = [];
+    let reach = 0;
+    for (let j = 0; j < pts.length; j += STRIDE) {
+      reach = Math.max(reach, Math.hypot(pts[j] - pts[0], pts[j + 1] - pts[1]));
+      tapersIn.push(penTaper(reach));
+    }
+    let from = count;
+    let back = 0;
+    for (let i = count - 1; i > 0 && back < PEN_TAPER.travel; i--) {
+      const j = i * STRIDE;
+      const out = penTaper(back);
+      if (out < tapersIn[i]) {
+        pts[j + 2] *= out / tapersIn[i];
+        from = i;
+      }
+      back += Math.hypot(pts[j] - pts[j - STRIDE], pts[j + 1] - pts[j - STRIDE + 1]);
+    }
+    return from;
   }
 }

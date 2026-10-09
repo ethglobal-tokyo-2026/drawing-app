@@ -163,6 +163,8 @@ interface LiveStroke {
   caughtUp: number;
   /** The browser's latest guess at the pen's next samples, flat: x, y. */
   predicted: number[];
+  /** A pen's brush stroke: the ink as it landed, which goes back on lift under its narrowed tail. */
+  before: { ink: unknown } | null;
 }
 
 /**
@@ -627,6 +629,11 @@ export class InkEngine {
       pressureVaries: this.pressurePen,
       response: s.penPressure,
     });
+    // A copy now costs the same whatever is on the sheet; a replay on lift grows with the strokes.
+    const before =
+      e.pointerType === "pen" && s.tool !== "eraser"
+        ? { ink: timeOurWork(INK_WORK.snapshot, () => this.layer.snapshot()) }
+        : null;
     this.live = {
       id: e.pointerId,
       pointerType: e.pointerType,
@@ -644,6 +651,7 @@ export class InkEngine {
       t: e.timeStamp,
       caughtUp: e.timeStamp,
       predicted: [],
+      before,
     };
     // The dot shows as the pointer lands, not a frame later.
     timeOurWork(INK_WORK.paint, () => this.layer.paint(builder.op, 0, 1));
@@ -731,6 +739,7 @@ export class InkEngine {
     // A pen whose pressure moved senses it: its next strokes start at their first sample's width.
     if (live.builder.pressured) this.pressurePen = true;
     if (takeBack) {
+      if (live.before) this.layer.discard(live.before.ink);
       timeOurWork(INK_WORK.replay, () => this.history.repaint());
       return;
     }
@@ -742,6 +751,16 @@ export class InkEngine {
       live.builder.settle(live.x, live.y);
       this.paintNew(live);
     });
+    // A pen's tail narrows once it's known where the stroke ends, over ink already painted wider.
+    const { before } = live;
+    if (before) {
+      if (live.builder.taperEnd() < live.builder.count)
+        timeOurWork(INK_WORK.paint, () => {
+          this.layer.restore(before.ink);
+          this.layer.paint(live.builder.op, 0, live.builder.count);
+        });
+      this.layer.discard(before.ink);
+    }
     timeOurWork(INK_WORK.snapshot, () => this.history.commit(live.builder.op));
     this.events.onCommit(live.builder.op);
     this.notifyHistory();

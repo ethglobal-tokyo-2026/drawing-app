@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { PEN_PRESSURE_SAMPLES, StrokeBuilder, type PenPressure } from "./brush";
+import {
+  PEN_PRESSURE_SAMPLES,
+  PEN_TAPER,
+  PRESSURE_CAP,
+  previewWidth,
+  StrokeBuilder,
+  type PenPressure,
+} from "./brush";
 import { STRIDE } from "./ops";
 import { CURVE_FLATNESS } from "./strokeCurve";
 
@@ -22,26 +29,36 @@ const builder = (given: Partial<ConstructorParameters<typeof StrokeBuilder>[0]> 
     ...given,
   });
 
+/** A stroke's widths as fractions of the brush size. */
+const widthsOf = ({ op: { pts } }: StrokeBuilder) =>
+  Array.from({ length: pts.length / STRIDE }, (_, i) => pts[i * STRIDE + 2] / SIZE);
+
 interface Drawn {
   /** One pressure for every point, or each point's by its index. */
   pressure?: number | ((i: number) => number);
   pointer?: string;
   ms?: number;
+  /** Sheet units between points. */
+  step?: number;
   tool?: "brush" | "eraser";
   /** The pen has shown its pressure moving before this stroke. */
   pressureVaries?: boolean;
   response?: PenPressure;
+  /** The pointer lifts after the last point. */
+  lift?: boolean;
 }
 
-/** Widths as fractions of the brush size, after adding `n` points 10px apart, `ms` apart. */
+/** Widths as fractions of the brush size, after adding `n` points `step` apart, `ms` apart. */
 function widths(n: number, drawn: Drawn = {}): number[] {
   const {
     pressure = 0.5,
     pointer = "mouse",
     ms = 16,
+    step = 10,
     tool = "brush",
     pressureVaries = true,
     response = "normal",
+    lift = false,
   } = drawn;
   const pressed = (i: number) => (typeof pressure === "number" ? pressure : pressure(i));
   const stroke = builder({
@@ -51,13 +68,27 @@ function widths(n: number, drawn: Drawn = {}): number[] {
     pressureVaries,
     response,
   });
-  for (let i = 1; i <= n; i++) stroke.add(i * 10, 0, pressed(i), i * ms);
-  stroke.settle(n * 10, 0);
-  const { pts } = stroke.op;
-  return Array.from({ length: pts.length / STRIDE }, (_, i) => pts[i * STRIDE + 2] / SIZE);
+  for (let i = 1; i <= n; i++) stroke.add(i * step, 0, pressed(i), i * ms);
+  stroke.settle(n * step, 0);
+  if (lift) stroke.taperEnd();
+  return widthsOf(stroke);
 }
 
 const last = (list: number[]) => list[list.length - 1];
+/** A stroke's second half, where any taper in is long done. */
+const settled = (list: number[]) => list.slice(list.length / 2);
+/** How wide a long pen stroke settles at one pressure, as a fraction of the size. */
+const penWidth = (pressure: number, response: PenPressure = "normal") =>
+  last(widths(40, { pointer: "pen", pressure, response }));
+
+/** A Pencil tap at full pressure: its nib wobbles a unit and back `wobbles` times, then lifts. */
+function tap(wobbles: number): number[] {
+  const stroke = builder({ pressure: 1, pointerType: "pen", pressureVaries: true });
+  for (let i = 1; i <= wobbles; i++) stroke.add(i % 2, 0, 1, i * 4);
+  stroke.settle(wobbles % 2, 0);
+  stroke.taperEnd();
+  return widthsOf(stroke);
+}
 
 /** The most a sharp corner's line may turn at any one point, in radians: less than the corner's own. */
 const CORNER_TURN = Math.PI / 3;
@@ -70,9 +101,15 @@ const pointsOf = ({ op: { pts } }: StrokeBuilder) =>
   ]);
 
 describe("StrokeBuilder", () => {
-  it("sets a pen's width from pressure, from 0.28 of the size to all of it", () => {
-    expect(last(widths(40, { pointer: "pen", pressure: 1 }))).toBeCloseTo(1);
-    expect(last(widths(40, { pointer: "pen", pressure: 0.0001 }))).toBeCloseTo(0.28);
+  it("draws a half press as wide as the hover ring, a full press at most PRESSURE_CAP times that, and a feather-light touch at most half a full press", () => {
+    for (const response of ["light", "normal", "firm"] as const) {
+      const ring = previewWidth(response, true);
+      expect(penWidth(0.5, response)).toBeCloseTo(ring);
+      // No jump as a press passes halfway.
+      expect(penWidth(0.5001, response)).toBeCloseTo(ring);
+      expect(penWidth(1, response) / ring).toBeLessThanOrEqual(PRESSURE_CAP + 1e-9);
+      expect(penWidth(0.0001, response)).toBeLessThan(penWidth(1, response) / 2);
+    }
   });
 
   it("thins fast touch and mouse strokes, within 0.68 and 1.1 of the size", () => {
@@ -82,9 +119,32 @@ describe("StrokeBuilder", () => {
     expect(last(widths(40, { pointer: "touch", ms: 0.5 }))).toBeCloseTo(0.68);
   });
 
-  it("tapers in from a dot at 0.6 of the size", () => {
-    const taper = widths(6, { pointer: "pen", pressure: 1 });
-    expect(taper.map((w) => +w.toFixed(2))).toEqual([0.6, 0.68, 0.76, 0.84, 0.92, 1, 1]);
+  it("widens a pen's stroke from its dot over its first PEN_TAPER.travel units, however densely the pen samples", () => {
+    const FINE = 1;
+    const COARSE = 4;
+    const reach = 2 * PEN_TAPER.travel;
+    const fine = widths(reach / FINE, { pointer: "pen", pressure: 1, step: FINE });
+    const coarse = widths(reach / COARSE, { pointer: "pen", pressure: 1, step: COARSE });
+    coarse.forEach((w, k) => {
+      expect(w).toBeCloseTo(fine[(k * COARSE) / FINE]);
+      if (k * COARSE < PEN_TAPER.travel) expect(w).toBeLessThan(penWidth(1));
+      else expect(w).toBeCloseTo(penWidth(1));
+    });
+  });
+
+  it("leaves a Pencil tap at full pressure a small dot, however many samples its wobble makes", () => {
+    expect(Math.max(...tap(0))).toBeCloseTo(PEN_TAPER.dot * penWidth(1));
+    expect(Math.max(...tap(16))).toBeCloseTo(Math.max(...tap(2)));
+  });
+
+  it("narrows a pen's stroke toward where it lifts over its last PEN_TAPER.travel units", () => {
+    const drawn = { pointer: "pen", pressure: 1, step: 1 } as const;
+    const held = widths(40, drawn);
+    const lifted = widths(40, { ...drawn, lift: true });
+    const tail = lifted.slice(-PEN_TAPER.travel);
+    tail.slice(1).forEach((w, i) => expect(w).toBeLessThan(tail[i]));
+    expect(last(lifted)).toBeCloseTo(PEN_TAPER.dot * last(held));
+    expect(lifted.slice(0, -PEN_TAPER.travel)).toEqual(held.slice(0, -PEN_TAPER.travel));
   });
 
   it("keeps the eraser at its full size", () => {
@@ -149,8 +209,10 @@ describe("StrokeBuilder", () => {
     for (const response of ["light", "normal", "firm"] as const)
       for (const ms of [0.5, 1000])
         expect(
-          widths(40, { pointer: "pen", pressure: 0.5, pressureVaries: false, response, ms }),
-        ).toEqual(widths(40, { pointer: "touch", ms }));
+          settled(
+            widths(40, { pointer: "pen", pressure: 0.5, pressureVaries: false, response, ms }),
+          ),
+        ).toEqual(settled(widths(40, { pointer: "touch", ms })));
     // Once its pressure moves, pressure sets the width.
     const moving = { pointer: "pen", ms: 0.5, pressureVaries: false } as const;
     expect(last(widths(40, { ...moving, pressure: (i) => (i < 5 ? 0.5 : 1) }))).toBeCloseTo(
@@ -158,18 +220,19 @@ describe("StrokeBuilder", () => {
     );
   });
 
-  it("shows a pen's change of pressure in full within its few samples", () => {
+  it("shows a pen's change of pressure in full within its few samples, once past its taper in", () => {
     const STEP = 20;
     const stepped = widths(40, { pointer: "pen", pressure: (i) => (i < STEP ? 0.2 : 0.9) });
-    const firm = last(widths(40, { pointer: "pen", pressure: 0.9 }));
-    expect(stepped[STEP + PEN_PRESSURE_SAMPLES - 1]).toBeCloseTo(firm);
+    expect(stepped[STEP + PEN_PRESSURE_SAMPLES - 1]).toBeCloseTo(penWidth(0.9));
   });
 
   it("draws wider at one pressure under Light than Normal, and Normal than Firm, and the brush's own size under Off", () => {
-    const at = (response: PenPressure) =>
-      last(widths(40, { pointer: "pen", pressure: 0.3, response }));
-    expect(at("light")).toBeGreaterThan(at("normal"));
-    expect(at("normal")).toBeGreaterThan(at("firm"));
+    // Under a half press and past it.
+    for (const pressure of [0.3, 0.8]) {
+      const at = (response: PenPressure) => penWidth(pressure, response);
+      expect(at("light")).toBeGreaterThan(at("normal"));
+      expect(at("normal")).toBeGreaterThan(at("firm"));
+    }
     const off = (pressure: Drawn["pressure"], ms: number, pressureVaries: boolean) =>
       widths(40, { pointer: "pen", pressure, ms, pressureVaries, response: "off" });
     expect(off((i) => i / 40, 0.5, true)).toEqual(off(0.5, 1000, false));
