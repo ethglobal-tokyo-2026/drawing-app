@@ -103,8 +103,24 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
     userStats: unanswered("userStats"),
     suiAddress: unanswered("suiAddress"),
     gratitudeEvents: unanswered("gratitudeEvents"),
-    saveStickerPlacement: (stickerId, placement) =>
-      Promise.resolve({ stickerId, placement, seenAt: null, arrivedAt: new Date(0).toISOString() }),
+    saveStickerPlacement: (stickerId, spots) =>
+      Promise.resolve({
+        stickerId,
+        placement: spots.placement ?? null,
+        largePlacement: spots.largePlacement ?? null,
+        seenAt: null,
+        arrivedAt: new Date(0).toISOString(),
+      }),
+    saveLargeLayout: (stickerPlacements) =>
+      Promise.resolve(
+        stickerPlacements.map(({ stickerId, largePlacement }) => ({
+          stickerId,
+          placement: null,
+          largePlacement,
+          seenAt: null,
+          arrivedAt: new Date(0).toISOString(),
+        })),
+      ),
     markTraySeen: () => Promise.resolve({ newStickerCount: 0 }),
     seal: unanswered("seal"),
     stickerDetail: (stickerId) =>

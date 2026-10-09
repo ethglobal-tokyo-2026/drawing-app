@@ -16,7 +16,7 @@ import {
   type Step,
 } from "./boardGesture";
 import type { BoardSticker } from "./boardSticker";
-import { sizeOf, toFrac, toPx, transformAt, type Field } from "./placement";
+import { sizeOf, toFrac, toPx, transformAt, type BoardSize, type Field } from "./placement";
 import { focusStep, readingOrder } from "./stickerOrder";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 
@@ -25,7 +25,7 @@ interface Options {
   /** The stickers on the board. */
   stickers: readonly BoardSticker[];
   field: Field | null;
-  size: { W: number; H: number } | null;
+  size: BoardSize | null;
   selected: string | null;
   reduced: boolean;
   /** The sticker tray: a sticker let go over it goes back into its used sticker silhouette. */
@@ -143,8 +143,7 @@ export function useBoardGestures(options: Options) {
 
     /** Puts the element where `live` says, without React. */
     const draw = (el: HTMLElement, sticker: BoardSticker, live: Live) => {
-      const W = latest.current.size?.W ?? 0;
-      const { w, h } = sizeOf(W, live.s, sticker);
+      const { w, h } = sizeOf(latest.current.size?.U ?? 0, live.s, sticker);
       el.style.width = `${w}px`;
       el.style.height = `${h}px`;
       el.style.transform = transformAt(live.x, live.y, w, h, live.r);
@@ -218,7 +217,7 @@ export function useBoardGestures(options: Options) {
     const peelMark = (sticker: BoardSticker, live: Live) => {
       const mask = sticker.urls.mask;
       if (latest.current.reduced) return;
-      const { w, h } = sizeOf(latest.current.size?.W ?? 0, live.s, sticker);
+      const { w, h } = sizeOf(latest.current.size?.U ?? 0, live.s, sticker);
       const mark = document.createElement("span");
       mark.className = "peel-mark";
       mark.style.width = `${w}px`;
@@ -321,7 +320,7 @@ export function useBoardGestures(options: Options) {
       // The steps just saved aren't in the stickers until React draws them, so it peels from them.
       const from = liveOf(saved?.id === id ? saved.placement : sticker.placement, field);
       peelMark(sticker, from);
-      const { w, h } = sizeOf(size.W, from.s, sticker);
+      const { w, h } = sizeOf(size.U, from.s, sticker);
       const to = {
         x: size.W - STOW_EDGE,
         y: Math.min(size.H - 90, Math.max(field.top + 40, from.y)),
@@ -434,7 +433,7 @@ export function useBoardGestures(options: Options) {
         // Near its used sticker silhouette in the open tray, the tray draws it in.
         const snap = latest.current.tray.current?.boardDrag(g.id, g.live)?.snap;
         if (snap) {
-          const { w, h } = sizeOf(size.W, g.live.s, sticker);
+          const { w, h } = sizeOf(size.U, g.live.s, sticker);
           g.el.style.transform = `${transformAt(snap.x, snap.y, w, h, snap.r)} scale(${snap.scale.toFixed(3)})`;
           return;
         }

@@ -3,7 +3,7 @@ import { act, useRef, type RefObject } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BoardSticker } from "./boardSticker";
-import { fieldOf, sizeOf, toPx, transformAt } from "./placement";
+import { fieldOf, PHONE_BOARD, sizeOf, toPx, transformAt } from "./placement";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import { STEP_SAVE_IDLE_MS, useBoardGestures } from "./useBoardGestures";
 import { yoursHeld } from "./testBoardSticker";
@@ -100,7 +100,7 @@ describe("useBoardGestures", () => {
         <Board
           stickers={[sticker]}
           field={fieldOf(390, 657)}
-          size={{ W: 390, H: 657 }}
+          size={{ W: 390, H: 657, U: 390 }}
           selected="a"
           reduced
           tray={noTray}
@@ -149,7 +149,7 @@ describe("useBoardGestures", () => {
         <Board
           stickers={[sticker]}
           field={fieldOf(390, 657)}
-          size={{ W: 390, H: 657 }}
+          size={{ W: 390, H: 657, U: 390 }}
           selected="a"
           reduced
           tray={tray}
@@ -193,7 +193,7 @@ describe("useBoardGestures", () => {
           <Board
             stickers={stickers}
             field={fieldOf(390, 657)}
-            size={{ W: 390, H: 657 }}
+            size={{ W: 390, H: 657, U: 390 }}
             selected={selected}
             reduced
             tray={noTray}
@@ -230,6 +230,33 @@ describe("useBoardGestures", () => {
     expect(document.activeElement).toBe(el("b"));
   });
 
+  it("draws a sticker in hand at the board's unit, which on a large board isn't its width", async () => {
+    const large = { W: 1180, H: 662, U: PHONE_BOARD.W };
+    act(() =>
+      root.render(
+        <Board
+          stickers={[sticker]}
+          field={fieldOf(large.W, large.H)}
+          size={large}
+          selected="a"
+          reduced
+          tray={noTray}
+          onSelect={() => {}}
+          onOpen={() => {}}
+          onCommit={() => {}}
+          onRemove={() => {}}
+        />,
+      ),
+    );
+    const stage = host.querySelector(".board-stage");
+    const el = host.querySelector<HTMLElement>(".placed-sticker");
+    if (!(stage instanceof HTMLElement) || !el) throw new Error("the board didn't render");
+    // happy-dom lays nothing out: the stage is given the board's size.
+    stage.getBoundingClientRect = () => new DOMRect(0, 0, large.W, large.H);
+    await act(async () => dragAcross(el, 1, 100, 160));
+    expect(parseFloat(el.style.width)).toBeCloseTo(sizeOf(large.U, sticker.placement.s, sticker).w);
+  });
+
   describe("steps, from keys and from Arrange", () => {
     const board = (
       onCommit: Options["onCommit"],
@@ -240,7 +267,7 @@ describe("useBoardGestures", () => {
           <Board
             stickers={[sticker]}
             field={fieldOf(390, 657)}
-            size={{ W: 390, H: 657 }}
+            size={{ W: 390, H: 657, U: 390 }}
             selected="a"
             reduced
             tray={noTray}

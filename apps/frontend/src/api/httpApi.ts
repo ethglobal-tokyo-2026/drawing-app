@@ -183,10 +183,10 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       }
       return (await response.json()).suiAddress;
     },
-    saveStickerPlacement: async (stickerId, placement) => {
+    saveStickerPlacement: async (stickerId, spots) => {
       const response = await boards.me["sticker-placements"][":stickerId"].$patch({
         param: { stickerId },
-        json: placement,
+        json: spots,
       });
       if (!response.ok) {
         throw await refusal(
@@ -195,6 +195,13 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
         );
       }
       return (await response.json()).stickerPlacement;
+    },
+    saveLargeLayout: async (stickerPlacements) => {
+      const response = await boards.me["large-layout"].$post({
+        json: { stickerPlacements: [...stickerPlacements] },
+      });
+      if (!response.ok) throw await refusal(response, "POST /api/sticker-boards/me/large-layout");
+      return (await response.json()).stickerPlacements;
     },
     markTraySeen: async (stickerIds) => {
       const response = await boards.me["sticker-tray"].seen.$post({

@@ -57,6 +57,7 @@ const sticker = (
   outline: "M10.0 10.0L90.0 10.0L90.0 70.0L10.0 70.0Z",
   urls: testStickerUrls(id),
   placement: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
+  placements: { phone: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 }, large: null },
   artist: { id: "me", handle: "you", name: "You", nsfwOptIn: false },
   held: true,
   givenTo: null,

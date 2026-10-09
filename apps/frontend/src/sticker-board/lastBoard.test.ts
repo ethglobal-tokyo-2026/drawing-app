@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TEST_OWNER } from "../api/testing";
 import { toPerson } from "../api/views";
 import { testStickerUrls } from "../stickers/testStickerUrls";
-import type { BoardStickerView } from "./boardSticker";
+import type { PlacedBoardSticker } from "./boardSticker";
 import {
   forgetBoardUnlessFor,
   keepBoard,
@@ -14,7 +14,7 @@ import {
 
 const KEY = "draw.lastBoard";
 
-const sticker = (id: string): BoardStickerView => ({
+const sticker = (id: string): PlacedBoardSticker => ({
   id,
   no: 1,
   createdAt: 0,
@@ -25,7 +25,7 @@ const sticker = (id: string): BoardStickerView => ({
   kyotoSeikaSubjects: null,
   outline: "M0 0L600 0L600 600Z",
   urls: testStickerUrls(`/api/images/${id}`),
-  placement: { on: true, x: 0.5, y: 0.5, s: 1, r: 0, z: 1 },
+  placements: { phone: { on: true, x: 0.5, y: 0.5, s: 1, r: 0, z: 1 }, large: null },
   artist: toPerson(TEST_OWNER),
   held: true,
   givenTo: null,
@@ -52,7 +52,7 @@ describe("the board kept on this phone", () => {
     const kept = keptBoardFor("me");
     expect(kept?.stickers.map((s) => s.id)).toEqual(["s1", "s2"]);
     expect(kept?.stickers[0]).not.toHaveProperty("outline");
-    expect(kept?.stickers[0].placement).toEqual(board.stickers[0].placement);
+    expect(kept?.stickers[0].placements).toEqual(board.stickers[0].placements);
     expect(kept?.owner).toEqual(board.owner);
   });
 

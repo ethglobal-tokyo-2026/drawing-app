@@ -44,6 +44,7 @@ const answer = (sealed: Sticker) => ({
   stickerPlacement: {
     stickerId: sealed.id,
     placement: null,
+    largePlacement: null,
     seenAt: null,
     arrivedAt: sealed.sealedAt,
   },

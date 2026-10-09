@@ -33,7 +33,8 @@ import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { ArtistChipLayer } from "./ArtistChipLayer";
 import { markGreeted, owesGreeting } from "./artistChipGreeting";
-import { onTheBoard, toBoardSticker, type BoardStickerView } from "./boardSticker";
+import { onTheBoard, shownIn, toBoardSticker, type BoardStickerView } from "./boardSticker";
+import { laidOutForVisitor } from "./largeLayout";
 import { boxOf, fieldOf, kept, stickerBox, toPx, type Box, type Field } from "./placement";
 import { PlacedSticker } from "./PlacedSticker";
 import { AddressDialog } from "./stat-board/AddressDialog";
@@ -44,7 +45,7 @@ import { StatCork, type CorkFigures, type StatCorkHandle } from "./stat-board/St
 import { statFigures } from "./stat-board/statFigures";
 import { focusStep, readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
-import { useBoardSize } from "./useBoardSize";
+import { useBoardLayout, useBoardSize } from "./useBoardSize";
 import "./ArtistBoard.css";
 
 interface Props {
@@ -127,6 +128,7 @@ function StickerView({
  */
 export function ArtistBoard({ person, onBack }: Props) {
   const { t } = useTranslation();
+  const layout = useBoardLayout();
   const owner = toPerson(person);
   const optedIn = useMyNsfwOptIn();
   const handle = person.handle ? formatHandle(person.handle) : owner.name;
@@ -147,7 +149,7 @@ export function ArtistBoard({ person, onBack }: Props) {
   const suiPaper = useRef<HTMLButtonElement>(null);
   /** Their Sui address held up in the address dialog. */
   const [holdingAddress, setHoldingAddress] = useState(false);
-  const size = useBoardSize(face);
+  const size = useBoardSize(face, layout);
   /** Give's box on the board, which a sticker's toolbar keeps clear of. */
   const [give, setGive] = useState<Box | null>(null);
   const [turned, setTurned] = useState(false);
@@ -175,14 +177,20 @@ export function ArtistBoard({ person, onBack }: Props) {
     return () => observer.disconnect();
   }, [size]);
 
-  // What's on their board, bottom of the stack first.
+  // What's on their board in the layout this screen shows, bottom of the stack first.
   const stickers = useMemo(
     () =>
-      (board.state === "ready" ? board.data.boardStickers : [])
-        .map(toBoardSticker)
+      shownIn(
+        layout,
+        laidOutForVisitor(
+          (board.state === "ready" ? board.data.boardStickers : []).map(toBoardSticker),
+          layout,
+          size,
+        ),
+      )
         .filter(onTheBoard)
         .sort((a, b) => a.placement.z - b.placement.z),
-    [board],
+    [board, layout, size],
   );
   const field = size && visitField(size.W, size.H);
   // Screen readers and the arrow keys take the stickers in reading order, which is the DOM's too.
@@ -198,7 +206,7 @@ export function ArtistBoard({ person, onBack }: Props) {
       : stickers.filter(byOther).map((s) => ({
           id: s.id,
           artist: s.artist,
-          box: stickerBox(field, size.W, s.placement, s),
+          box: stickerBox(field, size.U, s.placement, s),
         }));
   // The greeting is spent as it starts, so coming back to their board, or leaving early, doesn't replay it.
   const greeting = chips.length > 0;
@@ -371,7 +379,7 @@ export function ArtistBoard({ person, onBack }: Props) {
               <PlacedSticker
                 sticker={s}
                 field={field}
-                boardWidth={size.W}
+                unit={size.U}
                 stack={s.id === selected ? stickers.length : stickers.indexOf(s)}
                 curled={false}
                 selected={s.id === selected}
@@ -391,7 +399,7 @@ export function ArtistBoard({ person, onBack }: Props) {
               {s.id === selected && (
                 <StickerToolbar
                   label={formatNo(s.no)}
-                  sticker={{ ...stickerBox(field, size.W, s.placement, s), r: s.placement.r }}
+                  sticker={{ ...stickerBox(field, size.U, s.placement, s), r: s.placement.r }}
                   board={size}
                   knobBelow={false}
                   clearOf={give}

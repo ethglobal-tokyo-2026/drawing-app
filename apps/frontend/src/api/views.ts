@@ -1,8 +1,14 @@
 import { i18next } from "../i18n/i18n";
 import { formatHandle } from "../stickers/format";
-import type { Placement as RecordPlacement } from "../sticker-board/placement";
+import type { Placement as RecordPlacement, Spots } from "../sticker-board/placement";
 import type { StickerUrls } from "../stickers/stickerUrls";
-import type { IsoTime, Person, Placement, Sticker } from "@drawing-app/api/client";
+import type {
+  IsoTime,
+  Person,
+  Placement,
+  PlacementsRequest,
+  Sticker,
+} from "@drawing-app/api/client";
 
 /** Someone, as a screen shows them. */
 export interface PersonView {
@@ -86,4 +92,10 @@ export const toApiPlacement = (p: RecordPlacement): Placement => ({
   scale: p.s,
   rotation: p.r,
   z: p.z,
+});
+
+/** A sticker's spots by layout, as the API saves them. */
+export const toApiSpots = (spots: Spots): PlacementsRequest => ({
+  ...(spots.phone && { placement: toApiPlacement(spots.phone) }),
+  ...(spots.large && { largePlacement: toApiPlacement(spots.large) }),
 });

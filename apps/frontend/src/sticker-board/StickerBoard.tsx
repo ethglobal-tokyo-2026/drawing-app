@@ -15,13 +15,7 @@ import { tokyoTicketDay } from "@drawing-app/api/client";
 import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
-import {
-  toApiPlacement,
-  toPerson,
-  toSticker,
-  type PersonView,
-  type StickerView,
-} from "../api/views";
+import { toApiSpots, toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
 import { GiftReceivedNotice } from "../giving/GiftReceivedNotice";
 import {
   markNoticed,
@@ -56,11 +50,16 @@ import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { normalizeTurn } from "./boardGesture";
 import {
+  hasLargeLayout,
+  movedIn,
   onTheBoard,
   placeUnplaced,
+  shownIn,
   toBoardSticker,
   type BoardSticker,
   type BoardStickerView,
+  type GivenSpots,
+  type PlacedBoardSticker,
 } from "./boardSticker";
 import { PlacedSticker } from "./PlacedSticker";
 import {
@@ -70,13 +69,17 @@ import {
   freeSpot,
   kept,
   knobHidden,
+  layoutsIn,
   nextZ,
   sizeOf,
+  spotsIn,
   stickerBox,
   toFrac,
   toPx,
+  type BoardLayout,
   type Box,
   type Placement,
+  type Spots,
 } from "./placement";
 import { noteBootMilestone } from "../performance/bootMilestones";
 import { BoardLoading } from "./BoardLoading";
@@ -88,6 +91,7 @@ import {
 } from "./boardComplete";
 import { markGreeted, owesGreeting } from "./artistChipGreeting";
 import { markChipsPlayed } from "./boardSettled";
+import { deriveLargeLayout, saveDerivedLayout, type LargeSpot } from "./largeLayout";
 import { keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
@@ -101,7 +105,7 @@ import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
 import { trayProblemKey, trayProblemWords, type TrayProblem } from "./tray/trayProblem";
 import { useBoardGestures, type SettledStep } from "./useBoardGestures";
-import { useBoardSize } from "./useBoardSize";
+import { useBoardLayout, useBoardSize } from "./useBoardSize";
 import { onMyStickerBoardChanged, useMyStickerBoard } from "./useMyStickerBoard";
 import "./StickerBoard.css";
 
@@ -163,7 +167,7 @@ const round4 = (v: number) => Number(v.toFixed(4));
 
 interface LoadedBoard {
   owner: PersonView;
-  stickers: BoardStickerView[];
+  stickers: PlacedBoardSticker[];
   /** Drawn from the phone's storage, until the fresh board lands. */
   fromPhone?: boolean;
 }
@@ -172,10 +176,10 @@ interface LoadedBoard {
  * The stickers whose spots win over a load's: all the board holds, since its moves are newer than any
  * load, but over a board from the phone's storage only those moved since it showed.
  */
-function heldOver(list: readonly BoardStickerView[] | null, over: LoadedBoard | null) {
+function heldOver(list: readonly PlacedBoardSticker[] | null, over: LoadedBoard | null) {
   if (!list || !over?.fromPhone) return list ?? [];
-  const keptSpots = new Map(over.stickers.map((s) => [s.id, s.placement]));
-  return list.filter((s) => keptSpots.get(s.id) !== s.placement);
+  const keptSpots = new Map(over.stickers.map((s) => [s.id, s.placements]));
+  return list.filter((s) => keptSpots.get(s.id) !== s.placements);
 }
 
 /** The stacking order that keeps a sticker on top: its own when it's there already. */
@@ -196,6 +200,45 @@ const stackOf = (stickers: readonly BoardSticker[]) =>
       .map((s, i) => [s.id, i]),
   );
 
+/** A sticker's spots that didn't save, the layouts they're in, and why. */
+interface Unsaved {
+  error: ApiError;
+  layouts: ReadonlySet<BoardLayout>;
+}
+
+/** `was` after a save of `layouts` for `ids`: failed with `error`, or saved when there's none. */
+function unsavedAfter(
+  was: ReadonlyMap<string, Unsaved>,
+  ids: readonly string[],
+  layouts: readonly BoardLayout[],
+  error: ApiError | null,
+): ReadonlyMap<string, Unsaved> {
+  if (!error && !ids.some((id) => was.has(id))) return was;
+  const next = new Map(was);
+  for (const id of ids) {
+    const before = next.get(id);
+    const left = new Set(before?.layouts);
+    for (const layout of layouts) {
+      if (error) left.add(layout);
+      else left.delete(layout);
+    }
+    const reason = error ?? before?.error;
+    if (left.size > 0 && reason) next.set(id, { error: reason, layouts: left });
+    else next.delete(id);
+  }
+  return next;
+}
+
+/** A sticker's spots now, in `layouts`, to save again. */
+function spotsOf(s: PlacedBoardSticker, layouts: Iterable<BoardLayout>): Spots {
+  const spots: Spots = {};
+  for (const layout of layouts) {
+    const placement = s.placements[layout];
+    if (placement) spots[layout] = placement;
+  }
+  return spots;
+}
+
 /** Received stickers already asked about gratitude this session, so the question comes once. */
 const askedForGratitude = new Set<string>();
 
@@ -207,7 +250,7 @@ const asGiver = (p: PersonView) => ({
 });
 
 /** A board sticker as the gift screens draw it. */
-const viewOf = (s: BoardStickerView): StickerView => ({
+const viewOf = (s: PlacedBoardSticker): StickerView => ({
   id: s.id,
   no: s.no,
   artist: s.artist,
@@ -222,7 +265,7 @@ const viewOf = (s: BoardStickerView): StickerView => ({
 });
 
 /** The stickers of yours that others have received, each with the giver's notice's contents. */
-const receivedGiftsOf = (stickers: readonly BoardStickerView[]) =>
+const receivedGiftsOf = (stickers: readonly PlacedBoardSticker[]) =>
   stickers.flatMap((s) =>
     !s.held && s.givenTo
       ? [
@@ -242,6 +285,7 @@ type GratitudeFor = { sticker: BoardSticker; giver: ReturnType<typeof asGiver>; 
 
 export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: Props) {
   const { t, i18n } = useTranslation();
+  const layout = useBoardLayout();
   const stage = useRef<HTMLDivElement>(null);
   /** The board's face, which the sticker tray runs down the right edge of. */
   const [face, setFace] = useState<HTMLDivElement | null>(null);
@@ -272,10 +316,16 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     });
   };
   const optedIn = useMyNsfwOptIn();
-  /** The last board this phone showed you, drawn at once while the fresh one loads. */
-  const [fromPhone] = useState(() => keptBoardFor(account.id));
-  /** The board's stickers as loaded and moved; `stickers` is how they show. */
-  const [loaded, setStickers] = useState<BoardStickerView[] | null>(
+  /**
+   * The last board this device showed you, drawn at once while the fresh one loads, when it has
+   * spots in this screen's layout.
+   */
+  const [fromPhone] = useState(() => {
+    const stored = keptBoardFor(account.id);
+    return stored && (layout === "phone" || hasLargeLayout(stored.stickers)) ? stored : null;
+  });
+  /** The board's stickers as loaded and moved, with their spots in both layouts; `stickers` shows them. */
+  const [loaded, setStickers] = useState<PlacedBoardSticker[] | null>(
     () => fromPhone?.stickers ?? null,
   );
   /** The load the stickers came from, and whose board it is: a sticker someone else drew wears foil. */
@@ -288,11 +338,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // board isn't kept on this phone.
   const imagesCurrent = owner === null || owner.nsfwOptIn === optedIn;
   const stickers = useMemo(
-    () => (loaded && !imagesCurrent ? withoutNsfwDrawings(loaded) : loaded),
-    [loaded, imagesCurrent],
+    () => loaded && shownIn(layout, imagesCurrent ? loaded : withoutNsfwDrawings(loaded)),
+    [loaded, imagesCurrent, layout],
   );
   /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
-  const [unsaved, setUnsaved] = useState<ReadonlyMap<string, ApiError>>(() => new Map());
+  const [unsaved, setUnsaved] = useState<ReadonlyMap<string, Unsaved>>(() => new Map());
   /** What the sticker tray couldn't do, said in an alert until it's dismissed. */
   const [trayProblems, setTrayProblems] = useState<readonly TrayProblem[]>([]);
   const addTrayProblem = useCallback(
@@ -302,7 +352,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       ),
     [],
   );
-  const size = useBoardSize(stage);
+  const size = useBoardSize(stage, layout);
   /** The name button's box on the board, which a sticker's knob must stay clear of. */
   const [name, setName] = useState<Box | null>(null);
   /** Draw's box on the board, which the selected sticker's toolbar keeps clear of. */
@@ -343,44 +393,39 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   useLight(!turned && !gratitudeFor);
 
   /**
-   * Stickers whose spot is saving, each with the spot waiting to go once that save settles. One save
-   * at a time, so an older spot can't land on the server last, and only the latest answer counts.
+   * Stickers whose spots are saving, each with the spots waiting to go once that save settles. One
+   * save of a sticker at a time, so an older spot can't land on the server last; spots that wait
+   * merge, the latest in each layout winning.
    */
-  const saving = useRef(new Map<string, Placement | null>());
+  const saving = useRef(new Map<string, Spots | null>());
   const save = useCallback(
-    (sticker: Pick<BoardSticker, "id" | "no">, placement: Placement) => {
+    (sticker: Pick<BoardSticker, "id" | "no">, spots: Spots) => {
       const inFlight = saving.current;
       if (inFlight.has(sticker.id)) {
-        inFlight.set(sticker.id, placement);
+        inFlight.set(sticker.id, { ...inFlight.get(sticker.id), ...spots });
         return;
       }
-      const send = (spot: Placement) => {
+      const send = (body: Spots) => {
         inFlight.set(sticker.id, null);
-        // A spot that waited goes next, and its answer is the one that sets or clears the note.
-        const settled = (answer: () => void) => {
+        const after = (failure: ApiError | null) => {
           const next = inFlight.get(sticker.id);
-          if (next) return send(next);
-          inFlight.delete(sticker.id);
-          answer();
+          if (next) {
+            // A failed save's spots go again with the ones that waited, the waiting ones winning.
+            send(failure ? { ...body, ...next } : next);
+            if (failure) return;
+          } else inFlight.delete(sticker.id);
+          setUnsaved((was) => unsavedAfter(was, [sticker.id], layoutsIn(body), failure));
         };
-        api.saveStickerPlacement(sticker.id, toApiPlacement(spot)).then(
-          () =>
-            settled(() =>
-              setUnsaved((was) => {
-                if (!was.has(sticker.id)) return was;
-                const next = new Map(was);
-                next.delete(sticker.id);
-                return next;
-              }),
-            ),
+        api.saveStickerPlacement(sticker.id, toApiSpots(body)).then(
+          () => after(null),
           (error: unknown) => {
             const failure = apiError(error);
             console.error(`Saving where ${formatNo(sticker.no)} sits failed`, failure);
-            settled(() => setUnsaved((was) => new Map(was).set(sticker.id, failure)));
+            after(failure);
           },
         );
       };
-      send(placement);
+      send(spots);
     },
     [api],
   );
@@ -394,33 +439,74 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   /** The language the board's names were made in: "Someone", a deleted account's, is the app's word. */
   const [namedIn, setNamedIn] = useState(i18n.language);
   /** Stickers the board had never placed, given a spot as their answer was adopted. */
-  const [newlyPlaced, setNewlyPlaced] = useState<readonly BoardStickerView[]>([]);
+  const [newlyPlaced, setNewlyPlaced] = useState<readonly GivenSpots[]>([]);
+  /** The large layout derived here from the phone's, to save once. */
+  const [derivedLayout, setDerivedLayout] = useState<readonly LargeSpot[]>([]);
   if (answer && (answer !== adoptedAnswer || namedIn !== i18n.language)) {
     setAdoptedAnswer(answer);
     setNamedIn(i18n.language);
     // Moves made while it loaded stay, and a language change holds every spot over.
     const { stickers: next, placed } = placeUnplaced(
       answer.boardStickers.map(toBoardSticker),
-      heldOver(stickers, adopted),
+      heldOver(loaded, adopted),
     );
     setAdopted({ owner: toPerson(answer.owner), stickers: next });
     setStickers(next);
     setNewlyPlaced(placed);
     // A sticker that comes back to you returns to the sticker tray, so there's no landing to wait for.
-    const landing = next.find((s) => s.id === landingId);
+    const landing = shownIn(layout, next).find((s) => s.id === landingId);
     if (landing && !onTheBoard(landing)) setLandingId(undefined);
+  }
+  // The first time a large screen shows your board, the large layout is derived from the phone's, from
+  // a load of its own: a kept board can be older than a large layout another device saved.
+  if (
+    layout === "large" &&
+    size &&
+    loaded &&
+    adopted &&
+    !adopted.fromPhone &&
+    !hasLargeLayout(loaded)
+  ) {
+    const { stickers: next, derived } = deriveLargeLayout(loaded, size);
+    if (derived.length > 0) {
+      setStickers(next);
+      setAdopted({ ...adopted, stickers: next });
+      setDerivedLayout(derived);
+    }
   }
   // Each spot the board gave is saved, so the sticker stays there.
   useEffect(() => {
-    for (const s of newlyPlaced) save(s, s.placement);
+    for (const { sticker, spots } of newlyPlaced) save(sticker, spots);
   }, [newlyPlaced, save]);
+  // A large layout derived here is saved once, where the server has none; a failure says so, and its
+  // retry saves each sticker's large spot.
+  useEffect(() => {
+    if (derivedLayout.length === 0) return;
+    saveDerivedLayout(api, derivedLayout).catch((error: unknown) => {
+      const failure = apiError(error);
+      console.error(
+        `Saving the large layout derived from your phone's failed for ${derivedLayout.length} stickers`,
+        failure,
+      );
+      setUnsaved((was) =>
+        unsavedAfter(
+          was,
+          derivedLayout.map((d) => d.id),
+          ["large"],
+          failure,
+        ),
+      );
+    });
+  }, [api, derivedLayout]);
   // The first open's board completes once the fresh board's stickers have all decoded; one from the
   // phone's storage starts them decoding. A board that didn't load has nothing more coming, so what
   // waited for it goes ahead.
   useEffect(() => {
     if (!adopted) return;
-    followBoardAssembly(assemblyOf(adopted.stickers), { fresh: !adopted.fromPhone });
-  }, [adopted]);
+    followBoardAssembly(assemblyOf(shownIn(layout, adopted.stickers)), {
+      fresh: !adopted.fromPhone,
+    });
+  }, [adopted, layout]);
   useEffect(() => {
     if (fromPhone)
       noteBootMilestone("board from this phone", `${fromPhone.stickers.length} stickers`);
@@ -581,7 +667,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       : named.map((s) => ({
           id: s.id,
           artist: s.artist,
-          box: stickerBox(field, size.W, s.placement, s),
+          box: stickerBox(field, size.U, s.placement, s),
         }));
   // The greeting is spent as it starts, so coming back to the board, or leaving early, doesn't replay it.
   const greeting = chips.length > 0;
@@ -590,8 +676,14 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   }, [greeting, account.id]);
   const freshSticker = freshId ? stickers?.find((s) => s.id === freshId) : undefined;
 
+  /** Moves a sticker in the layout on screen; its spot in the other layout stays. */
   const setPlacement = (id: string, placement: Placement) =>
-    setStickers((list) => list?.map((s) => (s.id === id ? { ...s, placement } : s)) ?? null);
+    setStickers(
+      (list) =>
+        list?.map((s) =>
+          s.id === id ? { ...s, placements: movedIn(s.placements, layout, placement) } : s,
+        ) ?? null,
+    );
 
   // Selecting raises a sticker above the rest; the raise is saved with its next move.
   const select = (id: string | null) => {
@@ -611,7 +703,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     if (selected === id) setSelected(null);
     const placement = { ...(steppedTo ?? sticker.placement), on: false };
     setPlacement(id, placement);
-    save(sticker, placement);
+    save(sticker, spotsIn(layout, placement));
   };
 
   // Turning over lets go of the selected sticker, so the board comes back without a stray toolbar.
@@ -641,7 +733,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       if (!stickers || !sticker) return;
       const moved = { ...placement, z: zOnTop(stickers, id) };
       setPlacement(id, moved);
-      save(sticker, moved);
+      save(sticker, spotsIn(layout, moved));
     },
     onRemove: removeFromBoard,
     onStepsSettled: tellSteps,
@@ -658,12 +750,12 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     stickerRect: (id) => {
       const s = onBoard.find((x) => x.id === id);
       if (!s || !field || !size) return null;
-      const { x, y, w, h } = stickerBox(field, size.W, s.placement, s);
+      const { x, y, w, h } = stickerBox(field, size.U, s.placement, s);
       return { x, y, w, h, r: s.placement.r };
     },
     sizeFor: (id) => {
       const s = stickers?.find((x) => x.id === id);
-      return s && size ? sizeOf(size.W, s.placement.s, s) : { w: 0, h: 0 };
+      return s && size ? sizeOf(size.U, s.placement.s, s) : { w: 0, h: 0 };
     },
     place: (id, at) => {
       const sticker = stickers?.find((s) => s.id === id);
@@ -681,7 +773,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       };
       // Drawn at once, so the tray can hand the sticker over where it lands.
       flushSync(() => setPlacement(id, placement));
-      save(sticker, placement);
+      save(sticker, spotsIn(layout, placement));
       const el = stickerEl(id);
       // Dropped, it presses flat; a tapped sticker's landing is the tray's to play.
       const lift = el?.querySelector<HTMLElement>(".placed-sticker__lift");
@@ -725,7 +817,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // The stickers' one Tab stop: the one last focused, else the selected one, else the first.
   const tabbable = [tabStop, selected].find((id) => id && order.includes(id)) ?? order[0];
   const chosen = onBoard.find((s) => s.id === selected);
-  const chosenBox = chosen && field && size && stickerBox(field, size.W, chosen.placement, chosen);
+  const chosenBox = chosen && field && size && stickerBox(field, size.U, chosen.placement, chosen);
   // Where the knob would sit off the board or under the name, it hangs below the sticker.
   const knobBelow = Boolean(
     chosen && chosenBox && name && knobHidden({ ...chosenBox, r: chosen.placement.r }, name),
@@ -739,7 +831,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // An empty board that still has stickers in the sticker tray points to the tray, not to Draw.
   const inTray = (stickers ?? []).some((s) => s.held && !onTheBoard(s));
   const unsavedStickers = (stickers ?? []).filter((s) => unsaved.has(s.id));
-  const unsavedErrors = unsavedStickers.flatMap((s) => unsaved.get(s.id) ?? []);
+  const unsavedErrors = unsavedStickers.flatMap((s) => unsaved.get(s.id)?.error ?? []);
 
   const front = (
     <div className="board" ref={setFace} data-resting={turned || gratitudeFor ? "" : undefined}>
@@ -825,7 +917,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
               <PlacedSticker
                 sticker={s}
                 field={field}
-                boardWidth={size.W}
+                unit={size.U}
                 stack={stack.get(s.id) ?? 0}
                 curled={s.id === curled}
                 selected={s.id === selected}
@@ -846,7 +938,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
               {s.id === selected && !hold && (
                 <StickerToolbar
                   label={formatNo(s.no)}
-                  sticker={{ ...stickerBox(field, size.W, s.placement, s), r: s.placement.r }}
+                  sticker={{ ...stickerBox(field, size.U, s.placement, s), r: s.placement.r }}
                   board={size}
                   knobBelow={knobBelow}
                   clearOf={draw}
@@ -916,7 +1008,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
           {unsavedStickers.length > 0 && (
             <ErrorLine
               detail={joinedDetails(unsavedErrors.map(errorDetail))}
-              onRetry={() => unsavedStickers.forEach((s) => save(s, s.placement))}
+              onRetry={() =>
+                unsavedStickers.forEach((s) =>
+                  save(s, spotsOf(s, unsaved.get(s.id)?.layouts ?? [])),
+                )
+              }
             >
               {t(($) => $.stickerBoard.board.unsaved, {
                 count: unsavedStickers.length,

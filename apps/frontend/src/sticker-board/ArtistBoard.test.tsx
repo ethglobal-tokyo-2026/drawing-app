@@ -8,8 +8,10 @@ import { emptyApi, renderWithApi, TEST_OWNER } from "../api/testing";
 import { toPerson } from "../api/views";
 import type { GiftSender } from "../giving/giftSender";
 import { PREPARING_SLOW_MS } from "../giving/giveFlow";
+import { onLargeScreen } from "../ui/testing";
 import { forgetGreetings } from "./artistChipGreeting";
 import { ArtistBoard } from "./ArtistBoard";
+import { fieldOf, PHONE_BOARD } from "./placement";
 import { shortAddress } from "./stat-board/addresses";
 
 // Someone's stat board mounts behind the front; nothing here needs LINE.
@@ -34,7 +36,7 @@ beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(741);
 });
 
-const placedAt = (x: number, y: number): BoardSticker["placement"] => ({
+const placedAt = (x: number, y: number): NonNullable<BoardSticker["placement"]> => ({
   onBoard: true,
   x,
   y,
@@ -260,5 +262,42 @@ describe("ArtistBoard's stat board", () => {
   it("pins no address paper while they have no Sui wallet", async () => {
     const host = await visit(three(), { suiAddress: () => Promise.resolve(null) });
     expect(host.querySelector(".address-papers")).toBeNull();
+  });
+});
+
+describe("ArtistBoard's layouts", () => {
+  const shown = (host: HTMLElement) => stickersIn(host).map((el) => el.dataset.stickerId);
+
+  it("shows a visitor the layout for their own size class", async () => {
+    // On the phone's board and in the tray in the large layout, and the other way round.
+    const phone = boardSticker({
+      placement: placedAt(0.3, 0.3),
+      largePlacement: { ...placedAt(0.3, 0.3), onBoard: false },
+    });
+    const large = boardSticker({
+      placement: { ...placedAt(0.7, 0.7), onBoard: false },
+      largePlacement: placedAt(0.7, 0.7),
+    });
+    expect(shown(await visit([phone, large]))).toEqual([phone.stickerId]);
+    unmount();
+    onLargeScreen();
+    expect(shown(await visit([phone, large]))).toEqual([large.stickerId]);
+  });
+
+  it("shows a large screen a board with no large layout yet as its phone's arrangement, at its size", async () => {
+    onLargeScreen();
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1180);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(662);
+    const centerX = (el: HTMLElement) =>
+      Number(/translate\((-?[\d.]+)px/.exec(el.style.transform)?.[1]) +
+      parseFloat(el.style.width) / 2;
+    const [left, right] = stickersIn(
+      await visit([
+        boardSticker({ placement: placedAt(0.1, 0.5) }),
+        boardSticker({ placement: placedAt(0.9, 0.5) }),
+      ]),
+    );
+    // As far apart as on the phone's field; spread over this board they'd be most of its width apart.
+    expect(centerX(right) - centerX(left)).toBeLessThan(fieldOf(PHONE_BOARD.W, PHONE_BOARD.H).w);
   });
 });

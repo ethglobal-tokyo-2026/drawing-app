@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { boardSticker, people, sticker, TEST_KYOTO_SEIKA_SUBJECTS } from "../api/testFixtures";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
-import { placeUnplaced, toBoardSticker } from "./boardSticker";
+import { placeUnplaced, shownIn, toBoardSticker } from "./boardSticker";
 import { LAID_OUT_SPOTS, TAKEN_WITHIN } from "./placement";
+
+/** A spot on the board, as the API sends it. */
+const onBoardAt = (x: number) => ({ onBoard: true, x, y: 0.5, scale: 0.3, rotation: 0, z: 1 });
 
 describe("toBoardSticker", () => {
   it("draws the API's board sticker with the app's names and milliseconds", () => {
@@ -23,8 +26,9 @@ describe("toBoardSticker", () => {
       }),
     );
     expect(view.no).toBe(147);
-    expect(view.placement).toEqual({ on: false, x: 0.3, y: 0.6, s: 0.25, r: -8, z: 4 });
-    expect(view.placement && toApiPlacement(view.placement)).toEqual(placement);
+    expect(view.placements.phone).toEqual({ on: false, x: 0.3, y: 0.6, s: 0.25, r: -8, z: 4 });
+    expect(view.placements.phone && toApiPlacement(view.placements.phone)).toEqual(placement);
+    expect(view.placements.large).toBeNull();
     expect(view.artist).toEqual(toPerson(people.ken));
     expect(view.givenTo).toEqual({
       receiver: toPerson(people.bob),
@@ -46,9 +50,12 @@ describe("placeUnplaced", () => {
       toBoardSticker,
     );
     const { stickers, placed } = placeUnplaced(list);
-    expect(stickers[0].placement).toEqual(toRecordPlacement(at));
-    expect(placed.map((s) => s.id)).toEqual([list[1].id, list[2].id]);
-    const [a, b] = placed.map((s) => s.placement);
+    expect(stickers[0].placements.phone).toEqual(toRecordPlacement(at));
+    expect(placed.map((p) => p.sticker.id)).toEqual([list[1].id, list[2].id]);
+    const [a, b] = placed.map(({ spots }) => {
+      if (!spots.phone) throw new Error("no phone spot given");
+      return spots.phone;
+    });
     expect([a.x, a.y]).not.toEqual([b.x, b.y]);
     expect(a.on && b.on).toBe(true);
     expect(Math.min(a.z, b.z)).toBeGreaterThan(at.z);
@@ -60,10 +67,10 @@ describe("placeUnplaced", () => {
     const onBoard = placeUnplaced(some()).stickers;
     const arrived = some();
     const { stickers, placed } = placeUnplaced([...onBoard, ...arrived]);
-    expect(placed.map((s) => s.id)).toEqual(arrived.map((s) => s.id));
-    for (const s of placed)
+    expect(placed.map((p) => p.sticker.id)).toEqual(arrived.map((s) => s.id));
+    for (const { sticker: s } of placed)
       for (const other of stickers.filter((o) => o.id !== s.id)) {
-        const [a, b] = [s.placement, other.placement];
+        const [a, b] = [s.placements.phone, other.placements.phone];
         expect(Math.hypot(a.x - b.x, (a.y - b.y) * 1.4)).toBeGreaterThan(TAKEN_WITHIN);
       }
     // A reload that finds them unplaced again puts them in the same spots.
@@ -72,9 +79,55 @@ describe("placeUnplaced", () => {
 
   it("keeps the spots the board already gave its stickers over a reload's", () => {
     const [moved] = placeUnplaced([toBoardSticker(boardSticker())]).stickers;
-    const nudged = { ...moved, placement: { ...moved.placement, x: 0.2, r: 12 } };
-    const { stickers, placed } = placeUnplaced([{ ...moved, placement: null }], [nudged]);
-    expect(stickers[0].placement).toEqual(nudged.placement);
+    const nudged = {
+      ...moved,
+      placements: { ...moved.placements, phone: { ...moved.placements.phone, x: 0.2, r: 12 } },
+    };
+    const { stickers, placed } = placeUnplaced(
+      [{ ...moved, placements: { phone: null, large: null } }],
+      [nudged],
+    );
+    expect(stickers[0].placements).toEqual(nudged.placements);
     expect(placed).toEqual([]);
+  });
+
+  it("lands a new sticker in the large layout too once the board has one, and in the tray there as on the phone", () => {
+    const both = boardSticker({ placement: onBoardAt(0.5), largePlacement: onBoardAt(0.4) });
+    const fresh = boardSticker();
+    // Received back: in the tray on the phone, never in the large layout.
+    const back = boardSticker({ placement: { ...onBoardAt(0.6), onBoard: false } });
+    const given = boardSticker({ placement: onBoardAt(0.7), held: false });
+    const { placed } = placeUnplaced([both, fresh, back, given].map(toBoardSticker));
+    const spotsGiven = new Map(placed.map((p) => [p.sticker.id, p.spots]));
+    expect([...spotsGiven.keys()]).toEqual([fresh.stickerId, back.stickerId]);
+    expect(spotsGiven.get(fresh.stickerId)).toMatchObject({
+      phone: { on: true },
+      large: { on: true },
+    });
+    const backSpots = spotsGiven.get(back.stickerId) ?? {};
+    expect(Object.keys(backSpots)).toEqual(["large"]);
+    expect(backSpots.large?.on).toBe(false);
+  });
+
+  it("leaves the large layout to be derived while the board has none", () => {
+    const { stickers, placed } = placeUnplaced(
+      [boardSticker({ placement: onBoardAt(0.5) }), boardSticker()].map(toBoardSticker),
+    );
+    expect(placed.map((p) => Object.keys(p.spots))).toEqual([["phone"]]);
+    expect(stickers.map((s) => s.placements.large)).toEqual([null, null]);
+  });
+});
+
+describe("shownIn", () => {
+  it("shows the layout asked for, a sticker that layout hasn't placed at its phone spot, and keeps a view while it hasn't moved", () => {
+    const [s] = placeUnplaced([
+      toBoardSticker(boardSticker({ placement: onBoardAt(0.2), largePlacement: onBoardAt(0.8) })),
+    ]).stickers;
+    const [given] = placeUnplaced([
+      toBoardSticker(boardSticker({ placement: onBoardAt(0.3), held: false })),
+    ]).stickers;
+    expect(shownIn("phone", [s])[0].placement.x).toBe(0.2);
+    expect(shownIn("large", [s, given]).map((v) => v.placement.x)).toEqual([0.8, 0.3]);
+    expect(shownIn("large", [s])[0]).toBe(shownIn("large", [s])[0]);
   });
 });

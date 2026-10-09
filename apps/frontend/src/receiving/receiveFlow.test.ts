@@ -37,6 +37,7 @@ const received: ReceivedGift = {
   stickerPlacement: {
     stickerId: gifted.id,
     placement: null,
+    largePlacement: null,
     seenAt: null,
     arrivedAt: "2026-09-23T12:02:00.000Z",
   },

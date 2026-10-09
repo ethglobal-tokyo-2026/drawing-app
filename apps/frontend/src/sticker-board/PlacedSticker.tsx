@@ -12,7 +12,8 @@ import type { Hold } from "./useBoardGestures";
 interface Props {
   sticker: BoardSticker;
   field: Field;
-  boardWidth: number;
+  /** What its size is a share of (see `unitOf`). */
+  unit: number;
   /** Its place in the stack, from the bottom. */
   stack: number;
   /** Whether its corner is lifted. */
@@ -50,7 +51,7 @@ const CORNERS = ["nw", "ne", "sw", "se"] as const;
 export const PlacedSticker = memo(function PlacedSticker({
   sticker,
   field,
-  boardWidth,
+  unit,
   stack,
   curled,
   selected,
@@ -70,7 +71,7 @@ export const PlacedSticker = memo(function PlacedSticker({
   const { t } = useTranslation();
   const lift = useRef<HTMLDivElement>(null);
   const fold = useFold(sticker.id, sticker.urls.mask, curled);
-  const box = stickerBox(field, boardWidth, sticker.placement, sticker);
+  const box = stickerBox(field, unit, sticker.placement, sticker);
 
   const land = useEffectEvent((el: HTMLElement) =>
     playStick(el, { from: "land", delay: 380, reduced }),

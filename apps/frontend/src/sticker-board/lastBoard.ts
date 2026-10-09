@@ -2,7 +2,8 @@ import type { PersonView } from "../api/views";
 import { openedFrom } from "../app/openedView";
 import { parseStored, readStored, writeStored } from "../ui/deviceStorage";
 import { assemblyOf, decodeImage } from "./boardComplete";
-import type { BoardStickerView } from "./boardSticker";
+import { shownIn, type PlacedBoardSticker } from "./boardSticker";
+import { boardLayoutNow } from "./useBoardSize";
 
 /**
  * The last board this phone showed, kept in its storage for the person signed in, so the next open
@@ -14,7 +15,7 @@ import type { BoardStickerView } from "./boardSticker";
  */
 export interface KeptBoard {
   owner: PersonView;
-  stickers: BoardStickerView[];
+  stickers: PlacedBoardSticker[];
 }
 
 interface Kept {
@@ -28,6 +29,9 @@ const KEY = "draw.lastBoard";
 /** This build: the address of its own code, which changes with every deploy. */
 const BUILD = import.meta.url;
 
+/** A kept sticker holds its spot in each layout. The dev server keeps one build across edits. */
+const hasSpots = (s: unknown) => typeof s === "object" && s !== null && "placements" in s;
+
 const isKept = (value: unknown): value is Kept =>
   typeof value === "object" &&
   value !== null &&
@@ -40,7 +44,8 @@ const isKept = (value: unknown): value is Kept =>
   value.board !== null &&
   "owner" in value.board &&
   "stickers" in value.board &&
-  Array.isArray(value.board.stickers);
+  Array.isArray(value.board.stickers) &&
+  value.board.stickers.every(hasSpots);
 
 /** The kept board as storage has it; another build's, or one that can't be read, is forgotten. */
 function read(): Kept | null {
@@ -100,7 +105,7 @@ export function readKeptBoardAgain(): void {
 // As the app's code starts, and while LINE and the sign-in take their turns, the kept board's images
 // start decoding (from the browser's cache, usually), so the board can draw them the moment it shows.
 if (kept && openedFrom(location.pathname).view === "board") {
-  for (const sticker of assemblyOf(kept.board.stickers)) {
+  for (const sticker of assemblyOf(shownIn(boardLayoutNow(), kept.board.stickers))) {
     for (const url of sticker.urls) void decodeImage(url);
   }
 }

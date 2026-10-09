@@ -8,7 +8,7 @@ export interface Placement {
   /** Center, as fractions of the board's field. */
   x: number;
   y: number;
-  /** Long side, as a fraction of the board's width. */
+  /** Long side, as a fraction of the board's unit (see `unitOf`). */
   s: number;
   /** Clockwise, in degrees. */
   r: number;
@@ -31,6 +31,42 @@ export interface Box {
   right: number;
   bottom: number;
 }
+
+/** Which of a board's two arrangements: the phone's, or the large layout a large screen shows. */
+export type BoardLayout = "phone" | "large";
+
+/**
+ * The phone's board: DESIGN.md's 390 × 844 iPhone inside LINE, less the status bar, LINE's header
+ * and the tab strip. The large layout sizes stickers by its width, and is first derived from it.
+ */
+export const PHONE_BOARD = { W: 390, H: 651 } as const;
+
+/** A board's size in px, and its unit, which a sticker's long side is a share of. */
+export interface BoardSize {
+  W: number;
+  H: number;
+  U: number;
+}
+
+/**
+ * What a sticker's size is a share of: the board's width on a phone; in the large layout the phone
+ * board's, so a sticker keeps its phone size either way up and the room goes to the board.
+ */
+export const unitOf = (layout: BoardLayout, boardWidth: number) =>
+  layout === "large" ? PHONE_BOARD.W : boardWidth;
+
+/** Every layout, in the order a body that saves spots names them. */
+const BOARD_LAYOUTS = ["phone", "large"] as const satisfies readonly BoardLayout[];
+
+/** A sticker's spots to save, by layout. */
+export type Spots = Partial<Record<BoardLayout, Placement>>;
+
+/** `placement` as the one spot to save, in `layout`. */
+export const spotsIn = (layout: BoardLayout, placement: Placement): Spots =>
+  layout === "large" ? { large: placement } : { phone: placement };
+
+/** The layouts a save's spots are in. */
+export const layoutsIn = (spots: Spots) => BOARD_LAYOUTS.filter((layout) => spots[layout]);
 
 /** An element's box on the board, which is its offset parent. */
 export const boxOf = (el: HTMLElement): Box => ({
@@ -78,9 +114,9 @@ export const toFrac = (f: Field, pt: { x: number; y: number }) => ({
   y: clamp01((pt.y - f.top) / f.h),
 });
 
-/** A sticker's size on a board this wide: `s` sets its long side, and the art sets its shape. */
-export function sizeOf(boardWidth: number, s: number, art: { width: number; height: number }) {
-  const long = s * boardWidth;
+/** A sticker's size at this unit: `s` sets its long side, and the art sets its shape. */
+export function sizeOf(unit: number, s: number, art: { width: number; height: number }) {
+  const long = s * unit;
   return art.width >= art.height
     ? { w: long, h: (long * art.height) / art.width }
     : { w: (long * art.width) / art.height, h: long };
@@ -93,12 +129,12 @@ export const transformAt = (x: number, y: number, w: number, h: number, r: numbe
 /** A sticker's box on the board, in board pixels, and the transform that puts it there. */
 export function stickerBox(
   field: Field,
-  boardWidth: number,
+  unit: number,
   p: Pick<Placement, "x" | "y" | "s" | "r">,
   art: { width: number; height: number },
 ) {
   const { x, y } = toPx(field, p);
-  const { w, h } = sizeOf(boardWidth, p.s, art);
+  const { w, h } = sizeOf(unit, p.s, art);
   return { x, y, w, h, transform: transformAt(x, y, w, h, p.r) };
 }
 

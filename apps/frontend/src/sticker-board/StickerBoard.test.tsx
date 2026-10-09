@@ -3,6 +3,7 @@ import type {
   BoardSticker as ApiBoardSticker,
   StickerBoard as LoadedBoard,
   Person,
+  StickerPlacement,
 } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,6 +16,7 @@ import { i18next, withBreakHints } from "../i18n/i18n";
 import { api as apiStrings } from "../i18n/strings/api";
 import { errors } from "../i18n/strings/errors";
 import { stickerBoard } from "../i18n/strings/stickerBoard";
+import { onLargeScreen } from "../ui/testing";
 import { forgetGreetings } from "./artistChipGreeting";
 import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
@@ -75,6 +77,59 @@ const onAPhone = () => {
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(657);
 };
+
+/** An 11-inch iPad's board in Safari, upright: a large screen. */
+const onAnIpad = () => {
+  onLargeScreen();
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(820);
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(1022);
+};
+
+/** A server holding these stickers, which keeps every spot saved in either layout, and a client over it. */
+function boardServer(...stickers: ApiBoardSticker[]) {
+  const onServer = new Map(stickers.map((s) => [s.stickerId, s]));
+  const keepSpots = (
+    stickerId: string,
+    spots: Partial<Pick<ApiBoardSticker, "placement" | "largePlacement">>,
+  ): StickerPlacement => {
+    const before = onServer.get(stickerId);
+    if (!before) throw new Error(`${stickerId} never reached you`);
+    const s = { ...before, ...spots };
+    onServer.set(stickerId, s);
+    const { placement, largePlacement, seenAt, arrivedAt } = s;
+    return { stickerId, placement, largePlacement, seenAt, arrivedAt };
+  };
+  const saveStickerPlacement = vi.fn<ApiClient["saveStickerPlacement"]>((stickerId, spots) =>
+    Promise.resolve(keepSpots(stickerId, spots)),
+  );
+  // As the server does: a derived spot only where none is saved.
+  const saveLargeLayout = vi.fn<ApiClient["saveLargeLayout"]>((entries) =>
+    Promise.resolve(
+      entries.map(({ stickerId, largePlacement }) =>
+        keepSpots(stickerId, {
+          largePlacement: onServer.get(stickerId)?.largePlacement ?? largePlacement,
+        }),
+      ),
+    ),
+  );
+  const api = emptyApi({
+    stickerBoard: () =>
+      Promise.resolve({ owner: TEST_OWNER, boardStickers: [...onServer.values()] }),
+    saveStickerPlacement,
+    saveLargeLayout,
+  });
+  return { api, onServer, saveStickerPlacement, saveLargeLayout };
+}
+
+/** Opens your board on `api`, and lets it load and save the spots it gives. */
+async function show(api: ApiClient) {
+  const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
+  unmount = view.unmount;
+  await act(async () => {});
+  await act(async () => {});
+  return view;
+}
+
 /** Selects the sticker from the keyboard, and returns its key presses. */
 function selectByKeys(host: HTMLElement, stickerId: string) {
   const el = host.querySelector<HTMLElement>(`[data-sticker-id="${stickerId}"]`);
@@ -115,7 +170,7 @@ describe("StickerBoard with the board kept on this phone", () => {
     const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
     unmount = view.unmount;
     await act(async () => {});
-    expect(keptBoardFor(TEST_ME.id)?.stickers[0].placement.x).toBe(0.6);
+    expect(keptBoardFor(TEST_ME.id)?.stickers[0].placements.phone.x).toBe(0.6);
   });
 
   it("never draws a board kept for someone else, and forgets it", () => {
@@ -502,9 +557,16 @@ describe("StickerBoard saving where a sticker sits", () => {
     const saveStickerPlacement = vi
       .fn<ApiClient["saveStickerPlacement"]>()
       .mockImplementationOnce(
-        (stickerId, placement) =>
+        (stickerId, spots) =>
           new Promise((resolve) => {
-            land = () => resolve({ stickerId, placement, seenAt: null, arrivedAt: a.arrivedAt });
+            land = () =>
+              resolve({
+                stickerId,
+                placement: spots.placement ?? null,
+                largePlacement: null,
+                seenAt: null,
+                arrivedAt: a.arrivedAt,
+              });
           }),
       )
       .mockRejectedValue(new ApiError(503, { error: "not_in_test", detail: "The board is down" }));
@@ -527,8 +589,10 @@ describe("StickerBoard saving where a sticker sits", () => {
 
     await act(async () => land());
     expect(saveStickerPlacement).toHaveBeenCalledTimes(2);
-    const shown = keptBoardFor(TEST_ME.id)?.stickers[0].placement;
-    expect(saveStickerPlacement.mock.lastCall?.[1]).toEqual(shown && toApiPlacement(shown));
+    const shown = keptBoardFor(TEST_ME.id)?.stickers[0].placements.phone;
+    expect(saveStickerPlacement.mock.lastCall?.[1]).toEqual(
+      shown && { placement: toApiPlacement(shown) },
+    );
     expect(view.host.querySelector(".board-alerts")).not.toBeNull();
   });
 });
@@ -550,11 +614,12 @@ describe("StickerBoard on the visit after a move", () => {
           owner: TEST_OWNER,
           boardStickers: [{ ...sticker, placement: onServer }],
         }),
-      saveStickerPlacement: (stickerId, placement) => {
-        onServer = placement;
+      saveStickerPlacement: (stickerId, spots) => {
+        onServer = spots.placement ?? onServer;
         return Promise.resolve({
           stickerId,
-          placement,
+          placement: onServer,
+          largePlacement: null,
           seenAt: null,
           arrivedAt: sticker.arrivedAt,
         });
@@ -579,7 +644,7 @@ describe("StickerBoard on the visit after a move", () => {
     first.unmount();
 
     await visit();
-    const shown = keptBoardFor(TEST_ME.id)?.stickers[0].placement;
+    const shown = keptBoardFor(TEST_ME.id)?.stickers[0].placements.phone;
     return { moved, onServer, shown: shown && toApiPlacement(shown) };
   }
 
@@ -824,5 +889,76 @@ describe("StickerBoard when your NSFW opt-in changes", () => {
     unmount = view.unmount;
     expect(document.querySelector(".gift-received-notice")).not.toBeNull();
     expect(document.body.innerHTML).not.toContain(DRAWING);
+  });
+});
+
+describe("StickerBoard's two layouts", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("saves a move on a large screen to the large layout alone, leaving the phone's arrangement", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    onAnIpad();
+    const a = boardSticker({ placement: at(0.5), largePlacement: at(0.3) });
+    const server = boardServer(a);
+    const { host } = await show(server.api);
+    selectByKeys(host, a.stickerId)("ArrowLeft");
+    act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    await act(async () => {});
+    const spots = server.saveStickerPlacement.mock.lastCall?.[1];
+    expect(spots?.largePlacement?.x).toBeLessThan(0.3);
+    expect(spots).not.toHaveProperty("placement");
+    expect(server.onServer.get(a.stickerId)?.placement).toEqual(at(0.5));
+  });
+
+  it("lands a new sticker on both layouts once your board has a large layout, from a phone too", async () => {
+    onAPhone();
+    const fresh = boardSticker();
+    const server = boardServer(
+      boardSticker({ placement: at(0.5), largePlacement: at(0.4) }),
+      fresh,
+    );
+    await show(server.api);
+    expect(server.onServer.get(fresh.stickerId)).toMatchObject({
+      placement: { onBoard: true },
+      largePlacement: { onBoard: true },
+    });
+  });
+
+  it("derives the large layout from the phone's the first time a large screen shows your board, and saves it once", async () => {
+    onAnIpad();
+    const [left, right] = [
+      boardSticker({ placement: at(0.2) }),
+      boardSticker({ placement: at(0.8) }),
+    ];
+    const server = boardServer(left, right);
+    await show(server.api);
+    expect(server.saveLargeLayout).toHaveBeenCalledOnce();
+    expect(server.saveStickerPlacement).not.toHaveBeenCalled();
+    const large = (s: ApiBoardSticker) =>
+      server.onServer.get(s.stickerId)?.largePlacement?.x ?? NaN;
+    // The phone's arrangement at its own size on a wider board: nearer the middle, in the same order.
+    expect([large(left) > 0.2, large(right) < 0.8, large(left) < large(right)]).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect([left, right].map((s) => server.onServer.get(s.stickerId)?.placement)).toEqual([
+      at(0.2),
+      at(0.8),
+    ]);
+    await act(() => vi.dynamicImportSettled());
+    unmount();
+    await show(server.api);
+    expect(server.saveLargeLayout).toHaveBeenCalledOnce();
+  });
+
+  it("draws a board kept on this device on a large screen only once it has a large layout", () => {
+    keep(TEST_ME.id, boardSticker({ placement: at(0.3) }));
+    onAnIpad();
+    const api = emptyApi({ stickerBoard: () => new Promise(() => {}) });
+    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
+    unmount = view.unmount;
+    expect(shownIds(view.host)).toEqual([]);
+    expect(view.host.querySelectorAll(".board-loading-sticker").length).toBeGreaterThan(0);
   });
 });

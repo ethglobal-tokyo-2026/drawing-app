@@ -9,7 +9,7 @@ import {
 } from "../api/views";
 import { formatHandle } from "../stickers/format";
 import type { StickerUrls } from "../stickers/stickerUrls";
-import { freeSpot, nextZ, type Placement } from "./placement";
+import { freeSpot, nextZ, type BoardLayout, type Placement, type Spots } from "./placement";
 
 /** A sticker at its spot, as a Sticker Board's parts draw it. */
 export interface BoardSticker {
@@ -37,7 +37,10 @@ interface GivenTo {
   receivedAt: number;
 }
 
-/** One of your Sticker Board's stickers: where it sits, who drew it, and where its gift is. */
+/**
+ * One of your Sticker Board's stickers as the board shows it: `placement` is its spot in the layout
+ * on screen.
+ */
 export interface BoardStickerView extends BoardSticker {
   /** The Original Artist. */
   artist: PersonView;
@@ -54,12 +57,44 @@ export interface BoardStickerView extends BoardSticker {
   seenAt: number | null;
   /** When it came to you, in milliseconds: the sticker tray's order. */
   arrivedAt: number;
+  /** Its spot in each layout: always the phone's, and the large layout's once the board has one. */
+  placements: {
+    phone: Placement;
+    large: Placement | null;
+  };
 }
 
-/** A board sticker as the API sends it: its placement is null until the board first places it. */
-export type UnplacedBoardSticker = Omit<BoardStickerView, "placement"> & {
-  placement: Placement | null;
+/** A sticker's spot in each layout; null until that layout first places it. */
+export interface Placements {
+  phone: Placement | null;
+  large: Placement | null;
+}
+
+/** A board sticker the board has placed, before it's shown in a layout. */
+export type PlacedBoardSticker = Omit<BoardStickerView, "placement">;
+
+/** A board sticker as the API sends it: each spot null until the board first places it there. */
+export type UnplacedBoardSticker = Omit<PlacedBoardSticker, "placements"> & {
+  placements: Placements;
 };
+
+/** Whether the board has a large layout yet: any of its stickers placed in it. */
+export const hasLargeLayout = (stickers: readonly { placements: Placements }[]) =>
+  stickers.some((s) => s.placements.large !== null);
+
+/** A placed sticker's spots, with `layout`'s moved to `placement`. */
+export const movedIn = (
+  placements: PlacedBoardSticker["placements"],
+  layout: BoardLayout,
+  placement: Placement,
+): PlacedBoardSticker["placements"] =>
+  layout === "large" ? { ...placements, large: placement } : { ...placements, phone: placement };
+
+/** The spots the board gave a sticker, by layout, for saving. */
+export interface GivenSpots {
+  sticker: PlacedBoardSticker;
+  spots: Spots;
+}
 
 export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
   const s = toSticker(b.sticker);
@@ -74,7 +109,10 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
     urls: s.urls,
     nsfw: s.nsfw,
     kyotoSeikaSubjects: s.kyotoSeikaSubjects,
-    placement: b.placement && toRecordPlacement(b.placement),
+    placements: {
+      phone: b.placement && toRecordPlacement(b.placement),
+      large: b.largePlacement && toRecordPlacement(b.largePlacement),
+    },
     artist: s.artist,
     held: b.held,
     givenTo: b.givenTo && {
@@ -96,40 +134,66 @@ export const onItsWay = (s: Pick<BoardStickerView, "held" | "openGift">) =>
   s.held && s.openGift?.status === "sent";
 
 /** On the board: stuck on, and still held rather than given away or on its way. */
-export const onTheBoard = <S extends Pick<UnplacedBoardSticker, "placement" | "held" | "openGift">>(
+export const onTheBoard = <
+  S extends Pick<BoardStickerView, "held" | "openGift"> & { placement: Placement | null },
+>(
   s: S,
 ): s is S & { placement: Placement } => s.placement?.on === true && s.held && !onItsWay(s);
 
 /** How a person is printed: their handle, or their name until they've chosen one. */
 export const handleOf = (p: PersonView) => (p.handle === null ? p.name : formatHandle(p.handle));
 
+/** A free spot on top of `taken`, which it joins: on the board, or at that spot in the tray. */
+function landIn(taken: Placement[], on: boolean): Placement {
+  const placement = { on, ...freeSpot(taken.filter((p) => p.on)), z: nextZ(taken) };
+  taken.push(placement);
+  return placement;
+}
+
 /**
- * Every sticker at a spot. One the board already holds keeps its spot there, since the board's moves
- * are newer than any load; one never placed goes to a free spot on top of the others, and is listed
- * in `placed` for saving, so it stays put when others move.
+ * Every sticker at a spot in the phone's layout, and in the large layout once the board has one. One
+ * the board already holds keeps its spots, since the board's moves are newer than any load. One never
+ * placed lands on top in each layout; one you hold that the large layout is missing goes there on the
+ * board or in the tray, as on the phone. Each spot given is listed for saving.
  */
 export function placeUnplaced(
   loaded: readonly UnplacedBoardSticker[],
-  held: readonly BoardStickerView[] = [],
-): {
-  stickers: BoardStickerView[];
-  placed: BoardStickerView[];
-} {
-  const spots = new Map(held.map((s) => [s.id, s.placement]));
-  const list = loaded.map((s) => ({ ...s, placement: spots.get(s.id) ?? s.placement }));
-  const placements = list.flatMap((s) => (s.placement ? [s.placement] : []));
-  const placed: BoardStickerView[] = [];
-  const stickers = list.map((s): BoardStickerView => {
-    if (s.placement) return { ...s, placement: s.placement };
-    const placement: Placement = {
-      on: true,
-      ...freeSpot(placements.filter((p) => p.on)),
-      z: nextZ(placements),
-    };
-    placements.push(placement);
-    const sticker = { ...s, placement };
-    placed.push(sticker);
+  held: readonly PlacedBoardSticker[] = [],
+): { stickers: PlacedBoardSticker[]; placed: GivenSpots[] } {
+  const heldSpots = new Map(held.map((s) => [s.id, s.placements]));
+  const list = loaded.map((s) => ({ ...s, placements: heldSpots.get(s.id) ?? s.placements }));
+  const large = hasLargeLayout(list);
+  const taken = {
+    phone: list.flatMap((s) => s.placements.phone ?? []),
+    large: list.flatMap((s) => s.placements.large ?? []),
+  };
+  const placed: GivenSpots[] = [];
+  const stickers = list.map((s): PlacedBoardSticker => {
+    const spots: Spots = {};
+    const phone = s.placements.phone ?? (spots.phone = landIn(taken.phone, true));
+    const inLarge =
+      s.placements.large ??
+      (large && s.held ? (spots.large = landIn(taken.large, phone.on)) : null);
+    const sticker = { ...s, placements: { phone, large: inLarge } };
+    if (spots.phone || spots.large) placed.push({ sticker, spots });
     return sticker;
   });
   return { stickers, placed };
+}
+
+const views = new WeakMap<PlacedBoardSticker, Partial<Record<BoardLayout, BoardStickerView>>>();
+
+/**
+ * Each sticker as the board shows it in `layout`; one that layout hasn't placed (a sticker you gave)
+ * shows its phone spot. A sticker that hasn't changed keeps its view, so only moved stickers redraw.
+ */
+export function shownIn(
+  layout: BoardLayout,
+  stickers: readonly PlacedBoardSticker[],
+): BoardStickerView[] {
+  return stickers.map((s) => {
+    let byLayout = views.get(s);
+    if (!byLayout) views.set(s, (byLayout = {}));
+    return (byLayout[layout] ??= { ...s, placement: s.placements[layout] ?? s.placements.phone });
+  });
 }

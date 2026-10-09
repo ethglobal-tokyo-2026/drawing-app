@@ -63,6 +63,7 @@ const sticker = (
   kyotoSeikaSubjects: null,
   urls: testStickerUrls(`blob:${no}`),
   placement: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: no },
+  placements: { phone: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: no }, large: null },
   artist: you,
   held: true,
   givenTo: null,

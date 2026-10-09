@@ -92,6 +92,7 @@ export function boardSticker(overrides: Partial<BoardSticker> = {}): BoardSticke
   return {
     stickerId: s.id,
     placement: null,
+    largePlacement: null,
     seenAt: null,
     arrivedAt: s.sealedAt,
     sticker: s,

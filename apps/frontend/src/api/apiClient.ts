@@ -9,13 +9,14 @@ import type {
   GratitudeEvents,
   GratitudeWithReplay,
   KyotoSeikaSubject,
+  LargeLayoutEntry,
   Me,
   OpenGiftBody,
   PackagedGift,
   PendingGifts,
   Person,
   PilePage,
-  Placement,
+  PlacementsRequest,
   ReceivedGift,
   RecordGratitude,
   SealResponse,
@@ -89,8 +90,10 @@ export interface ApiClient {
   gratitudeEvents: (before?: string) => Promise<GratitudeEvents>;
   /** GET /api/sticker-boards/:userId/sui-address: null while they have no wallet. */
   suiAddress: (userId: string) => Promise<string | null>;
-  /** PATCH /api/sticker-boards/me/sticker-placements/:stickerId */
-  saveStickerPlacement: (stickerId: string, placement: Placement) => Promise<StickerPlacement>;
+  /** PATCH /api/sticker-boards/me/sticker-placements/:stickerId: its spot in either layout, or both */
+  saveStickerPlacement: (stickerId: string, spots: PlacementsRequest) => Promise<StickerPlacement>;
+  /** POST /api/sticker-boards/me/large-layout: a large layout derived from the phone's, saved where none is */
+  saveLargeLayout: (stickerPlacements: readonly LargeLayoutEntry[]) => Promise<StickerPlacement[]>;
   /** POST /api/sticker-boards/me/sticker-tray/seen */
   markTraySeen: (stickerIds: readonly string[]) => Promise<{ newStickerCount: number }>;
 
