@@ -714,10 +714,11 @@ describe("StickerDetail", () => {
     };
     const showSwitch = strings.stickerBoard.settings.nsfw.show.en;
 
-    it("is offered to its Original Artist only, on a sticker not marked yet, quietly at the foot", () => {
+    it("is offered to its Original Artist only, on a sticker not marked yet, as label stock at the foot", () => {
       openOn(vi.fn());
       const opener = button(words.open.en);
-      expect(opener?.classList).toContain("label-btn--quiet");
+      // A quiet link reads as text, not something to press.
+      expect(opener?.classList).not.toContain("label-btn--quiet");
       const controls = [...document.querySelectorAll(".sticker-detail__main button")];
       expect(controls.at(-1)).toBe(opener);
       openOn(vi.fn(), sticker(133, day(14), { artist: toPerson(people.mika) }));

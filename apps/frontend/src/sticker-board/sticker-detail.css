@@ -282,8 +282,8 @@
   margin: 18px 0 0;
 }
 
-/* Mark 18+, a quiet link at the very foot, and the confirm it opens in its place: a label lifted off
-   the liner. */
+/* Mark 18+, plain label stock at the very foot, and the confirm it opens in its place: a label lifted
+   off the liner. */
 .sticker-detail__mark,
 .sticker-detail__mark-ask {
   margin-top: 22px;

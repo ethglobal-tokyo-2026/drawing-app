@@ -756,7 +756,7 @@ export function StickerDetail({
                 />
               )}
 
-              {/* At the very foot, quiet until asked: only its confirm carries the tomato. */}
+              {/* At the very foot, on plain label stock: only its confirm carries the tomato. */}
               {canMark &&
                 (mark ? (
                   <div
@@ -813,12 +813,13 @@ export function StickerDetail({
                   </div>
                 ) : (
                   <div className="sticker-detail__mark">
-                    <QuietLink
+                    <LabelButton
                       ref={markButton}
+                      size="sm"
                       onClick={() => setMarking({ stickerId: sticker.id, step: "asking" })}
                     >
                       {t(($) => $.stickerBoard.detail.markNsfw.open)}
-                    </QuietLink>
+                    </LabelButton>
                   </div>
                 ))}
               <p className="sticker-detail__marked" role="status">
