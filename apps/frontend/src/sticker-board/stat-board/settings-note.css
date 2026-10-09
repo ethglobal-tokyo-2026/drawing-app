@@ -224,18 +224,6 @@
   color: var(--graphite);
 }
 
-/* Dark subjects, under the mode's switch while it's on: indented behind a rule, with no divider. */
-.settings-note__nested {
-  margin: 10px 0 0 2px;
-  padding-left: 12px;
-  border-left: 1px solid var(--rule-strong);
-}
-
-.settings-note__nested .settings-note__option {
-  min-height: 40px;
-  font-size: 14px;
-}
-
 /* The subject list's credit, in its own case: names and a link, not caps metadata. */
 .settings-note__credit {
   margin: 8px 0 4px;

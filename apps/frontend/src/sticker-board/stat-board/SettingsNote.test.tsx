@@ -181,43 +181,30 @@ describe("the Settings note's 18+ switch", () => {
 });
 
 describe("the Settings note's Kyoto Seika Practice Mode", () => {
-  const switchIn = (host: HTMLElement, setting: "kyoto-seika" | "kyoto-seika-dark") => {
+  const switchIn = (host: HTMLElement) => {
     const found = host.querySelector<HTMLInputElement>(
-      `[data-setting="${setting}"] > label ${SWITCH}`,
+      `[data-setting="kyoto-seika"] > label ${SWITCH}`,
     );
-    if (!found) throw new Error(`No ${setting} switch on the note`);
+    if (!found) throw new Error("No Kyoto Seika Practice Mode switch on the note");
     return found;
   };
-  const savingSwitches = () =>
-    vi.fn<ApiClient["setKyotoSeikaPractice"]>((change) =>
-      Promise.resolve({ ...TEST_ME, kyotoSeikaPractice: true, ...change }),
-    );
 
-  it("turns on in place: it saves, your tickets reload, it says so, and the dark subjects switch shows", async () => {
-    const setKyotoSeikaPractice = savingSwitches();
+  it("turns on in place: it saves, your tickets reload, and it says so", async () => {
+    const setKyotoSeikaPractice = vi.fn<ApiClient["setKyotoSeikaPractice"]>((change) =>
+      Promise.resolve({ ...TEST_ME, ...change }),
+    );
     const tickets = vi.fn<ApiClient["tickets"]>(() => Promise.resolve(FRESH_TICKETS));
     const host = renderNote({ setKyotoSeikaPractice, tickets });
-    expect(host.querySelector('[data-setting="kyoto-seika-dark"]')).toBeNull();
-    await act(async () => switchIn(host, "kyoto-seika").click());
+    await act(async () => switchIn(host).click());
     expect(setKyotoSeikaPractice).toHaveBeenCalledExactlyOnceWith({ kyotoSeikaPractice: true });
-    expect(switchIn(host, "kyoto-seika").checked).toBe(true);
+    expect(switchIn(host).checked).toBe(true);
     expect(tickets).toHaveBeenCalledTimes(2);
     expect(statuses(host)[2]).toBe(stickerBoard.settings.kyotoSeika.on.en);
-    expect(switchIn(host, "kyoto-seika-dark").checked).toBe(false);
-  });
-
-  it("turns dark subjects on under it, leaving the mode as it is", async () => {
-    const setKyotoSeikaPractice = savingSwitches();
-    const host = renderNote({ setKyotoSeikaPractice }, { ...TEST_ME, kyotoSeikaPractice: true });
-    await act(async () => switchIn(host, "kyoto-seika-dark").click());
-    expect(setKyotoSeikaPractice).toHaveBeenCalledExactlyOnceWith({ kyotoSeikaDarkSubjects: true });
-    expect(switchIn(host, "kyoto-seika-dark").checked).toBe(true);
-    expect(switchIn(host, "kyoto-seika").checked).toBe(true);
   });
 
   it("names the mode for screen readers without its censor bar", () => {
     const host = renderNote({});
-    expect(switchIn(host, "kyoto-seika").getAttribute("aria-label")).toBe(
+    expect(switchIn(host).getAttribute("aria-label")).toBe(
       stickerBoard.settings.kyotoSeika.spokenName.en,
     );
   });

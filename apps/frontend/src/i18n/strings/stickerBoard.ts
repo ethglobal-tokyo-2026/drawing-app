@@ -267,17 +267,7 @@ export const stickerBoard = {
         en: "Off: your next sticker has the usual clock.",
         ja: "オフにしました。次のシールはいつもの時間です。",
       },
-      /** Under Kyoto Seika Practice Mode's switch while it's on. */
-      dark: {
-        /** Settings note, under Kyoto Seika Practice Mode's switch while it's on: the switch that also deals dark subjects */
-        label: { en: "Dark subjects too", ja: "重い題材も出す" },
-        /** Settings note: the note under the dark subjects switch, naming what it adds */
-        about: {
-          en: "Death, war, crime, alcohol and tobacco.",
-          ja: "死、戦争、犯罪、お酒、たばこなど。",
-        },
-      },
-      /** Settings note: the alert when a Kyoto Seika Practice Mode switch didn't save to your account, with the reason */
+      /** Settings note: the alert when Kyoto Seika Practice Mode's switch didn't save to your account, with the reason */
       notSaved: {
         en: "Your entrance exam setting couldn’t be saved, so it hasn’t changed: {{reason}}",
         ja: "入試の設定を保存できなかったため、変更していません：{{reason}}",

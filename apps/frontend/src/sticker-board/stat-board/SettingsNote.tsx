@@ -34,9 +34,9 @@ const PEEK_UNDER_TITLE = 10;
  * The settings on the note, each saved to your account and applied in place. One saves at a time, in
  * the order they were changed, so each answer is the account as it then is.
  */
-type Setting = "language" | "nsfw" | "kyotoSeika" | "kyotoSeikaDark";
+type Setting = "language" | "nsfw" | "kyotoSeika";
 /** The account's settings as the note shows them: a saving one shows its new value. */
-type Shown = Pick<Me, "language" | "nsfwOptIn" | "kyotoSeikaPractice" | "kyotoSeikaDarkSubjects">;
+type Shown = Pick<Me, "language" | "nsfwOptIn" | "kyotoSeikaPractice">;
 /** Why a setting didn't take: kept as it failed, so its words follow the app's language. */
 type Failure = { kind: "notSaved" | "notKept"; error: unknown };
 /** A setting's last change, until it's changed again: saving, waiting its turn included, then in place or why not. */
@@ -194,14 +194,6 @@ export function SettingsNote() {
       },
     );
 
-  const switchDark = (kyotoSeikaDarkSubjects: boolean) =>
-    save(
-      "kyotoSeikaDark",
-      { kyotoSeikaDarkSubjects },
-      () => api.setKyotoSeikaPractice({ kyotoSeikaDarkSubjects }),
-      () => null,
-    );
-
   const named = (language: Language) => t(($) => $.stickerBoard.settings.language.names[language]);
   const shown: Shown = Object.values(statuses).reduce<Shown>(
     (all, status) => (status?.step === "saving" ? { ...all, ...status.to } : all),
@@ -220,7 +212,6 @@ export function SettingsNote() {
       return me.kyotoSeikaPractice
         ? t(($) => $.stickerBoard.settings.kyotoSeika.on)
         : t(($) => $.stickerBoard.settings.kyotoSeika.off);
-    if (setting === "kyotoSeikaDark") return "";
     return me.nsfwOptIn
       ? t(($) => $.stickerBoard.settings.nsfw.shown)
       : t(($) => $.stickerBoard.settings.nsfw.blurred);
@@ -230,12 +221,10 @@ export function SettingsNote() {
     const status = statuses[setting];
     if (status?.step !== "failed") return null;
     const { message, detail } = problemOf(status.failure.error);
-    // Both Kyoto Seika Practice Mode switches say it in the mode's words.
-    const strings = setting === "kyotoSeikaDark" ? "kyotoSeika" : setting;
     const words =
       status.failure.kind === "notKept"
         ? t(($) => $.stickerBoard.settings.language.notKept)
-        : t(($) => $.stickerBoard.settings[strings].notSaved, { reason: message });
+        : t(($) => $.stickerBoard.settings[setting].notSaved, { reason: message });
     return (
       <ErrorLine className="settings-note__problem" detail={detail}>
         {words}
@@ -332,26 +321,6 @@ export function SettingsNote() {
             {statusLine("kyotoSeika")}
           </p>
           {problem("kyotoSeika")}
-          {shown.kyotoSeikaPractice && (
-            <div
-              className="settings-note__nested"
-              data-setting="kyoto-seika-dark"
-              aria-busy={saving("kyotoSeikaDark")}
-            >
-              <label className="settings-note__option settings-note__switch">
-                <span>{t(($) => $.stickerBoard.settings.kyotoSeika.dark.label)}</span>
-                <Switch
-                  checked={shown.kyotoSeikaDarkSubjects}
-                  aria-describedby={`${id}-kyoto-seika-dark-about`}
-                  onChange={switchDark}
-                />
-              </label>
-              <p className="settings-note__about" id={`${id}-kyoto-seika-dark-about`}>
-                {t(($) => $.stickerBoard.settings.kyotoSeika.dark.about)}
-              </p>
-              {problem("kyotoSeikaDark")}
-            </div>
-          )}
           <p className="fine settings-note__credit">
             <Trans
               i18nKey={($) => $.stickerBoard.settings.kyotoSeika.credit}
