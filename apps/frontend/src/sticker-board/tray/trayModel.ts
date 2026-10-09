@@ -245,7 +245,7 @@ export interface Tray {
   Wb: () => number;
   Hb: () => number;
   colLeft: () => number;
-  /** Where the open pouch ends, as the board's y: where its slider stops. */
+  /** Where the open pouch ends, as the board's y: where its mouth closes in. */
   pouchFoot: () => number;
   boardView: () => BoardView;
 }
@@ -298,19 +298,20 @@ export interface TrayFit {
   /** What the column and the mouth's travel grow by, and a pulled-out sheet's size: 1 but on a large screen. */
   grow: number;
   /**
-   * How far short of the rail's far stop the slider stops when it opens: just below the stack's foot,
+   * How far short of the slider on the far stop the open mouth closes in: just below the stack's foot,
    * so the open pouch holds no bare lining under the sheets.
    */
-  stopShort: number;
+  mouthShort: number;
 }
 
-export const PHONE_FIT: TrayFit = { scale: 1, grow: 1, stopShort: 0 };
+export const PHONE_FIT: TrayFit = { scale: 1, grow: 1, mouthShort: 0 };
 
 /**
  * The tray on its board. The stack shrinks until a deep stack fits the mouth opened to the rail's far
  * stop; on a large screen it grows to fill it, up to MAX_STACK_SCALE, and the column and the mouth's
- * travel grow with it. Opened, the slider stops a little below the foot of the `sheets` there are.
- * `windowFoot` is where the open mouth ends with the slider stopped this many px short of the far stop.
+ * travel grow with it. Opened, the slider runs to the far stop and the mouth closes in a little below
+ * the foot of the `sheets` there are. `windowFoot` is where the open mouth ends when it closes in this
+ * many px short of the slider.
  */
 export function trayFitFor(
   large: boolean,
@@ -326,7 +327,7 @@ export function trayFitFor(
   return {
     scale,
     grow: large ? Math.max(1, scale) : 1,
-    stopShort: Math.max(0, Math.floor(foot - wanted)),
+    mouthShort: Math.max(0, Math.floor(foot - wanted)),
   };
 }
 /** Phosphor's Stack and X icons, bold. */

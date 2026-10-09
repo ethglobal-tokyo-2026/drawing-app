@@ -315,7 +315,8 @@
   top: 0;
   width: 0;
   height: 0;
-  perspective: 240px;
+  /* Close enough that a pull lifted toward you grows at its free end. */
+  perspective: 200px;
 }
 
 .zip__flop {
@@ -345,7 +346,7 @@
   transform: rotateY(180deg);
 }
 
-/* The pull's shadow on the tape: it stretches and fades as the pull lifts. */
+/* The pull's shadow on the tape: it falls longer and fainter as the pull stands off the tape. */
 .zip__tabshadow {
   position: absolute;
   left: -9.5px;
@@ -355,7 +356,6 @@
   border-radius: 10px;
   background: rgba(28, 24, 36, 0.72);
   filter: blur(1.5px);
-  transform-origin: 9.5px 0;
   opacity: 0.55;
 }
 
@@ -398,8 +398,8 @@
   outline-offset: 3px;
 }
 
-/* The pull swings on for seconds after each run. On layers of their own, it and its shadow move
-   without repainting the Zipper. */
+/* The pull swings and falls on its own. On layers of their own, it and its shadow move without
+   repainting the Zipper. */
 .zip__flop,
 .zip__shadowpart {
   will-change: transform;

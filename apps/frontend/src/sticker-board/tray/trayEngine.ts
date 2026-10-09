@@ -250,7 +250,7 @@ export function createTrayEngine(
   const Wb = () => board.clientWidth || 390;
   const Hb = () => board.clientHeight || 657;
   const colLeft = () => Wb() - COL * ui.fit.grow;
-  /** Where the open pouch ends, as the board's y: where its slider stops. */
+  /** Where the open pouch ends, as the board's y: where its mouth closes in. */
   let openFoot = 0;
   const pouchFoot = () => openFoot || Hb();
   const boardView = (): BoardView => {
@@ -310,8 +310,9 @@ export function createTrayEngine(
   /**
    * Fits the tray to its board: the stack shrunk until its sheets, the edges behind them and the +N
    * button all fit a short board's mouth, and on a large screen grown to fill it, the column and the
-   * mouth's travel with it. Opened, the slider stops just below the stack, so the pouch holds no bare
-   * lining under the sheets. True when that reshaped the Zipper, which has drawn this frame already.
+   * mouth's travel with it. Opened, the slider runs on to the bottom stop, but the mouth closes in just
+   * below the stack, so the pouch holds no bare lining under the sheets. True when that reshaped the
+   * Zipper, which has drawn this frame already.
    */
   function fitTray(height: number) {
     // The stop follows the sheets there are: a short stack shows fewer edges behind its front sheet.
@@ -331,15 +332,15 @@ export function createTrayEngine(
       stack.style.setProperty("--scale", fit.scale.toFixed(4));
       if (ui.model && ui.order.length) renderStack();
     }
-    const moved = fit.grow !== was.grow || fit.stopShort !== was.stopShort;
+    const moved = fit.grow !== was.grow || fit.mouthShort !== was.mouthShort;
     if (moved)
       zip.reshape({
         chainAt: COL * fit.grow - 15,
         maxGap: GMAX * fit.grow,
-        stopShort: fit.stopShort,
+        mouthShort: fit.mouthShort,
       });
-    const stop = zip.openWindow();
-    openFoot = stop ? trayTop() + stop.slider : 0;
+    const open = zip.openWindow();
+    openFoot = open ? trayTop() + open.foot : 0;
     return moved;
   }
   function onFrame(g: Geometry) {

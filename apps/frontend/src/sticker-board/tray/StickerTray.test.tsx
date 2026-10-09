@@ -937,12 +937,26 @@ describe("StickerTray", () => {
       const sheets = (stackEl()?.querySelectorAll(".tray__sheet").length ?? 0) + hidden;
       const stackFoot = stackTop + scale * SHEET.h + stackFootFor(sheets);
       expect(scale).toBe(1);
-      // The slider stopped short of the rail's foot: only a little lining under the sheets.
+      // The mouth closes in short of the rail's foot: only a little lining under the sheets.
       expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
       expect(mouthFoot - stackFoot).toBeLessThan(2 * POUCH_LINING);
     });
 
-    it("takes a sticker back beside the open mouth, and not from below its slider", async () => {
+    it("runs the slider down to the bottom stop, however few the sheets", async () => {
+      await openOn(776, 1);
+      const [, sliderY = NaN] = numbersIn(board.querySelector(".zip__slider"));
+      const [, stopY = NaN] = numbersIn(board.querySelector(".zip__stop--bottom"));
+      // The slider's length, as its body is drawn.
+      const [, , , length = NaN] = (
+        board.querySelector(".zip__body")?.getAttribute("viewBox") ?? ""
+      )
+        .split(" ")
+        .map(Number);
+      expect(stopY - sliderY).toBeGreaterThan(0);
+      expect(stopY - sliderY).toBeLessThan(length);
+    });
+
+    it("takes a sticker back beside the open mouth, and not from below it", async () => {
       vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
         this: HTMLElement,
       ) {
