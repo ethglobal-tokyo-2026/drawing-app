@@ -8,9 +8,13 @@ export type { Pt };
 
 /** One cloud: the word area inside it, its lean, and the seed it's drawn from. */
 export interface BalloonSpec {
-  /** The furigana over the word, in px. */
+  /** The word area, the furigana over the word included, in px. */
   w: number;
   h: number;
+  /** How far the white reaches above and below the word area before its lobes, in px. */
+  padY: number;
+  /** The most a lobe bulges, in px. */
+  lobe: number;
   /** Degrees. */
   tilt: number;
   /** Seeds its lobes and bubbles, so a cloud is drawn the same every time. */
@@ -19,11 +23,13 @@ export interface BalloonSpec {
 
 /** The upper cloud, on the right, and the lower, on the left, by Balloon. */
 export const BALLOONS: readonly [BalloonSpec, BalloonSpec] = [
-  { w: 176, h: 72, tilt: 2.5, seed: 7 },
-  { w: 176, h: 72, tilt: -2.5, seed: 23 },
+  { w: 176, h: 72, padY: 12, lobe: 19, tilt: 2.5, seed: 7 },
+  { w: 176, h: 72, padY: 12, lobe: 19, tilt: -2.5, seed: 23 },
 ];
-/** The word area's height on a short phone, where the clouds tighten rather than scale. */
-const TIGHT_H = 62;
+/** On a short phone the clouds tighten rather than scale: first a shorter word area. */
+const TIGHT = { h: 62 };
+/** Where even that doesn't fit, a shorter one still, with less room round it and flatter lobes. */
+const TIGHTER = { h: 44, padY: 8, lobe: 14 };
 
 export interface Box {
   minX: number;
@@ -112,7 +118,7 @@ const boilRandom = (seed: number, frame: number) => seededRandom(seed * 7919 + f
 export function cloudShape(spec: BalloonSpec): Cloud {
   const random = seededRandom(spec.seed);
   const ax = spec.w / 2 + 14;
-  const ay = spec.h / 2 + 12;
+  const ay = spec.h / 2 + spec.padY;
   const exp = 2.6;
   const base = (t: number): Pt => {
     const c = Math.cos(t);
@@ -168,7 +174,7 @@ export function cloudShape(spec: BalloonSpec): Cloud {
     if (dot(out, mid) < 0) out = mul(out, -1);
     // Rounder lobes along the top, flatter ones along the foot.
     const k = 0.38 + 0.09 * clamp(-mid.y / ay, -1, 1) + (random() - 0.5) * 0.08;
-    const sag = clamp(k * chord, 6, 19);
+    const sag = clamp(k * chord, 6, spec.lobe);
     const radius = (chord * chord) / 4 / (2 * sag) + sag / 2;
     const center = add(mid, mul(out, sag - radius));
     const a0 = Math.atan2(a.y - center.y, a.x - center.x);
@@ -329,11 +335,13 @@ export interface PlacedBalloon {
   reach: Box;
 }
 
+/** How far the clouds tightened, rather than scaled, to fit a space shorter than the pair. */
+export type Fit = "roomy" | "tight" | "tighter";
+
 export interface PairLayout {
   /** The screen's width the pair was laid out on. */
   width: number;
-  /** The space is shorter than the pair, so the clouds tightened rather than scaled. */
-  tight: boolean;
+  fit: Fit;
   /** The upper cloud and the lower. */
   balloons: readonly [PlacedBalloon, PlacedBalloon];
 }
@@ -431,9 +439,9 @@ export function pairLayout({
   bottom: number;
 }): PairLayout {
   const space = bottom - top;
-  /** The pair with clouds `h` tall; `beside` sets the lower reroll by its cloud's right side, not under it. */
-  const arrange = (h: number, beside: boolean) => {
-    const specs = BALLOONS.map((s) => ({ ...s, h }));
+  /** The pair with clouds cut to `cut`; `beside` sets the lower reroll by its cloud's right side, not under it. */
+  const arrange = (cut: Partial<BalloonSpec>, beside: boolean) => {
+    const specs = BALLOONS.map((s) => ({ ...s, ...cut }));
     const upper = drawn(0, specs[0]);
     const under = drawn(1, specs[1], beside);
     const x = [
@@ -456,14 +464,16 @@ export function pairLayout({
     const foot = Math.max(...extents, ...lowerExtents.map((y) => y + dy));
     return { upper, lower, x, dy, head, height: foot - head };
   };
-  let pair = arrange(BALLOONS[0].h, false);
-  const tight = pair.height > space;
-  if (tight) pair = arrange(TIGHT_H, false);
-  // Still too tall, as on an iPhone SE inside LINE: the lower reroll moves up beside its cloud.
-  if (pair.height > space) pair = arrange(TIGHT_H, true);
+  let pair = arrange({}, false);
+  let fit: Fit = "roomy";
+  if (pair.height > space) [pair, fit] = [arrange(TIGHT, false), "tight"];
+  // Still too tall: the lower reroll moves up beside its cloud, and then, as on an iPhone SE inside
+  // LINE, the clouds tighten further, so the pair keeps clear of the timer's label and its note.
+  if (pair.height > space) pair = arrange(TIGHT, true);
+  if (pair.height > space) [pair, fit] = [arrange(TIGHTER, true), "tighter"];
   const room = space - pair.height;
-  // A pair still taller than the space keeps its foot on the task line's room, giving up some of the
-  // room under the timer's label instead, so nothing ever lands on the task line or Begin.
+  // A pair taller than the space even so keeps its foot on the task line's room, giving up some of
+  // the room under the timer's label instead, so nothing ever lands on the task line or Begin.
   const pairTop =
     room >= 0 ? top + clamp(PAIR_AT * space - pair.height / 2, 0, room) : bottom - pair.height;
   const upperY = pairTop - pair.head;
@@ -498,7 +508,7 @@ export function pairLayout({
   };
   return {
     width,
-    tight,
+    fit,
     balloons: [
       place(pair.upper, { x: pair.x[0], y: upperY }),
       place(pair.lower, { x: pair.x[1], y: upperY + pair.dy }),
@@ -508,19 +518,23 @@ export function pairLayout({
 
 /** Furigana stays at 11 px or more, so a word it sits on is never set under this. */
 export const FURIGANA_WORD_MIN_PX = 20;
-/** A word's size on a short phone, at most. */
-export const TIGHT_WORD_PX = 36;
-/** A word's size by its length: one or two characters, then three to six. */
-const WORD_PX = [46, 46, 42, 36, 32, 28] as const;
+/**
+ * A word's size by its length, one or two characters, then three to six, by how far the clouds
+ * tightened: the longer words a size smaller in the tighter clouds.
+ */
+const WORD_PX = {
+  roomy: [46, 46, 42, 36, 32, 28],
+  tight: [36, 36, 36, 36, 32, 28],
+  tighter: [36, 36, 32, 28, 26, 24],
+} as const satisfies Record<Fit, readonly number[]>;
 /** A Latin acronym such as SNS, which sets wider than kana or kanji. */
-const ACRONYM_PX = 40;
+const ACRONYM_PX = { roomy: 40, tight: 36, tighter: 32 } as const satisfies Record<Fit, number>;
 
 /** The size a subject's word is set at in its cloud, in px. */
-export function wordSizePx(ja: string, tight: boolean): number {
-  const natural = /^[A-Z]+$/.test(ja)
-    ? ACRONYM_PX
-    : WORD_PX[Math.min(Math.max(charCount(ja), 1), WORD_PX.length) - 1];
-  return tight ? Math.min(natural, TIGHT_WORD_PX) : natural;
+export function wordSizePx(ja: string, fit: Fit): number {
+  if (/^[A-Z]+$/.test(ja)) return ACRONYM_PX[fit];
+  const sizes = WORD_PX[fit];
+  return sizes[Math.min(Math.max(charCount(ja), 1), sizes.length) - 1];
 }
 
 /** The clouds' type, in px: the reading, and the room between it and the word. */

@@ -5,8 +5,6 @@ import {
   FURIGANA_WORD_MIN_PX,
   PAIR_AT,
   pairLayout,
-  ROOM_PX,
-  TIGHT_WORD_PX,
   toScreen,
   wordSizePx,
   type Box,
@@ -22,6 +20,11 @@ import {
 const TALL = { width: 390, top: 142, bottom: 641 };
 const SHORT = { width: 375, top: 142, bottom: 437 };
 const SE = { width: 375, top: 142, bottom: 357 };
+/** The space on a 375-wide phone `height` tall: Begin keeps to the foot, so the space loses what the phone does. */
+const phone = (height: number) => ({ ...SE, bottom: SE.bottom - (560 - height) });
+const WORDS = ["風", "地図", "小学生", "鬼ごっこ", "宇宙飛行士", "てるてる坊主"];
+/** The shortest and longest words, with kanji and furigana, and in Latin letters. */
+const EXTREME_WORDS = ["風", "てるてる坊主", "AI", "BGM"];
 
 /** Whether `p` lies inside the closed outline `poly` (even-odd). */
 function inside(p: Pt, poly: readonly Pt[]): boolean {
@@ -71,22 +74,27 @@ describe("a G-pen cloud", () => {
     for (const b of pairLayout(TALL).balloons) expect(new Set(b.beadsInks).size).toBe(inks.length);
   });
 
-  it("holds a word of any length and its furigana inside its lobes, tightened or not", () => {
-    const words = ["風", "地図", "小学生", "鬼ごっこ", "宇宙飛行士", "てるてる坊主"];
-    for (const tight of [false, true])
-      for (const placed of pairLayout(tight ? { ...SHORT, bottom: SHORT.top + 200 } : TALL)
-        .balloons)
-        for (const word of words) {
-          const size = wordSizePx(word, tight);
-          // Full-width characters a little apart, under a line of furigana.
-          const half = { x: (word.length * size * 1.02) / 2, y: (16 + size * 1.05) / 2 };
-          const corners = [-1, 1].flatMap((sx) =>
-            [-1, 1].map((sy) => ({ x: sx * half.x, y: sy * half.y })),
-          );
-          expect(corners.every((c) => inside(c, placed.cloud.white))).toBe(true);
-        }
+  it("holds a word of any length and its furigana inside its lobes, however far it tightened", () => {
+    const layouts = [TALL, phone(580), SE].map(pairLayout);
+    expect(layouts.map((l) => l.fit)).toEqual(["roomy", "tight", "tighter"]);
+    for (const layout of layouts)
+      for (const placed of layout.balloons)
+        for (const word of WORDS) expectHolds(placed, word, wordSizePx(word, layout.fit));
   });
 });
+
+/** `word` at `size` px, under a line of furigana, sits inside `placed`'s lobes. */
+function expectHolds(placed: PlacedBalloon, word: string, size: number) {
+  // Full-width characters a little apart, under a line of furigana.
+  const half = { x: (word.length * size * 1.02) / 2, y: (16 + size * 1.05) / 2 };
+  const corners = [-1, 1].flatMap((sx) =>
+    [-1, 1].map((sy) => ({ x: sx * half.x, y: sy * half.y })),
+  );
+  expect(
+    corners.every((c) => inside(c, placed.cloud.white)),
+    `${word} at ${size}px`,
+  ).toBe(true);
+}
 
 /** The two clouds never meet, and neither cloud's bubbles nor either reroll touch a cloud. */
 function expectKeptApart(layout: PairLayout) {
@@ -118,20 +126,27 @@ describe("the pair", () => {
     });
 
   it("on a phone too short for the lower reroll under its cloud, sets it beside the cloud's right side, and never puts a reroll on the task line or past the screen's sides", () => {
-    const layout = pairLayout(SE);
-    const [, lower] = layout.balloons;
-    expectKeptApart(layout);
+    const [, lower] = pairLayout(SE).balloons;
     expect(lower.reroll.minX).toBeGreaterThanOrEqual(Math.max(...onScreen(lower).map((p) => p.x)));
-    // It may take some of the room kept under the timer's label, never the label itself.
-    const { top, bottom } = extent(layout);
-    expect(top).toBeGreaterThanOrEqual(SE.top - ROOM_PX);
-    expect(bottom).toBeLessThanOrEqual(SE.bottom);
-    for (let foot = SE.bottom; foot >= SE.bottom - 60; foot -= 5)
-      for (const { reroll } of pairLayout({ ...SE, bottom: foot }).balloons) {
-        expect(reroll.maxY).toBeLessThanOrEqual(foot);
+    for (let height = 560; height >= 500; height -= 5)
+      for (const { reroll } of pairLayout(phone(height)).balloons) {
+        expect(reroll.maxY).toBeLessThanOrEqual(phone(height).bottom);
         expect(reroll.minX).toBeGreaterThanOrEqual(0);
         expect(reroll.maxX).toBeLessThanOrEqual(SE.width);
       }
+  });
+
+  it("on phones down to 375 × 520, keeps the pair between the label's room and the task line's, and holds its words", () => {
+    for (let height = 560; height >= 520; height -= 5) {
+      const space = phone(height);
+      const layout = pairLayout(space);
+      expectKeptApart(layout);
+      const { top, bottom } = extent(layout);
+      expect(top, `${height}px tall`).toBeGreaterThanOrEqual(space.top);
+      expect(bottom, `${height}px tall`).toBeLessThanOrEqual(space.bottom);
+      for (const placed of layout.balloons)
+        for (const word of EXTREME_WORDS) expectHolds(placed, word, wordSizePx(word, layout.fit));
+    }
   });
 
   it("sets each reroll just under its own cloud's right edge where there's room", () => {
@@ -154,9 +169,9 @@ describe("the pair", () => {
   });
 
   it("tightens rather than scaling when the space is shorter than the pair, and never lets the clouds meet", () => {
-    expect(pairLayout(TALL).tight).toBe(false);
+    expect(pairLayout(TALL).fit).toBe("roomy");
     const cramped = pairLayout({ ...SHORT, bottom: SHORT.top + 200 });
-    expect(cramped.tight).toBe(true);
+    expect(cramped.fit).not.toBe("roomy");
     const [upper, lower] = cramped.balloons.map(onScreen);
     expect(upper.some((p) => inside(p, lower))).toBe(false);
     expect(lower.some((p) => inside(p, upper))).toBe(false);
@@ -173,12 +188,17 @@ describe("the pair", () => {
 });
 
 describe("a subject's word", () => {
-  it("sets a longer word smaller, never under FURIGANA_WORD_MIN_PX, and no bigger than TIGHT_WORD_PX when tight", () => {
-    const sizes = ["風", "地図", "小学生", "鬼ごっこ", "宇宙飛行士", "てるてる坊主"].map((w) =>
-      wordSizePx(w, false),
-    );
-    expect(sizes).toEqual(sizes.toSorted((a, b) => b - a));
-    expect(Math.min(...sizes)).toBeGreaterThanOrEqual(FURIGANA_WORD_MIN_PX);
-    expect(wordSizePx("風", true)).toBeLessThanOrEqual(TIGHT_WORD_PX);
+  it("sets a longer word smaller, never under FURIGANA_WORD_MIN_PX, and no bigger as the clouds tighten", () => {
+    const fits = ["roomy", "tight", "tighter"] as const;
+    for (const fit of fits) {
+      const sizes = WORDS.map((w) => wordSizePx(w, fit));
+      expect(sizes).toEqual(sizes.toSorted((a, b) => b - a));
+      expect(Math.min(...sizes)).toBeGreaterThanOrEqual(FURIGANA_WORD_MIN_PX);
+    }
+    for (const word of [...WORDS, ...EXTREME_WORDS]) {
+      const sizes = fits.map((fit) => wordSizePx(word, fit));
+      expect(sizes).toEqual(sizes.toSorted((a, b) => b - a));
+    }
+    expect(wordSizePx("風", "tight")).toBeLessThan(wordSizePx("風", "roomy"));
   });
 });

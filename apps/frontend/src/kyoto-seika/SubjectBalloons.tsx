@@ -16,6 +16,7 @@ import {
   TYPE,
   wordSizePx,
   type Box,
+  type Fit,
   type PairLayout,
   type PlacedBalloon,
 } from "./balloonGeometry";
@@ -164,7 +165,7 @@ function puff(layer: HTMLElement) {
 interface BalloonProps {
   balloon: Balloon;
   placed: PlacedBalloon;
-  tight: boolean;
+  fit: Fit;
   subject: KyotoSeikaSubject;
   /** Its die blew up: smoke rises from it. */
   charred: boolean;
@@ -178,7 +179,7 @@ interface BalloonProps {
 function SubjectBalloon({
   balloon,
   placed,
-  tight,
+  fit,
   subject,
   charred,
   wrap,
@@ -237,7 +238,7 @@ function SubjectBalloon({
     return () => clearTimeout(swap);
   }, [subject, shown, reduced]);
 
-  const type = tight ? TIGHT_TYPE : TYPE;
+  const type = fit === "roomy" ? TYPE : TIGHT_TYPE;
   const style = {
     left: placed.center.x,
     top: placed.center.y,
@@ -270,10 +271,7 @@ function SubjectBalloon({
           className="subject-balloon__words"
           style={{ left: -spec.w / 2, top: -spec.h / 2, width: spec.w, height: spec.h }}
         >
-          <div
-            className="subject-balloon__word"
-            style={{ fontSize: wordSizePx(visible.ja, tight) }}
-          >
+          <div className="subject-balloon__word" style={{ fontSize: wordSizePx(visible.ja, fit) }}>
             <SubjectWord subject={visible} />
           </div>
         </div>
@@ -377,7 +375,7 @@ export function SubjectBalloons({ deal, layout, onRoll }: Props) {
           key={balloon}
           balloon={balloon}
           placed={layout.balloons[balloon]}
-          tight={layout.tight}
+          fit={layout.fit}
           subject={deal.subjects[balloon]}
           charred={dieMood(deal.rolls[balloon]).charred}
           wrap={(el) => {
