@@ -17,11 +17,15 @@ Artists use layers to sketch and then ink, to color under the lines, and to shad
 
 ### The layer panel
 
-1. **Placement.** One flat label strip under the tool strip, right-aligned with it; with a left drawing hand it follows the tool strip to the top left. On a large screen it sits in the top bar, before the tool strip. To confirm in the mock review.
+1. **Placement.** One flat label strip under the tool strip, right-aligned with it; with a left drawing hand it follows the tool strip to the top left. Its slots line up under the tool tiles: on the right hand, a gap before **+** matches the hairline before the tool strip's Clear.
+   - The Smoothing bar, the clear bar and the options bar open under the panel, never over it.
+   - On a large screen it's one row in the top bar, before the tool strip, with the slider before the chips, so nothing hangs into the sheet.
    - It hides with the tools: while a Kyoto Seika sheet waits for Begin, at time's up and while sealing. The seal sheet covers it like the rest.
+   - The panel leaves room for the current chip's ring.
 2. **Chips.** Back on the left, front on the right, then **+**. Every layer stack in the apps surveyed is vertical, so the rule is stated: right is in front.
    - A chip is a tiny sheet of paper showing its layer's ink cropped to the ink, as ibisPaint's "Only Contents" thumbnails are (https://ibispaint.com/lecture/index.jsp?no=81&lang=en), with the layer's number in fine print. An empty layer shows only its number.
    - A fresh sheet has one layer, 1.
+   - A faded layer's chip fades with it, but never below half, so a faint sketch still reads. A hidden layer's chip is dimmer still and wears an eye-slash.
    - Chips sit on the tool strip's 40px pitch. When there are more than fit (on a phone, past about seven), they scroll and **+** stays at the end.
    - The strip is one Tab stop, like the tool strip. Arrow keys move between chips; Enter selects one, or opens the current chip's options.
 3. **Numbers.** A layer keeps its number for life: moving it never renumbers it. A new layer takes one more than the highest number the sheet has used, so an undone delete can't collide with a newer layer.
@@ -62,7 +66,7 @@ Artists use layers to sketch and then ink, to color under the lines, and to shad
     - It fades with that layer: their opacities multiply, as in Clip Studio (https://help.clip-studio.com/en-us/manual_en/180_layers/Other_layer_settings.htm).
     - Several clipped layers can share one base.
     - The bottom layer can't clip. A clipped layer moved to the bottom stops clipping until a layer goes under it (Procreate).
-    - Its chip is stuck onto the chip on its left, like a sticker on a sticker.
+    - Its chip slides left inside its slot to touch the chip it clips to, a little smaller, like a sticker stuck to the edge of another. The slots stay on the tool tiles' columns, and its number stays at 11px.
 17. **Undo covers every layer change:** add, delete, move, opacity, lock, clip and clear are one step each.
     - Back-to-back opacity changes to one layer merge into one step, as Kleki does.
     - Undo never leaves a deleted layer current, and a layer it brings back comes back current.
@@ -78,6 +82,7 @@ Artists use layers to sketch and then ink, to color under the lines, and to shad
     - A stroke that starts cancels it, an empty layer doesn't flash, and under reduced motion nothing flashes: the chip's ring shows the current layer.
 20. **A hovering pen magnifies the chips,** as the macOS Dock does.
     - The chip under the pen grows, and its neighbors grow less and part to make room, so the chip stays under the pen.
+    - Chips grow toward the sheet. On a phone, where the slider sits under them, the slider fades while the pen hovers the chips.
     - Touching down freezes the strip, so the tap lands where it hovered, and leaving lets it settle.
     - Pen only, never a finger or a mouse. Hover only previews, as Apple asks (https://developer.apple.com/design/human-interface-guidelines/apple-pencil-and-scribble).
     - iPad Safari has delivered Pencil hover since 16.1 (https://webkit.org/blog/13399/webkit-features-in-safari-16-1/). Whether LINE's in-app browser does is unverified.
