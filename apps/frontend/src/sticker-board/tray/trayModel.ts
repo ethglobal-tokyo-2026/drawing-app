@@ -178,8 +178,10 @@ export interface TrayState {
   pulled: Pulled | null;
   /** The stickers the tray holds, and how many sheets they fill. */
   model: ReturnType<typeof modelOf>;
-  /** How the tray fits its board: the stack's scale, the column's growth and where the pouch ends. */
+  /** How the tray fits its board: the stack's scale, the column's growth and the open pouch's room. */
   fit: TrayFit;
+  /** The sheets' page height in sheet px, the one the stickers were packed for. */
+  sheetH: number;
   /** The stack's window is on show: the tray open, opening, or pulled to a crack. */
   onShow: boolean;
   /** The stickers changed while the sheets were out of sight, under a hand or mid-turn: they're
@@ -261,9 +263,10 @@ export const STACK_FOOT = PEEKS * PEEK + DEPTH_ROOM;
 /** Under the front sheet of a stack of `sheets`: the edges shown behind it, and the +N button once deeper ones hide. */
 export const stackFootFor = (sheets: number) =>
   Math.min(PEEKS, Math.max(0, sheets - 1)) * PEEK + (sheets - 1 > PEEKS ? DEPTH_ROOM : 0);
+/** A sheet's width, and its page's least height: the page grows taller to fill the open pouch. */
 export const SHEET = { w: 156, h: 364 };
 /** Packing keeps clear of the sheet's tear strip at the top and its dated foot. */
-const PACK = { sheet: SHEET, margin: { top: 30, right: 10, bottom: 24, left: 10 } };
+const PACK_MARGIN = { top: 30, right: 10, bottom: 24, left: 10 };
 /** The tray runs from under the board's header and its gifts badge to its foot; a large screen's header
  * row, where the gifts sit beside your name, is taller (sticker-tray.css sets --tray-top to match). */
 export const trayTop = () => (window.matchMedia(LARGE_SCREEN).matches ? 80 : 72);
@@ -298,38 +301,45 @@ export interface TrayFit {
   /** What the column and the mouth's travel grow by, and a pulled-out sheet's size: 1 but on a large screen. */
   grow: number;
   /**
-   * How far short of the slider on the far stop the open mouth closes in: just below the stack's foot,
-   * so the open pouch holds no bare lining under the sheets.
+   * The open pouch's room for the stack, in the column's px: from the stack's top down to the lining
+   * over the bottom stop. The front sheet's page and the stack's foot under it fill it.
    */
-  mouthShort: number;
+  room: number;
 }
 
-export const PHONE_FIT: TrayFit = { scale: 1, grow: 1, mouthShort: 0 };
+/** Before the board has a size: the page at its least height. */
+export const PHONE_FIT: TrayFit = { scale: 1, grow: 1, room: SHEET.h };
 
 /**
- * The tray on its board. The stack shrinks until a deep stack fits the mouth opened to the rail's far
- * stop; on a large screen it grows to fill it, up to MAX_STACK_SCALE, and the column and the mouth's
- * travel grow with it. Opened, the slider runs to the far stop and the mouth closes in a little below
- * the foot of the `sheets` there are. `windowFoot` is where the open mouth ends when it closes in this
- * many px short of the slider.
+ * The tray on its board. The stack shrinks until a deep stack of least-height pages fits the mouth
+ * opened to the rail's far stop; on a large screen it grows to fill it, up to MAX_STACK_SCALE, and the
+ * column and the mouth's travel grow with it. Whatever room is left goes to the pages' height
+ * (`sheetHeightFor`). `windowFoot` is where the open mouth ends when it closes in this many px short
+ * of the slider.
  */
-export function trayFitFor(
-  large: boolean,
-  sheets: number,
-  windowFoot: (short: number) => number | null,
-): TrayFit {
+export function trayFitFor(large: boolean, windowFoot: (short: number) => number | null): TrayFit {
   const foot = windowFoot(0);
   if (foot === null) return PHONE_FIT;
   // The scale whose deepest stack ends where the open mouth does.
   const fills = (foot - 2 - STACK_Y - STACK_FOOT) / SHEET.h;
   const scale = large && fills > 1 ? Math.min(fills, MAX_STACK_SCALE) : clamp(fills, MIN_SCALE, 1);
-  const wanted = 2 + STACK_Y + scale * SHEET.h + stackFootFor(sheets) + POUCH_LINING;
   return {
     scale,
     grow: large ? Math.max(1, scale) : 1,
-    mouthShort: Math.max(0, Math.floor(foot - wanted)),
+    room: foot - 2 - STACK_Y - POUCH_LINING,
   };
 }
+
+/** The page's height in sheet px on a stack of `sheets`: it fills the room above the stack's foot. */
+export const sheetHeightFor = (fit: TrayFit, sheets: number) =>
+  Math.max(SHEET.h, (fit.room - stackFootFor(sheets)) / fit.scale);
+
+/**
+ * How far short of the slider on the far stop the open mouth closes in: just below the stack's foot,
+ * so the open pouch holds no bare lining under the sheets. Pages that fill the pouch leave none.
+ */
+export const mouthShortFor = (fit: TrayFit, sheets: number, sheetH: number) =>
+  Math.max(0, Math.floor(fit.room - fit.scale * sheetH - stackFootFor(sheets)));
 /** Phosphor's Stack and X icons, bold. */
 export const ICONS = {
   stack:
@@ -387,10 +397,22 @@ export function createTrayModel(
 
   /* ---------------------------------------------------------------- where each sticker sits: on its cut line */
   function packWith(shapes: readonly Shape[]) {
-    const { sheets, byId } = packSheets(
-      ui.model.slots.map((s, i) => ({ id: s.id, shape: shapes[i] })),
-      PACK,
-    );
+    const items = ui.model.slots.map((s, i) => ({ id: s.id, shape: shapes[i] }));
+    const packOn = (h: number) =>
+      packSheets(items, { sheet: { w: SHEET.w, h }, margin: PACK_MARGIN });
+    // The more sheets, the deeper the stack's foot and the shorter the page above it: packed on the
+    // tallest page first, then on each shorter one until the stack it makes fits.
+    let sheetH = sheetHeightFor(ui.fit, 1);
+    let packed = packOn(sheetH);
+    for (
+      let next = sheetHeightFor(ui.fit, packed.sheets.length);
+      next < sheetH;
+      next = sheetHeightFor(ui.fit, packed.sheets.length)
+    ) {
+      sheetH = next;
+      packed = packOn(sheetH);
+    }
+    const { sheets, byId } = packed;
     for (const s of ui.model.slots) {
       const b = byId.get(s.id);
       if (b) {
@@ -404,6 +426,7 @@ export function createTrayModel(
       }
     }
     ui.model.count = Math.max(1, sheets.length);
+    ui.sheetH = sheetH;
   }
   /** Packs at once when every cut line is known; until then, the stand-in spots stay. */
   function applyPack() {

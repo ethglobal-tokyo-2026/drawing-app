@@ -909,6 +909,15 @@ describe("StickerTray", () => {
       el instanceof HTMLElement
         ? (el.style.transform.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number)
         : [];
+    /** The sheets' page height, as the tray draws them. */
+    const pageH = () =>
+      parseFloat(
+        board.querySelector<HTMLElement>(".tray")?.style.getPropertyValue("--sheet-h") ?? "",
+      );
+    /** How many sheets the open stack holds: those drawn, and those behind its +N button. */
+    const sheetCount = () =>
+      (stackEl()?.querySelectorAll(".tray__sheet").length ?? 0) +
+      Number(stackEl()?.querySelector(".tray__depth span")?.textContent?.slice(1) ?? 0);
     /**
      * The open stack's scale, where its foot (with the edges and the +N button) ends, and where the
      * open mouth ends, in the column's px.
@@ -916,9 +925,19 @@ describe("StickerTray", () => {
     const openStack = (height: number) => {
       const [, stackTop = NaN, scale = NaN] = numbersIn(stackEl());
       const [, mouthFootShift = NaN] = numbersIn(board.querySelector(".tray__w2"));
-      const stackFoot = stackTop + scale * SHEET.h + STACK_FOOT;
+      const stackFoot = stackTop + scale * pageH() + stackFootFor(sheetCount());
       return { scale, stackFoot, mouthFoot: height - trayTop() + mouthFootShift };
     };
+
+    it("packs more stickers to a sheet on a taller board, whose sheets are taller", async () => {
+      await openOn(523, 40);
+      const onShort = sheetCount();
+      act(() => root.unmount());
+      root = createRoot(host);
+      await openOn(900, 40);
+      expect(pageH()).toBeGreaterThan(SHEET.h);
+      expect(sheetCount()).toBeLessThan(onShort);
+    });
 
     it("grows the stack on a large screen, and opens the mouth only a little past it", async () => {
       media(window.matchMedia("all"), true);
@@ -953,18 +972,14 @@ describe("StickerTray", () => {
     it.each([
       ["one sheet", 1],
       ["a deep stack", 60],
-    ])("opens a tall board's mouth only as far as %s, full size", async (_, stickers) => {
+    ])("fills a tall board's open pouch with the pages of %s, full size", async (_, stickers) => {
       await openOn(776, stickers);
       const [, stackTop = NaN, scale = NaN] = numbersIn(stackEl());
       const [, mouthFootShift = NaN] = numbersIn(board.querySelector(".tray__w2"));
       const mouthFoot = 776 - trayTop() + mouthFootShift;
-      const hidden = Number(
-        stackEl()?.querySelector(".tray__depth span")?.textContent?.slice(1) ?? 0,
-      );
-      const sheets = (stackEl()?.querySelectorAll(".tray__sheet").length ?? 0) + hidden;
-      const stackFoot = stackTop + scale * SHEET.h + stackFootFor(sheets);
+      const stackFoot = stackTop + scale * pageH() + stackFootFor(sheetCount());
       expect(scale).toBe(1);
-      // The mouth closes in short of the rail's foot: only a little lining under the sheets.
+      // The pages fill the open mouth, down to a little lining under the sheets.
       expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
       expect(mouthFoot - stackFoot).toBeLessThan(2 * POUCH_LINING);
     });
@@ -1013,7 +1028,7 @@ describe("StickerTray", () => {
         const [, mouthFootShift] = numbersIn(board.querySelector(".tray__w2"));
         const mouthFoot = height - trayTop() + mouthFootShift;
         expect(shrink).toBeLessThan(1);
-        expect(stackTop + shrink * SHEET.h + STACK_FOOT).toBeLessThanOrEqual(mouthFoot);
+        expect(stackTop + shrink * pageH() + STACK_FOOT).toBeLessThanOrEqual(mouthFoot);
       },
     );
 
@@ -1031,7 +1046,7 @@ describe("StickerTray", () => {
         expect(turn).toBeDefined();
         // Below the header and above the board's foot.
         expect(y).toBeGreaterThanOrEqual(0);
-        expect(y + 364 * k).toBeLessThanOrEqual(height);
+        expect(y + pageH() * k).toBeLessThanOrEqual(height);
       }
     });
   });

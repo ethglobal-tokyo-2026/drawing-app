@@ -24,11 +24,14 @@ import {
   COL,
   GMAX,
   PHONE_FIT,
+  SHEET,
   STACK_Y,
   SVG_NS,
   trayTop,
   createTrayModel,
   modelOf,
+  mouthShortFor,
+  sheetHeightFor,
   trayFitFor,
   type BoardView,
   type Geometry,
@@ -238,6 +241,7 @@ export function createTrayEngine(
     pulled: null,
     model: modelOf(read(), seen),
     fit: PHONE_FIT,
+    sheetH: SHEET.h,
     onShow: false,
     stale: false,
     orderedFor: 0,
@@ -326,42 +330,53 @@ export function createTrayEngine(
   }
   let footShown = "1.00";
   const large = win.matchMedia(LARGE_SCREEN);
-  /** The board height, sheet count and screen the tray was last fitted for. */
+  /** The board height and screen the tray was last fitted for. */
   let fittedFor = "";
+  /** How far short of the bottom stop the Zipper's open mouth was last shaped to close in. */
+  let mouthShort = 0;
   /**
    * Fits the tray to its board: the stack shrunk until its sheets, the edges behind them and the +N
    * button all fit a short board's mouth, and on a large screen grown to fill it, the column and the
-   * mouth's travel with it. Opened, the slider runs on to the bottom stop, but the mouth closes in just
-   * below the stack, so the pouch holds no bare lining under the sheets. True when that reshaped the
-   * Zipper, which has drawn this frame already.
+   * mouth's travel with it; the pages grow taller to fill the pouch down to the bottom stop, and the
+   * stickers are packed again onto them. True when that reshaped the Zipper, which has drawn this
+   * frame already.
    */
   function fitTray(height: number) {
-    // The stop follows the sheets there are: a short stack shows fewer edges behind its front sheet.
-    const sheets = ui.model.count;
-    const fitting = `${height} ${sheets} ${large.matches}`;
-    if (!height || fitting === fittedFor) return false;
-    fittedFor = fitting;
+    if (!height) return false;
     const was = ui.fit;
-    const fit = trayFitFor(large.matches, sheets, (short) => zip.openWindow(short)?.bot ?? null);
-    ui.fit = fit;
-    if (fit.grow !== was.grow) {
-      // The open stack isn't sized for the column a pulled-out sheet came from.
-      if (ui.pulled) void sendHome({ instant: true });
-      root.style.setProperty("--tray-col", `${(COL * fit.grow).toFixed(1)}px`);
+    const fitting = `${height} ${large.matches}`;
+    if (fitting !== fittedFor) {
+      fittedFor = fitting;
+      const fit = trayFitFor(large.matches, (short) => zip.openWindow(short)?.bot ?? null);
+      ui.fit = fit;
+      if (fit.grow !== was.grow) {
+        // The open stack isn't sized for the column a pulled-out sheet came from.
+        if (ui.pulled) void sendHome({ instant: true });
+        root.style.setProperty("--tray-col", `${(COL * fit.grow).toFixed(1)}px`);
+      }
+      if (Math.abs(fit.scale - was.scale) >= 0.001)
+        stack.style.setProperty("--scale", fit.scale.toFixed(4));
+      if (fit.room !== was.room || fit.scale !== was.scale) {
+        // Until every cut line is known, the stand-in spots sit on pages that fill it all the same.
+        if (!applyPack()) ui.sheetH = sheetHeightFor(fit, ui.model.count);
+        if (ui.order.length) redraw();
+      }
     }
-    if (Math.abs(fit.scale - was.scale) >= 0.001) {
-      stack.style.setProperty("--scale", fit.scale.toFixed(4));
-      if (ui.model && ui.order.length) renderStack();
-    }
-    const moved = fit.grow !== was.grow || fit.mouthShort !== was.mouthShort;
-    if (moved)
+    // The mouth closes in under the stack there is, whose sheets a refresh changes too.
+    const short = mouthShortFor(ui.fit, ui.model.count, ui.sheetH);
+    const moved = ui.fit.grow !== was.grow || short !== mouthShort;
+    if (moved) {
+      mouthShort = short;
       zip.reshape({
-        chainAt: COL * fit.grow - 15,
-        maxGap: GMAX * fit.grow,
-        mouthShort: fit.mouthShort,
+        chainAt: COL * ui.fit.grow - 15,
+        maxGap: GMAX * ui.fit.grow,
+        mouthShort,
       });
-    const open = zip.openWindow();
-    openFoot = open ? trayTop() + open.foot : 0;
+    }
+    if (moved || ui.fit !== was) {
+      const open = zip.openWindow();
+      openFoot = open ? trayTop() + open.foot : 0;
+    }
     return moved;
   }
   function onFrame(g: Geometry) {

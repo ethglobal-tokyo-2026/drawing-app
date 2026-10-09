@@ -139,7 +139,7 @@
   left: 0;
   top: 0;
   width: 156px;
-  height: 436px;
+  height: calc(var(--sheet-h, 364px) + 72px);
   /* The engine shrinks the stack on a short board and grows it on a large screen; its edges keep their
      size on screen. */
   --scale: 1;
@@ -157,7 +157,7 @@
   left: 0;
   top: 0;
   width: 156px;
-  height: 364px;
+  height: var(--sheet-h, 364px);
   transform-origin: 50% 100%;
 }
 
@@ -390,7 +390,7 @@
   left: 0;
   top: 0;
   width: 156px;
-  height: 364px;
+  height: var(--sheet-h, 364px);
   transform-origin: 50% 40%;
 }
 
@@ -836,7 +836,7 @@
   left: 0;
   top: 0;
   width: 156px;
-  height: 364px;
+  height: var(--sheet-h, 364px);
   margin: 0;
   padding: 0;
   border: 0;

@@ -83,7 +83,15 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   function placeOf(s: Slot): Box {
     if (s.pos) return { x: s.pos.x, y: s.pos.y, r: s.pos.r, w: s.pos.w, h: s.pos.h };
     const [x, y, r] = STAND_IN[s.slot];
-    return { x, y, r, ...fitOf(s) };
+    // From the foot of a page grown taller, as packing fills it.
+    return { x, y: y + ui.sheetH - SHEET.h, r, ...fitOf(s) };
+  }
+  let drawnH = 0;
+  /** Every sheet in the tray, stacked, pulled out or spread, is drawn as tall as its stickers were packed for. */
+  function sizePages() {
+    if (ui.sheetH === drawnH) return;
+    drawnH = ui.sheetH;
+    tray.root.style.setProperty("--sheet-h", px(drawnH));
   }
   /**
    * The cut line on a given sticker's spot, or one on its way, the one its sheet was packed by. A cut
@@ -280,6 +288,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     news: ReadonlySet<string> = newIds(),
     use: SlotUse = depth > 0 ? "behind" : "live",
   ) {
+    sizePages();
     const paper = make("div", "tray__paper", decorative(make("i", "tray__tear")));
     // A sticker received leaves its spot, which opens it, when the board says who has it.
     for (const s of sheetItems(f))
@@ -338,7 +347,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     if (hidden > 0) {
       const more = make("button", "tray__depth", icon(ICONS.stack), make("span", "", `+${hidden}`));
       more.type = "button";
-      more.style.transform = `translateY(${SHEET.h + (k * PEEK + 3) / ui.fit.scale}px) scale(${(1 / ui.fit.scale).toFixed(4)})`;
+      more.style.transform = `translateY(${(ui.sheetH + (k * PEEK + 3) / ui.fit.scale).toFixed(1)}px) scale(${(1 / ui.fit.scale).toFixed(4)})`;
       const spread = i18next.t(($) => $.stickerBoard.tray.moreSheets, { count: hidden });
       more.setAttribute("aria-label", spread);
       kids.push(more);

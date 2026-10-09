@@ -11,8 +11,8 @@ import type { TraySheets } from "./traySheets";
 /** Where the spread lays each sheet down: a slight turn apiece. */
 const SPREAD_TURNS = [-1.2, 0.8, -0.5, 1.1, -0.9, 0.6, 1.3, -0.7];
 
-/** Where the spread lays out `n` sheets on a board this big, whose tray grew by `grow`. */
-function spreadCells(n: number, W: number, H: number, grow: number) {
+/** Where the spread lays out `n` sheets `sheetH` tall on a board this big, whose tray grew by `grow`. */
+function spreadCells(n: number, W: number, H: number, grow: number, sheetH: number) {
   const margin = 18;
   const gap = 14;
   const cols = n <= 1 ? 1 : n <= 2 ? 2 : n <= 6 ? 3 : 4;
@@ -20,10 +20,10 @@ function spreadCells(n: number, W: number, H: number, grow: number) {
   const k = Math.min(
     (n <= 2 ? 0.95 : 0.8) * grow,
     (W - margin * 2 - gap * (cols - 1)) / cols / SHEET.w,
-    (H - trayTop() - 30 - (rows - 1) * 18) / (rows * SHEET.h),
+    (H - trayTop() - 30 - (rows - 1) * 18) / (rows * sheetH),
   );
   const cw = SHEET.w * k;
-  const ch = SHEET.h * k;
+  const ch = sheetH * k;
   const totalH = rows * ch + (rows - 1) * 18;
   const left0 = (W - (cols * cw + (cols - 1) * gap)) / 2;
   const top0 = Math.max(trayTop() - 6, (H - totalH) / 2);
@@ -66,7 +66,7 @@ export function createTraySpread(
     spreadLayer.hidden = false;
     spreadLayer.classList.add("is-on");
     const list = ui.order.length ? ui.order : [topF()];
-    const cells = spreadCells(list.length, Wb(), Hb(), ui.fit.grow);
+    const cells = spreadCells(list.length, Wb(), Hb(), ui.fit.grow, ui.sheetH);
     for (const c of spreadLayer.querySelectorAll(".tray__cell")) c.remove();
     const from = stackOnBoard();
     const news = newIds();

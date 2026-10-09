@@ -24,8 +24,6 @@ import type { TrayPaging } from "./trayPaging";
 import type { TrayPeel } from "./trayPeel";
 import type { TraySheets } from "./traySheets";
 
-/** A pulled-out sheet turns and scales about this point, as the CSS sets it. */
-const PULLED_ORIGIN = { x: SHEET.w / 2, y: SHEET.h * 0.4 };
 /** The first move of a press on the stack decides what it does. */
 const DECIDE = 10;
 /** A page turn commits past this lift or this speed, up to the back of the stack or down to the front. */
@@ -56,9 +54,12 @@ export function createTrayPresses(
   const { page, bringToFront, settle, topSheet, sheetEls, depthOf } = trayPaging;
   const { startPeel, movePeel, dropPeel, putBack, lieDown, quickAdd, showOnBoard } = trayPeel;
 
-  /** A pulled-out sheet at `x`, `y` (its top left) and this scale: growing from the stack's size. */
+  /**
+   * A pulled-out sheet at `x`, `y` (its top left) and this scale: growing from the stack's size, about
+   * the point the CSS turns and scales it on.
+   */
   const pulledFrom = (x: number, y: number, scale: number, turn = 0) =>
-    `translate(${px(x - PULLED_ORIGIN.x * (1 - scale))},${px(y - PULLED_ORIGIN.y * (1 - scale))}) rotate(${turn.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
+    `translate(${px(x - (SHEET.w / 2) * (1 - scale))},${px(y - ui.sheetH * 0.4 * (1 - scale))}) rotate(${turn.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
 
   /* ---------------------------------------------------------------- gestures on the stack. The first move decides:
    * up or down pages, from anywhere; toward the board on a sticker peels it, on the paper pulls the sheet out. */
@@ -337,7 +338,7 @@ export function createTrayPresses(
   const pulledAt = (x: number, y: number, lift = 1.02) =>
     pulledFrom(x, y, lift * ui.fit.grow, -1.5);
   /** The pulled-out sheet's size over the board. */
-  const pulledSize = () => ({ w: SHEET.w * ui.fit.grow, h: SHEET.h * ui.fit.grow });
+  const pulledSize = () => ({ w: SHEET.w * ui.fit.grow, h: ui.sheetH * ui.fit.grow });
   async function releasePull(g: Gesture, pt: Point) {
     const p = ui.pulled;
     if (!p) return;
