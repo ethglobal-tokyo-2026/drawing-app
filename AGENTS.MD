@@ -219,7 +219,7 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
 - Runtime is **pnpm**
 - Node is **24 LTS**, one exact version in the root `package.json`'s `devEngines.runtime`: pnpm runs every script on it, and downloads it when it's missing. `deploy/install-node.sh` installs the same version on the box under `/usr/local/lib/nodejs/` for `sticker-auth` and `drawing-api`, and leaves the box's own `/usr/bin/node` alone
 - Tests are **vitest**
-- End-to-end tests are **Playwright** in `apps/frontend/e2e/`, kept out of `pnpm check`: `pnpm test:e2e` starts its own API and dev server (ports in `e2e/ports.ts`) on a fresh database in `data/e2e/`, under LIFF Mock and dev sign-in, and signs each test in with `?as=`. Install its Chromium once with `pnpm --filter frontend exec playwright install chromium`
+- End-to-end tests are **Playwright** in `apps/frontend/e2e/`, kept out of `pnpm check`: `pnpm test:e2e` starts its own API and dev server (ports in `e2e/ports.ts`, which `E2E_APP_PORT` and `E2E_API_PORT` override so two runs can go side by side) on a fresh database in `data/e2e/`, under LIFF Mock and dev sign-in, and signs each test in with `?as=`. Install its Chromium once with `pnpm --filter frontend exec playwright install chromium`
 - Move packages use the **Sui CLI**: the root `test:move` script runs `sui move test` for `jpy_coin`, `payment` and `stickers`, and `pnpm check` runs it, so `pnpm check` needs the Sui CLI
 - Frontend is **Vite** + **React**
 - Lint is **oxlint**, type-aware (`pnpm lint`); format is **oxfmt** (`pnpm format`). A pre-commit hook runs both on staged files. Don't downgrade a rule for a file in `.oxlintrc.json` to get a commit through; fix the code
