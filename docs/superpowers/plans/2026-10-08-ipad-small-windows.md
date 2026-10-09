@@ -620,7 +620,7 @@ Both languages fit: Japanese at 375×667, 540×620 and 1180×734.
 
 UI task: read `~/.claude/skills/impeccable/reference/craft-floor.md` first, with `/impeccable adapt` as the lens.
 
-- [ ] **Step 1: Write the failing test,** `apps/frontend/src/ui/visibleArea.test.tsx`:
+- [x] **Step 1: Write the failing test,** `apps/frontend/src/ui/visibleArea.test.tsx`:
 
 ```tsx
 // @vitest-environment happy-dom
@@ -710,8 +710,8 @@ describe("useVisibleArea", () => {
 });
 ```
 
-- [ ] **Step 2:** `pnpm -C "$W/apps/frontend" exec vitest run src/ui/visibleArea.test.tsx` → fails: `./visibleArea` doesn't exist.
-- [ ] **Step 3: Implement** `apps/frontend/src/ui/visibleArea.ts`:
+- [x] **Step 2:** `pnpm -C "$W/apps/frontend" exec vitest run src/ui/visibleArea.test.tsx` → fails: `./visibleArea` doesn't exist.
+- [x] **Step 3: Implement** `apps/frontend/src/ui/visibleArea.ts`:
 
 ```ts
 import { useLayoutEffect, type RefObject } from "react";
@@ -765,8 +765,8 @@ export function useVisibleArea(
 }
 ```
 
-- [ ] **Step 4:** Run the test → passes.
-- [ ] **Step 5: `GatePaper`.** In `apps/frontend/src/line/GateParts.tsx` the React import gains `type ComponentPropsWithoutRef`, `useVisibleArea` comes from `../ui/visibleArea`, and before `GateOpening`:
+- [x] **Step 4:** Run the test → passes.
+- [x] **Step 5: `GatePaper`.** In `apps/frontend/src/line/GateParts.tsx` the React import gains `type ComponentPropsWithoutRef`, `useVisibleArea` comes from `../ui/visibleArea`, and before `GateOpening`:
 
 ```tsx
 /**
@@ -784,12 +784,12 @@ export function GatePaper({ className, children, ...rest }: ComponentPropsWithou
 }
 ```
 
-- [ ] **Step 6: The four gates stand on it.** `GatePaper` joins each file's `GateParts` import (`HandlePrompt.tsx` imports it from `../line/GateParts`):
+- [x] **Step 6: The four gates stand on it.** `GatePaper` joins each file's `GateParts` import (`HandlePrompt.tsx` imports it from `../line/GateParts`):
   - `LineGate`: `<main className="line-gate" aria-busy={line.status === "loading"}>` → `<GatePaper aria-busy={line.status === "loading"}>`, its `</main>` → `</GatePaper>`.
   - `SessionGate`: `<main className="line-gate" aria-busy={state.step !== "failed"}>` → `<GatePaper aria-busy={state.step !== "failed"}>`, its `</main>` → `</GatePaper>`.
   - `HandlePrompt`: `<main className="line-gate handle-prompt">` → `<GatePaper className="handle-prompt">`, its `</main>` → `</GatePaper>`.
   - `AppCrashed` in `AppCrashBoundary.tsx`: `<main className="line-gate">` → `<GatePaper>`, its `</main>` → `</GatePaper>`.
-- [ ] **Step 7: Styles.** In `line/LineGate.css`, `.line-gate` and `.line-gate::before` become these, with `.line-gate__stack` after them:
+- [x] **Step 7: Styles.** In `line/LineGate.css`, `.line-gate` and `.line-gate::before` become these, with `.line-gate__stack` after them:
 
 ```css
 .line-gate {
@@ -835,8 +835,8 @@ In `api/HandlePrompt.css`, the `.handle-prompt__form` comment ends at "past the 
    screen. */
 ```
 
-- [ ] **Step 8:** `pnpm -C "$W/apps/frontend" exec vitest run src/ui/visibleArea.test.tsx src/line/LineGate.test.tsx src/api/SessionGate.test.tsx src/app/AppCrashBoundary.test.tsx` → pass. `pnpm -C "$W" check` → passes.
-- [ ] **Step 9: Commit** the nine files by path: `feat(frontend): the sign-in gates scroll and keep a field above the on-screen keyboard`
+- [x] **Step 8:** `pnpm -C "$W/apps/frontend" exec vitest run src/ui/visibleArea.test.tsx src/line/LineGate.test.tsx src/api/SessionGate.test.tsx src/app/AppCrashBoundary.test.tsx` → pass. `pnpm -C "$W" check` → passes.
+- [x] **Step 9: Commit** the nine files by path: `feat(frontend): the sign-in gates scroll and keep a field above the on-screen keyboard`
 
 ### Task 2: The drawing screen at short heights
 
@@ -844,7 +844,7 @@ In `api/HandlePrompt.css`, the `.handle-prompt__form` comment ends at "past the 
 
 UI task: craft floor first, `/impeccable adapt` as the lens. Phones' offsets stay; the large layout's rules, with their higher specificity, are untouched.
 
-- [ ] **Step 1: The rail.** In `.size-rail`, `height: 222px;` becomes:
+- [x] **Step 1: The rail.** In `.size-rail`, `height: 222px;` becomes:
 
 ```css
 /* Ends at least 24px above undo however short the screen: undo's 22px foot, its 46px tiles and the
@@ -852,7 +852,7 @@ UI task: craft floor first, `/impeccable adapt` as the lens. Phones' offsets sta
 height: clamp(120px, calc(100% - 196px), 222px);
 ```
 
-- [ ] **Step 2: The color sheet.** In `ColorSheet.css`, delete the `@media (max-height: 640px)` rule and its comment, and after `.color-picker` add:
+- [x] **Step 2: The color sheet.** In `ColorSheet.css`, delete the `@media (max-height: 640px)` rule and its comment, and after `.color-picker` add:
 
 ```css
 /* Short heights in the phone layout (LINE's sheet on an iPad, an iPhone SE in LINE): the color sheet
@@ -883,15 +883,15 @@ height: clamp(120px, calc(100% - 196px), 222px);
 
 If the foundations plan spells the large-screen query otherwise, the outer condition is its exact negation in that spelling.
 
-- [ ] **Step 3: DESIGN.md,** this plan's own sentences. Draw screen's **Color sheet** bullet gains: "Under 700px tall in the phone layout, such as LINE's sheet on an iPad, it stops at 42%, its heading hidden from sight and its pad 56px tall, so more than half the sheet stays in view." **Size rail** gains: "On a short screen it shortens, so it always ends 24px above undo."
-- [ ] **Step 4:** `pnpm -C "$W" check` → passes (CSS has no unit test; Task 4's sweep measures it at every size).
-- [ ] **Step 5: Commit** the three files: `fix(frontend): the size rail and the color sheet fit short heights, LINE's sheet on an iPad among them`
+- [x] **Step 3: DESIGN.md,** this plan's own sentences. Draw screen's **Color sheet** bullet gains: "Under 700px tall in the phone layout, such as LINE's sheet on an iPad, it stops at 42%, its heading hidden from sight and its pad 56px tall, so more than half the sheet stays in view." **Size rail** gains: "On a short screen it shortens, so it always ends 24px above undo."
+- [x] **Step 4:** `pnpm -C "$W" check` → passes (CSS has no unit test; Task 4's sweep measures it at every size).
+- [x] **Step 5: Commit** the three files: `fix(frontend): the size rail and the color sheet fit short heights, LINE's sheet on an iPad among them`
 
 ### Task 3: Stickers keep a phone's size in a wider phone-layout window
 
 Open item 1. **Files:** Modify `apps/frontend/src/sticker-board/placement.ts` (`unitOf`), `placement.test.ts`, `apps/frontend/src/explore/pileLayout.ts` (`LARGE_PILE_SCALE`, `pileFit`), `pileLayout.test.ts`, `explore/StickerPile.tsx` (the pile's fit effect), `DESIGN.md`
 
-- [ ] **Step 1: Write the failing tests.** `placement.test.ts` imports `PHONE_BOARD`, `PHONE_UNIT_MAX` and `unitOf`, and gains:
+- [x] **Step 1: Write the failing tests.** `placement.test.ts` imports `PHONE_BOARD`, `PHONE_UNIT_MAX` and `unitOf`, and gains:
 
 ```ts
 describe("unitOf", () => {
@@ -919,8 +919,8 @@ describe("pileFit", () => {
 });
 ```
 
-- [ ] **Step 2:** `pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board/placement.test.ts src/explore/pileLayout.test.ts` → fails: no `PHONE_UNIT_MAX` or `MAX_PILE_SCALE` exported.
-- [ ] **Step 3: The board's unit.** In `placement.ts`, before `unitOf`:
+- [x] **Step 2:** `pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board/placement.test.ts src/explore/pileLayout.test.ts` → fails: no `PHONE_UNIT_MAX` or `MAX_PILE_SCALE` exported.
+- [x] **Step 3: The board's unit.** In `placement.ts`, before `unitOf`:
 
 ```ts
 /** The widest iPhone's width: a phone layout wider than it, such as LINE's sheet on an iPad, sizes stickers by it. */
@@ -936,7 +936,7 @@ export const unitOf = (layout: BoardLayout, boardWidth: number) =>
 
 Its doc comment gains: "A phone layout wider than the widest phone keeps that phone's unit, and the extra width is board."
 
-- [ ] **Step 4: The pile's fit.** In `pileLayout.ts`, `LARGE_PILE_SCALE` and `pileFit` become:
+- [x] **Step 4: The pile's fit.** In `pileLayout.ts`, `LARGE_PILE_SCALE` and `pileFit` become:
 
 ```ts
 /**
@@ -954,15 +954,15 @@ export const pileFit = (px: number) =>
 
 `PileOptions.width`'s comment becomes "Its width in units: PILE_WIDTH, or wider past MAX_PILE_SCALE (pileFit)." In `StickerPile.tsx`, `pileFit(pile.clientWidth, large)` becomes `pileFit(pile.clientWidth)`, the effect's deps `[large]` become `[]`, its comment becomes "A pile is PILE_WIDTH units across, scaled to its width up to about a phone's scale; a wider one spans as many units as fit.", and `const large = useLargeScreen();` and its import go if nothing else in the file reads them. `rg -n "LARGE_PILE_SCALE|pileFit\(" "$W/apps/frontend/src"` → no other caller left with two arguments.
 
-- [ ] **Step 5:** Run Step 2's tests → pass. `pnpm -C "$W" check` → passes; a sibling plan's test that expected a phone layout's unit or pile scale to grow past a phone's follows Open item 1.
-- [ ] **Step 6: DESIGN.md.** The board's sentence that stickers keep their phone size gains "in a phone-layout window wider than a phone too"; Explore's sentence that the pile keeps stickers about phone size gains "in any window wider than a phone". Where the sibling plans worded them otherwise, add the same fact to their sentences.
-- [ ] **Step 7: Commit** the six files: `fix(frontend): stickers keep a phone's size in LINE's sheet and Split View, and the extra width is room`
+- [x] **Step 5:** Run Step 2's tests → pass. `pnpm -C "$W" check` → passes; a sibling plan's test that expected a phone layout's unit or pile scale to grow past a phone's follows Open item 1.
+- [x] **Step 6: DESIGN.md.** The board's sentence that stickers keep their phone size gains "in a phone-layout window wider than a phone too"; Explore's sentence that the pile keeps stickers about phone size gains "in any window wider than a phone". Where the sibling plans worded them otherwise, add the same fact to their sentences.
+- [x] **Step 7: Commit** the six files: `fix(frontend): stickers keep a phone's size in LINE's sheet and Split View, and the extra width is room`
 
 ### The check scripts
 
 Written once, before Task 4; scratch, so never committed. Selectors come from the catalog (`lib.mjs`'s `say`, `named`, `startsWith`), so a copy change doesn't break them; a step that fails on a selector gets the script fixed, not the app.
 
-- [ ] **`$S/sweep.mjs`**, every surface at each size:
+- [x] **`$S/sweep.mjs`**, every surface at each size:
 
 ```js
 // Scratch for the iPad small windows plan: every surface at each size, in one engine and language,
@@ -1371,7 +1371,7 @@ L.log(failed ? `SWEEP ${L.RUN} FAILED ${failed} steps` : `SWEEP ${L.RUN} OK`);
 process.exitCode = failed ? 1 : 0;
 ```
 
-- [ ] **`$S/gates.mjs`**, the gates at each size with a stand-in keyboard:
+- [x] **`$S/gates.mjs`**, the gates at each size with a stand-in keyboard:
 
 ```js
 // Scratch for the iPad small windows plan: the sign-in gates at each size, scrolled to their foot, and
@@ -1490,7 +1490,7 @@ L.log(failures ? `GATES ${L.RUN} FAILED ${failures}` : `GATES ${L.RUN} OK`);
 process.exitCode = failures ? 1 : 0;
 ```
 
-- [ ] **`$S/turn.mjs`**, turning or resizing the window mid-drawing, mid-drag and mid-scroll:
+- [x] **`$S/turn.mjs`**, turning or resizing the window mid-drawing, mid-drag and mid-scroll:
 
 ```js
 // Scratch for the iPad small windows plan: the window turns or resizes from one size to another
@@ -1691,7 +1691,7 @@ L.log(failures ? `TURN ${pair} ${L.RUN} FAILED ${failures}` : `TURN ${pair} ${L.
 process.exitCode = failures ? 1 : 0;
 ```
 
-- [ ] **`$S/overlay.mjs`**, impeccable's in-page detector for Task 7, in the sweep's touch contexts (a desktop browser, the Playwright MCP's included, shows the phone frame instead):
+- [x] **`$S/overlay.mjs`**, impeccable's in-page detector for Task 7, in the sweep's touch contexts (a desktop browser, the Playwright MCP's included, shows the phone frame instead):
 
 ```js
 // Scratch for the iPad small windows plan: impeccable's detector run inside Croquis at each size.
@@ -1741,7 +1741,7 @@ for (const sz of L.sizesFrom(process.argv[2])) {
 }
 ```
 
-- [ ] **Reading a run.** Problems, grouped across sizes:
+- [x] **Reading a run.** Problems, grouped across sizes:
 
 ```sh
 rg "FAILED|PAGEERROR" "$S/run.log"

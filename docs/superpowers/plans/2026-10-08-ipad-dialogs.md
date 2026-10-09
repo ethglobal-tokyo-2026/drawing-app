@@ -92,7 +92,7 @@ Under `apps/frontend/src/` unless shown.
 
 ### Task 0: Base and worktree
 
-- [ ] **Step 1: The base.**
+- [x] **Step 1: The base.**
 
 ```bash
 git -C "$R" fetch origin
@@ -101,8 +101,8 @@ git -C "$R" cat-file -e origin/main:docs/superpowers/plans/2026-10-08-ipad-board
 
 Expected: no output. `NOT MERGED`: stop and report.
 
-- [ ] **Step 2: Worktree.** `git -C "$R" worktree add -b feat/ipad-dialogs "$W" origin/main && pnpm -C "$W" install`. An isolated agent already in a fresh worktree runs `git switch -c feat/ipad-dialogs origin/main` and `pnpm install` in its own.
-- [ ] **Step 3: Names.**
+- [x] **Step 2: Worktree.** `git -C "$R" worktree add -b feat/ipad-dialogs "$W" origin/main && pnpm -C "$W" install`. An isolated agent already in a fresh worktree runs `git switch -c feat/ipad-dialogs origin/main` and `pnpm install` in its own.
+- [x] **Step 3: Names.**
 
 ```bash
 rg -n "head\?: ReactNode|bottom-sheet__head|export const DISMISS_PX|export function dragBy" "$W/apps/frontend/src/ui"
@@ -119,8 +119,8 @@ Expected: each Shop lane name found; the board's `.board-head` holds `PendingGif
 
 The drag moves out of `Sheet` as it is but for one thing, the pointer held only once the press passes the slop (R2), so `Sheet.test.tsx`'s and `GratitudeEvents.test.tsx`'s drag tests are its test; Task 16's X tap tests the late hold in a browser, and its card lines the CSS.
 
-- [ ] **Step 1:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/ui/Sheet.test.tsx src/sticker-board/stat-board/GratitudeEvents.test.tsx` → PASS (the baseline).
-- [ ] **Step 2: `ui/useSheetDrag.ts`:**
+- [x] **Step 1:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/ui/Sheet.test.tsx src/sticker-board/stat-board/GratitudeEvents.test.tsx` → PASS (the baseline).
+- [x] **Step 2: `ui/useSheetDrag.ts`:**
 
 ```ts
 import { useRef, useState, type CSSProperties, type DOMAttributes } from "react";
@@ -194,7 +194,7 @@ export function useSheetDrag(close: () => void) {
 }
 ```
 
-- [ ] **Step 3: `Sheet.tsx`** keeps its props and adds one:
+- [x] **Step 3: `Sheet.tsx`** keeps its props and adds one:
 
 ```ts
   /** On a large screen it shows as a card in the middle of its layer (sheet.css's `.sheet-card`). */
@@ -203,7 +203,7 @@ export function useSheetDrag(close: () => void) {
 
 In the body, `close` and `const drag = useSheetDrag(close);` go first, so the hook runs before `if (!shown) return null` and the reopen branch can call `drag.reset()` in place of `setLeaveFrom(0)`; `press`, `dragged`, `dy`, `leaveFrom`, `release`, the Shop lane's `drag` object and the `DISMISS_PX`/`TAP_SLOP_PX` constants go; if the seal sheet landed first, its `closable` stays and `close` keeps refusing while it's false; the root's `className` list gains `card && "sheet-card"` after `"bottom-sheet"`, its `style` is `drag.style`; the perforation takes `{...drag.handlers}` and `onClick={() => { if (!drag.tookClick()) close(); }}`; the head takes `{...(large ? drag.handlers : {})}`. `Sheet.test.tsx` and `GratitudeEvents.test.tsx` import `DISMISS_PX` from `./useSheetDrag` / `../../ui/useSheetDrag`.
 
-- [ ] **Step 4: The rule.** `styles/tokens.css`, beside `--gutter-large`:
+- [x] **Step 4: The rule.** `styles/tokens.css`, beside `--gutter-large`:
 
 ```css
 /* A card's width on a large screen: a phone's, as the ticket cards and the Sealed card rise at. */
@@ -242,7 +242,7 @@ In the body, `close` and `const drag = useSheetDrag(close);` go first, so the ho
 
 A sheet whose own rule sets `left`, `right`, `bottom` or `max-height` with two classes resets them in its own large-screen block (Tasks 3–4 list each).
 
-- [ ] **Step 5: The gratitude events card on the rule.** `GratitudeEvents.tsx`'s `<Sheet>` gains `card`. In `gratitude-events.css`'s large-screen block, the layer's flex centering and padding, the sheet's `position`, `width`, `max-width`, `padding-top` and `border-radius`, and the perforation's hiding go; the block keeps one rule, under its comment "A large screen shows it as the shared card (ui/sheet.css), wider for its rows.":
+- [x] **Step 5: The gratitude events card on the rule.** `GratitudeEvents.tsx`'s `<Sheet>` gains `card`. In `gratitude-events.css`'s large-screen block, the layer's flex centering and padding, the sheet's `position`, `width`, `max-width`, `padding-top` and `border-radius`, and the perforation's hiding go; the block keeps one rule, under its comment "A large screen shows it as the shared card (ui/sheet.css), wider for its rows.":
 
 ```css
 .gratitude-events.bottom-sheet {
@@ -250,8 +250,8 @@ A sheet whose own rule sets `left`, `right`, `bottom` or `max-height` with two c
 }
 ```
 
-- [ ] **Step 6:** Step 1's command and `pnpm -C "$W/apps/frontend" typecheck` → PASS.
-- [ ] **Step 7: Commit.** `git -C "$W" add apps/frontend/src && git -C "$W" commit -m "feat(frontend): one card rule for sheets on a large screen, and the drag that closes a sheet or a card"`
+- [x] **Step 6:** Step 1's command and `pnpm -C "$W/apps/frontend" typecheck` → PASS.
+- [x] **Step 7: Commit.** `git -C "$W" add apps/frontend/src && git -C "$W" commit -m "feat(frontend): one card rule for sheets on a large screen, and the drag that closes a sheet or a card"`
 
 ### Task 2: Sheets pad the home indicator (every size)
 
@@ -259,7 +259,7 @@ A sheet whose own rule sets `left`, `right`, `bottom` or `max-height` with two c
 
 From the Oct 7 foundations plan's Task 4 (`git show 22de7791:docs/superpowers/plans/2026-10-07-ipad-foundations.md | sed -n '1941,1969p'`), on main's files. A sheet over the tabs (the motion card, Giving's, the Accept sheet) reaches the screen's foot and pads 24px only today. Its test is Task 16's "home indicator" e2e test.
 
-- [ ] **Step 1: The token.** `tokens.css`, after `--tabs-strip`:
+- [x] **Step 1: The token.** `tokens.css`, after `--tabs-strip`:
 
 ```css
 /* The home indicator's safe area under a layer that reaches the screen's foot. Inside .screen, which
@@ -269,22 +269,22 @@ From the Oct 7 foundations plan's Task 4 (`git show 22de7791:docs/superpowers/pl
 
 `App.css`'s `.screen` gains `--foot-inset: 0px;` first, and its comment the sentence "It ends above the tab strip, which clears the home indicator, so nothing in it pads the foot's safe area."
 
-- [ ] **Step 2: Sheets pad it.** `sheet.css`'s `.bottom-sheet` gains first `--sheet-foot-inset: var(--foot-inset, 0px);` under `/* The home indicator's safe area the paper runs down over, under its content. */`, and its `padding: 0 20px 24px;` becomes `padding: 0 20px calc(24px + var(--sheet-foot-inset));`. `.receive-gift__sheet.bottom-sheet`'s `padding-bottom: 30px;` becomes `calc(30px + var(--sheet-foot-inset))`. A card sets `--sheet-foot-inset: 0px` (Task 1).
-- [ ] **Step 3: The rest read the token.** `tickets.css`'s `.out-of-tickets` `padding: 14px;` becomes `padding: 14px 14px calc(14px + var(--foot-inset, 0px));`, its comment gaining "Over the tabs, as the checkout is over the Shop, it clears the home indicator."; `ReserveTicketCheckout.css`'s `.phone > .reserve-checkout` rule and its comment go. `gift-received-notice.css`'s and `lifted-sticker.css`'s `env(safe-area-inset-bottom)` become `var(--foot-inset, 0px)`.
-- [ ] **Step 4:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/ui src/tickets src/receiving` → PASS (CSS only).
-- [ ] **Step 5: Commit.** `fix(frontend): sheets over the tabs pad the home indicator's safe area`
+- [x] **Step 2: Sheets pad it.** `sheet.css`'s `.bottom-sheet` gains first `--sheet-foot-inset: var(--foot-inset, 0px);` under `/* The home indicator's safe area the paper runs down over, under its content. */`, and its `padding: 0 20px 24px;` becomes `padding: 0 20px calc(24px + var(--sheet-foot-inset));`. `.receive-gift__sheet.bottom-sheet`'s `padding-bottom: 30px;` becomes `calc(30px + var(--sheet-foot-inset))`. A card sets `--sheet-foot-inset: 0px` (Task 1).
+- [x] **Step 3: The rest read the token.** `tickets.css`'s `.out-of-tickets` `padding: 14px;` becomes `padding: 14px 14px calc(14px + var(--foot-inset, 0px));`, its comment gaining "Over the tabs, as the checkout is over the Shop, it clears the home indicator."; `ReserveTicketCheckout.css`'s `.phone > .reserve-checkout` rule and its comment go. `gift-received-notice.css`'s and `lifted-sticker.css`'s `env(safe-area-inset-bottom)` become `var(--foot-inset, 0px)`.
+- [x] **Step 4:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/ui src/tickets src/receiving` → PASS (CSS only).
+- [x] **Step 5: Commit.** `fix(frontend): sheets over the tabs pad the home indicator's safe area`
 
 ### Task 3: Giving and the give sheet as cards; three lines go (decisions 1, 4, 5; answer 2)
 
 **Files:** `giving/Giving.tsx`, `Giving.css`, `GiveSheet.tsx`, `give-sheet.css`, `CantFindThem.tsx`, `i18n/strings/giving.ts`.
 
-- [ ] **Step 1: The lines go (every size).** In `giving.ts` delete `sheet.sendInChatHint`, `sheet.leaves` and `giveSheet.lead`, with their comments. In `Giving.tsx` delete the hint `<p>`, the key's `aria-describedby={hintId}`, `hintId` and `useId`, the leaves `<p>` and the `StickerGlyph` import; in `GiveSheet.tsx` the lead `<p>`. In `Giving.css` delete `.giving__hint` and `.giving__leaves`. Then `rg -n "sendInChatHint|sheet\.leaves|giveSheet\.lead|giving__hint|giving__leaves" "$W/apps" "$W/DESIGN.md"` → nothing; any test or doc hit changes with it.
-- [ ] **Step 2: Heads.** Each view's header moves into `Sheet`'s `head`, so a swipe down it closes the card on a large screen:
+- [x] **Step 1: The lines go (every size).** In `giving.ts` delete `sheet.sendInChatHint`, `sheet.leaves` and `giveSheet.lead`, with their comments. In `Giving.tsx` delete the hint `<p>`, the key's `aria-describedby={hintId}`, `hintId` and `useId`, the leaves `<p>` and the `StickerGlyph` import; in `GiveSheet.tsx` the lead `<p>`. In `Giving.css` delete `.giving__hint` and `.giving__leaves`. Then `rg -n "sendInChatHint|sheet\.leaves|giveSheet\.lead|giving__hint|giving__leaves" "$W/apps" "$W/DESIGN.md"` → nothing; any test or doc hit changes with it.
+- [x] **Step 2: Heads.** Each view's header moves into `Sheet`'s `head`, so a swipe down it closes the card on a large screen:
   - `CantFindThem.tsx` exports `CantFindThemHead({ onBack })`, its `<header className="giving__head">…</header>`; `CantFindThem` keeps the rest.
   - `Giving.tsx`: `let head: ReactNode = null;` beside `content`; each branch that renders `<header className="giving__head">` assigns it to `head` instead (the cantFind branch `<CantFindThemHead onBack={() => setCantFind(false)} />`), keyed by `view` with the body's slide: `<header key={view} className={`giving__head ${slideIn ? "is-in" : ""}`}>`. The sent step has none. `<Sheet … head={head ?? undefined} card>`.
   - `Giving.css`: the slide rules `.giving__body.is-in` (and its reduced-motion twin) take `:is(.giving__body, .giving__head).is-in`; add `.giving .bottom-sheet__head { flex: none; }`.
   - `GiveSheet.tsx`: its header goes to `head`, `<Sheet … card>`. `give-sheet.css`: `.bottom-sheet.giving__sheet--give > .bottom-sheet__head { margin-bottom: 14px; }` (the body's gap it left).
-- [ ] **Step 3: The picker's scrim dims the tab row (decision 5).** `GiveSheet.tsx` imports `createPortal` and `useLargeScreen`; its layer goes over the whole phone on a large screen, where Give stands in the tab row:
+- [x] **Step 3: The picker's scrim dims the tab row (decision 5).** `GiveSheet.tsx` imports `createPortal` and `useLargeScreen`; its layer goes over the whole phone on a large screen, where Give stands in the tab row:
 
 ```tsx
 const large = useLargeScreen();
@@ -299,7 +299,7 @@ const phone = large ? document.querySelector<HTMLElement>(".phone") : null;
 return phone ? createPortal(sheet, phone) : sheet;
 ```
 
-- [ ] **Step 4: Giving's group (decision 4).** `Giving.css`, before its reduced-motion block (starting values; Task 17's Giving lines tune them):
+- [x] **Step 4: Giving's group (decision 4).** `Giving.css`, before its reduced-motion block (starting values; Task 17's Giving lines tune them):
 
 ```css
 /* On a large screen the sticker and its card are one group in the middle: the sticker at the card's
@@ -333,14 +333,14 @@ return phone ? createPortal(sheet, phone) : sheet;
 
 The give sheet's card needs nothing more: four tiles a row at 400px are a phone's size.
 
-- [ ] **Step 5:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/giving src/sticker-board/ArtistBoard.test.tsx` and typecheck → PASS.
-- [ ] **Step 6: Commit.** `feat(frontend): on an iPad Giving and the give sheet are one card in the middle, and their sublines go`
+- [x] **Step 5:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/giving src/sticker-board/ArtistBoard.test.tsx` and typecheck → PASS.
+- [x] **Step 6: Commit.** `feat(frontend): on an iPad Giving and the give sheet are one card in the middle, and their sublines go`
 
 ### Task 4: Receiving and the Send gratitude card (decisions 1, 6)
 
 **Files:** `receiving/ReceiveGiftDialog.tsx`, `receive-gift-dialog.css`, `SendGratitudeSheet.tsx`, `send-gratitude-sheet.css`, `SendGratitudeSheet.test.tsx`.
 
-- [ ] **Step 1: Write the failing test.** In `SendGratitudeSheet.test.tsx` (import `onLargeScreen` from `../ui/testing`; its `afterEach` gains `vi.restoreAllMocks()`), in `describe("SendGratitudeSheet")`:
+- [x] **Step 1: Write the failing test.** In `SendGratitudeSheet.test.tsx` (import `onLargeScreen` from `../ui/testing`; its `afterEach` gains `vi.restoreAllMocks()`), in `describe("SendGratitudeSheet")`:
 
 ```tsx
 it("on an iPad waits as a card over a scrim, which says Later", () => {
@@ -351,8 +351,8 @@ it("on an iPad waits as a card over a scrim, which says Later", () => {
 });
 ```
 
-- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/receiving/SendGratitudeSheet.test.tsx` → FAIL: no scrim.
-- [ ] **Step 3: `SendGratitudeSheet.tsx`.** Its `<Sheet>` gains `card`, `head` (the `.send-gratitude-sheet__from` block, moved there whole) and, on a large screen, `layer`; there it renders inside a layer over the whole phone:
+- [x] **Step 2:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/receiving/SendGratitudeSheet.test.tsx` → FAIL: no scrim.
+- [x] **Step 3: `SendGratitudeSheet.tsx`.** Its `<Sheet>` gains `card`, `head` (the `.send-gratitude-sheet__from` block, moved there whole) and, on a large screen, `layer`; there it renders inside a layer over the whole phone:
 
 ```tsx
 const large = useLargeScreen();
@@ -406,7 +406,7 @@ return phone ? createPortal(layered, phone) : layered;
 }
 ```
 
-- [ ] **Step 4: Receiving's group.** `ReceiveGiftDialog.tsx`'s Accept `<Sheet>` gains `card` and `head` (its `.receive-gift__copy`). `receive-gift-dialog.css`, before the reduced-motion block (starting values; Task 17's Receiving lines tune `--accept-over`):
+- [x] **Step 4: Receiving's group.** `ReceiveGiftDialog.tsx`'s Accept `<Sheet>` gains `card` and `head` (its `.receive-gift__copy`). `receive-gift-dialog.css`, before the reduced-motion block (starting values; Task 17's Receiving lines tune `--accept-over`):
 
 ```css
 /* On a large screen one group in the middle: the header centered over the bag, the bag and its pull
@@ -440,14 +440,14 @@ return phone ? createPortal(layered, phone) : layered;
 
 `--accept-over` is an unverified guess: Task 17 measures the phone's overlap (the Accept sheet's top against the bag's box at 390×844 once torn) and sets it to that.
 
-- [ ] **Step 5:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/receiving` → PASS.
-- [ ] **Step 6: Commit.** `feat(frontend): on an iPad Receiving is one centered group, and Send gratitude a card over a scrim`
+- [x] **Step 5:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/receiving` → PASS.
+- [x] **Step 6: Commit.** `feat(frontend): on an iPad Receiving is one centered group, and Send gratitude a card over a scrim`
 
 ### Task 5: The gift received notice as a card (decision 1)
 
 **Files:** `giving/GiftReceivedNotice.tsx`, `gift-received-notice.css`, `GiftReceivedNotice.test.tsx`.
 
-- [ ] **Step 1: Write the failing test.** In `GiftReceivedNotice.test.tsx` (import `onLargeScreen`, `dragBy` from `../ui/testing`, `DISMISS_PX` from `../ui/useSheetDrag`; its `afterEach` gains `vi.restoreAllMocks()`), the existing test's `root.render(<GiftReceivedNotice … />)` moves into `const showNotice = () => act(() => root.render(…))`, which both tests call:
+- [x] **Step 1: Write the failing test.** In `GiftReceivedNotice.test.tsx` (import `onLargeScreen`, `dragBy` from `../ui/testing`, `DISMISS_PX` from `../ui/useSheetDrag`; its `afterEach` gains `vi.restoreAllMocks()`), the existing test's `root.render(<GiftReceivedNotice … />)` moves into `const showNotice = () => act(() => root.render(…))`, which both tests call:
 
 ```tsx
 it("on an iPad closes from its scrim, and from a swipe down its head past the drag's length", () => {
@@ -463,8 +463,8 @@ it("on an iPad closes from its scrim, and from a swipe down its head past the dr
 });
 ```
 
-- [ ] **Step 2:** run it → FAIL: no scrim.
-- [ ] **Step 3: Implement.** In `GiftReceivedNotice.tsx`: `const large = useLargeScreen(); const drag = useSheetDrag(onClose);`. The head, stage and act go inside `<div className="gift-received-notice__card" style={large ? drag.style : undefined}>`; before it, `{large && <div className="gift-received-notice__scrim" onClick={onClose} />}`; the head takes `{...(large ? drag.handlers : {})}`. `gift-received-notice.css`:
+- [x] **Step 2:** run it → FAIL: no scrim.
+- [x] **Step 3: Implement.** In `GiftReceivedNotice.tsx`: `const large = useLargeScreen(); const drag = useSheetDrag(onClose);`. The head, stage and act go inside `<div className="gift-received-notice__card" style={large ? drag.style : undefined}>`; before it, `{large && <div className="gift-received-notice__scrim" onClick={onClose} />}`; the head takes `{...(large ? drag.handlers : {})}`. `gift-received-notice.css`:
 
 ```css
 /* The notice's page on a phone; a card on a large screen. */
@@ -512,8 +512,8 @@ it("on an iPad closes from its scrim, and from a swipe down its head past the dr
 }
 ```
 
-- [ ] **Step 4:** Step 1's file → PASS.
-- [ ] **Step 5: Commit.** `feat(frontend): on an iPad the gift received notice is a card over the board`
+- [x] **Step 4:** Step 1's file → PASS.
+- [x] **Step 5: Commit.** `feat(frontend): on an iPad the gift received notice is a card over the board`
 
 ### Task 6: The sticker detail's panes (decisions 2, 3)
 
@@ -521,9 +521,9 @@ it("on an iPad closes from its scrim, and from a swipe down its head past the dr
 
 CSS and two layout-neutral wrappers; the existing detail tests are its regression test, Task 16's detail test its layout test.
 
-- [ ] **Step 1: Wrappers.** In `StickerDetail.tsx`'s `sticker ? (…)` branch, the stage and the pager go inside `<div className="sticker-detail__sticker-pane">`; everything after the pager up to and including the `.sticker-detail__marked` status line goes inside `<div className="sticker-detail__column">`. On a phone both are plain blocks inside the scrolling `.sticker-detail__main`.
-- [ ] **Step 2: The figure's box as a variable.** `sticker-detail.css`: `.sticker-detail` gains first `--figure: 216px;` under `/* The sticker's box: a phone's, grown on a large screen. */`; `.sticker-detail__stage`'s `height: 240px;` becomes `height: calc(var(--figure) + 24px);`; the figure rule's comment becomes "Its own shape, inside the --figure square; the timelapse's layer over it takes the same box." and its width `calc(var(--figure) * min(1, var(--ar)))`.
-- [ ] **Step 3: The panes**, before `@media (hover: hover)`:
+- [x] **Step 1: Wrappers.** In `StickerDetail.tsx`'s `sticker ? (…)` branch, the stage and the pager go inside `<div className="sticker-detail__sticker-pane">`; everything after the pager up to and including the `.sticker-detail__marked` status line goes inside `<div className="sticker-detail__column">`. On a phone both are plain blocks inside the scrolling `.sticker-detail__main`.
+- [x] **Step 2: The figure's box as a variable.** `sticker-detail.css`: `.sticker-detail` gains first `--figure: 216px;` under `/* The sticker's box: a phone's, grown on a large screen. */`; `.sticker-detail__stage`'s `height: 240px;` becomes `height: calc(var(--figure) + 24px);`; the figure rule's comment becomes "Its own shape, inside the --figure square; the timelapse's layer over it takes the same box." and its width `calc(var(--figure) * min(1, var(--ar)))`.
+- [x] **Step 3: The panes**, before `@media (hover: hover)`:
 
 ```css
 /* ---------- Large screens ---------- */
@@ -574,8 +574,8 @@ CSS and two layout-neutral wrappers; the existing detail tests are its regressio
 }
 ```
 
-- [ ] **Step 4:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board/StickerDetail.test.tsx src/sticker-board/TransferTrail.test.tsx` → PASS. Decision 3 needs no code: the replay's stage takes its card's width, a phone's in the column (Task 17 checks it).
-- [ ] **Step 5: Commit.** `feat(frontend): on an iPad the sticker detail splits in two panes when the window is wider than tall, one column otherwise`
+- [x] **Step 4:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board/StickerDetail.test.tsx src/sticker-board/TransferTrail.test.tsx` → PASS. Decision 3 needs no code: the replay's stage takes its card's width, a phone's in the column (Task 17 checks it).
+- [x] **Step 5: Commit.** `feat(frontend): on an iPad the sticker detail splits in two panes when the window is wider than tall, one column otherwise`
 
 ### Task 7: A gift in flight in its sticker's detail (decision 9, answer 1)
 
@@ -583,7 +583,7 @@ CSS and two layout-neutral wrappers; the existing detail tests are its regressio
 
 States, from the board's `openGift`: **sent, for someone** — the closed bag's sleeve, "On its way to @bob"; **sent, no one yet** — the sleeve, "On its way"; **packed** — the open bag's sleeve, "In the bag", Give still the key. Take it out sits under the note in all three; a sent gift's opens an in-place confirm first.
 
-- [ ] **Step 1: Write the failing tests.** In `StickerDetail.test.tsx`, import `gift` from `../api/testFixtures` and `errorMessage` beside `errorDetail`. The test "shows a sent sticker on its way in place of Give, and gives a packed one" gives way to:
+- [x] **Step 1: Write the failing tests.** In `StickerDetail.test.tsx`, import `gift` from `../api/testFixtures` and `errorMessage` beside `errorDetail`. The test "shows a sent sticker on its way in place of Give, and gives a packed one" gives way to:
 
 ```tsx
 describe("a gift in flight", () => {
@@ -675,8 +675,8 @@ describe("a gift in flight", () => {
 
 `take_out_not_landed` is the take-out route's 503 refusal (`apps/api/src/gifts/takeOut.ts`, `routes/gifts.ts`).
 
-- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board/StickerDetail.test.tsx -t "in flight"` → FAIL: no `takeOut` strings, no note for a packed gift, no Take it out.
-- [ ] **Step 3: Strings.** `stickerBoard.ts`, in `detail`, after `onItsWayTo`:
+- [x] **Step 2:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board/StickerDetail.test.tsx -t "in flight"` → FAIL: no `takeOut` strings, no note for a packed gift, no Take it out.
+- [x] **Step 3: Strings.** `stickerBoard.ts`, in `detail`, after `onItsWayTo`:
 
 ```ts
     /** Take it out, on the detail of a sticker in a gift you sent or packed. */
@@ -692,7 +692,7 @@ describe("a gift in flight", () => {
 
 Back in the tray it says `tray.status.returned` ("{{no}} is back in your tray", the same words), whose comment adds "; and the sticker detail, once Take it out landed and the sticker is back in your sticker tray". `onItsWay`'s and `onItsWayTo`'s comments become "Sticker detail, a sticker you've sent that hasn't been received (… to someone in the app): the note in place of Give, beside its sleeve". In `giving.ts` the comments of `inTheBag.title`, `inTheBag.takeOut`, `takingOut.button` and `inTheBag.couldntTakeOut` add the sticker detail's use: "; and the sticker detail of a sticker in a packed gift: its note" / "…: the quiet link under its note, and its confirm's key" / "…: that link's words while it runs" / "…: the alert under its note, with Try again and Dismiss".
 
-- [ ] **Step 4: One take-out per gift.** In `giftBackend.ts`, the backend's `takeOut` becomes a module function; inside `createApiGiftBackend`, `const takeOut = (giftId: string) => takeOutGift({ api, userId, sign }, giftId);` replaces its own, so `pack`'s recovery and the returned `takeOut` both go through it:
+- [x] **Step 4: One take-out per gift.** In `giftBackend.ts`, the backend's `takeOut` becomes a module function; inside `createApiGiftBackend`, `const takeOut = (giftId: string) => takeOutGift({ api, userId, sign }, giftId);` replaces its own, so `pack`'s recovery and the returned `takeOut` both go through it:
 
 ```ts
 /**
@@ -724,7 +724,7 @@ export function takeOutGift(
 
 The backend's `settle` keeps its other callers.
 
-- [ ] **Step 5: `giving/takeOuts.ts`:**
+- [x] **Step 5: `giving/takeOuts.ts`:**
 
 ```ts
 import { useSyncExternalStore } from "react";
@@ -797,7 +797,7 @@ export function onTakenOut(listener: (stickerId: string) => void) {
 }
 ```
 
-- [ ] **Step 6: The detail.** In `StickerDetail.tsx` (imports: `ArrowUUpLeft`, `takeOutFromDetail`, `dismissTakeOut`, `onTakenOut`, `useTakeOut`). Take it out shows where `ownerId` is set, which the board always passes for your own stickers; the take-out's person is `ownerId` (no `useMe()`: the detail renders outside a SessionGate in its tests).
+- [x] **Step 6: The detail.** In `StickerDetail.tsx` (imports: `ArrowUUpLeft`, `takeOutFromDetail`, `dismissTakeOut`, `onTakenOut`, `useTakeOut`). Take it out shows where `ownerId` is set, which the board always passes for your own stickers; the take-out's person is `ownerId` (no `useMe()`: the detail renders outside a SessionGate in its tests).
   - State: `takenOut` (`ReadonlySet<string>`, stickers whose take-out landed here, until the board's reload drops their gift), `takeOutAsk` (the sticker id whose confirm is up), `takenOutSaid` (`{ stickerId, words }`), and `takeOut = useTakeOut(sticker?.id ?? null)`.
   - `const openGift = sticker && !takenOut.has(sticker.id) ? sticker.openGift : null;` and `const sent = openGift?.status === "sent";`. `owed`'s `!onItsWay(sticker)` becomes `!sent`; the lift's `given` keeps `s.openGift?.status === "sent"`.
   - An effect `onTakenOut((id) => …)`: for an id among `stickers`, add it to `takenOut`, set `takenOutSaid` to `detail.takeOut.backOnBoard` or `tray.status.returned` by that sticker's `placement.on`, and, if it's the shown sticker, focus the act's key after the render (`root.current?.querySelector<HTMLElement>(".sticker-detail__acts .key")?.focus({ preventScroll: true })` in a layout effect keyed on `takenOutSaid`).
@@ -872,8 +872,8 @@ export function onTakenOut(listener: (stickerId: string) => void) {
     with `const startTakeOut = (giftId: string) => { setTakeOutAsk(null); if (ownerId) takeOutFromDetail({ api, userId: ownerId }, sticker.id, giftId); };` (inside the branch, where `sticker` is set; the in-flight block renders its link and confirm only when `ownerId` is set), `cancelTakeOut` focused when the confirm opens (as `cancelMark` is), focus back on Take it out when Cancel or Escape closes it (Escape steps out of it first, as out of Mark 18+'s), and a page turn closing it (`onPage` sets `takeOutAsk` to null). After `.sticker-detail__marked`: `<p className="visually-hidden sticker-detail__taken-out" role="status">{takenOutSaid?.stickerId === sticker.id ? takenOutSaid.words : ""}</p>`.
 
 - `sticker-detail.css`: `.sticker-detail__in-flight { display: grid; gap: 10px; margin-top: 18px; }`; `.sticker-detail__in-flight > .sticker-detail__mark-ask { margin-top: 0; }`; the note's `flex: 1` goes (it's no longer in a flex row); the open bag's sleeve, after `.sticker-detail__sleeve::after`: `.sticker-detail__sleeve.is-open::after { display: none; }` under `/* In the bag, not sent: no tape across its mouth yet. */`. Japanese wraps: the note's text keeps `min-width: 0` and normal wrapping. Nothing here animates, so under reduced motion the note goes in one frame as everywhere.
-- [ ] **Step 7:** Step 2's command → PASS; then the whole file, `src/giving` and typecheck → PASS.
-- [ ] **Step 8: Commit.** `feat(frontend): a gift in flight shows in its sticker's detail, which takes it out, asking first once it's sent`
+- [x] **Step 7:** Step 2's command → PASS; then the whole file, `src/giving` and typecheck → PASS.
+- [x] **Step 8: Commit.** `feat(frontend): a gift in flight shows in its sticker's detail, which takes it out, asking first once it's sent`
 
 ### Task 8: A gift on its way in the sticker tray (decision 9)
 
@@ -881,7 +881,7 @@ export function onTakenOut(listener: (stickerId: string) => void) {
 
 Today a sticker on its way leaves bare paper (`traySheets.ts` skips a `given` slot with no `givenTo`). Now its spot shows the sticker under the sleeve's frost, inside its own cut line, never peels, and a tap opens its detail among your stickers.
 
-- [ ] **Step 1: Write the failing tests.** In `traySlots.test.ts`, "marks stickers out on the board, on their way or received, or here" expects `["used", "onItsWay", "given", "here", "here"]`. In `StickerTray.test.tsx`: `api` gains `openYours: () => {}`; in "leaves a given sticker's spot…" the two lines saying a sticker on its way leaves nothing to tap go; "traces a given sticker's own cut line on its spot, and leaves one on its way only paper" becomes "traces a given sticker's own cut line on its spot", its `outlines` read from `'.tray__slot[data-id="given"] .tray__given-outline'`. Add after them:
+- [x] **Step 1: Write the failing tests.** In `traySlots.test.ts`, "marks stickers out on the board, on their way or received, or here" expects `["used", "onItsWay", "given", "here", "here"]`. In `StickerTray.test.tsx`: `api` gains `openYours: () => {}`; in "leaves a given sticker's spot…" the two lines saying a sticker on its way leaves nothing to tap go; "traces a given sticker's own cut line on its spot, and leaves one on its way only paper" becomes "traces a given sticker's own cut line on its spot", its `outlines` read from `'.tray__slot[data-id="given"] .tray__given-outline'`. Add after them:
 
 ```tsx
 it("shows a sticker on its way under frost in its spot, which opens it among your stickers", async () => {
@@ -897,8 +897,8 @@ it("shows a sticker on its way under frost in its spot, which opens it among you
 });
 ```
 
-- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board/tray` → FAIL.
-- [ ] **Step 3: Strings.** `stickerBoard.ts`, `tray.slot`, after `given`:
+- [x] **Step 2:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board/tray` → FAIL.
+- [x] **Step 3: Strings.** `stickerBoard.ts`, `tray.slot`, after `given`:
 
 ```ts
       /** Sticker tray: screen readers' name for the spot of a sticker you sent that no one has received yet, a button that opens it among your stickers */
@@ -910,8 +910,8 @@ it("shows a sticker on its way under frost in its spot, which opens it among you
       },
 ```
 
-- [ ] **Step 4: The state.** `traySlots.ts`: `TraySlotState` gains `"onItsWay"` (its doc: "on its way" — its spot shows it under frost); `state` becomes `!s.held ? "given" : onItsWay(s) ? "onItsWay" : s.placement.on ? "used" : "here"`; `newSlots` keeps only `"here"` and `"used"` (its filter `s.state !== "given"` becomes `s.state === "here" || s.state === "used"`).
-- [ ] **Step 5: The spot.** `trayModel.ts`: `TraySticker` gains `/** On its way: who it waits for, printed, when the app knows. */ onItsWayTo?: string;` and `TrayBoard` `/** Opens a sticker on its way among your stickers. */ openYours: (id: string) => void;`. `StickerTray.tsx`'s `trayStickers` sets `sticker.onItsWayTo = formatHandle(s.openGift.to)` for an `onItsWay` slot whose gift has a `to` (a handle string, not a person). `traySheets.ts`: `sheetEl` appends `onItsWay` slots too; `slotEl` names one from `onItsWay`/`onItsWayTo` and gives it the shared press (`data-press`), draws its image as a `here` slot's with `<i class="tray__frost">` after it inside `.tray__fit` (in the `imagesOn` branch, where `--m` is set), and appends its cut line (`cutLineEl`). `trayPresses.ts`: a click on `.tray__slot[data-state="onItsWay"]` calls `api.openYours(id)` (beside `openGivenAt`); `holdPress` and the keydown's slot guard treat it as `given` (it opens on its click and never peels; a drag on it already pulls, since only `here` peels). `StickerBoard.tsx`: `trayBoard` gains `openYours`, and `givenSpot` matches `:is([data-state="given"], [data-state="onItsWay"])`, so the detail lifts out of the spot and gives focus back to it. `sticker-tray.css`:
+- [x] **Step 4: The state.** `traySlots.ts`: `TraySlotState` gains `"onItsWay"` (its doc: "on its way" — its spot shows it under frost); `state` becomes `!s.held ? "given" : onItsWay(s) ? "onItsWay" : s.placement.on ? "used" : "here"`; `newSlots` keeps only `"here"` and `"used"` (its filter `s.state !== "given"` becomes `s.state === "here" || s.state === "used"`).
+- [x] **Step 5: The spot.** `trayModel.ts`: `TraySticker` gains `/** On its way: who it waits for, printed, when the app knows. */ onItsWayTo?: string;` and `TrayBoard` `/** Opens a sticker on its way among your stickers. */ openYours: (id: string) => void;`. `StickerTray.tsx`'s `trayStickers` sets `sticker.onItsWayTo = formatHandle(s.openGift.to)` for an `onItsWay` slot whose gift has a `to` (a handle string, not a person). `traySheets.ts`: `sheetEl` appends `onItsWay` slots too; `slotEl` names one from `onItsWay`/`onItsWayTo` and gives it the shared press (`data-press`), draws its image as a `here` slot's with `<i class="tray__frost">` after it inside `.tray__fit` (in the `imagesOn` branch, where `--m` is set), and appends its cut line (`cutLineEl`). `trayPresses.ts`: a click on `.tray__slot[data-state="onItsWay"]` calls `api.openYours(id)` (beside `openGivenAt`); `holdPress` and the keydown's slot guard treat it as `given` (it opens on its click and never peels; a drag on it already pulls, since only `here` peels). `StickerBoard.tsx`: `trayBoard` gains `openYours`, and `givenSpot` matches `:is([data-state="given"], [data-state="onItsWay"])`, so the detail lifts out of the spot and gives focus back to it. `sticker-tray.css`:
 
 ```css
 /* A sticker on its way: in its spot under the sleeve's frost, inside its own cut line, so its sheet's
@@ -935,16 +935,16 @@ it("shows a sticker on its way under frost in its spot, which opens it among you
 
 Reduced motion: the frost appears in one frame (no transition).
 
-- [ ] **Step 6:** Step 2's command → PASS; `src/sticker-board` and typecheck → PASS.
-- [ ] **Step 7: Commit.** `feat(frontend): a sticker on its way waits under frost in its tray spot, which opens its detail`
+- [x] **Step 6:** Step 2's command → PASS; `src/sticker-board` and typecheck → PASS.
+- [x] **Step 7: Commit.** `feat(frontend): a sticker on its way waits under frost in its tray spot, which opens its detail`
 
 ### Task 9: The "On its way" badge and its route go (decision 9; sequenced after the board plan)
 
 **Files:** listed under Files, Badge goes.
 
-- [ ] **Step 1: The board.** In `StickerBoard.tsx`: the `pending` query, `reloadPending` and its state, `onTheirWay`, the `PendingGiftsNotificationBadge` import and element go; `onMyStickerBoardChanged` sets only `setReloadForGift(true)`; `board-who`'s `is-roomy` and the `.board-gifts` condition read `waiting.length > 0` only; the gifts comment becomes `{/* Gifts for you: they ask to be opened. */}`. `StickerBoard.css`: in the large-screen block, `:is(.gifts-for-you-badge, .pending-gifts-badge)` becomes `.gifts-for-you-badge`, `.board-gifts .pending-gifts-badge` goes, and the 600–699px block that stacks the gifts goes (one badge has nothing to stack). Delete `giving/PendingGiftsNotificationBadge.tsx`, its test and `pending-gifts-badge.css`; delete `giving.pendingGifts` from `giving.ts`. `StickerBoard.test.tsx`'s `pendingGifts` mocks and the counts that read them go.
-- [ ] **Step 2: The client.** `apiClient.ts` drops `pendingGifts` and the `PendingGifts` import; `httpApi.ts` its method; `httpApi.test.ts` its `["/api/gifts/pending", "GET"]` row; `api/testing.tsx` its stub.
-- [ ] **Step 3: The API**, nothing else reading it (`rg -n "pendingGifts|PendingGifts|gifts/pending" "$W/apps" "$W/packages"` → only these): `routes/gifts.ts`'s `.get("/pending", …)` and import; `packaging.ts`'s `pendingGiftsSchema`, `PendingGifts`, `pendingGifts()` and any import only they used; `client.ts`'s `PendingGifts` export; `requestDiagnostics.ts`'s `"/api/gifts/pending"`; `routes/giving.test.ts`'s `describe("GET /api/gifts/pending")`. In `routes/giftsForYou.test.ts`, "The giver's gifts on their way say who it went to." reads the giver's board instead:
+- [x] **Step 1: The board.** In `StickerBoard.tsx`: the `pending` query, `reloadPending` and its state, `onTheirWay`, the `PendingGiftsNotificationBadge` import and element go; `onMyStickerBoardChanged` sets only `setReloadForGift(true)`; `board-who`'s `is-roomy` and the `.board-gifts` condition read `waiting.length > 0` only; the gifts comment becomes `{/* Gifts for you: they ask to be opened. */}`. `StickerBoard.css`: in the large-screen block, `:is(.gifts-for-you-badge, .pending-gifts-badge)` becomes `.gifts-for-you-badge`, `.board-gifts .pending-gifts-badge` goes, and the 600–699px block that stacks the gifts goes (one badge has nothing to stack). Delete `giving/PendingGiftsNotificationBadge.tsx`, its test and `pending-gifts-badge.css`; delete `giving.pendingGifts` from `giving.ts`. `StickerBoard.test.tsx`'s `pendingGifts` mocks and the counts that read them go.
+- [x] **Step 2: The client.** `apiClient.ts` drops `pendingGifts` and the `PendingGifts` import; `httpApi.ts` its method; `httpApi.test.ts` its `["/api/gifts/pending", "GET"]` row; `api/testing.tsx` its stub.
+- [x] **Step 3: The API**, nothing else reading it (`rg -n "pendingGifts|PendingGifts|gifts/pending" "$W/apps" "$W/packages"` → only these): `routes/gifts.ts`'s `.get("/pending", …)` and import; `packaging.ts`'s `pendingGiftsSchema`, `PendingGifts`, `pendingGifts()` and any import only they used; `client.ts`'s `PendingGifts` export; `requestDiagnostics.ts`'s `"/api/gifts/pending"`; `routes/giving.test.ts`'s `describe("GET /api/gifts/pending")`. In `routes/giftsForYou.test.ts`, "The giver's gifts on their way say who it went to." reads the giver's board instead:
 
 ```ts
 // The giver's board says who the gift waits for.
@@ -961,7 +961,7 @@ expect(board.boardStickers.find((s) => s.sticker.id === gift.stickerId)?.openGif
 
 (`test.get` is rooted at `/api/gifts`, so the board goes through `test.send`, as `stickerBoards.test.ts`'s `boardOf` does; `stickerBoardSchema` from `../stickerBoards/board.ts`.)
 
-- [ ] **Step 4: E2E.** `e2e/giving.e2e.ts`'s badge lines become the detail's, through another sticker's detail and its strip:
+- [x] **Step 4: E2E.** `e2e/giving.e2e.ts`'s badge lines become the detail's, through another sticker's detail and its strip:
 
 ```ts
 // Sent, it leaves Alice's board; its detail says it's on its way.
@@ -978,8 +978,8 @@ await detail.getByRole("button", { name: say(ui.backToBoard, language) }).click(
 
 (import `ui` from `strings` if the file doesn't).
 
-- [ ] **Step 5:** `pnpm -C "$W/apps/api" exec vitest run src/routes` and `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board src/api src/giving`, both typechecks → PASS. `pnpm -C "$W/apps/frontend" exec knip` (or the repo's knip script) reports nothing new.
-- [ ] **Step 6: Commit.** `feat: the board's "On its way" badge and GET /api/gifts/pending go; a gift in flight shows in its sticker's detail and tray spot`
+- [x] **Step 5:** `pnpm -C "$W/apps/api" exec vitest run src/routes` and `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board src/api src/giving`, both typechecks → PASS. `pnpm -C "$W/apps/frontend" exec knip` (or the repo's knip script) reports nothing new.
+- [x] **Step 6: Commit.** `feat: the board's "On its way" badge and GET /api/gifts/pending go; a gift in flight shows in its sticker's detail and tray spot`
 
 ### Task 10: The Mini-game in a phone-width band, the game growing with its stage (decisions 1, 7)
 
@@ -987,7 +987,7 @@ await detail.getByRole("button", { name: say(ui.backToBoard, language) }).click(
 
 Read the Oct 7 plan's Tasks 8–9: `git show 22de7791:docs/superpowers/plans/2026-10-07-ipad-explore-and-dialogs.md | sed -n '800,1137p'`. Take its live-game parts, changed as below; leave its replay scale (`replayScale`, `REPLAY_FRAME`, the feed's reach: decision 3), its `FULL_SCALE_HEIGHT` shrink (R5) and its `sizeClassOf`.
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - `stageLayout.test.ts`: from the old Task 8 Step 1 keep "sits centered under the frame…" and the two `liveScale` tests "stays at 1 on a phone" and "grows with a regular stage's smaller side, up to its cap" (named "grows with a large screen's stage's smaller share, up to its cap"); add:
 
 ```ts
@@ -1036,8 +1036,8 @@ it("on an iPad closes from a swipe down its receipt's head", async () => {
 });
 ```
 
-- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/gratitude` → FAIL: no `liveScale`, `liveHeartRest`; the slid tap is a drag; the lines have no width; the iPad tap lands at 1.5× the heart's half; no swipe.
-- [ ] **Step 3: `stageLayout.ts`.** `heartRest` takes `widest = MAX_HEART_WIDTH` as its fourth parameter (`Math.min(width * HEART_SHARE, widest)`), and:
+- [x] **Step 2:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/gratitude` → FAIL: no `liveScale`, `liveHeartRest`; the slid tap is a drag; the lines have no width; the iPad tap lands at 1.5× the heart's half; no swipe.
+- [x] **Step 3: `stageLayout.ts`.** `heartRest` takes `widest = MAX_HEART_WIDTH` as its fourth parameter (`Math.min(width * HEART_SHARE, widest)`), and:
 
 ```ts
 /** The live game's stage on the phone it was made for, px: it draws at scale 1 there. */
@@ -1063,8 +1063,8 @@ export const liveHeartRest = (width: number, height: number) =>
   heartRest(width, height, LIVE_FRAME, MAX_HEART_WIDTH * liveScale(width, height));
 ```
 
-- [ ] **Step 4: The engine,** as the old Task 9 Steps 3–4 have it (speed lines sized to the stage; `scale`, `heartWidest` and `inputScale` read once from the stage in `mountMiniGameEngine`; the tap slop and the try at stroking scaled by `inputScale`; `--gr-scale` set by the engine; `middleIn` for the giver's picture), with: `LIVE_STAGE_WIDTH` gives way to `LIVE_STAGE` everywhere (`mountGratitudeReplay.ts`'s `scale = width / LIVE_STAGE.width` stays the replay's rule, its `--gr-scale` line going since the engine sets it); `mountReplayEngine` passes `heartWidest: MAX_HEART_WIDTH`; the old step's doc comments that name `replayScale` name the replay's width over `LIVE_STAGE`'s instead. The recorded heart is the live game's: `replayFeed.ts`'s and `mountGratitudeReplay.ts`'s `heartRest(width, height, LIVE_FRAME)` / `heartRest(replay.stage[0], replay.stage[1], LIVE_FRAME)` become `liveHeartRest(…)`.
-- [ ] **Step 5: The stylesheet,** as the old Task 9 Step 5 has it (the px lengths at `--gr-scale`, the replay block's four rules going), its "regular width" block becoming, at the file's end:
+- [x] **Step 4: The engine,** as the old Task 9 Steps 3–4 have it (speed lines sized to the stage; `scale`, `heartWidest` and `inputScale` read once from the stage in `mountMiniGameEngine`; the tap slop and the try at stroking scaled by `inputScale`; `--gr-scale` set by the engine; `middleIn` for the giver's picture), with: `LIVE_STAGE_WIDTH` gives way to `LIVE_STAGE` everywhere (`mountGratitudeReplay.ts`'s `scale = width / LIVE_STAGE.width` stays the replay's rule, its `--gr-scale` line going since the engine sets it); `mountReplayEngine` passes `heartWidest: MAX_HEART_WIDTH`; the old step's doc comments that name `replayScale` name the replay's width over `LIVE_STAGE`'s instead. The recorded heart is the live game's: `replayFeed.ts`'s and `mountGratitudeReplay.ts`'s `heartRest(width, height, LIVE_FRAME)` / `heartRest(replay.stage[0], replay.stage[1], LIVE_FRAME)` become `liveHeartRest(…)`.
+- [x] **Step 5: The stylesheet,** as the old Task 9 Step 5 has it (the px lengths at `--gr-scale`, the replay block's four rules going), its "regular width" block becoming, at the file's end:
 
 ```css
 /* ------------------------------------------------------------------ large screens
@@ -1092,15 +1092,15 @@ export const liveHeartRest = (width: number, height: number) =>
 
 (`.gr-hud` has its own 20px sides on a phone: keep them inside the band by padding if the HUD's rule sets `left`/`right` to 20px.)
 
-- [ ] **Step 6: The receipt's swipe.** In `GratitudeMiniGame.tsx`: `const large = useLargeScreen(); const drag = useSheetDrag(close);` (`close` as the X's); the receipt takes `style={large ? drag.style : undefined}` and its `.gr-rc-row` `{...(large ? drag.handlers : {})}`.
-- [ ] **Step 7:** Step 2's command and typecheck → PASS: happy-dom's sizeless stage is the phone fallback, so the other engine tests see scale 1.
-- [ ] **Step 8: Commit.** `feat(frontend): on an iPad the Mini-game grows with its stage inside a phone-width band, and its receipt is a card`
+- [x] **Step 6: The receipt's swipe.** In `GratitudeMiniGame.tsx`: `const large = useLargeScreen(); const drag = useSheetDrag(close);` (`close` as the X's); the receipt takes `style={large ? drag.style : undefined}` and its `.gr-rc-row` `{...(large ? drag.handlers : {})}`.
+- [x] **Step 7:** Step 2's command and typecheck → PASS: happy-dom's sizeless stage is the phone fallback, so the other engine tests see scale 1.
+- [x] **Step 8: Commit.** `feat(frontend): on an iPad the Mini-game grows with its stage inside a phone-width band, and its receipt is a card`
 
 ### Task 11: Explore's lifted sticker as a card (decisions 1, 8)
 
 **Files:** `explore/LiftedSticker.tsx`, `lifted-sticker.css`, `LiftedSticker.test.tsx`.
 
-- [ ] **Step 1: Write the failing test.** In `LiftedSticker.test.tsx` (`onLargeScreen`, `dragBy` from `../ui/testing`, `DISMISS_PX` from `../ui/useSheetDrag`; its `afterEach` gains `vi.restoreAllMocks()`), after the `it.each` of ways to put it back:
+- [x] **Step 1: Write the failing test.** In `LiftedSticker.test.tsx` (`onLargeScreen`, `dragBy` from `../ui/testing`, `DISMISS_PX` from `../ui/useSheetDrag`; its `afterEach` gains `vi.restoreAllMocks()`), after the `it.each` of ways to put it back:
 
 ```tsx
 it("on an iPad puts the sticker back at a swipe down the card's head", async () => {
@@ -1113,8 +1113,8 @@ it("on an iPad puts the sticker back at a swipe down the card's head", async () 
 });
 ```
 
-- [ ] **Step 2:** run it → FAIL.
-- [ ] **Step 3: Implement.** `LiftedSticker.tsx`: `const large = useLargeScreen(); const drag = useSheetDrag(close);`; `.lifted-sticker__sheet` takes `style={large ? drag.style : undefined}`; `.lifted-sticker__about` takes `{...(large ? drag.handlers : {})}`. `lifted-sticker.css`, before its reduced-motion block:
+- [x] **Step 2:** run it → FAIL.
+- [x] **Step 3: Implement.** `LiftedSticker.tsx`: `const large = useLargeScreen(); const drag = useSheetDrag(close);`; `.lifted-sticker__sheet` takes `style={large ? drag.style : undefined}`; `.lifted-sticker__about` takes `{...(large ? drag.handlers : {})}`. `lifted-sticker.css`, before its reduced-motion block:
 
 ```css
 /* On a large screen it's the shared card (ui/sheet.css) in the middle, its carets just outside the
@@ -1154,8 +1154,8 @@ it("on an iPad puts the sticker back at a swipe down the card's head", async () 
 
 (105px is half the 210px square; 40px the caret and its gap: starting values.)
 
-- [ ] **Step 4:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/explore` → PASS.
-- [ ] **Step 5: Commit.** `feat(frontend): on an iPad Explore's lifted sticker is a card in the middle`
+- [x] **Step 4:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/explore` → PASS.
+- [x] **Step 5: Commit.** `feat(frontend): on an iPad Explore's lifted sticker is a card in the middle`
 
 ### Task 12: The seal sheet on a large screen (decision 1; once the seal sheet is on main)
 
@@ -1210,8 +1210,8 @@ The Oct 7 foundations plan's Task 7 (`git show 22de7791:docs/superpowers/plans/2
 - If the seal sheet moved `seal.failed.onThisPhone`, rename it where it landed.
 - The glossary row: `| device (a phone or an iPad) | 端末 | "This device" in notes and errors; never the device's name |`.
 
-- [ ] **Step 1–6:** the old task's steps (tests first: `session.test.ts`, `DrawingScreen.test.tsx`, `GratitudeMiniGame.test.tsx` read the catalog; they fail on `onThisDevice`; then the words, the code, the checks). Its Step 5's `checks.js words` gives way to `rg -n -i 'en: ".*\bi?phone' "$W/apps/frontend/src/i18n/strings"` → no match.
-- [ ] **Step 7: Commit.** `fix(frontend): words that named the phone or iPhone name no device`
+- [x] **Step 1–6:** the old task's steps (tests first: `session.test.ts`, `DrawingScreen.test.tsx`, `GratitudeMiniGame.test.tsx` read the catalog; they fail on `onThisDevice`; then the words, the code, the checks). Its Step 5's `checks.js words` gives way to `rg -n -i 'en: ".*\bi?phone' "$W/apps/frontend/src/i18n/strings"` → no match.
+- [x] **Step 7: Commit.** `fix(frontend): words that named the phone or iPhone name no device`
 
 ### Task 14: A card can't scroll its host (`overflow: clip`)
 
@@ -1219,9 +1219,9 @@ The Oct 7 foundations plan's Task 7 (`git show 22de7791:docs/superpowers/plans/2
 
 The Oct 7 foundations plan's Task 5 and its finding (`sed -n '32p;1971,1981p'` of the same `git show`): WebKit under reduced motion scrolls `.board` (`overflow: hidden`, still a scroll container) by 42px to show the key the rising out-of-tickets card focuses, so the scrim ends short of the tabs.
 
-- [ ] **Step 1:** `.board`'s `overflow: hidden;` (StickerBoard.css) becomes `overflow: clip;`, its comment ending "It clips without being a scroll container, so a card focused as it rises from past its foot can't scroll it."; `.drawing-screen`'s likewise ("…so a ticket card focused as it rises can't scroll it."); App.css's desktop frame `.phone`'s `overflow: hidden;` becomes `overflow: clip;`.
-- [ ] **Step 2:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board src/sticker-creation` → PASS. Its test is Task 17's "board stays put" WebKit line.
-- [ ] **Step 3: Commit.** `fix(frontend): the out-of-tickets card no longer scrolls the board up in WebKit`
+- [x] **Step 1:** `.board`'s `overflow: hidden;` (StickerBoard.css) becomes `overflow: clip;`, its comment ending "It clips without being a scroll container, so a card focused as it rises from past its foot can't scroll it."; `.drawing-screen`'s likewise ("…so a ticket card focused as it rises can't scroll it."); App.css's desktop frame `.phone`'s `overflow: hidden;` becomes `overflow: clip;`.
+- [x] **Step 2:** `TZ=Asia/Tokyo pnpm -C "$W/apps/frontend" exec vitest run src/sticker-board src/sticker-creation` → PASS. Its test is Task 17's "board stays put" WebKit line.
+- [x] **Step 3: Commit.** `fix(frontend): the out-of-tickets card no longer scrolls the board up in WebKit`
 
 ### Task 15: The developer slip's Device paper
 
@@ -1235,8 +1235,8 @@ The Oct 7 foundations plan's Task 2 (`sed -n '1125,1611p'` of the same `git show
 - The paper's comment says "and whether the app takes the large layout"; the slip's DESIGN.md bullet gains "a Device paper with what the device says and Copy" (Task 18).
 - The Pencil summary in that plan isn't this task: `2026-10-08-ipad-pencil.md` owns Pencil input.
 
-- [ ] **Steps:** the old task's Steps 1–10, tests first (`deviceFacts.test.ts` fails: no module; `DeviceDetails.test.tsx` fails: no component; the recorder's test fails on its new line). Its `checks.js device` line gives way to Task 17's Device paper screenshot.
-- [ ] **Commit.** `feat(frontend): the developer slip's Device paper says what the device says`
+- [x] **Steps:** the old task's Steps 1–10, tests first (`deviceFacts.test.ts` fails: no module; `DeviceDetails.test.tsx` fails: no component; the recorder's test fails on its new line). Its `checks.js device` line gives way to Task 17's Device paper screenshot.
+- [x] **Commit.** `feat(frontend): the developer slip's Device paper says what the device says`
 
 ### Task 16: End-to-end specs
 
