@@ -2,6 +2,8 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { buildGiftMessage } from "../../giving/giftMessage";
+import { keepMockGiftMessage } from "../../giving/mockGiftMessages";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import { mockPerson } from "../../line/liff";
 import { SwitchPersonControls } from "./SwitchPersonControls";
@@ -60,5 +62,23 @@ describe("SwitchPersonControls", () => {
     render("alice,bob", "alice");
     act(() => button(switchTo("Bob")).click());
     expect(assign).toHaveBeenCalledWith("/?as=bob");
+  });
+
+  it("opens a Gift Message LIFF Mock's picker sent as the person pressed, once", () => {
+    const assign = vi.spyOn(location, "assign").mockImplementation(() => {});
+    render("alice,bob", "alice");
+    keepMockGiftMessage(
+      buildGiftMessage({
+        liffId: "test-liff",
+        giftClaimToken: "0xclaim",
+        fromHandle: "alice",
+        no: 1,
+        timeUsed: 60,
+        language: "en",
+      }),
+    );
+    act(() => button(switchTo("Bob")).click());
+    act(() => button(switchTo("Bob")).click());
+    expect(assign.mock.calls).toEqual([["/g/0xclaim?as=bob"], ["/?as=bob"]]);
   });
 });

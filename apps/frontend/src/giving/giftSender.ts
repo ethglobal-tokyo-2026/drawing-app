@@ -4,7 +4,9 @@ import {
   type LiffPicker,
   type PickerOutcome,
 } from "../line/friendPicker";
+import { liffMockActive } from "../line/liff";
 import type { GiftMessage } from "./giftMessage";
+import { keepMockGiftMessage } from "./mockGiftMessages";
 
 /** `unknown`: LINE didn't say whether the gift message went out. */
 export type GiftSendOutcome = PickerOutcome;
@@ -20,4 +22,12 @@ export interface GiftSender {
 
 /** LINE's picker; null wherever LINE reports the picker unavailable. */
 export const liffGiftSender = (line: LiffPicker): GiftSender | null =>
-  canOpenPicker(line) ? { send: (message) => sendInLineChat(line, [message]) } : null;
+  canOpenPicker(line)
+    ? {
+        send: async (message) => {
+          const outcome = await sendInLineChat(line, [message]);
+          if (liffMockActive && outcome === "sent") keepMockGiftMessage(message);
+          return outcome;
+        },
+      }
+    : null;

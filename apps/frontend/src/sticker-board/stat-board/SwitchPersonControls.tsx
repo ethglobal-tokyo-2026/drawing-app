@@ -1,3 +1,4 @@
+import { takeMockGiftMessage } from "../../giving/mockGiftMessages";
 import { useTranslation } from "../../i18n/react";
 import { liffMockActive, mockPerson } from "../../line/liff";
 import { LabelButton } from "../../ui/LabelButton";
@@ -34,7 +35,11 @@ export function SwitchPersonControls() {
             key={name}
             block
             tone="aqua"
-            onClick={() => location.assign(`/?as=${encodeURIComponent(name)}`)}
+            onClick={() => {
+              // A Gift Message sent meanwhile opens as them, as its link would from their LINE chat.
+              const giftPath = takeMockGiftMessage();
+              location.assign(`${giftPath ?? "/"}?as=${encodeURIComponent(name)}`);
+            }}
           >
             {t(($) => $.stickerBoard.developer.demoPeople.switchTo, {
               name: name.charAt(0).toUpperCase() + name.slice(1),
