@@ -20,7 +20,7 @@
 /* A card's clean-cut edge, not a torn one. */
 .settings-note > .stat-board__paper {
   padding: 16px 16px 8px;
-  border-radius: 3px;
+  border-radius: var(--r-paper);
 }
 
 .settings-note__title {
@@ -104,7 +104,7 @@
   border-radius: 999px;
   background: none;
   color: var(--graphite);
-  font: 650 14px/1 var(--font-ui);
+  font: 650 13px/1 var(--font-ui);
   white-space: nowrap;
   cursor: pointer;
   touch-action: manipulation;

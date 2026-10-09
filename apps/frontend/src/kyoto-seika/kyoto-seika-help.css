@@ -99,7 +99,7 @@
   display: block;
   margin: 16px 0 0;
   color: var(--graphite);
-  font: 500 12px/1.5 var(--font-ui);
+  font: 500 var(--fs-fine)/1.5 var(--font-ui);
   text-wrap: pretty;
 }
 

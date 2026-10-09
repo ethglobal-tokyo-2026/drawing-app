@@ -227,7 +227,7 @@
    and between letters only where it must. A long one steps down to fit two lines, never under 11px;
    --handle-w is its width in the tags' 11px letters (pileLayout's textWidth). */
 .row-names b {
-  font-size: clamp(11px, calc(2000cqi / var(--handle-w, 1)), 16px);
+  font-size: clamp(11px, calc(2000cqi / var(--handle-w, 1)), 15px);
   font-weight: 800;
   line-height: 1.15;
   overflow-wrap: anywhere;
@@ -243,7 +243,7 @@
 
 .figure {
   flex: none;
-  font-size: 19px;
+  font-size: 23px;
   font-weight: 900;
   line-height: 0.95;
   font-stretch: var(--w-figure);
@@ -436,7 +436,7 @@
 }
 
 .this-week--compact .figure {
-  font-size: 16px;
+  font-size: 20px;
 }
 
 .this-week--compact .row-names span {
