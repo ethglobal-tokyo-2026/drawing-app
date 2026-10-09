@@ -14,7 +14,7 @@ import "./pencil-settings.css";
 /**
  * The Drawing group's Pencil rows, once a pen has drawn on this device: the input each new drawing
  * starts in, and how the pen's pressure sets its width, with a strip to try it. Each applies at once,
- * and `onKept` hands the group whether the device kept it, for its status and error lines.
+ * and `onKept` hands the group whether the device kept it, for its error line.
  */
 export function PencilSettings({ onKept }: { onKept: (kept: boolean) => void }) {
   const { t } = useTranslation();

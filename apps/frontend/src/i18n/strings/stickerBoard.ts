@@ -176,10 +176,8 @@ export const stickerBoard = {
   settings: {
     /** Your stat board: the title of the Settings note, the first paper under the stats on the cork, which peeks up from the cork's foot until it's scrolled into view */
     title: { en: "Settings", ja: "設定" },
-    /** Settings note: the status line while a setting saves, which screen readers announce */
-    saving: { en: "Saving…", ja: "保存しています…" },
     language: {
-      /** Settings note: the language row's name, before the choice it shows, which opens the list of choices */
+      /** Settings note: the language row's name, before its two choices, English and 日本語 */
       title: { en: "Language", ja: "言語" },
       /** Each language is named in its own language. */
       names: {
@@ -187,11 +185,6 @@ export const stickerBoard = {
         en: { en: "English", ja: "English" },
         /** Settings note: the Japanese choice, named in Japanese */
         ja: { en: "日本語", ja: "日本語" },
-      },
-      /** Settings note: the status line once a language choice has saved and the app has switched to it; {{language}} is that language's own name, such as "日本語" */
-      applied: {
-        en: "Croquis is now in {{language}}.",
-        ja: "表示を{{language}}に切り替えました。",
       },
       /** Settings note: the alert when the language choice didn't save to your account, with the reason */
       notSaved: {
@@ -208,16 +201,6 @@ export const stickerBoard = {
     nsfw: {
       /** Settings note: the NSFW opt-in's switch, off until you turn it on; on, 18+ stickers show unblurred and you can receive them */
       show: { en: "Show 18+ stickers", ja: "18+のシールを表示する" },
-      /** Settings note: the status line once Show 18+ stickers has been turned on and saved */
-      shown: {
-        en: "18+ stickers now show unblurred.",
-        ja: "18+のシールをぼかしなしで表示します。",
-      },
-      /** Settings note: the status line once Show 18+ stickers has been turned off and saved */
-      blurred: {
-        en: "18+ stickers are blurred now, yours too.",
-        ja: "18+のシールを、自分のものも含めてぼかして表示します。",
-      },
       /** Settings note: the alert when the NSFW opt-in didn't save to your account, with the reason */
       notSaved: {
         en: "Your 18+ setting couldn’t be saved, so it hasn’t changed: {{reason}}",
@@ -226,9 +209,7 @@ export const stickerBoard = {
     },
     /** Kyoto Seika Manga Expression Practice Mode, a third setting under 18+. */
     kyotoSeika: {
-      /** Settings note: the legend over Kyoto Seika Practice Mode's switch */
-      title: { en: "Entrance exam", ja: "入試" },
-      /** Settings note: Kyoto Seika Practice Mode's switch, one character of its university blacked out by <bar/> */
+      /** Settings note: Kyoto Seika Practice Mode's switch row, one character of its university blacked out by <bar/>, with "?" after it */
       name: {
         en: "Kyoto <bar/>ka University Entrance Exam Mode",
         ja: "京都<bar/>華大学<wbr/>入試モード",
@@ -240,33 +221,8 @@ export const stickerBoard = {
         en: "Kyoto Seika University Entrance Exam Mode",
         ja: "京都精華大学 入試モード",
       },
-      /** Settings note: the help button after the legend of Kyoto Seika Practice Mode, which opens its note */
+      /** Settings note: screen readers' name for the "?" after Kyoto Seika Practice Mode's name, which opens its help sheet */
       help: { en: "About this mode", ja: "このモードについて" },
-      /** Settings note, the note under Kyoto Seika Practice Mode's legend, and its switch's description: how a sheet works; {{minutes}} is its clock and {{tickets}} its daily tickets */
-      how: {
-        en: "Each new sticker deals two subjects to combine, and each one's die deals another. Begin starts the {{minutes}} minutes at once, as in the real test. The day has {{tickets}} daily tickets.",
-        ja: "シールをかくたびに題材が2つ配られ、サイコロで別の題材にできます。「はじめ」を押すと、試験の「始め」と同じく{{minutes}}分のタイマーが動きだします。無償チケットは1日{{tickets}}枚です。",
-      },
-      /** Settings note, the note under Kyoto Seika Practice Mode's legend: who made the mode, and that neither Croquis nor its maker is connected with the university */
-      maker: {
-        en: "Croquis’s maker is applying to Kyoto Seika too, and built this mode to practice. Neither Croquis nor its maker has any connection with the university.",
-        ja: "クロッキーの作者も京都精華大学の受験生で、自分の練習のためにこのモードを作りました。クロッキーも作者も、大学とは関係ありません。",
-      },
-      /** Settings note: the credit at the foot of Kyoto Seika Practice Mode's setting, its link opening the subject list's sources */
-      credit: {
-        en: "Subjects from JMdict. <sources>Sources</sources>",
-        ja: "題材：JMdict　<sources>出典</sources>",
-      },
-      /** Settings note: the status line once Kyoto Seika Practice Mode has been turned on and saved */
-      on: {
-        en: "On: your next sticker deals two subjects.",
-        ja: "オンにしました。次のシールから題材が2つ出ます。",
-      },
-      /** Settings note: the status line once Kyoto Seika Practice Mode has been turned off and saved */
-      off: {
-        en: "Off: your next sticker has the usual clock.",
-        ja: "オフにしました。次のシールはいつもの時間です。",
-      },
       /** Settings note: the alert when Kyoto Seika Practice Mode's switch didn't save to your account, with the reason */
       notSaved: {
         en: "Your entrance exam setting couldn’t be saved, so it hasn’t changed: {{reason}}",
@@ -279,15 +235,13 @@ export const stickerBoard = {
       title: { en: "Drawing", ja: "かく画面" },
       /** The drawing hand: Left mirrors the drawing screen. */
       hand: {
-        /** Settings note, Drawing group: the drawing hand row's name; a tap opens the choice of Right or Left */
+        /** Settings note, Drawing group: the drawing hand row's name, before its choices, Right and Left */
         label: { en: "Drawing hand", ja: "利き手" },
         /** Settings note, Drawing group: the drawing hand choice for the right hand, the default */
         right: { en: "Right", ja: "右手" },
         /** Settings note, Drawing group: the drawing hand choice for the left hand, which mirrors the drawing screen */
         left: { en: "Left", ja: "左手" },
       },
-      /** Settings note, Drawing group: the status line once a drawing setting has changed, which this device keeps rather than your account */
-      kept: { en: "Kept on this device.", ja: "この端末に保存しました。" },
       /** Settings note, Drawing group: the alert when this device couldn't keep a drawing setting, which still applies until Croquis closes */
       notKept: {
         en: "This device couldn’t keep that, so it lasts until you close Croquis.",

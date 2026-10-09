@@ -12,8 +12,8 @@ import { PencilSettings } from "./PencilSettings";
 
 /**
  * Settings' Drawing group: the drawing screen's settings, kept on this device rather than your
- * account, since each suits a device and the hand that draws on it. A change applies at once, and the
- * status line says it's kept; one the device couldn't keep says so and lasts until Croquis closes.
+ * account, since each suits a device and the hand that draws on it. A change applies at once; one the
+ * device couldn't keep says so and lasts until Croquis closes.
  * Once a pen has drawn on the device, the Pencil rows follow (`PencilSettings`).
  */
 export function DrawingSettings() {
@@ -35,9 +35,6 @@ export function DrawingSettings() {
         onChoose={(each) => setKept(keepDrawingHand(each))}
       />
       <PencilSettings onKept={setKept} />
-      <p className="fine settings-note__status" role="status">
-        {kept ? t(($) => $.stickerBoard.settings.drawing.kept) : ""}
-      </p>
       {kept === false && (
         <ErrorLine className="settings-note__problem">
           {t(($) => $.stickerBoard.settings.drawing.notKept)}
