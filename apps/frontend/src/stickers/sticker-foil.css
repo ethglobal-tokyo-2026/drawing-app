@@ -76,6 +76,16 @@
     calc(var(--foil-w) * 1.7071) calc(var(--foil-w) * 0.2929);
 }
 
+/* WebKit's mask leaves a trace of whatever is painted on the band's edge when that edge falls between
+   device pixels, as on a turned sticker, which outlined its box. A clear pixel of border moves that
+   edge out past the tone and glint; they and the mask keep to the padding box, the band's box as before. */
+.sticker-foil--kyoto-seika .sticker-foil__band {
+  inset: calc(var(--foil-w) * -1 - 1px);
+  border: 1px solid transparent;
+  -webkit-mask-origin: padding-box;
+  mask-origin: padding-box;
+}
+
 /* A light tone all round, and a dense one on the same dots that comes in toward the bottom-right,
    whatever the sticker's turn. The tile is whole device pixels at 2x and 3x, so no dot smears. */
 .sticker-foil--kyoto-seika .sticker-foil__sheen {
