@@ -171,7 +171,7 @@ Artists use layers to sketch and then ink, to color under the lines, and to shad
   - `below`: every layer under the current one, composited;
   - the current layer's own canvas, at its opacity;
   - `above`.
-- The prediction canvas sits over the current layer, under `above`.
+- The wet canvas, which holds a brush stroke until it lifts, sits over the current layer, under `above`.
 - **The composites are rebuilt** when:
   - the current layer changes;
   - another layer changes, through undo, redo, a property or a move;
@@ -183,9 +183,9 @@ Artists use layers to sketch and then ink, to color under the lines, and to shad
 ### Painting
 
 - **A stroke** paints only the current layer's canvas, as the one ink canvas is painted today. That keeps a stroke's cost per frame where it is.
-- **Lock:** the brush composites `source-atop`, which keeps the layer's alpha. A locked fill draws its result the same way, and the prediction is cut to the layer's ink.
+- **Lock:** the brush composites `source-atop`, which keeps the layer's alpha. A locked fill draws its result the same way, and the wet canvas is cut to the layer's ink as the stroke paints.
 - **Clipping:** strokes land on the clipped layer's own canvas, which keeps all of them. Only what's shown is cut.
-- **A pen's taper:** the snapshot it restores is the current layer's.
+- **A pen's taper:** the stroke repaints whole on the wet canvas at lift, so no full-sheet copy is made at pen down. Today's copy and its restore go (the drawing screen review's P-1).
 
 ### Thumbnails
 
@@ -220,7 +220,7 @@ Computed for a full iPhone sheet (1122 × 2469 px, 11.08 MB) and the densest she
 | Canvases                         | Count | iPhone   | Densest  |
 | -------------------------------- | ----- | -------- | -------- |
 | Ten layers                       | 10    | 110.8 MB | 168.0 MB |
-| + `below`, `above`, prediction   | 13    | 144.1 MB | 218.4 MB |
+| + `below`, `above`, wet          | 13    | 144.1 MB | 218.4 MB |
 | + a clipped current layer's view | 14    | 155.1 MB | 235.2 MB |
 | + four checkpoint copies         | 18    | 199.5 MB | 302.4 MB |
 | + the seal's or a pen's copy     | 19    | 210.5 MB | 319.2 MB |
