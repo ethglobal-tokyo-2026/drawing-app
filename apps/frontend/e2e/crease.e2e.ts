@@ -1,7 +1,18 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import { boardSticker, handleOf, openTheirBoard, sealFromBoard, signIn, test } from "./helpers.ts";
+import { strings } from "../src/i18n/strings/index.ts";
+import {
+  boardSticker,
+  flipToStatBoard,
+  handleOf,
+  openTheirBoard,
+  say,
+  sealFromBoard,
+  signIn,
+  test,
+} from "./helpers.ts";
 
 const language = "en";
+const { developer, statBoard } = strings.stickerBoard;
 
 /** The middle of a sticker on screen. */
 async function middleOf(sticker: Locator) {
@@ -23,11 +34,28 @@ async function stuck(page: Page, no: string) {
   return { sticker, id };
 }
 
-test("a sticker over another shows the crease of the edge beneath, on your board and to a visitor, and none while it's in hand", async ({
+/** Switches creases on or off for `page`'s device on its developer slip, and flips back to the board. */
+async function setCreases(page: Page, on: boolean) {
+  await flipToStatBoard(page, language);
+  const slip = page.getByRole("button", { name: say(developer.label, language) });
+  const show = page.getByRole("checkbox", { name: say(developer.creases.show, language) });
+  // The slip opens from a button only keyboards and screen readers find, so it's worked by keyboard.
+  // Opened before the board comes to rest it goes back under, and the turn and the slip each move
+  // focus as they settle, which can take a key press with them: so each step goes again until it holds.
+  await expect(async () => {
+    if (await slip.isVisible()) await slip.press("Enter");
+    if ((await show.isChecked()) !== on) await show.press("Space");
+    await expect(show).toBeChecked({ checked: on, timeout: 1000 });
+  }).toPass({ timeout: 15_000 });
+  await page.getByRole("button", { name: say(statBoard.flipBack, language) }).click();
+}
+
+test("a sticker over another shows the crease of the edge beneath, on your board and to a visitor, none while it's in hand, and none on a device that switches creases off", async ({
   page,
   friend,
 }) => {
   const me = await signIn(page, "crease", language);
+  await setCreases(page, true);
   const under = await stuck(page, await sealFromBoard(page, language));
   const over = await stuck(page, await sealFromBoard(page, language));
   // A new sticker lands clear of the others, so nothing has a crease yet.
@@ -53,8 +81,13 @@ test("a sticker over another shows the crease of the edge beneath, on your board
   await page.mouse.up();
   await expect(creaseOf(page, over.id)).toHaveCount(1);
 
-  // Someone else looking at the board sees the same crease.
+  // Switched off on this device's developer slip, the crease goes.
+  await setCreases(page, false);
+  await expect(creaseOf(page, over.id)).toHaveCount(0);
+
+  // Someone else looking at the board, with creases on, sees the same crease.
   await signIn(friend, "visitor", language);
+  await setCreases(friend, true);
   await openTheirBoard(friend, language, handleOf(me));
   await expect(creaseOf(friend, over.id)).toHaveCount(1);
   await expect(creaseOf(friend, under.id)).toHaveCount(0);

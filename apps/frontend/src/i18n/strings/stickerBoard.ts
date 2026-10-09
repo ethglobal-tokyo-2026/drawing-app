@@ -285,6 +285,11 @@ export const stickerBoard = {
       off: { en: "Privy is off on the dev server, where LIFF Mock signs you in" },
       tryAgain: { en: "Try again" },
     },
+    creases: {
+      title: { en: "Creases" },
+      show: { en: "Show creases on this device" },
+      unkept: { en: "This device couldn’t keep it, so it lasts until the app reloads" },
+    },
     demoPeople: {
       title: { en: "Demo people" },
       switchTo: { en: "Switch to {{name}}" },

@@ -13,6 +13,7 @@ import { lightIn } from "../stickers/crease";
 import type { Affine, CreaseBatch, CreaseJob, CreaseReply } from "../stickers/creaseWorker";
 import type { Crease } from "../stickers/StickerFigure";
 import type { StickerUrls } from "../stickers/stickerUrls";
+import { deviceSetting } from "../ui/deviceSetting";
 import { stickerBox, type Field, type Placement } from "./placement";
 
 interface CreaseSticker {
@@ -29,6 +30,19 @@ const MAX_SCALE = 2;
 const SETTLE_MS = 90;
 /** How far past its box a foil sticker's band reaches, in CSS px, on the board. */
 export const FOIL_REACH = 5;
+
+/** Whether this device shows creases: only once its developer slip switches them on. */
+const creasesShown = deviceSetting<boolean>("board.creases", {
+  parse: (text) => text === "on",
+  serialize: (on) => (on ? "on" : null),
+  name: "Whether creases show",
+});
+
+/** Whether this device shows creases, as its developer slip last set it. */
+export const useCreasesShown = (): boolean =>
+  useSyncExternalStore(creasesShown.subscribe, creasesShown.get);
+/** Shows or hides creases on this device; says whether the device kept the choice. */
+export const keepCreasesShown = (on: boolean): boolean => creasesShown.set(on);
 
 type Box = { x: number; y: number; w: number; h: number; r: number };
 
@@ -265,7 +279,8 @@ function creaseWorker() {
 /**
  * Bakes the creases of a board's stickers off the main thread once the board holds still, again for
  * each sticker whose stack changes, and none for the sticker in hand. Returns the board's creases,
- * which its stickers read through `CreasesContext`.
+ * which its stickers read through `CreasesContext`. A device that hasn't switched creases on bakes
+ * none, and switching them off takes every crease off the board.
  */
 export function useCreases<S extends CreaseSticker>({
   stickers,
@@ -285,8 +300,10 @@ export function useCreases<S extends CreaseSticker>({
 }): CreaseStore {
   const board = useId();
   const [store] = useState(() => new CreaseStore());
+  const shown = useCreasesShown();
   const scale = Math.min(MAX_SCALE, window.devicePixelRatio || 1);
   const signature = [
+    shown,
     held,
     field && `${field.left},${field.top},${field.w},${field.h}`,
     unit,
@@ -307,7 +324,7 @@ export function useCreases<S extends CreaseSticker>({
 
   const bake = useEffectEvent(() => {
     const jobs =
-      field && unit
+      shown && field && unit
         ? creaseJobs(
             stickers.filter((s) => s.id !== held),
             field,

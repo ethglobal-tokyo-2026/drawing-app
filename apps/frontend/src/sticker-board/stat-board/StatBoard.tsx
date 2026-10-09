@@ -18,6 +18,7 @@ import { useSuiAddress } from "./addresses";
 import { DeveloperSlip } from "./DeveloperSlip";
 import { DeviceDetails } from "./DeviceDetails";
 import { GratitudeEventsSheet } from "./GratitudeEvents";
+import { CreasesControls } from "./CreasesControls";
 import { GratitudeDemoControls } from "./GratitudeDemoControls";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
 import { SettingsNote } from "./SettingsNote";
@@ -128,6 +129,7 @@ export const StatBoard = memo(function StatBoard({
             <PrivyAccount />
             <GratitudeDemoControls onTry={onTryGratitudeMiniGame} />
             <PerformanceRecorderControls />
+            <CreasesControls />
           </DeveloperSlip>
         )}
       </>
