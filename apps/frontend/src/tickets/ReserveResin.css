@@ -1,5 +1,5 @@
 /* A reserve ticket's resin and star (ReserveResin.tsx). Tickets aren't controls, so the No Gloss Rule leaves them
-   be: this is the stickers' own baked resin, lit from the one top-left light. */
+   be: a resin coat lit from the one top-left light. */
 
 .resin-coat__light {
   stop-color: var(--canvas);
