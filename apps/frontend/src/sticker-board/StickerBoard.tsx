@@ -44,8 +44,10 @@ import { useTickets } from "../tickets/useTickets";
 import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
+import { useLargeScreen } from "../ui/largeScreen";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { PhotoSticker } from "../ui/PhotoSticker";
+import { TabsLead } from "../ui/TabsLead";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { normalizeTurn } from "./boardGesture";
@@ -353,6 +355,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     [],
   );
   const size = useBoardSize(stage, layout);
+  /** On a large screen Draw stands at the tab strip's left end (ui/TabsLead.tsx). */
+  const large = useLargeScreen();
   /** The name button's box on the board, which a sticker's knob must stay clear of. */
   const [name, setName] = useState<Box | null>(null);
   /** Draw's box on the board, which the selected sticker's toolbar keeps clear of. */
@@ -623,21 +627,22 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   };
 
   // The name's width follows the person's name, which arrives after the board; Draw's, its font. Draw
-  // sits at the board's foot, so a new board size moves it too.
+  // sits at the board's foot, so a new board size moves it too. In the tabs' row it's off the board.
   useLayoutEffect(() => {
     const who = nameButton.current;
+    if (!who) return;
+    // On a large screen Draw mounts after the name, in the tab row's slot.
     const key = drawSlot.current;
-    if (!who || !key) return;
     const measure = () => {
       setName((was) => kept(was, boxOf(who)));
-      setDraw((was) => kept(was, boxOf(key)));
+      setDraw((was) => (large || !key ? null : kept(was, boxOf(key))));
     };
     const observer = new ResizeObserver(measure);
     observer.observe(who);
-    observer.observe(key);
+    if (key) observer.observe(key);
     measure();
     return () => observer.disconnect();
-  }, [size]);
+  }, [size, large]);
 
   useEffect(() => {
     if (landingId) landed.add(landingId);
@@ -833,9 +838,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const unsavedStickers = (stickers ?? []).filter((s) => unsaved.has(s.id));
   const unsavedErrors = unsavedStickers.flatMap((s) => unsaved.get(s.id)?.error ?? []);
 
-  const front = (
-    <div className="board" ref={setFace} data-resting={turned || gratitudeFor ? "" : undefined}>
-      {/* Your name and Draw come before the stickers, so Tab reaches them first. */}
+  const head = (
+    <>
       <button
         ref={nameButton}
         // Its width is its own until a gifts badge needs the room opposite.
@@ -859,10 +863,19 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
           <PendingGiftsNotificationBadge gifts={onTheirWay} onOpen={openYours} />
         </div>
       )}
+    </>
+  );
 
-      {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. The tickets
-          tuck behind the key's right end, in the slot beside it, so they hop along but never press. */}
-      <span ref={drawSlot} className={`board-draw ${firstVisit ? "is-fresh" : ""}`}>
+  // The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. The tickets
+  // tuck behind the key's right end, in the slot beside it, so they hop along but never press. On a
+  // large screen it stands in the tabs' row, where it can't turn away with the board, so it hides.
+  const drawKeyGroup = (
+    <>
+      <span
+        ref={drawSlot}
+        className={`board-draw ${firstVisit ? "is-fresh" : ""} ${large && turned ? "is-away" : ""}`}
+        inert={large && turned}
+      >
         <Key
           size="compact"
           icon={<DrawIcon />}
@@ -879,12 +892,22 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         </Key>
         {drawKey.shown && <DrawKeyTickets tickets={drawKey.shown} peel={drawKey.peeling} />}
       </span>
-      {drawKey.overBoard}
       {firstVisit && (
         <span className="board-nudge" aria-hidden>
           {t(($) => $.stickerBoard.board.firstSticker)}
         </span>
       )}
+    </>
+  );
+
+  const front = (
+    <div className="board" ref={setFace} data-resting={turned || gratitudeFor ? "" : undefined}>
+      {/* Your name and Draw come before the stickers, so Tab reaches them first. On a large screen the
+          name and the gifts share one row, so a long name gives way to the gifts rather than under them. */}
+      {layout === "large" ? <div className="board-head">{head}</div> : head}
+
+      <TabsLead>{drawKeyGroup}</TabsLead>
+      {drawKey.overBoard}
 
       <div
         className="board-stage"

@@ -618,3 +618,97 @@
     transform: rotate(var(--tilt));
   }
 }
+
+/* ---------- Large screens ---------- */
+
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  /* Draw has joined the tabs' row, so the board's alerts take the foot it left. */
+  .board-alerts {
+    left: var(--gutter-large);
+    bottom: 14px;
+  }
+
+  /* In the tabs' row the key stands in line with the tabs, not over the board; it hides while the
+     board is turned over, since it can't turn with it. */
+  .tabs-lead .board-draw {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    z-index: auto;
+    transition: opacity 180ms linear;
+  }
+
+  .tabs-lead .board-draw.is-away {
+    opacity: 0;
+  }
+
+  /* The first-sticker nudge points down at Draw from above the row. */
+  .tabs-lead .board-nudge {
+    left: 0;
+    bottom: calc(100% + 12px);
+  }
+
+  /* An iPad's edge margin, wider than the phone's. */
+  .board-who {
+    left: calc(var(--gutter-large) - 2px);
+  }
+
+  /* Your name and the gifts share one row, clear of the zipper's rail: the gifts keep their whole
+     length and the name gives way, down to where it would say too little, when the gifts stack. */
+  .board-head {
+    position: absolute;
+    z-index: 800;
+    left: calc(var(--gutter-large) - 2px);
+    right: 40px;
+    top: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .board-head > .board-who {
+    position: relative;
+    left: auto;
+    top: auto;
+    flex: 1 1 auto;
+    min-width: 160px;
+    max-width: max-content;
+  }
+
+  .board-head > .board-gifts {
+    position: relative;
+    right: auto;
+    top: auto;
+    flex: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+  }
+
+  /* Each as long as what it says rather than cut to a phone's width, and side by side at one height. */
+  .board-gifts :is(.gifts-for-you-badge, .pending-gifts-badge) {
+    width: auto;
+    max-width: 300px;
+  }
+
+  .board-gifts .pending-gifts-badge {
+    height: 56px;
+    padding-block: 5px;
+  }
+}
+
+/* A window too narrow for a long name beside both gifts stacks them, as a phone does. */
+@media (min-width: 600px) and (max-width: 699px) and (min-height: 600px) and (any-pointer: coarse) {
+  .board-head > .board-gifts {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+}
+
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) and (prefers-reduced-motion: reduce) {
+  .tabs-lead .board-draw {
+    transition-duration: 1ms;
+  }
+}

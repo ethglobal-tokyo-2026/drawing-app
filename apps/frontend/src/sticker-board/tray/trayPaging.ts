@@ -238,7 +238,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
     const drop = before.filter((el, i) => i === 0 || !shown.has(Number(el.dataset.f)));
     const pile = (d: number, dy = 0, r = 0) => restAt(d * 0.15, 30 + dy, r);
     // Far enough that a sheet's top is behind the fabric.
-    const DROP = Math.max(320, ((ui.band ? ui.band.bot - ui.stackAt.y : 470) + 12) / ui.shrink);
+    const DROP = Math.max(320, ((ui.band ? ui.band.bot - ui.stackAt.y : 470) + 12) / ui.fit.scale);
     stack
       .querySelector(".tray__depth")
       ?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 100, fill: "forwards" });

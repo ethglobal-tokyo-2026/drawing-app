@@ -9,7 +9,7 @@ import {
   CRACK,
   ICONS,
   SHEET,
-  TOP,
+  trayTop,
   ended,
   local,
   px,
@@ -123,7 +123,7 @@ export function createTrayPresses(
         if (f !== undefined) await bringToFront(f);
       }
     } else if (g.mode === "page") {
-      if (g.dy < PAGE_UP.px || g.vy < PAGE_UP.speed) await page(1, { fromY: g.dy });
+      if (g.dy < PAGE_UP.px || g.vy < PAGE_UP.speed) await page(1, { fromY: liftOf(g) });
       else if (g.dy > PAGE_DOWN.px || g.vy > PAGE_DOWN.speed) {
         const el = topSheet();
         if (el) el.style.transform = restAt(0);
@@ -154,6 +154,8 @@ export function createTrayPresses(
     } else if (g.mode === "pull") await sendHome({ quick: true });
     else if (g.mode === "move" && g.pulled && g.pulled === ui.pulled) settlePulled(g.pulled);
   }
+  /** A page turn's lift in the stack's own pixels: on a grown stack, so its sheet keeps pace with the finger. */
+  const liftOf = (g: Gesture) => (ui.fit.grow > 1 ? g.dy / ui.fit.scale : g.dy);
   /** The dated edge, as its depth in the stack, that a press at this screen height is for. */
   function edgeUnder(clientY: number) {
     const feet = sheetEls().map((el) => el.querySelector<HTMLElement>(".tray__foot"));
@@ -197,7 +199,7 @@ export function createTrayPresses(
       const el = topSheet();
       if (el) {
         g.dy = dy < 0 ? dy * 0.9 : dy * 0.45;
-        el.style.transform = restAt(0, g.dy, clamp(g.dy / -60, -1, 1) * -1.6);
+        el.style.transform = restAt(0, liftOf(g), clamp(g.dy / -60, -1, 1) * -1.6);
       }
     } else if (g.mode === "peel") movePeel(g, pt);
     else if (g.mode === "pull") movePull(g, pt);
@@ -282,7 +284,9 @@ export function createTrayPresses(
     x.type = "button";
     x.setAttribute("aria-label", words.putBack);
     const wrap = make("div", "tray__pulled", sheetEl(f, "is-top is-pulled", 0), x);
-    wrap.style.transform = pulledFrom(x0, y0, ui.shrink);
+    // Out over the board it's drawn at its full size, whose dates and X keep their size on screen.
+    wrap.style.setProperty("--scale", String(ui.fit.grow));
+    wrap.style.transform = pulledFrom(x0, y0, ui.fit.scale);
     fly.append(wrap);
     const pulled: Pulled = {
       f,
@@ -314,11 +318,16 @@ export function createTrayPresses(
       stepAside();
     }
     // Full size by the time it comes free.
-    const grown = p.out ? 1 : lerp(ui.shrink, 1, clamp(-dx / PULL_FREE, 0, 1));
-    const bump = 0.02 * (p.out ? 1 : k);
+    const full = ui.fit.grow;
+    const grown = p.out ? full : lerp(ui.fit.scale, full, clamp(-dx / PULL_FREE, 0, 1));
+    const bump = 0.02 * full * (p.out ? 1 : k);
     p.el.style.transform = pulledFrom(p.x, p.y, grown + bump, p.out ? -1.5 : -2.5 * k);
   }
-  const pulledAt = (x: number, y: number, scale = 1.02) => pulledFrom(x, y, scale, -1.5);
+  /** The pulled-out sheet hovering at `x`, `y`, lifted a little past its full size. */
+  const pulledAt = (x: number, y: number, lift = 1.02) =>
+    pulledFrom(x, y, lift * ui.fit.grow, -1.5);
+  /** The pulled-out sheet's size over the board. */
+  const pulledSize = () => ({ w: SHEET.w * ui.fit.grow, h: SHEET.h * ui.fit.grow });
   async function releasePull(g: Gesture, pt: Point) {
     const p = ui.pulled;
     if (!p) return;
@@ -329,8 +338,9 @@ export function createTrayPresses(
     p.out = true;
     stepAside();
     // It settles over the board, wholly on screen, hovering.
-    const x = clamp(p.x, 8, Wb() - SHEET.w - 40);
-    const y = clamp(p.y, TOP - 6, Hb() - SHEET.h - 10);
+    const size = pulledSize();
+    const x = clamp(p.x, 8, Wb() - size.w - 40);
+    const y = clamp(p.y, trayTop() - 6, Hb() - size.h - 10);
     await ended(
       p.el.animate([{ transform: p.el.style.transform }, { transform: pulledAt(x, y) }], {
         duration: 240,
@@ -389,12 +399,13 @@ export function createTrayPresses(
   }
   /** Let go after moving it: back over the tray it goes home, else it settles where it's wholly in reach. */
   function settlePulled(p: Pulled) {
-    if (p.x + SHEET.w * 0.5 > Wb() - 60) {
+    const size = pulledSize();
+    if (p.x + size.w * 0.5 > Wb() - 60) {
       void sendHome();
       return;
     }
-    p.x = clamp(p.x, 8 - SHEET.w * 0.4, Wb() - SHEET.w * 0.6);
-    p.y = clamp(p.y, TOP - 20, Hb() - SHEET.h * 0.5);
+    p.x = clamp(p.x, 8 - size.w * 0.4, Wb() - size.w * 0.6);
+    p.y = clamp(p.y, trayTop() - 20, Hb() - size.h * 0.5);
     const to = pulledAt(p.x, p.y);
     void ended(
       p.el.animate([{ transform: p.el.style.transform }, { transform: to }], {
@@ -418,13 +429,13 @@ export function createTrayPresses(
     const focused = holdsFocus(p.el);
     ui.order = [p.f, ...ui.order.filter((o) => o !== p.f)];
     zip.relax(1);
-    const home = { x: colLeft() + ui.stackAt.x, y: TOP + ui.stackAt.y };
+    const home = { x: colLeft() + ui.stackAt.x, y: trayTop() + ui.stackAt.y };
     if (!reduced() && !instant)
       await ended(
         p.el.animate(
           [
             { transform: p.el.style.transform },
-            { transform: pulledFrom(home.x, home.y, ui.shrink) },
+            { transform: pulledFrom(home.x, home.y, ui.fit.scale) },
           ],
           { duration: quick ? 180 : 320, easing: EASE_PEEL, fill: "forwards" },
         ),

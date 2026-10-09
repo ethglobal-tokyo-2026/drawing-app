@@ -6,11 +6,7 @@ import { timeOurWork } from "../../performance/performanceRecorder";
 import { formatNo } from "../../stickers/format";
 import { EASE_OUT, EASE_PEEL, clamp, lerp } from "../../ui/easing";
 import {
-  COL,
   CRACK,
-  GMAX,
-  STACK_Y,
-  TOP,
   cssUrl,
   ended,
   px,
@@ -46,20 +42,20 @@ export function createTrayPeel(
   const { win, reduced, later, cancel, make, zip, api, problem, fly, land, stack, ui } = tray;
   const { Wb, Hb, colLeft, boardView } = tray;
   const { itemOf } = trayModel;
-  const { placeOf, shrunkInset, sayStuckOn } = traySheets;
+  const { placeOf, stackHome, sayStuckOn } = traySheets;
 
   /* ---------------------------------------------------------------- peeling: a sticker from its sheet onto the board */
   /** A slot's sticker, in board pixels: its center, its fitted size, and its turn. */
   function rectOfFit(el: HTMLElement, view: BoardView = boardView()): Box {
     const fit = el.querySelector<HTMLElement>(".tray__fit") ?? el;
     const r = fit.getBoundingClientRect();
-    // A sheet on the stack is drawn shrunk; a pulled-out one is full size.
-    const shrunk = el.closest(".tray__stack") ? ui.shrink : 1;
+    // A sheet on the stack is drawn at the stack's scale; a pulled-out one at its full size.
+    const k = el.closest(".tray__stack") ? ui.fit.scale : ui.fit.grow;
     return {
       x: (r.left + r.width / 2 - view.left) / view.k,
       y: (r.top + r.height / 2 - view.top) / view.k,
-      w: parseFloat(fit.style.width) * shrunk,
-      h: parseFloat(fit.style.height) * shrunk,
+      w: parseFloat(fit.style.width) * k,
+      h: parseFloat(fit.style.height) * k,
       r: parseFloat(el.style.getPropertyValue("--r")) || 0,
     };
   }
@@ -268,12 +264,13 @@ export function createTrayPeel(
   /** Where a slot's sticker sits with the tray wide open, in board pixels. */
   function slotHome(s: Slot): Box {
     const q = placeOf(s);
-    const xw = (ui.geo ? ui.geo.chainX : COL - 15) - 0.97 * GMAX + 3;
+    const home = stackHome();
+    const { scale } = ui.fit;
     return {
-      x: colLeft() + xw + 3 + shrunkInset() + q.x * ui.shrink,
-      y: TOP + STACK_Y + q.y * ui.shrink,
-      w: q.w * ui.shrink,
-      h: q.h * ui.shrink,
+      x: home.x + q.x * scale,
+      y: home.y + q.y * scale,
+      w: q.w * scale,
+      h: q.h * scale,
       r: q.r,
     };
   }

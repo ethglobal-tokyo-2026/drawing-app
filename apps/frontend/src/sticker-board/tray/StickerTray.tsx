@@ -23,6 +23,8 @@ export interface StickerTrayHandle {
   boardDrop: (id: string, at: { x: number; y: number }) => Promise<boolean>;
   /** Closes the spread, else the tray; whether it did anything. */
   escape: () => boolean;
+  /** Where the pouch ends, as the board's y; null before the tray has laid out. */
+  pouchFoot: () => number | null;
 }
 
 interface Props {
@@ -124,6 +126,7 @@ export function StickerTray({ board, stickers, ownerId, api, onSeen, onProblem, 
       boardDrag: (id, at) => engine.current?.boardDrag(id, at) ?? null,
       boardDrop: (id, at) => engine.current?.boardDrop(id, at) ?? Promise.resolve(false),
       escape: () => engine.current?.escape() ?? false,
+      pouchFoot: () => engine.current?.pouchFoot() ?? null,
     }),
     [],
   );

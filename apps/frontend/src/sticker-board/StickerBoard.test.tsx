@@ -6,7 +6,7 @@ import type {
   StickerPlacement,
 } from "@drawing-app/api/client";
 import { act } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { boardSticker, gift, people, sticker, trailEntry } from "../api/testFixtures";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
@@ -16,6 +16,7 @@ import { i18next, withBreakHints } from "../i18n/i18n";
 import { api as apiStrings } from "../i18n/strings/api";
 import { errors } from "../i18n/strings/errors";
 import { stickerBoard } from "../i18n/strings/stickerBoard";
+import { TabsLeadSlot } from "../ui/TabsLead";
 import { onLargeScreen } from "../ui/testing";
 import { forgetGreetings } from "./artistChipGreeting";
 import { forgetBoardComplete } from "./boardComplete";
@@ -889,6 +890,17 @@ describe("StickerBoard when your NSFW opt-in changes", () => {
     unmount = view.unmount;
     expect(document.querySelector(".gift-received-notice")).not.toBeNull();
     expect(document.body.innerHTML).not.toContain(DRAWING);
+  });
+});
+
+describe("StickerBoard's Draw on a large screen", () => {
+  it("stands at the tab row's left end, in the slot the tab strip keeps, and leaves the board", async () => {
+    onLargeScreen();
+    const tabs = renderWithApi(<TabsLeadSlot />);
+    onTestFinished(tabs.unmount);
+    const { host } = await show(emptyApi());
+    expect(tabs.host.querySelector(".tabs-lead .board-draw")).not.toBeNull();
+    expect(host.querySelector(".board-draw")).toBeNull();
   });
 });
 

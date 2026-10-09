@@ -7,15 +7,20 @@ import { formatMonthDay, formatNo } from "../../stickers/format";
 import { lightUp } from "../../stickers/light";
 import { knownShape } from "./stickerShape";
 import {
+  COL,
+  GMAX,
   ICONS,
   PEEK,
   PEEKS,
   SHEET,
+  STACK_Y,
   SVG_NS,
+  trayTop,
   cssUrl,
   dayOf,
   px,
   type Box,
+  type Point,
   type Size,
   type Slot,
   type Tray,
@@ -45,14 +50,20 @@ const STAND_IN: readonly (readonly [x: number, y: number, r: number])[] = [
 const FIT = { w: 66, h: 76 };
 
 export function createTraySheets(tray: Tray, trayModel: TrayModel) {
-  const { doc, zip, make, decorative, icon, words, hint, say, stack, ui } = tray;
+  const { doc, zip, make, decorative, icon, words, hint, say, stack, ui, colLeft } = tray;
   const { newIds, matches, sheetItems, sheetMatches, topF, resetOrder } = trayModel;
 
   /** A sheet's transform at a depth in the stack: lower, and narrower from its foot, the further back. */
   const restAt = (depth: number, dy = 0, r = 0) =>
-    `translateY(${((depth * PEEK) / ui.shrink + dy).toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${(1 - INSET * depth).toFixed(4)})`;
-  /** The stack's left inset when shrunk: the sheets stay centered in the mouth. */
-  const shrunkInset = () => (SHEET.w * (1 - ui.shrink)) / 2;
+    `translateY(${((depth * PEEK) / ui.fit.scale + dy).toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${(1 - INSET * depth).toFixed(4)})`;
+  /** The stack's left inset when it's shrunk narrower than the column was made for: it stays centered in the mouth. */
+  const stackInset = () => (SHEET.w * (ui.fit.grow - ui.fit.scale)) / 2;
+  /** The stack's top left with the tray wide open, in board pixels. */
+  function stackHome(): Point {
+    const { grow } = ui.fit;
+    const xw = (ui.geo ? ui.geo.chainX : COL * grow - 15) - 0.97 * GMAX * grow + 3;
+    return { x: colLeft() + xw + 3 + stackInset(), y: trayTop() + STACK_Y };
+  }
 
   function loadImages() {
     if (ui.imagesOn || ui.destroyed) return;
@@ -312,7 +323,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     if (hidden > 0) {
       const more = make("button", "tray__depth", icon(ICONS.stack), make("span", "", `+${hidden}`));
       more.type = "button";
-      more.style.transform = `translateY(${SHEET.h + (k * PEEK + 3) / ui.shrink}px) scale(${(1 / ui.shrink).toFixed(4)})`;
+      more.style.transform = `translateY(${SHEET.h + (k * PEEK + 3) / ui.fit.scale}px) scale(${(1 / ui.fit.scale).toFixed(4)})`;
       const spread = i18next.t(($) => $.stickerBoard.tray.moreSheets, { count: hidden });
       more.setAttribute("aria-label", spread);
       kids.push(more);
@@ -370,7 +381,8 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
 
   return {
     restAt,
-    shrunkInset,
+    stackInset,
+    stackHome,
     placeOf,
     sheetEl,
     sheetLabel,

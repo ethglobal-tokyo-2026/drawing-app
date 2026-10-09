@@ -68,13 +68,19 @@ export const spotsIn = (layout: BoardLayout, placement: Placement): Spots =>
 /** The layouts a save's spots are in. */
 export const layoutsIn = (spots: Spots) => BOARD_LAYOUTS.filter((layout) => spots[layout]);
 
-/** An element's box on the board, which is its offset parent. */
-export const boxOf = (el: HTMLElement): Box => ({
-  left: el.offsetLeft,
-  top: el.offsetTop,
-  right: el.offsetLeft + el.offsetWidth,
-  bottom: el.offsetTop + el.offsetHeight,
-});
+/** An element's box on the board, through any positioned box it sits in, such as the header row. */
+export function boxOf(el: HTMLElement): Box {
+  let [left, top] = [el.offsetLeft, el.offsetTop];
+  for (
+    let parent = el.offsetParent;
+    parent instanceof HTMLElement && !parent.classList.contains("board");
+    parent = parent.offsetParent
+  ) {
+    left += parent.offsetLeft;
+    top += parent.offsetTop;
+  }
+  return { left, top, right: left + el.offsetWidth, bottom: top + el.offsetHeight };
+}
 
 /** The box as it was when it hasn't moved, so measuring again doesn't re-render the board. */
 export const kept = (was: Box | null, now: Box) =>

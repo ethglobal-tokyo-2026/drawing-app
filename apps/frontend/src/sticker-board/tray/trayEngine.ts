@@ -9,6 +9,7 @@
 import { i18next } from "../../i18n/i18n";
 import { whenBoardQuiet } from "../boardComplete";
 import { clamp, lerp } from "../../ui/easing";
+import { LARGE_SCREEN } from "../../ui/largeScreen";
 import type { TrayProblem } from "./trayProblem";
 import { createTrayBoardDrop } from "./trayBoardDrop";
 import { countVisit, visitsSoFar } from "./traySeen";
@@ -21,14 +22,13 @@ import { createTraySpread } from "./traySpread";
 import {
   COL,
   GMAX,
-  SHEET,
-  STACK_FOOT,
+  PHONE_FIT,
   STACK_Y,
-  stackFootFor,
   SVG_NS,
-  TOP,
+  trayTop,
   createTrayModel,
   modelOf,
+  trayFitFor,
   type BoardView,
   type Geometry,
   type Point,
@@ -62,16 +62,11 @@ export interface TrayEngine {
   boardDrop: (id: string, at: Point) => Promise<boolean>;
   /** Closes the spread, else the tray; whether it did anything. */
   escape: () => boolean;
+  /** Where the pouch ends, as the board's y: its foot, or higher where a tall board shortens it. */
+  pouchFoot: () => number;
   destroy: () => void;
 }
 
-/**
- * However short the tray, the stack is shrunk to no less than this, so the dates on its narrowest
- * edge, kept at the fine-print floor, still sit beside the sheet's number.
- */
-const MIN_SHRINK = 0.5;
-/** The open mouth keeps this much lining under the stack's foot, where the +N button's reach ends. */
-export const POUCH_LINING = 24;
 /** The stack's foot (dates, NEW, +N) is hidden below this share of the mouth's open width, whole above the other. */
 const FOOT_FADE = { hidden: 0.35, whole: 0.7 };
 /** The pull tugs itself, and the front sheet's grip nudges, on this many visits to the tray. */
@@ -241,7 +236,7 @@ export function createTrayEngine(
     shown: new Set(),
     pulled: null,
     model: modelOf(read(), seen),
-    shrink: 1,
+    fit: PHONE_FIT,
     onShow: false,
     stale: false,
     orderedFor: 0,
@@ -253,7 +248,7 @@ export function createTrayEngine(
 
   const Wb = () => board.clientWidth || 390;
   const Hb = () => board.clientHeight || 657;
-  const colLeft = () => Wb() - COL;
+  const colLeft = () => Wb() - COL * ui.fit.grow;
   /** Where the open pouch ends, as the board's y: where its slider stops. */
   let openFoot = 0;
   const pouchFoot = () => openFoot || Hb();
@@ -293,7 +288,7 @@ export function createTrayEngine(
     boardView,
   };
   const traySheets = createTraySheets(tray, trayModel);
-  const { shrunkInset, renderStack, holdsFocus, redraw, markShown, loadImages } = traySheets;
+  const { stackInset, renderStack, holdsFocus, redraw, markShown, loadImages } = traySheets;
 
   const trayPaging = createTrayPaging(tray, trayModel, traySheets);
   const { tabs, syncTabsShown } = trayPaging;
@@ -308,43 +303,51 @@ export function createTrayEngine(
     w1.toggleAttribute("inert", now);
   }
   let footShown = "1.00";
-  let fittedFor = 0;
-  let fittedSheets = -1;
-  let stoppedShort = 0;
+  const large = win.matchMedia(LARGE_SCREEN);
+  /** The board height, sheet count and screen the tray was last fitted for. */
+  let fittedFor = "";
   /**
-   * Fits the stack to the open mouth: shrunk until its sheets, the edges behind them and the +N button
-   * all fit on a short board, whose mouth ends above where the stack would. Opened, the slider stops
-   * just below the stack, so the pouch holds no bare lining under the sheets. True when that moved
-   * the stop: the Zipper redrawn for it has drawn this frame already.
+   * Fits the tray to its board: the stack shrunk until its sheets, the edges behind them and the +N
+   * button all fit a short board's mouth, and on a large screen grown to fill it, the column and the
+   * mouth's travel with it. Opened, the slider stops just below the stack, so the pouch holds no bare
+   * lining under the sheets. True when that reshaped the Zipper, which has drawn this frame already.
    */
-  function fitStack(height: number) {
+  function fitTray(height: number) {
     // The stop follows the sheets there are: a short stack shows fewer edges behind its front sheet.
     const sheets = ui.model.count;
-    if (!height || (height === fittedFor && sheets === fittedSheets)) return false;
-    fittedFor = height;
-    fittedSheets = sheets;
-    const room = zip.openWindow(0);
-    const next = room ? clamp((room.bot - 2 - STACK_Y - STACK_FOOT) / SHEET.h, MIN_SHRINK, 1) : 1;
-    if (Math.abs(next - ui.shrink) >= 0.001) {
-      ui.shrink = next;
-      stack.style.setProperty("--shrink", ui.shrink.toFixed(4));
+    const fitting = `${height} ${sheets} ${large.matches}`;
+    if (!height || fitting === fittedFor) return false;
+    fittedFor = fitting;
+    const was = ui.fit;
+    const fit = trayFitFor(large.matches, sheets, (short) => zip.openWindow(short)?.bot ?? null);
+    ui.fit = fit;
+    if (fit.grow !== was.grow) {
+      // The open stack isn't sized for the column a pulled-out sheet came from.
+      if (ui.pulled) void sendHome({ instant: true });
+      root.style.setProperty("--tray-col", `${(COL * fit.grow).toFixed(1)}px`);
+    }
+    if (Math.abs(fit.scale - was.scale) >= 0.001) {
+      stack.style.setProperty("--scale", fit.scale.toFixed(4));
       if (ui.model && ui.order.length) renderStack();
     }
-    const stackFoot = 2 + STACK_Y + ui.shrink * SHEET.h + stackFootFor(sheets) + POUCH_LINING;
-    const stopShort = room ? Math.max(0, Math.floor(room.bot - stackFoot)) : 0;
-    const moved = stopShort !== stoppedShort;
-    stoppedShort = stopShort;
-    if (moved) zip.reshape({ stopShort });
+    const moved = fit.grow !== was.grow || fit.stopShort !== was.stopShort;
+    if (moved)
+      zip.reshape({
+        chainAt: COL * fit.grow - 15,
+        maxGap: GMAX * fit.grow,
+        stopShort: fit.stopShort,
+      });
     const stop = zip.openWindow();
-    openFoot = stop ? TOP + stop.slider : 0;
+    openFoot = stop ? trayTop() + stop.slider : 0;
     return moved;
   }
   function onFrame(g: Geometry) {
-    if (fitStack(g.H)) return;
+    if (fitTray(g.H)) return;
     ui.geo = g;
     const G = g.G;
     const k = showsFrom(g.spread);
-    const open = clamp(G / (0.97 * GMAX), 0, 1);
+    const { scale, grow } = ui.fit;
+    const open = clamp(G / (0.97 * GMAX * grow), 0, 1);
     const range = G > 3 ? mouthRange(g, G, k) : null;
     const show = range !== null;
     // A mouth sagged to a crack rings through shut for a few frames: the stack stays as it was, so it
@@ -368,7 +371,7 @@ export function createTrayEngine(
       w2.style.transform = `translate(0px,${(yBot - g.H).toFixed(2)}px)`;
       c2.style.transform = `translate(0px,${(g.H - yBot).toFixed(2)}px)`;
       // The stack slides out from under the left lip as the mouth opens, and settles a little lower.
-      const bx = lerp(-58, 3, Math.pow(open, 0.85));
+      const bx = lerp(-58 * grow, 3, Math.pow(open, 0.85));
       const by = lerp(-40, STACK_Y, Math.pow(open, 0.8));
       const deep = ((1 - 0.72 * g.spread) * clamp((yBot - yTop) / 150, 0.35, 1)).toFixed(3);
       deepTop.style.opacity = deep;
@@ -385,8 +388,8 @@ export function createTrayEngine(
         stack.style.setProperty("--foot", foot);
       }
       tabsEl.style.transform = `translate(${bx.toFixed(2)}px,${by.toFixed(2)}px)`;
-      stack.style.transform = `translate(${(bx + shrunkInset()).toFixed(2)}px,${by.toFixed(2)}px) scale(${ui.shrink.toFixed(4)})`;
-      ui.stackAt = { x: xw + bx + shrunkInset(), y: by };
+      stack.style.transform = `translate(${(bx + stackInset()).toFixed(2)}px,${by.toFixed(2)}px) scale(${scale.toFixed(4)})`;
+      ui.stackAt = { x: xw + bx + stackInset(), y: by };
       ui.band = { top: yTop, bot: yBot };
     }
     const out = ui.spreadOpen
@@ -397,6 +400,9 @@ export function createTrayEngine(
   zip.on("frame", onFrame);
   // The Zipper drew itself before this listened.
   onFrame(zip.geometry());
+  // The board resizing redraws the Zipper, which fits the tray again; so does the screen turning large.
+  const fitForScreen = () => onFrame(zip.geometry());
+  large.addEventListener("change", fitForScreen);
   zip.on("commit", ({ open }) => {
     cancelTugs();
     if (open) {
@@ -545,6 +551,7 @@ export function createTrayEngine(
     boardDrag,
     boardDrop,
     escape,
+    pouchFoot,
     destroy() {
       if (ui.destroyed) return;
       ui.destroyed = true;
@@ -556,6 +563,7 @@ export function createTrayEngine(
       if (peel) win.cancelAnimationFrame(peel.raf);
       ui.pulled?.listening.abort();
       traySpread.destroy();
+      large.removeEventListener("change", fitForScreen);
       listening.abort();
       zip.destroy();
       root.remove();

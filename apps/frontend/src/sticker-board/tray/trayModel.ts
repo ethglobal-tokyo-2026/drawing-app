@@ -4,6 +4,8 @@
  */
 import { tokyoTicketDay } from "@drawing-app/api/client";
 import type { StickerUrls } from "../../stickers/stickerUrls";
+import { clamp } from "../../ui/easing";
+import { LARGE_SCREEN } from "../../ui/largeScreen";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape, unreadableCut } from "./stickerShape";
 import type { TrayProblem } from "./trayProblem";
@@ -172,11 +174,8 @@ export interface TrayState {
   pulled: Pulled | null;
   /** The stickers the tray holds, and how many sheets they fill. */
   model: ReturnType<typeof modelOf>;
-  /**
-   * How much the stack is shrunk to fit a short board, from 1 down. The sheets shrink; the edges behind
-   * the front one stay their own height on screen, so they stay something to tap.
-   */
-  shrink: number;
+  /** How the tray fits its board: the stack's scale, the column's growth and where the pouch ends. */
+  fit: TrayFit;
   /** The stack's window is on show: the tray open, opening, or pulled to a crack. */
   onShow: boolean;
   /** The stickers changed while the sheets were out of sight, under a hand or mid-turn: they're
@@ -261,9 +260,9 @@ export const stackFootFor = (sheets: number) =>
 export const SHEET = { w: 156, h: 364 };
 /** Packing keeps clear of the sheet's tear strip at the top and its dated foot. */
 const PACK = { sheet: SHEET, margin: { top: 30, right: 10, bottom: 24, left: 10 } };
-/** The tray runs from under the board's header and its gifts badge to its foot (sticker-tray.css sets
- * --tray-top to match). */
-export const TOP = 72;
+/** The tray runs from under the board's header and its gifts badge to its foot; a large screen's header
+ * row, where the gifts sit side by side, is taller (sticker-tray.css sets --tray-top to match). */
+export const trayTop = () => (window.matchMedia(LARGE_SCREEN).matches ? 80 : 72);
 /** The tray's column: wide enough for the left row's full travel. */
 export const COL = 205;
 /** How far the left row travels open: the tray takes about half the screen. */
@@ -272,6 +271,60 @@ export const GMAX = 172;
 export const STACK_Y = 72;
 /** How the mouth sags to a crack while something is out over the board. */
 export const CRACK = 0.12;
+/**
+ * However short the tray, the stack is shrunk to no less than this, so the dates on its narrowest
+ * edge, kept at the fine-print floor, still sit beside the sheet's number.
+ */
+const MIN_SCALE = 0.5;
+/**
+ * On a large screen the stack grows no larger than this: its stickers come out about the size of the
+ * board's, and the open pouch leaves most of the board in view.
+ */
+export const MAX_STACK_SCALE = 1.5;
+/** The open mouth keeps this much lining under the stack's foot, where the +N button's reach ends. */
+export const POUCH_LINING = 24;
+
+/** How the tray fits its board. */
+export interface TrayFit {
+  /**
+   * The stack's scale: below 1 to fit a short board, above 1 to fill a large screen's room. The sheets
+   * scale; the edges behind the front one, their dates and the +N button keep their size on screen.
+   */
+  scale: number;
+  /** What the column and the mouth's travel grow by, and a pulled-out sheet's size: 1 but on a large screen. */
+  grow: number;
+  /**
+   * How far short of the rail's far stop the slider stops when it opens: just below the stack's foot,
+   * so the open pouch holds no bare lining under the sheets.
+   */
+  stopShort: number;
+}
+
+export const PHONE_FIT: TrayFit = { scale: 1, grow: 1, stopShort: 0 };
+
+/**
+ * The tray on its board. The stack shrinks until a deep stack fits the mouth opened to the rail's far
+ * stop; on a large screen it grows to fill it, up to MAX_STACK_SCALE, and the column and the mouth's
+ * travel grow with it. Opened, the slider stops a little below the foot of the `sheets` there are.
+ * `windowFoot` is where the open mouth ends with the slider stopped this many px short of the far stop.
+ */
+export function trayFitFor(
+  large: boolean,
+  sheets: number,
+  windowFoot: (short: number) => number | null,
+): TrayFit {
+  const foot = windowFoot(0);
+  if (foot === null) return PHONE_FIT;
+  // The scale whose deepest stack ends where the open mouth does.
+  const fills = (foot - 2 - STACK_Y - STACK_FOOT) / SHEET.h;
+  const scale = large && fills > 1 ? Math.min(fills, MAX_STACK_SCALE) : clamp(fills, MIN_SCALE, 1);
+  const wanted = 2 + STACK_Y + scale * SHEET.h + stackFootFor(sheets) + POUCH_LINING;
+  return {
+    scale,
+    grow: large ? Math.max(1, scale) : 1,
+    stopShort: Math.max(0, Math.floor(foot - wanted)),
+  };
+}
 /** Phosphor's Stack and X icons, bold. */
 export const ICONS = {
   stack:

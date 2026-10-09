@@ -321,9 +321,11 @@ export function useBoardGestures(options: Options) {
       const from = liveOf(saved?.id === id ? saved.placement : sticker.placement, field);
       peelMark(sticker, from);
       const { w, h } = sizeOf(size.U, from.s, sticker);
+      // It rides in level with where it was, but never below a shortened pouch's foot.
+      const foot = latest.current.tray.current?.pouchFoot() ?? size.H;
       const to = {
         x: size.W - STOW_EDGE,
-        y: Math.min(size.H - 90, Math.max(field.top + 40, from.y)),
+        y: Math.min(size.H - 90, foot - 60, Math.max(field.top + 40, from.y)),
       };
       const at = (c: Pt, k = 1) => `${transformAt(c.x, c.y, w, h, from.r)} scale(${k})`;
       setHold({ id, kind: "drag" });

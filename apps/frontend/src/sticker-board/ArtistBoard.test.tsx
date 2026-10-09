@@ -284,6 +284,13 @@ describe("ArtistBoard's layouts", () => {
     expect(shown(await visit([phone, large]))).toEqual([large.stickerId]);
   });
 
+  it("leads back to Explore with its chip on a phone, and on a large screen leaves that to the lit Explore tab", async () => {
+    expect((await visit(three())).querySelector(".explore-chip")).not.toBeNull();
+    unmount();
+    onLargeScreen();
+    expect((await visit(three())).querySelector(".explore-chip")).toBeNull();
+  });
+
   it("shows a large screen a board with no large layout yet as its phone's arrangement, at its size", async () => {
     onLargeScreen();
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1180);

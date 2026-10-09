@@ -18,8 +18,16 @@ import { errors } from "../../i18n/strings/errors";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
-import { POUCH_LINING, TUG_VISITS, type TrayBoard } from "./trayEngine";
-import { SHEET, STACK_FOOT, stackFootFor, TOP } from "./trayModel";
+import { TUG_VISITS, type TrayBoard } from "./trayEngine";
+import { LARGE_SCREEN } from "../../ui/largeScreen";
+import {
+  MAX_STACK_SCALE,
+  POUCH_LINING,
+  SHEET,
+  STACK_FOOT,
+  stackFootFor,
+  trayTop,
+} from "./trayModel";
 import { testStickerUrls } from "../../stickers/testStickerUrls";
 import { NUDGE_AFTER } from "./trayNudge";
 import { trayProblemWords, type TrayProblem } from "./trayProblem";
@@ -129,6 +137,15 @@ const peelFrom = (sheet: Element | null, on: Element | null = sheet, pointerId =
   pointer(on, "pointermove", 40, 200, pointerId);
   return slot?.getAttribute("data-id");
 };
+/** happy-dom's own matchMedia, before any test spies on it. */
+const unspiedMatchMedia = window.matchMedia.bind(window);
+/** The screen's media queries: reduced motion as `motion` answers, and a phone's screen unless `large`. */
+const media = (motion: MediaQueryList, large = false) => {
+  const screen = unspiedMatchMedia(large ? "all" : "(max-width: 1px)");
+  vi.spyOn(window, "matchMedia").mockImplementation((query) =>
+    query === LARGE_SCREEN ? screen : motion,
+  );
+};
 /**
  * Reduced motion until `animate` turns it off (or back on), and animations that end only when
  * `finishAll` ends them, so a page turn can be caught partway. `asked` keeps every animation with the
@@ -138,7 +155,7 @@ const holdAnimations = () => {
   let reduce = true;
   const motion = window.matchMedia("all");
   Object.defineProperty(motion, "matches", { get: () => reduce });
-  vi.spyOn(window, "matchMedia").mockReturnValue(motion);
+  media(motion);
   const held: Animation[] = [];
   const asked: {
     el: Element;
@@ -214,7 +231,7 @@ beforeEach(() => {
   // Each test starts with a board that hasn't assembled, as a new page would.
   forgetBoardComplete();
   // Reduced motion: the tray opens and shuts at once. happy-dom's own animations reject unhandled.
-  vi.spyOn(window, "matchMedia").mockReturnValue(window.matchMedia("all"));
+  media(window.matchMedia("all"));
   vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
   // happy-dom lays nothing out: every box is given the board's size, so the Zipper draws its mouth.
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
@@ -844,7 +861,7 @@ describe("StickerTray", () => {
       vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
         this: HTMLElement,
       ) {
-        return this.classList.contains("tray__col") ? height - TOP : height;
+        return this.classList.contains("tray__col") ? height - trayTop() : height;
       });
       render(manyStickers(stickers));
       await openTray();
@@ -854,6 +871,39 @@ describe("StickerTray", () => {
       el instanceof HTMLElement
         ? (el.style.transform.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number)
         : [];
+    /**
+     * The open stack's scale, where its foot (with the edges and the +N button) ends, and where the
+     * open mouth ends, in the column's px.
+     */
+    const openStack = (height: number) => {
+      const [, stackTop = NaN, scale = NaN] = numbersIn(stackEl());
+      const [, mouthFootShift = NaN] = numbersIn(board.querySelector(".tray__w2"));
+      const stackFoot = stackTop + scale * SHEET.h + STACK_FOOT;
+      return { scale, stackFoot, mouthFoot: height - trayTop() + mouthFootShift };
+    };
+
+    it("grows the stack on a large screen, and opens the mouth only a little past it", async () => {
+      media(window.matchMedia("all"), true);
+      await openOn(1200, 60);
+      const { scale, stackFoot, mouthFoot } = openStack(1200);
+      expect(scale).toBeGreaterThan(1);
+      expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
+      expect(mouthFoot - stackFoot).toBeLessThan(STACK_FOOT);
+    });
+
+    it("never grows the stack past its most, however tall the board", async () => {
+      media(window.matchMedia("all"), true);
+      await openOn(3000, 60);
+      expect(openStack(3000).scale).toBe(MAX_STACK_SCALE);
+    });
+
+    it("keeps a short large screen's stack about the phone's size", async () => {
+      media(window.matchMedia("all"), true);
+      await openOn(666, 60);
+      const { scale, stackFoot, mouthFoot } = openStack(666);
+      expect(scale).toBeCloseTo(1, 0);
+      expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
+    });
 
     it("leaves the stack full size when everything fits the mouth", async () => {
       await openOn(700);
@@ -869,7 +919,7 @@ describe("StickerTray", () => {
       await openOn(776, stickers);
       const [, stackTop = NaN, scale = NaN] = numbersIn(stackEl());
       const [, mouthFootShift = NaN] = numbersIn(board.querySelector(".tray__w2"));
-      const mouthFoot = 776 - TOP + mouthFootShift;
+      const mouthFoot = 776 - trayTop() + mouthFootShift;
       const hidden = Number(
         stackEl()?.querySelector(".tray__depth span")?.textContent?.slice(1) ?? 0,
       );
@@ -885,7 +935,7 @@ describe("StickerTray", () => {
       vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
         this: HTMLElement,
       ) {
-        return this.classList.contains("tray__col") ? 776 - TOP : 776;
+        return this.classList.contains("tray__col") ? 776 - trayTop() : 776;
       });
       render([sticker("a", 1, true), sticker("b", 2, true)]);
       await openTray();
@@ -909,7 +959,7 @@ describe("StickerTray", () => {
         expect(board.querySelector(".tray__depth")).not.toBeNull();
         const [, stackTop, shrink] = numbersIn(stackEl());
         const [, mouthFootShift] = numbersIn(board.querySelector(".tray__w2"));
-        const mouthFoot = height - TOP + mouthFootShift;
+        const mouthFoot = height - trayTop() + mouthFootShift;
         expect(shrink).toBeLessThan(1);
         expect(stackTop + shrink * SHEET.h + STACK_FOOT).toBeLessThanOrEqual(mouthFoot);
       },

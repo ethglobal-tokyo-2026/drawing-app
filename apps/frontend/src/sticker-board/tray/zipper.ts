@@ -117,8 +117,8 @@ export interface Zipper {
    * the host is laid out.
    */
   openWindow: (short?: number) => { top: number; bot: number; slider: number } | null;
-  /** Moves where the opened slider stops: it redraws at once. */
-  reshape: (options: Required<Pick<ZipperOptions, "stopShort">>) => void;
+  /** The host was resized with a new chain line, travel or stop: it redraws at once. */
+  reshape: (options: Required<Pick<ZipperOptions, "chainAt" | "maxGap" | "stopShort">>) => void;
   on: <K extends keyof ZipperEvents>(event: K, fn: Listener<K>) => () => void;
   destroy: () => void;
 }
@@ -571,7 +571,7 @@ function windowOf(doc: Document): Window & typeof globalThis {
 export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper {
   const doc = host.ownerDocument;
   const win = windowOf(doc);
-  // Its own copy: `reshape` moves the stop.
+  // Its own copy: `reshape` moves the chain line, the travel and the stop.
   const o = { stopShort: 0, ...options };
   /** The pull's name, which says so when the pip marks something new. */
   const names = {
@@ -1397,8 +1397,11 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
       const range = mouthRange({ sM: open.sM, gap: (a) => gapOf(open, a) }, open.G, showsFrom(1));
       return range && { top: yOf(range.from), bot: yOf(range.to), slider: yOf(S) };
     },
-    reshape({ stopShort }) {
-      if (destroyed || stopShort === o.stopShort) return;
+    reshape({ chainAt, maxGap, stopShort }) {
+      const same = chainAt === o.chainAt && maxGap === o.maxGap && stopShort === o.stopShort;
+      if (destroyed || same) return;
+      o.chainAt = chainAt;
+      o.maxGap = maxGap;
       o.stopShort = stopShort;
       L = 0;
       if (build()) render();

@@ -55,6 +55,7 @@ const trayDropping = (
     boardDrag: () => null,
     boardDrop,
     escape: () => false,
+    pouchFoot: () => null,
   },
 });
 

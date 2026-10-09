@@ -140,8 +140,9 @@
   top: 0;
   width: 156px;
   height: 436px;
-  /* The engine shrinks the stack on a short board; its edges keep their size on screen. */
-  --shrink: 1;
+  /* The engine shrinks the stack on a short board and grows it on a large screen; its edges keep their
+     size on screen. */
+  --scale: 1;
   transform-origin: 0 0;
   pointer-events: auto;
   touch-action: none;
@@ -249,7 +250,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(15px / var(--shrink, 1));
+  height: calc(15px / var(--scale, 1));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -262,7 +263,7 @@
 
 .tray__foot .fine {
   position: relative;
-  font-size: calc(var(--fs-fine) / var(--shrink, 1));
+  font-size: calc(var(--fs-fine) / var(--scale, 1));
   line-height: 1;
   letter-spacing: 0.05em;
   white-space: nowrap;
@@ -322,15 +323,15 @@
 }
 
 .tray__sheet[data-depth="1"] .tray__foot .fine {
-  font-size: calc(var(--fs-fine) / (0.975 * var(--shrink, 1)));
+  font-size: calc(var(--fs-fine) / (0.975 * var(--scale, 1)));
 }
 
 .tray__sheet[data-depth="2"] .tray__foot .fine {
-  font-size: calc(var(--fs-fine) / (0.95 * var(--shrink, 1)));
+  font-size: calc(var(--fs-fine) / (0.95 * var(--scale, 1)));
 }
 
 .tray__sheet[data-depth="3"] .tray__foot .fine {
-  font-size: calc(var(--fs-fine) / (0.925 * var(--shrink, 1)));
+  font-size: calc(var(--fs-fine) / (0.925 * var(--scale, 1)));
 }
 
 /* The rest of the stack: a button, its depth, that spreads every sheet out. */
@@ -861,5 +862,19 @@
   .tray__slot.is-target .tray__used-sticker-silhouette-ring {
     animation: none;
     opacity: 0.5;
+  }
+}
+
+/* On a large screen the sheets grow; the NEW dots stuck on them and a pulled-out sheet's X keep their
+   size, stuck on by the same hand as every other. The header row is taller, so the tray starts lower
+   (trayTop() in trayModel.ts reads the same query). */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .tray {
+    --tray-top: 80px;
+  }
+
+  .tray__new,
+  .tray__x {
+    scale: calc(1 / var(--scale, 1));
   }
 }

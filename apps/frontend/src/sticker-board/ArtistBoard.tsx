@@ -26,8 +26,10 @@ import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
+import { useLargeScreen } from "../ui/largeScreen";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { QuietLink } from "../ui/QuietLink";
+import { TabsLead } from "../ui/TabsLead";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
@@ -150,6 +152,8 @@ export function ArtistBoard({ person, onBack }: Props) {
   /** Their Sui address held up in the address dialog. */
   const [holdingAddress, setHoldingAddress] = useState(false);
   const size = useBoardSize(face, layout);
+  /** On a large screen Give stands at the tab strip's left end (ui/TabsLead.tsx). */
+  const large = useLargeScreen();
   /** Give's box on the board, which a sticker's toolbar keeps clear of. */
   const [give, setGive] = useState<Box | null>(null);
   const [turned, setTurned] = useState(false);
@@ -167,15 +171,16 @@ export function ArtistBoard({ person, onBack }: Props) {
     nameButton.current?.focus({ preventScroll: true });
   }, []);
 
+  // In the tabs' row Give is off the board, so the toolbar has no Give to keep clear of.
   useLayoutEffect(() => {
     const key = giveSlot.current;
     if (!key) return;
-    const measure = () => setGive((was) => kept(was, boxOf(key)));
+    const measure = () => setGive((was) => (large ? null : kept(was, boxOf(key))));
     const observer = new ResizeObserver(measure);
     observer.observe(key);
     measure();
     return () => observer.disconnect();
-  }, [size]);
+  }, [size, large]);
 
   // What's on their board in the layout this screen shows, bottom of the stack first.
   const stickers = useMemo(
@@ -295,9 +300,46 @@ export function ArtistBoard({ person, onBack }: Props) {
     since: stats.state === "ready" ? Date.parse(stats.data.since) : null,
   };
 
+  const backToExplore = (
+    <button
+      type="button"
+      className="explore-chip"
+      data-press
+      onClick={onBack}
+      aria-label={t(($) => $.stickerBoard.artistBoard.backToExplore)}
+    >
+      <CaretLeft size={14} />
+      {t(($) => $.stickerBoard.artistBoard.explore)}
+    </button>
+  );
+
+  // Give takes Draw's slot as the board's one key; on a large screen it stands in the tabs' row, where
+  // it can't turn away with the board, so it hides.
+  const giveKeyGroup = (
+    <span
+      ref={giveSlot}
+      className={`board-draw ${large && turned ? "is-away" : ""}`}
+      inert={large && turned}
+    >
+      <Key
+        size="compact"
+        tone="aqua"
+        icon={<GiveIcon />}
+        onClick={(e) => {
+          giveKey.current = e.currentTarget;
+          setSelected(null);
+          setGiving(true);
+        }}
+      >
+        {t(($) => $.stickerBoard.artistBoard.give)}
+      </Key>
+    </span>
+  );
+
   const front = (
     <div className="board visit" ref={face} data-resting={turned ? "" : undefined}>
-      {/* Their name, the Explore chip and Give come before the stickers, so Tab reaches them first. */}
+      {/* Their name, the Explore chip and Give come before the stickers, so Tab reaches them first. A
+          large screen has no chip: the Explore tab, lit while you visit, is the way back there. */}
       <button
         type="button"
         ref={nameButton}
@@ -311,32 +353,9 @@ export function ArtistBoard({ person, onBack }: Props) {
         <span className="board-who-name">{owner.name}</span>
         <CaretRight className="board-who-cue" size={14} weight="bold" aria-hidden />
       </button>
-      <button
-        type="button"
-        className="explore-chip"
-        data-press
-        onClick={onBack}
-        aria-label={t(($) => $.stickerBoard.artistBoard.backToExplore)}
-      >
-        <CaretLeft size={14} />
-        {t(($) => $.stickerBoard.artistBoard.explore)}
-      </button>
+      {layout === "phone" && backToExplore}
 
-      {/* Give takes Draw's slot as the board's one key. */}
-      <span ref={giveSlot} className="board-draw">
-        <Key
-          size="compact"
-          tone="aqua"
-          icon={<GiveIcon />}
-          onClick={(e) => {
-            giveKey.current = e.currentTarget;
-            setSelected(null);
-            setGiving(true);
-          }}
-        >
-          {t(($) => $.stickerBoard.artistBoard.give)}
-        </Key>
-      </span>
+      <TabsLead>{giveKeyGroup}</TabsLead>
 
       <div
         className="board-stage"

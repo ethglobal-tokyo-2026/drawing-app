@@ -4,40 +4,29 @@
  */
 import { EASE_OUT, EASE_PEEL } from "../../ui/easing";
 import { inertBesides } from "./inertBesides";
-import {
-  COL,
-  GMAX,
-  SHEET,
-  STACK_Y,
-  TOP,
-  ended,
-  px,
-  targetOf,
-  type Tray,
-  type TrayModel,
-} from "./trayModel";
+import { SHEET, trayTop, ended, px, targetOf, type Tray, type TrayModel } from "./trayModel";
 import type { TrayPresses } from "./trayPresses";
 import type { TraySheets } from "./traySheets";
 
 /** Where the spread lays each sheet down: a slight turn apiece. */
 const SPREAD_TURNS = [-1.2, 0.8, -0.5, 1.1, -0.9, 0.6, 1.3, -0.7];
 
-/** Where the spread lays out `n` sheets on a board this big. */
-function spreadCells(n: number, W: number, H: number) {
+/** Where the spread lays out `n` sheets on a board this big, whose tray grew by `grow`. */
+function spreadCells(n: number, W: number, H: number, grow: number) {
   const margin = 18;
   const gap = 14;
   const cols = n <= 1 ? 1 : n <= 2 ? 2 : n <= 6 ? 3 : 4;
   const rows = Math.ceil(n / cols);
   const k = Math.min(
-    n <= 2 ? 0.95 : 0.8,
+    (n <= 2 ? 0.95 : 0.8) * grow,
     (W - margin * 2 - gap * (cols - 1)) / cols / SHEET.w,
-    (H - TOP - 30 - (rows - 1) * 18) / (rows * SHEET.h),
+    (H - trayTop() - 30 - (rows - 1) * 18) / (rows * SHEET.h),
   );
   const cw = SHEET.w * k;
   const ch = SHEET.h * k;
   const totalH = rows * ch + (rows - 1) * 18;
   const left0 = (W - (cols * cw + (cols - 1) * gap)) / 2;
-  const top0 = Math.max(TOP - 6, (H - totalH) / 2);
+  const top0 = Math.max(trayTop() - 6, (H - totalH) / 2);
   return Array.from({ length: n }, (_, d) => ({
     x: left0 + (d % cols) * (cw + gap),
     y: top0 + Math.floor(d / cols) * (ch + 18),
@@ -55,7 +44,7 @@ export function createTraySpread(
   const { doc, board, reduced, listen, make, zip, stack, spreadLayer, mat, ui, Wb, Hb, colLeft } =
     tray;
   const { newIds, topF } = trayModel;
-  const { shrunkInset, sheetEl, sheetLabel, renderStack, holdsFocus, keepFocus, sayFront } =
+  const { stackHome, sheetEl, sheetLabel, renderStack, holdsFocus, keepFocus, sayFront } =
     traySheets;
   const { sendHome } = trayPresses;
   /**
@@ -65,11 +54,7 @@ export function createTraySpread(
   const spreadHasFocus = () => holdsFocus(spreadLayer) || doc.activeElement === doc.body;
 
   /* ---------------------------------------------------------------- the spread: the stack's depth button lays every sheet out */
-  const stackOnBoard = () => ({ x: colLeft() + ui.stackAt.x, y: TOP + ui.stackAt.y });
-  const stackOnBoardOpen = () => ({
-    x: colLeft() + (ui.geo ? ui.geo.chainX : COL - 15) - 0.97 * GMAX + 3 + 3 + shrunkInset(),
-    y: TOP + STACK_Y,
-  });
+  const stackOnBoard = () => ({ x: colLeft() + ui.stackAt.x, y: trayTop() + ui.stackAt.y });
   /** Undoes the inert board behind the open spread. */
   let endAside: (() => void) | null = null;
   function openSpread({ focus = false } = {}) {
@@ -81,7 +66,7 @@ export function createTraySpread(
     spreadLayer.hidden = false;
     spreadLayer.classList.add("is-on");
     const list = ui.order.length ? ui.order : [topF()];
-    const cells = spreadCells(list.length, Wb(), Hb());
+    const cells = spreadCells(list.length, Wb(), Hb(), ui.fit.grow);
     for (const c of spreadLayer.querySelectorAll(".tray__cell")) c.remove();
     const from = stackOnBoard();
     const news = newIds();
@@ -113,7 +98,7 @@ export function createTraySpread(
         c.animate(
           [
             {
-              transform: `translate(${px(from.x)},${px(from.y)}) rotate(0deg) scale(${ui.shrink})`,
+              transform: `translate(${px(from.x)},${px(from.y)}) rotate(0deg) scale(${ui.fit.scale})`,
             },
             { transform: c.style.transform },
           ],
@@ -139,7 +124,7 @@ export function createTraySpread(
     const cells = [...spreadLayer.querySelectorAll<HTMLElement>(".tray__cell")];
     const pick = cells.find((c) => Number(c.dataset.f) === f);
     zip.relax(1);
-    const home = stackOnBoardOpen();
+    const home = stackHome();
     if (!reduced()) {
       mat.animate([{ opacity: 1 }, { opacity: 0 }], {
         duration: 320,
@@ -152,7 +137,7 @@ export function createTraySpread(
             [
               { transform: c.style.transform, opacity: 1 },
               {
-                transform: `translate(${px(home.x)},${px(home.y)}) scale(${(0.92 * ui.shrink).toFixed(4)})`,
+                transform: `translate(${px(home.x)},${px(home.y)}) scale(${(0.92 * ui.fit.scale).toFixed(4)})`,
                 opacity: 0,
               },
             ],
@@ -164,11 +149,11 @@ export function createTraySpread(
             [
               { transform: pick.style.transform },
               {
-                transform: `translate(${px(home.x)},${px(home.y)}) rotate(-2deg) scale(${(1.03 * ui.shrink).toFixed(4)})`,
+                transform: `translate(${px(home.x)},${px(home.y)}) rotate(-2deg) scale(${(1.03 * ui.fit.scale).toFixed(4)})`,
                 offset: 0.78,
               },
               {
-                transform: `translate(${px(home.x)},${px(home.y)}) rotate(0deg) scale(${ui.shrink})`,
+                transform: `translate(${px(home.x)},${px(home.y)}) rotate(0deg) scale(${ui.fit.scale})`,
               },
             ],
             { duration: 440, easing: EASE_PEEL, fill: "forwards" },

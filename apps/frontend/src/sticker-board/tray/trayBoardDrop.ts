@@ -4,7 +4,7 @@
  */
 import { EASE_OUT, lerp } from "../../ui/easing";
 import {
-  TOP,
+  trayTop,
   ended,
   type BoardView,
   type Point,
@@ -71,7 +71,7 @@ export function createTrayBoardDrop(
       cancel(ui.shutTimer);
       drop = ui.drop = { id, wasOpen: zip.isOpen, view: boardView() };
     }
-    const nearEdge = pt.x > Wb() - 74 && pt.y > TOP - 20;
+    const nearEdge = pt.x > Wb() - 74 && pt.y > trayTop() - 20;
     if (!zip.isOpen) {
       if (nearEdge && !ui.dwell)
         ui.dwell = later(() => {
