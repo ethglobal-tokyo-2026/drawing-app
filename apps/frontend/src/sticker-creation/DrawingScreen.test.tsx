@@ -669,10 +669,6 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     expect(subjects()).toHaveLength(5);
     expect(dice()).toHaveLength(1);
     expect(stillDealt()).toBe(true);
-    // Above Begin, the task: one sticker with both subjects in it.
-    expect(document.querySelector(".drawing-screen")?.textContent).toContain(
-      strings.kyotoSeika.begin.task.en,
-    );
     tapSubjects(2);
     act(() => beginKey()?.click());
     await settle(1000);

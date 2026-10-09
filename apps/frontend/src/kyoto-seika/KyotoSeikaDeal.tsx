@@ -32,7 +32,7 @@ interface Props {
 
 /**
  * A fresh sheet's deal in Kyoto Seika Manga Expression Practice Mode: the five clouds between the
- * timer's label and the task over Begin, Begin at the sheet's foot, or why the subjects didn't load.
+ * timer's label, Begin at the sheet's foot, or why the subjects didn't load.
  */
 export function KyotoSeikaDeal({
   screen,
@@ -65,7 +65,6 @@ export function KyotoSeikaDeal({
       const scale = box.width / area.offsetWidth || 1;
       // The timer's label, which keeps the start note's room while off, since a touch brings it.
       const above = el.querySelector(".timer-hint-label") ?? el.querySelector(".drawing-top");
-      // Begin with the task line over it.
       const below = el.querySelector(".begin-key");
       if (!above || !below) return;
       setLayout(

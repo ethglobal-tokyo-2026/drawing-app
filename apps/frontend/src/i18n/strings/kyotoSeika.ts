@@ -30,8 +30,6 @@ export const kyotoSeika = {
     },
     /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the sunk yellow key's label and name until two of the five subjects are picked */
     pick: { en: "Pick 2", ja: "2つ選ぶ" },
-    /** Drawing screen, a sheet in Kyoto Seika Practice Mode before Begin: the quiet line between the subjects' clouds and Begin, saying what the test asks of the two picked */
-    task: { en: "Draw both in one sticker", ja: "2つの題材を1枚にかく" },
   },
   /** A die rolled again and again teases in manga hand lettering beside its balloon, and at last blows up. */
   tease: {

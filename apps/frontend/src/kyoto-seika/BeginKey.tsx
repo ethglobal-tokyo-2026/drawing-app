@@ -40,8 +40,6 @@ export function BeginKey({ ref, minutes, ready, onBegin }: Props) {
   );
   return (
     <div className="begin-key">
-      <p className="begin-key__task">{t(($) => $.kyotoSeika.begin.task)}</p>
-      {/* Only the key nudges; the line stays put. */}
       <div ref={holder}>
         <Key
           icon={<DrawIcon />}
