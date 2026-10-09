@@ -15,17 +15,18 @@ const startedBodySchema = z.object({
 });
 
 /**
- * The app on the fake Sui chain. `buyer` makes a person whose Privy Sui wallet the test holds the
- * key to, so it signs their payments as the app's wallet would.
+ * The app on the fake Sui chain, on a fresh database or the one at `databaseFile`. `buyer` makes a
+ * person whose Privy Sui wallet the test holds the key to, so it signs their payments as the app's
+ * wallet would.
  */
-export async function purchasesApp() {
+export async function purchasesApp(databaseFile?: string) {
   let chain: FakeSui | undefined;
   let wallets: ReturnType<typeof fakeSuiWallets> | undefined;
   const test = await createTestApp(({ db, clock }) => {
     chain = fakeSui(clock);
     wallets = fakeSuiWallets(db);
     return { sui: chain.sui, gasStation: chain.gasStation, suiWallets: wallets };
-  });
+  }, databaseFile);
   if (!chain || !wallets) throw new Error("createTestApp built no overrides");
   const { keyOf, without } = wallets;
   return { test, chain, buyer: () => insertUser(test.db), walletOf: keyOf, without };

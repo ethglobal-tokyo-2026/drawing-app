@@ -1,10 +1,9 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "@playwright/test";
+import { E2E_DATA_DIR, E2E_DATABASE } from "./e2e/dataDir.ts";
 import { phone } from "./e2e/phone.ts";
 import { E2E_API_PORT, E2E_APP_PORT } from "./e2e/ports.ts";
 
-// The suite's own database and sticker images, made fresh by each run; data/ is gitignored.
-const dataDir = fileURLToPath(new URL("../../data/e2e", import.meta.url));
 const appOrigin = `http://localhost:${E2E_APP_PORT}`;
 
 export default defineConfig({
@@ -34,14 +33,14 @@ export default defineConfig({
     {
       // The API as its dev script runs it, minus a developer's private .env, on a database and image
       // folder wiped first, with LIFF Mock's dev ID tokens trusted and nothing sent to Sui.
-      command: `rm -rf "${dataDir}" && mkdir -p "${dataDir}/images" && exec node --env-file=.env.example src/server.ts`,
+      command: `rm -rf "${E2E_DATA_DIR}" && mkdir -p "${E2E_DATA_DIR}/images" && exec node --env-file=.env.example src/server.ts`,
       cwd: fileURLToPath(new URL("../api", import.meta.url)),
       url: `http://127.0.0.1:${E2E_API_PORT}/api/me`,
       reuseExistingServer: false,
       env: {
         PORT: String(E2E_API_PORT),
-        DATABASE_URL: `${dataDir}/drawing-app.db`,
-        IMAGE_DIR: `${dataDir}/images`,
+        DATABASE_URL: E2E_DATABASE,
+        IMAGE_DIR: `${E2E_DATA_DIR}/images`,
         IMAGE_BASE_URL: `${appOrigin}/api/images`,
         DEV_SIGN_IN: "on",
         STICKER_CHAIN_MODE: "mock",

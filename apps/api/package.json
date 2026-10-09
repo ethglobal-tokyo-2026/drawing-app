@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     "./client": "./src/client.ts",
-    "./dev-sign-in": "./src/services/devSignIn.ts"
+    "./dev-sign-in": "./src/services/devSignIn.ts",
+    "./tickets": "./src/tickets/tickets.ts",
+    "./testing/purchases": "./src/tickets/testPurchases.ts"
   },
   "scripts": {
     "build": "node scripts/build.ts",

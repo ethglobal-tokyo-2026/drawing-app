@@ -1,3 +1,4 @@
+import { openDb } from "@drawing-app/db";
 import { createTestDb } from "@drawing-app/db/testing";
 import { serializeSigned } from "hono/utils/cookie";
 import { createApp } from "../app.ts";
@@ -32,12 +33,24 @@ interface SendOptions {
 }
 
 /**
- * The app on a fresh in-memory database, with fakes for external services. Tests override the
- * chain dependencies to exercise minting and escrow without submitting transactions, and pass a
- * function to build an override on the app's database and clock.
+ * The database at `path`, with its client: one a running server keeps migrated, such as the
+ * end-to-end suite's.
  */
-export async function createTestApp(overrides: Overrides | ((base: TestBase) => Overrides) = {}) {
-  const { db, sqlite } = await createTestDb();
+function fileDb(path: string) {
+  const db = openDb(path);
+  return { db, sqlite: db.$client };
+}
+
+/**
+ * The app on a fresh in-memory database, or on the database at `databaseFile`, with fakes for
+ * external services. Tests override the chain dependencies to exercise minting and escrow without
+ * submitting transactions, and pass a function to build an override on the app's database and clock.
+ */
+export async function createTestApp(
+  overrides: Overrides | ((base: TestBase) => Overrides) = {},
+  databaseFile?: string,
+) {
+  const { db, sqlite } = databaseFile === undefined ? await createTestDb() : fileDb(databaseFile);
   const clock = fakeClock();
   const images = fakeImageStore();
   const deps: AppDeps = {
