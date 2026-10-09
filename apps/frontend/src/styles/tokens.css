@@ -16,6 +16,7 @@
   --font-ui: "Croquis Sans", "Zen Kaku Gothic New", system-ui, sans-serif;
   --font-puffy: "Dela Gothic One", var(--font-ui);
   --r-label: 6px;
+  --r-paper: 4px; /* paper: the drawing sheet and the tray's loose sheets */
   --tilt: -4deg;
   --gutter: 12px;
   /* A large screen's edge margin, wider than the phone's gutter. */
