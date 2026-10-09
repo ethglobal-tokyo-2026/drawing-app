@@ -441,8 +441,14 @@
   }
 }
 
-/* Upright: one centered column under the sticker. */
+/* Upright: one centered column under the sticker. In a short window the sticker grows only as far as
+   leaves room under it for the top bar, pager, fine print with a line to spare, and Give, so Give
+   shows without a scroll. */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) and (orientation: portrait) {
+  .sticker-detail {
+    --figure: min(324px, 100dvh - env(safe-area-inset-top) - 360px);
+  }
+
   .sticker-detail__column {
     width: min(var(--column-w), 100%);
     margin-inline: auto;
