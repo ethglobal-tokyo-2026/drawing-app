@@ -1,11 +1,27 @@
-/* The 18+ mark, one for every place an NSFW sticker is flagged: Ink on Bonbon Pink, since a coded
-   field carries Ink, and never under the 11px floor. Where it sits, and any larger size, are its
-   place's own. */
+/* The 18+ mark, one for every place an NSFW sticker is flagged: Ink on a strip of pink foil, the
+   material an NSFW sticker wears, under a fine grating, since Bonbon Pink is gratitude's field. It
+   never goes under the 11px floor. Where it sits, and any larger size, are its place's own. */
 .nsfw-mark {
   display: inline-block;
   padding: 0.2em 0.55em;
   border-radius: 999px;
-  background: var(--pink);
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.3) 0,
+      rgba(255, 255, 255, 0) 0.7px,
+      rgba(255, 255, 255, 0) 2px
+    ),
+    linear-gradient(
+      115deg,
+      var(--foil-rose),
+      var(--foil-blush) 28%,
+      var(--foil-pearl) 46%,
+      var(--foil-candy) 64%,
+      var(--foil-orchid) 82%,
+      var(--foil-magenta)
+    );
+  box-shadow: inset 0 0 0 1px var(--ink);
   color: var(--ink);
   font: 800 11px / 1 var(--font-ui);
   letter-spacing: 0.04em;
