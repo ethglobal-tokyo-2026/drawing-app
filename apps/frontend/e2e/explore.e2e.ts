@@ -2,6 +2,7 @@ import { expect, type Page } from "@playwright/test";
 import { GAME_CONFIG } from "../src/gratitude/gameConfig.ts";
 import { strings } from "../src/i18n/strings/index.ts";
 import {
+  backToBoardOnceSent,
   giftClaimTokenFrom,
   giveFromBoard,
   handleOf,
@@ -10,7 +11,6 @@ import {
   playCombo,
   say,
   sealFromBoard,
-  sendInLineChat,
   signIn,
   startsWith,
   test,
@@ -88,9 +88,9 @@ test("This week: Bob's combo puts Alice on Most gratitude and him on Best combo,
 }) => {
   const aliceHandle = handleOf(await signIn(alice, "alice", language));
   const no = await sealFromBoard(alice, language);
-  await giveFromBoard(alice, language, no);
   const giftClaimToken = giftClaimTokenFrom(alice);
-  await sendInLineChat(alice, language, no);
+  await giveFromBoard(alice, language, no);
+  await backToBoardOnceSent(alice, language);
 
   const bobHandle = handleOf(await signIn(bob, "bob", language));
   await bob.goto(`/g/${await giftClaimToken}`);

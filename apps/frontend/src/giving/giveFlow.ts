@@ -37,12 +37,11 @@ interface PackingWait {
 }
 
 /**
- * Giving through a LINE chat, from the give sheet to "Closed and sent". `recordError` means
- * the step happened but the server couldn't record it; the gift may still read as packed.
+ * Giving through a LINE chat, from packing to "Closed and sent" or back out of the bag. `recordError`
+ * means the step happened but the server couldn't record it; the gift may still read as packed.
  */
 export type GiveFlowState =
-  | { step: "sheet" }
-  /** The bag animation has started while the sticker is prepared. */
+  /** The bag animation has started while the sticker is prepared. Giving opens on it. */
   | ({ step: "packed" } & PackingWait)
   /** Waiting for the sticker to be ready before opening LINE's picker. */
   | ({ step: "preparing" } & PackingWait)
@@ -57,8 +56,10 @@ export type GiveFlowState =
   /** LINE didn't say whether the gift message went out, so it isn't offered again. */
   | { step: "maybeSent"; confirming?: boolean }
   | { step: "failed"; error: Problem; recordError?: Problem }
-  /** The sticker lifts back out of the bag, then the give sheet returns. */
-  | { step: "takingOut" };
+  /** The sticker lifts back out of the bag. */
+  | { step: "takingOut" }
+  /** The sticker is back out of the bag, and Giving closes. */
+  | { step: "takenOut" };
 
 export interface GiveFlowOptions {
   sticker: GiftSticker;
@@ -75,8 +76,8 @@ export interface GiveFlowOptions {
 export interface GiveFlow {
   getState: () => GiveFlowState;
   subscribe: (listener: () => void) => () => void;
-  /** "Send in a LINE chat" on the give sheet. */
-  chooseLineChat: () => void;
+  /** Give: packs the sticker, then opens LINE's picker. Only the flow's first step. */
+  give: () => void;
   /** The Send in LINE key: LINE's picker, again. */
   sendInLine: () => void;
   /** "It went out", when LINE didn't say or is late: the giver says the gift message was sent. */
@@ -139,7 +140,7 @@ export function createGiveFlow({
 }: GiveFlowOptions): GiveFlow {
   const which = formatNo(sticker.no);
   const listeners = new Set<() => void>();
-  let state: GiveFlowState = { step: "sheet" };
+  let state: GiveFlowState = { step: "packed" };
   let attempt: Attempt | null = null;
   /** The picker the flow waits on, until LINE answers or the flow stops waiting. */
   let waiting: { a: Attempt; giftId: string } | null = null;
@@ -358,8 +359,8 @@ export function createGiveFlow({
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    chooseLineChat: () => {
-      if (disposed || state.step !== "sheet") return;
+    give: () => {
+      if (disposed || attempt || state.step !== "packed") return;
       const a = startAttempt();
       set(packingState("packed"));
       void packedGift(a);
@@ -429,7 +430,7 @@ export function createGiveFlow({
           }
         }
         attempt = null;
-        after(takeOutMs, () => set({ step: "sheet" }));
+        after(takeOutMs, () => set({ step: "takenOut" }));
       })();
     },
     pageShown: () => {

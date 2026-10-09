@@ -2,6 +2,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { PULL } from "../src/receiving/pullTab.ts";
 import {
+  backToBoardOnceSent,
   boardSticker,
   giftClaimTokenFrom,
   giftFrom,
@@ -13,7 +14,6 @@ import {
   pullTabIn,
   say,
   sealFromBoard,
-  sendInLineChat,
   signIn,
   test,
 } from "./helpers.ts";
@@ -63,21 +63,21 @@ const atTheLead = (page: Page) =>
 test.describe("On an iPad", () => {
   test.use(ipad);
 
-  test("Give from your board is one card in the middle, the sticker at its head, and its X closes it", async ({
+  test("Giving from your board is one card in the middle, the sticker at its head, and once it's sent its X closes it", async ({
     page,
   }) => {
     const no = await signInWithASticker(page, "giver");
     await giveFromBoard(page, language, no);
-    const card = page.getByRole("dialog", { name: say(giving.give, language, { no }) });
+    const label = say(giving.sent.title, language);
+    const card = page.getByRole("dialog", { name: label });
     await expectCardInTheMiddle(page, card);
-    const sticker = await restingBox(page.locator(".giving__figure"));
+    const sticker = await restingBox(page.locator(".giving__given-sticker-silhouette"));
     const cardBox = await restingBox(card);
     expect(sticker.y + sticker.height).toBeLessThanOrEqual(cardBox.y);
     // The sticker, its fine print and the card stand in the middle as one group.
     const group = await restingBox(page.locator(".giving__sticker"));
     const view = page.viewportSize()?.height ?? 0;
     expect(Math.abs((group.y + cardBox.y + cardBox.height) / 2 - view / 2)).toBeLessThanOrEqual(2);
-    const label = say(giving.give, language, { no });
     await card
       .getByRole("button", { name: say(ui.sheet.close, language, { label }), exact: true })
       .tap();
@@ -126,9 +126,9 @@ test.describe("On an iPad", () => {
     }) => {
       const giver = handleOf(await signIn(friend, "giver", language));
       const no = await sealFromBoard(friend, language);
-      await giveFromBoard(friend, language, no);
       const giftClaimToken = giftClaimTokenFrom(friend);
-      await sendInLineChat(friend, language, no);
+      await giveFromBoard(friend, language, no);
+      await backToBoardOnceSent(friend, language);
       await page.setViewportSize(viewport);
       await signIn(page, "receiver", language);
       await page.goto(`/g/${await giftClaimToken}`);
@@ -172,7 +172,7 @@ test("a sent gift's detail says it's on its way, and Take it out asks before it 
   const no = await signInWithASticker(page, "giver");
   const other = await sealFromBoard(page, language);
   await giveFromBoard(page, language, no);
-  await sendInLineChat(page, language, no);
+  await backToBoardOnceSent(page, language);
   await (
     await openDetail(page, language, other)
   )
@@ -200,7 +200,7 @@ test("a sent gift's detail says it's on its way, and Take it out asks before it 
 test("a sheet over the tabs pads the home indicator", async ({ page }) => {
   const no = await signInWithASticker(page, "giver");
   await giveFromBoard(page, language, no);
-  const sheet = page.getByRole("dialog", { name: say(giving.give, language, { no }) });
+  const sheet = page.getByRole("dialog", { name: say(giving.sent.title, language) });
   const footPadding = () => sheet.evaluate((el) => parseFloat(getComputedStyle(el).paddingBottom));
   const unpadded = await footPadding();
   await page.evaluate(

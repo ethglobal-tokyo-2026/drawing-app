@@ -32,7 +32,7 @@ export function CantFindThemHead({
   );
 }
 
-/** "Can’t find them?", in the give sheet's place: for a friend LINE's picker leaves out. */
+/** "Can’t find them?", in Not sent yet's place: for a friend LINE's picker leaves out. */
 export function CantFindThem() {
   const { t } = useTranslation();
   /** LINE's own words for why its Add friends screen didn't open. */

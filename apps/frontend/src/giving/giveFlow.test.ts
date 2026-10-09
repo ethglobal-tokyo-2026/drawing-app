@@ -119,7 +119,7 @@ const wait = (ms = 0) => vi.advanceTimersByTimeAsync(ms);
 
 /** Packs the sticker and waits until LINE's picker is open. */
 async function openPicker(t: ReturnType<typeof setup>) {
-  t.flow.chooseLineChat();
+  t.flow.give();
   await wait(PICKER_DELAY);
   expect(t.step()).toBe("picking");
 }
@@ -134,7 +134,7 @@ afterEach(() => {
 describe("giving through a LINE chat", () => {
   it("packs the sticker, then opens LINE's picker on its own", async () => {
     const t = setup();
-    t.flow.chooseLineChat();
+    t.flow.give();
     await wait(PICKER_DELAY - 1);
     expect(t.step()).toBe("packed");
     expect(t.gifts()).toEqual(["packed"]);
@@ -162,12 +162,12 @@ describe("giving through a LINE chat", () => {
     const packing = new Deferred<Awaited<ReturnType<GiftBackend["pack"]>>>();
     const pack = vi.fn(() => packing.promise);
     const t = setup({ backend: { ...server.backend, pack } });
-    t.flow.chooseLineChat();
+    t.flow.give();
     await wait(PICKER_DELAY);
     expect(t.step()).toBe("preparing");
     expect(t.messages).toHaveLength(0);
 
-    t.flow.chooseLineChat();
+    t.flow.give();
     t.flow.sendInLine();
     expect(pack).toHaveBeenCalledTimes(1);
     expect(t.step()).toBe("preparing");
@@ -186,7 +186,7 @@ describe("giving through a LINE chat", () => {
     const server = fakeBackend();
     const packing = new Deferred<Awaited<ReturnType<GiftBackend["pack"]>>>();
     const t = setup({ backend: { ...server.backend, pack: () => packing.promise } });
-    t.flow.chooseLineChat();
+    t.flow.give();
     await wait(PICKER_DELAY);
     expect(t.step()).toBe("preparing");
 
@@ -196,7 +196,7 @@ describe("giving through a LINE chat", () => {
 
     packing.resolve(await server.backend.pack(STICKER));
     await wait(TAKE_OUT);
-    expect(t.step()).toBe("sheet");
+    expect(t.step()).toBe("takenOut");
     expect(t.messages).toHaveLength(0);
     expect(server.states()).toEqual(["taken_out"]);
   });
@@ -214,7 +214,7 @@ describe("giving through a LINE chat", () => {
         },
       },
     });
-    t.flow.chooseLineChat();
+    t.flow.give();
     heard("moving");
     await wait(PICKER_DELAY);
     expect(t.state()).toEqual({ step: "preparing", wait: "moving" });
@@ -256,7 +256,7 @@ describe("giving through a LINE chat", () => {
       new GiftTransferError("no_link", "No.0147 is in a gift the server gave no link for"),
     );
     const t = setup({ backend: { ...server.backend, pack: () => Promise.reject(noLink) } });
-    t.flow.chooseLineChat();
+    t.flow.give();
     await wait(PICKER_DELAY);
     expect(t.failure().message).toMatch(
       /^No\.0147 couldn’t be packed: This gift came without a link to send\./,
@@ -281,7 +281,7 @@ describe("giving through a LINE chat", () => {
 
   it("opens the picker once, at once, when Send in LINE beats the timer", async () => {
     const t = setup();
-    t.flow.chooseLineChat();
+    t.flow.give();
     t.flow.sendInLine();
     await wait();
     expect(t.messages).toHaveLength(1);
@@ -294,13 +294,13 @@ describe("giving through a LINE chat", () => {
 
   it("takes the sticker out before the picker opens, and never opens it", async () => {
     const t = setup();
-    t.flow.chooseLineChat();
+    t.flow.give();
     await wait(PICKER_DELAY / 2);
     t.flow.takeOut();
     expect(t.step()).toBe("takingOut");
 
     await wait(TAKE_OUT);
-    expect(t.step()).toBe("sheet");
+    expect(t.step()).toBe("takenOut");
     await wait(PICKER_DELAY * 2);
     expect(t.messages).toHaveLength(0);
     expect(t.gifts()).toEqual(["taken_out"]);
@@ -319,13 +319,13 @@ describe("giving through a LINE chat", () => {
         takeOut,
       },
     });
-    t.flow.chooseLineChat();
+    t.flow.give();
     await wait(PICKER_DELAY * 2);
     expect(t.failure().message).toContain(errors.not_minted.en);
     expect(t.messages).toHaveLength(0);
     t.flow.takeOut();
     await wait(TAKE_OUT);
-    expect(t.step()).toBe("sheet");
+    expect(t.step()).toBe("takenOut");
     expect(takeOut).not.toHaveBeenCalled();
   });
 
@@ -342,7 +342,7 @@ describe("giving through a LINE chat", () => {
       .fn(server.backend.takeOut)
       .mockRejectedValueOnce(new Error("Take-out is still pending"));
     const t = setup({ backend: { ...server.backend, pack, takeOut } });
-    t.flow.chooseLineChat();
+    t.flow.give();
     await wait(PICKER_DELAY);
     expect(t.failure().message).toContain(errors.deposit_not_landed.en);
 
@@ -351,7 +351,7 @@ describe("giving through a LINE chat", () => {
     expect(t.failure().detail).toContain("Take-out is still pending");
     t.flow.takeOut();
     await wait(TAKE_OUT);
-    expect(t.step()).toBe("sheet");
+    expect(t.step()).toBe("takenOut");
     expect(server.states()).toEqual(["taken_out"]);
     expect(takeOut).toHaveBeenCalledTimes(2);
     expect(pack).toHaveBeenCalledTimes(1);
@@ -364,7 +364,7 @@ describe("giving through a LINE chat", () => {
       .fn(server.backend.takeOut)
       .mockRejectedValueOnce(new Error("Gas sponsorship failed"));
     const t = setup({ backend: { ...server.backend, takeOut } });
-    t.flow.chooseLineChat();
+    t.flow.give();
     await wait();
     t.flow.takeOut();
     await wait(TAKE_OUT);
@@ -372,7 +372,7 @@ describe("giving through a LINE chat", () => {
     expect(server.states()).toEqual(["packed"]);
     t.flow.takeOut();
     await wait(TAKE_OUT);
-    expect(t.step()).toBe("sheet");
+    expect(t.step()).toBe("takenOut");
     expect(server.states()).toEqual(["taken_out"]);
   });
 
@@ -413,7 +413,7 @@ describe("giving through a LINE chat", () => {
 
   it("leaves the sticker in the bag when the flow closes before the picker opens", async () => {
     const t = setup();
-    t.flow.chooseLineChat();
+    t.flow.give();
     t.flow.dispose();
     await wait(PICKER_DELAY * 2);
     expect(t.messages).toHaveLength(0);
@@ -437,7 +437,7 @@ describe("giving through a LINE chat", () => {
     const t = setup({
       backend: { ...server.backend, pack: () => packing.promise, takeOut },
     });
-    t.flow.chooseLineChat();
+    t.flow.give();
     await wait(PICKER_DELAY);
     expect(t.step()).toBe("preparing");
     t.flow.dispose();
@@ -459,7 +459,7 @@ describe("giving through a LINE chat", () => {
     expect(t.messages).toHaveLength(1);
     t.flow.takeOut();
     await wait(TAKE_OUT);
-    expect(t.step()).toBe("sheet");
+    expect(t.step()).toBe("takenOut");
   });
 
   it("counts LINE's answer as late only while the page is in view, and still hears it after", async () => {
@@ -479,7 +479,7 @@ describe("giving through a LINE chat", () => {
 
   it("counts nothing late while the page is hidden as LINE's picker is asked for", async () => {
     const t = setup();
-    t.flow.chooseLineChat();
+    t.flow.give();
     t.flow.pageHidden();
     await wait(PICKER_DELAY + PICKER_OPENING_MS);
     expect(t.state()).toEqual({ step: "picking" });
@@ -490,7 +490,7 @@ describe("giving through a LINE chat", () => {
 
   it.each([
     ["It went out", (flow: GiveFlow) => flow.itWentOut(), "sent", "sent"],
-    ["Take it out", (flow: GiveFlow) => flow.takeOut(), "sheet", "taken_out"],
+    ["Take it out", (flow: GiveFlow) => flow.takeOut(), "takenOut", "taken_out"],
   ] as const)(
     "lets the giver leave with %s once LINE's answer is late, even where the picker never hides the page",
     async (_, leave, step, gift) => {
@@ -550,7 +550,7 @@ describe("giving through a LINE chat", () => {
           pack: () => Promise.reject(new GiftMessageOutError("gift-1", outcome)),
         },
       });
-      t.flow.chooseLineChat();
+      t.flow.give();
       await wait(PICKER_DELAY);
       expect(t.step()).toBe(step);
       expect(t.messages).toHaveLength(0);
@@ -567,7 +567,7 @@ describe("giving through a LINE chat", () => {
       const t = setup({
         backend: { ...server.backend, pack: () => packing.promise, takeOut, markSent },
       });
-      t.flow.chooseLineChat();
+      t.flow.give();
       await wait(PREPARING_SLOW_MS);
       t.flow.takeOut();
       expect(t.step()).toBe("takingOut");
@@ -590,13 +590,13 @@ describe("giving through a LINE chat", () => {
         takeOut,
       },
     });
-    t.flow.chooseLineChat();
+    t.flow.give();
     await wait(PICKER_DELAY);
     expect(t.step()).toBe("maybeSent");
 
     t.flow.takeOut();
     await wait(TAKE_OUT);
-    expect(t.step()).toBe("sheet");
+    expect(t.step()).toBe("takenOut");
     expect(takeOut).toHaveBeenCalledExactlyOnceWith("gift-1");
   });
 
@@ -608,7 +608,7 @@ describe("giving through a LINE chat", () => {
       await server.backend.takeOut(giftId);
     });
     const t = setup({ backend: { ...server.backend, takeOut } });
-    t.flow.chooseLineChat();
+    t.flow.give();
     await wait();
     t.flow.takeOut();
     await wait();

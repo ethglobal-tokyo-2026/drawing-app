@@ -2,6 +2,7 @@ import { expect, type Page } from "@playwright/test";
 import { GAME_CONFIG } from "../src/gratitude/gameConfig.ts";
 import { strings } from "../src/i18n/strings/index.ts";
 import {
+  backToBoardOnceSent,
   flipToStatBoard,
   giftClaimTokenFrom,
   giveFromBoard,
@@ -11,7 +12,6 @@ import {
   receivedRow,
   say,
   sealFromBoard,
-  sendInLineChat,
   signIn,
   test,
   unpackageAndAccept,
@@ -36,9 +36,9 @@ test("Gratitude: Bob plays a combo for Alice's gift, its receipt says sent, and 
 }) => {
   const aliceHandle = handleOf(await signIn(alice, "alice", language));
   const no = await sealFromBoard(alice, language);
-  await giveFromBoard(alice, language, no);
   const giftClaimToken = giftClaimTokenFrom(alice);
-  await sendInLineChat(alice, language, no);
+  await giveFromBoard(alice, language, no);
+  await backToBoardOnceSent(alice, language);
 
   // Alice looks at her stat board while her gift is on its way, then turns back to her stickers. The
   // board stays mounted, so the later turn has to load her User Stats again to show the gratitude.

@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import {
+  backToBoardOnceSent,
   boardSticker,
   giftClaimTokenFrom,
   giveFromBoard,
@@ -11,7 +12,6 @@ import {
   receivedRow,
   say,
   sealFromBoard,
-  sendInLineChat,
   signIn,
   test,
   unpackageAndAccept,
@@ -26,9 +26,9 @@ test("Gift link: Alice gives from her board, and Bob opens the Gift Message's li
 }) => {
   const aliceHandle = handleOf(await signIn(alice, "alice", language));
   const no = await sealFromBoard(alice, language);
-  await giveFromBoard(alice, language, no);
   const giftClaimToken = giftClaimTokenFrom(alice);
-  await sendInLineChat(alice, language, no);
+  await giveFromBoard(alice, language, no);
+  await backToBoardOnceSent(alice, language);
 
   // Sent, it leaves Alice's board; its detail says it's on its way.
   await expect(boardSticker(alice, language, no)).toHaveCount(0);
@@ -81,7 +81,7 @@ test("In-app gift: Alice gives from Give on Bob's board, and Bob receives it the
   });
   await giveSheet.getByRole("radio", { name: no }).click();
   await giveSheet.getByRole("button", { name: say(giving.give, language, { no }) }).click();
-  await sendInLineChat(alice, language, no);
+  await backToBoardOnceSent(alice, language);
   await expect(giveSheet).toBeHidden();
 
   // The gift waits on Bob's board, from Alice, and opens from there.
@@ -110,7 +110,7 @@ test("Mark 18+ is the Original Artist's: Alice is offered it, and Bob, who recei
   await hers
     .getByRole("button", { name: say(stickerBoard.detail.give, language), exact: true })
     .click();
-  await sendInLineChat(alice, language, no);
+  await backToBoardOnceSent(alice, language);
 
   await signIn(bob, "bob", language);
   await bob.goto(`/g/${await giftClaimToken}`);

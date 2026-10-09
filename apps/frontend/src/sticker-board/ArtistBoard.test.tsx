@@ -210,12 +210,16 @@ describe("ArtistBoard's Give key", () => {
     return key;
   }
 
-  /** Picks your sticker on the give sheet and gives it, which swaps the give sheet for Giving. */
+  /**
+   * Picks your sticker on the give sheet and gives it, which swaps the give sheet for Giving; then,
+   * short of the long-wait notice and past the bag's beat, LINE's picker has opened and answered.
+   */
   async function giveYourSticker() {
     tap(".sticker-picker button");
     tap(".giving__acts .key");
     await act(() => vi.dynamicImportSettled());
     expect(document.querySelector(".giving")).not.toBeNull();
+    await act(() => vi.advanceTimersByTimeAsync(PREPARING_SLOW_MS - 1));
   }
 
   it("gets focus back when the give sheet closes", async () => {
@@ -226,6 +230,7 @@ describe("ArtistBoard's Give key", () => {
   });
 
   it("gets focus back after backing out of the gift bag to the give sheet, and closing that", async () => {
+    line.send.mockResolvedValue("cancelled");
     const give = await tapGive();
     await giveYourSticker();
     tap(".perf");
@@ -238,9 +243,6 @@ describe("ArtistBoard's Give key", () => {
   it("gets focus back once the gift is sent and Giving closes", async () => {
     const give = await tapGive();
     await giveYourSticker();
-    tap(".giving__acts .key");
-    // Short of the long-wait notice, past the bag's beat: LINE's picker has opened and answered.
-    await act(() => vi.advanceTimersByTimeAsync(PREPARING_SLOW_MS - 1));
     tap(".giving__sent .label-btn");
     expect(document.querySelector(".giving")).toBeNull();
     expect(document.activeElement).toBe(give);
