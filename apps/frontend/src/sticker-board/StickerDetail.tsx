@@ -516,7 +516,11 @@ export function StickerDetail({
         ))}
       </nav>
 
-      <div className="sticker-detail__main">
+      {/* The sticker's shape, which the column beside it reads to line up with its top edge. */}
+      <div
+        className="sticker-detail__main"
+        style={sticker ? { "--ar": (sticker.width / sticker.height).toFixed(4) } : undefined}
+      >
         {sticker ? (
           <>
             {/* The sticker and its pager, and the column about it: on a phone two plain blocks in

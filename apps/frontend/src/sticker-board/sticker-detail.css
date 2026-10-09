@@ -3,13 +3,19 @@
 
 .sticker-detail {
   /* The sticker's box: a phone's, grown on a large screen. */
-  --figure: 216px;
+  --figure-phone: 216px;
+  --figure: var(--figure-phone);
+  /* The strip's width, the top bar's height, and the pager's with the gap over it, which a large
+     screen's sticker is sized around. */
+  --strip-w: 62px;
+  --top-h: 54px;
+  --pager-h: 38px;
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);
   display: grid;
-  grid-template-columns: 62px minmax(0, 1fr);
-  grid-template-rows: 54px minmax(0, 1fr);
+  grid-template-columns: var(--strip-w) minmax(0, 1fr);
+  grid-template-rows: var(--top-h) minmax(0, 1fr);
   padding-top: env(safe-area-inset-top);
   overflow: hidden;
   background: var(--liner);
@@ -148,7 +154,7 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  height: 36px;
+  height: calc(var(--pager-h) - 2px);
   margin-top: 2px;
 }
 
@@ -436,20 +442,21 @@
 
 /* ---------- Large screens ---------- */
 
-/* The sticker grows up to 1.5×, and what's about it keeps a phone's width: never across the room. */
+/* The sticker takes the room, never less than a phone's; what's about it keeps a phone's width: never
+   across the room. Sizes are in viewport units, since a percentage would resolve against whichever
+   box reads --figure. */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
   .sticker-detail {
-    --figure: 324px;
     --column-w: 390px;
   }
 }
 
-/* Upright: one centered column under the sticker. In a short window the sticker grows only as far as
-   leaves room under it for the top bar, pager, fine print with a line to spare, and Give, so Give
-   shows without a scroll. */
+/* Upright: one centered column under the sticker, which takes most of the width. In a short window
+   it grows only as far as leaves room under it for the top bar, pager, fine print with a line to
+   spare, and Give, so Give shows without a scroll. */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) and (orientation: portrait) {
   .sticker-detail {
-    --figure: min(324px, 100dvh - env(safe-area-inset-top) - 360px);
+    --figure: min(70vw, 100dvh - env(safe-area-inset-top) - 360px);
   }
 
   .sticker-detail__column {
@@ -458,14 +465,27 @@
   }
 }
 
-/* Wider than tall: the sticker, its carets and its timelapse centered on the left; the column beside
-   it scrolls on its own, so a trail opened or a replay played never scrolls the sticker away. */
+/* Wider than tall: the sticker, its carets and its timelapse centered on the left, filling the room
+   beside the column less a margin of liner; the column scrolls on its own, so a trail opened or a
+   replay played never scrolls the sticker away. */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) and (orientation: landscape) {
+  .sticker-detail {
+    /* The main's room: inside its padding across, which the column takes up to half of, and under
+       the top bar down. */
+    --main-w: calc(100vw - var(--strip-w) - 18px - var(--gutter-large));
+    --main-h: calc(100dvh - env(safe-area-inset-top) - var(--top-h));
+    --room-w: calc(
+      var(--main-w) - min(var(--column-w), var(--main-w) / 2) - 2 * var(--gutter-large) - 48px
+    );
+    --room-h: calc(var(--main-h) - 24px - var(--pager-h) - 64px);
+    --figure: max(var(--figure-phone), min(var(--room-w), var(--room-h)));
+  }
+
   .sticker-detail__main {
     display: grid;
     grid-template-columns: minmax(0, 1fr) min(var(--column-w), 50%);
     grid-template-rows: minmax(0, 1fr);
-    column-gap: var(--gutter-large);
+    column-gap: calc(2 * var(--gutter-large));
     padding: 0 var(--gutter-large) 0 18px;
     overflow: hidden;
   }
@@ -474,8 +494,11 @@
     align-self: center;
   }
 
+  /* Its first line level with the sticker's top edge: the pane sits centered, and the sticker, as tall
+     as its --ar makes it, centered in its stage. */
   .sticker-detail__column {
     min-height: 0;
+    padding-top: calc((var(--main-h) - var(--pager-h) - var(--figure) * min(1, 1 / var(--ar))) / 2);
     padding-bottom: 44px;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -484,6 +507,10 @@
 
   .sticker-detail__column::-webkit-scrollbar {
     display: none;
+  }
+
+  .sticker-detail__meta {
+    margin-top: 0;
   }
 }
 
