@@ -21,6 +21,8 @@ export const app = {
     myBoard: { en: "My board", ja: "マイボード" },
     /** Tab bar at the bottom of every screen: the tab for Explore, where you find other people's stickers and boards */
     explore: { en: "Explore", ja: "さがす" },
+    /** Tab bar on a large screen, while someone else's sticker board is open over Explore: screen readers' name for the lit Explore tab, which goes back to Explore */
+    backToExplore: { en: "Back to Explore", ja: "さがすに戻る" },
     /** Tab bar at the bottom of every screen: the tab for the Shop, where tickets are bought */
     shop: { en: "Shop", ja: "ショップ" },
     /** Drawing screen, which tucks the tab bar away: screen-reader label of the grabber at the bottom that brings the tabs back */

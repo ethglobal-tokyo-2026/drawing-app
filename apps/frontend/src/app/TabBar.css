@@ -270,3 +270,54 @@
     animation: none;
   }
 }
+
+/* ---------- Large screens: a board's key leads the tab row ---------- */
+
+/* On a phone a board's key stands on the board, so the row keeps no room for it. */
+.tabs-lead {
+  display: none;
+}
+
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  /* Two ends: the board's key at the left, the tabs at the right, where they stay on every screen, so
+     they never shift as you change tabs. The tabs stay about a phone's width, never outweighing the
+     key. */
+  .tabs {
+    justify-content: flex-end;
+    padding-left: calc(var(--gutter-large) + var(--tabs-lead-w) + var(--gutter));
+    padding-right: var(--gutter-large);
+  }
+
+  .tab {
+    max-width: 144px;
+  }
+
+  /* Quieter: a tab you're not on loses its outline, so the row that's always in view stays light and
+     the board's key stands out. Pressed, it still sinks; the current tab is as on a phone. */
+  .tab:not([aria-current="page"]),
+  .tab:not([aria-current="page"]):hover {
+    box-shadow: none;
+  }
+
+  .tab[data-press-state="down"]:not([aria-current="page"]) {
+    box-shadow: inset 0 2px 3px rgba(28, 24, 36, 0.16);
+  }
+
+  /* The compact key's 48px face centers on the tabs, its 6px lip below their foot. It stacks over the
+     screens, since a key's nudge and tickets reach up past the strip, and under the sheets that cover
+     the whole phone. */
+  .tabs-lead {
+    position: absolute;
+    z-index: calc(var(--z-sheet) - 1);
+    left: var(--gutter-large);
+    bottom: calc(var(--tabs-pad-foot) + var(--tab-h) / 2 - 24px - 6px);
+    display: flex;
+  }
+}
+
+/* Under 640px wide a third leaves マイボード too little room, as on a phone under 390px. */
+@media (min-width: 600px) and (max-width: 639px) and (min-height: 600px) and (any-pointer: coarse) {
+  .tab {
+    gap: 4px;
+  }
+}

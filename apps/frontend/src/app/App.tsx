@@ -256,7 +256,12 @@ export default function App() {
         )}
         {view === "shop" && <ShopScreen onBuyReserveTickets={() => setCheckingOut(true)} />}
       </div>
-      <TabBar active={drawing ? undefined : view} tucked={drawing} onChange={changeTab} />
+      <TabBar
+        active={drawing ? undefined : view}
+        tucked={drawing}
+        visiting={visiting !== undefined}
+        onChange={changeTab}
+      />
       {checkingOut && view === "shop" && (
         <ReserveTicketCheckout
           onDraw={() => {

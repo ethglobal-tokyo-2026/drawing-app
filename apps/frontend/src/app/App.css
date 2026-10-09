@@ -11,23 +11,26 @@
 }
 
 /* On a desktop with a mouse, show it inside a phone frame: the phone's own 390px viewport in a
-   bezel, whose outer corner is the screen's radius plus the bezel. */
+   bezel, whose outer corner is the screen's radius plus the bezel. A touch screen, an iPad with a
+   trackpad included, keeps the whole screen for the large layout (ui/largeScreen.ts). */
 @media (hover: hover) and (pointer: fine) and (min-width: 500px) {
-  #root {
-    display: grid;
-    place-items: center;
-    background: var(--liner-deep);
-  }
-  .phone {
-    position: relative;
-    inset: auto;
-    width: calc(var(--ph-w) + 2 * var(--ph-bezel));
-    height: min(calc(var(--ph-h) + 2 * var(--ph-bezel)), calc(100dvh - 48px));
-    padding-top: 14px;
-    border: var(--ph-bezel) solid var(--ink);
-    border-radius: calc(var(--ph-radius) + var(--ph-bezel));
-    overflow: hidden;
-    box-shadow: var(--shadow-device);
+  @media not all and (any-pointer: coarse) {
+    #root {
+      display: grid;
+      place-items: center;
+      background: var(--liner-deep);
+    }
+    .phone {
+      position: relative;
+      inset: auto;
+      width: calc(var(--ph-w) + 2 * var(--ph-bezel));
+      height: min(calc(var(--ph-h) + 2 * var(--ph-bezel)), calc(100dvh - 48px));
+      padding-top: 14px;
+      border: var(--ph-bezel) solid var(--ink);
+      border-radius: calc(var(--ph-radius) + var(--ph-bezel));
+      overflow: hidden;
+      box-shadow: var(--shadow-device);
+    }
   }
 }
 
@@ -114,6 +117,19 @@
 @media (prefers-reduced-motion: reduce) {
   .phone:has(.out-of-tickets--over-board) .tabs::after {
     animation-duration: 1ms;
+  }
+}
+
+/* On a large screen the board's key in the tab row drops under the strip's scrim meanwhile, so it
+   dims with the strip and a tap on it closes the card; its nudge, which reaches up over the board,
+   goes. The scrim's z-index, earlier in the page, so the scrim paints over it, above the strip's paper. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .phone:has(.out-of-tickets--over-board) .tabs-lead {
+    z-index: 1;
+  }
+
+  .phone:has(.out-of-tickets--over-board) .tabs-lead .board-nudge {
+    visibility: hidden;
   }
 }
 

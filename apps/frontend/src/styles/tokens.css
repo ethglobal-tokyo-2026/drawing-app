@@ -18,6 +18,8 @@
   --r-label: 6px;
   --tilt: -4deg;
   --gutter: 12px;
+  /* A large screen's edge margin, wider than the phone's gutter. */
+  --gutter-large: 20px;
   --ease-peel: cubic-bezier(0.2, 0.7, 0.2, 1);
   --t-peel: 280ms;
   --t-stick: 220ms;
@@ -98,6 +100,9 @@
   --tabs-pad-top: 10px;
   --tabs-pad-foot: max(12px, env(safe-area-inset-bottom));
   --tabs-strip: calc(var(--tabs-pad-top) + var(--tab-h) + var(--tabs-pad-foot));
+  /* On a large screen the strip's left end holds a board's key: Draw with its widest tickets tucked
+     behind. */
+  --tabs-lead-w: 228px;
 
   /* Layers inside a phone */
   --z-screen: 1;
@@ -117,6 +122,14 @@
     --t-pop: 1ms;
     --t-tidy: 1ms;
     --t-turn: 1ms;
+  }
+}
+
+/* On a large screen a board's key shares the strip with the tabs, so the strip takes a little more
+   paper above them. */
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  :root {
+    --tabs-pad-top: 14px;
   }
 }
 

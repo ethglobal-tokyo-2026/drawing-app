@@ -1,8 +1,10 @@
 // @vitest-environment happy-dom
-import { act } from "react";
+import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18next } from "../i18n/i18n";
+import { TabsLead } from "../ui/TabsLead";
+import { onLargeScreen } from "../ui/testing";
 import { IDLE_MS, TabBar } from "./TabBar";
 
 declare global {
@@ -37,6 +39,42 @@ describe("TabBar", () => {
     expect(host.querySelector(".tab-grabber")?.getAttribute("aria-label")).toBe(
       "マイボード・さがす・ショップのタブを出す",
     );
+  });
+});
+
+describe("TabBar's lead on a large screen", () => {
+  /** A board's key, which counts its mounts. */
+  function BoardKey({ onMount }: { onMount: () => void }) {
+    useEffect(onMount, [onMount]);
+    return (
+      <button type="button" className="board-key">
+        Draw
+      </button>
+    );
+  }
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it("mounts a board's key once, in the tab row's lead, and hands it back to the board on a phone", () => {
+    const large = onLargeScreen();
+    const onMount = vi.fn();
+    // As App renders the screen before the tabs.
+    act(() =>
+      root.render(
+        <>
+          <TabsLead>
+            <BoardKey onMount={onMount} />
+          </TabsLead>
+          <TabBar tucked={false} onChange={() => {}} />
+        </>,
+      ),
+    );
+    const key = () => host.querySelector(".board-key");
+    expect(key()?.parentElement?.classList.contains("tabs-lead")).toBe(true);
+    expect(onMount).toHaveBeenCalledOnce();
+
+    act(() => large.change(false));
+    expect(key()?.parentElement).toBe(host);
   });
 });
 

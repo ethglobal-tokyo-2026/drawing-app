@@ -7,6 +7,7 @@ import { ApiError } from "../api/apiClient";
 import { emptyApi, renderWithApi } from "../api/testing";
 import { forgetBoardComplete } from "../sticker-board/boardComplete";
 import { readKeptBoardAgain } from "../sticker-board/lastBoard";
+import { onLargeScreen } from "../ui/testing";
 import App from "./App";
 
 vi.mock("@line/liff", () => ({
@@ -51,6 +52,7 @@ afterEach(async () => {
   await act(() => vi.dynamicImportSettled());
   unmount();
   history.replaceState(null, "", "/");
+  vi.restoreAllMocks();
 });
 
 const element = (selector: string) => {
@@ -59,7 +61,8 @@ const element = (selector: string) => {
   return found;
 };
 
-it("makes Explore inert under someone's board, puts focus on it, and gives it back to the row on Back", async () => {
+/** Opens App on Explore and Ken's board from his row, focused first. Resolves with the row. */
+async function visitKen() {
   const api = emptyApi({
     userStats: () => Promise.reject(new ApiError(503, { error: "unavailable", detail: "test" })),
   });
@@ -73,6 +76,11 @@ it("makes Explore inert under someone's board, puts focus on it, and gives it ba
   act(() => row.click());
   await act(() => vi.dynamicImportSettled());
   await act(async () => {});
+  return row;
+}
+
+it("makes Explore inert under someone's board, puts focus on it, and gives it back to the row on Back", async () => {
+  const row = await visitKen();
 
   expect(element(".screen-layer").hasAttribute("inert")).toBe(true);
   expect(document.activeElement).toBe(element(".artist-board .board-who"));
@@ -81,4 +89,17 @@ it("makes Explore inert under someone's board, puts focus on it, and gives it ba
   expect(element(".screen-layer").hasAttribute("inert")).toBe(false);
   expect(document.querySelector(".artist-board")).toBeNull();
   expect(document.activeElement).toBe(row);
+});
+
+it("on a large screen, makes the lit Explore tab the way back from someone's board", async () => {
+  onLargeScreen();
+  await visitKen();
+
+  const tab = element(".tab-explore");
+  expect(tab.getAttribute("aria-label")).toBe("Back to Explore");
+
+  act(() => tab.click());
+  expect(document.querySelector(".artist-board")).toBeNull();
+  expect(element(".screen-layer").hasAttribute("inert")).toBe(false);
+  expect(tab.getAttribute("aria-label")).toBeNull();
 });

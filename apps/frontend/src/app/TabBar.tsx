@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "../i18n/react";
-import { CaretUp, ExploreIcon, ShopIcon, StickerBoardIcon } from "../icons";
+import { CaretLeft, CaretUp, ExploreIcon, ShopIcon, StickerBoardIcon } from "../icons";
 import { readStored, writeStored } from "../ui/deviceStorage";
+import { useLargeScreen } from "../ui/largeScreen";
+import { TabsLeadSlot } from "../ui/TabsLead";
 import "./TabBar.css";
 
 export type Tab = "board" | "explore" | "shop";
@@ -25,6 +27,8 @@ interface Props {
   active?: Tab;
   /** The tabs tuck away below the screen, behind a grabber, so the screen gets the room. */
   tucked: boolean;
+  /** Someone else's sticker board is open over Explore. */
+  visiting?: boolean;
   onChange: (tab: Tab) => void;
 }
 
@@ -34,10 +38,11 @@ interface Props {
  * anywhere else, or a few idle seconds, tucks them away again. Someone using a keyboard or a screen
  * reader has focus in the strip, and it stays up for as long as they do: there's no idle for them to
  * outwait, and Escape tucks it. Until it has been used once, the grabber is a label-stock pull tab
- * that says where it goes.
+ * that says where it goes. On a large screen a board's key leads the row (ui/TabsLead.tsx).
  */
-export function TabBar({ active, tucked, onChange }: Props) {
+export function TabBar({ active, tucked, visiting = false, onChange }: Props) {
   const { t } = useTranslation();
+  const large = useLargeScreen();
   const nav = useRef<HTMLElement>(null);
   const grabber = useRef<HTMLButtonElement>(null);
   const grabY = useRef<number | null>(null);
@@ -98,8 +103,13 @@ export function TabBar({ active, tucked, onChange }: Props) {
 
   const current = (tab: Tab) => (active === tab ? "page" : undefined);
   const weight = (tab: Tab) => (active === tab ? "fill" : "bold");
+  // On a large screen someone's board leaves the way back to the lit Explore tab, which says so.
+  const backToExplore = large && visiting && active === "explore";
   return (
     <>
+      {/* A board's key on a large screen: before the tabs, as it stands left of them, and outside the
+          strip's landmark, since it's a key and not a section. */}
+      <TabsLeadSlot />
       <nav
         ref={nav}
         className={`tabs ${tucked ? "is-tucked" : ""} ${peeking ? "is-peeking" : ""}`}
@@ -130,9 +140,14 @@ export function TabBar({ active, tucked, onChange }: Props) {
           className="tab tab-explore"
           data-press
           aria-current={current("explore")}
+          aria-label={backToExplore ? t(($) => $.app.tabs.backToExplore) : undefined}
           onClick={() => onChange("explore")}
         >
-          <ExploreIcon size={20} weight={weight("explore")} />
+          {backToExplore ? (
+            <CaretLeft size={20} weight="bold" />
+          ) : (
+            <ExploreIcon size={20} weight={weight("explore")} />
+          )}
           <span>{t(($) => $.app.tabs.explore)}</span>
         </button>
         <button
