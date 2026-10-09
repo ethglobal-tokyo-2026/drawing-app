@@ -14,7 +14,7 @@ const subscribe = (onChange: () => void) => {
 
 const isLandscapeTouch = () => query().matches;
 
-/** A phone's own screen, whatever its window: its short side is under the large layout's room. */
+/** A phone's own screen, whatever its window: its short side is under a large screen's. */
 const onPhoneScreen = () => Math.min(screen.width, screen.height) < LARGE_MIN_PX;
 
 /**

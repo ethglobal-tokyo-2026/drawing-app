@@ -48,7 +48,7 @@ afterEach(() => {
 });
 
 describe("DeviceDetails", () => {
-  it("says what the device says, and whether the app takes the large layout, and copies it whole", async () => {
+  it("says what the device says, and whether the app lays out for a large screen, and copies it whole", async () => {
     onLargeScreen();
     windowAt(1180, 820);
     render();

@@ -22,7 +22,7 @@ const ipadInSafari: DeviceFacts = {
 const large = true;
 
 describe("the device's facts", () => {
-  it("read as a row a fact, with whether the app takes the large layout last", () => {
+  it("read as a row a fact, with whether the app lays out for a large screen last", () => {
     expect(deviceFactRows(ipadInSafari, large)).toEqual([
       ["User agent", ipadInSafari.userAgent],
       ["Platform", "MacIntel · 5 touch points"],
