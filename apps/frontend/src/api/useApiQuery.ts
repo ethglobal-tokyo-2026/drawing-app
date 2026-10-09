@@ -62,17 +62,18 @@ export class QueryAnswers<T> {
 }
 
 /**
- * Loads `key` ahead of its readers and keeps the answer for them, unless a fresh one is kept. A
- * failure is only logged: a reader then loads it itself, and shows its own failure.
+ * Loads `key` ahead of its readers and keeps the answer for them, unless a fresh one is kept; settles
+ * once it's done either way. A failure is only logged: a reader then loads it itself, and shows its
+ * own failure.
  */
 export function preloadQuery<T>(
   api: ApiClient,
   key: string,
   load: (api: ApiClient) => Promise<T>,
   answers: QueryAnswers<T>,
-): void {
-  if (answers.fresh(api, key)) return;
-  load(api).then(answers.keeper(api, key), (error: unknown) => {
+): Promise<void> {
+  if (answers.fresh(api, key)) return Promise.resolve();
+  return load(api).then(answers.keeper(api, key), (error: unknown) => {
     console.error(`Loading ${key} ahead failed`, apiError(error));
   });
 }

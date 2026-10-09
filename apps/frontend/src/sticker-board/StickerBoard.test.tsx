@@ -360,7 +360,6 @@ describe("StickerBoard's artist chips", () => {
             sticker: received.sticker,
             owner: TEST_OWNER,
             transferTrail: [],
-            hasTimelapse: false,
           }),
       }),
     );
@@ -787,7 +786,6 @@ describe("StickerBoard after receiving", () => {
           sticker: back.sticker,
           owner: TEST_OWNER,
           transferTrail: [trailEntry({ giftId: "g1", receiver: TEST_OWNER })],
-          hasTimelapse: false,
         }),
     });
     const view = renderWithApi(

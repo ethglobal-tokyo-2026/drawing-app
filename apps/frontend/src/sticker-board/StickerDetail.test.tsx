@@ -31,6 +31,7 @@ import { testStickerUrls } from "../stickers/testStickerUrls";
 import type { BoardStickerView } from "./boardSticker";
 import { keepBoard, keptBoardFor } from "./lastBoard";
 import { StickerDetail } from "./StickerDetail";
+import { preloadStickerDetails } from "./stickerDetailQuery";
 import { onMyStickerBoardChanged } from "./useMyStickerBoard";
 import { fakeTimelapsePlayers, TEST_TIMELAPSE } from "./timelapse/testTimelapse";
 import type { CreateTimelapsePlayer } from "./timelapse/useTimelapse";
@@ -67,6 +68,7 @@ const sticker = (
   placements: { phone: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: no }, large: null },
   artist: you,
   held: true,
+  hasTimelapse: false,
   givenTo: null,
   openGift: null,
   seenAt: createdAt,
@@ -119,7 +121,6 @@ function received(gratitude: Gratitude | null) {
         sticker: drawn,
         owner: TEST_OWNER,
         transferTrail: [entry],
-        hasTimelapse: false,
       }),
   });
   return { drawn, client };
@@ -153,7 +154,6 @@ function heldReads() {
                 gratitude: seen,
               },
             ],
-            hasTimelapse: false,
           }),
         );
       }),
@@ -181,7 +181,6 @@ const withTrail = (trail: StickerDetailResponse["transferTrail"]) =>
         sticker: apiSticker({ id, number: 133 }),
         owner: me,
         transferTrail: id === "s-133" ? trail : [],
-        hasTimelapse: false,
       }),
   });
 const rows = () => [...document.querySelectorAll(".transfer-trail__row")];
@@ -571,6 +570,23 @@ describe("StickerDetail", () => {
     expect(openRow()).toContain("2,357 to @ken · 589 to @mika, its artist");
   });
 
+  it("opens on a detail read ahead with its Transfer Trail in, asking the server nothing more", async () => {
+    const stickerDetail = vi.fn((id: string) =>
+      Promise.resolve({
+        sticker: apiSticker({ id, number: 133 }),
+        owner: me,
+        transferTrail: [trailEntry({ giftId: "gift-133", giver: me, receiver: people.mika })],
+      }),
+    );
+    const client = emptyApi({ stickerDetail });
+    preloadStickerDetails(client, ["s-133"]);
+    await settle();
+    open({ ownerId: me.id }, client);
+    expect(rows()).toHaveLength(1);
+    await settle();
+    expect(stickerDetail).toHaveBeenCalledTimes(1);
+  });
+
   it("folds the rows past the newest, and opens a tapped row in place of the open one", async () => {
     const given = (n: number) =>
       trailEntry({
@@ -610,16 +626,12 @@ describe("StickerDetail", () => {
       timelapsePlayer.create.mockImplementation(players.create);
     });
 
-    /** Only No.0133 was sealed with its timelapse. */
+    /** Only No.0133 was sealed with its timelapse, as the board lists it. */
+    const timelapsed = stickers.map((s) => ({ ...s, hasTimelapse: s.id === "s-133" }));
     const withTimelapse = () =>
       emptyApi({
         stickerDetail: (id) =>
-          Promise.resolve({
-            sticker: apiSticker({ id }),
-            owner: me,
-            transferTrail: [],
-            hasTimelapse: id === "s-133",
-          }),
+          Promise.resolve({ sticker: apiSticker({ id }), owner: me, transferTrail: [] }),
         timelapse: () => Promise.resolve(TEST_TIMELAPSE),
       });
     const timelapseButton = () => document.querySelector<HTMLButtonElement>(".timelapse-button");
@@ -627,7 +639,7 @@ describe("StickerDetail", () => {
 
     /** Opens No.0133 and plays its timelapse. */
     async function playing() {
-      open({}, withTimelapse());
+      open({ stickers: timelapsed }, withTimelapse());
       await settle();
       act(() => timelapseButton()?.click());
       await settle();
@@ -640,7 +652,7 @@ describe("StickerDetail", () => {
     it.each(["yours", "given"] as const)(
       "offers Timelapse in %s mode, only for a sticker sealed with one",
       async (mode) => {
-        open({ mode }, withTimelapse());
+        open({ mode, stickers: timelapsed }, withTimelapse());
         await settle();
         expect(timelapseButton()).not.toBeNull();
         press("Next sticker");
@@ -663,8 +675,18 @@ describe("StickerDetail", () => {
       expect(layer()).toBeNull();
     });
 
+    it("shows Timelapse and the Kyoto Seika pair from the board's sticker before its detail is read", () => {
+      const drawn = { ...timelapsed[1], kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS };
+      open(
+        { stickers: [drawn], startId: drawn.id },
+        emptyApi({ stickerDetail: () => new Promise(() => {}) }),
+      );
+      expect(timelapseButton()).not.toBeNull();
+      expect(document.querySelector(".kyoto-seika-tag .subject-pair")).not.toBeNull();
+    });
+
     it("keeps focus in the dialog when paging from Timelapse takes the button away", async () => {
-      open({}, withTimelapse());
+      open({ stickers: timelapsed }, withTimelapse());
       await settle();
       act(() => timelapseButton()?.focus());
       expect(document.activeElement).toBe(timelapseButton());
@@ -829,7 +851,6 @@ describe("StickerDetail", () => {
           sticker: await readBack(),
           owner: TEST_OWNER,
           transferTrail: [],
-          hasTimelapse: false,
         }));
         const client = emptyApi({ markStickerNsfw, stickerDetail });
         const onBoard = (shown: BoardStickerView) =>

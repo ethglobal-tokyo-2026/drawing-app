@@ -28,6 +28,7 @@ const sticker = (id: string): PlacedBoardSticker => ({
   placements: { phone: { on: true, x: 0.5, y: 0.5, s: 1, r: 0, z: 1 }, large: null },
   artist: toPerson(TEST_OWNER),
   held: true,
+  hasTimelapse: false,
   givenTo: null,
   openGift: null,
   seenAt: null,

@@ -97,6 +97,7 @@ export function boardSticker(overrides: Partial<BoardSticker> = {}): BoardSticke
     arrivedAt: s.sealedAt,
     sticker: s,
     held: true,
+    hasTimelapse: false,
     givenTo: null,
     openGift: null,
     ...overrides,

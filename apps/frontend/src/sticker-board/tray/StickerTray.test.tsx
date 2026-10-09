@@ -69,6 +69,7 @@ const sticker = (
   placements: { phone: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 }, large: null },
   artist: { id: "me", handle: "you", name: "You", nsfwOptIn: false },
   held: true,
+  hasTimelapse: false,
   givenTo: null,
   openGift: null,
   ...extra,

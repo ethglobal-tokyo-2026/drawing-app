@@ -108,6 +108,7 @@ import { trayProblemKey, trayProblemWords, type TrayProblem } from "./tray/trayP
 import { useBoardGestures, type SettledStep } from "./useBoardGestures";
 import { useBoardLayout, useBoardSize } from "./useBoardSize";
 import { CreasesContext, useCreases } from "./useCreases";
+import { detailsAhead, preloadStickerDetails } from "./stickerDetailQuery";
 import { onMyStickerBoardChanged, useMyStickerBoard } from "./useMyStickerBoard";
 import "./StickerBoard.css";
 
@@ -374,6 +375,13 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const reduced = useReducedMotion();
   const hints = useId();
   const idle = usePreloadAfterBoard(OPENED_FROM_BOARD);
+  // Once the board is idle, the details of the stickers on top load ahead, so opening one shows it
+  // whole at once. Only a change in which stickers those are starts it again.
+  const aheadKey = useMemo(() => (stickers ? detailsAhead(stickers).join(" ") : ""), [stickers]);
+  useEffect(() => {
+    if (!idle || aheadKey === "") return;
+    return preloadStickerDetails(api, aheadKey.split(" "));
+  }, [idle, api, aheadKey]);
   // The gratitude mini-game covers the board, so the tilt and its sheen sweeps rest while it plays.
   useLight(!turned && !gratitudeFor);
 

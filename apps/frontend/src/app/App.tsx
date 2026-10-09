@@ -136,7 +136,7 @@ export default function App() {
   const afterTheBoard = usePreloadAfterBoard(AFTER_THE_BOARD);
   // The Shop's prices load with the screens' code, so the Shop opens on them.
   useEffect(() => {
-    if (afterTheBoard) preloadReservePacks(api);
+    if (afterTheBoard) void preloadReservePacks(api);
   }, [afterTheBoard, api]);
   // Draw opened the drawing screen, so it stays mounted from then on.
   const [drewHere, setDrewHere] = useState(drawing);

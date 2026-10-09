@@ -17,6 +17,7 @@ import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CdnPurge } from "../deps.ts";
+import { stickerBoardSchema } from "../stickerBoards/board.ts";
 import { markNsfwResponseSchema, markStickerNsfw } from "../stickers/markNsfw.ts";
 import { sealResponseSchema } from "../stickers/seal.ts";
 import { MAX_SEAL_BYTES } from "../stickers/sealForm.ts";
@@ -140,7 +141,7 @@ describe("POST /api/stickers", () => {
     const veiled = veiledImagesOf(sticker.id);
     expect(sticker).toMatchObject({ nsfw: true, images: veiled });
     const detail = await bodyOf(await getSticker(optedOutId, sticker.id), stickerDetailSchema);
-    expect(detail).toMatchObject({ sticker: { images: veiled }, hasTimelapse: false });
+    expect(detail).toMatchObject({ sticker: { images: veiled } });
   });
 
   it("numbers seals across everyone, one after another", async () => {
@@ -393,14 +394,17 @@ describe("GET /api/stickers/:stickerId", () => {
     ]);
   });
 
-  it("says whether the sticker was sealed with its timelapse", async () => {
+  it("lists on the board whether each sticker was sealed with its timelapse", async () => {
     const artistId = insertUser(test.db);
     const withOne = await seal(artistId);
     const without = await seal(artistId, { timelapse: undefined });
-    const hasTimelapse = async (stickerId: string) =>
-      (await bodyOf(await getSticker(artistId, stickerId), stickerDetailSchema)).hasTimelapse;
-    expect(await hasTimelapse(withOne.sticker.id)).toBe(true);
-    expect(await hasTimelapse(without.sticker.id)).toBe(false);
+    const board = await bodyOf(
+      await test.send("GET", "/api/sticker-boards/me", { as: artistId }),
+      stickerBoardSchema,
+    );
+    const hasTimelapse = new Map(board.boardStickers.map((b) => [b.stickerId, b.hasTimelapse]));
+    expect(hasTimelapse.get(withOne.sticker.id)).toBe(true);
+    expect(hasTimelapse.get(without.sticker.id)).toBe(false);
   });
 
   it("refuses an unknown sticker with sticker_not_found", async () => {

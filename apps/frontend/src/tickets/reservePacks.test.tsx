@@ -38,7 +38,7 @@ const Checkout = reader(useReservePacks);
 async function loadedAhead() {
   const ticketShop = vi.fn(() => Promise.resolve(SHOP));
   const api = emptyApi({ ticketShop });
-  preloadReservePacks(api);
+  void preloadReservePacks(api);
   await act(() => Promise.resolve());
   return { api, ticketShop };
 }
@@ -53,7 +53,7 @@ afterEach(() => {
 describe("reserve packs", () => {
   it("the Shop shows packs loaded ahead at once, asks for nothing while they're fresh, and loads again once they're stale", async () => {
     const { api, ticketShop } = await loadedAhead();
-    preloadReservePacks(api);
+    void preloadReservePacks(api);
     ({ unmount } = renderWithApi(<Shop />, api));
     expect(seen.query).toMatchObject({ state: "ready", data: SHOP });
     expect(ticketShop).toHaveBeenCalledTimes(1);

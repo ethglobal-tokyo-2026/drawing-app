@@ -85,7 +85,7 @@ describe("an NSFW sticker's images", () => {
     }
     const [board, explore, detail, preview] = bodies;
     for (const body of [board, explore, detail]) expect(body).toContain(scene.veiled.webp.sticker);
-    expect(JSON.parse(detail)).toMatchObject({ hasTimelapse: false });
+    expect(JSON.parse(board)).toMatchObject({ boardStickers: [{ hasTimelapse: false }] });
     expect(JSON.parse(preview)).toMatchObject({ refusal: "nsfw_not_opted_in", sticker: null });
     const timelapse = await timelapseOf(scene, optedOutId);
     expect(timelapse.status).toBe(403);
@@ -108,7 +108,7 @@ describe("an NSFW sticker's images", () => {
     const [stickerWebp, giftStickerWebp] = scene.optedInWebps;
     for (const body of [board, explore, detail]) expect(body).toContain(stickerWebp);
     expect(preview).toContain(giftStickerWebp);
-    expect(JSON.parse(detail)).toMatchObject({ hasTimelapse: true });
+    expect(JSON.parse(board)).toMatchObject({ boardStickers: [{ hasTimelapse: true }] });
     expect((await timelapseOf(scene, optedInId)).status).toBe(200);
   });
 });

@@ -1,4 +1,4 @@
-import { gifts, gratitude, stickers, stickerTimelapses, users, type Db } from "@drawing-app/db";
+import { gifts, gratitude, stickers, users, type Db } from "@drawing-app/db";
 import { and, desc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { createSelectSchema } from "drizzle-zod";
@@ -35,11 +35,6 @@ export const stickerDetailSchema = z.object({
   owner: personSchema,
   /** Newest first. */
   transferTrail: z.array(transferTrailEntrySchema),
-  /**
-   * Sealed with its timelapse, which GET /api/stickers/:stickerId/timelapse answers. False to a viewer
-   * who gets the sticker veiled, since it shows the drawing.
-   */
-  hasTimelapse: z.boolean(),
 });
 export type StickerDetail = z.infer<typeof stickerDetailSchema>;
 
@@ -80,15 +75,5 @@ export function stickerDetail(
           },
         ],
   );
-  const timelapse = db
-    .select({ stickerId: stickerTimelapses.stickerId })
-    .from(stickerTimelapses)
-    .where(eq(stickerTimelapses.stickerId, stickerId))
-    .get();
-  return {
-    sticker,
-    owner: toPerson(owner),
-    transferTrail,
-    hasTimelapse: timelapse !== undefined && !viewer.veils(sticker),
-  };
+  return { sticker, owner: toPerson(owner), transferTrail };
 }

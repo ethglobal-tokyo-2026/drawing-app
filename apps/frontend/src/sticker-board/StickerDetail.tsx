@@ -1,9 +1,16 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
 import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
-import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
 import { dismissTakeOut, onTakenOut, takeOutFromDetail, useTakeOut } from "../giving/takeOuts";
 import { isGratitudeWaiting, onGratitudeLeftOutbox } from "../gratitude/gratitudeOutbox";
@@ -43,6 +50,7 @@ import { handleOf, type BoardStickerView } from "./boardSticker";
 import { useDetailLift, type LiftView } from "./detailLift";
 import { useSwipePaging } from "./detailPaging";
 import { forget as forgetKeptBoard } from "./lastBoard";
+import { combosLeftNow, useStickerDetail } from "./stickerDetailQuery";
 import { myStickerBoardChanged } from "./useMyStickerBoard";
 import { TimelapseButton, TimelapseFailure } from "./timelapse/TimelapseButton";
 import { TimelapseLayer } from "./timelapse/TimelapseLayer";
@@ -188,15 +196,11 @@ export function StickerDetail({
   const sent = openGift?.status === "sent";
   // Gratitude kept on this phone that the server has since recorded or refused: counted, whatever
   // the read of the detail is doing, so a read that went out before one left can be told apart.
-  const [combosLeft, setCombosLeft] = useState(0);
-  useEffect(() => onGratitudeLeftOutbox(() => setCombosLeft((n) => n + 1)), []);
-  // Its Transfer Trail, and whether you owe gratitude for a sticker you hold, come with its detail.
+  const combosLeft = useSyncExternalStore(onGratitudeLeftOutbox, combosLeftNow);
+  // Its Transfer Trail, and whether you owe gratitude for a sticker you hold, come with its detail,
+  // often read ahead by the board.
   const shownStickerId = sticker?.id ?? null;
-  const detail = useApiQuery(`sticker-detail:${shownStickerId ?? "none"}`, async (api) => {
-    const combosLeftBefore = combosLeft;
-    const stickerDetail = shownStickerId ? await api.stickerDetail(shownStickerId) : null;
-    return { stickerDetail, combosLeftBefore };
-  });
+  const detail = useStickerDetail(shownStickerId);
   const read = detail.state === "ready" ? detail.data : null;
   const loaded = read?.stickerDetail ?? null;
   const readAgain = detail.state === "ready" ? detail.refresh : null;
@@ -234,11 +238,11 @@ export function StickerDetail({
     reduced,
     onClose,
   });
-  // A sticker veiled for you plays no timelapse, which shows its drawing: the server says so, and a
-  // mark landing here says so at once.
+  // From the board's listing, so Timelapse shows as the detail opens. A sticker veiled for you plays
+  // no timelapse, which shows its drawing: the board says so, and a mark landing here says so at once.
   const hasTimelapse =
-    loaded?.hasTimelapse === true && !(sticker !== undefined && veiledFor(sticker, optedIn));
-  const kyotoSeika = Boolean(loaded?.sticker.kyotoSeikaSubjects);
+    sticker !== undefined && sticker.hasTimelapse && !veiledFor(sticker, optedIn);
+  const kyotoSeika = sticker !== undefined && sticker.kyotoSeikaSubjects !== null;
   const timelapse = useTimelapse({ sticker, hasTimelapse, figure, reduced, kyotoSeika });
   // The timelapse's layer goes first: the lift clones the figure and flies it back to the board.
   const close = () => {

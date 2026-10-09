@@ -1,4 +1,11 @@
-import { gifts, stickerPlacements, stickers, users, type Db } from "@drawing-app/db";
+import {
+  gifts,
+  stickerPlacements,
+  stickers,
+  stickerTimelapses,
+  users,
+  type Db,
+} from "@drawing-app/db";
 import { and, asc, count, eq, inArray, isNull, notExists, or } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -33,6 +40,11 @@ const boardStickerSchema = stickerPlacementSchema.extend({
   sticker: stickerSchema,
   /** False: given away; off the board, and an empty spot in the sticker tray. */
   held: z.boolean(),
+  /**
+   * Sealed with its timelapse, which GET /api/stickers/:stickerId/timelapse answers. False to a viewer
+   * who gets the sticker veiled, since it shows the drawing.
+   */
+  hasTimelapse: z.boolean(),
   /** Set when `held` is false: who received it, for the giver's notice. */
   givenTo: z.object({ receiver: personSchema, receivedAt: isoTimeSchema }).nullable(),
   /** `for`: who the giver picked in the app, or who first opened its link; null through LINE alone. */
@@ -136,6 +148,17 @@ function givenToOf(db: Db, ownerId: string, stickerIds: string[]) {
   return givenTo;
 }
 
+/** Which of `stickerIds` were sealed with their timelapse. */
+function withTimelapses(db: Db, stickerIds: string[]): Set<string> {
+  if (stickerIds.length === 0) return new Set();
+  const rows = db
+    .select({ stickerId: stickerTimelapses.stickerId })
+    .from(stickerTimelapses)
+    .where(inArray(stickerTimelapses.stickerId, stickerIds))
+    .all();
+  return new Set(rows.map(({ stickerId }) => stickerId));
+}
+
 /** A sticker in one of the owner's sent gifts: on its way, so off their board until it's received. */
 const onItsWayFrom = (db: Db, ownerId: string) =>
   db
@@ -187,6 +210,10 @@ export function loadStickerBoard(
         givenAway.map(({ sticker }) => sticker.id),
       )
     : new Map<string, BoardSticker["givenTo"]>();
+  const timelapsed = withTimelapses(
+    db,
+    rows.map(({ sticker }) => sticker.id),
+  );
   return {
     owner: toPerson(owner),
     boardStickers: rows.map(({ placement, sticker, artist }) => {
@@ -200,6 +227,7 @@ export function loadStickerBoard(
           outline: simplifiedOutlineOf(sticker),
         },
         held,
+        hasTimelapse: timelapsed.has(sticker.id) && !viewer.veils(sticker),
         givenTo: held ? null : (givenTo.get(sticker.id) ?? null),
         openGift: openGifts.get(sticker.id) ?? null,
       };
