@@ -28,6 +28,14 @@
     visibility 0s;
 }
 
+/* Reduced motion: the check shows and goes at once, as every key's states change, with no spring. */
+@media (prefers-reduced-motion: reduce) {
+  .key.seal-key,
+  .key.seal-key.is-shown {
+    transition: none;
+  }
+}
+
 .key.seal-key svg {
   position: relative;
   width: 26px;
