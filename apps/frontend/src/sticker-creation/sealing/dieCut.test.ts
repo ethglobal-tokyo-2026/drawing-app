@@ -28,12 +28,50 @@ const union =
   (...shapes: Shape[]): Shape =>
   (x, y) =>
     shapes.some((s) => s(x, y));
+/** A stroke `r` px either side of a polyline. */
+const stroke =
+  (points: [number, number][], r: number): Shape =>
+  (x, y) =>
+    points.slice(1).some(([bx, by], i) => {
+      const [ax, ay] = points[i];
+      const [dx, dy] = [bx - ax, by - ay];
+      const t = Math.min(1, Math.max(0, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)));
+      return Math.hypot(x - ax - t * dx, y - ay - t * dy) <= r;
+    });
 
-function cutOf(ink: Pixels): DieCut {
-  const cut = dieCut(ink, BORDER);
+function cutOf(ink: Pixels, border = BORDER): DieCut {
+  const cut = dieCut(ink, border);
   if (!cut) throw new Error("expected a cut");
   return cut;
 }
+
+/** How many 4-connected pieces the cells `on` says are set make. */
+function piecesOf(on: (i: number) => boolean, width: number, height: number): number {
+  const seen = new Uint8Array(width * height);
+  let count = 0;
+  for (let s = 0; s < width * height; s++) {
+    if (!on(s) || seen[s]) continue;
+    count++;
+    seen[s] = 1;
+    const stack = [s];
+    for (let i = stack.pop(); i !== undefined; i = stack.pop()) {
+      const x = i % width;
+      for (const j of [x > 0 ? i - 1 : -1, x < width - 1 ? i + 1 : -1, i - width, i + width]) {
+        if (j < 0 || j >= width * height || seen[j] || !on(j)) continue;
+        seen[j] = 1;
+        stack.push(j);
+      }
+    }
+  }
+  return count;
+}
+
+/** One piece, in the mask and along the soft cut line the contour traces. */
+const onePiece = ({ mask, soft, width, height }: DieCut) =>
+  piecesOf((i) => mask[i] === 1, width, height) === 1 &&
+  piecesOf((i) => soft[i] >= 0.5, width, height) === 1;
+
+const area = (cut: DieCut) => cut.mask.reduce((sum, v) => sum + v, 0);
 
 /** The grid cell an ink pixel lands in. */
 const cell = (cut: DieCut, x: number, y: number) =>
@@ -104,13 +142,77 @@ describe("dieCut", () => {
     expect(cut.mask[cell(cut, 110, 90)]).toBe(1);
   });
 
+  it("bridges parts that won't join, hugging each with the border", () => {
+    const ink = sheet(200, 100, union(disk(15, 50, 4), disk(185, 50, 4)));
+    const cut = cutOf(ink);
+    expect(cut.square).toBe(false);
+    expect(onePiece(cut)).toBe(true);
+    expect(holdsAllInk(cut, ink)).toBe(true);
+    // The rounded rectangle round all the ink would be this box, less its corners.
+    const box = (185 - 15 + 8 + 2 * BORDER) * (8 + 2 * BORDER);
+    expect(area(cut)).toBeLessThan(box / 2);
+  });
+
+  it("makes a bridge narrower than the border that the soft cut line keeps whole", () => {
+    // A border wide enough on the grid that the bridge's width is its own, not the soft line's least.
+    const border = 24;
+    const cut = cutOf(sheet(500, 200, union(disk(40, 100, 6), disk(460, 100, 6))), border);
+    expect(onePiece(cut)).toBe(true);
+    let across = 0;
+    for (let y = 0; y < 200; y++) across += cut.mask[cell(cut, 250, y)];
+    expect(across).toBeGreaterThan(0);
+    expect(across).toBeLessThan(border);
+    expect(cut.soft[cell(cut, 250, 100)]).toBeGreaterThan(0.5);
+  });
+
+  it("bridges a scribble to a dot far off in a corner, leaving the empty corners out", () => {
+    const scribble = stroke(
+      [
+        [40, 50],
+        [110, 40],
+        [50, 80],
+        [120, 75],
+        [60, 110],
+      ],
+      3,
+    );
+    const ink = sheet(300, 300, union(scribble, disk(275, 275, 3)));
+    const cut = cutOf(ink);
+    expect(cut.square).toBe(false);
+    expect(onePiece(cut)).toBe(true);
+    expect(holdsAllInk(cut, ink)).toBe(true);
+    // The corners away from both parts and the line between them.
+    let inCorners = 0;
+    for (const [x0, y0] of [
+      [200, 0],
+      [0, 200],
+    ])
+      for (let y = y0; y < y0 + 100; y++)
+        for (let x = x0; x < x0 + 100; x++) inCorners += cut.mask[cell(cut, x, y)];
+    expect(inCorners).toBe(0);
+  });
+
+  it("bridges many scattered dots into one piece", () => {
+    const dots = Array.from({ length: 30 }, (_, i) =>
+      disk(
+        40 + (i % 6) * 64 + ((i * 37) % 19) - 9,
+        40 + Math.floor(i / 6) * 80 + ((i * 53) % 23) - 11,
+        3,
+      ),
+    );
+    const ink = sheet(420, 420, union(...dots));
+    const cut = cutOf(ink);
+    expect(cut.square).toBe(false);
+    expect(onePiece(cut)).toBe(true);
+    expect(holdsAllInk(cut, ink)).toBe(true);
+  });
+
   it.each<[string, Pixels]>([
     ["covers most of the sheet", sheet(100, 100, rect(10, 10, 90, 90))],
     [
       "touches three edges",
       sheet(120, 100, union(rect(0, 20, 2, 99), rect(0, 97, 119, 99), rect(117, 20, 119, 99))),
     ],
-    ["won't join into one piece", sheet(200, 100, union(disk(15, 50, 4), disk(185, 50, 4)))],
   ])("cuts a rounded square when the ink %s", (_, ink) => {
     const cut = cutOf(ink);
     expect(cut.square).toBe(true);

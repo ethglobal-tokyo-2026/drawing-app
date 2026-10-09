@@ -1,7 +1,8 @@
 /**
  * The die-cut: a sticker's outline from the artist's own ink, with no guessing. The cut is a dilation
- * of the ink, so the same ink always gives the same cut, and it never crops a line. Pure functions over
- * pixel arrays; the ink is measured scaled down to at most GRID pixels on its long side.
+ * of the ink, so the same ink always gives the same cut, and it never crops a line. Parts the border
+ * doesn't join hang together by narrow bridges of border. Pure functions over pixel arrays; the ink is
+ * measured scaled down to at most GRID pixels on its long side.
  */
 import { boxResample, type Pixels } from "./pixels";
 
@@ -32,8 +33,14 @@ export interface DieCut {
   bounds: Bounds;
   /** The cut line, closed, through cell centers. */
   contour: Point[];
-  /** Cut as a rounded square, because the ink fills the sheet, runs off it, or won't join up. */
+  /** Cut as a rounded square, because the ink fills the sheet or runs off it. */
   square: boolean;
+}
+
+/** The pieces of a mask, numbered from 1 by cell, 0 outside them. */
+interface Parts {
+  labels: Int32Array;
+  count: number;
 }
 
 const GRID = 512;
@@ -41,17 +48,30 @@ const GRID = 512;
 const INK_ALPHA = 18;
 /** The white border's width, in sheet units: what a 390 px phone's sticker has. */
 export const BORDER_UNITS = 23;
-/** Each try dilates a little wider, until the parts join into one piece. */
-const TRIES = [1, 1.5, 2.1];
-/** The closing that rounds the concave corners, as a share of the dilation. */
+/** The closing that rounds the concave corners, as a share of the border. */
 const CLOSING = 0.7;
+/**
+ * A bridge's width, as a share of the border. The rest of the cut is never under two borders across,
+ * so a bridge this wide reads as an arm between parts, not as more border; any narrower, and on a
+ * board-sized sticker the resin over it reads as a rod rather than paper.
+ */
+const BRIDGE = 0.6;
+/** The soft cut line blurs the mask twice with a box this many cells either side. */
+const SOFT = 2;
 /** Ink over this share of the sheet is cut as a square. */
 const FULL_BLEED = 0.6;
 /** The square cut's corner radius, in borders. */
 const SQUARE_CORNER = 1.8;
 
-/** Felzenszwalb–Huttenlocher squared distance transform along one line. */
-function distanceLine(f: Float64Array, n: number, d: Float64Array, v: Int32Array, z: Float64Array) {
+/** Felzenszwalb–Huttenlocher squared distance transform along one line; `at` gets each argmin. */
+function distanceLine(
+  f: Float64Array,
+  n: number,
+  d: Float64Array,
+  v: Int32Array,
+  z: Float64Array,
+  at?: Int32Array,
+) {
   let k = 0;
   v[0] = 0;
   z[0] = -Infinity;
@@ -72,11 +92,15 @@ function distanceLine(f: Float64Array, n: number, d: Float64Array, v: Int32Array
     while (z[k + 1] < q) k++;
     const dq = q - v[k];
     d[q] = dq * dq + f[v[k]];
+    if (at) at[q] = v[k];
   }
 }
 
-/** The Euclidean distance from every cell to the nearest cell that's set in `on`. */
-function distanceTo(on: Uint8Array, w: number, h: number): Float64Array {
+/**
+ * The Euclidean distance from every cell to the nearest cell that's set in `on`. Given `nearest`, it
+ * also fills in that cell's index for every cell.
+ */
+function distanceTo(on: Uint8Array, w: number, h: number, nearest?: Int32Array): Float64Array {
   const FAR = 1e12;
   const g = new Float64Array(w * h);
   for (let i = 0; i < w * h; i++) g[i] = on[i] ? 0 : FAR;
@@ -85,16 +109,22 @@ function distanceTo(on: Uint8Array, w: number, h: number): Float64Array {
   const d = new Float64Array(n);
   const v = new Int32Array(n);
   const z = new Float64Array(n + 1);
+  const at = nearest && new Int32Array(n);
+  // Down each column, the row of its nearest set cell; along each row, the column whose is nearest.
+  const row = nearest && new Int32Array(w * h);
   for (let x = 0; x < w; x++) {
     for (let y = 0; y < h; y++) f[y] = g[y * w + x];
-    distanceLine(f, h, d, v, z);
+    distanceLine(f, h, d, v, z, at);
     for (let y = 0; y < h; y++) g[y * w + x] = d[y];
+    if (row && at) for (let y = 0; y < h; y++) row[y * w + x] = at[y];
   }
   for (let y = 0; y < h; y++) {
     const o = y * w;
     for (let x = 0; x < w; x++) f[x] = g[o + x];
-    distanceLine(f, w, d, v, z);
+    distanceLine(f, w, d, v, z, at);
     for (let x = 0; x < w; x++) g[o + x] = Math.sqrt(d[x]);
+    if (nearest && row && at)
+      for (let x = 0; x < w; x++) nearest[o + x] = row[o + at[x]] * w + at[x];
   }
   return g;
 }
@@ -152,27 +182,128 @@ function fillHoles(m: Uint8Array, w: number, h: number) {
   for (let i = 0; i < w * h; i++) if (!reached[i]) m[i] = 1;
 }
 
-/** How many separate pieces the mask holds, counting no further than two. */
-function pieces(m: Uint8Array, w: number, h: number): number {
-  const seen = new Uint8Array(w * h);
+/**
+ * The cut, from how far each cell lies past the border round the ink and any bridges: the cells within
+ * it, their concave corners rounded by a closing `closing` cells wide, and their holes filled.
+ */
+function closed(beyond: Float64Array, w: number, h: number, closing: number): Uint8Array {
+  const n = w * h;
+  const outsideGrown = new Uint8Array(n);
+  for (let i = 0; i < n; i++) outsideGrown[i] = beyond[i] <= closing ? 0 : 1;
+  const toOutside = distanceTo(outsideGrown, w, h);
+  const m = new Uint8Array(n);
+  for (let i = 0; i < n; i++)
+    m[i] = (!outsideGrown[i] && toOutside[i] > closing) || beyond[i] <= 0 ? 1 : 0;
+  fillHoles(m, w, h);
+  return m;
+}
+
+/** Numbers each 4-connected piece of `m`. */
+function label(m: Uint8Array, w: number, h: number): Parts {
+  const n = w * h;
+  const labels = new Int32Array(n);
+  const stack = new Int32Array(n);
+  const steps = [-1, 1, -w, w];
   let count = 0;
-  for (let s = 0; s < w * h; s++) {
-    if (!m[s] || seen[s]) continue;
-    if (++count > 1) return count;
-    const stack = [s];
-    seen[s] = 1;
-    for (let i = stack.pop(); i !== undefined; i = stack.pop()) {
+  for (let s = 0; s < n; s++) {
+    if (!m[s] || labels[s]) continue;
+    labels[s] = ++count;
+    let top = 0;
+    stack[top++] = s;
+    while (top > 0) {
+      const i = stack[--top];
       const x = i % w;
-      const next = [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i >= w ? i - w : -1, i + w];
-      for (const j of next) {
-        if (j >= 0 && j < w * h && m[j] && !seen[j]) {
-          seen[j] = 1;
-          stack.push(j);
-        }
+      for (const step of steps) {
+        const j = i + step;
+        if (j < 0 || j >= n || (step === -1 && x === 0) || (step === 1 && x === w - 1)) continue;
+        if (!m[j] || labels[j]) continue;
+        labels[j] = count;
+        stack[top++] = j;
       }
     }
   }
-  return count;
+  return { labels, count };
+}
+
+/**
+ * The bridges that join the parts into one, as pairs of cells: a minimum spanning tree over the parts,
+ * each edge between their nearest cells. Two parts' nearest cells face each other where the regions
+ * nearest to each part meet, so only neighboring cells across those seams are compared.
+ */
+function spanningBridges(
+  m: Uint8Array,
+  { labels, count }: Parts,
+  w: number,
+  h: number,
+): [number, number][] {
+  const n = w * h;
+  const nearest = new Int32Array(n);
+  distanceTo(m, w, h, nearest);
+  const owner = new Int32Array(n);
+  for (let i = 0; i < n; i++) owner[i] = labels[nearest[i]];
+  const shortest = new Map<number, { length: number; from: number; to: number }>();
+  const meet = (p: number, q: number) => {
+    const from = nearest[p];
+    const to = nearest[q];
+    const length = Math.hypot((from % w) - (to % w), Math.floor(from / w) - Math.floor(to / w));
+    const key = Math.min(owner[p], owner[q]) * (count + 1) + Math.max(owner[p], owner[q]);
+    const known = shortest.get(key);
+    if (!known || length < known.length) shortest.set(key, { length, from, to });
+  };
+  for (let i = 0; i < n; i++) {
+    if (i % w < w - 1 && owner[i] !== owner[i + 1]) meet(i, i + 1);
+    if (i < n - w && owner[i] !== owner[i + w]) meet(i, i + w);
+  }
+  // Kruskal's: shortest first, keeping each edge that joins parts not yet joined.
+  const parent = Int32Array.from({ length: count + 1 }, (_, i) => i);
+  const root = (a: number) => {
+    let r = a;
+    while (parent[r] !== r) {
+      parent[r] = parent[parent[r]];
+      r = parent[r];
+    }
+    return r;
+  };
+  const bridges: [number, number][] = [];
+  for (const { from, to } of [...shortest.values()].sort((a, b) => a.length - b.length)) {
+    const a = root(labels[from]);
+    const b = root(labels[to]);
+    if (a === b) continue;
+    parent[a] = b;
+    bridges.push([from, to]);
+  }
+  return bridges;
+}
+
+/**
+ * Lays a bridge `halfWidth` cells either side of the line from cell `from` to cell `to` into `beyond`,
+ * out to `reach` past it: the closing sees no further.
+ */
+function layBridge(
+  beyond: Float64Array,
+  w: number,
+  h: number,
+  [from, to]: [number, number],
+  halfWidth: number,
+  reach: number,
+) {
+  const [ax, bx] = [from % w, to % w];
+  const [ay, by] = [(from - ax) / w, (to - bx) / w];
+  const [dx, dy] = [bx - ax, by - ay];
+  const length2 = dx * dx + dy * dy || 1;
+  const r = Math.ceil(halfWidth + reach) + 1;
+  for (let y = Math.max(0, Math.min(ay, by) - r); y <= Math.min(h - 1, Math.max(ay, by) + r); y++) {
+    for (
+      let x = Math.max(0, Math.min(ax, bx) - r);
+      x <= Math.min(w - 1, Math.max(ax, bx) + r);
+      x++
+    ) {
+      const t = Math.min(1, Math.max(0, ((x - ax) * dx + (y - ay) * dy) / length2));
+      const past = Math.hypot(x - ax - t * dx, y - ay - t * dy) - halfWidth;
+      const i = y * w + x;
+      if (past < beyond[i]) beyond[i] = past;
+    }
+  }
 }
 
 /** A rounded rectangle, as a mask. */
@@ -242,8 +373,9 @@ export function dieCut(ink: Pixels, borderPx: number): DieCut | null {
   const ih = Math.max(1, Math.ceil(ink.height * scale));
   const long = Math.max(iw, ih);
   const border = borderPx * scale;
-  // Room for the widest try and the smoothing, so the cut can grow past the sheet's edge.
-  const pad = Math.ceil(border * 4.2 + 0.07 * long + 6);
+  const closing = border * CLOSING;
+  // Room past the sheet's edge for the border and its closing, and for the layers' margin round the cut.
+  const pad = Math.ceil(border + closing + 0.07 * long + 6);
   const width = iw + 2 * pad;
   const height = ih + 2 * pad;
   const n = width * height;
@@ -269,47 +401,52 @@ export function dieCut(ink: Pixels, borderPx: number): DieCut | null {
   }
   if (!count) return null;
 
-  // Dilate, round the concave corners with a closing, fill the holes; widen until it's one piece.
   const edges = [
     ink0.y0 - pad <= 1,
     ink0.y1 - pad >= ih - 2,
     ink0.x0 - pad <= 1,
     ink0.x1 - pad >= iw - 2,
   ].filter(Boolean).length;
-  let square = count / (iw * ih) > FULL_BLEED || edges >= 3;
-  let joined: Uint8Array | null = null;
-  if (!square) {
-    const fromInk = distanceTo(inked, width, height);
-    for (const t of TRIES) {
-      const r = border * t;
-      const closing = r * CLOSING;
-      const outsideGrown = new Uint8Array(n);
-      for (let i = 0; i < n; i++) outsideGrown[i] = fromInk[i] <= r + closing ? 0 : 1;
-      const toOutside = distanceTo(outsideGrown, width, height);
-      const m = new Uint8Array(n);
-      for (let i = 0; i < n; i++)
-        m[i] = (!outsideGrown[i] && toOutside[i] > closing) || fromInk[i] <= r ? 1 : 0;
-      fillHoles(m, width, height);
-      if (pieces(m, width, height) === 1) {
-        joined = m;
-        break;
-      }
-    }
-    square = !joined;
-  }
-  const mask =
-    joined ??
-    roundRect(
+  const square = count / (iw * ih) > FULL_BLEED || edges >= 3;
+  const inside = (m: Uint8Array) =>
+    distanceTo(
+      m.map((v) => 1 - v),
+      width,
+      height,
+    );
+  let mask: Uint8Array;
+  let distanceIn: Float64Array;
+  if (square) {
+    mask = roundRect(
       width,
       height,
       { x0: ink0.x0 - border, y0: ink0.y0 - border, x1: ink0.x1 + border, y1: ink0.y1 + border },
       border * SQUARE_CORNER,
     );
+    distanceIn = inside(mask);
+  } else {
+    // How far each cell lies past the border round the ink; bridges lower it along their lines.
+    const beyond = distanceTo(inked, width, height);
+    for (let i = 0; i < n; i++) beyond[i] -= border;
+    mask = closed(beyond, width, height, closing);
+    distanceIn = inside(mask);
+    // The parts to bridge are the cut's cells half a bridge or more inside it, so a neck narrower than
+    // a bridge counts as apart. A bridge is at least as wide as the soft line's box, which keeps it
+    // whole, and half of it at most the border, which keeps every ink cell in a part.
+    const halfWidth = Math.min(Math.max(BRIDGE * border, 2 * SOFT + 1) / 2, border);
+    const core = new Uint8Array(n);
+    for (let i = 0; i < n; i++) core[i] = distanceIn[i] >= halfWidth ? 1 : 0;
+    const parts = label(core, width, height);
+    if (parts.count > 1) {
+      for (const bridge of spanningBridges(core, parts, width, height))
+        layBridge(beyond, width, height, bridge, halfWidth, closing);
+      mask = closed(beyond, width, height, closing);
+      distanceIn = inside(mask);
+    }
+  }
 
-  const outside = new Uint8Array(n);
   const bounds: Bounds = { x0: width, y0: height, x1: -1, y1: -1 };
   for (let i = 0; i < n; i++) {
-    outside[i] = mask[i] ? 0 : 1;
     if (!mask[i]) continue;
     const x = i % width;
     const y = Math.floor(i / width);
@@ -319,7 +456,7 @@ export function dieCut(ink: Pixels, borderPx: number): DieCut | null {
     bounds.y1 = Math.max(bounds.y1, y);
   }
   const plain = Float32Array.from(mask);
-  const soft = boxBlur(boxBlur(plain, width, height, 2), width, height, 2);
+  const soft = boxBlur(boxBlur(plain, width, height, SOFT), width, height, SOFT);
   const edge = new Uint8Array(n);
   for (let i = 0; i < n; i++) edge[i] = soft[i] >= 0.5 ? 1 : 0;
 
@@ -329,7 +466,7 @@ export function dieCut(ink: Pixels, borderPx: number): DieCut | null {
     scale,
     pad,
     mask,
-    distanceIn: distanceTo(outside, width, height),
+    distanceIn,
     distanceOut: distanceTo(mask, width, height),
     soft,
     bounds,
