@@ -157,8 +157,6 @@ export const meSchema = personSchema.extend({
    * spent in it.
    */
   kyotoSeikaPractice: z.boolean(),
-  /** "Dark subjects too", under it: the deal may bring the dark Kyoto Seika Subjects. */
-  kyotoSeikaDarkSubjects: z.boolean(),
 });
 export type Me = z.infer<typeof meSchema>;
 
@@ -173,7 +171,6 @@ export const toMe = (
   needsHandle: user.handle === null,
   ...counts,
   kyotoSeikaPractice: kyotoSeikaPracticeOn(user),
-  kyotoSeikaDarkSubjects: user.kyotoSeikaDarkSubjectsOnAt !== null,
 });
 
 /** The five PNGs a sticker is sealed with. The sticker PNG's hash names them. */

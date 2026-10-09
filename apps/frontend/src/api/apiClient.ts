@@ -78,11 +78,8 @@ export interface ApiClient {
   setLanguageChoice: (language: Me["language"]) => Promise<Me>;
   /** POST /api/me/nsfw-opt-in: Show 18+ stickers, in Settings. */
   setNsfwOptIn: (nsfwOptIn: boolean) => Promise<Me>;
-  /** POST /api/me/kyoto-seika-practice: Kyoto Seika Practice Mode and its dark subjects, in Settings; a switch left out stays. */
-  setKyotoSeikaPractice: (change: {
-    kyotoSeikaPractice?: boolean;
-    kyotoSeikaDarkSubjects?: boolean;
-  }) => Promise<Me>;
+  /** POST /api/me/kyoto-seika-practice: Kyoto Seika Practice Mode, in Settings. */
+  setKyotoSeikaPractice: (change: { kyotoSeikaPractice: boolean }) => Promise<Me>;
 
   /** GET /api/sticker-boards/:userId; `me` for your own. */
   stickerBoard: (userId?: string) => Promise<StickerBoard>;

@@ -295,40 +295,27 @@ describe("your NSFW opt-in", () => {
   });
 });
 
-describe("your switches for Kyoto Seika Manga Expression Practice Mode", () => {
-  const setSwitches = (headers: Record<string, string>, body: unknown) =>
+describe("your switch for Kyoto Seika Manga Expression Practice Mode", () => {
+  const setSwitch = (headers: Record<string, string>, body: unknown) =>
     test.send("POST", "/api/me/kyoto-seika-practice", { headers, body });
-  const switchesIn = async (response: Response) => {
-    const { kyotoSeikaPractice, kyotoSeikaDarkSubjects } = await meIn(response);
-    return { kyotoSeikaPractice, kyotoSeikaDarkSubjects };
-  };
+  const practiceIn = async (response: Response) => (await meIn(response)).kyotoSeikaPractice;
   const kyotoSeikaPracticeOnAt = (userId: string) =>
     test.db.select().from(users).where(eq(users.id, userId)).get()?.kyotoSeikaPracticeOnAt;
 
-  it("are off until turned on, and each turns on and off without moving the other", async () => {
+  it("is off until turned on, and turns off again", async () => {
     const userId = insertUser(test.db);
     const headers = await test.signInAs(userId);
-    expect(await switchesIn(await getMe(headers))).toEqual({
-      kyotoSeikaPractice: false,
-      kyotoSeikaDarkSubjects: false,
-    });
-    await setSwitches(headers, { kyotoSeikaPractice: true });
+    expect(await practiceIn(await getMe(headers))).toBe(false);
+    expect(await practiceIn(await setSwitch(headers, { kyotoSeikaPractice: true }))).toBe(true);
     expect(kyotoSeikaPracticeOnAt(userId)).toEqual(test.clock.now());
-    expect(await switchesIn(await setSwitches(headers, { kyotoSeikaDarkSubjects: true }))).toEqual({
-      kyotoSeikaPractice: true,
-      kyotoSeikaDarkSubjects: true,
-    });
-    expect(await switchesIn(await setSwitches(headers, { kyotoSeikaPractice: false }))).toEqual({
-      kyotoSeikaPractice: false,
-      kyotoSeikaDarkSubjects: true,
-    });
+    expect(await practiceIn(await setSwitch(headers, { kyotoSeikaPractice: false }))).toBe(false);
     expect(kyotoSeikaPracticeOnAt(userId)).toBeNull();
   });
 
-  it("refuses a body that turns nothing on or off", async () => {
+  it("refuses a body that doesn't say on or off", async () => {
     const headers = await test.signInAs(insertUser(test.db));
     for (const body of [{}, { kyotoSeikaPractice: "on" }]) {
-      expect(await refusalOf(await setSwitches(headers, body))).toMatchObject({
+      expect(await refusalOf(await setSwitch(headers, body))).toMatchObject({
         status: 400,
         error: "invalid_request",
       });
@@ -337,7 +324,7 @@ describe("your switches for Kyoto Seika Manga Expression Practice Mode", () => {
 });
 
 describe("deleting your account", () => {
-  it("forgets LINE, the handle, the NSFW opt-in and the switches for Kyoto Seika Manga Expression Practice Mode, keeps the rest, ends the session, and a new sign-in makes a new person", async () => {
+  it("forgets LINE, the handle, the NSFW opt-in and Kyoto Seika Manga Expression Practice Mode, keeps the rest, ends the session, and a new sign-in makes a new person", async () => {
     const signedIn = await signIn(ALICE);
     const { id } = await meIn(signedIn);
     const headers = sessionCookie(signedIn);
@@ -349,7 +336,6 @@ describe("deleting your account", () => {
         suiAddress: wallet,
         nsfwOptedInAt: now,
         kyotoSeikaPracticeOnAt: now,
-        kyotoSeikaDarkSubjectsOnAt: now,
       })
       .where(eq(users.id, id))
       .run();
@@ -368,7 +354,6 @@ describe("deleting your account", () => {
       handle: null,
       nsfwOptedInAt: null,
       kyotoSeikaPracticeOnAt: null,
-      kyotoSeikaDarkSubjectsOnAt: null,
       suiAddress: wallet,
     });
     expect(test.db.select().from(stickers).where(eq(stickers.id, stickerId)).get()).toMatchObject({
