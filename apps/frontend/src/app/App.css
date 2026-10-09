@@ -12,7 +12,7 @@
 
 /* On a desktop with a mouse, show it inside a phone frame: the phone's own 390px viewport in a
    bezel, whose outer corner is the screen's radius plus the bezel. A touch screen, an iPad with a
-   trackpad included, keeps the whole screen for the large layout (ui/largeScreen.ts). */
+   trackpad included, keeps the whole screen for its own layout (ui/largeScreen.ts). */
 @media (hover: hover) and (pointer: fine) and (min-width: 500px) {
   @media not all and (any-pointer: coarse) {
     #root {

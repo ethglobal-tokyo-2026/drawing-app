@@ -3,7 +3,7 @@
  * WebDriver over fetch), for what Safari's own UI can get wrong and Playwright's WebKit can't show:
  * Safari's toolbars and the home indicator over controls, overflow, turning the iPad, iOS's motion
  * prompt, its native pickers, touch and pen ink, and the session cookie surviving a reload. Run it after
- * changing the large layout, sheets, the tab bar, or touch and pen input:
+ * changing large-screen layouts, sheets, the tab bar, or touch and pen input:
  *
  *   pnpm --filter frontend test:ipad-safari
  *

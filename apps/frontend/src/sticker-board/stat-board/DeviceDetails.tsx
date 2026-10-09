@@ -18,7 +18,7 @@ const reason = (error: unknown) => (error instanceof Error ? error.message : Str
 
 /**
  * The developer slip's Device paper: what the device and its browser say about themselves and
- * whether the app takes the large layout, following every turn and resize, with Copy for a report
+ * whether the app lays out for a large screen, following every turn and resize, with Copy for a report
  * from a real iPad.
  */
 export function DeviceDetails() {

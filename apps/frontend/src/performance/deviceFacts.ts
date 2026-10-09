@@ -103,7 +103,7 @@ export function watchDeviceFacts(onChange: () => void): () => void {
 const size = ({ width, height }: Size) => `${Math.round(width)}×${Math.round(height)}`;
 
 /**
- * The facts as labeled rows, whether the app takes the large layout (ui/largeScreen.ts) last: the
+ * The facts as labeled rows, whether the app lays out for a large screen (ui/largeScreen.ts) last: the
  * Device paper's rows, the report's lines.
  */
 export function deviceFactRows(facts: DeviceFacts, large: boolean): [string, string][] {

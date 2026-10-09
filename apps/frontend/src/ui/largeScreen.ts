@@ -5,7 +5,7 @@ import { useSyncExternalStore } from "react";
  * not. Anything smaller, Split View and LINE's sheet included, keeps the phone's layout, and so does a
  * desktop, shown in its phone frame (App.css). Every large-screen CSS rule spells the same query.
  */
-/** The large layout's room, in CSS px, both ways. */
+/** A large screen's least room, in CSS px, both ways. */
 export const LARGE_MIN_PX = 600;
 export const LARGE_SCREEN = `(min-width: ${LARGE_MIN_PX}px) and (min-height: ${LARGE_MIN_PX}px) and (any-pointer: coarse)`;
 
