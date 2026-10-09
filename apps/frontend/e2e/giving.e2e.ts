@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test";
+import { expect, type Locator } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import {
   backToBoardOnceSent,
@@ -124,4 +124,66 @@ test("Mark 18+ is the Original Artist's: Alice is offered it, and Bob, who recei
   const received = await openDetail(bob, language, no);
   await expect(receivedRow(received, language, aliceHandle)).toBeVisible();
   await expect(received.getByRole("button", markNsfw)).toHaveCount(0);
+});
+
+test("Bob's detail of Alice's gift holds the Transfer Trail's place and Send gratitude's while it's read, and nothing moves as they land", async ({
+  page: alice,
+  friend: bob,
+}) => {
+  const aliceHandle = handleOf(await signIn(alice, "alice", language));
+  const no = await sealFromBoard(alice, language);
+  const giftClaimToken = giftClaimTokenFrom(alice);
+  await giveFromBoard(alice, language, no);
+  await backToBoardOnceSent(alice, language);
+
+  await signIn(bob, "bob", language);
+  await bob.goto(`/g/${await giftClaimToken}`);
+  await unpackageAndAccept(bob, language, aliceHandle);
+  const ask = gratitudeAsk(bob, language, aliceHandle);
+  await ask.getByRole("button", { name: say(receiving.sendGratitude.later, language) }).click();
+  await expect(ask).toBeHidden();
+
+  // Every read of a sticker's detail, the board's read ahead included, waits until it's let go.
+  let letGo = () => {};
+  const held = new Promise<void>((resolve) => {
+    letGo = resolve;
+  });
+  await bob.route(/\/api\/stickers\/[^/?]+(\?.*)?$/, async (route) => {
+    if (route.request().method() === "GET") await held;
+    await route.continue();
+  });
+  await bob.reload();
+  const detail = await openDetail(bob, language, no);
+  const trail = detail.getByRole("region", {
+    name: say(stickerBoard.transferTrail.label, language),
+  });
+  await expect(trail.getByRole("status")).toHaveText(
+    say(stickerBoard.transferTrail.loading, language),
+  );
+  const give = detail.getByRole("button", {
+    name: say(stickerBoard.detail.give, language),
+    exact: true,
+  });
+  /** Where a part sits in the page's layout, apart from any rise it's making. */
+  const span = (part: Locator) =>
+    part.evaluate((el: HTMLElement) => ({
+      top: el.offsetTop,
+      foot: el.offsetTop + el.offsetHeight,
+    }));
+  const before = {
+    give: await span(give),
+    trail: await span(trail),
+    rows: await trail.locator("li").count(),
+  };
+
+  letGo();
+  await expect(receivedRow(detail, language, aliceHandle)).toBeVisible();
+  await expect(
+    detail.getByRole("button", { name: say(stickerBoard.detail.sendGratitude, language) }),
+  ).toBeVisible();
+  expect({
+    give: await span(give),
+    trail: await span(trail),
+    rows: await trail.locator("li").count(),
+  }).toEqual(before);
 });

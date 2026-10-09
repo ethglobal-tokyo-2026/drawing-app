@@ -757,6 +757,8 @@ export const stickerBoard = {
   transferTrail: {
     /** Sticker detail: screen readers' name for the Transfer Trail section under the sticker */
     label: { en: "Where it’s been", ja: "来歴" },
+    /** Sticker detail, while it's read: screen readers' status line for the Transfer Trail's placeholder rows */
+    loading: { en: "Loading where it’s been", ja: "来歴を読み込んでいます" },
     /** A row: `<giver/>` and `<receiver/>` are their names, and `<at>` holds the day. */
     handOff: {
       /** Transfer Trail: a row for a gift between two other people; <at> holds the day, such as "9.23" */

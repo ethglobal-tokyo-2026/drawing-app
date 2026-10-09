@@ -69,6 +69,7 @@ const sticker = (
   artist: you,
   held: true,
   hasTimelapse: false,
+  trail: { timesGiven: 0, newestHasGratitude: false },
   givenTo: null,
   openGift: null,
   seenAt: createdAt,
@@ -611,10 +612,108 @@ describe("StickerDetail", () => {
     const client = emptyApi({ stickerDetail });
     preloadStickerDetails(client, ["s-133"]);
     await settle();
-    open({ ownerId: me.id }, client);
+    const given = stickers.map((s) => ({
+      ...s,
+      trail: { timesGiven: 1, newestHasGratitude: false },
+    }));
+    open({ ownerId: me.id, stickers: given }, client);
     expect(rows()).toHaveLength(1);
+    expect(document.querySelector(".sticker-detail__column .skeleton")).toBeNull();
     await settle();
     expect(stickerDetail).toHaveBeenCalledTimes(1);
+  });
+
+  describe("while its detail is read", () => {
+    /** A client whose read of the sticker's detail answers `answer` only once `land` is called. */
+    function heldDetail(answer: StickerDetailResponse) {
+      let resolve: (detail: StickerDetailResponse) => void = () => {};
+      const stickerDetail = () =>
+        new Promise<StickerDetailResponse>((r) => {
+          resolve = r;
+        });
+      return {
+        client: emptyApi({ stickerDetail }),
+        land: async () => {
+          resolve(answer);
+          await settle();
+        },
+      };
+    }
+    const trail = () => document.querySelector(".transfer-trail");
+    const skeletons = (within: string) => document.querySelectorAll(`${within} .skeleton`).length;
+    /** Each of the trail's rows by the shape that sets its height. */
+    const shapes = () =>
+      [...(trail()?.querySelectorAll(".transfer-trail__row") ?? [])].map((row) =>
+        row.classList.contains("is-open")
+          ? "card"
+          : row.classList.contains("transfer-trail__row--fold")
+            ? "fold"
+            : row.querySelector("p.transfer-trail__head")
+              ? "line"
+              : "closed",
+      );
+
+    it("holds the Transfer Trail's place with a skeleton of its rows, shaped as the trail lands", async () => {
+      const bob = toPerson(people.bob);
+      const given = sticker(133, day(14), {
+        held: false,
+        givenTo: { receiver: bob, receivedAt: day(23) },
+        trail: { timesGiven: 3, newestHasGratitude: true },
+      });
+      const read = heldDetail({
+        sticker: apiSticker({ id: "s-133", number: 133 }),
+        owner: people.bob,
+        transferTrail: [
+          trailEntry({
+            giftId: "g-3",
+            giver: me,
+            receiver: people.bob,
+            gratitude: gratitudeFixture({ giftId: "g-3", total: 300 }),
+          }),
+          trailEntry({ giftId: "g-2", giver: people.ken, receiver: me }),
+          trailEntry({ giftId: "g-1", giver: me, receiver: people.ken }),
+        ],
+      });
+      open({ mode: "given", stickers: [given], startId: given.id, ownerId: me.id }, read.client);
+      const held = shapes();
+      expect(skeletons(".transfer-trail")).toBeGreaterThan(0);
+      // The line that says who has it is the trail's, so it doesn't show and go as the trail lands.
+      const meta = () => document.querySelector(".sticker-detail__meta")?.textContent;
+      expect(meta()).not.toContain("You gave it to");
+
+      await read.land();
+      expect(skeletons(".transfer-trail")).toBe(0);
+      expect(shapes()).toEqual(held);
+      expect(openRow()).toContain("300");
+      expect(meta()).not.toContain("You gave it to");
+    });
+
+    it("lays Give out beside Send gratitude's place while it reads whether gratitude is owed, and keeps it there", async () => {
+      const read = heldDetail({
+        sticker: apiSticker({ id: "s-133", artist: people.ken, ownerId: TEST_OWNER.id }),
+        owner: TEST_OWNER,
+        transferTrail: [trailEntry({ giftId: "gift-133", receiver: TEST_OWNER })],
+      });
+      const fromMika = sticker(133, day(14), {
+        artist: toPerson(people.ken),
+        trail: { timesGiven: 1, newestHasGratitude: false },
+      });
+      const onSendGratitude = vi.fn();
+      open(
+        { stickers: [fromMika], startId: fromMika.id, ownerId: TEST_OWNER.id, onSendGratitude },
+        read.client,
+      );
+      const give = button("Give");
+      expect(give?.classList.contains("key")).toBe(false);
+      expect(skeletons(".sticker-detail__acts")).toBe(1);
+      const held = shapes();
+
+      await read.land();
+      expect(button("Give")).toBe(give);
+      expect(button("Send gratitude")?.classList.contains("key")).toBe(true);
+      expect(skeletons(".sticker-detail__acts")).toBe(0);
+      expect(shapes()).toEqual(held);
+    });
   });
 
   it("folds the rows past the newest, and opens a tapped row in place of the open one", async () => {

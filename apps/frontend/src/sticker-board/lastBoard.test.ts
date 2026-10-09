@@ -29,6 +29,7 @@ const sticker = (id: string): PlacedBoardSticker => ({
   artist: toPerson(TEST_OWNER),
   held: true,
   hasTimelapse: false,
+  trail: { timesGiven: 0, newestHasGratitude: false },
   givenTo: null,
   openGift: null,
   seenAt: null,

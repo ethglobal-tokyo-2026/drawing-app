@@ -1,5 +1,6 @@
 import {
   gifts,
+  gratitude,
   stickerPlacements,
   stickers,
   stickerTimelapses,
@@ -45,6 +46,11 @@ const boardStickerSchema = stickerPlacementSchema.extend({
    * who gets the sticker veiled, since it shows the drawing.
    */
   hasTimelapse: z.boolean(),
+  /**
+   * Its Transfer Trail's outline, so its detail holds the trail's place until the trail is read: how
+   * many times it was given and received, and whether the newest of those gifts has gratitude.
+   */
+  trail: z.object({ timesGiven: z.number().int().nonnegative(), newestHasGratitude: z.boolean() }),
   /** Set when `held` is false: who received it, for the giver's notice. */
   givenTo: z.object({ receiver: personSchema, receivedAt: isoTimeSchema }).nullable(),
   /** `for`: who the giver picked in the app, or who first opened its link; null through LINE alone. */
@@ -159,6 +165,29 @@ function withTimelapses(db: Db, stickerIds: string[]): Set<string> {
   return new Set(rows.map(({ stickerId }) => stickerId));
 }
 
+const NO_TRAIL: BoardSticker["trail"] = { timesGiven: 0, newestHasGratitude: false };
+
+/** Each of `stickerIds`' Transfer Trail outline; one never received from anyone has none. */
+function trailsOf(db: Db, stickerIds: string[]) {
+  const trails = new Map<string, BoardSticker["trail"]>();
+  if (stickerIds.length === 0) return trails;
+  const rows = db
+    .select({ stickerId: gifts.stickerId, gratitudeFor: gratitude.giftId })
+    .from(gifts)
+    .leftJoin(gratitude, eq(gratitude.giftId, gifts.id))
+    .where(and(eq(gifts.status, "received"), inArray(gifts.stickerId, stickerIds)))
+    .orderBy(asc(gifts.receivedAt))
+    .all();
+  // Oldest first, so each sticker ends on its newest gift's gratitude.
+  for (const { stickerId, gratitudeFor } of rows) {
+    trails.set(stickerId, {
+      timesGiven: (trails.get(stickerId)?.timesGiven ?? 0) + 1,
+      newestHasGratitude: gratitudeFor !== null,
+    });
+  }
+  return trails;
+}
+
 /** A sticker in one of the owner's sent gifts: on its way, so off their board until it's received. */
 const onItsWayFrom = (db: Db, ownerId: string) =>
   db
@@ -210,10 +239,9 @@ export function loadStickerBoard(
         givenAway.map(({ sticker }) => sticker.id),
       )
     : new Map<string, BoardSticker["givenTo"]>();
-  const timelapsed = withTimelapses(
-    db,
-    rows.map(({ sticker }) => sticker.id),
-  );
+  const listedIds = rows.map(({ sticker }) => sticker.id);
+  const timelapsed = withTimelapses(db, listedIds);
+  const trails = trailsOf(db, listedIds);
   return {
     owner: toPerson(owner),
     boardStickers: rows.map(({ placement, sticker, artist }) => {
@@ -228,6 +256,7 @@ export function loadStickerBoard(
         },
         held,
         hasTimelapse: timelapsed.has(sticker.id) && !viewer.veils(sticker),
+        trail: trails.get(sticker.id) ?? NO_TRAIL,
         givenTo: held ? null : (givenTo.get(sticker.id) ?? null),
         openGift: openGifts.get(sticker.id) ?? null,
       };

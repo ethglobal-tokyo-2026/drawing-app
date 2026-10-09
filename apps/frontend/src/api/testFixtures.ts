@@ -98,6 +98,7 @@ export function boardSticker(overrides: Partial<BoardSticker> = {}): BoardSticke
     sticker: s,
     held: true,
     hasTimelapse: false,
+    trail: { timesGiven: 0, newestHasGratitude: false },
     givenTo: null,
     openGift: null,
     ...overrides,

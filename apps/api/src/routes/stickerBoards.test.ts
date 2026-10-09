@@ -261,6 +261,29 @@ describe("GET /api/sticker-boards/:userId", () => {
     });
   });
 
+  it("says how many times each sticker was given, and whether its newest gift has gratitude", async () => {
+    const me = insertUser(test.db);
+    const friend = insertUser(test.db);
+    const kept = seal(me);
+    const withGratitude = seal(me);
+    sendGratitude(test.db, withGratitude, me, friend, OWN_TAP);
+    const cameBack = seal(me);
+    giveSticker(test.db, cameBack, me, friend, FIRST_ARRIVAL);
+    giveSticker(test.db, cameBack, friend, me, minuteAfter(FIRST_ARRIVAL));
+    // On its way, not received yet, so not on its Transfer Trail.
+    const onItsWay = seal(me);
+    sendGift(onItsWay, me);
+
+    const trails = new Map(
+      (await boardOf(me, "me")).boardStickers.map((b) => [b.stickerId, b.trail]),
+    );
+    const none = { timesGiven: 0, newestHasGratitude: false };
+    expect(trails.get(kept)).toEqual(none);
+    expect(trails.get(onItsWay)).toEqual(none);
+    expect(trails.get(withGratitude)).toEqual({ timesGiven: 1, newestHasGratitude: true });
+    expect(trails.get(cameBack)).toEqual({ timesGiven: 2, newestHasGratitude: false });
+  });
+
   it("refuses a person who doesn't exist, for their board and their stats", async () => {
     const me = insertUser(test.db);
     for (const path of [

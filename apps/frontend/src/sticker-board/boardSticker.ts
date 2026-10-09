@@ -48,6 +48,8 @@ export interface BoardStickerView extends BoardSticker {
   held: boolean;
   /** Sealed with its timelapse, and not veiled for you, so its detail offers Timelapse. */
   hasTimelapse: boolean;
+  /** Its Transfer Trail's outline, which holds the trail's place in its detail until it's read. */
+  trail: { timesGiven: number; newestHasGratitude: boolean };
   /** Set when `held` is false. */
   givenTo: GivenTo | null;
   /**
@@ -118,6 +120,7 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
     artist: s.artist,
     held: b.held,
     hasTimelapse: b.hasTimelapse,
+    trail: b.trail,
     givenTo: b.givenTo && {
       receiver: toPerson(b.givenTo.receiver),
       receivedAt: toMs(b.givenTo.receivedAt),

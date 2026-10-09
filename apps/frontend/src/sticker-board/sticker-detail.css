@@ -325,6 +325,12 @@
   align-self: stretch;
 }
 
+/* Send gratitude's place while the read is out: a key's box and corners, as keys.css draws one. */
+.sticker-detail__acts .sticker-detail__key-skeleton {
+  min-height: calc(60px + 6px);
+  border-radius: 16px;
+}
+
 .sticker-detail__check-failed,
 .sticker-detail__gratitude-refused {
   margin: 18px 0 0;

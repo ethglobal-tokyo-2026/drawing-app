@@ -44,6 +44,7 @@ import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
+import { Skeleton } from "../ui/Skeleton";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
@@ -56,7 +57,7 @@ import { myStickerBoardChanged } from "./useMyStickerBoard";
 import { TimelapseButton, TimelapseFailure } from "./timelapse/TimelapseButton";
 import { TimelapseLayer } from "./timelapse/TimelapseLayer";
 import { useTimelapse } from "./timelapse/useTimelapse";
-import { TransferTrail } from "./TransferTrail";
+import { TransferTrail, TransferTrailSkeleton } from "./TransferTrail";
 import { toTrailRows } from "./trailRows";
 import { dotSpot } from "./tray/stickerShape";
 import "./sticker-detail.css";
@@ -226,6 +227,20 @@ export function StickerDetail({
   const youId = mode === "yours" ? (loaded?.owner.id ?? null) : null;
   const gratitudeRefusals = useGratitudeRefusals(youId);
   const refused = youId && loaded ? refusedGratitude(loaded, gratitudeRefusals) : null;
+  // Until the read lands, the board's outline of the trail holds its place, and a gift to you with no
+  // gratitude yet lays out Send gratitude's, so nothing under the fine print moves as it lands.
+  const reading = detail.state === "loading" && sticker !== undefined;
+  const trailHeld = reading && ownerId !== undefined && sticker.trail.timesGiven > 0;
+  const mayOweGratitude =
+    reading &&
+    mode === "yours" &&
+    onSendGratitude !== undefined &&
+    !sent &&
+    sticker.trail.timesGiven > 0 &&
+    !sticker.trail.newestHasGratitude;
+  // The trail that lands where its skeleton was rises into its place.
+  const [heldTrailOf, setHeldTrailOf] = useState<string | null>(null);
+  if (trailHeld && heldTrailOf !== sticker.id) setHeldTrailOf(sticker.id);
 
   const root = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLElement>(null);
@@ -652,8 +667,8 @@ export function StickerDetail({
                 {sticker.kyotoSeikaSubjects && (
                   <KyotoSeikaTag subjects={sticker.kyotoSeikaSubjects} />
                 )}
-                {/* The Transfer Trail says it too, once it's in. */}
-                {mode === "given" && sticker.givenTo && trail.length === 0 && (
+                {/* The Transfer Trail says it too, once it's in or while its place is held. */}
+                {mode === "given" && sticker.givenTo && trail.length === 0 && !trailHeld && (
                   <p className="fine sticker-detail__fine-print">
                     <Trans
                       i18nKey={($) => $.stickerBoard.detail.youGaveIt}
@@ -788,16 +803,24 @@ export function StickerDetail({
               )}
               {mode === "yours" &&
                 !sent &&
-                (owed && onSendGratitude ? (
+                ((owed && onSendGratitude) || mayOweGratitude ? (
                   // Gratitude comes first; Give stays within reach as label stock.
                   <div className="sticker-detail__acts sticker-detail__acts--stack">
-                    <Key
-                      tone="pink"
-                      icon={<GratitudeIcon />}
-                      onClick={() => onSendGratitude(owed.gift, owed.sticker, owed.giver)}
-                    >
-                      {t(($) => $.stickerBoard.detail.sendGratitude)}
-                    </Key>
+                    {owed && onSendGratitude ? (
+                      <Key
+                        tone="pink"
+                        icon={<GratitudeIcon />}
+                        onClick={() => onSendGratitude(owed.gift, owed.sticker, owed.giver)}
+                      >
+                        {t(($) => $.stickerBoard.detail.sendGratitude)}
+                      </Key>
+                    ) : (
+                      <Skeleton
+                        className="sticker-detail__key-skeleton"
+                        width="100%"
+                        height="auto"
+                      />
+                    )}
                     {onGive && (
                       <LabelButton
                         size="sm"
@@ -824,8 +847,10 @@ export function StickerDetail({
                   rows={trail}
                   viewerId={ownerId}
                   artist={sticker.artist}
+                  rises={heldTrailOf === sticker.id}
                 />
               )}
+              {trailHeld && <TransferTrailSkeleton trail={sticker.trail} />}
 
               {/* A section of its own at the very foot, past a rule, so it never reads as Give's
                   alternative: plain label stock across the column, its confirm opening in its place,

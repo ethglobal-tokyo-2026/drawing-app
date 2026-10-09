@@ -1,5 +1,6 @@
 import type { StickerBoard } from "@drawing-app/api/client";
 import { QueryAnswers, useApiQuery, type Query } from "../api/useApiQuery";
+import { onGratitudeLeftOutbox } from "../gratitude/gratitudeOutbox";
 import { noteBootMilestone } from "../performance/bootMilestones";
 import { useNsfwOptInKey } from "../stickers/nsfw";
 
@@ -17,6 +18,11 @@ export function myStickerBoardChanged(): void {
   answers.forget();
   for (const changed of [...changes]) changed();
 }
+
+// A recorded combo gives its gift gratitude, which the board's outline of each Transfer Trail says.
+onGratitudeLeftOutbox(({ result }) => {
+  if (result.state === "recorded") myStickerBoardChanged();
+});
 
 /** Calls `changed` whenever myStickerBoardChanged runs; returns how to stop. */
 export function onMyStickerBoardChanged(changed: () => void): () => void {

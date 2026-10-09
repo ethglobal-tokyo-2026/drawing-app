@@ -70,6 +70,7 @@ const sticker = (
   artist: { id: "me", handle: "you", name: "You", nsfwOptIn: false },
   held: true,
   hasTimelapse: false,
+  trail: { timesGiven: 0, newestHasGratitude: false },
   givenTo: null,
   openGift: null,
   ...extra,

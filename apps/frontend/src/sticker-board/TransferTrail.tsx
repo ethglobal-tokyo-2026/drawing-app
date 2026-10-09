@@ -10,8 +10,10 @@ import { Trans, useTranslation } from "../i18n/react";
 import { formatMonthDay } from "../stickers/format";
 import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
+import { REVEAL } from "../ui/reveal";
+import { Skeleton } from "../ui/Skeleton";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { handleOf } from "./boardSticker";
+import { handleOf, type BoardStickerView } from "./boardSticker";
 import { artistShareLine, defaultOpenRow, TRAIL_SHOWN, type TrailRow } from "./trailRows";
 import "./transfer-trail.css";
 
@@ -27,6 +29,8 @@ interface Props {
   artist: PersonView;
   /** Builds a gratitude replay's engine; tests pass a fake. */
   mountReplay?: typeof mountGratitudeReplay;
+  /** Landing where its skeleton held its place: it rises into it. */
+  rises?: boolean;
 }
 
 /**
@@ -35,7 +39,7 @@ interface Props {
  * card; any row with gratitude opens with a tap. Past the newest gift, the rest fold into "N
  * earlier gifts".
  */
-export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
+export function TransferTrail({ rows, viewerId, artist, mountReplay, rises = false }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const [openId, setOpenId] = useState(() => defaultOpenRow(rows, viewerId));
@@ -110,7 +114,10 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
   };
 
   return (
-    <section className="transfer-trail" aria-label={t(($) => $.stickerBoard.transferTrail.label)}>
+    <section
+      className={`transfer-trail ${rises ? REVEAL : ""}`}
+      aria-label={t(($) => $.stickerBoard.transferTrail.label)}
+    >
       <ol ref={list} className="transfer-trail__list">
         {shown.map((r) => {
           const g = r.gratitude;
@@ -272,6 +279,70 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
               <CaretDown size={14} aria-hidden className="transfer-trail__caret" />
               <span>{t(($) => $.stickerBoard.transferTrail.earlierGifts, { count: earlier })}</span>
             </button>
+          </li>
+        )}
+      </ol>
+    </section>
+  );
+}
+
+/** A skeleton line as tall as a line of the text it stands for. */
+const Line = ({ width }: { width: string }) => <Skeleton width={width} height="1.3em" />;
+
+/**
+ * The Transfer Trail's place while its sticker's detail is read: the rows it first shows, in outline
+ * and in the same row boxes, so nothing under it moves as it lands. The newest gift is an open card
+ * when it has gratitude, as the trail opens the most recent gratitude; past it, the fold.
+ */
+export function TransferTrailSkeleton({
+  trail: { timesGiven, newestHasGratitude },
+}: {
+  trail: BoardStickerView["trail"];
+}) {
+  const { t } = useTranslation();
+  const shown = Math.min(timesGiven, TRAIL_SHOWN);
+  return (
+    <section
+      className="transfer-trail transfer-trail--loading"
+      aria-label={t(($) => $.stickerBoard.transferTrail.label)}
+    >
+      <p className="visually-hidden" role="status">
+        {t(($) => $.stickerBoard.transferTrail.loading)}
+      </p>
+      <ol className="transfer-trail__list" aria-hidden="true">
+        {Array.from({ length: shown }, (_, i) =>
+          i === 0 && newestHasGratitude ? (
+            <li key={i} className="transfer-trail__row is-open">
+              <p className="transfer-trail__head">
+                <Line width="78%" />
+              </p>
+              <div className="transfer-trail__figure">
+                <Skeleton width={40} height={40} round />
+                <span className="transfer-trail__sum">
+                  <span className="transfer-trail__total">
+                    <Skeleton width="3em" height="1em" />
+                  </span>
+                  <span className="fine transfer-trail__from">
+                    <Line width="9em" />
+                  </span>
+                </span>
+                <Skeleton width={92} height={40} className="transfer-trail__replay-skeleton" />
+              </div>
+            </li>
+          ) : (
+            <li key={i} className="transfer-trail__row">
+              <p className="transfer-trail__head">
+                <Line width="78%" />
+              </p>
+            </li>
+          ),
+        )}
+        {timesGiven > shown && (
+          // A control's height, as the fold's button is.
+          <li className="transfer-trail__row transfer-trail__row--fold">
+            <div className="transfer-trail__head">
+              <Line width="9em" />
+            </div>
           </li>
         )}
       </ol>
