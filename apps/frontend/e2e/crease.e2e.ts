@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
+import type { CreaseSide } from "../src/stickers/crease.ts";
 import {
   boardSticker,
   flipToStatBoard,
@@ -24,6 +25,12 @@ async function middleOf(sticker: Locator) {
 /** A sticker's crease, by the sticker's ID, on whichever board `page` shows. */
 const creaseOf = (page: Page, id: string) =>
   page.locator(`[data-sticker-id="${id}"] .sticker-crease`);
+
+/** How much of a crease's image lit from `side` shows now. */
+const opacityOf = (crease: Locator, side: CreaseSide) =>
+  crease
+    .locator(`[data-side="${side}"]`)
+    .evaluate((layer) => Number(getComputedStyle(layer).opacity));
 
 /** A sticker once it has landed and stuck, with its ID. */
 async function stuck(page: Page, no: string) {
@@ -50,7 +57,7 @@ async function setCreases(page: Page, on: boolean) {
   await page.getByRole("button", { name: say(statBoard.flipBack, language) }).click();
 }
 
-test("a sticker over another shows the crease of the edge beneath, on your board and to a visitor, none while it's in hand, and none on a device that switches creases off", async ({
+test("a sticker over another shows the crease of the edge beneath, lit as the one light falls, on your board and to a visitor, none while it's in hand, and none on a device that switches creases off", async ({
   page,
   friend,
 }) => {
@@ -80,6 +87,18 @@ test("a sticker over another shows the crease of the edge beneath, on your board
   await expect(creaseOf(page, over.id)).toHaveCount(0);
   await page.mouse.up();
   await expect(creaseOf(page, over.id)).toHaveCount(1);
+
+  // A mouse moves the one light, and the crease's lit side follows it: with the light at the screen's
+  // top left, the side it rests on; swung to the bottom right, the opposite side.
+  const crease = creaseOf(page, over.id);
+  await page.mouse.move(0, 0);
+  await expect.poll(() => opacityOf(crease, "topLeft")).toBeCloseTo(1, 1);
+  await expect.poll(() => opacityOf(crease, "bottomRight")).toBe(0);
+  const screen = page.viewportSize();
+  if (!screen) throw new Error("The page has no viewport");
+  await page.mouse.move(screen.width - 1, screen.height - 1, { steps: 4 });
+  await expect.poll(() => opacityOf(crease, "bottomRight")).toBeGreaterThan(0.3);
+  await expect.poll(() => opacityOf(crease, "topLeft")).toBeLessThan(0.3);
 
   // Switched off on this device's developer slip, the crease goes.
   await setCreases(page, false);

@@ -1,19 +1,17 @@
 import { memo, type CSSProperties, type Ref } from "react";
 import { useTranslation } from "../i18n/react";
+import type { CreaseSide } from "./crease";
 import { LiveResin } from "./LiveResin";
 import { madeFoil } from "./madeFoil";
+import { StickerCrease } from "./StickerCrease";
 import { StickerFoil, type FoilSize } from "./StickerFoil";
 import type { StickerUrls } from "./stickerUrls";
 import { revealOnLoad } from "../ui/reveal";
 import "./nsfw-mark.css";
-import "./sticker-crease.css";
 import "./sticker-figure.css";
 
-/** A sticker's crease, baked: its image, and the mask of its lit side where the resin's light catches it. */
-export interface Crease {
-  url: string;
-  shine: string | null;
-}
+/** A sticker's crease, baked: an image of it lit from each side, which the one light blends between. */
+export type Crease = Record<CreaseSide, string>;
 
 interface Props {
   urls: StickerUrls;
@@ -42,7 +40,7 @@ interface Props {
   stuck?: boolean;
   /** Held back, every layer, until its image has loaded, then faded in. */
   reveal?: boolean;
-  /** Where it lies over other stickers' edges: the baked crease, and the resin's highlights catch its lit side. */
+  /** Where it lies over other stickers' edges: the baked crease, its lit side following the one light. */
   crease?: Crease;
   className?: string;
   ref?: Ref<HTMLSpanElement>;
@@ -83,11 +81,9 @@ export const StickerFigure = memo(function StickerFigure({
     "--m": cssUrl(mask),
     "--mt": cssUrl(spec),
     "--mb": cssUrl(rim),
-    ...(crease?.shine && { "--mc": cssUrl(crease.shine) }),
   };
   const classes = [
     "sticker-figure",
-    crease?.shine && "has-crease-shine",
     nsfw && "is-nsfw",
     veiled && "is-veiled",
     stuck && "is-stuck",
@@ -109,15 +105,8 @@ export const StickerFigure = memo(function StickerFigure({
         draggable={false}
       />
       {nsfw && <span className="sticker-figure__gloss" aria-hidden="true" />}
-      {/* Keyed by its image, so a rebaked crease presses in again. */}
-      {crease && (
-        <span
-          key={crease.url}
-          className="sticker-crease"
-          style={{ "--crease": cssUrl(crease.url) }}
-          aria-hidden="true"
-        />
-      )}
+      {/* Keyed by its images, so a rebaked crease presses in again. */}
+      {crease && <StickerCrease key={crease.topLeft} crease={crease} />}
       {veiled && (
         <span className="sticker-figure__veil">
           <b className="nsfw-mark" role="img" aria-label={t(($) => $.stickers.nsfw.veiled)}>

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { CREASE_LIGHT, RAMP, TRANSMIT, creasePixels, drape, stackedSurface } from "./crease";
+import {
+  CREASE_SIDES,
+  RAMP,
+  TRANSMIT,
+  creasePixels,
+  drape,
+  stackedSurface,
+  type CreaseSide,
+} from "./crease";
 
 const W = 120;
 const H = 60;
@@ -12,18 +20,21 @@ const field = (value: (x: number, y: number) => number) => {
 };
 const everywhere = field(() => 1);
 
-/** The crease of a sticker covering the whole field over `layers`, at one pixel per CSS px. */
-function creaseOver(layers: Float32Array[]) {
+/**
+ * The crease of an unturned sticker covering the whole field over `layers`, at one pixel per CSS px,
+ * lit from `side`: the one light at rest unless another is named.
+ */
+function creaseOver(layers: Float32Array[], side: CreaseSide = "topLeft") {
   const pixels = creasePixels({
     width: W,
     height: H,
     surface: stackedSurface(layers, W, H, 1),
     own: everywhere,
     scale: 1,
-    light: CREASE_LIGHT,
+    lights: CREASE_SIDES,
   });
   if (!pixels) throw new Error("No crease over a step");
-  return pixels.crease;
+  return pixels[side];
 }
 
 /** The crease's lit (white) and shaded (ink) alpha, summed over a box. */
@@ -65,18 +76,24 @@ describe("crease", () => {
     expect(deeper).toBeLessThan(direct * (TRANSMIT + 0.15));
   });
 
-  it("lights the side of a step that faces the light and shades the side that faces away", () => {
+  it("lights the side of a step that faces the light and shades the far side, and swaps them for the opposite light", () => {
     const [x0, x1, y0, y1] = [40, 80, 20, 40];
-    const crease = creaseOver([field((x, y) => (x >= x0 && x < x1 && y >= y0 && y < y1 ? 1 : 0))]);
+    const card = [field((x, y) => (x >= x0 && x < x1 && y >= y0 && y < y1 ? 1 : 0))];
     const reach = RAMP + 2;
-    // The light is at the top left, so the ramps down from the left and top edges face it.
-    const left = tones(crease, x0 - reach, x0, y0 + 5, y1 - 5);
-    const right = tones(crease, x1, x1 + reach, y0 + 5, y1 - 5);
-    const top = tones(crease, x0 + 5, x1 - 5, y0 - reach, y0);
-    const bottom = tones(crease, x0 + 5, x1 - 5, y1, y1 + reach);
+    /** The ramps round the card beneath: the left and top ones face the top left. */
+    const ramps = (crease: Uint8ClampedArray) => ({
+      left: tones(crease, x0 - reach, x0, y0 + 5, y1 - 5),
+      right: tones(crease, x1, x1 + reach, y0 + 5, y1 - 5),
+      top: tones(crease, x0 + 5, x1 - 5, y0 - reach, y0),
+      bottom: tones(crease, x0 + 5, x1 - 5, y1, y1 + reach),
+    });
+    const atRest = ramps(creaseOver(card, "topLeft"));
+    const opposite = ramps(creaseOver(card, "bottomRight"));
     for (const [lit, shaded] of [
-      [left, right],
-      [top, bottom],
+      [atRest.left, atRest.right],
+      [atRest.top, atRest.bottom],
+      [opposite.right, opposite.left],
+      [opposite.bottom, opposite.top],
     ]) {
       expect(lit.lit).toBeGreaterThan(lit.shade);
       expect(shaded.shade).toBeGreaterThan(shaded.lit);

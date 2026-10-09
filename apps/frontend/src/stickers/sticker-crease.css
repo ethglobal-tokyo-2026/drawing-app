@@ -1,22 +1,57 @@
-/* A sticker's crease where it lies over another's edge: the baked line, pressed in as it's shown. */
+/* A sticker's crease where it lies over another's edge, pressed in as it's shown: an image of it lit from
+   each side, blended by where the one light is (--lx, --ly), so its lit and shaded sides follow it. */
 .sticker-crease {
+  /* How far a full tilt swings the light: a full diagonal tilt reaches the opposite side. */
+  --crease-swing: 1.5;
+  /* Toward the light, on screen: the light at rest (--crease-ux, --crease-uy), swung by the tilt. */
+  --crease-x: calc(var(--crease-ux) + var(--crease-swing) * var(--lx, 0));
+  --crease-y: calc(var(--crease-uy) + var(--crease-swing) * var(--ly, 0));
+  /* Never stronger than at rest, so the crease only fades as the light passes overhead. */
+  --crease-len: max(1, hypot(var(--crease-x), var(--crease-y)));
+  /* Along the light at rest, and across it toward the top right. */
+  --crease-a: calc(
+    (var(--crease-x) * var(--crease-ux) + var(--crease-y) * var(--crease-uy)) / var(--crease-len)
+  );
+  --crease-b: calc(
+    (var(--crease-x) * -1 * var(--crease-uy) + var(--crease-y) * var(--crease-ux)) /
+      var(--crease-len)
+  );
+
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: var(--crease) 0 0 / 100% 100% no-repeat;
   animation: sticker-crease-in 360ms var(--ease-out) both;
 }
 
-/* The crease's lit side catches the resin's own specular and rim light as they slide with the light,
-   as one more mask under each: no layer of its own. */
-.sticker-figure.has-crease-shine .live-resin__spec {
-  -webkit-mask-image: var(--mt), var(--mc);
-  mask-image: var(--mt), var(--mc);
+.sticker-crease > i {
+  position: absolute;
+  inset: 0;
+  background: var(--crease) 0 0 / 100% 100% no-repeat;
+  transition: opacity 280ms var(--ease-out);
 }
 
-.sticker-figure.has-crease-shine .live-resin__rim {
-  -webkit-mask-image: var(--mb), var(--mc);
-  mask-image: var(--mb), var(--mc);
+/* Without hypot() the blend can't be worked out, and every side would show: there it's the crease at
+   rest. */
+.sticker-crease > i:not([data-side="topLeft"]) {
+  opacity: 0;
+}
+
+@supports (opacity: hypot(1, 1)) {
+  .sticker-crease > i[data-side="topLeft"] {
+    opacity: clamp(0, var(--crease-a), 1);
+  }
+
+  .sticker-crease > i[data-side="bottomRight"] {
+    opacity: clamp(0, calc(-1 * var(--crease-a)), 1);
+  }
+
+  .sticker-crease > i[data-side="topRight"] {
+    opacity: clamp(0, var(--crease-b), 1);
+  }
+
+  .sticker-crease > i[data-side="bottomLeft"] {
+    opacity: clamp(0, calc(-1 * var(--crease-b)), 1);
+  }
 }
 
 /* Lifted in a hand, it clears the stickers it lay over. */
@@ -35,5 +70,9 @@
 @media (prefers-reduced-motion: reduce) {
   .sticker-crease {
     animation: none;
+  }
+
+  .sticker-crease > i {
+    transition: none;
   }
 }
