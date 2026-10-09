@@ -3,10262 +3,5298 @@
     "ja": "AI",
     "reading": "",
     "en": "artificial intelligence",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "BGM",
     "reading": "",
     "en": "background music",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "SNS",
     "reading": "",
     "en": "social networking service",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "Tシャツ",
-    "reading": "",
-    "en": "T-shirt",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "アーティスト",
     "reading": "",
     "en": "artist",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
-    "ja": "アイス",
+    "ja": "アート",
     "reading": "",
-    "en": "ice cream",
-    "kind": "loanword",
-    "tier": false
+    "en": "art",
+    "kind": "loanword"
   },
   {
     "ja": "アイデア",
     "reading": "",
     "en": "idea",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "アイドル",
     "reading": "",
     "en": "Japanese idol",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "アクセサリー",
-    "reading": "",
-    "en": "accessory",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "あくび",
     "reading": "",
     "en": "yawn",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "アナウンサー",
-    "reading": "",
-    "en": "announcer",
-    "kind": "loanword",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "アニメ",
     "reading": "",
     "en": "animation",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "アパート",
-    "reading": "",
-    "en": "apartment building",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "あられ",
-    "reading": "",
-    "en": "hail",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "アルバイト",
     "reading": "",
     "en": "part-time job",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "アルバム",
     "reading": "",
     "en": "album",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "アンテナ",
-    "reading": "",
-    "en": "antenna",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "イカ",
-    "reading": "",
-    "en": "cuttlefish",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "イケメン",
     "reading": "",
     "en": "good-looking guy",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "いたずら",
     "reading": "",
     "en": "mischief",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "いとこ",
     "reading": "",
     "en": "cousin",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "いびき",
-    "reading": "",
-    "en": "snoring",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "インターホン",
-    "reading": "",
-    "en": "intercom",
-    "kind": "loanword",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "ウイルス",
     "reading": "",
     "en": "virus",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ウェイトレス",
-    "reading": "",
-    "en": "waitress",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "うがい",
-    "reading": "",
-    "en": "gargling",
-    "kind": "moment",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "うさぎ",
     "reading": "",
     "en": "rabbit",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "うそ",
     "reading": "",
     "en": "lie",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "うそつき",
     "reading": "",
     "en": "liar",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "うちわ",
-    "reading": "",
-    "en": "uchiwa",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "うどん",
-    "reading": "",
-    "en": "udon",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "うわさ",
     "reading": "",
     "en": "rumor",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "エアコン",
-    "reading": "",
-    "en": "air conditioner",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "えくぼ",
-    "reading": "",
-    "en": "dimple",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "エプロン",
-    "reading": "",
-    "en": "apron",
-    "kind": "loanword",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "エレベーター",
     "reading": "",
     "en": "elevator",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "エンジン",
-    "reading": "",
-    "en": "engine",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "オーロラ",
     "reading": "",
     "en": "aurora",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "おかず",
-    "reading": "",
-    "en": "small dish",
-    "kind": "thing",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "おしゃべり",
     "reading": "",
     "en": "chattering",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "オタク",
     "reading": "",
     "en": "otaku",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "おにぎり",
-    "reading": "",
-    "en": "onigiri",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "おむつ",
-    "reading": "",
-    "en": "diaper",
-    "kind": "thing",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "おもちゃ",
     "reading": "",
     "en": "toy",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "おやつ",
-    "reading": "",
-    "en": "between-meal snack",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "オリンピック",
     "reading": "",
     "en": "Olympics",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "オルガン",
-    "reading": "",
-    "en": "organ",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "オレンジ",
-    "reading": "",
-    "en": "orange",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "お化け",
     "reading": "おばけ",
     "en": "ghost",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "お菓子",
     "reading": "おかし",
     "en": "confections",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "お菓子屋",
-    "reading": "おかしや",
-    "en": "confectionery shop",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "お願い",
-    "reading": "おねがい",
-    "en": "request",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "お供",
     "reading": "おとも",
     "en": "attendant",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "お金",
     "reading": "おかね",
     "en": "money",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "お金持ち",
     "reading": "おかねもち",
     "en": "rich person",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "お見舞い",
     "reading": "おみまい",
     "en": "visit",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "お参り",
     "reading": "おまいり",
     "en": "visit",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "お守り",
     "reading": "おまもり",
     "en": "charm",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "お巡りさん",
     "reading": "おまわりさん",
     "en": "police officer",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "お嬢さん",
     "reading": "おじょうさん",
     "en": "young lady",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "お代わり",
-    "reading": "おかわり",
-    "en": "another helping",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "お茶",
-    "reading": "おちゃ",
-    "en": "tea",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "お土産",
     "reading": "おみやげ",
     "en": "present",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "お年寄り",
     "reading": "おとしより",
     "en": "old person",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "お腹",
-    "reading": "おなか",
-    "en": "belly",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "お盆",
     "reading": "おぼん",
     "en": "Obon",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "カーテン",
-    "reading": "",
-    "en": "curtain",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "カート",
-    "reading": "",
-    "en": "cart",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "カード",
-    "reading": "",
-    "en": "card",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "カーペット",
-    "reading": "",
-    "en": "carpet",
-    "kind": "loanword",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "かくれんぼ",
     "reading": "",
     "en": "hide-and-seek",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "かけっこ",
     "reading": "",
     "en": "race",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "かけら",
     "reading": "",
     "en": "fragment",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "かご",
-    "reading": "",
-    "en": "basket",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "カツ",
-    "reading": "",
-    "en": "cutlet",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "カップ",
-    "reading": "",
-    "en": "cup",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "かばん",
-    "reading": "",
-    "en": "bag",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "カフェ",
     "reading": "",
     "en": "café",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ガム",
-    "reading": "",
-    "en": "chewing gum",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "カメラ",
     "reading": "",
     "en": "camera",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "かも",
-    "reading": "",
-    "en": "duck",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "カラオケ",
     "reading": "",
     "en": "karaoke",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "ガラス",
     "reading": "",
     "en": "glass",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "カレー",
-    "reading": "",
-    "en": "curry",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "カレンダー",
-    "reading": "",
-    "en": "calendar",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "カンニング",
     "reading": "",
     "en": "cheating",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "キーボード",
-    "reading": "",
-    "en": "keyboard",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ギター",
     "reading": "",
     "en": "guitar",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
-    "ja": "キャップ",
+    "ja": "きつね",
     "reading": "",
-    "en": "cap",
-    "kind": "loanword",
-    "tier": false
+    "en": "fox",
+    "kind": "phenomenon"
   },
   {
     "ja": "キャラクター",
     "reading": "",
     "en": "character",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ギャル",
     "reading": "",
     "en": "gyaru",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "キャンパス",
     "reading": "",
     "en": "campus",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "キャンプ",
     "reading": "",
     "en": "camp",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "クイズ",
     "reading": "",
     "en": "quiz",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
-    "ja": "くちばし",
+    "ja": "くじら",
     "reading": "",
-    "en": "beak",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "クッキー",
-    "reading": "",
-    "en": "cookie",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "グッズ",
-    "reading": "",
-    "en": "goods",
-    "kind": "loanword",
-    "tier": false
+    "en": "whale",
+    "kind": "phenomenon"
   },
   {
     "ja": "クラス",
     "reading": "",
     "en": "class",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "くり",
-    "reading": "",
-    "en": "Japanese chestnut",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "クリーム",
-    "reading": "",
-    "en": "cream",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "クリスタル",
-    "reading": "",
-    "en": "crystal",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "クリスマス",
     "reading": "",
     "en": "Christmas",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "クレーン",
-    "reading": "",
-    "en": "crane",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ケーキ",
     "reading": "",
     "en": "cake",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "ゲーム",
     "reading": "",
     "en": "game",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ケチ",
-    "reading": "",
-    "en": "stinginess",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "けんか",
     "reading": "",
     "en": "quarrel",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "コーチ",
     "reading": "",
     "en": "coach",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "コート",
-    "reading": "",
-    "en": "coat",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "コーヒー",
-    "reading": "",
-    "en": "coffee",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ゴール",
     "reading": "",
     "en": "goal",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "コスプレ",
     "reading": "",
     "en": "cosplay",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "こたつ",
-    "reading": "",
-    "en": "kotatsu",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "ごちそう",
-    "reading": "",
-    "en": "treat",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "コック",
-    "reading": "",
-    "en": "cook",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ゴリラ",
-    "reading": "",
-    "en": "gorilla",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "コンサート",
     "reading": "",
     "en": "concert",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "コンテスト",
     "reading": "",
     "en": "contest",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "コンパス",
-    "reading": "",
-    "en": "compass",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "コンビニ",
     "reading": "",
     "en": "convenience store",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "コンピュータ",
-    "reading": "",
-    "en": "computer",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "こんろ",
-    "reading": "",
-    "en": "cooking stove",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "ご飯",
-    "reading": "ごはん",
-    "en": "cooked rice",
-    "kind": "thing",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "サーカス",
     "reading": "",
     "en": "circus",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "サイン会",
-    "reading": "さいんかい",
-    "en": "signing",
-    "kind": "moment",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "サブスク",
     "reading": "",
     "en": "subscription",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "サラダ",
-    "reading": "",
-    "en": "salad",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "サラリーマン",
     "reading": "",
     "en": "office worker",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "さんご",
-    "reading": "",
-    "en": "coral",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "サンダル",
-    "reading": "",
-    "en": "sandal",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "サンドイッチ",
-    "reading": "",
-    "en": "sandwich",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "シーツ",
-    "reading": "",
-    "en": "sheet",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "シール",
     "reading": "",
     "en": "sticker",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ジーンズ",
-    "reading": "",
-    "en": "jeans",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ジム",
-    "reading": "",
-    "en": "gym",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "シャーマン",
     "reading": "",
     "en": "shaman",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ジャケット",
-    "reading": "",
-    "en": "jacket",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "シャツ",
-    "reading": "",
-    "en": "shirt",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "シャッター",
-    "reading": "",
-    "en": "shutter",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ジャム",
-    "reading": "",
-    "en": "jam",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "シャワー",
-    "reading": "",
-    "en": "shower",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "じゃんけん",
     "reading": "",
     "en": "rock-paper-scissors",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "ジュース",
-    "reading": "",
-    "en": "juice",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "しょうゆ",
-    "reading": "",
-    "en": "soy sauce",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "ショック",
     "reading": "",
     "en": "shock",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "スイッチ",
-    "reading": "",
-    "en": "switch",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "スーツ",
-    "reading": "",
-    "en": "suit",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "スーツケース",
     "reading": "",
     "en": "suitcase",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "スーパー",
-    "reading": "",
-    "en": "supermarket",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "スープ",
-    "reading": "",
-    "en": "soup",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "スカート",
-    "reading": "",
-    "en": "skirt",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "スカーフ",
-    "reading": "",
-    "en": "scarf",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "スカウト",
     "reading": "",
     "en": "scout",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "スキー",
     "reading": "",
     "en": "skiing",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "スクリーン",
-    "reading": "",
-    "en": "screen",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "スケート",
     "reading": "",
     "en": "skating",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "スタジオ",
     "reading": "",
     "en": "studio",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ステーキ",
-    "reading": "",
-    "en": "steak",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ステージ",
-    "reading": "",
-    "en": "stage",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ストーブ",
-    "reading": "",
-    "en": "heater",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ストロー",
-    "reading": "",
-    "en": "drinking straw",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "スプーン",
-    "reading": "",
-    "en": "spoon",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ずぶ濡れ",
     "reading": "ずぶぬれ",
     "en": "dripping wet",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "スポーツ",
     "reading": "",
     "en": "sport",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "スポーツカー",
-    "reading": "",
-    "en": "sports car",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ズボン",
-    "reading": "",
-    "en": "trousers",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "スマホ",
     "reading": "",
     "en": "smartphone",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
-    "ja": "スリッパ",
+    "ja": "ゾンビ",
     "reading": "",
-    "en": "slipper",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "セーター",
-    "reading": "",
-    "en": "sweater",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ゼリー",
-    "reading": "",
-    "en": "jello",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "そば",
-    "reading": "",
-    "en": "soba noodles",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "ソファ",
-    "reading": "",
-    "en": "sofa",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "そろばん",
-    "reading": "",
-    "en": "abacus",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "タイマー",
-    "reading": "",
-    "en": "timer",
-    "kind": "loanword",
-    "tier": false
+    "en": "zombie",
+    "kind": "loanword"
   },
   {
     "ja": "タイムマシン",
     "reading": "",
     "en": "time machine",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "タイヤ",
-    "reading": "",
-    "en": "tire",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ダイヤモンド",
     "reading": "",
     "en": "diamond",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "タオル",
-    "reading": "",
-    "en": "towel",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "たき火",
     "reading": "たきび",
     "en": "open-air fire",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "タクシー",
-    "reading": "",
-    "en": "taxi",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ダム",
-    "reading": "",
-    "en": "dam",
-    "kind": "loanword",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "ため息",
     "reading": "ためいき",
     "en": "sigh",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "たんす",
-    "reading": "",
-    "en": "chest of drawers",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "ダンス",
     "reading": "",
     "en": "dance",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "チーズ",
-    "reading": "",
-    "en": "cheese",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "チーム",
     "reading": "",
     "en": "team",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "チキン",
-    "reading": "",
-    "en": "chicken",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "チャイム",
     "reading": "",
     "en": "chime",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "チャンス",
     "reading": "",
     "en": "chance",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "チャンピオン",
     "reading": "",
     "en": "champion",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "チョーク",
-    "reading": "",
-    "en": "chalk",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "チョコレート",
     "reading": "",
     "en": "chocolate",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ちりとり",
-    "reading": "",
-    "en": "dustpan",
-    "kind": "thing",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "つぼみ",
     "reading": "",
     "en": "bud",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "デート",
     "reading": "",
     "en": "date",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "テープ",
-    "reading": "",
-    "en": "tape",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "テーブル",
-    "reading": "",
-    "en": "table",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "デザート",
-    "reading": "",
-    "en": "dessert",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "デザイナー",
-    "reading": "",
-    "en": "designer",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "デッサン",
     "reading": "",
     "en": "rough sketch",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "テニス",
-    "reading": "",
-    "en": "tennis",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "デパート",
-    "reading": "",
-    "en": "department store",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "デビュー",
     "reading": "",
     "en": "debut",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "テレビ",
     "reading": "",
     "en": "television",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "テレビゲーム",
-    "reading": "",
-    "en": "video game",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "テント",
-    "reading": "",
-    "en": "tent",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ドア",
-    "reading": "",
-    "en": "door",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "トイレ",
-    "reading": "",
-    "en": "toilet",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ドーム",
-    "reading": "",
-    "en": "dome",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "とげ",
     "reading": "",
     "en": "thorn",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "トマト",
-    "reading": "",
-    "en": "tomato",
-    "kind": "loanword",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "ドライブ",
     "reading": "",
     "en": "drive",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "ドラゴン",
     "reading": "",
     "en": "dragon",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "トラック",
-    "reading": "",
-    "en": "truck",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ドラマ",
     "reading": "",
     "en": "television series",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ドラム",
-    "reading": "",
-    "en": "drum",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "トランプ",
     "reading": "",
     "en": "playing cards",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ドリル",
-    "reading": "",
-    "en": "drill bit",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ドレス",
     "reading": "",
     "en": "dress",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "トンネル",
     "reading": "",
     "en": "tunnel",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ナイフ",
-    "reading": "",
-    "en": "knife",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "なす",
-    "reading": "",
-    "en": "eggplant",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "なぞなぞ",
-    "reading": "",
-    "en": "riddle",
-    "kind": "thing",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ニュース",
     "reading": "",
     "en": "news",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ネクタイ",
-    "reading": "",
-    "en": "tie",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ネジ",
-    "reading": "",
-    "en": "screw",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ネズミ",
-    "reading": "",
-    "en": "mouse",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ネックレス",
-    "reading": "",
-    "en": "necklace",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ネット",
     "reading": "",
     "en": "Internet",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ノート",
-    "reading": "",
-    "en": "notebook",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "のこぎり",
-    "reading": "",
-    "en": "saw",
-    "kind": "thing",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ノック",
     "reading": "",
     "en": "knock",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "パーカー",
-    "reading": "",
-    "en": "hooded sweatshirt",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "パーティー",
     "reading": "",
     "en": "party",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "パートナー",
     "reading": "",
     "en": "partner",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "パイ",
-    "reading": "",
-    "en": "pie",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "バイオリン",
-    "reading": "",
-    "en": "violin",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ハイキング",
-    "reading": "",
-    "en": "hiking",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "バイク",
-    "reading": "",
-    "en": "motorcycle",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "パイロット",
     "reading": "",
     "en": "pilot",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ばい菌",
-    "reading": "ばいきん",
-    "en": "germ",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "はがき",
-    "reading": "",
-    "en": "postcard",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "バケツ",
-    "reading": "",
-    "en": "bucket",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "はさみ",
-    "reading": "",
-    "en": "scissors",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "はしご",
-    "reading": "",
-    "en": "ladder",
-    "kind": "thing",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "バス",
     "reading": "",
     "en": "bus",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "パスタ",
-    "reading": "",
-    "en": "pasta",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "パスポート",
     "reading": "",
     "en": "passport",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
-    "ja": "パソコン",
+    "ja": "パズル",
     "reading": "",
-    "en": "personal computer",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "バター",
-    "reading": "",
-    "en": "butter",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "はたき",
-    "reading": "",
-    "en": "duster",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "バット",
-    "reading": "",
-    "en": "bat",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "パトカー",
-    "reading": "",
-    "en": "patrol car",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "バナナ",
-    "reading": "",
-    "en": "banana",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ばね",
-    "reading": "",
-    "en": "spring",
-    "kind": "thing",
-    "tier": false
+    "en": "puzzle",
+    "kind": "loanword"
   },
   {
     "ja": "パパ",
     "reading": "",
     "en": "dad",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
-    "ja": "ハム",
+    "ja": "バレンタイン",
     "reading": "",
-    "en": "ham",
-    "kind": "loanword",
-    "tier": false
+    "en": "Valentine",
+    "kind": "loanword"
   },
   {
-    "ja": "パン",
+    "ja": "ハロウィン",
     "reading": "",
-    "en": "bread",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ハンガー",
-    "reading": "",
-    "en": "hanger",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ハンカチ",
-    "reading": "",
-    "en": "handkerchief",
-    "kind": "loanword",
-    "tier": false
+    "en": "Halloween",
+    "kind": "loanword"
   },
   {
     "ja": "ハンター",
     "reading": "",
     "en": "hunter",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ハンドバッグ",
-    "reading": "",
-    "en": "handbag",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "パン屋",
-    "reading": "ぱんや",
-    "en": "bakery",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "ピアス",
-    "reading": "",
-    "en": "earrings",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ピアノ",
     "reading": "",
     "en": "piano",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "ビーチ",
     "reading": "",
     "en": "beach",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "ヒーロー",
     "reading": "",
     "en": "hero",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "ピクニック",
     "reading": "",
     "en": "picnic",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ひげ",
-    "reading": "",
-    "en": "mustache",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "ピザ",
-    "reading": "",
-    "en": "pizza",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ビデオ",
-    "reading": "",
-    "en": "video",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ひな",
     "reading": "",
     "en": "young bird",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "ひも",
-    "reading": "",
-    "en": "string",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "ビリ",
     "reading": "",
     "en": "last",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ビル",
-    "reading": "",
-    "en": "multi-floor building",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ヒロイン",
     "reading": "",
     "en": "heroine",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
-    "ja": "ピン",
+    "ja": "ファッション",
     "reading": "",
-    "en": "pin",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ファスナー",
-    "reading": "",
-    "en": "zip fastener",
-    "kind": "loanword",
-    "tier": false
+    "en": "fashion",
+    "kind": "loanword"
   },
   {
     "ja": "ファン",
     "reading": "",
     "en": "fan",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "フィルム",
-    "reading": "",
-    "en": "film",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ブーツ",
-    "reading": "",
-    "en": "boots",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "プール",
     "reading": "",
     "en": "pool",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "フェリー",
-    "reading": "",
-    "en": "ferry",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "フォーク",
-    "reading": "",
-    "en": "fork",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ブザー",
-    "reading": "",
-    "en": "buzzer",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ぶどう",
-    "reading": "",
-    "en": "grape",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "フライパン",
-    "reading": "",
-    "en": "fry pan",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ブラウス",
-    "reading": "",
-    "en": "blouse",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ブラシ",
-    "reading": "",
-    "en": "brush",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "フランスパン",
-    "reading": "",
-    "en": "French bread",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ブレーキ",
-    "reading": "",
-    "en": "brake",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "プレゼント",
     "reading": "",
     "en": "present",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ブローチ",
-    "reading": "",
-    "en": "brooch",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "へそ",
-    "reading": "",
-    "en": "navel",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "ベッド",
-    "reading": "",
-    "en": "bed",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ペット",
     "reading": "",
     "en": "pet",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "ベテラン",
     "reading": "",
     "en": "veteran",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ヘリコプター",
-    "reading": "",
-    "en": "helicopter",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ベル",
-    "reading": "",
-    "en": "bell",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ベルト",
-    "reading": "",
-    "en": "belt",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ペン",
-    "reading": "",
-    "en": "pen",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ペンキ",
-    "reading": "",
-    "en": "paint",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ベンチ",
     "reading": "",
     "en": "bench",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ペンチ",
-    "reading": "",
-    "en": "cutting pliers",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ほうき",
-    "reading": "",
-    "en": "broom",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "ホース",
-    "reading": "",
-    "en": "hose",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ボート",
     "reading": "",
     "en": "boat",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ボールペン",
-    "reading": "",
-    "en": "ball-point pen",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ポケット",
-    "reading": "",
-    "en": "pocket",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ボス",
     "reading": "",
     "en": "boss",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ポスト",
-    "reading": "",
-    "en": "postbox",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ボタン",
-    "reading": "",
-    "en": "button",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ポット",
-    "reading": "",
-    "en": "pot",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ほっぺた",
-    "reading": "",
-    "en": "cheek",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "ホテル",
-    "reading": "",
-    "en": "hotel",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ホラー",
     "reading": "",
     "en": "horror",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "ボランティア",
     "reading": "",
     "en": "volunteer",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "マイク",
     "reading": "",
     "en": "mike",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "マスク",
     "reading": "",
     "en": "mask",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "マッチ",
-    "reading": "",
-    "en": "match",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "マット",
-    "reading": "",
-    "en": "mat",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "マフラー",
     "reading": "",
     "en": "scarf",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "ママ",
     "reading": "",
     "en": "mom",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "マラソン",
     "reading": "",
     "en": "marathon",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
-    "ja": "マンション",
+    "ja": "ミステリー",
     "reading": "",
-    "en": "condominium",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ミシン",
-    "reading": "",
-    "en": "sewing machine",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "みそ",
-    "reading": "",
-    "en": "miso",
-    "kind": "thing",
-    "tier": false
+    "en": "mystery",
+    "kind": "loanword"
   },
   {
     "ja": "メール",
     "reading": "",
     "en": "email",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "メモ帳",
-    "reading": "めもちょう",
-    "en": "memo book",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "モール",
-    "reading": "",
-    "en": "mall",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "モノレール",
-    "reading": "",
-    "en": "monorail",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "モンスター",
     "reading": "",
     "en": "monster",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "やかん",
-    "reading": "",
-    "en": "kettle",
-    "kind": "thing",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "やる気",
     "reading": "やるき",
     "en": "motivation",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "ゆり",
-    "reading": "",
-    "en": "lily",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "よそ見",
     "reading": "よそみ",
     "en": "looking away",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "ヨット",
-    "reading": "",
-    "en": "yacht",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ラーメン",
-    "reading": "",
-    "en": "ramen",
-    "kind": "loanword",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "ライオン",
     "reading": "",
     "en": "lion",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ライター",
-    "reading": "",
-    "en": "lighter",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ライダー",
     "reading": "",
     "en": "rider",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ライバル",
     "reading": "",
     "en": "rival",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "ライブ",
     "reading": "",
     "en": "live",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ラケット",
-    "reading": "",
-    "en": "racket",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ラジオ",
     "reading": "",
     "en": "radio",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ランドセル",
     "reading": "",
     "en": "randoseru",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
   },
   {
     "ja": "ランプ",
     "reading": "",
     "en": "lamp",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "リーダー",
     "reading": "",
     "en": "leader",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "リボン",
     "reading": "",
     "en": "ribbon",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "レインコート",
-    "reading": "",
-    "en": "raincoat",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "レーザー",
-    "reading": "",
-    "en": "laser",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "レース",
     "reading": "",
     "en": "race",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "レール",
-    "reading": "",
-    "en": "rail",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "レコード",
     "reading": "",
     "en": "record",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "レジ",
-    "reading": "",
-    "en": "register",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "レストラン",
     "reading": "",
     "en": "restaurant",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "レモン",
-    "reading": "",
-    "en": "lemon",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "れんが",
-    "reading": "",
-    "en": "brick",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "レンズ",
-    "reading": "",
-    "en": "lens",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ろうそく",
     "reading": "",
     "en": "candle",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "ロケット",
     "reading": "",
     "en": "rocket",
-    "kind": "loanword",
-    "tier": true
-  },
-  {
-    "ja": "ロッカー",
-    "reading": "",
-    "en": "locker",
-    "kind": "loanword",
-    "tier": false
-  },
-  {
-    "ja": "ロビー",
-    "reading": "",
-    "en": "lobby",
-    "kind": "loanword",
-    "tier": false
+    "kind": "loanword"
   },
   {
     "ja": "ロボット",
     "reading": "",
     "en": "robot",
-    "kind": "loanword",
-    "tier": true
+    "kind": "loanword"
+  },
+  {
+    "ja": "ロマンス",
+    "reading": "",
+    "en": "romance",
+    "kind": "loanword"
   },
   {
     "ja": "わな",
     "reading": "",
     "en": "trap",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "わら",
-    "reading": "",
-    "en": "straw",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "ワンピース",
-    "reading": "",
-    "en": "dress",
-    "kind": "loanword",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "愛",
     "reading": "あい",
     "en": "love",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "挨拶",
-    "reading": "あいさつ",
-    "en": "greeting",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "悪者",
     "reading": "わるもの",
     "en": "bad guy",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "悪魔",
     "reading": "あくま",
     "en": "devil",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "握手",
     "reading": "あくしゅ",
     "en": "handshake",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "飴",
-    "reading": "あめ",
-    "en": "candy",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "安心",
-    "reading": "あんしん",
-    "en": "peace of mind",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "暗算",
-    "reading": "あんざん",
-    "en": "mental arithmetic",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "闇",
     "reading": "やみ",
     "en": "darkness",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "椅子",
-    "reading": "いす",
-    "en": "chair",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "衣装",
-    "reading": "いしょう",
-    "en": "clothing",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "遺跡",
     "reading": "いせき",
     "en": "remains",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "医者",
     "reading": "いしゃ",
     "en": "doctor",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "井戸",
-    "reading": "いど",
-    "en": "water well",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "育児",
-    "reading": "いくじ",
-    "en": "childcare",
-    "kind": "moment",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "一人旅",
     "reading": "ひとりたび",
     "en": "traveling alone",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "一生",
-    "reading": "いっしょう",
-    "en": "whole life",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "引き出し",
-    "reading": "ひきだし",
-    "en": "drawer",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "引っ越し",
     "reading": "ひっこし",
     "en": "moving",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "飲み物",
     "reading": "のみもの",
     "en": "drink",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "隠れ家",
     "reading": "かくれが",
     "en": "hiding place",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "宇宙",
     "reading": "うちゅう",
     "en": "universe",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "宇宙人",
+    "reading": "うちゅうじん",
+    "en": "alien",
+    "kind": "people"
   },
   {
     "ja": "宇宙飛行士",
     "reading": "うちゅうひこうし",
     "en": "astronaut",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "羽",
     "reading": "はね",
     "en": "feather",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "雨",
     "reading": "あめ",
     "en": "rain",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "雨上がり",
+    "reading": "あめあがり",
+    "en": "after the rain",
+    "kind": "moment"
   },
   {
     "ja": "渦",
     "reading": "うず",
     "en": "whirlpool",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "運",
-    "reading": "うん",
-    "en": "fortune",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "運転手",
     "reading": "うんてんしゅ",
     "en": "driver",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "運転免許",
-    "reading": "うんてんめんきょ",
-    "en": "driver's license",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "運動会",
     "reading": "うんどうかい",
     "en": "athletic meet",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "運命",
     "reading": "うんめい",
     "en": "fate",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "雲",
     "reading": "くも",
     "en": "cloud",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "影",
     "reading": "かげ",
     "en": "shadow",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "影絵",
-    "reading": "かげえ",
-    "en": "shadow picture",
-    "kind": "thing",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "映画",
     "reading": "えいが",
     "en": "movie",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "映画館",
     "reading": "えいがかん",
     "en": "movie theater",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "永遠",
     "reading": "えいえん",
     "en": "eternity",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "英雄",
     "reading": "えいゆう",
     "en": "hero",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "衛星",
     "reading": "えいせい",
     "en": "satellite",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "駅",
     "reading": "えき",
     "en": "railway station",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "駅前",
-    "reading": "えきまえ",
-    "en": "in front of a station",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "演説",
-    "reading": "えんぜつ",
-    "en": "speech",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "演奏",
     "reading": "えんそう",
     "en": "musical performance",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "炎",
     "reading": "ほのお",
     "en": "flame",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "炎上",
     "reading": "えんじょう",
     "en": "going up in flames",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "煙",
     "reading": "けむり",
     "en": "smoke",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "煙突",
-    "reading": "えんとつ",
-    "en": "chimney",
-    "kind": "thing",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "猿",
     "reading": "さる",
     "en": "monkey",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "縁日",
     "reading": "えんにち",
     "en": "temple festival",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "遠く",
     "reading": "とおく",
     "en": "far away",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "遠足",
     "reading": "えんそく",
     "en": "school trip",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "鉛筆",
-    "reading": "えんぴつ",
-    "en": "pencil",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "塩",
-    "reading": "しお",
-    "en": "salt",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "汚染",
-    "reading": "おせん",
-    "en": "pollution",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "押し入れ",
-    "reading": "おしいれ",
-    "en": "closet",
-    "kind": "thing",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "王",
     "reading": "おう",
     "en": "king",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "王国",
     "reading": "おうこく",
     "en": "kingdom",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "王子",
     "reading": "おうじ",
     "en": "prince",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "黄金",
     "reading": "こがね",
     "en": "gold",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "黄色",
     "reading": "きいろ",
     "en": "yellow",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "屋根",
-    "reading": "やね",
-    "en": "roof",
-    "kind": "thing",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "屋上",
     "reading": "おくじょう",
     "en": "rooftop",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "屋台",
-    "reading": "やたい",
-    "en": "cart",
-    "kind": "thing",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "屋敷",
     "reading": "やしき",
     "en": "residence",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "温もり",
     "reading": "ぬくもり",
     "en": "warmth",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "温室",
-    "reading": "おんしつ",
-    "en": "greenhouse",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "温泉",
     "reading": "おんせん",
     "en": "hot spring",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "音",
     "reading": "おと",
     "en": "sound",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "音楽",
     "reading": "おんがく",
     "en": "music",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "下手",
-    "reading": "へた",
-    "en": "unskillful",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "下駄",
-    "reading": "げた",
-    "en": "geta",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "下町",
     "reading": "したまち",
     "en": "low-lying part of a city",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "化粧",
     "reading": "けしょう",
     "en": "make-up",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "化石",
     "reading": "かせき",
     "en": "fossil",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "仮面",
     "reading": "かめん",
     "en": "mask",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "夏",
     "reading": "なつ",
     "en": "summer",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "夏休み",
     "reading": "なつやすみ",
     "en": "summer vacation",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "家",
     "reading": "いえ",
     "en": "house",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "家具",
-    "reading": "かぐ",
-    "en": "furniture",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "家事",
-    "reading": "かじ",
-    "en": "housework",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "家出",
     "reading": "いえで",
     "en": "running away from home",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "家族",
     "reading": "かぞく",
     "en": "family",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "家庭教師",
     "reading": "かていきょうし",
     "en": "tutor",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "科学者",
     "reading": "かがくしゃ",
     "en": "scientist",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "暇",
-    "reading": "ひま",
-    "en": "spare time",
-    "kind": "moment",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "果物",
     "reading": "くだもの",
     "en": "fruit",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "歌",
     "reading": "うた",
     "en": "song",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "歌手",
     "reading": "かしゅ",
     "en": "singer",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "火",
     "reading": "ひ",
     "en": "fire",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "火花",
     "reading": "ひばな",
     "en": "spark",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "火山",
     "reading": "かざん",
     "en": "volcano",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "火事",
     "reading": "かじ",
     "en": "fire",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "花",
     "reading": "はな",
     "en": "flower",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "花びら",
     "reading": "はなびら",
     "en": "petal",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "花嫁",
     "reading": "はなよめ",
     "en": "bride",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "花火",
     "reading": "はなび",
     "en": "fireworks",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "花火大会",
     "reading": "はなびたいかい",
     "en": "fireworks display",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "花見",
     "reading": "はなみ",
     "en": "cherry blossom viewing",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
-    "ja": "花壇",
-    "reading": "かだん",
-    "en": "flower bed",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "花瓶",
-    "reading": "かびん",
-    "en": "vase",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "花粉",
-    "reading": "かふん",
-    "en": "pollen",
-    "kind": "phenomenon",
-    "tier": true
+    "ja": "花束",
+    "reading": "はなたば",
+    "en": "bouquet",
+    "kind": "thing"
   },
   {
     "ja": "荷物",
     "reading": "にもつ",
     "en": "luggage",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "過去",
     "reading": "かこ",
     "en": "the past",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "蚊",
-    "reading": "か",
-    "en": "mosquito",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "画家",
     "reading": "がか",
     "en": "painter",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "芽",
     "reading": "め",
     "en": "sprout",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "介護",
-    "reading": "かいご",
-    "en": "nursing",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "会社",
-    "reading": "かいしゃ",
-    "en": "company",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "会話",
-    "reading": "かいわ",
-    "en": "conversation",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "回り道",
     "reading": "まわりみち",
     "en": "detour",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "怪我",
     "reading": "けが",
     "en": "injury",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "怪獣",
     "reading": "かいじゅう",
     "en": "monster",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "改札",
-    "reading": "かいさつ",
-    "en": "ticket gate",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "海",
     "reading": "うみ",
     "en": "sea",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "海外",
     "reading": "かいがい",
     "en": "abroad",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "海岸",
     "reading": "かいがん",
     "en": "seashore",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "海賊",
     "reading": "かいぞく",
     "en": "pirate",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "灰",
     "reading": "はい",
     "en": "ash",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
-    "ja": "絵の具",
-    "reading": "えのぐ",
-    "en": "paint",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "絵画",
-    "reading": "かいが",
-    "en": "painting",
-    "kind": "thing",
-    "tier": false
+    "ja": "絵",
+    "reading": "え",
+    "en": "picture",
+    "kind": "thing"
   },
   {
     "ja": "絵本",
     "reading": "えほん",
     "en": "picture book",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "階段",
     "reading": "かいだん",
     "en": "stairs",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "貝",
-    "reading": "かい",
-    "en": "shellfish",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "貝殻",
     "reading": "かいがら",
     "en": "seashell",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "外国人",
     "reading": "がいこくじん",
     "en": "foreigner",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "外出",
-    "reading": "がいしゅつ",
-    "en": "going out",
-    "kind": "moment",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "崖",
     "reading": "がけ",
     "en": "cliff",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "街角",
     "reading": "まちかど",
     "en": "street corner",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "拡散",
-    "reading": "かくさん",
-    "en": "spreading",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "覚悟",
     "reading": "かくご",
     "en": "readiness",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "角",
-    "reading": "かど",
-    "en": "corner",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "革命",
     "reading": "かくめい",
     "en": "revolution",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "学校",
     "reading": "がっこう",
     "en": "school",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "学生",
-    "reading": "がくせい",
-    "en": "student",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "楽しみ",
-    "reading": "たのしみ",
-    "en": "enjoyment",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "楽器",
     "reading": "がっき",
     "en": "musical instrument",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "冠",
     "reading": "かんむり",
     "en": "crown",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "寒さ",
     "reading": "さむさ",
     "en": "coldness",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "患者",
     "reading": "かんじゃ",
     "en": "patient",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "感情",
-    "reading": "かんじょう",
-    "en": "emotion",
-    "kind": "moment",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "感動",
     "reading": "かんどう",
     "en": "deep emotion",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "汗",
     "reading": "あせ",
     "en": "sweat",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "漢字",
-    "reading": "かんじ",
-    "en": "kanji",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "看護師",
     "reading": "かんごし",
     "en": "nurse",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "看板",
-    "reading": "かんばん",
-    "en": "signboard",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "看病",
     "reading": "かんびょう",
     "en": "nursing",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "管理人",
     "reading": "かんりにん",
     "en": "administrator",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "缶",
-    "reading": "かん",
-    "en": "can",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "缶コーヒー",
-    "reading": "かんこーひー",
-    "en": "canned coffee",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "缶詰",
-    "reading": "かんづめ",
-    "en": "canned food",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "観客",
     "reading": "かんきゃく",
     "en": "spectator",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "観光",
-    "reading": "かんこう",
-    "en": "sightseeing",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "観光客",
-    "reading": "かんこうきゃく",
-    "en": "tourist",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "観戦",
-    "reading": "かんせん",
-    "en": "watching a game",
-    "kind": "moment",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "観覧車",
     "reading": "かんらんしゃ",
     "en": "Ferris wheel",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "還暦",
-    "reading": "かんれき",
-    "en": "kanreki",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "丸",
-    "reading": "まる",
-    "en": "circle",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "眼鏡",
     "reading": "めがね",
     "en": "glasses",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "岩",
     "reading": "いわ",
     "en": "rock",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "顔",
     "reading": "かお",
     "en": "face",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "願い",
     "reading": "ねがい",
     "en": "wish",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "危険",
     "reading": "きけん",
     "en": "danger",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "喜び",
     "reading": "よろこび",
     "en": "joy",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "基地",
-    "reading": "きち",
-    "en": "base",
-    "kind": "thing",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "奇跡",
     "reading": "きせき",
     "en": "miracle",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "寄り道",
     "reading": "よりみち",
     "en": "stopping off at",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "希望",
     "reading": "きぼう",
     "en": "hope",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "机",
-    "reading": "つくえ",
-    "en": "desk",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "旗",
     "reading": "はた",
     "en": "flag",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "機械",
     "reading": "きかい",
     "en": "machine",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "機嫌",
-    "reading": "きげん",
-    "en": "mood",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "帰り道",
     "reading": "かえりみち",
     "en": "the way back",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "帰宅",
-    "reading": "きたく",
-    "en": "returning home",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "気のせい",
     "reading": "きのせい",
     "en": "one's imagination",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "気まぐれ",
     "reading": "きまぐれ",
     "en": "whim",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "気持ち",
-    "reading": "きもち",
-    "en": "feeling",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "気分転換",
-    "reading": "きぶんてんかん",
-    "en": "change of pace",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "汽車",
-    "reading": "きしゃ",
-    "en": "steam locomotive",
-    "kind": "thing",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "祈り",
     "reading": "いのり",
     "en": "prayer",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "季節",
     "reading": "きせつ",
     "en": "season",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "記憶",
     "reading": "きおく",
     "en": "memory",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "記者",
     "reading": "きしゃ",
     "en": "reporter",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "記念日",
     "reading": "きねんび",
     "en": "memorial day",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "騎士",
     "reading": "きし",
     "en": "knight",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "鬼",
     "reading": "おに",
     "en": "ogre",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "鬼ごっこ",
     "reading": "おにごっこ",
     "en": "tag",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "亀",
     "reading": "かめ",
     "en": "tortoise",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "儀式",
     "reading": "ぎしき",
     "en": "ceremony",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "犠牲",
     "reading": "ぎせい",
     "en": "sacrifice",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "喫茶店",
-    "reading": "きっさてん",
-    "en": "coffee shop",
-    "kind": "thing",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "客",
     "reading": "きゃく",
     "en": "guest",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "逆転勝ち",
     "reading": "ぎゃくてんがち",
     "en": "comeback victory",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "丘",
     "reading": "おか",
     "en": "hill",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "久しぶり",
     "reading": "ひさしぶり",
     "en": "a long time",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
-    "ja": "休暇",
-    "reading": "きゅうか",
-    "en": "holiday",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "休憩",
-    "reading": "きゅうけい",
-    "en": "rest",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "宮殿",
-    "reading": "きゅうでん",
-    "en": "palace",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "弓",
-    "reading": "ゆみ",
-    "en": "bow",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "救急車",
-    "reading": "きゅうきゅうしゃ",
-    "en": "ambulance",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "救急箱",
-    "reading": "きゅうきゅうばこ",
-    "en": "first-aid kit",
-    "kind": "thing",
-    "tier": false
+    "ja": "吸血鬼",
+    "reading": "きゅうけつき",
+    "en": "vampire",
+    "kind": "people"
   },
   {
     "ja": "救助",
     "reading": "きゅうじょ",
     "en": "rescue",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "給食",
-    "reading": "きゅうしょく",
-    "en": "school lunch",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "牛",
-    "reading": "うし",
-    "en": "cattle",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "牛乳",
-    "reading": "ぎゅうにゅう",
-    "en": "milk",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "牛丼",
-    "reading": "ぎゅうどん",
-    "en": "gyudon",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "居間",
-    "reading": "いま",
-    "en": "living room",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "居場所",
     "reading": "いばしょ",
     "en": "whereabouts",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "居眠り",
     "reading": "いねむり",
     "en": "nodding off",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "巨人",
     "reading": "きょじん",
     "en": "giant",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "漁師",
     "reading": "りょうし",
     "en": "fisherman",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "魚",
     "reading": "さかな",
     "en": "fish",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "競技場",
-    "reading": "きょうぎじょう",
-    "en": "stadium",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "競争",
     "reading": "きょうそう",
     "en": "competition",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "恐怖",
     "reading": "きょうふ",
     "en": "fear",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "恐竜",
     "reading": "きょうりゅう",
     "en": "dinosaur",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "教科書",
-    "reading": "きょうかしょ",
-    "en": "textbook",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "教会",
     "reading": "きょうかい",
     "en": "church",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "教室",
     "reading": "きょうしつ",
     "en": "classroom",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "教授",
     "reading": "きょうじゅ",
     "en": "professor",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "橋",
     "reading": "はし",
     "en": "bridge",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "興奮",
-    "reading": "こうふん",
-    "en": "excitement",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "鏡",
     "reading": "かがみ",
     "en": "mirror",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "驚き",
     "reading": "おどろき",
     "en": "surprise",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "琴",
-    "reading": "こと",
-    "en": "koto",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "筋肉",
-    "reading": "きんにく",
-    "en": "muscle",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "緊張",
     "reading": "きんちょう",
     "en": "tension",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "近道",
     "reading": "ちかみち",
     "en": "shorter way",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "金魚",
     "reading": "きんぎょ",
     "en": "goldfish",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "金庫",
-    "reading": "きんこ",
-    "en": "safe",
-    "kind": "thing",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "銀河",
     "reading": "ぎんが",
     "en": "Milky Way",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "銀行",
-    "reading": "ぎんこう",
-    "en": "bank",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "九九",
-    "reading": "くく",
-    "en": "multiplication table",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "空",
     "reading": "そら",
     "en": "sky",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "空気",
     "reading": "くうき",
     "en": "air",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "空港",
     "reading": "くうこう",
     "en": "airport",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "空想",
     "reading": "くうそう",
     "en": "daydream",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "空中",
     "reading": "くうちゅう",
     "en": "the air",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "偶然",
     "reading": "ぐうぜん",
     "en": "coincidence",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "隅",
     "reading": "すみ",
     "en": "corner",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "靴",
     "reading": "くつ",
     "en": "shoe",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "靴下",
-    "reading": "くつした",
-    "en": "socks",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "熊",
     "reading": "くま",
     "en": "bear",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "繰り返し",
-    "reading": "くりかえし",
-    "en": "repetition",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "訓練",
-    "reading": "くんれん",
-    "en": "training",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "刑事",
     "reading": "けいじ",
     "en": "detective",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "兄",
     "reading": "あに",
     "en": "older brother",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "兄弟",
     "reading": "きょうだい",
     "en": "brothers and sisters",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "掲示板",
-    "reading": "けいじばん",
-    "en": "bulletin board",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "景色",
     "reading": "けしき",
     "en": "scenery",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "警察",
     "reading": "けいさつ",
     "en": "police",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "鶏",
-    "reading": "にわとり",
-    "en": "chicken",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "芸術家",
-    "reading": "げいじゅつか",
-    "en": "artist",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "芸人",
     "reading": "げいにん",
     "en": "comedian",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "芸能人",
-    "reading": "げいのうじん",
-    "en": "entertainer",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "劇",
-    "reading": "げき",
-    "en": "drama",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "劇場",
-    "reading": "げきじょう",
-    "en": "theater",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "劇団",
-    "reading": "げきだん",
-    "en": "troupe",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "隙間",
     "reading": "すきま",
     "en": "gap",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "決意",
     "reading": "けつい",
     "en": "decision",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "決勝",
     "reading": "けっしょう",
     "en": "decision of a contest",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "穴",
     "reading": "あな",
     "en": "hole",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "結婚",
     "reading": "けっこん",
     "en": "marriage",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "結婚式",
     "reading": "けっこんしき",
     "en": "wedding",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "結晶",
     "reading": "けっしょう",
     "en": "crystal",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
+  },
+  {
+    "ja": "月",
+    "reading": "つき",
+    "en": "Moon",
+    "kind": "phenomenon"
   },
   {
     "ja": "月光",
     "reading": "げっこう",
     "en": "moonlight",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "月食",
     "reading": "げっしょく",
     "en": "lunar eclipse",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "剣",
     "reading": "けん",
     "en": "sword",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "建築家",
     "reading": "けんちくか",
     "en": "architect",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "拳",
-    "reading": "こぶし",
-    "en": "fist",
-    "kind": "thing",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "犬",
     "reading": "いぬ",
     "en": "dog",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "研究室",
-    "reading": "けんきゅうしつ",
-    "en": "laboratory",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "見学",
-    "reading": "けんがく",
-    "en": "field trip",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "見合い",
     "reading": "みあい",
     "en": "meeting with a view to marriage",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "見送り",
     "reading": "みおくり",
     "en": "seeing off",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "鍵",
     "reading": "かぎ",
     "en": "key",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "顕微鏡",
-    "reading": "けんびきょう",
-    "en": "microscope",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "原っぱ",
     "reading": "はらっぱ",
     "en": "open field",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "幻",
     "reading": "まぼろし",
     "en": "phantom",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "幻想",
     "reading": "げんそう",
     "en": "fantasy",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "玄関",
-    "reading": "げんかん",
-    "en": "entrance",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "言葉",
     "reading": "ことば",
     "en": "words",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "呼吸",
-    "reading": "こきゅう",
-    "en": "breathing",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "孤児",
     "reading": "こじ",
     "en": "orphan",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "孤独",
     "reading": "こどく",
     "en": "solitude",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "戸締まり",
-    "reading": "とじまり",
-    "en": "locking up",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "故郷",
     "reading": "こきょう",
     "en": "hometown",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "湖",
     "reading": "みずうみ",
     "en": "lake",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "虎",
     "reading": "とら",
     "en": "tiger",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "誇り",
     "reading": "ほこり",
     "en": "pride",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "後悔",
     "reading": "こうかい",
     "en": "regret",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "後輩",
     "reading": "こうはい",
     "en": "junior",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "交差点",
     "reading": "こうさてん",
     "en": "crossing",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "交通機関",
-    "reading": "こうつうきかん",
-    "en": "transportation",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "交番",
-    "reading": "こうばん",
-    "en": "police box",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "光",
     "reading": "ひかり",
     "en": "light",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "光線",
     "reading": "こうせん",
     "en": "ray",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "公園",
     "reading": "こうえん",
     "en": "park",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "口",
-    "reading": "くち",
-    "en": "mouth",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "口紅",
-    "reading": "くちべに",
-    "en": "lipstick",
-    "kind": "thing",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "向こう",
     "reading": "むこう",
     "en": "opposite side",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "好き",
     "reading": "すき",
     "en": "liking",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "好き嫌い",
-    "reading": "すききらい",
-    "en": "likes and dislikes",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "好奇心",
     "reading": "こうきしん",
     "en": "curiosity",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "孝行",
-    "reading": "こうこう",
-    "en": "filial piety",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "工事",
-    "reading": "こうじ",
-    "en": "construction work",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "工場",
-    "reading": "こうじょう",
-    "en": "factory",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "幸運",
     "reading": "こううん",
     "en": "good luck",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "広告",
-    "reading": "こうこく",
-    "en": "advertisement",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "広場",
     "reading": "ひろば",
     "en": "public square",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "校舎",
-    "reading": "こうしゃ",
-    "en": "school building",
-    "kind": "thing",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "校長",
     "reading": "こうちょう",
     "en": "principal",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "校庭",
     "reading": "こうてい",
     "en": "schoolyard",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "洪水",
     "reading": "こうずい",
     "en": "flood",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "港",
     "reading": "みなと",
     "en": "harbor",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "皇帝",
     "reading": "こうてい",
     "en": "emperor",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "紅茶",
-    "reading": "こうちゃ",
-    "en": "black tea",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "紅葉",
     "reading": "こうよう",
     "en": "autumn leaves",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "行方不明",
     "reading": "ゆくえふめい",
     "en": "missing",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "香り",
     "reading": "かおり",
     "en": "aroma",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "香水",
-    "reading": "こうすい",
-    "en": "perfume",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "高原",
-    "reading": "こうげん",
-    "en": "tableland",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "高校",
-    "reading": "こうこう",
-    "en": "senior high school",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "高校生",
     "reading": "こうこうせい",
     "en": "senior high school student",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "高速道路",
-    "reading": "こうそくどうろ",
-    "en": "highway",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "合格",
     "reading": "ごうかく",
     "en": "passing",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "合図",
     "reading": "あいず",
     "en": "sign",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "告白",
     "reading": "こくはく",
     "en": "confession",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "国",
     "reading": "くに",
     "en": "country",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "国境",
     "reading": "こっきょう",
     "en": "border",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "黒",
     "reading": "くろ",
     "en": "black",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "黒板",
-    "reading": "こくばん",
-    "en": "blackboard",
-    "kind": "thing",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "骨",
     "reading": "ほね",
     "en": "bone",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "骨折",
-    "reading": "こっせつ",
-    "en": "bone fracture",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "今夜",
-    "reading": "こんや",
-    "en": "this evening",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "婚約",
     "reading": "こんやく",
     "en": "engagement",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "婚約者",
     "reading": "こんやくしゃ",
     "en": "fiance",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "恨み",
     "reading": "うらみ",
     "en": "resentment",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "根",
     "reading": "ね",
     "en": "root",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "混雑",
-    "reading": "こんざつ",
-    "en": "congestion",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "魂",
     "reading": "たましい",
     "en": "soul",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "砂",
     "reading": "すな",
     "en": "sand",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "砂糖",
-    "reading": "さとう",
-    "en": "sugar",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "砂漠",
     "reading": "さばく",
     "en": "desert",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "鎖",
-    "reading": "くさり",
-    "en": "chain",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "座敷",
-    "reading": "ざしき",
-    "en": "tatami room",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "再会",
     "reading": "さいかい",
     "en": "reunion",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "妻",
     "reading": "つま",
     "en": "wife",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "才能",
     "reading": "さいのう",
     "en": "talent",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "災害",
     "reading": "さいがい",
     "en": "calamity",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "祭り",
     "reading": "まつり",
     "en": "festival",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "裁判官",
     "reading": "さいばんかん",
     "en": "judge",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "財布",
-    "reading": "さいふ",
-    "en": "wallet",
-    "kind": "thing",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "坂",
     "reading": "さか",
     "en": "slope",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "作家",
     "reading": "さっか",
     "en": "author",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "作曲家",
     "reading": "さっきょくか",
     "en": "composer",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "作文",
-    "reading": "さくぶん",
-    "en": "writing",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "昨日",
-    "reading": "きのう",
-    "en": "yesterday",
-    "kind": "moment",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "桜",
     "reading": "さくら",
     "en": "cherry tree",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "撮影",
     "reading": "さつえい",
     "en": "photography",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "擦れ違い",
     "reading": "すれちがい",
     "en": "passing each other",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "雑巾",
-    "reading": "ぞうきん",
-    "en": "dust cloth",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "雑誌",
-    "reading": "ざっし",
-    "en": "magazine",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "皿",
-    "reading": "さら",
-    "en": "plate",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "三日月",
     "reading": "みかづき",
     "en": "crescent moon",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "三味線",
-    "reading": "しゃみせん",
-    "en": "shamisen",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "傘",
     "reading": "かさ",
     "en": "umbrella",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "山",
     "reading": "やま",
     "en": "mountain",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "山脈",
-    "reading": "さんみゃく",
-    "en": "mountain range",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "散歩",
     "reading": "さんぽ",
     "en": "walk",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "使命",
     "reading": "しめい",
     "en": "mission",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "刺身",
-    "reading": "さしみ",
-    "en": "sashimi",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "司会",
-    "reading": "しかい",
-    "en": "leading a meeting",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "始まり",
     "reading": "はじまり",
     "en": "origin",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "始発",
     "reading": "しはつ",
     "en": "first departure",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "姉",
     "reading": "あね",
     "en": "older sister",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "姉妹",
     "reading": "しまい",
     "en": "sisters",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "子供",
     "reading": "こども",
     "en": "child",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "子供の頃",
     "reading": "こどものころ",
     "en": "one's childhood",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "師匠",
     "reading": "ししょう",
     "en": "master",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "思い出",
     "reading": "おもいで",
     "en": "memories",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "指",
-    "reading": "ゆび",
-    "en": "finger",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "指揮者",
     "reading": "しきしゃ",
     "en": "conductor",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "指輪",
     "reading": "ゆびわ",
     "en": "ring",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "支度",
-    "reading": "したく",
-    "en": "preparation",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "枝",
     "reading": "えだ",
     "en": "branch",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "糸",
     "reading": "いと",
     "en": "thread",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "紙",
     "reading": "かみ",
     "en": "paper",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "視線",
     "reading": "しせん",
     "en": "one's gaze",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "詩人",
     "reading": "しじん",
     "en": "poet",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "試験",
     "reading": "しけん",
     "en": "examination",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "試合",
     "reading": "しあい",
     "en": "match",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "歯",
-    "reading": "は",
-    "en": "tooth",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "歯医者",
-    "reading": "はいしゃ",
-    "en": "dentist",
-    "kind": "people",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "歯車",
     "reading": "はぐるま",
     "en": "gear",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "歯磨き",
-    "reading": "はみがき",
-    "en": "dental brushing",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "侍",
     "reading": "さむらい",
     "en": "warrior",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "寺",
     "reading": "てら",
     "en": "temple",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "時間",
     "reading": "じかん",
     "en": "time",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "時計",
     "reading": "とけい",
     "en": "clock",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "時差",
-    "reading": "じさ",
-    "en": "time difference",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "時代劇",
-    "reading": "じだいげき",
-    "en": "historical play",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "磁石",
-    "reading": "じしゃく",
-    "en": "magnet",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "耳",
-    "reading": "みみ",
-    "en": "ear",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "自撮り",
     "reading": "じどり",
     "en": "selfie",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "自習",
-    "reading": "じしゅう",
-    "en": "self-study",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "自転車",
     "reading": "じてんしゃ",
     "en": "bicycle",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "自動販売機",
-    "reading": "じどうはんばいき",
-    "en": "vending machine",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "自慢",
-    "reading": "じまん",
-    "en": "pride",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "自由",
     "reading": "じゆう",
     "en": "freedom",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "辞書",
-    "reading": "じしょ",
-    "en": "dictionary",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "鹿",
     "reading": "しか",
     "en": "deer",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "七夕",
     "reading": "たなばた",
     "en": "Star Festival",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "失敗",
     "reading": "しっぱい",
     "en": "failure",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "失望",
-    "reading": "しつぼう",
-    "en": "disappointment",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "失恋",
     "reading": "しつれん",
     "en": "disappointed love",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "嫉妬",
     "reading": "しっと",
     "en": "jealousy",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "実家",
     "reading": "じっか",
     "en": "home",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "実験",
     "reading": "じっけん",
     "en": "experiment",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "芝居",
-    "reading": "しばい",
-    "en": "play",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "芝生",
-    "reading": "しばふ",
-    "en": "lawn",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "写真",
     "reading": "しゃしん",
     "en": "photograph",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "写真家",
     "reading": "しゃしんか",
     "en": "photographer",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "社会人",
-    "reading": "しゃかいじん",
-    "en": "working adult",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "社長",
     "reading": "しゃちょう",
     "en": "company president",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "車",
     "reading": "くるま",
     "en": "car",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "車掌",
-    "reading": "しゃしょう",
-    "en": "conductor",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "車輪",
-    "reading": "しゃりん",
-    "en": "wheel",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "蛇",
     "reading": "へび",
     "en": "snake",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "蛇口",
-    "reading": "じゃぐち",
-    "en": "faucet",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "寂しさ",
     "reading": "さびしさ",
     "en": "loneliness",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "主婦",
     "reading": "しゅふ",
     "en": "housewife",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "取材",
-    "reading": "しゅざい",
-    "en": "gathering material",
-    "kind": "moment",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "手",
     "reading": "て",
     "en": "hand",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "手芸",
-    "reading": "しゅげい",
-    "en": "handicrafts",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "手紙",
     "reading": "てがみ",
     "en": "letter",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "手袋",
-    "reading": "てぶくろ",
-    "en": "glove",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "手遅れ",
     "reading": "ておくれ",
     "en": "being too late",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "手伝い",
-    "reading": "てつだい",
-    "en": "helper",
-    "kind": "people",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "手品",
     "reading": "てじな",
     "en": "magic",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "種",
     "reading": "たね",
     "en": "seed",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "首",
-    "reading": "くび",
-    "en": "neck",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "首相",
-    "reading": "しゅしょう",
-    "en": "prime minister",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "首輪",
-    "reading": "くびわ",
-    "en": "collar",
-    "kind": "thing",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "受験",
     "reading": "じゅけん",
     "en": "taking an examination",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "授業",
-    "reading": "じゅぎょう",
-    "en": "lesson",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "収穫",
     "reading": "しゅうかく",
     "en": "harvest",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "就職",
-    "reading": "しゅうしょく",
-    "en": "finding employment",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "修学旅行",
     "reading": "しゅうがくりょこう",
     "en": "excursion",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "拾い物",
-    "reading": "ひろいもの",
-    "en": "found article",
-    "kind": "thing",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "秋",
     "reading": "あき",
     "en": "autumn",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
-    "ja": "十字路",
-    "reading": "じゅうじろ",
-    "en": "crossroads",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "柔道",
-    "reading": "じゅうどう",
-    "en": "judo",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "渋滞",
-    "reading": "じゅうたい",
-    "en": "congestion",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "宿題",
-    "reading": "しゅくだい",
-    "en": "homework",
-    "kind": "moment",
-    "tier": false
+    "ja": "終電",
+    "reading": "しゅうでん",
+    "en": "last train",
+    "kind": "moment"
   },
   {
     "ja": "祝い",
     "reading": "いわい",
     "en": "congratulation",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "塾",
-    "reading": "じゅく",
-    "en": "cram school",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "出会い",
     "reading": "であい",
     "en": "meeting",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "出口",
     "reading": "でぐち",
     "en": "exit",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "出発",
     "reading": "しゅっぱつ",
     "en": "departure",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "春",
     "reading": "はる",
     "en": "spring",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "春休み",
     "reading": "はるやすみ",
     "en": "spring break",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "瞬間",
     "reading": "しゅんかん",
     "en": "moment",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "盾",
-    "reading": "たて",
-    "en": "shield",
-    "kind": "thing",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "初心者",
     "reading": "しょしんしゃ",
     "en": "beginner",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
+  },
+  {
+    "ja": "初雪",
+    "reading": "はつゆき",
+    "en": "first snow",
+    "kind": "phenomenon"
   },
   {
     "ja": "初日",
     "reading": "しょにち",
     "en": "first day",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "初恋",
     "reading": "はつこい",
     "en": "first love",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "暑さ",
     "reading": "あつさ",
     "en": "heat",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "書斎",
-    "reading": "しょさい",
-    "en": "study",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "書店",
-    "reading": "しょてん",
-    "en": "bookshop",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "助手",
     "reading": "じょしゅ",
     "en": "assistant",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "女の子",
-    "reading": "おんなのこ",
-    "en": "girl",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "女王",
     "reading": "じょおう",
     "en": "queen",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "女子高",
-    "reading": "じょしこう",
-    "en": "girls' high school",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "女子高生",
     "reading": "じょしこうせい",
     "en": "female high school student",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "女神",
     "reading": "めがみ",
     "en": "goddess",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "女優",
     "reading": "じょゆう",
     "en": "actress",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "傷",
     "reading": "きず",
     "en": "wound",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "勝ち",
-    "reading": "かち",
-    "en": "win",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "勝負",
     "reading": "しょうぶ",
     "en": "victory or defeat",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "勝利",
     "reading": "しょうり",
     "en": "victory",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "商人",
     "reading": "しょうにん",
     "en": "merchant",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "商店街",
     "reading": "しょうてんがい",
     "en": "shopping district",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "将軍",
     "reading": "しょうぐん",
     "en": "general",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "将来",
-    "reading": "しょうらい",
-    "en": "future",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "小屋",
-    "reading": "こや",
-    "en": "hut",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "小学校",
-    "reading": "しょうがっこう",
-    "en": "primary school",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "小学生",
     "reading": "しょうがくせい",
     "en": "elementary school student",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "小指",
-    "reading": "こゆび",
-    "en": "little finger",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "小説",
-    "reading": "しょうせつ",
-    "en": "novel",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "小説家",
-    "reading": "しょうせつか",
-    "en": "novelist",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "小鳥",
-    "reading": "ことり",
-    "en": "small bird",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "小包",
-    "reading": "こづつみ",
-    "en": "parcel",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "少女",
     "reading": "しょうじょ",
     "en": "girl",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "少年",
     "reading": "しょうねん",
     "en": "boy",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "床",
-    "reading": "ゆか",
-    "en": "floor",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "床の間",
-    "reading": "とこのま",
-    "en": "tokonoma",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "床屋",
-    "reading": "とこや",
-    "en": "barbershop",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "招待",
     "reading": "しょうたい",
     "en": "invitation",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "松",
-    "reading": "まつ",
-    "en": "pine tree",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "沼",
     "reading": "ぬま",
     "en": "marsh",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "消しゴム",
-    "reading": "けしごむ",
-    "en": "eraser",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "消防",
-    "reading": "しょうぼう",
-    "en": "fire fighting",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "笑い",
     "reading": "わらい",
     "en": "laugh",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "笑顔",
     "reading": "えがお",
     "en": "smiling face",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "衝突",
     "reading": "しょうとつ",
     "en": "collision",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "象",
     "reading": "ぞう",
     "en": "elephant",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "賞",
-    "reading": "しょう",
-    "en": "prize",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "鐘",
-    "reading": "かね",
-    "en": "bell",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "障子",
-    "reading": "しょうじ",
-    "en": "shoji",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "上京",
     "reading": "じょうきょう",
     "en": "going to Tokyo",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "上司",
     "reading": "じょうし",
     "en": "superior",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "乗り物",
     "reading": "のりもの",
     "en": "vehicle",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "乗客",
     "reading": "じょうきゃく",
     "en": "passenger",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "冗談",
     "reading": "じょうだん",
     "en": "joke",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "城",
     "reading": "しろ",
     "en": "castle",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "情熱",
     "reading": "じょうねつ",
     "en": "passion",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "杖",
-    "reading": "つえ",
-    "en": "cane",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "畳",
-    "reading": "たたみ",
-    "en": "tatami mat",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "蒸気",
-    "reading": "じょうき",
-    "en": "steam",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "飾り",
-    "reading": "かざり",
-    "en": "decoration",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "植物",
     "reading": "しょくぶつ",
     "en": "plant",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "植物園",
-    "reading": "しょくぶつえん",
-    "en": "botanical garden",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "植木",
-    "reading": "うえき",
-    "en": "garden plant",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "職人",
     "reading": "しょくにん",
     "en": "craftsman",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "色",
     "reading": "いろ",
     "en": "color",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "食べ物",
     "reading": "たべもの",
     "en": "food",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "食事",
-    "reading": "しょくじ",
-    "en": "meal",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "食卓",
-    "reading": "しょくたく",
-    "en": "dining table",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "食堂",
-    "reading": "しょくどう",
-    "en": "dining room",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "食欲",
-    "reading": "しょくよく",
-    "en": "appetite",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "尻尾",
     "reading": "しっぽ",
     "en": "tail",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "信号",
-    "reading": "しんごう",
-    "en": "traffic light",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "唇",
-    "reading": "くちびる",
-    "en": "lip",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "寝坊",
     "reading": "ねぼう",
     "en": "sleeping in late",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "心",
     "reading": "こころ",
     "en": "mind",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "心臓",
     "reading": "しんぞう",
     "en": "heart",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "新幹線",
-    "reading": "しんかんせん",
-    "en": "Shinkansen",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "新月",
     "reading": "しんげつ",
     "en": "new moon",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "新婚",
     "reading": "しんこん",
     "en": "newly-wed",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "新人",
     "reading": "しんじん",
     "en": "newcomer",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "新世界",
     "reading": "しんせかい",
     "en": "New World",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "新成人",
-    "reading": "しんせいじん",
-    "en": "new adult",
-    "kind": "people",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "新生活",
     "reading": "しんせいかつ",
     "en": "new life",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "新入生",
     "reading": "しんにゅうせい",
     "en": "new student",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "新聞",
-    "reading": "しんぶん",
-    "en": "newspaper",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "森",
     "reading": "もり",
     "en": "forest",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "真っ二つ",
     "reading": "まっぷたつ",
     "en": "two equal parts",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "真似",
-    "reading": "まね",
-    "en": "imitating",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "真夜中",
     "reading": "まよなか",
     "en": "dead of night",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "神",
     "reading": "かみ",
     "en": "god",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "神社",
     "reading": "じんじゃ",
     "en": "Shinto shrine",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "神殿",
-    "reading": "しんでん",
-    "en": "temple",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "紳士",
     "reading": "しんし",
     "en": "gentleman",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "親バカ",
     "reading": "おやばか",
     "en": "over-fond parent",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "親子",
     "reading": "おやこ",
     "en": "parent and child",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "親戚",
     "reading": "しんせき",
     "en": "relative",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "親友",
     "reading": "しんゆう",
     "en": "close friend",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "診察",
-    "reading": "しんさつ",
-    "en": "medical examination",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "身長",
-    "reading": "しんちょう",
-    "en": "height",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "進化",
     "reading": "しんか",
     "en": "evolution",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "進路",
-    "reading": "しんろ",
-    "en": "future course",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "針",
-    "reading": "はり",
-    "en": "needle",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "人間",
     "reading": "にんげん",
     "en": "human being",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
-    "ja": "人気",
-    "reading": "にんき",
-    "en": "popularity",
-    "kind": "moment",
-    "tier": false
+    "ja": "人魚",
+    "reading": "にんぎょ",
+    "en": "mermaid",
+    "kind": "people"
   },
   {
     "ja": "人形",
     "reading": "にんぎょう",
     "en": "doll",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "人生",
     "reading": "じんせい",
     "en": "life",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "人類",
     "reading": "じんるい",
     "en": "mankind",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "図鑑",
-    "reading": "ずかん",
-    "en": "pictorial book",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "図書館",
     "reading": "としょかん",
     "en": "library",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "吹雪",
     "reading": "ふぶき",
     "en": "snow storm",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "水",
     "reading": "みず",
     "en": "water",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "水泳",
-    "reading": "すいえい",
-    "en": "swimming",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "水着",
-    "reading": "みずぎ",
-    "en": "bathing suit",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "水滴",
     "reading": "すいてき",
     "en": "drop of water",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "水筒",
-    "reading": "すいとう",
-    "en": "canteen",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "水平線",
     "reading": "すいへいせん",
     "en": "horizon",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "世界",
     "reading": "せかい",
     "en": "the world",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "世話",
-    "reading": "せわ",
-    "en": "care",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "制服",
     "reading": "せいふく",
     "en": "uniform",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "成功",
     "reading": "せいこう",
     "en": "success",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "成長",
     "reading": "せいちょう",
     "en": "growth",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "政治家",
     "reading": "せいじか",
     "en": "politician",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "星",
     "reading": "ほし",
     "en": "star",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "星空",
     "reading": "ほしぞら",
     "en": "starry sky",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "星座",
     "reading": "せいざ",
     "en": "constellation",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "晴れ",
     "reading": "はれ",
     "en": "clear weather",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "正解",
-    "reading": "せいかい",
-    "en": "correct answer",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "正義",
     "reading": "せいぎ",
     "en": "justice",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "正月",
     "reading": "しょうがつ",
     "en": "New Year",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "生き物",
     "reading": "いきもの",
     "en": "living thing",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "生徒",
     "reading": "せいと",
     "en": "pupil",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "声",
     "reading": "こえ",
     "en": "voice",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "西日",
     "reading": "にしび",
     "en": "westering sun",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "誓い",
     "reading": "ちかい",
     "en": "oath",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "青",
     "reading": "あお",
     "en": "blue",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "青春",
     "reading": "せいしゅん",
     "en": "youth",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "青年",
     "reading": "せいねん",
     "en": "youth",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "静けさ",
     "reading": "しずけさ",
     "en": "stillness",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "席",
-    "reading": "せき",
-    "en": "seat",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "昔",
     "reading": "むかし",
     "en": "the old days",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "石",
     "reading": "いし",
     "en": "stone",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "石けん",
-    "reading": "せっけん",
-    "en": "soap",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "赤",
     "reading": "あか",
     "en": "red",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "赤ちゃん",
     "reading": "あかちゃん",
     "en": "baby",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "切手",
-    "reading": "きって",
-    "en": "stamp",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "切符",
     "reading": "きっぷ",
     "en": "ticket",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "雪",
     "reading": "ゆき",
     "en": "snow",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "雪崩",
     "reading": "なだれ",
     "en": "avalanche",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "絶望",
     "reading": "ぜつぼう",
     "en": "despair",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "絶滅",
     "reading": "ぜつめつ",
     "en": "extinction",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "先生",
     "reading": "せんせい",
     "en": "teacher",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "先輩",
     "reading": "せんぱい",
     "en": "senior",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "川",
     "reading": "かわ",
     "en": "river",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "戦士",
     "reading": "せんし",
     "en": "warrior",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "扇子",
-    "reading": "せんす",
-    "en": "folding fan",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "扇風機",
-    "reading": "せんぷうき",
-    "en": "electric fan",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "泉",
     "reading": "いずみ",
     "en": "spring",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "洗濯",
-    "reading": "せんたく",
-    "en": "washing",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "洗濯機",
-    "reading": "せんたくき",
-    "en": "washing machine",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "洗濯物",
-    "reading": "せんたくもの",
-    "en": "laundry",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "潜水",
     "reading": "せんすい",
     "en": "diving",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "線路",
     "reading": "せんろ",
     "en": "railway track",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "船",
     "reading": "ふね",
     "en": "ship",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "選手",
     "reading": "せんしゅ",
     "en": "player",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "全力",
     "reading": "ぜんりょく",
     "en": "all one's power",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "祖父",
     "reading": "そふ",
     "en": "grandfather",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "祖母",
     "reading": "そぼ",
     "en": "grandmother",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "双子",
     "reading": "ふたご",
     "en": "twins",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "倉庫",
-    "reading": "そうこ",
-    "en": "storehouse",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "想像",
     "reading": "そうぞう",
     "en": "imagination",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "掃除",
-    "reading": "そうじ",
-    "en": "cleaning",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "掃除機",
-    "reading": "そうじき",
-    "en": "vacuum cleaner",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "早起き",
     "reading": "はやおき",
     "en": "getting up early",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "早口",
-    "reading": "はやくち",
-    "en": "fast-talking",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "巣",
     "reading": "す",
     "en": "nest",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "相性",
-    "reading": "あいしょう",
-    "en": "affinity",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "相棒",
     "reading": "あいぼう",
     "en": "partner",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "窓",
     "reading": "まど",
     "en": "window",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "草",
     "reading": "くさ",
     "en": "grass",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "草履",
-    "reading": "ぞうり",
-    "en": "zori",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "霜",
     "reading": "しも",
     "en": "frost",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "騒ぎ",
     "reading": "さわぎ",
     "en": "uproar",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "騒音",
-    "reading": "そうおん",
-    "en": "noise",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "像",
     "reading": "ぞう",
     "en": "statue",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "憎しみ",
     "reading": "にくしみ",
     "en": "hatred",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "蔵",
-    "reading": "くら",
-    "en": "warehouse",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "贈り物",
-    "reading": "おくりもの",
-    "en": "present",
-    "kind": "thing",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "息子",
     "reading": "むすこ",
     "en": "son",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "足",
-    "reading": "あし",
-    "en": "foot",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "足音",
     "reading": "あしおと",
     "en": "footsteps",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "足跡",
     "reading": "あしあと",
     "en": "footprints",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "卒業",
     "reading": "そつぎょう",
     "en": "graduation",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "卒業式",
     "reading": "そつぎょうしき",
     "en": "graduation ceremony",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "孫",
     "reading": "まご",
     "en": "grandchild",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "村",
     "reading": "むら",
     "en": "village",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "他人",
     "reading": "たにん",
     "en": "another person",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
-    "ja": "太鼓",
-    "reading": "たいこ",
-    "en": "drum",
-    "kind": "thing",
-    "tier": true
+    "ja": "太陽",
+    "reading": "たいよう",
+    "en": "Sun",
+    "kind": "phenomenon"
   },
   {
     "ja": "打ち上げ",
     "reading": "うちあげ",
     "en": "launch",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "駄菓子",
-    "reading": "だがし",
-    "en": "penny candy",
-    "kind": "thing",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "体",
     "reading": "からだ",
     "en": "body",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "体育祭",
     "reading": "たいいくさい",
     "en": "athletic festival",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "対決",
     "reading": "たいけつ",
     "en": "confrontation",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "対戦",
-    "reading": "たいせん",
-    "en": "fighting",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "待ち合わせ",
     "reading": "まちあわせ",
     "en": "appointment",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "待合室",
-    "reading": "まちあいしつ",
-    "en": "waiting room",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "袋",
-    "reading": "ふくろ",
-    "en": "bag",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "退院",
     "reading": "たいいん",
     "en": "leaving hospital",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "退学",
-    "reading": "たいがく",
-    "en": "withdrawal from school",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "隊長",
     "reading": "たいちょう",
     "en": "captain",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "台所",
-    "reading": "だいどころ",
-    "en": "kitchen",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "台風",
     "reading": "たいふう",
     "en": "typhoon",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "大会",
     "reading": "たいかい",
     "en": "tournament",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "大学",
-    "reading": "だいがく",
-    "en": "university",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "大学生",
     "reading": "だいがくせい",
     "en": "university student",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "大喜び",
-    "reading": "おおよろこび",
-    "en": "great joy",
-    "kind": "moment",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "大空",
     "reading": "おおぞら",
     "en": "wide open sky",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "大工",
     "reading": "だいく",
     "en": "carpenter",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "大事件",
     "reading": "だいじけん",
     "en": "major incident",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "大自然",
     "reading": "だいしぜん",
     "en": "nature",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "大集合",
     "reading": "だいしゅうごう",
     "en": "great gathering",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "大人",
     "reading": "おとな",
     "en": "adult",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "大勢",
-    "reading": "おおぜい",
-    "en": "crowd of people",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "大地",
     "reading": "だいち",
     "en": "earth",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "大統領",
     "reading": "だいとうりょう",
     "en": "president",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "大木",
     "reading": "たいぼく",
     "en": "large tree",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "大陸",
     "reading": "たいりく",
     "en": "continent",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "滝",
     "reading": "たき",
     "en": "waterfall",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "棚",
-    "reading": "たな",
-    "en": "shelf",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "谷",
     "reading": "たに",
     "en": "valley",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "探検",
     "reading": "たんけん",
     "en": "exploration",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "探偵",
     "reading": "たんてい",
     "en": "detective",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "短気",
-    "reading": "たんき",
-    "en": "short temper",
-    "kind": "moment",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "誕生",
     "reading": "たんじょう",
     "en": "birth",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "誕生日",
     "reading": "たんじょうび",
     "en": "birthday",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "男の子",
-    "reading": "おとこのこ",
-    "en": "boy",
-    "kind": "people",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "地下",
     "reading": "ちか",
     "en": "underground",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
-    "ja": "地下室",
-    "reading": "ちかしつ",
-    "en": "cellar",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "地下鉄",
-    "reading": "ちかてつ",
-    "en": "subway",
-    "kind": "thing",
-    "tier": false
+    "ja": "地球",
+    "reading": "ちきゅう",
+    "en": "Earth",
+    "kind": "phenomenon"
   },
   {
     "ja": "地震",
     "reading": "じしん",
     "en": "earthquake",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "地図",
     "reading": "ちず",
     "en": "map",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "地平線",
-    "reading": "ちへいせん",
-    "en": "horizon",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "恥",
     "reading": "はじ",
     "en": "shame",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "池",
     "reading": "いけ",
     "en": "pond",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "遅刻",
     "reading": "ちこく",
     "en": "lateness",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "竹",
     "reading": "たけ",
     "en": "bamboo",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "茶色",
-    "reading": "ちゃいろ",
-    "en": "brown",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "茶碗",
-    "reading": "ちゃわん",
-    "en": "rice bowl",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "着物",
     "reading": "きもの",
     "en": "kimono",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "中華街",
-    "reading": "ちゅうかがい",
-    "en": "Chinatown",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "中学生",
     "reading": "ちゅうがくせい",
     "en": "middle school pupil",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "仲間",
     "reading": "なかま",
     "en": "companion",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "仲直り",
     "reading": "なかなおり",
     "en": "reconciliation",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "仲良し",
     "reading": "なかよし",
     "en": "close friendship",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "昼",
-    "reading": "ひる",
-    "en": "noon",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "昼ご飯",
-    "reading": "ひるごはん",
-    "en": "lunch",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "昼休み",
     "reading": "ひるやすみ",
     "en": "lunch break",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "昼寝",
     "reading": "ひるね",
     "en": "nap",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "虫",
     "reading": "むし",
     "en": "insect",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "駐車場",
-    "reading": "ちゅうしゃじょう",
-    "en": "parking lot",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "貯金",
-    "reading": "ちょきん",
-    "en": "putting money aside",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "挑戦",
     "reading": "ちょうせん",
     "en": "challenge",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "朝",
     "reading": "あさ",
     "en": "morning",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "朝ごはん",
-    "reading": "あさごはん",
-    "en": "breakfast",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "朝焼け",
     "reading": "あさやけ",
     "en": "morning glow",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "朝日",
     "reading": "あさひ",
     "en": "morning sun",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "潮",
     "reading": "しお",
     "en": "tide",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "町",
     "reading": "まち",
     "en": "town",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "眺め",
-    "reading": "ながめ",
-    "en": "scene",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "蝶",
     "reading": "ちょう",
     "en": "butterfly",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "長女",
-    "reading": "ちょうじょ",
-    "en": "eldest daughter",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "長男",
-    "reading": "ちょうなん",
-    "en": "eldest son",
-    "kind": "people",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "頂",
     "reading": "いただき",
     "en": "crown",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "鳥",
     "reading": "とり",
     "en": "bird",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "鳥居",
-    "reading": "とりい",
-    "en": "torii",
-    "kind": "thing",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "沈没",
     "reading": "ちんぼつ",
     "en": "sinking",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "沈黙",
     "reading": "ちんもく",
     "en": "silence",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "通学路",
     "reading": "つうがくろ",
     "en": "school route",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "壷",
-    "reading": "つぼ",
-    "en": "pot",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "爪",
-    "reading": "つめ",
-    "en": "nail",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "爪切り",
-    "reading": "つめきり",
-    "en": "nail clippers",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "釣り",
     "reading": "つり",
     "en": "fishing",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "鶴",
     "reading": "つる",
     "en": "crane",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "停電",
     "reading": "ていでん",
     "en": "power outage",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "定期券",
-    "reading": "ていきけん",
-    "en": "commuter pass",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "定規",
-    "reading": "じょうぎ",
-    "en": "ruler",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "庭",
     "reading": "にわ",
     "en": "garden",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "弟",
     "reading": "おとうと",
     "en": "younger brother",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "弟子",
     "reading": "でし",
     "en": "pupil",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "諦め",
     "reading": "あきらめ",
     "en": "resignation",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "泥",
     "reading": "どろ",
     "en": "mud",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "泥棒",
     "reading": "どろぼう",
     "en": "thief",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "敵",
     "reading": "てき",
     "en": "opponent",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "笛",
-    "reading": "ふえ",
-    "en": "flute",
-    "kind": "thing",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "徹夜",
     "reading": "てつや",
     "en": "staying up all night",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "鉄橋",
-    "reading": "てっきょう",
-    "en": "railway bridge",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "天井",
-    "reading": "てんじょう",
-    "en": "ceiling",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "天気",
     "reading": "てんき",
     "en": "weather",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "天気予報",
-    "reading": "てんきよほう",
-    "en": "weather forecast",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "天国",
     "reading": "てんごく",
     "en": "paradise",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "天才",
     "reading": "てんさい",
     "en": "genius",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "天使",
     "reading": "てんし",
     "en": "angel",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "展覧会",
     "reading": "てんらんかい",
     "en": "exhibition",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "店",
-    "reading": "みせ",
-    "en": "store",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "店長",
     "reading": "てんちょう",
     "en": "shop manager",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "転校",
     "reading": "てんこう",
     "en": "changing schools",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "伝説",
     "reading": "でんせつ",
     "en": "legend",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "伝統",
-    "reading": "でんとう",
-    "en": "tradition",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "田んぼ",
     "reading": "たんぼ",
     "en": "rice field",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "田園",
-    "reading": "でんえん",
-    "en": "the country",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "田植え",
-    "reading": "たうえ",
-    "en": "rice planting",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "電気",
     "reading": "でんき",
     "en": "electricity",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "電球",
-    "reading": "でんきゅう",
-    "en": "light bulb",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "電車",
     "reading": "でんしゃ",
     "en": "train",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "電線",
-    "reading": "でんせん",
-    "en": "electric line",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "電池切れ",
     "reading": "でんちぎれ",
     "en": "battery depletion",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "電柱",
-    "reading": "でんちゅう",
-    "en": "utility pole",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "電波",
     "reading": "でんぱ",
     "en": "radio wave",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "電話",
     "reading": "でんわ",
     "en": "telephone call",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "渡り鳥",
     "reading": "わたりどり",
     "en": "migratory bird",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "登校",
     "reading": "とうこう",
     "en": "going to school",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "登山",
     "reading": "とざん",
     "en": "mountain climbing",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "途中",
-    "reading": "とちゅう",
-    "en": "on the way",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "都会",
     "reading": "とかい",
     "en": "city",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "努力",
-    "reading": "どりょく",
-    "en": "effort",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "度忘れ",
-    "reading": "どわすれ",
-    "en": "lapse of memory",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "土",
-    "reading": "つち",
-    "en": "earth",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "土手",
-    "reading": "どて",
-    "en": "embankment",
-    "kind": "thing",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "怒り",
     "reading": "いかり",
     "en": "anger",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "冬",
     "reading": "ふゆ",
     "en": "winter",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "冬休み",
     "reading": "ふゆやすみ",
     "en": "winter vacation",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "刀",
-    "reading": "かたな",
-    "en": "sword",
-    "kind": "thing",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "塔",
     "reading": "とう",
     "en": "tower",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "島",
     "reading": "しま",
     "en": "island",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "桃",
-    "reading": "もも",
-    "en": "peach",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "湯飲み",
-    "reading": "ゆのみ",
-    "en": "teacup",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "湯気",
     "reading": "ゆげ",
     "en": "steam",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "灯台",
     "reading": "とうだい",
     "en": "lighthouse",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "答案",
-    "reading": "とうあん",
-    "en": "examination paper",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "到着",
     "reading": "とうちゃく",
     "en": "arrival",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "藤",
-    "reading": "ふじ",
-    "en": "wisteria",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "豆",
-    "reading": "まめ",
-    "en": "legume",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "豆腐",
-    "reading": "とうふ",
-    "en": "tofu",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "踏切",
     "reading": "ふみきり",
     "en": "railway crossing",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "頭",
-    "reading": "あたま",
-    "en": "head",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "頭痛",
-    "reading": "ずつう",
-    "en": "headache",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "動画",
     "reading": "どうが",
     "en": "video",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "動物",
     "reading": "どうぶつ",
     "en": "animal",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "動物園",
     "reading": "どうぶつえん",
     "en": "zoo",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "同級生",
     "reading": "どうきゅうせい",
     "en": "classmate",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "同居",
     "reading": "どうきょ",
     "en": "living together",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "憧れ",
     "reading": "あこがれ",
     "en": "yearning",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "瞳",
     "reading": "ひとみ",
     "en": "pupil",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "童話",
     "reading": "どうわ",
     "en": "children's story",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "道",
     "reading": "みち",
     "en": "road",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "道場",
-    "reading": "どうじょう",
-    "en": "dojo",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "峠",
-    "reading": "とうげ",
-    "en": "pass",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "毒",
     "reading": "どく",
     "en": "poison",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "読書",
-    "reading": "どくしょ",
-    "en": "reading",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "豚",
-    "reading": "ぶた",
-    "en": "pig",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "曇り",
     "reading": "くもり",
     "en": "cloudiness",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "謎",
     "reading": "なぞ",
     "en": "riddle",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "鍋",
-    "reading": "なべ",
-    "en": "pan",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "縄",
-    "reading": "なわ",
-    "en": "rope",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "二階建て",
-    "reading": "にかいだて",
-    "en": "two-storied building",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "二度寝",
     "reading": "にどね",
     "en": "sleeping in",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "匂い",
     "reading": "におい",
     "en": "smell",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "肉",
-    "reading": "にく",
-    "en": "meat",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "虹",
     "reading": "にじ",
     "en": "rainbow",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "日の出",
     "reading": "ひので",
     "en": "sunrise",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "日の入り",
     "reading": "ひのいり",
     "en": "sunset",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "日帰り",
-    "reading": "ひがえり",
-    "en": "day trip",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "日記",
     "reading": "にっき",
     "en": "diary",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "日向",
     "reading": "ひなた",
     "en": "sunny place",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "日差し",
     "reading": "ひざし",
     "en": "sunlight",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "日食",
     "reading": "にっしょく",
     "en": "solar eclipse",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "入院",
     "reading": "にゅういん",
     "en": "hospitalization",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "入学",
     "reading": "にゅうがく",
     "en": "admission",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
-    "ja": "入口",
-    "reading": "いりぐち",
-    "en": "entrance",
-    "kind": "thing",
-    "tier": false
+    "ja": "忍者",
+    "reading": "にんじゃ",
+    "en": "ninja",
+    "kind": "people"
   },
   {
     "ja": "猫",
     "reading": "ねこ",
     "en": "cat",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "熱",
     "reading": "ねつ",
     "en": "heat",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "熱湯",
-    "reading": "ねっとう",
-    "en": "boiling water",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "年賀状",
-    "reading": "ねんがじょう",
-    "en": "New Year's card",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "年上",
     "reading": "としうえ",
     "en": "older",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "年輪",
     "reading": "ねんりん",
     "en": "annual tree ring",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "農家",
     "reading": "のうか",
     "en": "farmer",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "波",
     "reading": "なみ",
     "en": "wave",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "馬",
     "reading": "うま",
     "en": "horse",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "俳優",
     "reading": "はいゆう",
     "en": "actor",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "敗北",
     "reading": "はいぼく",
     "en": "defeat",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "背後",
-    "reading": "はいご",
-    "en": "back",
-    "kind": "thing",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "背中",
     "reading": "せなか",
     "en": "back",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "配信",
     "reading": "はいしん",
     "en": "streaming",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "配達",
-    "reading": "はいたつ",
-    "en": "delivery",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "梅",
     "reading": "うめ",
     "en": "Japanese apricot",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "梅雨",
     "reading": "つゆ",
     "en": "rainy season",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "梅干し",
-    "reading": "うめぼし",
-    "en": "umeboshi",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "買い物",
     "reading": "かいもの",
     "en": "shopping",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "売り切れ",
     "reading": "うりきれ",
     "en": "sold-out",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "博士",
     "reading": "はかせ",
     "en": "expert",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "博物館",
     "reading": "はくぶつかん",
     "en": "museum",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "拍手",
     "reading": "はくしゅ",
     "en": "clapping hands",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "白",
     "reading": "しろ",
     "en": "white",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "白髪",
-    "reading": "しらが",
-    "en": "white hair",
-    "kind": "thing",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "爆笑",
     "reading": "ばくしょう",
     "en": "roar of laughter",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "爆発",
     "reading": "ばくはつ",
     "en": "explosion",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "箱",
     "reading": "はこ",
     "en": "box",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "箸",
-    "reading": "はし",
-    "en": "chopsticks",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "畑",
-    "reading": "はたけ",
-    "en": "field",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "八百屋",
-    "reading": "やおや",
-    "en": "greengrocer",
-    "kind": "people",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "発見",
     "reading": "はっけん",
     "en": "discovery",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "発表会",
     "reading": "はっぴょうかい",
     "en": "recital",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "発明",
     "reading": "はつめい",
     "en": "invention",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "髪",
     "reading": "かみ",
     "en": "hair",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "判子",
-    "reading": "はんこ",
-    "en": "seal",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "版画",
-    "reading": "はんが",
-    "en": "woodcut",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "悲しみ",
     "reading": "かなしみ",
     "en": "sadness",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "悲劇",
     "reading": "ひげき",
     "en": "tragedy",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "扉",
     "reading": "とびら",
     "en": "door",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "疲れ",
-    "reading": "つかれ",
-    "en": "tiredness",
-    "kind": "moment",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "秘密",
     "reading": "ひみつ",
     "en": "secret",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "秘密基地",
     "reading": "ひみつきち",
     "en": "secret base",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "避難",
     "reading": "ひなん",
     "en": "taking refuge",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "飛行",
     "reading": "ひこう",
     "en": "flight",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "飛行機",
     "reading": "ひこうき",
     "en": "airplane",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "美容師",
     "reading": "びようし",
     "en": "beautician",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "鼻",
-    "reading": "はな",
-    "en": "nose",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "筆",
-    "reading": "ふで",
-    "en": "writing brush",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "姫",
     "reading": "ひめ",
     "en": "princess",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "氷",
     "reading": "こおり",
     "en": "ice",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "表情",
-    "reading": "ひょうじょう",
-    "en": "facial expression",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "病院",
     "reading": "びょういん",
     "en": "hospital",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "病気",
-    "reading": "びょうき",
-    "en": "illness",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "苗",
-    "reading": "なえ",
-    "en": "seedling",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "瓶",
-    "reading": "びん",
-    "en": "bottle",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "不安",
     "reading": "ふあん",
     "en": "anxiety",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "不運",
     "reading": "ふうん",
     "en": "misfortune",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "不幸",
     "reading": "ふこう",
     "en": "unhappiness",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "不合格",
     "reading": "ふごうかく",
     "en": "failure",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "不満",
-    "reading": "ふまん",
-    "en": "dissatisfaction",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "夫",
     "reading": "おっと",
     "en": "husband",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "夫婦",
     "reading": "ふうふ",
     "en": "married couple",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "布",
-    "reading": "ぬの",
-    "en": "cloth",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "布団",
-    "reading": "ふとん",
-    "en": "futon",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "父親",
     "reading": "ちちおや",
     "en": "father",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "負け",
-    "reading": "まけ",
-    "en": "defeat",
-    "kind": "moment",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "武士",
     "reading": "ぶし",
     "en": "samurai",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "舞台",
     "reading": "ぶたい",
     "en": "stage",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "部屋",
     "reading": "へや",
     "en": "room",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "部活",
     "reading": "ぶかつ",
     "en": "club activities",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "部長",
     "reading": "ぶちょう",
     "en": "captain",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "封筒",
-    "reading": "ふうとう",
-    "en": "envelope",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "風",
     "reading": "かぜ",
     "en": "wind",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "風車",
-    "reading": "かざぐるま",
-    "en": "windmill",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "風邪",
-    "reading": "かぜ",
-    "en": "cold",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "風船",
     "reading": "ふうせん",
     "en": "balloon",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "風呂",
-    "reading": "ふろ",
-    "en": "bath",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "風呂敷",
-    "reading": "ふろしき",
-    "en": "furoshiki",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "服",
     "reading": "ふく",
     "en": "clothes",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "仏像",
-    "reading": "ぶつぞう",
-    "en": "statue of Buddha",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "物音",
     "reading": "ものおと",
     "en": "noise",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "物語",
     "reading": "ものがたり",
     "en": "story",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "物置",
-    "reading": "ものおき",
-    "en": "storage room",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "噴火",
     "reading": "ふんか",
     "en": "eruption",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "噴水",
-    "reading": "ふんすい",
-    "en": "water fountain",
-    "kind": "thing",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "粉々",
     "reading": "こなごな",
     "en": "in very small pieces",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "雰囲気",
-    "reading": "ふんいき",
-    "en": "atmosphere",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "文化祭",
     "reading": "ぶんかさい",
     "en": "school festival",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "文字",
     "reading": "もじ",
     "en": "letter",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "文房具",
-    "reading": "ぶんぼうぐ",
-    "en": "stationery",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "平和",
     "reading": "へいわ",
     "en": "peace",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "並木",
-    "reading": "なみき",
-    "en": "roadside trees",
-    "kind": "phenomenon",
-    "tier": false
-  },
-  {
-    "ja": "米",
-    "reading": "こめ",
-    "en": "rice",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "壁",
     "reading": "かべ",
     "en": "wall",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "別れ",
     "reading": "わかれ",
     "en": "parting",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "別荘",
-    "reading": "べっそう",
-    "en": "holiday house",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "変化",
-    "reading": "へんか",
-    "en": "change",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "変形",
-    "reading": "へんけい",
-    "en": "transformation",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "変身",
     "reading": "へんしん",
     "en": "metamorphosis",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "片言",
-    "reading": "かたこと",
-    "en": "prattle",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "片思い",
     "reading": "かたおもい",
     "en": "unrequited love",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "片付け",
-    "reading": "かたづけ",
-    "en": "tidying up",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "編集者",
     "reading": "へんしゅうしゃ",
     "en": "editor",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "勉強",
-    "reading": "べんきょう",
-    "en": "study",
-    "kind": "moment",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "弁護士",
     "reading": "べんごし",
     "en": "lawyer",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "弁当",
-    "reading": "べんとう",
-    "en": "bento",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "保育所",
-    "reading": "ほいくしょ",
-    "en": "nursery school",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "母親",
     "reading": "ははおや",
     "en": "mother",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "包帯",
-    "reading": "ほうたい",
-    "en": "bandage",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "包丁",
-    "reading": "ほうちょう",
-    "en": "kitchen knife",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "宝",
-    "reading": "たから",
-    "en": "treasure",
-    "kind": "thing",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "宝石",
     "reading": "ほうせき",
     "en": "gem",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "宝探し",
     "reading": "たからさがし",
     "en": "treasure hunting",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
+  },
+  {
+    "ja": "宝箱",
+    "reading": "たからばこ",
+    "en": "treasure chest",
+    "kind": "thing"
   },
   {
     "ja": "宝物",
     "reading": "たからもの",
     "en": "treasure",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "崩壊",
     "reading": "ほうかい",
     "en": "collapse",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "放課後",
     "reading": "ほうかご",
     "en": "after school",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "泡",
     "reading": "あわ",
     "en": "bubble",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "蜂蜜",
-    "reading": "はちみつ",
-    "en": "honey",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "豊作",
-    "reading": "ほうさく",
-    "en": "abundant harvest",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "帽子",
     "reading": "ぼうし",
     "en": "hat",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "忘れ物",
     "reading": "わすれもの",
     "en": "lost article",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "暴走",
     "reading": "ぼうそう",
     "en": "acting rashly",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "望遠鏡",
     "reading": "ぼうえんきょう",
     "en": "telescope",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "棒",
-    "reading": "ぼう",
-    "en": "pole",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "冒険",
     "reading": "ぼうけん",
     "en": "adventure",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "墨",
-    "reading": "すみ",
-    "en": "sumi",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "牧場",
-    "reading": "ぼくじょう",
-    "en": "farm",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "本",
     "reading": "ほん",
     "en": "book",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "本音",
     "reading": "ほんね",
     "en": "real intention",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "本気",
     "reading": "ほんき",
     "en": "seriousness",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "本棚",
-    "reading": "ほんだな",
-    "en": "bookshelves",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "本番",
     "reading": "ほんばん",
     "en": "performance",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "本物",
     "reading": "ほんもの",
     "en": "genuine article",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "本名",
     "reading": "ほんみょう",
     "en": "real name",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "魔女",
     "reading": "まじょ",
     "en": "witch",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "魔法",
     "reading": "まほう",
     "en": "magic",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
+  },
+  {
+    "ja": "魔法使い",
+    "reading": "まほうつかい",
+    "en": "wizard",
+    "kind": "people"
   },
   {
     "ja": "妹",
     "reading": "いもうと",
     "en": "younger sister",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "幕",
-    "reading": "まく",
-    "en": "curtain",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "枕",
-    "reading": "まくら",
-    "en": "pillow",
-    "kind": "thing",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "末っ子",
     "reading": "すえっこ",
     "en": "youngest child",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "万歳",
     "reading": "ばんざい",
     "en": "banzai",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "万年筆",
-    "reading": "まんねんひつ",
-    "en": "fountain pen",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "満員",
-    "reading": "まんいん",
-    "en": "full house",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "満月",
     "reading": "まんげつ",
     "en": "full moon",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "満足",
-    "reading": "まんぞく",
-    "en": "satisfaction",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "漫画",
     "reading": "まんが",
     "en": "cartoon",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "漫画家",
     "reading": "まんがか",
     "en": "cartoonist",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "味",
-    "reading": "あじ",
-    "en": "flavor",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "味方",
     "reading": "みかた",
     "en": "friend",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "未来",
     "reading": "みらい",
     "en": "future",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "魅力",
-    "reading": "みりょく",
-    "en": "charm",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "岬",
     "reading": "みさき",
     "en": "cape",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "眠り",
     "reading": "ねむり",
     "en": "sleep",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "夢",
     "reading": "ゆめ",
     "en": "dream",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "夢中",
     "reading": "むちゅう",
     "en": "absorbed in",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "無重量",
     "reading": "むじゅうりょう",
     "en": "weightlessness",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "霧",
     "reading": "きり",
     "en": "fog",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "娘",
     "reading": "むすめ",
     "en": "daughter",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "名作",
-    "reading": "めいさく",
-    "en": "masterpiece",
-    "kind": "thing",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "名残",
     "reading": "なごり",
     "en": "remains",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "名人",
     "reading": "めいじん",
     "en": "master",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "名前",
     "reading": "なまえ",
     "en": "name",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "命",
     "reading": "いのち",
     "en": "life",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "明かり",
-    "reading": "あかり",
-    "en": "light",
-    "kind": "thing",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "明日",
     "reading": "あした",
     "en": "tomorrow",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "迷い",
     "reading": "まよい",
     "en": "hesitation",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "迷宮",
-    "reading": "めいきゅう",
-    "en": "labyrinth",
-    "kind": "thing",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "迷子",
     "reading": "まいご",
     "en": "lost child",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "迷路",
     "reading": "めいろ",
     "en": "maze",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "滅亡",
     "reading": "めつぼう",
     "en": "downfall",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "模型",
-    "reading": "もけい",
-    "en": "model",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "模様",
     "reading": "もよう",
     "en": "pattern",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "毛糸",
-    "reading": "けいと",
-    "en": "knitting wool",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "毛布",
-    "reading": "もうふ",
-    "en": "blanket",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "網",
-    "reading": "あみ",
-    "en": "net",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "木",
     "reading": "き",
     "en": "tree",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "目",
     "reading": "め",
     "en": "eye",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "目つき",
-    "reading": "めつき",
-    "en": "look",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "目覚まし",
-    "reading": "めざまし",
-    "en": "alarm clock",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "目覚め",
     "reading": "めざめ",
     "en": "waking",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "餅",
-    "reading": "もち",
-    "en": "mochi",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "門",
     "reading": "もん",
     "en": "gate",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "夜",
     "reading": "よる",
     "en": "night",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "夜更かし",
     "reading": "よふかし",
     "en": "staying up late",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "夜明け",
     "reading": "よあけ",
     "en": "dawn",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "野球部",
-    "reading": "やきゅうぶ",
-    "en": "baseball club",
-    "kind": "thing",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "野菜",
     "reading": "やさい",
     "en": "vegetable",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "野心",
     "reading": "やしん",
     "en": "ambition",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "矢",
     "reading": "や",
     "en": "arrow",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "約束",
     "reading": "やくそく",
     "en": "promise",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "薬",
     "reading": "くすり",
     "en": "medicine",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "薬局",
-    "reading": "やっきょく",
-    "en": "pharmacy",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "油絵",
-    "reading": "あぶらえ",
-    "en": "oil painting",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "優勝",
     "reading": "ゆうしょう",
     "en": "overall victory",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "勇気",
     "reading": "ゆうき",
     "en": "courage",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "友情",
     "reading": "ゆうじょう",
     "en": "friendship",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "友達",
     "reading": "ともだち",
     "en": "friend",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "幽霊",
     "reading": "ゆうれい",
     "en": "ghost",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "有名人",
     "reading": "ゆうめいじん",
     "en": "celebrity",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "遊び",
     "reading": "あそび",
     "en": "play",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "遊園地",
     "reading": "ゆうえんち",
     "en": "amusement park",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "郵便局",
-    "reading": "ゆうびんきょく",
-    "en": "post office",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "夕焼け",
     "reading": "ゆうやけ",
     "en": "evening glow",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
-    "ja": "夕飯",
-    "reading": "ゆうはん",
-    "en": "evening meal",
-    "kind": "thing",
-    "tier": false
+    "ja": "夕日",
+    "reading": "ゆうひ",
+    "en": "setting sun",
+    "kind": "phenomenon"
   },
   {
     "ja": "夕暮れ",
     "reading": "ゆうぐれ",
     "en": "evening",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "夕方",
-    "reading": "ゆうがた",
-    "en": "early evening",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "夕立",
     "reading": "ゆうだち",
     "en": "shower",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "妖怪",
     "reading": "ようかい",
     "en": "ghost",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "妖精",
     "reading": "ようせい",
     "en": "fairy",
-    "kind": "people",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "溶岩",
     "reading": "ようがん",
     "en": "lava",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "羊",
     "reading": "ひつじ",
     "en": "sheep",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "葉",
     "reading": "は",
     "en": "leaf",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "踊り",
     "reading": "おどり",
     "en": "dancing",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "浴衣",
     "reading": "ゆかた",
     "en": "yukata",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "翼",
     "reading": "つばさ",
     "en": "wing",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "裸足",
     "reading": "はだし",
     "en": "barefoot",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "雷",
     "reading": "かみなり",
     "en": "lightning",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "落ち葉",
     "reading": "おちば",
     "en": "fallen leaves",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "落とし物",
     "reading": "おとしもの",
     "en": "lost property",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "落書き",
     "reading": "らくがき",
     "en": "scrawl",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "卵",
     "reading": "たまご",
     "en": "eggs",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "嵐",
     "reading": "あらし",
     "en": "storm",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "梨",
-    "reading": "なし",
-    "en": "nashi",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "裏返し",
-    "reading": "うらがえし",
-    "en": "inside out",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "流れ",
     "reading": "ながれ",
     "en": "flow",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "流れ星",
     "reading": "ながれぼし",
     "en": "shooting star",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "流行",
-    "reading": "りゅうこう",
-    "en": "fashion",
-    "kind": "moment",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "留学",
     "reading": "りゅうがく",
     "en": "studying abroad",
-    "kind": "moment",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "留学生",
     "reading": "りゅうがくせい",
     "en": "overseas student",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "留守",
-    "reading": "るす",
-    "en": "absence",
-    "kind": "moment",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "留守番",
     "reading": "るすばん",
     "en": "care-taking",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "竜",
-    "reading": "りゅう",
-    "en": "dragon",
-    "kind": "people",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "旅",
     "reading": "たび",
     "en": "travel",
-    "kind": "moment",
-    "tier": true
-  },
-  {
-    "ja": "旅館",
-    "reading": "りょかん",
-    "en": "ryokan",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "旅行",
-    "reading": "りょこう",
-    "en": "travel",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "旅行者",
     "reading": "りょこうしゃ",
     "en": "traveler",
-    "kind": "people",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "旅立ち",
     "reading": "たびだち",
     "en": "setting off",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "両親",
     "reading": "りょうしん",
     "en": "parents",
-    "kind": "people",
-    "tier": false
-  },
-  {
-    "ja": "寮",
-    "reading": "りょう",
-    "en": "dormitory",
-    "kind": "thing",
-    "tier": true
+    "kind": "people"
   },
   {
     "ja": "料理",
     "reading": "りょうり",
     "en": "cooking",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "力",
     "reading": "ちから",
     "en": "force",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "緑",
     "reading": "みどり",
     "en": "green",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "隣",
     "reading": "となり",
     "en": "next",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   },
   {
     "ja": "涙",
     "reading": "なみだ",
     "en": "tear",
-    "kind": "thing",
-    "tier": true
-  },
-  {
-    "ja": "冷蔵庫",
-    "reading": "れいぞうこ",
-    "en": "refrigerator",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "鈴",
-    "reading": "すず",
-    "en": "bell",
-    "kind": "thing",
-    "tier": false
+    "kind": "thing"
   },
   {
     "ja": "零点",
     "reading": "れいてん",
     "en": "zero",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "歴史",
     "reading": "れきし",
     "en": "history",
-    "kind": "moment",
-    "tier": false
-  },
-  {
-    "ja": "列",
-    "reading": "れつ",
-    "en": "row",
-    "kind": "thing",
-    "tier": false
+    "kind": "moment"
   },
   {
     "ja": "恋",
     "reading": "こい",
     "en": "love",
-    "kind": "moment",
-    "tier": true
+    "kind": "moment"
   },
   {
     "ja": "恋人",
     "reading": "こいびと",
     "en": "lover",
-    "kind": "people",
-    "tier": true
-  },
-  {
-    "ja": "練習",
-    "reading": "れんしゅう",
-    "en": "practice",
-    "kind": "moment",
-    "tier": false
+    "kind": "people"
   },
   {
     "ja": "露",
     "reading": "つゆ",
     "en": "dew",
-    "kind": "phenomenon",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "廊下",
     "reading": "ろうか",
     "en": "corridor",
-    "kind": "thing",
-    "tier": true
+    "kind": "thing"
   },
   {
     "ja": "狼",
     "reading": "おおかみ",
     "en": "wolf",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "老人ホーム",
-    "reading": "ろうじんほーむ",
-    "en": "retirement home",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "惑星",
     "reading": "わくせい",
     "en": "planet",
-    "kind": "phenomenon",
-    "tier": true
-  },
-  {
-    "ja": "腕",
-    "reading": "うで",
-    "en": "arm",
-    "kind": "thing",
-    "tier": false
-  },
-  {
-    "ja": "丼",
-    "reading": "どんぶり",
-    "en": "porcelain bowl",
-    "kind": "thing",
-    "tier": false
+    "kind": "phenomenon"
   },
   {
     "ja": "蜃気楼",
     "reading": "しんきろう",
     "en": "mirage",
-    "kind": "phenomenon",
-    "tier": true
+    "kind": "phenomenon"
   }
 ]

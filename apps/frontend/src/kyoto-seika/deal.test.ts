@@ -47,19 +47,6 @@ describe("dealing Kyoto Seika Subjects", () => {
     expect(deal.subjects.filter((s) => lately.includes(s.ja))).toHaveLength(1);
   });
 
-  it("deals and rolls the upper balloon from the tier, and the lower from any kind but the upper's", () => {
-    for (const deal of deals(200, options())) {
-      expect(deal.subjects[0].tier).toBe(true);
-      expect(deal.subjects[1].kind).not.toBe(deal.subjects[0].kind);
-    }
-    expect(deals(200, options()).some((d) => !d.subjects[1].tier)).toBe(true);
-    let deal = firstDeal(TEST_SUBJECTS, options());
-    for (let i = 0; i < 20; i++) {
-      deal = rollDie(TEST_SUBJECTS, deal, 0, options({ random: seededRandom(i) })) ?? deal;
-      expect(deal.subjects[0].tier).toBe(true);
-    }
-  });
-
   it("takes no roll once the die is charred", () => {
     const charred = {
       ...firstDeal(TEST_SUBJECTS, options()),

@@ -11,10 +11,6 @@ describe("the subject list", () => {
     expect(list.filter((s) => charCount(s.ja) > MAX_SUBJECT_CHARS)).toEqual([]);
   });
 
-  it("holds every kind in the evocative tier, which the upper balloon deals from", () => {
-    expect(new Set(list.filter((s) => s.tier).map((s) => s.kind))).toEqual(new Set(KINDS));
-  });
-
   it("keeps a reading for every word with kanji to put furigana over, and for no other", () => {
     expect(list.filter((s) => (s.reading !== "") !== hasKanji(s.ja))).toEqual([]);
   });

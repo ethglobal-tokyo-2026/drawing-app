@@ -4,10 +4,9 @@
 
 Each entry:
 
-- `ja`: a noun as the test would print it, up to six characters, that a student can picture. Action nouns (散歩, 再会) carry the verbs. A word whose kanji few can read prints in kana (団扇 → うちわ).
+- `ja`: a subject the exam could set, broad enough to read many ways (風, 地図, 再会), never a narrow everyday item (缶コーヒー, はたき). A noun as the test would print it, up to six characters, that a student can picture. Action nouns (散歩, 再会) carry the verbs. A word whose kanji few can read prints in kana (団扇 → うちわ).
 - `reading`: its furigana, in kana; empty for a word without kanji.
 - `en`: JMdict's English for the sense meant, in American spelling.
-- `kind`: `moment`, `thing`, `phenomenon`, `people` or `loanword`. A deal pairs two different kinds, and never two words that share their English.
-- `tier`: in the evocative tier, which the upper balloon deals from: a subject you can picture a scene for at once (夜, 秘密基地, タイムマシン). The lower balloon deals from the whole list.
+- `kind`: `moment`, `thing`, `phenomenon`, `people` or `loanword`. A deal never holds two words of one kind, nor two that share their English.
 
 Words newer than JMdict's commonness marks (推し) come in only by hand.
