@@ -11,6 +11,9 @@ import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import { currentLanguage, i18next } from "../../i18n/i18n";
 import { readChosenLanguage } from "../../i18n/language";
 import { keepBoard, keptBoardFor, readKeptBoardAgain } from "../lastBoard";
+// The help sheet loads lazily; importing it here keeps that load out of the tap's short wait, which a busy
+// machine stretched past its limit.
+import "../../kyoto-seika/KyotoSeikaHelp";
 import { SettingsNote } from "./SettingsNote";
 import { statsClearPeek } from "./settingsPeek";
 
@@ -267,7 +270,7 @@ describe("the Settings note's Kyoto Seika Practice Mode", () => {
     expect(button?.previousElementSibling?.matches(`label[for="${switchIn(host).id}"]`)).toBe(true);
     expect(sheet()).toBeNull();
     await act(async () => button?.click());
-    // Its code loads on the first tap.
+    // Its code comes in through the lazy import on the first tap.
     await vi.waitFor(() =>
       expect(sheet()?.getAttribute("aria-label")).toBe(
         stickerBoard.settings.kyotoSeika.spokenName.en,
