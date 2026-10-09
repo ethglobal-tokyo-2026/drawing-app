@@ -153,7 +153,7 @@ Avoid hyperspecific tests or writing tests as a knee jerk reaction. Think about 
 - Keep documentation current after major feature or architecture changes.
 - Be direct and concise, so long as it doesn't cost usability, legibility, accuracy or quality.
 - Durable docs carry durable detail only, such as structure, architecture, and vocabulary, standards. Fragile content such as hardcoded counts, timings and reasoning logs don't belong in them.
-- DESIGN.md holds the design system only: tokens, materials, components and standing rules. A screen change never edits it; the code, its tests and the catalog are a screen's record.
+- DESIGN.md holds the design system only: tokens, materials, components and standing rules. Feature and screen work never edits it, and no brief, plan or summary proposes wording for it; the code, its tests and the catalog are a screen's record. A new or changed system rule is put to the engineer as a question, and goes in only once they approve it.
 - Durable docs should not be treated as a journal of research findings, they should instead focus on current state. If history/process is necessary context, it should be kept concise.
 - When determining if you should document something or not, Ask whether what you're writing is genuinely useful to a future reader.
 - **Never expose personal details** — username, absolute home paths, unrelated software — in committed documentation.
