@@ -219,6 +219,13 @@
       calc((100% - 4 * var(--shelf-swatch) - 3 * var(--shelf-gap) - 36px) / 2)
     );
   }
+
+  /* The count, Buy and Deposit keep a phone's width: centered upright, past the stub's perforation
+     sideways. */
+  .reserve-hero__buy {
+    width: calc(var(--ph-w) - 60px);
+    margin-inline: auto;
+  }
 }
 
 /* In landscape the page reads as one spread: reserve tickets as a banner across the top, the fan, the
@@ -269,7 +276,6 @@
 
   .reserve-hero__buy {
     flex: none;
-    width: calc(var(--ph-w) - 60px);
   }
 
   .shop__purchases {
