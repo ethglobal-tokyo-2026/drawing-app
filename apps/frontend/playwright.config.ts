@@ -11,6 +11,9 @@ export default defineConfig({
   testMatch: "**/*.e2e.ts",
   outputDir: fileURLToPath(new URL("../../data/e2e-results", import.meta.url)),
   fullyParallel: true,
+  // Each worker is a phone browser beside one API and one Vite server on a shared Mac; more than this
+  // starves them, and E2E_WORKERS raises it on a quiet machine.
+  workers: Number(process.env.E2E_WORKERS ?? 4),
   forbidOnly: true,
   reporter: "list",
   timeout: 60_000,
