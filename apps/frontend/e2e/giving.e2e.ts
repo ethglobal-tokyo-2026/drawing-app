@@ -164,12 +164,18 @@ test("Bob's detail of Alice's gift holds the Transfer Trail's place and Send gra
     name: say(stickerBoard.detail.give, language),
     exact: true,
   });
-  /** Where a part sits in the page's layout, apart from any rise it's making. */
+  /**
+   * Where a part sits in the page's layout, apart from any rise it or its parents are making. A part
+   * mid-rise is its children's offsetParent, so the whole chain is summed.
+   */
   const span = (part: Locator) =>
-    part.evaluate((el: HTMLElement) => ({
-      top: el.offsetTop,
-      foot: el.offsetTop + el.offsetHeight,
-    }));
+    part.evaluate((el: HTMLElement) => {
+      let top = 0;
+      for (let at: Element | null = el; at instanceof HTMLElement; at = at.offsetParent) {
+        top += at.offsetTop;
+      }
+      return { top, foot: top + el.offsetHeight };
+    });
   const before = {
     give: await span(give),
     trail: await span(trail),
