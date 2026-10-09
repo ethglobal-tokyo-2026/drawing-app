@@ -153,6 +153,16 @@ describe("ReceiveGiftDialog", () => {
     expect(heading()).toBe(refusalScreen(refusal, toPerson(giver)).title);
   });
 
+  it("draws a gift it can't receive closed but without its pull tab, so nothing invites a pull", async () => {
+    open({
+      previewGift: () =>
+        Promise.resolve({ ...receivable, receivable: false, refusal: "own_gift", sticker: null }),
+    });
+    await settle();
+    expect(document.querySelector(".gift-bag .gift-strip")).not.toBeNull();
+    expect(document.querySelector(".gift-strip__tab")).toBeNull();
+  });
+
   it.each(REFUSED_AS_ERRORS)(
     "says why a gift refused %i %s can't be opened",
     async (status, code) => {

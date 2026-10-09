@@ -730,6 +730,7 @@ A frosted bag with no zipper. Packing drops the sticker into the open bag, peeki
 - **Opening:** the receiver takes the tab and drags it along the strip. The tape tears out behind it with resistance, lagging the finger and advancing in small ticks, and hangs from the tab in a loop that grows as you pull. Behind it the film splits along its line, rimmed by a thin torn edge, showing the bag's pale inside and the top of the sticker's sleeve. Let go early and it settles back. Past the end it snaps free, the tab flies off, the mouth springs open, the sticker rises, and the receive dialog slides up.
 - **On a large screen:** the giver's header, the bag and its hint grow together, as the Mini-game does, up to 1.4× while they fit the window with the hint clear of the home indicator, and stand centered as one group; the tab stays under the finger along the grown strip, as on a phone, and the Accept card stays a 400px card.
 - **Alternatives:** a looping hint shows a small pull; double-tap or press-and-hold tears it by itself; for keyboards and screen readers the tab is a slider. Under reduced motion there's no loop and the snap becomes a fade.
+- **Can't be received here:** the screen that says why shows the bag as it stands, a closed one without its pull tab, so nothing invites a pull.
 - **The tag** is printed, never typed. It reads "For @name" when the recipient was chosen in the app, and "From Alice" when it went through LINE's picker. An opened bag carries a rubber OPENED date stamp on its tag.
 
 ### Timelapse
