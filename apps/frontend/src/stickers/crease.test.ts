@@ -1,13 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  CREASE_SIDES,
-  RAMP,
-  TRANSMIT,
-  creasePixels,
-  drape,
-  stackedSurface,
-  type CreaseSide,
-} from "./crease";
+import { CREASE_SIDES, RAMP, creasePixels, drape, stackedSurface, type CreaseSide } from "./crease";
 
 const W = 120;
 const H = 60;
@@ -63,17 +55,26 @@ describe("crease", () => {
     expect(dipAcross(RAMP * 4)).toBeGreaterThan(0.9);
   });
 
-  it("shows an edge one sticker deeper at about TRANSMIT of one just beneath", () => {
-    const peak = (crease: Uint8ClampedArray) => {
+  it("shows an edge directly beneath, and none of an edge buried under another sticker", () => {
+    /** The crease's most opaque pixel, lit from every side; 0 when it shows nothing. */
+    const peak = (layers: Float32Array[]) => {
+      const pixels = creasePixels({
+        width: W,
+        height: H,
+        surface: stackedSurface(layers, W, H, 1),
+        own: everywhere,
+        scale: 1,
+        lights: CREASE_SIDES,
+      });
       let most = 0;
-      for (let q = 3; q < crease.length; q += 4) most = Math.max(most, crease[q]);
+      for (const crease of pixels ? Object.values(pixels) : []) {
+        for (let q = 3; q < crease.length; q += 4) most = Math.max(most, crease[q]);
+      }
       return most;
     };
     const step = field((x) => (x < W / 2 ? 1 : 0));
-    const direct = peak(creaseOver([step]));
-    const deeper = peak(creaseOver([step, everywhere]));
-    expect(deeper).toBeGreaterThan(0);
-    expect(deeper).toBeLessThan(direct * (TRANSMIT + 0.15));
+    expect(peak([step])).toBeGreaterThan(0);
+    expect(peak([step, everywhere])).toBe(0);
   });
 
   it("lights the side of a step that faces the light and shades the far side, and swaps them for the opposite light", () => {

@@ -1,10 +1,10 @@
 /**
  * A sticker's crease. A sticker is a stiff sheet: it can't follow a sharp step, so beside the edge of
  * a sticker beneath it lifts off and ramps down to the lower level, catching the one light on the side
- * that faces it and falling into shade on the side that doesn't. Each sticker in a stack softens and
- * fades the shapes under it, so an edge deep in the stack shows fainter than one just beneath. Pure
- * functions over pixel arrays; the crease worker draws the stickers underneath and hands their
- * silhouettes here. Heights are in sticker thicknesses.
+ * that faces it and falling into shade on the side that doesn't. A sticker shows only the edges
+ * directly beneath it: one pressed over others hides theirs. Pure functions over pixel arrays; the
+ * crease worker draws the stickers underneath and hands their silhouettes here. Heights are in
+ * sticker thicknesses.
  */
 
 /** Toward the one light at the top left, as the baked gloss has it, on screen. */
@@ -32,12 +32,6 @@ const ROUND = 1;
 
 /** The spread of the mean height a sticker settles at over what's beneath it, in CSS px. */
 const LEVEL = 14;
-
-/**
- * How much of the shape beneath a sticker passes on to its top surface; the adhesive and vinyl soak
- * up the rest.
- */
-export const TRANSMIT = 0.4;
 
 /** How strongly each part of the crease shows, at its peak; the rest is shaded in proportion. */
 const CREASE_TONE = {
@@ -192,9 +186,8 @@ export function drape(
 
 /**
  * The surface under a sticker, from the silhouettes beneath it, bottom to top, each 0 to 1. Each
- * sticker's top settles at its thickness over the mean height beneath it, and passes on only TRANSMIT
- * of the draped shape around that mean, so an edge buried in the stack shows fainter and softer than
- * one just beneath, and keeping the mean adds no false step at a sticker's own edge.
+ * sticker's top settles flat at its thickness over the mean height beneath it, so the edges under it
+ * don't show through, and keeping the mean adds no false step at its own edge.
  */
 export function stackedSurface(
   layers: readonly Float32Array[],
@@ -210,12 +203,9 @@ export function stackedSurface(
     }
     const level = Float32Array.from(surface);
     blur(level, width, height, LEVEL * scale);
-    const draped = drape(surface, width, height, scale);
     for (let i = 0; i < surface.length; i++) {
       const m = layer[i];
-      if (m <= 0) continue;
-      const inside = 1 + level[i] + TRANSMIT * (draped[i] - level[i]);
-      surface[i] += m * (inside - surface[i]);
+      if (m > 0) surface[i] += m * (1 + level[i] - surface[i]);
     }
   });
   return surface;
