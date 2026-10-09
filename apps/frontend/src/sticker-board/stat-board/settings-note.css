@@ -1,4 +1,4 @@
-/* ---------- Settings: an index card taped on your cork back, first under the stats ---------- */
+/* ---------- Settings: an index card taped on your stat board, first under the stats ---------- */
 
 /* Until it scrolls into view it sticks to the cork's foot, tucked down so only its title peeks up
    (SettingsNote measures the tuck). While it peeks it rides over the stats above it. */
@@ -24,7 +24,7 @@
 }
 
 .settings-note__title {
-  margin: 0;
+  margin: 0 0 2px;
   padding-bottom: 10px;
   border-bottom: 1.5px solid var(--ink);
   font: 800 18px/1.1 var(--font-ui);
@@ -32,11 +32,22 @@
   letter-spacing: -0.01em;
 }
 
+/* A setting: its row, or a legend over its rows, then its status line and any error. */
 .settings-note__setting {
   min-width: 0;
   margin: 0;
-  padding: 12px 0 0;
+  padding: 0;
   border: 0;
+}
+
+/* Each setting under the first is set off by a dashed rule, as the rows are. */
+.settings-note__setting + .settings-note__setting {
+  border-top: 1px dashed var(--rule);
+}
+
+/* A legend over a setting's rows keeps a little room under the rule. */
+.settings-note__setting:has(> .settings-note__legend) {
+  padding-top: 12px;
 }
 
 /* Floated, the legend sits in the card like a heading rather than set into a border. */
@@ -49,46 +60,26 @@
   letter-spacing: 0.1em;
 }
 
-/* A ruled row per choice, the whole row its touch target. */
+/* A row per setting, the whole row its touch target: its name, then its control at the end. */
 .settings-note__option {
   display: flex;
   clear: both;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   min-height: 44px;
-  border-bottom: 1px dashed var(--rule);
   font: 650 15px/1.25 var(--font-ui);
   touch-action: manipulation;
 }
 
-.settings-note__option:last-of-type {
-  border-bottom: 0;
-}
-
-.settings-note__option input {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  margin: 0;
-  border: 1.5px solid var(--graphite);
-  border-radius: 50%;
-  background: var(--canvas);
-  appearance: none;
-}
-
-.settings-note__option input:checked {
-  border-color: var(--ink);
-  background: radial-gradient(circle, var(--ink) 0 5px, var(--canvas) 5.5px);
-}
-
-.settings-note__option input:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
-}
-
 .settings-note__status {
   clear: both;
-  margin: 8px 0 0;
+  margin: 0 0 8px;
+}
+
+/* Under a switch's note, rather than right under its row. */
+.settings-note__about + .settings-note__status {
+  margin-top: 8px;
 }
 
 .settings-note__status:empty {
@@ -96,7 +87,38 @@
 }
 
 .settings-note__problem {
-  margin: 6px 0 8px;
+  margin: 0 0 8px;
+}
+
+/* Language's row: the choice it shows, with a caret, and the unseen select over the whole row. */
+.settings-note__choice {
+  position: relative;
+}
+
+.settings-note__picked {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--graphite);
+}
+
+.settings-note__select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  font: inherit;
+  appearance: none;
+  cursor: pointer;
+}
+
+.settings-note__choice:has(.settings-note__select:focus-visible) {
+  border-radius: 3px;
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
 /* Washi across both top corners. */
@@ -116,27 +138,21 @@
   transform: rotate(27deg);
 }
 
-/* Under the first setting, a second one: set off by a dashed rule, as the rows are. */
-.settings-note__setting + .settings-note__setting {
-  margin-top: 12px;
-  border-top: 1px dashed var(--rule);
-}
-
-/* The NSFW opt-in's one row: its words, then a switch at the row's end, filled Bonbon Pink when on.
-   The thumb is a gradient so it needs no pseudo-element, which a checkbox may not carry. */
-.settings-note__switch {
-  justify-content: space-between;
-}
-
+/* A switch at its row's end, filled Bonbon Pink when on. The thumb is a gradient so it needs no
+   pseudo-element, which a checkbox may not carry. */
 .settings-note__switch input {
+  flex: none;
   width: 46px;
   height: 28px;
+  margin: 0;
+  border: 1.5px solid var(--graphite);
   border-radius: 999px;
   background-color: var(--canvas);
   background-image: radial-gradient(circle, var(--graphite) 0 8px, transparent 8.5px);
   background-repeat: no-repeat;
   background-size: 22px 22px;
   background-position: 2px 50%;
+  appearance: none;
 }
 
 .settings-note__switch input:checked {
@@ -144,6 +160,11 @@
   background-color: var(--pink);
   background-image: radial-gradient(circle, var(--ink) 0 8px, transparent 8.5px);
   background-position: calc(100% - 2px) 50%;
+}
+
+.settings-note__switch input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
 }
 
 @media (prefers-reduced-motion: no-preference) {

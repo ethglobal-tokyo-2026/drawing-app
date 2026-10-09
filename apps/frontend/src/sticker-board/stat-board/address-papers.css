@@ -1,10 +1,15 @@
-/* ---------- Your Sui address as a QR code on white label stock ---------- */
+/* ---------- A Sui address, yours or someone else's, as a QR code on white label stock ---------- */
 
 /* Under Settings, centered. */
 .address-papers {
   display: flex;
   justify-content: center;
   margin-top: 30px;
+}
+
+/* At the foot of someone else's leaf-and-stamps column, it keeps the column's own spacing. */
+.stat-board__col--b > .address-papers {
+  margin-top: 6px;
 }
 
 .address-papers__note {
@@ -48,7 +53,6 @@
 
 /* The lines under the code may run into the side margins, which only the code needs clear. */
 .address-papers__caption,
-.address-papers__chain,
 .address-papers__gloss,
 .address-papers__address,
 .address-papers__status {
@@ -56,7 +60,7 @@
   margin-inline: -6px;
 }
 
-/* What the address is for, under its network. */
+/* What the address is for, under its caption. */
 .address-papers__gloss {
   margin-top: 5px;
   text-wrap: balance;

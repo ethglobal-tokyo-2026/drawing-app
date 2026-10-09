@@ -83,33 +83,24 @@ afterEach(() => {
 });
 
 describe("StatCork's receipt", () => {
-  it("lists Direct and Residual gratitude above the total", () => {
+  const total = () => spoken(host.querySelector(".stat-board__receipt-total b"));
+
+  it("shows everything received as one total, Direct and Residual together", () => {
     render({ ...NEW_ARTIST, gratitude: { direct: 2460, residual: 395, total: 2855 } });
-    expect(rows(".stat-board__receipt-rows > div")).toEqual({ Direct: "2,460", Residual: "395" });
-    expect(spoken(host.querySelector(".stat-board__receipt-total b"))).toBe("2,855");
+    expect(total()).toBe("2,855");
   });
 
-  it("says on each row which gratitude it counts, after its amount", () => {
-    render({ ...NEW_ARTIST, gratitude: { direct: 2460, residual: 395, total: 2855 } });
-    const glosses = [...host.querySelectorAll(".stat-board__receipt-rows > div")].map((row) => {
-      const [, amount, gloss] = [...row.children];
-      expect(amount?.tagName).toBe("DD");
-      return gloss?.textContent;
-    });
-    expect(glosses.every(Boolean)).toBe(true);
-    expect(new Set(glosses).size).toBe(2);
+  it("says there's no gratitude yet in place of a total of 0", () => {
+    render(NEW_ARTIST);
+    expect(host.querySelector(".stat-board__receipt-total")).toBeNull();
+    expect(receipt()?.textContent).toContain("No gratitude yet.");
   });
 
-  it("leaves a kind of gratitude at 0 off", () => {
-    render({ ...NEW_ARTIST, gratitude: { direct: 80, residual: 0, total: 80 } });
-    expect(rows(".stat-board__receipt-rows > div")).toEqual({ Direct: "80" });
-  });
-
-  it("says why the stats didn't load in place of the rows", () => {
+  it("says why the stats didn't load in place of the total", () => {
     render(null);
     expect(receipt()?.textContent).toContain(`Their stats didn’t load: ${FAILURE.message}`);
     expect(receipt()?.textContent).toContain(FAILURE.detail);
-    expect(host.querySelector(".stat-board__receipt-rows")).toBeNull();
+    expect(host.querySelector(".stat-board__receipt-total")).toBeNull();
   });
 });
 
@@ -178,7 +169,7 @@ describe("StatCork's Bests", () => {
     expect(bests()).toEqual({
       "Longest streak": "None yet",
       "Best combo": "None yet",
-      "Most gratitude in a day": "None yet",
+      "Best day": "None yet",
     });
   });
 
@@ -190,7 +181,7 @@ describe("StatCork's Bests", () => {
     expect(bests()).toEqual({
       "Longest streak": "9 days",
       "Best combo": "64 hits",
-      "Most gratitude in a day": "1,210",
+      "Best day": "1,210",
     });
   });
 
@@ -199,8 +190,20 @@ describe("StatCork's Bests", () => {
     expect(bests()).toEqual({
       "Longest streak": "not known",
       "Best combo": "not known",
-      "Most gratitude in a day": "not known",
+      "Best day": "not known",
     });
+  });
+});
+
+describe("StatCork's Flip back", () => {
+  it("comes first on the stat board, before the papers, for keyboards and screen readers too", () => {
+    // The receipt's Try again is a button among the papers.
+    render(null);
+    const buttons = [...host.querySelectorAll(".stat-board__cork button")].map(
+      (b) => b.textContent,
+    );
+    expect(buttons).toContain("Try again");
+    expect(buttons[0]).toBe("Flip back");
   });
 });
 

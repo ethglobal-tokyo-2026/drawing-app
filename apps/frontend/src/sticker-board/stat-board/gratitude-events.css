@@ -1,0 +1,116 @@
+/* ---------- Your gratitude events: a sheet of rows, each combo that gave you gratitude ---------- */
+
+/* Over the whole phone, with a scrim that closes it, as the give sheet's layer is. */
+.gratitude-events-layer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+}
+
+.gratitude-events__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 24, 36, 0.36);
+  animation: gratitude-events-fade-in var(--t-peel) var(--ease-out);
+}
+
+@keyframes gratitude-events-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The rows scroll inside the sheet, under its title, so a long list never pushes it off the phone. */
+.gratitude-events.bottom-sheet {
+  display: flex;
+  flex-direction: column;
+  max-height: min(80dvh, 640px);
+}
+
+.gratitude-events__title {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font: 800 20px/1.1 var(--font-ui);
+  font-stretch: var(--w-title);
+  letter-spacing: -0.01em;
+}
+
+.gratitude-events__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+/* The sticker, who sent it and when, then what it gave you at the row's end. */
+.gratitude-events__row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--rule);
+}
+
+.gratitude-events__row:last-child {
+  border-bottom: 0;
+}
+
+.gratitude-events__sticker {
+  display: block;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.gratitude-events__who {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.gratitude-events__from {
+  overflow: hidden;
+  font: 700 15px/1.25 var(--font-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gratitude-events__when {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  color: var(--graphite);
+}
+
+/* The plain pink heart, as the Transfer Trail's amounts and Explore's figures wear it; the ink-lined
+   one is for the stat board's printed papers. */
+.gratitude-events__heart {
+  flex: none;
+  color: var(--pink);
+}
+
+.gratitude-events__amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 800 15px/1 var(--font-ui);
+}
+
+.gratitude-events__more {
+  flex: none;
+  align-self: center;
+  margin-top: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gratitude-events__scrim {
+    animation-duration: 1ms;
+  }
+}

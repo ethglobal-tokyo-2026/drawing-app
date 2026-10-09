@@ -36,6 +36,9 @@ import { markGreeted, owesGreeting } from "./artistChipGreeting";
 import { onTheBoard, toBoardSticker, type BoardStickerView } from "./boardSticker";
 import { boxOf, fieldOf, kept, stickerBox, toPx, type Box, type Field } from "./placement";
 import { PlacedSticker } from "./PlacedSticker";
+import { AddressDialog } from "./stat-board/AddressDialog";
+import { AddressPapers } from "./stat-board/AddressPapers";
+import type { ChainAddress } from "./stat-board/addresses";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./stat-board/StatCork";
 import { statFigures } from "./stat-board/statFigures";
@@ -130,6 +133,7 @@ export function ArtistBoard({ person, onBack }: Props) {
   const title = t(($) => $.stickerBoard.artistBoard.title, { name: handle });
   const board = useApiQuery(`sticker-board/${person.id}`, (api) => api.stickerBoard(person.id));
   const stats = useApiQuery(`user-stats/${person.id}`, (api) => api.userStats(person.id));
+  const address = useApiQuery(`sui-address/${person.id}`, (api) => api.suiAddress(person.id));
   const reduced = useReducedMotion();
   const hints = useId();
   const face = useRef<HTMLDivElement>(null);
@@ -140,6 +144,9 @@ export function ArtistBoard({ person, onBack }: Props) {
   const giveKey = useRef<HTMLButtonElement | null>(null);
   const flipBack = useRef<HTMLButtonElement>(null);
   const cork = useRef<StatCorkHandle>(null);
+  const suiPaper = useRef<HTMLButtonElement>(null);
+  /** Their Sui address held up in the address dialog. */
+  const [holdingAddress, setHoldingAddress] = useState(false);
   const size = useBoardSize(face);
   /** Give's box on the board, which a sticker's toolbar keeps clear of. */
   const [give, setGive] = useState<Box | null>(null);
@@ -258,6 +265,18 @@ export function ArtistBoard({ person, onBack }: Props) {
 
   const statsProblem =
     stats.state === "failed" ? { ...problemOf(stats.error), retry: stats.retry } : null;
+  /** Their Sui address paper; none while they have no wallet. */
+  const sui: ChainAddress | null =
+    address.state === "loading"
+      ? { state: "loading" }
+      : address.state === "failed"
+        ? { state: "failed", retry: address.retry }
+        : address.data === null
+          ? null
+          : { state: "ready", address: address.data };
+  const held = holdingAddress && sui?.state === "ready" ? sui.address : null;
+  if (holdingAddress && !held) setHoldingAddress(false);
+
   const figures: CorkFigures = {
     name: owner.name,
     handle: person.handle ?? owner.name,
@@ -414,9 +433,29 @@ export function ArtistBoard({ person, onBack }: Props) {
             figures={figures}
             onFlipBack={() => turn(false)}
             flipBackRef={flipBack}
+            side={
+              sui && (
+                <AddressPapers
+                  sui={sui}
+                  whose={owner.name}
+                  lifted={held !== null}
+                  paperRef={suiPaper}
+                  onOpen={() => setHoldingAddress(true)}
+                />
+              )
+            }
           />
         }
       />
+      {/* Beside the cork rather than in it, so its taps and Escape never reach the cork's own. */}
+      {held && (
+        <AddressDialog
+          address={held}
+          whose={owner.name}
+          from={suiPaper}
+          onClose={() => setHoldingAddress(false)}
+        />
+      )}
 
       {viewing && (
         <StickerView

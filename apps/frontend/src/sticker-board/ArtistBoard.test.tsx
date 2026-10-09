@@ -5,10 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "../api/apiClient";
 import { boardSticker, gift, people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi, TEST_OWNER } from "../api/testing";
+import { toPerson } from "../api/views";
 import type { GiftSender } from "../giving/giftSender";
 import { PREPARING_SLOW_MS } from "../giving/giveFlow";
 import { forgetGreetings } from "./artistChipGreeting";
 import { ArtistBoard } from "./ArtistBoard";
+import { shortAddress } from "./stat-board/addresses";
 
 // Someone's stat board mounts behind the front; nothing here needs LINE.
 vi.mock("@line/liff", () => ({ default: { isApiAvailable: () => false } }));
@@ -240,5 +242,23 @@ describe("ArtistBoard's Give key", () => {
     tap(".giving__sent .label-btn");
     expect(document.querySelector(".giving")).toBeNull();
     expect(document.activeElement).toBe(give);
+  });
+});
+
+describe("ArtistBoard's stat board", () => {
+  const SUI_ADDRESS = `0x${"5".repeat(64)}`;
+
+  it("pins their Sui address at the foot of the leaf-and-stamps column, named for them", async () => {
+    const suiAddress = vi.fn<ApiClient["suiAddress"]>(() => Promise.resolve(SUI_ADDRESS));
+    const host = await visit(three(), { suiAddress });
+    expect(suiAddress).toHaveBeenCalledWith(people.ken.id);
+    const paper = host.querySelector(".stat-board__col--b .address-papers__face");
+    expect(paper?.textContent).toContain(shortAddress(SUI_ADDRESS));
+    expect(paper?.getAttribute("aria-label")).toContain(toPerson(people.ken).name);
+  });
+
+  it("pins no address paper while they have no Sui wallet", async () => {
+    const host = await visit(three(), { suiAddress: () => Promise.resolve(null) });
+    expect(host.querySelector(".address-papers")).toBeNull();
   });
 });

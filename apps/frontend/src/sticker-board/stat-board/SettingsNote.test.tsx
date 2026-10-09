@@ -47,14 +47,23 @@ const saving = () =>
     Promise.resolve({ ...TEST_ME, languageChoice: choice }),
   );
 
-const option = (host: HTMLElement, label: string) => {
-  const found = [...host.querySelectorAll("label")].find((l) => l.textContent === label);
-  const input = found?.querySelector("input");
-  if (!input) throw new Error(`No option ${label}`);
-  return input;
+const picker = (host: HTMLElement) => {
+  const found = host.querySelector("select");
+  if (!found) throw new Error("No language select on the note");
+  return found;
 };
 
-const choose = (host: HTMLElement, label: string) => act(async () => option(host, label).click());
+/** The language the select has picked, as it names it. */
+const picked = (host: HTMLElement) => picker(host).selectedOptions[0]?.textContent;
+
+const choose = (host: HTMLElement, label: string) =>
+  act(async () => {
+    const select = picker(host);
+    const choice = [...select.options].find((o) => o.textContent === label);
+    if (!choice) throw new Error(`No language ${label}`);
+    select.value = choice.value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 
 /** Show 18+ stickers, the note's first switch. */
 const switchOf = (host: HTMLElement) => {
@@ -78,7 +87,7 @@ describe("the Settings note's language", () => {
     expect(setLanguageChoice).toHaveBeenCalledExactlyOnceWith("ja", "en");
     expect(readChosenLanguage()).toBe("ja");
     expect(currentLanguage()).toBe("ja");
-    expect(option(host, "日本語").checked).toBe(true);
+    expect(picked(host)).toBe("日本語");
     expect(statuses(host)[0]).toBe(
       i18next.t(($) => $.stickerBoard.settings.language.applied, { language: "日本語" }),
     );
@@ -89,7 +98,7 @@ describe("the Settings note's language", () => {
     await i18next.changeLanguage("ja");
     const setLanguageChoice = saving();
     const host = render(setLanguageChoice, "ja");
-    expect(option(host, "日本語").checked).toBe(true);
+    expect(picked(host)).toBe("日本語");
     await choose(host, "LINEと同じ（English）");
     expect(setLanguageChoice).toHaveBeenCalledExactlyOnceWith(null, "en");
     expect(readChosenLanguage()).toBeNull();
@@ -104,7 +113,7 @@ describe("the Settings note's language", () => {
     expect(alert(host)).toContain(errors.network.en);
     expect(host.textContent).toContain("Failed to fetch");
     expect(readChosenLanguage()).toBeNull();
-    expect(option(host, "Same as LINE (English)").checked).toBe(true);
+    expect(picked(host)).toBe("Same as LINE (English)");
     expect(currentLanguage()).toBe("en");
   });
 
@@ -127,10 +136,13 @@ describe("the Settings note's language", () => {
     await i18next.changeLanguage("ja");
     const host = render(saving());
     expect(host.querySelector("h3")?.textContent).toBe("設定");
-    expect(host.querySelector("legend")?.textContent).toBe("言語");
-    expect(
-      [...host.querySelectorAll("label:has(input[type=radio])")].map((l) => l.textContent),
-    ).toEqual(["LINEと同じ（English）", "English", "日本語"]);
+    const name = picker(host).getAttribute("aria-labelledby") ?? "";
+    expect(document.getElementById(name)?.textContent).toBe("言語");
+    expect([...picker(host).options].map((o) => o.textContent)).toEqual([
+      "LINEと同じ（English）",
+      "English",
+      "日本語",
+    ]);
   });
 });
 
@@ -139,11 +151,10 @@ describe("the Settings note's 18+ switch", () => {
     vi.fn<ApiClient["setNsfwOptIn"]>((nsfwOptIn) => Promise.resolve({ ...TEST_ME, nsfwOptIn }));
   const keepABoard = () => keepBoard(TEST_ME.id, { owner: toPerson(TEST_OWNER), stickers: [] });
 
-  it("is off until turned on, and says what it does", () => {
+  it("is off until turned on", () => {
     const host = renderNote({});
     expect(switchOf(host).checked).toBe(false);
     expect(switchOf(host).closest("label")?.textContent).toBe("Show 18+ stickers");
-    expect(host.textContent).toContain("For people 18 or older.");
   });
 
   it("saves it to your account, forgets the board kept on this phone, and says the stickers show", async () => {
@@ -182,11 +193,6 @@ describe("the Settings note's 18+ switch", () => {
   it("reads in Japanese", async () => {
     await i18next.changeLanguage("ja");
     const host = renderNote({});
-    expect([...host.querySelectorAll("legend")].map((l) => l.textContent)).toEqual([
-      "言語",
-      "18+のシール",
-      "入試",
-    ]);
     expect(host.querySelector("label:has(input[role='switch'])")?.textContent).toBe(
       "18+のシールを表示する",
     );
@@ -278,7 +284,7 @@ describe("the Settings note's saves", () => {
   }
   /** The 18+ setting's alert, under its switch. */
   const nsfwProblem = (host: HTMLElement) =>
-    switchOf(host).closest("fieldset")?.querySelector('[role="alert"]')?.textContent;
+    switchOf(host).closest(".settings-note__setting")?.querySelector('[role="alert"]')?.textContent;
 
   it("keeps a setting's failure while another setting saves, until that setting saves", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -319,7 +325,7 @@ describe("the Settings note's saves", () => {
 
     await act(async () => answerLanguage());
     expect(server.setNsfwOptIn).toHaveBeenCalledExactlyOnceWith(true);
-    expect(option(host, "English").checked).toBe(true);
+    expect(picked(host)).toBe("English");
     expect(switchOf(host).checked).toBe(true);
     expect(statuses(host)).toEqual([
       i18next.t(($) => $.stickerBoard.settings.language.applied, { language: "English" }),

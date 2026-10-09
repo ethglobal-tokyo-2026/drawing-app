@@ -18,7 +18,7 @@ export function statFigures(stats: UserStats | null): StatFigures {
     };
   }
   return {
-    gratitude: stats.gratitude,
+    gratitude: stats.gratitude.total,
     streak: { current: stats.streak, best: stats.bests.longestStreak },
     stamps: { made: stats.made, received: stats.received, given: stats.given },
     bestCombo: stats.bests.bestCombo,

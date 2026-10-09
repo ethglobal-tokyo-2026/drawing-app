@@ -10,6 +10,8 @@ import "./address-papers.css";
 
 interface Props {
   sui: ChainAddress;
+  /** The board owner's name, on someone else's stat board; unset on your own. */
+  whose?: string;
   /** Off the cork, held up in the address dialog. */
   lifted: boolean;
   /** The paper's face, which the dialog lifts off the cork and puts back. */
@@ -52,10 +54,10 @@ function CodePlaceholder() {
 }
 
 /**
- * Your Sui address, pinned on the cork as a QR code on white label paper under Sui's pin. Once the
- * address is known, the face opens it.
+ * A Sui address, yours or the board owner's, pinned on the cork as a QR code on white label paper
+ * under Sui's pin. Once the address is known, the face opens it.
  */
-export function AddressPapers({ sui, lifted, paperRef, onOpen }: Props) {
+export function AddressPapers({ sui, whose, lifted, paperRef, onOpen }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const note = useRef<HTMLDivElement>(null);
@@ -75,11 +77,10 @@ export function AddressPapers({ sui, lifted, paperRef, onOpen }: Props) {
       <span className="fine address-papers__caption">
         {t(($) => $.stickerBoard.addresses.sui.caption)}
       </span>
-      <span className="fine address-papers__chain">
-        {t(($) => $.stickerBoard.addresses.sui.network)}
-      </span>
       <span className="fine address-papers__gloss keep-phrases" id={glossId}>
-        {t(($) => $.stickerBoard.addresses.sui.gloss)}
+        {whose === undefined
+          ? t(($) => $.stickerBoard.addresses.sui.gloss)
+          : t(($) => $.stickerBoard.addresses.sui.theirs.gloss)}
       </span>
     </>
   );
@@ -94,7 +95,11 @@ export function AddressPapers({ sui, lifted, paperRef, onOpen }: Props) {
             className={`stat-board__paper address-papers__face${lifted ? " is-lifted" : ""}`}
             data-press
             aria-haspopup="dialog"
-            aria-label={t(($) => $.stickerBoard.addresses.sui.open)}
+            aria-label={
+              whose === undefined
+                ? t(($) => $.stickerBoard.addresses.sui.open)
+                : t(($) => $.stickerBoard.addresses.sui.theirs.open, { name: whose })
+            }
             aria-describedby={glossId}
             onClick={onOpen}
           >
@@ -107,9 +112,11 @@ export function AddressPapers({ sui, lifted, paperRef, onOpen }: Props) {
             <CodePlaceholder />
             {caption}
             <span className="address-papers__status keep-phrases">
-              {sui.state === "loading"
-                ? t(($) => $.stickerBoard.addresses.sui.loading)
-                : t(($) => $.stickerBoard.addresses.sui.didntLoad)}
+              {sui.state !== "loading"
+                ? t(($) => $.stickerBoard.addresses.sui.didntLoad)
+                : whose === undefined
+                  ? t(($) => $.stickerBoard.addresses.sui.loading)
+                  : t(($) => $.stickerBoard.addresses.sui.theirs.loading)}
             </span>
             {sui.state === "failed" && sui.retry && (
               <QuietLink className="address-papers__retry" onClick={sui.retry}>

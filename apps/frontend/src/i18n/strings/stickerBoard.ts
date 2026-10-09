@@ -22,29 +22,32 @@ export const stickerBoard = {
     gratitude: {
       /** Stat board: the heading of the Gratitude receipt, the paper under the pink pushpin */
       title: { en: "Gratitude received", ja: "受け取った感謝" },
-      /** Stat board, Gratitude receipt: the row for gratitude sent for stickers they gave, beside its amount */
-      direct: { en: "Direct", ja: "直接" },
-      /** Stat board, Gratitude receipt: the row for the Original Artist Gratitude Share, from stickers they drew that others gave on, beside its amount */
-      residual: { en: "Residual", ja: "作者として" },
-      /** Stat board, Gratitude receipt: fine print under each row's label, saying which gratitude the row counts */
-      gloss: {
-        /** Stat board, Gratitude receipt: fine print under Direct, the gratitude sent for stickers they gave */
-        direct: { en: "For stickers given", ja: "贈ったシールへの感謝" },
-        /** Stat board, Gratitude receipt: fine print under Residual, the gratitude from stickers they drew that others gave on */
-        residual: { en: "For stickers made, given on", ja: "つくったシールが贈られた分" },
-      },
-      /** Your stat board, Gratitude receipt: in place of the rows before you've received any gratitude */
+      /** Your stat board, Gratitude receipt: in place of the total before you've received any gratitude */
       noneYetOwn: {
         en: "No gratitude yet. It arrives when someone you give a sticker to sends you some for it.",
         ja: "まだ感謝はありません。シールを贈った相手が感謝を送ると、ここに届きます。",
       },
-      /** Someone else's stat board, Gratitude receipt: in place of the rows before they've received any gratitude */
+      /** Someone else's stat board, Gratitude receipt: in place of the total before they've received any gratitude */
       noneYet: {
         en: "No gratitude yet. It arrives when someone sends gratitude for a sticker they gave them.",
         ja: "まだ感謝はありません。贈ったシールに相手が感謝を送ると、ここに届きます。",
       },
-      /** Stat board, Gratitude receipt: the label of the total line at its foot */
-      total: { en: "Total", ja: "合計" },
+      /** Your gratitude events: every combo that gave you gratitude, opened from your receipt. */
+      events: {
+        /** Your stat board, Gratitude receipt: the quiet link under the total that opens your gratitude events */
+        open: { en: "See where it came from", ja: "内訳を見る" },
+        /** Your gratitude events sheet: the mark on a row that's your Original Artist Gratitude Share, from a sticker you drew that someone else gave */
+        residual: { en: "Residual", ja: "作者として" },
+        /** Your gratitude events sheet: the link under the rows that loads older ones */
+        more: { en: "Show more", ja: "もっと見る" },
+        /** Your gratitude events sheet: what screen readers hear while the rows load */
+        loading: { en: "Loading your gratitude", ja: "感謝を読み込んでいます" },
+        /** Your gratitude events sheet: in place of the rows, or under them for older ones, when they didn't load, with the reason */
+        didntLoad: {
+          en: "Your gratitude didn’t load: {{reason}}",
+          ja: "感謝を読み込めませんでした：{{reason}}",
+        },
+      },
     },
     bests: {
       /** Stat board: the heading of the Bests scrap */
@@ -57,8 +60,8 @@ export const stickerBoard = {
       days_other: { en: "{{days}} days", ja: "{{days}}日" },
       /** Stat board, Bests scrap: the Best combo row's label */
       bestCombo: { en: "Best combo", ja: "最高コンボ" },
-      /** Stat board, Bests scrap: the Most gratitude in a day row's label */
-      mostGratitudeInADay: { en: "Most gratitude in a day", ja: "1日の最多感謝" },
+      /** Stat board, Bests scrap: the label of the row for the most gratitude received in one day, before the heart and that figure */
+      bestDay: { en: "Best day", ja: "1日の最多感謝" },
       /** Stat board, Bests scrap: in place of a best that has no figure yet */
       noneYet: { en: "None yet", ja: "まだなし" },
     },
@@ -93,26 +96,21 @@ export const stickerBoard = {
     },
     /** Stat board: the Flip back button, which turns the board back over to its stickers */
     flipBack: { en: "Flip back", ja: "表に戻す" },
-    /** Your stat board, opened outside LINE's app: the button under Flip back that logs out of LINE */
+    /** Your stat board, opened outside LINE's app: the button after Flip back, at the top left, that logs out of LINE */
     logOut: { en: "Log out of LINE", ja: "LINEからログアウト" },
   },
-  /** Your Sui address as a QR code on the cork, and the dialog that holds it up. */
+  /** A Sui address as a QR code on the cork, yours or someone else's, and the dialog that holds it up. */
   addresses: {
     sui: {
-      /** Your stat board: the caption on the Sui address's QR code paper */
+      /** Stat board, yours or someone else's: the caption on the Sui address's QR code paper */
       caption: { en: "Sui address", ja: "Suiアドレス" },
-      /** Your stat board: the network's name under the Sui address paper's caption */
-      network: { en: "Sui Testnet", ja: "Sui Testnet" },
-      /** Your stat board: fine print on the Sui address paper, under its network, saying what the address is for */
-      gloss: {
-        en: "Keeps your stickers and pays for reserve tickets",
-        ja: "シールの保管・<wbr/>有償チケットの<wbr/>支払い用",
-      },
+      /** Your stat board: fine print on the Sui address paper, under its caption, saying what the address is for */
+      gloss: { en: "Holds your stickers", ja: "シールの保管用" },
       /** Your stat board: screen readers' name for the Sui address paper, a button that holds its QR code up in the address dialog */
       open: { en: "Show your Sui address as a QR code", ja: "SuiアドレスをQRコードで表示" },
       /** Your stat board: on the Sui address paper while the address loads */
       loading: { en: "Getting your Sui address…", ja: "Suiアドレスを<wbr/>取得しています…" },
-      /** Your stat board: on the Sui address paper when the address didn't load, over Try again */
+      /** Stat board, yours or someone else's: on the Sui address paper when the address didn't load, over Try again */
       didntLoad: { en: "Sui address didn’t load", ja: "Suiアドレスを<wbr/>読み込めませんでした" },
       /** Address dialog for the Sui address: its heading, under the large QR code */
       title: { en: "Your Sui address", ja: "あなたのSuiアドレス" },
@@ -137,22 +135,51 @@ export const stickerBoard = {
         en: "View on Suiscan: your Sui address",
         ja: "SuiアドレスをSuiscanで見る",
       },
+      /** Someone else's Sui address, on their stat board; {{name}} is the board owner's LINE name. */
+      theirs: {
+        /** Someone else's stat board: fine print on the Sui address paper, under its caption, saying what the address is for */
+        gloss: { en: "Holds their stickers", ja: "シールの保管用" },
+        /** Someone else's stat board: screen readers' name for the Sui address paper, a button that holds its QR code up in the address dialog */
+        open: {
+          en: "Show {{name}}’s Sui address as a QR code",
+          ja: "{{name}}さんのSuiアドレスをQRコードで表示",
+        },
+        /** Someone else's stat board: on the Sui address paper while the address loads */
+        loading: { en: "Getting their Sui address…", ja: "Suiアドレスを<wbr/>取得しています…" },
+        /** Address dialog for someone else's Sui address: its heading, under the large QR code */
+        title: { en: "{{name}}’s Sui address", ja: "{{name}}さんのSuiアドレス" },
+        /** Address dialog for someone else's Sui address: screen readers' name for the large QR code */
+        qrCode: {
+          en: "QR code of {{name}}’s Sui address",
+          ja: "{{name}}さんのSuiアドレスのQRコード",
+        },
+        /** Address dialog for someone else's Sui address: the note under the address */
+        note: {
+          en: "{{name}}’s stickers are kept at this address on Sui Testnet.",
+          ja: "{{name}}さんのシールは、<wbr/>Sui Testnetの<wbr/>このアドレスに<wbr/>保管されます。",
+        },
+        /** Address dialog for someone else's Sui address: screen readers' name for the Suiscan link */
+        viewOnExplorerLabel: {
+          en: "View on Suiscan: {{name}}’s Sui address",
+          ja: "{{name}}さんのSuiアドレスをSuiscanで見る",
+        },
+      },
     },
-    /** Your stat board: the link on the Sui address paper when its address didn't load */
+    /** Stat board, yours or someone else's: the link on the Sui address paper when its address didn't load */
     tryAgain: { en: "Try again", ja: "もう一度" },
     /** Address dialog: screen readers' name for the X button that puts the paper back on the cork */
     close: { en: "Close", ja: "閉じる" },
     /** Address dialog: the Copy address button under the card */
     copy: { en: "Copy address", ja: "アドレスをコピー" },
   },
-  /** The Settings note, the first paper under the stats on your cork back. */
+  /** The Settings note, the first paper under the stats on your stat board. */
   settings: {
     /** Your stat board: the title of the Settings note, the first paper under the stats on the cork, which peeks up from the cork's foot until it's scrolled into view */
     title: { en: "Settings", ja: "設定" },
     /** Settings note: the status line while a setting saves, which screen readers announce */
     saving: { en: "Saving…", ja: "保存しています…" },
     language: {
-      /** Settings note: the heading over the language choices */
+      /** Settings note: the language row's name, before the choice it shows, which opens the list of choices */
       title: { en: "Language", ja: "言語" },
       /** Settings note: the first language choice, which follows LINE's language; {{language}} is that language's own name, such as "日本語" */
       sameAsLine: { en: "Same as LINE ({{language}})", ja: "LINEと同じ（{{language}}）" },
@@ -181,15 +208,8 @@ export const stickerBoard = {
     },
     /** The NSFW opt-in, a second setting under Language. */
     nsfw: {
-      /** Settings note: the heading over the NSFW opt-in's switch */
-      title: { en: "18+ stickers", ja: "18+のシール" },
       /** Settings note: the NSFW opt-in's switch, off until you turn it on; on, 18+ stickers show unblurred and you can receive them */
       show: { en: "Show 18+ stickers", ja: "18+のシールを表示する" },
-      /** Settings note: the note under the NSFW opt-in's switch, saying who it's for and what it changes */
-      about: {
-        en: "For people 18 or older. On, 18+ stickers show unblurred, and you can receive them. Off, they’re blurred, yours too.",
-        ja: "18歳以上の方向けです。オンにすると、18+のシールがぼかしなしで表示され、受け取れるようになります。オフにすると、自分のものも含めてぼかして表示されます。",
-      },
       /** Settings note: the status line once Show 18+ stickers has been turned on and saved */
       shown: {
         en: "18+ stickers now show unblurred.",

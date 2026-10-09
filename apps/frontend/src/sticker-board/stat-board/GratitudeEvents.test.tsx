@@ -1,0 +1,118 @@
+// @vitest-environment happy-dom
+import type { GratitudeEvents, UserStats } from "@drawing-app/api/client";
+import { act, useState } from "react";
+import { afterEach, expect, it, vi } from "vitest";
+import { ApiError, type ApiClient } from "../../api/apiClient";
+import { emptyApi, renderWithApi } from "../../api/testing";
+import { people, sticker } from "../../api/testFixtures";
+import { problemOf } from "../../i18n/errorMessage";
+import { formatHandle } from "../../stickers/format";
+import { GratitudeEventsSheet } from "./GratitudeEvents";
+import { StatCork } from "./StatCork";
+import { statFigures } from "./statFigures";
+
+const STATS: UserStats = {
+  since: "2026-09-26T09:00:00.000Z",
+  made: 2,
+  received: 1,
+  given: 1,
+  gratitude: { direct: 480, residual: 120, total: 600 },
+  bests: { bestCombo: 12, mostGratitudeInADay: 480, longestStreak: 2 },
+  streak: 1,
+};
+
+/** Newest first, as the API sends them: your Original Artist Gratitude Share, then a gift you gave. */
+const EVENTS: GratitudeEvents = {
+  events: [
+    {
+      giftId: `0x${"b".repeat(64)}`,
+      sticker: sticker(),
+      from: people.mika,
+      part: "residual",
+      amount: 120,
+      recordedAt: "2026-10-07T03:00:00.000Z",
+    },
+    {
+      giftId: `0x${"a".repeat(64)}`,
+      sticker: sticker(),
+      from: people.ken,
+      part: "direct",
+      amount: 480,
+      recordedAt: "2026-10-06T03:00:00.000Z",
+    },
+  ],
+  next: null,
+};
+
+/** Your receipt and the sheet its link opens, held beside the cork as StatBoard holds them. */
+function YourReceipt() {
+  const [showing, setShowing] = useState(false);
+  return (
+    <>
+      <StatCork
+        figures={{
+          name: "Mika",
+          handle: "mika",
+          own: true,
+          loading: false,
+          failure: null,
+          since: null,
+          ...statFigures(STATS),
+        }}
+        onFlipBack={() => {}}
+        flipBackRef={null}
+        onShowGratitude={() => setShowing(true)}
+      />
+      {showing && <GratitudeEventsSheet onClose={() => setShowing(false)} />}
+    </>
+  );
+}
+
+let unmount = () => {};
+afterEach(() => unmount());
+
+const buttonIn = (host: Element, text: string) =>
+  [...host.querySelectorAll("button")].find((button) => button.textContent === text);
+
+/** Your receipt with its link pressed: the sheet, loading through `gratitudeEvents`. */
+async function openEvents(gratitudeEvents: ApiClient["gratitudeEvents"]) {
+  const view = renderWithApi(<YourReceipt />, emptyApi({ gratitudeEvents }));
+  unmount = view.unmount;
+  await act(async () => buttonIn(view.host, "See where it came from")?.click());
+  return view.host;
+}
+
+const rowsIn = (host: Element) =>
+  [...host.querySelectorAll(".gratitude-events__row")].map((row) => row.textContent ?? "");
+
+it("opens your gratitude events from the receipt: who sent each, newest first, Residual on your share", async () => {
+  const host = await openEvents(() => Promise.resolve(EVENTS));
+  const rows = rowsIn(host);
+  expect(rows).toHaveLength(2);
+  expect(rows[0]).toContain(formatHandle(people.mika.handle ?? ""));
+  expect(rows[0]).toContain("Residual");
+  expect(rows[0]).toContain("120");
+  expect(rows[1]).toContain(formatHandle(people.ken.handle ?? ""));
+  expect(rows[1]).not.toContain("Residual");
+  expect(rows[1]).toContain("480");
+});
+
+it("says why your gratitude events didn't load, with Try again, which loads them", async () => {
+  const failure = new ApiError(0, {
+    error: "network",
+    detail: "GET /api/gratitude/events got no answer",
+  });
+  const gratitudeEvents = vi
+    .fn<ApiClient["gratitudeEvents"]>()
+    .mockRejectedValueOnce(failure)
+    .mockResolvedValueOnce(EVENTS);
+  const host = await openEvents(gratitudeEvents);
+  const alert = host.querySelector('.gratitude-events [role="alert"]');
+  expect(alert?.textContent).toContain(problemOf(failure).message);
+  expect(rowsIn(host)).toEqual([]);
+
+  await act(async () => buttonIn(host, "Try again")?.click());
+  expect(gratitudeEvents).toHaveBeenCalledTimes(2);
+  expect(host.querySelector('.gratitude-events [role="alert"]')).toBeNull();
+  expect(rowsIn(host)).toHaveLength(EVENTS.events.length);
+});

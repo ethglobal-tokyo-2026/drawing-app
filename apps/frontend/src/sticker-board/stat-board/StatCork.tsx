@@ -19,6 +19,7 @@ import { formatDay, formatHandle } from "../../stickers/format";
 import { ErrorLine } from "../../ui/ErrorLine";
 import { HitCounter } from "../../ui/HitCounter";
 import { LabelButton } from "../../ui/LabelButton";
+import { QuietLink } from "../../ui/QuietLink";
 import { Skeleton } from "../../ui/Skeleton";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import "./stat-board.css";
@@ -38,8 +39,8 @@ export interface CorkFigures {
   failure: (Problem & { retry: () => void }) | null;
   /** The figures are on their way: outlines stand where they'll be. */
   loading: boolean;
-  /** Null when it didn't load; zeros read as "No gratitude yet". */
-  gratitude: { direct: number; residual: number; total: number } | null;
+  /** The gratitude received in all; null when it didn't load, and 0 reads as "No gratitude yet". */
+  gratitude: number | null;
   streak: { current: number; best: number } | null;
   stamps: { made: number | null; received: number | null; given: number | null };
   bestCombo: number | null;
@@ -54,10 +55,14 @@ interface Props {
   flipBackRef: Ref<HTMLButtonElement>;
   /** Escape closes this first when it returns true, before flipping back. */
   onEscape?: () => boolean;
-  /** Labels under Flip back, such as logging out of LINE on your own board. */
+  /** Labels after Flip back, such as logging out of LINE on your own board. */
   afterFlipBack?: ReactNode;
   /** Paper pinned below the stats, such as your addresses and Settings. */
   children?: ReactNode;
+  /** Paper at the foot of the leaf-and-stamps column, such as someone else's Sui address. */
+  side?: ReactNode;
+  /** Opens your gratitude events, from a link under the receipt's total; your own board only. */
+  onShowGratitude?: () => void;
   ref?: Ref<StatCorkHandle>;
 }
 
@@ -78,9 +83,6 @@ function Unknown() {
 
 const figure = (n: number | null) => (n === null ? <Unknown /> : formatCount(n));
 const figureText = (n: number | null) => (n === null ? "" : formatCount(n));
-
-// A kind at 0 is left off the receipt, so a friend-first artist sees Direct alone.
-const GRATITUDE_KINDS = ["direct", "residual"] as const;
 
 const STAMPS = [
   { kind: "made", hue: "var(--seal)" },
@@ -113,6 +115,8 @@ export function StatCork({
   onEscape,
   afterFlipBack,
   children,
+  side,
+  onShowGratitude,
   ref,
 }: Props) {
   const { t } = useTranslation();
@@ -185,6 +189,20 @@ export function StatCork({
                 : t(($) => $.stickerBoard.statBoard.loadingTheirs, { name: f.name })
               : ""}
           </p>
+          {/* At the top left, where the name that turns the board over sits on its front, so it comes
+              first for keyboards and screen readers too. */}
+          <div className="stat-board__head">
+            <LabelButton
+              ref={flipBackRef}
+              size="sm"
+              icon={<ArrowUUpLeft />}
+              className="stat-board__flip-back"
+              onClick={onFlipBack}
+            >
+              {t(($) => $.stickerBoard.statBoard.flipBack)}
+            </LabelButton>
+            {afterFlipBack}
+          </div>
           <div className="stat-board__stats">
             <div className="stat-board__col stat-board__col--a">
               <section
@@ -198,22 +216,10 @@ export function StatCork({
                     <span>{formatDay(printedAt)}</span>
                   </p>
                   <h3 className="fine stat-board__receipt-h" id={`${id}-gratitude`}>
-                    <GratitudeIcon className="stat-board__receipt-heart" size={14} />
+                    <GratitudeIcon className="stat-board__heart" size={14} />
                     {t(($) => $.stickerBoard.statBoard.gratitude.title)}
                   </h3>
-                  {gratitude && gratitude.total > 0 ? (
-                    <dl className="stat-board__receipt-rows">
-                      {GRATITUDE_KINDS.filter((kind) => gratitude[kind] > 0).map((kind) => (
-                        <div key={kind}>
-                          <dt>{t(($) => $.stickerBoard.statBoard.gratitude[kind])}</dt>
-                          <dd>{formatCount(gratitude[kind])}</dd>
-                          <dd className="fine stat-board__receipt-gloss">
-                            {t(($) => $.stickerBoard.statBoard.gratitude.gloss[kind])}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  ) : f.failure ? (
+                  {f.failure ? (
                     <ErrorLine detail={f.failure.detail} onRetry={retry}>
                       {f.own
                         ? t(($) => $.stickerBoard.statBoard.didntLoadOwnBecause, {
@@ -223,23 +229,22 @@ export function StatCork({
                             reason: f.failure.message,
                           })}
                     </ErrorLine>
-                  ) : (
+                  ) : gratitude === 0 ? (
                     <p className="stat-board__receipt-none">
-                      {!gratitude ? (
-                        <Skeleton width="80%" height="1em" />
-                      ) : f.own ? (
-                        t(($) => $.stickerBoard.statBoard.gratitude.noneYetOwn)
-                      ) : (
-                        t(($) => $.stickerBoard.statBoard.gratitude.noneYet)
-                      )}
+                      {f.own
+                        ? t(($) => $.stickerBoard.statBoard.gratitude.noneYetOwn)
+                        : t(($) => $.stickerBoard.statBoard.gratitude.noneYet)}
+                    </p>
+                  ) : (
+                    <p className="stat-board__receipt-total">
+                      <b>{gratitude === null ? <Unknown /> : formatCount(gratitude)}</b>
                     </p>
                   )}
-                  <p className="stat-board__receipt-total">
-                    <span className="fine">
-                      {t(($) => $.stickerBoard.statBoard.gratitude.total)}
-                    </span>
-                    <b>{gratitude ? formatCount(gratitude.total) : <Unknown />}</b>
-                  </p>
+                  {onShowGratitude && gratitude !== null && gratitude > 0 && (
+                    <QuietLink className="stat-board__receipt-more" onClick={onShowGratitude}>
+                      {t(($) => $.stickerBoard.statBoard.gratitude.events.open)}
+                    </QuietLink>
+                  )}
                 </div>
               </section>
 
@@ -280,12 +285,15 @@ export function StatCork({
                       </dd>
                     </div>
                     <div>
-                      <dt>{t(($) => $.stickerBoard.statBoard.bests.mostGratitudeInADay)}</dt>
+                      <dt>{t(($) => $.stickerBoard.statBoard.bests.bestDay)}</dt>
                       <dd>
                         {f.mostGratitudeInADay === null ? (
                           <Unknown />
                         ) : f.mostGratitudeInADay > 0 ? (
-                          formatCount(f.mostGratitudeInADay)
+                          <>
+                            <GratitudeIcon className="stat-board__heart" size={12} />
+                            {formatCount(f.mostGratitudeInADay)}
+                          </>
                         ) : (
                           t(($) => $.stickerBoard.statBoard.bests.noneYet)
                         )}
@@ -363,16 +371,7 @@ export function StatCork({
                 ))}
               </div>
 
-              <LabelButton
-                ref={flipBackRef}
-                size="sm"
-                icon={<ArrowUUpLeft />}
-                className="stat-board__flip-back"
-                onClick={onFlipBack}
-              >
-                {t(($) => $.stickerBoard.statBoard.flipBack)}
-              </LabelButton>
-              {afterFlipBack}
+              {side}
             </div>
           </div>
 

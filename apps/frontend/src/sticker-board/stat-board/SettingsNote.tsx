@@ -12,7 +12,7 @@ import { currentLanguage } from "../../i18n/i18n";
 import { keepChosenLanguage, type Language } from "../../i18n/language";
 import { followLanguageChoice, lineLanguage } from "../../i18n/pageLanguage";
 import { Trans, useTranslation } from "../../i18n/react";
-import { Question } from "../../icons";
+import { CaretDown, Question } from "../../icons";
 import { CensorBar } from "../../kyoto-seika/CensorBar";
 import { openLinkInLine } from "../../line/openLink";
 import { useTickets } from "../../tickets/useTickets";
@@ -99,7 +99,7 @@ function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLEleme
 }
 
 /**
- * Your Settings, the first paper under the stats on your cork back. Each setting saves to your account
+ * Your Settings, the first paper under the stats on your stat board. Each setting saves to your account
  * and applies in place: `me` takes the server's answer, and every screen follows it. A language is
  * also kept on this phone for the first screens of the next start.
  */
@@ -261,49 +261,51 @@ export function SettingsNote() {
         <h3 ref={title} className="settings-note__title" id={`${id}-title`}>
           {t(($) => $.stickerBoard.settings.title)}
         </h3>
-        <fieldset className="settings-note__setting" aria-busy={saving("language")}>
-          <legend className="fine settings-note__legend">
-            {t(($) => $.stickerBoard.settings.language.title)}
-          </legend>
-          {CHOICES.map((choice) => (
-            <label key={choice ?? "line"} className="settings-note__option">
-              <input
-                type="radio"
-                name={`${id}-language`}
-                checked={shown.languageChoice === choice}
-                onChange={() => choose(choice)}
-              />
-              {/* A language's own name is in that language, for screen readers too. */}
-              <span lang={choice ?? undefined}>{label(choice)}</span>
-            </label>
-          ))}
+        <div className="settings-note__setting" aria-busy={saving("language")}>
+          {/* One row with its choice at the end. The select lies unseen over the whole row, so a tap
+              anywhere on it opens the phone's own list of choices. */}
+          <div className="settings-note__option settings-note__choice">
+            <span id={`${id}-language`}>{t(($) => $.stickerBoard.settings.language.title)}</span>
+            <span className="settings-note__picked" aria-hidden>
+              <span lang={shown.languageChoice ?? undefined}>{label(shown.languageChoice)}</span>
+              <CaretDown size={16} weight="bold" />
+            </span>
+            <select
+              className="settings-note__select"
+              aria-labelledby={`${id}-language`}
+              value={shown.languageChoice ?? ""}
+              onChange={(event) =>
+                choose(CHOICES.find((choice) => (choice ?? "") === event.target.value) ?? null)
+              }
+            >
+              {CHOICES.map((choice) => (
+                // A language's own name is in that language, for screen readers too.
+                <option key={choice ?? "line"} value={choice ?? ""} lang={choice ?? undefined}>
+                  {label(choice)}
+                </option>
+              ))}
+            </select>
+          </div>
           <p className="fine settings-note__status" role="status">
             {statusLine("language")}
           </p>
           {problem("language")}
-        </fieldset>
-        <fieldset className="settings-note__setting" aria-busy={saving("nsfw")}>
-          <legend className="fine settings-note__legend">
-            {t(($) => $.stickerBoard.settings.nsfw.title)}
-          </legend>
+        </div>
+        <div className="settings-note__setting" aria-busy={saving("nsfw")}>
           <label className="settings-note__option settings-note__switch">
             <span>{t(($) => $.stickerBoard.settings.nsfw.show)}</span>
             <input
               type="checkbox"
               role="switch"
               checked={shown.nsfwOptIn}
-              aria-describedby={`${id}-nsfw-about`}
               onChange={() => switchNsfw(!shown.nsfwOptIn)}
             />
           </label>
-          <p className="settings-note__about" id={`${id}-nsfw-about`}>
-            {t(($) => $.stickerBoard.settings.nsfw.about)}
-          </p>
           <p className="fine settings-note__status" role="status">
             {statusLine("nsfw")}
           </p>
           {problem("nsfw")}
-        </fieldset>
+        </div>
         <fieldset
           className="settings-note__setting"
           data-setting="kyoto-seika"

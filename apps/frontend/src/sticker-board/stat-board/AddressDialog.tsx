@@ -18,8 +18,10 @@ import { addressGroups } from "./addresses";
 import "./address-dialog.css";
 
 interface Props {
-  /** Your Sui address. */
+  /** Your Sui address, or the board owner's. */
   address: string;
+  /** The board owner's name, on someone else's stat board; unset on your own. */
+  whose?: string;
   /** The paper on the cork that the dialog lifts off and puts back. */
   from: RefObject<HTMLElement | null>;
   /** Called once the paper is back on the cork. */
@@ -230,10 +232,10 @@ function reportUnlessCancelled(error: unknown) {
 }
 
 /**
- * Your Sui address held up off the cork: its paper lifts off the pin and grows into this card, with
- * the QR code big, the address in full, Copy and Suiscan. Closing flies it back under its pin.
+ * A Sui address held up off the cork: its paper lifts off the pin and grows into this card, with the
+ * QR code big, the address in full, Copy and Suiscan. Closing flies it back under its pin.
  */
-export function AddressDialog({ address, from, onClose }: Props) {
+export function AddressDialog({ address, whose, from, onClose }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const toast = useToast();
@@ -333,11 +335,17 @@ export function AddressDialog({ address, from, onClose }: Props) {
             <QrCode
               value={address}
               size={232}
-              label={t(($) => $.stickerBoard.addresses.sui.qrCode)}
+              label={
+                whose === undefined
+                  ? t(($) => $.stickerBoard.addresses.sui.qrCode)
+                  : t(($) => $.stickerBoard.addresses.sui.theirs.qrCode, { name: whose })
+              }
               className="address-dialog__qr"
             />
             <h2 className="address-dialog__title address-dialog__rise" id={titleId}>
-              {t(($) => $.stickerBoard.addresses.sui.title)}
+              {whose === undefined
+                ? t(($) => $.stickerBoard.addresses.sui.title)
+                : t(($) => $.stickerBoard.addresses.sui.theirs.title, { name: whose })}
             </h2>
             <p className="address-dialog__address address-dialog__rise">
               {/* The address's own 0x, set apart from the digits that tell it apart. */}
@@ -358,7 +366,9 @@ export function AddressDialog({ address, from, onClose }: Props) {
               ))}
             </p>
             <p className="address-dialog__note address-dialog__rise keep-phrases">
-              {t(($) => $.stickerBoard.addresses.sui.note)}
+              {whose === undefined
+                ? t(($) => $.stickerBoard.addresses.sui.note)
+                : t(($) => $.stickerBoard.addresses.sui.theirs.note, { name: whose })}
             </p>
           </div>
           <div className="address-dialog__acts">
@@ -381,7 +391,13 @@ export function AddressDialog({ address, from, onClose }: Props) {
               href={suiscanAccountUrl(address)}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={t(($) => $.stickerBoard.addresses.sui.viewOnExplorerLabel)}
+              aria-label={
+                whose === undefined
+                  ? t(($) => $.stickerBoard.addresses.sui.viewOnExplorerLabel)
+                  : t(($) => $.stickerBoard.addresses.sui.theirs.viewOnExplorerLabel, {
+                      name: whose,
+                    })
+              }
               onClick={openLinkInLine}
             >
               <ArrowSquareOut />

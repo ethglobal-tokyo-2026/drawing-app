@@ -16,6 +16,7 @@ import { AddressDialog } from "./AddressDialog";
 import { AddressPapers } from "./AddressPapers";
 import { useSuiAddress } from "./addresses";
 import { DeveloperSlip } from "./DeveloperSlip";
+import { GratitudeEventsSheet } from "./GratitudeEvents";
 import { GratitudeDemoControls } from "./GratitudeDemoControls";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
 import { SettingsNote } from "./SettingsNote";
@@ -64,6 +65,7 @@ export function StatBoard({ turned, onFlipBack, flipBackRef, onTryGratitudeMiniG
     since: Date.parse(stats.state === "ready" ? stats.data.since : account.createdAt),
   };
 
+  const [showingGratitude, setShowingGratitude] = useState(false);
   const sui = useSuiAddress();
   const suiPaper = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -79,6 +81,7 @@ export function StatBoard({ turned, onFlipBack, flipBackRef, onTryGratitudeMiniG
         figures={figures}
         onFlipBack={onFlipBack}
         flipBackRef={flipBackRef}
+        onShowGratitude={() => setShowingGratitude(true)}
         afterFlipBack={
           // Outside LINE's app it's the only way to switch LINE accounts, so it's never behind the dev flag.
           !me.inClient && (
@@ -114,6 +117,7 @@ export function StatBoard({ turned, onFlipBack, flipBackRef, onTryGratitudeMiniG
       </StatCork>
       {/* Beside the cork rather than in it, so its taps and Escape never reach the cork's own. */}
       {held && <AddressDialog address={held} from={suiPaper} onClose={() => setOpen(false)} />}
+      {showingGratitude && <GratitudeEventsSheet onClose={() => setShowingGratitude(false)} />}
     </>
   );
 }
