@@ -296,6 +296,7 @@ The world refuses two category defaults. One is Procreate-grey tool chrome with 
 **Key Characteristics:**
 
 - Backing-paper ground (Liner), ink text, and flat coded color fields that always carry ink text.
+- Light only: no dark theme, and it stays light where a browser would force pages dark (`color-scheme: only light`, `darkreader-lock`), so stickers keep their colors.
 - One cartoon keycap per screen for its primary act; everything else is thinner label stock, quiet links or flat tools.
 - One tactile press for every key and label: press, hold, slide-off lift, release pop, with the action firing 60ms into the pop.
 - No gloss on any control. Stickers keep their baked resin and live light; buttons never do.

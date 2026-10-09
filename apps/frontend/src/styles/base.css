@@ -1,4 +1,6 @@
 :root {
+  /* Light only, even where a browser would force pages dark: forced dark recolors the stickers' art. */
+  color-scheme: only light;
   font-family: var(--font-ui);
   font-stretch: var(--w-ui);
   font-size: 15px;

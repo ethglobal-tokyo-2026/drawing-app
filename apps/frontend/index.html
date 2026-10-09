@@ -2,6 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Light only: a browser's forced dark mode recolors the stickers' art and the color picker.
+         `only light` turns off Chromium's (Chrome's Auto Dark Theme, Android's WebView), and
+         darkreader-lock turns off Dark Reader, which Brave's Night Mode runs on iOS. -->
+    <meta name="color-scheme" content="only light" />
+    <meta name="darkreader-lock" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta
       name="viewport"
@@ -29,7 +34,6 @@
         href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap"
       />
     </noscript>
-    <meta name="color-scheme" content="light" />
     <meta name="theme-color" content="#F2F1F6" />
     <title>Croquis</title>
   </head>
