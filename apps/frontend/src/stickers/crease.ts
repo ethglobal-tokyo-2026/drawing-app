@@ -61,7 +61,7 @@ const MOST = { lit: 0.5, shade: 0.3 };
 const FLOOR = 0.03;
 
 /** Scales every tone: how much the crease shows. */
-const STRENGTH = 0.4;
+const STRENGTH = 0.7;
 
 /** Rises as `v` does, easing into `most` rather than piling up where edges cross. */
 const ease = (v: number, most: number) => most * (1 - Math.exp(-v / most));
