@@ -124,7 +124,8 @@ export function Sheet({
         <span className="perf perf--plain" aria-hidden="true" />
       )}
       {head !== undefined && (
-        <div className="bottom-sheet__head" {...(large ? drag.handlers : {})}>
+        // A sheet that can't close has no grab here either, as its plain perforation has none.
+        <div className="bottom-sheet__head" {...(large && closable ? drag.handlers : {})}>
           {head}
         </div>
       )}

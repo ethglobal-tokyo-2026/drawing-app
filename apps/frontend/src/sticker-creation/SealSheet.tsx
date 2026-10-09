@@ -7,6 +7,7 @@ import { SubjectPair } from "../kyoto-seika/SubjectPair";
 import { madeFoil } from "../stickers/madeFoil";
 import { StickerFoil } from "../stickers/StickerFoil";
 import { Key } from "../ui/Key";
+import { useLargeScreen } from "../ui/largeScreen";
 import { QuietLink } from "../ui/QuietLink";
 import { releaseCanvas } from "../ui/releaseCanvas";
 import { Sheet } from "../ui/Sheet";
@@ -41,7 +42,8 @@ interface Props {
 /**
  * The seal sheet: the sticker as it will be, the 18+ switch, and Seal, the screen's one key while
  * it's up. Not yet closes it back to the drawing, until time's up. A sheet in Kyoto Seika Practice
- * Mode shows its pair, and its time's up is the proctor's やめ, in the deal's hand lettering.
+ * Mode shows its pair, and its time's up is the proctor's やめ, in the deal's hand lettering. On a
+ * large screen it's a card in the middle, over a scrim and closed by a swipe down its head.
  */
 export function SealSheet({
   open,
@@ -54,6 +56,8 @@ export function SealSheet({
   onNotYet,
 }: Props) {
   const { t } = useTranslation();
+  const large = useLargeScreen();
+  const layer = useRef<HTMLDivElement>(null);
   const lettered = timeUp && subjects !== null;
   const words = !timeUp
     ? t(($) => $.stickerCreation.sealSheet.title)
@@ -73,55 +77,58 @@ export function SealSheet({
     if (timeUp && notYet.current && document.activeElement === notYet.current)
       switchRow.current?.querySelector("input")?.focus({ preventScroll: true });
   }, [timeUp]);
-  return (
+  const sheet = (
     <Sheet
       label={words}
       open={open}
       closable={!timeUp}
       card
+      layer={large ? layer : undefined}
       className={`seal-sheet keep-phrases ${timeUp ? "is-time-up" : ""}`}
       onClose={onNotYet}
-    >
-      <div className="seal-sheet__body">
-        <SealPreview open={open} nsfw={nsfw} kyotoSeika={subjects !== null} ink={ink} />
-        <div className="seal-sheet__side">
-          {/* Turned in place, the title it had stays unseen in the same cell, so a shorter one
-              keeps the sheet's height. */}
-          <div className="seal-sheet__titles">
-            {turned && (
-              <span className="seal-sheet__title is-outgoing" aria-hidden="true">
-                {t(($) => $.stickerCreation.sealSheet.title)}
-              </span>
+      head={
+        <div className="seal-sheet__body">
+          <SealPreview open={open} nsfw={nsfw} kyotoSeika={subjects !== null} ink={ink} />
+          <div className="seal-sheet__side">
+            {/* Turned in place, the title it had stays unseen in the same cell, so a shorter one
+                keeps the sheet's height. */}
+            <div className="seal-sheet__titles">
+              {turned && (
+                <span className="seal-sheet__title is-outgoing" aria-hidden="true">
+                  {t(($) => $.stickerCreation.sealSheet.title)}
+                </span>
+              )}
+              <h2
+                key={words}
+                className={`seal-sheet__title ${lettered ? "is-lettered" : ""} ${turned ? "is-turned" : ""}`}
+              >
+                {words}
+              </h2>
+            </div>
+            {subjects && (
+              <p className="seal-sheet__pair">
+                <SubjectPair subjects={subjects} />
+                <span className="visually-hidden">
+                  {t(($) => $.kyotoSeika.pair.spoken, {
+                    first: spokenSubject(subjects[0]),
+                    second: spokenSubject(subjects[1]),
+                  })}
+                </span>
+              </p>
             )}
-            <h2
-              key={words}
-              className={`seal-sheet__title ${lettered ? "is-lettered" : ""} ${turned ? "is-turned" : ""}`}
-            >
-              {words}
-            </h2>
+            <label ref={switchRow} className="seal-sheet__switch">
+              <span aria-hidden="true">{t(($) => $.stickerCreation.sealSheet.nsfw)}</span>
+              <Switch
+                checked={nsfw}
+                data-autofocus
+                aria-label={t(($) => $.stickerCreation.sealSheet.nsfwLabel)}
+                onChange={onNsfwChange}
+              />
+            </label>
           </div>
-          {subjects && (
-            <p className="seal-sheet__pair">
-              <SubjectPair subjects={subjects} />
-              <span className="visually-hidden">
-                {t(($) => $.kyotoSeika.pair.spoken, {
-                  first: spokenSubject(subjects[0]),
-                  second: spokenSubject(subjects[1]),
-                })}
-              </span>
-            </p>
-          )}
-          <label ref={switchRow} className="seal-sheet__switch">
-            <span aria-hidden="true">{t(($) => $.stickerCreation.sealSheet.nsfw)}</span>
-            <Switch
-              checked={nsfw}
-              data-autofocus
-              aria-label={t(($) => $.stickerCreation.sealSheet.nsfwLabel)}
-              onChange={onNsfwChange}
-            />
-          </label>
         </div>
-      </div>
+      }
+    >
       <p className="visually-hidden" role="status">
         {turned ? words : ""}
       </p>
@@ -138,6 +145,20 @@ export function SealSheet({
         )}
       </div>
     </Sheet>
+  );
+  if (!large) return sheet;
+  // The scrim dims the whole drawing screen, the foot row's My board tile included, and is Not yet
+  // until time's up. It stays mounted with the sheet, so it can fade out as the card leaves.
+  return (
+    <div className="seal-sheet-layer" ref={layer}>
+      <div
+        className={`seal-sheet-layer__scrim ${open ? "is-shown" : ""}`}
+        onClick={() => {
+          if (!timeUp) onNotYet();
+        }}
+      />
+      {sheet}
+    </div>
   );
 }
 

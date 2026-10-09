@@ -187,6 +187,31 @@
     visibility 0s linear 220ms;
 }
 
+/* A large screen's layer (SealSheet.tsx): it only groups the scrim and the card, for what stays live
+   while the card is up, so it takes no room and covers nothing while the card is down. */
+.seal-sheet-layer {
+  display: contents;
+}
+
+/* Over the whole drawing screen, under the card, as Send gratitude's scrim is over the board. */
+.seal-sheet-layer__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+  background: rgba(28, 24, 36, 0.36);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--t-peel) var(--ease-out),
+    visibility 0s linear var(--t-peel);
+}
+
+.seal-sheet-layer__scrim.is-shown {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--t-peel) var(--ease-out);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .seal-preview .sticker-foil,
   .seal-sheet__title.is-turned {
