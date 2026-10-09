@@ -84,7 +84,7 @@ export interface Ids {
   uuid: () => string;
 }
 
-/** Who a LIFF ID token names, as LINE reports them. */
+/** Who a LIFF access token names, as LINE reports them. */
 export const lineProfileSchema = z.object({
   sub: z.string().min(1),
   name: z.string(),
@@ -92,7 +92,7 @@ export const lineProfileSchema = z.object({
 });
 export type LineProfile = z.infer<typeof lineProfileSchema>;
 
-/** LINE refused the ID token: expired, forged, or issued for another channel. */
+/** LINE refused the access token: expired, revoked, or issued for another channel. */
 export class LineTokenInvalidError extends Error {
   name = "LineTokenInvalidError";
   readonly reason: "invalid" | "expired";
@@ -103,7 +103,7 @@ export class LineTokenInvalidError extends Error {
   }
 }
 
-/** LINE couldn't be asked about the ID token: a timeout, a network failure, or LINE's own error. */
+/** LINE couldn't be asked about the access token: a timeout, a network failure, or LINE's own error. */
 export class LineUnavailableError extends Error {
   name = "LineUnavailableError";
 }
@@ -113,7 +113,7 @@ export interface LineVerifier {
    * Asks LINE who the token names. Rejects with LineTokenInvalidError when LINE refuses the token;
    * any other rejection means LINE couldn't be asked.
    */
-  verifyIdToken: (idToken: string) => Promise<LineProfile>;
+  verifyAccessToken: (accessToken: string) => Promise<LineProfile>;
 }
 
 export interface ImageStore {

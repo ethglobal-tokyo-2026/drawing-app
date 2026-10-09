@@ -51,7 +51,7 @@ describe("the session client", () => {
   it("signs in with the token and language, on this origin with the cookie", async () => {
     const fetch = answering(200, { me });
     const session = createSessionApi(createServerClient(fetch));
-    const request = { idToken: "t", language: "ja" } as const;
+    const request = { accessToken: "t", language: "ja" } as const;
     await expect(session.signIn(request)).resolves.toEqual({ me });
     const [input, init] = fetch.mock.calls[0] ?? [];
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input?.url;

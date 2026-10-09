@@ -187,8 +187,8 @@ export function mockPerson(search: string, tab: Pick<Storage, "getItem" | "setIt
 
 /** On localhost LIFF Mock answers for LINE, logged in as mockPerson as if inside LINE. */
 async function initMock() {
-  // Only this path loads dev sign-in, so the build, which drops it, never ships a dev ID token.
-  const [{ LiffMockPlugin }, { devIdToken }] = await Promise.all([
+  // Only this path loads dev sign-in, so the build, which drops it, never ships a dev access token.
+  const [{ LiffMockPlugin }, { devAccessToken }] = await Promise.all([
     import("@line/liff-mock"),
     import("@drawing-app/api/dev-sign-in"),
   ]);
@@ -209,8 +209,8 @@ async function initMock() {
     shareTargetPicker: { status: "success" },
     // LIFF Mock reports a group chat; a gift link opens as it would from a 1:1 chat.
     getContext: data.getContext && { ...data.getContext, type: "utou", utouId: "mock-utou" },
-    // The REST API trusts a dev ID token only with DEV_SIGN_IN=on.
-    getIDToken: devIdToken(person),
+    // The REST API trusts a dev access token only with DEV_SIGN_IN=on.
+    getAccessToken: devAccessToken(person),
     // The claims LINE's token would carry, which the app opens with before LINE's profile answers.
     getDecodedIDToken: { sub: person.sub, name: person.name },
     getProfile: { userId: person.sub, displayName: person.name },
@@ -249,9 +249,12 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 
-/** The ID token that signs you in to the app's server, or null before LINE is ready. */
-export function lineIdToken(): string | null {
-  return state.status === "ready" ? liff.getIDToken() : null;
+/**
+ * The access token that signs you in to the app's server and to Privy, or null before LINE is ready.
+ * LIFF counts you logged in exactly while it holds one; its ID token lapses far sooner.
+ */
+export function lineAccessToken(): string | null {
+  return state.status === "ready" ? liff.getAccessToken() : null;
 }
 
 /** Used only to match an existing server session, never as a sign-in credential. */

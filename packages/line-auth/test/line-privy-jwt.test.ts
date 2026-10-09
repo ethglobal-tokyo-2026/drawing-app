@@ -36,14 +36,14 @@ describe("LINE to Privy JWT", () => {
     let checkedToken = "";
     const issuer = createLinePrivyJwtIssuer({
       ...baseOptions,
-      verifyLineIdToken: async (token) => {
+      verifyLineAccessToken: async (token) => {
         checkedToken = token;
         return { sub: "line-user-1" };
       },
     });
 
-    const { jwt, subject, expiresAt } = await issuer.issue("line-id-token");
-    expect(checkedToken).toBe("line-id-token");
+    const { jwt, subject, expiresAt } = await issuer.issue("line-access-token");
+    expect(checkedToken).toBe("line-access-token");
     expect(expiresAt).toBe(baseOptions.now() + PRIVY_JWT_LIFETIME_S);
     expect(subject).toMatch(/^line_[A-Za-z0-9_-]{43}$/);
     expect(issuer.jwks.keys[0]?.d).toBeUndefined();
@@ -73,12 +73,12 @@ describe("LINE to Privy JWT", () => {
   });
 
   it("creates a stable channel-scoped identity", async () => {
-    const verifyLineIdToken = async () => ({ sub: "line-user-1" });
-    const first = createLinePrivyJwtIssuer({ ...baseOptions, verifyLineIdToken });
+    const verifyLineAccessToken = async () => ({ sub: "line-user-1" });
+    const first = createLinePrivyJwtIssuer({ ...baseOptions, verifyLineAccessToken });
     const otherChannel = createLinePrivyJwtIssuer({
       ...baseOptions,
       channelId: "another-channel",
-      verifyLineIdToken,
+      verifyLineAccessToken,
     });
 
     await expect(first.issue("first")).resolves.toMatchObject({
@@ -92,17 +92,17 @@ describe("LINE to Privy JWT", () => {
   it("signs the subject the API's smart wallet lookup asks Privy for", async () => {
     const issuer = createLinePrivyJwtIssuer({
       ...baseOptions,
-      verifyLineIdToken: async () => ({ sub: "line-user-1" }),
+      verifyLineAccessToken: async () => ({ sub: "line-user-1" }),
     });
 
-    const { subject } = await issuer.issue("line-id-token");
+    const { subject } = await issuer.issue("line-access-token");
     expect(subject).toBe(privySubject(baseOptions.channelId, "line-user-1"));
   });
 
   it("does not issue a token when LINE rejects authentication", async () => {
     const issuer = createLinePrivyJwtIssuer({
       ...baseOptions,
-      verifyLineIdToken: async () => {
+      verifyLineAccessToken: async () => {
         throw new Error("LINE rejected token");
       },
     });

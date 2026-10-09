@@ -1,10 +1,5 @@
-export type LineRejectionReason =
-  | "token_invalid"
-  | "token_expired"
-  | "issuer_mismatch"
-  | "audience_mismatch"
-  | "nonce_mismatch"
-  | "subject_mismatch";
+/** Why LINE refused an access token, or why the verifier did: one issued for another channel. */
+type LineRejectionReason = "token_invalid" | "token_expired" | "channel_mismatch";
 
 type AuthFailureDetails =
   | {
@@ -14,13 +9,19 @@ type AuthFailureDetails =
         | "body_too_large"
         | "invalid_json"
         | "invalid_body"
-        | "id_token_required"
-        | "id_token_format";
+        | "access_token_required"
+        | "access_token_format";
     }
   | { code: "line_auth_failed"; reason: LineRejectionReason; upstreamStatus?: number }
   | {
       code: "line_unavailable";
-      reason: "network_error" | "timeout" | "http_error" | "invalid_response" | "invalid_claims";
+      reason:
+        | "network_error"
+        | "timeout"
+        | "http_error"
+        | "invalid_response"
+        | "invalid_verification"
+        | "invalid_profile";
       upstreamStatus?: number;
     }
   | {

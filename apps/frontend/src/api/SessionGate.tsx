@@ -3,7 +3,7 @@ import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { followAccountLanguage, lineLanguage } from "../i18n/pageLanguage";
 import { useTranslation } from "../i18n/react";
 import { GateNotice, GateOpening, GatePaper } from "../line/GateParts";
-import { lineClaims, lineIdToken, lineUserId, type LineClaims } from "../line/liff";
+import { lineClaims, lineAccessToken, lineUserId, type LineClaims } from "../line/liff";
 import { reconnectLine } from "../line/reconnectLine";
 import { Key } from "../ui/Key";
 import { ApiError, apiError } from "./apiClient";
@@ -46,13 +46,13 @@ const outOfDate = (me: Me, claims: LineClaims | null) =>
  * Signs you in to the app's server, inside LineGate, and holds the app until it has, it's in your
  * account's language and, when needed, you've chosen a handle. The session cookie from your last visit,
  * asked about as the app started, opens the app when it's the LINE user LIFF logged in; without that
- * early answer, GET /api/me resumes the session the server matches to LINE's user. Otherwise LINE's ID
+ * early answer, GET /api/me resumes the session the server matches to LINE's user. Otherwise LINE's access
  * token signs you in. A request that later finds the session gone, on any screen, sends the app back
  * through the same sign-in, so no screen dead-ends on being signed out.
  */
 export function SessionGate({
   session,
-  idToken = lineIdToken,
+  accessToken = lineAccessToken,
   claims = lineClaims,
   currentLineUserId = lineUserId,
   early = earlySession(),
@@ -60,8 +60,8 @@ export function SessionGate({
   children,
 }: {
   session: SessionApi;
-  /** LINE's ID token; LIFF's, unless a test hands in its own. */
-  idToken?: () => string | null;
+  /** LINE's access token; LIFF's, unless a test hands in its own. */
+  accessToken?: () => string | null;
   /** Who LINE's ID token names; LIFF's, unless a test hands in its own. */
   claims?: () => LineClaims | null;
   currentLineUserId?: () => string | null;
@@ -87,18 +87,18 @@ export function SessionGate({
     const signIn = async () => {
       let token: string | null;
       try {
-        token = idToken();
+        token = accessToken();
       } catch (error) {
         throw new ApiError(0, { error: "no_line_token", detail: describe(error) });
       }
       if (!token) {
         throw new ApiError(0, {
           error: "no_line_token",
-          detail: "LINE gave no ID token, though it's logged in",
+          detail: "LINE gave no access token, though it's logged in",
         });
       }
       // LINE's language, never one this phone kept: a new account starts in it.
-      return session.signIn({ idToken: token, language: lineLanguage() });
+      return session.signIn({ accessToken: token, language: lineLanguage() });
     };
     /** A session resumed without LINE's token; signing in again, behind it, brings LINE's news. */
     const resumed = async (me: Me) => {
@@ -174,7 +174,7 @@ export function SessionGate({
     return () => {
       current = false;
     };
-  }, [session, idToken, claims, currentLineUserId, early, attempt]);
+  }, [session, accessToken, claims, currentLineUserId, early, attempt]);
 
   // A request that finds the session gone, on any screen, signs in again the way the app opened.
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { users, type Db } from "@drawing-app/db";
-import { MAX_ID_TOKEN_LENGTH } from "@drawing-app/line-auth/line";
+import { MAX_ACCESS_TOKEN_LENGTH } from "@drawing-app/line-auth/line";
 import { and, eq, isNull } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { Hono } from "hono";
@@ -32,7 +32,7 @@ const userInput = createInsertSchema(users, {
 const signInBody = userInput
   .pick({ language: true })
   .required()
-  .extend({ idToken: z.string().min(1).max(MAX_ID_TOKEN_LENGTH) });
+  .extend({ accessToken: z.string().min(1).max(MAX_ACCESS_TOKEN_LENGTH) });
 
 const meHeaders = z.object({
   "x-line-user-id": z.string().min(1).max(LINE_USER_ID_MAX_LENGTH).optional(),
@@ -67,12 +67,12 @@ const meOf = (db: Db, user: UserRow) =>
   });
 
 /**
- * Who LINE says the ID token names, its refusal, or that LINE couldn't be asked. LINE's reason for a
+ * Who LINE says the access token names, its refusal, or that LINE couldn't be asked. LINE's reason for a
  * refusal goes to the log only.
  */
-async function lineProfileOf(line: LineVerifier, idToken: string) {
+async function lineProfileOf(line: LineVerifier, accessToken: string) {
   try {
-    return await line.verifyIdToken(idToken);
+    return await line.verifyAccessToken(accessToken);
   } catch (error) {
     if (error instanceof LineTokenInvalidError) {
       logFailure("line.token.refused", error);
@@ -90,15 +90,15 @@ async function lineProfileOf(line: LineVerifier, idToken: string) {
 export const sessionRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
     .post("/session", validate("json", signInBody), async (c) => {
-      const { idToken, language } = c.req.valid("json");
-      const profile = await lineProfileOf(deps.line, idToken);
+      const { accessToken, language } = c.req.valid("json");
+      const profile = await lineProfileOf(deps.line, accessToken);
       if (profile instanceof LineUnavailableError) {
         return apiError(c, 502, "line_unavailable", `LINE didn't answer: ${failureCause(profile)}`);
       }
       if (profile instanceof LineTokenInvalidError) {
         return profile.reason === "expired"
-          ? apiError(c, 401, "line_token_expired", "LINE ID token expired")
-          : apiError(c, 401, "line_token_invalid", "LINE refused the ID token");
+          ? apiError(c, 401, "line_token_expired", "LINE access token expired")
+          : apiError(c, 401, "line_token_invalid", "LINE refused the access token");
       }
       const lineProfile = {
         lineDisplayName: profile.name,

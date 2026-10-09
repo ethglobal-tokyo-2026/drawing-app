@@ -30,7 +30,7 @@ export function sequentialIds() {
   } satisfies Ids;
 }
 
-/** LINE, as dev sign-in stands in for it: devIdToken's tokens name their profile, and any other is refused. */
+/** LINE, as dev sign-in stands in for it: devAccessToken's tokens name their profile, and any other is refused. */
 export const fakeLineVerifier = createDevLineVerifier;
 
 /**

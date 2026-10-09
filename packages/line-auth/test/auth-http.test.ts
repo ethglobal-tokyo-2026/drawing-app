@@ -3,31 +3,27 @@ import { inspect } from "node:util";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MAX_AUTH_BODY_BYTES } from "../src/auth-http.js";
 import { createLinePrivyJwtIssuer, type LinePrivyJwtIssuer } from "../src/line-privy-jwt.js";
-import { createLineVerifier, MAX_ID_TOKEN_LENGTH, MIN_ID_TOKEN_LENGTH } from "../src/line.js";
+import {
+  createLineVerifier,
+  MAX_ACCESS_TOKEN_LENGTH,
+  MIN_ACCESS_TOKEN_LENGTH,
+} from "../src/line.js";
 import { APP_ORIGIN, startAuthServer } from "./helpers/auth-server.js";
+import { CHANNEL_ID, lineAnswering } from "./helpers/line-api.js";
 
 vi.mock("node:crypto", async (importOriginal) => {
   const original = await importOriginal<typeof import("node:crypto")>();
   return { ...original, sign: vi.fn(original.sign) };
 });
 
-const ID_TOKEN = "private-line-id-token";
-const CHANNEL_ID = "line-channel-123";
+const ACCESS_TOKEN = "private-line-access-token";
 const { privateKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
 const privateKeyPem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
-
-const verifiedClaims = () => ({
-  iss: "https://access.line.me",
-  aud: CHANNEL_ID,
-  sub: "private-line-user-id",
-  name: "Alice",
-  exp: Math.floor(Date.now() / 1000) + 3600,
-});
 
 function startVerifiedAuthServer(fetchImpl: typeof fetch) {
   return startAuthServer({
     issuer: createLinePrivyJwtIssuer({
-      verifyLineIdToken: createLineVerifier({ channelId: CHANNEL_ID, fetchImpl }),
+      verifyLineAccessToken: createLineVerifier({ channelId: CHANNEL_ID, fetchImpl }),
       channelId: CHANNEL_ID,
       issuer: APP_ORIGIN,
       audience: "privy-app-123",
@@ -39,7 +35,7 @@ function startVerifiedAuthServer(fetchImpl: typeof fetch) {
 
 function postJwt(
   url: string,
-  body = JSON.stringify({ idToken: ID_TOKEN }),
+  body = JSON.stringify({ accessToken: ACCESS_TOKEN }),
   contentType = "application/json",
 ) {
   return fetch(`${url}/v1/auth/privy-jwt`, {
@@ -69,7 +65,7 @@ describe("LINE authentication HTTP server", () => {
     const auth = await fetch(`${url}/v1/auth/privy-jwt`, {
       method: "POST",
       headers: { origin: APP_ORIGIN, "content-type": "application/json" },
-      body: JSON.stringify({ idToken: "verified-line-token" }),
+      body: JSON.stringify({ accessToken: "verified-line-token" }),
     });
     expect(auth.status).toBe(200);
     expect(auth.headers.get("cache-control")).toBe("no-store");
@@ -78,7 +74,7 @@ describe("LINE authentication HTTP server", () => {
     const crossOrigin = await fetch(`${url}/v1/auth/privy-jwt`, {
       method: "POST",
       headers: { origin: "https://other.example", "content-type": "application/json" },
-      body: JSON.stringify({ idToken: "verified-line-token" }),
+      body: JSON.stringify({ accessToken: "verified-line-token" }),
     });
     expect(crossOrigin.status).toBe(403);
   });
@@ -96,7 +92,7 @@ describe("LINE authentication HTTP server", () => {
       name: "expired LINE token",
       fetchImpl: async () =>
         Response.json(
-          { error: "invalid_request", error_description: "IdToken expired." },
+          { error: "invalid_request", error_description: "access token expired" },
           { status: 400 },
         ),
       status: 401,
@@ -104,11 +100,11 @@ describe("LINE authentication HTTP server", () => {
       reason: "token_expired",
     },
     {
-      name: "invalid LINE signature",
+      name: "revoked LINE token",
       fetchImpl: async () =>
         Response.json(
-          { error: "invalid_request", error_description: "Invalid IdToken." },
-          { status: 401 },
+          { error: "invalid_request", error_description: "invalid access token" },
+          { status: 400 },
         ),
       status: 401,
       code: "line_auth_failed",
@@ -117,7 +113,7 @@ describe("LINE authentication HTTP server", () => {
     {
       name: "LINE network failure",
       fetchImpl: async () => {
-        throw new TypeError(`Network failure ${ID_TOKEN}`);
+        throw new TypeError(`Network failure ${ACCESS_TOKEN}`);
       },
       status: 502,
       code: "line_unavailable",
@@ -126,7 +122,7 @@ describe("LINE authentication HTTP server", () => {
     {
       name: "LINE timeout",
       fetchImpl: async () => {
-        throw new DOMException(`Timeout ${ID_TOKEN}`, "TimeoutError");
+        throw new DOMException(`Timeout ${ACCESS_TOKEN}`, "TimeoutError");
       },
       status: 502,
       code: "line_unavailable",
@@ -134,46 +130,45 @@ describe("LINE authentication HTTP server", () => {
     },
     {
       name: "LINE server failure",
-      fetchImpl: async () => Response.json({ error: ID_TOKEN }, { status: 503 }),
+      fetchImpl: async () => Response.json({ error: ACCESS_TOKEN }, { status: 503 }),
       status: 502,
       code: "line_unavailable",
       reason: "http_error",
     },
     {
       name: "LINE rate limit",
-      fetchImpl: async () => Response.json({ error: ID_TOKEN }, { status: 429 }),
+      fetchImpl: async () => Response.json({ error: ACCESS_TOKEN }, { status: 429 }),
       status: 502,
       code: "line_unavailable",
       reason: "http_error",
     },
     {
       name: "malformed provider JSON",
-      fetchImpl: async () => new Response(ID_TOKEN),
+      fetchImpl: async () => new Response(ACCESS_TOKEN),
       status: 502,
       code: "line_unavailable",
       reason: "invalid_response",
     },
     {
       name: "malformed provider rejection",
-      fetchImpl: async () => new Response(ID_TOKEN, { status: 400 }),
+      fetchImpl: async () => new Response(ACCESS_TOKEN, { status: 400 }),
       status: 502,
       code: "line_unavailable",
       reason: "invalid_response",
     },
     {
       name: "unrecognized provider rejection",
-      fetchImpl: async () =>
-        Response.json({ error: "invalid_request", error_description: ID_TOKEN }, { status: 400 }),
+      fetchImpl: async () => Response.json({ error_description: ACCESS_TOKEN }, { status: 400 }),
       status: 502,
       code: "line_unavailable",
       reason: "http_error",
     },
     {
-      name: "malformed provider claims",
-      fetchImpl: async () => Response.json({ sub: ID_TOKEN }),
+      name: "malformed verify answer",
+      fetchImpl: async () => Response.json({ sub: ACCESS_TOKEN }),
       status: 502,
       code: "line_unavailable",
-      reason: "invalid_claims",
+      reason: "invalid_verification",
     },
   ])(
     "classifies $name through the real verifier and HTTP handler",
@@ -185,15 +180,15 @@ describe("LINE authentication HTTP server", () => {
       await expect(response.json()).resolves.toEqual({ error: code });
       expect(response.headers.get("cache-control")).toBe("no-store");
       expect(errors).toEqual([expect.objectContaining({ code, reason })]);
-      expect(inspect(errors, { depth: null })).not.toContain(ID_TOKEN);
+      expect(inspect(errors, { depth: null })).not.toContain(ACCESS_TOKEN);
       expect(sign).not.toHaveBeenCalled();
     },
   );
 
   it("returns an internal failure if signing fails after successful LINE verification", async () => {
-    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json(verifiedClaims()));
+    const fetchImpl = vi.fn(lineAnswering());
     vi.mocked(sign).mockImplementationOnce(() => {
-      throw Object.assign(new TypeError(`Signing failed ${ID_TOKEN} ${privateKeyPem}`), {
+      throw Object.assign(new TypeError(`Signing failed ${ACCESS_TOKEN} ${privateKeyPem}`), {
         code: "ERR_INVALID_ARG_TYPE",
       });
     });
@@ -202,7 +197,8 @@ describe("LINE authentication HTTP server", () => {
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({ error: "auth_unavailable" });
-    expect(fetchImpl).toHaveBeenCalledOnce();
+    // LINE's verify endpoint, then its profile.
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
     expect(sign).toHaveBeenCalledOnce();
     expect(errors).toEqual([
       {
@@ -212,32 +208,32 @@ describe("LINE authentication HTTP server", () => {
         errorCode: "ERR_INVALID_ARG_TYPE",
       },
     ]);
-    expect(inspect(errors, { depth: null })).not.toContain(ID_TOKEN);
+    expect(inspect(errors, { depth: null })).not.toContain(ACCESS_TOKEN);
     expect(inspect(errors, { depth: null })).not.toContain(privateKeyPem);
   });
 
   it.each([
     { body: "{", contentType: "application/json", reason: "invalid_json" },
     { body: "[]", contentType: "application/json", reason: "invalid_body" },
-    { body: "{}", contentType: "application/json", reason: "id_token_required" },
+    { body: "{}", contentType: "application/json", reason: "access_token_required" },
     {
-      body: JSON.stringify({ idToken: "x".repeat(MIN_ID_TOKEN_LENGTH - 1) }),
+      body: JSON.stringify({ accessToken: "x".repeat(MIN_ACCESS_TOKEN_LENGTH - 1) }),
       contentType: "application/json",
-      reason: "id_token_format",
+      reason: "access_token_format",
     },
     {
-      body: JSON.stringify({ idToken: "x".repeat(MAX_ID_TOKEN_LENGTH + 1) }),
+      body: JSON.stringify({ accessToken: "x".repeat(MAX_ACCESS_TOKEN_LENGTH + 1) }),
       contentType: "application/json",
-      reason: "id_token_format",
+      reason: "access_token_format",
     },
     {
       // Three bytes a character: under the limit in characters, over it in bytes.
-      body: JSON.stringify({ idToken: "あ".repeat(MAX_AUTH_BODY_BYTES / 2) }),
+      body: JSON.stringify({ accessToken: "あ".repeat(MAX_AUTH_BODY_BYTES / 2) }),
       contentType: "application/json",
       reason: "body_too_large",
     },
     {
-      body: JSON.stringify({ idToken: ID_TOKEN }),
+      body: JSON.stringify({ accessToken: ACCESS_TOKEN }),
       contentType: "text/plain",
       reason: "content_type_required",
     },
@@ -256,8 +252,8 @@ describe("LINE authentication HTTP server", () => {
     },
   );
 
-  it("issues a JWT after the real verifier accepts LINE's claims", async () => {
-    const { url } = await startVerifiedAuthServer(async () => Response.json(verifiedClaims()));
+  it("issues a JWT after the real verifier accepts LINE's answers", async () => {
+    const { url } = await startVerifiedAuthServer(lineAnswering());
     const response = await postJwt(url);
 
     expect(response.status).toBe(200);

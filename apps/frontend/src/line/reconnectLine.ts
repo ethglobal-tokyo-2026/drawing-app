@@ -25,6 +25,9 @@ export async function reconnectLine(to: string = location.href): Promise<void> {
   });
   try {
     const permanentUrl = await Promise.race([liff.permanentLink.createUrlBy(to), expired]);
+    // liff.init never replaces tokens this tab's LIFF already holds, so the stale ones go first.
+    // Not before the link is made: making it reads what logging out clears.
+    liff.logout();
     location.replace(permanentUrl);
   } finally {
     clearTimeout(timer);

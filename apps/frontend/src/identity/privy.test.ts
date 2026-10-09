@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // LINE's tokens as each test needs them.
 const liff = vi.hoisted(() => ({
+  getAccessToken: vi.fn<() => string | null>(),
   getIDToken: vi.fn<() => string | null>(),
   getDecodedIDToken: vi.fn<() => { exp: number } | null>(),
 }));
@@ -14,9 +15,11 @@ vi.stubEnv("VITE_LIFF_MOCK", "off");
 const { fetchPrivyJwt, privyStatus, retryPrivySignIn, setPrivyStatus } = await import("./privy");
 
 const nowS = () => Math.floor(Date.now() / 1000);
-const lineToken = (expiresInS: number) => {
+/** LIFF logged in, holding an access token, and an ID token that lapses in `idTokenExpiresInS`. */
+const lineToken = (idTokenExpiresInS = 3600) => {
+  liff.getAccessToken.mockReturnValue("line-access-token");
   liff.getIDToken.mockReturnValue("line-id-token");
-  liff.getDecodedIDToken.mockReturnValue({ exp: nowS() + expiresInS });
+  liff.getDecodedIDToken.mockReturnValue({ exp: nowS() + idTokenExpiresInS });
 };
 const server = (status: number, body: object) =>
   vi.fn(async () => new Response(JSON.stringify(body), { status }));
@@ -38,9 +41,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("trading LINE's ID token for a Privy JWT", () => {
-  it("hands Privy the auth server's JWT for a fresh LINE ID token", async () => {
-    lineToken(3600);
+describe("trading LIFF's access token for a Privy JWT", () => {
+  it("hands Privy the auth server's JWT for LIFF's access token", async () => {
+    lineToken();
     const fetch = server(200, { jwt: "privy.jwt", expiresAt: nowS() + 300 });
     vi.stubGlobal("fetch", fetch);
     expect(await fetchPrivyJwt()).toBe("privy.jwt");
@@ -48,14 +51,23 @@ describe("trading LINE's ID token for a Privy JWT", () => {
       "/v1/auth/privy-jwt",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ idToken: "line-id-token" }),
+        body: JSON.stringify({ accessToken: "line-access-token" }),
       }),
     );
   });
 
+  // LIFF stays logged in for hours after its hour-long ID token lapses, inside LINE and out.
+  it("signs in after LINE's ID token has expired, without reconnecting LINE", async () => {
+    lineToken(-10);
+    vi.stubGlobal("fetch", server(200, { jwt: "privy.jwt", expiresAt: nowS() + 300 }));
+    expect(await fetchPrivyJwt()).toBe("privy.jwt");
+    expect(privyStatus()).toEqual({ state: "signing-in" });
+    expect(reconnectLine).not.toHaveBeenCalled();
+  });
+
   // Privy re-authenticates whenever it gets a different JWT, and it asks again on every re-sync.
   it("reuses a JWT until it nears expiry", async () => {
-    lineToken(3600);
+    lineToken();
     const fetch = server(200, { jwt: "privy.jwt", expiresAt: nowS() + 300 });
     vi.stubGlobal("fetch", fetch);
     await fetchPrivyJwt();
@@ -65,7 +77,7 @@ describe("trading LINE's ID token for a Privy JWT", () => {
 
   // The SDK re-syncs on its own after a failure; each retry would hit the auth server, LINE and Privy.
   it("retries an unavailable auth server only when the person tries again", async () => {
-    lineToken(3600);
+    lineToken();
     const fetch = server(503, {});
     vi.stubGlobal("fetch", fetch);
     await fetchPrivyJwt();
@@ -78,7 +90,7 @@ describe("trading LINE's ID token for a Privy JWT", () => {
   });
 
   it("stays signed in while a lapsed JWT is renewed in the background", async () => {
-    lineToken(3600);
+    lineToken();
     // Kept, but within the expiry margin, so the next ask goes to the auth server.
     vi.stubGlobal("fetch", server(200, { jwt: "privy.jwt", expiresAt: nowS() + 30 }));
     await fetchPrivyJwt();
@@ -90,7 +102,7 @@ describe("trading LINE's ID token for a Privy JWT", () => {
 
   // Privy logs the person out when this throws, so failures resolve and say why.
   it("resolves to nothing when the auth server refuses, and keeps its reason", async () => {
-    lineToken(3600);
+    lineToken();
     vi.stubGlobal("fetch", server(401, { error: "line_auth_failed" }));
     expect(await fetchPrivyJwt()).toBeUndefined();
     expect(failureReason()).toMatch(/401.*line_auth_failed/);
@@ -98,7 +110,7 @@ describe("trading LINE's ID token for a Privy JWT", () => {
   });
 
   it("allows an ordinary retry when the auth server can't be reached", async () => {
-    lineToken(3600);
+    lineToken();
     const fetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
     vi.stubGlobal("fetch", fetch);
     expect(await fetchPrivyJwt()).toBeUndefined();
@@ -115,7 +127,7 @@ describe("trading LINE's ID token for a Privy JWT", () => {
     { status: 400, error: "invalid_request" },
     { status: 401, error: "auth_unavailable" },
   ])("retries $status $error without reconnecting LINE", async ({ status, error }) => {
-    lineToken(3600);
+    lineToken();
     const fetch = server(status, { error });
     vi.stubGlobal("fetch", fetch);
     expect(await fetchPrivyJwt()).toBeUndefined();
@@ -131,31 +143,23 @@ describe("trading LINE's ID token for a Privy JWT", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it.each(["missing", "expired"])(
-    "reconnects a %s LINE ID token on explicit retry",
-    async (token) => {
-      const fetch = server(200, { jwt: "privy.jwt", expiresAt: nowS() + 300 });
-      vi.stubGlobal("fetch", fetch);
-      if (token === "missing") {
-        liff.getIDToken.mockReturnValue(null);
-        liff.getDecodedIDToken.mockReturnValue(null);
-      } else {
-        lineToken(-10);
-      }
-      expect(await fetchPrivyJwt()).toBeUndefined();
-      expect(privyStatus()).toMatchObject({ state: "failed", reconnectLine: true });
-      expect(reconnectLine).not.toHaveBeenCalled();
+  it("reconnects LINE on explicit retry when LIFF holds no access token", async () => {
+    const fetch = server(200, { jwt: "privy.jwt", expiresAt: nowS() + 300 });
+    vi.stubGlobal("fetch", fetch);
+    liff.getAccessToken.mockReturnValue(null);
+    expect(await fetchPrivyJwt()).toBeUndefined();
+    expect(privyStatus()).toMatchObject({ state: "failed", reconnectLine: true });
+    expect(reconnectLine).not.toHaveBeenCalled();
 
-      retryPrivySignIn();
-      retryPrivySignIn();
-      expect(await fetchPrivyJwt()).toBeUndefined();
-      expect(reconnectLine).toHaveBeenCalledOnce();
-      expect(fetch).not.toHaveBeenCalled();
-    },
-  );
+    retryPrivySignIn();
+    retryPrivySignIn();
+    expect(await fetchPrivyJwt()).toBeUndefined();
+    expect(reconnectLine).toHaveBeenCalledOnce();
+    expect(fetch).not.toHaveBeenCalled();
+  });
 
   it("reconnects LINE after an auth rejection without repeating the exchange", async () => {
-    lineToken(3600);
+    lineToken();
     const fetch = server(401, { error: "line_auth_failed" });
     vi.stubGlobal("fetch", fetch);
     await fetchPrivyJwt();
@@ -170,7 +174,7 @@ describe("trading LINE's ID token for a Privy JWT", () => {
   });
 
   it("keeps a failed LINE reconnect recoverable without logging SDK error values", async () => {
-    lineToken(-10);
+    liff.getAccessToken.mockReturnValue(null);
     const failure = new Error("SDK error containing credential details");
     reconnectLine.mockRejectedValueOnce(failure);
     await fetchPrivyJwt();
@@ -202,7 +206,7 @@ describe("under LIFF Mock", () => {
     vi.stubEnv("VITE_LIFF_MOCK", "off");
   });
 
-  it("stays off, since the auth server only takes LINE's own ID tokens", async () => {
+  it("stays off, since the auth server only takes LINE's own access tokens", async () => {
     vi.stubEnv("VITE_LIFF_MOCK", "");
     vi.resetModules();
     const privy = await import("./privy");

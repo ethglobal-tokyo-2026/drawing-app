@@ -12,7 +12,7 @@ function requireEnvironment(name: string) {
 const channelId = requireEnvironment("LINE_CHANNEL_ID");
 const privyAppId = requireEnvironment("PRIVY_APP_ID");
 const issuer = createLinePrivyJwtIssuer({
-  verifyLineIdToken: createLineVerifier({ channelId }),
+  verifyLineAccessToken: createLineVerifier({ channelId }),
   channelId,
   issuer: requireEnvironment("AUTH_ISSUER"),
   audience: privyAppId,

@@ -14,7 +14,7 @@ export function privySubject(channelId: string, lineUserId: string): string {
 }
 
 interface LinePrivyJwtIssuerOptions {
-  verifyLineIdToken: (idToken: string) => Promise<{ sub: string }>;
+  verifyLineAccessToken: (accessToken: string) => Promise<{ sub: string }>;
   channelId: string;
   issuer: string;
   audience: string;
@@ -24,7 +24,7 @@ interface LinePrivyJwtIssuerOptions {
 }
 
 export interface LinePrivyJwtIssuer {
-  issue: (lineIdToken: string) => Promise<{
+  issue: (lineAccessToken: string) => Promise<{
     jwt: string;
     subject: string;
     expiresAt: number;
@@ -33,7 +33,7 @@ export interface LinePrivyJwtIssuer {
 }
 
 export function createLinePrivyJwtIssuer({
-  verifyLineIdToken,
+  verifyLineAccessToken,
   channelId,
   issuer,
   audience,
@@ -56,8 +56,8 @@ export function createLinePrivyJwtIssuer({
     keys: [{ ...publicJwk, kid: keyId, alg: "ES256", use: "sig" }],
   };
 
-  async function issue(lineIdToken: string) {
-    const { sub } = await verifyLineIdToken(lineIdToken);
+  async function issue(lineAccessToken: string) {
+    const { sub } = await verifyLineAccessToken(lineAccessToken);
     if (!sub) throw new Error("LINE verification returned no user");
     const subject = privySubject(channelId, sub);
     const issuedAt = now();

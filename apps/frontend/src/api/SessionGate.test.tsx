@@ -65,7 +65,7 @@ const ALICE_CLAIMS: LineClaims = { sub: "line-alice", name: "Alice" };
 
 function render(
   session: SessionApi,
-  idToken: () => string | null = () => "token",
+  accessToken: () => string | null = () => "token",
   reconnect = vi.fn<() => Promise<void>>().mockResolvedValue(),
   {
     early = null,
@@ -80,7 +80,7 @@ function render(
     root.render(
       <SessionGate
         session={session}
-        idToken={idToken}
+        accessToken={accessToken}
         claims={() => claims}
         currentLineUserId={() => claims.sub}
         early={early}
@@ -139,12 +139,12 @@ describe("SessionGate", () => {
   it("resumes the matching server session without reading or exchanging an old LINE token", async () => {
     const resume = vi.fn<SessionApi["me"]>().mockResolvedValue({ me });
     const signIn = vi.fn<SessionApi["signIn"]>();
-    const idToken = vi.fn(() => "expired-token");
-    const host = render(session({ me: resume, signIn }), idToken);
+    const accessToken = vi.fn(() => "expired-token");
+    const host = render(session({ me: resume, signIn }), accessToken);
     await settle();
     expect(resume).toHaveBeenCalledWith("line-alice");
     expect(signIn).not.toHaveBeenCalled();
-    expect(idToken).not.toHaveBeenCalled();
+    expect(accessToken).not.toHaveBeenCalled();
     expect(host.textContent).toContain("Board of @alice");
   });
 
@@ -167,7 +167,7 @@ describe("SessionGate", () => {
       expect(host.textContent).not.toContain("Board");
       await settle();
       // A new account starts in it, so a language this phone kept can't stand in for LINE's.
-      expect(signIn).toHaveBeenCalledWith({ idToken: "token", language: line });
+      expect(signIn).toHaveBeenCalledWith({ accessToken: "token", language: line });
       expect(host.textContent).toContain("Board of @alice");
     },
   );
@@ -287,11 +287,11 @@ describe("SessionGate", () => {
   it("says why it can't sign in when LINE can't give a token, and never asks the server", async () => {
     const signIn = vi.fn(() => Promise.resolve({ me }));
     const host = render(session({ signIn }), () => {
-      throw new Error("LIFF has no ID token for this login");
+      throw new Error("LIFF has no access token for this login");
     });
     await settle();
     expect(host.textContent).toContain("Couldn’t sign you in");
-    expect(host.textContent).toContain("LIFF has no ID token for this login");
+    expect(host.textContent).toContain("LIFF has no access token for this login");
     expect(signIn).not.toHaveBeenCalled();
   });
 
@@ -378,11 +378,11 @@ describe("SessionGate with the cookie from the last visit", () => {
     const signIn = vi
       .fn<SessionApi["signIn"]>()
       .mockRejectedValue(new ApiError(401, { error: "line_token_expired" }));
-    const idToken = vi.fn(() => "expired-token");
+    const accessToken = vi.fn(() => "expired-token");
     const reconnect = vi.fn<() => Promise<void>>().mockResolvedValue();
     const client = session({ me: resume, signIn });
     const early = openEarly(client, emptyApi(), { board: true });
-    const host = render(client, idToken, reconnect, { early });
+    const host = render(client, accessToken, reconnect, { early });
     await settle();
     expect(host.textContent).toContain("Check your connection");
     expect(signIn).not.toHaveBeenCalled();
@@ -391,7 +391,7 @@ describe("SessionGate with the cookie from the last visit", () => {
     await settle();
     expect(resume).toHaveBeenLastCalledWith("line-alice");
     expect(host.textContent).toContain("Board of @alice");
-    expect(idToken).not.toHaveBeenCalled();
+    expect(accessToken).not.toHaveBeenCalled();
     expect(reconnect).not.toHaveBeenCalled();
   });
 
@@ -527,7 +527,7 @@ describe("SessionGate when a request finds the session gone", () => {
     });
     expect(host.textContent).not.toContain("Board");
     await settle();
-    expect(signIn).toHaveBeenCalledExactlyOnceWith({ idToken: "token", language: "en" });
+    expect(signIn).toHaveBeenCalledExactlyOnceWith({ accessToken: "token", language: "en" });
     expect(host.textContent).toContain("Board of @alice");
   });
 
@@ -555,7 +555,7 @@ describe("SessionGate when a request finds the session gone", () => {
     expect(host.textContent).toContain("Board of @alice-again");
   });
 
-  it("asks to reconnect LINE when LINE's ID token has expired too, and doesn't resubmit it", async () => {
+  it("asks to reconnect LINE when LINE's access token has expired too, and doesn't resubmit it", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const signIn = vi
       .fn<SessionApi["signIn"]>()

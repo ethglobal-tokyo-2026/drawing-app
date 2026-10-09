@@ -102,7 +102,7 @@ describe("LIFF Mock's person", () => {
     history.replaceState(null, "", "/?as=alice");
     await initLine();
     const profile = await liff.getProfile();
-    const signedIn = await createDevLineVerifier().verifyIdToken(liff.getIDToken() ?? "");
+    const signedIn = await createDevLineVerifier().verifyAccessToken(liff.getAccessToken() ?? "");
     expect(signedIn).toEqual({ sub: profile.userId, name: profile.displayName });
     expect(signedIn).toEqual(mockPerson("?as=alice", newTab()));
   });

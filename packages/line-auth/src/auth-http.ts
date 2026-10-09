@@ -23,8 +23,8 @@ function sendJson(
   response.end(JSON.stringify(body));
 }
 
-// The route takes LINE's ID token.
-async function readIdToken(request: IncomingMessage) {
+// The route takes LIFF's access token, which lives as long as LIFF counts the person logged in.
+async function readAccessToken(request: IncomingMessage) {
   if (!request.headers["content-type"]?.startsWith("application/json")) {
     throw new AuthError({ code: "invalid_request", reason: "content_type_required" });
   }
@@ -44,15 +44,15 @@ async function readIdToken(request: IncomingMessage) {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new AuthError({ code: "invalid_request", reason: "invalid_body" });
   }
-  const idToken: unknown = Reflect.get(parsed, "idToken");
-  if (typeof idToken !== "string") {
-    throw new AuthError({ code: "invalid_request", reason: "id_token_required" });
+  const accessToken: unknown = Reflect.get(parsed, "accessToken");
+  if (typeof accessToken !== "string") {
+    throw new AuthError({ code: "invalid_request", reason: "access_token_required" });
   }
-  return idToken;
+  return accessToken;
 }
 
 /**
- * The LINE → Privy auth server: trades LINE's ID token for a Privy JWT, and serves the keys Privy
+ * The LINE → Privy auth server: trades LIFF's access token for a Privy JWT, and serves the keys Privy
  * checks it with.
  */
 export function createAuthHttpServer({
@@ -68,7 +68,7 @@ export function createAuthHttpServer({
 
   async function answerPrivyJwt(request: IncomingMessage, response: ServerResponse) {
     try {
-      const { jwt, expiresAt } = await issuer.issue(await readIdToken(request));
+      const { jwt, expiresAt } = await issuer.issue(await readAccessToken(request));
       sendJson(response, 200, { jwt, expiresAt });
     } catch (error) {
       const failure = authFailureOf(error);

@@ -4,7 +4,7 @@ import type { AppType } from "./app.ts";
 import type { LineProfile } from "./deps.ts";
 import { giftClaimTokenSchema } from "./gifts/packaging.ts";
 import { recordBody } from "./gratitude/testReplays.ts";
-import { devIdToken } from "./services/devSignIn.ts";
+import { devAccessToken } from "./services/devSignIn.ts";
 import { ME } from "./stickerBoards/board.ts";
 import { sealUpload } from "./stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
@@ -14,7 +14,7 @@ import { spendBody } from "./tickets/testSpends.ts";
 const API_ORIGIN = "https://api.test";
 const OK = 200;
 const CREATED = 201;
-/** LINE accounts, as the fake LINE verifier reads them from their ID tokens. */
+/** LINE accounts, as the fake LINE verifier reads them from their access tokens. */
 const ALICE: LineProfile = { sub: "line-alice", name: "Alice" };
 const BOB: LineProfile = { sub: "line-bob", name: "Bob" };
 /** A 1:1 chat, where a Gift Message is received. */
@@ -55,11 +55,11 @@ async function answered<Answer extends ClientResponse<unknown>>(
   return parseResponse(response);
 }
 
-/** Signs in with the LINE account's ID token: their client, now carrying their session, and `me`. */
+/** Signs in with the LINE account's access token: their client, now carrying their session, and `me`. */
 async function signIn(test: TestApp, profile: LineProfile) {
   const api = clientFor(test);
   const { me } = await answered(
-    api.session.$post({ json: { idToken: devIdToken(profile), language: "en" } }),
+    api.session.$post({ json: { accessToken: devAccessToken(profile), language: "en" } }),
     OK,
   );
   return { api, me };

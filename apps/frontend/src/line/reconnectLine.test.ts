@@ -39,18 +39,23 @@ afterEach(() => {
 });
 
 describe("reconnecting LINE", () => {
-  it("reenters the LIFF browser through a permanent link for the current deep link", async () => {
+  it("reenters the LIFF browser through a permanent link for the current deep link, with LIFF's stale tokens dropped", async () => {
     vi.mocked(liff.isInClient).mockReturnValue(true);
     const currentUrl = location.href;
     const permanentUrl = "https://liff.line.me/app-id/gift/claim-token?lang=ja#open";
     vi.mocked(liff.permanentLink.createUrlBy).mockResolvedValue(permanentUrl);
+    // The link is made from what LIFF holds, so it has to come before logging out drops it.
+    vi.mocked(liff.logout).mockImplementation(() => {
+      expect(liff.permanentLink.createUrlBy).toHaveBeenCalledOnce();
+      expect(navigation.replace).not.toHaveBeenCalled();
+    });
 
     await reconnectLine();
 
     expect(liff.permanentLink.createUrlBy).toHaveBeenCalledExactlyOnceWith(currentUrl);
+    expect(liff.logout).toHaveBeenCalledOnce();
     expect(navigation.replace).toHaveBeenCalledExactlyOnceWith(permanentUrl);
     expect(lineLogin).not.toHaveBeenCalled();
-    expect(liff.logout).not.toHaveBeenCalled();
   });
 
   it("discards external-browser credentials before signing in at the current deep link", async () => {
@@ -75,6 +80,8 @@ describe("reconnecting LINE", () => {
 
     expect(navigation.replace).not.toHaveBeenCalled();
     expect(lineLogin).not.toHaveBeenCalled();
+    // Still on this page, so LIFF keeps what it holds.
+    expect(liff.logout).not.toHaveBeenCalled();
   });
 
   it("times out a stalled permanent link and ignores its late result", async () => {

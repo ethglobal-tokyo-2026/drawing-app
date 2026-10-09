@@ -1,39 +1,40 @@
-import { MIN_ID_TOKEN_LENGTH } from "@drawing-app/line-auth/line";
+import { MIN_ACCESS_TOKEN_LENGTH } from "@drawing-app/line-auth/line";
 import { describe, expect, it, vi } from "vitest";
 import { LineTokenInvalidError, LineUnavailableError, type LineProfile } from "../deps.ts";
 import { createLineVerifier } from "./lineVerifier.ts";
 
 const CHANNEL_ID = "channel";
-const ID_TOKEN = "line-id-token";
+const ACCESS_TOKEN = "line-access-token";
+const profile: LineProfile = { sub: "U1", name: "Alice", picture: "https://profile.test/a" };
 
-/** A verifier whose LINE answers every request with `body` and `status`. */
-const verifierAnswering = (body: unknown, status = 200) =>
-  createLineVerifier(CHANNEL_ID, async () => Response.json(body, { status }));
+/** A verifier whose LINE verifies with `verify`, and answers the profile endpoint with `profile`'s. */
+const verifierAnswering = (verify: () => Response) =>
+  createLineVerifier(CHANNEL_ID, async (input) =>
+    new URL(input instanceof Request ? input.url : input).pathname === "/v2/profile"
+      ? Response.json({
+          userId: profile.sub,
+          displayName: profile.name,
+          pictureUrl: profile.picture,
+        })
+      : verify(),
+  );
 
-const refusal = (description: string) => ({
-  error: "invalid_request",
-  error_description: description,
-});
+const live = () => Response.json({ scope: "profile", client_id: CHANNEL_ID, expires_in: 3600 });
+const refusal = (description: string) =>
+  Response.json({ error: "invalid_request", error_description: description }, { status: 400 });
 
 describe("the LINE verifier", () => {
   it("returns the profile LINE says the token names", async () => {
-    const profile: LineProfile = { sub: "U1", name: "Alice", picture: "https://profile.test/a" };
-    const claims = {
-      iss: "https://access.line.me",
-      aud: CHANNEL_ID,
-      exp: Math.floor(Date.now() / 1000) + 3600,
-      ...profile,
-    };
-    await expect(verifierAnswering(claims).verifyIdToken(ID_TOKEN)).resolves.toEqual(profile);
+    await expect(verifierAnswering(live).verifyAccessToken(ACCESS_TOKEN)).resolves.toEqual(profile);
   });
 
   it.each([
-    { status: 400, description: "IdToken expired.", reason: "expired" },
-    { status: 401, description: "Invalid IdToken.", reason: "invalid" },
+    { description: "access token expired", reason: "expired" },
+    { description: "invalid access token", reason: "invalid" },
   ])(
-    "reads LINE's $status refusal, $description, as a refused token: $reason",
-    async ({ status, description, reason }) => {
-      const refused = verifierAnswering(refusal(description), status).verifyIdToken(ID_TOKEN);
+    "reads LINE's refusal, $description, as a refused token: $reason",
+    async ({ description, reason }) => {
+      const refused = verifierAnswering(() => refusal(description)).verifyAccessToken(ACCESS_TOKEN);
       await expect(refused).rejects.toBeInstanceOf(LineTokenInvalidError);
       await expect(refused).rejects.toMatchObject({ reason });
     },
@@ -41,8 +42,8 @@ describe("the LINE verifier", () => {
 
   it("refuses a token too short to be LINE's without asking LINE", async () => {
     const fetchImpl = vi.fn<typeof fetch>();
-    const refused = createLineVerifier(CHANNEL_ID, fetchImpl).verifyIdToken(
-      "x".repeat(MIN_ID_TOKEN_LENGTH - 1),
+    const refused = createLineVerifier(CHANNEL_ID, fetchImpl).verifyAccessToken(
+      "x".repeat(MIN_ACCESS_TOKEN_LENGTH - 1),
     );
     await expect(refused).rejects.toBeInstanceOf(LineTokenInvalidError);
     await expect(refused).rejects.toMatchObject({ reason: "invalid" });
@@ -68,7 +69,7 @@ describe("the LINE verifier", () => {
   ])(
     "tells LINE being unreachable, through $failure, from a refused token",
     async ({ fetchImpl, reason }) => {
-      const outage = createLineVerifier(CHANNEL_ID, fetchImpl).verifyIdToken(ID_TOKEN);
+      const outage = createLineVerifier(CHANNEL_ID, fetchImpl).verifyAccessToken(ACCESS_TOKEN);
       await expect(outage).rejects.toThrow(reason);
       await expect(outage).rejects.toBeInstanceOf(LineUnavailableError);
     },

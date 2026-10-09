@@ -51,7 +51,7 @@ export function usePrivyStatus(): PrivyStatus {
   return useSyncExternalStore(onPrivyStatus, privyStatus);
 }
 
-// LINE's ID token lasts an hour, and the auth server checks it with LINE again, so one about to lapse fails there.
+// A kept JWT this close to lapsing is renewed, so Privy is never handed one that lapses on the way.
 const EXPIRY_MARGIN_S = 60;
 const EXCHANGE_TIMEOUT_MS = 10_000;
 
@@ -121,26 +121,24 @@ export const jsonField = (body: unknown, key: string): unknown =>
   body && typeof body === "object" ? Reflect.get(body, key) : undefined;
 
 /**
- * Trades LINE's ID token for the auth server's five-minute Privy JWT. Privy logs the person out when
- * this throws, so a failure resolves to undefined and its reason goes to the status instead.
+ * Trades LIFF's access token for the auth server's five-minute Privy JWT. Privy logs the person out
+ * when this returns nothing, which it does on every page load, so the token is the access token: LIFF
+ * counts the person logged in exactly while it holds one, and its ID token lapses far sooner. A
+ * failure resolves to undefined, since a throw logs out too, and its reason goes to the status.
  */
 export async function fetchPrivyJwt(): Promise<string | undefined> {
   // The SDK re-syncs on its own after a failure; asking again would only repeat it at every server.
   if (status.state === "failed") return undefined;
   if (kept && kept.expiresAt - EXPIRY_MARGIN_S > Date.now() / 1000) return kept.jwt;
-  const idToken = liff.getIDToken();
-  const expiresAt = liff.getDecodedIDToken()?.exp;
-  if (!idToken || !expiresAt) return fail("LINE gave no ID token", true);
-  if (expiresAt - EXPIRY_MARGIN_S <= Date.now() / 1000) {
-    return fail("LINE’s ID token has expired; try again to reconnect LINE", true);
-  }
+  const accessToken = liff.getAccessToken();
+  if (!accessToken) return fail("LINE gave no access token", true);
   // Privy renews a lapsed JWT in the background, and the person stays signed in unless that fails.
   if (status.state !== "signed-in") setPrivyStatus({ state: "signing-in" });
   try {
     const response = await fetch("/v1/auth/privy-jwt", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ idToken }),
+      body: JSON.stringify({ accessToken }),
       signal: AbortSignal.timeout(EXCHANGE_TIMEOUT_MS),
     });
     const body: unknown = await response.json().catch(() => null);

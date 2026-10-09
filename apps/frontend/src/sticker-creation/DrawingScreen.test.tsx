@@ -17,7 +17,7 @@ import {
 } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
-import type { ApiClient } from "../api/apiClient";
+import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import { openedFrom } from "../app/openedView";
 import { i18next } from "../i18n/i18n";
@@ -153,7 +153,8 @@ vi.mock("./TimerDot", () => ({
     return <button ref={button} type="button" className="timer-stub" onClick={onToggle} />;
   },
 }));
-vi.mock("../identity/privy", () => ({ retryPrivySignIn: () => {} }));
+const privy = vi.hoisted(() => ({ retryPrivySignIn: vi.fn() }));
+vi.mock("../identity/privy", () => privy);
 vi.mock("../tickets/ReserveTicketCheckout", () => ({ ReserveTicketCheckout: () => null }));
 vi.mock("./tools/ColorSheet", () => ({
   ColorSheet: ({ open }: { open: boolean }) => (open ? <div className="color-sheet" /> : null),
@@ -469,6 +470,33 @@ describe("the seal sheet", () => {
       expect(seal.mock.calls[0]?.[0].nsfw).toBe(on);
     },
   );
+
+  it("keeps the drawing when LINE's sign-in has expired, and the check reconnects LINE back to it", async () => {
+    sealing.cut.mockResolvedValue(cutSticker());
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    // What the wait for the Sui address answers once Privy needs LINE reconnected.
+    const seal = vi.fn<ApiClient["seal"]>(() =>
+      Promise.reject(new ApiError(0, { error: "line_token_expired" })),
+    );
+    reopen(keptHalfway, {}, TEST_ME, { seal });
+    await settle();
+    tapSealKey();
+    sealOnSheet();
+    await settle(1000);
+    expect(seal).toHaveBeenCalledOnce();
+    expect(chip()).toContain(strings.stickerCreation.seal.failed.signInExpired.en);
+    expect(sheet).toBe("held");
+    expect(keptRecord()).toMatchObject({ ticket: 7 });
+
+    await settle(1000);
+    expect(chip()).toContain(strings.stickerCreation.seal.failed.signInExpired.en);
+    tapSealKey();
+    expect(privy.retryPrivySignIn).toHaveBeenCalledExactlyOnceWith(
+      new URL("/draw", location.href).href,
+      expect.any(Function),
+    );
+    expect(keptRecord()).toMatchObject({ ticket: 7 });
+  });
 
   it("closes at Not yet with the drawing and the 18+ choice kept, on the phone too", async () => {
     const seal = await openDrawing();

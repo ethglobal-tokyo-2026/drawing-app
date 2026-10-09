@@ -1,12 +1,13 @@
 import { stickers, users } from "@drawing-app/db";
 import { insertUser } from "@drawing-app/db/testing";
-import { MAX_ID_TOKEN_LENGTH } from "@drawing-app/line-auth/line";
+import { MAX_ACCESS_TOKEN_LENGTH } from "@drawing-app/line-auth/line";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { MAX_BODY_BYTES } from "../app.ts";
 import { LineTokenInvalidError, LineUnavailableError, type LineProfile } from "../deps.ts";
-import { devIdToken } from "../services/devSignIn.ts";
+import { devAccessToken } from "../services/devSignIn.ts";
+import { createLineVerifier } from "../services/lineVerifier.ts";
 import { HANDLE_MAX_LENGTH } from "../session/handleLimit.ts";
 import { SESSION_COOKIE, SESSION_MAX_AGE_S } from "../session.ts";
 import { meSchema } from "../shapes.ts";
@@ -18,7 +19,7 @@ import { LINE_USER_ID_MAX_LENGTH } from "./session.ts";
 
 const meBodySchema = z.object({ me: meSchema });
 
-/** A LINE account, as the fake LINE verifier reads it from its ID token. */
+/** A LINE account, as the fake LINE verifier reads it from its access token. */
 const ALICE: LineProfile = {
   sub: "line-alice",
   name: "Alice",
@@ -34,7 +35,7 @@ afterEach(() => {
 });
 
 const signIn = (profile: LineProfile, language = "en") =>
-  test.send("POST", "/api/session", { body: { idToken: devIdToken(profile), language } });
+  test.send("POST", "/api/session", { body: { accessToken: devAccessToken(profile), language } });
 
 const getMe = (headers: Record<string, string>) => test.send("GET", "/api/me", { headers });
 
@@ -93,6 +94,28 @@ describe("signing in", () => {
     });
   });
 
+  // LIFF counts the person logged in for hours after its ID token lapses, holding this token all along.
+  it("signs in with a LIFF access token LINE vouches for, naming who LINE's profile says", async () => {
+    const asked: string[] = [];
+    test = await createTestApp({
+      line: createLineVerifier("channel", async (input) => {
+        const url = new URL(input instanceof Request ? input.url : input);
+        asked.push(url.pathname);
+        return url.pathname === "/v2/profile"
+          ? Response.json({ userId: ALICE.sub, displayName: ALICE.name })
+          : Response.json({ scope: "profile", client_id: "channel", expires_in: 3600 });
+      }),
+    });
+    const response = await test.send("POST", "/api/session", {
+      body: { accessToken: "line-access-token", language: "en" },
+    });
+    expect(await meIn(response)).toMatchObject({
+      lineUserId: ALICE.sub,
+      lineDisplayName: ALICE.name,
+    });
+    expect(asked).toEqual(["/oauth2/v2.1/verify", "/v2/profile"]);
+  });
+
   it("starts a new person in the sign-in's language, and a later sign-in in another leaves it", async () => {
     expect((await meIn(await signIn(ALICE, "ja"))).language).toBe("ja");
     expect((await meIn(await signIn(ALICE, "en"))).language).toBe("ja");
@@ -102,10 +125,12 @@ describe("signing in", () => {
     { reason: "invalid", message: "Invalid IdToken Audience.", code: "line_token_invalid" },
     { reason: "expired", message: "IdToken expired.", code: "line_token_expired" },
   ] as const)(
-    "refuses a $reason ID token without a session and keeps LINE's reason in the log",
+    "refuses a $reason access token without a session and keeps LINE's reason in the log",
     async ({ reason, message, code }) => {
       test = await createTestApp({
-        line: { verifyIdToken: () => Promise.reject(new LineTokenInvalidError(message, reason)) },
+        line: {
+          verifyAccessToken: () => Promise.reject(new LineTokenInvalidError(message, reason)),
+        },
       });
       const log = vi.spyOn(console, "error").mockImplementation(() => {});
       const response = await signIn(ALICE);
@@ -121,7 +146,7 @@ describe("signing in", () => {
     const credential = "eyJhbGciOiJFUzI1NiJ9.c2VjcmV0.c2lnbmF0dXJl";
     test = await createTestApp({
       line: {
-        verifyIdToken: () =>
+        verifyAccessToken: () =>
           Promise.reject(new LineTokenInvalidError(`Invalid IdToken: ${credential}`)),
       },
     });
@@ -133,7 +158,9 @@ describe("signing in", () => {
 
   it("answers LINE being unreachable with line_unavailable, and logs why", async () => {
     test = await createTestApp({
-      line: { verifyIdToken: () => Promise.reject(new LineUnavailableError("verify timed out")) },
+      line: {
+        verifyAccessToken: () => Promise.reject(new LineUnavailableError("verify timed out")),
+      },
     });
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const response = await signIn(ALICE);
@@ -144,7 +171,7 @@ describe("signing in", () => {
 
   it("answers any other failure while asking LINE as the server's own", async () => {
     test = await createTestApp({
-      line: { verifyIdToken: () => Promise.reject(new Error("a bug")) },
+      line: { verifyAccessToken: () => Promise.reject(new Error("a bug")) },
     });
     vi.spyOn(console, "error").mockImplementation(() => {});
     const response = await signIn(ALICE);
@@ -153,19 +180,19 @@ describe("signing in", () => {
   });
 
   it("refuses a body over MAX_BODY_BYTES with invalid_request, though it's otherwise valid", async () => {
-    const valid = { idToken: devIdToken(ALICE), language: "en" };
+    const valid = { accessToken: devAccessToken(ALICE), language: "en" };
     const padded = { ...valid, padding: "x".repeat(MAX_BODY_BYTES) };
     const response = await test.send("POST", "/api/session", { body: padded });
     expect(response.headers.get("set-cookie")).toBeNull();
     expect(await refusalOf(response)).toMatchObject({ status: 400, error: "invalid_request" });
   });
 
-  it("refuses an unknown language, and an ID token that's empty or too long", async () => {
-    const valid = { idToken: devIdToken(ALICE), language: "en" };
+  it("refuses an unknown language, and an access token that's empty or too long", async () => {
+    const valid = { accessToken: devAccessToken(ALICE), language: "en" };
     const bodies = [
       { ...valid, language: "fr" },
-      { ...valid, idToken: "" },
-      { ...valid, idToken: "x".repeat(MAX_ID_TOKEN_LENGTH + 1) },
+      { ...valid, accessToken: "" },
+      { ...valid, accessToken: "x".repeat(MAX_ACCESS_TOKEN_LENGTH + 1) },
     ];
     for (const body of bodies) {
       expect(await refusalOf(await test.send("POST", "/api/session", { body }))).toMatchObject({
