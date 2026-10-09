@@ -46,20 +46,23 @@ function Board(props: Omit<Options, "stage">) {
 
 const noTray: RefObject<StickerTrayHandle | null> = { current: null };
 
-/** A sticker tray that answers a let-go sticker's `boardDrop` as given. */
-const trayDropping = (
-  boardDrop: StickerTrayHandle["boardDrop"],
-): RefObject<StickerTrayHandle | null> => ({
+/** A sticker tray that answers as `overrides` say, and holds nothing otherwise. */
+const trayWith = (overrides: Partial<StickerTrayHandle>): RefObject<StickerTrayHandle | null> => ({
   current: {
     isOpen: false,
     open: () => Promise.resolve(false),
     close: () => Promise.resolve(false),
     boardDrag: () => null,
-    boardDrop,
+    boardDrop: () => Promise.resolve(false),
     escape: () => false,
     pouchFoot: () => null,
+    focusZipper: () => {},
+    ...overrides,
   },
 });
+
+/** A sticker tray that answers a let-go sticker's `boardDrop` as given. */
+const trayDropping = (boardDrop: StickerTrayHandle["boardDrop"]) => trayWith({ boardDrop });
 
 let host: HTMLDivElement;
 let root: Root;
@@ -377,5 +380,83 @@ describe("useBoardGestures", () => {
       const [, saved] = onCommit.mock.calls[0];
       expect(onRemove).toHaveBeenCalledExactlyOnceWith("a", saved);
     });
+  });
+});
+
+describe("useBoardGestures' focus on a sticker that leaves the board", () => {
+  /** Three stickers in a row, read from the left. */
+  const [a, b, c] = ["a", "b", "c"].map((id, i) => ({
+    ...sticker,
+    id,
+    placement: { ...sticker.placement, x: 0.2 + 0.3 * i },
+  }));
+  const show = (
+    stickers: readonly BoardSticker[],
+    tray: RefObject<StickerTrayHandle | null>,
+    selected: string | null = null,
+  ) =>
+    act(() =>
+      root.render(
+        <Board
+          stickers={stickers}
+          field={fieldOf(390, 657)}
+          size={{ W: 390, H: 657, U: 390 }}
+          selected={selected}
+          reduced
+          layout="phone"
+          tray={tray}
+          onSelect={() => {}}
+          onOpen={() => {}}
+          onCommit={() => {}}
+          onRemove={() => {}}
+        />,
+      ),
+    );
+  const stickerEl = (id: string) => host.querySelector<HTMLElement>(`[data-sticker-id="${id}"]`);
+  const focusedId = () =>
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement.dataset.stickerId
+      : undefined;
+
+  it("goes to the next sticker along, else the one before it, else the Zipper, as it leaves", () => {
+    const focusZipper = vi.fn();
+    const tray = trayWith({ focusZipper });
+    /** `gone` leaves with focus on it, as a gift takes it off the board. */
+    const leave = (gone: BoardSticker, ...stays: BoardSticker[]) => {
+      act(() => stickerEl(gone.id)?.focus());
+      show(stays, tray);
+    };
+    show([a, b, c], tray);
+    leave(b, a, c);
+    expect(focusedId()).toBe("c");
+    leave(c, a);
+    expect(focusedId()).toBe("a");
+    expect(focusZipper).not.toHaveBeenCalled();
+    leave(a);
+    expect(focusZipper).toHaveBeenCalledOnce();
+  });
+
+  it("leaves focus that has gone elsewhere where it is", () => {
+    const elsewhere = document.createElement("button");
+    document.body.append(elsewhere);
+    show([a, b, c], noTray);
+    act(() => stickerEl("b")?.focus());
+    act(() => elsewhere.focus());
+    show([a, c], noTray);
+    expect(document.activeElement).toBe(elsewhere);
+    elsewhere.remove();
+  });
+
+  it("moves on at once on Remove, to the Zipper when it was the last sticker", () => {
+    const focusZipper = vi.fn();
+    show([a], trayWith({ focusZipper }), "a");
+    act(() => stickerEl("a")?.focus());
+    act(
+      () =>
+        void stickerEl("a")?.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Delete", bubbles: true }),
+        ),
+    );
+    expect(focusZipper).toHaveBeenCalledOnce();
   });
 });

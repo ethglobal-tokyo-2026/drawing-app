@@ -13,6 +13,7 @@ import {
   say,
   sealFromBoard,
   signIn,
+  startsWith,
   test,
   unpackageAndAccept,
 } from "./helpers.ts";
@@ -32,6 +33,10 @@ test("Gift link: Alice gives from her board, and Bob opens the Gift Message's li
 
   // Sent, it leaves Alice's board; its detail says it's on its way.
   await expect(boardSticker(alice, language, no)).toHaveCount(0);
+  // Focus goes with it to the Zipper, as no other sticker is left on the board.
+  await expect(
+    alice.getByRole("button", { name: startsWith(say(stickerBoard.tray.zipper, language)) }),
+  ).toBeFocused();
   const other = await sealFromBoard(alice, language);
   await (
     await openDetail(alice, language, other)

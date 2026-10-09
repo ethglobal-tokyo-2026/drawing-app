@@ -26,6 +26,19 @@ function rowsOf(points: readonly StickerPoint[]): StickerPoint[][] {
 export const readingOrder = (points: readonly StickerPoint[]) =>
   rowsOf(points).flatMap((row) => row.map((p) => p.id));
 
+/**
+ * Where focus goes from the sticker `id` as it leaves the board: the next sticker along in reading
+ * `order` that `stays`, else the nearest one before it; undefined when none stays.
+ */
+export function focusAfterLeaving(
+  order: readonly string[],
+  id: string,
+  stays: (other: string) => boolean,
+): string | undefined {
+  const i = order.indexOf(id);
+  return [...order.slice(i + 1), ...order.slice(0, i).reverse()].find(stays);
+}
+
 /** The stickers in a gift after the rest, each part in the order it came: how the detail pages yours. */
 export const inGiftsLast = <S extends Pick<BoardStickerView, "openGift">>(
   stickers: readonly S[],

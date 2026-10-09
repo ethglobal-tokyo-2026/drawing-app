@@ -27,7 +27,7 @@ import {
   type BoardSize,
   type Field,
 } from "./placement";
-import { focusStep, readingOrder } from "./stickerOrder";
+import { focusAfterLeaving, focusStep, readingOrder } from "./stickerOrder";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 
 interface Options {
@@ -113,6 +113,26 @@ const KEY_STEPS: Record<string, Step> = {
 export const STEP_SAVE_IDLE_MS = 400;
 
 const round = (v: number, places: number) => Number(v.toFixed(places));
+
+/** The stickers on `field` in reading order, as the arrow keys and screen readers take them. */
+const orderOn = (stickers: readonly BoardSticker[], field: Field) =>
+  readingOrder(stickers.map((s) => ({ id: s.id, ...toPx(field, s.placement) })));
+
+/**
+ * Focus on a sticker leaving the board goes to the next one along that stays, else the one before it,
+ * else the Zipper, rather than falling to the page.
+ */
+function handFocusOn(
+  stage: HTMLElement,
+  tray: StickerTrayHandle | null,
+  order: readonly string[],
+  id: string,
+  stays: (other: string) => boolean,
+) {
+  const next = focusAfterLeaving(order, id, stays);
+  if (next) stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(next)}"]`)?.focus();
+  else tray?.focusZipper();
+}
 
 /**
  * The board's pointer and key input. A held sticker's transform is written straight to its element
@@ -321,22 +341,20 @@ export function useBoardGestures(options: Options) {
       const { field, size, reduced } = latest.current;
       const sticker = stickerOf(id);
       if (!sticker || !field || !size || stowingId || leaving.has(id)) return;
-      // Focus on it or its toolbar goes to the next sticker along rather than falling to the page.
+      // Focus on it or its toolbar moves on at once, rather than after the ride back to the tray.
       const focused = stage.ownerDocument.activeElement;
       if (
         focused instanceof HTMLElement &&
         (focused.closest(".sticker-toolbar") ||
           focused.closest<HTMLElement>(".placed-sticker")?.dataset.stickerId === id)
-      ) {
-        const order = readingOrder(
-          latest.current.stickers.map((s) => ({ id: s.id, ...toPx(field, s.placement) })),
-        );
-        const i = order.indexOf(id);
-        const next = [...order.slice(i + 1), ...order.slice(0, i).reverse()].find(
+      )
+        handFocusOn(
+          stage,
+          latest.current.tray.current,
+          orderOn(latest.current.stickers, field),
+          id,
           (other) => !leaving.has(other),
         );
-        if (next) focusSticker(next);
-      }
       latest.current.onSelect(null);
       const el = stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`);
       if (!latest.current.tray.current || !el) {
@@ -602,6 +620,22 @@ export function useBoardGestures(options: Options) {
       arranging.current = () => {};
     };
   }, [options.stage]);
+
+  // A sticker that leaves the board another way, as a gift does, drops focus to the page: it moves
+  // on from the sticker last focused, as on Remove.
+  const shownOrder = useRef<readonly string[]>([]);
+  useLayoutEffect(() => {
+    const { stage, stickers, field, tray } = options;
+    if (!field || !stage.current) return;
+    const order = orderOn(stickers, field);
+    const before = shownOrder.current;
+    shownOrder.current = order;
+    const doc = stage.current.ownerDocument;
+    const at = doc.activeElement;
+    const lost = !at || at === doc.body || !at.isConnected;
+    if (lost && tabStop !== null && before.includes(tabStop) && !order.includes(tabStop))
+      handFocusOn(stage.current, tray.current, before, tabStop, (id) => order.includes(id));
+  });
 
   const stow = useCallback((id: string) => stowing.current(id), []);
   const arrange = useCallback((id: string, by: Step) => arranging.current(id, by), []);

@@ -26,6 +26,8 @@ export interface StickerTrayHandle {
   escape: () => boolean;
   /** Where the pouch ends, as the board's y; null before the tray has laid out. */
   pouchFoot: () => number | null;
+  /** Puts focus on the Zipper. */
+  focusZipper: () => void;
 }
 
 interface Props {
@@ -134,6 +136,7 @@ export function StickerTray({ board, stickers, ownerId, api, onSeen, onProblem, 
       boardDrop: (id, at) => engine.current?.boardDrop(id, at) ?? Promise.resolve(false),
       escape: () => engine.current?.escape() ?? false,
       pouchFoot: () => engine.current?.pouchFoot() ?? null,
+      focusZipper: () => engine.current?.focusZipper(),
     }),
     [],
   );

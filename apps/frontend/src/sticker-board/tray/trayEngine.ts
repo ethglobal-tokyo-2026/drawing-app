@@ -66,6 +66,8 @@ export interface TrayEngine {
   boardDrop: (id: string, at: Point) => Promise<boolean>;
   /** Closes the spread, else the tray; whether it did anything. */
   escape: () => boolean;
+  /** Puts focus on the Zipper's pull. */
+  focusZipper: () => void;
   /** Where the pouch ends, as the board's y: its foot, or higher where a tall board shortens it. */
   pouchFoot: () => number;
   destroy: () => void;
@@ -581,6 +583,7 @@ export function createTrayEngine(
     boardDrag,
     boardDrop,
     escape,
+    focusZipper: () => zip.slider.focus(),
     pouchFoot,
     destroy() {
       if (ui.destroyed) return;
