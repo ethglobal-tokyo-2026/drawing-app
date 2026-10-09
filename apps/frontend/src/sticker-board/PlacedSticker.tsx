@@ -2,7 +2,6 @@ import { ArrowClockwise } from "../icons";
 import { memo, useEffectEvent, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "../i18n/react";
 import { formatNo, spokenDuration } from "../stickers/format";
-import { useFold } from "../stickers/liftedCorner";
 import { playStick } from "../stickers/stick";
 import { StickerFigure } from "../stickers/StickerFigure";
 import type { BoardSticker } from "./boardSticker";
@@ -16,8 +15,6 @@ interface Props {
   unit: number;
   /** Its place in the stack, from the bottom. */
   stack: number;
-  /** Whether its corner is lifted. */
-  curled: boolean;
   selected: boolean;
   /** Whether its rotate knob hangs below it, where above it couldn't be reached. */
   knobBelow: boolean;
@@ -53,7 +50,6 @@ export const PlacedSticker = memo(function PlacedSticker({
   field,
   unit,
   stack,
-  curled,
   selected,
   knobBelow,
   held,
@@ -70,7 +66,6 @@ export const PlacedSticker = memo(function PlacedSticker({
 }: Props) {
   const { t } = useTranslation();
   const lift = useRef<HTMLDivElement>(null);
-  const fold = useFold(sticker.id, sticker.urls.mask, curled);
   const box = stickerBox(field, unit, sticker.placement, sticker);
 
   const land = useEffectEvent((el: HTMLElement) =>
@@ -133,13 +128,13 @@ export const PlacedSticker = memo(function PlacedSticker({
           urls={sticker.urls}
           width={sticker.width}
           height={sticker.height}
-          fold={fold}
           foil={foil ? "board" : undefined}
           nsfw={sticker.nsfw}
           kyotoSeika={sticker.kyotoSeikaSubjects !== null}
           veiled={veiled}
           no={sticker.no}
           turn={sticker.placement.r}
+          stuck
           // A landing sticker's stick animation shows it arrive; it isn't held back as well.
           reveal={!landing}
         />

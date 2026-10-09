@@ -204,7 +204,8 @@ echo "✓ created $MENU_ID, and recorded it in deploy/line/menus.json: commit th
 
 if [ -n "$SET_DEFAULT" ]; then
   echo "→ making it LINE's default menu"
-  if ! answer="$(line_api "https://api.line.me/v2/bot/user/all/richmenu/$MENU_ID" -X POST)"; then
+  # An empty body, not a bare -X POST: LINE's edge answers 411 to a POST without a Content-Length.
+  if ! answer="$(line_api "https://api.line.me/v2/bot/user/all/richmenu/$MENU_ID" --data-binary '')"; then
     echo "✗ LINE didn't make $MENU_ID the default: $answer" >&2
     exit 1
   fi

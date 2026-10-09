@@ -26,10 +26,6 @@ const FINGERTIP = PALM_CONTACT_PX / 8;
 
 // An iPad in portrait, the Pencil's own device.
 test.use(ipad);
-test.skip(
-  ({ browserName }) => browserName !== "chromium",
-  "The Pencil comes through Chromium's DevTools protocol",
-);
 
 /** Signs someone new in and opens a fresh sheet; resolves with the paper's box on screen. */
 async function openSheet(page: Page, who: string) {
