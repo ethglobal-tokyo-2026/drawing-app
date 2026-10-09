@@ -1,9 +1,9 @@
 /* Holo foil: the sticker's silhouette dilated into a band just past its white edge. The band is the
    sticker's edge: the kiss-cut and the cast shadow fall from its outer edge, and the image it sits
    under shows only inside its own cut. Its box is the image's, and the band spills past that box by
-   its width. Six bands of color flow on their own clock
-   under a fine, still grating, so the band glitters rather than crawls; the glint follows the app's
-   one light (light.ts). Both move by transform only and hold still under reduced motion. */
+   its width. Six bands of color slide with the app's one light (light.ts) under a fine, still
+   grating, so the band glitters rather than crawls, and a glint sits where the light falls. Both move
+   by transform only, only as the light moves, so a still light holds the foil still. */
 .sticker-foil {
   /* Seventeen copies of the silhouette at the image's size, which together dilate it: the center, and
      sixteen a band's width away, every 22.5°, so the band keeps an even width round curves and
@@ -90,7 +90,7 @@
    whatever the sticker's turn. The tile is whole device pixels at 2x and 3x, so no dot smears. */
 .sticker-foil--kyoto-seika .sticker-foil__sheen {
   inset: 0;
-  animation: none;
+  translate: none;
   background:
     var(--kyoto-seika-tone-light) 0 0 / 3px 3px,
     var(--canvas);
@@ -165,7 +165,7 @@
 }
 
 /* The band's shape, filled and held still, casts the sticker's cut and shadow from the band's outer
-   edge. It sits under the band, so the flowing bands never redraw a shadow. Wherever a sticker is
+   edge. It sits under the band, so the sliding bands never redraw a shadow. Wherever a sticker is
    lifted, the lifted shadow falls from here too. */
 .sticker-foil__cast {
   filter: var(--sticker-cut) var(--sticker-cast);
@@ -194,9 +194,12 @@
   overflow: hidden;
 }
 
-/* The six bands, one period apart; moving a period along their angle is seamless. The flow runs down
-   and to the right, so the bands reach past the band's box only up and to the left, a period's worth. */
+/* The six bands, one period apart. The light slides them along their normal, as tilting a holographic
+   foil runs its colors past: a period as the light goes from top left to bottom right, so they reach
+   past the band's box only up and to the left, a period's worth. Light moving along the bands doesn't
+   slide them, as with a real grating. */
 .sticker-foil__sheen {
+  --foil-slide: calc(var(--lx, -0.6) * 0.341 + var(--ly, -0.6) * 0.159 + 0.5);
   position: absolute;
   inset: -48px 0 0 -96px;
   background: repeating-linear-gradient(
@@ -209,12 +212,12 @@
     var(--band-6) 80px,
     var(--band-1) 96px
   );
-  animation: sticker-foil-flow 7s linear infinite;
-  animation-delay: calc(var(--foil-i, 0) * -2.3s);
+  translate: calc(var(--foil-slide) * 87px) calc(var(--foil-slide) * 40.6px);
+  transition: translate 280ms var(--ease-out);
 }
 
 /* The diffraction grating: fine diagonal hairlines, lit and shaded, pressed into the foil. They hold
-   still across the bands, crossing them, so the eye reads the flowing color as light moving over
+   still across the bands, crossing them, so the eye reads the sliding color as light moving over
    metal. Each hairline ramps in and out, so it stays smooth at any angle and scale. */
 .sticker-foil__band::after {
   content: "";
@@ -266,17 +269,8 @@
   filter: none;
 }
 
-@keyframes sticker-foil-flow {
-  to {
-    transform: translate3d(87px, 40.6px, 0);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .sticker-foil__sheen {
-    animation: none;
-  }
-
+  .sticker-foil__sheen,
   .sticker-foil__glint::before,
   .sticker-foil--kyoto-seika .sticker-foil__glint::after {
     transition: none;

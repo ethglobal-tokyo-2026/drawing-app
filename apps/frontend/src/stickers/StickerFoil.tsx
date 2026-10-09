@@ -13,8 +13,6 @@ type FoilTone = "holo" | "pink" | "kyoto-seika";
 
 interface Props {
   size: FoilSize;
-  /** The sticker's No., which staggers its bands' flow so neighbors never shimmer in step. */
-  no: number;
   /** Degrees the sticker is turned on screen, which the glint undoes so the light falls alike on all. */
   turn?: number;
   tone?: FoilTone;
@@ -29,12 +27,12 @@ interface Props {
  * Foil round a sticker, holo, pink or Kyoto Seika: its silhouette grown into a band just past the
  * white edge, from the server's mask when the sticker has one, else dilated in CSS from the `--m` the
  * container sets. The band is the sticker's edge, so its cut and cast shadow fall from the band's
- * outer edge. Holo and pink flow under a fine, still grating; Kyoto Seika is a narrower band of manga
- * screentone, with scraped highlights that the light slides through its glint. A glint sits where the
- * app's one light falls, holding where the last tilt left it. It goes under the image, which shows only
- * inside its own cut.
+ * outer edge. Holo and pink are bands of color that the light slides under a fine, still grating; Kyoto
+ * Seika is a narrower band of manga screentone, with scraped highlights that the light slides through
+ * its glint. A glint sits where the app's one light falls, holding where the last tilt left it, so a
+ * still light holds every foil still. It goes under the image, which shows only inside its own cut.
  */
-export function StickerFoil({ size, no, turn = 0, tone = "holo", mask }: Props) {
+export function StickerFoil({ size, turn = 0, tone = "holo", mask }: Props) {
   const foil = useRef<HTMLSpanElement>(null);
   // Shown after the light last moved, it starts where the light is, like every foil already shown.
   useLayoutEffect(() => {
@@ -45,7 +43,6 @@ export function StickerFoil({ size, no, turn = 0, tone = "holo", mask }: Props) 
       ref={foil}
       className={`sticker-foil sticker-foil--${size} sticker-foil--${tone}${mask ? " sticker-foil--baked" : ""}`}
       style={{
-        "--foil-i": no,
         "--foil-turn": turn,
         ...(mask && { "--foil-mask": `url("${mask}")` }),
       }}

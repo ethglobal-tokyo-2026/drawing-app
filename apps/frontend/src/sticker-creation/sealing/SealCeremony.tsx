@@ -392,9 +392,7 @@ export function SealCeremony({
           decoding="sync"
         />
         <div className="seal-ceremony__sticker" style={resin} aria-hidden="true">
-          {foil && sealed && (
-            <StickerFoil size="board" tone={foil} no={sealed.number} turn={LANDED_TURN_DEG} />
-          )}
+          {foil && sealed && <StickerFoil size="board" tone={foil} turn={LANDED_TURN_DEG} />}
           <img className="seal-ceremony__plain" src={layers.plain} alt="" decoding="sync" />
           <img className="seal-ceremony__tint" src={layers.tint} alt="" decoding="sync" />
           <img className="seal-ceremony__gloss" src={layers.gloss} alt="" decoding="sync" />

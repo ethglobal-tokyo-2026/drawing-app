@@ -194,7 +194,7 @@ function SealPreview({
     <div className="seal-preview" aria-hidden="true">
       <span className="seal-preview__sticker">
         {/* Keyed by tone, so marking 18+ lays the pink foil on fresh. */}
-        {tone && <StickerFoil key={tone} size="board" tone={tone} no={0} turn={TURN_DEG} />}
+        {tone && <StickerFoil key={tone} size="board" tone={tone} turn={TURN_DEG} />}
         <canvas ref={canvas} className="seal-preview__ink" />
       </span>
     </div>

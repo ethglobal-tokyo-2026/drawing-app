@@ -534,7 +534,6 @@ export function StickerDetail({
                     nsfw={sticker.nsfw}
                     kyotoSeika={sticker.kyotoSeikaSubjects !== null}
                     veiled={veiledFor(sticker, optedIn)}
-                    no={sticker.no}
                   />
                   <TimelapseLayer timelapse={timelapse} />
                 </div>

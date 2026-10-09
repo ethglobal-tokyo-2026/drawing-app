@@ -69,7 +69,7 @@ interface Props {
 
 /**
  * Keeps its children's CSS animations running through a reorder. A re-inserted element's animations
- * start over, so a sticker moved ahead of others would jump their foil's flow and resin's sway. The
+ * start over, so a sticker moved ahead of others would jump their resin's sway. The
  * clocks are read just before React changes the DOM, and set back on the new animations before paint.
  */
 export class KeepAnimations extends Component<Props, object, Clocks | null> {

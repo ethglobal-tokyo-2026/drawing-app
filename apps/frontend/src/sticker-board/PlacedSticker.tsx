@@ -134,7 +134,6 @@ export const PlacedSticker = memo(function PlacedSticker({
           nsfw={sticker.nsfw}
           kyotoSeika={sticker.kyotoSeikaSubjects !== null}
           veiled={veiled}
-          no={sticker.no}
           turn={sticker.placement.r}
           stuck
           // A landing sticker's stick animation shows it arrive; it isn't held back as well.

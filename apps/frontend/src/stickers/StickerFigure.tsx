@@ -32,8 +32,6 @@ interface Props {
    * comes, with the 18+ mark over it; its outline and foil stay sharp.
    */
   veiled?: boolean;
-  /** The sticker's No., which staggers its foil's light against its neighbors'. */
-  no?: number;
   /** Degrees it's turned on screen, which its foil's glint undoes. */
   turn?: number;
   /** Stuck to a board: it sits close to it, with the board's short cast and thinner resin. */
@@ -62,7 +60,6 @@ export const StickerFigure = memo(function StickerFigure({
   nsfw = false,
   kyotoSeika = false,
   veiled = false,
-  no = 0,
   turn = 0,
   stuck = false,
   reveal = false,
@@ -92,7 +89,7 @@ export const StickerFigure = memo(function StickerFigure({
   ].filter(Boolean);
   return (
     <span ref={ref} className={classes.join(" ")} style={style}>
-      {foilSize && <StickerFoil size={foilSize} no={no} turn={turn} tone={tone} mask={urls.foil} />}
+      {foilSize && <StickerFoil size={foilSize} turn={turn} tone={tone} mask={urls.foil} />}
       {/* A foil's band casts for it. */}
       {stuck && !foilSize && <span className="sticker-figure__cast" aria-hidden="true" />}
       <img

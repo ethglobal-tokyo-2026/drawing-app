@@ -182,7 +182,6 @@ export function LiftedSticker({
               nsfw={sticker.nsfw}
               kyotoSeika={sticker.kyotoSeikaSubjects !== null}
               veiled={veiledFor(sticker, optedIn)}
-              no={sticker.no}
             />
           </div>
           {/* aria-disabled rather than disabled, so a press at either end keeps its focus. */}

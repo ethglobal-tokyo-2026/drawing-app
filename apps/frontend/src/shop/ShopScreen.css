@@ -391,6 +391,7 @@
 
 /* The light moves every frame, so nothing glides after it. */
 .finish-preview .live-resin > i > b,
+.finish-preview .sticker-foil__sheen,
 .finish-preview .sticker-foil__glint::before {
   transition: none;
 }

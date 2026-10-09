@@ -62,7 +62,7 @@ export function FinishPreview({
   side: number;
   finish: Finish;
 }) {
-  const { urls, width, height, no } = sticker;
+  const { urls, width, height } = sticker;
   const long = Math.max(width, height);
   const box: CSSProperties = {
     width: (side * FILL * width) / long,
@@ -83,7 +83,6 @@ export function FinishPreview({
           width={width}
           height={height}
           foil={foil ? "detail" : undefined}
-          no={no}
           turn={-4}
           reveal
         />

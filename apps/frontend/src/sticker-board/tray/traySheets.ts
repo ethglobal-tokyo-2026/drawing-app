@@ -198,7 +198,6 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
             ),
           ),
         );
-        foil.style.setProperty("--foil-i", String(s.no));
         if (s.urls.foil) foil.style.setProperty("--foil-mask", cssUrl(s.urls.foil));
         lightUp(foil);
         fit.append(foil);

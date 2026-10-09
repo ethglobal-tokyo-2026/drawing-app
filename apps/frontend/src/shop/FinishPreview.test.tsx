@@ -9,7 +9,6 @@ const sticker: ShopSticker = {
   urls: { png: "/cat.webp", mask: "/cat-mask.webp", spec: "/cat-spec.webp", rim: "/cat-rim.webp" },
   width: 374,
   height: 384,
-  no: 1,
 };
 
 /** The images the preview asked to load, which the test loads by hand. */

@@ -12,8 +12,6 @@ export interface ShopSticker {
   urls: StickerUrls;
   width: number;
   height: number;
-  /** Staggers its foil's bands, as on a board. */
-  no: number;
 }
 
 /** A cat drawn and sealed with the app's own brush, fill and cut, for artists with no sticker yet. */
@@ -21,7 +19,6 @@ const SAMPLE_STICKER: ShopSticker = {
   urls: { png: samplePng, mask: sampleMask, spec: sampleSpec, rim: sampleRim },
   width: 374,
   height: 384,
-  no: 0,
 };
 
 /** The newest sticker you drew and still hold; null when there's none. */
@@ -35,7 +32,6 @@ function newestOwnSticker(board: StickerBoard): ShopSticker | null {
       urls: s.urls,
       width: s.width,
       height: s.height,
-      no: s.no,
       sealedAt: s.sealedAt,
     };
   }
