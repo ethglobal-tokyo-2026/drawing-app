@@ -3,6 +3,7 @@ import type { ApiClient } from "../api/apiClient";
 import { toApiPlacement } from "../api/views";
 import {
   hasLargeLayout,
+  onItsWay,
   placeUnplaced,
   type PlacedBoardSticker,
   type UnplacedBoardSticker,
@@ -10,30 +11,117 @@ import {
 import {
   fieldOf,
   PHONE_BOARD,
+  sizeOf,
+  toPx,
+  unitOf,
   type BoardLayout,
   type BoardSize,
+  type Field,
   type Placement,
 } from "./placement";
 
 const round4 = (v: number) => Number(v.toFixed(4));
 
+/** The share of each axis of the large board's field the phone's arrangement spreads across, centered. */
+export const LARGE_SPREAD = 0.88;
+
 /**
- * Where a sticker's phone spot lands in a large layout derived from the phone's: the phone's whole
- * arrangement at the stickers' own size, centered on the large board's field, fitted to a side too
- * short for it.
+ * Where a sticker's phone spot lands in a large layout derived from the phone's: the phone's
+ * arrangement spread across the large board's field, the sticker at its phone size, so the room is board.
  */
-export function largeSpotFrom(phone: Placement, board: BoardSize): Placement {
-  const from = fieldOf(PHONE_BOARD.W, PHONE_BOARD.H);
-  const to = fieldOf(board.W, board.H);
-  // Distances keep their share of a sticker's size: they grow by the unit over the phone board's.
-  const k = board.U / PHONE_BOARD.W;
-  const spanX = Math.min(1, (from.w * k) / to.w);
-  const spanY = Math.min(1, (from.h * k) / to.h);
+export function largeSpotFrom(phone: Placement): Placement {
   return {
     ...phone,
-    x: round4(0.5 + (phone.x - 0.5) * spanX),
-    y: round4(0.5 + (phone.y - 0.5) * spanY),
+    x: round4(0.5 + (phone.x - 0.5) * LARGE_SPREAD),
+    y: round4(0.5 + (phone.y - 0.5) * LARGE_SPREAD),
   };
+}
+
+/** A sticker's center and the half extents of its turned box, in board pixels. */
+interface Footprint {
+  x: number;
+  y: number;
+  ex: number;
+  ey: number;
+}
+
+type Art = Pick<PlacedBoardSticker, "width" | "height">;
+
+function footprintOf(field: Field, unit: number, p: Placement, art: Art): Footprint {
+  const { x, y } = toPx(field, p);
+  const { w, h } = sizeOf(unit, p.s, art);
+  const turn = (p.r * Math.PI) / 180;
+  const [cos, sin] = [Math.abs(Math.cos(turn)), Math.abs(Math.sin(turn))];
+  return { x, y, ex: (cos * w + sin * h) / 2, ey: (sin * w + cos * h) / 2 };
+}
+
+/** How deep two footprints overlap on each axis; at or below zero on either, they're clear. */
+const depthOf = (a: Footprint, b: Footprint) => ({
+  x: a.ex + b.ex - Math.abs(a.x - b.x),
+  y: a.ey + b.ey - Math.abs(a.y - b.y),
+});
+
+const overlap = (a: Footprint, b: Footprint) => {
+  const depth = depthOf(a, b);
+  return depth.x > 0 && depth.y > 0;
+};
+
+/** Passes over the pairs the spread pushed together; each pass settles what the last one left. */
+const PULL_PASSES = 32;
+/** Pulled-apart stickers end this far clear, in px, so rounding their spots can't overlap them again. */
+const PULL_CLEAR = 1;
+
+/**
+ * The derived spots with every pair that was clear on the phone pulled clear again, along the axis
+ * they overlap least on, without leaving the field. Stickers stacked on the phone stay stacked. Pairs
+ * go in the order of the stickers' ids, so the owner and a visitor pull them apart alike.
+ */
+function pulledApart(
+  shown: readonly { id: string; art: Art; phone: Placement; large: Placement }[],
+  board: BoardSize,
+): Map<string, Placement> {
+  const items = [...shown].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const phoneField = fieldOf(PHONE_BOARD.W, PHONE_BOARD.H);
+  const phoneUnit = unitOf("phone", PHONE_BOARD.W);
+  const phone = items.map((s) => footprintOf(phoneField, phoneUnit, s.phone, s.art));
+  const pairs: [number, number][] = [];
+  for (let i = 0; i < items.length; i++)
+    for (let j = i + 1; j < items.length; j++) if (!overlap(phone[i], phone[j])) pairs.push([i, j]);
+  const field = fieldOf(board.W, board.H);
+  const at = items.map((s) => footprintOf(field, board.U, s.large, s.art));
+  const bounds = { x: [field.left, field.left + field.w], y: [field.top, field.top + field.h] };
+  /** Moves a footprint up to `by` along `axis`, inside the field; returns how far it moved. */
+  const move = (f: Footprint, axis: "x" | "y", by: number) => {
+    const [lo, hi] = bounds[axis];
+    const was = f[axis];
+    f[axis] = Math.min(hi, Math.max(lo, was + by));
+    return Math.abs(f[axis] - was);
+  };
+  for (let pass = 0; pass < PULL_PASSES; pass++) {
+    let pulled = false;
+    for (const [i, j] of pairs) {
+      const depth = depthOf(at[i], at[j]);
+      if (depth.x <= 0 || depth.y <= 0) continue;
+      pulled = true;
+      const axis = depth.x < depth.y ? "x" : "y";
+      const dir = at[i][axis] <= at[j][axis] ? -1 : 1;
+      const half = (depth[axis] + PULL_CLEAR) / 2;
+      // What one can't move for the field's edge, the other moves instead.
+      const first = move(at[i], axis, dir * half);
+      move(at[j], axis, -dir * (2 * half - first));
+    }
+    if (!pulled) break;
+  }
+  return new Map(
+    items.map((s, i) => [
+      s.id,
+      {
+        ...s.large,
+        x: round4((at[i].x - field.left) / field.w),
+        y: round4((at[i].y - field.top) / field.h),
+      },
+    ]),
+  );
 }
 
 /** A sticker's spot in a derived large layout. */
@@ -42,12 +130,28 @@ export interface LargeSpot {
   placement: Placement;
 }
 
-/** The large layout derived from the phone's for a board this big: a spot for each sticker you hold. */
+/**
+ * The large layout derived from the phone's for a board this big: a spot for each sticker you hold,
+ * spread across the board, and the stickers on it pulled clear of each other where they were on the phone.
+ */
 export function deriveLargeLayout(stickers: readonly PlacedBoardSticker[], board: BoardSize) {
+  const deriving = stickers
+    .filter((s) => s.held && !s.placements.large)
+    .map((s) => ({
+      id: s.id,
+      art: s,
+      phone: s.placements.phone,
+      large: largeSpotFrom(s.placements.phone),
+    }));
+  const pulled = pulledApart(
+    deriving.filter(({ art, phone }) => phone.on && !onItsWay(art)),
+    board,
+  );
+  const spots = new Map(deriving.map(({ id, large }) => [id, pulled.get(id) ?? large]));
   const derived: LargeSpot[] = [];
   const next = stickers.map((s) => {
-    if (!s.held || s.placements.large) return s;
-    const placement = largeSpotFrom(s.placements.phone, board);
+    const placement = spots.get(s.id);
+    if (!placement) return s;
     derived.push({ id: s.id, placement });
     return { ...s, placements: { ...s.placements, large: placement } };
   });

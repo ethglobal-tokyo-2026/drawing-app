@@ -11,7 +11,7 @@ import { PREPARING_SLOW_MS } from "../giving/giveFlow";
 import { onLargeScreen } from "../ui/testing";
 import { forgetGreetings } from "./artistChipGreeting";
 import { ArtistBoard } from "./ArtistBoard";
-import { fieldOf, PHONE_BOARD } from "./placement";
+import { fieldOf, PHONE_BOARD, unitOf } from "./placement";
 import { shortAddress } from "./stat-board/addresses";
 
 // Someone's stat board mounts behind the front; nothing here needs LINE.
@@ -291,20 +291,20 @@ describe("ArtistBoard's layouts", () => {
     expect((await visit(three())).querySelector(".explore-chip")).toBeNull();
   });
 
-  it("shows a large screen a board with no large layout yet as its phone's arrangement, at its size", async () => {
+  it("shows a large screen a board with no large layout yet as its phone's arrangement spread across it, at the phone size", async () => {
     onLargeScreen();
-    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1180);
-    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(662);
+    const [W, H] = [1180, 662];
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(W);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(H);
     const centerX = (el: HTMLElement) =>
       Number(/translate\((-?[\d.]+)px/.exec(el.style.transform)?.[1]) +
       parseFloat(el.style.width) / 2;
+    const [a, b] = [placedAt(0.1, 0.5), placedAt(0.9, 0.5)];
     const [left, right] = stickersIn(
-      await visit([
-        boardSticker({ placement: placedAt(0.1, 0.5) }),
-        boardSticker({ placement: placedAt(0.9, 0.5) }),
-      ]),
+      await visit([boardSticker({ placement: a }), boardSticker({ placement: b })]),
     );
-    // As far apart as on the phone's field; spread over this board they'd be most of its width apart.
-    expect(centerX(right) - centerX(left)).toBeLessThan(fieldOf(PHONE_BOARD.W, PHONE_BOARD.H).w);
+    // Farther apart than the phone's whole field is wide: the arrangement has the large board's room.
+    expect(centerX(right) - centerX(left)).toBeGreaterThan(fieldOf(PHONE_BOARD.W, PHONE_BOARD.H).w);
+    expect(parseFloat(left.style.width)).toBeCloseTo(a.scale * unitOf("phone", PHONE_BOARD.W), 0);
   });
 });

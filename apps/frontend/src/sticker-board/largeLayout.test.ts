@@ -2,42 +2,95 @@ import { MAX_LARGE_LAYOUT_BATCH } from "@drawing-app/api/client";
 import { describe, expect, it, vi } from "vitest";
 import { boardSticker } from "../api/testFixtures";
 import { emptyApi } from "../api/testing";
-import { placeUnplaced, toBoardSticker } from "./boardSticker";
-import { deriveLargeLayout, largeSpotFrom, saveDerivedLayout, type LargeSpot } from "./largeLayout";
-import { fieldOf, PHONE_BOARD, toPx, unitOf, type BoardSize, type Placement } from "./placement";
+import { toApiPlacement } from "../api/views";
+import { placeUnplaced, toBoardSticker, type PlacedBoardSticker } from "./boardSticker";
+import {
+  deriveLargeLayout,
+  LARGE_SPREAD,
+  largeSpotFrom,
+  saveDerivedLayout,
+  type LargeSpot,
+} from "./largeLayout";
+import {
+  fieldOf,
+  PHONE_BOARD,
+  sizeOf,
+  stickerBox,
+  unitOf,
+  type BoardSize,
+  type Placement,
+} from "./placement";
 
 const largeBoard = (W: number, H: number): BoardSize => ({ W, H, U: unitOf("large", W) });
 const PHONE: BoardSize = { ...PHONE_BOARD, U: unitOf("phone", PHONE_BOARD.W) };
 /** iPads' boards in Safari, upright and turned: their viewports less a 72px tab strip. */
 const IPADS = [largeBoard(744, 975), largeBoard(820, 1022), largeBoard(1180, 662)];
-const spot = (x: number, y: number): Placement => ({ on: true, x, y, s: 0.3, r: 4, z: 2 });
-/** How many units apart two spots' centers are drawn on a board. */
-const apart = (board: BoardSize, a: Placement, b: Placement) => {
+const spot = (x: number, y: number, s = 0.3): Placement => ({ on: true, x, y, s, r: 0, z: 2 });
+/** Stickers you hold at these phone spots, with no large spot yet. */
+const holding = (...spots: Placement[]) =>
+  placeUnplaced(spots.map((p) => toBoardSticker(boardSticker({ placement: toApiPlacement(p) }))))
+    .stickers;
+/** Whether two stickers' boxes overlap where a board draws them at these spots. */
+const overlapOn = (
+  board: BoardSize,
+  [a, b]: [PlacedBoardSticker, PlacedBoardSticker],
+  [p, q]: [Placement, Placement],
+) => {
   const field = fieldOf(board.W, board.H);
-  const [p, q] = [toPx(field, a), toPx(field, b)];
-  return Math.hypot(q.x - p.x, q.y - p.y) / board.U;
+  const [m, n] = [stickerBox(field, board.U, p, a), stickerBox(field, board.U, q, b)];
+  return Math.abs(m.x - n.x) < (m.w + n.w) / 2 && Math.abs(m.y - n.y) < (m.h + n.h) / 2;
 };
+const largeOf = (stickers: readonly PlacedBoardSticker[], board: BoardSize) =>
+  new Map(deriveLargeLayout(stickers, board).derived.map((d) => [d.id, d.placement]));
 
 describe("the large layout derived from the phone's", () => {
-  it("keeps the phone's arrangement at the stickers' own size, centered on the board", () => {
-    const [a, b] = [spot(0.2, 0.3), spot(0.7, 0.85)];
+  it("spreads the phone's arrangement across the board's field, centered, at the phone size", () => {
+    const [corner, far] = [spot(0, 0), spot(1, 1)];
+    const edge = (1 - LARGE_SPREAD) / 2;
     for (const ipad of IPADS) {
-      expect(apart(ipad, largeSpotFrom(a, ipad), largeSpotFrom(b, ipad))).toBeCloseTo(
-        apart(PHONE, a, b),
-        2,
-      );
-      expect(largeSpotFrom(spot(0.5, 0.5), ipad)).toMatchObject({ x: 0.5, y: 0.5 });
-      expect(largeSpotFrom(a, ipad)).toMatchObject({ on: a.on, s: a.s, r: a.r, z: a.z });
+      expect(largeSpotFrom(corner)).toMatchObject({ x: edge, y: edge });
+      expect(largeSpotFrom(far)).toMatchObject({ x: 1 - edge, y: 1 - edge });
+      expect(largeSpotFrom(spot(0.5, 0.5))).toMatchObject({ x: 0.5, y: 0.5 });
+      const [sticker] = holding(corner);
+      const large = largeOf([sticker], ipad).get(sticker.id);
+      expect(large).toMatchObject({ on: corner.on, r: corner.r, z: corner.z });
+      expect(sizeOf(ipad.U, large?.s ?? 0, sticker)).toEqual(sizeOf(PHONE.U, corner.s, sticker));
     }
   });
 
-  it("fits the arrangement to a field shorter than the phone's, edge to edge", () => {
-    // An iPad mini turned, in Safari.
-    const short = largeBoard(1133, 586);
-    expect(fieldOf(short.W, short.H).h).toBeLessThan(fieldOf(PHONE.W, PHONE.H).h);
-    expect([largeSpotFrom(spot(0.4, 0), short).y, largeSpotFrom(spot(0.4, 1), short).y]).toEqual([
-      0, 1,
-    ]);
+  it("pulls apart stickers the spread pushed together, and leaves stacked ones stacked", () => {
+    // Stacked a pixel clear on the phone; a turned iPad's field is shorter, so the spread meets them.
+    const s = 0.4;
+    const gap = (s * PHONE.U + 1) / fieldOf(PHONE.W, PHONE.H).h;
+    const [top, below, onTop] = holding(
+      spot(0.5, 0.3, s),
+      spot(0.5, 0.3 + gap, s),
+      spot(0.55, 0.3, s),
+    );
+    const turned = IPADS[2];
+    const phones: [Placement, Placement] = [top.placements.phone, below.placements.phone];
+    expect(overlapOn(PHONE, [top, below], phones)).toBe(false);
+    expect(
+      overlapOn(turned, [top, below], [largeSpotFrom(phones[0]), largeSpotFrom(phones[1])]),
+    ).toBe(true);
+    const large = largeOf([top, below, onTop], turned);
+    const at = (s: PlacedBoardSticker) => large.get(s.id) ?? s.placements.phone;
+    expect(overlapOn(turned, [top, below], [at(top), at(below)])).toBe(false);
+    expect(overlapOn(PHONE, [top, onTop], [top.placements.phone, onTop.placements.phone])).toBe(
+      true,
+    );
+    expect(overlapOn(turned, [top, onTop], [at(top), at(onTop)])).toBe(true);
+  });
+
+  it("derives the same layout whatever order the stickers come in", () => {
+    // Columns clear on the phone, whose stickers a turned iPad's shorter field pushes together.
+    const s = 0.3;
+    const step = (s * PHONE.U + 4) / fieldOf(PHONE.W, PHONE.H).h;
+    const grid = holding(
+      ...[0.1, 0.5, 0.9].flatMap((x) => [0, 1, 2, 3].map((row) => spot(x, 0.2 + row * step, s))),
+    );
+    for (const ipad of IPADS)
+      expect(largeOf([...grid].reverse(), ipad)).toEqual(largeOf(grid, ipad));
   });
 
   it("gives every sticker you hold a spot and lists it for saving, and none to one you gave", () => {
