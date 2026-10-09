@@ -62,7 +62,8 @@
 }
 
 /* The band grows from the cut here, narrower than the server's mask: the center and eight copies a
-   band's width away, which round as evenly at this width as sixteen do at holo's. */
+   band's width away, which round as evenly at this width as sixteen do at holo's. Creases grow it
+   the same way, by kyotoSeikaBandWidth (StickerFoil.tsx), which keeps to --foil-w above. */
 .sticker-foil--kyoto-seika .sticker-foil__band,
 .sticker-foil--kyoto-seika .sticker-foil__cast::before {
   --foil-copies:

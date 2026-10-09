@@ -21,14 +21,36 @@ export interface CreaseJob {
   scale: number;
   /** Toward each side's light, in its frame. */
   lights: Record<CreaseSide, [number, number]>;
-  /** Its own silhouette's mask. */
-  own: string;
+  /** Its own silhouette. */
+  own: Silhouette;
   /**
-   * Each sticker underneath, bottom to top: its silhouette's mask, its box in CSS px, and where it
-   * lies in pixels.
+   * Each sticker underneath, bottom to top: its silhouette, its box in CSS px, and where it lies in
+   * pixels.
    */
-  under: { url: string; w: number; h: number; at: Affine }[];
+  under: (Silhouette & { w: number; h: number; at: Affine })[];
 }
+
+/**
+ * A sticker's outline as the board draws it: a mask, grown by `grow` CSS px all round when its foil
+ * band is grown from the cut rather than drawn from the server's mask.
+ */
+export interface Silhouette {
+  url: string;
+  grow: number;
+}
+
+/** The ways a band is grown from the cut, as the foil's CSS does: the center and eight around it. */
+const GROWN = [
+  [0, 0],
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+  [Math.SQRT1_2, Math.SQRT1_2],
+  [Math.SQRT1_2, -Math.SQRT1_2],
+  [-Math.SQRT1_2, Math.SQRT1_2],
+  [-Math.SQRT1_2, -Math.SQRT1_2],
+] as const;
 
 /** How long each part of a bake took, in ms. */
 export interface CreaseTimings {
@@ -112,7 +134,7 @@ async function pngOf(canvas: OffscreenCanvas, pixels: Uint8ClampedArray<ArrayBuf
 
 async function bake(board: string, job: CreaseJob): Promise<CreaseReply> {
   const t0 = performance.now();
-  const [own, ...under] = await Promise.all([job.own, ...job.under.map((u) => u.url)].map(maskOf));
+  const [own, ...under] = await Promise.all([job.own, ...job.under].map((s) => maskOf(s.url)));
   const t1 = performance.now();
   const canvas = new OffscreenCanvas(job.width, job.height);
   try {
@@ -125,13 +147,19 @@ async function bake(board: string, job: CreaseJob): Promise<CreaseReply> {
       draw();
       return alphaOf(g.getImageData(0, 0, job.width, job.height).data);
     };
+    /** A mask drawn `w`×`h` from the origin, grown as its band is; `px` per CSS px of growth. */
+    const drawGrown = (mask: ImageBitmap, { grow }: Silhouette, w: number, h: number, px = 1) => {
+      for (const [dx, dy] of grow > 0 ? GROWN : GROWN.slice(0, 1)) {
+        g.drawImage(mask, dx * grow * px, dy * grow * px, w, h);
+      }
+    };
     const layers = job.under.map((u, i) =>
       silhouette(() => {
         g.setTransform(...u.at);
-        g.drawImage(under[i], 0, 0, u.w, u.h);
+        drawGrown(under[i], u, u.w, u.h);
       }),
     );
-    const ownAlpha = silhouette(() => g.drawImage(own, 0, 0, job.width, job.height));
+    const ownAlpha = silhouette(() => drawGrown(own, job.own, job.width, job.height, job.scale));
     g.setTransform(1, 0, 0, 1, 0, 0);
     const t2 = performance.now();
     const pixels = creasePixels({

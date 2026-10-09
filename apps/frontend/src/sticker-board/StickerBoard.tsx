@@ -34,6 +34,7 @@ import { CaretRight } from "../icons";
 import { LIFF_ID } from "../line/liff";
 import { formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
+import { boardFoil } from "../stickers/madeFoil";
 import { playStick } from "../stickers/stick";
 import { DrawKeyTickets } from "../tickets/DrawKeyTickets";
 import { describeTickets } from "../tickets/tickets";
@@ -801,7 +802,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     stickers: onBoard.toSorted((a, b) => (stack.get(a.id) ?? 0) - (stack.get(b.id) ?? 0)),
     field,
     unit: size?.U ?? null,
-    wearsFoil: (s) => byOther(s) || s.nsfw || s.kyotoSeikaSubjects !== null,
+    foilOf: (s) =>
+      boardFoil({ nsfw: s.nsfw, kyotoSeika: s.kyotoSeikaSubjects !== null, byOther: byOther(s) }),
     held: hold?.id,
   });
   // Screen readers and the arrow keys take the stickers in reading order, which is the DOM's too.

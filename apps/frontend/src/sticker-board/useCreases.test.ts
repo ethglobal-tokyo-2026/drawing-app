@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CREASE_SIDES } from "../stickers/crease";
 import type { Affine, CreaseJob, CreaseReply } from "../stickers/creaseWorker";
+import { kyotoSeikaBandWidth, type FoilTone } from "../stickers/StickerFoil";
 import { testStickerUrls } from "../stickers/testStickerUrls";
 import { fieldOf, PHONE_BOARD, stickerBox, unitOf, type Placement } from "./placement";
 import { CreaseStore, creaseJobs, FOIL_REACH } from "./useCreases";
@@ -24,8 +25,10 @@ function sticker(id: string, at: Partial<Placement> = {}, urls = testStickerUrls
 }
 type TestSticker = ReturnType<typeof sticker>;
 
-const jobsFor = (stickers: TestSticker[], wearsFoil: (s: TestSticker) => boolean = () => false) =>
-  creaseJobs(stickers, field, unit, wearsFoil, SCALE);
+const jobsFor = (
+  stickers: TestSticker[],
+  foilOf: (s: TestSticker) => FoilTone | null = () => null,
+) => creaseJobs(stickers, field, unit, foilOf, SCALE);
 
 const boxOf = (s: TestSticker) => stickerBox(field, unit, s.placement, s);
 
@@ -113,19 +116,32 @@ describe("creaseJobs", () => {
     expect(jobsFor(beside(FOIL_REACH * 3))).toEqual([]);
   });
 
-  it("draws a sticker that wears foil by its foil band, and one that doesn't by its cut", () => {
+  it("draws each sticker by its outline as the board shows it: its cut, its foil band's mask, or its cut grown by a Kyoto Seika band", () => {
     const foiled = (id: string, at: Partial<Placement>) =>
       sticker(id, at, { ...testStickerUrls(id), foil: `${id}-foil.png` });
     const lower = foiled("lower", { x: 0.4 });
     const top = foiled("top", { x: 0.6 });
+    /** The outlines the top sticker's job draws, with `lowerFoil` and `topFoil` worn. */
+    const outlines = (lowerFoil: FoilTone | null, topFoil: FoilTone | null) => {
+      const [job] = jobsFor([lower, top], (s) => (s.id === "lower" ? lowerFoil : topFoil));
+      const [beneath] = job.under;
+      return { under: { url: beneath.url, grow: beneath.grow }, own: job.own };
+    };
 
-    const [lowerOnly] = jobsFor([lower, top], (s) => s.id === "lower");
-    expect(lowerOnly.under[0].url).toBe(lower.urls.foil);
-    expect(lowerOnly.own).toBe(top.urls.mask);
-
-    const [topOnly] = jobsFor([lower, top], (s) => s.id === "top");
-    expect(topOnly.under[0].url).toBe(lower.urls.mask);
-    expect(topOnly.own).toBe(top.urls.foil);
+    expect(outlines("holo", null)).toEqual({
+      under: { url: lower.urls.foil, grow: 0 },
+      own: { url: top.urls.mask, grow: 0 },
+    });
+    expect(outlines(null, "pink")).toEqual({
+      under: { url: lower.urls.mask, grow: 0 },
+      own: { url: top.urls.foil, grow: 0 },
+    });
+    // Its band is grown from the cut, narrower than the server's mask, so the cut is drawn grown.
+    const { under, own } = outlines("kyoto-seika", "kyoto-seika");
+    expect(under.url).toBe(lower.urls.mask);
+    expect(under.grow).toBeCloseTo(kyotoSeikaBandWidth(boxOf(lower).w, boxOf(lower).h), 1);
+    expect(own.url).toBe(top.urls.mask);
+    expect(own.grow).toBeGreaterThan(0);
   });
 
   it("keys a job by the stack under it, so it holds as other stickers move and changes when one underneath does", () => {

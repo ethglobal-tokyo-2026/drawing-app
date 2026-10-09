@@ -10,8 +10,15 @@ import {
 } from "react";
 import { isPerformanceRecorderOn, notePerformance } from "../performance/performanceRecorder";
 import { CREASE_SIDES, lightIn, type CreaseSide } from "../stickers/crease";
-import type { Affine, CreaseBatch, CreaseJob, CreaseReply } from "../stickers/creaseWorker";
+import type {
+  Affine,
+  CreaseBatch,
+  CreaseJob,
+  CreaseReply,
+  Silhouette,
+} from "../stickers/creaseWorker";
 import type { Crease } from "../stickers/StickerFigure";
+import { kyotoSeikaBandWidth, type FoilTone } from "../stickers/StickerFoil";
 import type { StickerUrls } from "../stickers/stickerUrls";
 import { deviceSetting } from "../ui/deviceSetting";
 import { stickerBox, type Field, type Placement } from "./placement";
@@ -31,7 +38,10 @@ interface CreaseSticker {
 const MAX_SCALE = 1;
 /** How long the board holds still before its creases are baked again. */
 const SETTLE_MS = 90;
-/** How far past its box a foil sticker's band reaches, in CSS px, on the board. */
+/**
+ * How far past its box a holo or pink band can reach, in CSS px, on the board; a band grown from the
+ * cut reaches its own width.
+ */
 export const FOIL_REACH = 5;
 
 /** Whether this device shows creases: only once its developer slip switches them on. */
@@ -117,27 +127,41 @@ const roundAffine = ([a, b, c, d, e, f]: Affine): Affine => [
 ];
 
 /**
- * Each sticker's crease job, from the stickers under it; `stickers` go bottom to top. A sticker that
- * wears foil is drawn as its foil band, which reaches past its cut.
+ * A sticker's outline as the board draws it: its cut; with holo or pink foil, the band's mask the
+ * server made; with the Kyoto Seika Practice Mode foil, its cut grown by that band, as its CSS grows it.
  */
+function silhouetteOf(
+  urls: StickerUrls,
+  tone: FoilTone | null,
+  box: { w: number; h: number },
+): Silhouette {
+  if (tone === "kyoto-seika") {
+    return { url: urls.mask, grow: r2(kyotoSeikaBandWidth(box.w, box.h)) };
+  }
+  if (!tone) return { url: urls.mask, grow: 0 };
+  return urls.foil ? { url: urls.foil, grow: 0 } : { url: urls.mask, grow: FOIL_REACH };
+}
+
+/** Each sticker's crease job, from the stickers under it; `stickers` go bottom to top. */
 export function creaseJobs<S extends CreaseSticker>(
   stickers: readonly S[],
   field: Field,
   unit: number,
-  wearsFoil: (s: S) => boolean,
+  foilOf: (s: S) => FoilTone | null,
   scale: number,
 ): CreaseJob[] {
   const boxes = stickers.map((s) => ({
     ...stickerBox(field, unit, s.placement, s),
     r: s.placement.r,
   }));
-  const silhouette = (s: S) => (wearsFoil(s) && s.urls.foil) || s.urls.mask;
+  const outlines = stickers.map((s, i) => silhouetteOf(s.urls, foilOf(s), boxes[i]));
   const jobs: CreaseJob[] = [];
   stickers.forEach((top, i) => {
     const b = boxes[i];
-    const under = stickers.slice(0, i).flatMap((s, j) => {
+    const under = stickers.slice(0, i).flatMap((_, j) => {
       const a = boxes[j];
-      if (!overlaps(a, b, FOIL_REACH)) return [];
+      const reach = Math.max(FOIL_REACH, outlines[i].grow, outlines[j].grow);
+      if (!overlaps(a, b, reach)) return [];
       // The one underneath's box, from its middle, into this one's frame, then into pixels.
       const steps: Affine[] = [
         [scale, 0, 0, scale, 0, 0],
@@ -147,7 +171,7 @@ export function creaseJobs<S extends CreaseSticker>(
         turn(a.r),
         move(-a.w / 2, -a.h / 2),
       ];
-      return [{ url: silhouette(s), w: r2(a.w), h: r2(a.h), at: roundAffine(steps.reduce(mul)) }];
+      return [{ ...outlines[j], w: r2(a.w), h: r2(a.h), at: roundAffine(steps.reduce(mul)) }];
     });
     if (!under.length) return;
     // Each side's light is on screen; the bake is in the sticker's frame, which its turn moves.
@@ -160,7 +184,7 @@ export function creaseJobs<S extends CreaseSticker>(
       height: Math.ceil(b.h * scale),
       scale,
       lights,
-      own: silhouette(top),
+      own: outlines[i],
       under,
     };
     jobs.push({ id: top.id, key: JSON.stringify(shape), ...shape });
@@ -292,15 +316,15 @@ export function useCreases<S extends CreaseSticker>({
   stickers,
   field,
   unit,
-  wearsFoil,
+  foilOf,
   held,
 }: {
   /** On the board, bottom to top. */
   stickers: readonly S[];
   field: Field | null;
   unit: number | null;
-  /** Whether it wears a foil band, which is then its silhouette. */
-  wearsFoil: (s: S) => boolean;
+  /** The foil it wears, if any, whose band is then its outline. */
+  foilOf: (s: S) => FoilTone | null;
   /** The sticker in hand, which has no crease and lies under none. */
   held?: string;
 }): CreaseStore {
@@ -316,7 +340,7 @@ export function useCreases<S extends CreaseSticker>({
     scale,
     ...stickers.map((s) => {
       const p = s.placement;
-      return `${s.id}:${p.x},${p.y},${p.s},${p.r},${wearsFoil(s)}`;
+      return `${s.id}:${p.x},${p.y},${p.s},${p.r},${foilOf(s)}`;
     }),
   ].join("|");
 
@@ -335,7 +359,7 @@ export function useCreases<S extends CreaseSticker>({
             stickers.filter((s) => s.id !== held),
             field,
             unit,
-            wearsFoil,
+            foilOf,
             scale,
           )
         : [];

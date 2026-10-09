@@ -22,6 +22,7 @@ import { ArtistChip } from "../stickers/ArtistChip";
 import { Duration } from "../stickers/Duration";
 import { formatHandle, formatNo } from "../stickers/format";
 import { Handle } from "../stickers/Handle";
+import { boardFoil } from "../stickers/madeFoil";
 import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { ErrorLine } from "../ui/ErrorLine";
@@ -214,7 +215,8 @@ export function ArtistBoard({ person, onBack }: Props) {
     ],
     field,
     unit: size?.U ?? null,
-    wearsFoil: (s) => byOther(s) || s.nsfw || s.kyotoSeikaSubjects !== null,
+    foilOf: (s) =>
+      boardFoil({ nsfw: s.nsfw, kyotoSeika: s.kyotoSeikaSubjects !== null, byOther: byOther(s) }),
   });
   const chips =
     chipsDone || board.state === "failed" || !field || !size
