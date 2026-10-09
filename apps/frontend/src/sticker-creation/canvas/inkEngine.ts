@@ -160,7 +160,7 @@ interface LiveStroke {
  * interrupts was a resting palm.
  */
 export class InkEngine {
-  settings: InkSettings;
+  private current: InkSettings;
   private readonly layer: InkLayer;
   private readonly history: History<unknown>;
   private readonly events: InkEvents;
@@ -197,10 +197,23 @@ export class InkEngine {
     requestFrame: RequestFrame = browserFrame,
   ) {
     this.layer = layer;
-    this.settings = settings;
+    this.current = settings;
     this.events = events;
     this.requestFrame = requestFrame;
     this.history = new History(layer);
+  }
+
+  get settings(): InkSettings {
+    return this.current;
+  }
+
+  /** A sheet that locks ends the stroke in progress where it stands, and drops a fill tap still down. */
+  set settings(next: InkSettings) {
+    const locking = next.locked && !this.current.locked;
+    this.current = next;
+    if (!locking) return;
+    this.endStroke(false);
+    this.fillTap = null;
   }
 
   /** Listens for pointers on the sheet; returns the detach. */
@@ -296,7 +309,12 @@ export class InkEngine {
       if (result !== "draw") return;
     } else if (pointerType === "pen") {
       this.events.onPen();
-      if (this.live && this.live.pointerType !== "pen") this.endStroke(true);
+      // Fingers down as a pen lands are the hand resting: no tap or fill of theirs counts.
+      this.taps.clear();
+      this.fillTap = null;
+      // A pen is one contact, so landing while its stroke is live, it lifted where the sheet couldn't hear.
+      if (this.live?.pointerType === "pen") this.endStroke(false);
+      else if (this.live) this.endStroke(true);
     }
     if (this.live || this.fillTap) return;
     if (s.panelOpen) {
@@ -328,9 +346,10 @@ export class InkEngine {
     if (e.pointerType === "touch") {
       const palm = this.palmContact(e);
       this.taps.move(id, e.clientX, e.clientY, palm);
-      // A fingertip that spreads into a palm as it settles never meant its stroke.
-      if (palm && this.live?.id === id) {
-        this.endStroke(true);
+      // A fingertip that spreads into a palm as it settles never meant its stroke or its fill.
+      if (palm && (this.live?.id === id || this.fillTap?.id === id)) {
+        if (this.live?.id === id) this.endStroke(true);
+        else this.fillTap = null;
         this.swallowed.add(id);
         return;
       }
@@ -660,8 +679,9 @@ export class InkEngine {
    * nib silent for `PAUSE_MS` has stopped: its line glides to it, and once there, curves all the way.
    */
   private catchUp(live: LiveStroke, time: number): void {
+    if (time - live.t < PAUSE_MS) return;
     const { stabilizer, builder } = live;
-    if (!stabilizer.settled && time - live.t >= PAUSE_MS) {
+    if (!stabilizer.settled) {
       const [x, y] = stabilizer.hold(time);
       builder.add(x, y, live.pressure, stabilizer.time, null);
     }
@@ -689,6 +709,8 @@ export class InkEngine {
     if (takeBack) {
       if (live.before) this.layer.discard(live.before.ink);
       timeOurWork(INK_WORK.replay, () => this.history.repaint());
+      // A sheet left blank follows its area again, as it did before the stroke fixed its frame.
+      if (this.history.steps.length === 0) this.frameRule = "follows";
       return;
     }
     timeOurWork(INK_WORK.paint, () => {

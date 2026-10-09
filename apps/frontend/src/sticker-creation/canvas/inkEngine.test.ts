@@ -556,4 +556,97 @@ describe("InkEngine", () => {
     // What the drawing screen's next save keeps with the steps.
     expect(engine.frame).toBeNull();
   });
+
+  it("ends a stroke in progress where it stands as the sheet locks, and drops a fill tap still down", () => {
+    const { engine, at, runFrame, committed } = setup();
+    engine.down(at("touch", 1, 0, 0, 0));
+    engine.move(at("touch", 1, 50, 0, 16));
+    runFrame();
+    engine.settings = { ...engine.settings, locked: true };
+    expect(committed()).toHaveLength(1);
+    // The finger carries on and lifts, as it can under the time's-up sheet.
+    engine.move(at("touch", 1, 150, 0, 32));
+    runFrame();
+    engine.up(at("touch", 1, 150, 0, 48));
+    expect(committed().map(lastPoint)).toEqual([[50, 0]]);
+
+    engine.settings = { ...engine.settings, locked: false, tool: "fill" };
+    engine.down(at("touch", 2, 40, 40, 1000));
+    engine.settings = { ...engine.settings, locked: true };
+    engine.up(at("touch", 2, 40, 40, 1050));
+    expect(committed()).toHaveLength(1);
+  });
+
+  it("ends a pen stroke whose lift went missing where it stood once the pen lands again, and draws the new one", () => {
+    // WebKit may give the next landing the lost pointer's id, or a new one.
+    for (const id of [1, 2]) {
+      const { engine, at, runFrame, stroke, committed } = setup();
+      engine.down(at("pen", 1, 0, 0, 0));
+      engine.move(at("pen", 1, 50, 0, 16));
+      runFrame();
+      stroke("pen", id, [0, 50], [100, 50], 1000);
+      const [stale, next] = committed();
+      expect(lastPoint(stale)).toEqual([50, 0]);
+      expect(next?.tool === "fill" ? [] : next?.pts.slice(0, 2)).toEqual([0, 50]);
+    }
+  });
+
+  it("takes a two-finger tap begun just before a pen lands as the hand resting: it undoes nothing", () => {
+    for (const inputMode of ["pencilOnly", "pencilAndFinger"] as const) {
+      const { engine, at, runFrame, stroke, committed, events } = setup({ inputMode });
+      stroke("pen", 1, [0, 0], [100, 0]);
+      engine.down(at("touch", 2, 300, 600, 1000));
+      engine.down(at("touch", 3, 360, 600, 1050));
+      engine.down(at("pen", 4, 0, 50, 1100));
+      engine.move(at("pen", 4, 50, 50, 1116));
+      runFrame();
+      engine.up(at("touch", 2, 300, 600, 1250));
+      engine.up(at("touch", 3, 360, 600, 1270));
+      engine.move(at("pen", 4, 100, 50, 1300));
+      runFrame();
+      engine.up(at("pen", 4, 100, 50, 1316));
+      expect(committed()).toHaveLength(2);
+      expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false));
+    }
+  });
+
+  it("gives a resting finger's fill tap way to a pen landing, and fills nothing where a palm settles", () => {
+    const { engine, at, committed } = setup({ tool: "fill", inputMode: "pencilAndFinger" });
+    engine.down(at("touch", 1, 300, 600, 0));
+    engine.down(at("pen", 2, 100, 100, 50));
+    engine.up(at("pen", 2, 100, 100, 100));
+    engine.up(at("touch", 1, 300, 600, 200));
+    // A fingertip that spreads into a palm as it settles never meant its fill.
+    engine.down(at("touch", 3, 200, 200, 1000));
+    engine.move(palmSized(at("touch", 3, 201, 200, 1016)));
+    engine.up(palmSized(at("touch", 3, 201, 200, 1032)));
+    expect(committed()).toEqual([expect.objectContaining({ tool: "fill", x: 100, y: 100 })]);
+  });
+
+  it("draws a stroke at Raw the same whatever the display's frame rate", () => {
+    /** A finger's quick half circle at Raw, a frame between samples, with `extra` frames more. */
+    const arc = (extra: number) => {
+      const { engine, at, runFrame, committed } = setup();
+      engine.down(at("touch", 1, 200, 100, 0));
+      for (let i = 1; i <= ROW_STEPS; i++) {
+        const angle = (i / ROW_STEPS) * Math.PI;
+        const t = i * FRAME_MS;
+        engine.move(at("touch", 1, 100 + 100 * Math.cos(angle), 100 + 100 * Math.sin(angle), t));
+        runFrame(t);
+        for (let f = 1; f <= extra; f++) runFrame(t + (f * FRAME_MS) / (extra + 1));
+      }
+      engine.up(at("touch", 1, 0, 100, (ROW_STEPS + 1) * FRAME_MS));
+      return committed();
+    };
+    expect(arc(1)).toEqual(arc(0));
+  });
+
+  it("lets a blank sheet's frame follow its area again once its only stroke is taken back", () => {
+    const { engine, at, tap } = setup();
+    engine.down(at("touch", 1, 0, 0, 0));
+    // Two fingers land on the young stroke: it was the start of a tap.
+    tap(2, 50);
+    engine.fit(TURNED, 1);
+    expect(engine.frame).toEqual(frameFor(TURNED, 1));
+  });
 });
