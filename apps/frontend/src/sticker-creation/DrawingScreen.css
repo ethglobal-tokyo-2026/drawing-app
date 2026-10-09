@@ -207,15 +207,15 @@
   right: auto;
 }
 
-/* Kyoto Seika's corner print stays over the seal check, and the deal tucks toward it. */
+/* Kyoto Seika's corner print goes over the tiles in the lower right, clear of the left hand, which
+   covers the lower left as it draws; the deal tucks toward it. */
 .drawing-screen[data-hand="left"] .corner-print {
-  left: 39px;
-  right: auto;
-  translate: -50% 0;
+  left: auto;
+  right: 10px;
 }
 
 .drawing-screen[data-hand="left"] > .kyoto-seika-deal {
-  transform-origin: 40px calc(100% - 270px);
+  transform-origin: calc(100% - 40px) calc(100% - 270px);
 }
 
 /* ---------- Large screens: as in drawing apps made for a tablet, the controls take a slim top bar and
