@@ -50,51 +50,37 @@
   inset: 0;
 }
 
-/* With the tabs tucked away, the screen runs down to the grabber's strip above the home indicator:
-   the grabber's 44px touch band starts 20px above the safe area and reaches over the screen's own
-   foot margin, never the sheet. The strip's height is one value, which the scrim over it reads too. */
-.phone.has-tucked-tabs {
-  --tucked-strip: calc(50px + env(safe-area-inset-bottom));
+/* The drawing screen has no tab strip: it runs down to the home indicator's safe area, which keeps
+   its foot clear of iOS's home swipe. */
+.phone.is-drawing .screen {
+  margin-bottom: env(safe-area-inset-bottom);
 }
 
-.phone.has-tucked-tabs .screen {
-  margin-bottom: var(--tucked-strip);
-}
-
-/* A ticket card's scrim stops at the drawing screen, so the grabber's strip takes the same scrim:
-   the tabs can't come up past a card that's waiting for an answer. The strip already reaches the
-   phone's foot, home indicator and all, so any taller and the scrim would lie across the card. */
-.phone.has-tucked-tabs:has(.out-of-tickets__scrim)::after {
+/* A ticket card's scrim stops at the drawing screen, so the safe area under it takes the same scrim. */
+.phone.is-drawing:has(.out-of-tickets__scrim)::after {
   content: "";
   position: absolute;
   inset: auto 0 0;
-  height: var(--tucked-strip);
-  z-index: calc(var(--z-tabs) + 2);
+  height: env(safe-area-inset-bottom);
   background: var(--scrim);
   animation: out-of-tickets-fade 320ms var(--ease-out) both;
 }
 
-/* Nor can the grabber be used then, so it goes rather than poking up out of the scrim. */
-.phone.has-tucked-tabs:has(.out-of-tickets__scrim) .tab-grabber {
-  opacity: 0;
-  pointer-events: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .phone.has-tucked-tabs:has(.out-of-tickets__scrim)::after {
+  .phone.is-drawing:has(.out-of-tickets__scrim)::after {
     animation: none;
   }
 }
 
-/* As a ticket card leaves with no other card coming up, the strip's scrim clears with the card's own. */
-.phone.has-tucked-tabs:has(.out-of-tickets.is-leaving):not(
+/* As a ticket card leaves with no other card coming up, the safe area's scrim clears with the card's own. */
+.phone.is-drawing:has(.out-of-tickets.is-leaving):not(
     :has(.out-of-tickets:not(.is-leaving))
   )::after {
   animation: out-of-tickets-clear var(--t-stick) linear 120ms both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .phone.has-tucked-tabs:has(.out-of-tickets.is-leaving)::after {
+  .phone.is-drawing:has(.out-of-tickets.is-leaving)::after {
     animation-delay: 0s;
   }
 }

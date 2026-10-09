@@ -12,6 +12,7 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
+  useState,
   type Ref,
 } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
@@ -208,6 +209,21 @@ const settle = async (ms = 0) => {
 /** The drawing screen `reopen` rendered. */
 const drawingScreen = createRef<DrawingScreenHandle>();
 
+/** The drawing screen as App shows it: its My board tile puts the board over it. */
+function DrawingAsApp({ ref }: { ref: Ref<DrawingScreenHandle> }) {
+  const [active, setActive] = useState(true);
+  return (
+    <DrawingScreen
+      ref={ref}
+      active={active}
+      onSealed={() => {}}
+      onNewSticker={() => {}}
+      onGoToBoard={() => {}}
+      onMyBoardTile={() => setActive(false)}
+    />
+  );
+}
+
 /**
  * Opens the drawing screen after a reload that kept `session`, with these tickets from the server,
  * for `me`; `api` replaces any of the client's other methods.
@@ -222,13 +238,7 @@ function reopen(
   kept.session = session;
   view = renderWithApi(
     <>
-      <DrawingScreen
-        ref={drawingScreen}
-        active
-        onSealed={() => {}}
-        onNewSticker={() => {}}
-        onGoToBoard={() => {}}
-      />
+      <DrawingAsApp ref={drawingScreen} />
       <SheetProbe />
     </>,
     emptyApi({ tickets: () => Promise.resolve({ ...FRESH_TICKETS, ...tickets }), ...api }),
@@ -373,6 +383,10 @@ async function countedAfter(action: () => void) {
   return drawn() - before;
 }
 const tapTimer = () => document.querySelector<HTMLButtonElement>(".timer-stub")?.click();
+const tapMyBoardTile = () =>
+  document
+    .querySelector<HTMLButtonElement>(`button[aria-label="${strings.stickerCreation.myBoard.en}"]`)
+    ?.click();
 const openPanel = (panel: Exclude<Panel, null>) => () =>
   document.querySelector<HTMLButtonElement>(`.${panel}-tile`)?.click();
 /** Each tool in hand: the color sheet, the Smoothing bar, the clear bar and a finger on the size rail. */
@@ -458,6 +472,13 @@ describe("the drawing screen's clock", () => {
     }
     expect(await countedAfter(tapTimer)).toBe(0);
   });
+
+  it("holds while the board covers the screen, which its My board tile opens", async () => {
+    reopen(keptHalfway);
+    await settle();
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    expect(await countedAfter(tapMyBoardTile)).toBe(0);
+  });
 });
 
 describe("clearing the sheet", () => {
@@ -512,7 +533,13 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     vi.useFakeTimers();
     kept.session = session;
     view = renderWithApi(
-      <DrawingScreen active onSealed={() => {}} onNewSticker={() => {}} onGoToBoard={() => {}} />,
+      <DrawingScreen
+        active
+        onSealed={() => {}}
+        onNewSticker={() => {}}
+        onGoToBoard={() => {}}
+        onMyBoardTile={() => {}}
+      />,
       emptyApi({ spendTicket: () => Promise.resolve(spentDaily(true)), ...api }),
       me,
     );
@@ -612,6 +639,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
         onSealed={() => {}}
         onNewSticker={() => {}}
         onGoToBoard={() => {}}
+        onMyBoardTile={() => {}}
       />
     );
     view?.rerender(screen(false));

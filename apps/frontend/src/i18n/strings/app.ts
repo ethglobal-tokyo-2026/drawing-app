@@ -15,23 +15,16 @@ export const app = {
     draw: { en: "Draw", ja: "かく" },
   },
   tabs: {
-    /** Tab bar at the bottom of every screen: its screen-reader name */
+    /** Tab bar at the bottom of every screen but the drawing screen: its screen-reader name */
     sections: { en: "App sections", ja: "アプリのセクション" },
-    /** Tab bar at the bottom of every screen: the tab for your own sticker board */
+    /** Tab bar at the bottom of every screen but the drawing screen: the tab for your own sticker board */
     myBoard: { en: "My board", ja: "マイボード" },
-    /** Tab bar at the bottom of every screen: the tab for Explore, where you find other people's stickers and boards */
+    /** Tab bar at the bottom of every screen but the drawing screen: the tab for Explore, where you find other people's stickers and boards */
     explore: { en: "Explore", ja: "さがす" },
     /** Tab bar on a large screen, while someone else's sticker board is open over Explore: screen readers' name for the lit Explore tab, which goes back to Explore */
     backToExplore: { en: "Back to Explore", ja: "さがすに戻る" },
-    /** Tab bar at the bottom of every screen: the tab for the Shop, where tickets are bought */
+    /** Tab bar at the bottom of every screen but the drawing screen: the tab for the Shop, where tickets are bought */
     shop: { en: "Shop", ja: "ショップ" },
-    /** Drawing screen, which tucks the tab bar away: screen-reader label of the grabber at the bottom that brings the tabs back */
-    showTabs: {
-      en: "Show the My board, Explore and Shop tabs",
-      ja: "マイボード・さがす・ショップのタブを出す",
-    },
-    /** Drawing screen: text on the grabber at the bottom until it's first used, saying where it leads */
-    grabber: { en: "Board", ja: "ボード" },
   },
   /** Drawing screen, when Draw is tapped before its code has loaded: what screen readers hear while it loads */
   drawingLoading: { en: "Opening the drawing screen", ja: "かく画面を読み込んでいます" },

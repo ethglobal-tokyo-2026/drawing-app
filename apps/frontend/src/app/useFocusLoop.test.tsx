@@ -9,7 +9,7 @@ declare global {
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-/** A screen whose last two controls take no Tab stop: tucked-away tabs and a control stepped aside. */
+/** A screen whose last two controls take no Tab stop: an inert bar and a control stepped aside. */
 function Screen({ active }: { active: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   useFocusLoop(ref, active);
@@ -17,9 +17,9 @@ function Screen({ active }: { active: boolean }) {
     <div ref={ref}>
       <button id="first">First</button>
       <button id="last">Last</button>
-      <nav inert>
-        <button>Tucked</button>
-      </nav>
+      <div inert>
+        <button>Inert</button>
+      </div>
       <button tabIndex={-1}>Stepped aside</button>
     </div>
   );

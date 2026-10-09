@@ -327,6 +327,8 @@ export const stickerCreation = {
     /** Drawing screen, bottom left: the redo tile, named for screen readers */
     redo: { en: "Redo", ja: "やり直す" },
   },
+  /** Drawing screen, at the foot between redo and the seal check: the tile that opens your sticker board, named for screen readers */
+  myBoard: { en: "My board", ja: "マイボード" },
   /** The white label at the foot of the drawing screen while the seal is on its way, which screen readers hear too. */
   sealCeremony: {
     /** Drawing screen, after tapping the check to seal: the white label at the foot of the screen while the server records the seal, and what screen readers hear */

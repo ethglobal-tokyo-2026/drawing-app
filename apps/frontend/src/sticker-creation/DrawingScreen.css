@@ -56,6 +56,17 @@
   transition-delay: 0s, 220ms;
 }
 
+/* My board steps back with the tools while sealing, but stays for a seal to try again: it's the way
+   back to the board. */
+.drawing-screen.is-sealing .my-board-tile {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition-property: opacity, visibility;
+  transition-duration: 220ms, 0s;
+  transition-delay: 0s, 220ms;
+}
+
 /* A sheet in Kyoto Seika Practice Mode waits for Begin with its tools put away, as an exam waits for
    始め: only the timer, the balloons and Begin show. */
 .drawing-screen.is-dealt :is(.tool-strip, .size-rail, .history-buttons, .seal-key) {
@@ -64,8 +75,14 @@
   pointer-events: none;
 }
 
-/* Begin: the tools come back a beat after the deal starts to leave, as after Keep drawing. */
-.drawing-screen.is-deal-leaving :is(.tool-strip, .size-rail, .history-buttons) {
+/* My board stays as the way back, in undo's place, clear of Begin at the foot's middle. */
+.drawing-screen.is-dealt .my-board-tile {
+  left: 18px;
+}
+
+/* Begin: the tools come back a beat after the deal starts to leave, as after Keep drawing, and My
+   board with them, in its own place. */
+.drawing-screen.is-deal-leaving :is(.tool-strip, .size-rail, .history-buttons, .my-board-tile) {
   animation: tools-back 220ms var(--ease-out) 120ms both;
 }
 
@@ -77,18 +94,19 @@
 
 /* Keep drawing: the fresh sheet's timer and tools come back a beat after the sealed card starts to
    leave, so the eye goes with the card first, and the sheet is never bare. */
-.drawing-screen:has(> .seal-ceremony.is-leaving) :is(.drawing-top, .size-rail, .history-buttons) {
+.drawing-screen:has(> .seal-ceremony.is-leaving)
+  :is(.drawing-top, .size-rail, .history-buttons, .my-board-tile) {
   transition-delay: 120ms;
 }
 
 /* Where the undo and redo tiles were, since a seal to try again has put them away. It wraps inside
-   their width, which the long seal chip stops short of: kept on one line, it ran into the chip. */
+   their width, short of My board: kept on one line, it ran into the chip. */
 .drawing-screen > .drawing-start-over {
   position: absolute;
   left: 18px;
   bottom: 22px;
   z-index: 3;
-  max-width: 112px;
+  max-width: calc(2 * 46px + 6px);
   justify-content: flex-start;
   white-space: normal;
   text-align: left;

@@ -67,6 +67,7 @@ import { TimerDot, type TimerDotHandle } from "./TimerDot";
 import { ClearBar } from "./tools/ClearBar";
 import { ColorSheet } from "./tools/ColorSheet";
 import { HistoryButtons } from "./tools/HistoryButtons";
+import { MyBoardTile } from "./tools/MyBoardTile";
 import { FIRST_RECENT, startingColor, withRecent } from "./tools/palette";
 import { SizeRail } from "./tools/SizeRail";
 import { SmoothingBar } from "./tools/SmoothingBar";
@@ -119,14 +120,24 @@ interface Props {
   onSealed: (stickerId: string) => void;
   onNewSticker: () => void;
   onGoToBoard: () => void;
+  /** The My board tile: the board opens over the drawing screen, as its tab opens it elsewhere. */
+  onMyBoardTile: () => void;
 }
 
 /**
  * The drawing screen: a white sheet on the Liner, the timer and the tools in one row across the top,
- * the size rail down the left edge, undo and redo at the bottom left and the seal key at the bottom
- * right. It owns the session (tickets, the clock and the seal step); the ink engine owns the drawing.
+ * the size rail down the left edge, undo, redo and My board at the bottom left and the seal key at
+ * the bottom right. It owns the session (tickets, the clock and the seal step); the ink engine owns
+ * the drawing.
  */
-export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard }: Props) {
+export function DrawingScreen({
+  ref,
+  active,
+  onSealed,
+  onNewSticker,
+  onGoToBoard,
+  onMyBoardTile,
+}: Props) {
   const { t } = useTranslation();
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<DrawingCanvasHandle>(null);
@@ -1068,6 +1079,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         onUndo={() => canvas.current?.undo()}
         onRedo={() => canvas.current?.redo()}
       />
+      <MyBoardTile onOpen={onMyBoardTile} />
       <SealKey
         shown={retrying || (history.hasInk && !sealing)}
         armed={session.phase === "armed"}

@@ -26,7 +26,7 @@
 }
 
 /* Keep drawing, or the shop: the fresh sheet and clock are already under the veil. The card carries
-   the sticker down toward the Board grabber, fading over its last half, as the veil lifts off. */
+   the sticker straight down, fading over its last half, as the veil lifts off. */
 .seal-ceremony.is-leaving {
   pointer-events: none;
 }

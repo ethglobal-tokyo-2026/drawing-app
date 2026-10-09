@@ -106,7 +106,6 @@
 
   /* Layers inside a phone */
   --z-screen: 1;
-  --z-tabs: 20;
   --z-header: 30;
   --z-sheet: 40;
   --z-toast: 60;

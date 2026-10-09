@@ -29,7 +29,12 @@ vi.mock("../line/liff", () => ({
 // Only the board and Receiving are visited; avoid starting unrelated drawing and payment screens.
 vi.mock("../shop/ShopScreen", () => ({ ShopScreen: () => null }));
 vi.mock("../tickets/ReserveTicketCheckout", () => ({ ReserveTicketCheckout: () => null }));
-vi.mock("../sticker-creation/DrawingScreen", () => ({ DrawingScreen: () => null }));
+// The drawing screen's own tests cover it; here it's only its My board tile, which App answers.
+vi.mock("../sticker-creation/DrawingScreen", () => ({
+  DrawingScreen: ({ onMyBoardTile }: { onMyBoardTile: () => void }) => (
+    <button type="button" className="my-board-tile" onClick={onMyBoardTile} />
+  ),
+}));
 vi.mock("../sticker-board/stat-board/StatBoard", () => ({ StatBoard: () => null }));
 vi.mock("./MotionPermissionCard", () => ({ MotionPermissionCard: () => null }));
 
@@ -75,6 +80,20 @@ it("reports a Gift Message's send the server missed as the app starts", async ()
   await act(() => vi.dynamicImportSettled());
   await settle();
   expect(reportShared).toHaveBeenCalledWith("gift-missed", "sent");
+});
+
+it("shows no tab strip over the drawing screen, whose My board tile opens the board as the tab does", async () => {
+  history.replaceState(null, "", "/draw");
+  const view = renderWithApi(<App />, emptyApi());
+  unmount = view.unmount;
+  await act(() => vi.dynamicImportSettled());
+  await settle();
+  const tabs = () => view.host.querySelector("nav.tabs");
+  expect(tabs()).toBeNull();
+
+  act(() => view.host.querySelector<HTMLElement>(".my-board-tile")?.click());
+  await settle();
+  expect(tabs()?.querySelector(".tab-board")?.getAttribute("aria-current")).toBe("page");
 });
 
 it("refreshes waiting gifts after Not now without reloading the sticker board", async () => {

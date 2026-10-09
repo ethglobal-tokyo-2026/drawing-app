@@ -1,106 +1,26 @@
-import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "../i18n/react";
-import { CaretLeft, CaretUp, ExploreIcon, ShopIcon, StickerBoardIcon } from "../icons";
-import { readStored, writeStored } from "../ui/deviceStorage";
+import { CaretLeft, ExploreIcon, ShopIcon, StickerBoardIcon } from "../icons";
 import { useLargeScreen } from "../ui/largeScreen";
 import { TabsLeadSlot } from "../ui/TabsLead";
 import "./TabBar.css";
 
 export type Tab = "board" | "explore" | "shop";
 
-/** Tabs brought back over a screen that tucks them away go again after this long untouched. */
-export const IDLE_MS = 4000;
-/** Dragging the grabber up this far brings the tabs back. */
-const GRAB_PX = 8;
-/** Set once the grabber has brought the tabs back, after which it needs no label. */
-const GRABBED_KEY = "draw.tabs.grabbed";
-
-const readGrabbed = () =>
-  readStored(GRABBED_KEY, "Can't read whether the tab grabber was used on this device").text !==
-  null;
-
-const saveGrabbed = () =>
-  writeStored(GRABBED_KEY, "1", "Can't save that the tab grabber was used on this device");
-
 interface Props {
-  /** None while drawing: Draw is the board's key, not a tab. */
-  active?: Tab;
-  /** The tabs tuck away below the screen, behind a grabber, so the screen gets the room. */
-  tucked: boolean;
+  active: Tab;
   /** Someone else's sticker board is open over Explore. */
   visiting?: boolean;
   onChange: (tab: Tab) => void;
 }
 
 /**
- * Index tabs cut from label stock; the current one is stuck on in its full hue. On a screen that
- * tucks them away, tapping the grabber or dragging it up brings them back, and the next touch
- * anywhere else, or a few idle seconds, tucks them away again. Someone using a keyboard or a screen
- * reader has focus in the strip, and it stays up for as long as they do: there's no idle for them to
- * outwait, and Escape tucks it. Until it has been used once, the grabber is a label-stock pull tab
- * that says where it goes. On a large screen a board's key leads the row (ui/TabsLead.tsx).
+ * Index tabs cut from label stock; the current one is stuck on in its full hue. The drawing screen
+ * has no tabs: Draw is the board's key, and the drawing screen's My board tile leads back. On a large
+ * screen a board's key leads the row (ui/TabsLead.tsx).
  */
-export function TabBar({ active, tucked, visiting = false, onChange }: Props) {
+export function TabBar({ active, visiting = false, onChange }: Props) {
   const { t } = useTranslation();
   const large = useLargeScreen();
-  const nav = useRef<HTMLElement>(null);
-  const grabber = useRef<HTMLButtonElement>(null);
-  const grabY = useRef<number | null>(null);
-  const idle = useRef<ReturnType<typeof setTimeout>>(undefined);
-  /** The tabs were brought up by a keyboard or assistive technology, not a touch, so focus follows them. */
-  const byKeys = useRef(false);
-  const [shown, setShown] = useState(false);
-  const [grabbed, setGrabbed] = useState(readGrabbed);
-  if (!tucked && shown) setShown(false);
-  const peeking = tucked && shown;
-
-  // Keyboard focus on a tab going away with it would fall to the page body, so it goes to the grabber.
-  const hide = () => {
-    if (nav.current?.contains(document.activeElement)) grabber.current?.focus();
-    byKeys.current = false;
-    setShown(false);
-  };
-  const waitIdle = () => {
-    clearTimeout(idle.current);
-    idle.current = setTimeout(() => {
-      // Focus in the strip is someone reading or choosing the tab, not someone who left it up.
-      if (!nav.current?.contains(document.activeElement)) hide();
-    }, IDLE_MS);
-  };
-  const show = (keys = false) => {
-    byKeys.current = keys;
-    setShown(true);
-    waitIdle();
-    if (grabbed) return;
-    setGrabbed(true);
-    saveGrabbed();
-  };
-  // Using the tabs keeps them up.
-  const keepUp = () => {
-    if (peeking) waitIdle();
-  };
-
-  useEffect(() => {
-    if (!peeking) return;
-    const onPointerDown = (e: PointerEvent) => {
-      if (!(e.target instanceof Node)) return;
-      if (nav.current?.contains(e.target) || grabber.current?.contains(e.target)) return;
-      hide();
-    };
-    document.addEventListener("pointerdown", onPointerDown, true);
-    return () => document.removeEventListener("pointerdown", onPointerDown, true);
-  }, [peeking]);
-
-  // The grabber steps aside once the tabs are up; keyboard or screen reader focus on it moves on to
-  // the tabs. A touch leaves focus alone, so the strip still tucks after its idle seconds.
-  useEffect(() => {
-    if (peeking && byKeys.current && document.activeElement === grabber.current) {
-      nav.current?.querySelector("button")?.focus();
-    }
-  }, [peeking]);
-
-  useEffect(() => () => clearTimeout(idle.current), []);
-
   const current = (tab: Tab) => (active === tab ? "page" : undefined);
   const weight = (tab: Tab) => (active === tab ? "fill" : "bold");
   // On a large screen someone's board leaves the way back to the lit Explore tab, which says so.
@@ -110,23 +30,7 @@ export function TabBar({ active, tucked, visiting = false, onChange }: Props) {
       {/* A board's key on a large screen: before the tabs, as it stands left of them, and outside the
           strip's landmark, since it's a key and not a section. */}
       <TabsLeadSlot />
-      <nav
-        ref={nav}
-        className={`tabs ${tucked ? "is-tucked" : ""} ${peeking ? "is-peeking" : ""}`}
-        aria-label={t(($) => $.app.tabs.sections)}
-        inert={tucked && !peeking}
-        onPointerDown={keepUp}
-        onPointerMove={keepUp}
-        onFocus={keepUp}
-        onKeyDown={(e) => {
-          if (e.key === "Escape" && peeking) hide();
-          else keepUp();
-        }}
-        // Focus leaving the strip starts the idle count, which it held off while focus was in it.
-        onBlur={(e) => {
-          if (peeking && !nav.current?.contains(e.relatedTarget)) waitIdle();
-        }}
-      >
+      <nav className="tabs" aria-label={t(($) => $.app.tabs.sections)}>
         <button
           className="tab tab-board"
           data-press
@@ -160,38 +64,6 @@ export function TabBar({ active, tucked, visiting = false, onChange }: Props) {
           <span>{t(($) => $.app.tabs.shop)}</span>
         </button>
       </nav>
-      {tucked && (
-        <button
-          ref={grabber}
-          type="button"
-          className={`tab-grabber ${grabbed ? "" : "is-pull-tab"} ${peeking ? "is-hidden" : ""}`}
-          aria-label={t(($) => $.app.tabs.showTabs)}
-          aria-expanded={peeking}
-          tabIndex={peeking ? -1 : undefined}
-          onPointerDown={(e) => {
-            grabY.current = e.clientY;
-            e.currentTarget.setPointerCapture(e.pointerId);
-          }}
-          onPointerMove={(e) => {
-            if (grabY.current === null || grabY.current - e.clientY <= GRAB_PX) return;
-            grabY.current = null;
-            show();
-          }}
-          onPointerUp={() => (grabY.current = null)}
-          onPointerCancel={() => (grabY.current = null)}
-          // A keyboard's or a screen reader's activation is a click with no detail; a touch's has one.
-          onClick={(e) => show(e.detail === 0)}
-        >
-          {grabbed ? (
-            <i />
-          ) : (
-            <span className="tab-pull">
-              <CaretUp />
-              {t(($) => $.app.tabs.grabber)}
-            </span>
-          )}
-        </button>
-      )}
     </>
   );
 }

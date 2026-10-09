@@ -1,0 +1,7 @@
+/* The foot row's third tile: after undo and redo, with their 6px gap. */
+.my-board-tile {
+  position: absolute;
+  left: calc(18px + 2 * (46px + 6px));
+  bottom: 22px;
+  z-index: 3;
+}

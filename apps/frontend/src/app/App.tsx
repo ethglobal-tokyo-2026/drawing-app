@@ -172,7 +172,7 @@ export default function App() {
     history.replaceState(history.state, "", url);
   }, [opened]);
 
-  // While drawing, the drawing screen's controls and the grabber are all there is to focus.
+  // While drawing, the drawing screen's controls are all there is to focus.
   useFocusLoop(phone, drawing);
 
   // After a seal, Draw starts a new sticker; otherwise it resumes the one in progress.
@@ -190,9 +190,9 @@ export default function App() {
     setVisiting(undefined);
   };
 
-  // The drawing screen tucks the tabs away so the sheet gets the room.
+  // The drawing screen has no tabs, so the sheet gets the room; its My board tile leads back.
   return (
-    <div ref={phone} className={`phone ${drawing ? "has-tucked-tabs" : ""}`}>
+    <div ref={phone} className={`phone ${drawing ? "is-drawing" : ""}`}>
       <div
         className="screen"
         data-arriving={arriving !== null && arriving === view ? "" : undefined}
@@ -212,6 +212,7 @@ export default function App() {
               }}
               onNewSticker={() => setSealedId(undefined)}
               onGoToBoard={() => setView("board")}
+              onMyBoardTile={() => changeTab("board")}
             />
           </Suspense>
         )}
@@ -256,12 +257,7 @@ export default function App() {
         )}
         {view === "shop" && <ShopScreen onBuyReserveTickets={() => setCheckingOut(true)} />}
       </div>
-      <TabBar
-        active={drawing ? undefined : view}
-        tucked={drawing}
-        visiting={visiting !== undefined}
-        onChange={changeTab}
-      />
+      {!drawing && <TabBar active={view} visiting={visiting !== undefined} onChange={changeTab} />}
       {checkingOut && view === "shop" && (
         <ReserveTicketCheckout
           onDraw={() => {

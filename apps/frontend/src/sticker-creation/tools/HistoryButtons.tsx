@@ -1,6 +1,7 @@
 import { ArrowClockwise, ArrowCounterClockwise } from "../../icons";
 import type { Ref } from "react";
 import { useTranslation } from "../../i18n/react";
+import "./foot-tile.css";
 import "./HistoryButtons.css";
 
 interface Props {
@@ -20,7 +21,7 @@ export function HistoryButtons({ canUndo, canRedo, undoRef, onUndo, onRedo }: Pr
       <button
         ref={undoRef}
         type="button"
-        className="history-tile"
+        className="foot-tile"
         aria-label={t(($) => $.stickerCreation.history.undo)}
         disabled={!canUndo}
         onClick={onUndo}
@@ -29,7 +30,7 @@ export function HistoryButtons({ canUndo, canRedo, undoRef, onUndo, onRedo }: Pr
       </button>
       <button
         type="button"
-        className="history-tile"
+        className="foot-tile"
         aria-label={t(($) => $.stickerCreation.history.redo)}
         disabled={!canRedo}
         onClick={onRedo}
