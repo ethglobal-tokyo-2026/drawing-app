@@ -17,8 +17,42 @@ export const along = (box: Box, down: number, from: number, to: number, steps = 
 /** The middle of a stroke's points. */
 export const middle = (points: At[]) => points[Math.floor(points.length / 2)];
 
-/** An Apple Pencil held at an angle: trusted pen events with pressure and tilt, hovering with no buttons. */
-export async function pencil(page: Page) {
+/** An Apple Pencil: it hovers with no buttons, or presses with a force; `time` stamps the event. */
+export interface Pencil {
+  hover: (point: At) => Promise<unknown>;
+  /** `time`: when the event happened, in ms since the epoch. */
+  down: (point: At, force: number, time?: number) => Promise<unknown>;
+  move: (point: At, force: number, time?: number) => Promise<unknown>;
+  up: (point: At, time?: number) => Promise<unknown>;
+}
+
+/** A finger or a palm on the glass: its id, where it is, and its contact's radius in CSS px. */
+export type Contact = At & { id: number; radius: number };
+
+/**
+ * Fingers and palms. A start or a move lists every contact still down, and presses what's new; an
+ * end lifts the contacts it lists, or with none listed, every contact.
+ */
+export interface Hand {
+  down: (contacts: Contact[]) => Promise<unknown>;
+  move: (contacts: Contact[]) => Promise<unknown>;
+  /** Lifts `contacts`, or every contact still down; a move that leaves one out doesn't lift it. */
+  up: (contacts?: Contact[]) => Promise<unknown>;
+}
+
+// Playwright has no pen or multi-touch input. Chromium takes them, trusted, through its DevTools
+// protocol; WebKit, which has nothing of the kind, gets them dispatched in the page.
+const inChromium = (page: Page) => page.context().browser()?.browserType().name() === "chromium";
+
+/** An Apple Pencil held at an angle: pen events with pressure and tilt, hovering with no buttons. */
+export const pencil = (page: Page): Promise<Pencil> =>
+  inChromium(page) ? devToolsPencil(page) : Promise.resolve(pagePencil(page));
+
+/** Fingers and palms on the glass, each contact as wide as its radius says. */
+export const hand = (page: Page): Promise<Hand> =>
+  inChromium(page) ? devToolsHand(page) : Promise.resolve(pageHand(page));
+
+async function devToolsPencil(page: Page): Promise<Pencil> {
   const cdp = await page.context().newCDPSession(page);
   const send = (
     type: "mouseMoved" | "mousePressed" | "mouseReleased",
@@ -48,7 +82,179 @@ export async function pencil(page: Page) {
     up: (point: At, time?: number) => send("mouseReleased", point, 0, false, time),
   };
 }
-export type Pencil = Awaited<ReturnType<typeof pencil>>;
+
+async function devToolsHand(page: Page): Promise<Hand> {
+  const cdp = await page.context().newCDPSession(page);
+  const send = (type: "touchStart" | "touchMove" | "touchEnd", contacts: Contact[]) =>
+    cdp.send("Input.dispatchTouchEvent", {
+      type,
+      touchPoints: contacts.map(({ x, y, id, radius }) => ({
+        x,
+        y,
+        id,
+        radiusX: radius,
+        radiusY: radius,
+        force: 1,
+      })),
+    });
+  return {
+    down: (contacts) => send("touchStart", contacts),
+    move: (contacts) => send("touchMove", contacts),
+    up: (contacts = []) => send("touchEnd", contacts),
+  };
+}
+
+/** One pointer event for `dispatchPointer`. */
+type PagePointer = {
+  type: "pointerdown" | "pointermove" | "pointerup";
+  id: number;
+  kind: "pen" | "touch";
+  at: At;
+  pressure: number;
+  /** The contact's size across, in CSS px. */
+  size: number;
+  pressed: boolean;
+  primary: boolean;
+  /** When it happened, in ms since the epoch. */
+  time?: number;
+  /** Where the pen goes next, as the browser would guess it. */
+  next?: At;
+};
+
+/**
+ * Dispatches a pointer event in the page as the browser would: at what's under it, or for a pressed
+ * pointer at where it landed, as capture does, with the boundary events of moving between elements.
+ * A finger that lifts is gone, so it leaves.
+ */
+function dispatchPointer(e: PagePointer) {
+  const held = window as Window & {
+    pointerOver?: Map<number, { over: Element | null; landed: Element | null }>;
+  };
+  held.pointerOver ??= new Map();
+  const state = held.pointerOver.get(e.id) ?? { over: null, landed: null };
+  held.pointerOver.set(e.id, state);
+  const init: PointerEventInit = {
+    pointerId: e.id,
+    pointerType: e.kind,
+    isPrimary: e.primary,
+    clientX: e.at.x,
+    clientY: e.at.y,
+    pressure: e.pressure,
+    width: e.size,
+    height: e.size,
+    tiltX: e.kind === "pen" ? 30 : 0,
+    button: e.type === "pointermove" ? -1 : 0,
+    buttons: e.pressed ? 1 : 0,
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+  };
+  const boundary = { ...init, bubbles: false, cancelable: false };
+  const moveTo = (next: Element | null) => {
+    const from = state.over;
+    if (next === from) return;
+    from?.dispatchEvent(new PointerEvent("pointerout", init));
+    for (let el = from; el && !el.contains(next); el = el.parentElement)
+      el.dispatchEvent(new PointerEvent("pointerleave", boundary));
+    next?.dispatchEvent(new PointerEvent("pointerover", init));
+    const entered: Element[] = [];
+    for (let el = next; el && !el.contains(from); el = el.parentElement) entered.unshift(el);
+    for (const el of entered) el.dispatchEvent(new PointerEvent("pointerenter", boundary));
+    state.over = next;
+  };
+  const target = state.landed ?? document.elementFromPoint(e.at.x, e.at.y);
+  moveTo(target);
+  const event = new PointerEvent(e.type, {
+    ...init,
+    predictedEvents: e.next
+      ? [new PointerEvent("pointermove", { ...init, clientX: e.next.x, clientY: e.next.y })]
+      : [],
+  });
+  if (e.time !== undefined)
+    Object.defineProperty(event, "timeStamp", { value: e.time - performance.timeOrigin });
+  target?.dispatchEvent(event);
+  if (e.type === "pointerdown") state.landed = target;
+  if (e.type !== "pointerup") return;
+  state.landed = null;
+  if (e.kind === "touch") moveTo(null);
+}
+
+function pagePencil(page: Page): Pencil {
+  const id = 2;
+  let last: At | null = null;
+  const send = (
+    type: PagePointer["type"],
+    at: At,
+    force: number,
+    pressed: boolean,
+    time?: number,
+  ) => {
+    // A pressed pen's next point, as far on as it just came.
+    const next = pressed && last ? { x: 2 * at.x - last.x, y: 2 * at.y - last.y } : undefined;
+    last = pressed ? at : null;
+    return page.evaluate(dispatchPointer, {
+      type,
+      id,
+      kind: "pen" as const,
+      at,
+      pressure: force,
+      size: 1,
+      pressed,
+      primary: true,
+      time,
+      next: type === "pointermove" ? next : undefined,
+    });
+  };
+  return {
+    hover: (point) => send("pointermove", point, 0, false),
+    down: (point, force, time) => send("pointerdown", point, force, true, time),
+    move: (point, force, time) => send("pointermove", point, force, true, time),
+    up: (point, time) => send("pointerup", point, 0, false, time),
+  };
+}
+
+function pageHand(page: Page): Hand {
+  const down = new Map<number, Contact & { primary: boolean }>();
+  const send = (type: PagePointer["type"], c: Contact & { primary: boolean }) =>
+    page.evaluate(dispatchPointer, {
+      type,
+      id: 10 + c.id,
+      kind: "touch" as const,
+      at: { x: c.x, y: c.y },
+      pressure: type === "pointerup" ? 0 : 1,
+      size: 2 * c.radius,
+      pressed: type !== "pointerup",
+      primary: c.primary,
+    });
+  return {
+    down: async (contacts) => {
+      for (const c of contacts) {
+        if (down.has(c.id)) continue;
+        const contact = { ...c, primary: down.size === 0 };
+        down.set(c.id, contact);
+        await send("pointerdown", contact);
+      }
+    },
+    move: async (contacts) => {
+      for (const c of contacts) {
+        const was = down.get(c.id);
+        if (!was) continue;
+        const contact = { ...c, primary: was.primary };
+        down.set(c.id, contact);
+        await send("pointermove", contact);
+      }
+    },
+    up: async (contacts = []) => {
+      const ids = contacts.length ? contacts.map((c) => c.id) : [...down.keys()];
+      for (const id of ids) {
+        const contact = down.get(id);
+        if (!contact) continue;
+        down.delete(id);
+        await send("pointerup", contact);
+      }
+    },
+  };
+}
 
 /**
  * A pen stroke through `points`, pressed `force(i)` at each, `ms` between moves. Each event is
@@ -71,36 +277,6 @@ export async function penStroke(
   }
   await pen.up(points[points.length - 1], stamp(points.length));
 }
-
-/** A finger or a palm on the glass: its id, where it is, and its contact's radius in CSS px. */
-export type Contact = At & { id: number; radius: number };
-
-/**
- * Fingers and palms. A start or a move lists every contact still down, as the protocol asks, and
- * presses what's new; an end lifts the contacts it lists, or with none listed, every contact.
- */
-export async function hand(page: Page) {
-  const cdp = await page.context().newCDPSession(page);
-  const send = (type: "touchStart" | "touchMove" | "touchEnd", contacts: Contact[]) =>
-    cdp.send("Input.dispatchTouchEvent", {
-      type,
-      touchPoints: contacts.map(({ x, y, id, radius }) => ({
-        x,
-        y,
-        id,
-        radiusX: radius,
-        radiusY: radius,
-        force: 1,
-      })),
-    });
-  return {
-    down: (contacts: Contact[]) => send("touchStart", contacts),
-    move: (contacts: Contact[]) => send("touchMove", contacts),
-    /** Lifts `contacts`, or every contact still down; a move that leaves one out doesn't lift it. */
-    up: (contacts: Contact[] = []) => send("touchEnd", contacts),
-  };
-}
-export type Hand = Awaited<ReturnType<typeof hand>>;
 
 /** One contact drawn through `points`, `radius` CSS px across its half. */
 export async function touchStroke(page: Page, fingers: Hand, points: At[], radius: number) {
