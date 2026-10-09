@@ -43,7 +43,7 @@
 }
 
 /* What went wrong with the last seal: above the foot row, so it never covers the tiles there, the
-   way out included, and left of the check's column, where Kyoto Seika's corner print stands. */
+   way out included. */
 .seal-chip {
   position: absolute;
   right: 88px;

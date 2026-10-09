@@ -289,8 +289,7 @@
     bottom: calc(var(--foot) + 8px);
   }
 
-  /* The seal problem chip beside the check, over the sheet's corner: Kyoto Seika's corner print is in
-     the sheet's other bottom corner, so it never stands under the chip. */
+  /* The seal problem chip beside the check, over the sheet's corner. */
   .drawing-screen > .seal-chip {
     right: auto;
     left: calc(var(--edge-w) + 4px);
