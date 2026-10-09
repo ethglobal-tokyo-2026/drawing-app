@@ -1,0 +1,4 @@
+[
+{"id":"TRAY-1","verdict":"CONFIRMED","note":"draft; see final"},
+{"id":"TRAY-2","verdict":"CONFIRMED","note":"draft; see final"}
+]

@@ -10,7 +10,11 @@
 
 ### Leftovers to remove
 
-1. **The resin's spec and rim highlight masks are made, stored, served and decoded, and nothing shows them.** Since 34b8d903 (the thin laminate), the live resin's specular is cut from `--m` alone; `--mt`/`--mb` have no reader. Sealing still computes both bands (`sticker-creation/sealing/stickerLayers.ts`, `cutSticker.ts`) and uploads them, the API stores and serves them as PNG and WebP (`apps/api/src/stickers/seal.ts`, `sealForm.ts`, `services/imageStore.ts`, `shapes.ts`), `api/views.ts` maps them, and `sticker-board/boardComplete.ts:78` decodes them for every board sticker at boot: two of the four images each sticker waits for. Confidence: high. Spans sealing and the API, so it needs a plan of its own.
+1. **The resin's spec and rim highlight masks are made, stored, served and decoded, and nothing shows them.** Since 34b8d903 (the thin laminate), the live resin's specular is cut from `--m` alone; `--mt`/`--mb` have no reader. Sealing still computes both bands (`sticker-creation/sealing/stickerLayers.ts`, `cutSticker.ts`) and uploads them, the API stores and serves them as PNG and WebP (`apps/api/src/stickers/seal.ts`, `sealForm.ts`, `services/imageStore.ts`, `shapes.ts`), `api/views.ts` maps them, and `sticker-board/boardComplete.ts:78` decodes them for every board sticker at boot: two of the four images each sticker waits for. Confidence: high. **Taken by another session:** branch `refactor/drop-resin-masks` (93e2c583) drops them end to end.
+
+### Owned by the drawing screen review
+
+`docs/review/2026-10-09-drawing-screen-review.md` already holds three findings in this folder; this review leaves them to it: T-3 (`stat-board/TryPenPressure.tsx` runs its own copy of the pen pipeline), C-4 (`timelapse/testCanvas.ts` ignores `putImageData`'s dirty rect) and R-2 (`timelapse/fillSnapshots.ts` makes canvases by hand).
 
 ### Docs
 

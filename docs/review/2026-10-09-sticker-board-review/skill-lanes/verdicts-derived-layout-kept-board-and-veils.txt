@@ -1,0 +1,4 @@
+[
+ {"id":"KEPT-3","verdict":"(in progress) leaning CONFIRMED","note":"server sends sharp:null for veiled (apps/api/src/shapes.ts:204-206,336-342); withoutNsfwDrawings keeps urls.sharp (stickers/nsfw.ts:28-30); useSharpSrc returns decoded sharp while decoded===urls.sharp (stickers/sharpImage.ts:51)"},
+ {"id":"KEPT-2","verdict":"(in progress) leaning CONFIRMED","note":"keepBoard effect StickerBoard.tsx:520-523 has no forget generation; forget() at StickerDetail.tsx:325, takeOuts.ts:39"}
+]
