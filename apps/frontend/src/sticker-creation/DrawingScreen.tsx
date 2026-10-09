@@ -212,11 +212,7 @@ export function DrawingScreen({
   const [kept, setKept] = useState(true);
   const [keeper] = useState(() => new SessionKeeper(me.id, setKept));
   // The deal of a ticket spent in Kyoto Seika Manga Expression Practice Mode, and whether this sheet's was.
-  const kyotoSeikaSheet = useKyotoSeikaSheet({
-    userId: me.id,
-    dark: me.kyotoSeikaPractice && me.kyotoSeikaDarkSubjects,
-    keeper,
-  });
+  const kyotoSeikaSheet = useKyotoSeikaSheet({ userId: me.id, keeper });
   const ticketKyotoSeika = useRef(false);
   const begin = useRef<BeginKeyHandle>(null);
   // Begin was pressed: the deal tucks away before it goes.

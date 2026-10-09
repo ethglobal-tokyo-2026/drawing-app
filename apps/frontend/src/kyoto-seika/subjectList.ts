@@ -16,8 +16,6 @@ export type KyotoSeikaSubjectEntry = KyotoSeikaSubject & {
   kind: SubjectKind;
   /** In the evocative tier, a subject a student can picture a scene for at once: the upper balloon deals only these. */
   tier: boolean;
-  /** Dealt only with "Dark subjects too" on. */
-  dark: boolean;
 };
 
 /**
@@ -25,7 +23,7 @@ export type KyotoSeikaSubjectEntry = KyotoSeikaSubject & {
  * entry, which a sheet kept by an earlier build may hold in a shape this one can't read.
  */
 export type DealtSubject = KyotoSeikaSubject &
-  Partial<Pick<KyotoSeikaSubjectEntry, "kind" | "tier" | "dark">>;
+  Partial<Pick<KyotoSeikaSubjectEntry, "kind" | "tier">>;
 
 /** Whether `word` has kanji, which take furigana. */
 export const hasKanji = (word: string) => /\p{Script=Han}/u.test(word);
@@ -45,10 +43,10 @@ function readSubject(v: unknown): KyotoSeikaSubject | undefined {
 function readSubjectEntry(v: unknown): KyotoSeikaSubjectEntry | undefined {
   const subject = readSubject(v);
   if (!subject || typeof v !== "object" || v === null) return undefined;
-  if (!("kind" in v && "tier" in v && "dark" in v)) return undefined;
-  const { kind, tier, dark } = v;
-  if (!isKind(kind) || typeof tier !== "boolean" || typeof dark !== "boolean") return undefined;
-  return { ...subject, kind, tier, dark };
+  if (!("kind" in v && "tier" in v)) return undefined;
+  const { kind, tier } = v;
+  if (!isKind(kind) || typeof tier !== "boolean") return undefined;
+  return { ...subject, kind, tier };
 }
 
 /**

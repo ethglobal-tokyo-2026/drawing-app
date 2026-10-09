@@ -13,8 +13,6 @@ export interface Deal {
 export interface DealOptions {
   /** Words dealt on this phone lately, newest last. */
   recent: readonly string[];
-  /** Dark subjects too: dealt only while both switches are on. */
-  dark: boolean;
   random: () => number;
 }
 
@@ -23,21 +21,20 @@ type List = readonly KyotoSeikaSubjectEntry[];
 /**
  * The one dealing rule: what `balloon` can be dealt beside what's on screen. The upper balloon only from
  * the evocative tier, so every pair has a strong word; never a kind the other balloon holds, nor the
- * other balloon's English, nor either balloon's word, nor a dark subject without Dark subjects too;
- * words dealt lately only when nothing else is left.
+ * other balloon's English, nor either balloon's word; words dealt lately only when nothing else is
+ * left.
  */
 function poolFor(
   list: List,
   balloon: Balloon,
   shown: readonly (DealtSubject | null)[],
-  { recent, dark }: Pick<DealOptions, "recent" | "dark">,
+  { recent }: Pick<DealOptions, "recent">,
 ): KyotoSeikaSubjectEntry[] {
   const other = shown[balloon === 0 ? 1 : 0];
   const onScreen = new Set(shown.flatMap((s) => (s ? [s.ja] : [])));
   const allowed = list.filter(
     (s) =>
       (balloon === 1 || s.tier) &&
-      (dark || !s.dark) &&
       !onScreen.has(s.ja) &&
       s.kind !== other?.kind &&
       s.en.toLowerCase() !== other?.en.toLowerCase(),

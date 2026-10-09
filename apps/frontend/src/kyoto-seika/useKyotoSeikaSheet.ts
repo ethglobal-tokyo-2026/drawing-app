@@ -12,8 +12,6 @@ export type SubjectListState =
 
 interface Options {
   userId: string;
-  /** Dark subjects too: both switches are on. */
-  dark: boolean;
   keeper: SessionKeeper;
 }
 
@@ -21,7 +19,7 @@ interface Options {
  * The deal of a sheet whose ticket was spent in Kyoto Seika Manga Expression Practice Mode: the list,
  * the pair with each die's rolls, and Begin, each kept with the drawing in progress as it changes.
  */
-export function useKyotoSeikaSheet({ userId, dark, keeper }: Options) {
+export function useKyotoSeikaSheet({ userId, keeper }: Options) {
   const [list, setList] = useState<SubjectListState>({ status: "idle" });
   const [deal, setDeal] = useState<Deal | null>(null);
   const [begun, setBegun] = useState(false);
@@ -36,7 +34,7 @@ export function useKyotoSeikaSheet({ userId, dark, keeper }: Options) {
     setDeal(next.subjects && { subjects: next.subjects, rolls: next.rolls });
     setBegun(next.begun);
   };
-  const options = () => ({ recent: readDealtRecently(userId), dark, random: Math.random });
+  const options = () => ({ recent: readDealtRecently(userId), random: Math.random });
 
   const load = (sheet: number) => {
     setList({ status: "loading" });
