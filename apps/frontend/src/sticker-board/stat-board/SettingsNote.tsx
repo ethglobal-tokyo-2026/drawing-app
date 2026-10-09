@@ -17,6 +17,7 @@ import { CensorBar } from "../../kyoto-seika/CensorBar";
 import { openLinkInLine } from "../../line/openLink";
 import { useTickets } from "../../tickets/useTickets";
 import { ErrorLine } from "../../ui/ErrorLine";
+import { Switch } from "../../ui/Switch";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { forget as forgetKeptBoard } from "../lastBoard";
 import { ChoiceRow } from "./ChoiceRow";
@@ -272,12 +273,7 @@ export function SettingsNote() {
         <div className="settings-note__setting" aria-busy={saving("nsfw")}>
           <label className="settings-note__option settings-note__switch">
             <span>{t(($) => $.stickerBoard.settings.nsfw.show)}</span>
-            <input
-              type="checkbox"
-              role="switch"
-              checked={shown.nsfwOptIn}
-              onChange={() => switchNsfw(!shown.nsfwOptIn)}
-            />
+            <Switch checked={shown.nsfwOptIn} onChange={switchNsfw} />
           </label>
           <p className="fine settings-note__status" role="status">
             {statusLine("nsfw")}
@@ -323,13 +319,11 @@ export function SettingsNote() {
                 }}
               />
             </span>
-            <input
-              type="checkbox"
-              role="switch"
+            <Switch
               checked={shown.kyotoSeikaPractice}
               aria-label={t(($) => $.stickerBoard.settings.kyotoSeika.spokenName)}
               aria-describedby={`${id}-kyoto-seika-about`}
-              onChange={() => switchKyotoSeika(!shown.kyotoSeikaPractice)}
+              onChange={switchKyotoSeika}
             />
           </label>
           <p className="settings-note__about" id={`${id}-kyoto-seika-about`}>
@@ -350,12 +344,10 @@ export function SettingsNote() {
             >
               <label className="settings-note__option settings-note__switch">
                 <span>{t(($) => $.stickerBoard.settings.kyotoSeika.dark.label)}</span>
-                <input
-                  type="checkbox"
-                  role="switch"
+                <Switch
                   checked={shown.kyotoSeikaDarkSubjects}
                   aria-describedby={`${id}-kyoto-seika-dark-about`}
-                  onChange={() => switchDark(!shown.kyotoSeikaDarkSubjects)}
+                  onChange={switchDark}
                 />
               </label>
               <p className="settings-note__about" id={`${id}-kyoto-seika-dark-about`}>

@@ -4,6 +4,7 @@ import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../../api/testing";
+import { SWITCH } from "../../ui/testing";
 import { toPerson } from "../../api/views";
 import { errors } from "../../i18n/strings/errors";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
@@ -63,7 +64,7 @@ const choose = (host: HTMLElement, label: string) =>
 
 /** Show 18+ stickers, the note's first switch. */
 const switchOf = (host: HTMLElement) => {
-  const found = host.querySelector<HTMLInputElement>('input[role="switch"]');
+  const found = host.querySelector<HTMLInputElement>(SWITCH);
   if (!found) throw new Error("No switch on the note");
   return found;
 };
@@ -182,7 +183,7 @@ describe("the Settings note's 18+ switch", () => {
 describe("the Settings note's Kyoto Seika Practice Mode", () => {
   const switchIn = (host: HTMLElement, setting: "kyoto-seika" | "kyoto-seika-dark") => {
     const found = host.querySelector<HTMLInputElement>(
-      `[data-setting="${setting}"] > label input[role="switch"]`,
+      `[data-setting="${setting}"] > label ${SWITCH}`,
     );
     if (!found) throw new Error(`No ${setting} switch on the note`);
     return found;

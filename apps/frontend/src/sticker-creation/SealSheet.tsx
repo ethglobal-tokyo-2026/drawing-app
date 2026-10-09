@@ -6,6 +6,7 @@ import { Key } from "../ui/Key";
 import { QuietLink } from "../ui/QuietLink";
 import { releaseCanvas } from "../ui/releaseCanvas";
 import { Sheet } from "../ui/Sheet";
+import { Switch } from "../ui/Switch";
 import { context2d } from "./canvas/context2d";
 import "./SealSheet.css";
 
@@ -53,13 +54,11 @@ export function SealSheet({ open, timeUp, nsfw, ink, onNsfwChange, onSeal, onNot
         <h2 className="seal-sheet__title">{words}</h2>
         <label className="seal-sheet__switch">
           <span aria-hidden="true">{t(($) => $.stickerCreation.sealSheet.nsfw)}</span>
-          <input
-            type="checkbox"
-            role="switch"
+          <Switch
             checked={nsfw}
             data-autofocus
             aria-label={t(($) => $.stickerCreation.sealSheet.nsfwLabel)}
-            onChange={(e) => onNsfwChange(e.currentTarget.checked)}
+            onChange={onNsfwChange}
           />
         </label>
       </div>

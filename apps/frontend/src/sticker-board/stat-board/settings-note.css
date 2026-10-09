@@ -138,43 +138,6 @@
   transform: rotate(27deg);
 }
 
-/* A switch at its row's end, filled Bonbon Pink when on. The thumb is a gradient so it needs no
-   pseudo-element, which a checkbox may not carry. */
-.settings-note__switch input {
-  flex: none;
-  width: 46px;
-  height: 28px;
-  margin: 0;
-  border: 1.5px solid var(--graphite);
-  border-radius: 999px;
-  background-color: var(--canvas);
-  background-image: radial-gradient(circle, var(--graphite) 0 8px, transparent 8.5px);
-  background-repeat: no-repeat;
-  background-size: 22px 22px;
-  background-position: 2px 50%;
-  appearance: none;
-}
-
-.settings-note__switch input:checked {
-  border-color: var(--ink);
-  background-color: var(--pink);
-  background-image: radial-gradient(circle, var(--ink) 0 8px, transparent 8.5px);
-  background-position: calc(100% - 2px) 50%;
-}
-
-.settings-note__switch input:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .settings-note__switch input {
-    transition:
-      background-color 160ms var(--ease-out),
-      background-position 160ms var(--ease-out);
-  }
-}
-
 /* What a switch does: a supporting note in sentence case, since caps fine print is for metadata. */
 .settings-note__about {
   margin: 4px 0 0;

@@ -111,3 +111,6 @@ export function dragBy(el: Element | null, ...path: [dx: number, dy: number][]) 
   send("pointerup", dx, dy);
   act(() => void el?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 }
+
+/** The input of the app's one switch (`Switch`): tests find switches by it, so one drawn any other way isn't found. */
+export const SWITCH = ".switch > input[role='switch']";

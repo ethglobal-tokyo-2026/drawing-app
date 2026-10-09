@@ -83,40 +83,6 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* The switch is a mark, not a setting, so it fills Ink when on: pink is gratitude's field, and the
-   preview's foil carries the 18+. The thumb is a gradient, since a checkbox can't carry a
-   pseudo-element. */
-.seal-sheet__switch input {
-  flex: none;
-  width: 46px;
-  height: 28px;
-  margin: 0;
-  border: 1.5px solid var(--graphite);
-  border-radius: 999px;
-  background-color: var(--canvas);
-  background-image: radial-gradient(circle, var(--graphite) 0 8px, transparent 8.5px);
-  background-repeat: no-repeat;
-  background-size: 22px 22px;
-  background-position: 2px 50%;
-  appearance: none;
-  cursor: pointer;
-  transition:
-    background-color 160ms var(--ease-out),
-    background-position 160ms var(--ease-out);
-}
-
-.seal-sheet__switch input:checked {
-  border-color: var(--ink);
-  background-color: var(--ink);
-  background-image: radial-gradient(circle, var(--canvas) 0 8px, transparent 8.5px);
-  background-position: calc(100% - 2px) 50%;
-}
-
-.seal-sheet__switch input:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
-}
-
 .seal-sheet__foot {
   display: flex;
   flex-direction: column;
@@ -132,9 +98,5 @@
 @media (prefers-reduced-motion: reduce) {
   .seal-preview .sticker-foil {
     animation: none;
-  }
-
-  .seal-sheet__switch input {
-    transition: none;
   }
 }

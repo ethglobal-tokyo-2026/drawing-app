@@ -24,7 +24,7 @@ import { i18next } from "../i18n/i18n";
 import { strings } from "../i18n/strings";
 import { useTickets } from "../tickets/useTickets";
 import { personKey } from "../ui/deviceStorage";
-import { onLargeScreen } from "../ui/testing";
+import { onLargeScreen, SWITCH } from "../ui/testing";
 import type { HistoryState, InputMode } from "./canvas/inkEngine";
 import type { Op } from "./canvas/ops";
 import { frameFor, SHEET_SHORT_UNITS } from "./canvas/sheetFrame";
@@ -320,7 +320,7 @@ const clickSealKey = () => document.querySelector<HTMLButtonElement>(".seal-key"
 const tapSealKey = () => act(clickSealKey);
 /** The seal sheet while it's up; a closed one slides away first, which happy-dom never finishes. */
 const sealSheet = () => document.querySelector<HTMLElement>(".seal-sheet:not(.is-leaving)");
-const nsfwSwitch = () => sealSheet()?.querySelector<HTMLInputElement>("input[role='switch']");
+const nsfwSwitch = () => sealSheet()?.querySelector<HTMLInputElement>(SWITCH);
 const sheetButton = (words: string) =>
   [...(sealSheet()?.querySelectorAll("button") ?? [])].find((b) => b.textContent === words);
 const sealOnSheet = () =>
