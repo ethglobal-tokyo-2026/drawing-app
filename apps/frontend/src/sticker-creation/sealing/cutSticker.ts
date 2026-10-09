@@ -7,7 +7,7 @@ import { BORDER_UNITS, dieCut, type Point } from "./dieCut";
 import type { Pixels } from "./pixels";
 import { sharpSticker, stickerLayers, type Rect } from "./stickerLayers";
 
-export type LayerName = "plain" | "gloss" | "shadow" | "mask" | "spec" | "rim";
+export type LayerName = "plain" | "gloss" | "shadow" | "mask";
 
 /** A blank canvas, on either thread, to paint and encode as a PNG. */
 interface PngCanvas {
@@ -86,7 +86,7 @@ export async function cutSticker(ink: Ink, make: MakeCanvas): Promise<CutSticker
   const inked = cutInk(pixels, ink.density);
   if (!inked) return null;
   const { cut, layers } = inked;
-  const { width, height, place, bands } = layers;
+  const { width, height, place } = layers;
 
   const contour = cut.contour.map(([x, y]): Point => [
     (x - cut.pad) / cut.scale,
@@ -102,14 +102,12 @@ export async function cutSticker(ink: Ink, make: MakeCanvas): Promise<CutSticker
     g.putImageData(new ImageData(layer, w, h), 0, 0);
     return png();
   };
-  const [png, flat, plain, gloss, shadow, spec, rim, mask] = await Promise.all([
+  const [png, flat, plain, gloss, shadow, mask] = await Promise.all([
     encoded(layers.sticker),
     flatten(ink, make),
     encoded(layers.plain),
     encoded(layers.gloss),
     encoded(layers.shadow),
-    encoded(bands.spec, bands.width, bands.height),
-    encoded(bands.rim, bands.width, bands.height),
     encoded(layers.mask),
   ]);
   // Once the layers are encoded, so its canvas is never held beside theirs.
@@ -119,7 +117,7 @@ export async function cutSticker(ink: Ink, make: MakeCanvas): Promise<CutSticker
     png,
     sharp: sharpPng,
     flat,
-    layers: { plain, gloss, shadow, mask, spec, rim },
+    layers: { plain, gloss, shadow, mask },
     maskPixels: layers.mask,
     outline: outlinePath(inImage),
     width,

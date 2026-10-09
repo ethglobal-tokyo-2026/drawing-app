@@ -291,8 +291,6 @@ const spentDaily = (kyotoSeikaPractice: boolean) =>
 const cutSticker = () => ({
   png: new Blob(["png"]),
   mask: new Blob(["mask"]),
-  spec: new Blob(["spec"]),
-  rim: new Blob(["rim"]),
   flat: new Blob(["flat"]),
   outline: "M0 0L1 1Z",
   width: 10,

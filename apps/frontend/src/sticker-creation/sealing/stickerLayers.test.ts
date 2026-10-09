@@ -138,27 +138,6 @@ describe("stickerLayers", () => {
     expect(castEnds).toBeGreaterThan(cutEnds);
     expect(castEnds - cutEnds).toBeLessThanOrEqual(pad / 2);
   });
-
-  it("cuts the live resin's bands from the silhouette: the specular up top, the rim light below", () => {
-    const { layers } = layersOf(redDisk());
-    const { spec, rim, width, height } = layers.bands;
-    // Alpha summed over the top and bottom halves of each band.
-    const halves = (band: Uint8ClampedArray) => {
-      let top = 0;
-      let bottom = 0;
-      for (let y = 0; y < height; y++)
-        for (let x = 0; x < width; x++) {
-          const a = band[(y * width + x) * 4 + 3];
-          if (y < height / 2) top += a;
-          else bottom += a;
-        }
-      return { top, bottom };
-    };
-    const s = halves(spec);
-    const r = halves(rim);
-    expect(s.top).toBeGreaterThan(4 * s.bottom);
-    expect(r.bottom).toBeGreaterThan(4 * r.top);
-  });
 });
 
 /** Cutting a sheet larger than the stored image takes seconds while the whole suite runs. */

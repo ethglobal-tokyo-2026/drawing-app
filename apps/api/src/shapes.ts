@@ -175,22 +175,18 @@ export const toMe = (
   kyotoSeikaPractice: kyotoSeikaPracticeOn(user),
 });
 
-/** The five PNGs a sticker is sealed with. The sticker PNG's hash names them. */
+/** The three PNGs a sticker is sealed with. The sticker PNG's hash names them. */
 export const stickerPngsSchema = z.object({
   png: z.url(),
   mask: z.url(),
-  spec: z.url(),
-  rim: z.url(),
   flat: z.url(),
 });
 export type StickerPngKind = keyof z.infer<typeof stickerPngsSchema>;
 
-/** What the app shows: WebP copies of the sticker and its masks, and the foil band's mask. */
+/** What the app shows: WebP copies of the sticker and its mask, and the foil band's mask. */
 export const stickerWebpsSchema = z.object({
   sticker: z.url(),
   mask: z.url(),
-  spec: z.url(),
-  rim: z.url(),
   /** The silhouette grown to the foil band's outer edge, the image's size. */
   foil: z.url(),
 });

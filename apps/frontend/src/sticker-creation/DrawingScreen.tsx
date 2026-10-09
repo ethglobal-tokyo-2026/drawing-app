@@ -388,8 +388,6 @@ export function DrawingScreen({
       png: cut.png,
       ...(cut.sharp && { sharp: cut.sharp }),
       mask: cut.mask,
-      spec: cut.spec,
-      rim: cut.rim,
       flat: cut.flat,
       ...(timelapse && { timelapse }),
       nsfw: marked,

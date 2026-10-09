@@ -4,8 +4,6 @@ import { useMyStickerBoard } from "../sticker-board/useMyStickerBoard";
 import type { StickerUrls } from "../stickers/stickerUrls";
 import sampleMask from "./sample-sticker/mask.png";
 import samplePng from "./sample-sticker/sticker.png";
-import sampleRim from "./sample-sticker/rim.png";
-import sampleSpec from "./sample-sticker/spec.png";
 
 /** A sticker the Shop's laminate and backing foil previews wear. */
 export interface ShopSticker {
@@ -16,7 +14,7 @@ export interface ShopSticker {
 
 /** A cat drawn and sealed with the app's own brush, fill and cut, for artists with no sticker yet. */
 const SAMPLE_STICKER: ShopSticker = {
-  urls: { png: samplePng, mask: sampleMask, spec: sampleSpec, rim: sampleRim },
+  urls: { png: samplePng, mask: sampleMask },
   width: 374,
   height: 384,
 };

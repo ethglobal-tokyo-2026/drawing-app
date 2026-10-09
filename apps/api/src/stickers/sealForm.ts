@@ -62,7 +62,10 @@ const jsonField = <Schema extends z.ZodType>(schema: Schema) =>
 
 const png = z.file().mime("image/png").max(MAX_IMAGE_BYTES);
 
-/** POST /api/stickers's multipart parts. The timelapse is optional, and stored as sent. */
+/**
+ * POST /api/stickers's multipart parts. The timelapse is optional, and stored as sent. Parts it doesn't
+ * name are dropped, not refused, so a page open since an older build still seals.
+ */
 export const sealForm = z.object({
   ticketUseId: digits(createSelectSchema(ticketUses).shape.id.min(1)),
   timeUsed: digits(stickerColumns.timeUsed),
@@ -76,8 +79,6 @@ export const sealForm = z.object({
   /** The sticker again, larger, from ink that holds more than `png`. */
   sharp: z.file().mime("image/png").max(MAX_SHARP_IMAGE_BYTES).optional(),
   mask: png,
-  spec: png,
-  rim: png,
   flat: png,
   timelapse: z.file().max(MAX_TIMELAPSE_BYTES).optional(),
   /** An NSFW sticker: whoever seals it may mark it 18+, opted in or not. */

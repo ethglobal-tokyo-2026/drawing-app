@@ -72,7 +72,7 @@ describe("the disk image store", () => {
       expect(new URL(webp[kind]).pathname).toMatch(`${IMAGE_FOLDER}${contentHash}.`);
       const { format, width } = await sharp(fileAt(webp[kind])).metadata();
       expect(format).toBe("webp");
-      // The sticker, its mask and the foil band's mask are the sticker's size; spec and rim the band's.
+      // The sticker, its mask and the foil band's mask are all the sticker's size.
       const from = kind === "sticker" ? "png" : kind === "foil" ? "mask" : kind;
       expect(width).toBe((await sharp(pngs[from]).metadata()).width);
     }

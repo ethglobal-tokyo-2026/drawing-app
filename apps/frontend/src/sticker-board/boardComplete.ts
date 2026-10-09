@@ -75,8 +75,8 @@ export interface AssemblingSticker {
 export const assemblyOf = (stickers: readonly BoardStickerView[]): AssemblingSticker[] =>
   stickers.flatMap((s) => {
     if (!onTheBoard(s)) return [];
-    const { png, mask, spec, rim } = s.urls;
-    return [{ urls: [png, mask, spec, rim] }];
+    const { png, mask } = s.urls;
+    return [{ urls: [png, mask] }];
   });
 
 /**

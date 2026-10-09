@@ -34,8 +34,6 @@ const request = {
   outline: "M0 0Z",
   png: image,
   mask: image,
-  spec: image,
-  rim: image,
   flat: image,
   nsfw: false,
 };

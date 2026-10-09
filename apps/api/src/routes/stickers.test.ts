@@ -109,7 +109,7 @@ const timelapseOf = (stickerId: string) =>
   test.db.select().from(stickerTimelapses).where(eq(stickerTimelapses.stickerId, stickerId)).get();
 
 describe("POST /api/stickers", () => {
-  it("stores the five images under the PNG's hash, spends the ticket, and shows the sticker as NEW", async () => {
+  it("stores the three images under the PNG's hash, spends the ticket, and shows the sticker as NEW", async () => {
     const artistId = insertUser(test.db);
     const { ticketUseId, sticker, stickerPlacement } = await seal(artistId);
     const images = sealImages();

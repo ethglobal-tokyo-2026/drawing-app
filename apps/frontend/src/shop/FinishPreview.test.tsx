@@ -6,7 +6,7 @@ import { FinishPreview, type Laminate } from "./FinishPreview";
 import type { ShopSticker } from "./shopSticker";
 
 const sticker: ShopSticker = {
-  urls: { png: "/cat.webp", mask: "/cat-mask.webp", spec: "/cat-spec.webp", rim: "/cat-rim.webp" },
+  urls: { png: "/cat.webp", mask: "/cat-mask.webp" },
   width: 374,
   height: 384,
 };

@@ -154,8 +154,6 @@ describe("sealing", () => {
     outline: "M0 0L1 1Z",
     png: new Blob(["png"]),
     mask: new Blob(["mask"]),
-    spec: new Blob(["spec"]),
-    rim: new Blob(["rim"]),
     flat: new Blob(["flat"]),
     nsfw: false,
   };

@@ -54,16 +54,13 @@ export const STICKER_SIZE = { width: 320, height: 240 };
 export const SHARP_SIZE = { width: 800, height: 600 };
 /** Its size on the sheet, in sheet units: the timelapse's place, at two image px per unit. */
 export const STICKER_DRAWN_SIZE = { width: 160, height: 120.5 };
-/** The live resin's band-sized masks, and the flat sheet: neither is the sticker's size. */
-const BAND_SIZE = { width: 352, height: 272 };
+/** The flat sheet: not the sticker's size. */
 const SHEET_SIZE = { width: 1100, height: 800 };
 
-/** The five images a seal uploads. Each part's bytes differ, so a mix-up shows. */
+/** The three images a seal uploads. Each part's bytes differ, so a mix-up shows. */
 export const sealImages = () => ({
   png: testPng(STICKER_SIZE.width, STICKER_SIZE.height),
   mask: testPng(STICKER_SIZE.width, STICKER_SIZE.height, "mask"),
-  spec: testPng(BAND_SIZE.width, BAND_SIZE.height, "spec"),
-  rim: testPng(BAND_SIZE.width, BAND_SIZE.height, "rim"),
   flat: testPng(SHEET_SIZE.width, SHEET_SIZE.height, "flat"),
 });
 
@@ -107,8 +104,6 @@ export function sealUpload(ticketUseId: number) {
     png: pngFile(images.png, "png"),
     sharp: pngFile(sharpImage(), "sharp"),
     mask: pngFile(images.mask, "mask"),
-    spec: pngFile(images.spec, "spec"),
-    rim: pngFile(images.rim, "rim"),
     flat: pngFile(images.flat, "flat"),
     timelapse: new File([testTimelapse()], "timelapse.json.gz", { type: "application/gzip" }),
     nsfw: "false",

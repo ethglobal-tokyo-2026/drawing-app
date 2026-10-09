@@ -65,14 +65,10 @@ function stickerImageUrls(baseUrl: string, contentHash: string): StickerImages {
   return {
     png: png("png"),
     mask: png("mask"),
-    spec: png("spec"),
-    rim: png("rim"),
     flat: png("flat"),
     webp: {
       sticker: webp("sticker"),
       mask: webp("mask"),
-      spec: webp("spec"),
-      rim: webp("rim"),
       foil: webp("foil"),
     },
     sharp: {
@@ -240,8 +236,6 @@ async function makeWebp(
     case "sticker":
       return stickerWebp(await readPng("png"), await readPng("mask"));
     case "mask":
-    case "spec":
-    case "rim":
       return sharp(await readPng(kind))
         .webp({ lossless: true })
         .toBuffer();

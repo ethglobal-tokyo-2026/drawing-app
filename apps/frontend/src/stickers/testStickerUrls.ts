@@ -4,6 +4,4 @@ import type { StickerUrls } from "./stickerUrls";
 export const testStickerUrls = (name: string): StickerUrls => ({
   png: `${name}.png`,
   mask: `${name}-mask.png`,
-  spec: `${name}-spec.png`,
-  rim: `${name}-rim.png`,
 });

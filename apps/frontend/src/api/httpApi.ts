@@ -228,8 +228,6 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
             png: png(request.png, "sticker.png"),
             ...(request.sharp && { sharp: png(request.sharp, "sharp.png") }),
             mask: png(request.mask, "mask.png"),
-            spec: png(request.spec, "spec.png"),
-            rim: png(request.rim, "rim.png"),
             flat: png(request.flat, "flat.png"),
             nsfw: request.nsfw ? "true" : "false",
             ...(request.kyotoSeikaSubjects && {

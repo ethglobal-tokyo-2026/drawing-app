@@ -1,7 +1,7 @@
 /**
  * A sticker's layers, from its die-cut and the ink: the print (white border, kiss-cut groove, ink), the
- * baked gloss of its thin laminate, the cast shadow, the mask, the finished sticker, and the bands the
- * live resin is masked by. Pure functions over pixel arrays.
+ * baked gloss of its thin laminate, the cast shadow, the mask and the finished sticker. Pure functions
+ * over pixel arrays.
  */
 import { clamp01 } from "../../ui/easing";
 import type { DieCut } from "./dieCut";
@@ -14,16 +14,6 @@ export interface Rect {
   y: number;
   w: number;
   h: number;
-}
-
-/** The live resin's masks, cut from the silhouette's edges. */
-interface Bands {
-  width: number;
-  height: number;
-  /** The upper-left edge, brightest at the lip: where the specular runs. */
-  spec: Layer;
-  /** The lower edge: where the rim light sits. */
-  rim: Layer;
 }
 
 export interface StickerLayers {
@@ -43,7 +33,6 @@ export interface StickerLayers {
   mask: Layer;
   /** The finished sticker: the shadow, the print, and the gloss. */
   sticker: Layer;
-  bands: Bands;
 }
 
 /** The cut's long side in the image, at most. */
@@ -68,8 +57,6 @@ const SHEEN = 0.1;
 const CAST_X = 0.0015;
 const CAST_Y = 0.004;
 const CAST_BLUR = 0.012;
-/** The live resin's bands are measured at most this big; CSS stretches them to the sticker. */
-const BAND_SIDE = 420;
 
 /** Where the image falls on the die-cut's grid: pixel (x, y) is centered on grid (x0 + (x + ½)/k, …). */
 interface Frame {
@@ -150,61 +137,6 @@ function glossPlanes(cut: DieCut): Float32Array[] {
   return planes;
 }
 
-/** Bilinear, and empty off the image. */
-function sampleClear(m: Float32Array, w: number, h: number, x: number, y: number): number {
-  const x0 = Math.floor(x);
-  const y0 = Math.floor(y);
-  const fx = x - x0;
-  const fy = y - y0;
-  const v = (xx: number, yy: number) =>
-    xx < 0 || yy < 0 || xx >= w || yy >= h ? 0 : m[yy * w + xx];
-  return (
-    (v(x0, y0) * (1 - fx) + v(x0 + 1, y0) * fx) * (1 - fy) +
-    (v(x0, y0 + 1) * (1 - fx) + v(x0 + 1, y0 + 1) * fx) * fy
-  );
-}
-
-/**
- * The live resin's bands: the silhouette less itself moved down and right (graded, so it's brightest
- * at the lip and feathers inward), and less itself moved up. Sizes are shares of the sticker.
- */
-function cutBands(mask: Layer, width: number, height: number): Bands {
-  const s = Math.min(1, BAND_SIDE / Math.max(width, height));
-  const W = Math.max(1, Math.round(width * s));
-  const H = Math.max(1, Math.round(height * s));
-  const m = boxResample(
-    { data: mask, width, height },
-    { x: 0, y: 0, step: 1 / s, width: W, height: H },
-    1,
-  );
-  for (let i = 0; i < m.length; i++) m[i] /= 255;
-  const big = Math.max(W, H);
-  const k = Math.max(3, Math.round(big * 0.1));
-  const k2 = Math.max(2, Math.round(big * 0.035));
-  const spec = new Uint8ClampedArray(W * H * 4);
-  const rim = new Uint8ClampedArray(W * H * 4);
-  const [sx, sy] = [Math.round(k * 0.55), k];
-  const [rx, ry] = [-Math.round(k2 * 0.35), -k2];
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const i = y * W + x;
-      const a = m[i];
-      if (!a) continue;
-      let upper = a;
-      for (const [f, strength] of [
-        [0.35, 0.2],
-        [0.65, 0.4],
-        [1, 1],
-      ])
-        upper *= 1 - strength * sampleClear(m, W, H, x - sx * f, y - sy * f);
-      const lower = a * (1 - sampleClear(m, W, H, x - rx, y - ry));
-      spec.set([255, 255, 255, upper * 255], i * 4);
-      rim.set([255, 255, 255, lower * 255], i * 4);
-    }
-  }
-  return { width: W, height: H, spec, rim };
-}
-
 /** The image's frame with the cut's long side at most `maxSide`, and its clear margin. */
 function frameOf({ bounds, scale }: DieCut, maxSide: number): Frame & { pad: number } {
   const mw = bounds.x1 - bounds.x0 + 1;
@@ -222,15 +154,7 @@ export function stickerLayers(ink: Pixels, cut: DieCut): StickerLayers {
   const frame = frameOf(cut, MAX_SIDE);
   const { width, height, pad } = frame;
   const { layers, sticker, place } = paint(ink, cut, frame, 1, true);
-  return {
-    width,
-    height,
-    pad,
-    place,
-    ...layers,
-    sticker,
-    bands: cutBands(layers.mask, width, height),
-  };
+  return { width, height, pad, place, ...layers, sticker };
 }
 
 /** The finished sticker alone, larger than its stored image, for screens that show it larger. */

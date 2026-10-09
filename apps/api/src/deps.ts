@@ -124,7 +124,7 @@ export type DisplayWebp =
 
 export interface ImageStore {
   /**
-   * Saves a sticker's five PNGs under the content hash of its sticker PNG, its sharp copy when it
+   * Saves a sticker's three PNGs under the content hash of its sticker PNG, its sharp copy when it
    * has one, and the WebP files made from them, keeping any already there.
    */
   save: (

@@ -23,8 +23,6 @@ describe("toSticker", () => {
     expect(toSticker(s).urls).toEqual({
       png: s.images.webp.sticker,
       mask: s.images.webp.mask,
-      spec: s.images.webp.spec,
-      rim: s.images.webp.rim,
       foil: s.images.webp.foil,
     });
   });

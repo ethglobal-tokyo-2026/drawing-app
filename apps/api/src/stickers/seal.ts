@@ -72,7 +72,7 @@ function checkImages(pngs: StickerPngs, { width, height }: SealForm): SealRefusa
   for (const part of stickerPngsSchema.keyof().options) {
     const size = pngSize(pngs[part]);
     if (!size) return invalid(`${part}: not a PNG`);
-    // spec and rim are band-sized and flat is sheet-sized, so only these two match the sticker.
+    // flat is sheet-sized, so only these two match the sticker.
     const stickerSized = part === "png" || part === "mask";
     if (stickerSized && (size.width !== width || size.height !== height)) {
       return invalid(
@@ -209,8 +209,6 @@ export async function sealSticker(
   const pngs: StickerPngs = {
     png: await bytesOf(form.png),
     mask: await bytesOf(form.mask),
-    spec: await bytesOf(form.spec),
-    rim: await bytesOf(form.rim),
     flat: await bytesOf(form.flat),
   };
   const imageRefusal = checkImages(pngs, form);

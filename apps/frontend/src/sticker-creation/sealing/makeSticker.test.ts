@@ -70,8 +70,6 @@ const CUT: CutSticker = {
     gloss: png(),
     shadow: png(),
     mask: png(),
-    spec: png(),
-    rim: png(),
   },
   maskPixels: new Uint8ClampedArray(3 * 2 * 4),
   outline: "M0 0L3 0L3 2Z",

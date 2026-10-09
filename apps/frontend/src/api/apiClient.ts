@@ -52,8 +52,6 @@ interface SealRequest {
   /** The sticker, larger, when the ink holds more than `png`. */
   sharp?: Blob;
   mask: Blob;
-  spec: Blob;
-  rim: Blob;
   flat: Blob;
   /** The gzipped TimelapseV1; a seal without one still seals. */
   timelapse?: Blob;

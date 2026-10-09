@@ -13,10 +13,6 @@ export interface SealedSticker {
   sharp: Blob | null;
   /** The cut's shape (white, with the cut as alpha), the same size and place as `png`. */
   mask: Blob;
-  /** The live resin's specular mask, along the top edge. */
-  spec: Blob;
-  /** The live resin's rim-light mask, inside the lower edge. */
-  rim: Blob;
   /** The sheet as it was drawn, on white. */
   flat: Blob;
   /** The cut line as an SVG path, in image pixels. */
@@ -162,15 +158,11 @@ export async function makeSticker(
     gloss: URL.createObjectURL(layers.gloss),
     shadow: URL.createObjectURL(layers.shadow),
     mask: URL.createObjectURL(layers.mask),
-    spec: URL.createObjectURL(layers.spec),
-    rim: URL.createObjectURL(layers.rim),
   };
   return {
     png: cut.png,
     sharp: cut.sharp,
     mask: layers.mask,
-    spec: layers.spec,
-    rim: layers.rim,
     flat: cut.flat,
     outline: cut.outline,
     width,
