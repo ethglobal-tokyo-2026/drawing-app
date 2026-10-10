@@ -20,7 +20,7 @@ import { Trans, useTranslation } from "../i18n/react";
 import { ArrowSquareOut, HandHeart, StickerBoardIcon, X } from "../icons";
 import { useIdentity } from "../identity/useIdentity";
 import { Duration } from "../stickers/Duration";
-import { formatDay, formatHandle, formatNo } from "../stickers/format";
+import { formatDay, formatNo, handleOf } from "../stickers/format";
 import { Handle } from "../stickers/Handle";
 import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
@@ -60,9 +60,6 @@ const FIGURE_PX = 200;
 
 /** Where the gift comes from: its gift message's link, or your board, where it waits for you. */
 type Opening = { claim: GiftOpening } | { gift: GiftForYou };
-
-/** How a person is printed: their handle, or their LINE name until they have one. */
-const printed = (p: PersonView) => (p.handle ? formatHandle(p.handle) : p.name);
 
 /**
  * Opening a gift message's link, over the whole phone: the closed bag, the pull tab, the reveal and
@@ -161,7 +158,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
   const [shownPreview, setShownPreview] = useState<GiftPreviewView | null>(null);
   if (preview && preview !== shownPreview) setShownPreview(preview);
   const title = t(($) => $.receiving.title, {
-    name: giver ? printed(giver) : "",
+    name: giver ? handleOf(giver) : "",
     context: giver ? undefined : "unknownGiver",
   });
   // LINE's header shows the page title; App names the page again once the dialog closes.
@@ -391,7 +388,7 @@ function Gift({
                   values={{ no: formatNo(sticker.no), day: formatDay(sticker.sealedAt) }}
                   components={{
                     duration: <Duration seconds={sticker.timeUsed} />,
-                    artist: <Handle name={printed(sticker.artist)} />,
+                    artist: <Handle name={handleOf(sticker.artist)} />,
                   }}
                 />
               </p>
@@ -430,7 +427,7 @@ function Gift({
               <Trans
                 i18nKey={($) => $.receiving.termsLine}
                 components={{
-                  name: <>{printed(giver)}</>,
+                  name: <>{handleOf(giver)}</>,
                   terms: <a href={t(($) => $.pages.terms)} onClick={openPage} />,
                   privacy: <a href={t(($) => $.pages.privacy)} onClick={openPage} />,
                 }}

@@ -9,7 +9,7 @@ import { problemOf } from "../../i18n/errorMessage";
 import { formatCount } from "../../i18n/format";
 import { useTranslation } from "../../i18n/react";
 import { GratitudeIcon } from "../../icons";
-import { formatDay, formatHandle } from "../../stickers/format";
+import { formatDay, handleOf } from "../../stickers/format";
 import { ErrorLine } from "../../ui/ErrorLine";
 import { QuietLink } from "../../ui/QuietLink";
 import { Sheet } from "../../ui/Sheet";
@@ -31,9 +31,7 @@ function EventRow({ event }: { event: GratitudeEvent }) {
     <li className="gratitude-events__row">
       <img className="gratitude-events__sticker" src={toSticker(event.sticker).urls.png} alt="" />
       <span className="gratitude-events__who">
-        <span className="gratitude-events__from">
-          {from.handle === null ? from.name : formatHandle(from.handle)}
-        </span>
+        <span className="gratitude-events__from">{handleOf(from)}</span>
         <span className="fine gratitude-events__when">
           <span>{formatDay(Date.parse(event.recordedAt))}</span>
           {event.part === "residual" && (

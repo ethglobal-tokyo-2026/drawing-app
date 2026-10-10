@@ -2,7 +2,7 @@ import type { TransferTrailEntry } from "@drawing-app/api/client";
 import { toMs, toPerson, type PersonView } from "../api/views";
 import { formatCount } from "../i18n/format";
 import { i18next } from "../i18n/i18n";
-import { handleOf } from "./boardSticker";
+import { handleOf } from "../stickers/format";
 
 /** One hand-off on a sticker's Transfer Trail, as its detail shows it. */
 export interface TrailRow {

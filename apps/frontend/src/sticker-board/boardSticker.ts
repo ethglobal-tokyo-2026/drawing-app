@@ -7,7 +7,6 @@ import {
   type PersonView,
   type StickerView,
 } from "../api/views";
-import { formatHandle } from "../stickers/format";
 import type { StickerUrls } from "../stickers/stickerUrls";
 import {
   freeSpot,
@@ -159,9 +158,6 @@ export const onTheBoard = <
 >(
   s: S,
 ): s is S & { placement: Placement } => s.placement?.on === true && s.held && !s.openGift;
-
-/** How a person is printed: their handle, or their name until they've chosen one. */
-export const handleOf = (p: PersonView) => (p.handle === null ? p.name : formatHandle(p.handle));
 
 /** Whether two spots put a sticker in the same place, on the board or in the tray; stacking aside. */
 export const samePlace = (a: Placement | null | undefined, b: Placement | null | undefined) =>

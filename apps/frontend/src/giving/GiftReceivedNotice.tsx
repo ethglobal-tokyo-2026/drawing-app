@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type { PersonView, StickerView } from "../api/views";
 import { useTranslation } from "../i18n/react";
 import { ArrowRight, GratitudeIcon, StickerBoardIcon } from "../icons";
-import { formatHandle, formatMonthDay } from "../stickers/format";
+import { formatMonthDay, handleOf } from "../stickers/format";
 import { EASE_OUT } from "../ui/easing";
 import { LabelButton } from "../ui/LabelButton";
 import { useLargeScreen } from "../ui/largeScreen";
@@ -70,7 +70,7 @@ export function GiftReceivedNotice({ sticker, receiver, receivedAt, onClose }: P
     return () => arc.finish();
   }, [arriving]);
 
-  const who = receiver.handle ? formatHandle(receiver.handle) : receiver.name;
+  const who = handleOf(receiver);
 
   const notice = (
     <div

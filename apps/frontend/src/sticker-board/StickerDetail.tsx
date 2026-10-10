@@ -34,7 +34,7 @@ import {
   StickerBoardIcon,
 } from "../icons";
 import { Duration } from "../stickers/Duration";
-import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/format";
+import { formatDay, formatHandle, formatMonthDay, formatNo, handleOf } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { spokenPair } from "../kyoto-seika/spokenSubject";
 import { SubjectThought } from "../kyoto-seika/SubjectThought";
@@ -51,7 +51,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { handleOf, type BoardStickerView } from "./boardSticker";
+import type { BoardStickerView } from "./boardSticker";
 import { useDetailLift, type LiftView } from "./detailLift";
 import { useSwipePaging } from "./detailPaging";
 import { forgetKeptBoard } from "./lastBoard";

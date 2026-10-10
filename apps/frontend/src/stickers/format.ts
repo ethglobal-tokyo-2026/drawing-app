@@ -1,10 +1,13 @@
 import { TOKYO_UTC_OFFSET_MS } from "@drawing-app/api/client";
+import type { PersonView } from "../api/views";
 import { currentLanguage, i18next } from "../i18n/i18n";
 import type { Language } from "../i18n/language";
 
 export const formatNo = (no: number) => `No.${String(no).padStart(4, "0")}`;
 /** A handle as it's printed: one "@", however many it came with. */
 export const formatHandle = (handle: string) => `@${handle.replace(/^@+/, "")}`;
+/** How a person is printed: their handle, or their name until they've chosen one. */
+export const handleOf = (p: PersonView) => (p.handle === null ? p.name : formatHandle(p.handle));
 
 /**
  * The Tokyo date `t` falls on, read from its UTC fields. Dates print the day the server counts,

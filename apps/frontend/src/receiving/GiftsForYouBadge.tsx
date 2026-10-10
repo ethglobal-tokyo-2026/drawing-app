@@ -2,7 +2,7 @@ import type { GiftsForYou } from "@drawing-app/api/client";
 import { toPerson, toSticker } from "../api/views";
 import { Trans, useTranslation } from "../i18n/react";
 import { GiveIcon } from "../icons";
-import { formatHandle } from "../stickers/format";
+import { handleOf } from "../stickers/format";
 import "../stickers/nsfw-mark.css";
 import "./gifts-for-you-badge.css";
 
@@ -26,7 +26,7 @@ export function GiftsForYouBadge({ gifts, onOpen, nudging = false }: Props) {
   const [newest] = gifts;
   if (!newest) return null;
   const giver = toPerson(newest.giver);
-  const name = giver.handle ? formatHandle(giver.handle) : giver.name;
+  const name = handleOf(giver);
   const count = gifts.length;
   const nsfw = toSticker(newest.sticker).nsfw;
   return (

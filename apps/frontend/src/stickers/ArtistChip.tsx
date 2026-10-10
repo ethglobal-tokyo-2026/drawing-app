@@ -1,6 +1,6 @@
 import type { PersonView } from "../api/views";
 import { useTranslation } from "../i18n/react";
-import { formatHandle } from "./format";
+import { handleOf } from "./format";
 import "./artist-chip.css";
 
 interface Props {
@@ -33,7 +33,7 @@ export function ArtistChip({
 }: Props) {
   const { t } = useTranslation();
   // Until the handle prompt is answered, their LINE name stands in.
-  const name = artist.handle === null ? artist.name : formatHandle(artist.handle);
+  const name = handleOf(artist);
   const [initial] = graphemes.segment(artist.name.trim());
   const classes = [
     "artist-chip",

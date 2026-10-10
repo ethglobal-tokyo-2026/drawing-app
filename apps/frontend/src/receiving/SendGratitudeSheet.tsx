@@ -3,7 +3,7 @@ import { Clock, GratitudeIcon } from "../icons";
 import type { PersonView, StickerView } from "../api/views";
 import { Trans, useTranslation } from "../i18n/react";
 import { Duration } from "../stickers/Duration";
-import { formatHandle } from "../stickers/format";
+import { handleOf } from "../stickers/format";
 import { Key } from "../ui/Key";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { keepNameWhole } from "../ui/keepNameWhole";
@@ -30,7 +30,7 @@ interface Props {
 export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
   const { t } = useTranslation();
   const large = useLargeScreen();
-  const who = giver.handle === null ? giver.name : formatHandle(giver.handle);
+  const who = handleOf(giver);
   const title = t(($) => $.receiving.sendGratitude.title, { name: who });
   const from = (
     <div className="send-gratitude-sheet__from">

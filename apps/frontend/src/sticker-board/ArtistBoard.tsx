@@ -21,7 +21,7 @@ import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { Duration } from "../stickers/Duration";
-import { formatHandle, formatNo } from "../stickers/format";
+import { formatNo, handleOf } from "../stickers/format";
 import { Handle } from "../stickers/Handle";
 import { boardFoil } from "../stickers/madeFoil";
 import { useLight } from "../stickers/light";
@@ -60,10 +60,6 @@ interface Props {
   person: Person;
   onBack: () => void;
 }
-
-/** Their handle, or their LINE name until they've picked one. */
-const artistName = (artist: PersonView) =>
-  artist.handle ? formatHandle(artist.handle) : artist.name;
 
 /** Nothing lands on someone else's board. */
 const noLanding = () => {};
@@ -119,7 +115,7 @@ function VisitStickerDialog({
             i18nKey={($) => $.stickerBoard.artistBoard.drawnIn}
             components={{
               duration: <Duration seconds={sticker.timeUsed} />,
-              artist: <Handle name={artistName(sticker.artist)} />,
+              artist: <Handle name={handleOf(sticker.artist)} />,
             }}
           />
         </div>
@@ -142,7 +138,7 @@ export function ArtistBoard({ person, onBack }: Props) {
   const layout = useBoardLayout();
   const owner = toPerson(person);
   const optedIn = useMyNsfwOptIn();
-  const handle = person.handle ? formatHandle(person.handle) : owner.name;
+  const handle = handleOf(owner);
   const title = t(($) => $.stickerBoard.artistBoard.title, { name: handle });
   const board = useApiQuery(`sticker-board/${person.id}`, (api) => api.stickerBoard(person.id));
   const stats = useApiQuery(`user-stats/${person.id}`, (api) => api.userStats(person.id));
@@ -438,7 +434,7 @@ export function ArtistBoard({ person, onBack }: Props) {
                   hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
                   foil={byOther(s)}
                   veiled={veiledFor(s, optedIn)}
-                  by={byOther(s) ? artistName(s.artist) : undefined}
+                  by={byOther(s) ? handleOf(s.artist) : undefined}
                 />
                 {/* Right after its sticker, so Tab reaches it next. */}
                 {s.id === selected && (

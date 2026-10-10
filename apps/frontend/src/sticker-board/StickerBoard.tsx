@@ -39,7 +39,7 @@ import { useMe } from "../api/meContext";
 import { useIdentity } from "../identity/useIdentity";
 import { CaretRight } from "../icons";
 import { LIFF_ID } from "../line/liff";
-import { formatHandle, formatNo } from "../stickers/format";
+import { formatNo, handleOf } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { boardFoil } from "../stickers/madeFoil";
 import { playStick } from "../stickers/stick";
@@ -681,8 +681,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const landedNow = useCallback(() => setLandingId(undefined), []);
   /** Drawn by someone other than the board's owner: it wears foil and names its artist. */
   const byOther = (s: BoardStickerView) => owner !== null && s.artist.id !== owner.id;
-  const printedArtist = (s: BoardStickerView) =>
-    s.artist.handle ? formatHandle(s.artist.handle) : s.artist.name;
   // A received sticker landing names its artist alone, greeted or not; otherwise the greeting names
   // every foil sticker's, once per app open.
   const arrived = onBoard.find((s) => s.id === arrivedId && byOther(s));
@@ -1017,7 +1015,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                     hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
                     foil={byOther(s)}
                     veiled={veiledFor(s, optedIn)}
-                    by={byOther(s) ? printedArtist(s) : undefined}
+                    by={byOther(s) ? handleOf(s.artist) : undefined}
                   />
                   {/* Right after its sticker, so Tab reaches it next. */}
                   {s.id === selected && !hold && (

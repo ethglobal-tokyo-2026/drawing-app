@@ -10,7 +10,7 @@ import { useDetailLift, type LiftOrigin, type LiftView } from "../sticker-board/
 import { useSwipePaging } from "../sticker-board/detailPaging";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { Duration } from "../stickers/Duration";
-import { formatDay, formatHandle, formatNo } from "../stickers/format";
+import { formatDay, formatNo, handleOf } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { LabelButton } from "../ui/LabelButton";
@@ -88,8 +88,7 @@ const SHEET: LiftView = {
 };
 
 /** Who drew it, or who was given it: the handle, or the LINE name until there's one. */
-const nameOf = (person: Person) =>
-  person.handle === null ? toPerson(person).name : formatHandle(person.handle);
+const nameOf = (person: Person) => handleOf(toPerson(person));
 
 /**
  * A sticker lifted off Explore's pile into a sheet: large, with live resin under the one light, its

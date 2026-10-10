@@ -6,13 +6,13 @@ import { useGratitudeReplay } from "../gratitude/replay/useGratitudeReplay";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { formatCount } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
-import { formatMonthDay } from "../stickers/format";
+import { formatMonthDay, handleOf } from "../stickers/format";
 import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { handleOf, type BoardStickerView } from "./boardSticker";
+import type { BoardStickerView } from "./boardSticker";
 import { artistShareLine, defaultOpenRow, TRAIL_SHOWN, type TrailRow } from "./trailRows";
 import "./transfer-trail.css";
 

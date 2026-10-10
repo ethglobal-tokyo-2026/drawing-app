@@ -1,8 +1,8 @@
 import { memo, useImperativeHandle, useLayoutEffect, useMemo, useRef, type Ref } from "react";
 import { useTranslation } from "../../i18n/react";
-import { formatHandle } from "../../stickers/format";
+import { formatHandle, handleOf } from "../../stickers/format";
 import { useMyNsfwOptIn, veiledFor } from "../../stickers/nsfw";
-import { handleOf, type BoardStickerView } from "../boardSticker";
+import type { BoardStickerView } from "../boardSticker";
 import {
   createTrayEngine,
   type TrayBoard,
