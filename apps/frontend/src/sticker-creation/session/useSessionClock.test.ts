@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { KYOTO_SEIKA_TIME_USED_S, MAX_TIME_USED_S } from "@drawing-app/api/client";
-import { sessionMs, type Hold } from "./session";
+import { sessionMs } from "./session";
 import { clockOnFrames } from "./testClock";
-import { WARN_AT_SECONDS } from "./useSessionClock";
+import { WARN_AT_SECONDS, type Hold, type ScreenHolds } from "./useSessionClock";
 
-const NO_HOLDS = {
+const NO_HOLDS: ScreenHolds = {
   paused: false,
   away: false,
   seal: false,
@@ -27,14 +27,21 @@ describe("SessionClock", () => {
 
   it("holds for each hold and counts again when it lets go", () => {
     const { clock, counted } = setup();
-    for (const hold of ["paused", "away", "seal", "color", "smoothing", "clear", "size"] as const) {
+    for (const hold of Object.keys(NO_HOLDS)) {
       clock.setHolds({ ...NO_HOLDS, [hold]: true });
       expect(counted(1000)).toBe(0);
-      expect(clock.getView().held).toBe<Hold>(hold);
+      expect(clock.getView().held).toBe(hold);
       clock.setHolds(NO_HOLDS);
       expect(counted(500)).toBe(500);
       expect(clock.getView().held).toBeNull();
     }
+  });
+
+  it("shows the person's own pause over any other hold", () => {
+    const { clock } = setup();
+    clock.setHidden(true);
+    clock.setHolds({ ...NO_HOLDS, size: true, paused: true });
+    expect(clock.getView().held).toBe<Hold>("paused");
   });
 
   it("shows no hold while it waits for the first stroke", () => {

@@ -11,9 +11,8 @@ import {
 import { useTranslation } from "../i18n/react";
 import { EASE_OUT } from "../ui/easing";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import type { Hold } from "./session/session";
 import { NUDGE, NUDGE_MS } from "./nudge";
-import type { SessionClock } from "./session/useSessionClock";
+import type { Hold, SessionClock } from "./session/useSessionClock";
 import "./TimerDot.css";
 
 /** How long the paused hint stays after a stroke meets a paused sheet, as does a tap's word on a clock that never pauses. */

@@ -1,5 +1,4 @@
 import { KYOTO_SEIKA_TIME_USED_S, MAX_TIME_USED_S } from "@drawing-app/api/client";
-import { ApiError, type ErrorCode } from "../../api/apiClient";
 
 /**
  * How long a sheet gets on the drawing clock, by its ticket's mode: Kyoto Seika Manga Expression
@@ -8,29 +7,24 @@ import { ApiError, type ErrorCode } from "../../api/apiClient";
 export const sessionMs = (kyotoSeika: boolean) =>
   (kyotoSeika ? KYOTO_SEIKA_TIME_USED_S : MAX_TIME_USED_S) * 1000;
 
-/**
- * blank: a fresh sheet asks before a ticket is spent; the sheet takes no ink yet.
- * dealt: a ticket was spent in Kyoto Seika Practice Mode; its two subjects wait in their balloons for
- * Begin, the sheet takes no ink and the tools are hidden.
- * primed: Start spent a regular ticket; the clock waits for the first stroke.
- * drawing: the first stroke or fill started the clock.
- * seal-sheet: the seal key opened the seal sheet over the drawing, which takes no ink while it's up.
- * time-up: the clock reached 0:00, pencils down: the seal sheet is up in its time's-up state, and
- * nothing seals until its Seal.
- * sealing: building the sticker. sealed: done.
- * retry: a seal failed where the sheet mustn't take ink again, since time is up or the server may
- * already hold the seal: the sheet stays locked, and the seal key only tries the seal again. A seal
- * the server refuses at 0:00 gives way to a fresh sheet instead.
- */
 type Phase =
+  /** A fresh sheet: it asks before a ticket is spent, and takes no ink yet. */
   | "blank"
+  /** A ticket spent in Kyoto Seika Practice Mode: no ink or tools until Begin locks the pair in. */
   | "dealt"
+  /** Start spent a regular ticket; the clock waits for the first stroke. */
   | "primed"
+  /** The first stroke or fill started the clock. */
   | "drawing"
+  /** The seal key opened the seal sheet over the drawing, which takes no ink while it's up. */
   | "seal-sheet"
+  /** 0:00, pencils down: the time's-up sheet is up, and nothing seals until its Seal. */
   | "time-up"
+  /** Building the sticker. */
   | "sealing"
+  /** Done: the sticker is sealed. */
   | "sealed"
+  /** A seal failed where the sheet mustn't change: time is up, or the server may hold the seal. */
   | "retry";
 
 export interface Session {
@@ -134,77 +128,4 @@ export function transition(session: Session, event: SessionEvent): Result {
     case "reset":
       return to("blank", ["reset-sheet"]);
   }
-}
-
-/**
- * The seal route's own refusals, each answered only while the ticket holds no sticker of this person's.
- * A 4xx from before the route, 401 signed_out above all, says nothing about an earlier try, nor does
- * ticket_not_yours: it means the session is someone else's, as when another window signed this
- * browser in as them.
- */
-const SEAL_REFUSALS: ReadonlySet<string> = new Set([
-  "invalid_request",
-  "ticket_not_found",
-] satisfies ErrorCode[]);
-
-/**
- * What a failed seal request says about the server. "refused": it answered that it holds no seal for
- * this ticket, so the sheet may change. "unsent": the wait for the Sui address stopped it before it
- * left the device. "unknown": anything else, no answer above all, after which the server may hold it.
- */
-export function sealFailure(error: unknown): "refused" | "unsent" | "unknown" {
-  if (!(error instanceof ApiError)) return "unknown";
-  if (error.status >= 400 && error.status < 500 && SEAL_REFUSALS.has(error.code)) return "refused";
-  const unsent = error.code === "line_token_expired" || error.code === "sui_wallet_not_ready";
-  return error.status === 0 && unsent ? "unsent" : "unknown";
-}
-
-/** What the seal chip says a failed seal ran into, in words of its own with no technical detail. */
-export type SealProblem =
-  | {
-      kind:
-        | "onThisDevice"
-        | "noAnswer"
-        | "serverProblem"
-        | "notOnChain"
-        | "suiAddress"
-        | "signInExpired";
-    }
-  /** The server's own answer, worded by its error message. */
-  | { kind: "refused"; error: ApiError };
-
-/** Sorts a failed seal for its chip. `sent`: the request had left the device. */
-export function describeSealFailure(error: unknown, sent: boolean): SealProblem {
-  // An answer that can't be read is no answer; a failure before the request left is the device's.
-  if (!(error instanceof ApiError)) return { kind: sent ? "noAnswer" : "onThisDevice" };
-  if (error.code === "line_token_expired") return { kind: "signInExpired" };
-  if (error.code === "sui_wallet_not_ready") return { kind: "suiAddress" };
-  if (error.code === "mint_failed") return { kind: "notOnChain" };
-  if (error.status === 0) return { kind: "noAnswer" };
-  return error.status >= 500 ? { kind: "serverProblem" } : { kind: "refused", error };
-}
-
-/**
- * Why the clock is held: the person's pause, a hidden page, the drawing screen being covered, the
- * seal sheet, or a tool in hand (the color sheet, the smoothing bar, the clear bar, a finger on the
- * size rail). Only a started clock is held; before the first stroke it just waits, and nothing shows
- * as paused.
- */
-export type Hold = "paused" | "hidden" | "away" | "seal" | "color" | "smoothing" | "clear" | "size";
-
-/** Which hold the timer shows, most important first. */
-const HOLDS: readonly Hold[] = [
-  "paused",
-  "hidden",
-  "away",
-  "seal",
-  "color",
-  "smoothing",
-  "clear",
-  "size",
-];
-
-/** The hold the timer shows, or null when nothing holds it. */
-export function heldBy(holds: ReadonlySet<Hold>): Hold | null {
-  return HOLDS.find((hold) => holds.has(hold)) ?? null;
 }

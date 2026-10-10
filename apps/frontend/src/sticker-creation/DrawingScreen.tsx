@@ -45,6 +45,7 @@ import { SealKey } from "./SealKey";
 import { SealSheet } from "./SealSheet";
 import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
 import { SealCeremony } from "./sealing/SealCeremony";
+import { describeSealFailure, sealFailure } from "./sealing/sealFailure";
 import { SealingStatusLabel } from "./sealing/SealingStatusLabel";
 import { LEAVE_MS, type Box } from "./sealing/sealTimeline";
 import { drawnSizeOf, encodeTimelapse, gzipTimelapse } from "./sealing/timelapse";
@@ -60,9 +61,7 @@ import {
 } from "./session/keptSession";
 import { forgetSentSeal, keepSentSeal, sealWentOut, sentSealOutcome } from "./session/sentSeal";
 import {
-  describeSealFailure,
   FRESH_SESSION,
-  sealFailure,
   sessionMs,
   transition,
   type SessionEffect,
