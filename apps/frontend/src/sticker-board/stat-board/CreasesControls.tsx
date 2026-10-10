@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "../../i18n/react";
 import { ErrorLine } from "../../ui/ErrorLine";
-import { keepCreasesShown, useCreasesShown } from "../useCreases";
+import { creasesCanBake, keepCreasesShown, useCreasesShown } from "../useCreases";
 import "./developer-slip.css";
 
 /** Creases' switch, on the stat board's developer slip: they show only on a device that switches them on. */
@@ -22,6 +22,9 @@ export function CreasesControls() {
         {t(($) => $.stickerBoard.developer.creases.show)}
       </label>
       {unkept && <ErrorLine>{t(($) => $.stickerBoard.developer.creases.unkept)}</ErrorLine>}
+      {shown && !creasesCanBake() && (
+        <ErrorLine>{t(($) => $.stickerBoard.developer.creases.cantBake)}</ErrorLine>
+      )}
     </div>
   );
 }

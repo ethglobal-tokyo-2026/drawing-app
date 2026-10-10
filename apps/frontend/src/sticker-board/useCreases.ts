@@ -315,9 +315,17 @@ export function useCrease(id: string): Crease | undefined {
 /** The mounted boards' stores, by the board id their batches carry back in the worker's replies. */
 const stores = new Map<string, CreaseStore>();
 let worker: Worker | null = null;
-/** Whether a worker can paint here, checked once, the first time a board bakes. */
+/** Whether a worker can paint here, checked once, the first time it's asked. */
 let workerPaints: boolean | null = null;
+/** Whether the console and recorder have been told this browser can't bake creases. */
+let saidCantBake = false;
 let batches = 0;
+
+/** Whether this browser can bake creases: the crease worker paints on OffscreenCanvas. */
+export function creasesCanBake(): boolean {
+  workerPaints ??= workerCanPaint();
+  return workerPaints;
+}
 
 /** Says what went wrong with creases, in the console and the performance recorder. */
 function sayCreaseFailed(why: string) {
@@ -347,12 +355,12 @@ function dropWorker(failed: Worker, why: string) {
 /** The one worker every board's batches go to; none where a worker can't paint, which it says once. */
 function creaseWorker(): Worker | null {
   if (worker) return worker;
-  if (workerPaints === null) {
-    workerPaints = workerCanPaint();
-    if (!workerPaints)
+  if (!creasesCanBake()) {
+    if (!saidCantBake)
       sayCreaseFailed("A worker can't paint in this browser, so no crease is baked");
+    saidCantBake = true;
+    return null;
   }
-  if (!workerPaints) return null;
   const started = new Worker(new URL("../stickers/creaseWorker.ts", import.meta.url), {
     type: "module",
   });
