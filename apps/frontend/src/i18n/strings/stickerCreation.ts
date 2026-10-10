@@ -38,7 +38,7 @@ export const stickerCreation = {
         en: "{{time}} left, paused while you choose a color",
         ja: "残り{{time}}、色を選んでいる間は一時停止中",
       },
-      /** Drawing screen, top left: read by screen readers after the timer dot's name while the smoothing bar is open, which stops the clock */
+      /** Drawing screen, top left: read by screen readers after the timer dot's name while the Smoothing bar is open, which stops the clock */
       smoothing: {
         en: "{{time}} left, paused while you set smoothing",
         ja: "残り{{time}}、手ぶれ補正を調整している間は一時停止中",
@@ -195,7 +195,7 @@ export const stickerCreation = {
     fill: { en: "Fill", ja: "塗りつぶし" },
     /** Drawing screen, top right: the color tile in the tool strip, which opens the color sheet, named for screen readers */
     color: { en: "Color", ja: "カラー" },
-    /** Drawing screen, top right: the smoothing tile's name for screen readers, the title of the smoothing bar it opens, and that bar's slider's name */
+    /** Drawing screen, top right: the Smoothing tile's name for screen readers, the title of the Smoothing bar it opens, and that bar's slider's name */
     smoothing: { en: "Smoothing", ja: "手ぶれ補正" },
     /** Drawing screen, top right: the clear tile at the end of the tool strip, which opens the clear bar, named for screen readers; dimmed while the sheet is blank */
     clear: { en: "Clear the sheet", ja: "キャンバスを消去" },
@@ -209,7 +209,7 @@ export const stickerCreation = {
     recent: { en: "Recent", ja: "最近" },
     /** Color sheet: the row of recently used colors, named for screen readers */
     recentColors: { en: "Recent colors", ja: "最近使った色" },
-    /** Color sheet: the grid of 30 preset colors, named for screen readers */
+    /** Color sheet: the grid of preset colors, named for screen readers */
     swatches: { en: "Swatches", ja: "パレット" },
     /** Color sheet: the hue and saturation pad, named for screen readers */
     huePad: { en: "Hue and saturation", ja: "色相と彩度" },
@@ -309,7 +309,7 @@ export const stickerCreation = {
     brush: { en: "Brush size", ja: "ブラシのサイズ" },
     /** Drawing screen, left edge: the size rail's name for screen readers while the eraser is in hand */
     eraser: { en: "Eraser size", ja: "消しゴムのサイズ" },
-    /** Drawing screen, left edge: read by screen readers as the size rail moves; {{size}} is 1 to 48; the number shown on the rail doesn't use this text */
+    /** Drawing screen, left edge: read by screen readers as the size rail moves; {{size}} is the brush's or eraser's size in px; the number shown on the rail doesn't use this text */
     value: { en: "{{size}} px", ja: "{{size}}ピクセル" },
   },
   /** The bar under the tools, named like its tile. */

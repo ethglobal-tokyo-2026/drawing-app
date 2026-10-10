@@ -19,7 +19,7 @@ import "./TimerDot.css";
 const HINT_MS = 2600;
 /** A time warning stays in its live region this long, then the region empties so no stale one is read later. */
 const WARNING_MS = 6000;
-/** A proctor's time call stays on the label this long: an unverified guess, to tune by feel. */
+/** A proctor's time call stays on the label this long. */
 const CALL_MS = 4000;
 /** "30:00" doesn't fit the dot's usual size, so it's wider while the clock reads this many seconds or more. */
 export const WIDE_FROM_SECONDS = 10 * 60;
@@ -113,8 +113,7 @@ export function TimerDot({ ref, clock, paused, note, waitsFor, pausable, onToggl
   const [words, setWords] = useState({ text: label, call: calling });
   if (label && (label !== words.text || calling !== words.call))
     setWords({ text: label, call: calling });
-  const held = !label && startsAtBegin ? startsAtBegin : words.text;
-  const heldCall = !(!label && startsAtBegin) && words.call;
+  const kept = !label && startsAtBegin ? { text: startsAtBegin, call: false } : words;
 
   useImperativeHandle(ref, () => {
     const flashFor = (what: "hint" | "clockRuns") => {
@@ -222,11 +221,11 @@ export function TimerDot({ ref, clock, paused, note, waitsFor, pausable, onToggl
         </span>
       </button>
       <div
-        className={`timer-hint ${label ? "is-on" : ""} ${wide ? "is-wide" : ""} ${heldCall ? "is-call" : ""}`}
+        className={`timer-hint ${label ? "is-on" : ""} ${wide ? "is-wide" : ""} ${kept.call ? "is-call" : ""}`}
         aria-hidden="true"
       >
-        {!heldCall && <ArrowBendLeftUp className="timer-hint-arrow" size={28} />}
-        <span className="timer-hint-label">{held}</span>
+        {!kept.call && <ArrowBendLeftUp className="timer-hint-arrow" size={28} />}
+        <span className="timer-hint-label">{kept.text}</span>
       </div>
       <span className="visually-hidden" role="status">
         {label ?? ""}
