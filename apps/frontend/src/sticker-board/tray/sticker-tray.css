@@ -923,7 +923,7 @@
 
 /* On a large screen the sheets grow; the dot badges stuck on them and a pulled-out sheet's X keep their
    size, stuck on by the same hand as every other. The header row is taller, so the tray starts lower
-   (trayTop() in trayModel.ts reads the same query). */
+   (the tray engine's trayTop reads the same query). */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
   .tray {
     --tray-top: 80px;

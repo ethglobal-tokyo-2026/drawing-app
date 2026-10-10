@@ -26,7 +26,7 @@ import {
   SHEET,
   STACK_FOOT,
   stackFootFor,
-  trayTop,
+  trayTopFor,
 } from "./trayModel";
 import { testStickerUrls } from "../../stickers/testStickerUrls";
 import { NUDGE_AFTER } from "./trayNudge";
@@ -930,6 +930,8 @@ describe("StickerTray", () => {
   });
 
   describe("on a board of this height", () => {
+    /** Where the tray starts on the board, on the screen the test's media queries describe. */
+    const trayTop = () => trayTopFor(window.matchMedia(LARGE_SCREEN).matches);
     /** Opens the tray on a board this tall, its column running from under the header to the foot. */
     const openOn = async (height: number, stickers = 30) => {
       vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (

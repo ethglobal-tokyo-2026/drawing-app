@@ -146,6 +146,10 @@ export function createTrayPeel(
     // The tray gets out of the way: its mouth sags to a crack, still unzipped.
     zip.relax(CRACK);
     pk.startX = pk.r.x;
+    // Where it would land is this sticker's size and cut for the whole peel; only its place follows.
+    land.style.width = px(pk.size.w);
+    land.style.height = px(pk.size.h);
+    if (landMark instanceof HTMLElement) landMark.style.setProperty("--m", cssUrl(pk.s.urls.mask));
     // Made once for the peel, so no frame makes a closure.
     const follow = () => {
       if (pk.target) {
@@ -175,9 +179,6 @@ export function createTrayPeel(
       land.style.opacity = "0";
       return;
     }
-    land.style.width = px(pk.size.w);
-    land.style.height = px(pk.size.h);
-    if (landMark instanceof HTMLElement) landMark.style.setProperty("--m", cssUrl(pk.s.urls.mask));
     land.style.transform = `translate(${px(pk.target.x - pk.size.w / 2 + 3)},${px(pk.target.y - pk.size.h / 2 + 6)}) rotate(${pk.rot.toFixed(2)}deg)`;
     land.style.opacity = "1";
   }

@@ -9,7 +9,6 @@ import {
   CRACK,
   ICONS,
   SHEET,
-  trayTop,
   ended,
   local,
   px,
@@ -48,7 +47,7 @@ export function createTrayPresses(
   }: { openSpread: (options: { focus: boolean }) => void; cancelTugs: () => void },
 ) {
   const { win, reduced, listen, make, icon, words, zip, api, fly, stack, ui } = tray;
-  const { Wb, Hb, colLeft, boardView } = tray;
+  const { Wb, Hb, colLeft, trayTop, boardView } = tray;
   const { topF } = trayModel;
   const { restAt, sheetEl, renderStack, holdsFocus, keepFocus, catchUp, sheetOf } = traySheets;
   const { page, bringToFront, settle, topSheet, sheetEls, depthOf } = trayPaging;
