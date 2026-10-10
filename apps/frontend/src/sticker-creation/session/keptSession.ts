@@ -5,14 +5,11 @@ import { STRIDE, type Op, type Step } from "../canvas/ops";
 import type { SheetFrame } from "../canvas/sheetFrame";
 
 /*
- * The session in progress, kept on this device for the person signed in, so a reload or logging out
- * and back in doesn't lose it, and wiped once it's over. Each person's is their own: someone else signing in on
- * this device never gets it, and theirs leaves it be. Its steps, the ops and the clears between them,
- * live in IndexedDB, one record per step, so a stroke writes only itself, with the frame they're
- * drawn in beside them, in the same transaction. The ticket the session spent and the time drawn
- * live in localStorage: it writes at once, where an IndexedDB write started as the page unloads
- * never lands, and it can still be read when the steps can't, so a drawing that can't be picked
- * back up can still carry its ticket over to the next sheet.
+ * The session in progress, kept on this device for the person signed in alone, so a reload doesn't
+ * lose it, and wiped once it's over. Its steps live in IndexedDB, one record each, so a stroke writes
+ * only itself, beside the frame they're drawn in. The ticket it spent and the time drawn live in
+ * localStorage, which lands even as the page unloads, and still reads when the steps can't, so the
+ * ticket carries over to the next sheet.
  */
 
 const dbName = (userId: string) => `drawing-session.${userId}`;
@@ -531,15 +528,6 @@ function readKyotoSeika(v: unknown): KeptKyotoSeika {
   return UNDEALT;
 }
 
-/** The die's rolls, or, from a build that gave each balloon of a pair its own die, the busier one's. */
-function readRolls(v: unknown): number | undefined {
-  if (isCount(v)) return v;
-  if (!Array.isArray(v) || v.length !== 2) return undefined;
-  const counts: readonly unknown[] = v;
-  const [upper, lower] = counts;
-  return isCount(upper) && isCount(lower) ? Math.max(upper, lower) : undefined;
-}
-
 /** The places picked in a deal of `dealt` subjects: distinct, inside the deal, and PICKS at most. */
 function readPicked(v: unknown, dealt: number): readonly number[] | undefined {
   if (!Array.isArray(v) || v.length > PICKS) return undefined;
@@ -552,10 +540,9 @@ function readPicked(v: unknown, dealt: number): readonly number[] | undefined {
 
 function readKyotoSeikaPart(v: unknown): KeptKyotoSeika | undefined {
   if (typeof v !== "object" || v === null) return undefined;
-  if (!("subjects" in v && "rolls" in v && "begun" in v)) return undefined;
-  const { subjects, begun } = v;
-  const rolls = readRolls(v.rolls);
-  if (typeof begun !== "boolean" || rolls === undefined) return undefined;
+  if (!("subjects" in v && "picked" in v && "rolls" in v && "begun" in v)) return undefined;
+  const { subjects, rolls, begun } = v;
+  if (typeof begun !== "boolean" || !isCount(rolls)) return undefined;
   // Begin locks a pair in, so a sheet without one hasn't begun.
   if (subjects === null) return begun ? undefined : { ...UNDEALT, rolls };
   if (!Array.isArray(subjects) || subjects.length < PICKS || subjects.length > KINDS.length)
@@ -563,9 +550,7 @@ function readKyotoSeikaPart(v: unknown): KeptKyotoSeika | undefined {
   const entries: readonly unknown[] = subjects;
   const dealt = entries.flatMap((entry) => readDealtSubject(entry) ?? []);
   if (dealt.length !== entries.length) return undefined;
-  // A build that dealt a pair kept no picks: its two are the pair, as if picked.
-  const picked =
-    "picked" in v ? readPicked(v.picked, dealt.length) : dealt.length === PICKS ? [0, 1] : [];
+  const picked = readPicked(v.picked, dealt.length);
   if (!picked) return undefined;
   const part = { subjects: dealt, picked, rolls, begun };
   return begun && !pickedPair(part) ? undefined : part;

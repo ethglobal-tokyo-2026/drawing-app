@@ -785,32 +785,6 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     expect(pressed()).toEqual(["false", "false", "false", "true", "false"]);
   });
 
-  it("deals the rest of the kinds round a pair kept by a build that dealt two, the pair already picked", async () => {
-    loads();
-    const me = someoneNew();
-    vi.useFakeTimers();
-    new SessionKeeper(me.id).save([], 0, FRAME);
-    await settle(1000);
-    localStorage.setItem(
-      personKey("draw.session", me.id),
-      JSON.stringify({
-        ticket: 9,
-        elapsedMs: 0,
-        nsfw: false,
-        kyotoSeika: { subjects: [WIND, REUNION], rolls: [3, 0], begun: false },
-      }),
-    );
-    await openKyotoSeikaSheet(null, {}, me);
-    await settle(1000);
-    expect(subjects()).toHaveLength(5);
-    expect(new Set(subjects().map((toggle) => subjectOf(toggle)?.kind)).size).toBe(5);
-    expect(subjects().slice(0, 2).map(subjectOf)).toEqual([WIND, REUNION]);
-    expect(pressed()).toEqual(["true", "true", "false", "false", "false"]);
-    act(() => beginKey()?.click());
-    await settle(1000);
-    expect(stillDealt()).toBe(false);
-  });
-
   it("shows why the subjects didn't load, and tries again on a fresh page, which picks the sheet up and deals", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const navigate = vi.spyOn(location, "replace").mockImplementation(() => {});
@@ -919,7 +893,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
         ticket: 9,
         elapsedMs: halfway,
         nsfw: false,
-        kyotoSeika: { subjects: pair, rolls: [0, 0], begun: true },
+        kyotoSeika: { subjects: pair, picked: [0, 1], rolls: 0, begun: true },
       }),
     );
     const seal = vi.fn<ApiClient["seal"]>(() => new Promise(() => {}));

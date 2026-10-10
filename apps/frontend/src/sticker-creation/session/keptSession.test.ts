@@ -302,30 +302,23 @@ describe("the drawing kept on this device", () => {
       kyotoSeika: { subjects: [sent(WIND), sent(REUNION)], picked: [0, 1], rolls: 2, begun: true },
     });
 
-    // A build that dealt a pair, each balloon with its own die: its two are the picks, and its die
-    // has rolled as often as the busier of the two.
-    keptAs({ subjects: [WIND, REUNION], rolls: [3, 7], begun: false });
-    expect(await loadKeptSession(userId)).toMatchObject({
-      kyotoSeika: { subjects: [WIND, REUNION], picked: [0, 1], rolls: 7, begun: false },
-    });
-    keptAs({ subjects: [WIND, REUNION], rolls: [2, 0], begun: true });
-    expect(await loadKeptSession(userId)).toMatchObject({
-      kyotoSeika: { subjects: [WIND, REUNION], picked: [0, 1], rolls: 2, begun: true },
-    });
-
-    // A deal that can't be read at all is dealt again, so the sheet waits for Begin.
+    // A deal that can't be read at all is dealt again, so the sheet waits for Begin on its own ticket.
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    for (const unreadable of [
+    const unreadables = [
       { subjects: [{ word: WIND.ja }, REUNION], picked: [0, 1], rolls: 2, begun: true },
       { subjects: FIVE, picked: [1, 1], rolls: 2, begun: false },
       { subjects: FIVE, picked: [0, FIVE.length], rolls: 2, begun: false },
       { subjects: FIVE, picked: [0, 1, 2], rolls: 2, begun: false },
       { subjects: FIVE, picked: [0], rolls: 2, begun: true },
-    ]) {
+      // No picks, or a die per subject.
+      { subjects: [WIND, REUNION], rolls: 2, begun: true },
+      { subjects: [WIND, REUNION], picked: [0, 1], rolls: [3, 7], begun: false },
+    ];
+    for (const unreadable of unreadables) {
       keptAs(unreadable);
-      expect(await loadKeptSession(userId)).toMatchObject({ kyotoSeika: UNDEALT });
+      expect(await loadKeptSession(userId)).toMatchObject({ ticket: 7, kyotoSeika: UNDEALT });
     }
-    expect(error).toHaveBeenCalledTimes(5);
+    expect(error).toHaveBeenCalledTimes(unreadables.length);
   });
 
   it("carries a ticket's Kyoto Seika Practice Mode part with it when the drawing isn't read", async () => {
