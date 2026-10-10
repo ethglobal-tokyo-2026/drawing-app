@@ -19,7 +19,7 @@ Seven verifiers checked every candidate against main, one verdict each, and a sw
 | ~~`fix/review-engine-input`~~           | T-7, A1-5, D-8, B-3, R-1/C-6, H-4 (engine), D-6 (fingers), H-9, X-2, X-3, X-4 (gestures), K-9 (engine)   |
 | ~~`fix/review-stroke`~~                 | T-2/P-6, P-7, H-4/P-8 (curve), A1-13/D-5, T-3, R-8, X-4 (brush), K-7, K-8 (brush)                        |
 | ~~`fix/review-fill`~~                   | A1-2, O-2/M-5, C-4, X-4 (fill), K-9 (fill)                                                               |
-| `fix/review-seal`                       | A3-1, A3-2/T-4, A3-3/C-2, R-5, R-6, R-7 (`Box`), T-5, X-4/X-5/X-7/X-9/X-10 (sealing), K-3, K-6 (sealing) |
+| ~~`fix/review-seal`~~                   | A3-1, A3-2/T-4, A3-3/C-2, R-5, R-6, R-7 (`Box`), T-5, X-4/X-5/X-7/X-9/X-10 (sealing), K-3, K-6 (sealing) |
 | `fix/review-seal-speed` (O-6, O-7 left) | A3-4, O-6, O-7/A3-5, A3-6, S-2, R-2 (`blankCanvas`), K-9, K-11                                           |
 | ~~`fix/review-screen`~~                 | Z-3/A4-7, S-5, S-6, S-7/R-4, S-8, A2-5, K-1, K-2 (code), K-5, K-10, X-1, X-5 (timer), X-8, X-9           |
 | ~~`fix/review-kept-drawing`~~           | A4-1, A4-2, A4-3, A4-4, A4-5, Z-1/X-6 (rolls and picks), K-4                                             |
