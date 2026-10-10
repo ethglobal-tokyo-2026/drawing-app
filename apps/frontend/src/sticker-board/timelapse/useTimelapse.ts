@@ -70,10 +70,22 @@ function homeward(from: FigureTransform, u: number, size: { w: number; h: number
   };
 }
 
+/** Ready to fly: transformed about its top left, over the sheet. */
+function liftFigure(el: HTMLElement) {
+  el.style.transformOrigin = "0 0";
+  el.style.zIndex = "1";
+}
+
+/** Back in its spot, whatever its opacity. */
+function figureHome(el: HTMLElement | null) {
+  for (const property of ["transform", "transform-origin", "z-index"])
+    el?.style.removeProperty(property);
+}
+
 /** The figure as the detail shows it, whatever the timelapse did to it. */
 function figureBack(el: HTMLElement | null) {
-  for (const property of ["transform", "transform-origin", "opacity", "z-index"])
-    el?.style.removeProperty(property);
+  figureHome(el);
+  el?.style.removeProperty("opacity");
 }
 
 export type TimelapsePhase = "idle" | "loading" | "preparing" | "playing" | "ending";
@@ -250,15 +262,19 @@ export function useTimelapse({
 
   /**
    * The finished sheet holds; then the sticker comes up over its ink and peels off back to its spot,
-   * settling as it sticks, while the sheet fades under it. In its spot, or under reduced motion, the
-   * sheet fades off the sticker where it is.
+   * settling as it sticks, while the sheet fades under it. One in its spot is back under its sheet,
+   * which fades off it; under reduced motion one off its spot fades in as the sheet fades out.
    */
   const reveal = (s: Session) => {
     setView((v) => ({ ...v, phase: "ending" }));
     const { reduced: still, frames: clock } = latest.current;
     const box = s.figure;
     const flight = still ? null : s.flight;
-    if (!flight) figureBack(box);
+    // The sheet covers a sticker in its spot, but not one whose sheet plays elsewhere.
+    const crossfade = still && s.flight !== null;
+    if (flight && box) liftFigure(box);
+    else if (crossfade) figureHome(box);
+    else figureBack(box);
     const size = { w: box?.offsetWidth ?? 0, h: box?.offsetHeight ?? 0 };
     const fadeMs = still ? REDUCED_FADE_MS : FADE_MS;
     const total = HOLD_MS + (flight ? LAND_MS + PEEL_MS : fadeMs);
@@ -272,7 +288,11 @@ export function useTimelapse({
         box.style.opacity = String(clamp01((elapsed - HOLD_MS) / LAND_MS));
         transformFigure(box, homeward(flight, peel, size));
         if (sheet) sheet.style.opacity = String(1 - easeOutCubic(peel));
-      } else if (sheet) sheet.style.opacity = String(endingOpacity(elapsed, fadeMs));
+      } else {
+        const shown = endingOpacity(elapsed, fadeMs);
+        if (sheet) sheet.style.opacity = String(shown);
+        if (crossfade && box) box.style.opacity = String(1 - shown);
+      }
       if (elapsed < total) s.cancelFrame = clock.request(frame);
       else finish(s, !still);
     };
@@ -281,19 +301,25 @@ export function useTimelapse({
 
   /**
    * The paper comes up and the sticker flies from its spot onto its place on it, then fades into the
-   * blank sheet as the first strokes land. One that plays in its spot stays under the paper.
+   * blank sheet as the first strokes land. One that plays in its spot fades under the paper as it
+   * comes up; under reduced motion it goes at once. Nothing of it shows while its sheet plays.
    */
   const takeOff = async (s: Session, layout: TimelapseLayout) => {
     lay(layout);
     setView((v) => ({ ...v, phase: "playing", said: "playing" }));
     const box = s.figure;
+    if (!box) return;
+    if (latest.current.reduced) {
+      box.style.opacity = "0";
+      return;
+    }
     const flight = s.flight;
-    if (!box || !flight || latest.current.reduced) return;
-    box.style.transformOrigin = "0 0";
-    box.style.zIndex = "1";
-    await animate(s, FLIGHT_MS, (u) =>
-      transformFigure(box, between(IN_SPOT, flight, easeOutCubic(u))),
-    );
+    if (flight) {
+      liftFigure(box);
+      await animate(s, FLIGHT_MS, (u) =>
+        transformFigure(box, between(IN_SPOT, flight, easeOutCubic(u))),
+      );
+    }
     void animate(s, LAND_MS, (u) => {
       box.style.opacity = String(1 - u);
     });

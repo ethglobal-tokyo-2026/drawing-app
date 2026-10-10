@@ -264,14 +264,30 @@ describe("useTimelapse", () => {
     expect(figure().getAttribute("style") ?? "").not.toMatch(/transform|opacity|z-index/);
   });
 
-  it("never flies the sticker under reduced motion", async () => {
+  it("never flies the sticker under reduced motion: hidden while its sheet plays, it fades in as the sheet fades", async () => {
     await flying({ reduced: true });
+    expect(figure().style.opacity).toBe("0");
     advance(FLIGHT_MS + LAND_MS);
     expect(figure().style.transform).toBe("");
     await finish();
-    advance(HOLD_MS + REDUCED_FADE_MS);
-    expect(phase()).toBe("idle");
+    advance(HOLD_MS + REDUCED_FADE_MS / 2);
+    const shown = Number(figure().style.opacity);
+    expect(shown).toBeGreaterThan(0);
+    expect(shown).toBeLessThan(1);
     expect(figure().style.transform).toBe("");
+    advance(REDUCED_FADE_MS / 2);
+    expect(phase()).toBe("idle");
+    expect(figure().getAttribute("style") ?? "").not.toMatch(/transform|opacity|z-index/);
+  });
+
+  it("fades a sticker that plays in its spot out under its paper, and has it back under the sheet at the end", async () => {
+    await playing();
+    advance(LAND_MS);
+    expect(figure().style.opacity).toBe("0");
+    expect(figure().style.transform).toBe("");
+    await finish();
+    expect(figure().getAttribute("style") ?? "").not.toMatch(/transform|opacity|z-index/);
+    expect(layer()?.style.opacity).toBe("");
   });
 
   it("skips to the finished ink when the sticker is tapped", async () => {
