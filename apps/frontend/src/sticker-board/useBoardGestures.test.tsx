@@ -318,7 +318,7 @@ describe("useBoardGestures", () => {
     expect(onSelect).not.toHaveBeenCalled();
     expect(onCommit).not.toHaveBeenCalled();
 
-    // Enter selects as a tap does, which a peek at a Kyoto Seika pair follows.
+    // Enter selects as a tap does, which a peek at the Kyoto Seika Subjects of a sticker drawn in Kyoto Seika Practice Mode follows.
     press("Enter");
     expect(onSelect).toHaveBeenLastCalledWith("b", "tap");
     render("b");

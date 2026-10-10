@@ -8,13 +8,12 @@ import {
   forgetBoardUnlessFor,
   forgetsSoFar,
   KEEP_WRITE_WITHIN_MS,
+  KEPT_BOARD_KEY,
   keepBoard,
   keptBoardFor,
   readKeptBoardAgain,
   type KeptBoard,
 } from "./lastBoard";
-
-const KEY = "draw.lastBoard";
 
 const sticker = (id: string): PlacedBoardSticker => ({
   id,
@@ -79,7 +78,7 @@ describe("the board kept on this phone", () => {
   it("forgets it when someone else signs in", () => {
     keepBoard("me", board, forgetsSoFar());
     expect(keptBoardFor("someone-else")).toBeNull();
-    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(localStorage.getItem(KEPT_BOARD_KEY)).toBeNull();
     expect(keptBoardFor("me")).toBeNull();
   });
 
@@ -88,28 +87,34 @@ describe("the board kept on this phone", () => {
     forgetBoardUnlessFor("me");
     expect(keptBoardFor("me")).not.toBeNull();
     forgetBoardUnlessFor("someone-else");
-    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(localStorage.getItem(KEPT_BOARD_KEY)).toBeNull();
   });
 
   it("forgets one another build kept, or one that isn't JSON", () => {
-    localStorage.setItem(KEY, JSON.stringify({ build: "an older build", userId: "me", board }));
+    localStorage.setItem(
+      KEPT_BOARD_KEY,
+      JSON.stringify({ build: "an older build", userId: "me", board }),
+    );
     readKeptBoardAgain();
     expect(keptBoardFor("me")).toBeNull();
-    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(localStorage.getItem(KEPT_BOARD_KEY)).toBeNull();
 
     vi.spyOn(console, "error").mockImplementation(() => {});
-    localStorage.setItem(KEY, "{not json");
+    localStorage.setItem(KEPT_BOARD_KEY, "{not json");
     readKeptBoardAgain();
     expect(keptBoardFor("me")).toBeNull();
-    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(localStorage.getItem(KEPT_BOARD_KEY)).toBeNull();
   });
 
   it("forgets one another build kept as the app's code starts", async () => {
-    localStorage.setItem(KEY, JSON.stringify({ build: "an older build", userId: "me", board }));
+    localStorage.setItem(
+      KEPT_BOARD_KEY,
+      JSON.stringify({ build: "an older build", userId: "me", board }),
+    );
     vi.resetModules();
     const started = await import("./lastBoard");
     expect(started.keptBoardFor("me")).toBeNull();
-    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(localStorage.getItem(KEPT_BOARD_KEY)).toBeNull();
   });
 
   it("still gives the board back in memory when storage refuses to keep it", () => {

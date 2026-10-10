@@ -2,11 +2,12 @@
 import type {
   BoardSticker as ApiBoardSticker,
   StickerBoard as LoadedBoard,
+  Me,
   Person,
   StickerPlacement,
 } from "@drawing-app/api/client";
 import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
-import { act, useEffect } from "react";
+import { act, useEffect, type ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { boardSticker, people, sticker, trailEntry } from "../api/testFixtures";
 import { ApiError, type ApiClient } from "../api/apiClient";
@@ -27,10 +28,18 @@ import { forgetGreetings } from "./artistChipGreeting";
 import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
 import { deriveLargeLayout } from "./largeLayout";
-import { forget, forgetsSoFar, keepBoard, keptBoardFor, readKeptBoardAgain } from "./lastBoard";
+import {
+  forget,
+  forgetsSoFar,
+  KEPT_BOARD_KEY,
+  keepBoard,
+  keptBoardFor,
+  readKeptBoardAgain,
+} from "./lastBoard";
 import { unitOf } from "./placement";
 import { StickerBoard } from "./StickerBoard";
 import { myStickerBoardChanged } from "./useMyStickerBoard";
+import { placedAt } from "./testBoardSticker";
 import { STEP_SAVE_IDLE_MS } from "./useBoardGestures";
 
 // The board's chat menu and Privy reach LINE's SDK; nothing here needs it to answer.
@@ -65,6 +74,7 @@ vi.mock("../line/liff", () => ({
 
 let unmount = () => {};
 afterEach(async () => {
+  vi.useRealTimers();
   // The board loads its sheets, detail and stat board in the background; they land before it goes.
   await act(() => vi.dynamicImportSettled());
   unmount();
@@ -79,7 +89,6 @@ beforeEach(() => {
   forgetGreetings();
 });
 
-const at = (x: number) => ({ onBoard: true, x, y: 0.5, scale: 0.3, rotation: 0, z: 1 });
 const shownIds = (host: HTMLElement) =>
   [...host.querySelectorAll<HTMLElement>(".placed-sticker")].map((el) => el.dataset.stickerId);
 const keep = (userId: string, ...stickers: ApiBoardSticker[]) =>
@@ -137,14 +146,51 @@ function boardServer(...stickers: ApiBoardSticker[]) {
   return { api, onServer, saveStickerPlacement, saveLargeLayout };
 }
 
-/** Opens your board on `api`, and lets it load and save the spots it gives. */
-async function show(api: ApiClient) {
-  const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
+/** A client whose board holds `boardStickers`, over `overrides`. */
+const boardApi = (boardStickers: ApiBoardSticker[] = [], overrides: Partial<ApiClient> = {}) =>
+  emptyApi({
+    stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers }),
+    ...overrides,
+  });
+
+/** A client whose board never finishes loading, over `overrides`. */
+const stillLoading = (overrides: Partial<ApiClient> = {}) =>
+  emptyApi({ stickerBoard: () => new Promise<LoadedBoard>(() => {}), ...overrides });
+
+/** Your board on `api`, as `me`, rendered and not yet loaded; it goes when the test ends. */
+function renderBoard(
+  api: ApiClient,
+  props: Partial<ComponentProps<typeof StickerBoard>> = {},
+  me?: Me,
+) {
+  const view = renderWithApi(
+    <StickerBoard onDraw={() => {}} onOpenGift={() => {}} {...props} />,
+    api,
+    me,
+  );
   unmount = view.unmount;
+  return view;
+}
+
+/** Your board on `api`, once it has loaded and saved the spots it gives. */
+async function openBoard(
+  api: ApiClient,
+  props: Partial<ComponentProps<typeof StickerBoard>> = {},
+  me?: Me,
+) {
+  const view = renderBoard(api, props, me);
   await act(async () => {});
   await act(async () => {});
   return view;
 }
+
+/** Turns the board over, or back, with its name button. */
+const flip = (host: HTMLElement) => {
+  // A turn that never lands, and isn't played in reverse: happy-dom's cancel of a playing one rejects unhandled.
+  vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
+  vi.spyOn(Animation.prototype, "reverse").mockImplementation(() => {});
+  act(() => host.querySelector<HTMLElement>(".board-who")?.click());
+};
 
 /** Selects the sticker from the keyboard, and returns its key presses. */
 function selectByKeys(host: HTMLElement, stickerId: string) {
@@ -160,13 +206,13 @@ function selectByKeys(host: HTMLElement, stickerId: string) {
 
 describe("StickerBoard with the board kept on this phone", () => {
   it("draws the last board at once, with no loading shapes, then swaps in the fresh board", async () => {
-    const a = boardSticker({ placement: at(0.3) });
-    const b = boardSticker({ placement: at(0.7) });
+    const a = boardSticker({ placement: placedAt(0.3) });
+    const b = boardSticker({ placement: placedAt(0.7) });
     keep(TEST_ME.id, a);
     let answer: (board: LoadedBoard) => void = () => {};
-    const api = emptyApi({ stickerBoard: () => new Promise((resolve) => (answer = resolve)) });
-    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
-    unmount = view.unmount;
+    const view = renderBoard(
+      emptyApi({ stickerBoard: () => new Promise((resolve) => (answer = resolve)) }),
+    );
     expect(view.host.querySelectorAll(".board-loading-sticker")).toHaveLength(0);
     expect(shownIds(view.host)).toEqual([a.stickerId]);
 
@@ -177,15 +223,10 @@ describe("StickerBoard with the board kept on this phone", () => {
   });
 
   it("takes the fresh board's spots over the kept ones", async () => {
-    const a = boardSticker({ placement: at(0.3) });
+    const a = boardSticker({ placement: placedAt(0.3) });
     keep(TEST_ME.id, a);
-    const moved = { ...a, placement: at(0.6) };
-    const api = emptyApi({
-      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [moved] }),
-    });
-    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
-    unmount = view.unmount;
-    await act(async () => {});
+    const moved = { ...a, placement: placedAt(0.6) };
+    await openBoard(boardApi([moved]));
     expect(keptBoardFor(TEST_ME.id)?.stickers[0].placements.phone.x).toBe(0.6);
   });
 
@@ -195,78 +236,65 @@ describe("StickerBoard with the board kept on this phone", () => {
     let answer = () => {};
     const stickerBoard = () =>
       new Promise<LoadedBoard>((resolve) => (answer = () => resolve(server.api.stickerBoard())));
-    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, {
-      ...server.api,
-      stickerBoard,
-    });
-    unmount = view.unmount;
+    const view = renderBoard({ ...server.api, stickerBoard });
     return { host: view.host, land: () => act(async () => answer()) };
   }
   const keptSpots = (s: ApiBoardSticker) =>
     keptBoardFor(TEST_ME.id)?.stickers.find((k) => k.id === s.stickerId)?.placements;
-  afterEach(() => vi.useRealTimers());
 
   it("takes the fresh board's spot for a sticker only raised while it loaded", async () => {
-    const under = boardSticker({ placement: at(0.3) });
-    const over = boardSticker({ placement: { ...at(0.7), z: 2 } });
+    const under = boardSticker({ placement: placedAt(0.3) });
+    const over = boardSticker({ placement: { ...placedAt(0.7), z: 2 } });
     keep(TEST_ME.id, under, over);
     // Moved on another device since this phone kept its board.
-    const { host, land } = openFromKept(boardServer({ ...under, placement: at(0.5) }, over));
+    const { host, land } = openFromKept(boardServer({ ...under, placement: placedAt(0.5) }, over));
     selectByKeys(host, under.stickerId);
     await land();
-    expect(keptSpots(under)?.phone).toEqual(toRecordPlacement(at(0.5)));
+    expect(keptSpots(under)?.phone).toEqual(toRecordPlacement(placedAt(0.5)));
   });
 
   it("leaves the large layout's spot alone for a sticker moved while it loaded", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    const [a, b] = [boardSticker({ placement: at(0.3) }), boardSticker({ placement: at(0.7) })];
+    const [a, b] = [
+      boardSticker({ placement: placedAt(0.3) }),
+      boardSticker({ placement: placedAt(0.7) }),
+    ];
     keep(TEST_ME.id, a, b);
     // Since this phone kept its board, another device saved a large layout.
     const server = boardServer(
-      { ...a, largePlacement: at(0.35) },
-      { ...b, largePlacement: at(0.65) },
+      { ...a, largePlacement: placedAt(0.35) },
+      { ...b, largePlacement: placedAt(0.65) },
     );
     const { host, land } = openFromKept(server);
     selectByKeys(host, a.stickerId)("ArrowLeft");
     act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
     await land();
     await act(async () => {});
-    expect(server.onServer.get(a.stickerId)?.largePlacement).toEqual(at(0.35));
-    expect(keptSpots(a)?.large).toEqual(toRecordPlacement(at(0.35)));
+    expect(server.onServer.get(a.stickerId)?.largePlacement).toEqual(placedAt(0.35));
+    expect(keptSpots(a)?.large).toEqual(toRecordPlacement(placedAt(0.35)));
     expect(keptSpots(a)?.phone.x).toBeLessThan(0.3);
   });
 
   it("never draws a board kept for someone else, and forgets it", () => {
-    keep("someone-else", boardSticker({ placement: at(0.3) }));
-    const api = emptyApi({ stickerBoard: () => new Promise(() => {}) });
-    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
-    unmount = view.unmount;
+    keep("someone-else", boardSticker({ placement: placedAt(0.3) }));
+    const view = renderBoard(stillLoading());
     expect(shownIds(view.host)).toEqual([]);
     expect(view.host.querySelectorAll(".board-loading-sticker").length).toBeGreaterThan(0);
-    expect(localStorage.getItem("draw.lastBoard")).toBeNull();
+    expect(localStorage.getItem(KEPT_BOARD_KEY)).toBeNull();
   });
 });
 
 describe("StickerBoard's check for gratitude to send", () => {
   it("says so when the check for the sticker that just arrived fails, and Try again asks again", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const a = boardSticker({ placement: at(0.3) });
+    const a = boardSticker({ placement: placedAt(0.3) });
     const stickerDetail = vi
       .fn<ApiClient["stickerDetail"]>()
       .mockRejectedValueOnce(
         new ApiError(503, { error: "unavailable", detail: "database is busy" }),
       )
       .mockRejectedValue(new ApiError(404, { error: "sticker_not_found", detail: "gone" }));
-    const api = emptyApi({
-      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a] }),
-      stickerDetail,
-    });
-    const view = renderWithApi(
-      <StickerBoard freshId={a.stickerId} onDraw={() => {}} onOpenGift={() => {}} />,
-      api,
-    );
-    unmount = view.unmount;
-    await act(async () => {});
+    const view = await openBoard(boardApi([a], { stickerDetail }), { freshId: a.stickerId });
     const alert = () => view.host.querySelector(".board-alerts")?.textContent;
     expect(alert()).toContain("Couldn’t check whether gratitude is waiting");
     expect(alert()).toContain("database is busy");
@@ -282,18 +310,13 @@ describe("StickerBoard's check for gratitude to send", () => {
     // Received: the board gives it a spot, which doesn't save.
     const a = boardSticker({ placement: null });
     const offline = new ApiError(0, { error: "network", detail: "Failed to fetch" });
-    const api = emptyApi({
-      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a] }),
-      stickerDetail: () => Promise.reject(offline),
-      saveStickerPlacement: () => Promise.reject(offline),
-    });
-    const view = renderWithApi(
-      <StickerBoard freshId={a.stickerId} onDraw={() => {}} onOpenGift={() => {}} />,
-      api,
+    const view = await openBoard(
+      boardApi([a], {
+        stickerDetail: () => Promise.reject(offline),
+        saveStickerPlacement: () => Promise.reject(offline),
+      }),
+      { freshId: a.stickerId },
     );
-    unmount = view.unmount;
-    await act(async () => {});
-    await act(async () => {});
     const alerts = view.host.querySelectorAll(".board-alerts [role='alert']");
     expect([...alerts].map((alert) => alert.textContent)).toEqual([
       expect.stringContaining("Couldn’t save where"),
@@ -309,13 +332,7 @@ describe("StickerBoard's tickets", () => {
       .fn<ApiClient["tickets"]>()
       .mockRejectedValueOnce(new ApiError(0, { error: "network", detail: "Failed to fetch" }))
       .mockResolvedValue(FRESH_TICKETS);
-    const api = emptyApi({
-      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [] }),
-      tickets,
-    });
-    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
-    unmount = view.unmount;
-    await act(async () => {});
+    const view = await openBoard(boardApi([], { tickets }));
     const alert = () => view.host.querySelector('.board-alerts [role="alert"]')?.textContent;
     expect(alert()).toContain("Couldn’t load your tickets");
     expect(view.host.textContent).toContain("Failed to fetch");
@@ -341,11 +358,8 @@ describe("StickerBoard while a drawing waits", () => {
       <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />
     </>
   );
-  const openBoard = async (sheet: Sheet) => {
-    const api = emptyApi({
-      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [] }),
-    });
-    const view = renderWithApi(board(sheet), api);
+  const openOverDrawing = async (sheet: Sheet) => {
+    const view = renderWithApi(board(sheet), boardApi());
     unmount = view.unmount;
     await act(async () => {});
     return {
@@ -357,7 +371,7 @@ describe("StickerBoard while a drawing waits", () => {
   const { draw, continueDrawing, firstSticker } = stickerBoard.board;
 
   it("says Draw continues the drawing the drawing screen holds, with no first-sticker tip, until its sheet is fresh", async () => {
-    const shown = await openBoard("held");
+    const shown = await openOverDrawing("held");
     expect(shown.drawKey()).toBe(continueDrawing.en);
     expect(shown.tip()).toBeUndefined();
 
@@ -370,7 +384,7 @@ describe("StickerBoard while a drawing waits", () => {
     vi.stubGlobal("indexedDB", new FakeIndexedDB());
     onTestFinished(() => void vi.unstubAllGlobals());
     new SessionKeeper(TEST_ME.id).start(7);
-    const shown = await openBoard(null);
+    const shown = await openOverDrawing(null);
     expect(shown.drawKey()).toBe(continueDrawing.en);
     expect(shown.tip()).toBeUndefined();
   });
@@ -382,28 +396,16 @@ describe("StickerBoard's artist chips", () => {
     [...host.querySelectorAll(".artist-chip-layer__chip .artist-chip__name")]
       .map((name) => name.textContent)
       .toSorted();
-  const openBoard = (
-    freshId?: string,
-    api = emptyApi({ stickerBoard: () => new Promise(() => {}) }),
-  ) =>
-    renderWithApi(
-      <StickerBoard {...(freshId && { freshId })} onDraw={() => {}} onOpenGift={() => {}} />,
-      api,
-    );
-  /** Turns the board over, or back, with its name button. */
-  const flip = (host: HTMLElement) => {
-    // A turn that never lands, and isn't played in reverse: happy-dom's cancel of a playing one rejects unhandled.
-    vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
-    vi.spyOn(Animation.prototype, "reverse").mockImplementation(() => {});
-    act(() => host.querySelector<HTMLElement>(".board-who")?.click());
-  };
+  /** A board mounted on its own, which its test takes down. */
+  const mounted = (api: ApiClient, props: Partial<ComponentProps<typeof StickerBoard>> = {}) =>
+    renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} {...props} />, api);
   const byMika = () =>
-    boardSticker({ placement: at(0.3), sticker: sticker({ artist: people.mika }) });
+    boardSticker({ placement: placedAt(0.3), sticker: sticker({ artist: people.mika }) });
 
   it("name the artists of foil stickers once per app open, not on every visit to the board", () => {
     keep(TEST_ME.id, byMika());
     const visit = () => {
-      const view = openBoard();
+      const view = mounted(stillLoading());
       const names = chipped(view.host);
       view.unmount();
       return names;
@@ -415,30 +417,24 @@ describe("StickerBoard's artist chips", () => {
   it("name a received sticker's artist alone as it lands, after the greeting has played too", async () => {
     const [a, b] = [
       byMika(),
-      boardSticker({ placement: at(0.7), sticker: sticker({ artist: people.ken }) }),
+      boardSticker({ placement: placedAt(0.7), sticker: sticker({ artist: people.ken }) }),
     ];
     // A received sticker has no spot until the board gives it one.
     const received = boardSticker({ placement: null, sticker: sticker({ artist: people.bob }) });
     keep(TEST_ME.id, a, b);
 
-    const first = openBoard();
+    const first = mounted(stillLoading());
     expect(chipped(first.host)).toEqual(["@ken", "@mika"]);
     first.unmount();
 
     // Receiving mounts the board again, with the sticker on it.
-    const view = openBoard(
-      received.stickerId,
-      emptyApi({
-        stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a, b, received] }),
+    const view = renderBoard(
+      boardApi([a, b, received], {
         stickerDetail: () =>
-          Promise.resolve({
-            sticker: received.sticker,
-            owner: TEST_OWNER,
-            transferTrail: [],
-          }),
+          Promise.resolve({ sticker: received.sticker, owner: TEST_OWNER, transferTrail: [] }),
       }),
+      { freshId: received.stickerId },
     );
-    unmount = view.unmount;
     await act(async () => {});
     expect(chipped(view.host)).toEqual(["@bob"]);
 
@@ -455,7 +451,19 @@ describe("StickerBoard's artist chips", () => {
     expect(chipped(view.host)).toEqual(["@bob"]);
   });
 
-  it("reload your User Stats each time the board turns over", async () => {
+  it("end with a turn of the board while they play, and don't start over when it turns back", () => {
+    keep(TEST_ME.id, byMika());
+    const view = renderBoard(stillLoading());
+    expect(chipped(view.host)).toEqual(["@mika"]);
+
+    flip(view.host);
+    flip(view.host);
+    expect(chipped(view.host)).toEqual([]);
+  });
+});
+
+describe("StickerBoard's stat board", () => {
+  it("reloads your User Stats each time the board turns over", async () => {
     const stats = (direct: number) => ({
       since: "2026-10-01T00:00:00.000Z",
       made: 1,
@@ -469,11 +477,7 @@ describe("StickerBoard's artist chips", () => {
       .fn<ApiClient["userStats"]>()
       .mockResolvedValueOnce(stats(0))
       .mockResolvedValueOnce(stats(120));
-    const view = openBoard(
-      undefined,
-      emptyApi({ stickerBoard: () => new Promise(() => {}), userStats }),
-    );
-    unmount = view.unmount;
+    const view = renderBoard(stillLoading({ userStats }));
 
     flip(view.host);
     await vi.waitFor(async () => {
@@ -488,17 +492,10 @@ describe("StickerBoard's artist chips", () => {
     });
   });
 
-  it("say why your User Stats didn't load in the app's language, after it changes", async () => {
+  it("says why your User Stats didn't load in the app's language, after it changes", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const offline = new ApiError(0, { error: "network", detail: "Failed to fetch" });
-    const view = openBoard(
-      undefined,
-      emptyApi({
-        stickerBoard: () => new Promise(() => {}),
-        userStats: () => Promise.reject(offline),
-      }),
-    );
-    unmount = view.unmount;
+    const view = renderBoard(stillLoading({ userStats: () => Promise.reject(offline) }));
     const receipt = () => view.host.querySelector(".stat-board__receipt")?.textContent;
 
     flip(view.host);
@@ -510,39 +507,24 @@ describe("StickerBoard's artist chips", () => {
     await act(() => i18next.changeLanguage("ja"));
     expect(receipt()).toContain(withBreakHints(errors.network.ja));
   });
-
-  it("end with a turn of the board while they play, and don't start over when it turns back", () => {
-    keep(TEST_ME.id, byMika());
-    const view = openBoard();
-    unmount = view.unmount;
-    expect(chipped(view.host)).toEqual(["@mika"]);
-
-    flip(view.host);
-    flip(view.host);
-    expect(chipped(view.host)).toEqual([]);
-  });
 });
 
 /** Your board on a phone, with `boardStickers` on it, once it has loaded. */
-const visitBoard = async (...boardStickers: ApiBoardSticker[]) => {
+const visitBoard = (...boardStickers: ApiBoardSticker[]) => {
   onAPhone();
-  const view = renderWithApi(
-    <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
-    emptyApi({ stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers }) }),
-  );
-  unmount = view.unmount;
-  await act(async () => {});
-  return view;
+  return openBoard(boardApi(boardStickers));
 };
 
 describe("StickerBoard's Arrange", () => {
-  afterEach(() => vi.useRealTimers());
   const arrangeTile = (host: HTMLElement) =>
     host.querySelector<HTMLButtonElement>(".sticker-toolbar__arrange-toggle");
   const stepTiles = (host: HTMLElement) => host.querySelectorAll(".sticker-toolbar__step");
 
   it("is closed until opened, then stays open for the next selection and the next visit", async () => {
-    const [a, b] = [boardSticker({ placement: at(0.3) }), boardSticker({ placement: at(0.7) })];
+    const [a, b] = [
+      boardSticker({ placement: placedAt(0.3) }),
+      boardSticker({ placement: placedAt(0.7) }),
+    ];
     const first = await visitBoard(a, b);
     selectByKeys(first.host, a.stickerId);
     expect(stepTiles(first.host)).toHaveLength(0);
@@ -559,7 +541,7 @@ describe("StickerBoard's Arrange", () => {
 
   it("reads out what a run of steps did once it settles", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    const a = boardSticker({ placement: at(0.5) });
+    const a = boardSticker({ placement: placedAt(0.5) });
     const view = await visitBoard(a);
     selectByKeys(view.host, a.stickerId)("ArrowRight");
     act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
@@ -574,11 +556,11 @@ describe("StickerBoard's Arrange", () => {
 describe("StickerBoard's sticker detail", () => {
   it("opens on the sticker viewed, and pages through yours with the ones in a gift last", async () => {
     const inTheBag = boardSticker({
-      placement: at(0.2),
+      placement: placedAt(0.2),
       openGift: { id: "g-packed", status: "packed", for: null },
     });
-    const viewed = boardSticker({ placement: at(0.5) });
-    const after = boardSticker({ placement: at(0.8) });
+    const viewed = boardSticker({ placement: placedAt(0.5) });
+    const after = boardSticker({ placement: placedAt(0.8) });
     const view = await visitBoard(inTheBag, viewed, after);
     selectByKeys(view.host, viewed.stickerId);
     const viewKey = [...view.host.querySelectorAll<HTMLElement>(".sticker-toolbar button")].find(
@@ -609,17 +591,13 @@ describe("StickerBoard's sticker detail", () => {
 describe("StickerBoard after a gift", () => {
   const given = () =>
     boardSticker({
-      placement: at(0.3),
+      placement: placedAt(0.3),
       held: false,
       givenTo: { receiver: people.bob, receivedAt: "2026-09-23T11:52:00.000Z" },
     });
-  const show = async (...boardStickers: ApiBoardSticker[]) => {
-    const api = emptyApi({
-      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers }),
-    });
-    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
-    unmount = view.unmount;
-    await act(async () => {});
+  /** Your board's stage, once your board with `boardStickers` has loaded. */
+  const stageWith = async (...boardStickers: ApiBoardSticker[]) => {
+    const view = await openBoard(boardApi(boardStickers));
     const stage = view.host.querySelector<HTMLElement>(".board-stage");
     if (!stage) throw new Error("The board has no stage");
     return stage;
@@ -628,14 +606,9 @@ describe("StickerBoard after a gift", () => {
   it("loads the board again when the server hears of a send late", async () => {
     const stickerBoard = vi.fn(async () => ({
       owner: TEST_OWNER,
-      boardStickers: [boardSticker({ placement: at(0.5) })],
+      boardStickers: [boardSticker({ placement: placedAt(0.5) })],
     }));
-    const view = renderWithApi(
-      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
-      emptyApi({ stickerBoard }),
-    );
-    unmount = view.unmount;
-    await act(async () => {});
+    await openBoard(emptyApi({ stickerBoard }));
     const loads = stickerBoard.mock.calls.length;
 
     await act(async () => myStickerBoardChanged());
@@ -644,16 +617,15 @@ describe("StickerBoard after a gift", () => {
 
   it("leaves a given sticker off the board, and out of the count", async () => {
     const gone = given();
-    const kept = boardSticker({ placement: at(0.7) });
-    const stage = await show(gone, kept);
+    const kept = boardSticker({ placement: placedAt(0.7) });
+    const stage = await stageWith(gone, kept);
     expect(shownIds(stage)).toEqual([kept.stickerId]);
-    expect(stage.querySelector(`[data-sticker-id="${gone.stickerId}"]`)).toBeNull();
     expect(stage.querySelector(".placed-sticker")?.getAttribute("aria-label")).toMatch(/1 of 1$/);
     expect(stage.querySelector(".board-blank")).toBeNull();
   });
 
   it("shows the empty board when every sticker was given", async () => {
-    const stage = await show(given());
+    const stage = await stageWith(given());
     expect(shownIds(stage)).toEqual([]);
     expect(stage.querySelector(".board-blank")).not.toBeNull();
   });
@@ -664,7 +636,7 @@ describe("StickerBoard after a gift", () => {
     markNoticed([
       { stickerId: gone.stickerId, receivedAt: Date.parse("2026-09-23T11:52:00.000Z") },
     ]);
-    const stage = await show(gone, boardSticker({ placement: at(0.7) }));
+    const stage = await stageWith(gone, boardSticker({ placement: placedAt(0.7) }));
     // The sticker tray loads with the board.
     await act(() => vi.dynamicImportSettled());
     const spot = stage
@@ -686,7 +658,7 @@ describe("StickerBoard after a gift", () => {
   const noticeTitle = () => document.querySelector(".gift-received-notice h1")?.textContent?.trim();
 
   it("draws no notice for gifts received before this device's first board", async () => {
-    await show(
+    await stageWith(
       gave(people.mika, "2026-09-22T11:52:00.000Z"),
       gave(people.bob, "2026-09-23T11:52:00.000Z"),
     );
@@ -696,16 +668,15 @@ describe("StickerBoard after a gift", () => {
   it("gives each gift received since the last visit its own notice, newest first", async () => {
     // This device has shown a notice before.
     noticeReceivesFromNow([]);
-    await show(
+    await stageWith(
       gave(people.mika, "2026-09-22T11:52:00.000Z"),
       gave(people.bob, "2026-09-23T11:52:00.000Z"),
     );
-    const title = noticeTitle;
     const close = () =>
       act(() => document.querySelector<HTMLElement>(".gift-received-notice .label-btn")?.click());
-    expect(title()).toBe("@bob received your sticker");
+    expect(noticeTitle()).toBe("@bob received your sticker");
     close();
-    expect(title()).toBe("@mika received your sticker");
+    expect(noticeTitle()).toBe("@mika received your sticker");
     close();
     expect(document.querySelector(".gift-received-notice")).toBeNull();
   });
@@ -713,13 +684,8 @@ describe("StickerBoard after a gift", () => {
 
 describe("StickerBoard's sticker tray", () => {
   it("moves focus to a sticker on the board when its hole's Show it is pressed", async () => {
-    const a = boardSticker({ placement: at(0.3) });
-    const api = emptyApi({
-      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a] }),
-    });
-    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
-    unmount = view.unmount;
-    await act(async () => {});
+    const a = boardSticker({ placement: placedAt(0.3) });
+    const view = await openBoard(boardApi([a]));
     await act(() => vi.dynamicImportSettled());
     const hole = view.host.querySelector<HTMLElement>(`.tray__slot[data-id="${a.stickerId}"]`);
     expect(hole?.getAttribute("aria-label")).toMatch(/on your board\. Show it$/);
@@ -737,12 +703,10 @@ describe("StickerBoard's sticker tray", () => {
 });
 
 describe("StickerBoard saving where a sticker sits", () => {
-  afterEach(() => vi.useRealTimers());
-
   it("keeps one save of a sticker in flight, then sends only its latest spot, whose failure stays", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     onAPhone();
-    const a = boardSticker({ placement: at(0.5) });
+    const a = boardSticker({ placement: placedAt(0.5) });
     let land = () => {};
     const saveStickerPlacement = vi
       .fn<ApiClient["saveStickerPlacement"]>()
@@ -760,15 +724,7 @@ describe("StickerBoard saving where a sticker sits", () => {
           }),
       )
       .mockRejectedValue(new ApiError(503, { error: "not_in_test", detail: "The board is down" }));
-    const view = renderWithApi(
-      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
-      emptyApi({
-        stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a] }),
-        saveStickerPlacement,
-      }),
-    );
-    unmount = view.unmount;
-    await act(async () => {});
+    const view = await openBoard(boardApi([a], { saveStickerPlacement }));
     const press = selectByKeys(view.host, a.stickerId);
     // Each burst of keys is one save, so three bursts are three saves, the first in flight.
     for (let burst = 0; burst < 3; burst++) {
@@ -788,8 +744,6 @@ describe("StickerBoard saving where a sticker sits", () => {
 });
 
 describe("StickerBoard on the visit after a move", () => {
-  afterEach(() => vi.useRealTimers());
-
   /**
    * Two visits with one client, as leaving the board and coming back makes them: the first moves
    * the sticker and saves it, to a server that keeps the spot saved last.
@@ -815,14 +769,7 @@ describe("StickerBoard on the visit after a move", () => {
         });
       },
     });
-    const visit = async () => {
-      const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
-      unmount = view.unmount;
-      // The board loads, and saves any spot it gives.
-      await act(async () => {});
-      await act(async () => {});
-      return view;
-    };
+    const visit = () => openBoard(api);
     const first = await visit();
     const before = onServer;
     selectByKeys(first.host, sticker.stickerId)("ArrowLeft");
@@ -839,7 +786,7 @@ describe("StickerBoard on the visit after a move", () => {
   }
 
   it("shows the sticker where it was moved", async () => {
-    const { moved, shown } = await visitAfterAMove(boardSticker({ placement: at(0.5) }));
+    const { moved, shown } = await visitAfterAMove(boardSticker({ placement: placedAt(0.5) }));
     expect(shown).toEqual(moved);
   });
 
@@ -854,11 +801,7 @@ describe("StickerBoard on the visit after a move", () => {
 describe("StickerBoard after Giving", () => {
   /** Selects a board sticker and opens Giving from its toolbar's Give. */
   const openGiving = async (host: HTMLElement, stickerId: string) => {
-    const el = host.querySelector<HTMLElement>(`[data-sticker-id="${stickerId}"]`);
-    act(() => {
-      el?.focus();
-      el?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-    });
+    selectByKeys(host, stickerId);
     const give = [...host.querySelectorAll<HTMLElement>(".sticker-toolbar button")].find(
       (button) => button.textContent === "Give",
     );
@@ -867,14 +810,9 @@ describe("StickerBoard after Giving", () => {
   };
 
   it("loads again when Giving closes unsent, since its gift may have been packed or taken out", async () => {
-    const a = boardSticker({ placement: at(0.3) });
+    const a = boardSticker({ placement: placedAt(0.3) });
     const stickerBoard = vi.fn(async () => ({ owner: TEST_OWNER, boardStickers: [a] }));
-    const view = renderWithApi(
-      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
-      emptyApi({ stickerBoard }),
-    );
-    unmount = view.unmount;
-    await act(async () => {});
+    const view = await openBoard(emptyApi({ stickerBoard }));
     const loads = stickerBoard.mock.calls.length;
 
     await openGiving(view.host, a.stickerId);
@@ -884,7 +822,7 @@ describe("StickerBoard after Giving", () => {
   });
 
   it("loads again when its fresh load had failed, so the sticker on its way leaves the board", async () => {
-    const a = boardSticker({ placement: at(0.3) });
+    const a = boardSticker({ placement: placedAt(0.3) });
     keep(TEST_ME.id, a);
     const onItsWay = { ...a, openGift: { id: "g1", status: "sent" as const, for: null } };
     const stickerBoard = vi
@@ -893,12 +831,7 @@ describe("StickerBoard after Giving", () => {
         new ApiError(503, { error: "not_in_test", detail: "The board is down" }),
       )
       .mockResolvedValue({ owner: TEST_OWNER, boardStickers: [onItsWay] });
-    const view = renderWithApi(
-      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
-      emptyApi({ stickerBoard }),
-    );
-    unmount = view.unmount;
-    await act(async () => {});
+    const view = await openBoard(emptyApi({ stickerBoard }));
     expect(view.host.querySelector(".board-problem")).not.toBeNull();
 
     await openGiving(view.host, a.stickerId);
@@ -911,22 +844,14 @@ describe("StickerBoard after Giving", () => {
 describe("StickerBoard after receiving", () => {
   it("asks about gratitude for a sticker that came back to your sticker tray", async () => {
     // Placed before you gave it, so it comes back to the tray rather than landing on the board.
-    const back = boardSticker({ placement: { ...at(0.3), onBoard: false } });
-    const api = emptyApi({
-      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [back] }),
-      stickerDetail: () =>
-        Promise.resolve({
-          sticker: back.sticker,
-          owner: TEST_OWNER,
-          transferTrail: [trailEntry({ giftId: "g1", receiver: TEST_OWNER })],
-        }),
-    });
-    const view = renderWithApi(
-      <StickerBoard freshId={back.stickerId} onDraw={() => {}} onOpenGift={() => {}} />,
-      api,
-    );
-    unmount = view.unmount;
-    await act(async () => {});
+    const back = boardSticker({ placement: { ...placedAt(0.3), onBoard: false } });
+    const stickerDetail = () =>
+      Promise.resolve({
+        sticker: back.sticker,
+        owner: TEST_OWNER,
+        transferTrail: [trailEntry({ giftId: "g1", receiver: TEST_OWNER })],
+      });
+    await openBoard(boardApi([back], { stickerDetail }), { freshId: back.stickerId });
     expect(document.querySelector(".send-gratitude-sheet")).not.toBeNull();
   });
 });
@@ -934,9 +859,9 @@ describe("StickerBoard after receiving", () => {
 describe("StickerBoard while it loads", () => {
   it("shows faint sticker shapes until the board's stickers arrive", async () => {
     let answer: (board: LoadedBoard) => void = () => {};
-    const api = emptyApi({ stickerBoard: () => new Promise((resolve) => (answer = resolve)) });
-    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
-    unmount = view.unmount;
+    const view = renderBoard(
+      emptyApi({ stickerBoard: () => new Promise((resolve) => (answer = resolve)) }),
+    );
     const shapes = () => view.host.querySelectorAll(".board-loading-sticker").length;
     expect(shapes()).toBeGreaterThan(0);
     expect(view.host.querySelector('[role="status"]')?.textContent).toBe("Loading your stickers");
@@ -953,7 +878,7 @@ describe("StickerBoard when the app's language changes", () => {
 
   it("names a deleted account's sticker in the new language", async () => {
     const gone: Person = { ...people.ken, handle: null, lineDisplayName: null };
-    const theirs = boardSticker({ placement: at(0.5), sticker: sticker({ artist: gone }) });
+    const theirs = boardSticker({ placement: placedAt(0.5), sticker: sticker({ artist: gone }) });
     const view = await visitBoard(theirs);
     const label = () =>
       view.host
@@ -966,21 +891,13 @@ describe("StickerBoard when the app's language changes", () => {
 
   it("says why a spot didn't save in the new language", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const view = renderWithApi(
-      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
-      emptyApi({
-        // The board gives an unplaced sticker a spot, and saves it.
-        stickerBoard: () =>
-          Promise.resolve({
-            owner: TEST_OWNER,
-            boardStickers: [boardSticker({ placement: null })],
-          }),
+    // The board gives an unplaced sticker a spot, and saves it.
+    const view = await openBoard(
+      boardApi([boardSticker({ placement: null })], {
         saveStickerPlacement: () =>
           Promise.reject(new ApiError(0, { error: "network", detail: "Failed to fetch" })),
       }),
     );
-    unmount = view.unmount;
-    await act(async () => {});
     const alert = () => view.host.querySelector(".board-alerts")?.textContent;
     expect(alert()).toContain(withBreakHints(errors.network.en));
     await act(() => i18next.changeLanguage("ja"));
@@ -1001,7 +918,7 @@ describe("StickerBoard when your NSFW opt-in changes", () => {
   };
   const boardFor = (optedIn: boolean): LoadedBoard => ({
     owner: { ...TEST_OWNER, nsfwOptIn: optedIn },
-    boardStickers: [boardSticker({ placement: at(0.5), sticker: nsfwSticker(optedIn) })],
+    boardStickers: [boardSticker({ placement: placedAt(0.5), sticker: nsfwSticker(optedIn) })],
   });
   /** Your board opted in, its drawing on the board; `later` answers each load after the first. */
   async function optedInBoard(later: ApiClient["stickerBoard"]) {
@@ -1010,19 +927,12 @@ describe("StickerBoard when your NSFW opt-in changes", () => {
       .fn<ApiClient["stickerBoard"]>()
       .mockResolvedValueOnce(boardFor(true))
       .mockImplementation(later);
-    const view = renderWithApi(
-      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
-      emptyApi({ stickerBoard }),
-      { ...TEST_ME, nsfwOptIn: true },
-    );
-    unmount = view.unmount;
-    await act(async () => {});
+    const view = await openBoard(emptyApi({ stickerBoard }), {}, { ...TEST_ME, nsfwOptIn: true });
     expect(view.host.innerHTML).toContain(DRAWING);
     return { view, stickerBoard };
   }
   const optOut = (view: ReturnType<typeof renderWithApi>) =>
     view.setMe({ ...TEST_ME, nsfwOptIn: false });
-  afterEach(() => vi.useRealTimers());
 
   it("shows no NSFW drawing from the moment you opt out, until your board loads under the new setting", async () => {
     let answer: (board: LoadedBoard) => void = () => {};
@@ -1069,11 +979,7 @@ describe("StickerBoard when your NSFW opt-in changes", () => {
       forgetsSoFar(),
     );
     onAPhone();
-    const view = renderWithApi(
-      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
-      emptyApi({ stickerBoard: () => new Promise(() => {}) }),
-    );
-    unmount = view.unmount;
+    const view = renderBoard(stillLoading());
     expect(view.host.innerHTML).not.toContain(DRAWING);
   });
 
@@ -1093,35 +999,24 @@ describe("StickerBoard when your NSFW opt-in changes", () => {
       },
       forgetsSoFar(),
     );
-    const view = renderWithApi(
-      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
-      emptyApi({ stickerBoard: () => new Promise(() => {}) }),
-    );
-    unmount = view.unmount;
+    renderBoard(stillLoading());
     expect(document.querySelector(".gift-received-notice")).not.toBeNull();
     expect(document.body.innerHTML).not.toContain(DRAWING);
   });
 });
 
 describe("StickerBoard after the board kept on this phone is forgotten", () => {
-  afterEach(() => vi.useRealTimers());
-
   it("keeps nothing until a load since the forget lands", async () => {
     // A key's step is committed, which changes the board's stickers, once the keys go quiet.
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     onAPhone();
-    const a = boardSticker({ placement: at(0.5) });
+    const a = boardSticker({ placement: placedAt(0.5) });
     let land: (board: LoadedBoard) => void = () => {};
     const stickerBoard = vi
       .fn<ApiClient["stickerBoard"]>()
       .mockResolvedValueOnce({ owner: TEST_OWNER, boardStickers: [a] })
       .mockImplementation(() => new Promise((resolve) => (land = resolve)));
-    const view = renderWithApi(
-      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
-      emptyApi({ stickerBoard }),
-    );
-    unmount = view.unmount;
-    await act(async () => {});
+    const view = await openBoard(emptyApi({ stickerBoard }));
     // As an 18+ mark or a gift taken out does.
     await act(async () => {
       forget();
@@ -1142,38 +1037,36 @@ describe("StickerBoard's Draw on a large screen", () => {
     onLargeScreen();
     const tabs = renderWithApi(<TabsLeadSlot />);
     onTestFinished(tabs.unmount);
-    const { host } = await show(emptyApi());
+    const { host } = await openBoard(emptyApi());
     expect(tabs.host.querySelector(".tabs-lead .board-draw")).not.toBeNull();
     expect(host.querySelector(".board-draw")).toBeNull();
   });
 });
 
 describe("StickerBoard's two layouts", () => {
-  afterEach(() => vi.useRealTimers());
-
   it("saves a move on a large screen to the large layout alone, leaving the phone's arrangement", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     onAnIpad();
-    const a = boardSticker({ placement: at(0.5), largePlacement: at(0.3) });
+    const a = boardSticker({ placement: placedAt(0.5), largePlacement: placedAt(0.3) });
     const server = boardServer(a);
-    const { host } = await show(server.api);
+    const { host } = await openBoard(server.api);
     selectByKeys(host, a.stickerId)("ArrowLeft");
     act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
     await act(async () => {});
     const spots = server.saveStickerPlacement.mock.lastCall?.[1];
     expect(spots?.largePlacement?.x).toBeLessThan(0.3);
     expect(spots).not.toHaveProperty("placement");
-    expect(server.onServer.get(a.stickerId)?.placement).toEqual(at(0.5));
+    expect(server.onServer.get(a.stickerId)?.placement).toEqual(placedAt(0.5));
   });
 
   it("lands a new sticker on both layouts once your board has a large layout, from a phone too", async () => {
     onAPhone();
     const fresh = boardSticker();
     const server = boardServer(
-      boardSticker({ placement: at(0.5), largePlacement: at(0.4) }),
+      boardSticker({ placement: placedAt(0.5), largePlacement: placedAt(0.4) }),
       fresh,
     );
-    await show(server.api);
+    await openBoard(server.api);
     expect(server.onServer.get(fresh.stickerId)).toMatchObject({
       placement: { onBoard: true },
       largePlacement: { onBoard: true },
@@ -1183,11 +1076,11 @@ describe("StickerBoard's two layouts", () => {
   it("derives the large layout from the phone's the first time a large screen shows your board, and saves it once", async () => {
     onAnIpad();
     const [left, right] = [
-      boardSticker({ placement: at(0.2) }),
-      boardSticker({ placement: at(0.8) }),
+      boardSticker({ placement: placedAt(0.2) }),
+      boardSticker({ placement: placedAt(0.8) }),
     ];
     const server = boardServer(left, right);
-    await show(server.api);
+    await openBoard(server.api);
     expect(server.saveLargeLayout).toHaveBeenCalledOnce();
     expect(server.saveStickerPlacement).not.toHaveBeenCalled();
     const large = (s: ApiBoardSticker) =>
@@ -1199,23 +1092,23 @@ describe("StickerBoard's two layouts", () => {
       true,
     ]);
     expect([left, right].map((s) => server.onServer.get(s.stickerId)?.placement)).toEqual([
-      at(0.2),
-      at(0.8),
+      placedAt(0.2),
+      placedAt(0.8),
     ]);
     await act(() => vi.dynamicImportSettled());
     unmount();
-    await show(server.api);
+    await openBoard(server.api);
     expect(server.saveLargeLayout).toHaveBeenCalledOnce();
   });
 
   it("takes the large layout another device saved first over the one it derived", async () => {
     onAnIpad();
     const [left, right] = [
-      boardSticker({ placement: at(0.2) }),
-      boardSticker({ placement: at(0.8) }),
+      boardSticker({ placement: placedAt(0.2) }),
+      boardSticker({ placement: placedAt(0.8) }),
     ];
     const server = boardServer(left, right);
-    const theirs = [at(0.3), at(0.6)];
+    const theirs = [placedAt(0.3), placedAt(0.6)];
     // The other device saves its own as soon as this one has read the board.
     const stickerBoard = async () => {
       const board = await server.api.stickerBoard();
@@ -1224,7 +1117,7 @@ describe("StickerBoard's two layouts", () => {
       );
       return board;
     };
-    await show({ ...server.api, stickerBoard });
+    await openBoard({ ...server.api, stickerBoard });
     await act(async () => {});
     expect(server.saveLargeLayout).toHaveBeenCalledOnce();
     const shown = keptBoardFor(TEST_ME.id)?.stickers.map((s) => s.placements.large);
@@ -1237,12 +1130,12 @@ describe("StickerBoard's two layouts", () => {
     onAPhone();
     // Drawn big, so the phone's board is too narrow for the size it takes in the large layout.
     const big = boardSticker({
-      placement: { ...at(0.5), scale: 0.9 },
+      placement: { ...placedAt(0.5), scale: 0.9 },
       sticker: sticker({ drawnWidth: 1600, drawnHeight: 1600 }),
     });
-    const server = boardServer(big, boardSticker({ placement: at(0.2) }));
+    const server = boardServer(big, boardSticker({ placement: placedAt(0.2) }));
     const phoneSpots = placeUnplaced([...server.onServer.values()].map(toBoardSticker)).stickers;
-    await show(server.api);
+    await openBoard(server.api);
     expect(server.saveLargeLayout).not.toHaveBeenCalled();
 
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(820);
@@ -1254,11 +1147,9 @@ describe("StickerBoard's two layouts", () => {
   });
 
   it("draws a board kept on this device on a large screen only once it has a large layout", () => {
-    keep(TEST_ME.id, boardSticker({ placement: at(0.3) }));
+    keep(TEST_ME.id, boardSticker({ placement: placedAt(0.3) }));
     onAnIpad();
-    const api = emptyApi({ stickerBoard: () => new Promise(() => {}) });
-    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
-    unmount = view.unmount;
+    const view = renderBoard(stillLoading());
     expect(shownIds(view.host)).toEqual([]);
     expect(view.host.querySelectorAll(".board-loading-sticker").length).toBeGreaterThan(0);
   });

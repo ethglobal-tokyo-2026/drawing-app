@@ -66,11 +66,19 @@ describe("board gestures", () => {
     const size = { w: 200, h: 120 };
     for (const r of [0, 30]) {
       const at = keptOnField({ x: 340, y: 620, r }, size, field);
+      // The turned box's corners, its furthest right and furthest down on the field's edges.
       const turn = (r * Math.PI) / 180;
-      const [cos, sin] = [Math.abs(Math.cos(turn)), Math.abs(Math.sin(turn))];
-      const reach = { x: (cos * size.w + sin * size.h) / 2, y: (sin * size.w + cos * size.h) / 2 };
-      expect(at.x + reach.x).toBeCloseTo(field.left + field.w);
-      expect(at.y + reach.y).toBeCloseTo(field.top + field.h);
+      const corners = [-1, 1].flatMap((sx) =>
+        [-1, 1].map((sy) => {
+          const [dx, dy] = [(sx * size.w) / 2, (sy * size.h) / 2];
+          return {
+            x: at.x + dx * Math.cos(turn) - dy * Math.sin(turn),
+            y: at.y + dx * Math.sin(turn) + dy * Math.cos(turn),
+          };
+        }),
+      );
+      expect(Math.max(...corners.map((c) => c.x))).toBeCloseTo(field.left + field.w);
+      expect(Math.max(...corners.map((c) => c.y))).toBeCloseTo(field.top + field.h);
     }
     const inside = { x: 180, y: 300, r: 0 };
     expect(keptOnField(inside, size, field)).toEqual({ x: inside.x, y: inside.y });

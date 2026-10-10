@@ -11,9 +11,7 @@ import {
   toBoardSticker,
 } from "./boardSticker";
 import { FIRST_SPOT, LAID_OUT_SPOTS, LARGE_LANDING_GROWTH, type Placement } from "./placement";
-
-/** A spot on the board, as the API sends it. */
-const onBoardAt = (x: number) => ({ onBoard: true, x, y: 0.5, scale: 0.3, rotation: 0, z: 1 });
+import { placedAt } from "./testBoardSticker";
 
 describe("toBoardSticker", () => {
   it("draws the API's board sticker with the app's names and milliseconds", () => {
@@ -101,7 +99,7 @@ describe("placeUnplaced", () => {
 
   it("takes a load's spot in each layout the board didn't move a sticker in", () => {
     const onServer = toBoardSticker(
-      boardSticker({ placement: onBoardAt(0.3), largePlacement: onBoardAt(0.4) }),
+      boardSticker({ placement: placedAt(0.3), largePlacement: placedAt(0.4) }),
     );
     // Drawn before another device saved the large layout, then dragged on the phone.
     const [drawn] = placeUnplaced([
@@ -127,7 +125,7 @@ describe("placeUnplaced", () => {
     const fresh = toBoardSticker(boardSticker());
     const where = (p: Placement) => ({ x: p.x, y: p.y });
     const alone = where(placeUnplaced([fresh]).stickers[0].placements.phone);
-    const atFirstSpot = { ...onBoardAt(FIRST_SPOT.x), y: FIRST_SPOT.y };
+    const atFirstSpot = { ...placedAt(FIRST_SPOT.x), y: FIRST_SPOT.y };
     const gone = [{ held: false }, { openGift: { id: "g", status: "packed" as const, for: null } }];
     for (const left of gone) {
       const leftAt = toBoardSticker(boardSticker({ placement: atFirstSpot, ...left }));
@@ -137,25 +135,25 @@ describe("placeUnplaced", () => {
   });
 
   it("lands a new sticker in the large layout too once the board has one, and in the tray there as on the phone", () => {
-    const both = boardSticker({ placement: onBoardAt(0.5), largePlacement: onBoardAt(0.4) });
+    const both = boardSticker({ placement: placedAt(0.5), largePlacement: placedAt(0.4) });
     const fresh = boardSticker();
     // Received back: in the tray on the phone, never in the large layout.
-    const back = boardSticker({ placement: { ...onBoardAt(0.6), onBoard: false } });
-    const given = boardSticker({ placement: onBoardAt(0.7), held: false });
+    const back = boardSticker({ placement: { ...placedAt(0.6), onBoard: false } });
+    const given = boardSticker({ placement: placedAt(0.7), held: false });
     const { placed } = placeUnplaced([both, fresh, back, given].map(toBoardSticker));
-    const spotsGiven = new Map(placed.map((p) => [p.sticker.id, p.spots]));
-    expect([...spotsGiven.keys()]).toEqual([fresh.stickerId, back.stickerId]);
-    expect(spotsGiven.get(fresh.stickerId)).toMatchObject({
+    const newSpots = new Map(placed.map((p) => [p.sticker.id, p.spots]));
+    expect([...newSpots.keys()]).toEqual([fresh.stickerId, back.stickerId]);
+    expect(newSpots.get(fresh.stickerId)).toMatchObject({
       phone: { on: true },
       large: { on: true },
     });
-    const backSpots = spotsGiven.get(back.stickerId) ?? {};
+    const backSpots = newSpots.get(back.stickerId) ?? {};
     expect(Object.keys(backSpots)).toEqual(["large"]);
     expect(backSpots.large?.on).toBe(false);
   });
 
   it("lands a new sticker larger in the large layout than at the same spot on the phone", () => {
-    const placed = boardSticker({ placement: onBoardAt(0.5), largePlacement: onBoardAt(0.5) });
+    const placed = boardSticker({ placement: placedAt(0.5), largePlacement: placedAt(0.5) });
     const [{ spots }] = placeUnplaced([placed, boardSticker()].map(toBoardSticker)).placed;
     expect(spots.large?.s).toBeGreaterThan(spots.phone?.s ?? Infinity);
     expect(spots.large?.s).toBeCloseTo((spots.phone?.s ?? 0) * LARGE_LANDING_GROWTH);
@@ -163,7 +161,7 @@ describe("placeUnplaced", () => {
 
   it("leaves the large layout to be derived while the board has none", () => {
     const { stickers, placed } = placeUnplaced(
-      [boardSticker({ placement: onBoardAt(0.5) }), boardSticker()].map(toBoardSticker),
+      [boardSticker({ placement: placedAt(0.5) }), boardSticker()].map(toBoardSticker),
     );
     expect(placed.map((p) => Object.keys(p.spots))).toEqual([["phone"]]);
     expect(stickers.map((s) => s.placements.large)).toEqual([null, null]);
@@ -178,7 +176,7 @@ describe("onTheBoard", () => {
       { openGift: inAGift("packed") },
       { openGift: inAGift("sent") },
       { held: false },
-    ].map((rest) => toBoardSticker(boardSticker({ placement: onBoardAt(0.5), ...rest })));
+    ].map((rest) => toBoardSticker(boardSticker({ placement: placedAt(0.5), ...rest })));
     const shown = shownIn("phone", placeUnplaced(stuckOn).stickers);
     expect(shown.map((s) => onTheBoard(s))).toEqual([true, false, false, false]);
   });
@@ -187,10 +185,10 @@ describe("onTheBoard", () => {
 describe("shownIn", () => {
   it("shows the layout asked for, a sticker that layout hasn't placed at its phone spot, and keeps a view while it hasn't moved", () => {
     const [s] = placeUnplaced([
-      toBoardSticker(boardSticker({ placement: onBoardAt(0.2), largePlacement: onBoardAt(0.8) })),
+      toBoardSticker(boardSticker({ placement: placedAt(0.2), largePlacement: placedAt(0.8) })),
     ]).stickers;
     const [given] = placeUnplaced([
-      toBoardSticker(boardSticker({ placement: onBoardAt(0.3), held: false })),
+      toBoardSticker(boardSticker({ placement: placedAt(0.3), held: false })),
     ]).stickers;
     expect(shownIn("phone", [s])[0].placement.x).toBe(0.2);
     expect(shownIn("large", [s, given]).map((v) => v.placement.x)).toEqual([0.8, 0.3]);

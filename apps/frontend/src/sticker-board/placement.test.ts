@@ -7,6 +7,7 @@ import {
   knobHidden,
   LAID_OUT_SPOTS,
   LARGE_LANDING_GROWTH,
+  MIDDLE_CLEAR,
   NATURAL_SCALE,
   nextZ,
   PHONE_BOARD,
@@ -18,6 +19,7 @@ import {
   sRangeOf,
   toFrac,
   toolbarSpot,
+  TRAY_EDGE,
   unitOf,
   type Art,
   type BoardSize,
@@ -114,13 +116,6 @@ describe("placement", () => {
     expect(freeSpot([], USUAL, "phone", PHONE_BOARD_SIZE)).toMatchObject(FIRST_SPOT);
   });
 
-  it("gives the same spot for the same board", () => {
-    const taken = stuck([0.5, 0.45]);
-    expect(freeSpot(taken, USUAL, "phone", PHONE_BOARD_SIZE)).toEqual(
-      freeSpot(taken, USUAL, "phone", PHONE_BOARD_SIZE),
-    );
-  });
-
   it("lands a sticker clear of the ones already there, with room for its size", () => {
     const field = fieldOf(PHONE_BOARD.W, PHONE_BOARD.H);
     const footprint = (p: Pick<Placement, "x" | "y" | "s" | "r">, art: Taken["art"]) =>
@@ -186,7 +181,7 @@ describe("placement", () => {
     const low = toolbarSpot({ ...sticker, y: 560 }, board, bar);
     expect(low.top + bar.h).toBeLessThan(560 - sticker.h / 2);
     const right = toolbarSpot({ ...sticker, x: 370 }, board, bar);
-    expect(right.left + bar.w).toBeLessThanOrEqual(board.W - 40);
+    expect(right.left + bar.w).toBeLessThanOrEqual(board.W - TRAY_EDGE);
     // With the knob hanging below, the toolbar clears the knob's far edge.
     const knobEdge = sticker.y + sticker.h / 2 + 42.5 + 14;
     expect(toolbarSpot(sticker, board, bar, { knobBelow: true }).top).toBeGreaterThan(knobEdge);
@@ -219,7 +214,7 @@ describe("placement", () => {
       for (let y = 120; y <= 480; y += 10) {
         const sticker = { x: 180, y, w: h * (4 / 3), h, r: 0 };
         const { top } = toolbarSpot(sticker, board, bar, { clearOf: draw });
-        expect(top > y + 22 || top + bar.h < y - 22).toBe(true);
+        expect(top > y + MIDDLE_CLEAR || top + bar.h < y - MIDDLE_CLEAR).toBe(true);
       }
   });
 

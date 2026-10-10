@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../api/testing";
 import { forgetBootMilestones, readBootMilestones } from "../performance/bootMilestones";
 import {
+  GIVE_UP_MS,
   QUIET_MS,
   followBoardAssembly,
   forgetBoardComplete,
@@ -98,11 +99,11 @@ describe("the board's first assembly", () => {
     expect(complete).toBe(true);
   });
 
-  it("counts as complete 10s after it first showed, when an image never arrives", async () => {
+  it("counts as complete once it has waited GIVE_UP_MS, when an image never arrives", async () => {
     vi.useFakeTimers();
     follow();
     followBoardAssembly([{ urls: ["a.png"] }], { fresh: true });
-    await act(async () => vi.advanceTimersByTimeAsync(9_999));
+    await act(async () => vi.advanceTimersByTimeAsync(GIVE_UP_MS - 1));
     expect(complete).toBe(false);
     await act(async () => vi.advanceTimersByTimeAsync(1));
     expect(complete).toBe(true);

@@ -13,6 +13,7 @@ import { forgetGreetings } from "./artistChipGreeting";
 import { ArtistBoard } from "./ArtistBoard";
 import { fieldOf, LARGE_LANDING_GROWTH, PHONE_BOARD, unitOf } from "./placement";
 import { shortAddress } from "./stat-board/addresses";
+import { placedAt } from "./testBoardSticker";
 
 // Someone's stat board mounts behind the front; nothing here needs LINE.
 vi.mock("@line/liff", () => ({ default: { isApiAvailable: () => false } }));
@@ -34,15 +35,6 @@ beforeEach(() => {
   forgetGreetings();
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(741);
-});
-
-const placedAt = (x: number, y: number): NonNullable<BoardSticker["placement"]> => ({
-  onBoard: true,
-  x,
-  y,
-  scale: 0.3,
-  rotation: 0,
-  z: 1,
 });
 
 /** Someone's board with three stickers, listed out of reading order: two on a top row, one below. */

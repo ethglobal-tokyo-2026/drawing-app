@@ -12,7 +12,7 @@ afterEach(() => {
 
 describe("the board settling", () => {
   it("waits for the board to be complete and quiet, and for its artist chips to have played", async () => {
-    const { markBoardComplete } = await import("./boardComplete");
+    const { markBoardComplete, QUIET_MS } = await import("./boardComplete");
     const { markChipsPlayed, whenBoardSettled } = await import("./boardSettled");
     let settled = false;
     void whenBoardSettled().then(() => (settled = true));
@@ -22,7 +22,7 @@ describe("the board settling", () => {
     expect(settled).toBe(false);
 
     markBoardComplete();
-    await vi.advanceTimersByTimeAsync(999);
+    await vi.advanceTimersByTimeAsync(QUIET_MS - 1);
     expect(settled).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
     expect(settled).toBe(true);

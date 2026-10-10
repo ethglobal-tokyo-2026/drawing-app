@@ -5,6 +5,7 @@ import { people } from "../api/testFixtures";
 import { renderWithApi } from "../api/testing";
 import { toPerson, type PersonView } from "../api/views";
 import { ArtistChipLayer } from "./ArtistChipLayer";
+import { CHIP_ROOM, DROP, OVERHANG } from "./chipPlacement";
 
 type Chip = ComponentProps<typeof ArtistChipLayer>["chips"][number];
 
@@ -47,12 +48,15 @@ describe("ArtistChipLayer", () => {
       chip(mika, { x: 30, y: 40, w: 80, h: 80 }),
       chip(bob, { x: 380, y: 690, w: 80, h: 80 }),
     ]);
-    expect(spotOf(host, ken)).toEqual({ left: 200 - 50 - 10, top: 300 - 40 - 20 });
-    expect(spotOf(host, mika)).toEqual({ left: 8, top: 74 });
-    expect(spotOf(host, bob)).toEqual({ left: BOARD.W - 200, top: BOARD.H - 150 });
+    expect(spotOf(host, ken)).toEqual({ left: 200 - 50 - OVERHANG.x, top: 300 - 40 - OVERHANG.y });
+    expect(spotOf(host, mika)).toEqual({ left: CHIP_ROOM.left, top: CHIP_ROOM.top });
+    expect(spotOf(host, bob)).toEqual({
+      left: BOARD.W - CHIP_ROOM.fromRight,
+      top: BOARD.H - CHIP_ROOM.fromFoot,
+    });
   });
 
-  it("drops a chip 46px below each one in its way, placing them top to bottom", () => {
+  it("drops a chip below each one in its way, placing them top to bottom", () => {
     // Given bottom first: the highest sticker keeps its spot, and each lower chip drops under it.
     const host = layer([
       chip(bob, { x: 190, y: 320, w: 100, h: 80 }),
@@ -60,8 +64,8 @@ describe("ArtistChipLayer", () => {
       chip(ken, { x: 200, y: 300, w: 100, h: 80 }),
     ]);
     const top = spotOf(host, ken).top;
-    expect(spotOf(host, mika).top).toBe(top + 46);
-    expect(spotOf(host, bob).top).toBe(top + 92);
+    expect(spotOf(host, mika).top).toBe(top + DROP);
+    expect(spotOf(host, bob).top).toBe(top + 2 * DROP);
   });
 
   it("lets each chip go as its flash ends, and is done after the last", () => {

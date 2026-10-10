@@ -4,6 +4,7 @@ import { boardSticker, sticker } from "../api/testFixtures";
 import { emptyApi } from "../api/testing";
 import { toApiPlacement } from "../api/views";
 import { placeUnplaced, toBoardSticker, type PlacedBoardSticker } from "./boardSticker";
+import { placedAt } from "./testBoardSticker";
 import {
   deriveLargeLayout,
   LARGE_SPREAD,
@@ -15,7 +16,7 @@ import {
   fieldOf,
   LARGE_LANDING_GROWTH,
   sRangeOf,
-  PHONE_BOARD,
+  PHONE_BOARD_SIZE as PHONE,
   stickerBox,
   unitOf,
   type BoardSize,
@@ -26,8 +27,7 @@ import {
 const largeBoard = (W: number, H: number): BoardSize => ({ W, H, U: unitOf("large", W) });
 /** Any size at all: the spread alone. */
 const ANY_SIZE: SRange = { min: 0, max: Infinity };
-const PHONE: BoardSize = { ...PHONE_BOARD, U: unitOf("phone", PHONE_BOARD.W) };
-/** iPads' boards in Safari, upright and turned: their viewports less a 72px tab strip. */
+/** iPads' boards in Safari, upright and turned: their viewports less the tab strip. */
 const IPADS = [largeBoard(744, 975), largeBoard(820, 1022), largeBoard(1180, 662)];
 const spot = (x: number, y: number, s = 0.3): Placement => ({ on: true, x, y, s, r: 0, z: 2 });
 /** Stickers you hold at these phone spots, with no large spot yet. */
@@ -51,11 +51,11 @@ describe("the large layout derived from the phone's", () => {
   it("spreads the phone's arrangement across the board's field, centered, a size larger", () => {
     const [corner, far] = [spot(0, 0), spot(1, 1)];
     const edge = (1 - LARGE_SPREAD) / 2;
+    expect(largeSpotFrom(corner, ANY_SIZE)).toMatchObject({ x: edge, y: edge });
+    expect(largeSpotFrom(far, ANY_SIZE)).toMatchObject({ x: 1 - edge, y: 1 - edge });
+    expect(largeSpotFrom(spot(0.5, 0.5), ANY_SIZE)).toMatchObject({ x: 0.5, y: 0.5 });
+    const [held] = holding(corner);
     for (const ipad of IPADS) {
-      expect(largeSpotFrom(corner, ANY_SIZE)).toMatchObject({ x: edge, y: edge });
-      expect(largeSpotFrom(far, ANY_SIZE)).toMatchObject({ x: 1 - edge, y: 1 - edge });
-      expect(largeSpotFrom(spot(0.5, 0.5), ANY_SIZE)).toMatchObject({ x: 0.5, y: 0.5 });
-      const [held] = holding(corner);
       const large = largeOf([held], ipad).get(held.id);
       expect(large).toMatchObject({ on: corner.on, r: corner.r, z: corner.z });
       expect(large?.s).toBeCloseTo(corner.s * LARGE_LANDING_GROWTH);
@@ -117,7 +117,7 @@ describe("the large layout derived from the phone's", () => {
   });
 
   it("gives every sticker you hold a spot and lists it for saving, and none to one you gave", () => {
-    const placement = { onBoard: true, x: 0.3, y: 0.4, scale: 0.3, rotation: 0, z: 1 };
+    const placement = placedAt(0.3, 0.4);
     const [held, gave] = placeUnplaced(
       [boardSticker({ placement }), boardSticker({ placement, held: false })].map(toBoardSticker),
     ).stickers;
