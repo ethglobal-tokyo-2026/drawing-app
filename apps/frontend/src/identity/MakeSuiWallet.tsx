@@ -1,5 +1,6 @@
 import { useCreateWallet } from "@privy-io/react-auth/extended-chains";
 import { useEffect } from "react";
+import { messageOf } from "../i18n/errorMessage";
 import { usePrivyStatus } from "./privy";
 import { setSuiWalletFailure, useSuiWalletAttempt } from "./suiWallet";
 
@@ -22,7 +23,7 @@ export function MakeSuiWallet() {
     // Privy then refreshes the user, which brings the new address to the status.
     createWallet({ chainType: "sui" }).catch((error: unknown) => {
       console.error("Privy couldn't make the Sui wallet", error);
-      setSuiWalletFailure(error instanceof Error ? error.message : String(error));
+      setSuiWalletFailure(messageOf(error));
     });
   }, [needed, attempt, createWallet]);
   return null;

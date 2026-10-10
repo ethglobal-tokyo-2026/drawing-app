@@ -1,4 +1,5 @@
 import { Component, lazy, Suspense, type ReactNode } from "react";
+import { messageOf } from "../i18n/errorMessage";
 import { liffMockActive } from "../line/liff";
 import { setPrivyStatus } from "./privy";
 import { usePrivyStarted } from "./privyStart";
@@ -19,7 +20,7 @@ class PrivyBoundary extends Component<{ children: ReactNode }, { failed: boolean
     console.error("Privy stopped", error);
     setPrivyStatus({
       state: "failed",
-      reason: `Privy stopped: ${error instanceof Error ? error.message : String(error)}`,
+      reason: `Privy stopped: ${messageOf(error)}`,
     });
   }
 

@@ -1,6 +1,7 @@
 import type { ChatMenuLink } from "@drawing-app/api/client";
 import { useEffect, useSyncExternalStore } from "react";
 import { createServerClient } from "../api/httpApi";
+import { messageOf } from "../i18n/errorMessage";
 import { jsonField } from "../identity/privy";
 
 /**
@@ -57,7 +58,7 @@ export async function linkChatMenu(api = createServerClient()): Promise<void> {
     const error = jsonField(await response.json().catch(() => null), "error");
     fail(`HTTP ${response.status}${typeof error === "string" ? ` ${error}` : ""}`);
   } catch (error) {
-    fail(`couldn’t reach the server: ${error instanceof Error ? error.message : String(error)}`);
+    fail(`couldn’t reach the server: ${messageOf(error)}`);
   }
 }
 

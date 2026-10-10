@@ -1,4 +1,5 @@
 import { ApiError } from "../api/apiClient";
+import { messageOf } from "../i18n/errorMessage";
 import { SigningTimedOut } from "../identity/signingTimedOut";
 
 /**
@@ -14,5 +15,5 @@ export type PaymentFailure =
 export function paymentFailureOf(error: unknown): PaymentFailure {
   if (error instanceof SigningTimedOut) return { kind: "timedOut", detail: "" };
   if (error instanceof ApiError) return { kind: "app", error, detail: error.detail ?? "" };
-  return { kind: "other", detail: error instanceof Error ? error.message : String(error) };
+  return { kind: "other", detail: messageOf(error) };
 }

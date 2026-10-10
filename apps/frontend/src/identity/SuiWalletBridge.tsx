@@ -1,6 +1,7 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { useSignRawHash } from "@privy-io/react-auth/extended-chains";
 import { useEffect } from "react";
+import { messageOf } from "../i18n/errorMessage";
 import { privySuiWallet } from "./privy";
 import { PrivySuiSigner, setSuiSigner, suiPublicKeyFor } from "./suiSigner";
 import { setSuiWalletFailure } from "./suiWallet";
@@ -32,7 +33,7 @@ export function SuiWalletBridge() {
       );
     } catch (error) {
       console.error("The Sui wallet's signer failed to start", error);
-      setSuiWalletFailure(error instanceof Error ? error.message : String(error));
+      setSuiWalletFailure(messageOf(error));
     }
     return () => setSuiSigner(null);
   }, [address, publicKey, signRawHash]);

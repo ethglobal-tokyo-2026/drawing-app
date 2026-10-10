@@ -1,6 +1,7 @@
 import type { SignedTransaction, SponsoredTransaction } from "@drawing-app/api/client";
 import type { ApiClient } from "../api/apiClient";
 import { ApiError } from "../api/apiClient";
+import { messageOf } from "../i18n/errorMessage";
 import { currentLanguage } from "../i18n/i18n";
 import { forgetMyStickerBoard } from "../sticker-board/useMyStickerBoard";
 import { formatNo } from "../stickers/format";
@@ -28,7 +29,7 @@ export class GiftPackagingError extends Error {
   readonly giftId: string;
 
   constructor(giftId: string, cause: unknown) {
-    super(cause instanceof Error ? cause.message : String(cause), { cause });
+    super(messageOf(cause), { cause });
     this.giftId = giftId;
   }
 }

@@ -2,6 +2,7 @@ import liff from "@line/liff";
 import type { User, WalletWithMetadata } from "@privy-io/react-auth";
 import { useSyncExternalStore } from "react";
 import { ApiError } from "../api/apiClient";
+import { messageOf } from "../i18n/errorMessage";
 import { liffMockActive } from "../line/liff";
 import { reconnectLine } from "../line/reconnectLine";
 
@@ -157,8 +158,6 @@ export async function fetchPrivyJwt(): Promise<string | undefined> {
     kept = { jwt, expiresAt };
     return jwt;
   } catch (error) {
-    return fail(
-      `couldn’t reach the auth server: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    return fail(`couldn’t reach the auth server: ${messageOf(error)}`);
   }
 }

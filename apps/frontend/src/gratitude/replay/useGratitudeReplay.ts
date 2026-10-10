@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "re
 import { apiError, type ApiError } from "../../api/apiClient";
 import { useApi } from "../../api/useApi";
 import { useApiQuery } from "../../api/useApiQuery";
+import { messageOf } from "../../i18n/errorMessage";
 import { mountGratitudeReplay, type GratitudeReplayHandle } from "./mountGratitudeReplay";
 import { STAGE_EASE_MS } from "./ReplayStage";
 
@@ -167,7 +168,7 @@ export function useGratitudeReplay({
         console.error(`The replay of gift ${current.giftId}'s gratitude stopped`, error);
         release();
         setRun(null);
-        const reason = error instanceof Error ? error.message : String(error);
+        const reason = messageOf(error);
         setLoopFailure({ giftId: current.giftId, reason });
       },
     );

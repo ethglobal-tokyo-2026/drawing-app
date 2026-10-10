@@ -1,4 +1,5 @@
 import type { ReplayV1 } from "@drawing-app/api/client";
+import { messageOf } from "../i18n/errorMessage";
 import { formatCount } from "../i18n/format";
 import { i18next } from "../i18n/i18n";
 import {
@@ -1254,7 +1255,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
     running = false;
     cancelFrame();
     console.error("The gratitude mini-game stopped", error, combo.view);
-    options.onError(error instanceof Error ? error.message : String(error));
+    options.onError(messageOf(error));
     // No ending can play without the loop: a combo in play is recorded as it stands, and one
     // already in its ending goes on to the receipt.
     if (!liveInput) return;

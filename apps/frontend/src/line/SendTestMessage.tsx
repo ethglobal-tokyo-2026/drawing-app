@@ -1,5 +1,6 @@
 import liff from "@line/liff";
 import { useState } from "react";
+import { messageOf } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { PaperPlaneTilt } from "../icons";
 import { LabelButton } from "../ui/LabelButton";
@@ -30,7 +31,7 @@ export function SendTestMessage({ senderName }: { senderName: string }) {
       setStatus({ kind: await sendInLineChat(liff, [{ type: "text", text }]) });
     } catch (error) {
       console.error(error);
-      setStatus({ kind: "failed", reason: error instanceof Error ? error.message : String(error) });
+      setStatus({ kind: "failed", reason: messageOf(error) });
     }
   };
 

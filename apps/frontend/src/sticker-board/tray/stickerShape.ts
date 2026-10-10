@@ -1,4 +1,5 @@
 import type { BoardSticker } from "../boardSticker";
+import { messageOf } from "../../i18n/errorMessage";
 import { maskPixels } from "../../stickers/maskPixels";
 import type { StickerUrls } from "../../stickers/stickerUrls";
 import { boxShape, outlineShape, shapeFromMask, type Shape } from "./sheetPacking";
@@ -83,7 +84,7 @@ export function stickerShape(
       (error: unknown) => {
         // Not kept, so the next call tries again.
         tracing.delete(sticker.id);
-        unreadable.set(sticker.id, error instanceof Error ? error.message : String(error));
+        unreadable.set(sticker.id, messageOf(error));
         console.error(`Tracing No.${sticker.no}'s cut failed, so its sheet packs its box`, error);
         return boxShape(sticker.width, sticker.height);
       },
