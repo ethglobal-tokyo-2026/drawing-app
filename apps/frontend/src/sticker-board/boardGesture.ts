@@ -2,8 +2,8 @@ import { clampS, type Field, type SRange } from "./placement";
 
 export type Pt = { x: number; y: number };
 
-/** How far a finger may wander before a press on a sticker becomes a drag. */
-const SLOP = 6;
+/** How far a press may wander and still be a tap: past it, a press on a sticker becomes a drag. */
+export const SLOP = 6;
 /** A turn this many degrees from upright settles upright. */
 const SETTLE = 3;
 

@@ -3,7 +3,6 @@ import { formatNo } from "../stickers/format";
 import { sheenIn, sweepSheen } from "../stickers/resinSheen";
 import { playStick } from "../stickers/stick";
 import { EASE_PEEL } from "../ui/easing";
-import type { Placement } from "./placement";
 import {
   dragBounds,
   keptOnField,
@@ -26,6 +25,7 @@ import {
   type BoardLayout,
   type BoardSize,
   type Field,
+  type Placement,
 } from "./placement";
 import { focusAfterLeaving, focusStep, readingOrder } from "./stickerOrder";
 import type { StickerTrayHandle } from "./tray/StickerTray";
@@ -93,8 +93,6 @@ type Gesture =
     }
   | { mode: "bg"; p0: Pt };
 
-/** A tap on bare board may wander this far and still deselect. */
-const TAP_SLOP = 8;
 /** Removed, a sticker rides to the tray's edge, this far in from the board's. */
 const STOW_EDGE = 30;
 /** The step each key takes on the selected sticker. */
@@ -159,6 +157,11 @@ export function useBoardGestures(options: Options) {
     if (!stage) return;
     const pointers = new Map<number, Pt>();
     let origin = { left: 0, top: 0, k: 1 };
+    /**
+     * Stickers on their way into the tray. Until it has them they take no new press or key, so nothing
+     * put down meanwhile is undone when they land.
+     */
+    const leaving = new Set<string>();
 
     const stickerOf = (id: string) => latest.current.stickers.find((s) => s.id === id);
     const liveOf = (p: Placement, field: Field): Live => ({ ...toPx(field, p), s: p.s, r: p.r });
@@ -309,12 +312,6 @@ export function useBoardGestures(options: Options) {
         return false;
       }
     };
-
-    /**
-     * Stickers on their way into the tray. Until it has them they take no new press or key, so nothing
-     * put down meanwhile is undone when they land.
-     */
-    const leaving = new Set<string>();
 
     /** A dragged sticker let go: still in hand, above the tray, until the tray says whether it's taking it. */
     const dropHeld = async (g: Extract<Gesture, { mode: "drag" }>) => {
@@ -525,8 +522,7 @@ export function useBoardGestures(options: Options) {
       setHold(null);
       const tap = e.type === "pointerup";
       if (g.mode === "bg") {
-        const pt = local(e);
-        if (!tap || Math.hypot(pt.x - g.p0.x, pt.y - g.p0.y) >= TAP_SLOP) return;
+        if (!tap || passedSlop(g.p0, local(e))) return;
         latest.current.onSelect(null);
         closeTray();
         // A press here doesn't move focus as it would on a page, so a focused sticker is let go of

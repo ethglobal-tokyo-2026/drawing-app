@@ -4,6 +4,7 @@ import {
   passedSlop,
   pinchBy,
   scaleBy,
+  SLOP,
   stepBy,
   turnBy,
   type Pt,
@@ -88,8 +89,9 @@ describe("board gestures", () => {
     expect(pinchBy(start, now, { x: 100, y: 100, s: 0.3, r: 0 }, RANGE).r).toBeCloseTo(2);
   });
 
-  it("starts a drag only past the slop", () => {
-    expect(passedSlop({ x: 0, y: 0 }, { x: 6, y: 0 })).toBe(false);
-    expect(passedSlop({ x: 0, y: 0 }, { x: 5, y: 5 })).toBe(true);
+  it("passes the slop by the distance moved, not by either axis alone", () => {
+    const from = { x: 10, y: 10 };
+    expect(passedSlop(from, { x: from.x + SLOP, y: from.y })).toBe(false);
+    expect(passedSlop(from, { x: from.x + 0.8 * SLOP, y: from.y - 0.8 * SLOP })).toBe(true);
   });
 });

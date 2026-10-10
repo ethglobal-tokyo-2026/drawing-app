@@ -3,7 +3,7 @@ import { act, useRef, type RefObject } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BoardSticker } from "./boardSticker";
-import { fieldOf, PHONE_BOARD, sizeOf, toPx, transformAt } from "./placement";
+import { fieldOf, PHONE_BOARD, sizeOf, toPx, transformAt, type Placement } from "./placement";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import { STEP_SAVE_IDLE_MS, useBoardGestures } from "./useBoardGestures";
 import { yoursHeld } from "./testBoardSticker";
@@ -15,6 +15,7 @@ declare global {
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 type Options = Parameters<typeof useBoardGestures>[0];
+type BoardProps = Omit<Options, "stage">;
 
 const sticker: BoardSticker = {
   id: "a",
@@ -32,7 +33,7 @@ const sticker: BoardSticker = {
   placement: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
 };
 
-function Board(props: Omit<Options, "stage">) {
+function Board(props: BoardProps) {
   const stage = useRef<HTMLDivElement>(null);
   useBoardGestures({ ...props, stage });
   return (
@@ -64,18 +65,68 @@ const trayWith = (overrides: Partial<StickerTrayHandle>): RefObject<StickerTrayH
 /** A sticker tray that answers a let-go sticker's `boardDrop` as given. */
 const trayDropping = (boardDrop: StickerTrayHandle["boardDrop"]) => trayWith({ boardDrop });
 
+const phone = { ...PHONE_BOARD, U: PHONE_BOARD.W };
+const phoneField = fieldOf(phone.W, phone.H);
+
+/** One sticker, selected, on a phone's board with motion off and no tray. */
+const defaults: BoardProps = {
+  stickers: [sticker],
+  field: phoneField,
+  size: phone,
+  layout: "phone",
+  selected: sticker.id,
+  reduced: true,
+  tray: noTray,
+  onSelect: () => {},
+  onOpen: () => {},
+  onCommit: () => {},
+  onRemove: () => {},
+};
+
 let host: HTMLDivElement;
 let root: Root;
 
+/** Draws the board, `overrides` on `defaults`, and returns its stage. */
+const show = (overrides: Partial<BoardProps> = {}) => {
+  const props = { ...defaults, ...overrides };
+  act(() => root.render(<Board {...props} />));
+  const stage = host.querySelector<HTMLElement>(".board-stage");
+  if (!stage) throw new Error("the board didn't render");
+  // happy-dom lays nothing out: the stage is given the board's size.
+  const { W, H } = props.size ?? phone;
+  stage.getBoundingClientRect = () => new DOMRect(0, 0, W, H);
+  return stage;
+};
+
+const stickerEl = (id = sticker.id) => {
+  const el = host.querySelector<HTMLElement>(`[data-sticker-id="${id}"]`);
+  if (!el) throw new Error(`${id} isn't on the board`);
+  return el;
+};
+
+/** `key` pressed where focus is, or on `on`. */
+const keyDown = (key: string, on: Element | null = document.activeElement) =>
+  on?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+const press = (key: string, on?: Element) => act(() => void keyDown(key, on));
+
+/** A pointer on `el` at (x, y). */
+const point = (el: Element, type: string, pointerId: number, x: number, y: number) =>
+  el.dispatchEvent(
+    new PointerEvent(type, { pointerId, clientX: x, clientY: y, button: 0, bubbles: true }),
+  );
+
 /** A press, a move past the slop and a lift, at the board's middle height. */
 const dragAcross = (el: Element, pointerId: number, from: number, to: number) => {
-  const at = (type: string, x: number) =>
-    el.dispatchEvent(
-      new PointerEvent(type, { pointerId, clientX: x, clientY: 300, button: 0, bubbles: true }),
-    );
-  at("pointerdown", from);
-  at("pointermove", to);
-  at("pointerup", to);
+  point(el, "pointerdown", pointerId, from, 300);
+  point(el, "pointermove", pointerId, to, 300);
+  point(el, "pointerup", pointerId, to, 300);
+};
+
+/** The transform that draws the sticker at `placement` on the phone's board. */
+const drawnAt = (placement: Placement) => {
+  const { x, y } = toPx(phoneField, placement);
+  const { w, h } = sizeOf(phone.U, placement.s, sticker);
+  return transformAt(x, y, w, h, placement.r);
 };
 
 beforeEach(() => {
@@ -90,38 +141,14 @@ afterEach(() => {
   act(() => root.unmount());
   host.remove();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
-
-/** A pointer on `el` at (x, y). */
-const point = (el: Element, type: string, pointerId: number, x: number, y: number) =>
-  el.dispatchEvent(
-    new PointerEvent(type, { pointerId, clientX: x, clientY: y, button: 0, bubbles: true }),
-  );
 
 describe("useBoardGestures", () => {
   it("hands a pinch to the fingers still down when one of its pair lifts, from where the sticker is", () => {
     const onCommit = vi.fn<Options["onCommit"]>();
-    act(() =>
-      root.render(
-        <Board
-          stickers={[sticker]}
-          field={fieldOf(390, 657)}
-          size={{ W: 390, H: 657, U: 390 }}
-          selected="a"
-          reduced
-          layout="phone"
-          tray={noTray}
-          onSelect={() => {}}
-          onOpen={() => {}}
-          onCommit={onCommit}
-          onRemove={() => {}}
-        />,
-      ),
-    );
-    const stage = host.querySelector(".board-stage");
-    const el = host.querySelector(".placed-sticker");
-    if (!(stage instanceof HTMLElement) || !el) throw new Error("the board didn't render");
-    stage.getBoundingClientRect = () => new DOMRect(0, 0, 390, 657);
+    show({ onCommit });
+    const el = stickerEl();
 
     act(() => {
       point(el, "pointerdown", 1, 100, 300);
@@ -149,38 +176,15 @@ describe("useBoardGestures", () => {
       .fn<StickerTrayHandle["boardDrop"]>()
       .mockReturnValueOnce(new Promise((resolve) => (land = resolve)))
       .mockResolvedValue(false);
-    const tray = trayDropping(boardDrop);
     const onCommit = vi.fn();
-    act(() =>
-      root.render(
-        <Board
-          stickers={[sticker]}
-          field={fieldOf(390, 657)}
-          size={{ W: 390, H: 657, U: 390 }}
-          selected="a"
-          reduced
-          layout="phone"
-          tray={tray}
-          onSelect={() => {}}
-          onOpen={() => {}}
-          onCommit={onCommit}
-          onRemove={() => {}}
-        />,
-      ),
-    );
-    const stage = host.querySelector(".board-stage");
-    const el = host.querySelector(".placed-sticker");
-    if (!(stage instanceof HTMLElement) || !el) throw new Error("the board didn't render");
-    // happy-dom lays nothing out: the stage is given the board's size.
-    stage.getBoundingClientRect = () => new DOMRect(0, 0, 390, 657);
+    show({ tray: trayDropping(boardDrop), onCommit });
+    const el = stickerEl();
 
     // Let go over the tray, which takes its time to take it.
     act(() => dragAcross(el, 1, 100, 140));
     // Meanwhile it's grabbed again and put down on the board, and nudged with a key.
-    act(() => {
-      dragAcross(el, 2, 140, 180);
-      el.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
-    });
+    act(() => dragAcross(el, 2, 140, 180));
+    press("ArrowLeft", el);
     await act(async () => land(true));
 
     expect(boardDrop).toHaveBeenCalledTimes(1);
@@ -195,34 +199,12 @@ describe("useBoardGestures", () => {
       sticker,
       { ...sticker, id: "b", placement: { ...sticker.placement, x: 0.8 } },
     ];
-    const render = (selected: string | null) =>
-      act(() =>
-        root.render(
-          <Board
-            stickers={stickers}
-            field={fieldOf(390, 657)}
-            size={{ W: 390, H: 657, U: 390 }}
-            selected={selected}
-            reduced
-            layout="phone"
-            tray={noTray}
-            onSelect={onSelect}
-            onOpen={() => {}}
-            onCommit={onCommit}
-            onRemove={() => {}}
-          />,
-        ),
-      );
-    const el = (id: string) => host.querySelector<HTMLElement>(`[data-sticker-id="${id}"]`);
-    const press = (key: string) =>
-      act(() => {
-        document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
-      });
+    const render = (selected: string | null) => show({ stickers, selected, onSelect, onCommit });
 
     render(null);
-    act(() => el("a")?.focus());
+    act(() => stickerEl("a").focus());
     press("ArrowRight");
-    expect(document.activeElement).toBe(el("b"));
+    expect(document.activeElement).toBe(stickerEl("b"));
     expect(onSelect).not.toHaveBeenCalled();
     expect(onCommit).not.toHaveBeenCalled();
 
@@ -231,39 +213,19 @@ describe("useBoardGestures", () => {
     expect(onSelect).toHaveBeenLastCalledWith("b", "tap");
     render("b");
     press("ArrowLeft");
-    expect(document.activeElement).toBe(el("b"));
+    expect(document.activeElement).toBe(stickerEl("b"));
     act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
     expect(onCommit).toHaveBeenCalledOnce();
 
     press("Escape");
     expect(onSelect).toHaveBeenLastCalledWith(null);
-    expect(document.activeElement).toBe(el("b"));
+    expect(document.activeElement).toBe(stickerEl("b"));
   });
 
   it("draws a sticker in hand at the board's unit, which on a large board isn't its width", async () => {
     const large = { W: 1180, H: 662, U: PHONE_BOARD.W };
-    act(() =>
-      root.render(
-        <Board
-          stickers={[sticker]}
-          field={fieldOf(large.W, large.H)}
-          size={large}
-          selected="a"
-          reduced
-          layout="phone"
-          tray={noTray}
-          onSelect={() => {}}
-          onOpen={() => {}}
-          onCommit={() => {}}
-          onRemove={() => {}}
-        />,
-      ),
-    );
-    const stage = host.querySelector(".board-stage");
-    const el = host.querySelector<HTMLElement>(".placed-sticker");
-    if (!(stage instanceof HTMLElement) || !el) throw new Error("the board didn't render");
-    // happy-dom lays nothing out: the stage is given the board's size.
-    stage.getBoundingClientRect = () => new DOMRect(0, 0, large.W, large.H);
+    show({ field: fieldOf(large.W, large.H), size: large });
+    const el = stickerEl();
     await act(async () => dragAcross(el, 1, 100, 160));
     expect(parseFloat(el.style.width)).toBeCloseTo(sizeOf(large.U, sticker.placement.s, sticker).w);
   });
@@ -271,31 +233,11 @@ describe("useBoardGestures", () => {
   describe("when the stage can't capture a pointer", () => {
     /** The board, with its stage's `setPointerCapture` throwing `error`; returns its sticker. */
     const boardCapturing = (error: Error, onCommit: Options["onCommit"] = () => {}) => {
-      act(() =>
-        root.render(
-          <Board
-            stickers={[sticker]}
-            field={fieldOf(390, 657)}
-            size={{ W: 390, H: 657, U: 390 }}
-            selected="a"
-            reduced
-            layout="phone"
-            tray={noTray}
-            onSelect={() => {}}
-            onOpen={() => {}}
-            onCommit={onCommit}
-            onRemove={() => {}}
-          />,
-        ),
-      );
-      const stage = host.querySelector(".board-stage");
-      const el = host.querySelector(".placed-sticker");
-      if (!(stage instanceof HTMLElement) || !el) throw new Error("the board didn't render");
-      stage.getBoundingClientRect = () => new DOMRect(0, 0, 390, 657);
+      const stage = show({ onCommit });
       stage.setPointerCapture = () => {
         throw error;
       };
-      return el;
+      return stickerEl();
     };
 
     it("carries a drag on uncaptured when WebKit no longer has its pointer", async () => {
@@ -317,43 +259,14 @@ describe("useBoardGestures", () => {
   });
 
   describe("steps, from keys and from Arrange", () => {
-    const board = (
-      onCommit: Options["onCommit"],
-      overrides: Partial<Omit<Options, "stage">> = {},
-    ) =>
-      act(() =>
-        root.render(
-          <Board
-            stickers={[sticker]}
-            field={fieldOf(390, 657)}
-            size={{ W: 390, H: 657, U: 390 }}
-            selected="a"
-            reduced
-            layout="phone"
-            tray={noTray}
-            onSelect={() => {}}
-            onOpen={() => {}}
-            onCommit={onCommit}
-            onRemove={() => {}}
-            {...overrides}
-          />,
-        ),
-      );
     const pressRight = (times: number) => {
-      const el = host.querySelector<HTMLElement>(".placed-sticker");
-      act(() => el?.focus());
-      for (let i = 0; i < times; i++)
-        act(
-          () =>
-            void el?.dispatchEvent(
-              new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
-            ),
-        );
+      act(() => stickerEl().focus());
+      for (let i = 0; i < times; i++) press("ArrowRight");
     };
     /** Where `times` presses of Right leave the sticker, once they've been saved. */
     const savedAfter = (times: number) => {
       const onCommit = vi.fn<Options["onCommit"]>();
-      board(onCommit);
+      show({ onCommit });
       pressRight(times);
       expect(onCommit).not.toHaveBeenCalled();
       act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
@@ -363,7 +276,6 @@ describe("useBoardGestures", () => {
     };
 
     beforeEach(() => vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] }));
-    afterEach(() => vi.useRealTimers());
 
     it("save once, where all of them added up, not once each", () => {
       const start = sticker.placement.x;
@@ -374,21 +286,21 @@ describe("useBoardGestures", () => {
 
     it("tell the last of a run once it settles, and that the board's edge stopped it", () => {
       const onStepsSettled = vi.fn<NonNullable<Options["onStepsSettled"]>>();
-      board(() => {}, { onStepsSettled });
+      show({ onStepsSettled });
       pressRight(3);
       expect(onStepsSettled).not.toHaveBeenCalled();
       act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
       expect(onStepsSettled).toHaveBeenCalledExactlyOnceWith({ step: "right", moved: true });
 
       // More presses than the field has pixels: the last ones can't move it.
-      pressRight(fieldOf(390, 657).w);
+      pressRight(phoneField.w);
       act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
       expect(onStepsSettled).toHaveBeenLastCalledWith({ step: "right", moved: false });
     });
 
     it("save when the board is let go of, without waiting for the idle", () => {
       const onCommit = vi.fn<Options["onCommit"]>();
-      board(onCommit);
+      show({ onCommit });
       pressRight(2);
       act(() => root.render(null));
       expect(onCommit).toHaveBeenCalledOnce();
@@ -396,37 +308,28 @@ describe("useBoardGestures", () => {
 
     it("peel a removed sticker up from where they left it, not from where it was before", () => {
       const onCommit = vi.fn<Options["onCommit"]>();
-      board(onCommit, { reduced: false, tray: trayDropping(() => Promise.resolve(true)) });
+      show({ onCommit, reduced: false, tray: trayDropping(() => Promise.resolve(true)) });
       pressRight(2);
       // Removed within the idle, before React has been given the steps' spot.
-      const el = host.querySelector(".placed-sticker");
-      act(
-        () =>
-          void el?.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true })),
-      );
+      const el = stickerEl();
+      press("Delete", el);
 
       const [, saved] = onCommit.mock.calls[0];
-      const { x, y } = toPx(fieldOf(390, 657), saved);
-      const { w, h } = sizeOf(390, saved.s, sticker);
       // The sticker's own peel, after the mark it leaves behind.
       const { calls, contexts } = vi.spyOn(Element.prototype, "animate").mock;
       const [frames] = calls[contexts.indexOf(el)] ?? [];
       const first = Array.isArray(frames) ? frames[0]?.transform : undefined;
-      expect(first).toContain(transformAt(x, y, w, h, saved.r));
+      expect(first).toContain(drawnAt(saved));
     });
 
     it("take a sticker removed before the tray has loaded off from where they left it", () => {
       const onCommit = vi.fn<Options["onCommit"]>();
       const onRemove = vi.fn<Options["onRemove"]>();
-      board(onCommit, { onRemove });
+      show({ onCommit, onRemove });
       pressRight(2);
-      const el = host.querySelector(".placed-sticker");
-      act(
-        () =>
-          void el?.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true })),
-      );
+      press("Delete", stickerEl());
       const [, saved] = onCommit.mock.calls[0];
-      expect(onRemove).toHaveBeenCalledExactlyOnceWith("a", saved);
+      expect(onRemove).toHaveBeenCalledExactlyOnceWith(sticker.id, saved);
     });
   });
 });
@@ -438,29 +341,11 @@ describe("useBoardGestures' focus on a sticker that leaves the board", () => {
     id,
     placement: { ...sticker.placement, x: 0.2 + 0.3 * i },
   }));
-  const show = (
+  const showRow = (
     stickers: readonly BoardSticker[],
     tray: RefObject<StickerTrayHandle | null>,
     selected: string | null = null,
-  ) =>
-    act(() =>
-      root.render(
-        <Board
-          stickers={stickers}
-          field={fieldOf(390, 657)}
-          size={{ W: 390, H: 657, U: 390 }}
-          selected={selected}
-          reduced
-          layout="phone"
-          tray={tray}
-          onSelect={() => {}}
-          onOpen={() => {}}
-          onCommit={() => {}}
-          onRemove={() => {}}
-        />,
-      ),
-    );
-  const stickerEl = (id: string) => host.querySelector<HTMLElement>(`[data-sticker-id="${id}"]`);
+  ) => show({ stickers, tray, selected });
   const focusedId = () =>
     document.activeElement instanceof HTMLElement
       ? document.activeElement.dataset.stickerId
@@ -471,10 +356,10 @@ describe("useBoardGestures' focus on a sticker that leaves the board", () => {
     const tray = trayWith({ focusZipper });
     /** `gone` leaves with focus on it, as a gift takes it off the board. */
     const leave = (gone: BoardSticker, ...stays: BoardSticker[]) => {
-      act(() => stickerEl(gone.id)?.focus());
-      show(stays, tray);
+      act(() => stickerEl(gone.id).focus());
+      showRow(stays, tray);
     };
-    show([a, b, c], tray);
+    showRow([a, b, c], tray);
     leave(b, a, c);
     expect(focusedId()).toBe("c");
     leave(c, a);
@@ -487,24 +372,19 @@ describe("useBoardGestures' focus on a sticker that leaves the board", () => {
   it("leaves focus that has gone elsewhere where it is", () => {
     const elsewhere = document.createElement("button");
     document.body.append(elsewhere);
-    show([a, b, c], noTray);
-    act(() => stickerEl("b")?.focus());
+    showRow([a, b, c], noTray);
+    act(() => stickerEl("b").focus());
     act(() => elsewhere.focus());
-    show([a, c], noTray);
+    showRow([a, c], noTray);
     expect(document.activeElement).toBe(elsewhere);
     elsewhere.remove();
   });
 
   it("moves on at once on Remove, to the Zipper when it was the last sticker", () => {
     const focusZipper = vi.fn();
-    show([a], trayWith({ focusZipper }), "a");
-    act(() => stickerEl("a")?.focus());
-    act(
-      () =>
-        void stickerEl("a")?.dispatchEvent(
-          new KeyboardEvent("keydown", { key: "Delete", bubbles: true }),
-        ),
-    );
+    showRow([a], trayWith({ focusZipper }), "a");
+    act(() => stickerEl("a").focus());
+    press("Delete", stickerEl("a"));
     expect(focusZipper).toHaveBeenCalledOnce();
   });
 });
