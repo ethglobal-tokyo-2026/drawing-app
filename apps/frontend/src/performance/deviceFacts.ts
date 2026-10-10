@@ -1,3 +1,5 @@
+import { i18next } from "../i18n/i18n";
+
 interface Size {
   width: number;
   height: number;
@@ -104,25 +106,56 @@ const size = ({ width, height }: Size) => `${Math.round(width)}×${Math.round(he
 
 /**
  * The facts as labeled rows, whether the app lays out for a large screen (ui/largeScreen.ts) last: the
- * Device paper's rows, the report's lines.
+ * Device paper's rows, the report's lines. Their words are the developer slip's, which stay English,
+ * so a report reads the same whatever the app's language.
  */
 export function deviceFactRows(facts: DeviceFacts, large: boolean): [string, string][] {
   const visual = facts.visualViewport;
-  const viewport = visual
-    ? `${size(facts.viewport)} · visual ${size(visual)} at ${Math.round(visual.left)},${Math.round(visual.top)}, scale ${visual.scale}`
-    : `${size(facts.viewport)} · no visual viewport`;
-  const screenParts = [size(facts.screen), `at ${facts.pixelRatio}x`, facts.screen.orientation];
+  const visualViewport = visual
+    ? i18next.t(($) => $.stickerBoard.developer.device.viewport.visual, {
+        size: size(visual),
+        offset: `${Math.round(visual.left)},${Math.round(visual.top)}`,
+        scale: visual.scale,
+      })
+    : i18next.t(($) => $.stickerBoard.developer.device.viewport.noVisual);
+  const pixelRatio = i18next.t(($) => $.stickerBoard.developer.device.screen.pixelRatio, {
+    pixelRatio: `${facts.pixelRatio}x`,
+  });
+  const screenParts = [size(facts.screen), pixelRatio, facts.screen.orientation];
+  const nothing = i18next.t(($) => $.stickerBoard.developer.device.media.nothing);
   const media = facts.media.map(
-    ({ feature, matches }) => `${feature} ${matches.join(" ") || "nothing"}`,
+    ({ feature, matches }) => `${feature} ${matches.join(" ") || nothing}`,
   );
+  const platform =
+    facts.platform || i18next.t(($) => $.stickerBoard.developer.device.platform.none);
+  const touchPoints = i18next.t(($) => $.stickerBoard.developer.device.platform.touchPoints, {
+    touchPoints: facts.touchPoints,
+  });
   return [
-    ["User agent", facts.userAgent],
-    ["Platform", `${facts.platform || "none"} · ${facts.touchPoints} touch points`],
-    ["Viewport", viewport],
-    ["Screen", screenParts.filter(Boolean).join(" ")],
-    ["Safe areas", SIDES.map((side) => `${side} ${facts.safeArea[side]}`).join(" · ")],
-    ["Media", media.join(" · ")],
-    ["Large screen", large ? "yes" : "no"],
+    [i18next.t(($) => $.stickerBoard.developer.device.userAgent.label), facts.userAgent],
+    [
+      i18next.t(($) => $.stickerBoard.developer.device.platform.label),
+      `${platform} · ${touchPoints}`,
+    ],
+    [
+      i18next.t(($) => $.stickerBoard.developer.device.viewport.label),
+      `${size(facts.viewport)} · ${visualViewport}`,
+    ],
+    [
+      i18next.t(($) => $.stickerBoard.developer.device.screen.label),
+      screenParts.filter(Boolean).join(" "),
+    ],
+    [
+      i18next.t(($) => $.stickerBoard.developer.device.safeAreas.label),
+      SIDES.map((side) => `${side} ${facts.safeArea[side]}`).join(" · "),
+    ],
+    [i18next.t(($) => $.stickerBoard.developer.device.media.label), media.join(" · ")],
+    [
+      i18next.t(($) => $.stickerBoard.developer.device.largeScreen.label),
+      large
+        ? i18next.t(($) => $.stickerBoard.developer.device.largeScreen.yes)
+        : i18next.t(($) => $.stickerBoard.developer.device.largeScreen.no),
+    ],
   ];
 }
 
@@ -132,4 +165,7 @@ export const deviceLines = (facts: DeviceFacts, large: boolean) =>
 
 /** The facts as text to paste into a chat. */
 export const formatDeviceDetails = (facts: DeviceFacts, large: boolean, takenAt: Date) =>
-  [`Device details, taken ${takenAt.toISOString()}`, ...deviceLines(facts, large)].join("\n");
+  [
+    i18next.t(($) => $.stickerBoard.developer.device.taken, { time: takenAt.toISOString() }),
+    ...deviceLines(facts, large),
+  ].join("\n");

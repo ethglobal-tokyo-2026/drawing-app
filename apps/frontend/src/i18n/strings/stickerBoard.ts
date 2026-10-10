@@ -329,6 +329,34 @@ export const stickerBoard = {
         en: "The device details couldn’t be copied: {{reason}}. They’re below to copy by hand.",
       },
       text: { en: "Device details" },
+      /** The copied details' first line. */
+      taken: { en: "Device details, taken {{time}}" },
+      /** The rows, which the performance report repeats: each label and its value's words. */
+      userAgent: { label: { en: "User agent" } },
+      platform: {
+        label: { en: "Platform" },
+        none: { en: "none" },
+        touchPoints: { en: "{{touchPoints}} touch points" },
+      },
+      viewport: {
+        label: { en: "Viewport" },
+        visual: { en: "visual {{size}} at {{offset}}, scale {{scale}}" },
+        noVisual: { en: "no visual viewport" },
+      },
+      screen: {
+        label: { en: "Screen" },
+        pixelRatio: { en: "at {{pixelRatio}}" },
+      },
+      safeAreas: { label: { en: "Safe areas" } },
+      media: {
+        label: { en: "Media" },
+        nothing: { en: "nothing" },
+      },
+      largeScreen: {
+        label: { en: "Large screen" },
+        yes: { en: "yes" },
+        no: { en: "no" },
+      },
     },
   },
   /** Your own sticker board. */
