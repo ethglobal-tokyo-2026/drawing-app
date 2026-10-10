@@ -7,13 +7,13 @@ LINE sends this message when someone adds Croquis's official account as a friend
 Paste it as one text bubble, exactly:
 
 ```text
-3分でかいた絵が、シールになります。ボードにはるのも、友だちにあげるのも自由。下のメニューからシールボードをひらいてください。
+3分でかいた絵が、シールになります。ボードにはるのも、友だちにあげるのも自由。下のメニューからクロッキーをひらいてください。
 
-Draw for three minutes, and your drawing becomes a sticker to keep on your board or give to a friend. Open Sticker Board from the menu below.
+Draw for three minutes, and your drawing becomes a sticker to keep on your board or give to a friend. Open Croquis from the menu below.
 ```
 
 - It says what the app is, what you do in it and where to tap, in the app's own words.
-- It sends people to "Open Sticker Board" (シールボードをひらく), the key on the default chat menu that new people see under it (`images/default.png`). If either one's words change, change the other.
+- It sends people to the default chat menu that new people see under it (`images/default.png`), whose bar says クロッキー Croquis. If the menu's words change, check that this still matches them.
 - It doesn't use `{Nickname}`: LINE may not deliver a message that carries it to some people.
 
 ## Replacing LINE's default greeting

@@ -17,28 +17,40 @@ ssh() { command ssh "${SSH_OPTS[@]}" "$@"; }
 export RSYNC_RSH="ssh ${SSH_OPTS[*]}"
 
 # deploy.sh and deploy-api.sh build and publish whatever is checked out, so they deploy only the commit main points
-# to, with nothing uncommitted. DEPLOY_ANY_CHECKOUT=on, for an emergency, deploys the checkout as it is.
+# to, with nothing uncommitted, and only once origin's main points there too: a teammate deploying origin's main would
+# take the box back off commits only this checkout has. DEPLOY_ANY_CHECKOUT=on, for an emergency, deploys the checkout
+# as it is.
 require_main_checkout() {
-  local head main changes
+  local head main origin changes ssh_command
   head="$(git -C "$ROOT" rev-parse --short HEAD)"
   if [ "${DEPLOY_ANY_CHECKOUT:-}" = on ]; then
     echo "⚠ DEPLOY_ANY_CHECKOUT=on: deploying the checkout at $head as it is, whatever main is" >&2
     return
   fi
+  # SSH's timeouts, added to whatever command git already uses, so a network that drops GitHub fails the fetch.
+  ssh_command="${GIT_SSH_COMMAND:-$(git -C "$ROOT" config --get core.sshCommand || echo ssh)}"
+  if ! GIT_SSH_COMMAND="$ssh_command -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4" \
+    git -C "$ROOT" fetch --quiet origin main; then
+    echo "✗ couldn't fetch origin's main to check that main is pushed. In an emergency, DEPLOY_ANY_CHECKOUT=on" \
+      "deploys this checkout anyway." >&2
+    exit 1
+  fi
   main="$(git -C "$ROOT" rev-parse --short --verify --quiet refs/heads/main)" || main="none"
+  origin="$(git -C "$ROOT" rev-parse --short --verify --quiet refs/remotes/origin/main)" || origin="none"
   changes="$(git -C "$ROOT" status --porcelain)"
-  if [ "$head" = "$main" ] && [ -z "$changes" ]; then
+  if [ "$head" = "$main" ] && [ "$main" = "$origin" ] && [ -z "$changes" ]; then
     echo "→ deploying main at $head"
     return
   fi
   {
-    echo "✗ $(basename "$0") builds what's checked out, so it deploys only main's commit, with nothing uncommitted:"
+    echo "✗ $(basename "$0") builds what's checked out, so it deploys only main's commit, pushed, with nothing uncommitted:"
     if [ "$head" != "$main" ]; then echo "  HEAD is $head, and main is $main"; fi
+    if [ "$main" != "$origin" ]; then echo "  main is $main, and origin's main is $origin"; fi
     if [ -n "$changes" ]; then
       echo "  uncommitted:"
       printf '%s\n' "$changes" | sed 's/^/    /'
     fi
-    echo "  Deploy from a clean checkout of main. In an emergency, DEPLOY_ANY_CHECKOUT=on deploys this one anyway."
+    echo "  Deploy from a clean checkout of main, pushed. In an emergency, DEPLOY_ANY_CHECKOUT=on deploys this one anyway."
   } >&2
   exit 1
 }

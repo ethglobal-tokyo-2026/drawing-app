@@ -71,17 +71,23 @@ pnpm --dir "$ROOT" --filter @drawing-app/api build
 echo "→ rsync → $TARGET:$DIR"
 # /srv belongs to root, so a missing folder is made once with sudo and handed to the deploy user.
 ssh "$TARGET" "test -d '$DIR' || sudo install -d -o \"\$(id -un)\" -g \"\$(id -gn)\" -m 755 '$DIR'"
-ssh "$TARGET" "mkdir -p '$DIR/server' '$DIR/data' '$DIR/images'"
+# Only the deploy account, which the API runs as, reads the database and the images (drawing-api.service's UMask): the
+# API serves the images itself.
+ssh "$TARGET" "mkdir -p '$DIR/server' '$DIR/data' '$DIR/images' && chmod 700 '$DIR/data' '$DIR/images'"
 
 # By content, without times: every deploy rebuilds the bundle, and a new timestamp alone would restart it. The Node
 # version is in it so that a new Node reinstalls the native modules too.
 printf '{ "private": true, "type": "module", "engines": { "node": "%s" }, "dependencies": { "better-sqlite3": "%s", "sharp": "%s" } }\n' \
   "$NODE_VERSION" "$SQLITE_VERSION" "$SHARP_VERSION" >"$STAGE/package.json"
-changed="$(rsync -ci "$STAGE/package.json" "$TARGET:$DIR/server/package.json")"
-if [ -n "$changed" ]; then
+rsync -c "$STAGE/package.json" "$TARGET:$DIR/server/package.json"
+changed=""
+# installed.json is the package.json the last finished install installed, so one that failed or timed out runs again.
+if ! ssh "$TARGET" "cmp -s '$DIR/server/package.json' '$DIR/server/installed.json'"; then
   # With the pinned Node's npm, so native modules match the Node that loads them.
-  ssh "$TARGET" "cd '$DIR/server' && PATH=$NODE_BIN:\$PATH \
-    timeout $NPM_INSTALL_TIMEOUT $NODE_BIN/npm install --omit=dev --no-audit --no-fund --loglevel=error"
+  ssh "$TARGET" "cd '$DIR/server' && rm -f installed.json && PATH=$NODE_BIN:\$PATH \
+    timeout $NPM_INSTALL_TIMEOUT $NODE_BIN/npm install --omit=dev --no-audit --no-fund --loglevel=error \
+    && cp package.json installed.json"
+  changed="installed the native modules"
 fi
 changed+="$(rsync -ci "$ROOT/apps/api/dist/server.mjs" "$TARGET:$DIR/server/server.mjs")"
 changed+="$(rsync -rci --delete "$ROOT/packages/db/drizzle/" "$TARGET:$DIR/drizzle/")"

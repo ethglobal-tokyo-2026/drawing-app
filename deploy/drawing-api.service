@@ -29,6 +29,8 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ReadWritePaths=/srv/drawing-api/data /srv/drawing-api/images
+# No other account reads its database or images: it serves the images itself.
+UMask=0077
 ProtectHome=true
 ProtectKernelTunables=true
 ProtectKernelLogs=true
