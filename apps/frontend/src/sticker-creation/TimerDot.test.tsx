@@ -73,7 +73,12 @@ describe("the timer dot", () => {
     );
     expect(shownLabel(host)).toBe(call);
     expect(announced(host)).toContain(call);
-    expect(announced(host).join(" ")).not.toMatch(/seconds/);
+    // A call is said once, as minutes, never again as a warning in seconds.
+    const asWarning = strings.stickerCreation.timer.warning.en.replace(
+      "{{seconds}}",
+      String(firstCall),
+    );
+    expect(announced(host)).not.toContain(asWarning);
   });
 
   it("names a clock that never pauses as the timer, and says why when it's tapped", () => {
@@ -94,8 +99,13 @@ describe("the timer dot", () => {
   });
 
   it("says a dealt clock starts at Begin", () => {
-    const { host } = renderDot({ length: sessionMs(true), started: false, waitsFor: "begin" });
-    expect(described(host)).toMatch(/press Begin/);
+    const length = sessionMs(true);
+    const { host } = renderDot({ length, started: false, waitsFor: "begin" });
+    // The clock hasn't started, so it shows its whole length.
+    const time = `${length / 60_000}:00`;
+    expect(described(host)).toBe(
+      strings.stickerCreation.timer.status.dealt.en.replace("{{time}}", time),
+    );
   });
 
   it("brings the start note when a touch meets a sheet waiting for Begin", () => {

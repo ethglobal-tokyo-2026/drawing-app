@@ -18,6 +18,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
 import { ApiError, type ApiClient } from "../api/apiClient";
+import { sticker as aSticker } from "../api/testFixtures";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import { openedFrom } from "../app/openedView";
 import { i18next } from "../i18n/i18n";
@@ -240,22 +241,37 @@ const settle = async (ms = 0) => {
   for (let i = 0; i < 5; i++) await act(() => vi.advanceTimersByTimeAsync(ms / 5));
 };
 
-/** The drawing screen `reopen` rendered. */
+/** The drawing screen each test renders. */
 const drawingScreen = createRef<DrawingScreenHandle>();
 
-/** The drawing screen as App shows it: its My board tile puts the board over it. */
-function DrawingAsApp({ ref }: { ref: Ref<DrawingScreenHandle> }) {
-  const [active, setActive] = useState(true);
+/** The drawing screen as App shows it, `active` until the board covers it, as its My board tile does. */
+function DrawingAsApp({ active }: { active: boolean }) {
+  const [covered, setCovered] = useState(false);
   return (
     <DrawingScreen
-      ref={ref}
-      active={active}
+      ref={drawingScreen}
+      active={active && !covered}
       onSealed={() => {}}
       onNewSticker={() => {}}
       onGoToBoard={() => {}}
-      onMyBoardTile={() => setActive(false)}
+      onMyBoardTile={() => setCovered(true)}
     />
   );
+}
+
+/** The drawing screen, `active` or under the board, and what Draw on the board means for its sheet. */
+const screenAsApp = (active = true) => (
+  <>
+    <DrawingAsApp active={active} />
+    <SheetProbe />
+  </>
+);
+
+/** Opens the drawing screen on `client` for `me`, after a reload that kept `session`; null: what this device keeps. */
+function openScreen(session: KeptSession | null, client: ApiClient, me: Me) {
+  vi.useFakeTimers();
+  kept.session = session;
+  view = renderWithApi(screenAsApp(), client, me);
 }
 
 /**
@@ -268,16 +284,8 @@ function reopen(
   me: Me = TEST_ME,
   api: Partial<ApiClient> = {},
 ) {
-  vi.useFakeTimers();
-  kept.session = session;
-  view = renderWithApi(
-    <>
-      <DrawingAsApp ref={drawingScreen} />
-      <SheetProbe />
-    </>,
-    emptyApi({ tickets: () => Promise.resolve({ ...FRESH_TICKETS, ...tickets }), ...api }),
-    me,
-  );
+  const answers = () => Promise.resolve({ ...FRESH_TICKETS, ...tickets });
+  openScreen(session, emptyApi({ tickets: answers, ...api }), me);
 }
 
 /** The server's answer to a daily ticket spent, in Kyoto Seika Practice Mode or not. */
@@ -508,6 +516,43 @@ describe("the seal sheet", () => {
     expect(keptRecord()).toMatchObject({ ticket: 7 });
   });
 
+  it("sends the same seal again at the check after the server fails it, and seals", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    sealing.cut.mockClear();
+    sealing.cut.mockResolvedValue(cutSticker());
+    const sealed = aSticker();
+    const seal = vi
+      .fn<ApiClient["seal"]>()
+      .mockRejectedValueOnce(new ApiError(503, { error: "mint_failed" }))
+      .mockResolvedValueOnce({
+        sticker: sealed,
+        stickerPlacement: {
+          stickerId: sealed.id,
+          placement: null,
+          largePlacement: null,
+          seenAt: null,
+          arrivedAt: sealed.sealedAt,
+        },
+      });
+    reopen(keptHalfway, {}, TEST_ME, { seal });
+    await settle();
+    tapSealKey();
+    sealOnSheet();
+    await settle(1000);
+    expect(chip()).toContain(strings.stickerCreation.seal.failed.notOnChain.en);
+    // The server may hold the seal, so a reload still knows it went out.
+    expect(sealWentOut(TEST_ME.id, 7)).toBe(true);
+
+    tapSealKey();
+    await settle(1000);
+    // The retry sends the request it held rather than cutting the sheet again.
+    expect(sealing.cut).toHaveBeenCalledOnce();
+    expect(seal).toHaveBeenCalledTimes(2);
+    expect(seal.mock.calls[1]?.[0]).toBe(seal.mock.calls[0]?.[0]);
+    expect(sealWentOut(TEST_ME.id, 7)).toBe(false);
+    expect(sheet).toBe("fresh");
+  });
+
   it("closes at Not yet with the drawing and the 18+ choice kept, on the phone too", async () => {
     const seal = await openDrawing();
     tapSealKey();
@@ -659,16 +704,8 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     api: Partial<ApiClient> = {},
     me: Me = KYOTO_SEIKA_ME,
   ) {
-    vi.useFakeTimers();
-    kept.session = session;
-    view = renderWithApi(
-      <DrawingScreen
-        active
-        onSealed={() => {}}
-        onNewSticker={() => {}}
-        onGoToBoard={() => {}}
-        onMyBoardTile={() => {}}
-      />,
+    openScreen(
+      session,
       emptyApi({ spendTicket: () => Promise.resolve(spentDaily(true)), ...api }),
       me,
     );
@@ -815,18 +852,9 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     await openKyotoSeikaSheet();
     tapSubjects(0, 1);
     act(() => beginKey()?.click());
-    const screen = (active: boolean) => (
-      <DrawingScreen
-        active={active}
-        onSealed={() => {}}
-        onNewSticker={() => {}}
-        onGoToBoard={() => {}}
-        onMyBoardTile={() => {}}
-      />
-    );
-    view?.rerender(screen(false));
+    view?.rerender(screenAsApp(false));
     await settle(1000);
-    view?.rerender(screen(true));
+    view?.rerender(screenAsApp(true));
     expect(document.querySelector(".kyoto-seika-deal")).toBeNull();
     expect(beginKey()).toBeNull();
   });
@@ -971,7 +999,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     expect(document.querySelector(".color-sheet")).toBeNull();
   });
 
-  it("shows a begun sheet's pair on its seal sheet, whose sticker wears the Kyoto Seika foil, and pink once marked 18+", async () => {
+  it("shows a begun sheet's pair on its seal sheet, whose sticker wears the Kyoto Seika Practice Mode foil, and pink once marked 18+", async () => {
     await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: BEGUN });
     tapSealKey();
     const pair = sealSheet()?.querySelector(".subject-pair")?.textContent;
