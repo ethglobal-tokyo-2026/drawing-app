@@ -5,7 +5,7 @@ import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import { ChainUnavailableError } from "./deps.ts";
-import { failureCause, logFailure, logInfo } from "./diagnostics.ts";
+import { describeIssues, failureCause, logFailure, logInfo, type Issue } from "./diagnostics.ts";
 import { SignatureInvalidError } from "./sui/transactions.ts";
 import { SponsorshipError } from "./sui/types.ts";
 
@@ -43,19 +43,6 @@ const SPONSORSHIP_REFUSALS = {
   unavailable: { status: 503, error: "sponsor_unavailable" },
 } as const satisfies Record<SponsorshipError["reason"], { status: number; error: string }>;
 
-interface Issue {
-  path: readonly PropertyKey[];
-  message: string;
-}
-
-const describeIssues = (issues: readonly Issue[], target: keyof ValidationTargets) =>
-  issues
-    .map((issue) => {
-      const field = issue.path.length > 0 ? issue.path.map(String).join(".") : target;
-      return `${field}: ${issue.message}`;
-    })
-    .join("; ");
-
 /** zValidator's hook: a request that fails its schema answers 400 invalid_request, naming the field. */
 export const invalidRequest = (
   result: ({ success: true } | { success: false; error: { issues: readonly Issue[] } }) & {
@@ -65,7 +52,12 @@ export const invalidRequest = (
 ) =>
   result.success
     ? undefined
-    : apiError(c, 400, "invalid_request", describeIssues(result.error.issues, result.target));
+    : apiError(
+        c,
+        400,
+        "invalid_request",
+        describeIssues(result.error.issues, { whenEmpty: result.target }),
+      );
 
 /** Validates a request's body, query or path parameters, with the invalid_request hook. */
 export const validate = <Target extends keyof ValidationTargets, Schema extends z.ZodType>(

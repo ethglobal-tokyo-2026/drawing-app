@@ -73,7 +73,7 @@ describe("sessions", () => {
   it("start with the HttpOnly cookie setSessionCookie sets", async () => {
     const userId = insertUser(test.db);
     const signIn = new Hono().post("/", async (c) => {
-      await setSessionCookie(c, test.deps.sessionSecret, userId);
+      await setSessionCookie(c, test.deps, userId);
       return c.body(null, 204);
     });
     const setCookie = (await signIn.request("/", { method: "POST" })).headers.get("set-cookie");

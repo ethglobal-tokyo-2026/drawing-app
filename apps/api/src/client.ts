@@ -24,6 +24,7 @@ export type ApiErrorCode =
   | "sponsor_fund_empty"
   | "sponsor_unavailable"
   | "signature_invalid";
+export { replayHitProblems } from "./gratitude/replayHits.ts";
 export { MAX_PERFORMANCE_REPORT_CHARS } from "./performanceReportLimits.ts";
 export { HANDLE_MAX_LENGTH } from "./session/handleLimit.ts";
 export { MAX_LARGE_LAYOUT_BATCH } from "./stickerBoards/largeLayoutLimit.ts";

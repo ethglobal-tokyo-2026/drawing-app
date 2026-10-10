@@ -1,5 +1,6 @@
 import { gunzipSync, gzipSync } from "node:zlib";
 import { z } from "zod";
+import { SHAKE_REVERSAL, STROKE_SAMPLE, TOUCH } from "./replayHits.ts";
 
 /** The longest a combo runs: ReplayV1's durationMs ceiling. */
 export const MAX_COMBO_MS = 8000;
@@ -8,10 +9,6 @@ export const STAGE_UNITS = 10_000;
 
 const replayEndReasons = ["empty", "cap", "hidden", "closed"] as const;
 
-// What each value in a flat series' group means. ms, x and y are changes from the value before.
-const TOUCH = ["ms", "x", "y", "counted"] as const;
-const STROKE_SAMPLE = ["ms", "x", "y"] as const;
-const SHAKE_REVERSAL = ["ms", "direction"] as const;
 type SeriesValue = (typeof TOUCH | typeof STROKE_SAMPLE | typeof SHAKE_REVERSAL)[number];
 
 /** A flat series of integers, a whole number of groups long. */
@@ -119,10 +116,6 @@ export const replayV1Schema = z
     }
   });
 export type ReplayV1 = z.infer<typeof replayV1Schema>;
-
-/** The touches that counted as hits. */
-export const countedTouches = ({ hits }: Pick<ReplayV1, "hits">) =>
-  hits.filter((value, at) => TOUCH[at % TOUCH.length] === "counted" && value === 1).length;
 
 /** A replay as the gratitude table stores it: gzipped JSON. */
 export const gzipReplay = (replay: ReplayV1) => gzipSync(JSON.stringify(replay));

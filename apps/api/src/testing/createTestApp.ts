@@ -6,7 +6,7 @@ import { chatMenuOff } from "../chatMenu/lineChatMenu.ts";
 import type { AppDeps } from "../deps.ts";
 import { giverNoticeOff } from "../gifts/giverNotice.ts";
 import { mockChain } from "../services/mockChain.ts";
-import { SESSION_COOKIE } from "../session.ts";
+import { SESSION_COOKIE, sessionValue } from "../session.ts";
 import {
   fakeClock,
   fakeImageStore,
@@ -69,9 +69,13 @@ export async function createTestApp(
     ...(typeof overrides === "function" ? overrides({ db, clock }) : overrides),
   };
   const app = createApp(deps);
-  /** Request headers carrying a valid session cookie for `userId`. */
+  /** Request headers carrying a session cookie for `userId`, as signing in now would set it. */
   const signInAs = async (userId: string) => ({
-    Cookie: await serializeSigned(SESSION_COOKIE, userId, deps.sessionSecret),
+    Cookie: await serializeSigned(
+      SESSION_COOKIE,
+      sessionValue(userId, deps.clock.now()),
+      deps.sessionSecret,
+    ),
   });
   return {
     app,

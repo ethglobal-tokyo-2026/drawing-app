@@ -18,7 +18,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -52,12 +51,20 @@ describe("the giver's messages", () => {
     expect((await lineUnder({ devSignIn: "off", ...TEST_CHANNEL })).pushes).toHaveLength(1);
   });
 
-  it("are swept at once, for what an earlier run left due, then every SWEEP_EVERY_MS", () => {
-    vi.useFakeTimers();
+  it("are swept at once, for what an earlier run left due, then SWEEP_EVERY_MS after each sweep ends", async () => {
     const sweep = vi.fn(() => Promise.resolve());
-    startGiverNoticeSweeps({ sweep });
+    const runs: (() => void)[] = [];
+    const schedule = vi.fn((run: () => void) => {
+      runs.push(run);
+      return () => {};
+    });
+    const job = startGiverNoticeSweeps({ sweep }, schedule);
+    await job.idle();
     expect(sweep).toHaveBeenCalledTimes(1);
-    vi.advanceTimersByTime(SWEEP_EVERY_MS);
+    expect(schedule).toHaveBeenLastCalledWith(expect.any(Function), SWEEP_EVERY_MS);
+    runs.shift()?.();
+    await job.idle();
     expect(sweep).toHaveBeenCalledTimes(2);
+    job.stop();
   });
 });

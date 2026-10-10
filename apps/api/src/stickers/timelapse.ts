@@ -2,7 +2,7 @@ import { gunzipSync } from "node:zlib";
 import { stickers, stickerTimelapses, type Db } from "@drawing-app/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { failureCause } from "../diagnostics.ts";
+import { describeIssues, failureCause } from "../diagnostics.ts";
 import type { StickerViewer } from "../shapes.ts";
 
 /** A timelapse's JSON, unzipped, at most: a gzip that grows past it is refused, not read. */
@@ -58,9 +58,7 @@ export function timelapseProblem(gzipped: Uint8Array): string | null {
   }
   const parsed = timelapseV1Schema.safeParse(json);
   if (parsed.success) return null;
-  return parsed.error.issues
-    .map((issue) => `${["timelapse", ...issue.path].map(String).join(".")}: ${issue.message}`)
-    .join("; ");
+  return describeIssues(parsed.error.issues, { under: "timelapse" });
 }
 
 /**

@@ -9,9 +9,9 @@ import {
 import { bytes32, insertUser, ONE_TAP, packGift } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { MAX_BODY_BYTES } from "../app.ts";
 import {
   gratitudeResponseSchema,
-  MAX_GRATITUDE_BODY_BYTES,
   MAX_GRATITUDE_PER_HIT,
   ORIGINAL_ARTIST_GRATITUDE_SHARE,
   type RecordGratitude,
@@ -69,13 +69,31 @@ function storedReplay(test: TestApp, giftId: string) {
   return gunzipReplay(row.replay);
 }
 
-/** One tap, then a stroke pass from the centre to the stage's right edge. */
-const switchedToStroke = (): ReplayV1 => ({
-  ...tapReplay(ONE_TAP.hits),
-  switchedAtHit: ONE_TAP.hits,
-  strokes: [[0, STAGE_CENTRE, STAGE_CENTRE, TAP_GAP_MS, STAGE_UNITS - STAGE_CENTRE, 0]],
-  strokePasses: [[]],
-});
+/** One tap, then `played` stroke passes or shake reversals, TAP_GAP_MS apart, each a hit. */
+function switchedTo(method: "stroke" | "shake", played: number): ReplayV1 {
+  const tapped = tapReplay(ONE_TAP.hits);
+  const steps = Array.from({ length: played }, (_, at) => at);
+  const firstGap = (at: number) => (at === 0 ? tapped.durationMs : TAP_GAP_MS);
+  const replay = {
+    ...tapped,
+    switchedAtHit: ONE_TAP.hits,
+    durationMs: tapped.durationMs + played * TAP_GAP_MS,
+  };
+  if (method === "shake") {
+    return { ...replay, shakes: steps.flatMap((at) => [firstGap(at), at % 2 === 0 ? 1 : -1]) };
+  }
+  // From the centre to the stage's right edge and back, each move ending a fast pass.
+  const reach = STAGE_UNITS - STAGE_CENTRE;
+  const moves = steps.flatMap((at) => [TAP_GAP_MS, at % 2 === 0 ? reach : -reach, 0]);
+  return {
+    ...replay,
+    strokes: [[tapped.durationMs, STAGE_CENTRE, STAGE_CENTRE, ...moves]],
+    strokePasses: [steps.map((at) => at + 1)],
+  };
+}
+
+/** A stroke or shake combo of COMBO_HITS: one tap, then one pass or reversal. */
+const switchedCombo = (method: "stroke" | "shake") => switchedTo(method, COMBO_HITS - ONE_TAP.hits);
 
 /** A tap combo of COMBO_HITS whose second touch is `second`. */
 const withSecondTouch = (second: number[]) => ({
@@ -139,7 +157,7 @@ const REPLAY_BREAKS: FieldBreak[] = [
     body: {
       method: "stroke",
       hits: COMBO_HITS,
-      replay: { ...switchedToStroke(), switchedAtHit: null },
+      replay: { ...switchedCombo("stroke"), switchedAtHit: null },
     },
   },
   {
@@ -148,20 +166,35 @@ const REPLAY_BREAKS: FieldBreak[] = [
     body: {
       method: "stroke",
       hits: COMBO_HITS,
-      replay: { ...switchedToStroke(), switchedAtHit: COMBO_HITS + 1 },
+      replay: { ...switchedCombo("stroke"), switchedAtHit: COMBO_HITS + 1 },
     },
   },
   {
-    breaks: "a stroke combo with more counted touches than hits",
+    breaks: "a stroke combo with more counted touches than taps before its switch",
     field: "replay.hits",
     body: {
       method: "stroke",
       hits: COMBO_HITS,
-      replay: {
-        ...switchedToStroke(),
-        hits: tapReplay(COMBO_HITS + 1).hits,
-        durationMs: tapReplay(COMBO_HITS + 1).durationMs,
-      },
+      replay: { ...switchedCombo("stroke"), hits: tapReplay(COMBO_HITS + 1).hits },
+    },
+  },
+  {
+    breaks: "a stroke combo with fewer counted touches than taps before its switch",
+    field: "replay.hits",
+    body: { method: "stroke", hits: COMBO_HITS, replay: { ...switchedCombo("stroke"), hits: [] } },
+  },
+  {
+    breaks: "a stroke combo with fewer stroke passes than hits from its switch",
+    field: "replay.strokePasses",
+    body: { method: "stroke", hits: COMBO_HITS + 1, replay: switchedCombo("stroke") },
+  },
+  {
+    breaks: "a shake combo of MAX_HITS whose replay plays nothing",
+    field: "replay.shakes",
+    body: {
+      method: "shake",
+      hits: MAX_HITS,
+      replay: { ...switchedTo("shake", 0), switchedAtHit: 0, hits: [] },
     },
   },
 ];
@@ -238,16 +271,19 @@ describe("POST /api/gratitude", () => {
     }
   });
 
-  it("records a stroke combo that switched from tapping", async () => {
-    const { test, receiverId, giftId } = await receivedGift();
-    const body = recordBody(giftId, {
-      method: "stroke",
-      hits: COMBO_HITS,
-      replay: switchedToStroke(),
-    });
-    expect(await recorded(await post(test, receiverId, body), 201)).toMatchObject(comboOf(body));
-    expect(storedReplay(test, giftId)).toEqual(body.replay);
-  });
+  it.each(["stroke", "shake"] as const)(
+    "records a %s combo that switched from tapping",
+    async (method) => {
+      const { test, receiverId, giftId } = await receivedGift();
+      const body = recordBody(giftId, {
+        method,
+        hits: COMBO_HITS,
+        replay: switchedCombo(method),
+      });
+      expect(await recorded(await post(test, receiverId, body), 201)).toMatchObject(comboOf(body));
+      expect(storedReplay(test, giftId)).toEqual(body.replay);
+    },
+  );
 
   it("records the largest combo the Mini-game can score: MAX_HITS hits, each at the multiplier's ceiling and a stroke pass's weight", async () => {
     const { test, receiverId, giftId } = await receivedGift();
@@ -259,7 +295,7 @@ describe("POST /api/gratitude", () => {
       total: MAX_HITS * mostPerHit,
       peakMult: MAX_PEAK_MULT,
       peakTier: MAX_PEAK_TIER,
-      replay: switchedToStroke(),
+      replay: switchedTo("stroke", MAX_HITS - ONE_TAP.hits),
     });
     expect(await recorded(await post(test, receiverId, body), 201)).toMatchObject(comboOf(body));
   });
@@ -317,9 +353,9 @@ describe("POST /api/gratitude", () => {
     expectFieldRefused("invalid_request", fieldBreak),
   );
 
-  it("refuses a body over MAX_GRATITUDE_BODY_BYTES with invalid_request, though it's otherwise valid", async () => {
+  it("refuses a body over MAX_BODY_BYTES with invalid_request, though it's otherwise valid", async () => {
     const { test, receiverId, giftId } = await receivedGift();
-    const padded = { ...recordBody(giftId), padding: "x".repeat(MAX_GRATITUDE_BODY_BYTES) };
+    const padded = { ...recordBody(giftId), padding: "x".repeat(MAX_BODY_BYTES) };
     expect(await refusalOf(await post(test, receiverId, padded))).toMatchObject({
       status: 400,
       error: "invalid_request",

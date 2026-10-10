@@ -1,11 +1,11 @@
 import type { Clock } from "./deps.ts";
 import { logFailure } from "./diagnostics.ts";
-import { nextTokyoTicketDayStart, tokyoTicketDay } from "./ticketDays.ts";
+import { nextTokyoTicketDayStart, tokyoTicketDay, tokyoTicketDayStart } from "./ticketDays.ts";
 
 /**
  * How long after midnight each day's run starts, so any chat menu link that read yesterday's count,
- * with its token request and link at up to 5 s each, has landed first and the day's batch moves it
- * too.
+ * its token request and link each within LINE's request limit, has landed first and the day's batch
+ * moves it too.
  */
 export const AFTER_MIDNIGHT_MS = 15_000;
 
@@ -41,29 +41,31 @@ export function startMidnightJob(
   let stopped = false;
   let running = Promise.resolve();
 
-  /** Runs the day's work; a run that went past midnight leaves the new day's due at once. */
+  /** Runs the day's work, and resolves how long until the next run. */
   async function runDue() {
-    for (;;) {
-      const ticketDay = tokyoTicketDay(clock.now());
-      let rerunIn: number | null = null;
-      try {
-        rerunIn = await job.run(ticketDay);
-      } catch (error) {
-        logFailure(job.failedEvent, error, { ticketDay });
-      }
-      if (tokyoTicketDay(clock.now()) === ticketDay) return rerunIn;
+    const ticketDay = tokyoTicketDay(clock.now());
+    let rerunIn: number | null = null;
+    try {
+      rerunIn = await job.run(ticketDay);
+    } catch (error) {
+      logFailure(job.failedEvent, error, { ticketDay });
     }
+    const now = clock.now();
+    const today = tokyoTicketDay(now);
+    // A run that went past midnight leaves the new day's AFTER_MIDNIGHT_MS after it, as any day's.
+    if (today !== ticketDay) {
+      return Math.max(0, tokyoTicketDayStart(today).getTime() + AFTER_MIDNIGHT_MS - now.getTime());
+    }
+    const midnight = nextTokyoTicketDayStart(now).getTime();
+    // A rerun from midnight on would start the next day's run before AFTER_MIDNIGHT_MS.
+    const rerunAt = rerunIn === null ? null : now.getTime() + rerunIn;
+    const due = rerunAt !== null && rerunAt < midnight ? rerunAt : midnight + AFTER_MIDNIGHT_MS;
+    return due - now.getTime();
   }
 
   function runNext() {
-    running = running.then(runDue).then((rerunIn) => {
-      if (stopped) return;
-      const now = clock.now().getTime();
-      const midnight = nextTokyoTicketDayStart(clock.now()).getTime();
-      // A rerun from midnight on would start the next day's run before AFTER_MIDNIGHT_MS.
-      const rerunAt = rerunIn === null ? null : now + rerunIn;
-      const due = rerunAt !== null && rerunAt < midnight ? rerunAt : midnight + AFTER_MIDNIGHT_MS;
-      cancel = schedule(runNext, due - now);
+    running = running.then(runDue).then((dueIn) => {
+      if (!stopped) cancel = schedule(runNext, dueIn);
     });
   }
 

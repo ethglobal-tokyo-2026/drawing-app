@@ -1,8 +1,8 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { once } from "node:events";
-import { Readable } from "node:stream";
+import { PassThrough, Readable } from "node:stream";
 import type { ServerLog } from "../deps.ts";
-import { logInfo } from "../diagnostics.ts";
+import { logFailure, logInfo } from "../diagnostics.ts";
 
 /** The box's units whose journal is the server log: this API, and the LINE → Privy auth server. */
 const UNITS = ["drawing-api", "sticker-auth"];
@@ -34,23 +34,33 @@ export function createJournalLog(): ServerLog {
       },
     );
     running = journalctl;
+    const log = new PassThrough();
     const timeout = setTimeout(() => {
       logInfo("server_log.timed_out");
       journalctl.kill();
       // The reader's answer fails, rather than ending as if it were the whole log.
-      journalctl.stdout.destroy();
+      log.destroy();
     }, JOURNALCTL_TIMEOUT_MS);
     const ended = () => {
       clearTimeout(timeout);
       if (running === journalctl) running = null;
     };
-    // 'end' comes before the reader sees the end, so its next request finds journalctl free; 'close'
-    // covers a reader that lets go first, and 'error' a journalctl that never started.
-    journalctl.stdout.once("end", ended).once("close", ended);
     journalctl.once("error", ended);
     // Off the box there's no journalctl: this rejects before any of the answer is sent.
     await once(journalctl, "spawn");
-    return Readable.toWeb(journalctl.stdout);
+    journalctl.stdout.pipe(log, { end: false });
+    // The answer ends once journalctl has exited, after its next request would find it free. One
+    // that exits with an error fails the answer, rather than ending as if it were the whole log.
+    journalctl.once("close", (code, signal) => {
+      ended();
+      if (code === 0) return log.end();
+      const failure = new Error(`journalctl exited with ${code ?? signal}`);
+      logFailure("server_log.failed", failure);
+      log.destroy(failure);
+    });
+    // A reader that lets go stops journalctl.
+    log.once("close", () => journalctl.kill());
+    return Readable.toWeb(log);
   };
 }
 

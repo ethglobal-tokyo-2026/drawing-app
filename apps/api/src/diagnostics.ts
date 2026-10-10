@@ -11,13 +11,10 @@ export interface DiagnosticFields {
   giftId?: string;
   userId?: string;
   artistId?: string;
-  recipientId?: string;
   /** A Sui transaction's kind: mint, deposit, take_out, claim, return or payment. */
   kind?: string;
   status?: string | number;
   elapsedMs?: number;
-  cached?: boolean;
-  recovered?: boolean;
   mode?: string;
   stage?: string;
   errorCode?: string;
@@ -26,7 +23,8 @@ export interface DiagnosticFields {
   menu?: string;
   /**
    * The expiry sweep's tally: gifts it sent back, recorded as the escrow left them, closed with no
-   * deposit, left alone, or failed on. The mint catch-up counts its failures in failed too.
+   * deposit, left alone, or failed on. The mint catch-up and the ticket purchase sweep count their
+   * failures in failed too.
    */
   returned?: number;
   recorded?: number;
@@ -40,13 +38,8 @@ export interface DiagnosticFields {
   purchaseId?: number;
   /** A Sui transaction digest. */
   txDigest?: string;
-  /**
-   * The ticket purchase sweep's tally: PaymentReceived events it read, purchases it credited,
-   * payments short of their purchase's price, and purchases it gave up.
-   */
-  events?: number;
+  /** The ticket purchase sweep's tally: purchases it credited, and purchases it gave up. */
   credited?: number;
-  short?: number;
   givenUp?: number;
   /** The boot check: whether ServerConfig names the server, the objects the env names that Sui lacks, and Shinami's fund in MIST. */
   serverMatches?: boolean;
@@ -138,6 +131,27 @@ function errorCauses(error: unknown) {
 /** Longer causes are cut here, so the answer stays one line. */
 export const CAUSE_MAX_LENGTH = 160;
 
+/** A problem a schema found, as Zod reports it. */
+export interface Issue {
+  path: readonly PropertyKey[];
+  message: string;
+}
+
+/**
+ * A schema's problems as one line for an error's detail, each naming its field by its path: under
+ * `under` when given, and `whenEmpty` for a problem with the whole value.
+ */
+export const describeIssues = (
+  issues: readonly Issue[],
+  { under, whenEmpty = "" }: { under?: string; whenEmpty?: string } = {},
+) =>
+  issues
+    .map(({ path, message }) => {
+      const field = (under === undefined ? path : [under, ...path]).map(String).join(".");
+      return `${field || whenEmpty}: ${message}`;
+    })
+    .join("; ");
+
 /**
  * Why a failure happened, in the words of its innermost cause that says (an RPC's "rate limit
  * exceeded"), masked as the log is, so the person's own error can carry it.
@@ -158,12 +172,9 @@ const loggedFields = {
   giftId: true,
   userId: true,
   artistId: true,
-  recipientId: true,
   kind: true,
   status: true,
   elapsedMs: true,
-  cached: true,
-  recovered: true,
   mode: true,
   stage: true,
   errorCode: true,
@@ -179,9 +190,7 @@ const loggedFields = {
   skipped: true,
   purchaseId: true,
   txDigest: true,
-  events: true,
   credited: true,
-  short: true,
   givenUp: true,
   serverMatches: true,
   missing: true,
