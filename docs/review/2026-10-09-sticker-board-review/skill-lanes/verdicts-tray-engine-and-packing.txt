@@ -1,4 +1,0 @@
-[
-{"id":"ENGINE-1","verdict":"CONFIRMED","file":"apps/frontend/src/sticker-board/tray/trayModel.ts","line":412,"note":"scratch /tmp/sb-review/engine1-append-moves-sheets.ts: room 602, 16->17 stickers moves #14,#15 sheet 0->1; large 30 stickers foot 1100 vs 760: 17 change sheet"},
-{"id":"ENGINE-5","verdict":"REFUTED","file":"apps/frontend/src/sticker-board/tray/trayModel.ts","line":341,"note":"scratch /tmp/sb-review/engine5-mouth-short-grid.ts: mouthShortFor(fit,count,sheetHeightFor(fit,count)) is 0 for all 41418 combos; page height change is applied by redraw->sheetEl->sizePages"}
-]

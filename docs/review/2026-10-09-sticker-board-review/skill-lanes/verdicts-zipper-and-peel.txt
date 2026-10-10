@@ -1,7 +1,0 @@
-[
- {"id":"ZIP-1","verdict":"PENDING","note":"onDown has no st.grab guard; tracing second-pointer delivery"},
- {"id":"ZIP-2","verdict":"PENDING"},
- {"id":"PEEL-1","verdict":"PENDING"},
- {"id":"PEEL-2","verdict":"PENDING"},
- {"id":"PEEL-3","verdict":"PENDING"}
-]

@@ -1,3 +1,0 @@
-[
-{"id":"REUSE-1","verdict":"CONFIRMED","file":"apps/frontend/src/sticker-board/StickerBoard.tsx","line":652,"status":"draft, being refined"}
-]
