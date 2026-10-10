@@ -128,6 +128,13 @@ export class StrokeCurve {
     return this.keys[(this.count - 1) * STRIDE + 1];
   }
 
+  /** The stroke's first point takes this width, while no span from it has been cut. */
+  setFirstWidth(width: number): void {
+    if (this.out.length !== STRIDE) return;
+    this.out[2] = width;
+    this.keys[2] = width;
+  }
+
   /** The curve passes through x, y next, at this width and ms; the span before it is cut. */
   add(x: number, y: number, width: number, t: number): void {
     const at = this.count * STRIDE;
