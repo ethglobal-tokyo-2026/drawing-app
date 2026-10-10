@@ -112,7 +112,7 @@ import { trayProblemKey, trayProblemWords, type TrayProblem } from "./tray/trayP
 import { useBoardGestures, type SettledStep } from "./useBoardGestures";
 import { useBoardLayout, useBoardSize } from "./useBoardSize";
 import { CreasesContext, useCreases } from "./useCreases";
-import { detailsAhead, preloadStickerDetails } from "./stickerDetailQuery";
+import { detailReadsKey, detailsAhead, preloadStickerDetails } from "./stickerDetailQuery";
 import { onMyStickerBoardChanged, useMyStickerBoard } from "./useMyStickerBoard";
 import "./StickerBoard.css";
 
@@ -388,9 +388,10 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const hints = useId();
   const idle = usePreloadAfterBoard(OPENED_FROM_BOARD);
   // Once the board is idle, the details of the stickers on top load ahead, so opening one shows it
-  // whole at once. Only a change in which stickers those are starts it again, not raising one of them.
+  // whole at once. Only a change in which stickers those are, or in their trails, starts it again, not
+  // raising one of them.
   const ahead = useMemo(() => (stickers ? detailsAhead(stickers) : []), [stickers]);
-  const aheadKey = ahead.toSorted().join(" ");
+  const aheadKey = detailReadsKey(ahead);
   const preloadAhead = useEffectEvent(() => preloadStickerDetails(api, ahead));
   useEffect(() => {
     if (!idle || aheadKey === "") return;

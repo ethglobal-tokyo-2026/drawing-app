@@ -624,17 +624,45 @@ describe("StickerDetail", () => {
       }),
     );
     const client = emptyApi({ stickerDetail });
-    preloadStickerDetails(client, ["s-133"]);
-    await settle();
     const given = stickers.map((s) => ({
       ...s,
       trail: { timesGiven: 1, newestHasGratitude: false },
     }));
+    preloadStickerDetails(
+      client,
+      given.filter((s) => s.id === "s-133"),
+    );
+    await settle();
     open({ ownerId: me.id, stickers: given }, client);
     expect(rows()).toHaveLength(1);
     expect(document.querySelector(".sticker-detail__column .skeleton")).toBeNull();
     await settle();
     expect(stickerDetail).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads its detail again once the board lists a gift received since the last read", async () => {
+    let trail = [trailEntry({ giftId: "g-1", giver: me, receiver: people.mika })];
+    const stickerDetail = vi.fn((id: string) =>
+      Promise.resolve({
+        sticker: apiSticker({ id, number: 133 }),
+        owner: me,
+        transferTrail: trail,
+      }),
+    );
+    const client = emptyApi({ stickerDetail });
+    const listed = (timesGiven: number) => [
+      sticker(133, day(14), { trail: { timesGiven, newestHasGratitude: false } }),
+    ];
+    open({ ownerId: me.id, stickers: listed(1) }, client);
+    await settle();
+    act(() => root.render(null));
+
+    // Within the minute @mika gives it back, and the board's reload lists that gift.
+    trail = [trailEntry({ giftId: "g-2", giver: people.mika, receiver: me }), ...trail];
+    open({ ownerId: me.id, stickers: listed(2) }, client);
+    await settle();
+    expect(stickerDetail).toHaveBeenCalledTimes(2);
+    expect(rows()).toHaveLength(2);
   });
 
   describe("while its detail is read", () => {

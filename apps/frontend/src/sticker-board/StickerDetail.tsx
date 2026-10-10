@@ -222,7 +222,7 @@ export function StickerDetail({
   // Its Transfer Trail, and whether you owe gratitude for a sticker you hold, come with its detail,
   // often read ahead by the board.
   const shownStickerId = sticker?.id ?? null;
-  const detail = useStickerDetail(shownStickerId);
+  const detail = useStickerDetail(sticker ?? null);
   const read = detail.state === "ready" ? detail.data : null;
   const loaded = read?.stickerDetail ?? null;
   const readAgain = detail.state === "ready" ? detail.refresh : null;
