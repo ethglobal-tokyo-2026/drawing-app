@@ -35,8 +35,9 @@ export function needsDrawnSizes(sqlite: Database.Database): boolean {
 
 /**
  * Reads every sticker's drawn size from its timelapse and, with `write`, stages it in
- * sticker_drawn_sizes, which the migration copies onto the stickers and drops. Throws, writing
- * nothing, when a sticker's timelapse is missing or records no place, naming each such sticker.
+ * sticker_drawn_sizes, which the migration copies onto the stickers and drops. A sticker sealed
+ * without a timelapse, as one too big to send was, takes its image's size in px, an estimate. Throws,
+ * writing nothing, when a sticker's timelapse records no place, naming each such sticker.
  */
 export function stageDrawnSizes(
   sqlite: Database.Database,
@@ -44,16 +45,23 @@ export function stageDrawnSizes(
   log: (line: string) => void = console.log,
 ): (DrawnSize & { id: string })[] {
   const rows = sqlite
-    .prepare<[], { id: string; number: number; ops: Uint8Array | null }>(
-      "select s.id, s.number, t.ops from stickers s left join sticker_timelapses t on t.sticker_id = s.id order by s.number",
+    .prepare<
+      [],
+      { id: string; number: number; width: number; height: number; ops: Uint8Array | null }
+    >(
+      "select s.id, s.number, s.width, s.height, t.ops from stickers s left join sticker_timelapses t on t.sticker_id = s.id order by s.number",
     )
     .all();
   log(`Reading the drawn size of ${rows.length} stickers from their timelapses`);
   const sized: (DrawnSize & { id: string })[] = [];
   const unknown: string[] = [];
-  for (const { id, number, ops } of rows) {
+  for (const { id, number, width, height, ops } of rows) {
+    if (!ops) {
+      sized.push({ id, width, height });
+      log(`No.${number} ${id}: no timelapse, so its image's ${width} × ${height} px stand in`);
+      continue;
+    }
     try {
-      if (!ops) throw new Error("it has no timelapse");
       const size = drawnSizeOf(ops);
       sized.push({ id, ...size });
       log(`No.${number} ${id}: ${size.width} × ${size.height} units`);
@@ -65,7 +73,7 @@ export function stageDrawnSizes(
   }
   if (unknown.length > 0) {
     throw new Error(
-      `The drawn size of ${unknown.length} sticker(s) can't be known, so stickers.drawn_width can't be added: ${unknown.join("; ")}. Delete those stickers, or the database, and start again.`,
+      `The drawn size of ${unknown.length} sticker(s) can't be known, so stickers.drawn_width can't be added: ${unknown.join("; ")}. Delete those stickers with every row that names them, or the database, and start again.`,
     );
   }
   if (!write) {

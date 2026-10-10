@@ -1,9 +1,14 @@
 import { createHash, randomUUID } from "node:crypto";
+import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import Database from "better-sqlite3";
 import { generateSQLiteDrizzleJson, generateSQLiteMigration } from "drizzle-kit/api";
 import { and, count, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { migrationsFolder } from "./migrate.ts";
 import * as schema from "./schema/index.ts";
 import type { KyotoSeikaSubject } from "./schema/index.ts";
 import { DAILY_TICKETS_PER_DAY, GIFT_EXPIRY_MS } from "./schema/limits.ts";
@@ -23,6 +28,56 @@ export async function createTestDb() {
 }
 
 export type TestDb = Awaited<ReturnType<typeof createTestDb>>["db"];
+
+/** A migration as the Drizzle journal lists it: its place, when it was generated, and its file's name. */
+interface JournalEntry {
+  idx: number;
+  when: number;
+  tag: string;
+}
+
+const isJournalEntry = (entry: unknown): entry is JournalEntry =>
+  typeof entry === "object" &&
+  entry !== null &&
+  "idx" in entry &&
+  typeof entry.idx === "number" &&
+  "when" in entry &&
+  typeof entry.when === "number" &&
+  "tag" in entry &&
+  typeof entry.tag === "string";
+
+const journalPath = (folder: string) => join(folder, "meta", "_journal.json");
+
+/** The journal's entries in `folder`, in the order the migrator applies them. */
+export function journalEntries(folder = migrationsFolder): JournalEntry[] {
+  const journal: unknown = JSON.parse(readFileSync(journalPath(folder), "utf8"));
+  const entries =
+    typeof journal === "object" && journal !== null && "entries" in journal
+      ? journal.entries
+      : null;
+  if (!Array.isArray(entries) || !entries.every(isJournalEntry)) {
+    throw new Error(`${journalPath(folder)} doesn't list its migrations as { idx, when, tag }`);
+  }
+  return entries;
+}
+
+/**
+ * A database file migrated up to just before the migration `tag`, as one that hasn't applied it
+ * yet holds it, from a copy of the migrations whose journal ends there.
+ */
+export function databaseBefore(tag: string) {
+  const dir = mkdtempSync(join(tmpdir(), "drawing-app-db-"));
+  const folder = join(dir, "drizzle");
+  cpSync(migrationsFolder, folder, { recursive: true });
+  const entries = journalEntries(folder);
+  const at = entries.findIndex((entry) => entry.tag === tag);
+  if (at < 0) throw new Error(`The journal lists no migration ${tag}`);
+  writeFileSync(journalPath(folder), JSON.stringify({ entries: entries.slice(0, at) }));
+  const path = join(dir, "test.db");
+  const sqlite = new Database(path);
+  migrate(drizzle({ client: sqlite }), { migrationsFolder: folder });
+  return { path, sqlite };
+}
 
 /** Why the database refused a write. Drizzle wraps SQLite's error as its cause. */
 export function refusal(write: () => unknown): string {

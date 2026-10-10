@@ -1,0 +1,1 @@
+CREATE INDEX `stickers_veiled_hash` ON `stickers` (`veiled_hash`) WHERE "stickers"."veiled_hash" is not null;
