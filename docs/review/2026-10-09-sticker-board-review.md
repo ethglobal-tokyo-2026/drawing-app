@@ -6,8 +6,8 @@
 
 **Status:**
 
-- Merged: the light is written on the highlights that move with it (95a45b14), and the Shop's previews follow their own light again (662d6016).
-- Running: tray frame cost (`perf/tray-frames`), the board's re-render cost (`perf/board-renders`).
+- Merged: the light is written on the highlights that move with it (95a45b14); the Shop's previews follow their own light again (662d6016); a tilt sweeps however slowly it turns, and a sweep no longer restyles per sticker (fc8ffb3b); a tap on the board skips work that never changes (d3484b12); the tray's per-frame work trimmed (bedb31ea, 72420473).
+- Running: the fix plan's waves 1 and 2.
 - Taken elsewhere: the spec and rim masks (d6380033); TryPenPressure's pipeline copy, `testCanvas.ts`'s dirty rect and `fillSnapshots.ts`'s canvases (drawing screen review).
 
 ## Bugs (verified)
@@ -51,17 +51,20 @@ Shared helpers wanted across the app (copies counted by the lanes): `handleOf` (
 
 Chromium, CPU slowed 4×, 24 stickers; GPU is software here, so raster numbers aren't a phone's.
 
-| What                                    | Measured                                                                                                           |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Light moving (bench, mouse)             | Main thread 768 → 524 ms/s, style 430 → 228 ms/s, frames over 1.5× the median 23–62 → 0–1 per 6 s (merged)         |
-| Light moving (bench, tilt)              | Main thread 766 → 538 ms/s, style 425 → 226 ms/s                                                                   |
-| Light written every 90 ms instead of 45 | A further cut to 344–528 ms/s; not merged, see question 2                                                          |
-| Idle sway                               | About 80 ms/s of main thread, no dropped frames in either engine                                                   |
-| Taps (dev build)                        | Select 175 ms, open detail 257, drag pickup 167, drop 177: the board's React re-render; production numbers pending |
-| Board turn                              | 130 ms at the start (style recalc over 1,653 elements as the front goes inert), 64 ms landing                      |
-| Detail close                            | 161 ms: style 45 ms, raster 61 ms                                                                                  |
-| Tray                                    | Opening frame 367 ms (rendering, no script); closing: 34 of 205 frames over 33 ms                                  |
-| Boot                                    | Spec and rim masks were 23% of image bytes and 34% of requests (removed, d6380033)                                 |
+| What                                    | Measured                                                                                                   |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Light moving (bench, mouse)             | Main thread 768 → 524 ms/s, style 430 → 228 ms/s, frames over 1.5× the median 23–62 → 0–1 per 6 s (merged) |
+| Light moving (bench, tilt)              | Main thread 766 → 538 ms/s, style 425 → 226 ms/s                                                           |
+| Light written every 90 ms instead of 45 | A further cut to 344–528 ms/s; not merged, see question 2                                                  |
+| Idle sway                               | About 80 ms/s of main thread, no dropped frames in either engine                                           |
+| Tilt sweep (bench, WebKit)              | About 10 ms of main thread a sweep → under 1 ms; it had also fired only on flicks (merged)                 |
+| Taps, production build                  | Busy per tap: select 52–62 → 33–35 ms, detail close 79–99 → 46–61, open 69–71 → 55–64 (merged)             |
+| Taps, dev build                         | 175–257 ms, mostly React's development build                                                               |
+| Board turn                              | 130 ms at the start (style recalc over 1,653 elements as the front goes inert), 64 ms landing              |
+| Detail open                             | `StickerToolbar` reads its width after every board render, forcing 12–16 ms of layout as the detail mounts |
+| Tray                                    | No long frame in production; the dev trace's 367 ms opening frame was the harness's screenshot             |
+| Tray closing                            | Each frame restyles about 380 Zipper elements (teeth, tape, lining): style and layerize, 1–2 ms of script  |
+| Boot                                    | Spec and rim masks were 23% of image bytes and 34% of requests (removed, d6380033)                         |
 
 Tried and dropped: the light written once per sticker or on the board (slower), `--lx`/`--ly` registered with `@property` (no gain), a per-frame JS glide in place of the CSS transitions (twice the writes), a baked resin band (no gain). Each mask downloads twice in dev because Vite's proxy adds `Vary: Origin`; the API doesn't, and production is unchecked.
 
@@ -71,3 +74,4 @@ Tried and dropped: the light written once per sticker or on the board (slower), 
 2. Writing the light every 90 ms instead of 45 cuts its cost by about a third again. The highlights still glide (280 ms transitions), but the light updates about 11 times a second instead of 22. Try it? Recommended: yes, judged on your phone.
 3. DEPTH-2: phone-layout windows wider than a phone (LINE's sheet on an iPad, Split View) keep phone-sized stickers but spread them, so a wide window and a phone disagree on overlaps. Recommended: accept it; the alternative is a third saved layout.
 4. Bigger then Smaller leaves a sticker 0.64% smaller (`STEP_GROW` 1.08, `STEP_SHRINK` 0.92). Make Smaller undo Bigger exactly? Recommended: yes.
+5. The Zipper draws its chain as about 380 elements that restyle every frame it moves. Production frames stayed in budget at 4× CPU, so redrawing it (one SVG path or a canvas) isn't worth it unless the tray stutters closing on your phone. Recommended: leave it.

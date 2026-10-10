@@ -1,0 +1,45 @@
+/* A panel the tool strip opens, as a bar of label stock lifted over the sheet. Closed, it hides and
+   takes no touch while it fades, so a stroke started there reaches the sheet and a tap can't land
+   on a closing control. Its place is the caller's: `.under-tool-strip`, or one of its own. */
+.panel-bar {
+  position: absolute;
+  z-index: 4;
+  width: 244px;
+  background: var(--liner-lift);
+  border-radius: var(--r-label);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    var(--shadow-lift);
+  opacity: 0;
+  transform: translateY(-6px);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 160ms var(--ease-out),
+    transform 220ms var(--ease-out),
+    visibility 0s linear 220ms;
+}
+
+.panel-bar.is-open {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    opacity 160ms var(--ease-out),
+    transform 220ms var(--ease-out),
+    visibility 0s;
+}
+
+/* Under the tool strip, in line with its end on the drawing hand's side. */
+.under-tool-strip {
+  top: 66px;
+  left: var(--near-left) var(--tools-inset);
+  right: var(--near-right) var(--tools-inset);
+}
+
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .under-tool-strip {
+    top: var(--top-h);
+  }
+}

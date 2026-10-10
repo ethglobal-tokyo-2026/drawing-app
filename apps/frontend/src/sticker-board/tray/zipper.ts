@@ -40,51 +40,32 @@ interface RunOptions {
 
 /** The Zipper's live shape, in the host's pixels. */
 interface ZipperGeometry {
-  /** The host's width and height, and the track's length. */
-  W: number;
+  /** The host's height. */
   H: number;
-  L: number;
   /** The chain's center line, from the host's left edge. */
   chainX: number;
-  /** A place on the track as the host's y, and back. */
+  /** A place on the track as the host's y. */
   yOf: (a: number) => number;
-  aOf: (y: number) => number;
-  progress: number;
-  open: boolean;
   mode: ZipperState;
-  /** The slider's center on the track, and where the parted rows leave its shoulders. */
-  S: number;
+  /** Where the parted rows leave the slider's shoulders, on the track. */
   sM: number;
-  /** How wide the mouth is, and how far its curves reach from the slider and from the top stop. */
+  /** How wide the mouth is. */
   G: number;
-  Ts: number;
-  Te: number;
   /** From running open to spread flat. */
   spread: number;
   /** The mouth's hold: wide open, or sagged to a crack. */
   relax: number;
   /** How far the left row stands off the chain at a place on the track. */
   gap: (a: number) => number;
-  /** The left lip's x at a place on the track. */
-  lipX: (a: number) => number;
-  /** The slider's center as the host's y. */
-  sliderY: number;
 }
 
 interface ZipperEvents {
   grab: { progress: number };
-  drag: { progress: number; velocity: number };
-  release: { progress: number; open: boolean; tap: boolean };
   /** A run toward open or shut has begun. */
   commit: { open: boolean };
   /** The slider knocked the far stop, or the top one. */
   opened: void;
   closed: void;
-  /** The run is over and everything is still. */
-  settled: { open: boolean };
-  /** A tooth pair passed through the slider. */
-  tick: { n: number };
-  hint: void;
   frame: ZipperGeometry;
 }
 
@@ -531,6 +512,8 @@ interface Segment {
   el: HTMLElement;
   tape: HTMLElement;
   a: number;
+  /** Its transform sewn in the shut chain, which only `build` moves. */
+  home: string;
   /** The transforms last written, so an unchanged part isn't written again. */
   t: string;
   ts: string;
@@ -607,14 +590,9 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
 
   const listeners: { [K in keyof ZipperEvents]: Set<Listener<K>> } = {
     grab: new Set(),
-    drag: new Set(),
-    release: new Set(),
     commit: new Set(),
     opened: new Set(),
     closed: new Set(),
-    settled: new Set(),
-    tick: new Set(),
-    hint: new Set(),
     frame: new Set(),
   };
   function emit<K extends keyof ZipperEvents>(event: K, detail: ZipperEvents[K]) {
@@ -691,12 +669,11 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   let teethB: Segment[] = [];
   let slivers: Sliver[] = [];
   const yOf = (a: number) => o.insets[0] + a;
-  const aOf = (y: number) => y - o.insets[0];
 
   function segment(row: "a" | "b", a: number): Segment {
     const tape = make(doc, "i", "zip__tape");
     const el = make(doc, "i", `zip__seg zip__seg--${row}`, tape, make(doc, "i", "zip__tooth"));
-    return { el, tape, a, t: "", ts: "" };
+    return { el, tape, a, home: `translate(${f2(chainX)}px,${f2(yOf(a))}px)`, t: "", ts: "" };
   }
   function build(): boolean {
     W = host.clientWidth;
@@ -714,6 +691,8 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     teethB = wantB.map((a) => segment("b", a));
     rowA.replaceChildren(...teethA.map((s) => s.el));
     rowB.replaceChildren(...teethB.map((s) => s.el));
+    // The right row stays sewn to the tray, so it's placed only here.
+    for (const s of teethB) put(s, s.home);
     slivers = [];
     for (let a = LINING.step / 2; a < L; a += LINING.step) {
       slivers.push({ el: make(doc, "i", "zip__sliver"), a, t: "", on: false });
@@ -924,7 +903,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
         st.stv += TICK.stutter * dir;
         st.swv += (n % 2 ? 1 : -1) * TICK.swing;
         if (n % 2 === 0) buzz(TICK.buzzMs);
-        emit("tick", { n });
       }
     }
   }
@@ -964,7 +942,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     st.mode = "rest";
     // A run that had no stop to knock, such as opening what was already open, still answers.
     flush(st.open);
-    emit("settled", { open: st.open });
   }
   function flush(open: boolean) {
     const w = waiters;
@@ -992,24 +969,31 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
         : 0;
     }
     table.n = n;
+    cursor = 1;
     return n ? table.s[n - 1] : 0;
   }
-  /** The point on the curve `s` px from the slider's shoulders, and the way the curve runs there. */
+  /** Where the last `at` stopped in the table, so the next one looks on from there. */
+  let cursor = 1;
+  const point = { a: 0, c: 0, ang: 0 };
+  /**
+   * The point on the curve `s` px from the slider's shoulders, and the way the curve runs there, in one
+   * object each call reuses. After a `sample`, each call's `s` must be no less than the last one's.
+   */
   function at(s: number): { a: number; c: number; ang: number } {
     const n = table.n;
-    if (n < 2) return { a: shape.sM, c: 0, ang: 0 };
-    let i = 1;
+    if (n < 2) return Object.assign(point, { a: shape.sM, c: 0, ang: 0 });
+    let i = cursor;
     while (i < n - 1 && table.s[i] < s) i++;
+    cursor = i;
     const s0 = table.s[i - 1];
     const s1 = table.s[i];
     const k = s1 > s0 ? clamp((s - s0) / (s1 - s0), 0, 1) : 0;
     const da = table.a[i - 1] - table.a[i];
     const dc = table.c[i - 1] - table.c[i];
-    return {
-      a: lerp(table.a[i - 1], table.a[i], k),
-      c: lerp(table.c[i - 1], table.c[i], k),
-      ang: -Math.atan2(dc, da) * (180 / Math.PI),
-    };
+    point.a = lerp(table.a[i - 1], table.a[i], k);
+    point.c = lerp(table.c[i - 1], table.c[i], k);
+    point.ang = -Math.atan2(dc, da) * (180 / Math.PI);
+    return point;
   }
   const put = (part: { el: HTMLElement; t: string }, t: string) => {
     if (part.t === t) return;
@@ -1066,25 +1050,28 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     const total = shape.G > 0.05 || shape.lie > 0.05 ? sample() : 0;
     const len = Math.max(1e-3, shape.sM);
     const stretch = total > 0 ? Math.max(1, total / len) : 1;
-    // Row a: parted teeth run along the curve, spaced by their place on the tape.
-    for (const s of teethA) {
+    // Row a: parted teeth run along the curve, spaced by their place on the tape. They're placed from
+    // the slider back, so each finds its point on the curve where the last one did.
+    for (let j = teethA.length - 1; j >= 0; j--) {
+      const s = teethA[j];
       if (total > 0 && s.a < shape.sM) {
         const q = at((shape.sM - s.a) * stretch);
         put(s, `translate(${f2(chainX + q.c)}px,${f2(yOf(q.a))}px) rotate(${f2(q.ang)}deg)`);
         putTape(s, stretch > 1.002 ? `scaleY(${stretch.toFixed(3)})` : "");
       } else {
-        put(s, `translate(${f2(chainX)}px,${f2(yOf(s.a))}px)`);
+        put(s, s.home);
         putTape(s, "");
       }
     }
-    for (const s of teethB) put(s, `translate(${f2(chainX)}px,${f2(yOf(s.a))}px)`);
     // The lining between the rows. Each sliver reaches the lip's outermost point within its height, so on
     // a steep bend it runs a little under the tape, which covers it, instead of leaving a notch.
     for (const sl of slivers) {
       const lo = sl.a - LINING.half;
       const hi = Math.min(sl.a + LINING.half, shape.sM);
-      const gIn = lo < shape.sM ? Math.min(gap(lo), gap(hi), gap(sl.a)) : 0;
-      if (gIn < LINING.minGap) {
+      const gLo = gap(lo);
+      const gHi = gap(hi);
+      const gMid = gap(sl.a);
+      if (Math.min(gLo, gHi, gMid) < LINING.minGap) {
         if (sl.on) {
           sl.el.style.opacity = "0";
           sl.on = false;
@@ -1095,7 +1082,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
         sl.el.style.opacity = "1";
         sl.on = true;
       }
-      const g = Math.max(gap(lo), gap(hi), gap(sl.a));
+      const g = Math.max(gLo, gHi, gMid);
       const left = -g - LINING.underLip;
       const right = LINING.underChain;
       put(
@@ -1125,25 +1112,15 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
 
   function geometry(): ZipperGeometry {
     return {
-      W,
       H,
-      L,
       chainX,
       yOf,
-      aOf,
-      progress: st.p,
-      open: st.open,
       mode: st.mode,
-      S: shape.S,
       sM: shape.sM,
       G: shape.G,
-      Ts: shape.Ts,
-      Te: shape.Te,
       spread: st.spread,
       relax: st.relax,
       gap,
-      lipX: (a) => chainX - gap(a),
-      sliderY: yOf(shape.S),
     };
   }
 
@@ -1170,7 +1147,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
       render();
       emit(open ? "opened" : "closed", undefined);
       flush(open);
-      emit("settled", { open });
       return done;
     }
     st.mode = "run";
@@ -1248,7 +1224,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     st.fingerV = lerp(st.fingerV, (y - g.ly) / travel / (dt / 1000), FINGER_SMOOTHING);
     g.ly = y;
     g.lt = t;
-    emit("drag", { progress: st.p, velocity: st.fingerV });
     wake();
   };
   /** The hand leaves the pull. A touch the system took was never let go: it runs back where it began. */
@@ -1264,7 +1239,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
         ? !g.startOpen
         : releaseOpens(st.p, st.fingerV, g.startOpen);
     if (!cancelled) st.pv = clamp(st.fingerV, -RELEASE_MAX, RELEASE_MAX);
-    emit("release", { progress: st.p, open, tap });
     void run(open);
   };
   const onUp = (e: PointerEvent) => letGo(e, false);
@@ -1377,7 +1351,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
       st.target = TUG.px / travel;
       st.tv += TUG.tilt;
       st.knocked = true;
-      emit("hint", undefined);
       wake();
       later(() => {
         if (st.mode !== "hint") return;

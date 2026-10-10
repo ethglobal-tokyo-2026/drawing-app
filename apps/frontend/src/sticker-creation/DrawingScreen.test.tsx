@@ -1101,3 +1101,32 @@ describe("spending a sheet's ticket", () => {
     expect(keptSpend(TEST_ME.id)).not.toBeNull();
   });
 });
+
+describe("a drawing another tab starts", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  /** This tab is shown again after another tab began keeping a drawing for the same person. */
+  const shownAfterAnotherTabKeeps = () => {
+    const record = { ticket: 9, elapsedMs: 0, nsfw: false };
+    localStorage.setItem(personKey("draw.session", TEST_ME.id), JSON.stringify(record));
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    act(() => void document.dispatchEvent(new Event("visibilitychange")));
+  };
+
+  it("is taken up as a reload does when this tab, shown again, has no drawing of its own", async () => {
+    const reload = vi.spyOn(location, "reload").mockImplementation(() => {});
+    // The tickets haven't come, so this sheet spends none while it waits.
+    reopen({ status: "none" }, {}, TEST_ME, { tickets: () => new Promise(() => {}) });
+    await settle();
+    shownAfterAnotherTabKeeps();
+    expect(reload).toHaveBeenCalledOnce();
+  });
+
+  it("leaves this tab's own drawing as it is", async () => {
+    const reload = vi.spyOn(location, "reload").mockImplementation(() => {});
+    reopen(keptHalfway);
+    await settle();
+    shownAfterAnotherTabKeeps();
+    expect(reload).not.toHaveBeenCalled();
+  });
+});

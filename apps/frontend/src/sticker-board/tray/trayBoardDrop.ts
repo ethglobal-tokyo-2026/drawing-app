@@ -4,7 +4,6 @@
  */
 import { EASE_OUT, lerp } from "../../ui/easing";
 import {
-  trayTop,
   ended,
   type BoardView,
   type Point,
@@ -29,8 +28,8 @@ export function createTrayBoardDrop(
   trayPeel: TrayPeel,
   trayPresses: TrayPresses,
 ) {
-  const { reduced, later, cancel, zip, api, root, stack, ui, Wb, colLeft, pouchFoot, boardView } =
-    tray;
+  const { reduced, later, cancel, zip, api, root, stack, ui } = tray;
+  const { Wb, colLeft, trayTop, pouchFoot, boardView } = tray;
   const { itemOf, topF } = trayModel;
   const { renderStack, rerenderPulled, sayReturned } = traySheets;
   const { bringToFront } = trayPaging;

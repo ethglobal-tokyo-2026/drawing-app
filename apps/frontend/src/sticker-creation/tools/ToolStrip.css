@@ -10,7 +10,7 @@
     var(--shadow-label);
 }
 
-/* 38px keeps the row tight; the invisible margin in ::after brings each touch target to 44px. */
+/* Small tiles keep the row tight; ::after's invisible margin makes each a full touch target. */
 .tool-tile {
   position: relative;
   display: grid;

@@ -27,7 +27,7 @@ import {
   SHEET,
   STACK_Y,
   SVG_NS,
-  trayTop,
+  trayTopFor,
   createTrayModel,
   modelOf,
   mouthShortFor,
@@ -280,6 +280,9 @@ export function createTrayEngine(
   const Wb = () => placed.w || 390;
   const Hb = () => placed.h || 657;
   const colLeft = () => Wb() - COL * ui.fit.grow;
+  // One query for the tray's life: a board drag reads it on every move.
+  const large = win.matchMedia(LARGE_SCREEN);
+  const trayTop = () => trayTopFor(large.matches);
   /** Where the open pouch ends, as the board's y: where its mouth closes in. */
   let openFoot = 0;
   const pouchFoot = () => openFoot || Hb();
@@ -312,6 +315,7 @@ export function createTrayEngine(
     Wb,
     Hb,
     colLeft,
+    trayTop,
     pouchFoot,
     boardView,
   };
@@ -331,7 +335,6 @@ export function createTrayEngine(
     w1.toggleAttribute("inert", now);
   }
   let footShown = "1.00";
-  const large = win.matchMedia(LARGE_SCREEN);
   /** The board height and screen the tray was last fitted for. */
   let fittedFor = "";
   /** How far short of the bottom stop the Zipper's open mouth was last shaped to close in. */
@@ -435,7 +438,8 @@ export function createTrayEngine(
     const out = ui.spreadOpen
       ? 0
       : clamp((g.spread - 0.55) / 0.45, 0, 1) * clamp((g.relax - 0.85) / 0.15, 0, 1);
-    for (const t of tabs) t.tabIndex = out > 0.5 ? 0 : -1;
+    const tabStop = out > 0.5 ? 0 : -1;
+    for (const t of tabs) if (t.tabIndex !== tabStop) t.tabIndex = tabStop;
   }
   zip.on("frame", onFrame);
   // The Zipper drew itself before this listened.

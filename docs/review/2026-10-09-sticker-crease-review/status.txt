@@ -1,22 +1,25 @@
 Sticker crease: end-of-feature reviews, 2026-10-09. Kept so another session can pick up if usage runs out.
 
 Live on stickeroo.art (main), behind the developer slip's "Show creases on this device", off by default:
-- a sticker over others shows the edges directly beneath it; buried edges don't show
-- STRENGTH 0.7 (apps/frontend/src/stickers/crease.ts)
+- a sticker over others shows the edges directly beneath it; buried edges don't show; STRENGTH 0.7
 - baked lit from four sides; the four layers blend by --lx/--ly, so the lit and shaded sides follow the tilt
-- the Kyoto Seika Practice Mode band is drawn grown from the cut, as its CSS draws it
-- stickers are flat under the thin laminate now, which the crease's flat-sheet model matches
+- the Kyoto Seika Practice Mode band is drawn grown from the cut; stickers are flat under the laminate
 
-Open: a moving light drops frames with creases on (measured before main's 95a45b14, which writes the
-light only onto the highlights that move: WebKit about 18% fewer frames over a pointer sweep).
+Findings, all in this folder: code-review.txt (F1–F8), performance.txt (+ perf-*.patch), critique.txt (+ png).
 
-Lanes, each committing its findings to its own branch in its own worktree under .claude/worktrees/:
-- code review:   branch review/sticker-crease-code,     this folder's code-review.txt
-- performance:   branch review/sticker-crease-perf,     this folder's performance.txt and perf-<variant>.patch
-- critique:      branch review/sticker-crease-critique, this folder's critique.txt and critique-<n>.png
-- recorder upload (the performance recorder sends its report to the server log, read at /api/logs):
-                 branch perf-report-upload, code commits
+Merged on main, not yet deployed when written: the performance recorder sends its report to the server
+while it's on (POST /api/performance-reports); read phone reports with
+  curl -s 'https://stickeroo.art/api/logs?lines=5000' | rg '"event":"performance.report"'
 
-Next: merge each lane's findings here on main; fix what they find in a worktree; run pnpm check and
-apps/frontend/e2e/crease.e2e.ts in both engines; push; ask the session working in the main checkout to deploy.
-Delete this folder once its findings are fixed or answered.
+Fix pass, branch fix/sticker-crease-review (its own worktree under .claude/worktrees/), one commit each:
+1. settle: creases take --lx/--ly only once the light has rested 250 ms (performance.txt's verdict)
+2. base layer: shoulder and foot in a fifth image at constant opacity, so creases never vanish with the
+   light overhead and never show stronger off-axis (critique 2 and 3)
+3. the worker's mask cache capped (LRU)
+4. code-review.txt F1 (affine rounding), F4 (worker safeguards), F2, F3, F5, F6, F7, comments for F8
+Not taken: critique 1 and 5 (ad0ll approved the line at 0.7), DEPTH-4, the "no-fade" variant (WebKit fell
+to 13–15 fps without the opacity transition). Open: WebKit's one long frame as fades end (performance.txt);
+measure on ad0ll's phone with the recorder once the fix pass is live.
+
+Next: merge the fix branch (squash; no AI attribution), pnpm check, apps/frontend/e2e/crease.e2e.ts in both
+engines, push, ask the session working in the main checkout to deploy. Delete this folder once done.

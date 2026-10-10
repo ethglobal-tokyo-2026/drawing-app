@@ -13,6 +13,14 @@
   user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+  /* The top row's insets from the screen's edges: the timer's, and the tool strip's. */
+  --timer-inset: 16px;
+  --tools-inset: 14px;
+  /* The foot row: undo and redo, then My board past a wider gap. */
+  --foot-tile: 46px;
+  --foot-inset: 18px;
+  --history-gap: 6px;
+  --board-gap: 16px;
 }
 
 .drawing-screen :focus-visible {
@@ -24,8 +32,8 @@
 .drawing-top {
   position: absolute;
   top: 14px;
-  left: 16px;
-  right: 14px;
+  left: var(--timer-inset);
+  right: var(--tools-inset);
   z-index: 3;
   display: flex;
   align-items: center;
@@ -42,7 +50,7 @@
 /* While sealing, the tools step back; the ceremony owns the screen. A seal to try again keeps only
    the seal key and its chip, since the sheet can't change. */
 .drawing-screen:is(.is-sealing, .is-retrying)
-  :is(.drawing-top, .smoothing-bar, .clear-bar, .size-rail, .history-buttons),
+  :is(.drawing-top, .panel-bar, .size-rail, .history-buttons),
 .drawing-screen.is-sealing :is(.seal-chip, .seal-key) {
   opacity: 0;
   pointer-events: none;
@@ -56,7 +64,7 @@
 
 /* Once faded, the tools leave the tab order and the screen reader's too, so only the seal key is left. */
 .drawing-screen:is(.is-sealing, .is-retrying)
-  :is(.drawing-top, .smoothing-bar, .clear-bar, .size-rail, .history-buttons) {
+  :is(.drawing-top, .panel-bar, .size-rail, .history-buttons) {
   visibility: hidden;
   transition-property: opacity, visibility;
   transition-delay: 0s, 220ms;
@@ -83,7 +91,8 @@
 
 /* My board stays as the way back, in undo's place, clear of Begin at the foot's middle. */
 .drawing-screen.is-dealt .my-board-tile {
-  left: 18px;
+  left: var(--far-left) var(--foot-inset);
+  right: var(--far-right) var(--foot-inset);
 }
 
 /* 0:00 is pencils down: the tools fade as the time's-up sheet rises, and only the clock stays. */
@@ -116,30 +125,47 @@
 }
 
 /* Where the undo and redo tiles were, since a seal to try again has put them away. It wraps inside
-   their width, short of My board: kept on one line, it ran into the chip. */
+   their width, short of My board, so it stays clear of the seal problem chip. */
 .drawing-screen > .drawing-start-over {
   position: absolute;
-  left: 18px;
+  left: var(--far-left) var(--foot-inset);
+  right: var(--far-right) var(--foot-inset);
   bottom: 22px;
   z-index: 3;
-  max-width: calc(2 * 46px + 6px);
+  max-width: calc(2 * var(--foot-tile) + var(--history-gap));
   justify-content: flex-start;
   white-space: normal;
   text-align: left;
 }
 
-/* ---------- Drawing hand: Left mirrors the screen, so the drawing hand never rests on a control. The
-   rail, the foot row's tiles and the seal check change sides; the tools go to the top left, the timer
-   to the top right. Each control keeps its own reading order: undo still comes before redo. */
+/* ---------- Drawing hand: Left mirrors the screen, so the drawing hand never rests on a control.
+   A control takes its side through switches: far for the screen's edge away from the drawing hand,
+   near for the hand's own. Each is empty on its edge and `initial` on the other, where it makes a
+   declaration such as `left: var(--far-left) 18px` invalid, so that inset falls back to auto. */
+.drawing-screen {
+  --far-left: ;
+  --far-right: initial;
+  --near-left: initial;
+  --near-right: ;
+}
+
+.drawing-screen[data-hand="left"] {
+  --far-left: initial;
+  --far-right: ;
+  --near-left: ;
+  --near-right: initial;
+}
+
+/* What a switch can't turn keeps a Left rule: a row's order and both its insets, a drawing's
+   direction, transform origins and text alignment. Each control keeps its own reading order: undo
+   still comes before redo. */
 .drawing-screen[data-hand="left"] > .drawing-top {
-  left: 14px;
-  right: 16px;
+  left: var(--tools-inset);
+  right: var(--timer-inset);
   flex-direction: row-reverse;
 }
 
 .drawing-screen[data-hand="left"] .timer-hint {
-  left: auto;
-  right: 4px;
   flex-direction: row-reverse;
   transform-origin: calc(100% - 14px) 0;
 }
@@ -149,12 +175,7 @@
 }
 
 .drawing-screen[data-hand="left"] .timer-hint-label {
-  margin: 18px -2px 0 0;
   transform-origin: 100% 0;
-}
-
-.drawing-screen[data-hand="left"] .timer-hint.is-call .timer-hint-label {
-  margin: 4px 0 0;
 }
 
 /* The wide dot grows from its top-right corner, away from the screen's edge. */
@@ -162,58 +183,18 @@
   translate: -4px 4px;
 }
 
-.drawing-screen[data-hand="left"] > :is(.smoothing-bar, .clear-bar) {
-  left: 14px;
-  right: auto;
-}
-
-.drawing-screen[data-hand="left"] > .size-rail {
-  left: auto;
-  right: 0;
-}
-
 /* The rail's number grows left for two digits, away from the screen's edge. */
 .drawing-screen[data-hand="left"] .size-num {
-  left: auto;
-  right: 7px;
   transform-origin: 100% 100%;
 }
 
-.drawing-screen[data-hand="left"] > .history-buttons {
-  left: auto;
-  right: 18px;
-}
-
-/* My board stays on undo's far side, nearer the middle, as on the right. */
-.drawing-screen[data-hand="left"] > .my-board-tile {
-  left: auto;
-  right: calc(18px + var(--board-at));
-}
-
-.drawing-screen.is-dealt[data-hand="left"] > .my-board-tile {
-  right: 18px;
-}
-
 .drawing-screen[data-hand="left"] > .drawing-start-over {
-  left: auto;
-  right: 18px;
   justify-content: flex-end;
   text-align: right;
 }
 
-.drawing-screen[data-hand="left"] > .key.seal-key {
-  left: 18px;
-  right: auto;
-}
-
-/* The seal problem chip stays above the foot row, on the sheet's side of the check's column. */
-.drawing-screen[data-hand="left"] > .seal-chip {
-  left: 88px;
-  right: auto;
-}
-
-/* Kyoto Seika's corner print goes over the tiles in the lower right, clear of the left hand, which
-   covers the lower left as it draws; the deal tucks toward it. */
+/* The corner print of a sheet in Kyoto Seika Practice Mode goes over the tiles in the lower right,
+   clear of the left hand, which covers the lower left as it draws; the deal tucks toward it. */
 .drawing-screen[data-hand="left"] .corner-print {
   left: auto;
   right: 10px;
@@ -235,26 +216,31 @@
     --foot: 8px;
     /* The rail, then undo, redo and My board under it, centered on the sidebar's height. */
     --rail-h: 180px;
-    --tiles-h: calc(3 * 46px + 6px + 16px);
+    --tiles-h: calc(3 * var(--foot-tile) + var(--history-gap) + var(--board-gap));
     --rail-top: calc(50% - (var(--rail-h) + 16px + var(--tiles-h)) / 2);
     --tiles-top: calc(var(--rail-top) + var(--rail-h) + 16px);
+    --timer-inset: 8px;
+    --tools-inset: 8px;
   }
 
   .drawing-screen > .drawing-top {
     top: 8px;
-    left: 8px;
-    right: 8px;
   }
 
-  /* The sheet's room: its one rule, everything the bars leave. */
+  /* The sheet's room: everything the bars leave. It sets both sides, which Left swaps. */
   .drawing-screen > .ink-area {
     inset: var(--top-h) 8px var(--foot) var(--edge-w);
+  }
+
+  .drawing-screen[data-hand="left"] > .ink-area {
+    inset: var(--top-h) var(--edge-w) var(--foot) 8px;
   }
 
   /* The thumb's tip shows the size, and a held thumb its ghost mid-sheet, so the rail drops the px label. */
   .drawing-screen > .size-rail {
     --thumb-foot: 18px;
-    left: calc((var(--edge-w) - 40px) / 2);
+    left: var(--far-left) calc((var(--edge-w) - 40px) / 2);
+    right: var(--far-right) calc((var(--edge-w) - 40px) / 2);
     top: var(--rail-top);
     height: var(--rail-h);
   }
@@ -265,7 +251,8 @@
 
   .drawing-screen > .history-buttons {
     flex-direction: column;
-    left: calc((var(--edge-w) - 46px) / 2);
+    left: var(--far-left) calc((var(--edge-w) - var(--foot-tile)) / 2);
+    right: var(--far-right) calc((var(--edge-w) - var(--foot-tile)) / 2);
     top: var(--tiles-top);
     bottom: auto;
   }
@@ -273,14 +260,18 @@
   /* Under redo, where it stays while a sheet waits for Begin: the sidebar keeps it clear of Begin. */
   .drawing-screen > .my-board-tile,
   .drawing-screen.is-dealt > .my-board-tile {
-    left: calc((var(--edge-w) - 46px) / 2);
+    left: var(--far-left) calc((var(--edge-w) - var(--foot-tile)) / 2);
+    right: var(--far-right) calc((var(--edge-w) - var(--foot-tile)) / 2);
     top: calc(var(--tiles-top) + var(--board-at));
     bottom: auto;
   }
 
-  /* In undo and redo's place, which a seal to try again has put away; the sheet can't change then. */
-  .drawing-screen > .drawing-start-over {
-    left: 4px;
+  /* In undo and redo's place, which a seal to try again has put away; the sheet can't change then.
+     Centered, for either hand. */
+  .drawing-screen > .drawing-start-over,
+  .drawing-screen[data-hand="left"] > .drawing-start-over {
+    left: var(--far-left) 4px;
+    right: var(--far-right) 4px;
     top: var(--tiles-top);
     bottom: auto;
     max-width: calc(var(--edge-w) - 8px);
@@ -289,65 +280,16 @@
   }
 
   .drawing-screen > .key.seal-key {
-    right: auto;
-    left: calc((var(--edge-w) - 58px) / 2);
+    left: var(--far-left) calc((var(--edge-w) - 58px) / 2);
+    right: var(--far-right) calc((var(--edge-w) - 58px) / 2);
     bottom: calc(var(--foot) + 8px);
   }
 
   /* The seal problem chip beside the check, over the sheet's corner. */
   .drawing-screen > .seal-chip {
-    right: auto;
-    left: calc(var(--edge-w) + 4px);
+    left: var(--far-left) calc(var(--edge-w) + 4px);
+    right: var(--far-right) calc(var(--edge-w) + 4px);
     bottom: calc(var(--foot) + 8px);
-  }
-
-  .drawing-screen > :is(.smoothing-bar, .clear-bar) {
-    top: var(--top-h);
-    right: 8px;
-  }
-
-  /* Left: the sidebar at the right edge. These beat the phone's Left rules by coming later. */
-  .drawing-screen[data-hand="left"] > .drawing-top {
-    left: 8px;
-    right: 8px;
-  }
-
-  .drawing-screen[data-hand="left"] > .ink-area {
-    inset: var(--top-h) var(--edge-w) var(--foot) 8px;
-  }
-
-  .drawing-screen[data-hand="left"] > .size-rail {
-    left: auto;
-    right: calc((var(--edge-w) - 40px) / 2);
-  }
-
-  .drawing-screen[data-hand="left"] > .history-buttons,
-  .drawing-screen[data-hand="left"] > .my-board-tile,
-  .drawing-screen.is-dealt[data-hand="left"] > .my-board-tile {
-    left: auto;
-    right: calc((var(--edge-w) - 46px) / 2);
-  }
-
-  .drawing-screen[data-hand="left"] > .drawing-start-over {
-    left: auto;
-    right: 4px;
-    justify-content: center;
-    text-align: center;
-  }
-
-  .drawing-screen[data-hand="left"] > .key.seal-key {
-    left: auto;
-    right: calc((var(--edge-w) - 58px) / 2);
-  }
-
-  .drawing-screen[data-hand="left"] > .seal-chip {
-    left: auto;
-    right: calc(var(--edge-w) + 4px);
-  }
-
-  .drawing-screen[data-hand="left"] > :is(.smoothing-bar, .clear-bar) {
-    left: 8px;
-    right: auto;
   }
 }
 

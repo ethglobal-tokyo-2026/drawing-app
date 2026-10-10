@@ -1,9 +1,10 @@
 .history-buttons {
   position: absolute;
-  left: 18px;
+  left: var(--far-left) var(--foot-inset);
+  right: var(--far-right) var(--foot-inset);
   bottom: 22px;
   z-index: 3;
   display: flex;
-  gap: 6px;
+  gap: var(--history-gap);
   transition: opacity var(--t-pop) var(--ease-out);
 }

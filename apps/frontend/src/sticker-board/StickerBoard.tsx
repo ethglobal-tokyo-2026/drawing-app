@@ -3,6 +3,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useEffectEvent,
   useId,
   useLayoutEffect,
   useMemo,
@@ -387,11 +388,13 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const hints = useId();
   const idle = usePreloadAfterBoard(OPENED_FROM_BOARD);
   // Once the board is idle, the details of the stickers on top load ahead, so opening one shows it
-  // whole at once. Only a change in which stickers those are starts it again.
-  const aheadKey = useMemo(() => (stickers ? detailsAhead(stickers).join(" ") : ""), [stickers]);
+  // whole at once. Only a change in which stickers those are starts it again, not raising one of them.
+  const ahead = useMemo(() => (stickers ? detailsAhead(stickers) : []), [stickers]);
+  const aheadKey = ahead.toSorted().join(" ");
+  const preloadAhead = useEffectEvent(() => preloadStickerDetails(api, ahead));
   useEffect(() => {
     if (!idle || aheadKey === "") return;
-    return preloadStickerDetails(api, aheadKey.split(" "));
+    return preloadAhead();
   }, [idle, api, aheadKey]);
   // The gratitude mini-game covers the board, so the tilt and its sheen sweeps rest while it plays.
   useLight(!turned && !gratitudeFor);
@@ -545,9 +548,13 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // Each gift someone received since this device last said so, newest first, one notice at a time.
   // From the stickers as they show: the same given stickers as the load's, with no NSFW drawing
   // loaded under the other opt-in.
-  const receivedGifts = receivedGiftsOf(stickers ?? []);
-  // Closed ones stay closed on this visit even when the device can't save that they were noticed.
-  const notice = newestUnnoticed(receivedGifts.filter((g) => !noticesClosed.has(receiveOf(g))));
+  const receivedGifts = useMemo(() => receivedGiftsOf(stickers ?? []), [stickers]);
+  // Closed ones stay closed on this visit even when the device can't save that they were noticed. The
+  // device's record is read again only when these change, not on every render.
+  const notice = useMemo(
+    () => newestUnnoticed(receivedGifts.filter((g) => !noticesClosed.has(receiveOf(g)))),
+    [receivedGifts, noticesClosed],
+  );
 
   // A device with no record of notices would replay every gift ever received, so the first board it
   // draws counts those as noticed.
@@ -813,6 +820,22 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         );
     },
   };
+  // The sticker tray skips the board's renders, so it's handed one side of the board that never
+  // changes, each call reaching the board as it is now.
+  const trayNow = useRef({ board: trayBoard, markSeen });
+  useLayoutEffect(() => {
+    trayNow.current = { board: trayBoard, markSeen };
+  });
+  const [traySide] = useState<TrayBoard>(() => ({
+    stickerRect: (id) => trayNow.current.board.stickerRect(id),
+    sizeFor: (id) => trayNow.current.board.sizeFor(id),
+    place: (id, at) => trayNow.current.board.place(id, at),
+    remove: (id) => trayNow.current.board.remove(id),
+    pulse: (id) => trayNow.current.board.pulse(id),
+    openGiven: (id) => trayNow.current.board.openGiven(id),
+    openYours: (id) => trayNow.current.board.openYours(id),
+  }));
+  const onTraySeen = useCallback((ids: readonly string[]) => trayNow.current.markSeen(ids), []);
   const stack = stackOf(onBoard);
   const creases = useCreases({
     stickers: onBoard.toSorted((a, b) => (stack.get(a.id) ?? 0) - (stack.get(b.id) ?? 0)),
@@ -826,7 +849,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const order = field
     ? readingOrder(onBoard.map((s) => ({ id: s.id, ...toPx(field, s.placement) })))
     : [];
-  const inOrder = order.flatMap((id) => onBoard.filter((s) => s.id === id));
+  const onBoardById = new Map(onBoard.map((s) => [s.id, s]));
+  const inOrder = order.flatMap((id) => onBoardById.get(id) ?? []);
   // Privy's SDK waits for the first-load chips too (whenBoardSettled), so its wallet frame doesn't
   // stutter them.
   const chipsOver = failed || (stickers !== null && field !== null && chips.length === 0);
@@ -956,7 +980,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
           <KeepAnimations order={order.join(" ")} root={stage}>
             {field &&
               size &&
-              inOrder.map((s) => (
+              inOrder.map((s, i) => (
                 <Fragment key={s.id}>
                   <PlacedSticker
                     sticker={s}
@@ -970,7 +994,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                     onLanded={landedNow}
                     reduced={reduced}
                     tabbable={s.id === tabbable}
-                    position={order.indexOf(s.id) + 1}
+                    position={i + 1}
                     setSize={order.length}
                     hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
                     foil={byOther(s)}
@@ -1040,8 +1064,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             board={face}
             stickers={stickers}
             ownerId={owner.id}
-            api={trayBoard}
-            onSeen={markSeen}
+            api={traySide}
+            onSeen={onTraySeen}
             onProblem={addTrayProblem}
           />
         </Suspense>

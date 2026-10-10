@@ -1,9 +1,14 @@
-import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "../../i18n/react";
-import { StrokeBuilder, type PenPressure } from "../../sticker-creation/canvas/brush";
-import { context2d } from "../../sticker-creation/canvas/context2d";
-import type { StrokeOp } from "../../sticker-creation/canvas/ops";
-import { paintStroke } from "../../sticker-creation/canvas/paintStroke";
+import type { PenPressure } from "../../sticker-creation/canvas/brush";
+import {
+  InkEngine,
+  type InkEvents,
+  type InkSettings,
+} from "../../sticker-creation/canvas/inkEngine";
+import { InkSurface } from "../../sticker-creation/canvas/inkSurface";
+import type { Step } from "../../sticker-creation/canvas/ops";
+import { FIRST_SMOOTHING } from "../../sticker-creation/canvas/stabilizer";
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 
@@ -13,14 +18,42 @@ const TRY_SIZE = 12;
 const TRY_FADE_AFTER_MS = 3000;
 /** Ink, the color sheet's first swatch. */
 const INK = "#1C1824";
+/**
+ * A page holding only a clear: loaded without a frame, it takes the strip's own area as its frame,
+ * one CSS px to the unit, as a drawing kept without a frame does.
+ */
+const BLANK: readonly Step[] = [{ tool: "clear" }];
 
-type Sample = { clientX: number; clientY: number; pressure: number; timeStamp: number };
+/** The strip draws as a fresh sheet does, with the brush at its size and the chosen curve. */
+const settingsFor = (response: PenPressure, fingersDraw: boolean): InkSettings => ({
+  tool: "brush",
+  color: INK,
+  size: TRY_SIZE,
+  smoothing: FIRST_SMOOTHING,
+  locked: false,
+  paused: false,
+  panelOpen: false,
+  inputMode: fingersDraw ? "pencilAndFinger" : "pencilOnly",
+  penPressure: response,
+  sessionMs: () => 0,
+});
+
+/** The strip shows no hover ring, keeps nothing, and has no panel or pause to report. */
+const ignore = () => {};
+const EVENTS: InkEvents = {
+  onHistory: ignore,
+  onCommit: ignore,
+  onBlocked: ignore,
+  onDismissPanel: ignore,
+  onPen: ignore,
+  onHover: ignore,
+};
 
 /**
- * Try it: a strip of drawing paper where the pen draws with the chosen pressure curve, so the choice
- * is felt, not guessed. Fingers draw too unless `fingersDraw` is off; a mouse draws by speed. The ink
- * fades a few seconds after the last stroke, or goes at once under reduced motion; nothing is kept.
- * Screen readers skip it.
+ * Try it: a strip of drawing paper where the pen draws through the drawing screen's own ink engine
+ * with the chosen pressure curve, so the choice is felt, not guessed. Fingers draw too unless
+ * `fingersDraw` is off; a mouse draws by speed. The ink fades a few seconds after the last stroke,
+ * or goes at once under reduced motion; nothing is kept. Screen readers skip it.
  */
 export function TryPenPressure({
   response,
@@ -32,139 +65,80 @@ export function TryPenPressure({
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const canvas = useRef<HTMLCanvasElement>(null);
-  const ctx = useRef<CanvasRenderingContext2D | null>(null);
-  /** The stroke in progress, and where its latest sample was. */
-  const live = useRef<{
-    id: number;
-    builder: StrokeBuilder;
-    painted: number;
-    x: number;
-    y: number;
-  } | null>(null);
-  /** The strokes on the strip, painted again when a pen's tail narrows as it lifts. */
-  const strokes = useRef<StrokeOp[]>([]);
-  // Whether this pen senses pressure, learned as the drawing screen learns it.
-  const sensed = useRef(false);
-  const fade = useRef<number | undefined>(undefined);
+  const engine = useRef<InkEngine | null>(null);
+  /** The strip's size and density the ink was framed at; null once it has faded. */
+  const framed = useRef<string | null>(null);
+  const initialSettings = useEffectEvent(() => settingsFor(response, fingersDraw));
+  const faded = (el: HTMLCanvasElement) => {
+    releaseCanvas(el);
+    framed.current = null;
+  };
+  const fadeOut = useEffectEvent((el: HTMLCanvasElement) => {
+    if (reduced) faded(el);
+    else el.classList.add("is-fading");
+  });
 
   useEffect(() => {
     const el = canvas.current;
     if (!el) return;
+    const ink = new InkEngine(new InkSurface(el), initialSettings(), EVENTS);
+    let fade: number | undefined;
+    // Framed to the strip at the screen's density as a stroke lands, which clears it: what's left
+    // would fade anyway. This runs before the engine hears the pointer.
+    const onDown = (e: PointerEvent) => {
+      // A stroke here isn't a press on the paper around it.
+      e.stopPropagation();
+      clearTimeout(fade);
+      el.classList.remove("is-fading");
+      const size = `${el.clientWidth}x${el.clientHeight}@${devicePixelRatio}`;
+      if (framed.current === size) return;
+      framed.current = size;
+      ink.load(BLANK, null);
+      ink.fit({ width: el.clientWidth, height: el.clientHeight }, devicePixelRatio);
+    };
+    const onLift = () => {
+      clearTimeout(fade);
+      fade = window.setTimeout(() => fadeOut(el), TRY_FADE_AFTER_MS);
+    };
     // The strip takes the whole touch: no scroll, no Scribble or text selection from the Pencil, and
     // the cork never reads it as its pull toward the developer slip.
     const hold = (e: TouchEvent) => {
       e.preventDefault();
       e.stopPropagation();
     };
+    el.addEventListener("pointerdown", onDown);
+    const detach = ink.attach(el);
+    el.addEventListener("pointerup", onLift);
+    el.addEventListener("pointercancel", onLift);
     el.addEventListener("touchstart", hold, { passive: false });
     el.addEventListener("touchmove", hold, { passive: false });
+    engine.current = ink;
     return () => {
+      el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("pointerup", onLift);
+      el.removeEventListener("pointercancel", onLift);
       el.removeEventListener("touchstart", hold);
       el.removeEventListener("touchmove", hold);
-      clearTimeout(fade.current);
-      releaseCanvas(el);
+      detach();
+      clearTimeout(fade);
+      ink.dispose();
+      engine.current = null;
+      faded(el);
     };
   }, []);
 
-  const point = (el: HTMLCanvasElement, e: Sample) => {
-    const box = el.getBoundingClientRect();
-    return { x: e.clientX - box.left, y: e.clientY - box.top };
-  };
-  const paint = () => {
-    const stroke = live.current;
-    if (!stroke || !ctx.current) return;
-    paintStroke(ctx.current, stroke.builder.op, stroke.painted, stroke.builder.count);
-    stroke.painted = stroke.builder.count;
-  };
-
-  const down = (e: ReactPointerEvent<HTMLCanvasElement>) => {
-    // A stroke here isn't a press on the paper around it.
-    e.stopPropagation();
-    if (live.current || (!fingersDraw && e.pointerType === "touch")) return;
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    const el = e.currentTarget;
-    try {
-      el.setPointerCapture(e.pointerId);
-    } catch {
-      // The pointer already lifted, or never existed (a synthetic event): nothing left to capture.
-    }
-    clearTimeout(fade.current);
-    el.classList.remove("is-fading");
-    // Sized to the strip at the screen's density, which clears it: what's left would fade anyway.
-    const density = devicePixelRatio || 1;
-    const [w, h] = [Math.round(el.clientWidth * density), Math.round(el.clientHeight * density)];
-    if (el.width !== w || el.height !== h) {
-      [el.width, el.height] = [w, h];
-      strokes.current = [];
-    }
-    ctx.current ??= context2d(el);
-    ctx.current.setTransform(density, 0, 0, density, 0, 0);
-    const { x, y } = point(el, e);
-    const builder = new StrokeBuilder({
-      tool: "brush",
-      color: INK,
-      size: TRY_SIZE,
-      x,
-      y,
-      t: e.timeStamp,
-      T: 0,
-      pressure: e.pressure,
-      pointerType: e.pointerType,
-      pressureVaries: sensed.current,
-      response,
-    });
-    live.current = { id: e.pointerId, builder, painted: 0, x, y };
-    paint();
-  };
-
-  const move = (e: ReactPointerEvent<HTMLCanvasElement>) => {
-    const stroke = live.current;
-    if (stroke?.id !== e.pointerId) return;
-    const native: Sample & { getCoalescedEvents?: () => Sample[] } = e.nativeEvent;
-    const samples = native.getCoalescedEvents?.() ?? [];
-    for (const sample of samples.length ? samples : [native]) {
-      const { x, y } = point(e.currentTarget, sample);
-      stroke.builder.add(x, y, sample.pressure, sample.timeStamp);
-      [stroke.x, stroke.y] = [x, y];
-    }
-    paint();
-  };
-
-  const end = (e: ReactPointerEvent<HTMLCanvasElement>) => {
-    const stroke = live.current;
-    if (stroke?.id !== e.pointerId) return;
-    // The line curves all the way to the last sample.
-    stroke.builder.settle(stroke.x, stroke.y);
-    paint();
-    live.current = null;
-    if (stroke.builder.pressured) sensed.current = true;
-    const el = e.currentTarget;
-    const { op, count } = stroke.builder;
-    if (stroke.builder.taperEnd() < count && ctx.current) {
-      ctx.current.clearRect(0, 0, el.clientWidth, el.clientHeight);
-      for (const done of strokes.current) paintStroke(ctx.current, done);
-      paintStroke(ctx.current, op);
-    }
-    strokes.current.push(op);
-    fade.current = window.setTimeout(() => {
-      if (reduced) releaseCanvas(el);
-      else el.classList.add("is-fading");
-    }, TRY_FADE_AFTER_MS);
-  };
+  useLayoutEffect(() => {
+    if (engine.current) engine.current.settings = settingsFor(response, fingersDraw);
+  });
 
   return (
     <div className="try-pen-pressure" aria-hidden="true">
       <canvas
         ref={canvas}
         className="try-pen-pressure__ink"
-        onPointerDown={down}
-        onPointerMove={move}
-        onPointerUp={end}
-        onPointerCancel={end}
-        onLostPointerCapture={end}
         onTransitionEnd={(e) => {
           if (!e.currentTarget.classList.contains("is-fading")) return;
-          releaseCanvas(e.currentTarget);
+          faded(e.currentTarget);
           e.currentTarget.classList.remove("is-fading");
         }}
       />

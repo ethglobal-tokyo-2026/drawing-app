@@ -2,6 +2,7 @@ import { useEffect, useId, useRef } from "react";
 import { useTranslation } from "../../i18n/react";
 import { LabelButton } from "../../ui/LabelButton";
 import { QuietLink } from "../../ui/QuietLink";
+import "./panel-bar.css";
 import "./ClearBar.css";
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
 }
 
 /**
- * Asks before the sheet is cleared, from under the tool strip, where the smoothing bar opens. It isn't
+ * Asks before the sheet is cleared, from under the tool strip, where the Smoothing bar opens. It isn't
  * modal: a tap anywhere else closes it, as it closes the other panels. Focus starts on Cancel, so
  * Enter alone never clears, and goes back to the clear tile when the bar closes with focus inside.
  */
@@ -40,7 +41,7 @@ export function ClearBar({ id, open, onClear, onClose }: Props) {
     <div
       ref={bar}
       id={id}
-      className={`clear-bar keep-phrases ${open ? "is-open" : ""}`}
+      className={`panel-bar under-tool-strip clear-bar keep-phrases ${open ? "is-open" : ""}`}
       role="dialog"
       aria-labelledby={titleId}
       aria-describedby={lineId}

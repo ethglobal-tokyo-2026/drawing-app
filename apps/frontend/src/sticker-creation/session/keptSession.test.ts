@@ -5,7 +5,7 @@ import {
   IDBFactory as FakeIndexedDB,
   IDBObjectStore as FakeStore,
 } from "fake-indexeddb";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { personKey } from "../../ui/deviceStorage";
 import { CHARRED_AT_ROLL } from "../../kyoto-seika/dieMood";
 import { REUNION, TEST_SUBJECTS, WIND } from "../../kyoto-seika/testSubjects";
@@ -488,5 +488,69 @@ describe("the drawing kept on this device", () => {
       ticket: 7,
       kyotoSeika: part,
     });
+  });
+});
+
+/**
+ * Web Locks for the rest of the test, as the keeper asks for them: each request steals the name's
+ * lock, so its holder's request rejects with AbortError. Returns the names held.
+ */
+function fakeLocks() {
+  const holders = new Map<string, (error: DOMException) => void>();
+  const locks = {
+    request: (name: string, _options: { steal: boolean }, granted: () => Promise<void>) =>
+      new Promise<void>((resolve, reject) => {
+        holders.get(name)?.(new DOMException("The lock was stolen", "AbortError"));
+        holders.set(name, reject);
+        void granted().then(() => {
+          if (holders.get(name) === reject) holders.delete(name);
+          resolve();
+        });
+      }),
+  };
+  Object.defineProperty(navigator, "locks", { configurable: true, get: () => locks });
+  onTestFinished(() => {
+    Reflect.deleteProperty(navigator, "locks");
+  });
+  return holders;
+}
+
+describe("a drawing kept open in two tabs", () => {
+  it("is kept by the tab that picked it up last: the other writes nothing more, says so once, and reloads once shown", async () => {
+    const held = fakeLocks();
+    const userId = someone();
+    const [a, b, c] = ["a", "b", "c"].map(stroke);
+    const onKept = vi.fn();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const reload = vi.spyOn(location, "reload").mockImplementation(() => {});
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    const stale = draw(userId, [a], { onKept });
+    const kept = await loadKept(userId);
+    if (kept.status !== "found") throw new Error(`The drawing came back ${kept.status}`);
+    const inUse = new SessionKeeper(userId);
+    inUse.resume(kept.ticket, kept.steps, kept.elapsedMs, kept.nsfw, kept.tools, kept.kyotoSeika);
+    await vi.waitFor(() => expect(onKept).toHaveBeenLastCalledWith(false));
+    inUse.save([a, b], 2000, FRAME);
+
+    // The stale tab saves as it's hidden, draws on, and seals.
+    stale.save([a], 1000, FRAME);
+    stale.save([a, c], 3000, FRAME);
+    stale.wipe();
+    expect(await loadKept(userId)).toMatchObject({
+      status: "found",
+      steps: [a, b],
+      elapsedMs: 2000,
+    });
+    expect(warn).toHaveBeenCalledOnce();
+
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(reload).not.toHaveBeenCalled();
+    visibility.mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(reload).toHaveBeenCalledOnce();
+
+    // The tab in use lets the lock go once its session is over.
+    inUse.wipe();
+    await vi.waitFor(() => expect(held.size).toBe(0));
   });
 });

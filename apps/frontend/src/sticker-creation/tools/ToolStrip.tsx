@@ -54,7 +54,7 @@ function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
 }
 
 /**
- * The tools: brush, eraser and fill, the color, and smoothing, as one flat label strip, with the clear
+ * The tools: brush, eraser and fill, the color, and Smoothing, as one flat label strip, with the clear
  * tile past a rule at its end, since clearing isn't drawing. The current tool, or the open panel's
  * tile, is reversed out of Ink with the fill-weight icon. The strip is one Tab stop, on the tile
  * focused last, or the current tool. Once a pen has drawn on the device, the Pencil only tile leads

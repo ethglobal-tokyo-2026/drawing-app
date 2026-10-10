@@ -628,18 +628,28 @@ export function useBoardGestures(options: Options) {
 
   // A sticker that leaves the board another way, as a gift does, drops focus to the page: it moves
   // on from the sticker last focused, as on Remove.
-  const shownOrder = useRef<readonly string[]>([]);
+  // The stickers last shown, put in reading order only when focus has fallen from one that left.
+  const shown = useRef<{ stickers: readonly BoardSticker[]; field: Field } | null>(null);
   useLayoutEffect(() => {
     const { stage, stickers, field, tray } = options;
     if (!field || !stage.current) return;
-    const order = orderOn(stickers, field);
-    const before = shownOrder.current;
-    shownOrder.current = order;
+    const before = shown.current;
+    shown.current = { stickers, field };
+    if (!before || tabStop === null) return;
     const doc = stage.current.ownerDocument;
     const at = doc.activeElement;
     const lost = !at || at === doc.body || !at.isConnected;
-    if (lost && tabStop !== null && before.includes(tabStop) && !order.includes(tabStop))
-      handFocusOn(stage.current, tray.current, before, tabStop, (id) => order.includes(id));
+    const left =
+      before.stickers.some((s) => s.id === tabStop) && !stickers.some((s) => s.id === tabStop);
+    if (!lost || !left) return;
+    const order = orderOn(stickers, field);
+    handFocusOn(
+      stage.current,
+      tray.current,
+      orderOn(before.stickers, before.field),
+      tabStop,
+      (id) => order.includes(id),
+    );
   });
 
   const stow = useCallback((id: string) => stowing.current(id), []);

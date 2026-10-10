@@ -13,6 +13,7 @@ import type {
   Me,
   OpenGiftBody,
   PackagedGift,
+  PerformanceReportUpload,
   Person,
   PilePage,
   PlacementsRequest,
@@ -170,6 +171,12 @@ export interface ApiClient {
   explorePile: (before: string) => Promise<PilePage>;
   /** GET /api/users?handle= */
   searchUsers: (handle: string) => Promise<Person[]>;
+
+  /**
+   * POST /api/performance-reports: the performance recorder's report, which the server writes to its
+   * log. Sent with keepalive so it lands as the page hides.
+   */
+  uploadPerformanceReport: (upload: PerformanceReportUpload) => Promise<void>;
 }
 
 /**

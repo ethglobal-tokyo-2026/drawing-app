@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  PEN_PRESSURE_SAMPLES,
-  PEN_TAPER,
-  PRESSURE_CAP,
-  previewWidth,
-  StrokeBuilder,
-  type PenPressure,
-} from "./brush";
+import { PEN_TAPER, PRESSURE_CAP, previewWidth, StrokeBuilder, type PenPressure } from "./brush";
 import { STRIDE } from "./ops";
 import { CURVE_FLATNESS } from "./strokeCurve";
 
@@ -112,11 +105,19 @@ describe("StrokeBuilder", () => {
     }
   });
 
-  it("thins fast touch and mouse strokes, within 0.68 and 1.1 of the size", () => {
-    // 10px every half millisecond (time steps floor at 1ms) against 10px a second.
-    expect(last(widths(40, { ms: 0.5 }))).toBeCloseTo(0.68);
-    expect(last(widths(40, { ms: 1000 }))).toBeCloseTo(1.1);
-    expect(last(widths(40, { pointer: "touch", ms: 0.5 }))).toBeCloseTo(0.68);
+  it("thins quick touch and mouse strokes", () => {
+    for (const pointer of ["touch", "mouse"]) {
+      // 10 units every 4 ms, a flick, against 10 a second.
+      const [quick, slow] = [4, 1000].map((ms) => last(widths(40, { pointer, ms })));
+      expect(quick).toBeLessThan(slow);
+    }
+  });
+
+  it("tapers and thins a finger's stroke alike however often the screen samples it", () => {
+    // One stroke's speed, sampled at 60 Hz and at 120 Hz: where both have a point, widths agree.
+    const coarse = widths(16, { pointer: "touch", step: 5, ms: 1000 / 60 });
+    const fine = widths(32, { pointer: "touch", step: 2.5, ms: 1000 / 120 });
+    coarse.forEach((w, k) => expect(w).toBeCloseTo(fine[2 * k]));
   });
 
   it("widens a pen's stroke from its dot over its first PEN_TAPER.travel units, however densely the pen samples", () => {
@@ -213,6 +214,11 @@ describe("StrokeBuilder", () => {
             widths(40, { pointer: "pen", pressure: 0.5, pressureVaries: false, response, ms }),
           ),
         ).toEqual(settled(widths(40, { pointer: "touch", ms })));
+    // Landing at no pressure is no reading, so it's no move either.
+    const unread = (i: number) => (i === 0 ? 0 : 0.5);
+    expect(
+      settled(widths(40, { pointer: "pen", pressure: unread, pressureVaries: false, ms: 1000 })),
+    ).toEqual(settled(widths(40, { pointer: "touch", ms: 1000 })));
     // Once its pressure moves, pressure sets the width.
     const moving = { pointer: "pen", ms: 0.5, pressureVaries: false } as const;
     expect(last(widths(40, { ...moving, pressure: (i) => (i < 5 ? 0.5 : 1) }))).toBeCloseTo(
@@ -220,10 +226,16 @@ describe("StrokeBuilder", () => {
     );
   });
 
-  it("shows a pen's change of pressure in full within its few samples, once past its taper in", () => {
+  it("starts a pen known to sense pressure at its first reading's width when it lands reporting none", () => {
+    // Safari can report no pressure for a Pencil's landing.
+    const unread = widths(40, { pointer: "pen", pressure: (i) => (i === 0 ? 0 : 0.1) });
+    expect(unread).toEqual(widths(40, { pointer: "pen", pressure: 0.1 }));
+  });
+
+  it("shows a pen's change of pressure in full by its second sample, once past its taper in", () => {
     const STEP = 20;
     const stepped = widths(40, { pointer: "pen", pressure: (i) => (i < STEP ? 0.2 : 0.9) });
-    expect(stepped[STEP + PEN_PRESSURE_SAMPLES - 1]).toBeCloseTo(penWidth(0.9));
+    expect(stepped[STEP + 1]).toBeCloseTo(penWidth(0.9));
   });
 
   it("draws wider at one pressure under Light than Normal, and Normal than Firm, and the brush's own size under Off", () => {

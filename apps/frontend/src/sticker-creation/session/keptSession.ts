@@ -186,7 +186,18 @@ export function keptColor(steps: readonly Step[]): string | null {
   return drawn?.color ?? null;
 }
 
-/** Keeps the session in progress on this device, for the person signed in, as it changes. */
+/** Web Locks, where the browser has them: WebKit before 15.4 and pages outside a secure context don't. */
+function webLocks(): LockManager | null {
+  // lib.dom types it as always there.
+  const locks: LockManager | null | undefined = navigator.locks;
+  return locks ?? null;
+}
+
+/**
+ * Keeps the session in progress on this device, for the person signed in, as it changes. One tab
+ * at a time keeps it: the one where it last started, resumed or carried over, which holds a Web Lock
+ * named after the database while it keeps a session.
+ */
 export class SessionKeeper {
   private readonly userId: string;
   private readonly onKept: (kept: boolean) => void;
@@ -211,6 +222,14 @@ export class SessionKeeper {
   private reported = false;
   /** Set by `carry`: what's kept is the unread drawing's, untouched until this sheet is drawn on. */
   private carried = false;
+  /** From start, resume or carry until wipe; the lock is held while it is. */
+  private keeping = false;
+  /** Lets go of the Web Lock; null while this keeper holds none. */
+  private releaseLock: (() => void) | null = null;
+  /** Another tab took the session over, so this one writes nothing more. */
+  private takenOver = false;
+  /** Calls off the reload a takeover waits to make when the page is next shown. */
+  private stopReload: (() => void) | null = null;
 
   /** `onKept` hears whether the session is kept on this device, each time that changes. */
   constructor(userId: string, onKept: (kept: boolean) => void = () => {}) {
@@ -223,6 +242,7 @@ export class SessionKeeper {
    * yet. Says whether its record was written: without it, a reload can't tell the ticket was spent.
    */
   start(ticket: number | null, kyotoSeika: KeptKyotoSeika | null = null): boolean {
+    this.takeLock();
     this.ticket = ticket;
     this.nsfw = false;
     this.kyotoSeika = kyotoSeika;
@@ -242,6 +262,7 @@ export class SessionKeeper {
     tools: KeptTools | undefined,
     kyotoSeika: KeptKyotoSeika | null,
   ): void {
+    this.takeLock();
     this.ticket = ticket;
     this.elapsedMs = elapsedMs;
     this.nsfw = nsfw;
@@ -256,6 +277,7 @@ export class SessionKeeper {
    * kept stays as it is until that sheet is drawn on, so a later read can still pick the drawing up.
    */
   carry(ticket: number, kyotoSeika: KeptKyotoSeika | null): void {
+    this.takeLock();
     this.ticket = ticket;
     this.nsfw = false;
     this.kyotoSeika = kyotoSeika;
@@ -303,12 +325,72 @@ export class SessionKeeper {
     this.nsfw = false;
     this.kyotoSeika = null;
     this.elapsedMs = 0;
+    this.keeping = false;
+    if (this.takenOver) return;
     removeRecord(this.userId);
     this.recordKept = true;
     this.queue({ clear: true, steps: null, frame: null });
   }
 
+  /** Takes the lock from any other tab, unless this keeper holds it. */
+  private takeLock(): void {
+    this.keeping = true;
+    this.stopReload?.();
+    this.stopReload = null;
+    if (this.takenOver) {
+      this.takenOver = false;
+      // The other tab wrote since this one last did.
+      this.written = null;
+      this.changed();
+    }
+    const locks = webLocks();
+    if (this.releaseLock || !locks) return;
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    this.releaseLock = release;
+    void locks
+      .request(dbName(this.userId), { steal: true }, () => held)
+      .catch((error: unknown) => {
+        release();
+        if (this.releaseLock !== release) return;
+        this.releaseLock = null;
+        if (error instanceof DOMException && error.name === "AbortError") this.giveUpToOtherTab();
+        else console.error("Can't hold the drawing in progress for this tab alone", error);
+      });
+  }
+
+  /** Lets the lock go once no session is kept and nothing is left to write. */
+  private releaseIfIdle(): void {
+    if (this.keeping || this.writing || this.pending) return;
+    const release = this.releaseLock;
+    this.releaseLock = null;
+    release?.();
+  }
+
+  /**
+   * Another tab stole the lock: this one writes nothing more, says the drawing isn't kept here, and
+   * reloads once shown again, so it picks up what that tab keeps.
+   */
+  private giveUpToOtherTab(): void {
+    this.takenOver = true;
+    this.pending = null;
+    this.changed();
+    console.warn(
+      "Another tab took over the drawing in progress, so this one keeps nothing more and reloads when it's next shown",
+    );
+    const onShown = () => {
+      if (document.visibilityState !== "visible") return;
+      document.removeEventListener("visibilitychange", onShown);
+      location.reload();
+    };
+    document.addEventListener("visibilitychange", onShown);
+    this.stopReload = () => document.removeEventListener("visibilitychange", onShown);
+  }
+
   private keepRecord(): void {
+    if (this.takenOver) return;
     // A session with no ticket can't be sealed, so none is kept.
     if (this.ticket === null) removeRecord(this.userId);
     else
@@ -323,6 +405,7 @@ export class SessionKeeper {
   }
 
   private queue(next: PendingWrite): void {
+    if (this.takenOver) return;
     this.pending = next;
     this.drain();
   }
@@ -340,7 +423,9 @@ export class SessionKeeper {
       return;
     this.written = steps ?? [];
     this.writing = true;
-    const fill = (stepStore: IDBObjectStore, progress: IDBObjectStore) =>
+    const fill = (stepStore: IDBObjectStore, progress: IDBObjectStore) => {
+      // A takeover while this write waited leaves the stores to the other tab.
+      if (this.takenOver) throw new Error("Another tab keeps the drawing in progress now");
       timeOurWork(SAVE_WORK, () => {
         if (next.clear) {
           stepStore.clear();
@@ -356,11 +441,13 @@ export class SessionKeeper {
         progress.put(steps.length, PROGRESS_KEY);
         if (next.frame) progress.put(next.frame, FRAME_KEY);
       });
+    };
     let deadline: ReturnType<typeof setTimeout> | undefined;
     const judge = () => {
       // A hidden page's writes can be held up with it, so they're judged once it's shown again.
       if (document.visibilityState === "hidden") deadline = setTimeout(judge, WRITE_TIMEOUT_MS);
-      else this.failed(new Error(`A write didn't land within ${WRITE_TIMEOUT_MS / 1000}s`));
+      else if (!this.takenOver)
+        this.failed(new Error(`A write didn't land within ${WRITE_TIMEOUT_MS / 1000}s`));
     };
     deadline = setTimeout(judge, WRITE_TIMEOUT_MS);
     transact(this.userId, "readwrite", fill).then(
@@ -372,7 +459,7 @@ export class SessionKeeper {
       },
       (error: unknown) => {
         clearTimeout(deadline);
-        this.failed(error);
+        if (!this.takenOver) this.failed(error);
         this.settled();
       },
     );
@@ -392,10 +479,11 @@ export class SessionKeeper {
     this.writing = false;
     this.changed();
     this.drain();
+    this.releaseIfIdle();
   }
 
   private changed(): void {
-    const kept = this.recordKept && this.stepsKept;
+    const kept = this.recordKept && this.stepsKept && !this.takenOver;
     if (kept === this.kept) return;
     this.kept = kept;
     if (kept) this.reported = false;

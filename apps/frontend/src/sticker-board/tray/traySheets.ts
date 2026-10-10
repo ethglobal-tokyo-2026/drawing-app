@@ -15,7 +15,6 @@ import {
   SHEET,
   STACK_Y,
   SVG_NS,
-  trayTop,
   cssUrl,
   dayOf,
   px,
@@ -50,7 +49,7 @@ const STAND_IN: readonly (readonly [x: number, y: number, r: number])[] = [
 const FIT = { w: 66, h: 76 };
 
 export function createTraySheets(tray: Tray, trayModel: TrayModel) {
-  const { doc, zip, make, decorative, icon, words, hint, say, stack, ui, colLeft } = tray;
+  const { doc, zip, make, decorative, icon, words, hint, say, stack, ui, colLeft, trayTop } = tray;
   const { newIds, matches, sheetItems, sheetMatches, topF, resetOrder } = trayModel;
 
   /** A sheet's transform at a depth in the stack: lower, and narrower from its foot, the further back. */

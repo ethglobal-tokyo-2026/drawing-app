@@ -5,7 +5,6 @@
 import { tokyoTicketDay } from "@drawing-app/api/client";
 import type { StickerUrls } from "../../stickers/stickerUrls";
 import { clamp } from "../../ui/easing";
-import { LARGE_SCREEN } from "../../ui/largeScreen";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape, unreadableCut } from "./stickerShape";
 import type { TrayProblem } from "./trayProblem";
@@ -247,6 +246,8 @@ export interface Tray {
   Wb: () => number;
   Hb: () => number;
   colLeft: () => number;
+  /** Where the tray starts on the board, under its header (see `trayTopFor`). */
+  trayTop: () => number;
   /** Where the open pouch ends, as the board's y: where its mouth closes in. */
   pouchFoot: () => number;
   boardView: () => BoardView;
@@ -269,7 +270,7 @@ export const SHEET = { w: 156, h: 364 };
 const PACK_MARGIN = { top: 30, right: 10, bottom: 24, left: 10 };
 /** The tray runs from under the board's header and its gifts badge to its foot; a large screen's header
  * row, where the gifts sit beside your name, is taller (sticker-tray.css sets --tray-top to match). */
-export const trayTop = () => (window.matchMedia(LARGE_SCREEN).matches ? 80 : 72);
+export const trayTopFor = (largeScreen: boolean) => (largeScreen ? 80 : 72);
 /** The tray's column: wide enough for the left row's full travel. */
 export const COL = 205;
 /** How far the left row travels open: the tray takes about half the screen. */

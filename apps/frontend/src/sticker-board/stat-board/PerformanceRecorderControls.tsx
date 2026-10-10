@@ -1,14 +1,16 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { readCurrentReport } from "../../performance/currentReport";
 import {
   clearPerformanceRecording,
-  describeDevice,
   isPerformanceRecorderOn,
-  readPerformanceRecording,
   readPerformanceSummary,
   setPerformanceRecorder,
 } from "../../performance/performanceRecorder";
-import { readBootMilestones } from "../../performance/bootMilestones";
-import { formatPerformanceReport, formatSummaryLine } from "../../performance/performanceReport";
+import { formatSummaryLine } from "../../performance/performanceReport";
+import {
+  onPerformanceUploadProblem,
+  readPerformanceUploadProblem,
+} from "../../performance/performanceUpload";
 import { messageOf } from "../../i18n/errorMessage";
 import { useTranslation } from "../../i18n/react";
 import { Copy } from "../../icons";
@@ -28,6 +30,10 @@ export function PerformanceRecorderControls() {
   const [problem, setProblem] = useState<string | null>(null);
   /** The report, to copy by hand after the clipboard refused it. */
   const [uncopied, setUncopied] = useState<string | null>(null);
+  const uploadProblem = useSyncExternalStore(
+    onPerformanceUploadProblem,
+    readPerformanceUploadProblem,
+  );
 
   // Each second while the slip shows. The stat board stays mounted behind the board, so the timer
   // runs only while the page is visible and the slip isn't inert, as the board facing out, or a game
@@ -82,14 +88,9 @@ export function PerformanceRecorderControls() {
   };
 
   const copy = async () => {
-    const recording = readPerformanceRecording();
-    if (!recording) return;
-    const report = formatPerformanceReport({
-      ...recording,
-      takenAt: new Date(),
-      device: describeDevice(),
-      start: readBootMilestones(),
-    });
+    const current = readCurrentReport();
+    if (!current) return;
+    const { report } = current;
     setCopied(false);
     setProblem(null);
     setUncopied(null);
@@ -153,6 +154,11 @@ export function PerformanceRecorderControls() {
         {copied ? t(($) => $.stickerBoard.developer.performance.copied) : ""}
       </p>
       {problem && <ErrorLine className="performance-recorder__problem">{problem}</ErrorLine>}
+      {uploadProblem && (
+        <ErrorLine className="performance-recorder__problem">
+          {t(($) => $.stickerBoard.developer.performance.notUploaded, { reason: uploadProblem })}
+        </ErrorLine>
+      )}
       {uncopied && (
         <textarea
           className="performance-recorder__report"
