@@ -150,6 +150,7 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
     giftsForYou: () => Promise.resolve({ gifts: [] }),
     previewGiftForYou: unanswered("previewGiftForYou"),
     receiveGiftForYou: unanswered("receiveGiftForYou"),
+    uploadPerformanceReport: () => Promise.resolve(),
     ...overrides,
   };
 }

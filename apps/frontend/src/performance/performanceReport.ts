@@ -16,6 +16,8 @@ export interface ReportInput {
   device: string;
   /** This open's start, step by step, from `readBootMilestones`. */
   start?: readonly BootMilestone[];
+  /** The most characters the report may have: it leaves out its oldest slow frames to fit. */
+  within?: number;
 }
 
 /** A typical frame in this band is 30 fps: iOS's Low Power Mode, or the browser throttling the page. */
@@ -163,14 +165,23 @@ function windowLines(summary: PerformanceSummary, start: readonly BootMilestone[
   return ["The 5s after the board was complete: not recorded, as the recorder was off then", ""];
 }
 
-/** The report, as plain text to paste into a chat. */
-export function formatPerformanceReport({
-  summary,
-  slowFrames,
-  takenAt,
-  device,
-  start = [],
-}: ReportInput): string {
+/**
+ * The report, as plain text to paste into a chat. Within a limit, it holds the latest slow frames
+ * that fit, and says how many of the slow frames it holds.
+ */
+export function formatPerformanceReport(input: ReportInput): string {
+  const { slowFrames, within = Infinity } = input;
+  let report = formatReport(input);
+  let kept = slowFrames.length;
+  // Slow frames run about as long as one another, so the share that fits is nearly the share to keep.
+  while (report.length > within && kept > 0) {
+    kept = Math.floor(kept * Math.min(0.9, within / report.length));
+    report = formatReport({ ...input, slowFrames: slowFrames.slice(slowFrames.length - kept) });
+  }
+  return report;
+}
+
+function formatReport({ summary, slowFrames, takenAt, device, start = [] }: ReportInput): string {
   const head = `Performance report, taken ${takenAt.toISOString()}`;
   if (summary.frames === 0) {
     return [head, device, "", ...startLines(start), "Nothing recorded yet"].join("\n");

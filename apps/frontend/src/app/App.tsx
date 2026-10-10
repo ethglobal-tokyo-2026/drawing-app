@@ -20,6 +20,7 @@ import { whenBoardSettled } from "../sticker-board/boardSettled";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import type { DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
 import { noteBootMilestone } from "../performance/bootMilestones";
+import { uploadPerformanceReports } from "../performance/performanceUpload";
 import { markBoardComplete, usePreloadAfterBoard } from "../sticker-board/boardComplete";
 import { forgetBoardUnlessFor } from "../sticker-board/lastBoard";
 import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
@@ -159,6 +160,9 @@ export default function App() {
   useEffect(() => resendGratitudeWhenReachable(api, me.id), [api, me.id]);
   // So does word of a Gift Message that went out while the server couldn't hear it.
   useEffect(() => void reportKeptSends(api, me.id), [api, me.id]);
+  // The performance recorder, while it's on, sends its report to the server for the agents reading
+  // its log.
+  useEffect(() => uploadPerformanceReports(api), [api]);
 
   // Privy's SDK waits for the board to settle, so it doesn't hold up the stickers. A gift needs
   // it at once, and any other screen has no board to wait for.

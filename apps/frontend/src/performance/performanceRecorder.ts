@@ -406,6 +406,14 @@ export function timeOurWork<T>(label: string, work: () => T): T {
 
 export const isPerformanceRecorderOn = () => stopRecording !== null;
 
+const switchListeners = new Set<(on: boolean) => void>();
+
+/** Calls `listener` whenever recording has started or stopped. Returns what stops it. */
+export function onPerformanceRecorderSwitch(listener: (on: boolean) => void): () => void {
+  switchListeners.add(listener);
+  return () => void switchListeners.delete(listener);
+}
+
 export function readPerformanceRecorderSetting(): boolean {
   try {
     return localStorage.getItem(SETTING) === "on";
@@ -429,6 +437,7 @@ export function startPerformanceRecorder(): void {
   const recording = log ?? createPerformanceLog(performance.now());
   stopRecording = listen(recording);
   log = recording;
+  for (const heard of switchListeners) heard(true);
 }
 
 /**
@@ -456,6 +465,7 @@ export function stopPerformanceRecorder(): void {
   // Else a start without Clear would count the time off as a frame, and the new observers' buffered
   // entries would reach the slow frames still waiting a second time.
   log?.pause();
+  for (const heard of switchListeners) heard(false);
 }
 
 /** Empties the recording; a running recorder records on from now. */

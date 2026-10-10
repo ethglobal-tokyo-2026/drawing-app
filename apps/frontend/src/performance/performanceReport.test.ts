@@ -60,6 +60,7 @@ const report = (
   over: Partial<PerformanceSummary> = {},
   slowFrames = [slowFrame],
   steps: BootMilestone[] = [],
+  within = Infinity,
 ) =>
   formatPerformanceReport({
     summary: { ...summary, ...over },
@@ -67,6 +68,7 @@ const report = (
     takenAt: new Date(Date.UTC(2026, 8, 26, 9, 4, 5)),
     device: "iPhone Line/15.14.0",
     start: steps,
+    within,
   });
 
 describe("the performance report", () => {
@@ -112,6 +114,24 @@ describe("the performance report", () => {
 
   it("says how many slow frames it lists of all of them", () => {
     expect(report()).toContain("The latest 1 of 212 slow frames, oldest first");
+  });
+
+  it("leaves out the oldest slow frames to fit a limit, and keeps a report that already fits whole", () => {
+    const slowFrames = Array.from({ length: 40 }, (_, i) => ({
+      ...slowFrame,
+      screen: `Screen ${i}`,
+    }));
+    const whole = report({}, slowFrames);
+    expect(report({}, slowFrames, [], whole.length)).toBe(whole);
+
+    const limit = Math.floor(whole.length / 2);
+    const fitted = report({}, slowFrames, [], limit);
+    const listed = [...fitted.matchAll(/^\S+ Screen (\d+): /gm)].map(([, n]) => Number(n));
+    expect(fitted.length).toBeLessThanOrEqual(limit);
+    expect(listed.length).toBeGreaterThan(0);
+    expect(listed.length).toBeLessThan(slowFrames.length);
+    expect(listed.at(-1)).toBe(slowFrames.length - 1);
+    expect(fitted).toContain(`The latest ${listed.length} of 212 slow frames, oldest first`);
   });
 
   it("tells the open's start step by step, on the page's clock, before the recording", () => {

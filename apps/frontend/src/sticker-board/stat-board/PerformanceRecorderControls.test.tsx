@@ -2,10 +2,15 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "../../api/apiClient";
 import {
   clearPerformanceRecording,
   stopPerformanceRecorder,
 } from "../../performance/performanceRecorder";
+import {
+  REPORT_UPLOAD_EVERY_MS,
+  uploadPerformanceReports,
+} from "../../performance/performanceUpload";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
 
 declare global {
@@ -36,6 +41,8 @@ const record = () => {
 };
 const copyReport = () => act(async () => button("Copy report").click());
 
+let stopUploading: (() => void) | undefined;
+
 beforeEach(() => {
   vi.useFakeTimers({
     toFake: ["setInterval", "clearInterval", "requestAnimationFrame", "cancelAnimationFrame"],
@@ -50,6 +57,8 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount());
   host.remove();
+  stopUploading?.();
+  stopUploading = undefined;
   stopPerformanceRecorder();
   clearPerformanceRecording();
   localStorage.clear();
@@ -78,6 +87,26 @@ describe("PerformanceRecorderControls", () => {
       "The report couldn’t be copied: Not allowed here. It’s below to copy by hand.",
     );
     expect(control<HTMLTextAreaElement>("textarea").value).toContain("Typical frame");
+  });
+
+  it("shows in one line why a report upload failed, until the next one is accepted", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const upload = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(
+        new ApiError(400, { error: "invalid_request", detail: "report: Too big" }),
+      )
+      .mockResolvedValue();
+    record();
+    stopUploading = uploadPerformanceReports({ uploadPerformanceReport: upload });
+
+    await act(() => vi.advanceTimersByTimeAsync(REPORT_UPLOAD_EVERY_MS));
+    expect(control('[role="alert"]').textContent).toBe(
+      "The report wasn’t uploaded: HTTP 400 invalid_request: report: Too big. The next send tries again.",
+    );
+
+    await act(() => vi.advanceTimersByTimeAsync(REPORT_UPLOAD_EVERY_MS));
+    expect(host.querySelector('[role="alert"]')).toBeNull();
   });
 
   it("runs its once-a-second update only while the slip shows", async () => {

@@ -404,5 +404,13 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, `GET /api/users?handle=${handle}`);
       return (await response.json()).users;
     },
+
+    uploadPerformanceReport: async (upload) => {
+      const response = await api["performance-reports"].$post(
+        { json: upload },
+        { init: { keepalive: true } },
+      );
+      if (!response.ok) throw await refusal(response, "POST /api/performance-reports");
+    },
   };
 }
