@@ -9,6 +9,7 @@
 import { i18next } from "../../i18n/i18n";
 import { timeOurWork } from "../../performance/performanceRecorder";
 import { clamp, lerp } from "../../ui/easing";
+import { REDUCED_MOTION } from "../../ui/useReducedMotion";
 import { elementMaker, timeoutsIn, windowOf } from "./trayDom";
 import "./zipper.css";
 
@@ -241,7 +242,6 @@ const MOTION_MIN = 0.7;
 /** Where the browser reports acceleration only with gravity, a slow average stands in for gravity. */
 const GRAVITY_SMOOTHING = 0.9;
 
-const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 let uid = 0;

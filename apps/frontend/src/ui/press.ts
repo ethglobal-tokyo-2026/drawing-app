@@ -10,6 +10,7 @@
  * While it moves the element carries `data-press-state` (down | pop | lift); at rest it has none.
  */
 import { EASE_OUT, EASE_SPRING } from "./easing";
+import { REDUCED_MOTION } from "./useReducedMotion";
 
 const SELECTOR = ".key, .label-btn:not(.label-btn--quiet), [data-press]";
 /** Pixels past the touch target before a held press lets go. */
@@ -39,7 +40,7 @@ interface Bounds {
   bottom: number;
 }
 
-const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const reduced = () => matchMedia(REDUCED_MOTION).matches;
 
 const isOff = (el: HTMLElement) =>
   el.matches(":disabled") ||

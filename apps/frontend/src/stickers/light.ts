@@ -4,6 +4,7 @@ import {
   notePerformance,
   timeOurWork,
 } from "../performance/performanceRecorder";
+import { REDUCED_MOTION } from "../ui/useReducedMotion";
 import { sheenIn, sweepSheen } from "./resinSheen";
 
 /**
@@ -15,7 +16,6 @@ import { sheenIn, sweepSheen } from "./resinSheen";
  * rest everywhere else.
  */
 
-const REDUCED = "(prefers-reduced-motion: reduce)";
 /**
  * What follows the light as it moves: the resin's specular, and each foil's bands and glint. Set on them
  * rather than the resin or foil they're in, a move restyles only them, not the masked layers around them.
@@ -129,7 +129,7 @@ function sweepVisible(doc: Document, win: Window): number {
 
 /** Starts the light; returns what stops it. */
 export function installLight(root: HTMLElement, win: typeof window = window): () => void {
-  const reduced = win.matchMedia(REDUCED);
+  const reduced = win.matchMedia(REDUCED_MOTION);
   let x = 0;
   let y = 0;
   /** The tilt aimed it, so it glides there; a mouse or pen is followed at once. */

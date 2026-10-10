@@ -4,6 +4,7 @@ import { EASE_SPRING, clamp } from "../ui/easing";
 import { FEEL_CONFIG } from "./gameConfig";
 import type { HeartBox } from "./miniHeartPhysics";
 import { POP_IN_WORDS, createPopInPicker, type PopInBank } from "./popInWords";
+import { REDUCED_MOTION } from "../ui/useReducedMotion";
 import { shownGloss, TIER_NAMES, type TierName } from "./tierNames";
 import { animate } from "./webAnimations";
 
@@ -249,8 +250,7 @@ function makeCaption(kind: "gr-slam" | "gr-pop"): Caption {
 
 /** The system's reduced-motion setting, followed live: until the engine passes its own. */
 function systemReduced(): () => boolean {
-  const query =
-    typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
+  const query = typeof matchMedia === "function" ? matchMedia(REDUCED_MOTION) : null;
   return () => query?.matches ?? false;
 }
 

@@ -11,6 +11,7 @@ import { i18next } from "../../i18n/i18n";
 import { whenBoardQuiet } from "../boardComplete";
 import { clamp, lerp } from "../../ui/easing";
 import { LARGE_SCREEN } from "../../ui/largeScreen";
+import { REDUCED_MOTION } from "../../ui/useReducedMotion";
 import { PHONE_BOARD_SIZE } from "../placement";
 import type { TrayProblem } from "./trayProblem";
 import { createTrayBoardDrop } from "./trayBoardDrop";
@@ -97,7 +98,6 @@ export const TUG_VISITS = 3;
  * shows, the next this long after it, at most `perVisit` a visit; one the tray is busy for waits `retry`.
  */
 const TUG = { first: 2400, between: 7000, retry: 4000, perVisit: 2 };
-const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 /** Trays made so far, which keeps each one's ids its own. */
 let trays = 0;

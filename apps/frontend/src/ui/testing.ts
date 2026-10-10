@@ -2,6 +2,7 @@ import { act } from "react";
 import { onTestFinished, vi } from "vitest";
 import { LARGE_SCREEN } from "./largeScreen";
 import { LANDSCAPE_TOUCH } from "./sideways";
+import { REDUCED_MOTION } from "./useReducedMotion";
 
 /** A media query switched by the test: a matchMedia spy returns it, and `change` tells its listeners. */
 class SwitchedQuery extends EventTarget implements MediaQueryList {
@@ -24,7 +25,7 @@ class SwitchedQuery extends EventTarget implements MediaQueryList {
 /** prefers-reduced-motion as the phone reports it, switched by the test: a matchMedia spy returns it. */
 export class ReducedMotion extends SwitchedQuery {
   constructor(reduced: boolean) {
-    super("(prefers-reduced-motion: reduce)", reduced);
+    super(REDUCED_MOTION, reduced);
   }
 }
 
