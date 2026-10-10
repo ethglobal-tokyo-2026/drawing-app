@@ -218,6 +218,36 @@ const key = (name: string) =>
       ?.dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true }));
   });
 
+/** Opens the detail on `shown`, as its Original Artist on your board. */
+const openAsArtist = (shown: BoardStickerView, client: ApiClient, me?: Me) =>
+  open({ ownerId: TEST_OWNER.id, stickers: [shown], startId: shown.id }, client, me);
+/** Changes the shown sticker's 18+ mark through its confirm, with Mark 18+'s words or Remove 18+'s. */
+async function changeMarkThrough(words: { open: { en: string }; confirm: { en: string } }) {
+  press(words.open.en);
+  press(words.confirm.en);
+  await settle();
+}
+const confirm = () => document.querySelector(".sticker-detail__mark-ask");
+const figure = () => document.querySelector(".sticker-detail__slide .sticker-figure");
+const status = () => document.querySelector('[role="status"]')?.textContent;
+
+/**
+ * Hears your board change, with `kept` as the board kept on this device; `expectReloaded` checks the
+ * board was told to load again, without the kept one.
+ */
+function watchBoard(kept?: BoardStickerView[]) {
+  if (kept) keepBoard(TEST_OWNER.id, { owner: you, stickers: kept });
+  const changed = vi.fn();
+  onTestFinished(onMyStickerBoardChanged(changed));
+  return {
+    changed,
+    expectReloaded: () => {
+      expect(changed).toHaveBeenCalledOnce();
+      expect(keptBoardFor(TEST_OWNER.id)).toBeNull();
+    },
+  };
+}
+
 beforeEach(() => {
   host = document.createElement("div");
   document.body.append(host);
@@ -924,21 +954,8 @@ describe("StickerDetail", () => {
       markStickerNsfw: ApiClient["markStickerNsfw"],
       shown: BoardStickerView = sticker(133, day(14)),
       me?: Me,
-    ) =>
-      open(
-        { ownerId: TEST_OWNER.id, stickers: [shown], startId: shown.id },
-        emptyApi({ markStickerNsfw }),
-        me,
-      );
-    const confirm = () => document.querySelector(".sticker-detail__mark-ask");
-    const figure = () => document.querySelector(".sticker-detail__slide .sticker-figure");
-    const status = () => document.querySelector('[role="status"]')?.textContent;
-    /** Marks the shown sticker, through its confirm. */
-    const markIt = async () => {
-      press(words.open.en);
-      press(words.confirm.en);
-      await settle();
-    };
+    ) => openAsArtist(shown, emptyApi({ markStickerNsfw }), me);
+    const markIt = () => changeMarkThrough(words);
     const showSwitch = strings.stickerBoard.settings.nsfw.show.en;
 
     it("is offered to its Original Artist only, on a sticker not marked yet, in a section of its own at the foot", async () => {
@@ -1010,15 +1027,12 @@ describe("StickerDetail", () => {
 
     it("marks it on confirm, shows it as the answer has it, and has the board load again without the kept one", async () => {
       const markStickerNsfw = vi.fn<ApiClient["markStickerNsfw"]>(() => Promise.resolve(answer));
-      const boardChanged = vi.fn();
-      onTestFinished(onMyStickerBoardChanged(boardChanged));
-      keepBoard(TEST_OWNER.id, { owner: you, stickers: [sticker(133, day(14))] });
+      const board = watchBoard([sticker(133, day(14))]);
       openOn(markStickerNsfw);
       await markIt();
 
       expect(markStickerNsfw).toHaveBeenCalledExactlyOnceWith("s-133");
-      expect(boardChanged).toHaveBeenCalledOnce();
-      expect(keptBoardFor(TEST_OWNER.id)).toBeNull();
+      board.expectReloaded();
       expect(figure()?.querySelector("img")?.getAttribute("src")).toBe(
         toSticker(answer.sticker).urls.png,
       );
@@ -1043,8 +1057,7 @@ describe("StickerDetail", () => {
     it("says why the mark didn't take, and leaves the sticker and the board as they were", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       const refusal = new ApiError(404, { error: "sticker_not_found", detail: "s-133" });
-      const boardChanged = vi.fn();
-      onTestFinished(onMyStickerBoardChanged(boardChanged));
+      const board = watchBoard();
       openOn(() => Promise.reject(refusal));
       await markIt();
 
@@ -1054,7 +1067,7 @@ describe("StickerDetail", () => {
       );
       expect(failed?.textContent).toContain(errorDetail(refusal));
       expect(figure()?.classList).not.toContain("is-nsfw");
-      expect(boardChanged).not.toHaveBeenCalled();
+      expect(board.changed).not.toHaveBeenCalled();
       expect(button(words.confirm.en)).toBeDefined();
     });
 
@@ -1114,9 +1127,7 @@ describe("StickerDetail", () => {
       async (_, readBack, shownUrls) => {
         vi.spyOn(console, "warn").mockImplementation(() => {});
         vi.spyOn(console, "error").mockImplementation(() => {});
-        const boardChanged = vi.fn();
-        onTestFinished(onMyStickerBoardChanged(boardChanged));
-        keepBoard(TEST_OWNER.id, { owner: you, stickers: [sticker(133, day(14))] });
+        const board = watchBoard([sticker(133, day(14))]);
         // Its earlier mark's answer was lost on its way, or another window marked it first.
         const markStickerNsfw = () =>
           Promise.reject(new ApiError(409, { error: "already_nsfw", detail: "s-133" }));
@@ -1126,8 +1137,7 @@ describe("StickerDetail", () => {
           transferTrail: [],
         }));
         const client = emptyApi({ markStickerNsfw, stickerDetail });
-        const onBoard = (shown: BoardStickerView) =>
-          open({ ownerId: TEST_OWNER.id, stickers: [shown], startId: shown.id }, client);
+        const onBoard = (shown: BoardStickerView) => openAsArtist(shown, client);
         onBoard(sticker(133, day(14)));
         await settle();
         await markIt();
@@ -1138,8 +1148,7 @@ describe("StickerDetail", () => {
         expect(shownSrc()).toBe(shownUrls?.png);
         expect(figure()?.classList).toContain("is-veiled");
         expect(status()).toContain("No.0133");
-        expect(boardChanged).toHaveBeenCalledOnce();
-        expect(keptBoardFor(TEST_OWNER.id)).toBeNull();
+        board.expectReloaded();
 
         // Once the board's reload lists it marked, the detail shows it as the board has it.
         const reloaded = sticker(133, day(14), {
@@ -1164,20 +1173,8 @@ describe("StickerDetail", () => {
     const openOn = (
       unmarkStickerNsfw: ApiClient["unmarkStickerNsfw"],
       shown: BoardStickerView = marked(),
-    ) =>
-      open(
-        { ownerId: TEST_OWNER.id, stickers: [shown], startId: shown.id },
-        emptyApi({ unmarkStickerNsfw }),
-      );
-    const confirm = () => document.querySelector(".sticker-detail__mark-ask");
-    const figure = () => document.querySelector(".sticker-detail__slide .sticker-figure");
-    const status = () => document.querySelector('[role="status"]')?.textContent;
-    /** Takes the shown sticker's mark off, through its confirm. */
-    const unmarkIt = async () => {
-      press(words.open.en);
-      press(words.confirm.en);
-      await settle();
-    };
+    ) => openAsArtist(shown, emptyApi({ unmarkStickerNsfw }));
+    const unmarkIt = () => changeMarkThrough(words);
 
     it("is offered in Mark 18+'s place to its Original Artist only, on a sticker marked 18+", () => {
       openOn(vi.fn());
@@ -1205,16 +1202,13 @@ describe("StickerDetail", () => {
       const unmarkStickerNsfw = vi.fn<ApiClient["unmarkStickerNsfw"]>(() =>
         Promise.resolve(answer),
       );
-      const boardChanged = vi.fn();
-      onTestFinished(onMyStickerBoardChanged(boardChanged));
-      keepBoard(TEST_OWNER.id, { owner: you, stickers: [marked()] });
+      const board = watchBoard([marked()]);
       openOn(unmarkStickerNsfw);
       expect(figure()?.classList).toContain("is-veiled");
       await unmarkIt();
 
       expect(unmarkStickerNsfw).toHaveBeenCalledExactlyOnceWith("s-133");
-      expect(boardChanged).toHaveBeenCalledOnce();
-      expect(keptBoardFor(TEST_OWNER.id)).toBeNull();
+      board.expectReloaded();
       expect(figure()?.classList).not.toContain("is-veiled");
       expect(figure()?.classList).not.toContain("is-nsfw");
       expect(figure()?.querySelector("img")?.getAttribute("src")).toBe(
@@ -1231,8 +1225,7 @@ describe("StickerDetail", () => {
       const unmarkStickerNsfw = vi.fn<ApiClient["unmarkStickerNsfw"]>(() =>
         Promise.reject(refusal),
       );
-      const boardChanged = vi.fn();
-      onTestFinished(onMyStickerBoardChanged(boardChanged));
+      const board = watchBoard();
       openOn(unmarkStickerNsfw);
       await unmarkIt();
 
@@ -1241,7 +1234,7 @@ describe("StickerDetail", () => {
         strings.errors.network.en,
       );
       expect(figure()?.classList).toContain("is-nsfw");
-      expect(boardChanged).not.toHaveBeenCalled();
+      expect(board.changed).not.toHaveBeenCalled();
 
       unmarkStickerNsfw.mockResolvedValueOnce(answer);
       const tryAgain = failed?.querySelector<HTMLButtonElement>('[role="alert"] button');
