@@ -12,7 +12,7 @@ Each lane: its own worktree from main; commits as it goes (squash before merge, 
 
 ## Wave 1: bugs
 
-Done; C1 and C2 running, C5 after them.
+Done; C2 running, C5 after it.
 
 - [x] B1 board placement (`StickerBoard.tsx`, `boardSticker.ts`, `largeLayout.ts`, `lastBoard.ts`, `ArtistBoard.css`, `StickerToolbar.tsx`): ADOPT-1, ADOPT-2, ADOPT-3, KEPT-1, KEPT-2, ADOPT-4 (reproduce first), DETAIL-4, the hidden gratitude-check alert (`StickerBoard.tsx:1104`), `StickerToolbar`'s width read after every board render (place it on its own size changes).
 - [x] B2 gestures (`useBoardGestures.ts`, `boardGesture.ts`): GEST-1 (a cancel puts the sticker back, as the Zipper does), GEST-2, GEST-3, GEST-4, SWEEP-2, a second Remove during a stow (board-logic).
@@ -25,7 +25,7 @@ Done; C1 and C2 running, C5 after them.
 
 High and medium-high items in each lane file; lower ones only with a reason.
 
-- [ ] C1 board: `board-screen.txt`, `board-logic.txt`, SIMP-1 to SIMP-6, REUSE-1 to REUSE-6, CONV-1, CONV-2, CONV-4.
+- [x] C1 board: `board-screen.txt`, `board-logic.txt`, SIMP-1 to SIMP-6, REUSE-1 to REUSE-6, CONV-1, CONV-2, CONV-4.
 - [ ] C2 tray: `tray-engine.txt`, `tray-sheets.txt`. Split `zipper.ts` only for its SVG artwork, if at all.
 - [x] C3 detail, material and timelapse: `sticker-detail.txt`, `material-timelapse.txt`.
 - [x] C4 stat board: `stat-board.txt` (high and medium-high items).
