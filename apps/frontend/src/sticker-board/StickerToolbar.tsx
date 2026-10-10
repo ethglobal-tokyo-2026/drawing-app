@@ -89,8 +89,9 @@ export function StickerToolbar({
   const tiles = useRef<HTMLDivElement>(null);
   const tilesId = useId();
 
-  // Placed once it's measured, before it's painted: its width follows the labels it shows.
-  useLayoutEffect(() => {
+  // Placed once it's measured, before it's painted: its width follows the labels it shows. Measuring
+  // forces layout, so it's measured again only as its own size or what it keeps clear of changes.
+  const place = useEffectEvent(() => {
     const el = ref.current;
     if (!el) return;
     const bar = { w: el.offsetWidth, h: el.offsetHeight };
@@ -100,6 +101,16 @@ export function StickerToolbar({
     // opening them leaves the row in place.
     el.dataset.over = String(top + bar.h / 2 < sticker.y);
   });
+  const { x, y, w, h, r } = sticker;
+  const open = arrange?.open ?? false;
+  useLayoutEffect(() => place(), [x, y, w, h, r, board.W, board.H, knobBelow, clearOf, open]);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const resized = new ResizeObserver(() => place());
+    resized.observe(el);
+    return () => resized.disconnect();
+  }, []);
 
   // It comes in when it first shows. Selection moving straight to another sticker swaps one toolbar
   // for another in the same commit, and that one moves over without coming in again.
@@ -121,7 +132,6 @@ export function StickerToolbar({
   }, []);
 
   // Opened here, the step tiles come out of the toolbar's row; already out, they come in with it.
-  const open = arrange?.open ?? false;
   const wasOpen = useRef(open);
   useLayoutEffect(() => {
     const opened = open && !wasOpen.current;

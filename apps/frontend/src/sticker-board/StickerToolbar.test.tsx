@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { emptyApi, renderWithApi } from "../api/testing";
 import { stickerBoard } from "../i18n/strings/stickerBoard";
 import { FAST_AFTER_MS, HOLD_DELAY_MS } from "../ui/useHeldRepeat";
@@ -13,24 +13,61 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const BOARD = { W: 390, H: 657 };
+
+const toolbar = (extra: Partial<Parameters<typeof StickerToolbar>[0]> = {}) => (
+  <StickerToolbar
+    label="No.0133"
+    sticker={{ x: 100, y: 200, w: 80, h: 80, r: 0 }}
+    board={BOARD}
+    knobBelow={false}
+    clearOf={null}
+    onView={() => {}}
+    onEscape={() => {}}
+    reduced
+    {...extra}
+  />
+);
+
 const show = (extra: Partial<Parameters<typeof StickerToolbar>[0]> = {}) => {
-  const view = renderWithApi(
-    <StickerToolbar
-      label="No.0133"
-      sticker={{ x: 100, y: 200, w: 80, h: 80, r: 0 }}
-      board={{ W: 390, H: 657 }}
-      knobBelow={false}
-      clearOf={null}
-      onView={() => {}}
-      onEscape={() => {}}
-      reduced
-      {...extra}
-    />,
-    emptyApi(),
-  );
+  const view = renderWithApi(toolbar(extra), emptyApi());
   unmount = view.unmount;
   return view.host;
 };
+
+describe("StickerToolbar's spot", () => {
+  it("moves as its own size changes, and measures nothing on a render that leaves its spot", () => {
+    const resized: (() => void)[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(onResize: () => void) {
+          resized.push(onResize);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    onTestFinished(() => void vi.unstubAllGlobals());
+    // happy-dom lays nothing out, so the toolbar is given a width.
+    let width = 100;
+    const measured = vi
+      .spyOn(HTMLElement.prototype, "offsetWidth", "get")
+      .mockImplementation(() => width);
+    const view = renderWithApi(toolbar(), emptyApi());
+    unmount = view.unmount;
+    const bar = view.host.querySelector<HTMLElement>(".sticker-toolbar");
+    const spot = bar?.style.transform;
+
+    measured.mockClear();
+    view.rerender(toolbar({ onView: () => {}, sticker: { x: 100, y: 200, w: 80, h: 80, r: 0 } }));
+    expect(measured).not.toHaveBeenCalled();
+
+    width = 160;
+    act(() => resized.forEach((onResize) => onResize()));
+    expect(bar?.style.transform).not.toBe(spot);
+  });
+});
 
 const buttons = (host: HTMLElement, group: string) => [
   ...host.querySelectorAll<HTMLButtonElement>(`${group} button`),
