@@ -20,9 +20,9 @@
     scale var(--t-stick) var(--ease-peel);
 }
 
-/* "30:00" takes more than the usual dot, so while the clock reads 10:00 or more the dot grows to 56px
-   from its top-left corner, by transform alone. Its numerals and tag keep their size, and the label
-   under it moves down with it. */
+/* Four digits take more than the usual dot, so while the clock shows four the dot grows from its
+   top-left corner, by transform alone. Its numerals and tag keep their size, and the label under it
+   moves down with it. */
 .timer-dot.is-wide {
   translate: 4px 4px;
   scale: calc(56 / 48);

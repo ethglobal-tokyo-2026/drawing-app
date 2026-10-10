@@ -45,7 +45,7 @@
   vertical-align: middle;
 }
 
-/* A Kyoto Seika Practice Mode sticker's pair, its furigana clear of "Sealed" above. */
+/* A sticker drawn in Kyoto Seika Practice Mode: its pair, furigana clear of "Sealed" above. */
 .sealed-card__pair {
   margin: 10px 0 0;
   line-height: 1;
@@ -57,7 +57,7 @@
   text-wrap: balance;
 }
 
-/* The one key on the card, sized to it: a 58px face on its 6px lip. */
+/* The one key on the card, as wide as the card and as tall as the key's face on its lip. */
 .sealed-card .sealed-card__key {
   display: flex;
   width: 100%;

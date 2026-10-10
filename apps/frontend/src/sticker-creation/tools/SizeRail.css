@@ -7,8 +7,7 @@
   top: 104px;
   z-index: 3;
   width: 40px;
-  /* Ends at least 24px above undo however short the screen: undo's 22px foot, its 46px tiles and the
-     gap take 92px below the rail, which starts 104px down. */
+  /* Ends a gap above undo however short the screen, leaving room for undo's tiles and foot. */
   height: clamp(120px, calc(100% - 196px), 222px);
   /* The rail's box is paper: only the thumb takes a finger, so a stroke starting beside it draws. */
   pointer-events: none;

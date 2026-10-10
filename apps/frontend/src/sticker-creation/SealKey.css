@@ -97,7 +97,7 @@
 }
 
 /* Japanese breaks only between its marked phrases (keep-phrases). WebKit's keep-all moves English
-   breaks too, such as at a hyphen or before a bracket, so English wraps as it always has. */
+   breaks too, such as at a hyphen or before a bracket, so English keeps its normal breaks. */
 .seal-chip:not(:lang(ja)) {
   word-break: normal;
 }

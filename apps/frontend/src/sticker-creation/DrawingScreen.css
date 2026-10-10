@@ -125,7 +125,7 @@
 }
 
 /* Where the undo and redo tiles were, since a seal to try again has put them away. It wraps inside
-   their width, short of My board: kept on one line, it ran into the chip. */
+   their width, short of My board, so it stays clear of the seal problem chip. */
 .drawing-screen > .drawing-start-over {
   position: absolute;
   left: var(--far-left) var(--foot-inset);
@@ -193,8 +193,8 @@
   text-align: right;
 }
 
-/* Kyoto Seika's corner print goes over the tiles in the lower right, clear of the left hand, which
-   covers the lower left as it draws; the deal tucks toward it. */
+/* The corner print of a sheet in Kyoto Seika Practice Mode goes over the tiles in the lower right,
+   clear of the left hand, which covers the lower left as it draws; the deal tucks toward it. */
 .drawing-screen[data-hand="left"] .corner-print {
   left: auto;
   right: 10px;
@@ -227,7 +227,7 @@
     top: 8px;
   }
 
-  /* The sheet's room: its one rule, everything the bars leave. Both sides are set, so Left swaps them. */
+  /* The sheet's room: everything the bars leave. It sets both sides, which Left swaps. */
   .drawing-screen > .ink-area {
     inset: var(--top-h) 8px var(--foot) var(--edge-w);
   }

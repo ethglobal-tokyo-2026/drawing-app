@@ -1,5 +1,5 @@
-/* The foot row's third tile, after undo and redo, set off from them by a wider gap so it reads as the
-   way out, not a third history control. `--board-at` is its offset from undo. */
+/* The foot row's third tile, after undo and redo, set off from them by a wider gap so it reads as
+   the way out, not a third history control. `--board-at` is its offset from undo. */
 .my-board-tile {
   --board-at: calc(2 * var(--foot-tile) + var(--history-gap) + var(--board-gap));
   position: absolute;

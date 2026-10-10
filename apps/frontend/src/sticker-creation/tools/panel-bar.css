@@ -1,6 +1,6 @@
 /* A panel the tool strip opens, as a bar of label stock lifted over the sheet. Closed, it hides and
-   takes no touch while it fades, so a stroke started there reaches the sheet and a tap can't land on
-   a closing control. Where it sits is the caller's: `.under-tool-strip`, or a place of its own. */
+   takes no touch while it fades, so a stroke started there reaches the sheet and a tap can't land
+   on a closing control. Its place is the caller's: `.under-tool-strip`, or one of its own. */
 .panel-bar {
   position: absolute;
   z-index: 4;

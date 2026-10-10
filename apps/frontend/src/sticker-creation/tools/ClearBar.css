@@ -15,7 +15,8 @@
   }
 }
 
-/* Japanese breaks only between its marked phrases (keep-phrases); English wraps as it always has. */
+/* Japanese breaks only between its marked phrases (keep-phrases); English keeps its normal breaks,
+   which WebKit's keep-all would move. */
 .clear-bar:not(:lang(ja)) {
   word-break: normal;
 }
