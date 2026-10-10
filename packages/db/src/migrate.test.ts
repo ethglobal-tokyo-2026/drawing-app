@@ -90,6 +90,32 @@ const UNPLACED: Layout = PHONE.map(() => null);
 const NO_SCALE: Layout = [1, 0.5, 0.25, null, 12, 2];
 const NO_SPOT: Layout = [1, null, null, null, 0, 1];
 
+/** When the stickers below were sealed, unless a test says otherwise. */
+const SEALED_AT = Date.UTC(2026, 8, 26);
+
+/** Seals a sticker by 'u', as a hand edit writes one: NSFW when it has a veil. */
+function insertStickerRow(
+  sqlite: Database.Database,
+  stickerId: string,
+  {
+    veiledHash = null,
+    sealedAt = SEALED_AT,
+  }: { veiledHash?: string | null; sealedAt?: number } = {},
+) {
+  sqlite
+    .prepare(
+      "insert into stickers (id, number, artist_id, owner_id, time_used, width, height, outline, nsfw, content_hash, veiled_hash, drawn_width, drawn_height, created_at, updated_at) values (?, (select count(*) + 1 from stickers), 'u', 'u', 1, 1, 1, 'M0 0Z', ?, ?, ?, 1, 1, ?, ?)",
+    )
+    .run(
+      stickerId,
+      veiledHash === null ? 0 : 1,
+      bytes32(stickerId),
+      veiledHash,
+      sealedAt,
+      sealedAt,
+    );
+}
+
 /** Seals a sticker by 'u' and gives them a placement of it, with each layout as given. */
 function insertPlacement(
   sqlite: Database.Database,
@@ -97,11 +123,7 @@ function insertPlacement(
   phone: Layout,
   large: Layout,
 ) {
-  sqlite
-    .prepare(
-      "insert into stickers (id, number, artist_id, owner_id, time_used, width, height, outline, nsfw, content_hash, drawn_width, drawn_height) values (?, (select count(*) + 1 from stickers), 'u', 'u', 1, 1, 1, 'M0 0Z', 0, ?, 1, 1)",
-    )
-    .run(stickerId, bytes32(stickerId));
+  insertStickerRow(sqlite, stickerId);
   const columns = [...PHONE, ...LARGE];
   sqlite
     .prepare(
@@ -192,5 +214,25 @@ describe("the ticket kinds migration", () => {
     expect(refusal(() => insertUse(migrated, "after", "bonus", DAILY_TICKETS_PER_DAY + 2))).toMatch(
       /ticket_uses_known_kind/,
     );
+  });
+});
+
+describe("the veiled images migration", () => {
+  it("records each veil a sticker names once, from the earliest sticker that names it", () => {
+    const { path, sqlite } = databaseBefore("0013_veiled_images");
+    signUpU(sqlite);
+    const veiledHash = bytes32("one veil");
+    // Numbered before the earlier seal, so only the seal time picks it.
+    insertStickerRow(sqlite, "sealed second", { veiledHash, sealedAt: SEALED_AT + 1 });
+    insertStickerRow(sqlite, "sealed first", { veiledHash });
+    insertStickerRow(sqlite, "without a veil");
+    sqlite.close();
+
+    migrateDatabase(path);
+
+    const migrated = new Database(path);
+    expect(migrated.prepare("select veiled_hash, sticker_id from veiled_images").all()).toEqual([
+      { veiled_hash: veiledHash, sticker_id: "sealed first" },
+    ]);
   });
 });

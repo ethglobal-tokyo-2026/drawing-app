@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import Database from "better-sqlite3";
 import { generateSQLiteDrizzleJson, generateSQLiteMigration } from "drizzle-kit/api";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, max } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { migrationsFolder } from "./migrate.ts";
@@ -106,11 +106,10 @@ export function insertUser(db: TestDb, values: Partial<typeof schema.users.$infe
   return id;
 }
 
-let nextNumber = 0;
-
 /**
- * Inserts a sealed, unminted sticker that `artistId` drew and holds, and returns its id. An NSFW
- * one comes with its veil, as sealing makes it before the row.
+ * Inserts a sealed, unminted sticker that `artistId` drew and holds, and returns its id. It's
+ * numbered as sealing numbers it, so it never takes the number of one sealed through the API. An
+ * NSFW one comes with its veil, recorded, as sealing leaves it.
  */
 export function insertSticker(
   db: TestDb,
@@ -119,10 +118,15 @@ export function insertSticker(
 ) {
   const id = values.id ?? newId("sticker");
   const nsfw = values.nsfw ?? false;
-  db.insert(schema.stickers)
+  const last = db
+    .select({ number: max(schema.stickers.number) })
+    .from(schema.stickers)
+    .get();
+  const { veiledHash } = db
+    .insert(schema.stickers)
     .values({
       id,
-      number: ++nextNumber,
+      number: (last?.number ?? 0) + 1,
       artistId,
       ownerId: artistId,
       timeUsed: 0,
@@ -136,7 +140,14 @@ export function insertSticker(
       veiledHash: nsfw ? bytes32(`veiled-${id}`) : null,
       ...values,
     })
-    .run();
+    .returning({ veiledHash: schema.stickers.veiledHash })
+    .get();
+  if (veiledHash) {
+    db.insert(schema.veiledImages)
+      .values({ veiledHash, stickerId: id })
+      .onConflictDoNothing()
+      .run();
+  }
   return id;
 }
 

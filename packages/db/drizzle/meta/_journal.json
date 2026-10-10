@@ -92,6 +92,13 @@
       "when": 1791639874110,
       "tag": "0012_ticket_kinds",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1791644338809,
+      "tag": "0013_veiled_images",
+      "breakpoints": true
     }
   ]
 }

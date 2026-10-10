@@ -6,6 +6,7 @@ import { stickers, stickerTimelapses } from "./stickers.ts";
 import { suiTransactions } from "./suiTransactions.ts";
 import { ticketPurchases, ticketUses } from "./tickets.ts";
 import { users } from "./users.ts";
+import { veiledImages } from "./veiledImages.ts";
 
 export { escrowStatuses, giftStatuses } from "./gifts.ts";
 export { suiTransactionKinds, suiTransactionOutcomes } from "./suiTransactions.ts";
@@ -21,6 +22,7 @@ export {
   ticketPurchases,
   ticketUses,
   users,
+  veiledImages,
 };
 
 /** Every table: the updated_at triggers cover each one. */
@@ -28,6 +30,7 @@ export const allTables = [
   users,
   stickers,
   stickerTimelapses,
+  veiledImages,
   ticketUses,
   ticketPurchases,
   stickerPlacements,
