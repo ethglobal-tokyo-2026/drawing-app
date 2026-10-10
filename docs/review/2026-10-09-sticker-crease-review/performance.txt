@@ -68,3 +68,62 @@ Smoke run, Chromium 4x, current: 33 fps, p50 33 ms, p95 50 ms, 202 frames > 25 m
 thread busy 10.7 s over a 11.0 s move, 5.2 s of it style recalc.
 Bake timings (worker, whole board, 28 jobs): Chromium sum 119 ms, max 9 ms; WebKit sum 866 ms (decode
 378, draw 308, shade 128, encode 52), max 88 ms.
+
+Rounds 1 and 2 (interleaved; round 2 in reverse order). Each cell: round 1 / round 2.
+uptime load averages: r1 WebKit 29.9, r1 Chromium 25.7, r2 WebKit 23.1, r2 Chromium 64.9 (1-min).
+
+WebKit 1x       fps         p50 ms    p95 ms     >25 ms     >50 ms     move took s
+  off           59.4/59.5   17/17     18/19      2/2        1/1        8.1/8.2
+  current       55.8/56.8   17/17     21/20      16/12      6/5        9.5/8.8
+  no-fade       15.5/13.2   28/33     145/164    213/235    208/190    27.8/30.7
+  settle        59.3/59.3   17/17     18/19      3/2        2/2        8.1/8.5
+
+Chromium 4x     fps         p50 ms     p95 ms     >25 ms    >50 ms   main s      style s
+  off           60.0/59.2   16.7/16.7  16.7/16.8  0/6       0/0      3.7/5.1     1.2/1.8
+  current       38.1/36.5   16.8/33.3  50.0/50.0  183/222   9/9      9.1/10.7    4.2/5.0
+  no-fade       46.5/45.8   16.7/16.7  49.9/33.4  91/141    2/0      7.0/8.4     3.1/3.7
+  settle        58.8/59.3   16.7/16.7  16.8/16.8  9/5       0/0      5.6/4.8     2.0/1.6
+
+Compositing layers drawn, most at once while the light moves (Chromium 1x, CDP LayerTree): off 136,
+current 202, no-fade 158, settle 158. The running fades hold ~44 more layers than no fade at all.
+
+Reading:
+- The known cost reproduces in Chromium: current spends 2-2.5x off's main-thread time while the light
+  moves, about 3 s more of it in style recalc, and drops to 36-38 fps at 4x.
+- no-fade is a regression on WebKit, the iPhone's engine: 13-15 fps, frames of 150+ ms. With the fade,
+  each write starts composited opacity animations; without it, each write changes the opacity of 88
+  painted layers, which WebKit repaints on the main thread at DPR 3. Rejected.
+- settle matches off in both engines (WebKit 59.3 vs 59.5 fps; Chromium 4x main 4.8-5.6 s vs off
+  3.7-5.1 s), but the creases hold still while the light moves and catch up 250 ms after it stops.
+
+Rounds 3 and 4: a fifth variant, beat (perf-beat.patch): creases take the light at most every 250 ms
+while it moves, plus once where it stops, so they keep following it, their fade gliding between. Same
+harness, with 1.2 s recorded after the last move (tail). load averages: r3 35-37, r4 24-32.
+
+WebKit 1x       fps         p95 ms   >25 ms   >50 ms   tail: longest frame ms
+  current       55.4/57.7   25/19    21/10    7/4      232/123 (r5: 226)
+  settle        59.3/59.5   24/19    8/4      2/1      263/125
+  beat          55.1/57.2   24/25    20/26    6/5      203/214
+  off (r5, r6)  59.1/59.0   18/19    4/4      1/2      22/24
+
+Chromium 4x     fps         p95 ms     >25 ms   >50 ms   main s     style s    tail longest ms
+  current       19.7/54.9   83.3/33.3  231/32   118/0    13.6/5.8   7.4/2.4    16.8/16.8
+  settle        59.0/59.5   16.8/16.7  6/3      1/1      5.2/4.7    1.8/1.6    33.3/33.4
+  beat          53.5/53.5   33.4/33.3  48/49    1/0      6.5/5.9    2.6/2.3    16.8/16.8
+Chromium layers while moving: beat 202, as current (its fades never stop while the light moves).
+Chromium's current spread (19.7 to 54.9 fps across rounds) follows the host's load: CPU throttling is
+relative to what the renderer gets.
+
+New finding, WebKit only: a 120-260 ms frame after the light stops, with creases on, in every fading
+variant; with creases off the tail's longest frame is 22-24 ms. It lands as the fades end (settle's
+comes after its catch-up). Likely WebKit tearing down the fades' compositing layers and repainting the
+creases at DPR 3 (mechanism unverified). On an iPhone that's a hitch each time the light comes to
+rest, unverified on a device. settle doesn't remove it; fewer crease layers (2 per crease, risk 5) or
+painting the blend without opacity animations would.
+
+VERDICT
+settle gets closest to off while still following the light: frames during a moving light match off in
+both engines, and the crease follows the light 250 ms after it rests, gliding on the existing fade.
+beat keeps following during the move but only helps Chromium (about half of current's extra cost);
+on WebKit it's no better than current. no-fade is rejected (WebKit 13-15 fps). Next, for the
+WebKit rest hitch and layer memory: two layers per crease instead of four.
