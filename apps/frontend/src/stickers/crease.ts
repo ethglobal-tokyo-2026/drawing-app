@@ -39,7 +39,10 @@ const ROUND = 1;
 /** The spread of the mean height a sticker settles at over what's beneath it, in CSS px. */
 const LEVEL = 14;
 
-/** How strongly each part of the crease shows, at its peak; the rest is shaded in proportion. */
+/**
+ * Each part's tone where one sticker's step beneath peaks, the rest shaded in proportion. STRENGTH
+ * scales it, then FLOOR takes its share and MOST caps it, so a part shows less than its value here.
+ */
 const CREASE_TONE = {
   /** The rise that faces the light. */
   lit: 0.42,
@@ -54,13 +57,13 @@ const CREASE_TONE = {
 /** The ink the shade is drawn in. */
 const INK = [28, 24, 36];
 
-/** The most a crease shows, lit and shaded, however many edges meet there. */
+/** The most each of a crease's images shows, lit and shaded, however many edges meet there. */
 const MOST = { lit: 0.5, shade: 0.3 };
 
-/** Tone a crease loses everywhere, so the slight dips a pressed sticker never shows vanish. */
+/** Tone each image loses everywhere, after STRENGTH, so the slight dips a pressed sticker never shows vanish. */
 const FLOOR = 0.03;
 
-/** Scales every tone: how much the crease shows. */
+/** How much the crease shows: scales every CREASE_TONE, before FLOOR and MOST apply. */
 const STRENGTH = 0.7;
 
 /** Rises as `v` does, easing into `most` rather than piling up where edges cross. */

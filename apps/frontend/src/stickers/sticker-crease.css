@@ -7,7 +7,7 @@
   /* Toward the light, on screen: the light at rest (--crease-ux, --crease-uy), swung by the tilt. */
   --crease-x: calc(var(--crease-ux) + var(--crease-swing) * var(--lx, 0));
   --crease-y: calc(var(--crease-uy) + var(--crease-swing) * var(--ly, 0));
-  /* Never stronger than at rest, so the crease only fades as the light passes overhead. */
+  /* Never stronger than at rest, so each side only fades as the light passes overhead, to the base. */
   --crease-len: max(1, hypot(var(--crease-x), var(--crease-y)));
   /* Along the light at rest, and across it toward the top right. */
   --crease-a: calc(

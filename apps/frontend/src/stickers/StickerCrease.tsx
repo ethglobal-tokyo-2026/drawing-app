@@ -4,7 +4,7 @@ import { lightUp } from "./light";
 import type { Crease } from "./StickerFigure";
 import "./sticker-crease.css";
 
-const cssUrl = (url: string) => ({ "--crease": `url("${url}")` });
+const creaseStyle = (url: string) => ({ "--crease": `url("${url}")` });
 
 /**
  * A sticker's crease where it lies over other stickers' edges: its base, the shoulder and foot that show
@@ -24,9 +24,9 @@ export function StickerCrease({ crease: { base, ...sides } }: { crease: Crease }
       style={{ "--crease-ux": CREASE_LIGHT[0], "--crease-uy": CREASE_LIGHT[1] }}
       aria-hidden="true"
     >
-      <i style={cssUrl(base)} />
+      <i style={creaseStyle(base)} />
       {Object.entries(sides).map(([side, url]) => (
-        <i key={side} data-side={side} style={cssUrl(url)} />
+        <i key={side} data-side={side} style={creaseStyle(url)} />
       ))}
     </span>
   );

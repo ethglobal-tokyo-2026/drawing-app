@@ -112,17 +112,26 @@ describe("creaseJobs", () => {
   });
 
   it("counts a sticker its neighbor's foil band could reach as lying over it", () => {
-    /** Two stickers side by side with `gap` between their edges. */
-    const beside = (gap: number) => {
-      const left = sticker("left", { x: 0.3 });
+    /** Two stickers `s` large side by side with `gap` between their edges. */
+    const beside = (gap: number, s = 0.4) => {
+      const left = sticker("left", { x: 0.3, s });
       const next = boxOf(left).w + gap;
-      return [left, sticker("right", { x: 0.3 + next / field.w })];
+      return [left, sticker("right", { x: 0.3 + next / field.w, s })];
     };
     expect(jobsFor(beside(FOIL_REACH)).map((j) => j.id)).toEqual(["right"]);
     expect(jobsFor(beside(FOIL_REACH * 3))).toEqual([]);
+
+    // On a large sticker the Kyoto Seika Practice Mode foil's band, grown from the cut, reaches further.
+    const [large] = beside(0, MAX_SCALE);
+    const band = kyotoSeikaBandWidth(boxOf(large).w, boxOf(large).h);
+    expect(band).toBeGreaterThan(FOIL_REACH);
+    const kyotoSeika = (): FoilTone => "kyoto-seika";
+    expect(jobsFor(beside(FOIL_REACH + band, MAX_SCALE), kyotoSeika).map((j) => j.id)).toEqual([
+      "right",
+    ]);
   });
 
-  it("draws each sticker by its outline as the board shows it: its cut, its foil band's mask, or its cut grown by a Kyoto Seika band", () => {
+  it("draws each sticker by its outline as the board shows it: its cut, its foil band's mask, or its cut grown by the Kyoto Seika Practice Mode foil's band", () => {
     const foiled = (id: string, at: Partial<Placement>) =>
       sticker(id, at, { ...testStickerUrls(id), foil: `${id}-foil.png` });
     const lower = foiled("lower", { x: 0.4 });

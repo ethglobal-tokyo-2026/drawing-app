@@ -41,8 +41,10 @@ const MAX_SCALE = 1;
 /** How long the board holds still before its creases are baked again. */
 const SETTLE_MS = 90;
 /**
- * How far past its box a holo or pink band can reach, in CSS px, on the board; a band grown from the
- * cut reaches its own width.
+ * How far apart two stickers' boxes can lie and one still count as over the other, in CSS px, since a
+ * holo or pink band's mask from the server fills the box; a band grown from the cut widens it to its
+ * own width. Also the width a holo or pink band is grown by where there's no such mask (the Shop's
+ * sample, never on a board).
  */
 export const FOIL_REACH = 5;
 
