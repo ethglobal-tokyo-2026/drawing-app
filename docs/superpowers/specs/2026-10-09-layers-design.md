@@ -164,7 +164,8 @@ Artists use layers to sketch and then ink, to color under the lines, and to shad
   - In the undo spike's 30-minute, ten-layer drawing, replaying every layer made the worst undo about five times longer than rebuilding one.
 - A checkpoint copies only the layers changed since the previous one and shares the rest.
 - Checkpoint copies live under a memory budget that shrinks as layers fill.
-  - Past the budget, checkpoints thin out by how much replay each one saves for the copies it frees, so recent undos stay short and older ones stay bounded.
+  - Past the budget, checkpoints thin out exponentially with distance back, the way time-travel debuggers keep theirs. The newest few always stay, so undos about 30 strokes deep stay short; older ones go by how much replay each saves for the copies it frees.
+  - Undo reaches the start of the sheet, as today: a deep undo replays one layer at most.
   - The checkpoint just taken is never the one dropped, and checkpoints past the undo point (only a redo returns to them) go first.
   - Picking a drawing back up plans its checkpoints before replaying, and takes only those.
 - A deleted layer's canvas stays until the next step, so undoing the delete is instant.
