@@ -29,7 +29,7 @@ import { kyotoSeika } from "../i18n/strings/kyotoSeika";
 import { withoutNsfwDrawings } from "../stickers/nsfw";
 import { testStickerUrls } from "../stickers/testStickerUrls";
 import type { BoardStickerView } from "./boardSticker";
-import { keepBoard, keptBoardFor } from "./lastBoard";
+import { forgetsSoFar, keepBoard, keptBoardFor } from "./lastBoard";
 import { StickerDetail } from "./StickerDetail";
 import { preloadStickerDetails } from "./stickerDetailQuery";
 import { onMyStickerBoardChanged } from "./useMyStickerBoard";
@@ -236,7 +236,7 @@ const status = () => document.querySelector('[role="status"]')?.textContent;
  * board was told to load again, without the kept one.
  */
 function watchBoard(kept?: BoardStickerView[]) {
-  if (kept) keepBoard(TEST_OWNER.id, { owner: you, stickers: kept });
+  if (kept) keepBoard(TEST_OWNER.id, { owner: you, stickers: kept }, forgetsSoFar());
   const changed = vi.fn();
   onTestFinished(onMyStickerBoardChanged(changed));
   return {

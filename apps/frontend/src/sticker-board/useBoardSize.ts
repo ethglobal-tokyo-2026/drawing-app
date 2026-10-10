@@ -9,13 +9,17 @@ export const useBoardLayout = (): BoardLayout => (useLargeScreen() ? "large" : "
 export const boardLayoutNow = (): BoardLayout =>
   window.matchMedia(LARGE_SCREEN).matches ? "large" : "phone";
 
+/** A board's size, and the layout it was measured for. */
+export type MeasuredBoard = BoardSize & { layout: BoardLayout };
+
 /**
  * A board's size in px and its unit, which lay out its stickers: measured before it first paints and
  * again as it resizes or turns. The same object is kept while they hold, so a resize that changes
- * none of them doesn't re-render the board.
+ * none of them doesn't re-render the board. As the layout flips, one render still has the last
+ * layout's measure, which `layout` says.
  */
 export function useBoardSize(ref: RefObject<HTMLElement | null>, layout: BoardLayout) {
-  const [size, setSize] = useState<BoardSize | null>(null);
+  const [size, setSize] = useState<MeasuredBoard | null>(null);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -23,7 +27,9 @@ export function useBoardSize(ref: RefObject<HTMLElement | null>, layout: BoardLa
       setSize((was) => {
         const [W, H] = [el.clientWidth, el.clientHeight];
         const U = unitOf(layout, W);
-        return was?.W === W && was.H === H && was.U === U ? was : { W, H, U };
+        return was?.W === W && was.H === H && was.U === U && was.layout === layout
+          ? was
+          : { W, H, U, layout };
       });
     const observer = new ResizeObserver(measure);
     observer.observe(el);

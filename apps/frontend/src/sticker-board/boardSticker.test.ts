@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { boardSticker, people, sticker, TEST_KYOTO_SEIKA_SUBJECTS } from "../api/testFixtures";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
-import { onTheBoard, placeUnplaced, shownIn, toBoardSticker } from "./boardSticker";
-import { LAID_OUT_SPOTS, LARGE_LANDING_GROWTH } from "./placement";
+import {
+  movedIn,
+  movedSince,
+  onTheBoard,
+  placeUnplaced,
+  shownIn,
+  spotsById,
+  toBoardSticker,
+} from "./boardSticker";
+import { FIRST_SPOT, LAID_OUT_SPOTS, LARGE_LANDING_GROWTH, type Placement } from "./placement";
 
 /** A spot on the board, as the API sends it. */
 const onBoardAt = (x: number) => ({ onBoard: true, x, y: 0.5, scale: 0.3, rotation: 0, z: 1 });
@@ -85,10 +93,47 @@ describe("placeUnplaced", () => {
     };
     const { stickers, placed } = placeUnplaced(
       [{ ...moved, placements: { phone: null, large: null } }],
-      [nudged],
+      movedSince([nudged], spotsById([moved])),
     );
     expect(stickers[0].placements).toEqual(nudged.placements);
     expect(placed).toEqual([]);
+  });
+
+  it("takes a load's spot in each layout the board didn't move a sticker in", () => {
+    const onServer = toBoardSticker(
+      boardSticker({ placement: onBoardAt(0.3), largePlacement: onBoardAt(0.4) }),
+    );
+    // Drawn before another device saved the large layout, then dragged on the phone.
+    const [drawn] = placeUnplaced([
+      { ...onServer, placements: { ...onServer.placements, large: null } },
+    ]).stickers;
+    const phone = drawn.placements.phone;
+    const dragged = {
+      ...drawn,
+      placements: movedIn(drawn.placements, "phone", { ...phone, x: 0.6 }),
+    };
+    const raised = { ...drawn, placements: movedIn(drawn.placements, "phone", { ...phone, z: 9 }) };
+    const from = spotsById([drawn]);
+    expect(movedSince([raised], from).size).toBe(0);
+    const { stickers, placed } = placeUnplaced([onServer], movedSince([dragged], from));
+    expect(stickers[0].placements).toEqual({
+      phone: dragged.placements.phone,
+      large: onServer.placements.large,
+    });
+    expect(placed).toEqual([]);
+  });
+
+  it("lands a new sticker as on a board without the stickers given away or in a gift", () => {
+    const fresh = toBoardSticker(boardSticker());
+    const where = (p: Placement) => ({ x: p.x, y: p.y });
+    const alone = where(placeUnplaced([fresh]).stickers[0].placements.phone);
+    const atFirstSpot = { ...onBoardAt(FIRST_SPOT.x), y: FIRST_SPOT.y };
+    const gone = [{ held: false }, { openGift: { id: "g", status: "packed" as const, for: null } }];
+    for (const left of gone) {
+      const leftAt = toBoardSticker(boardSticker({ placement: atFirstSpot, ...left }));
+      const [, landed] = placeUnplaced([leftAt, fresh]).stickers;
+      expect(where(landed.placements.phone)).toEqual(alone);
+    }
   });
 
   it("lands a new sticker in the large layout too once the board has one, and in the tray there as on the phone", () => {

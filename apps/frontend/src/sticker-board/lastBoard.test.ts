@@ -6,6 +6,7 @@ import { testStickerUrls } from "../stickers/testStickerUrls";
 import type { PlacedBoardSticker } from "./boardSticker";
 import {
   forgetBoardUnlessFor,
+  forgetsSoFar,
   KEEP_WRITE_WITHIN_MS,
   keepBoard,
   keptBoardFor,
@@ -62,7 +63,7 @@ describe("the board kept on this phone", () => {
     // Without requestIdleCallback, as in Safari, the write waits on a timer.
     vi.stubGlobal("requestIdleCallback", undefined);
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    keepBoard("me", board);
+    keepBoard("me", board, forgetsSoFar());
     vi.advanceTimersByTime(KEEP_WRITE_WITHIN_MS);
     const kept = nextOpen();
     expect(kept?.stickers.map((s) => s.id)).toEqual(["s1", "s2"]);
@@ -70,20 +71,20 @@ describe("the board kept on this phone", () => {
     expect(kept?.stickers[0].placements).toEqual(board.stickers[0].placements);
     expect(kept?.owner).toEqual(board.owner);
 
-    keepBoard("me", { ...board, stickers: [sticker("s2")] });
+    keepBoard("me", { ...board, stickers: [sticker("s2")] }, forgetsSoFar());
     dispatchEvent(new Event("pagehide"));
     expect(nextOpen()?.stickers.map((s) => s.id)).toEqual(["s2"]);
   });
 
   it("forgets it when someone else signs in", () => {
-    keepBoard("me", board);
+    keepBoard("me", board, forgetsSoFar());
     expect(keptBoardFor("someone-else")).toBeNull();
     expect(localStorage.getItem(KEY)).toBeNull();
     expect(keptBoardFor("me")).toBeNull();
   });
 
   it("forgets it at sign-in unless it's the same person's", () => {
-    keepBoard("me", board);
+    keepBoard("me", board, forgetsSoFar());
     forgetBoardUnlessFor("me");
     expect(keptBoardFor("me")).not.toBeNull();
     forgetBoardUnlessFor("someone-else");
@@ -121,7 +122,7 @@ describe("the board kept on this phone", () => {
         throw new DOMException("Full", "QuotaExceededError");
       },
     });
-    keepBoard("me", board);
+    keepBoard("me", board, forgetsSoFar());
     dispatchEvent(new Event("pagehide"));
     expect(keptBoardFor("me")?.stickers).toHaveLength(2);
     expect(error).toHaveBeenCalledWith(

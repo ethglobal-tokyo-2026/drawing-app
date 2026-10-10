@@ -10,7 +10,7 @@ import { errors } from "../../i18n/strings/errors";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import { currentLanguage, i18next } from "../../i18n/i18n";
 import { readChosenLanguage } from "../../i18n/language";
-import { keepBoard, keptBoardFor, readKeptBoardAgain } from "../lastBoard";
+import { forgetsSoFar, keepBoard, keptBoardFor, readKeptBoardAgain } from "../lastBoard";
 // The help sheet loads lazily; importing it here keeps that load out of the tap's short wait, which a busy
 // machine stretched past its limit.
 import "../../kyoto-seika/KyotoSeikaHelp";
@@ -152,7 +152,8 @@ describe("the Settings note's language", () => {
 describe("the Settings note's 18+ switch", () => {
   const savingOptIn = () =>
     vi.fn<ApiClient["setNsfwOptIn"]>((nsfwOptIn) => Promise.resolve({ ...TEST_ME, nsfwOptIn }));
-  const keepABoard = () => keepBoard(TEST_ME.id, { owner: toPerson(TEST_OWNER), stickers: [] });
+  const keepABoard = () =>
+    keepBoard(TEST_ME.id, { owner: toPerson(TEST_OWNER), stickers: [] }, forgetsSoFar());
 
   it("is off until turned on", () => {
     const host = renderNote({});

@@ -70,10 +70,16 @@ const removeKept = () =>
  * changes, so the next open waits for the board from the server.
  */
 export function forget() {
+  forgets += 1;
   kept = null;
   dropWrite();
   removeKept();
 }
+
+/** Times the kept board was forgotten: a board loaded before the latest is what it was forgotten for. */
+let forgets = 0;
+/** How many times the kept board has been forgotten so far. */
+export const forgetsSoFar = () => forgets;
 
 /** Read once, as the app's code starts; kept up to date in memory from then on. */
 let kept: Kept | null = read();
@@ -128,10 +134,13 @@ export function keptBoardFor(userId: string): KeptBoard | null {
 }
 
 /**
- * Keeps the board as it shows now for `userId`'s next open, without the stickers' outlines. Storage
- * gets it once the page is idle, or as it's hidden, so a tap or a drop doesn't wait on the write.
+ * Keeps the board as it shows now for `userId`'s next open, without the stickers' outlines, unless it
+ * was loaded before the kept board was last forgotten: `loadedAfter` is forgetsSoFar() as its load
+ * went out. Storage gets it once the page is idle, or as it's hidden, so a tap or a drop doesn't
+ * wait on the write.
  */
-export function keepBoard(userId: string, board: KeptBoard): void {
+export function keepBoard(userId: string, board: KeptBoard, loadedAfter: number): void {
+  if (loadedAfter !== forgets) return;
   const stickers = board.stickers.map(({ outline: _outline, ...s }) => s);
   kept = { build: BUILD, userId, board: { owner: board.owner, stickers } };
   unwritten = true;

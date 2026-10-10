@@ -15,7 +15,13 @@ import { flushSync } from "react-dom";
 import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
-import { toApiSpots, toPerson, type PersonView, type StickerView } from "../api/views";
+import {
+  toApiSpots,
+  toPerson,
+  toRecordPlacement,
+  type PersonView,
+  type StickerView,
+} from "../api/views";
 import { GiftReceivedNotice } from "../giving/GiftReceivedNotice";
 import {
   markNoticed,
@@ -54,9 +60,12 @@ import { normalizeTurn } from "./boardGesture";
 import {
   hasLargeLayout,
   movedIn,
+  movedSince,
   onTheBoard,
   placeUnplaced,
+  samePlace,
   shownIn,
+  spotsById,
   toBoardSticker,
   type BoardSticker,
   type BoardStickerView,
@@ -97,7 +106,7 @@ import {
 import { markGreeted, owesGreeting } from "./artistChipGreeting";
 import { markChipsPlayed } from "./boardSettled";
 import { deriveLargeLayout, saveDerivedLayout, type LargeSpot } from "./largeLayout";
-import { keepBoard, keptBoardFor } from "./lastBoard";
+import { forgetsSoFar, keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { arrangeLeftOpen, keepArrangeOpen } from "./arrangeOpen";
@@ -162,16 +171,8 @@ interface LoadedBoard {
   stickers: PlacedBoardSticker[];
   /** Drawn from the phone's storage, until the fresh board lands. */
   fromPhone?: boolean;
-}
-
-/**
- * The stickers whose spots win over a load's: all the board holds, since its moves are newer than any
- * load, but over a board from the phone's storage only those moved since it showed.
- */
-function heldOver(list: readonly PlacedBoardSticker[] | null, over: LoadedBoard | null) {
-  if (!list || !over?.fromPhone) return list ?? [];
-  const keptSpots = new Map(over.stickers.map((s) => [s.id, s.placements]));
-  return list.filter((s) => keptSpots.get(s.id) !== s.placements);
+  /** forgetsSoFar() as its load went out: a board loaded before the kept board's last forget isn't kept. */
+  forgets: number;
 }
 
 /** The stacking order that keeps a sticker on top: its own when it's there already. */
@@ -324,8 +325,13 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   );
   /** The load the stickers came from, and whose board it is: a sticker someone else drew wears foil. */
   const [adopted, setAdopted] = useState<LoadedBoard | null>(
-    () => fromPhone && { ...fromPhone, fromPhone: true },
+    () => fromPhone && { ...fromPhone, fromPhone: true, forgets: forgetsSoFar() },
   );
+  /**
+   * The spots the stickers were drawn from: the last load's, or the board kept on this phone's. A spot
+   * moved from these wins over a load's.
+   */
+  const [drawnFrom, setDrawnFrom] = useState(() => spotsById(fromPhone?.stickers ?? []));
   const owner = adopted?.owner ?? null;
   // A load's owner is you, with the opt-in its images were picked for: the browser keeps a drawing
   // it has shown, so until a load under your opt-in now is adopted, NSFW stickers show none, and the
@@ -347,6 +353,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     [],
   );
   const size = useBoardSize(stage, layout);
+  /** The board measured in the layout it shows: a flip at runtime leaves one render on the last one's. */
+  const measured = size?.layout === layout ? size : null;
   /** On a large screen Draw stands at the tab strip's left end (ui/TabsLead.tsx). */
   const large = useLargeScreen();
   /** The name button's box on the board, which a sticker's knob must stay clear of. */
@@ -450,16 +458,28 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [newlyPlaced, setNewlyPlaced] = useState<readonly GivenSpots[]>([]);
   /** The large layout derived here from the phone's, to save once. */
   const [derivedLayout, setDerivedLayout] = useState<readonly LargeSpot[]>([]);
+  /**
+   * A gift went out or its bag changed, so the board loads again where its gift is: at once, or once a
+   * load in flight lands, since that one may have read the board before the gift moved.
+   */
+  const [reloadForGift, setReloadForGift] = useState(false);
   if (answer && (answer !== adoptedAnswer || namedIn !== i18n.language)) {
     setAdoptedAnswer(answer);
     setNamedIn(i18n.language);
-    // Moves made while it loaded stay, and a language change holds every spot over.
+    const fresh = answer.boardStickers.map(toBoardSticker);
+    // Moves made since the last load, or while this one loaded, stay; a language change keeps every spot.
     const { stickers: next, placed } = placeUnplaced(
-      answer.boardStickers.map(toBoardSticker),
-      heldOver(loaded, adopted),
-      size ? { [layout]: size } : {},
+      fresh,
+      movedSince(loaded ?? [], answer === adoptedAnswer ? new Map() : drawnFrom),
+      measured ? { [layout]: measured } : {},
     );
-    setAdopted({ owner: toPerson(answer.owner), stickers: next });
+    setDrawnFrom(spotsById(fresh));
+    setAdopted({
+      owner: toPerson(answer.owner),
+      stickers: next,
+      // Every forget reloads the board, and a reload drops a load in flight unless it waits for it.
+      forgets: reloadForGift ? (adopted?.forgets ?? -1) : forgetsSoFar(),
+    });
     setStickers(next);
     setNewlyPlaced(placed);
     // A sticker that comes back to you returns to the sticker tray, so there's no landing to wait for.
@@ -470,13 +490,13 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // a load of its own: a kept board can be older than a large layout another device saved.
   if (
     layout === "large" &&
-    size &&
+    measured &&
     loaded &&
     adopted &&
     !adopted.fromPhone &&
     !hasLargeLayout(loaded)
   ) {
-    const { stickers: next, derived } = deriveLargeLayout(loaded, size);
+    const { stickers: next, derived } = deriveLargeLayout(loaded, measured);
     if (derived.length > 0) {
       setStickers(next);
       setAdopted({ ...adopted, stickers: next });
@@ -487,25 +507,49 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   useEffect(() => {
     for (const { sticker, spots } of newlyPlaced) save(sticker, spots);
   }, [newlyPlaced, save]);
-  // A large layout derived here is saved once, where the server has none; a failure says so, and its
-  // retry saves each sticker's large spot.
+  // A large layout derived here is saved once, where the server has none. One another device saved
+  // first stays, and each sticker still at its spot derived here takes the server's. A failure says
+  // so, and its retry saves each sticker's large spot.
   useEffect(() => {
     if (derivedLayout.length === 0) return;
-    saveDerivedLayout(api, derivedLayout).catch((error: unknown) => {
-      const failure = apiError(error);
-      console.error(
-        `Saving the large layout derived from your phone's failed for ${derivedLayout.length} stickers`,
-        failure,
-      );
-      setUnsaved((was) =>
-        unsavedAfter(
-          was,
-          derivedLayout.map((d) => d.id),
-          ["large"],
+    saveDerivedLayout(api, derivedLayout).then(
+      (saved) => {
+        const ours = new Map(derivedLayout.map((d) => [d.id, d.placement]));
+        const theirs = new Map(
+          saved.flatMap(({ stickerId, largePlacement }) => {
+            const spot = largePlacement && toRecordPlacement(largePlacement);
+            return spot && !samePlace(spot, ours.get(stickerId))
+              ? [[stickerId, spot] as const]
+              : [];
+          }),
+        );
+        if (theirs.size === 0) return;
+        setStickers(
+          (list) =>
+            list?.map((s) => {
+              const spot = theirs.get(s.id);
+              return spot && samePlace(s.placements.large, ours.get(s.id))
+                ? { ...s, placements: { ...s.placements, large: spot } }
+                : s;
+            }) ?? null,
+        );
+      },
+      (error: unknown) => {
+        const failure = apiError(error);
+        console.error(
+          `Saving the large layout derived from your phone's failed for ${derivedLayout.length} stickers`,
           failure,
-        ),
-      );
-    });
+        );
+        setUnsaved((was) =>
+          unsavedAfter(
+            was,
+            derivedLayout.map((d) => d.id),
+            ["large"],
+            failure,
+          ),
+        );
+      },
+    );
   }, [api, derivedLayout]);
   // The first open's board completes once the fresh board's stickers have all decoded; one from the
   // phone's storage starts them decoding. A board that didn't load has nothing more coming, so what
@@ -523,17 +567,12 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // Once the fresh board is in, the board as it shows is kept for your next open.
   useEffect(() => {
     if (adopted && !adopted.fromPhone && imagesCurrent && loaded)
-      keepBoard(account.id, { owner: adopted.owner, stickers: loaded });
+      keepBoard(account.id, { owner: adopted.owner, stickers: loaded }, adopted.forgets);
   }, [account.id, adopted, imagesCurrent, loaded]);
   const failed = board.state === "failed";
   useEffect(() => {
     if (failed) markBoardComplete();
   }, [failed]);
-  /**
-   * A gift went out or its bag changed, so the board loads again where its gift is: at once, or once a
-   * load in flight lands, since that one may have read the board before the gift moved.
-   */
-  const [reloadForGift, setReloadForGift] = useState(false);
   if (reloadForGift && board.state !== "loading") {
     setReloadForGift(false);
     if (board.state === "ready") board.refresh();

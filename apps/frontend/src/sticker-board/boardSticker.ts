@@ -163,63 +163,95 @@ export const onTheBoard = <
 /** How a person is printed: their handle, or their name until they've chosen one. */
 export const handleOf = (p: PersonView) => (p.handle === null ? p.name : formatHandle(p.handle));
 
+/** Whether two spots put a sticker in the same place, on the board or in the tray; stacking aside. */
+export const samePlace = (a: Placement | null | undefined, b: Placement | null | undefined) =>
+  a === b ||
+  (!!a && !!b && a.on === b.on && a.x === b.x && a.y === b.y && a.s === b.s && a.r === b.r);
+
+/** Each sticker's spots, by its id. */
+export const spotsById = (
+  stickers: readonly { id: string; placements: Placements }[],
+): ReadonlyMap<string, Placements> => new Map(stickers.map((s) => [s.id, s.placements]));
+
 /**
- * A free spot in `layout` for `art`, on top of `taken`, which it joins: on the board, or at that spot
- * in the tray.
+ * The spots the board moved its stickers to since they were drawn from `from`'s spots, by sticker and
+ * layout. Raising a sticker on top isn't a move.
+ */
+export function movedSince(
+  stickers: readonly PlacedBoardSticker[],
+  from: ReadonlyMap<string, Placements>,
+): Map<string, Spots> {
+  const moved = new Map<string, Spots>();
+  for (const { id, placements } of stickers) {
+    const was = from.get(id);
+    const spots: Spots = {};
+    if (!samePlace(placements.phone, was?.phone)) spots.phone = placements.phone;
+    if (placements.large && !samePlace(placements.large, was?.large))
+      spots.large = placements.large;
+    if (spots.phone || spots.large) moved.set(id, spots);
+  }
+  return moved;
+}
+
+/** A listed sticker's spot in one layout. */
+interface Listed extends Taken, Pick<BoardStickerView, "held" | "openGift"> {}
+
+/**
+ * A free spot in `layout` for `s`, on top of every listed spot, which it joins: on the board, or at
+ * that spot in the tray. Only the stickers on the board take up room there.
  */
 function landIn(
-  taken: Taken[],
-  art: Art,
+  listed: Listed[],
+  s: Art & Pick<BoardStickerView, "held" | "openGift">,
   on: boolean,
   layout: BoardLayout,
   board: BoardSize,
 ): Placement {
   const placement = {
     on,
-    ...freeSpot(
-      taken.filter((t) => t.placement.on),
-      art,
-      layout,
-      board,
-    ),
-    z: nextZ(taken.map((t) => t.placement)),
+    ...freeSpot(listed.filter(onTheBoard), s, layout, board),
+    z: nextZ(listed.map((t) => t.placement)),
   };
-  taken.push({ placement, art });
+  listed.push({ placement, art: s, held: s.held, openGift: s.openGift });
   return placement;
 }
 
 /**
- * Every sticker at a spot in the phone's layout, and in the large layout once the board has one. One
- * the board already holds keeps its spots, since the board's moves are newer than any load. One never
- * placed lands on top in each layout, clear of the others for its size on `boards`; one you hold that
- * the large layout is missing goes there on the board or in the tray, as on the phone. Each spot given
- * is listed for saving.
+ * Every sticker at a spot in the phone's layout, and in the large layout once the board has one. A
+ * spot the board moved a sticker to (`moved`) wins over the load's in its layout, since the board's
+ * moves are newer than any load. One never placed lands on top in each layout, clear of the stickers
+ * on the board for its size on `boards`; one you hold that the large layout is missing goes there on
+ * the board or in the tray, as on the phone. Each spot given is listed for saving.
  */
 export function placeUnplaced(
   loaded: readonly UnplacedBoardSticker[],
-  held: readonly PlacedBoardSticker[] = [],
+  moved: ReadonlyMap<string, Spots> = new Map(),
   boards: Partial<Record<BoardLayout, BoardSize>> = {},
 ): { stickers: PlacedBoardSticker[]; placed: GivenSpots[] } {
-  const heldSpots = new Map(held.map((s) => [s.id, s.placements]));
-  const list = loaded.map((s) => ({ ...s, placements: heldSpots.get(s.id) ?? s.placements }));
+  const list = loaded.map((s) => {
+    const spots = moved.get(s.id);
+    if (!spots) return s;
+    const { phone, large } = s.placements;
+    return { ...s, placements: { phone: spots.phone ?? phone, large: spots.large ?? large } };
+  });
   const large = hasLargeLayout(list);
-  const takenIn = (layout: BoardLayout) =>
-    list.flatMap((s) => {
+  const listedIn = (layout: BoardLayout) =>
+    list.flatMap((s): Listed[] => {
       const placement = s.placements[layout];
-      return placement ? [{ placement, art: s }] : [];
+      return placement ? [{ placement, art: s, held: s.held, openGift: s.openGift }] : [];
     });
-  const taken = { phone: takenIn("phone"), large: takenIn("large") };
+  const listed = { phone: listedIn("phone"), large: listedIn("large") };
   const boardFor = (layout: BoardLayout) => boards[layout] ?? PHONE_BOARD_SIZE;
   const placed: GivenSpots[] = [];
   const stickers = list.map((s): PlacedBoardSticker => {
     const spots: Spots = {};
     const phone =
       s.placements.phone ??
-      (spots.phone = landIn(taken.phone, s, true, "phone", boardFor("phone")));
+      (spots.phone = landIn(listed.phone, s, true, "phone", boardFor("phone")));
     const inLarge =
       s.placements.large ??
       (large && s.held
-        ? (spots.large = landIn(taken.large, s, phone.on, "large", boardFor("large")))
+        ? (spots.large = landIn(listed.large, s, phone.on, "large", boardFor("large")))
         : null);
     const sticker = { ...s, placements: { phone, large: inLarge } };
     if (spots.phone || spots.large) placed.push({ sticker, spots });
