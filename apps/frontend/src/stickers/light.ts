@@ -17,10 +17,17 @@ import { sheenIn, sweepSheen } from "./resinSheen";
 
 const REDUCED = "(prefers-reduced-motion: reduce)";
 /**
- * What reads the light: the resin's specular, each foil's bands and glint, and each crease. Set on them
+ * What follows the light as it moves: the resin's specular, and each foil's bands and glint. Set on them
  * rather than the resin or foil they're in, a move restyles only them, not the masked layers around them.
  */
-const LIT = ".live-resin__spec > b, .sticker-foil__sheen, .sticker-foil__glint, .sticker-crease";
+const MOVING = ".live-resin__spec > b, .sticker-foil__sheen, .sticker-foil__glint";
+/**
+ * Each crease, which takes the light only once it rests: restyling every crease's layers on each write
+ * drops frames while the light moves, and its fade glides it there after.
+ */
+const CREASES = ".sticker-crease";
+/** How long the light holds still before the creases take it. */
+export const CREASE_SETTLE_MS = 250;
 /** The light is written at most this often; the highlights' transitions glide between writes. */
 const BEAT_MS = 45;
 /** A move shorter than this, on the -1 to 1 scale, isn't written, so the hand's tremor keeps still. */
@@ -74,16 +81,34 @@ function lightForTilt(beta: number, gamma: number): { x: number; y: number } {
 let light: { on: () => void; off: () => void } | null = null;
 let holders = 0;
 
-/** Where the light last was, or null before it first moves: what a newly shown sticker starts at. */
-let lightNow: { lx: string; ly: string } | null = null;
+/** The light as it's written onto what reads it. */
+type Light = { lx: string; ly: string };
 
-/** Sets the light where it is now on what reads it in `el`, newly shown, so it matches the rest at once. */
-export function lightUp(el: HTMLElement) {
-  if (!lightNow) return;
-  for (const lit of el.matches(LIT) ? [el] : el.querySelectorAll<HTMLElement>(LIT)) {
-    lit.style.setProperty("--lx", lightNow.lx);
-    lit.style.setProperty("--ly", lightNow.ly);
+/** Where the light last was, or null before it first moves: what a newly shown highlight starts at. */
+let lightNow: Light | null = null;
+/** Where the light last rested, or null before it first rests: what a newly shown crease starts at. */
+let creaseLightNow: Light | null = null;
+
+/** Sets `light` on each of `els`, or clears it with null; returns how many. */
+function setLight(els: NodeListOf<HTMLElement> | HTMLElement[], light: Light | null) {
+  for (const el of els) {
+    if (light) {
+      el.style.setProperty("--lx", light.lx);
+      el.style.setProperty("--ly", light.ly);
+    } else {
+      el.style.removeProperty("--lx");
+      el.style.removeProperty("--ly");
+    }
   }
+  return els.length;
+}
+
+/** Sets the light on what reads it in `el`, newly shown, so it matches the rest at once. */
+export function lightUp(el: HTMLElement) {
+  const within = (selector: string) =>
+    el.matches(selector) ? [el] : el.querySelectorAll<HTMLElement>(selector);
+  if (lightNow) setLight(within(MOVING), lightNow);
+  if (creaseLightNow) setLight(within(CREASES), creaseLightNow);
 }
 
 /** Sweeps a sheen across each live resin big enough to see on screen; returns how many it measured. */
@@ -113,25 +138,29 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   let lit: { x: number; y: number } | null = null;
   let frame = 0;
   let lastWrite = -Infinity;
+  let settle = 0;
 
-  /** Sets the light on everything that reads it, or clears it with null; returns how many. */
-  const setLight = (lx: string | null, ly: string | null) => {
-    lightNow = lx === null || ly === null ? null : { lx, ly };
-    const readers = root.querySelectorAll<HTMLElement>(LIT);
-    for (const el of readers) {
-      if (lx === null || ly === null) {
-        el.style.removeProperty("--lx");
-        el.style.removeProperty("--ly");
-      } else {
-        el.style.setProperty("--lx", lx);
-        el.style.setProperty("--ly", ly);
-      }
-    }
-    return readers.length;
+  /** Lights every crease from where the light now rests. Made once, not per write. */
+  const settleCreases = () => {
+    creaseLightNow = lightNow;
+    const count = timeOurWork("light", () => setLight(root.querySelectorAll(CREASES), lightNow));
+    if (isPerformanceRecorderOn()) notePerformance("light", `settle on ${count} creases`);
   };
 
-  /** Sets the light from `lit` on everything that reads it; returns how many. Made once, not per write. */
-  const writeLit = () => (lit ? setLight(written(lit.x), written(lit.y)) : 0);
+  /**
+   * Sets the light on every highlight, or clears it with null, and on every crease once it rests;
+   * returns how many highlights.
+   */
+  const setLightNow = (light: Light | null) => {
+    lightNow = light;
+    win.clearTimeout(settle);
+    if (light) settle = win.setTimeout(settleCreases, CREASE_SETTLE_MS);
+    else settleCreases();
+    return setLight(root.querySelectorAll<HTMLElement>(MOVING), light);
+  };
+
+  /** Sets the light from `lit` on every highlight; returns how many. Made once, not per write. */
+  const writeLit = () => (lit ? setLightNow({ lx: written(lit.x), ly: written(lit.y) }) : 0);
 
   /** Writes the light from `lit` as our work, and notes how many it lit while recording. */
   const writeLight = () => {
@@ -201,7 +230,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     win.cancelAnimationFrame(frame);
     frame = 0;
     lit = null;
-    setLight(null, null);
+    setLightNow(null);
   };
 
   // The light never asks for the tilt: where a browser wants permission first (iOS), no tilt
@@ -229,6 +258,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     if (light === own) light = null;
     reduced.removeEventListener("change", onMotionSetting);
     win.cancelAnimationFrame(frame);
+    win.clearTimeout(settle);
   };
 }
 
