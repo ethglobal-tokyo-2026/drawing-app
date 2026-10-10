@@ -184,9 +184,9 @@ function sealedSticker(deps: AppDeps, userId: string, stickerId: string): SealRe
 }
 
 /**
- * Seals a sticker in progress: checks the ticket, the images and the timelapse, stores the files,
- * writes the sticker, then mints it. The files go first, so no sticker row names a file that isn't
- * stored.
+ * Seals a sticker in progress: checks the ticket and the images, stores the files, writes the
+ * sticker with its timelapse when that can be read, then mints it. The files go first, so no sticker
+ * row names a file that isn't stored.
  */
 export async function sealSticker(
   deps: AppDeps,
@@ -216,9 +216,10 @@ export async function sealSticker(
   const sharp = form.sharp ? await bytesOf(form.sharp) : undefined;
   const sharpRefusal = sharp && checkSharp(sharp, form);
   if (sharpRefusal) return { refused: sharpRefusal };
-  const timelapse = form.timelapse ? Buffer.from(await form.timelapse.arrayBuffer()) : null;
-  const badTimelapse = timelapse && timelapseProblem(timelapse);
-  if (badTimelapse) return { refused: invalid(badTimelapse) };
+  const uploaded = form.timelapse ? Buffer.from(await form.timelapse.arrayBuffer()) : null;
+  // The timelapse only replays the drawing: one that can't be read is left out, never the sticker.
+  const unreadable = uploaded && timelapseProblem(uploaded);
+  const timelapse = unreadable ? null : uploaded;
 
   // Hashed here, never taken from the client: the hash names files other stickers may share. The
   // store keeps a name's first files, so a PNG sealed before keeps its first seal's images.
@@ -276,6 +277,9 @@ export async function sealSticker(
   if (refused) return { refused };
 
   logInfo("sticker.seal.saved", { stickerId, userId });
+  if (unreadable) {
+    logFailure("sticker.timelapse.dropped", new Error(unreadable), { stickerId, userId });
+  }
   const mintRefusal = await mintOrRefuse(deps, userId, stickerId);
   if (mintRefusal) return { refused: mintRefusal };
   return { sealed: sealedSticker(deps, userId, stickerId), created: true };

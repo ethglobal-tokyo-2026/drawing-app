@@ -41,7 +41,7 @@ import {
   testTimelapse,
   type SealParts,
 } from "../stickers/testPngs.ts";
-import { timelapseV1Schema } from "../stickers/timelapse.ts";
+import { timelapseProblem, timelapseV1Schema } from "../stickers/timelapse.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeCdnPurge, fakeSuiWallets } from "../testing/fakes.ts";
 import { fakeSui, type FakeSui } from "../testing/fakeSui.ts";
@@ -179,6 +179,19 @@ describe("POST /api/stickers", () => {
     expect(sticker).toMatchObject(drawn);
   });
 
+  it.each([
+    ["not a timelapse", gzipSync(JSON.stringify({ v: 1, ink: [1, 1] }))],
+    ["not gzipped", new TextEncoder().encode(JSON.stringify(TEST_TIMELAPSE))],
+  ])("seals without a timelapse that's %s, and logs why, naming the sticker", async (_, bytes) => {
+    const logs = captureLogLines();
+    const userId = insertUser(test.db);
+    const { sticker } = await seal(userId, { timelapse: new File([bytes], "t.json.gz") });
+    expect(timelapseOf(sticker.id)).toBeUndefined();
+    logs.expectLogged("sticker.timelapse.dropped", { stickerId: sticker.id, userId });
+    const dropped = logs.entries.find(({ event }) => event === "sticker.timelapse.dropped");
+    expect(dropped).toMatchObject({ causes: [{ message: timelapseProblem(bytes) }] });
+  });
+
   it("keeps the first seal's files when a later seal uploads the same PNG", async () => {
     const first = await seal(insertUser(test.db));
     const otherMask = testPng(STICKER_SIZE.width, STICKER_SIZE.height, "another mask");
@@ -271,18 +284,6 @@ describe("POST /api/stickers", () => {
       part: "sharp",
       why: "no larger than the sticker",
       overrides: { sharp: pngFile(testPng(SHARP_SIZE.width, STICKER_SIZE.height), "sharp") },
-    },
-    {
-      part: "timelapse",
-      why: "not a timelapse",
-      overrides: {
-        timelapse: new File([gzipSync(JSON.stringify({ v: 1, ink: [1, 1] }))], "t.json.gz"),
-      },
-    },
-    {
-      part: "timelapse",
-      why: "not gzipped",
-      overrides: { timelapse: new File([JSON.stringify(TEST_TIMELAPSE)], "t.json.gz") },
     },
   ];
 
