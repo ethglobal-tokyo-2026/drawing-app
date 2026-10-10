@@ -1,4 +1,4 @@
-/* ---------- The developer slip: LINE's and Privy's details, under the end of the cork ---------- */
+/* ---------- The developer slip: testing tools, under the end of the cork ---------- */
 
 /* Collapsed to nothing under the last paper and clipped, so none of it scrolls into view. A pull grows
    it through `--pull`; out, it takes the slip's whole height. It reaches to the cork's edges so the
@@ -92,11 +92,71 @@
   transform: rotate(-2deg);
 }
 
-.stat-board__slip-h {
+/* The slip's title, and each section's heading. */
+.dev-slip__h {
   margin: 0;
   color: var(--ink);
   font-weight: 700;
   letter-spacing: 0.1em;
+}
+
+/* A section of the slip, under a dashed rule. */
+.dev-slip__section {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule-strong);
+}
+
+.dev-slip__section :focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* A button keeps its own width; a block one spans the slip. */
+.dev-slip__section > .label-btn {
+  justify-self: start;
+}
+
+.dev-slip__note {
+  margin: -2px 0 0;
+}
+
+.dev-slip__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font: 700 15px/1.2 var(--font-ui);
+}
+
+.dev-slip__checkbox input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+/* What the clipboard refused, to copy by hand: in the app's own face, not the system monospace, whose
+   zero is slashed too. */
+.dev-slip__text {
+  min-height: 180px;
+  font: 500 13px/1.4 var(--font-ui);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* The performance recorder's summary changes each second: tabular figures keep it from jittering. */
+.performance-recorder__summary {
+  margin: 0;
+  font: 500 13px/1.4 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+.performance-recorder__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 /* Reduced motion: no rubber band and no glide; the slip fades in where it lies. */

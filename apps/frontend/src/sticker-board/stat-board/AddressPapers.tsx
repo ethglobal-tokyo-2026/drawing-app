@@ -5,8 +5,10 @@ import { QrCode } from "../../ui/QrCode";
 import { QuietLink } from "../../ui/QuietLink";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { shortAddress, type ChainAddress } from "./addresses";
-import { ChainPin } from "./ChainPin";
 import "./address-papers.css";
+// Sui's droplet in Sui Blue, byte for byte from its brand kit (live.standards.site/sui-media-kit). Sui's
+// rules forbid altering it, so the pin's head is the file itself: never recolored, outlined or glinted.
+import suiDroplet from "./Logo_Sui_Droplet_Sui_Blue.svg";
 
 interface Props {
   sui: ChainAddress;
@@ -87,7 +89,7 @@ export function AddressPapers({ sui, whose, lifted, paperRef, onOpen }: Props) {
   return (
     <div className="address-papers">
       <div className="stat-board__note address-papers__note" ref={note}>
-        <ChainPin className="address-papers__pin" />
+        <img className="address-papers__pin" src={suiDroplet} alt="" draggable={false} />
         {sui.state === "ready" ? (
           <button
             ref={paperRef}

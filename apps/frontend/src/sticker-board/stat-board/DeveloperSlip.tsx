@@ -9,9 +9,9 @@ import { usePullToReveal } from "./usePullToReveal";
 const ROOM_ABOVE = 20;
 
 /**
- * The developer slip: LINE's and Privy's details, for testing them from the board. It lies collapsed
- * under the end of the cork, off screen until a pull past the end brings it out, or the button only
- * keyboards and screen readers find. It goes back under when the board comes to rest on its front.
+ * The developer slip: the board's testing tools. It lies collapsed under the end of the cork until a
+ * pull past the end brings it out, or the button only keyboards and screen readers find, and goes back
+ * under when the board comes to rest on its front.
  */
 export function DeveloperSlip({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
@@ -53,7 +53,7 @@ export function DeveloperSlip({ children }: { children: ReactNode }) {
           tabIndex={-1}
         >
           <div className="stat-board__paper">
-            <h3 className="fine stat-board__slip-h">{t(($) => $.stickerBoard.developer.title)}</h3>
+            <h3 className="fine dev-slip__h">{t(($) => $.stickerBoard.developer.title)}</h3>
             {children}
           </div>
           <i className="stat-board__washi" aria-hidden />

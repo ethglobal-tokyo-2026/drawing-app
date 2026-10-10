@@ -7,7 +7,7 @@ import {
 import { useTranslation } from "../../i18n/react";
 import { GratitudeIcon } from "../../icons";
 import { LabelButton } from "../../ui/LabelButton";
-import "./gratitude-demo-controls.css";
+import "./developer-slip.css";
 
 interface Props {
   /** Opens the gratitude mini-game for the newest sticker; null while the board has none. */
@@ -26,10 +26,8 @@ export function GratitudeDemoControls({ onTry }: Props) {
   };
 
   return (
-    <div className="gratitude-demo">
-      <h3 className="fine gratitude-demo__h">
-        {t(($) => $.stickerBoard.developer.gratitudeDemo.title)}
-      </h3>
+    <div className="dev-slip__section">
+      <h3 className="fine dev-slip__h">{t(($) => $.stickerBoard.developer.gratitudeDemo.title)}</h3>
       <LabelButton
         block
         icon={<GratitudeIcon />}
@@ -40,11 +38,11 @@ export function GratitudeDemoControls({ onTry }: Props) {
         {t(($) => $.stickerBoard.developer.gratitudeDemo.try)}
       </LabelButton>
       {!onTry && (
-        <p id={`${id}-note`} className="fine gratitude-demo__note">
+        <p id={`${id}-note`} className="fine dev-slip__note">
           {t(($) => $.stickerBoard.developer.gratitudeDemo.drawFirst)}
         </p>
       )}
-      <label className="gratitude-demo__switch">
+      <label className="dev-slip__checkbox">
         <input
           type="checkbox"
           checked={settings.fullEffects}
@@ -52,7 +50,7 @@ export function GratitudeDemoControls({ onTry }: Props) {
         />
         {t(($) => $.stickerBoard.developer.gratitudeDemo.fullEffects)}
       </label>
-      <label className="gratitude-demo__switch">
+      <label className="dev-slip__checkbox">
         <input
           type="checkbox"
           checked={settings.showFrameTimes}

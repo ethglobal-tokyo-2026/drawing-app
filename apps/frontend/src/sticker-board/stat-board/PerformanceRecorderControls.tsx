@@ -17,7 +17,7 @@ import { Copy } from "../../icons";
 import { ErrorLine } from "../../ui/ErrorLine";
 import { LabelButton } from "../../ui/LabelButton";
 import { QuietLink } from "../../ui/QuietLink";
-import "./performance-recorder-controls.css";
+import "./developer-slip.css";
 
 /** The performance recorder's switch, live summary and report, on the stat board's developer slip. */
 export function PerformanceRecorderControls() {
@@ -114,11 +114,9 @@ export function PerformanceRecorderControls() {
   };
 
   return (
-    <div className="performance-recorder" ref={slip}>
-      <h3 className="fine performance-recorder__h">
-        {t(($) => $.stickerBoard.developer.performance.title)}
-      </h3>
-      <label className="performance-recorder__switch">
+    <div className="dev-slip__section" ref={slip}>
+      <h3 className="fine dev-slip__h">{t(($) => $.stickerBoard.developer.performance.title)}</h3>
+      <label className="dev-slip__checkbox">
         <input
           type="checkbox"
           checked={on}
@@ -127,7 +125,7 @@ export function PerformanceRecorderControls() {
         />
         {t(($) => $.stickerBoard.developer.performance.record)}
       </label>
-      <p id={`${id}-what`} className="fine performance-recorder__note">
+      <p id={`${id}-what`} className="fine dev-slip__note">
         {t(($) => $.stickerBoard.developer.performance.what)}
       </p>
       <p className="performance-recorder__summary">
@@ -150,18 +148,18 @@ export function PerformanceRecorderControls() {
           {t(($) => $.stickerBoard.developer.performance.clear)}
         </QuietLink>
       </div>
-      <p className="fine performance-recorder__note" role="status">
+      <p className="fine dev-slip__note" role="status">
         {copied ? t(($) => $.stickerBoard.developer.performance.copied) : ""}
       </p>
-      {problem && <ErrorLine className="performance-recorder__problem">{problem}</ErrorLine>}
+      {problem && <ErrorLine>{problem}</ErrorLine>}
       {uploadProblem && (
-        <ErrorLine className="performance-recorder__problem">
+        <ErrorLine>
           {t(($) => $.stickerBoard.developer.performance.notUploaded, { reason: uploadProblem })}
         </ErrorLine>
       )}
       {uncopied && (
         <textarea
-          className="performance-recorder__report"
+          className="dev-slip__text"
           aria-label={t(($) => $.stickerBoard.developer.performance.report)}
           readOnly
           value={uncopied}

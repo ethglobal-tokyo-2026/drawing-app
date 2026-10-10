@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "../../i18n/react";
 import { ErrorLine } from "../../ui/ErrorLine";
 import { keepCreasesShown, useCreasesShown } from "../useCreases";
-import "./creases-controls.css";
+import "./developer-slip.css";
 
 /** Creases' switch, on the stat board's developer slip: they show only on a device that switches them on. */
 export function CreasesControls() {
@@ -11,11 +11,9 @@ export function CreasesControls() {
   // The device refused to keep the choice, which then lasts only until the app reloads.
   const [unkept, setUnkept] = useState(false);
   return (
-    <div className="creases-controls">
-      <h3 className="fine creases-controls__h">
-        {t(($) => $.stickerBoard.developer.creases.title)}
-      </h3>
-      <label className="creases-controls__switch">
+    <div className="dev-slip__section">
+      <h3 className="fine dev-slip__h">{t(($) => $.stickerBoard.developer.creases.title)}</h3>
+      <label className="dev-slip__checkbox">
         <input
           type="checkbox"
           checked={shown}

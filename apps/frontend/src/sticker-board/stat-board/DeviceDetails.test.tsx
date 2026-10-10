@@ -59,9 +59,7 @@ describe("DeviceDetails", () => {
     const copied = writeText.mock.lastCall?.[0] ?? "";
     expect(copied).toMatch(/^Device details, taken .+\nUser agent: /);
     expect(copied).toContain("\nLarge screen: yes");
-    expect(host.querySelector('.device-details [role="status"]')?.textContent).toBe(
-      strings.copied.en,
-    );
+    expect(host.querySelector('[role="status"]')?.textContent).toBe(strings.copied.en);
   });
 
   it("follows the window as it turns", () => {

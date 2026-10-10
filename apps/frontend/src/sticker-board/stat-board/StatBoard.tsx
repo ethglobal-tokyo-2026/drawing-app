@@ -26,8 +26,7 @@ import { StatCork, type CorkFigures, type StatCorkHandle } from "./StatCork";
 import { SwitchPersonControls } from "./SwitchPersonControls";
 import { statFigures } from "./statFigures";
 
-// The developer slip, LINE's and Privy's details for testing them from the board. The dev server shows
-// it unless `.env` says "off"; a build shows it only when it's "on".
+// The developer slip: the dev server shows it unless `.env` says "off"; a build only when it's "on".
 const DEV_SLIP = import.meta.env.VITE_DEV_SLIP
   ? import.meta.env.VITE_DEV_SLIP === "on"
   : import.meta.env.DEV;

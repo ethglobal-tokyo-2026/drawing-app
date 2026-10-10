@@ -137,23 +137,20 @@
   bottom: 0;
 }
 
-/* The pin stays on the cork when its paper lifts off, so it's the note's, not the face's. It goes
-   through the paper's top margin, its clear space in from the edge, and lets taps through to the face. */
+/* A push pin whose head is Sui's droplet, standing just off the paper: an Ink contact line and a soft
+   cast down and to the right. It stays on the cork when its paper lifts off, so it's the note's, not
+   the face's. It goes through the paper's top margin, its clear space in from the edge, and lets taps
+   through to the face. */
 .address-papers__pin {
   position: absolute;
   z-index: 3;
   left: 50%;
   top: calc(var(--pin) / 2);
   translate: -50% 0;
-  pointer-events: none;
-}
-
-/* A push pin whose head is Sui's droplet, standing just off the paper: an Ink contact line and a soft
-   cast down and to the right. */
-.chain-pin {
   display: block;
   width: auto;
   height: var(--pin);
+  pointer-events: none;
   user-select: none;
   filter: drop-shadow(0 0.5px 0 rgba(28, 24, 36, 0.16))
     drop-shadow(1px 2px 1.5px rgba(28, 24, 36, 0.14));

@@ -239,7 +239,7 @@
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
   .stat-board__note.settings-note {
     width: 100%;
-    max-width: 460px;
+    max-width: var(--settings-w);
     margin-inline: auto;
   }
 }

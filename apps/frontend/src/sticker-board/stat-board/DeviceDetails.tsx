@@ -13,7 +13,7 @@ import {
 import { ErrorLine } from "../../ui/ErrorLine";
 import { LabelButton } from "../../ui/LabelButton";
 import { useLargeScreen } from "../../ui/largeScreen";
-import "./device-details.css";
+import "./developer-slip.css";
 
 /**
  * The developer slip's Device paper: what the device and its browser say about themselves and
@@ -54,8 +54,8 @@ export function DeviceDetails() {
   };
 
   return (
-    <div className="device-details">
-      <h3 className="fine device-details__h">{t(($) => $.stickerBoard.developer.device.title)}</h3>
+    <div className="dev-slip__section">
+      <h3 className="fine dev-slip__h">{t(($) => $.stickerBoard.developer.device.title)}</h3>
       <dl className="account-rows">
         {deviceFactRows(facts, large).map(([label, value]) => (
           <AccountRow key={label} label={label} value={value} />
@@ -65,13 +65,13 @@ export function DeviceDetails() {
       <LabelButton size="sm" icon={<Copy />} data-press="off" onClick={() => void copy()}>
         {t(($) => $.stickerBoard.developer.device.copy)}
       </LabelButton>
-      <p className="fine device-details__note" role="status">
+      <p className="fine dev-slip__note" role="status">
         {copied ? t(($) => $.stickerBoard.developer.device.copied) : ""}
       </p>
       {problem && <ErrorLine>{problem}</ErrorLine>}
       {uncopied && (
         <textarea
-          className="device-details__text"
+          className="dev-slip__text"
           aria-label={t(($) => $.stickerBoard.developer.device.text)}
           readOnly
           value={uncopied}

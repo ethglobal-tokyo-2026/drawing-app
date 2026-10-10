@@ -631,7 +631,7 @@
     /* The least bare cork round the papers, and between the stats and your own papers. */
     --cork-edge: 24px;
     --group-gap: 40px;
-    /* Settings at its widest, a control's width rather than the cork's. */
+    /* Settings and the developer slip at their widest, a control's width rather than the cork's. */
     --settings-w: 460px;
     padding: var(--cork-edge);
   }
@@ -646,20 +646,6 @@
   .stat-board__stats,
   .stat-board--own .stat-board__cork > .address-papers {
     zoom: var(--papers-zoom, 1);
-  }
-
-  /* Flip back, and any label after it, at their own widths. */
-  .stat-board__head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 12px;
-    margin-bottom: 16px;
-  }
-
-  .stat-board__head > * {
-    align-self: center;
-    margin-top: 0;
   }
 }
 
@@ -743,7 +729,7 @@
   }
 
   .stat-board__slip {
-    max-width: 460px;
+    max-width: var(--settings-w);
     margin-inline: auto;
   }
 }

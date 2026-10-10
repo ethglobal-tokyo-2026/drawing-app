@@ -2,7 +2,7 @@ import { takeMockGiftMessage } from "../../giving/mockGiftMessages";
 import { useTranslation } from "../../i18n/react";
 import { liffMockActive, mockPerson } from "../../line/liff";
 import { LabelButton } from "../../ui/LabelButton";
-import "./switch-person-controls.css";
+import "./developer-slip.css";
 
 /** The demo's people, as `?as=` names: VITE_DEMO_PEOPLE, comma-separated. */
 const demoPeople = () => [
@@ -24,10 +24,8 @@ export function SwitchPersonControls() {
   if (!liffMockActive || people.length < 2) return null;
   const current = mockPerson("", sessionStorage).sub.replace(/^dev-/, "");
   return (
-    <div className="switch-person">
-      <h3 className="fine switch-person__h">
-        {t(($) => $.stickerBoard.developer.demoPeople.title)}
-      </h3>
+    <div className="dev-slip__section">
+      <h3 className="fine dev-slip__h">{t(($) => $.stickerBoard.developer.demoPeople.title)}</h3>
       {people
         .filter((name) => name !== current)
         .map((name) => (
