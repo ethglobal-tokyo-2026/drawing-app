@@ -1,0 +1,203 @@
+Sticker tray and sticker sheets review lane (snapshot 52493b56, $W=.claude/worktrees/perf-research)
+Paths are relative to $W/apps/frontend/src/sticker-board/tray/ unless given in full.
+Status: DONE. All files in the brief reviewed.
+
+== 1. Removable / duplicate ==
+
+[R1] traySheets.ts:50  `const FIT = { w: 66, h: 76 };`
+  Duplicates sheetPacking.ts:124 `fit: { w: 66, h: 76 }` (DEFAULTS). The stand-in spots and the packed spots must fit stickers to the same box, but two literals hold it.
+  Fix: export the box from sheetPacking (e.g. `export const STICKER_FIT = { w: 66, h: 76 }`, used by DEFAULTS.fit) and import it in traySheets. Confidence: high.
+
+[R2] edgeBands.ts:8 `EDGE_TAIL = 3`, trayModel.ts:260 `DEPTH_ROOM = 3 + 22`, traySheets.ts:384 `(k * PEEK + 3)`, sticker-tray.css:344 `.tray__depth { height: 22px }` (and :375 `bottom: -22px`)
+  The gap between the last dated edge and the +N button is three separate `3` literals (layout of the button, the press bands, the fit math); the button's 22px height is in TS and CSS. A change to one moves the drawn button off its hit band and off the fit math.
+  Fix: one `DEPTH_GAP = 3` (and `DEPTH_BUTTON_H = 22`) in trayModel.ts; edgeBands takes the gap from it (or re-exports it), traySheets uses it in the +N transform, DEPTH_ROOM = DEPTH_GAP + DEPTH_BUTTON_H. Confidence: high.
+
+[R3] traySheets.ts:64 `(ui.geo ? ui.geo.chainX : COL * grow - 15) - 0.97 * GMAX * grow + 3` (+ another `+ 3` on :65)
+  `15` repeats trayEngine.ts:185 `chainAt: COL - 15` and :373 `chainAt: COL * ui.fit.grow - 15`; `0.97` repeats zipper.ts:213 `SPREAD_AT = 0.97` and trayEngine.ts:390 `G / (0.97 * GMAX * grow)`. The stack's home x is derived from them in two files with no shared name.
+  Fix: `export const CHAIN_INSET = 15` in trayModel.ts, used at all three sites; export SPREAD_AT from zipper.ts (or carry the open fraction on Geometry) and use it for both 0.97s. Confidence: medium-high.
+
+[R4] inertBesides.ts (whole file) vs apps/frontend/src/ui/useModalDialog.ts:46-54 `behind(layer)` + hold/release, and apps/frontend/src/gratitude/GratitudeMiniGame.tsx:127-141 `setPhoneAside`
+  Three implementations of "make everything beside this layer inert, undo only what you added". useModalDialog's is the most careful (counts nested holds, follows the owner's own inert changes); inertBesides and setPhoneAside each re-do the sibling walk.
+  Fix: export a non-hook `holdBehind(layer, within = document.body): () => void` from ui/useModalDialog.ts (the hook calls it), and have traySpread.ts:117 call it with the board; drop inertBesides.ts and its test. Confidence: medium (AGENTS.md "one authoritative implementation per concept"; the shared version is safer when a dialog opens over the spread).
+
+[R5] sheetPacking.ts:134-142 `export function hash(str)` (FNV-1a)
+  Imported by apps/frontend/src/explore/pileLayout.ts:14 and explore/StickerPile.tsx:19 from the tray's internals; a generic seed helper living in the packer. Its partner `seededRandom` is in ui/seededRandom.ts.
+  Fix: move it to ui/seededRandom.ts as `seedOf(text)` and import from there in sheetPacking and explore. Confidence: medium.
+
+[R6] trayModel.ts:358 `export const cssUrl = (url: string) => \`url("${url}")\`;`
+  Same helper is defined again at apps/frontend/src/stickers/StickerFigure.tsx:48, and inlined as `url("${...}")` in ~10 other files (FinishPreview, GiftReceivedNotice, StickerFoil, SealCeremony, useBoardGestures, TimelapseLayer...).
+  Fix: one export in apps/frontend/src/stickers/ (beside stickerUrls.ts), used by the tray and StickerFigure at least. Confidence: medium.
+
+[R7] trayModel.ts:357 `export const SVG_NS = "http://www.w3.org/2000/svg";` duplicated at zipper.ts:266.
+  Fix: zipper.ts imports it from trayModel.ts (only a type import goes the other way, so no runtime cycle). Confidence: medium.
+
+[R8] traySeen.ts (10 lines)
+  The name says "seen", which in the tray means NEW/seen (TraySticker.seen, onSeen, markSeen); the file is the tray's visit counter. Its Draw twin is sticker-creation/drawVisits.ts.
+  Fix: rename to trayVisits.ts (StickerTray.test.tsx:34 and trayEngine.ts:16 import it). Confidence: medium-high.
+
+== 6. Magic numbers ==
+
+[M1] traySpread.ts:16-29 spreadCells
+  The row gap `18` is written three times (lines 23, 27, 32) and must agree in all three or rows overlap/overflow; `margin = 18`, `gap = 14`, `- 30`, `trayTop() - 6`, caps `0.95`/`0.8` and the column thresholds `n <= 1 ? 1 : n <= 2 ? 2 : n <= 6 ? 3 : 4` carry no reason.
+  Fix: `const ROW_GAP = 18` used at all three; name the bottom room (`- 30`) and the header overlap (`- 6`). Confidence: high for ROW_GAP, medium for the rest.
+
+[M2] trayModel.ts:324 and :329 `foot - 2 - STACK_Y - ...` (and trayModel.test.ts:16 `2 + STACK_Y`)
+  An unexplained `2` in both fit formulas, restated in the test.
+  Fix: name it with its reason (e.g. the lip the open mouth keeps over the stack) and export it for the test. Confidence: medium.
+
+[M3] trayModel.ts:272 `trayTop = () => (window.matchMedia(LARGE_SCREEN).matches ? 80 : 72)` vs sticker-tray.css:15 `--tray-top: 72px` and :927-930 `--tray-top: 80px`
+  The tray's top lives in TS and CSS (the comments at trayModel.ts:271 and sticker-tray.css:926 each point at the other). trayEngine.ts:357 already sets `--tray-col` from COL the same way.
+  Fix: set `--tray-top` from trayTop() where the engine fits the tray, and drop the CSS values and the media block's --tray-top. Confidence: medium-high.
+
+== 7. Footguns / performance ==
+
+[P1] trayModel.ts:272 trayTop() calls `window.matchMedia(LARGE_SCREEN)` on every call, and trayBoardDrop.ts:74 calls it in boardDrag, which useBoardGestures.ts:487 runs on every pointermove of a board sticker drag. trayEngine.ts:334 already holds `const large = win.matchMedia(LARGE_SCREEN)`.
+  Fix: read the engine's `large` (e.g. `tray.top()`), or keep one module-level MediaQueryList. Confidence: medium.
+
+== 1. Removable / duplicate (cont.) ==
+
+[R9] sheetPacking.ts:81-82 `fill?: "up" | "down"`, :84 `max?: number`, and profileOf's `flip` param (:327)
+  No caller sets `fill` or `max`: the one production call is trayModel.ts:409 `packSheets(items, { sheet, margin: PACK_MARGIN, spread: true })`, and the tests set only sheet/margin/clearance/spread (rg "packSheets\(" over src: trayModel.ts and sheetPacking.test.ts only; rg '"down"' finds the option's own declaration only). profileOf's `flip` is always false (pileLayout.ts:287 passes false; packSheets passes `!up`, always false). So the whole fill-down path is dead: `up` (:431), the mirrored margin (:432-433), `up ? -lift : lift` (:508), `up ? r : -r, !up` (:539), `up ? at.y : H - at.y` (:558), `max` and `sheet.items.length < o.max` (:542).
+  Fix: drop `fill`, `max` and `flip` and their branches. The other never-set knobs (breathe, fit, minSize, vary, turn, inset) could become module constants beside SAFE/LINE_RISE, which removes Resolved/DEFAULTS/options() (~45 lines). Confidence: high for fill/max/flip, medium for the knobs.
+
+[R10] traySheets.ts:380 `sheetEl(order[i], i === 1 ? "is-next" : "is-peek", i, news)`
+  Nothing styles `is-next` or `is-peek` (sticker-tray.css has no rule for either); `is-peek` appears nowhere else in src or e2e, and `is-next` only in StickerTray.test.tsx:472, which could read `[data-depth="1"]` like the rest of the suite. data-depth already carries the level.
+  Fix: pass "" for sheets behind the front one; the test selects `.tray__sheet[data-depth="1"]`. Confidence: high.
+
+[R11] traySpread.ts:57 `const stackOnBoard = () => ({ x: colLeft() + ui.stackAt.x, y: trayTop() + ui.stackAt.y });` duplicates trayPresses.ts:444 `const home = { x: colLeft() + ui.stackAt.x, y: trayTop() + ui.stackAt.y };`
+  Fix: export `stackOnBoard` from traySheets.ts beside stackHome and use it in both. Confidence: medium.
+
+[R12] traySheets.ts:41-48 STAND_IN (6 spots) and traySlots.ts:22 `PER_SHEET = 6`
+  placeOf does `const [x, y, r] = STAND_IN[s.slot]`, where slot = n % PER_SHEET; the two sixes live in two files, and raising PER_SHEET throws on the destructure.
+  Fix: keep STAND_IN beside PER_SHEET in traySlots.ts and set `PER_SHEET = STAND_IN.length`. Confidence: medium.
+
+[R13] sheetPacking.ts:310 `export interface Profile` and :48 `export interface Packed`
+  Neither is imported anywhere (rg -w Profile / Packed over src: sheetPacking.ts only; the "Packed" hit in trayEngine.ts:560 is a comment). knip reports exports used only in their own file.
+  Fix: drop `export`. Confidence: medium.
+
+== 2. Cheap simplifications / naming ==
+
+[S1] sticker-tray.css:462-468 `.tray__slot { width: 72px; height: 84px; margin: -42px 0 0 -36px; ... }`
+  Dead: every .tray__slot is made by traySheets.ts:124 slotEl, which always calls placeAt (traySheets.ts:114-121) and sets width, height and margin inline. No other code makes .tray__slot (rg '"tray__slot' over tray/*.ts: traySheets.ts:126 only).
+  Fix: drop the three declarations. Confidence: high.
+
+[S2] sticker-tray.css:551-552 and :844-845 `filter: drop-shadow(0 0 0.5px rgba(28, 24, 36, 0.55)) drop-shadow(0.4px 0.8px 0.5px rgba(28, 24, 36, 0.18));`
+  The first drop-shadow is the `--sticker-cut` token (apps/frontend/src/styles/tokens.css:80, "the kiss-cut groove"), which the same file already uses at :839; the two rules also repeat each other.
+  Fix: `filter: var(--sticker-cut) drop-shadow(0.4px 0.8px 0.5px rgba(28, 24, 36, 0.18));` in one rule, `.tray__img, .tray__fit .sticker-foil__cast, .tray__flyer.is-flat img`. Confidence: high.
+
+[S3] sticker-tray.css:165-179 (z-index x4), :315-325 (shade opacity x3), :327-337 (foot font-size x3)
+  Ten rules keyed on data-depth that restate traySheets.ts:39 `INSET = 0.025` (0.975/0.95/0.925) and trayPaging.ts:62 `shadeOf = (d) => clamp(d * 0.3, 0, 0.9)` (0.3/0.6/0.9; its comment says "As the CSS shades each level back").
+  Fix: sheetEl sets `--depth` with data-depth; CSS becomes `z-index: calc(4 - var(--depth))`, `opacity: min(calc(var(--depth) * 0.3), 0.9)`, `font-size: calc(var(--fs-fine) / ((1 - 0.025 * var(--depth)) * var(--scale, 1)))`, or the engine sets the shade and inset values it already computes. Confidence: medium.
+
+[S4] sticker-tray.css `width: 156px` at :141, :159, :394, :695, :874 and `var(--sheet-h, 364px)` at :142, :160, :395, :875
+  Five copies of SHEET.w (trayModel.ts:267). The 364px fallbacks never apply: sheetEl calls sizePages() first, which sets --sheet-h on the root before any sheet exists.
+  Fix: set `--sheet-w` from SHEET.w where --sheet-h is set (or once in trayEngine), use it in the five rules, drop the 364px fallbacks. Confidence: medium.
+
+[S5] sticker-tray.css:484-487 and :513-515 two `cursor: pointer` rules for slot states
+  Fix: one rule, `.tray__slot:is([data-state="used"], [data-state="given"], [data-state="inTheBag"], [data-state="onItsWay"]) { cursor: pointer; }`; the comment at :483 names only the given spot though the rule covers used too. Confidence: medium-low.
+
+[S6] traySheets.ts:349 `sheetLabel(f, cls.includes("is-pulled") ? "pulled" : "front")`
+  Picks the accessible name by sniffing the class string passed in.
+  Fix: sheetEl takes the SheetName (or a `pulled` flag) and derives the class from it. Confidence: medium.
+
+[S7] trayModel.ts:383-387 `modelOf(list, seen)` has no doc and adds to `seen` as a side effect while reading like a constructor.
+  Fix: one-line JSDoc ("Copies the stickers into slots, and remembers the ones already seen"), or move the seen update to trayEngine's two callers. Confidence: low-medium.
+
+[S8] trayModel.ts:377 `export const local = (e, view) => ...`
+  `local` says nothing; the doc says "A pointer's place in board pixels".
+  Fix: rename `boardPoint`. Confidence: low-medium.
+
+[R14] sticker-tray.css:253 `.tray__foot { height: calc(15px / var(--scale, 1)); }` restates trayModel.ts:256 `PEEK = 15` (each sheet behind sits PEEK lower so exactly its foot shows); sticker-tray.css:142 `.tray__stack { height: calc(var(--sheet-h, 364px) + 72px) }` has an unexplained 72px (STACK_FOOT is 70).
+  Fix: set `--peek` (and a stack-foot value) from TS where --sheet-h is set, and use them. Confidence: medium.
+
+== 4. Tests ==
+
+[T1] StickerTray.test.tsx boilerplate repeated 3+ times with no helper, or around an existing one:
+  - open: `openTray` exists (:126) but :274 and :327 inline it; close is inline at :110, :528, :605, :1096. Add `closeTray()`; openAndShut becomes `await openTray(); await closeTray();`.
+  - keydown: :198, :413, :695, :804, :852 build `new KeyboardEvent("keydown", { key, bubbles: true })`. Add `press(el, key)`; pageDown is `press(stackEl(), "PageDown")`.
+  - `frontSheet()?.querySelector('.tray__slot[data-state="here"]')` at :420, :673, :693, :801, :847 (and :144, :435 on other sheets). Add `hereOn(sheet = frontSheet())`.
+  - tap = pointerdown on an element then pointerup on the stack at :388-389, :421-422, :499-500, :624-625, :832-833. Add `tap(el, x, y)`.
+  - folder tab click at :486, :501, :781, while :1104 defines `tab(filter)` locally. Hoist `tab()` and add `chooseTab(filter)`.
+  - `.tray__depth` click at :867, :891, :1074. Add `spreadSheets()`.
+  Confidence: high (AGENTS.md makes extraction mandatory past 3).
+
+[T2] StickerTray.test.tsx:1003, :1013-1016, :1063-1067 recompute what `openStack(height)` (:961-966) returns; :1067 uses STACK_FOOT where openStack uses stackFootFor(sheetCount()). :1037-1042 repeats openOn's clientHeight mock because openOn only takes a count.
+  Fix: use openStack() in all three; let openOn take `number | BoardStickerView[]`. Confidence: high.
+
+[T3] Redundant tests:
+  - :987-991 "never grows the stack past its most" asserts scale === MAX_STACK_SCALE, which trayModel.test.ts:36-40 already asserts on trayFitFor; :978-985 already checks the DOM takes a large screen's grown scale.
+  - :1001-1005 "leaves the stack full size when everything fits the mouth" (700px, scale 1) is covered by the it.each at :1008-1021 (scale 1 at 776px, one sheet and a deep stack).
+  - :506-513 and :515-533 both render [] then let a sticker arrive; one test can check the empty line, the name and aria-describedby.
+  Fix: drop the first two; merge the last pair. Confidence: medium.
+
+[T4] Assertions that can't fail:
+  - StickerTray.test.tsx:304 `expect(boardReads.mock.results.at(-1)?.value).toBe(moved);` restates the spy (:297 makes every later call return `moved`; :300 already proved a call). Drop. Confidence: high.
+  - edgeBands.test.ts:21 `expect(share).toBeGreaterThan(edges[0].bottom - edges[0].top);` compares the test's own fixture arithmetic; no edit to edgeAt turns it red. Drop. Confidence: high.
+  - StickerTray.test.tsx:1082 `expect(turn).toBeDefined();` is red only when the regex misses, when the y check fails anyway. Use `const [, y, , k]` and drop it. Confidence: medium.
+
+[T5] Names and keys that restate values:
+  - StickerTray.test.tsx:587 "not once the tray has been opened three times" while the body uses TUG_VISITS; rename "not once the tray's first few visits are over". Confidence: medium.
+  - :536 `localStorage.getItem("draw.tray.visits")` repeats traySeen.ts's private key; use `visitsSoFar()` and expect 1. Confidence: medium.
+
+[T6] StickerTray.test.tsx:661-663 and :854-856 each wait 700 ms of real time (`setTimeout(resolve, 700)`), no reason given for 700.
+  Fix: one named helper with the reason (the mouth's spring settling), on fake timers if the frames allow. Confidence: medium.
+
+[T7] StickerTray.test.tsx:149-157 (`unspiedMatchMedia`, `media(motion, large)`) and :164-166 (`Object.defineProperty(motion, "matches", ...)`) re-implement ui/testing.ts's SwitchedQuery/ReducedMotion/onLargeScreen; `media` also answers every query but LARGE_SCREEN with the motion list, so a new query the tray reads would silently answer as reduced motion.
+  Fix: a ui/testing.ts helper answering REDUCED_MOTION and LARGE_SCREEN by switches and the rest through happy-dom (as onTouchScreen does); `animate(on)` becomes `motion.change(!on)`. Confidence: medium.
+
+[T8] StickerTray.test.tsx:49-79 builds a BoardStickerView by hand; StickerDetail.test.tsx:53-79 has a near-identical builder (same fields, `drawnWidth: 480`, placements, trail...). api/testFixtures.ts has sticker()/boardSticker() for the API shapes only.
+  Fix: one `boardStickerView(overrides)` in api/testFixtures.ts; four test files build one by hand (StickerTray, StickerDetail, stickerDetailQuery, lastBoard). Confidence: medium.
+
+[T9] The language restore `onTestFinished(async () => { await i18next.changeLanguage("en"); })` at StickerTray.test.tsx:1113-1115, :1149-1151 and trayProblem.test.ts:32-34 (20 test files restore "en"). Fix: an `inLanguage(lang)` helper in ui/testing.ts. Confidence: low-medium (cross-cutting).
+
+[T10] trayModel.test.ts:15-16 `stackEnd = 2 + STACK_Y + fit.scale * sheetH + stackFootFor(sheets) + POUCH_LINING` restates trayFitFor's room formula, unexplained 2 included, so :31's toBeCloseTo(foot) holds by algebra; :29's mouthShortFor === 0 states the same fact through the code. Drop stackEnd (or import the named constant from M2). Confidence: low-medium.
+
+[T11] traySlots.test.ts:23-31 "keeps each sticker's slot for good": the [sheet, slot] assertion passes for any PER_SHEET >= 3 and never shows "for good" (a given sticker keeping its slot). Add a given sticker and check the next one's slot, or drop that assertion. Confidence: low-medium.
+
+[T12] sheetPacking.test.ts:38-42 `opts` copies SHEET and PACK_MARGIN as literals ({156, 364}, {30, 10, 24, 10}); the comment at :43 says "As the sticker tray packs". Import SHEET and export PACK_MARGIN. Confidence: low.
+
+== 3. Comments ==
+
+[C1] sheetPacking.ts:1-14 file-top overview is 14 lines (limit 7). Rewrite (the "given stickers stay in the list" contract moves to trayModel.ts packWith):
+/**
+ * Sticker sheets packed by each sticker's cut line, as on a die-cut sheet: varied gaps, slight turns,
+ * never shrunk to fit. Deterministic: a spot depends only on the stickers before it, so a later one
+ * never sits on an earlier sheet and appending moves nothing but a spread sheet's lines. Each sheet
+ * keeps a skyline grown by the clearance; a new sticker is lowered onto it at every x and settles on
+ * its own cut line. `spread` shares a sheet's spare room evenly between its lines.
+ */
+  Confidence: high.
+
+[C2] sticker-tray.css:1-4 "trayEngine.ts places everything; motion is transform and opacity only." Sheets and slots are placed by traySheets.ts, and the folder tab's ::before transitions background-color and box-shadow (:741-744, :913-915). Rewrite the last sentence: "The tray's scripts place everything; motion is transform and opacity, but for a folder tab's fill." Confidence: medium-low.
+
+[C3] trayPaging.ts:333 `void stack.offsetWidth;` forces layout with no reason given. Add: `// Commits the old filter's fade, so the new one transitions from it.` Confidence: medium.
+
+[C4] edgeBands.ts:12 "The edges are strips 15px tall" restates PEEK as a number. Rewrite: "The edges are strips one PEEK tall, too thin to hit alone, so the front sheet's own foot, the edges and the gap under the last are shared out evenly among them." Confidence: low-medium.
+
+[C5] Section banners that restate their file's own overview: traySpread.ts:56 `/* ---- the spread: the stack's depth button lays every sheet out */`, traySheets.ts:78 `/* ---- drawing a sheet */`. Drop. Confidence: low.
+
+== 6. Magic numbers (cont.) ==
+
+[M4] trayPaging.ts page(): `-118` at :112, :121, :150, :158 and `2.2`/`-2.2` at the same lines (the lift a sheet takes out of the stack's top, and its turn), four copies each.
+  Fix: `const LIFT = { dy: -118, r: 2.2 }` with its reason. Confidence: medium.
+
+[M5] trayPaging.ts:240-242 `pile = (d, dy = 0, r = 0) => restAt(d * 0.15, 30 + dy, r)` and `DROP = Math.max(320, ((ui.band ? ui.band.bot - ui.stackAt.y : 470) + 12) / ui.fit.scale)`; :266, :292, :316 pass `DROP - 30` to cancel pile's +30. 320, 470, 12, 0.15 carry no reason.
+  Fix: fold the 30 into DROP once and name the dip and the 470 fallback. Confidence: medium.
+
+== 7. Footguns / performance (cont.) ==
+
+[P2] traySheets.ts:363-392 renderStack rebuilds every drawn sheet (each slot, its img and foil) after each page turn (trayPaging.ts:130, :135), and bringToFront (trayPaging.ts:193-194) riffles by calling page() once per hop, so a riffle through k sheets rebuilds the stack k times and re-creates its <img> elements each time.
+  Fix: reuse sheet elements by data-f across renders, updating depth, class and transform. Confidence: low-medium (larger change).
+
+== 2. Simplifications (cont.) ==
+
+[S9] StickerTray.tsx:100-108 forwards each TrayBoard method by hand; a new method goes in the interface, here and the test's stub. Fix: hand the engine `() => latest.current.api` and let it read the board's side at call time. Confidence: low.
+[S10] StickerTray.tsx:82 `useRef(new Set<string>())` builds a Set every render; only the first is kept. Fix: lazy init. Confidence: low.
+[S11] trayPaging.ts:18 `FILTERS` repeats trayModel.ts:95 `Filter`. Fix: `export const FILTERS = ["all", "mine", "gifts"] as const; export type Filter = (typeof FILTERS)[number];` in trayModel.ts. Confidence: low-medium.
+[S12] traySheets.ts:150-167 a five-deep nested ternary names a slot. Fix: a switch on s.state. Confidence: low.
+[S13] traySheets.ts:233-234 sizes .tray__fit to exactly its slot's size (placeAt sets the same q.w x q.h at :118-119) and CSS centers it (sticker-tray.css:530-535); trayPeel.ts:50-58 reads the fit's inline size back. Fix: `.tray__fit { inset: 0 }`, drop the inline size, read the slot's. Confidence: low.
+
+== 5. Errors / guards ==
+
+[E1] inertBesides.ts:6-8 throws when the spread isn't inside the board, which can't happen (spreadLayer is made inside the tray's root, which trayEngine appends to the board); inertBesides.test.ts:47-49 tests the guard. Goes away with R4. Confidence: low.
+[E2] sheetPacking.ts:545-549 falls back to a centered spot when a sticker doesn't fit an empty sheet, with no comment. With the tray's fit (66x76, minSize 44) on a 156px page it can't trigger. Add a one-line reason or drop. Confidence: low.
