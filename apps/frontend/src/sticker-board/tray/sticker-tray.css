@@ -122,7 +122,7 @@
   left: 0;
   top: 0;
   width: var(--sheet-w);
-  /* Its press area: the front sheet, and a deep stack's foot under it, which keeps its size on screen. */
+  /* Its press area: the front sheet, and the foot it shows under it, which keeps its size on screen. */
   height: calc(var(--sheet-h) + var(--stack-foot) / var(--scale, 1));
   /* The engine shrinks the stack on a short board and grows it on a large screen; its edges keep their
      size on screen. */
