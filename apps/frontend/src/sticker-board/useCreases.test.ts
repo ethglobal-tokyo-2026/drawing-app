@@ -210,11 +210,33 @@ describe("CreaseStore", () => {
     expect(changed).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps the crease shown when a second bake of the same stack lands, and doesn't post it again", () => {
+    const store = new CreaseStore();
+    const changed = vi.fn();
+    store.watch(job.id, changed);
+    const todo = store.want([job]);
+    store.land(bake(job));
+    const shown = store.creaseOf(job.id);
+    store.land(bake(job));
+    expect(store.creaseOf(job.id)).toBe(shown);
+    expect(changed).toHaveBeenCalledTimes(1);
+    expect(store.stillToBake(todo)).toEqual([]);
+  });
+
   it("doesn't bake a stack again once its bake left nothing to show", () => {
     const store = new CreaseStore();
     store.want([job]);
     store.land(bake(job, false));
     expect(store.want([job])).toEqual([]);
+  });
+
+  it("doesn't bake a stack again once its bake failed, until the stack changes", () => {
+    const store = new CreaseStore();
+    store.want([job]);
+    store.fail(job);
+    expect(store.want([job])).toEqual([]);
+    const restacked = { ...job, key: "another stack" };
+    expect(store.want([restacked])).toEqual([restacked]);
   });
 
   it("lets go of a crease's images when it's replaced and when the board goes", () => {

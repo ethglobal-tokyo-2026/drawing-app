@@ -1,5 +1,6 @@
 import { blankCanvas, context2d } from "../canvas/context2d";
 import { releaseCanvas } from "../../ui/releaseCanvas";
+import { workerCanPaint } from "../../ui/workerCanPaint";
 import { cutSticker, type CutSticker, type MakeCanvas } from "./cutSticker";
 import type { SealReply, SealRequest } from "./sealWorker";
 
@@ -35,12 +36,6 @@ const elementCanvas: MakeCanvas = (width, height) => {
     bitmap: () => createImageBitmap(canvas).finally(() => releaseCanvas(canvas)),
   };
 };
-
-/** The sealing worker paints on OffscreenCanvas, which older iOS lacks: there the cut runs here. */
-const workerCanCut = () =>
-  typeof Worker === "function" &&
-  typeof OffscreenCanvas === "function" &&
-  new OffscreenCanvas(1, 1).getContext("2d") !== null;
 
 /** The sealing worker's script didn't load. */
 class WorkerDidNotStart extends Error {}
@@ -122,7 +117,10 @@ export async function makeSticker(
   ink: HTMLCanvasElement,
   density: number,
 ): Promise<SealedSticker | null> {
-  const cut = workerCanCut() ? await cutInWorkerOrHere(ink, density) : await cutHere(ink, density);
+  // The sealing worker paints on OffscreenCanvas; where a worker can't, the cut runs here.
+  const cut = workerCanPaint()
+    ? await cutInWorkerOrHere(ink, density)
+    : await cutHere(ink, density);
   if (!cut) return null;
   const { maskPixels, ...rest } = cut;
   const { width, height } = rest;

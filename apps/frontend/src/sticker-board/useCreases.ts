@@ -22,6 +22,7 @@ import { kyotoSeikaBandWidth } from "../stickers/kyotoSeikaFoil";
 import type { FoilTone } from "../stickers/StickerFoil";
 import type { StickerUrls } from "../stickers/stickerUrls";
 import { deviceSetting } from "../ui/deviceSetting";
+import { workerCanPaint } from "../ui/workerCanPaint";
 import { stickerBox, type Field, type Placement } from "./placement";
 
 interface CreaseSticker {
@@ -214,7 +215,10 @@ interface Baked {
 
 /** One board's baked creases, by sticker, and who watches each. */
 export class CreaseStore {
-  /** Includes a sticker whose bake left nothing to show, so its stack isn't baked again. */
+  /**
+   * Includes a sticker whose bake left nothing to show or failed, so its stack isn't baked again until
+   * it changes.
+   */
   readonly #baked = new Map<string, Baked>();
   readonly #watchers = new Map<string, Set<() => void>>();
   /** The key each sticker's crease must match to show: the board's stack now. */
@@ -245,16 +249,32 @@ export class CreaseStore {
     for (const [id, baked] of this.#baked) {
       if (this.#wanted.get(id) !== baked.key) this.#put(id, null);
     }
-    return jobs.filter((j) => this.#baked.get(j.id)?.key !== j.key);
+    return this.stillToBake(jobs);
   }
 
-  /** Shows a bake's crease, unless the sticker's stack has changed since it was posted. */
+  /** Those of `jobs` the board's stack still calls for and no bake has answered yet. */
+  stillToBake(jobs: readonly CreaseJob[]): CreaseJob[] {
+    return jobs.filter(
+      (j) => this.#wanted.get(j.id) === j.key && this.#baked.get(j.id)?.key !== j.key,
+    );
+  }
+
+  /**
+   * Shows a bake's crease, unless the sticker's stack has changed since it was posted, or a bake of
+   * the same stack already shows: replacing it would press it in again.
+   */
   land({ id, key, crease }: Extract<CreaseReply, { ok: true }>) {
-    if (this.#wanted.get(id) !== key) return;
+    if (this.#wanted.get(id) !== key || this.#baked.get(id)?.key === key) return;
     this.#put(id, {
       key,
       ...(crease && { crease: byImage((image) => URL.createObjectURL(crease[image])) }),
     });
+  }
+
+  /** Records a bake that failed, so its stack isn't posted again until it changes. */
+  fail({ id, key }: { id: string; key: string }) {
+    if (this.#wanted.get(id) !== key || this.#baked.get(id)?.key === key) return;
+    this.#put(id, { key });
   }
 
   /** Lets go of every crease, as the board goes. */
@@ -293,11 +313,20 @@ export function useCrease(id: string): Crease | undefined {
 /** The mounted boards' stores, by the board id their batches carry back in the worker's replies. */
 const stores = new Map<string, CreaseStore>();
 let worker: Worker | null = null;
+/** Whether a worker can paint here, checked once, the first time a board bakes. */
+let workerPaints: boolean | null = null;
 let batches = 0;
+
+/** Says what went wrong with creases, in the console and the performance recorder. */
+function sayCreaseFailed(why: string) {
+  console.error(why);
+  notePerformance("crease", why);
+}
 
 function heard(reply: CreaseReply) {
   if (!reply.ok) {
-    console.error(`Baking sticker ${reply.id}'s crease failed:`, reply.error);
+    sayCreaseFailed(`Baking sticker ${reply.id}'s crease failed: ${reply.error}`);
+    stores.get(reply.board)?.fail(reply);
     return;
   }
   if (isPerformanceRecorderOn()) {
@@ -306,16 +335,44 @@ function heard(reply: CreaseReply) {
   stores.get(reply.board)?.land(reply);
 }
 
-/** The one worker every board's batches go to. */
-function creaseWorker() {
-  if (!worker) {
-    worker = new Worker(new URL("../stickers/creaseWorker.ts", import.meta.url), {
-      type: "module",
-    });
-    worker.onmessage = (event: MessageEvent<CreaseReply>) => heard(event.data);
-    worker.onerror = (event) => console.error("The crease worker failed:", event.message);
+/** Lets go of a worker that failed, so the next batch starts a fresh one. */
+function dropWorker(failed: Worker, why: string) {
+  sayCreaseFailed(why);
+  failed.terminate();
+  if (worker === failed) worker = null;
+}
+
+/** The one worker every board's batches go to; none where a worker can't paint, which it says once. */
+function creaseWorker(): Worker | null {
+  if (worker) return worker;
+  if (workerPaints === null) {
+    workerPaints = workerCanPaint();
+    if (!workerPaints)
+      sayCreaseFailed("A worker can't paint in this browser, so no crease is baked");
   }
-  return worker;
+  if (!workerPaints) return null;
+  const started = new Worker(new URL("../stickers/creaseWorker.ts", import.meta.url), {
+    type: "module",
+  });
+  started.onmessage = (event: MessageEvent<CreaseReply>) => heard(event.data);
+  // A script that didn't load reports a bare event, with no message: a page open since before a
+  // deploy asks for the old build's worker, which the deploy removed.
+  started.onerror = (event) =>
+    dropWorker(
+      started,
+      event.message
+        ? `The crease worker failed: ${event.message}`
+        : "The crease worker's script didn't load",
+    );
+  started.onmessageerror = () => dropWorker(started, "The crease worker's answer couldn't be read");
+  worker = started;
+  return started;
+}
+
+/** Tells the worker, if it's running, that a board wants nothing baked, so it drops the board's batch. */
+function bakeNothingFor(board: string) {
+  const message: CreaseBatch = { board, batch: ++batches, jobs: [] };
+  worker?.postMessage(message);
 }
 
 /**
@@ -363,6 +420,7 @@ export function useCreases<S extends CreaseSticker>({
     return () => {
       stores.delete(board);
       store.clear();
+      bakeNothingFor(board);
     };
   }, [board, store]);
 
@@ -378,15 +436,21 @@ export function useCreases<S extends CreaseSticker>({
           )
         : [];
     const todo = store.want(jobs);
-    if (!todo.length) return undefined;
+    if (!todo.length) {
+      bakeNothingFor(board);
+      return undefined;
+    }
     const timer = window.setTimeout(() => {
-      const message: CreaseBatch = { board, batch: ++batches, jobs: todo };
+      // A bake of the last batch may have landed while the board held still.
+      const left = store.stillToBake(todo);
+      if (!left.length) return;
+      const message: CreaseBatch = { board, batch: ++batches, jobs: left };
       // Creases are decoration: a worker that can't start leaves the board without them, and says so.
       try {
-        creaseWorker().postMessage(message);
+        creaseWorker()?.postMessage(message);
       } catch (error) {
         console.error(
-          `The crease worker didn't start, so ${todo.length} stickers show no crease`,
+          `The crease worker didn't start, so ${left.length} stickers show no crease`,
           error,
         );
       }
