@@ -1,6 +1,10 @@
 // @vitest-environment happy-dom
 import type { KyotoSeikaSubject } from "@drawing-app/api/client";
-import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
+import {
+  IDBDatabase as FakeDb,
+  IDBFactory as FakeIndexedDB,
+  IDBObjectStore as FakeStore,
+} from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { personKey } from "../../ui/deviceStorage";
 import { CHARRED_AT_ROLL } from "../../kyoto-seika/dieMood";
@@ -13,11 +17,23 @@ import {
   keptColor,
   loadKeptSession,
   LOAD_TIMEOUT_MS,
+  SAVE_WORK,
   SessionKeeper,
   UNDEALT,
+  WRITE_TIMEOUT_MS,
 } from "./keptSession";
 
+/** The labels work was timed under, as the performance recorder hears them. */
+const timed = vi.hoisted((): string[] => []);
+vi.mock("../../performance/performanceRecorder", () => ({
+  timeOurWork: <T>(label: string, work: () => T): T => {
+    timed.push(label);
+    return work();
+  },
+}));
+
 const stroke = (color: string): Op => ({ tool: "brush", color, pts: [], T: 0 });
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 /** A deal of five, one of each kind: the first of each in the test list. */
 const FIVE = TEST_SUBJECTS.filter((s, i, all) => all.findIndex((o) => o.kind === s.kind) === i);
 /** The sheet these drawings are drawn on. */
@@ -50,9 +66,19 @@ function draw(
   return keeper;
 }
 
-/** The steps kept for `userId`; the load also waits for every write started before it. */
+/**
+ * What's kept for `userId` once the writes asked of its keepers have landed: a load waits for the
+ * writes started before it, and one merged behind another starts as that one lands, before the
+ * second load.
+ */
+async function loadKept(userId: string) {
+  await loadKeptSession(userId);
+  return loadKeptSession(userId);
+}
+
+/** The steps kept for `userId`, once the writes asked so far have landed. */
 async function keptSteps(userId: string) {
-  const kept = await loadKeptSession(userId);
+  const kept = await loadKept(userId);
   return kept.status === "found" ? kept.steps : kept.status;
 }
 
@@ -67,17 +93,59 @@ async function openKept(): Promise<IDBDatabase> {
   });
 }
 
-/** Writes `step` as step `i` of the drawing kept, as an older build would have kept it. */
-async function keepStepAs(i: number, step: unknown) {
+/** Runs `edit` on the store of steps kept, as another build or a lost write would have left it. */
+async function editKeptSteps(edit: (ops: IDBObjectStore) => void) {
   const db = await openKept();
   await new Promise<void>((resolve, reject) => {
     // keptSession.ts's store of steps.
     const tx = db.transaction("ops", "readwrite");
-    tx.objectStore("ops").put(step, i);
+    edit(tx.objectStore("ops"));
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
   db.close();
+}
+
+/** Writes `step` as step `i` of the drawing kept, as an older build would have kept it. */
+const keepStepAs = (i: number, step: unknown) => editKeptSteps((ops) => ops.put(step, i));
+
+/** The places of the steps kept. */
+async function keptPlaces() {
+  let places: IDBValidKey[] = [];
+  await editKeptSteps((ops) => {
+    const keys = ops.getAllKeys();
+    keys.onsuccess = () => (places = keys.result);
+  });
+  return places;
+}
+
+/** How many steps are written from now on. */
+function countStepPuts() {
+  const put = vi.spyOn(FakeStore.prototype, "put");
+  return () =>
+    put.mock.calls.filter(
+      ([value]: unknown[]) => typeof value === "object" && value !== null && "tool" in value,
+    ).length;
+}
+
+/**
+ * `keeper` saves `live` after each of `edits`, while another tab holds the stores; the first of
+ * those writes aborts once they're all made, and the stores are let go.
+ */
+async function abortFirstWrite(keeper: SessionKeeper, live: Step[], edits: (() => void)[]) {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const release = await holdStores();
+  const transactions = vi.spyOn(FakeDb.prototype, "transaction");
+  for (const edit of edits) {
+    edit();
+    keeper.save(live, 0, FRAME);
+    await tick();
+  }
+  const first = transactions.mock.results[0];
+  transactions.mockRestore();
+  if (first?.type !== "return") throw new Error("No write was made");
+  first.value.abort();
+  release();
 }
 
 /** Holds the one database's stores in a transaction until the returned release, as a slow disk would. */
@@ -135,6 +203,19 @@ describe("the drawing kept on this device", () => {
     expect(await keptSteps(theirs)).toEqual([c]);
   });
 
+  it("says whether a new session's record was written, which a reload needs to know its ticket was spent", () => {
+    expect(new SessionKeeper(someone()).start(7)).toBe(true);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    // A stand-in storage: spying on happy-dom's own doesn't reach it.
+    vi.stubGlobal("localStorage", {
+      removeItem: () => {},
+      setItem: () => {
+        throw new DOMException("The quota has been exceeded", "QuotaExceededError");
+      },
+    });
+    expect(new SessionKeeper(someone()).start(7)).toBe(false);
+  });
+
   it("brings a drawing back with its clears, so undo can still reach what was cleared", async () => {
     const userId = someone();
     const steps: Step[] = [stroke("a"), { tool: "clear" }, stroke("b")];
@@ -155,8 +236,8 @@ describe("the drawing kept on this device", () => {
     const [framed, unframed] = [someone(), someone()];
     draw(framed, [stroke("a")]);
     draw(unframed, [stroke("a")], { frame: null });
-    expect(await loadKeptSession(framed)).toMatchObject({ status: "found", frame: FRAME });
-    expect(await loadKeptSession(unframed)).toMatchObject({ status: "found", frame: null });
+    expect(await loadKept(framed)).toMatchObject({ status: "found", frame: FRAME });
+    expect(await loadKept(unframed)).toMatchObject({ status: "found", frame: null });
   });
 
   it("keeps how the tools were set, and a screen's first render clears nothing kept", async () => {
@@ -165,7 +246,7 @@ describe("the drawing kept on this device", () => {
     draw(userId, [stroke("a")]).keepTools(tools);
     // A screen with no session yet only reports its tools, which mustn't wipe the session kept.
     new SessionKeeper(userId).keepTools({ brushSize: 0.34, eraserSize: 0.52, smoothing: 30 });
-    expect(await loadKeptSession(userId)).toMatchObject({ status: "found", tools });
+    expect(await loadKept(userId)).toMatchObject({ status: "found", tools });
   });
 
   it("leaves a drawing it couldn't read as it was while the carried sheet is still blank", async () => {
@@ -178,7 +259,7 @@ describe("the drawing kept on this device", () => {
     after.carry(7, null);
     after.keepTools({ brushSize: 0.7, eraserSize: 0.2, smoothing: 55 });
     after.keepNsfw(false);
-    expect(await loadKeptSession(userId)).toMatchObject({
+    expect(await loadKept(userId)).toMatchObject({
       status: "found",
       steps: ops,
       elapsedMs: 1000,
@@ -194,7 +275,7 @@ describe("the drawing kept on this device", () => {
     if (typeof record !== "object" || record === null) throw new Error("No record is kept");
     for (const tools of [undefined, { brushSize: 9, eraserSize: 0.2, smoothing: 55 }, "wide"]) {
       localStorage.setItem(key, JSON.stringify({ ...record, tools }));
-      const kept = await loadKeptSession(userId);
+      const kept = await loadKept(userId);
       expect(kept).toMatchObject({ status: "found" });
       expect(kept).not.toHaveProperty("tools");
     }
@@ -217,6 +298,79 @@ describe("the drawing kept on this device", () => {
     vi.useRealTimers();
     expect(await kept.later).toMatchObject({ status: "found", steps: ops });
     expect(await keptSteps(userId)).toEqual(ops);
+  });
+
+  it("reads each step at its own place, so one missing below the count loses the drawing, and an undo deletes the steps it took back", async () => {
+    const userId = someone();
+    const steps = ["a", "b", "c", "d"].map(stroke);
+    draw(userId, steps).save(steps.slice(0, 2), 2000, FRAME);
+    expect(await keptSteps(userId)).toEqual(steps.slice(0, 2));
+    expect(await keptPlaces()).toEqual([0, 1]);
+    // A step lost below the count, and a stray one past it.
+    await editKeptSteps((ops) => {
+      ops.delete(1);
+      ops.put(stroke("e"), 2);
+    });
+    expect(await keptSteps(userId)).toBe("lost");
+  });
+
+  it("writes every step again after a write fails, before a save waiting behind it lands", async () => {
+    const userId = someone();
+    const [s0, s1, s2, s3, s4] = ["s0", "s1", "s2", "s3", "s4"].map(stroke);
+    // An undo, then two strokes, the first of whose writes fails.
+    const keeper = draw(userId, []);
+    const live = [s0, s1, s2, s3, s4];
+    keeper.save(live, 0, FRAME);
+    live.length = 3;
+    keeper.save(live, 0, FRAME);
+    expect(await keptSteps(userId)).toEqual(live);
+    const [t3, t4] = ["t3", "t4"].map(stroke);
+    await abortFirstWrite(keeper, live, [() => live.push(t3), () => live.push(t4)]);
+    expect(await keptSteps(userId)).toEqual(live);
+
+    // Three strokes on a new sheet, the first of whose writes fails, then an undo.
+    const steps = [s0, s1];
+    const again = draw(userId, steps);
+    await abortFirstWrite(again, steps, [
+      () => steps.push(s2),
+      () => steps.push(s3),
+      () => steps.push(s4),
+      () => steps.pop(),
+    ]);
+    expect(await keptSteps(userId)).toEqual(steps);
+  });
+
+  it("says the drawing isn't kept once a write hasn't landed in time, and writes what waited once, whole, when it does", async () => {
+    const userId = someone();
+    const onKept = vi.fn();
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const keeper = draw(userId, [], { onKept });
+    expect(await keptSteps(userId)).toEqual([]);
+    const release = await holdStores();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    // The canvas hands over its live steps, as History does.
+    const live: Step[] = [];
+    for (const color of ["a", "b", "c"]) {
+      live.push(stroke(color));
+      keeper.save(live, 0, FRAME);
+    }
+    await vi.advanceTimersByTimeAsync(WRITE_TIMEOUT_MS);
+    expect(onKept).toHaveBeenLastCalledWith(false);
+    expect(error).toHaveBeenCalledOnce();
+    const puts = countStepPuts();
+    release();
+    vi.useRealTimers();
+    await vi.waitFor(() => expect(puts()).toBe(live.length));
+    expect(await keptSteps(userId)).toEqual(live);
+    expect(onKept).toHaveBeenLastCalledWith(true);
+  });
+
+  it("times its writes for the performance recorder", async () => {
+    const userId = someone();
+    timed.length = 0;
+    draw(userId, [stroke("a")]);
+    expect(await keptSteps(userId)).toEqual([stroke("a")]);
+    expect(timed).toContain(SAVE_WORK);
   });
 
   it("goes on keeping strokes after the browser closes its connection, and says while it can't", async () => {
@@ -255,7 +409,7 @@ describe("the drawing kept on this device", () => {
     keeper.start(7, UNDEALT);
     const dealt = { subjects: FIVE, picked: [3, 0], rolls: 4, begun: false };
     keeper.keepKyotoSeika(dealt);
-    expect(await loadKeptSession(userId)).toMatchObject({
+    expect(await loadKept(userId)).toMatchObject({
       status: "found",
       ticket: 7,
       kyotoSeika: dealt,
@@ -267,13 +421,13 @@ describe("the drawing kept on this device", () => {
       begun: true,
     };
     keeper.keepKyotoSeika(begun);
-    expect(await loadKeptSession(userId)).toMatchObject({ kyotoSeika: begun });
+    expect(await loadKept(userId)).toMatchObject({ kyotoSeika: begun });
   });
 
   it("keeps no Kyoto Seika Practice Mode part for a regular sheet", async () => {
     const userId = someone();
     draw(userId, [stroke("a")]);
-    expect(await loadKeptSession(userId)).toMatchObject({ status: "found", kyotoSeika: null });
+    expect(await loadKept(userId)).toMatchObject({ status: "found", kyotoSeika: null });
     const record: unknown = JSON.parse(
       localStorage.getItem(personKey("draw.session", userId)) ?? "null",
     );
@@ -298,7 +452,7 @@ describe("the drawing kept on this device", () => {
       rolls: 2,
       begun: true,
     });
-    expect(await loadKeptSession(userId)).toMatchObject({
+    expect(await loadKept(userId)).toMatchObject({
       kyotoSeika: { subjects: [sent(WIND), sent(REUNION)], picked: [0, 1], rolls: 2, begun: true },
     });
 
@@ -329,7 +483,7 @@ describe("the drawing kept on this device", () => {
     vi.spyOn(indexedDB, "open").mockImplementation(() => {
       throw new DOMException("Connection to Indexed Database server lost", "UnknownError");
     });
-    expect(await loadKeptSession(userId)).toMatchObject({
+    expect(await loadKept(userId)).toMatchObject({
       status: "unread",
       ticket: 7,
       kyotoSeika: part,

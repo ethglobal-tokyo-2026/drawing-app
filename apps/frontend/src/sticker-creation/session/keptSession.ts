@@ -1,3 +1,4 @@
+import { timeOurWork } from "../../performance/performanceRecorder";
 import { personKey, parseStored, readStored, writeStored } from "../../ui/deviceStorage";
 import { pickedPair, PICKS } from "../../kyoto-seika/deal";
 import { KINDS, readDealtSubject, type DealtSubject } from "../../kyoto-seika/subjectList";
@@ -22,6 +23,22 @@ const FRAME_KEY = 1;
 const recordKey = (userId: string) => personKey("draw.session", userId);
 /** A kept drawing whose steps haven't loaded by then carries its ticket over, so Draw never waits on it for good. */
 export const LOAD_TIMEOUT_MS = 5_000;
+/**
+ * A write unanswered this long counts as failed: a healthy one lands in milliseconds, and a reload
+ * gives the read no longer, so it wouldn't bring the drawing back either.
+ */
+export const WRITE_TIMEOUT_MS = 5_000;
+/** The keeper's writes as the performance recorder's report names them. */
+export const SAVE_WORK = "kept drawing save";
+
+/** What a write makes the stores hold. */
+interface PendingWrite {
+  /** Start or wipe: the stores are emptied first. */
+  clear: boolean;
+  /** The latest save's steps, read as the write starts; null when it only empties the stores. */
+  steps: readonly Step[] | null;
+  frame: SheetFrame | null;
+}
 
 /** How the artist set the size rail, for the brush and for the eraser (0 to 1 along it), and Smoothing (0 to 100). */
 export interface KeptTools {
@@ -155,11 +172,6 @@ async function transact(
   });
 }
 
-const clearStores = (ops: IDBObjectStore, progress: IDBObjectStore) => {
-  ops.clear();
-  progress.clear();
-};
-
 /** Where a save starts writing: the first step that isn't the one written there last. */
 export function firstChanged(written: readonly Step[], steps: readonly Step[]): number {
   let i = 0;
@@ -184,8 +196,12 @@ export class SessionKeeper {
   private elapsedMs = 0;
   /** The tools as the artist last set them: they outlast a sheet, so a new session keeps them too. */
   private tools: KeptTools | undefined;
-  /** The steps as last written, by reference; null when a write failed and what landed is unknown. */
+  /** What the stores hold as of the last write started, by reference; null when what landed is unknown. */
   private written: readonly Step[] | null = [];
+  /** A write is in flight: the next waits for it, so writes land in order and a late answer lets one go. */
+  private writing = false;
+  /** The next write, which later saves merge into while one is in flight. */
+  private pending: PendingWrite | null = null;
   /** Whether the last record written landed. */
   private recordKept = true;
   /** Whether the steps kept are the session's; after a failed write, not until one writing every step lands. */
@@ -202,19 +218,19 @@ export class SessionKeeper {
     this.onKept = onKept;
   }
 
-  /** A new session: the ticket it spent, its Kyoto Seika Practice Mode part if any, and nothing drawn yet. */
-  start(ticket: number | null, kyotoSeika: KeptKyotoSeika | null = null): void {
+  /**
+   * A new session: the ticket it spent, its Kyoto Seika Practice Mode part if any, and nothing drawn
+   * yet. Says whether its record was written: without it, a reload can't tell the ticket was spent.
+   */
+  start(ticket: number | null, kyotoSeika: KeptKyotoSeika | null = null): boolean {
     this.ticket = ticket;
     this.nsfw = false;
     this.kyotoSeika = kyotoSeika;
     this.elapsedMs = 0;
-    this.written = [];
     this.carried = false;
     this.keepRecord();
-    this.write(true, (ops, progress) => {
-      clearStores(ops, progress);
-      progress.put(0, PROGRESS_KEY);
-    });
+    this.queue({ clear: true, steps: [], frame: null });
+    return this.recordKept;
   }
 
   /** A session picked back up after a reload, whose steps are already kept. */
@@ -276,15 +292,8 @@ export class SessionKeeper {
     this.elapsedMs = elapsedMs;
     this.carried = false;
     this.keepRecord();
-    const written = this.written;
-    const from = written ? firstChanged(written, steps) : 0;
-    if (written && from === steps.length && steps.length === written.length) return;
-    this.written = [...steps];
-    this.write(from === 0, (stepStore, progressStore) => {
-      for (let i = from; i < steps.length; i++) stepStore.put(steps[i], i);
-      progressStore.put(steps.length, PROGRESS_KEY);
-      if (frame) progressStore.put(frame, FRAME_KEY);
-    });
+    const pending = this.pending;
+    this.queue({ clear: pending?.clear ?? false, steps, frame: frame ?? pending?.frame ?? null });
   }
 
   /** Nothing is in progress any more. */
@@ -294,10 +303,9 @@ export class SessionKeeper {
     this.nsfw = false;
     this.kyotoSeika = null;
     this.elapsedMs = 0;
-    this.written = [];
     removeRecord(this.userId);
     this.recordKept = true;
-    this.write(true, clearStores);
+    this.queue({ clear: true, steps: null, frame: null });
   }
 
   private keepRecord(): void {
@@ -314,29 +322,76 @@ export class SessionKeeper {
     this.changed();
   }
 
-  /** `whole`: it writes every step, so once it lands the steps kept are the session's again. */
-  private write(
-    whole: boolean,
-    fill: (ops: IDBObjectStore, progress: IDBObjectStore) => void,
-  ): void {
+  private queue(next: PendingWrite): void {
+    this.pending = next;
+    this.drain();
+  }
+
+  /** Starts the pending write, unless one is in flight: then it starts once that one settles. */
+  private drain(): void {
+    const next = this.pending;
+    if (!next || this.writing) return;
+    this.pending = null;
+    const before = next.clear ? [] : this.written;
+    // History hands over its live steps, so the write takes them as they are now.
+    const steps = next.steps && [...next.steps];
+    const from = steps && before ? firstChanged(before, steps) : 0;
+    if (steps && before && !next.clear && from === steps.length && steps.length === before.length)
+      return;
+    this.written = steps ?? [];
+    this.writing = true;
+    const fill = (stepStore: IDBObjectStore, progress: IDBObjectStore) =>
+      timeOurWork(SAVE_WORK, () => {
+        if (next.clear) {
+          stepStore.clear();
+          progress.clear();
+        } else if (!before) {
+          // What landed is unknown, so every step is written afresh.
+          stepStore.clear();
+        }
+        if (!steps) return;
+        for (let i = from; i < steps.length; i++) stepStore.put(steps[i], i);
+        // The steps an undo took back since the last write.
+        for (let i = steps.length; i < (before?.length ?? 0); i++) stepStore.delete(i);
+        progress.put(steps.length, PROGRESS_KEY);
+        if (next.frame) progress.put(next.frame, FRAME_KEY);
+      });
+    let deadline: ReturnType<typeof setTimeout> | undefined;
+    const judge = () => {
+      // A hidden page's writes can be held up with it, so they're judged once it's shown again.
+      if (document.visibilityState === "hidden") deadline = setTimeout(judge, WRITE_TIMEOUT_MS);
+      else this.failed(new Error(`A write didn't land within ${WRITE_TIMEOUT_MS / 1000}s`));
+    };
+    deadline = setTimeout(judge, WRITE_TIMEOUT_MS);
     transact(this.userId, "readwrite", fill).then(
       () => {
-        if (whole) this.stepsKept = true;
-        this.changed();
+        clearTimeout(deadline);
+        // Every step written: the steps kept are the session's again.
+        if (from === 0) this.stepsKept = true;
+        this.settled();
       },
       (error: unknown) => {
-        // It can't tell which of the steps landed, so the next save writes them all.
-        this.written = null;
-        this.stepsKept = false;
-        this.changed();
-        if (this.reported) return;
-        this.reported = true;
-        console.error(
-          "The drawing in progress can't be kept on this device; a reload loses it",
-          error,
-        );
+        clearTimeout(deadline);
+        this.failed(error);
+        this.settled();
       },
     );
+  }
+
+  /** A write failed, or is past its deadline though it may still land: the next writes every step. */
+  private failed(error: unknown): void {
+    this.written = null;
+    this.stepsKept = false;
+    this.changed();
+    if (this.reported) return;
+    this.reported = true;
+    console.error("The drawing in progress can't be kept on this device; a reload loses it", error);
+  }
+
+  private settled(): void {
+    this.writing = false;
+    this.changed();
+    this.drain();
   }
 
   private changed(): void {
@@ -394,10 +449,15 @@ export async function loadKeptSession(userId: string): Promise<KeptSession> {
 }
 
 async function readDrawing(userId: string): Promise<{ steps: Step[]; frame: SheetFrame | null }> {
+  let places: IDBValidKey[] = [];
   let stored: unknown[] = [];
   let count: unknown;
   let frame: unknown;
   await transact(userId, "readonly", (stepStore, progressStore) => {
+    const keys = stepStore.getAllKeys();
+    keys.onsuccess = () => {
+      places = keys.result;
+    };
     const all = stepStore.getAll();
     all.onsuccess = () => {
       stored = all.result;
@@ -415,14 +475,20 @@ async function readDrawing(userId: string): Promise<{ steps: Step[]; frame: Shee
     throw new UnreadableDrawing(
       count === undefined ? "No steps were kept" : "Its step count is unreadable",
     );
-  if (stored.length < count)
-    throw new UnreadableDrawing(`${count - stored.length} of its ${count} steps are missing`);
+  // Each step is read at its own place, so one missing below the count can't be filled from past it.
+  const atPlace = new Map(places.map((place, i): [IDBValidKey, unknown] => [place, stored[i]]));
   const steps: Step[] = [];
-  for (const value of stored.slice(0, count)) {
-    const step = readStep(value);
-    if (!step) throw new UnreadableDrawing(`Step ${steps.length} is unreadable`);
+  let missing = 0;
+  for (let i = 0; i < count; i++) {
+    if (!atPlace.has(i)) {
+      missing++;
+      continue;
+    }
+    const step = readStep(atPlace.get(i));
+    if (!step) throw new UnreadableDrawing(`Step ${i} is unreadable`);
     steps.push(step);
   }
+  if (missing > 0) throw new UnreadableDrawing(`${missing} of its ${count} steps are missing`);
   return { steps, frame: readFrame(frame) };
 }
 
