@@ -135,3 +135,76 @@ T10 StickerDetail.test.tsx:807-815, the Kyoto Seika half
   Problem: 539-557 already asserts the thought right after open(), before any read lands (emptyApi's read rejects). So this half adds nothing. The wording issue the other reviewer flagged at 807 also appears in 539's title: "thinks of a sticker drawn in Kyoto Seika Practice Mode's pair".
   Fix: drop the Kyoto Seika half from 807 (and with it the "pair" wording there). Retitle 539, for example: "shows the subjects a sticker drawn in Kyoto Seika Practice Mode combined, which screen readers hear".
   Confidence: medium
+
+--- appended after the restart (every file has now been read) ---
+Unused CSS: every BEM element and modifier class in sticker-detail.css, transfer-trail.css and detail-lift.css has a non-test use in src. A per-class rg returned no misses; the control search found sticker-detail__strip in 1 file. Nothing to remove there.
+
+S4 (over-defensive guard) trailRows.ts:60
+  if (!g || g.artistShare <= 0 || row.giver.id === artist.id) return null;
+  Problem: the API already gives no share when the Original Artist gave or received the gift (apps/api/src/gratitude/record.ts:125-133), so `artistShare <= 0` covers the giver check. That is also why T6's case can't tell the two apart.
+  Fix: drop `row.giver.id === artist.id` and its "when the giver isn't the artist" in the JSDoc. Keep one test: nothing shared gives null.
+  Confidence: medium-high
+
+S5 TransferTrail.tsx:30-31, 77 (mountReplay prop)
+  Problem: only TransferTrail.test.tsx:55 passes it. StickerDetail never does, and useGratitudeReplay.test.tsx passes `mount` to the hook directly. The prop is a test-only seam in production props, while StickerDetail.test.tsx swaps out the timelapse player with vi.mock instead.
+  Fix: vi.mock("../gratitude/replay/mountGratitudeReplay") in TransferTrail.test.tsx and drop the prop.
+  Confidence: low-medium (both styles work; this is about using one seam style)
+
+T11 StickerDetail.test.tsx:51, 178 and api/testing TEST_OWNER
+  const you = { id: "me", handle: "alice", ... };  const me = { ...TEST_OWNER, handle: "me", lineDisplayName: "Me" };
+  Problem: one person (id "me") appears under three handles: alice, you (TEST_OWNER) and me. No assertion reads "alice" or "@me" (rg for "alice"|"@me"|handle: "me" finds only the two definitions). Line 581's byMika also builds Mika by hand where toPerson(people.mika) exists.
+  Fix: const you = toPerson(TEST_OWNER); use TEST_OWNER for `me`; artist: toPerson(people.mika).
+  Confidence: medium
+
+T15 StickerDetail.test.tsx:112-130 (received), 138-176 (heldReads), 628-641 (heldDetail)
+  Problem: three helpers each build the same s-133 detail (apiSticker({ id: "s-133", artist: people.ken, ownerId: TEST_OWNER.id }) plus a hand-written trail entry with receivedAt "2026-09-23T12:00:00.000Z") where trailEntry() would do. Two of them are "a read that answers only when told".
+  Fix: one detailOf(gratitude) built on trailEntry, and one heldReads(answer) that both held-read tests use.
+  Confidence: medium
+
+T17 StickerDetail.test.tsx:310-323 ("... and keeps Give the key while it's in the bag")
+  press("Give"); expect(onGive)...
+  Problem: nothing checks that Give is the key. press() finds any button named Give, so if Give became label stock while packed, the test would stay green.
+  Fix: add expect(giveIsTheKey()).toBe(true) after the packed open.
+  Confidence: medium
+
+T12 StickerDetail.test.tsx and TransferTrail.test.tsx: expected copy
+  Problem: computed sentences are asserted as English literals ("You gave it to @bob · 9.23", "Couldn’t load where it’s been", PLAY_LABEL "Play the replay of @bob’s 2,946 gratitude", "Replaying your 2,946 gratitude", ...). Elsewhere the same files use i18next.t(...) or strings.x.en.replace("{{no}}", ...). Counted in StickerDetail.test.tsx: 34 literal-copy lines, 7 i18next.t, 5 strings.*.en. A copy edit breaks the literal ones without any behavior change.
+  Fix: build expected sentences with i18next.t(key, values), which still checks which key and which values the code chose. Literal button names can stay.
+  Confidence: medium-low
+
+T16 StickerDetail.test.tsx:298-308 (dot nearest the top-right corner, diamond)
+  Problem: it tests dotSpot's geometry through the whole detail. tray/stickerShape.test.ts holds dotSpot's own cases (triangle, unknown) but not the diamond.
+  Fix: move the diamond case to stickerShape.test.ts. Keep the detail check to "the dot layer carries dotSpot(sticker)'s spot", or drop it.
+  Confidence: low
+
+T13/T14 (cross-cutting, noted once)
+  - StickerDetail.test.tsx repeats vi.spyOn(console, "error"/"warn").mockImplementation(() => {}) 9 times; across the frontend tests it appears 97 times in 46 files (rg -c count). A shared quietConsole() in ui/testing would cut it.
+  - `declare global { var IS_REACT_ACT_ENVIRONMENT } ... = true` is repeated in 44 test files (rg -l count), both of mine included. apps/frontend/vite.config.ts sets no test.setupFiles, so one setup file would replace all 44 copies.
+  Confidence: low-medium
+
+M2 detailPaging.ts:66, 69, 91, 107
+  translateX(${side * 60}px) rotate(${side * 2}deg) / 260 / dx * 0.7, dx * 0.02 / 220
+  Problem: the slide's entry, how far it follows the finger, and its spring back have no names or reasons. LiftedSticker shares them. 220 is --t-stick spelled out, and 260 matches no token.
+  Fix: named constants beside LOCK_PX and PAGE_PX (ENTER_PX, ENTER_TURN_DEG, ENTER_MS, FOLLOW, FOLLOW_TURN_PER_PX), and the spring back from the shared --t-stick constant (R3).
+  Confidence: low-medium
+
+M3 sticker-detail.css:523, 528
+  --main-w: calc(100vw - var(--strip-w) - 18px - ...);  --room-h: calc(var(--main-h) - 24px - var(--pager-h) - 64px);
+  Problem: 18px copies .sticker-detail__main's left padding (116, 537) and 24px copies the stage's extra height (128). 64px has no reason. (Separate from the 360px reserve at 507, which is already reported.)
+  Fix: --main-pad and --stage-room declared once with the other sizes at 10-12 and read in both places; say what the 64px holds or derive it.
+  Confidence: low-medium
+
+M4 TransferTrail.tsx:181
+  className={`transfer-trail__total ${amount.length > 5 ? "is-long" : ""}`}
+  Problem: no reason given. formatCount is toLocaleString, so this means 10,000 and up.
+  Fix: // Five figures and up step down a size, so the total fits beside the heart and Replay.
+  Confidence: low
+
+M5 stickerDetailQuery.ts:14  export const MAX_DETAILS_AHEAD = 12;  no reason for 12 (unverified whether it matches what a board shows). Low.
+
+C2 TransferTrail.tsx:341  // A control's height, as the fold's button is.
+  Problem: it doesn't say why the skeleton fold is a div while the rows are p.
+  Fix: // A div, not a row's shorter p, so it holds the fold button's height.
+  Confidence: low
+
+Flight (detailLift.ts): besides P1, the flight measures layout only at open and close, clones once, and animates transform and opacity only. Nothing else I could verify costs frames for no visible gain.

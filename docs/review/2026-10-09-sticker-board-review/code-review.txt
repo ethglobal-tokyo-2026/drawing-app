@@ -129,8 +129,9 @@ STAT-4 | CONFIRMED | low | apps/frontend/src/sticker-board/stat-board/StatCork.t
 === Fix depth
 DEPTH-2 | CONFIRMED | medium | apps/frontend/src/sticker-board/placement.ts:61
   Capping the phone layout's unit at 440 while every phone-layout window shares the same fractions: spacing set in a wider phone-layout window (LINE's iPad sheet, Split View) overlaps on a phone.
-DEPTH-3 | CANDIDATE | low | apps/frontend/src/sticker-board/keepAnimations.ts:75
+DEPTH-3 | UNVERIFIED | low | apps/frontend/src/sticker-board/keepAnimations.ts:75
   Only CSS animation clocks are kept across a reorder; transitions on moved stickers still drop.
+  Verifier: its verifier lane didn't finish before usage ran out; not re-run on the coordinator's instruction
 DEPTH-4 | CONFIRMED | low | apps/frontend/src/stickers/kyotoSeikaFoil.ts:5
   The Kyoto Seika Practice Mode foil's band width is computed in TypeScript and CSS separately (they agree today; creases are behind the developer slip).
 
@@ -210,15 +211,13 @@ CONV-4 | CONFIRMED | low | apps/frontend/src/sticker-board/stat-board/settings-n
   Verifier: Comments restate pixel values and DESIGN.md's frame size
 
 === Found during verification and the gap sweep
-SWEEP-1 | SWEEP-CANDIDATE | medium | apps/frontend/src/sticker-board/stat-board/StatBoard.tsx:76
-  dee196f4 memoized the cork's figures on [displayName, handle, createdAt, loading, data, error, retry], but figures.failure.message is problemOf(error), a sentence i18next renders in the language of that moment; a language change no longer recomputes it.
-  Scenario: Your stats fail to load (GET stats 5xx or timeout) and the cork shows its ErrorLine; you switch Settings' Language from English to 日本語 on the same cork (the language save succeeds). StatCork re-renders its own sentence in Japanese, but the {{reason}} it splices in (figures.failure.message) is the memoized English errors.* text, so the line mixes languages until Try again. Before the memo, figures were rebuilt every render and followed the language; SettingsNote keeps raw errors for exactly this reason.
+SWEEP-1 | CONFIRMED | low | apps/frontend/src/sticker-board/stat-board/StatBoard.tsx:76
+  Stats fail to load, the cork shows its ErrorLine; switching Settings' language re-renders StatCork's sentence in the new language but the memoized reason stays in the old one until Try again
 NEW-STAT-1 | NEW-CANDIDATE | medium if the premise holds | apps/frontend/src/sticker-board/stat-board/AddressDialog.tsx:375
   The code disagrees with itself about whether navigator.clipboard.writeText works from the press's re-fired click. If the comment's premise holds in LINE's iOS browser, the Sui address dialog's Copy (the user-facing one) and every ErrorLine detail Copy reject with NotAllowedError and show their not-copied line; if it doesn't, the slip's opt-outs are needless and those two labels lose the shared press. Uncertain: WebKit forwards a user gesture to a timer under 1s, so Safari may allow the late click. To confirm: tap Copy in the Sui address dialog in LINE's iOS browser or test:ipad-safari with motion on, and see whether the copied toast or the not-copied ErrorLine shows.
-SWEEP-2 | SWEEP-CANDIDATE | medium | apps/frontend/src/sticker-board/useBoardGestures.test.tsx:191
-  The test 'goes between stickers on focus alone' turns on fake setTimeout/clearTimeout and nothing restores them (the file's afterEach only unmounts and restoreAllMocks; only the 'steps' describe has afterEach(useRealTimers)), so the tests after it run on fake timers.
-  Scenario: Vitest runs the file in order: 'draws a sticker in hand at the board's unit' and the 'when the stage can't capture a pointer' tests (lines 243-312) run with the leaked fake setTimeout, so any timer the gesture code arms there (the tray's dwell, STEP_SAVE_IDLE_MS) never fires: a regression that a timer would expose passes, and running one of them alone (it.only, a filtered run) changes its timing. Fix: afterEach(() => vi.useRealTimers()) at file level, or onTestFinished in that test.
+SWEEP-2 | CONFIRMED | low | apps/frontend/src/sticker-board/useBoardGestures.test.tsx:191
+  The tests after line 241 ('draws a sticker in hand at the board's unit', the pointer-capture describe) run on fake setTimeout, so a timer-driven regression there passes and their behavior differs when run alone
 NEW-ZIP-1 | NEW-CANDIDATE | low | apps/frontend/src/sticker-board/tray/zipper.ts:1265
   A finger held still sends no pointermoves, so the last drag speed survives any pause and a release reads it as a flick. Probe: five 20px moves 16ms apart (progress 0.16), held still 1000ms, let go -> {progress:0.162, open:true}. Per the documented rule a still release short of the 0.25 threshold should spring back; velocity trackers zero the speed once the pointer has been still (e.g. ignore samples older than ~100ms, unverified figure). Same in trayPresses.ts:183-185 for page turns and pull-outs (g.vx/g.vy read at release).
 
-Tally: CANDIDATE 1, CONFIRMED 56, PLAUSIBLE 5, REFUTED 1
+Tally: CONFIRMED 56, PLAUSIBLE 5, REFUTED 1, UNVERIFIED 1
