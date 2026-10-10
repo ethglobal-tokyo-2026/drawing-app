@@ -1,5 +1,4 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import type { PersonView, StickerView } from "../api/views";
 import { useTranslation } from "../i18n/react";
 import { ArrowRight, GratitudeIcon, StickerBoardIcon } from "../icons";
@@ -12,6 +11,7 @@ import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { useSheetDrag } from "../ui/useSheetDrag";
+import { PhonePortal } from "../ui/PhonePortal";
 import "./gift-received-notice.css";
 
 interface Props {
@@ -133,6 +133,5 @@ export function GiftReceivedNotice({ sticker, receiver, receivedAt, onClose }: P
     </div>
   );
   // Over the whole phone, tabs included.
-  const phone = document.querySelector<HTMLElement>(".phone");
-  return phone ? createPortal(notice, phone) : notice;
+  return <PhonePortal eachRender>{notice}</PhonePortal>;
 }

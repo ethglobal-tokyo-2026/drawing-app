@@ -1,4 +1,3 @@
-import { createPortal } from "react-dom";
 import { Clock, GratitudeIcon } from "../icons";
 import type { PersonView, StickerView } from "../api/views";
 import { Trans, useTranslation } from "../i18n/react";
@@ -10,6 +9,7 @@ import { keepNameWhole } from "../ui/keepNameWhole";
 import { useLargeScreen } from "../ui/largeScreen";
 import { QuietLink } from "../ui/QuietLink";
 import { Sheet } from "../ui/Sheet";
+import { PhonePortal } from "../ui/PhonePortal";
 import "./send-gratitude-sheet.css";
 
 interface Props {
@@ -68,6 +68,5 @@ export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
   );
   if (!large) return sheet;
   // On a large screen it's a card in the middle, over a scrim that dims the board and the tab row.
-  const phone = document.querySelector<HTMLElement>(".phone");
-  return phone ? createPortal(sheet, phone) : sheet;
+  return <PhonePortal eachRender>{sheet}</PhonePortal>;
 }

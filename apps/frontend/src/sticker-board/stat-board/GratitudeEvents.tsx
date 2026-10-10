@@ -1,6 +1,5 @@
 import type { GratitudeEvents } from "@drawing-app/api/client";
 import { useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { apiError } from "../../api/apiClient";
 import { useApi } from "../../api/useApi";
 import { useApiQuery } from "../../api/useApiQuery";
@@ -14,6 +13,7 @@ import { ErrorLine } from "../../ui/ErrorLine";
 import { QuietLink } from "../../ui/QuietLink";
 import { Sheet } from "../../ui/Sheet";
 import { Skeleton } from "../../ui/Skeleton";
+import { PhonePortal } from "../../ui/PhonePortal";
 import "./gratitude-events.css";
 
 type GratitudeEvent = GratitudeEvents["events"][number];
@@ -57,8 +57,6 @@ export function GratitudeEventsSheet({ onClose }: { onClose: () => void }) {
   const first = useApiQuery("gratitude-events", (client) => client.gratitudeEvents());
   const [older, setOlder] = useState<GratitudeEvents[]>([]);
   const [olderStatus, setOlderStatus] = useState<Older>({ step: "idle" });
-  // Resolved once, so the sheet never moves between the page and the phone, which would remount it.
-  const [phone] = useState(() => document.querySelector<HTMLElement>(".phone"));
   const layer = useRef<HTMLDivElement>(null);
   const title = t(($) => $.stickerBoard.statBoard.gratitude.title);
   const pages = first.state === "ready" ? [first.data, ...older] : [];
@@ -141,5 +139,5 @@ export function GratitudeEventsSheet({ onClose }: { onClose: () => void }) {
       </Sheet>
     </div>
   );
-  return phone ? createPortal(sheet, phone) : sheet;
+  return <PhonePortal>{sheet}</PhonePortal>;
 }

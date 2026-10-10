@@ -1,7 +1,6 @@
 import type { Person, Sticker } from "@drawing-app/api/client";
 import { useMyNsfwOptIn, veiledFor } from "../stickers/nsfw";
-import { useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useRef } from "react";
 import { useMe } from "../api/meContext";
 import { toPerson, toSticker } from "../api/views";
 import { Trans, useTranslation } from "../i18n/react";
@@ -21,6 +20,7 @@ import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { useSheetDrag } from "../ui/useSheetDrag";
+import { PhonePortal } from "../ui/PhonePortal";
 import "../ui/sheet.css";
 import "./lifted-sticker.css";
 
@@ -138,8 +138,6 @@ export function LiftedSticker({
     reduced,
     onPage: onIndexChange,
   });
-  // Resolved once, so the sheet never moves between the page and the phone, which would remount it.
-  const [phone] = useState(() => document.querySelector<HTMLElement>(".phone"));
   if (!entry) return null;
 
   const sticker = toSticker(entry.sticker);
@@ -254,5 +252,5 @@ export function LiftedSticker({
     </div>
   );
   // Over the whole phone, tabs included, as the board's sticker detail is.
-  return phone ? createPortal(sheet, phone) : sheet;
+  return <PhonePortal>{sheet}</PhonePortal>;
 }

@@ -8,7 +8,6 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
 import { apiError } from "../api/apiClient";
 import { GIFT_EXPIRY_MS, type GiftPreview } from "@drawing-app/api/client";
 import type { GiftOpening } from "../api/apiClient";
@@ -34,6 +33,7 @@ import { Sheet } from "../ui/Sheet";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
+import { PhonePortal } from "../ui/PhonePortal";
 import type { GiftForYou } from "./GiftsForYouBadge";
 import { receiveFlow, type GiftPreviewView } from "./receiveFlow";
 import { previewFailedScreen, refusalScreen, type EndScreen } from "./refusals";
@@ -259,8 +259,6 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
     );
   }
 
-  // Resolved once, so the dialog never moves between the page and the phone, which would remount it.
-  const [phone] = useState(() => document.querySelector<HTMLElement>(".phone"));
   const classes = [
     "receive-gift",
     `is-${screen.step}`,
@@ -281,7 +279,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
       {body}
     </div>
   );
-  return phone ? createPortal(dialog, phone) : dialog;
+  return <PhonePortal>{dialog}</PhonePortal>;
 }
 
 interface GiftProps {

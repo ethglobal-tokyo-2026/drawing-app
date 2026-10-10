@@ -3,7 +3,6 @@ import {
   KYOTO_SEIKA_TIME_USED_S,
 } from "@drawing-app/api/client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "../i18n/react";
 import { openLinkInLine } from "../line/openLink";
 import { sessionMs } from "../sticker-creation/session/session";
@@ -11,6 +10,7 @@ import { SessionClock } from "../sticker-creation/session/useSessionClock";
 import { TimerDot } from "../sticker-creation/TimerDot";
 import { TicketCount } from "../tickets/TicketCount";
 import { Sheet } from "../ui/Sheet";
+import { PhonePortal } from "../ui/PhonePortal";
 import { dealLayout } from "./balloonGeometry";
 import { CensorBar } from "./CensorBar";
 import { dealKinds, type Deal } from "./deal";
@@ -168,8 +168,6 @@ function HelpBody() {
  */
 export function KyotoSeikaHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
-  // Resolved once, so the sheet never moves between the page and the phone, which would remount it.
-  const [phone] = useState(() => document.querySelector<HTMLElement>(".phone"));
   const layer = useRef<HTMLDivElement>(null);
   const sheet = (
     // Its taps and Escape stop here: from inside the stat board's cork, React would pass them on to
@@ -212,5 +210,5 @@ export function KyotoSeikaHelp({ open, onClose }: { open: boolean; onClose: () =
       </Sheet>
     </div>
   );
-  return phone ? createPortal(sheet, phone) : sheet;
+  return <PhonePortal>{sheet}</PhonePortal>;
 }

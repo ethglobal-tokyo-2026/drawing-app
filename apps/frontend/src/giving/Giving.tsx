@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import type { Problem } from "../i18n/errorMessage";
@@ -15,6 +14,7 @@ import { QuietLink } from "../ui/QuietLink";
 import { Sheet } from "../ui/Sheet";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
+import { PhonePortal } from "../ui/PhonePortal";
 import { CantFindThem, CantFindThemHead } from "./CantFindThem";
 import { GiftBag } from "./GiftBag";
 import type { GiftSender } from "./giftSender";
@@ -339,7 +339,6 @@ export function Giving({
     );
   }
 
-  const phone = document.querySelector<HTMLElement>(".phone");
   const giving = (
     <div className="giving" ref={layer}>
       <div className="giving__scrim" onClick={close} />
@@ -384,5 +383,5 @@ export function Giving({
     </div>
   );
   // Over the whole phone, tabs included, as a LIFF screen without the tabs.
-  return phone ? createPortal(giving, phone) : giving;
+  return <PhonePortal eachRender>{giving}</PhonePortal>;
 }

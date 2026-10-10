@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import type { TFunction } from "i18next";
 import type { RecordGratitude, ReplayV1 } from "@drawing-app/api/client";
 import { useMe } from "../api/meContext";
@@ -19,6 +18,7 @@ import { useLargeScreen } from "../ui/largeScreen";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { useSheetDrag } from "../ui/useSheetDrag";
+import { PhonePortal } from "../ui/PhonePortal";
 import type { ComboRecord } from "./combo";
 import { newIdempotencyKey } from "../api/idempotencyKey";
 import {
@@ -450,6 +450,5 @@ export function GratitudeMiniGame({
     </div>
   );
   // Over the whole phone, tabs included, as the sticker detail is.
-  const phone = document.querySelector<HTMLElement>(".phone");
-  return phone ? createPortal(screen, phone) : screen;
+  return <PhonePortal eachRender>{screen}</PhonePortal>;
 }

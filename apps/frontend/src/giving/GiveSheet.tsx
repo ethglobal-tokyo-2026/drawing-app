@@ -1,6 +1,5 @@
 import { GiveIcon } from "../icons";
 import { Suspense, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useMe } from "../api/meContext";
 import { Trans, useTranslation } from "../i18n/react";
 import { LIFF_ID } from "../line/liff";
@@ -14,6 +13,7 @@ import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { keepNameWhole } from "../ui/keepNameWhole";
 import { useLargeScreen } from "../ui/largeScreen";
 import { Sheet } from "../ui/Sheet";
+import { PhonePortal } from "../ui/PhonePortal";
 // Giving.css goes first, even ahead of the give-sheet.css StickerPicker brings, so the sheet's
 // resets come after its margins wherever this loads.
 import "./Giving.css";
@@ -138,6 +138,5 @@ export function GiveSheet({ to, toId, toNsfwOptIn, onClose, returnFocus }: Props
     </div>
   );
   // On a large screen its scrim dims the tab row too, where Give stands.
-  const phone = large ? document.querySelector<HTMLElement>(".phone") : null;
-  return phone ? createPortal(sheet, phone) : sheet;
+  return large ? <PhonePortal eachRender>{sheet}</PhonePortal> : sheet;
 }

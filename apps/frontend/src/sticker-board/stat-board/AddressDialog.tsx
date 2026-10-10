@@ -1,5 +1,4 @@
 import { useEffectEvent, useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { createPortal } from "react-dom";
 import { problemOf, type Problem } from "../../i18n/errorMessage";
 import { useTranslation } from "../../i18n/react";
 import { ArrowSquareOut, Copy, X } from "../../icons";
@@ -14,6 +13,7 @@ import { useFocusTrap } from "../../ui/useFocusTrap";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { isCancelled } from "../../ui/webAnimations";
 import { useToast } from "../../ui/useToast";
+import { PhonePortal } from "../../ui/PhonePortal";
 import { addressGroups } from "./addresses";
 import "./address-dialog.css";
 
@@ -306,8 +306,6 @@ export function AddressDialog({ address, whose, from, onClose }: Props) {
     }
   };
 
-  // Resolved once, so the dialog never moves between the page and the phone, which would remount it.
-  const [phone] = useState(() => document.querySelector<HTMLElement>(".phone"));
   const fours = addressGroups(address);
   const dialog = (
     <div
@@ -408,5 +406,5 @@ export function AddressDialog({ address, whose, from, onClose }: Props) {
       </div>
     </div>
   );
-  return phone ? createPortal(dialog, phone) : dialog;
+  return <PhonePortal>{dialog}</PhonePortal>;
 }
