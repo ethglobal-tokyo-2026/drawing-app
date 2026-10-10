@@ -195,7 +195,7 @@ export default function App() {
 
   // The new screen shows at once and takes taps from its first frame; only its look settles in.
   const changeTab = (tab: Tab) => {
-    drawingScreen.current?.closeDrawers();
+    drawingScreen.current?.closePanels();
     if (tab !== view || visiting) setArriving(reduced ? null : tab);
     setView(tab);
     setVisiting(undefined);
