@@ -25,22 +25,29 @@ interface Ink {
   density: number;
 }
 
-/** The cut sticker. What it shares with SealedSticker means the same there. */
+/** The cut sticker: a SealedSticker once its passes are object URLs. */
 export interface CutSticker {
+  /** The finished sticker, cast shadow and all. */
   png: Blob;
   /** The sticker again, larger, for screens that show it larger than `png`; null when the ink holds no more. */
   sharp: Blob | null;
+  /** The sheet as it was drawn, on white. */
   flat: Blob;
   /** The ceremony's passes, as PNGs. */
   passes: Record<PassName, Blob>;
   /** The mask as pixels, for the ceremony to paint with. */
   maskPixels: Uint8ClampedArray<ArrayBuffer>;
+  /** The cut line as an SVG path, in image pixels. */
   outline: string;
   width: number;
   height: number;
+  /** The clear margin around the cut, in image pixels. */
   pad: number;
+  /** The ink canvas's width, which `place` and `contour` are measured against. */
   inkWidth: number;
+  /** Where the image sits over the ink, in ink pixels. */
   place: Rect;
+  /** The cut line, closed, in ink pixels. */
   contour: Point[];
 }
 

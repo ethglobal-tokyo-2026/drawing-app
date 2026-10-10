@@ -1,8 +1,11 @@
+import { blankCanvas, context2d } from "../canvas/context2d";
+import { lerp } from "../../ui/easing";
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import type { Box } from "./sealTimeline";
 
-/** The paper's backing, and what its maker printed on it. */
+/** The paper's backing. */
 const BACKING = "#E7E5EE";
+/** Its maker's print: a pattern on the paper, bilingual on purpose, not copy for the catalog. */
 const PRINT = "SEAL · シール · ";
 const INK = "#1C1824";
 /** Seal Yellow: the blade is the seal check's own "now". */
@@ -10,11 +13,14 @@ const SEAL = "#FFD93B";
 
 type Size = { w: number; h: number };
 
-/** A canvas's 2D context, or null after saying why: the ceremony plays on without that canvas. */
-function paintable(canvas: HTMLCanvasElement, what: string) {
-  const g = canvas.getContext("2d");
-  if (!g) console.error(`No 2D context for the seal ceremony's ${what}; it plays without it`);
-  return g;
+/** What `make` gives, or null after saying why: the ceremony plays on without that canvas. */
+function paintable<T>(make: () => T, what: string): T | null {
+  try {
+    return make();
+  } catch (error) {
+    console.error(`No 2D context for the seal ceremony's ${what}; it plays without it`, error);
+    return null;
+  }
 }
 
 /** Sizes a canvas that covers the ceremony, at `r` device pixels per pixel. */
@@ -32,7 +38,7 @@ export function paintDim(
   r: number,
 ) {
   cover(canvas, size, r);
-  const g = paintable(canvas, "dim");
+  const g = paintable(() => context2d(canvas), "dim");
   if (!g) return;
   g.setTransform(r, 0, 0, r, 0, 0);
   g.fillStyle = "rgba(28, 24, 36, 0.52)";
@@ -53,7 +59,7 @@ export function paintUsedStickerSilhouette(
   const H = Math.max(1, Math.round(box.h * r));
   canvas.width = W;
   canvas.height = H;
-  const g = paintable(canvas, "used sticker silhouette");
+  const g = paintable(() => context2d(canvas), "used sticker silhouette");
   if (!g) return;
   g.fillStyle = BACKING;
   g.fillRect(0, 0, W, H);
@@ -72,11 +78,9 @@ export function paintUsedStickerSilhouette(
       g.fillText(PRINT, x, y);
   g.restore();
   // The paper's thickness: a soft shadow along the cut wall nearest the light.
-  const wall = document.createElement("canvas");
-  wall.width = W;
-  wall.height = H;
-  const wg = paintable(wall, "cut wall");
-  if (wg) {
+  const wall = paintable(() => blankCanvas(W, H), "cut wall");
+  if (wall) {
+    const { canvas: wallCanvas, g: wg } = wall;
     for (const [ox, oy, alpha] of [
       [1.4, 2.2, 0.22],
       [3.4, 5, 0.1],
@@ -88,11 +92,11 @@ export function paintUsedStickerSilhouette(
       wg.globalCompositeOperation = "destination-out";
       wg.drawImage(mask, ox * r, oy * r, W, H);
       g.globalAlpha = alpha;
-      g.drawImage(wall, 0, 0);
+      g.drawImage(wallCanvas, 0, 0);
       g.globalAlpha = 1;
     }
+    releaseCanvas(wallCanvas);
   }
-  releaseCanvas(wall);
   g.globalCompositeOperation = "destination-in";
   g.drawImage(mask, 0, 0, W, H);
   g.globalCompositeOperation = "source-over";
@@ -126,7 +130,7 @@ const BLADE = 5.4;
  */
 export function makeCutLine(canvas: HTMLCanvasElement, size: Size, line: number[][], r: number) {
   cover(canvas, size, r);
-  const g = paintable(canvas, "cut line");
+  const g = paintable(() => context2d(canvas), "cut line");
   const lengths = [0];
   for (let i = 1; i < line.length; i++)
     lengths.push(
@@ -147,7 +151,7 @@ export function makeCutLine(canvas: HTMLCanvasElement, size: Size, line: number[
     const u = (d - lengths[lo - 1]) / (lengths[lo] - lengths[lo - 1] || 1);
     const [ax, ay] = line[lo - 1];
     const [bx, by] = line[lo];
-    return [lo, ax + (bx - ax) * u, ay + (by - ay) * u];
+    return [lo, lerp(ax, bx, u), lerp(ay, by, u)];
   };
 
   /** Adds the line from `a` to `b` px along it to the current path, `a` before `b`. */
@@ -199,8 +203,8 @@ export function makeCutLine(canvas: HTMLCanvasElement, size: Size, line: number[
         continue;
       }
       const u = (reach - lengths[i - 1]) / (lengths[i] - lengths[i - 1] || 1);
-      hx = line[i - 1][0] + (line[i][0] - line[i - 1][0]) * u;
-      hy = line[i - 1][1] + (line[i][1] - line[i - 1][1]) * u;
+      hx = lerp(line[i - 1][0], line[i][0], u);
+      hy = lerp(line[i - 1][1], line[i][1], u);
       g.lineTo(hx, hy);
       break;
     }

@@ -1,49 +1,22 @@
-import { context2d } from "../canvas/context2d";
+import { blankCanvas, context2d } from "../canvas/context2d";
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { cutSticker, type CutSticker, type MakeCanvas, type PassName } from "./cutSticker";
-import type { Point } from "./dieCut";
 import type { SealReply, SealRequest } from "./sealWorker";
-import type { Rect } from "./stickerPasses";
 
-/** A sealed sticker: what's stored, and what the ceremony plays with. */
-export interface SealedSticker {
-  /** The finished sticker, cast shadow and all. */
-  png: Blob;
-  /** The finished sticker, larger, for screens that show it larger than `png`; null when the ink holds no more. */
-  sharp: Blob | null;
+/** A sealed sticker: the cut sticker as it's stored, and as the ceremony plays with it. */
+export type SealedSticker = Omit<CutSticker, "passes" | "maskPixels"> & {
   /** The cut's shape (white, with the cut as alpha), the same size and place as `png`. */
   mask: Blob;
-  /** The sheet as it was drawn, on white. */
-  flat: Blob;
-  /** The cut line as an SVG path, in image pixels. */
-  outline: string;
-  width: number;
-  height: number;
-  /** The clear margin around the cut, in image pixels. */
-  pad: number;
-  /** The ink canvas's width, which `place` and `contour` are measured against. */
-  inkWidth: number;
-  /** Where the image sits over the ink, in ink pixels. */
-  place: Rect;
-  /** The cut line, closed, in ink pixels. */
-  contour: Point[];
   /** The ceremony's passes, as object URLs. */
   passes: Record<PassName, string>;
   /** The mask, for painting the dim and the used sticker silhouette. */
   maskImage: HTMLCanvasElement;
   /** Lets the passes' URLs and the mask's canvas go. */
   dispose: () => void;
-}
+};
 
 /** Far longer than a slow phone takes, so only a stalled worker fails the seal, with Try again. */
 const WORKER_TIMEOUT_MS = 60_000;
-
-function blankCanvas(width: number, height: number) {
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  return { canvas, g: context2d(canvas) };
-}
 
 const encode = (canvas: HTMLCanvasElement) =>
   new Promise<Blob>((resolve, reject) =>
@@ -149,9 +122,10 @@ export async function makeSticker(
 ): Promise<SealedSticker | null> {
   const cut = workerCanCut() ? await cutInWorkerOrHere(ink, density) : await cutHere(ink, density);
   if (!cut) return null;
-  const { width, height, passes } = cut;
+  const { passes, maskPixels, ...rest } = cut;
+  const { width, height } = rest;
   const { canvas: maskImage, g } = blankCanvas(width, height);
-  g.putImageData(new ImageData(cut.maskPixels, width, height), 0, 0);
+  g.putImageData(new ImageData(maskPixels, width, height), 0, 0);
 
   const urls: Record<PassName, string> = {
     plain: URL.createObjectURL(passes.plain),
@@ -160,17 +134,8 @@ export async function makeSticker(
     mask: URL.createObjectURL(passes.mask),
   };
   return {
-    png: cut.png,
-    sharp: cut.sharp,
+    ...rest,
     mask: passes.mask,
-    flat: cut.flat,
-    outline: cut.outline,
-    width,
-    height,
-    pad: cut.pad,
-    inkWidth: cut.inkWidth,
-    place: cut.place,
-    contour: cut.contour,
     passes: urls,
     maskImage,
     dispose: () => {

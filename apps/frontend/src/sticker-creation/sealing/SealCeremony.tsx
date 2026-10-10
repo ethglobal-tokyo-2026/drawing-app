@@ -109,9 +109,7 @@ function need<E extends Element>(el: E | null, what: string): E {
  * the server has sealed the sticker: only then does the resin pour. One animation-frame loop writes
  * each frame of the timeline straight to the canvases, images and transforms; React only hears when
  * the card's first key has faded up. Until then a tap, Enter, Space or Escape skips to the wait, or
- * to the end once sealed; reduced motion starts there. A failed seal fades back to the drawing.
- * Keep drawing and the shop hand over at once: the fresh sheet is set up under the veil while the
- * card leaves over it.
+ * to the end once sealed; reduced motion starts there.
  */
 export function SealCeremony({
   sticker,

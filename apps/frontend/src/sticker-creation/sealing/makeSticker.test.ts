@@ -5,12 +5,19 @@ import { makeSticker } from "./makeSticker";
 import type { SealReply, SealRequest } from "./sealWorker";
 
 // happy-dom has no 2D canvas: this one reads every sheet as blank and paints nothing.
-vi.mock("../canvas/context2d", () => ({
-  context2d: (canvas: HTMLCanvasElement) => ({
+vi.mock("../canvas/context2d", () => {
+  const context2d = (canvas: HTMLCanvasElement) => ({
     getImageData: () => new ImageData(canvas.width, canvas.height),
     putImageData: () => {},
-  }),
-}));
+  });
+  const blankCanvas = (width: number, height: number) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    return { canvas, g: context2d(canvas) };
+  };
+  return { context2d, blankCanvas };
+});
 
 /** The sealing worker, which each test answers for. */
 class FakeWorker {
