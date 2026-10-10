@@ -91,9 +91,10 @@
   }
 }
 
+/* Its own shape, inside a min(200px, 56%) square. */
 .visit-view-art {
-  width: min(200px, 56%);
-  aspect-ratio: 1;
+  width: calc(min(200px, 56%) * min(1, var(--ar)));
+  aspect-ratio: var(--ar);
   height: auto;
   margin: 6px 0;
   rotate: -3deg;
