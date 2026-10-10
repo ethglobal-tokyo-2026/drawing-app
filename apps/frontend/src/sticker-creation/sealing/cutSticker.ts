@@ -5,7 +5,7 @@
  */
 import { BORDER_UNITS, dieCut, type Point } from "./dieCut";
 import type { Pixels } from "./pixels";
-import { sharpSticker, stickerPasses, type Rect } from "./stickerPasses";
+import { bakedGloss, sharpSticker, stickerPasses, type Rect } from "./stickerPasses";
 
 export type PassName = "plain" | "gloss" | "shadow" | "mask";
 
@@ -84,7 +84,10 @@ function outlinePath(points: Point[]): string {
  */
 export function cutInk(pixels: Pixels, density: number) {
   const cut = dieCut(pixels, BORDER_UNITS * density);
-  return cut && { cut, passes: stickerPasses(pixels, cut) };
+  if (!cut) return null;
+  // Worked out once for the stored image and the sharp copy both.
+  const glossGrid = bakedGloss(cut);
+  return { cut, glossGrid, passes: stickerPasses(pixels, cut, glossGrid) };
 }
 
 /** Cuts the sticker from the ink; null when there's no ink to cut. */
@@ -92,7 +95,7 @@ export async function cutSticker(ink: Ink, make: MakeCanvas): Promise<CutSticker
   const { pixels } = ink;
   const inked = cutInk(pixels, ink.density);
   if (!inked) return null;
-  const { cut, passes } = inked;
+  const { cut, glossGrid, passes } = inked;
   const { width, height, place } = passes;
 
   const contour = cut.contour.map(([x, y]): Point => [
@@ -118,7 +121,7 @@ export async function cutSticker(ink: Ink, make: MakeCanvas): Promise<CutSticker
     encoded(passes.mask),
   ]);
   // Once the passes are encoded, so its canvas is never held beside theirs.
-  const sharp = sharpSticker(pixels, cut);
+  const sharp = sharpSticker(pixels, cut, glossGrid);
   const sharpPng = sharp && (await encoded(sharp.sticker, sharp.width, sharp.height));
   return {
     png,

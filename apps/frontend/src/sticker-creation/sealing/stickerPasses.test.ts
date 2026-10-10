@@ -5,6 +5,7 @@ import {
   MAX_SIDE,
   PAD,
   SHARP_SIDE,
+  bakedGloss,
   sharpSticker,
   stickerPasses,
   type StickerPasses,
@@ -37,7 +38,13 @@ const redDisk = (side?: number, radius?: number) => disk(RED, side, radius);
 function passesOf(ink: Pixels) {
   const cut = dieCut(ink, BORDER);
   if (!cut) throw new Error("expected a cut");
-  return { cut, passes: stickerPasses(ink, cut) };
+  const glossGrid = bakedGloss(cut);
+  return { cut, glossGrid, passes: stickerPasses(ink, cut, glossGrid) };
+}
+
+function sharpOf(ink: Pixels) {
+  const { cut, glossGrid } = passesOf(ink);
+  return sharpSticker(ink, cut, glossGrid);
 }
 
 /** The RGBA of a pass at a point given in sheet pixels. */
@@ -153,7 +160,7 @@ describe("sharpSticker", () => {
     "holds the cut's long side to SHARP_SIDE, from ink that has more",
     () => {
       const ink = redDisk(2000, 950);
-      const sharp = sharpSticker(ink, passesOf(ink).cut);
+      const sharp = sharpOf(ink);
       expect(sharp && longSide(sharp)).toBe(sideFor(SHARP_SIDE));
       expect(sharp?.sticker.length).toBe((sharp?.width ?? 0) * (sharp?.height ?? 0) * 4);
     },
@@ -164,11 +171,11 @@ describe("sharpSticker", () => {
     "is never larger than the ink was drawn",
     () => {
       const ink = redDisk(1000, 400);
-      const { cut, passes } = passesOf(ink);
+      const { cut, glossGrid, passes } = passesOf(ink);
       const inkSide = (cut.bounds.x1 - cut.bounds.x0 + 1) / cut.scale;
       expect(inkSide).toBeGreaterThan(MAX_SIDE);
       expect(inkSide).toBeLessThan(SHARP_SIDE);
-      const sharp = sharpSticker(ink, cut);
+      const sharp = sharpSticker(ink, cut, glossGrid);
       expect(sharp && longSide(sharp)).toBe(sideFor(inkSide));
       expect(longSide(passes)).toBe(sideFor(MAX_SIDE));
     },
@@ -177,6 +184,6 @@ describe("sharpSticker", () => {
 
   it("is null when the ink holds no more than the stored image", () => {
     const ink = redDisk();
-    expect(sharpSticker(ink, passesOf(ink).cut)).toBeNull();
+    expect(sharpOf(ink)).toBeNull();
   });
 });

@@ -69,14 +69,15 @@ function resampleRow(src: Pixels, q: number, tx: Taps, channels: 1 | 4, row: Flo
 }
 
 /**
- * Scales a window of `src` down by area-averaging. One channel gives the alpha; four give RGBA
+ * Scales a window of `src` down by area-averaging, a row at a time: `row(j, out, o)` writes the
+ * window's row `j` into `out` from `o` on, so an image too large to hold as floats can be made a row
+ * at a time. Rows asked for in order are cheapest. One channel gives the alpha; four give RGBA
  * premultiplied by it, on the 0–255 scale, so colors at soft edges don't darken.
  */
-export function boxResample(src: Pixels, win: Window, channels: 1 | 4): Float32Array {
+export function boxRows(src: Pixels, win: Window, channels: 1 | 4) {
   const tx = taps(win.width, src.width, win.x, win.step);
   const ty = taps(win.height, src.height, win.y, win.step);
   const rowLength = win.width * channels;
-  const out = new Float32Array(win.height * rowLength);
   // Neighboring window rows share at most their boundary source row, so two cached rows are enough.
   const cache = [
     { q: -1, row: new Float32Array(rowLength) },
@@ -91,13 +92,21 @@ export function boxResample(src: Pixels, win: Window, channels: 1 | 4): Float32A
     resampleRow(src, q, tx, channels, c.row);
     return c.row;
   };
-  for (let j = 0; j < win.height; j++) {
-    const o = j * rowLength;
+  return (j: number, out: Float32Array, o = 0) => {
+    out.fill(0, o, o + rowLength);
     for (let t = 0; t < ty.count[j]; t++) {
       const wy = ty.weight[j * ty.stride + t];
       const row = rowAt(ty.first[j] + t);
       for (let i = 0; i < rowLength; i++) out[o + i] += wy * row[i];
     }
-  }
+  };
+}
+
+/** The whole window of `src`, scaled down as boxRows does it. */
+export function boxResample(src: Pixels, win: Window, channels: 1 | 4): Float32Array {
+  const rowLength = win.width * channels;
+  const out = new Float32Array(win.height * rowLength);
+  const row = boxRows(src, win, channels);
+  for (let j = 0; j < win.height; j++) row(j, out, j * rowLength);
   return out;
 }

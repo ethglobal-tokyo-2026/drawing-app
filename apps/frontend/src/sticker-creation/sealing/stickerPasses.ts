@@ -5,7 +5,7 @@
  */
 import { clamp01 } from "../../ui/easing";
 import type { DieCut } from "./dieCut";
-import { boxResample, type Pixels } from "./pixels";
+import { boxRows, type Pixels } from "./pixels";
 
 type Pass = Uint8ClampedArray<ArrayBuffer>;
 
@@ -67,9 +67,12 @@ interface Frame {
   height: number;
 }
 
-/** A field over the die-cut's grid, sampled bilinearly at every image pixel. */
-function upscale(field: ArrayLike<number>, w: number, h: number, f: Frame): Float32Array {
-  const out = new Float32Array(f.width * f.height);
+/**
+ * Fields over the die-cut's grid, sampled bilinearly along one image row at a time, so a large image
+ * never holds a field at its own size. `rows(field, keep)` keeps the last `keep` rows it sampled.
+ */
+function gridRows(cut: DieCut, f: Frame) {
+  const { width: w, height: h } = cut;
   const cols = new Int32Array(f.width);
   const fxs = new Float32Array(f.width);
   for (let x = 0; x < f.width; x++) {
@@ -77,32 +80,44 @@ function upscale(field: ArrayLike<number>, w: number, h: number, f: Frame): Floa
     cols[x] = Math.min(w - 2, Math.floor(gx));
     fxs[x] = gx - cols[x];
   }
-  for (let y = 0; y < f.height; y++) {
-    const gy = Math.min(h - 1, Math.max(0, f.y0 + (y + 0.5) / f.k - 0.5));
-    const r0 = Math.min(h - 2, Math.floor(gy));
-    const fy = gy - r0;
-    const top = r0 * w;
-    const bottom = top + w;
-    for (let x = 0; x < f.width; x++) {
-      const c = cols[x];
-      const fx = fxs[x];
-      const t = field[top + c] * (1 - fx) + field[top + c + 1] * fx;
-      const b = field[bottom + c] * (1 - fx) + field[bottom + c + 1] * fx;
-      out[y * f.width + x] = t * (1 - fy) + b * fy;
-    }
-  }
-  return out;
+  return (field: ArrayLike<number>, keep = 1) => {
+    const kept = Array.from({ length: keep }, () => ({ y: -1, row: new Float32Array(f.width) }));
+    return (y: number) => {
+      const slot = kept[y % keep];
+      if (slot.y === y) return slot.row;
+      slot.y = y;
+      const gy = Math.min(h - 1, Math.max(0, f.y0 + (y + 0.5) / f.k - 0.5));
+      const r0 = Math.min(h - 2, Math.floor(gy));
+      const fy = gy - r0;
+      const top = r0 * w;
+      const bottom = top + w;
+      for (let x = 0; x < f.width; x++) {
+        const c = cols[x];
+        const fx = fxs[x];
+        const t = field[top + c] * (1 - fx) + field[top + c + 1] * fx;
+        const b = field[bottom + c] * (1 - fx) + field[bottom + c + 1] * fx;
+        slot.row[x] = t * (1 - fy) + b * fy;
+      }
+      return slot.row;
+    };
+  };
+}
+
+/** The baked gloss on the die-cut's grid, premultiplied: its white, the same in every channel, and its alpha. */
+export interface GlossGrid {
+  color: Float32Array;
+  alpha: Float32Array;
 }
 
 /**
- * The baked gloss on the die-cut's grid, premultiplied: a thin laminate lit from the top left, so a faint
- * broad sheen and a slim highlight along the edges that face the light, and no shade anywhere. It's soft,
- * so it's worked out at the grid's size and scaled up.
+ * The baked gloss: a thin laminate lit from the top left, so a faint broad sheen and a slim highlight
+ * along the edges that face the light, and no shade anywhere. It's soft, so it's worked out once a cut,
+ * at the grid's size, and every image of the sticker scales it up.
  */
-function glossPlanes(cut: DieCut): Float32Array[] {
+export function bakedGloss(cut: DieCut): GlossGrid {
   const { width: w, height: h, mask, distanceIn: depth, bounds } = cut;
-  const planes = [0, 1, 2, 3].map(() => new Float32Array(w * h));
-  const [pr, pg, pb, pa] = planes;
+  const color = new Float32Array(w * h);
+  const alpha = new Float32Array(w * h);
   const mw = bounds.x1 - bounds.x0 + 1;
   const mh = bounds.y1 - bounds.y0 + 1;
   const reach = Math.max(1, EDGE_REACH * Math.max(mw, mh));
@@ -130,11 +145,11 @@ function glossPlanes(cut: DieCut): Float32Array[] {
       const sheen = q2 < 1 ? SHEEN * Math.pow(1 - q2, 1.5) : 0;
       const light = Math.min(0.9, edge + sheen);
       if (light <= 0.004) continue;
-      pr[i] = pg[i] = pb[i] = 255 * light;
-      pa[i] = light;
+      color[i] = 255 * light;
+      alpha[i] = light;
     }
   }
-  return planes;
+  return { color, alpha };
 }
 
 /** The image's frame with the cut's long side at most `maxSide`, and its clear margin. */
@@ -149,11 +164,11 @@ function frameOf({ bounds, scale }: DieCut, maxSide: number): Frame & { pad: num
   return { x0: bounds.x0 - pad / k, y0: bounds.y0 - pad / k, k, width, height, pad };
 }
 
-/** Lays the sticker out from its cut: every pass, the same size and in the same place. */
-export function stickerPasses(ink: Pixels, cut: DieCut): StickerPasses {
+/** Lays the sticker out from its cut and its gloss: every pass, the same size and in the same place. */
+export function stickerPasses(ink: Pixels, cut: DieCut, glossGrid: GlossGrid): StickerPasses {
   const frame = frameOf(cut, MAX_SIDE);
   const { width, height, pad } = frame;
-  const { passes, sticker, place } = paint(ink, cut, frame, 1, true);
+  const { passes, sticker, place } = paint(ink, cut, glossGrid, frame, 1, true);
   return { width, height, pad, place, ...passes, sticker };
 }
 
@@ -168,11 +183,11 @@ export interface SharpSticker {
  * The finished sticker with its cut's long side up to SHARP_SIDE, as stickerPasses lays it out; null
  * when the ink holds no more pixels than the stored image already has.
  */
-export function sharpSticker(ink: Pixels, cut: DieCut): SharpSticker | null {
+export function sharpSticker(ink: Pixels, cut: DieCut, glossGrid: GlossGrid): SharpSticker | null {
   const frame = frameOf(cut, SHARP_SIDE);
   const base = frameOf(cut, MAX_SIDE);
   if (frame.width <= base.width) return null;
-  const { sticker } = paint(ink, cut, frame, frame.k / base.k, false);
+  const { sticker } = paint(ink, cut, glossGrid, frame, frame.k / base.k, false);
   return { width: frame.width, height: frame.height, sticker };
 }
 
@@ -189,6 +204,7 @@ type Painted<All extends boolean> = {
 function paint<All extends boolean>(
   ink: Pixels,
   cut: DieCut,
+  glossGrid: GlossGrid,
   frame: Frame,
   unit: number,
   all: All,
@@ -196,6 +212,7 @@ function paint<All extends boolean>(
 function paint(
   ink: Pixels,
   cut: DieCut,
+  glossGrid: GlossGrid,
   frame: Frame,
   unit: number,
   all: boolean,
@@ -206,26 +223,30 @@ function paint(
   const mh = cut.bounds.y1 - cut.bounds.y0 + 1;
   const n = width * height;
 
-  const up = (field: ArrayLike<number>) => upscale(field, cut.width, cut.height, frame);
-  const soft = up(cut.soft);
-  const clearance = up(cut.distanceOut);
   const place: Rect = {
     x: (frame.x0 - gridPad) / scale,
     y: (frame.y0 - gridPad) / scale,
     w: width / k / scale,
     h: height / k / scale,
   };
-  const print = boxResample(
+  const printRow = boxRows(
     ink,
     { x: place.x, y: place.y, step: 1 / (scale * k), width, height },
     4,
   );
-  const glossGrid = glossPlanes(cut).map(up);
+  const print = new Float32Array(width * 4);
 
   const body = Math.max(mw, mh) * k;
   const offX = Math.round(body * CAST_X + 0.5 * unit);
   const offY = Math.round(body * CAST_Y + unit);
   const blur = Math.max(unit, body * CAST_BLUR);
+
+  const rows = gridRows(cut, frame);
+  // The cast reads the cut `offY` rows up, so that many rows stay at hand.
+  const softRow = rows(cut.soft, offY + 1);
+  const clearanceRow = rows(cut.distanceOut, offY + 1);
+  const glossColorRow = rows(glossGrid.color);
+  const glossAlphaRow = rows(glossGrid.alpha);
 
   // Only the finished sticker when `all` is false: the sharp copy is large, and needs no other pass.
   const pass = () => new Uint8ClampedArray(all ? n * 4 : 0);
@@ -237,11 +258,19 @@ function paint(
   const printColor = [0, 0, 0];
 
   for (let y = 0; y < height; y++) {
+    const soft = softRow(y);
+    const clearance = clearanceRow(y);
+    const castFrom = Math.min(height - 1, Math.max(0, y - offY));
+    const softAbove = softRow(castFrom);
+    const clearanceAbove = clearanceRow(castFrom);
+    const glossColor = glossColorRow(y);
+    const glossAlpha = glossAlphaRow(y);
+    printRow(y, print);
     for (let x = 0; x < width; x++) {
-      const i = y * width + x;
-      const q = i * 4;
+      const q = (y * width + x) * 4;
+      const p = x * 4;
       // The signed distance to the cut, in image pixels, positive inside.
-      const sd = (soft[i] - 0.5) * 5 * k;
+      const sd = (soft[x] - 0.5) * 5 * k;
       const a = clamp01(0.5 + sd);
       const groove = (clamp01(0.5 + sd + 1.15 * unit) - a) * 0.5;
       const printed = a + groove * (1 - a);
@@ -252,22 +281,20 @@ function paint(
       }
 
       if (printed > 0) {
-        const inkAlpha = print[q + 3] / 255;
+        const inkAlpha = print[p + 3] / 255;
         for (let c = 0; c < 3; c++) {
           const base = (PAPER[c] * a + INK[c] * groove * (1 - a)) / printed;
-          printColor[c] = print[q + c] + base * (1 - inkAlpha);
+          printColor[c] = print[p + c] + base * (1 - inkAlpha);
           if (all) plain[q + c] = printColor[c];
         }
         if (all) plain[q + 3] = printed * 255;
       }
 
       // The cast shadow falls a little down and to the right, with a tight contact line at the cut.
-      const j =
-        Math.min(height - 1, Math.max(0, y - offY)) * width +
-        Math.min(width - 1, Math.max(0, x - offX));
-      const under = soft[j] > 0.5;
-      const throwOff = under ? 0 : clamp01((clearance[j] * k) / blur);
-      const contact = under ? 1 : 1 - clamp01((clearance[i] * k) / (2.2 * unit));
+      const j = Math.min(width - 1, Math.max(0, x - offX));
+      const under = softAbove[j] > 0.5;
+      const throwOff = under ? 0 : clamp01((clearanceAbove[j] * k) / blur);
+      const contact = under ? 1 : 1 - clamp01((clearance[x] * k) / (2.2 * unit));
       const shade = Math.min(1, 0.16 * (1 - throwOff) * (1 - throwOff) + 0.16 * contact);
       if (all) {
         shadow[q] = INK[0];
@@ -277,18 +304,18 @@ function paint(
       }
 
       // The gloss, clipped to the cut; then shadow, print and gloss, one over the other.
-      const glossAlpha = glossGrid[3][i] * a;
+      const glossA = glossAlpha[x] * a;
+      const g = glossColor[x] * a;
       const printAlpha = printed;
       const below = shade * (1 - printAlpha);
-      const alpha = glossAlpha + (printAlpha + below) * (1 - glossAlpha);
+      const alpha = glossA + (printAlpha + below) * (1 - glossA);
       for (let c = 0; c < 3; c++) {
-        const g = glossGrid[c][i] * a;
-        if (all && glossAlpha > 0) gloss[q + c] = g / glossAlpha;
-        const p = printed > 0 ? printColor[c] * printAlpha : 0;
-        const premultiplied = g + (p + INK[c] * below) * (1 - glossAlpha);
+        if (all && glossA > 0) gloss[q + c] = g / glossA;
+        const inked = printed > 0 ? printColor[c] * printAlpha : 0;
+        const premultiplied = g + (inked + INK[c] * below) * (1 - glossA);
         sticker[q + c] = alpha > 0 ? premultiplied / alpha : 0;
       }
-      if (all) gloss[q + 3] = glossAlpha * 255;
+      if (all) gloss[q + 3] = glossA * 255;
       sticker[q + 3] = alpha * 255;
     }
   }
