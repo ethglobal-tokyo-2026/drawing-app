@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { maskPixels } from "../../stickers/maskPixels";
 import { testStickerUrls } from "../../stickers/testStickerUrls";
 import {
   MAX_STACK_SCALE,
@@ -11,6 +12,35 @@ import {
   trayFitFor,
   type TraySticker,
 } from "./trayModel";
+import type { TrayProblem } from "./trayProblem";
+
+vi.mock("../../stickers/maskPixels", () => ({ maskPixels: vi.fn() }));
+
+/** `n` stickers in arrival order, their cut lines of varied sizes, as drawn stickers' are. */
+const stickers = (n: number, name: string) =>
+  Array.from({ length: n }, (_, i): TraySticker => {
+    const w = 100 + ((i * 37) % 120);
+    const h = 100 + ((i * 53) % 140);
+    const id = `${name}-${i}`;
+    return {
+      id,
+      no: i + 1,
+      arrivedAt: i + 1,
+      sheet: 0,
+      slot: 0,
+      state: "here",
+      width: w,
+      height: h,
+      outline: `M6 4L${w - 4} 6L${w - 6} ${h - 4}L4 ${h - 6}Z`,
+      urls: testStickerUrls(id),
+      gift: false,
+      nsfw: false,
+      kyotoSeika: false,
+      veiled: false,
+      seen: false,
+    };
+  });
+const nothingToSay = { problem: () => {}, problemGone: () => {} };
 
 describe("trayFitFor", () => {
   it.each([
@@ -44,35 +74,11 @@ describe("trayFitFor", () => {
 });
 
 describe("packing the sheets", () => {
-  /** `n` stickers in arrival order, their cut lines of varied sizes, as drawn stickers' are. */
-  const stickers = (n: number) =>
-    Array.from({ length: n }, (_, i): TraySticker => {
-      const w = 100 + ((i * 37) % 120);
-      const h = 100 + ((i * 53) % 140);
-      const id = `packed-${i}`;
-      return {
-        id,
-        no: i + 1,
-        arrivedAt: i + 1,
-        sheet: 0,
-        slot: 0,
-        state: "here",
-        width: w,
-        height: h,
-        outline: `M6 4L${w - 4} 6L${w - 6} ${h - 4}L4 ${h - 6}Z`,
-        urls: testStickerUrls(id),
-        gift: false,
-        nsfw: false,
-        kyotoSeika: false,
-        veiled: false,
-        seen: false,
-      };
-    });
   /** Each sticker's sheet, as the tray packs `n` stickers for an open pouch ending at `foot`. */
   const sheetsOf = (n: number, large: boolean, foot: number) => {
-    const ui = createTrayState(modelOf(stickers(n), new Set()));
+    const ui = createTrayState(modelOf(stickers(n, "packed"), new Set()));
     ui.fit = trayFitFor(large, () => foot);
-    createTrayModel(ui, new Set(), () => {}).applyPack();
+    createTrayModel(ui, new Set(), nothingToSay).applyPack();
     return ui.model.slots.map((s) => s.sheet);
   };
 
@@ -87,5 +93,36 @@ describe("packing the sheets", () => {
     ];
     for (const [large, foot] of boards)
       for (let n = 1; n <= most; n++) expect(sheetsOf(n, large, foot)).toEqual(sheets.slice(0, n));
+  });
+});
+
+describe("the board's alert that a cut line couldn't be read", () => {
+  it("is taken back once a stored cut line replaces a failed trace, leaving the others'", async () => {
+    vi.mocked(maskPixels).mockRejectedValue(new Error("the mask didn't decode"));
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    onTestFinished(() => {
+      errors.mockRestore();
+      vi.mocked(maskPixels).mockReset();
+    });
+    const outlined = stickers(2, "kept");
+    // As the board kept on the device has them: without cut lines, so their masks are traced.
+    const kept = outlined.map(({ outline: _outline, ...s }) => s);
+    const told: TrayProblem[] = [];
+    const gone: TrayProblem[] = [];
+    const ui = createTrayState(modelOf(kept, new Set()));
+    const model = createTrayModel(ui, new Set(), {
+      problem: (p) => told.push(p),
+      problemGone: (p) => gone.push(p),
+    });
+    await model.relayout();
+    expect(told.map((p) => [p.kind, p.nos])).toEqual([
+      ["cut", [kept[0].no]],
+      ["cut", [kept[1].no]],
+    ]);
+
+    ui.model = modelOf([outlined[0], kept[1]], new Set());
+    model.applyPack();
+    expect(gone).toEqual([told[0]]);
+    expect(told).toHaveLength(2);
   });
 });

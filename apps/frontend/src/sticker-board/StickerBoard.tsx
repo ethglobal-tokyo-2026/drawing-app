@@ -338,6 +338,15 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       ),
     [],
   );
+  /** A problem the tray told that's no longer so: the alert stops saying it, and leaves the rest. */
+  const dropTrayProblem = useCallback(
+    (problem: TrayProblem) =>
+      setTrayProblems((was) => {
+        const left = was.filter((p) => trayProblemKey(p) !== trayProblemKey(problem));
+        return left.length === was.length ? was : left;
+      }),
+    [],
+  );
   const size = useBoardSize(stage, layout);
   /** The board measured in the layout it shows: a flip at runtime leaves one render on the last one's. */
   const measured = size?.layout === layout ? size : null;
@@ -1079,6 +1088,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             api={traySide}
             onSeen={onTraySeen}
             onProblem={addTrayProblem}
+            onProblemGone={dropTrayProblem}
           />
         </Suspense>
       )}

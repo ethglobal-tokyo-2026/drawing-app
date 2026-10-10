@@ -75,6 +75,7 @@ const render = (
         api={{ ...api, ...side }}
         onSeen={onSeen}
         onProblem={onProblem}
+        onProblemGone={() => {}}
       />,
     ),
   );

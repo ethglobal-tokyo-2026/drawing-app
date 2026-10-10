@@ -109,6 +109,7 @@ export function createTrayEngine(
     api,
     markSeen,
     problem,
+    problemGone,
     seen = new Set<string>(),
   }: {
     slots: () => readonly TraySticker[];
@@ -117,6 +118,8 @@ export function createTrayEngine(
     markSeen: (ids: readonly string[]) => void;
     /** Something the tray couldn't do, for the board to say. */
     problem: (problem: TrayProblem) => void;
+    /** A problem it told that's no longer so, which the board stops saying. */
+    problemGone: (problem: TrayProblem) => void;
     /**
      * Shown in the open tray: the stickers' own marks, and what this visit's trays have shown,
      * carried across a rebuilt engine.
@@ -225,7 +228,7 @@ export function createTrayEngine(
   zip.slot.append(w1);
 
   const ui = createTrayState(modelOf(read(), seen));
-  const trayModel = createTrayModel(ui, seen, problem);
+  const trayModel = createTrayModel(ui, seen, { problem, problemGone });
   const { newIds, applyPack, fitPages, relayout, resetOrder, sheetsMatching } = trayModel;
 
   /**

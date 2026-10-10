@@ -43,6 +43,8 @@ interface Props {
   onSeen: (ids: readonly string[]) => void;
   /** Something the tray couldn't do, which the board says. */
   onProblem: (problem: TrayProblem) => void;
+  /** A problem it told that's no longer so, which the board stops saying. */
+  onProblemGone: (problem: TrayProblem) => void;
   ref?: Ref<StickerTrayHandle>;
 }
 
@@ -87,6 +89,7 @@ export const StickerTray = memo(function StickerTray({
   api,
   onSeen,
   onProblem,
+  onProblemGone,
   ref,
 }: Props) {
   const engine = useRef<TrayEngine | null>(null);
@@ -94,9 +97,9 @@ export const StickerTray = memo(function StickerTray({
   /** What this visit's trays have shown, so a tray rebuilt for a new language shows none of it as NEW. */
   const seen = useRef(new Set<string>());
   const optedIn = useMyNsfwOptIn();
-  const latest = useRef({ stickers, ownerId, optedIn, api, onSeen, onProblem });
+  const latest = useRef({ stickers, ownerId, optedIn, api, onSeen, onProblem, onProblemGone });
   useLayoutEffect(() => {
-    latest.current = { stickers, ownerId, optedIn, api, onSeen, onProblem };
+    latest.current = { stickers, ownerId, optedIn, api, onSeen, onProblem, onProblemGone };
   });
 
   // What the sheets show: a sticker moved, raised or dropped on the board leaves it as it was, so the
@@ -130,6 +133,7 @@ export const StickerTray = memo(function StickerTray({
       api: side,
       markSeen: (ids) => latest.current.onSeen(ids),
       problem: (p) => latest.current.onProblem(p),
+      problemGone: (p) => latest.current.onProblemGone(p),
       seen: seen.current,
     });
     engine.current = tray;

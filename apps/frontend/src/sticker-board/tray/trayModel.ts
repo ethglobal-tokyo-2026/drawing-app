@@ -445,10 +445,17 @@ export function createTrayState(model: TrayState["model"]): TrayState {
 export function createTrayModel(
   ui: TrayState,
   seen: ReadonlySet<string>,
-  problem: (problem: TrayProblem) => void,
+  {
+    problem,
+    problemGone,
+  }: {
+    problem: (problem: TrayProblem) => void;
+    /** A problem it told that's no longer so, which the board stops saying. */
+    problemGone: (problem: TrayProblem) => void;
+  },
 ) {
-  /** Stickers whose unreadable cut line the board has been told of, once each. */
-  const toldCuts = new Set<string>();
+  /** What the board has been told of each sticker whose cut line couldn't be read. */
+  const toldCuts = new Map<string, TrayProblem>();
   const newIds = () => newSlots(ui.model.slots, { today: dayOf(Date.now()), dayOf, seen });
   const matches = (s: Slot) => matchesFilter(s, ui.filter);
   const sheetItems = (f: number) => ui.model.slots.filter((s) => s.sheet === f);
@@ -491,10 +498,16 @@ export function createTrayModel(
     if (sheetH !== SHEET.h) packed = packOn(sheetH);
     for (const s of ui.model.slots) {
       s.pos = packed.byId.get(s.id) ?? s.pos;
+      // Said once, and taken back once the cut line is read, as from the fresh board's outline.
       const why = unreadableCut(s.id);
-      if (why !== undefined && !toldCuts.has(s.id)) {
-        toldCuts.add(s.id);
-        problem({ kind: "cut", nos: [s.no], detail: why });
+      const told = toldCuts.get(s.id);
+      if (told?.detail === why) continue;
+      if (told) problemGone(told);
+      if (why === undefined) toldCuts.delete(s.id);
+      else {
+        const cut: TrayProblem = { kind: "cut", nos: [s.no], detail: why };
+        toldCuts.set(s.id, cut);
+        problem(cut);
       }
     }
     ui.sheetH = sheetH;
