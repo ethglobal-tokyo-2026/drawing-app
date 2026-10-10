@@ -108,7 +108,7 @@ describe("SendGratitudeSheet", () => {
   it("on an iPad waits as a card over a scrim, which says Later", () => {
     onLargeScreen();
     open(people.ken, people.mika);
-    act(() => document.querySelector<HTMLElement>(".send-gratitude-layer__scrim")?.click());
+    act(() => document.querySelector<HTMLElement>(".sheet-scrim")?.click());
     expect(onLater).toHaveBeenCalledOnce();
   });
 });

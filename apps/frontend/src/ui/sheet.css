@@ -35,6 +35,39 @@
   }
 }
 
+/* A sheet with a scrim (Sheet's `scrim`): the layer only groups the scrim and the sheet, as what
+   stays live while it's up, so it takes no room of its own. */
+.sheet-layer {
+  display: contents;
+}
+
+/* Over all of what the sheet sits in, under the card. */
+.sheet-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+  background: var(--scrim);
+  animation: sheet-scrim-in var(--t-peel) var(--ease-out);
+}
+
+/* Fading out with the sheet, it takes no touch, so the next one reaches the screen. */
+.sheet-scrim.is-leaving {
+  animation: sheet-scrim-out var(--t-peel) var(--ease-out) forwards;
+  pointer-events: none;
+}
+
+@keyframes sheet-scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-scrim-out {
+  to {
+    opacity: 0;
+  }
+}
+
 /* The perforation row, and the grab: a firmer run of holes at the center. */
 .perf {
   position: relative;

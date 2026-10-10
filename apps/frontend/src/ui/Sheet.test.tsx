@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LARGE_SCREEN } from "./largeScreen";
 import { Sheet } from "./Sheet";
-import { dragBy } from "./testing";
+import { dragBy, onLargeScreen } from "./testing";
 import { DISMISS_PX } from "./useSheetDrag";
 
 declare global {
@@ -75,6 +75,24 @@ describe("Sheet", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     render(true, { card: true, closable: false });
     expect(host.querySelector(".sheet-x")).toBeNull();
+  });
+
+  it("on a large screen closes a card from its scrim while it can close, and lets taps through the scrim as it goes", () => {
+    onLargeScreen();
+    // A browser's tap passes through an inert element, so the scrim only counts if it's live.
+    const tapScrim = () => {
+      const scrim = host.querySelector<HTMLElement>(".sheet-scrim");
+      if (scrim && !scrim.closest("[inert]")) act(() => scrim.click());
+    };
+    render(true, { card: true, scrim: true, closable: false });
+    tapScrim();
+    expect(onClose).not.toHaveBeenCalled();
+    render(true, { card: true, scrim: true });
+    tapScrim();
+    expect(onClose).toHaveBeenCalledTimes(1);
+    render(false, { card: true, scrim: true });
+    tapScrim();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("slides a closing sheet away before it goes", () => {

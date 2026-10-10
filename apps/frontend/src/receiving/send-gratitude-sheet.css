@@ -61,16 +61,8 @@
   max-width: 100%;
 }
 
-/* A large screen's layer and scrim, as the give sheet's. */
-.send-gratitude-layer {
-  position: absolute;
-  inset: 0;
-  z-index: var(--z-sheet);
-}
-
-.send-gratitude-layer__scrim {
-  position: absolute;
-  inset: 0;
+/* On a large screen its scrim is the give sheet's, lighter over the board. */
+.sheet-scrim:has(+ .send-gratitude-sheet) {
   background: rgba(28, 24, 36, 0.36);
 }
 

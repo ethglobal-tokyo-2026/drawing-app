@@ -31,7 +31,7 @@ interface Props {
   returnFocus?: () => HTMLElement | null;
   /**
    * What stays live around the sheet while it's open, for a sheet in a layer of its own (with a scrim
-   * to tap, or a screen that closes it). The rest of the page goes inert.
+   * of its own to tap, or a screen that closes it). The rest of the page goes inert.
    */
   layer?: RefObject<HTMLElement | null>;
   /**
@@ -44,6 +44,11 @@ interface Props {
    * an X in its corner while it can close.
    */
   card?: boolean;
+  /**
+   * As a card on a large screen, it sits over a scrim that dims what's around it and closes it at a
+   * tap, while it can close.
+   */
+  scrim?: boolean;
   className?: string;
   children: ReactNode;
 }
@@ -64,12 +69,15 @@ export function Sheet({
   layer,
   head,
   card = false,
+  scrim = false,
   className,
   children,
 }: Props) {
   const { t } = useTranslation();
   const large = useLargeScreen();
   const ref = useRef<HTMLDivElement>(null);
+  // The scrim stays live with the sheet, so the two are one layer.
+  const ownLayer = useRef<HTMLDivElement>(null);
   // The perforation, Escape and Back all close it, and all refuse while its act is on its way.
   const stays = busy || !closable;
   const close = () => {
@@ -87,7 +95,7 @@ export function Sheet({
     }
   }
   // The page comes back from inert before the trap gives focus back to it, so this goes first.
-  useModalDialog(ref, { layer, active: open });
+  useModalDialog(ref, { layer: layer ?? (scrim ? ownLayer : undefined), active: open });
   useFocusTrap(ref, { active: open, onEscape: onEscape ?? close, returnFocus });
   useBackToClose(open, () => {
     close();
@@ -96,7 +104,7 @@ export function Sheet({
   if (!shown) return null;
 
   const leaving = !open;
-  return (
+  const sheet = (
     <div
       ref={ref}
       className={["bottom-sheet", card && "sheet-card", leaving && "is-leaving", className]
@@ -145,6 +153,20 @@ export function Sheet({
         </div>
       )}
       {children}
+    </div>
+  );
+  if (!scrim) return sheet;
+  return (
+    <div ref={ownLayer} className="sheet-layer">
+      {card && large && (
+        // Fading out with the sheet, it lets the next tap through to what's under it.
+        <div
+          className={leaving ? "sheet-scrim is-leaving" : "sheet-scrim"}
+          inert={leaving}
+          onClick={close}
+        />
+      )}
+      {sheet}
     </div>
   );
 }

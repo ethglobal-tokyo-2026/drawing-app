@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { createPortal } from "react-dom";
 import { Clock, GratitudeIcon } from "../icons";
 import type { PersonView, StickerView } from "../api/views";
@@ -31,7 +30,6 @@ interface Props {
 export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
   const { t } = useTranslation();
   const large = useLargeScreen();
-  const layer = useRef<HTMLDivElement>(null);
   const who = giver.handle === null ? giver.name : formatHandle(giver.handle);
   const title = t(($) => $.receiving.sendGratitude.title, { name: who });
   const from = (
@@ -57,14 +55,7 @@ export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
     </div>
   );
   const sheet = (
-    <Sheet
-      label={title}
-      onClose={onLater}
-      className="send-gratitude-sheet"
-      card
-      layer={large ? layer : undefined}
-      head={from}
-    >
+    <Sheet label={title} onClose={onLater} className="send-gratitude-sheet" card scrim head={from}>
       <div className="send-gratitude-sheet__acts">
         <Key tone="pink" size="lg" icon={<GratitudeIcon />} onClick={onSend} data-autofocus>
           {t(($) => $.receiving.sendGratitude.send)}
@@ -78,11 +69,5 @@ export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
   if (!large) return sheet;
   // On a large screen it's a card in the middle, over a scrim that dims the board and the tab row.
   const phone = document.querySelector<HTMLElement>(".phone");
-  const layered = (
-    <div className="send-gratitude-layer" ref={layer}>
-      <div className="send-gratitude-layer__scrim" onClick={onLater} />
-      {sheet}
-    </div>
-  );
-  return phone ? createPortal(layered, phone) : layered;
+  return phone ? createPortal(sheet, phone) : sheet;
 }
