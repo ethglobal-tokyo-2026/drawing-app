@@ -1,3 +1,4 @@
+import { MAX_SCALE } from "@drawing-app/api/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CREASE_SIDES } from "../stickers/crease";
 import type { Affine, CreaseJob, CreaseReply } from "../stickers/creaseWorker";
@@ -11,8 +12,8 @@ const field = fieldOf(PHONE_BOARD.W, PHONE_BOARD.H);
 const unit = unitOf("phone", PHONE_BOARD.W);
 /** Pixels per CSS px for the bakes. */
 const SCALE = 2;
-/** `at` is stored to two places, which over a sticker's size moves a point by under a pixel. */
-const ROUNDING_PX = 1;
+/** How far `at`'s rounding may move a point, even across the largest sticker. */
+const ROUNDING_PX = 0.05;
 
 /** A sticker twice as wide as it's tall, so its width and height can't be mixed up. */
 function sticker(id: string, at: Partial<Placement> = {}, urls = testStickerUrls(id)) {
@@ -59,34 +60,38 @@ function expectedIn(top: TestSticker, lower: TestSticker, fromMiddle: [number, n
 
 describe("creaseJobs", () => {
   it.each([
-    ["neither turned", 0, 0],
-    ["the sticker over it turned", 30, 0],
-    ["both turned", 30, -20],
-  ])("puts the sticker underneath where it lies in the top one's frame, %s", (_, over, under) => {
-    const lower = sticker("lower", { x: 0.4, y: 0.5, r: under });
-    const top = sticker("top", { x: 0.6, y: 0.55, r: over });
+    ["neither turned", 0, 0, 0.4],
+    ["the sticker over it turned", 30, 0, 0.4],
+    ["both turned", 30, -20, 0.4],
+    ["both turned, as large as a sticker gets", 30, -20, MAX_SCALE],
+  ])(
+    "puts the sticker underneath where it lies in the top one's frame, %s",
+    (_, over, under, s) => {
+      const lower = sticker("lower", { x: 0.4, y: 0.5, r: under, s });
+      const top = sticker("top", { x: 0.6, y: 0.55, r: over, s });
 
-    const jobs = jobsFor([lower, top]);
+      const jobs = jobsFor([lower, top]);
 
-    // Only the one lying over another has a crease to bake.
-    expect(jobs.map((j) => j.id)).toEqual(["top"]);
-    expect(jobs[0].under).toHaveLength(1);
-    const [beneath] = jobs[0].under;
-    const { w, h } = boxOf(lower);
-    expect(beneath.w).toBeCloseTo(w, 1);
-    expect(beneath.h).toBeCloseTo(h, 1);
-    // Its middle, and its top-left corner, which a turn of its own moves.
-    const points: [number, number][] = [
-      [0, 0],
-      [-w / 2, -h / 2],
-    ];
-    for (const fromMiddle of points) {
-      const [x, y] = apply(beneath.at, [w / 2 + fromMiddle[0], h / 2 + fromMiddle[1]]);
-      const [ex, ey] = expectedIn(top, lower, fromMiddle);
-      expect(Math.abs(x - ex)).toBeLessThan(ROUNDING_PX);
-      expect(Math.abs(y - ey)).toBeLessThan(ROUNDING_PX);
-    }
-  });
+      // Only the one lying over another has a crease to bake.
+      expect(jobs.map((j) => j.id)).toEqual(["top"]);
+      expect(jobs[0].under).toHaveLength(1);
+      const [beneath] = jobs[0].under;
+      const { w, h } = boxOf(lower);
+      expect(beneath.w).toBeCloseTo(w, 1);
+      expect(beneath.h).toBeCloseTo(h, 1);
+      // Its middle, and its top-left corner, which a turn of its own moves.
+      const points: [number, number][] = [
+        [0, 0],
+        [-w / 2, -h / 2],
+      ];
+      for (const fromMiddle of points) {
+        const [x, y] = apply(beneath.at, [w / 2 + fromMiddle[0], h / 2 + fromMiddle[1]]);
+        const [ex, ey] = expectedIn(top, lower, fromMiddle);
+        expect(Math.abs(x - ex)).toBeLessThan(ROUNDING_PX);
+        expect(Math.abs(y - ey)).toBeLessThan(ROUNDING_PX);
+      }
+    },
+  );
 
   it("lights a turned sticker's crease from each side's light on screen, turned into its frame", () => {
     const r = 30;

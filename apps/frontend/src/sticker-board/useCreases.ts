@@ -124,11 +124,16 @@ const byImage = <T>(of: (image: CreaseImage) => T): Record<CreaseImage, T> => ({
 });
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
+const r5 = (v: number) => Math.round(v * 100_000) / 100_000;
+/**
+ * Rounded so float noise doesn't change a job's key: the move to two places, under a pixel; the turn
+ * and scale to five, since their error grows with the sticker's size.
+ */
 const roundAffine = ([a, b, c, d, e, f]: Affine): Affine => [
-  r2(a),
-  r2(b),
-  r2(c),
-  r2(d),
+  r5(a),
+  r5(b),
+  r5(c),
+  r5(d),
   r2(e),
   r2(f),
 ];
