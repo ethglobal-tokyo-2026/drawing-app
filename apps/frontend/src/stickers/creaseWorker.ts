@@ -4,7 +4,8 @@
  * replaces whatever of the last one hasn't started.
  */
 import { releaseCanvas } from "../ui/releaseCanvas";
-import { creasePixels, stackedSurface, type CreaseSide } from "./crease";
+import { creasePixels, stackedSurface, type CreaseImage, type CreaseSide } from "./crease";
+import { maskCache } from "./maskCache";
 
 /** A 2D affine, as setTransform takes it. */
 export type Affine = [number, number, number, number, number, number];
@@ -61,14 +62,14 @@ export interface CreaseTimings {
   total: number;
 }
 
-/** A baked crease, lit from each side; null when nothing underneath shows a step. */
+/** A baked crease, its base and its rise lit from each side; null when nothing underneath shows a step. */
 export type CreaseReply =
   | {
       ok: true;
       board: string;
       id: string;
       key: string;
-      crease: Record<CreaseSide, Blob> | null;
+      crease: Record<CreaseImage, Blob> | null;
       timings: CreaseTimings;
     }
   | { ok: false; board: string; id: string; key: string; error: string };
@@ -86,13 +87,15 @@ declare const self: {
   postMessage: (reply: CreaseReply) => void;
 };
 
-/** Masks are kept at most this long a side: the crease is soft, and every board sticker's is kept. */
+/** Masks are kept at most this long a side: the crease is soft, and a board's worth are kept. */
 const MASK_SIDE = 320;
-
-const masks = new Map<string, Promise<ImageBitmap>>();
+/** How many masks are kept: about a board's worth. */
+const MASKS_KEPT = 64;
+/** A bake, and a mask's fetch with it, is given up after this long, so one that stalls holds up no other. */
+const BAKE_TIMEOUT_MS = 20_000;
 
 async function loadMask(url: string): Promise<ImageBitmap> {
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(BAKE_TIMEOUT_MS) });
   if (!response.ok) throw new Error(`Loading the mask ${url} answered ${response.status}`);
   const bitmap = await createImageBitmap(await response.blob());
   const s = Math.min(1, MASK_SIDE / Math.max(bitmap.width, bitmap.height));
@@ -101,22 +104,18 @@ async function loadMask(url: string): Promise<ImageBitmap> {
     Math.max(1, Math.round(bitmap.width * s)),
     Math.max(1, Math.round(bitmap.height * s)),
   );
-  const g = canvas.getContext("2d");
-  if (!g) throw new Error("OffscreenCanvas 2D context unavailable");
-  g.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  return canvas.transferToImageBitmap();
+  try {
+    const g = canvas.getContext("2d");
+    if (!g) throw new Error("OffscreenCanvas 2D context unavailable");
+    g.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    return canvas.transferToImageBitmap();
+  } finally {
+    bitmap.close();
+    releaseCanvas(canvas);
+  }
 }
 
-function maskOf(url: string): Promise<ImageBitmap> {
-  let mask = masks.get(url);
-  if (!mask) {
-    mask = loadMask(url);
-    masks.set(url, mask);
-    mask.catch(() => masks.delete(url));
-  }
-  return mask;
-}
+const maskOf = maskCache(loadMask, MASKS_KEPT);
 
 /** The alpha channel, 0 to 1. */
 function alphaOf(data: Uint8ClampedArray): Float32Array {
@@ -172,6 +171,7 @@ async function bake(board: string, job: CreaseJob): Promise<CreaseReply> {
     });
     const t3 = performance.now();
     const crease = pixels && {
+      base: await pngOf(canvas, pixels.base),
       topLeft: await pngOf(canvas, pixels.topLeft),
       bottomRight: await pngOf(canvas, pixels.bottomRight),
       topRight: await pngOf(canvas, pixels.topRight),
@@ -191,18 +191,41 @@ async function bake(board: string, job: CreaseJob): Promise<CreaseReply> {
   }
 }
 
+/** `work`, or an error once it has taken longer than `ms`. */
+async function within<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`it took over ${ms / 1000} s, so it was given up`)),
+          ms,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Each board's latest batch. */
 const current = new Map<string, number>();
 
 self.onmessage = (event) => {
   const { board, batch, jobs } = event.data;
+  // An empty batch says the board wants nothing more, or has gone: its last batch's rest is dropped.
+  if (!jobs.length) {
+    current.delete(board);
+    return;
+  }
   current.set(board, batch);
   void (async () => {
     for (const job of jobs) {
       // A newer batch for this board has its whole stack again; this one's rest is stale.
       if (current.get(board) !== batch) return;
       try {
-        self.postMessage(await bake(board, job));
+        self.postMessage(await within(bake(board, job), BAKE_TIMEOUT_MS));
       } catch (error) {
         self.postMessage({
           ok: false,

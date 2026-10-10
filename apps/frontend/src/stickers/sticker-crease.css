@@ -1,12 +1,13 @@
-/* A sticker's crease where it lies over another's edge, pressed in as it's shown: an image of it lit from
-   each side, blended by where the one light is (--lx, --ly), so its lit and shaded sides follow it. */
+/* A sticker's crease where it lies over another's edge, pressed in as it's shown: its base, the shoulder
+   and foot that show under any light, and over it an image of its rise lit from each side, blended by
+   where the one light is (--lx, --ly), so its lit and shaded sides follow it. */
 .sticker-crease {
   /* How far a full tilt swings the light: a full diagonal tilt reaches the opposite side. */
   --crease-swing: 1.5;
   /* Toward the light, on screen: the light at rest (--crease-ux, --crease-uy), swung by the tilt. */
   --crease-x: calc(var(--crease-ux) + var(--crease-swing) * var(--lx, 0));
   --crease-y: calc(var(--crease-uy) + var(--crease-swing) * var(--ly, 0));
-  /* Never stronger than at rest, so the crease only fades as the light passes overhead. */
+  /* Never stronger than at rest, so each side only fades as the light passes overhead, to the base. */
   --crease-len: max(1, hypot(var(--crease-x), var(--crease-y)));
   /* Along the light at rest, and across it toward the top right. */
   --crease-a: calc(
@@ -27,12 +28,16 @@
   position: absolute;
   inset: 0;
   background: var(--crease) 0 0 / 100% 100% no-repeat;
+}
+
+/* The fade keeps each side's change on the compositor; without it WebKit repaints every side. */
+.sticker-crease > i[data-side] {
   transition: opacity 280ms var(--ease-out);
 }
 
 /* Without hypot() the blend can't be worked out, and every side would show: there it's the crease at
-   rest. */
-.sticker-crease > i:not([data-side="topLeft"]) {
+   rest. :where() keeps this under the blend below. */
+.sticker-crease > i:where([data-side]):not([data-side="topLeft"]) {
   opacity: 0;
 }
 
@@ -72,7 +77,7 @@
     animation: none;
   }
 
-  .sticker-crease > i {
+  .sticker-crease > i[data-side] {
     transition: none;
   }
 }

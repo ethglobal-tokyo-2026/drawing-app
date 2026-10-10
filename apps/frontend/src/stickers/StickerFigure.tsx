@@ -1,6 +1,6 @@
 import { memo, useCallback, useState, type CSSProperties, type Ref } from "react";
 import { useTranslation } from "../i18n/react";
-import type { CreaseSide } from "./crease";
+import type { CreaseImage } from "./crease";
 import { LiveResin } from "./LiveResin";
 import { madeFoil } from "./madeFoil";
 import { useSharpSrc } from "./sharpImage";
@@ -11,8 +11,11 @@ import { revealOnLoad } from "../ui/reveal";
 import "./nsfw-mark.css";
 import "./sticker-figure.css";
 
-/** A sticker's crease, baked: an image of it lit from each side, which the one light blends between. */
-export type Crease = Record<CreaseSide, string>;
+/**
+ * A sticker's crease, baked: its base, which always shows, and its rise lit from each side, which the
+ * one light blends between.
+ */
+export type Crease = Record<CreaseImage, string>;
 
 interface Props {
   urls: StickerUrls;

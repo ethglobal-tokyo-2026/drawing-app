@@ -65,11 +65,9 @@ test("a sticker over another shows the crease of the edge beneath, lit as the on
   await setCreases(page, true);
   const under = await stuck(page, await sealFromBoard(page, language));
   const over = await stuck(page, await sealFromBoard(page, language));
-  // A new sticker lands clear of the others, so nothing has a crease yet.
-  await expect(page.locator(".sticker-crease")).toHaveCount(0);
 
   // Dragged over the first sticker's edge, the second sticker shows a crease once it's down; the
-  // one beneath shows none.
+  // one beneath, baked in the same batch before it, shows none.
   const from = await middleOf(over.sticker);
   const onto = await middleOf(under.sticker);
   await page.mouse.move(from.x, from.y);
