@@ -1,3 +1,4 @@
+import { capturePointer } from "../ui/capturePointer";
 import { FEEL_CONFIG } from "./gameConfig";
 
 /** The heart's resting box, in the stage's own pixels. */
@@ -71,11 +72,7 @@ export function listenForTouches(
   const onDown = (e: PointerEvent) => {
     if (e.button > 0) return;
     // The stage keeps the pointer until it lifts, so a mouse let go off the stage still lifts here.
-    try {
-      stage.setPointerCapture(e.pointerId);
-    } catch {
-      // Synthetic pointer events have no active pointer to capture; the touch still counts.
-    }
+    capturePointer(stage, e.pointerId);
     const { x, y } = options.toStage(e);
     const onHeart = isOnHeart(x, y, options.heartArea());
     grabs.set(e.pointerId, { x, y, t: e.timeStamp, onHeart, dragged: false });

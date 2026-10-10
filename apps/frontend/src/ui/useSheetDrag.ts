@@ -1,4 +1,5 @@
 import { useRef, useState, type CSSProperties, type DOMAttributes } from "react";
+import { capturePointer } from "./capturePointer";
 
 /** How far a sheet or a card must be dragged down before it lets go, px. */
 export const DISMISS_PX = 40;
@@ -29,7 +30,7 @@ export function useSheetDrag(close: () => void) {
       const y = e.clientY - held.y;
       if (!held.moved && Math.hypot(x, y) > TAP_SLOP_PX) {
         held.moved = true;
-        e.currentTarget.setPointerCapture(e.pointerId);
+        capturePointer(e.currentTarget, e.pointerId);
       }
       held.dy = Math.max(0, y);
       setDy(held.dy);

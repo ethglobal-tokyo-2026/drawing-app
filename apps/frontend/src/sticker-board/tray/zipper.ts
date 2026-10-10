@@ -8,6 +8,7 @@
  */
 import { i18next } from "../../i18n/i18n";
 import { timeOurWork } from "../../performance/performanceRecorder";
+import { capturePointer } from "../../ui/capturePointer";
 import { clamp, lerp } from "../../ui/easing";
 import { REDUCED_MOTION } from "../../ui/useReducedMotion";
 import { elementMaker, timeoutsIn, windowOf } from "./trayDom";
@@ -1144,11 +1145,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     // One hand on the pull at a time: a second finger or a palm beside it is ignored.
     if (e.button > 0 || st.grab) return;
     e.preventDefault();
-    try {
-      slider.setPointerCapture(e.pointerId);
-    } catch {
-      // Synthetic pointer events have no active pointer to capture; the drag still works.
-    }
+    capturePointer(slider, e.pointerId);
     const frame = frameOf();
     const y = localY(e, frame);
     // When each event happened, not when it's handled: moves handled together after a stall were

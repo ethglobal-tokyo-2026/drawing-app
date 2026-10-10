@@ -7,6 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { PullTab } from "../giving/GiftBag";
+import { capturePointer } from "../ui/capturePointer";
 import { clamp01 } from "../ui/easing";
 import {
   PULL,
@@ -230,11 +231,7 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
       if (p.torn || p.drag) return;
       // The bag's own press and hold is for presses off the tab.
       e.stopPropagation();
-      try {
-        e.currentTarget.setPointerCapture(e.pointerId);
-      } catch {
-        // A synthetic pointer has nothing to capture; the drag still follows it.
-      }
+      capturePointer(e.currentTarget, e.pointerId);
       stopMoving();
       // A grab mid-hint takes the tab where the hint has it, so it doesn't jump back from under the finger.
       if (hinting && !reduced) show(hintTear(p.bag));

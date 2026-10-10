@@ -3,6 +3,7 @@
  * the board: the first move decides whether a press pages, peels, pulls the sheet out or moves it,
  * and a tap sticks a sticker on or shows where it is.
  */
+import { capturePointer } from "../../ui/capturePointer";
 import { EASE_OUT, EASE_PEEL, clamp, lerp } from "../../ui/easing";
 import { edgeAt } from "./edgeBands";
 import {
@@ -102,11 +103,7 @@ export function createTrayPresses(
       peel: null,
       at: null,
     };
-    try {
-      on.setPointerCapture(e.pointerId);
-    } catch {
-      // Synthetic pointer events have no active pointer to capture; the gesture still works.
-    }
+    capturePointer(on, e.pointerId);
     e.preventDefault();
   }
   /** The press this pointer holds on `pulled`'s sheet, or on the stack when null. */

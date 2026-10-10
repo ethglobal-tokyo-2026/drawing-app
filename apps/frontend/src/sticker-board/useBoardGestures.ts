@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObje
 import { formatNo } from "../stickers/format";
 import { sheenIn, sweepSheen } from "../stickers/resinSheen";
 import { playStick } from "../stickers/stick";
+import { capturePointer } from "../ui/capturePointer";
 import { clamp, EASE_PEEL } from "../ui/easing";
 import {
   dragBounds,
@@ -454,12 +455,7 @@ export function useBoardGestures(options: Options) {
         gesture.current = { mode: "bg", p0: pt };
       }
       startHold(gesture.current);
-      try {
-        stage.setPointerCapture(e.pointerId);
-      } catch (error) {
-        // WebKit can't capture a pointer that's gone; its lift on the stage still ends the gesture.
-        if (!(error instanceof DOMException && error.name === "NotFoundError")) throw error;
-      }
+      capturePointer(stage, e.pointerId);
       e.preventDefault();
     };
 

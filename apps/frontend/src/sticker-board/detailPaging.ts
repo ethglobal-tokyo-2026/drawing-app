@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, type PointerEvent } from "react";
+import { capturePointer } from "../ui/capturePointer";
 import { EASE_OUT, T_STICK_MS } from "../ui/easing";
 
 /** How far a finger moves on the stage before it counts as a swipe or a scroll. */
@@ -93,7 +94,7 @@ export function useSwipePaging({ index, count, reduced, onPage }: Paging) {
     const dx = e.clientX - s.x;
     if (!s.lock) {
       s.lock = swipeLock({ dx, dy: e.clientY - s.y });
-      if (s.lock === "swipe") e.currentTarget.setPointerCapture(e.pointerId);
+      if (s.lock === "swipe") capturePointer(e.currentTarget, e.pointerId);
     }
     if (s.lock !== "swipe") return;
     s.dx = dx;

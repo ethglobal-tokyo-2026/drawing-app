@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { capturePointer } from "../../ui/capturePointer";
 
 interface Drag {
   /** The drag began where the pointer landed, in the element's box. */
@@ -39,7 +40,7 @@ export function useDrag({ onStart, onMove, onEnd, onAbandon }: Drag) {
       e.preventDefault();
       const box = e.currentTarget.getBoundingClientRect();
       drag.current = { box, pointerId: e.pointerId };
-      e.currentTarget.setPointerCapture(e.pointerId);
+      capturePointer(e.currentTarget, e.pointerId);
       onStart?.(e.clientX, e.clientY, box);
       onMove(e.clientX, e.clientY, box);
     },

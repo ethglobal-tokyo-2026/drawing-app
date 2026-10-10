@@ -9,6 +9,7 @@
  * `el.click()`, so React's onClick still runs, and a cancelled press can't let a click slip through.
  * While it moves the element carries `data-press-state` (down | pop | lift); at rest it has none.
  */
+import { capturePointer } from "./capturePointer";
 import { EASE_OUT, EASE_SPRING } from "./easing";
 import { REDUCED_MOTION } from "./useReducedMotion";
 
@@ -217,11 +218,7 @@ export function installPress(): () => void {
     if (held || !e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
     const el = pressable(e.target);
     if (!el) return;
-    try {
-      el.setPointerCapture(e.pointerId);
-    } catch {
-      // Synthetic pointer events have no active pointer to capture; the press still works.
-    }
+    capturePointer(el, e.pointerId);
     held = { el, id: e.pointerId, rect: bounds(el), inside: true };
     setState(el, "down");
     down(el);
