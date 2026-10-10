@@ -284,7 +284,7 @@ export function pileStickers(items: readonly PileItem[], opts: PileOptions): Pil
     else if (long < LONG_MIN) s *= LONG_MIN / long;
     const w = sh.w * s;
     const h = sh.h * s;
-    const pf = profileOf(sh, w, h, r, false);
+    const pf = profileOf(sh, w, h, r);
 
     // The tag hangs across the cut's lower edge under its own left side, turned back a little.
     const tw = item.tag.w;

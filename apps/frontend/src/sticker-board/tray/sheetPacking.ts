@@ -318,13 +318,13 @@ interface Profile {
 
 const profiles = new WeakMap<Shape, Map<string, Profile>>();
 
-export function profileOf(sh: Shape, bw: number, bh: number, deg: number, flip: boolean): Profile {
+export function profileOf(sh: Shape, bw: number, bh: number, deg: number): Profile {
   let per = profiles.get(sh);
   if (!per) {
     per = new Map();
     profiles.set(sh, per);
   }
-  const key = `${bw.toFixed(3)}|${bh.toFixed(3)}|${deg.toFixed(3)}|${flip ? 1 : 0}`;
+  const key = `${bw.toFixed(3)}|${bh.toFixed(3)}|${deg.toFixed(3)}`;
   const known = per.get(key);
   if (known) return known;
   const a = (deg * Math.PI) / 180;
@@ -340,7 +340,7 @@ export function profileOf(sh: Shape, bw: number, bh: number, deg: number, flip: 
   let maxy = -Infinity;
   for (let i = 0; i < n; i++) {
     const px = (poly[i][0] - 0.5) * bw;
-    const py = (flip ? 0.5 - poly[i][1] : poly[i][1] - 0.5) * bh;
+    const py = (poly[i][1] - 0.5) * bh;
     const x = px * cs - py * sn;
     const y = px * sn + py * cs;
     X[i] = x;
@@ -529,7 +529,7 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
         (Math.max(...vs) - Math.min(...vs)) * sh.h,
       ) * s;
     if (cutLong < o.minSize) s *= o.minSize / cutLong;
-    const pf = profileOf(sh, sh.w * s, sh.h * s, r, false);
+    const pf = profileOf(sh, sh.w * s, sh.h * s, r);
     const seed = { lift: u[3] * o.breathe, gap: u[4] * o.breathe, inset: u[5] * o.inset };
     let sheet = sheets.at(-1);
     let at = sheet ? spotFor(sheet, pf, seed) : null;
