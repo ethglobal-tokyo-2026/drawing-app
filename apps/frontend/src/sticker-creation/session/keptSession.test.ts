@@ -84,10 +84,13 @@ async function keptSteps(userId: string) {
 
 /**
  * Waits for the steps kept for `userId` to be `expected`: a write merged behind one that failed
- * starts only once that failure reaches its keeper, which no load can wait for.
+ * starts only once that failure reaches its keeper, which no load can wait for. It waits as long as
+ * the session gives a write, which a busy machine can need.
  */
 const untilKept = (userId: string, expected: Step[]) =>
-  vi.waitFor(async () => expect(await keptSteps(userId)).toEqual(expected));
+  vi.waitFor(async () => expect(await keptSteps(userId)).toEqual(expected), {
+    timeout: WRITE_TIMEOUT_MS,
+  });
 
 /** A second connection to the one database kept, as another tab would open. */
 async function openKept(): Promise<IDBDatabase> {
