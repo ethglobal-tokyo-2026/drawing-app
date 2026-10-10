@@ -24,7 +24,6 @@ import {
   toStickerPlacement,
   type StickerViewer,
 } from "../shapes.ts";
-import { simplifiedOutlineOf } from "../stickers/outline.ts";
 import { MAX_LARGE_LAYOUT_BATCH } from "./largeLayoutLimit.ts";
 
 /** `me` in a board's path: the signed-in person. */
@@ -37,7 +36,6 @@ export const MAX_SEEN_BATCH = 500;
 const openGiftStatusSchema = giftSchema.shape.status.extract(["packed", "sent"]);
 
 const boardStickerSchema = stickerPlacementSchema.extend({
-  /** Its outline simplified, which is all a sticker sheet packs by; the sticker's detail has it whole. */
   sticker: stickerSchema,
   /** False: given away; off the board, and an empty spot in the sticker tray. */
   held: z.boolean(),
@@ -250,10 +248,7 @@ export function loadStickerBoard(
       return {
         ...stickerPlacement,
         seenAt: own ? stickerPlacement.seenAt : null,
-        sticker: {
-          ...toSticker(sticker, artist, viewer),
-          outline: simplifiedOutlineOf(sticker),
-        },
+        sticker: toSticker(sticker, artist, viewer),
         held,
         hasTimelapse: timelapsed.has(sticker.id) && !viewer.veils(sticker),
         trail: trails.get(sticker.id) ?? NO_TRAIL,

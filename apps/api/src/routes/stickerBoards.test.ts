@@ -161,7 +161,7 @@ describe("GET /api/sticker-boards/:userId", () => {
     expect(stickers.get(received)).toMatchObject({ held: true, openGift: null });
   });
 
-  it("sends each cut line simplified, where the sticker's detail sends it whole", async () => {
+  it("sends each cut line simplified, on the board and in the sticker's detail", async () => {
     const me = insertUser(test.db);
     // A circle as the seal stores a cut line: a point every 2 px.
     const points = Array.from({ length: 800 }, (_, i) => {
@@ -170,10 +170,12 @@ describe("GET /api/sticker-boards/:userId", () => {
     });
     const outline = `M${points.join("L")}Z`;
     const stickerId = insertSealedSticker(test.db, me, { outline, width: 600, height: 600 });
+    const simplified = simplifiedOutline(outline, 600, 600);
+    expect(simplified.length).toBeLessThan(outline.length);
     const detail = await test.send("GET", `/api/stickers/${stickerId}`, { as: me });
-    expect((await bodyOf(detail, stickerDetailSchema)).sticker.outline).toBe(outline);
+    expect((await bodyOf(detail, stickerDetailSchema)).sticker.outline).toBe(simplified);
     const [onBoard] = (await boardOf(me, "me")).boardStickers;
-    expect(onBoard?.sticker.outline).toBe(simplifiedOutline(outline, 600, 600));
+    expect(onBoard?.sticker.outline).toBe(simplified);
   });
 
   it("shows someone else only the stickers on the board its owner holds, without their bag or NEW", async () => {
