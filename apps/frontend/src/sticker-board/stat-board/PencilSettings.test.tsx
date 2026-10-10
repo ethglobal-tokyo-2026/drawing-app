@@ -13,6 +13,12 @@ import {
 import { refusingStorage } from "../../ui/testing";
 import { DrawingSettings } from "./DrawingSettings";
 
+// Try it draws on a canvas, which happy-dom gives no 2D context.
+vi.mock("../../sticker-creation/canvas/context2d", async () => {
+  const { fakeContext2d } = await import("../timelapse/testCanvas");
+  return { context2d: fakeContext2d };
+});
+
 const words = stickerBoard.settings.pencil;
 const { notKept } = stickerBoard.settings.drawing;
 let unmount = () => {};

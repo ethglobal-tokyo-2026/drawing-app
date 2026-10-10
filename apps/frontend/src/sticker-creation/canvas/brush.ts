@@ -125,7 +125,7 @@ export class StrokeBuilder {
   private readonly size: number;
   private readonly t0: number;
   /** The pointer's own sample as the last point went in, which a speed-drawn width measures from. */
-  private nib: Nib;
+  private readonly nib: Nib;
   private readonly pen: boolean;
   private readonly response: PenPressure;
   /** The pen's first reading; null while it has reported none. */
@@ -220,7 +220,12 @@ export class StrokeBuilder {
       this.reach = Math.max(this.reach, Math.hypot(x - pts[0], y - pts[1]));
       width *= this.smoothed * tapered(this.taper, this.reach);
     }
-    if (nib) this.nib = nib;
+    // Copied, so a caller can hand in every sample in one object.
+    if (nib) {
+      this.nib.x = nib.x;
+      this.nib.y = nib.y;
+      this.nib.t = nib.t;
+    }
     this.curve.add(x, y, width, Math.round(t - this.t0));
     return true;
   }
