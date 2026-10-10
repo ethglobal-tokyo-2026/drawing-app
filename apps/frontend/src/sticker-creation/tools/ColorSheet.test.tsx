@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act, useRef } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { renderWithApi } from "../../api/testing";
 import { ColorSheet } from "./ColorSheet";
 
@@ -9,6 +9,12 @@ const DRAWN = "#1C1824";
 
 describe("ColorSheet", () => {
   it("shows the drawn color again when it goes with a color still in hand on the pad", () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      // Closing schedules a history step back; it must not outlive this test's window.
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    });
     const onPick = vi.fn<(hex: string) => void>();
     const onPreview = vi.fn<(hex: string) => void>();
     function Screen() {

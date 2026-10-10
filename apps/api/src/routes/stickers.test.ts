@@ -4,6 +4,7 @@ import {
   stickers,
   stickerTimelapses,
   ticketUses,
+  timelapseV1ToV2,
 } from "@drawing-app/db";
 import {
   insertGratitude,
@@ -14,7 +15,7 @@ import {
 } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
-import { gzipSync } from "node:zlib";
+import { gunzipSync, gzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CdnPurge } from "../deps.ts";
 import { stickerBoardSchema } from "../stickerBoards/board.ts";
@@ -42,11 +43,13 @@ import {
   STICKER_DRAWN_SIZE,
   STICKER_SIZE,
   TEST_TIMELAPSE,
+  TEST_TIMELAPSE_V1,
   testPng,
   testTimelapse,
   type SealParts,
 } from "../stickers/testPngs.ts";
-import { timelapseProblem, timelapseV1Schema } from "../stickers/timelapse.ts";
+import { timelapseToStore, timelapseV2Schema } from "../stickers/timelapse.ts";
+import { MAX_LAYERS } from "../stickers/timelapseLimit.ts";
 import { createChainTestApp, createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeCdnPurge } from "../testing/fakes.ts";
 import { captureLogLines } from "../testing/logLines.ts";
@@ -182,6 +185,15 @@ describe("POST /api/stickers", () => {
   it.each([
     ["not a timelapse", gzipSync(JSON.stringify({ v: 1, ink: [1, 1] }))],
     ["not gzipped", new TextEncoder().encode(JSON.stringify(TEST_TIMELAPSE))],
+    [
+      "on more layers than a sheet holds",
+      gzipSync(
+        JSON.stringify({
+          ...TEST_TIMELAPSE,
+          layers: Array.from({ length: MAX_LAYERS + 1 }, (_, i) => [i + 1, 100, false, false]),
+        }),
+      ),
+    ],
   ])("seals without a timelapse that's %s, and logs why, naming the sticker", async (_, bytes) => {
     const logs = captureLogLines();
     const userId = insertUser(test.db);
@@ -189,7 +201,21 @@ describe("POST /api/stickers", () => {
     expect(timelapseOf(sticker.id)).toBeUndefined();
     logs.expectLogged("sticker.timelapse.dropped", { stickerId: sticker.id, userId });
     const dropped = logs.entries.find(({ event }) => event === "sticker.timelapse.dropped");
-    expect(dropped).toMatchObject({ causes: [{ message: timelapseProblem(bytes) }] });
+    const checked = timelapseToStore(Buffer.from(bytes));
+    if (!("problem" in checked)) throw new Error("The timelapse reads, so sealing would store it");
+    expect(dropped).toMatchObject({ causes: [{ message: checked.problem }] });
+  });
+
+  it("stores a v1 timelapse, from a page loaded before timelapses recorded layers, as v2, and logs it", async () => {
+    const logs = captureLogLines();
+    const userId = insertUser(test.db);
+    const v1 = new File([gzipSync(JSON.stringify(TEST_TIMELAPSE_V1))], "t.json.gz");
+    const { sticker } = await seal(userId, { timelapse: v1 });
+    const stored = timelapseOf(sticker.id);
+    if (!stored) throw new Error(`Sticker ${sticker.id} was sealed without its timelapse`);
+    const json: unknown = JSON.parse(gunzipSync(stored.ops).toString());
+    expect(timelapseV2Schema.parse(json)).toEqual(timelapseV1ToV2(TEST_TIMELAPSE_V1));
+    logs.expectLogged("sticker.timelapse.v1_converted", { stickerId: sticker.id, userId });
   });
 
   it("keeps the first seal's files when a later seal uploads the same PNG", async () => {
@@ -640,13 +666,13 @@ describe("DELETE /api/stickers/:stickerId/nsfw", () => {
 });
 
 describe("GET /api/stickers/:stickerId/timelapse", () => {
-  const getTimelapse = (userId: string, stickerId: string) =>
-    test.send("GET", `/api/stickers/${stickerId}/timelapse`, { as: userId });
+  const getTimelapse = (userId: string, stickerId: string, format = "2") =>
+    test.send("GET", `/api/stickers/${stickerId}/timelapse?format=${format}`, { as: userId });
 
   it("answers how the sticker was drawn, as it was sealed, to anyone signed in", async () => {
     const { sticker } = await seal(insertUser(test.db));
     const response = await getTimelapse(insertUser(test.db), sticker.id);
-    expect(await bodyOf(response, timelapseV1Schema)).toEqual(TEST_TIMELAPSE);
+    expect(await bodyOf(response, timelapseV2Schema)).toEqual(TEST_TIMELAPSE);
   });
 
   it("refuses a sticker sealed without one with timelapse_not_found", async () => {
@@ -661,5 +687,11 @@ describe("GET /api/stickers/:stickerId/timelapse", () => {
   it("refuses an unknown sticker with sticker_not_found", async () => {
     const response = await getTimelapse(insertUser(test.db), "no-such-sticker");
     expect(await refusalOf(response)).toMatchObject({ status: 404, error: "sticker_not_found" });
+  });
+
+  it("refuses a version it doesn't serve with invalid_request", async () => {
+    const { sticker } = await seal(insertUser(test.db));
+    const response = await getTimelapse(sticker.artist.id, sticker.id, "1");
+    expect(await refusalOf(response)).toMatchObject({ status: 400, error: "invalid_request" });
   });
 });

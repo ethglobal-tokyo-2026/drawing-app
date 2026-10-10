@@ -18,13 +18,25 @@ export const LATE_MS = 10_000;
 export const WARN_AT_SECONDS = [10 * 60, 5 * 60, 30, 10] as const;
 
 /** Which hold the timer shows when several hold the clock, most important first. */
-const HOLDS = ["paused", "hidden", "away", "seal", "color", "smoothing", "clear", "size"] as const;
+const HOLDS = [
+  "paused",
+  "hidden",
+  "away",
+  "seal",
+  "color",
+  "smoothing",
+  "clear",
+  "layerOptions",
+  "opacity",
+  "reorder",
+  "size",
+] as const;
 
 /**
  * Why the clock is held: the person's pause, a hidden page, the drawing screen being covered, the
- * seal sheet, or a tool in hand (the color sheet, the Smoothing bar, the clear bar, a finger on the
- * size rail). Only a started clock is held; before the first stroke it just waits, and nothing shows
- * as paused.
+ * seal sheet, or a tool in hand (the color sheet, the Smoothing bar, the clear bar, a layer's options
+ * bar, a finger on the opacity slider, a lifted layer chip, a finger on the size rail). Only a started
+ * clock is held; before the first stroke it just waits, and nothing shows as paused.
  */
 export type Hold = (typeof HOLDS)[number];
 
@@ -62,6 +74,9 @@ export class SessionClock {
     color: false,
     smoothing: false,
     clear: false,
+    layerOptions: false,
+    opacity: false,
+    reorder: false,
     size: false,
   };
   private hidden = false;

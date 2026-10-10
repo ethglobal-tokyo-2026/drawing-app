@@ -168,7 +168,7 @@
 /* While the sticker flies to or from its spot, the figure waits hidden and the flyer copies only the
    figure, so the dot waits with it; and while its timelapse plays, the sticker is on its sheet. */
 .sticker-detail:has(+ .detail-lift__flyer) .sticker-detail__dot-layer,
-.sticker-detail__slide:has(> .timelapse-layer) .sticker-detail__dot-layer {
+.sticker-detail__slide:has(> .timelapse-overlay) .sticker-detail__dot-layer {
   visibility: hidden;
 }
 

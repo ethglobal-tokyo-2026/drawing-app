@@ -399,12 +399,36 @@ ${LIB}
     });
     await wd("DELETE", "/actions");
   };
+  /**
+   * Pixels holding ink in what the sheet shows: every visible ink canvas on it, 0×0 ones skipped,
+   * composited in DOM order at its effective CSS opacity, as a stroke in progress is on one of its own.
+   */
   const inkedPixels = async () =>
     Number(
-      await page(`const canvas = document.querySelector(".ink-canvas");
-        const ctx = canvas?.getContext("2d");
-        if (!canvas || !ctx || canvas.width === 0) return 0;
-        const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      await page(`const sheet = document.querySelector(".ink-sheet");
+        if (!sheet) return 0;
+        const box = sheet.getBoundingClientRect();
+        const shown = [...sheet.querySelectorAll(".ink-canvas")].filter((c) => {
+          const at = c.getBoundingClientRect();
+          return c.width > 0 && c.height > 0 && at.width > 0 && at.height > 0
+            && getComputedStyle(c).visibility === "visible";
+        });
+        if (shown.length === 0) return 0;
+        const k = Math.max(...shown.map((c) => c.width / c.getBoundingClientRect().width));
+        const out = document.createElement("canvas");
+        out.width = Math.round(box.width * k);
+        out.height = Math.round(box.height * k);
+        const g = out.getContext("2d", { willReadFrequently: true });
+        for (const c of shown) {
+          let opacity = 1;
+          for (let el = c; el; el = el.parentElement) opacity *= Number(getComputedStyle(el).opacity);
+          const at = c.getBoundingClientRect();
+          g.globalAlpha = opacity;
+          g.drawImage(c, (at.left - box.left) * k, (at.top - box.top) * k, at.width * k, at.height * k);
+        }
+        const { data } = g.getImageData(0, 0, out.width, out.height);
+        out.width = 0;
+        out.height = 0;
         let inked = 0;
         for (let i = 3; i < data.length; i += 4) if (data[i] > 0) inked++;
         return inked;`),

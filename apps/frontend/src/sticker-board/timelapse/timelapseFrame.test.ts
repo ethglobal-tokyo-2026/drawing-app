@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Op } from "../../sticker-creation/canvas/ops";
+import { addLayer, deleteLayer } from "../../sticker-creation/layers/testLayerSteps";
 import type { Rect } from "../../sticker-creation/sealing/stickerPasses";
 import {
   FRAME_MARGIN,
@@ -18,6 +19,7 @@ const place: Rect = { x: 60, y: 300, w: 280, h: 260 };
 /** A stroke through these points, `width` units wide throughout. */
 const stroke = (tool: "brush" | "eraser", width: number, ...points: [number, number][]): Op => ({
   tool,
+  layer: 1,
   color: "#000000",
   T: 0,
   pts: points.flatMap(([x, y], i) => [x, y, width, i * 16]),
@@ -43,9 +45,9 @@ describe("the frame", () => {
     expect(strokeFrame(ops, place, sheet)).toEqual(place);
   });
 
-  it("takes in a brush stroke outside the cut, by half its width and the margin", () => {
-    const ops = [stroke("brush", 8, [200, 100], [210, 120])];
-    const frame = strokeFrame(ops, place, sheet);
+  it("takes in a brush stroke outside the cut on any layer, a deleted one's too, by half its width and the margin", () => {
+    const outside = { ...stroke("brush", 8, [200, 100], [210, 120]), layer: 2 };
+    const frame = strokeFrame([addLayer(2, 1), outside, deleteLayer(2)], place, sheet);
     expect(frame.y).toBe(100 - 4 - FRAME_MARGIN);
     expect(frame.y + frame.h).toBe(place.y + place.h);
   });

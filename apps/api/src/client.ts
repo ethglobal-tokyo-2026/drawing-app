@@ -36,7 +36,7 @@ export {
   MAX_STICKER_IMAGE_SIDE,
   SHARP_CUT_SIDE,
 } from "./stickers/imageSides.ts";
-export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
+export { MAX_LAYERS, MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
 export { TOKYO_UTC_OFFSET_MS, tokyoTicketDay } from "./ticketDays.ts";
 export { purchaseNamedBy } from "./tickets/paymentReference.ts";
 export {
@@ -97,7 +97,7 @@ export type {
 export type { MarkNsfwResponse, UnmarkNsfwResponse } from "./stickers/markNsfw.ts";
 export type { SealResponse } from "./stickers/seal.ts";
 export type { StickerDetail, TransferTrailEntry } from "./stickers/stickerDetail.ts";
-export type { TimelapseV1 } from "./stickers/timelapse.ts";
+export type { TimelapseV2 } from "./stickers/timelapse.ts";
 export type {
   SpendTicket,
   StartedTicketPurchase,

@@ -2,7 +2,7 @@ import { blankCanvas, context2d } from "../canvas/context2d";
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { workerCanPaint } from "../../ui/workerCanPaint";
 import { cutSticker, type CutSticker, type MakeCanvas } from "./cutSticker";
-import type { SealReply, SealRequest } from "./sealWorker";
+import type { CutReply, CutRequest } from "./sealWorker";
 
 /** A sealed sticker: the cut sticker as it's stored, and as the ceremony plays with it. */
 export type SealedSticker = Omit<CutSticker, "maskPixels"> & {
@@ -48,7 +48,7 @@ async function cutInWorker(ink: HTMLCanvasElement, density: number): Promise<Cut
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await new Promise<CutSticker | null>((resolve, reject) => {
-      worker.onmessage = ({ data }: MessageEvent<SealReply>) => {
+      worker.onmessage = ({ data }: MessageEvent<CutReply>) => {
         if (data.ok) resolve(data.cut);
         else reject(new Error(data.error));
       };
@@ -70,7 +70,7 @@ async function cutInWorker(ink: HTMLCanvasElement, density: number): Promise<Cut
           ),
         WORKER_TIMEOUT_MS,
       );
-      const request: SealRequest = { ink: image, density };
+      const request: CutRequest = { ink: image, density };
       worker.postMessage(request, [image]);
     });
   } finally {

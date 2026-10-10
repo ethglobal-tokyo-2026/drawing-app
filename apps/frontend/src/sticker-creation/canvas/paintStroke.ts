@@ -35,27 +35,31 @@ function capsule(
   g.closePath();
 }
 
-const radius = (pts: number[], i: number) => Math.max(pts[i * STRIDE + 2] / 2, MIN_RADIUS);
+/** The radius point `i` of a stroke paints at, in sheet units. */
+export const paintedRadius = (pts: readonly number[], i: number) =>
+  Math.max(pts[i * STRIDE + 2] / 2, MIN_RADIUS);
 
 /**
  * Paints points [from, to) of a stroke, joined to the point before `from`, so a stroke in progress
- * paints only what's new each frame. The brush is opaque; the eraser clears to transparent.
+ * paints only what's new each frame. The brush is opaque, and meets the pixels there by `brush`:
+ * `source-atop` changes only pixels already inked. The eraser clears to transparent.
  */
 export function paintStroke(
   g: CanvasRenderingContext2D,
   op: StrokeOp,
   from = 0,
   to = op.pts.length / STRIDE,
+  brush: GlobalCompositeOperation = "source-over",
 ): void {
   if (to <= from) return;
   const { pts } = op;
   g.save();
-  g.globalCompositeOperation = op.tool === "eraser" ? "destination-out" : "source-over";
+  g.globalCompositeOperation = op.tool === "eraser" ? "destination-out" : brush;
   g.fillStyle = op.tool === "eraser" ? "#000" : op.color;
   g.beginPath();
   let i = from;
   if (i === 0) {
-    const r = radius(pts, 0);
+    const r = paintedRadius(pts, 0);
     g.moveTo(pts[0] + r, pts[1]);
     g.arc(pts[0], pts[1], r, 0, TAU);
     i = 1;
@@ -66,10 +70,10 @@ export function paintStroke(
       g,
       pts[j - STRIDE],
       pts[j - STRIDE + 1],
-      radius(pts, i - 1),
+      paintedRadius(pts, i - 1),
       pts[j],
       pts[j + 1],
-      radius(pts, i),
+      paintedRadius(pts, i),
     );
   }
   g.fill();

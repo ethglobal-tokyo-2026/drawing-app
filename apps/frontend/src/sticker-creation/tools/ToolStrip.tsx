@@ -14,7 +14,8 @@ import type { InputMode } from "../canvas/inkEngine";
 import type { Tool } from "../canvas/ops";
 import "./ToolStrip.css";
 
-export type Panel = "color" | "smoothing" | "clear" | null;
+/** What's open over the drawing: one of the tool strip's panels, or the current layer's options bar. */
+export type Panel = "color" | "smoothing" | "clear" | "layer" | null;
 
 const TOOLS: { tool: Tool; Icon: Icon }[] = [
   { tool: "brush", Icon: PaintBrush },
@@ -29,7 +30,7 @@ const INPUT_TILE = TOOLS.length + 3;
 interface Props {
   tool: Tool;
   panel: Panel;
-  /** There's ink to clear: until there is, the clear tile is dimmed and does nothing. */
+  /** The current layer has ink to clear: until it has, the clear tile is dimmed and does nothing. */
   canClear: boolean;
   colorSheetId: string;
   smoothingBarId: string;

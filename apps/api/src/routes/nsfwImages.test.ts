@@ -66,7 +66,7 @@ async function nsfwSticker() {
 }
 
 const timelapseOf = (scene: Awaited<ReturnType<typeof nsfwSticker>>, as?: string) =>
-  scene.test.send("GET", `/api/stickers/${scene.stickerId}/timelapse`, { as });
+  scene.test.send("GET", `/api/stickers/${scene.stickerId}/timelapse?format=2`, { as });
 
 describe("an NSFW sticker's images", () => {
   it("are its veiled image to someone without the NSFW opt-in, with no URL of its drawing", async () => {

@@ -30,7 +30,7 @@ interface Props {
   nsfw: boolean;
   /** The pair a sheet in Kyoto Seika Practice Mode was dealt, which the sticker keeps; null on a regular sheet. */
   subjects: readonly [KyotoSeikaSubject, KyotoSeikaSubject] | null;
-  /** A copy of the ink as it is now, which the preview lets go. */
+  /** A new canvas of what the sheet shows now, which the preview reads only through a small scan and lets go. */
   ink: () => HTMLCanvasElement | null;
   /** The ink's device px per sheet unit; null while the sheet has no frame, and so no ink. */
   density: () => number | null;

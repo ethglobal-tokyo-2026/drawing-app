@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Pixels } from "../../sticker-creation/canvas/fill";
-import { MAX_DPR, MAX_INK_PIXELS, maxInkDensity } from "../../sticker-creation/canvas/sheetFrame";
+import { MAX_DPR, MAX_INK_PIXELS } from "../../sticker-creation/canvas/sheetFrame";
 import {
   changedArea,
   displayBox,
@@ -14,7 +14,7 @@ import {
 describe("the density a sticker was drawn at", () => {
   it("is the recorded one, up to the densest any sheet that size was backed at", () => {
     const ink = { width: 150, height: 150 };
-    const most = maxInkDensity({ w: ink.width, h: ink.height });
+    const most = Math.floor(Math.sqrt(4_200_000 / (ink.width * ink.height)) * 1000) / 1000;
     // An iPad's sheet is backed denser than any screen's own pixels, and its fills flood at that.
     expect(drawingDensity({ ink, density: most - 1 })).toBe(most - 1);
     expect(drawingDensity({ ink, density: most + 1 })).toBe(most);

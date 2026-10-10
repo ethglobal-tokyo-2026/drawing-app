@@ -1,20 +1,38 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { InkSurface } from "../../sticker-creation/canvas/inkSurface";
-import { STRIDE, type FillOp, type Op, type StrokeOp } from "../../sticker-creation/canvas/ops";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { hexToRgb } from "../../sticker-creation/canvas/color";
+import {
+  STRIDE,
+  type FillOp,
+  type LayerId,
+  type Op,
+  type Step,
+  type StrokeOp,
+} from "../../sticker-creation/canvas/ops";
 import { paintStroke } from "../../sticker-creation/canvas/paintStroke";
 import { MAX_DPR } from "../../sticker-creation/canvas/sheetFrame";
+import { LayerInk } from "../../sticker-creation/layers/layerInk";
+import {
+  FIRST_LAYERS,
+  FULL_OPACITY,
+  type LayerState,
+} from "../../sticker-creation/layers/layerState";
+import { addLayer, deleteLayer } from "../../sticker-creation/layers/testLayerSteps";
 import { decodeTimelapse, encodeTimelapse } from "../../sticker-creation/sealing/timelapse";
 import { notePerformance } from "../../performance/performanceRecorder";
 import { contextOf, forgetContexts, madeContexts, type FakeContext } from "./testCanvas";
 import { handFrames } from "./testTimelapse";
 import { MAX_FRAME_MS, createTimelapsePlayer } from "./timelapsePlayer";
-import { scheduleTimelapse, type ScheduledStroke } from "./timelapseSchedule";
+import {
+  scheduleTimelapse,
+  type ScheduledStroke,
+  type TimelapseSchedule,
+} from "./timelapseSchedule";
 
-vi.mock("../../sticker-creation/canvas/context2d", async () => {
-  const { fakeContext2d } = await import("./testCanvas");
-  return { context2d: fakeContext2d };
-});
+vi.mock(
+  "../../sticker-creation/canvas/context2d",
+  () => import("../../sticker-creation/canvas/testContext2d"),
+);
 vi.mock("../../sticker-creation/canvas/paintStroke", async (importOriginal) => {
   const real = await importOriginal<{ paintStroke: typeof paintStroke }>();
   return { paintStroke: vi.fn(real.paintStroke) };
@@ -38,6 +56,7 @@ const FIGURE = { x: 0, y: 0, w: STAGE.width, h: STAGE.height };
 /** A stroke that stays well inside the sticker's cut, as every mark of one drawn within it does. */
 const stroke = (T: number, ms: readonly number[]): StrokeOp => ({
   tool: "brush",
+  layer: 1,
   color: "#1c1824",
   T,
   pts: ms.flatMap((t, i) => [35 + (i % 30), 45, 4, t]),
@@ -46,13 +65,15 @@ const steady = (ms: number, step = 16) =>
   Array.from({ length: Math.floor(ms / step) + 1 }, (_, i) => i * step);
 const pointCount = (op: StrokeOp) => op.pts.length / STRIDE;
 
-const sameObject = (a: object, b: object | undefined) => a === b;
-
 function setup(
-  ops: Op[],
-  { reduced = false, cut }: { reduced?: boolean; cut?: CanvasImageSource } = {},
+  steps: Step[],
+  {
+    reduced = false,
+    cut,
+    layers = FIRST_LAYERS,
+  }: { reduced?: boolean; cut?: CanvasImageSource; layers?: LayerState } = {},
 ) {
-  const timelapse = encodeTimelapse({ ops, frame: SHEET, place: PLACE });
+  const timelapse = encodeTimelapse({ steps, start: layers, frame: SHEET, place: PLACE });
   const canvas = document.createElement("canvas");
   const clock = handFrames();
   const player = createTimelapsePlayer({
@@ -66,28 +87,49 @@ function setup(
     frames: clock.source,
   });
   const display = contextOf(canvas);
-  const schedule = scheduleTimelapse(decodeTimelapse(timelapse).ops, { reduced });
-  /** The point ranges painted on the display, in the order painted. */
+  if (!display) throw new Error("the player made no display");
+  const decoded = decodeTimelapse(timelapse).steps;
+  const schedule = scheduleTimelapse(decoded, { reduced });
+  /** The point ranges painted, in order: the player's, after its prepare pass's when there are fills. */
   const painted = () =>
     vi
       .mocked(paintStroke)
-      .mock.calls.filter(([g]) => sameObject(g, display))
-      .map(([, op, from = 0, to = pointCount(op)]) => ({ op, from, to }));
+      .mock.calls.map(([, op, from = 0, to = pointCount(op)]) => ({ op, from, to }));
   /** Starts playing, and waits for its first frame to be asked for. */
   const start = async () => {
     const playing = player.play();
     await vi.waitFor(() => expect(clock.waiting()).toBe(true));
     return { playing };
   };
-  return { canvas, player, display, schedule, painted, start, ...clock };
+  /** Plays it a frame at a time to the end. */
+  const playToEnd = async () => {
+    const { playing } = await start();
+    clock.advance(schedule.length + 32);
+    await expect(playing).resolves.toBe("done");
+  };
+  return { canvas, player, display, steps: decoded, schedule, painted, start, playToEnd, ...clock };
+}
+
+/** The canvas the player plays layer `id` on: where the last stroke on that layer was painted. */
+function layerShown(id: LayerId): FakeContext {
+  const call = vi.mocked(paintStroke).mock.calls.findLast(([, op]) => op.layer === id);
+  const shown = call && contextOf(call[0].canvas);
+  if (!shown) throw new Error(`No stroke was painted on layer ${id}`);
+  return shown;
 }
 
 /** How many of a stroke's points are due by playback time `t`. */
 const dueBy = (scheduled: ScheduledStroke, t: number) =>
   scheduled.at.filter((at) => at <= t).length;
-const strokeAt = (schedule: ReturnType<typeof scheduleTimelapse>, index: number) => {
-  const scheduled = schedule.ops[index];
-  if (scheduled.kind !== "stroke") throw new Error(`op ${index} is a fill`);
+const strokeAt = (schedule: TimelapseSchedule, index: number) => {
+  const scheduled = schedule.steps[index];
+  if (scheduled.kind !== "stroke") throw new Error(`step ${index} isn't a stroke`);
+  return scheduled;
+};
+/** When step `index`'s reveal or beat runs. */
+const beatAt = (schedule: TimelapseSchedule, index: number) => {
+  const scheduled = schedule.steps[index];
+  if (scheduled.kind === "stroke") throw new Error(`step ${index} is a stroke`);
   return scheduled;
 };
 
@@ -100,7 +142,7 @@ afterEach(() => {
   Reflect.deleteProperty(document, "visibilityState");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
-  vi.mocked(paintStroke).mockClear();
+  vi.mocked(paintStroke).mockReset();
   forgetContexts();
 });
 
@@ -110,15 +152,17 @@ describe("the timelapse player", () => {
     [4, MAX_DPR],
   ])(
     "covers the stage at a screen density of %s, and plays a sticker drawn within its cut in its spot",
-    (screen, density) => {
+    async (screen, density) => {
       vi.stubGlobal("devicePixelRatio", screen);
-      const { canvas, display } = setup([stroke(0, steady(100))]);
+      const { canvas, player } = setup([stroke(0, steady(100))]);
       expect([canvas.width, canvas.height]).toEqual([
         STAGE.width * density,
         STAGE.height * density,
       ]);
+      player.skip();
+      await expect(player.play()).resolves.toBe("done");
       const scale = (density * FIGURE.w) / PLACE.w;
-      expect(display?.calls).toContainEqual([
+      expect(layerShown(1).calls).toContainEqual([
         "setTransform",
         scale,
         0,
@@ -214,18 +258,22 @@ describe("the timelapse player", () => {
       throw new Error("the canvas is lost");
     });
     advance(16);
-    await expect(playing).rejects.toThrow("The timelapse stopped at op 1 of 2: the canvas is lost");
+    await expect(playing).rejects.toThrow(
+      "The timelapse stopped at step 1 of 2: the canvas is lost",
+    );
   });
 
-  it("shows a stroke drawn outside the sticker's cut whole, shrinking the sheet to fit the stage", () => {
+  it("shows a stroke drawn outside the sticker's cut whole, shrinking the sheet to fit the stage", async () => {
     const outside: StrokeOp = {
       ...stroke(0, steady(32)),
       pts: [5, 10, 4, 0, 90, 95, 4, 16, 50, 50, 4, 32],
     };
-    const { canvas, display, player } = setup([outside, stroke(500, steady(100))]);
+    const { canvas, player } = setup([outside, stroke(500, steady(100))]);
     const { playing, inSpot } = player.layout();
     expect(playing.scale).toBeLessThan(inSpot.scale);
-    const shown = display?.calls.findLast(([name]) => name === "setTransform") ?? [];
+    player.skip();
+    await expect(player.play()).resolves.toBe("done");
+    const shown = layerShown(1).calls.findLast(([name]) => name === "setTransform") ?? [];
     const [, a = 0, , , d = 0, e = 0, f = 0] = shown.map(Number);
     for (let i = 0; i < outside.pts.length; i += STRIDE) {
       const x = a * outside.pts[i] + e;
@@ -242,10 +290,10 @@ describe("the timelapse player", () => {
       ...stroke(0, steady(32)),
       pts: [40, 45, 4, 0, 5, 45, 4, 16, -30, 45, 4, 32],
     };
-    const { display, player } = setup([pastTheEdge]);
+    const { player } = setup([pastTheEdge]);
     player.skip();
     await expect(player.play()).resolves.toBe("done");
-    const calls = display?.calls ?? [];
+    const { calls } = layerShown(1);
     const names = calls.map(([name]) => name);
     // The stroke paints inside a clip, made under the frame's transform, to the sheet's own rect.
     const painted = names.indexOf("fill");
@@ -257,7 +305,6 @@ describe("the timelapse player", () => {
   it("clears the ink inside the sticker's cut when the sticker takes it along, once its cut has loaded", () => {
     const takeWith = (cut: CanvasImageSource) => {
       const { display, player } = setup([stroke(0, steady(100))], { cut });
-      if (!display) throw new Error("the player made no display");
       const drawn: unknown[][] = [];
       vi.spyOn(display, "drawImage").mockImplementation((...args) => {
         drawn.push([display.globalCompositeOperation, ...args]);
@@ -278,35 +325,91 @@ describe("the timelapse player", () => {
   });
 });
 
+describe("the timelapse player's layers", () => {
+  const RED = "#ff0000";
+  const BLUE = "#0000ff";
+  /** Layer 1, under layer 2. */
+  const TWO_LAYERS: LayerState = {
+    layers: [1, 2].map((id) => ({ id, opacity: FULL_OPACITY, locked: false, clipped: false })),
+    nextId: 3,
+  };
+  /** A stroke on `layer` in `color`, begun `T` ms into the session. */
+  const strokeOn = (layer: LayerId, color: string, T: number): StrokeOp => ({
+    ...stroke(T, steady(300)),
+    layer,
+    color,
+  });
+  const opaque = (color: string) => [...hexToRgb(color), 255];
+  /** The display's pixel in its middle, where the sheet shows. */
+  const shownMiddle = (display: FakeContext) => [
+    ...display.getImageData(STAGE.width / 2, STAGE.height / 2, 1, 1).data,
+  ];
+
+  beforeEach(() => {
+    // The fake canvas paints no paths, so each stroke inks its whole layer in its color instead.
+    vi.mocked(paintStroke).mockImplementation((g, op) => {
+      const pixels = new ImageData(g.canvas.width, g.canvas.height);
+      const color = op.tool === "brush" ? opaque(op.color) : [0, 0, 0, 0];
+      for (let i = 0; i < pixels.data.length; i += 4) pixels.data.set(color, i);
+      g.putImageData(pixels, 0, 0);
+    });
+  });
+
+  it("plays a stroke on a layer added under another beneath that layer's ink, though drawn after it", async () => {
+    const { display, playToEnd } = setup([
+      strokeOn(1, BLUE, 0),
+      { ...addLayer(2, 0), T: 500 },
+      strokeOn(2, RED, 900),
+    ]);
+    await playToEnd();
+    expect(shownMiddle(display)).toEqual(opaque(BLUE));
+  });
+
+  it("fades a deleted layer's ink out over its beat, and it's gone by the end", async () => {
+    const { display, schedule, start, advance } = setup(
+      [strokeOn(1, RED, 0), strokeOn(2, BLUE, 500), { ...deleteLayer(2), T: 1_000 }],
+      { layers: TWO_LAYERS },
+    );
+    const beat = beatAt(schedule, 2);
+    const { playing } = await start();
+    // The first frame starts the clock at 0, so after `ms` of frames it has played `ms - 16`.
+    advance((beat.start + beat.end) / 2 + 16);
+    const fading = shownMiddle(display);
+    expect(fading).not.toEqual(opaque(BLUE));
+    expect(fading).not.toEqual(opaque(RED));
+    advance(schedule.length);
+    await expect(playing).resolves.toBe("done");
+    expect(shownMiddle(display)).toEqual(opaque(RED));
+  });
+});
+
 describe("the timelapse player's fills", () => {
   /** The middle of a pixel at density 1, as the timelapse stores a tap. */
   const TAP = { x: 40.5, y: 50.5 };
   /** A line, a fill, and a line over it. */
   const sticker = (): Op[] => {
-    const fill: FillOp = { tool: "fill", color: "#ff0000", ...TAP, gap: 0, T: 500 };
+    const fill: FillOp = { tool: "fill", layer: 1, color: "#ff0000", ...TAP, gap: 0, T: 500 };
     return [stroke(0, steady(300)), fill, stroke(800, steady(300))];
   };
-  /** The circles a reveal clipped the display to, in order: the arc just before each such clip. */
-  const clips = (display: FakeContext | undefined) =>
-    (display?.calls ?? []).flatMap((call, i, calls) =>
+  /** The circles a reveal clipped the layer to, in order: the arc just before each such clip. */
+  const clips = ({ calls }: FakeContext) =>
+    calls.flatMap((call, i) =>
       call[0] === "clip" && calls[i - 1]?.[0] === "arc" ? [calls[i - 1]] : [],
     );
-  const draws = (display: FakeContext | undefined) =>
-    (display?.calls ?? []).filter(([name]) => name === "drawImage");
+  const draws = ({ calls }: FakeContext) => calls.filter(([name]) => name === "drawImage");
   /** The canvases made that still hold memory. */
   const heldCanvases = () =>
     madeContexts()
       .map((context) => context.canvas)
       .filter((canvas) => canvas.width > 0 || canvas.height > 0);
 
-  it("reveals a fill inside a circle growing from its tap, then whole", async () => {
-    const { display, player, start, advance, schedule } = setup(sticker());
+  it("reveals a fill on its layer inside a circle growing from its tap, then whole", async () => {
+    const { player, playToEnd } = setup(sticker());
     await player.prepare();
-    const { playing } = await start();
-    advance(schedule.length + 32);
-    await expect(playing).resolves.toBe("done");
+    await playToEnd();
 
-    const circles = clips(display);
+    const onLayer = layerShown(1);
+    const circles = clips(onLayer);
     expect(circles.length).toBeGreaterThan(1);
     // At a screen density of 1, the stage's px are the display's.
     const at = player.layout().playing;
@@ -317,7 +420,7 @@ describe("the timelapse player's fills", () => {
     }
     const radii = circles.map(([, , , r]) => Number(r));
     expect(radii).toEqual(radii.toSorted((a, b) => a - b));
-    expect(draws(display)).toHaveLength(circles.length + 1);
+    expect(draws(onLayer)).toHaveLength(circles.length + 1);
   });
 
   it("notes how long preparing its fills took, for the performance recorder", async () => {
@@ -330,12 +433,11 @@ describe("the timelapse player's fills", () => {
   });
 
   it("reveals fills whole at once under reduced motion, in no beat, so the strokes after start sooner", async () => {
-    const { display, player, start, advance, schedule, painted } = setup(sticker(), {
+    const { player, start, advance, schedule, steps, painted } = setup(sticker(), {
       reduced: true,
     });
     const after = strokeAt(schedule, 2);
-    const ops = schedule.ops.map((scheduled) => scheduled.op);
-    const withBeat = strokeAt(scheduleTimelapse(ops, { reduced: false }), 2).at[0];
+    const withBeat = strokeAt(scheduleTimelapse(steps, { reduced: false }), 2).at[0];
     expect(withBeat).toBeGreaterThan(after.at[0]);
     await player.prepare();
     const { playing } = await start();
@@ -344,47 +446,48 @@ describe("the timelapse player's fills", () => {
     expect(painted().some((range) => range.op.T === after.op.T)).toBe(true);
     advance(schedule.length);
     await expect(playing).resolves.toBe("done");
-    expect(clips(display)).toEqual([]);
-    expect(draws(display)).toHaveLength(1);
+    expect(clips(layerShown(1))).toEqual([]);
+    expect(draws(layerShown(1))).toHaveLength(1);
   });
 
   it("reveals its fills whole at once from when reduced motion is turned on mid-play", async () => {
-    const { display, player, start, advance, schedule } = setup(sticker());
+    const { player, start, advance, schedule } = setup(sticker());
     await player.prepare();
     const { playing } = await start();
     advance(32);
     player.setReduced(true);
     advance(schedule.length + 32);
     await expect(playing).resolves.toBe("done");
-    expect(clips(display)).toEqual([]);
-    expect(draws(display)).toHaveLength(1);
+    expect(clips(layerShown(1))).toEqual([]);
+    expect(draws(layerShown(1))).toHaveLength(1);
   });
 
   it("reveals the fills still to come whole on skip", async () => {
-    const { display, player, start, advance } = setup(sticker());
+    const { player, start, advance } = setup(sticker());
     await player.prepare();
     const { playing } = await start();
     advance(32);
     player.skip();
     await expect(playing).resolves.toBe("done");
-    expect(clips(display)).toEqual([]);
-    expect(draws(display)).toHaveLength(1);
+    expect(clips(layerShown(1))).toEqual([]);
+    expect(draws(layerShown(1))).toHaveLength(1);
   });
 
   it("lets go of every canvas it made once done, keeping the display's", async () => {
-    const { canvas, player, start, advance, schedule } = setup(sticker());
+    const { canvas, player, playToEnd } = setup(sticker());
     await player.prepare();
-    const { playing } = await start();
-    advance(schedule.length + 32);
-    await playing;
+    await playToEnd();
     expect(heldCanvases()).toEqual([canvas]);
   });
 
   it("lets go of every canvas it made when stopped mid-reveal", async () => {
-    const { canvas, display, player, start, advance } = setup(sticker());
+    const { canvas, player, start, advance, schedule } = setup(sticker());
     await player.prepare();
     await start();
-    for (let frames = 0; clips(display).length === 0 && frames < 1_000; frames++) advance(16);
+    const reveal = beatAt(schedule, 1);
+    // The first frame starts the clock at 0, so after `ms` of frames it has played `ms - 16`.
+    advance((reveal.start + reveal.end) / 2 + 16);
+    expect(clips(layerShown(1)).length).toBeGreaterThan(0);
     player.stop();
     expect(heldCanvases()).toEqual([canvas]);
   });
@@ -399,7 +502,7 @@ describe("the timelapse player's fills", () => {
   });
 
   it("fails to prepare and to play, saying which fill failed", async () => {
-    vi.spyOn(InkSurface.prototype, "flood").mockImplementation(() => {
+    vi.spyOn(LayerInk.prototype, "flood").mockImplementation(() => {
       throw new Error("out of memory");
     });
     const { player } = setup(sticker());

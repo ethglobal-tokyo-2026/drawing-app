@@ -20,7 +20,7 @@ import { at, type At, type Box } from "./pen.ts";
 const { stickerBoard, stickerCreation, ui } = strings;
 const { timelapse } = stickerBoard;
 
-/** What the recorder saw: each inline transform and opacity the figure took, and when the layer took each phase. */
+/** What the recorder saw: each inline transform and opacity the figure took, and when the overlay took each phase. */
 interface Recorded {
   styles: { transform: string; opacity: string }[];
   phases: { phase: string; at: number }[];
@@ -168,7 +168,7 @@ const skipKey = (detail: Locator, language: Language) =>
 const statusLine = (detail: Locator) => detail.locator(".timelapse-button + [role='status']");
 
 /**
- * The timelapse as the page shows it now: its layer's phase, the figure's opacity and the inline
+ * The timelapse as the page shows it now: its overlay's phase, the figure's opacity and the inline
  * styles the timelapse sets on it, and the screen boxes of the figure, the paper, the stage and the
  * pager.
  */
@@ -188,11 +188,11 @@ const look = (detail: Locator) =>
       throw new Error("The sticker detail has no sticker, stage or pager");
     const { transform, transformOrigin, opacity, zIndex } = figure.style;
     return {
-      phase: el.querySelector<HTMLElement>(".timelapse-layer")?.dataset.phase ?? null,
+      phase: el.querySelector<HTMLElement>(".timelapse-overlay")?.dataset.phase ?? null,
       opacity: getComputedStyle(figure).opacity,
       inline: { transform, transformOrigin, opacity, zIndex },
       figure: figureBox,
-      paper: boxOf(".timelapse-layer__paper"),
+      paper: boxOf(".timelapse-overlay__paper"),
       stage,
       pager,
     };
@@ -245,7 +245,7 @@ async function stillSpot(detail: Locator) {
 
 /**
  * Puts the recorder on: from now on, every inline transform and opacity the figure takes, and when
- * the timelapse's layer takes each phase. A style attribute's earlier values come as old values,
+ * the timelapse's overlay takes each phase. A style attribute's earlier values come as old values,
  * which a detached span reads.
  */
 const startRecorder = (detail: Locator) =>
@@ -265,7 +265,7 @@ const startRecorder = (detail: Locator) =>
     }).observe(figure, { attributeFilter: ["style"], attributeOldValue: true });
     let phase: string | null = null;
     new MutationObserver(() => {
-      const now = el.querySelector<HTMLElement>(".timelapse-layer")?.dataset.phase ?? null;
+      const now = el.querySelector<HTMLElement>(".timelapse-overlay")?.dataset.phase ?? null;
       if (now !== null && now !== phase)
         recorded.phases.push({ phase: now, at: performance.now() });
       phase = now;
@@ -310,12 +310,12 @@ async function pressUntilPlaying(detail: Locator, language: Language, no: string
   return shown;
 }
 
-/** Waits for the end: Timelapse named to watch again, the live line saying it's done, the layer gone. */
+/** Waits for the end: Timelapse named to watch again, the live line saying it's done, the overlay gone. */
 async function untilEnded(detail: Locator, language: Language, no: string) {
   await expect(watchKey(detail, language, no)).toBeVisible();
   await expect(statusLine(detail)).toHaveText(say(timelapse.done, language));
   const shown = await look(detail);
-  expect(shown.phase, "the timelapse's layer").toBeNull();
+  expect(shown.phase, "the timelapse's overlay").toBeNull();
   return shown;
 }
 

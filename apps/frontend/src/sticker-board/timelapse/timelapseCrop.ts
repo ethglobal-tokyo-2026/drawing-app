@@ -3,7 +3,7 @@
  * sheet the display shows, and what a fill changed there. Pure numbers and pixel arrays.
  */
 import type { Pixels } from "../../sticker-creation/canvas/fill";
-import { MAX_DPR, maxInkDensity } from "../../sticker-creation/canvas/sheetFrame";
+import { MAX_DPR } from "../../sticker-creation/canvas/sheetFrame";
 import type { DecodedTimelapse } from "../../sticker-creation/sealing/timelapse";
 import type { Rect } from "../../sticker-creation/sealing/stickerPasses";
 import type { Placement } from "./timelapseFrame";
@@ -13,7 +13,13 @@ import type { Placement } from "./timelapseFrame";
  * densest any sheet that size was backed at, so a replay floods as the drawing did.
  */
 export function drawingDensity(timelapse: Pick<DecodedTimelapse, "density" | "ink">): number {
-  const most = maxInkDensity({ w: timelapse.ink.width, h: timelapse.ink.height });
+  // Existing stickers used the earlier sheet limit. Their fills must keep that raster density,
+  // even though new and resumed drawings use a smaller backing canvas.
+  const recordedPixelLimit = 4_200_000;
+  const most =
+    Math.floor(
+      Math.sqrt(recordedPixelLimit / (timelapse.ink.width * timelapse.ink.height)) * 1000,
+    ) / 1000;
   return Math.min(timelapse.density, Math.max(MAX_DPR, most));
 }
 

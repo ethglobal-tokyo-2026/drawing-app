@@ -7,18 +7,18 @@ import { releaseCanvas } from "../../ui/releaseCanvas";
 import { cutSticker, type CutSticker, type MakeCanvas } from "./cutSticker";
 
 /** The ink to cut, handed over rather than copied, and its pixels per sheet unit. */
-export interface SealRequest {
+export interface CutRequest {
   ink: ImageBitmap;
   density: number;
 }
 
 /** The cut, null when the ink was empty, or what went wrong. */
-export type SealReply = { ok: true; cut: CutSticker | null } | { ok: false; error: string };
+export type CutReply = { ok: true; cut: CutSticker | null } | { ok: false; error: string };
 
 // The app compiles against the DOM's types, which have no worker scope: this is the part used here.
 declare const self: {
-  onmessage: ((event: MessageEvent<SealRequest>) => void) | null;
-  postMessage: (reply: SealReply, transfer: Transferable[]) => void;
+  onmessage: ((event: MessageEvent<CutRequest>) => void) | null;
+  postMessage: (reply: CutReply, transfer: Transferable[]) => void;
 };
 
 const offscreenCanvas: MakeCanvas = (width, height) => {
@@ -42,7 +42,7 @@ function pixelsOf(ink: ImageBitmap): ImageData {
   return pixels;
 }
 
-async function answer({ ink, density }: SealRequest) {
+async function answer({ ink, density }: CutRequest) {
   try {
     const cut = await cutSticker({ pixels: pixelsOf(ink), image: ink, density }, offscreenCanvas);
     self.postMessage(

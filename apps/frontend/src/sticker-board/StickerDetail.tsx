@@ -58,7 +58,7 @@ import { forgetKeptBoard } from "./lastBoard";
 import { combosLeftNow, useStickerDetail } from "./stickerDetailQuery";
 import { myStickerBoardChanged } from "./useMyStickerBoard";
 import { TimelapseButton, TimelapseFailure } from "./timelapse/TimelapseButton";
-import { TimelapseLayer } from "./timelapse/TimelapseLayer";
+import { TimelapseOverlay } from "./timelapse/TimelapseOverlay";
 import { useTimelapse } from "./timelapse/useTimelapse";
 import { TransferTrail, TransferTrailSkeleton } from "./TransferTrail";
 import { toTrailRows } from "./trailRows";
@@ -281,7 +281,7 @@ export function StickerDetail({
   const hasTimelapse = sticker !== undefined && sticker.hasTimelapse && !veiled;
   const kyotoSeika = sticker !== undefined && sticker.kyotoSeikaSubjects !== null;
   const timelapse = useTimelapse({ sticker, hasTimelapse, figure, reduced, kyotoSeika });
-  // The timelapse's layer goes first: the lift clones the figure and flies it back to the board.
+  // The timelapse's overlay goes first: the lift clones the figure and flies it back to the board.
   const close = () => {
     timelapse.stop();
     lift();
@@ -606,7 +606,7 @@ export function StickerDetail({
                     kyotoSeika={kyotoSeika}
                     veiled={veiled}
                   />
-                  <TimelapseLayer timelapse={timelapse} />
+                  <TimelapseOverlay timelapse={timelapse} />
                   {/* A gift's state, stuck on the sticker as it pages; its note says it in words. */}
                   {giftDot && (
                     <span

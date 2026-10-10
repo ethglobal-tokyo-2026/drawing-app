@@ -75,7 +75,7 @@ function homeward(from: FigureTransform, u: number, size: { w: number; h: number
 }
 
 /**
- * Ready to fly: transformed about its top left, over the sheet, on a layer of its own so its filters
+ * Ready to fly: transformed about its top left, over the sheet, composited on its own so its filters
  * aren't repainted each frame, and letting taps through to the sheet, which skips.
  */
 function liftFigure(el: HTMLElement) {
@@ -135,7 +135,7 @@ interface Options {
   frames?: FrameSource;
 }
 
-/** What the button, the layer and the failure line show. */
+/** What the button, the overlay and the failure line show. */
 interface View {
   /** The sticker it's for: another sticker shows none of it. */
   stickerId: string | null;
@@ -151,7 +151,7 @@ const IDLE: View = { stickerId: null, phase: "idle", failure: null, said: null }
 interface Session {
   stickerId: string;
   player: TimelapsePlayer | null;
-  /** The player's canvas, kept here since paging detaches the layer's refs before the session ends. */
+  /** The player's canvas, kept here since paging detaches the overlay's refs before the session ends. */
   canvas: HTMLCanvasElement | null;
   /** The sticker's figure, which flies onto the sheet and back. */
   figure: HTMLElement | null;
@@ -176,18 +176,18 @@ export interface Timelapse {
   skip: () => void;
   /** Try again, from the failure line: focus goes back to the button. */
   retry: () => void;
-  /** Ends it at once; the layer hides before anything else reads the page. */
+  /** Ends it at once; the overlay hides before anything else reads the page. */
   stop: () => void;
-  /** Where the button, the layer, its paper and its canvas attach. */
+  /** Where the button, the overlay, its paper and its canvas attach. */
   attach: {
     button: RefCallback<HTMLButtonElement>;
-    layer: RefCallback<HTMLDivElement>;
+    overlay: RefCallback<HTMLDivElement>;
     paper: RefCallback<HTMLSpanElement>;
     canvas: RefCallback<HTMLCanvasElement>;
   };
 }
 
-/** The layer's opacity `elapsed` ms into the ending: held, then faded out on an ease-out. */
+/** The overlay's opacity `elapsed` ms into the ending: held, then faded out on an ease-out. */
 const endingOpacity = (elapsed: number, fadeMs: number) =>
   elapsed <= HOLD_MS ? 1 : (1 - Math.min(1, (elapsed - HOLD_MS) / fadeMs)) ** 3;
 
@@ -195,7 +195,7 @@ const toError = (error: unknown) => (error instanceof Error ? error : new Error(
 
 /**
  * The sticker detail's timelapse. A press loads the sticker's timelapse and prepares its fills; the
- * sticker flies onto the sheet it was drawn on, which plays from blank on a layer over the stage; the
+ * sticker flies onto the sheet it was drawn on, which plays from blank on an overlay over the stage; the
  * finished sheet holds, the sticker peels off it back to its spot as the sheet fades, and its sheen
  * sweeps. `stop` ends it at once.
  */
@@ -212,15 +212,15 @@ export function useTimelapse({
   const [view, setView] = useState<View>(IDLE);
   const session = useRef<Session | null>(null);
   const button = useRef<HTMLButtonElement>(null);
-  const layer = useRef<HTMLDivElement>(null);
+  const overlay = useRef<HTMLDivElement>(null);
   const paper = useRef<HTMLSpanElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [attach] = useState(() => ({
     button: (el: HTMLButtonElement | null) => {
       button.current = el;
     },
-    layer: (el: HTMLDivElement | null) => {
-      layer.current = el;
+    overlay: (el: HTMLDivElement | null) => {
+      overlay.current = el;
     },
     paper: (el: HTMLSpanElement | null) => {
       paper.current = el;
@@ -234,7 +234,7 @@ export function useTimelapse({
   useLayoutEffect(() => {
     latest.current = { reduced, createPlayer, frames };
   });
-  // A playing player hears it too: the fills still to come show whole.
+  // A playing player hears it too: the fills and layer steps still to come show whole.
   useEffect(() => {
     session.current?.player?.setReduced(reduced);
   }, [reduced]);
@@ -248,7 +248,7 @@ export function useTimelapse({
     s.over = true;
     s.cancelFrame();
     s.unwatch();
-    if (layer.current) layer.current.style.visibility = "hidden";
+    if (overlay.current) overlay.current.style.visibility = "hidden";
     figureBack(s.figure);
     s.player?.stop();
     const ink = s.canvas;
@@ -315,7 +315,7 @@ export function useTimelapse({
     const from = clock.now();
     const frame = (t: number) => {
       const elapsed = t - from;
-      const sheet = layer.current;
+      const sheet = overlay.current;
       if (flight && box) {
         const peel = clamp01((elapsed - HOLD_MS - LAND_MS) / PEEL_MS);
         box.style.opacity = String(clamp01((elapsed - HOLD_MS) / LAND_MS));
@@ -343,7 +343,7 @@ export function useTimelapse({
    * motion nothing moves: the paper fades in, and a sticker off its spot fades out as it does.
    */
   const takeOff = (s: Session, layout: TimelapseLayout) => {
-    const sheet = layer.current;
+    const sheet = overlay.current;
     const box = s.figure;
     lay(layout);
     if (sheet) sheet.style.opacity = "0";
@@ -372,17 +372,17 @@ export function useTimelapse({
         throw apiError(error);
       });
       if (s.over) return;
-      // The player takes the layer's canvas, so the layer goes into the page first, unseen.
+      // The player takes the overlay's canvas, so the overlay goes into the page first, unseen.
       flushSync(() => setView((v) => ({ ...v, phase: "preparing" })));
       const ink = canvas.current;
-      const stage = layer.current;
+      const stage = overlay.current;
       const box = figure.current;
       if (!ink || !stage || !box)
-        throw new Error("The timelapse's layer or the sticker's figure is gone");
+        throw new Error("The timelapse's overlay or the sticker's figure is gone");
       const { reduced: still, createPlayer: create, frames: clock } = latest.current;
       s.canvas = ink;
       s.figure = box;
-      // The layer covers the stage, so the figure's offset is its place on the stage.
+      // The overlay covers the stage, so the figure's offset is its place on the stage.
       const figureBox = {
         x: box.offsetLeft,
         y: box.offsetTop,

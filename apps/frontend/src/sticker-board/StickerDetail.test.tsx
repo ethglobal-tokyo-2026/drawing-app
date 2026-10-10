@@ -767,7 +767,7 @@ describe("StickerDetail", () => {
         timelapse: () => Promise.resolve(TEST_TIMELAPSE),
       });
     const timelapseButton = () => document.querySelector<HTMLButtonElement>(".timelapse-button");
-    const layer = () => document.querySelector(".timelapse-layer");
+    const overlay = () => document.querySelector(".timelapse-overlay");
 
     /** Opens No.0133 and plays its timelapse. */
     async function playing() {
@@ -777,7 +777,7 @@ describe("StickerDetail", () => {
       await settle();
       players.last().prepared.resolve();
       await settle();
-      expect(layer()).not.toBeNull();
+      expect(overlay()).not.toBeNull();
       return players.last();
     }
 
@@ -798,13 +798,13 @@ describe("StickerDetail", () => {
       ["paging", () => press(NEXT_STICKER)],
       ["the back button", () => press(i18next.t(($) => $.ui.backToBoard))],
       ["Escape", () => key("Escape")],
-    ])("stops on %s, lets go of its canvas, and leaves no layer behind", async (_, leave) => {
+    ])("stops on %s, lets go of its canvas, and leaves no overlay behind", async (_, leave) => {
       const player = await playing();
       leave();
       expect(player.calls).toContain("stop");
       const { canvas } = player.options;
       expect([canvas.width, canvas.height]).toEqual([0, 0]);
-      expect(layer()).toBeNull();
+      expect(overlay()).toBeNull();
     });
 
     it("shows Timelapse from the board's sticker before its detail is read", () => {
@@ -856,7 +856,7 @@ describe("StickerDetail", () => {
       land();
       await settle();
       expect(player.calls).not.toContain("stop");
-      expect(layer()).not.toBeNull();
+      expect(overlay()).not.toBeNull();
       expect(document.activeElement).toBe(previous);
     });
 
@@ -867,7 +867,7 @@ describe("StickerDetail", () => {
         await new Promise((resolve) => setTimeout(resolve, 20));
       });
       expect(player.calls).toContain("stop");
-      expect(layer()).toBeNull();
+      expect(overlay()).toBeNull();
     });
   });
 
@@ -1036,7 +1036,8 @@ describe("StickerDetail", () => {
       press(NEXT_STICKER);
       key("Escape");
       await settle();
-      expect(onClose).toHaveBeenCalledOnce();
+      // The close reaches its caller after the sticker's return animation finishes.
+      await expect.poll(() => onClose.mock.calls.length).toBe(1);
     });
 
     it.each([

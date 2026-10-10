@@ -130,10 +130,68 @@ type PagePointer = {
  */
 function dispatchPointer(e: PagePointer) {
   const held = window as Window & {
-    pointerOver?: Map<number, { over: Element | null; landed: Element | null }>;
+    pointerOver?: Map<
+      number,
+      {
+        over: Element | null;
+        landed: Element | null;
+        captured: Element | null;
+        pressed: boolean;
+      }
+    >;
   };
-  held.pointerOver ??= new Map();
-  const state = held.pointerOver.get(e.id) ?? { over: null, landed: null };
+  if (!held.pointerOver) {
+    const pointers = new Map<
+      number,
+      { over: Element | null; landed: Element | null; captured: Element | null; pressed: boolean }
+    >();
+    held.pointerOver = pointers;
+    const setPointerCapture: unknown = Reflect.get(Element.prototype, "setPointerCapture");
+    const hasPointerCapture: unknown = Reflect.get(Element.prototype, "hasPointerCapture");
+    const releasePointerCapture: unknown = Reflect.get(Element.prototype, "releasePointerCapture");
+    if (
+      typeof setPointerCapture !== "function" ||
+      typeof hasPointerCapture !== "function" ||
+      typeof releasePointerCapture !== "function"
+    ) {
+      throw new Error("The browser has no pointer capture methods");
+    }
+    // Dispatched pointers never enter WebKit's native pointer table. Model capture for these test
+    // pointers too; real mouse/touch input still uses the browser's original methods.
+    Element.prototype.setPointerCapture = function (id) {
+      const pointer = pointers.get(id);
+      if (!pointer?.pressed) {
+        Reflect.apply(setPointerCapture, this, [id]);
+        return;
+      }
+      if (pointer.captured === this) return;
+      pointer.captured?.releasePointerCapture(id);
+      pointer.captured = this;
+      this.dispatchEvent(new PointerEvent("gotpointercapture", { pointerId: id, bubbles: true }));
+    };
+    Element.prototype.hasPointerCapture = function (id) {
+      const pointer = pointers.get(id);
+      return pointer?.pressed
+        ? pointer.captured === this
+        : Reflect.apply(hasPointerCapture, this, [id]) === true;
+    };
+    Element.prototype.releasePointerCapture = function (id) {
+      const pointer = pointers.get(id);
+      if (!pointer?.pressed) {
+        Reflect.apply(releasePointerCapture, this, [id]);
+        return;
+      }
+      if (pointer.captured !== this) return;
+      pointer.captured = null;
+      this.dispatchEvent(new PointerEvent("lostpointercapture", { pointerId: id, bubbles: true }));
+    };
+  }
+  const state = held.pointerOver.get(e.id) ?? {
+    over: null,
+    landed: null,
+    captured: null,
+    pressed: false,
+  };
   held.pointerOver.set(e.id, state);
   const init: PointerEventInit = {
     pointerId: e.id,
@@ -164,14 +222,19 @@ function dispatchPointer(e: PagePointer) {
     for (const el of entered) el.dispatchEvent(new PointerEvent("pointerenter", boundary));
     state.over = next;
   };
-  const target = state.landed ?? document.elementFromPoint(e.at.x, e.at.y);
+  const target = state.captured ?? state.landed ?? document.elementFromPoint(e.at.x, e.at.y);
   moveTo(target);
   const event = new PointerEvent(e.type, init);
   if (e.time !== undefined)
     Object.defineProperty(event, "timeStamp", { value: e.time - performance.timeOrigin });
+  if (e.type === "pointerdown") {
+    state.landed = target;
+    state.pressed = true;
+  }
   target?.dispatchEvent(event);
-  if (e.type === "pointerdown") state.landed = target;
   if (e.type !== "pointerup") return;
+  state.captured?.releasePointerCapture(e.id);
+  state.pressed = false;
   state.landed = null;
   if (e.kind === "touch") moveTo(null);
 }
@@ -283,46 +346,98 @@ export async function touchStroke(page: Page, fingers: Hand, points: At[], radiu
 /** CSS px each way from a point that ink is looked for in: a stroke's width, never the next row's. */
 const BAND = 48;
 
+/** The drawing screen's paper, whose ink the readers read unless told another container. */
+const SHEET = ".ink-sheet";
+
+/** What a reader asks of the ink a container shows, in CSS px on screen. */
+type InkQuery =
+  /** How many CSS px of ink a vertical line through x crosses within `band` of y. */
+  | { kind: "across"; x: number; y: number; band: number }
+  /** The furthest right ink reaches along row y. */
+  | { kind: "reach"; y: number }
+  /** How many device px hold any ink. */
+  | { kind: "count" };
+
 /**
- * How many CSS px of ink a short vertical line through `point` crosses on the canvas `selector`
- * names: how thick a roughly horizontal stroke there came out.
+ * Runs in the page: what `container` shows, every visible `.ink-canvas` in it composited in DOM order
+ * at its effective CSS opacity, skipping 0×0 ones, read for `query`. A stroke in progress is on a
+ * canvas of its own, so ink read mid-stroke is there too.
  */
-export function inkAt(page: Page, point: At, selector = ".ink-canvas") {
-  return page.evaluate(
-    ({ selector, x, y, band }) => {
-      const canvas = document.querySelector<HTMLCanvasElement>(selector);
-      const ctx = canvas?.getContext("2d");
-      if (!canvas || !ctx) throw new Error(`No canvas at ${selector}`);
-      if (canvas.width === 0) return 0;
-      const box = canvas.getBoundingClientRect();
-      const k = canvas.width / box.width;
-      const top = Math.max(0, Math.round((y - band - box.top) * k));
-      const bottom = Math.min(canvas.height, Math.round((y + band - box.top) * k));
-      if (bottom <= top) return 0;
-      const column = ctx.getImageData(Math.round((x - box.left) * k), top, 1, bottom - top).data;
+function readShownInk({ container, query }: { container: string; query: InkQuery }) {
+  const host = document.querySelector(container);
+  if (!host) throw new Error(`Nothing at ${container}`);
+  const box = host.getBoundingClientRect();
+  const shown = [...host.querySelectorAll<HTMLCanvasElement>(".ink-canvas")].filter((canvas) => {
+    const at = canvas.getBoundingClientRect();
+    return (
+      canvas.width > 0 &&
+      canvas.height > 0 &&
+      at.width > 0 &&
+      at.height > 0 &&
+      getComputedStyle(canvas).visibility === "visible"
+    );
+  });
+  if (shown.length === 0 || box.width === 0 || box.height === 0) return null;
+  // Device px per CSS px: the densest canvas's, so none loses detail.
+  const k = Math.max(...shown.map((canvas) => canvas.width / canvas.getBoundingClientRect().width));
+  const out = document.createElement("canvas");
+  out.width = Math.round(box.width * k);
+  out.height = Math.round(box.height * k);
+  try {
+    const g = out.getContext("2d", { willReadFrequently: true });
+    if (!g) throw new Error("No 2D context to composite the ink on");
+    for (const canvas of shown) {
+      let opacity = 1;
+      for (let el: Element | null = canvas; el; el = el.parentElement)
+        opacity *= Number(getComputedStyle(el).opacity);
+      const at = canvas.getBoundingClientRect();
+      g.globalAlpha = opacity;
+      g.drawImage(
+        canvas,
+        (at.left - box.left) * k,
+        (at.top - box.top) * k,
+        at.width * k,
+        at.height * k,
+      );
+    }
+    if (query.kind === "count") {
+      const { data } = g.getImageData(0, 0, out.width, out.height);
       let inked = 0;
-      for (let i = 3; i < column.length; i += 4) if (column[i] > 128) inked++;
+      for (let i = 3; i < data.length; i += 4) if (data[i] > 0) inked++;
+      return inked;
+    }
+    if (query.kind === "across") {
+      const top = Math.max(0, Math.round((query.y - query.band - box.top) * k));
+      const bottom = Math.min(out.height, Math.round((query.y + query.band - box.top) * k));
+      if (bottom <= top) return null;
+      const column = g.getImageData(Math.round((query.x - box.left) * k), top, 1, bottom - top);
+      let inked = 0;
+      for (let i = 3; i < column.data.length; i += 4) if (column.data[i] > 128) inked++;
       return inked / k;
-    },
-    { selector, x: point.x, y: point.y, band: BAND },
-  );
+    }
+    const row = g.getImageData(0, Math.round((query.y - box.top) * k), out.width, 1).data;
+    for (let x = out.width - 1; x >= 0; x--) if (row[x * 4 + 3] > 128) return box.left + x / k;
+    return null;
+  } finally {
+    // WebKit counts canvas memory against a budget until it's collected.
+    out.width = 0;
+    out.height = 0;
+  }
+}
+
+/**
+ * How many CSS px of ink a short vertical line through `point` crosses in what `container` shows:
+ * how thick a roughly horizontal stroke there came out.
+ */
+export async function inkAt(page: Page, point: At, container = SHEET) {
+  const query: InkQuery = { kind: "across", x: point.x, y: point.y, band: BAND };
+  return (await page.evaluate(readShownInk, { container, query })) ?? 0;
 }
 
 /** The furthest right, in CSS px, that ink reaches along screen row `y`; null on a blank row. */
-export function inkReach(page: Page, y: number, selector = ".ink-canvas") {
-  return page.evaluate(
-    ({ selector, y }) => {
-      const canvas = document.querySelector<HTMLCanvasElement>(selector);
-      const ctx = canvas?.getContext("2d");
-      if (!canvas || !ctx) throw new Error(`No canvas at ${selector}`);
-      const box = canvas.getBoundingClientRect();
-      const k = canvas.width / box.width;
-      const row = ctx.getImageData(0, Math.round((y - box.top) * k), canvas.width, 1).data;
-      for (let x = canvas.width - 1; x >= 0; x--) if (row[x * 4 + 3] > 128) return box.left + x / k;
-      return null;
-    },
-    { selector, y },
-  );
+export function inkReach(page: Page, y: number, container = SHEET) {
+  const query: InkQuery = { kind: "reach", y };
+  return page.evaluate(readShownInk, { container, query });
 }
 
 /** Waits until the ink shows at every point, so a stroke's width is read once it's painted. */
@@ -330,15 +445,8 @@ export async function inkShows(page: Page, ...points: At[]) {
   for (const point of points) await expect.poll(() => inkAt(page, point)).toBeGreaterThan(0);
 }
 
-/** Pixels holding ink anywhere on the canvas `selector` names. */
-export function inkedPixels(page: Page, selector: string) {
-  return page.evaluate((selector) => {
-    const canvas = document.querySelector<HTMLCanvasElement>(selector);
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx || canvas.width === 0) return 0;
-    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    let inked = 0;
-    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) inked++;
-    return inked;
-  }, selector);
+/** Pixels holding ink anywhere in what `container` shows. */
+export async function inkedPixels(page: Page, container: string) {
+  const query: InkQuery = { kind: "count" };
+  return (await page.evaluate(readShownInk, { container, query })) ?? 0;
 }

@@ -1,11 +1,13 @@
 import {
   ArrowsOutCardinal,
+  Checkerboard,
   Eye,
   Fire,
   Gift,
   Heart,
   MapTrifold,
   PenNib,
+  SelectionBackground,
   Spinner,
   Sticker,
   Ticket,
@@ -63,6 +65,20 @@ export const ClearSheetIcon = (props: IconProps) => (
 export const PencilOnlyIcon = (props: IconProps) => (
   <PenNib aria-hidden focusable="false" {...props} />
 );
+/**
+ * Lock transparent pixels: the layer options bar's toggle. Phosphor's checkerboard, the mark
+ * Photoshop, Krita and Clip Studio Paint share; its fill weight, shown while on, is a true checkerboard.
+ */
+export const LockTransparentPixelsIcon = (props: IconProps) => (
+  <Checkerboard aria-hidden focusable="false" {...props} />
+);
+/**
+ * Clip to layer below: the layer options bar's toggle. Phosphor's selection-background, a solid
+ * square under a dashed one, which is Clip Studio Paint's own mark for clipping.
+ */
+export const ClipToLayerBelowIcon = (props: IconProps) => (
+  <SelectionBackground aria-hidden focusable="false" {...props} />
+);
 
 // Icons with no meaning of their own in the app.
 export {
@@ -84,6 +100,7 @@ export {
   Copy,
   DeviceRotate,
   Eraser,
+  EyeSlash,
   HandHeart,
   HandPointing,
   Minus,
@@ -99,6 +116,7 @@ export {
   SkipForward,
   StarFour,
   Stop,
+  Trash,
   Vibrate,
   WaveSine,
   Wind,

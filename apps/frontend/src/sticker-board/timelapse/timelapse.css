@@ -2,7 +2,7 @@
 
 /* Over the whole stage, so marks drawn beside the sticker show beside it. Positioned after the
    figure, so it paints over it, except while the sticker flies onto or off its paper. */
-.timelapse-layer {
+.timelapse-overlay {
   position: absolute;
   inset: 0;
   cursor: pointer;
@@ -11,12 +11,12 @@
 }
 
 /* In the page while its fills are prepared, unseen until it plays. */
-.timelapse-layer[data-phase="preparing"] {
+.timelapse-overlay[data-phase="preparing"] {
   visibility: hidden;
 }
 
 /* The part of the sheet that was drawn on, as the drawing screen shows the sheet. */
-.timelapse-layer__paper {
+.timelapse-overlay__paper {
   position: absolute;
   background: var(--canvas);
   border-radius: var(--r-paper);
@@ -26,7 +26,7 @@
     1px 3px 10px rgba(28, 24, 36, 0.05);
 }
 
-.timelapse-layer__ink {
+.timelapse-overlay__ink {
   position: absolute;
   inset: 0;
   display: block;

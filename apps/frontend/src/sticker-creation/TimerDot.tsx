@@ -36,6 +36,9 @@ const HELD_STATUS = {
   color: "color",
   smoothing: "smoothing",
   clear: "clear",
+  layerOptions: "layerOptions",
+  opacity: "opacity",
+  reorder: "reorder",
   size: "size",
 } as const satisfies Record<Hold, string>;
 

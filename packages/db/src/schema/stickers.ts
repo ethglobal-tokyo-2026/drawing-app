@@ -112,11 +112,21 @@ export const stickers = sqliteTable(
 );
 
 /** How a sticker was drawn, inserted with it at seal. Its own table, so board reads never load it. */
-export const stickerTimelapses = sqliteTable("sticker_timelapses", {
-  stickerId: text("sticker_id")
-    .primaryKey()
-    .references(() => stickers.id),
-  /** Gzipped TimelapseV1 JSON, as sent. */
-  ops: blob("ops", { mode: "buffer" }).notNull(),
-  ...timestamps(),
-});
+export const stickerTimelapses = sqliteTable(
+  "sticker_timelapses",
+  {
+    stickerId: text("sticker_id")
+      .primaryKey()
+      .references(() => stickers.id),
+    /** Gzipped timelapse JSON in `format`. */
+    ops: blob("ops", { mode: "buffer" }).notNull(),
+    ...timestamps(),
+    /** The timelapse JSON's version, its `v`. */
+    format: integer("format").notNull().default(2),
+  },
+  (t) => [
+    // v2, which records layers, is the only version reading takes: a new one comes with a migration
+    // that converts the stored timelapses and moves this check.
+    check("sticker_timelapses_format", sql`${t.format} = 2`),
+  ],
+);

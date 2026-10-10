@@ -18,7 +18,16 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | draw                             | かく                                   | In hiragana, as on the Draw key                                                       |
 | the check (the seal key)         | チェック                               | In words naming the key; the act it does is 仕上げ                                    |
 | Time's up                        | タイムアップ                           | The seal sheet's title at 0:00; a Kyoto Seika sheet's is Pencils down, やめ           |
-| clear (the sheet)                | 消去                                   | Clip Studio Paint's word for its Clear; the eraser stays 消しゴム                     |
+| clear (a layer)                  | 消去                                   | Clip Studio Paint's word for its Clear; the eraser stays 消しゴム                     |
+| layer                            | レイヤー                               | A sheet of ink in the drawing screen's layer column                                   |
+| New layer                        | 新規レイヤー                           | The + tile; Clip Studio Paint's term                                                  |
+| Delete layer                     | レイヤーを削除                         | In the current layer's options                                                        |
+| Move forward / back              | 前面へ / 背面へ                        | Moves the current layer through the stack                                             |
+| hidden                           | 非表示                                 | A layer at 0% opacity                                                                 |
+| opacity                          | 不透明度                               | The layer's opacity slider                                                            |
+| layer options                    | レイヤー設定                           | Opened by tapping the current layer again                                             |
+| Lock transparent pixels          | 透明ピクセルをロック                   | Clip Studio Paint's term; keeps new ink inside existing ink                           |
+| Clip to layer below              | 下のレイヤーでクリッピング             | Clip Studio Paint's term; shows ink through the nearest unclipped layer below         |
 | two fingers                      | 2本指                                  | Undo on the drawing screen; three fingers (3本指) redo                                |
 | Pencil only / Pencil and finger  | ペンのみ / ペンと指                    | The two inputs: Settings' Input (入力), and the drawing screen's pen tile             |
 | pen pressure                     | 筆圧                                   | Off オフ, Light 軽め, Normal ふつう, Firm 強め                                        |

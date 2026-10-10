@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import {
   KYOTO_SEIKA_TIME_USED_S,
+  MAX_LAYERS,
   type KyotoSeikaSubject,
   type Me,
   type Tickets,
@@ -28,11 +29,14 @@ import { useTickets } from "../tickets/useTickets";
 import { personKey } from "../ui/deviceStorage";
 import { onLargeScreen, onTouchScreen, SWITCH } from "../ui/testing";
 import type { HistoryState, InputMode } from "./canvas/inkEngine";
-import type { Op } from "./canvas/ops";
+import { CanvasUnavailableError } from "./canvas/canvasUnavailable";
+import type { Op, Step } from "./canvas/ops";
 import { frameFor, SHEET_SHORT_UNITS } from "./canvas/sheetFrame";
 import { DrawingScreen, type DrawingScreenHandle } from "./DrawingScreen";
 import type { SealedSticker } from "./sealing/makeSticker";
 import { keepDrawingHand, penDrew, readInputMode } from "./drawingSettings";
+import { FIRST_LAYER, FIRST_LAYERS } from "./layers/layerState";
+import type { LayerView } from "./layers/layerView";
 import { CHARRED_AT_ROLL } from "../kyoto-seika/dieMood";
 import { REUNION, TEST_SUBJECTS, WIND } from "../kyoto-seika/testSubjects";
 import {
@@ -51,6 +55,18 @@ const kept = vi.hoisted(() => ({
 }));
 const sheetCalls = vi.hoisted(() => ({
   cleared: 0,
+  selected: [] as number[],
+  moved: [] as { id: number; to: number }[],
+  layers: (_view: LayerView) => {},
+  view: null as LayerView | null,
+  loadedCurrent: null as number | null,
+  steps: [] as Step[],
+  inkFailed: (_error: unknown) => {},
+  /** Every composite of the sheet read, in order; each is let go of by setting its size to 0. */
+  composites: [] as HTMLCanvasElement[],
+  compositeError: null as Error | null,
+  /** The pointers swallowed, so they draw nothing on the sheet. */
+  swallowed: [] as number[],
   /** A stroke is being drawn: the sheet's finishStroke lands it. */
   live: false,
   settings: null as {
@@ -81,50 +97,102 @@ vi.mock("./canvas/DrawingCanvas", () => ({
       onBlocked,
       settings,
       label,
+      onLayers,
+      onInkFailed,
     }: {
       onHistory: (state: HistoryState) => void;
       onCommit: (op: Op) => void;
       onBlocked: () => void;
       settings: { paused: boolean; sessionMs: () => number; inputMode: InputMode | null };
       label?: string;
+      onLayers?: (view: LayerView) => void;
+      onInkFailed?: (error: unknown) => void;
     },
     ref,
   ) {
     useEffect(() => {
       sheetCalls.settings = settings;
       sheetCalls.label = label;
+      sheetCalls.layers = (view) => onLayers?.(view);
+      sheetCalls.inkFailed = (error) => onInkFailed?.(error);
+      if (sheetCalls.view) onLayers?.(sheetCalls.view);
       sheetCalls.blocked = onBlocked;
       sheetCalls.stroke = () => {
         onHistory({ canUndo: true, canRedo: false, hasInk: true });
-        onCommit({ tool: "brush", color: "#1C1824", pts: [], T: 0 });
+        onLayers?.({
+          state: FIRST_LAYERS,
+          current: FIRST_LAYER,
+          inked: new Set([FIRST_LAYER]),
+          currentInked: true,
+          versions: new Map(),
+        });
+        onCommit({ tool: "brush", layer: 1, color: "#1C1824", pts: [], T: 0 });
       };
     });
+    const paper = useRef<HTMLDivElement>(null);
     useImperativeHandle(ref, () => ({
       undo() {},
       redo() {},
       // A clear leaves the drawing to undo, and no ink.
-      clear() {
+      clearLayer() {
         sheetCalls.cleared++;
         onHistory({ canUndo: true, canRedo: false, hasInk: false });
       },
+      addLayer() {
+        sheetCalls.steps.push({ tool: "add", layer: 2, at: 1, T: 0 });
+        onHistory({ canUndo: true, canRedo: false, hasInk: false });
+      },
+      selectLayer(id: number) {
+        sheetCalls.selected.push(id);
+      },
+      deleteLayer() {},
+      moveLayer(id: number, to: number) {
+        sheetCalls.moved.push({ id, to });
+      },
+      previewOpacity() {},
+      setOpacity() {},
+      setLocked() {},
+      setClipped() {},
+      thumbnail: () => null,
       reset() {},
-      load(steps: readonly unknown[]) {
+      load(steps: readonly unknown[], _frame: unknown, current: number) {
+        sheetCalls.loadedCurrent = current;
         const drawn = steps.length > 0;
         onHistory({ canUndo: drawn, canRedo: false, hasInk: drawn });
+        onLayers?.(
+          sheetCalls.view ?? {
+            state: FIRST_LAYERS,
+            current,
+            inked: new Set(drawn ? [FIRST_LAYER] : []),
+            currentInked: drawn && current === FIRST_LAYER,
+            versions: new Map(),
+          },
+        );
       },
-      ops: () => [],
-      steps: () => [],
+      timelapse: () => ({ steps: [], start: FIRST_LAYERS }),
+      steps: () => sheetCalls.steps,
       finishStroke() {
         if (!sheetCalls.live) return;
         sheetCalls.live = false;
         sheetCalls.stroke();
       },
-      inkForReading: () => document.createElement("canvas"),
+      composite() {
+        if (sheetCalls.compositeError) throw sheetCalls.compositeError;
+        const canvas = document.createElement("canvas");
+        [canvas.width, canvas.height] = [FRAME.w, FRAME.h];
+        sheetCalls.composites.push(canvas);
+        return canvas;
+      },
       frame: () => FRAME,
+      sheetRect: () => paper.current?.getBoundingClientRect() ?? null,
+      swallow(pointerId: number) {
+        sheetCalls.swallowed.push(pointerId);
+      },
     }));
-    return <div className="ink-sheet" />;
+    return <div ref={paper} className="ink-sheet" />;
   }),
 }));
+vi.mock("./layers/layerThumbnails", () => ({ drawThumbnail: () => {} }));
 vi.mock("./session/keptSession", async (original) => {
   const actual = await original<typeof import("./session/keptSession")>();
   return {
@@ -182,11 +250,13 @@ vi.mock("./tools/SmoothingBar", () => ({ SmoothingBar: () => null }));
 vi.mock("./tools/ToolStrip", () => ({
   ToolStrip: ({
     clearBarId,
+    canClear,
     onPanel,
     inputMode,
     onInputMode,
   }: {
     clearBarId: string;
+    canClear: boolean;
     onPanel: (panel: Exclude<Panel, null>) => void;
     inputMode: InputMode | null;
     onInputMode: (mode: InputMode) => void;
@@ -198,6 +268,7 @@ vi.mock("./tools/ToolStrip", () => ({
         type="button"
         className="clear-tile"
         aria-controls={clearBarId}
+        disabled={!canClear}
         onClick={() => onPanel("clear")}
       />
       {inputMode && (
@@ -228,6 +299,14 @@ afterEach(() => {
   view = undefined;
   localStorage.clear();
   sheetCalls.cleared = 0;
+  sheetCalls.selected = [];
+  sheetCalls.moved = [];
+  sheetCalls.view = null;
+  sheetCalls.loadedCurrent = null;
+  sheetCalls.steps = [];
+  sheetCalls.composites = [];
+  sheetCalls.compositeError = null;
+  sheetCalls.swallowed = [];
   sheetCalls.live = false;
   sheetCalls.settings = null;
   sheetCalls.label = undefined;
@@ -336,6 +415,7 @@ const keptAtTimeUp: KeptSession = {
   ticket: 7,
   elapsedMs: sessionMs(false),
   nsfw: false,
+  currentLayer: FIRST_LAYER,
   kyotoSeika: null,
   steps: [],
   frame: null,
@@ -405,6 +485,42 @@ describe("the drawing screen after a reload", () => {
     expect(startOver()).toBeUndefined();
     expect(sheet).toBe("held");
   });
+
+  it("keeps an expired drawing when its seal composite cannot allocate a canvas", async () => {
+    const failure = vi.spyOn(console, "error").mockImplementation(() => {});
+    const wipe = vi.spyOn(SessionKeeper.prototype, "wipe");
+    onTestFinished(() => {
+      wipe.mockRestore();
+      failure.mockRestore();
+    });
+    reopen(keptAtTimeUp);
+    await settle();
+    sheetCalls.steps = keptAtTimeUp.steps.slice();
+    sheetCalls.compositeError = new CanvasUnavailableError();
+    sealOnSheet();
+    await settle(1000);
+
+    expect(sheet).toBe("held");
+    expect(wipe).not.toHaveBeenCalled();
+    expect(keptRecord()).toMatchObject({ ticket: 7 });
+    expect(chip()).toContain(strings.stickerCreation.seal.failed.onThisDevice.en);
+    expect(chip()).not.toContain(strings.stickerCreation.seal.emptyAtTimeUp.en);
+    expect(failure).toHaveBeenCalled();
+  });
+
+  it("doesn't show an earlier seal failure's detail under a later ink failure", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    reopen(keptAtTimeUp);
+    await settle();
+    sealOnSheet();
+    await settle(1000);
+    expect(chip()).toContain("The sealing worker stopped");
+
+    act(() => sheetCalls.inkFailed(new Error("out of memory")));
+    expect(chip()).toContain(strings.stickerCreation.layers.inkFailed.en);
+    expect(chip()).not.toContain("The sealing worker stopped");
+    error.mockRestore();
+  });
 });
 
 /** Halfway through its time. */
@@ -415,8 +531,9 @@ const keptHalfway: KeptSession = {
   ticket: 7,
   elapsedMs: KEPT_MS,
   nsfw: false,
+  currentLayer: FIRST_LAYER,
   kyotoSeika: null,
-  steps: [{ tool: "brush", color: "#1C1824", pts: [], T: 0 }],
+  steps: [{ tool: "brush", layer: 1, color: "#1C1824", pts: [], T: 0 }],
   frame: FRAME,
 };
 const buttonSaying = (words: string) =>
@@ -573,6 +690,17 @@ describe("the seal sheet", () => {
     expect(seal).not.toHaveBeenCalled();
   });
 
+  it("cuts the sticker from one composite of the sheet, and lets it go", async () => {
+    const seal = await openDrawing();
+    tapSealKey();
+    // The preview reads one of its own as the seal sheet opens.
+    sheetCalls.composites = [];
+    sealOnSheet();
+    await settle(1000);
+    expect(seal).toHaveBeenCalledOnce();
+    expect(sheetCalls.composites.map(({ width }) => width)).toEqual([0]);
+  });
+
   it("comes back on for a kept drawing marked 18+, and starts off on a new sheet", async () => {
     await openDrawing({ ...keptHalfway, nsfw: true });
     tapSealKey();
@@ -694,6 +822,191 @@ describe("clearing the sheet", () => {
   });
 });
 
+describe("the drawing screen's layers", () => {
+  const twoLayers: LayerView = {
+    state: {
+      layers: [FIRST_LAYERS.layers[0], { id: 2, opacity: 100, locked: false, clipped: false }],
+      nextId: 3,
+    },
+    current: 1,
+    inked: new Set([1]),
+    currentInked: true,
+    versions: new Map(),
+  };
+  const show = (next: LayerView) => act(() => sheetCalls.layers(next));
+
+  it("keeps a layer added before the first mark without starting the clock", async () => {
+    const save = vi.spyOn(SessionKeeper.prototype, "save");
+    reopen({ ...keptAtTimeUp, elapsedMs: 0 });
+    await settle();
+    act(() => document.querySelector<HTMLButtonElement>(".layer-add")?.click());
+    expect(save).toHaveBeenCalledWith([{ tool: "add", layer: 2, at: 1, T: 0 }], 0, FRAME);
+    expect(await countedAfter(tapTimer)).toBe(0);
+    save.mockRestore();
+  });
+
+  it("restores metadata-only layer history with the clock waiting for the first mark", async () => {
+    reopen({
+      ...keptAtTimeUp,
+      elapsedMs: 0,
+      steps: [
+        { tool: "add", layer: 2, at: 1, T: 0 },
+        { tool: "opacity", layer: 2, opacity: 50, T: 0 },
+        { tool: "lock", layer: 2, on: true, T: 0 },
+        { tool: "clip", layer: 2, on: true, T: 0 },
+        { tool: "move", layer: 2, to: 0, T: 0 },
+      ],
+    });
+    await settle();
+    expect(await countedAfter(tapTimer)).toBe(0);
+    expect(await countedAfter(() => sheetCalls.stroke())).toBeGreaterThan(0);
+  });
+
+  it("selects another layer, opens options on the current chip, and closes them on the sheet", async () => {
+    reopen(keptHalfway);
+    await settle();
+    show(twoLayers);
+    act(() => document.querySelector<HTMLButtonElement>('[data-layer-chip="2"]')?.click());
+    expect(sheetCalls.selected).toEqual([2]);
+    act(() => document.querySelector<HTMLButtonElement>('[data-layer-chip="1"]')?.click());
+    expect(document.querySelector(".layer-options-bar")).not.toBeNull();
+    act(
+      () =>
+        void document
+          .querySelector(".ink-sheet")
+          ?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 19 })),
+    );
+    expect(document.querySelector(".layer-options-bar")).toBeNull();
+    expect(sheetCalls.swallowed).toContain(19);
+  });
+
+  it("disables delete on the last layer and add at the layer limit", async () => {
+    reopen(keptHalfway);
+    await settle();
+    act(() => document.querySelector<HTMLButtonElement>('[data-layer-chip="1"]')?.click());
+    expect(
+      document
+        .querySelector<HTMLButtonElement>('[aria-label="Delete layer"]')
+        ?.getAttribute("aria-disabled"),
+    ).toBe("true");
+    show({
+      ...twoLayers,
+      state: {
+        layers: Array.from({ length: MAX_LAYERS }, (_, i) => ({
+          ...FIRST_LAYERS.layers[0],
+          id: i + 1,
+        })),
+        nextId: MAX_LAYERS + 1,
+      },
+    });
+    expect(document.querySelector<HTMLButtonElement>(".layer-add")?.disabled).toBe(true);
+  });
+
+  it("shows opacity for two layers or a partly transparent only layer", async () => {
+    reopen(keptHalfway);
+    await settle();
+    expect(document.querySelector(".opacity-slider")).toBeNull();
+    show(twoLayers);
+    expect(document.querySelector(".opacity-slider")).not.toBeNull();
+    show({
+      ...twoLayers,
+      state: { ...FIRST_LAYERS, layers: [{ ...FIRST_LAYERS.layers[0], opacity: 50 }] },
+    });
+    expect(document.querySelector(".opacity-slider")).not.toBeNull();
+  });
+
+  it("only enables Clear while the current layer has ink", async () => {
+    reopen(keptHalfway);
+    await settle();
+    show({ ...twoLayers, current: 2, currentInked: false });
+    expect(document.querySelector<HTMLButtonElement>(".clear-tile")?.disabled).toBe(true);
+  });
+
+  it("moves the current layer forward and announces where it went", async () => {
+    reopen(keptHalfway);
+    await settle();
+    show(twoLayers);
+    act(() => document.querySelector<HTMLButtonElement>('[data-layer-chip="1"]')?.click());
+    act(() => document.querySelector<HTMLButtonElement>('[aria-label="Move forward"]')?.click());
+    expect(sheetCalls.moved).toEqual([{ id: 1, to: 1 }]);
+    expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      "Layer 1 moved in front of layer 2",
+    );
+  });
+
+  it("holds a regular sheet's clock while the opacity thumb is held", async () => {
+    reopen(keptHalfway);
+    await settle();
+    show(twoLayers);
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    const thumb = document.querySelector(".opacity-thumb");
+    const point = (type: string) =>
+      thumb?.dispatchEvent(
+        new PointerEvent(type, {
+          pointerId: 21,
+          clientX: 8,
+          clientY: 100,
+          bubbles: true,
+        }),
+      );
+    expect(
+      await countedAfter(() => {
+        point("pointerdown");
+      }),
+    ).toBe(0);
+    expect(
+      await countedAfter(() => {
+        point("pointerup");
+      }),
+    ).toBeGreaterThan(0);
+  });
+
+  it("passes the kept current layer to the sheet and keeps a later selection", async () => {
+    reopen({ ...keptHalfway, currentLayer: 2 });
+    await settle();
+    expect(sheetCalls.loadedCurrent).toBe(2);
+    show({ ...twoLayers, current: 2, currentInked: false });
+    expect(keptRecord()).toMatchObject({ currentLayer: 2 });
+  });
+
+  it("keeps the layer the sheet actually selected when a kept layer no longer exists", async () => {
+    sheetCalls.view = {
+      state: FIRST_LAYERS,
+      current: FIRST_LAYER,
+      inked: new Set([FIRST_LAYER]),
+      currentInked: true,
+      versions: new Map(),
+    };
+    reopen({ ...keptHalfway, currentLayer: 2 });
+    await settle();
+    expect(sheetCalls.loadedCurrent).toBe(2);
+    expect(keptRecord()).toMatchObject({ currentLayer: FIRST_LAYER });
+  });
+
+  it("shows a failed mark until another mark lands", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    reopen(keptHalfway);
+    await settle();
+    act(() => sheetCalls.inkFailed(new Error("out of memory")));
+    expect(chip()).toContain(strings.stickerCreation.layers.inkFailed.en);
+    expect(error).toHaveBeenCalledOnce();
+    act(() => sheetCalls.stroke());
+    expect(document.querySelector(".seal-chip.is-on")).toBeNull();
+    error.mockRestore();
+  });
+
+  it("clears a failed drawing update after a layer change succeeds", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    reopen(keptHalfway);
+    await settle();
+    act(() => sheetCalls.inkFailed(new Error("out of memory")));
+    expect(chip()).toContain(strings.stickerCreation.layers.inkFailed.en);
+    act(() => document.querySelector<HTMLButtonElement>(".layer-add")?.click());
+    expect(document.querySelector(".seal-chip.is-on")).toBeNull();
+    error.mockRestore();
+  });
+});
+
 describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
   const KYOTO_SEIKA_ME: Me = { ...TEST_ME, kyotoSeikaPractice: true };
 
@@ -783,6 +1096,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
       ticket: 9,
       elapsedMs: 0,
       nsfw: false,
+      currentLayer: FIRST_LAYER,
       kyotoSeika: { subjects: five, picked: [3], rolls: CHARRED_AT_ROLL, begun: false },
       steps: [],
       frame: null,
@@ -888,7 +1202,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     vi.useFakeTimers();
     const halfway = sessionMs(true) / 2;
     new SessionKeeper(me.id).save(
-      [{ tool: "brush", color: "#1C1824", pts: [], T: 0 }],
+      [{ tool: "brush", layer: 1, color: "#1C1824", pts: [], T: 0 }],
       halfway,
       FRAME,
     );
@@ -929,6 +1243,36 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     for (const takeTool of TOOLS_IN_HAND) expect(await countedAfter(takeTool)).toBeGreaterThan(0);
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
     expect(timerCalls.clockRuns).toBe(1);
+  });
+
+  it("keeps a begun sheet's clock running while the opacity thumb is held", async () => {
+    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: BEGUN });
+    act(() =>
+      sheetCalls.layers({
+        state: {
+          layers: [FIRST_LAYERS.layers[0], { id: 2, opacity: 100, locked: false, clipped: false }],
+          nextId: 3,
+        },
+        current: 1,
+        inked: new Set([1]),
+        currentInked: true,
+        versions: new Map(),
+      }),
+    );
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    const thumb = document.querySelector(".opacity-thumb");
+    expect(
+      await countedAfter(() => {
+        thumb?.dispatchEvent(
+          new PointerEvent("pointerdown", {
+            pointerId: 25,
+            clientX: 8,
+            clientY: 100,
+            bubbles: true,
+          }),
+        );
+      }),
+    ).toBeGreaterThan(0);
   });
 
   it("holds a begun sheet's clock while the phone is on its side, as it does under the board", async () => {
@@ -1049,6 +1393,31 @@ describe("the color sheet", () => {
     await openColors();
     touch(".timer-stub");
     expect(colorSheet()).not.toBeNull();
+  });
+});
+
+describe("a press on the sheet", () => {
+  /** A pointer landing on the sheet. */
+  const pressSheet = (pointerId: number) =>
+    act(
+      () =>
+        void document
+          .querySelector(".ink-sheet")
+          ?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId })),
+    );
+
+  it("closes whatever panel is open and is swallowed, so it draws nothing, and with none open is the sheet's own", async () => {
+    reopen(keptHalfway);
+    await settle();
+    // On a phone the color sheet is a bottom sheet, which a press anywhere else leaves open.
+    act(openPanel("color"));
+    pressSheet(5);
+    expect(document.querySelector(".color-sheet")).toBeNull();
+    act(openPanel("clear"));
+    pressSheet(6);
+    expect(document.querySelector(".clear-bar.is-open")).toBeNull();
+    pressSheet(7);
+    expect(sheetCalls.swallowed).toEqual([5, 6]);
   });
 });
 

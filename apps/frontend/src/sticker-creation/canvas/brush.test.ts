@@ -9,6 +9,7 @@ const SIZE = 10;
 const builder = (given: Partial<ConstructorParameters<typeof StrokeBuilder>[0]> = {}) =>
   new StrokeBuilder({
     tool: "brush",
+    layer: 1,
     color: "#000000",
     size: SIZE,
     x: 0,
@@ -85,6 +86,19 @@ function tap(wobbles: number): number[] {
 
 /** The most a sharp corner's line may turn at any one point, in radians: less than the corner's own. */
 const CORNER_TURN = Math.PI / 3;
+
+/** A wavy line's samples, far enough apart that the builder takes each, so its spans curve. */
+const WAVE = Array.from({ length: 8 }, (_, i) => [(i + 1) * 10, 10 * Math.sin(i)] as const);
+
+/** A stroke through WAVE's first `n` samples; `asked`, its held-back points are asked for after each, as every frame does. */
+function wave(n: number, asked: boolean): StrokeBuilder {
+  const stroke = builder();
+  WAVE.slice(0, n).forEach(([x, y], i) => {
+    stroke.add(x, y, 0.5, (i + 1) * 16);
+    if (asked) stroke.provisional();
+  });
+  return stroke;
+}
 
 /** A stroke's points, as x, y. */
 const pointsOf = ({ op: { pts } }: StrokeBuilder) =>
@@ -188,6 +202,24 @@ describe("StrokeBuilder", () => {
       );
     });
     expect(Math.max(...strays)).toBeLessThanOrEqual(CURVE_FLATNESS);
+  });
+
+  it("holds back what settling at the newest point would add, and nothing once settled", () => {
+    for (let n = 1; n <= WAVE.length; n++) {
+      const stroke = wave(n, true);
+      const held = [...stroke.provisional()];
+      const settledTo = stroke.op.pts.length;
+      stroke.settle(...WAVE[n - 1]);
+      expect(held.length).toBeGreaterThan(0);
+      expect(held).toEqual(stroke.op.pts.slice(settledTo));
+      expect(stroke.provisional()).toEqual([]);
+    }
+  });
+
+  it("draws the same stroke whether or not its held-back points were asked for", () => {
+    const [asked, never] = [wave(WAVE.length, true), wave(WAVE.length, false)];
+    for (const stroke of [asked, never]) stroke.settle(...WAVE[WAVE.length - 1]);
+    expect(asked.op).toEqual(never.op);
   });
 
   it("skips points within half a pixel of the last", () => {

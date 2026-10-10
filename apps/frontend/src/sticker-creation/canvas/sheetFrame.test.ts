@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CANVAS_BYTES_BUDGET } from "../layers/layerInk";
 import {
   areaFrame,
   fitScale,
@@ -40,13 +41,22 @@ describe("frameFor", () => {
 
   it("backs the ink at the screen's density as the sheet is shown, within MAX_INK_PIXELS", () => {
     const shown = frameFor(IPAD_11, 2);
-    expect(shown.density).toBeCloseTo(fitScale(shown, IPAD_11) * 2, 2);
-    expect(backing(shown)).toBeLessThan(MAX_INK_PIXELS);
+    expect(shown.density).toBe(maxInkDensity(shown));
+    expect(shown.density).toBeLessThan(fitScale(shown, IPAD_11) * 2);
+    expect(backing(shown)).toBeLessThanOrEqual(MAX_INK_PIXELS);
 
     const big = frameFor(IPAD_13, 2);
     expect(big.density).toBe(maxInkDensity(big));
     expect(big.density).toBeLessThan(fitScale(big, IPAD_13) * 2);
     expect(backing(big)).toBeLessThanOrEqual(MAX_INK_PIXELS);
+  });
+
+  it("keeps a tall DPR3 phone at native density and caps twenty raw sheet canvases", () => {
+    const tallestPhone = { width: SHEET_SHORT_UNITS, height: SHEET_SHORT_UNITS * MAX_SHEET_ASPECT };
+    expect(frameFor(tallestPhone, MAX_DPR).density).toBe(MAX_DPR);
+    expect(backing(frameFor(tallestPhone, MAX_DPR))).toBeLessThan(MAX_INK_PIXELS);
+    expect(MAX_INK_PIXELS * 4 * 20).toBeLessThanOrEqual(CANVAS_BYTES_BUDGET);
+    expect(backing(frameFor(IPAD_13, 2)) * 4 * 20).toBeLessThanOrEqual(CANVAS_BYTES_BUDGET);
   });
 
   it("never backs a sheet shown small coarser than a phone's sheet, nor past MAX_DPR", () => {
@@ -72,7 +82,7 @@ describe("fitScale", () => {
 
 describe("areaFrame", () => {
   it("takes the area itself as the sheet, at scale 1, at the screen's density", () => {
-    const area = { width: 1163.53, height: 747.5 };
+    const area = { width: 800, height: 600 };
     const frame = areaFrame(area, 2);
     expect(fitScale(frame, area)).toBeCloseTo(1, 3);
     expect(frame.density).toBe(2);

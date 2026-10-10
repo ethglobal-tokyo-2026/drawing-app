@@ -74,31 +74,47 @@ const TUCKED = 7;
 const rgbDistance = (data: Uint8ClampedArray, i: number, [r, g, b]: Rgb) =>
   Math.abs(data[i] - r) + Math.abs(data[i + 1] - g) + Math.abs(data[i + 2] - b);
 
+/** A fill's region and tuck on the pixels shown, in their coordinates. */
+export interface FoundFill {
+  box: Rect;
+  /** IN or TUCKED per pixel of `box`, row by row; 0 elsewhere. */
+  marks: Uint8Array;
+  /** A paper fill, rather than a recolor. */
+  paper: boolean;
+}
+
 /**
- * Scanline flood fill from (sx, sy), in the pixels' own units. It takes in empty paper, or a colored
- * region of similar colors, and tucks the fill under what borders it. On paper, openings in the lines
- * up to about `gap` across hold the fill as if closed (`closeGaps`). Returns the box it changed, or
- * null when nothing changed: the seed is off the image or already the fill color. With `cut` sides
- * it answers "past", changing nothing, once the region comes close enough to one to go on beyond it.
+ * Scanline flood fill from (sx, sy) on the pixels shown, in their own units, writing nothing. It
+ * takes in empty paper, or a colored region of similar colors, and tucks the fill under what borders
+ * it. On paper, openings in the lines up to about `gap` across hold the fill as if closed
+ * (`closeGaps`). Null when the fill would change nothing: the seed is off the pixels or already the
+ * fill color. With `cut` sides it answers "past" once the region comes close enough to one to go on
+ * beyond it.
  */
-export function floodFill(img: Pixels, sx: number, sy: number, fill: Rgb, gap: number): Rect | null;
-export function floodFill(
-  img: Pixels,
+export function findFill(
+  shown: Pixels,
   sx: number,
   sy: number,
   fill: Rgb,
   gap: number,
-  cut: Cut,
-): Rect | "past" | null;
-export function floodFill(
-  img: Pixels,
+): FoundFill | null;
+export function findFill(
+  shown: Pixels,
   sx: number,
   sy: number,
   fill: Rgb,
   gap: number,
   cut?: Cut,
-): Rect | "past" | null {
-  const { width: w, height: h, data } = img;
+): FoundFill | "past" | null;
+export function findFill(
+  shown: Pixels,
+  sx: number,
+  sy: number,
+  fill: Rgb,
+  gap: number,
+  cut?: Cut,
+): FoundFill | "past" | null {
+  const { width: w, height: h, data } = shown;
   if (sx < 0 || sy < 0 || sx >= w || sy >= h) return null;
   const seed = (sy * w + sx) * 4;
   const target: Rgb = [data[seed], data[seed + 1], data[seed + 2]];
@@ -108,7 +124,7 @@ export function floodFill(
   // Half the widest opening closed, in thirds of a pixel. A fill on a color closes none, so a stroke
   // thinner than the gap still recolors whole.
   const reach = empty ? Math.min((gap * SIDE) / 2, FAR - 1) : 0;
-  const lines = reach > 0 ? lineDistances(img, cut, reach, reach * ROOM) : null;
+  const lines = reach > 0 ? lineDistances(shown, cut, reach, reach * ROOM) : null;
   const far = lines?.far ?? null;
   // Lines past a cut side are unseen, so paper this near one may be nearer them than it looks.
   const margin = reach > 0 ? Math.max(CLEAR, Math.ceil((reach * ROOM) / SIDE) + 1) : CLEAR;
@@ -134,7 +150,6 @@ export function floodFill(
       : closeGaps(region, lines.far, lines.near, reach, w, h, sx, sy, open, nearCut);
   if (box === "past") return "past";
 
-  const [fr, fg, fb] = fill;
   // The pixels the tuck grows from: the region's, beside a pixel outside it.
   let edge: number[] = [];
   const { x0, y0, x1, y1 } = box;
@@ -142,12 +157,6 @@ export function floodFill(
     for (let x = x0; x <= x1; x++) {
       const p = y * w + x;
       if (region[p] !== IN) continue;
-      const i = p * 4;
-      data[i] = fr;
-      data[i + 1] = fg;
-      data[i + 2] = fb;
-      // A recolor keeps each pixel's alpha, so the stroke keeps its shape and its soft edge.
-      if (empty) data[i + 3] = 255;
       if (
         (x > 0 && region[p - 1] !== IN) ||
         (x < w - 1 && region[p + 1] !== IN) ||
@@ -157,12 +166,12 @@ export function floodFill(
         edge.push(p);
     }
   }
-  // The tuck writes no paper outside the region: a paper fill goes under the ink beside it, up to
+  // The tuck takes in no paper outside the region: a paper fill goes under the ink beside it, up to
   // its opaque core, and a recolor gives the stroke's faint fringe the fill's color.
   const tucks = empty
     ? (a: number) => a >= EMPTY_ALPHA && a < 255
     : (a: number) => a > 0 && a < EMPTY_ALPHA;
-  const changed: Box = { ...box };
+  const reached: Box = { ...box };
   for (let step = 0; step < TUCK && edge.length > 0; step++) {
     const next: number[] = [];
     for (const p of edge) {
@@ -171,34 +180,112 @@ export function floodFill(
       for (let ny = Math.max(0, y - 1); ny <= Math.min(h - 1, y + 1); ny++) {
         for (let nx = Math.max(0, x - 1); nx <= Math.min(w - 1, x + 1); nx++) {
           const q = ny * w + nx;
-          const i = q * 4;
-          if (region[q] === IN || region[q] === TUCKED || !tucks(data[i + 3])) continue;
+          if (region[q] === IN || region[q] === TUCKED || !tucks(data[q * 4 + 3])) continue;
           region[q] = TUCKED;
-          extend(changed, q, w);
+          extend(reached, q, w);
           next.push(q);
-          if (!empty) {
-            data[i] = fr;
-            data[i + 1] = fg;
-            data[i + 2] = fb;
-            continue;
-          }
-          // The ink keeps its color over the fill, by its own alpha.
-          const a = data[i + 3] / 255;
-          data[i] = data[i] * a + fr * (1 - a);
-          data[i + 1] = data[i + 1] * a + fg * (1 - a);
-          data[i + 2] = data[i + 2] * a + fb * (1 - a);
-          data[i + 3] = 255;
         }
       }
     }
     edge = next;
   }
-  return {
-    x: changed.x0,
-    y: changed.y0,
-    w: changed.x1 - changed.x0 + 1,
-    h: changed.y1 - changed.y0 + 1,
-  };
+  const bw = reached.x1 - reached.x0 + 1;
+  const bh = reached.y1 - reached.y0 + 1;
+  const marks = new Uint8Array(bw * bh);
+  for (let y = 0; y < bh; y++) {
+    const row = (reached.y0 + y) * w + reached.x0;
+    for (let x = 0; x < bw; x++) {
+      const mark = region[row + x];
+      if (mark === IN || mark === TUCKED) marks[y * bw + x] = mark;
+    }
+  }
+  return { box: { x: reached.x0, y: reached.y0, w: bw, h: bh }, marks, paper: empty };
+}
+
+/**
+ * Writes a found fill onto `target`, against the target's own pixels, where `target` and `shown`
+ * cover the pixels the fill was found on. On one layer, `target` is `shown`. On a `locked` layer
+ * the fill's color goes source-atop, region and tuck alike, so every pixel keeps its alpha. Returns
+ * whether it wrote a pixel, which a locked layer's clear pixels never take.
+ */
+export function writeFill(
+  target: Pixels,
+  shown: Pixels,
+  found: FoundFill,
+  fill: Rgb,
+  locked = false,
+): boolean {
+  if (target.width !== shown.width || target.height !== shown.height) {
+    throw new Error(
+      `A fill found on ${shown.width}×${shown.height} px can't be written on ${target.width}×${target.height} px`,
+    );
+  }
+  const { box, marks, paper } = found;
+  const [fr, fg, fb] = fill;
+  const t = target.data;
+  let wrote = false;
+  for (let y = 0; y < box.h; y++) {
+    for (let x = 0; x < box.w; x++) {
+      const mark = marks[y * box.w + x];
+      if (mark === 0) continue;
+      const i = ((box.y + y) * target.width + box.x + x) * 4;
+      if (locked) {
+        // An opaque color laid source-atop takes the pixel's alpha, so a clear pixel takes nothing.
+        if (t[i + 3] === 0) continue;
+        t[i] = fr;
+        t[i + 1] = fg;
+        t[i + 2] = fb;
+      } else if (!paper) {
+        // A recolor keeps the stroke's shape and soft edge, from whichever layer shows it.
+        t[i] = fr;
+        t[i + 1] = fg;
+        t[i + 2] = fb;
+        t[i + 3] = Math.max(t[i + 3], shown.data[i + 3]);
+      } else if (mark === IN) {
+        t[i] = fr;
+        t[i + 1] = fg;
+        t[i + 2] = fb;
+        t[i + 3] = 255;
+      } else {
+        // The target's ink keeps its color over the fill, by its own alpha: on a layer under the
+        // lines, where it's clear, the fill goes under them whole.
+        const a = t[i + 3] / 255;
+        t[i] = t[i] * a + fr * (1 - a);
+        t[i + 1] = t[i + 1] * a + fg * (1 - a);
+        t[i + 2] = t[i + 2] * a + fb * (1 - a);
+        t[i + 3] = 255;
+      }
+      wrote = true;
+    }
+  }
+  return wrote;
+}
+
+/**
+ * Floods the pixels from (sx, sy) in place, as one layer takes a fill: `findFill`, then `writeFill`
+ * on the same pixels. Returns the box it changed, or what `findFill` answered instead.
+ */
+export function floodFill(img: Pixels, sx: number, sy: number, fill: Rgb, gap: number): Rect | null;
+export function floodFill(
+  img: Pixels,
+  sx: number,
+  sy: number,
+  fill: Rgb,
+  gap: number,
+  cut: Cut,
+): Rect | "past" | null;
+export function floodFill(
+  img: Pixels,
+  sx: number,
+  sy: number,
+  fill: Rgb,
+  gap: number,
+  cut?: Cut,
+): Rect | "past" | null {
+  const found = findFill(img, sx, sy, fill, gap, cut);
+  if (found === null || found === "past") return found;
+  writeFill(img, img, found, fill);
+  return found.box;
 }
 
 /**
@@ -536,6 +623,13 @@ function extend(box: Box, p: number, w: number): void {
   if (y > box.y1) box.y1 = y;
 }
 
+/** A fill found on a sheet: the shown pixels read, where they sit on the sheet, and the fill on them. */
+interface SheetFind<P extends Pixels> {
+  shown: P;
+  at: Rect;
+  found: FoundFill;
+}
+
 /** A sheet flood's result: the pixels read, where they sit on the sheet, and the box of them it changed. */
 interface SheetFlood<P extends Pixels> {
   pixels: P;
@@ -543,24 +637,24 @@ interface SheetFlood<P extends Pixels> {
   changed: Rect;
 }
 
-/** How many squares a sheet flood reads, each twice as wide as the last, before the whole sheet. */
+/** How many squares a sheet fill reads, each twice as wide as the last, before the whole sheet. */
 const SQUARE_READS = 3;
 
 /**
- * Floods a sheet from (sx, sy), closing openings up to `gap` across, reading its pixels through
- * `read`: a square about `near` px on a side around the seed, then squares twice as wide while the
- * region reaches past each, then the whole sheet, so a fill reads and floods not much more than its
- * region. Null when nothing changed.
+ * Finds a fill on a sheet from (sx, sy), closing openings up to `gap` across, reading what's shown
+ * through `readShown`: a square about `near` px on a side around the seed, then squares twice as wide
+ * while the region reaches past each, then the whole sheet, so a fill reads and floods not much more
+ * than its region. Null when the fill would change nothing.
  */
-export function floodSheet<P extends Pixels>(
+export function findOnSheet<P extends Pixels>(
   sheet: { width: number; height: number },
-  read: (box: Rect) => P,
+  readShown: (box: Rect) => P,
   sx: number,
   sy: number,
   fill: Rgb,
   gap: number,
   near: number,
-): SheetFlood<P> | null {
+): SheetFind<P> | null {
   const { width, height } = sheet;
   if (sx < 0 || sy < 0 || sx >= width || sy >= height) return null;
   for (let n = 0, side = near; n < SQUARE_READS; n++, side *= 2) {
@@ -581,12 +675,115 @@ export function floodSheet<P extends Pixels>(
     };
     // A wider square holding half the sheet costs about what the whole does, and may still fall short.
     if (n > 0 && around.w * around.h * 2 >= width * height) break;
-    const pixels = read(around);
-    const changed = floodFill(pixels, sx - around.x, sy - around.y, fill, gap, cut);
-    if (changed !== "past") return changed && { pixels, at: around, changed };
+    const shown = readShown(around);
+    const found = findFill(shown, sx - around.x, sy - around.y, fill, gap, cut);
+    if (found !== "past") return found && { shown, at: around, found };
   }
   const whole = { x: 0, y: 0, w: width, h: height };
-  const all = read(whole);
-  const changedAll = floodFill(all, sx, sy, fill, gap);
-  return changedAll && { pixels: all, at: whole, changed: changedAll };
+  const shown = readShown(whole);
+  const found = findFill(shown, sx, sy, fill, gap);
+  return found && { shown, at: whole, found };
+}
+
+/**
+ * Floods a sheet of one layer from (sx, sy), as `findOnSheet` finds it, writing the fill onto the
+ * pixels it read. Null when nothing changed.
+ */
+export function floodSheet<P extends Pixels>(
+  sheet: { width: number; height: number },
+  read: (box: Rect) => P,
+  sx: number,
+  sy: number,
+  fill: Rgb,
+  gap: number,
+  near: number,
+): SheetFlood<P> | null {
+  const sheetFind = findOnSheet(sheet, read, sx, sy, fill, gap, near);
+  if (!sheetFind) return null;
+  const { shown, at, found } = sheetFind;
+  writeFill(shown, shown, found, fill);
+  return { pixels: shown, at, changed: found.box };
+}
+
+/** The pixels a fill changed on its layer and their values after it, run-length encoded. */
+export interface WrittenFill {
+  box: Rect;
+  /** y, x0, x1 (end-exclusive) per span of changed pixels, in sheet px. */
+  spans: Uint32Array;
+  /** count, then RGBA packed in a uint32, over the spans' pixels in order. */
+  colors: Uint32Array;
+}
+
+/**
+ * What a fill wrote on its layer, read from `after` once written, which `at` places on the sheet.
+ * Undo replays it on that layer alone, since finding the fill again would need the other layers as
+ * they were. A flat fill keeps few color runs a row.
+ */
+export function recordFill(after: Pixels, at: Rect, found: FoundFill): WrittenFill {
+  const { box, marks } = found;
+  const { width, data } = after;
+  const spans: number[] = [];
+  const colors: number[] = [];
+  let color = -1;
+  for (let y = 0; y < box.h; y++) {
+    let x = 0;
+    while (x < box.w) {
+      if (marks[y * box.w + x] === 0) {
+        x++;
+        continue;
+      }
+      const x0 = x;
+      for (; x < box.w && marks[y * box.w + x] !== 0; x++) {
+        const i = ((box.y + y) * width + box.x + x) * 4;
+        const rgba =
+          ((data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) | data[i + 3]) >>> 0;
+        if (rgba === color) colors[colors.length - 2]++;
+        else {
+          color = rgba;
+          colors.push(1, rgba);
+        }
+      }
+      spans.push(at.y + box.y + y, at.x + box.x + x0, at.x + box.x + x);
+    }
+  }
+  return {
+    box: { x: at.x + box.x, y: at.y + box.y, w: box.w, h: box.h },
+    spans: Uint32Array.from(spans),
+    colors: Uint32Array.from(colors),
+  };
+}
+
+/** Writes a recorded fill's pixels back onto `target`, which `at` places on the sheet. */
+export function replayFill(target: Pixels, at: Rect, written: WrittenFill): void {
+  const { box, spans, colors } = written;
+  const { width, height, data } = target;
+  if (
+    box.x < at.x ||
+    box.y < at.y ||
+    box.x + box.w > at.x + width ||
+    box.y + box.h > at.y + height
+  ) {
+    throw new Error(
+      `A fill written at (${box.x}, ${box.y}), ${box.w}×${box.h} px, reaches past the ${width}×${height} px at (${at.x}, ${at.y}) it's replayed on`,
+    );
+  }
+  let run = 0;
+  let left = 0;
+  let rgba = 0;
+  for (let s = 0; s < spans.length; s += 3) {
+    const row = (spans[s] - at.y) * width - at.x;
+    for (let x = spans[s + 1]; x < spans[s + 2]; x++) {
+      if (left === 0) {
+        left = colors[run];
+        rgba = colors[run + 1];
+        run += 2;
+      }
+      left--;
+      const i = (row + x) * 4;
+      data[i] = rgba >>> 24;
+      data[i + 1] = (rgba >>> 16) & 255;
+      data[i + 2] = (rgba >>> 8) & 255;
+      data[i + 3] = rgba & 255;
+    }
+  }
 }

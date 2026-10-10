@@ -95,6 +95,7 @@ export interface Nib {
 
 interface StrokeStart {
   tool: StrokeOp["tool"];
+  layer: StrokeOp["layer"];
   color: string;
   /** Width in sheet units. */
   size: number;
@@ -145,10 +146,24 @@ export class StrokeBuilder {
   private readonly taper: Taper;
   /** How far the stroke has reached from where it landed, which its taper in goes by. */
   private reach = 0;
+  /** What `provisional` returns: one array, refilled each call, as a Pencil asks every frame. */
+  private readonly held: number[] = [];
 
   constructor(start: StrokeStart) {
-    const { tool, color, size, x, y, t, T, pressure, pointerType, pressureVaries, response } =
-      start;
+    const {
+      tool,
+      layer,
+      color,
+      size,
+      x,
+      y,
+      t,
+      T,
+      pressure,
+      pointerType,
+      pressureVaries,
+      response,
+    } = start;
     this.size = size;
     this.t0 = t;
     this.nib = { x, y, t };
@@ -162,7 +177,7 @@ export class StrokeBuilder {
     this.smoothed = this.pressed ? pressureWidth(pressure, response) : 1;
     this.taper = this.pen ? PEN_TAPER : TOUCH_TAPER;
     const width = tool === "eraser" ? size : size * this.taper.dot * this.smoothed;
-    this.op = { tool, color, pts: [x, y, width, 0], T };
+    this.op = { tool, layer, color, pts: [x, y, width, 0], T };
     this.curve = new StrokeCurve(this.op.pts);
   }
 
@@ -245,15 +260,22 @@ export class StrokeBuilder {
   }
 
   /**
-   * The pen lifted and the line settled: narrows a pen's brush stroke over the last
-   * `PEN_TAPER.travel` units along its curve, never past the dot it landed with. Returns the first
-   * point it narrowed, the count when it narrowed none, so what was painted from there can be
-   * painted again. Once per stroke.
+   * The points `settle` at the newest point would add now, flat, after the last of `op.pts`: the line
+   * the curve holds back, so it can show reaching the nib. Empty when settled. The next call
+   * overwrites the same array.
    */
-  taperEnd(): number {
+  provisional(): readonly number[] {
+    this.curve.provisional(this.held);
+    return this.held;
+  }
+
+  /**
+   * The pen lifted and the line settled: narrows a pen's brush stroke over the last
+   * `PEN_TAPER.travel` units along its curve, never past the dot it landed with. Once per stroke.
+   */
+  taperEnd(): void {
     const { pts, tool } = this.op;
-    const count = this.count;
-    if (tool !== "brush" || !this.pen) return count;
+    if (tool !== "brush" || !this.pen) return;
     // Each point's share of its width from the taper in, by how far the line had reached there.
     const tapersIn: number[] = [];
     let reach = 0;
@@ -261,17 +283,12 @@ export class StrokeBuilder {
       reach = Math.max(reach, Math.hypot(pts[j] - pts[0], pts[j + 1] - pts[1]));
       tapersIn.push(tapered(PEN_TAPER, reach));
     }
-    let from = count;
     let back = 0;
-    for (let i = count - 1; i > 0 && back < PEN_TAPER.travel; i--) {
+    for (let i = this.count - 1; i > 0 && back < PEN_TAPER.travel; i--) {
       const j = i * STRIDE;
       const out = tapered(PEN_TAPER, back);
-      if (out < tapersIn[i]) {
-        pts[j + 2] *= out / tapersIn[i];
-        from = i;
-      }
+      if (out < tapersIn[i]) pts[j + 2] *= out / tapersIn[i];
       back += Math.hypot(pts[j] - pts[j - STRIDE], pts[j + 1] - pts[j - STRIDE + 1]);
     }
-    return from;
   }
 }

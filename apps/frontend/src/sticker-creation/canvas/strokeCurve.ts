@@ -173,6 +173,15 @@ export class StrokeCurve {
     this.keep(last);
   }
 
+  /**
+   * Fills `into` with the points `settle` at the newest point would add now: the span still waiting
+   * for the point after it, cut as if the line ended there. The curve itself doesn't change.
+   */
+  provisional(into: number[]): void {
+    into.length = 0;
+    if (this.count > 1) this.span(this.count - 2, into);
+  }
+
   /** Keeps the keys from `first` on, moved to the front. */
   private keep(first: number): void {
     for (let i = first; i < this.count; i++)
@@ -184,8 +193,8 @@ export class StrokeCurve {
     for (let j = 0; j < STRIDE; j++) this.keys[to + j] = from[at + j];
   }
 
-  /** Cuts the span from key `i` to the next, whose neighbors set its tangents. */
-  private span(i: number): void {
+  /** Cuts the span from key `i` to the next, whose neighbors set its tangents, onto `out`. */
+  private span(i: number, out = this.out): void {
     const k = this.keys;
     const a = i * STRIDE;
     const b = a + STRIDE;
@@ -227,7 +236,7 @@ export class StrokeCurve {
         continue;
       }
       const s = pieces[p + 9];
-      this.out.push(pieces[p + 6], pieces[p + 7], lerp(w1, w2, s), Math.round(lerp(t1, t2, s)));
+      out.push(pieces[p + 6], pieces[p + 7], lerp(w1, w2, s), Math.round(lerp(t1, t2, s)));
     }
   }
 }

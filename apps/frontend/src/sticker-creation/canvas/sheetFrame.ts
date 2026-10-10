@@ -11,8 +11,8 @@ export const SHEET_SHORT_UNITS = 374;
 /** The long side follows the area's shape as the drawing starts, between these times the short. */
 const MIN_SHEET_ASPECT = 1;
 export const MAX_SHEET_ASPECT = 2.2;
-/** The most device px the ink is backed with: a bigger screen gets softer ink, not more memory. */
-export const MAX_INK_PIXELS = 4_200_000;
+/** Raw pixels for twenty full sheet canvases fit the 224 MB old-iOS target; WebKit may keep extra backing. */
+export const MAX_INK_PIXELS = 2_800_000;
 /** Past this many device px per CSS px, a sharper canvas costs memory and shows nothing more. */
 export const MAX_DPR = 3;
 
@@ -76,3 +76,9 @@ export function areaFrame(area: SheetArea, devicePixelRatio: number): SheetFrame
   const size = { w: toTenth(area.width), h: toTenth(area.height) };
   return { ...size, density: densityFor(size, area, devicePixelRatio) };
 }
+
+/** Keeps saved sheet coordinates while limiting the backing pixels to this device's canvas budget. */
+export const boundedFrame = (frame: SheetFrame): SheetFrame => {
+  const density = Math.min(frame.density, maxInkDensity(frame));
+  return density === frame.density ? frame : { ...frame, density };
+};

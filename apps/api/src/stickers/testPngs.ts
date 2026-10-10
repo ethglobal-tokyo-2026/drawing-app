@@ -2,7 +2,7 @@ import { MAX_TIME_USED_S } from "@drawing-app/db";
 import { crc32, deflateSync, gzipSync } from "node:zlib";
 import type { z } from "zod";
 import type { sealForm } from "./sealForm.ts";
-import type { TimelapseV1 } from "./timelapse.ts";
+import type { TimelapseV2 } from "./timelapse.ts";
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 const IHDR_BYTES = 13;
@@ -67,22 +67,43 @@ export const sealImages = () => ({
 /** The test sticker's sharp copy. */
 export const sharpImage = () => testPng(SHARP_SIZE.width, SHARP_SIZE.height, "sharp");
 
-/** How the tests' sticker was drawn: one brush stroke of two points, then two fills. */
-export const TEST_TIMELAPSE: TimelapseV1 = {
+/**
+ * How the tests' sticker was drawn: a brush stroke of two points, a fill, then a second layer, a fill
+ * on it and a turn of its opacity.
+ */
+export const TEST_TIMELAPSE: TimelapseV2 = {
+  v: 2,
+  ink: [SHEET_SIZE.width, SHEET_SIZE.height],
+  place: [10, 20, STICKER_DRAWN_SIZE.width, STICKER_DRAWN_SIZE.height],
+  density: 2,
+  layers: [[1, 100, false, false]],
+  ops: [
+    ["brush", 1, "#ff3366", 0, [100, 200, 60, 0, 50, 25, 0, 16]],
+    ["fill", 1, "#33aaff", 1500, 40.5, 60, 0],
+    ["add", 2, 1800, 1],
+    ["fill", 2, "#ffcc00", 2100, 80.5, 30, 2],
+    ["opacity", 2, 2400, 60],
+  ],
+};
+
+/** A gzipped timelapse, which sealing stores as sent. */
+export const testTimelapse = () => new Uint8Array(gzipSync(JSON.stringify(TEST_TIMELAPSE)));
+
+/**
+ * A timelapse as a page loaded before timelapses recorded layers uploads it, a fill from before fills
+ * recorded their gap among its ops. It goes with sealing's v1 bridge.
+ */
+export const TEST_TIMELAPSE_V1 = {
   v: 1,
   ink: [SHEET_SIZE.width, SHEET_SIZE.height],
   place: [10, 20, STICKER_DRAWN_SIZE.width, STICKER_DRAWN_SIZE.height],
   density: 2,
   ops: [
     ["brush", "#ff3366", 0, [100, 200, 60, 0, 50, 25, 0, 16]],
-    // Sealed before fills recorded their gap, as stored timelapses may be.
     ["fill", "#33aaff", 1500, 40.5, 60],
     ["fill", "#ffcc00", 2100, 80.5, 30, 2],
   ],
 };
-
-/** A gzipped timelapse, which sealing stores as sent. */
-export const testTimelapse = () => new Uint8Array(gzipSync(JSON.stringify(TEST_TIMELAPSE)));
 
 export const pngFile = (bytes: Uint8Array<ArrayBuffer>, name: string) =>
   new File([bytes], `${name}.png`, { type: "image/png" });

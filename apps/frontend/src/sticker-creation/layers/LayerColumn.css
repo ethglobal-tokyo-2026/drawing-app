@@ -1,0 +1,224 @@
+/* The layer column: + over the chips, front on top. Its box passes touches to the sheet; only + and the
+   list take them, so a stroke starting beside them draws. */
+.layer-column {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-height: 100%;
+  pointer-events: none;
+}
+
+.layer-column[data-edge="right"] {
+  align-items: flex-end;
+}
+
+/* A flat tile, as small as a chip is wide; its invisible margin brings the touch target to 44px. */
+.layer-add {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-inline: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-label);
+  background: var(--liner-lift);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  color: var(--ink);
+  pointer-events: auto;
+  transition: transform var(--t-press) linear;
+}
+
+.layer-add::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+}
+
+.layer-add svg {
+  display: block;
+}
+
+.layer-add:active {
+  transform: translateY(1px);
+}
+
+/* Ten layers: sunk like the tool strip's clear tile with nothing to clear. */
+.layer-add:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.layer-add:disabled:active {
+  transform: none;
+}
+
+.layer-body {
+  display: flex;
+  min-height: 0;
+}
+
+.layer-column[data-edge="right"] .layer-body {
+  flex-direction: row-reverse;
+}
+
+/* The padding keeps rings, shadows and 44px touch targets inside the scroll box, which clips them. The
+   width holds a clipped chip's step in too, so the column doesn't widen when a layer starts clipping. */
+.layer-list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: none;
+  gap: 4px;
+  width: 50px;
+  padding: 4px 7px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 4px;
+  scrollbar-width: none;
+  touch-action: pan-y;
+  pointer-events: auto;
+}
+
+.layer-list::-webkit-scrollbar {
+  display: none;
+}
+
+.layer-column[data-edge="right"] .layer-list {
+  align-items: flex-end;
+}
+
+/* Each chip is its own small sheet of paper: a hairline edge and a label's contact shadow. */
+.layer-chip {
+  --chip-cast: 0 1px 0 rgba(28, 24, 36, 0.06), 1px 3px 5px -2px rgba(28, 24, 36, 0.16);
+  position: relative;
+  flex: none;
+  display: block;
+  width: 30px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-paper);
+  background: var(--canvas);
+  box-shadow:
+    0 0 0 1px rgba(28, 24, 36, 0.16),
+    var(--chip-cast);
+}
+
+.layer-chip::after {
+  content: "";
+  position: absolute;
+  inset: -3px -7px;
+}
+
+/* Over its neighbors, so a chip that touches it can't cover its ring. */
+.layer-chip.is-current {
+  z-index: 1;
+  box-shadow:
+    0 0 0 2px var(--ink),
+    var(--chip-cast);
+}
+
+.layer-chip:focus-visible {
+  z-index: 2;
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Lock transparent pixels: the thumbnail sits on a checkerboard, Procreate's sign for it. */
+.layer-chip.is-locked {
+  background: repeating-conic-gradient(#eceaf1 0 25%, #ffffff 0 50%) 0 0 / 10px 10px;
+}
+
+/* A clipped layer steps in toward the sheet and down onto the chip below, as ibisPaint indents one. */
+.layer-chip.is-clipped {
+  margin-bottom: -4px;
+  margin-left: 6px;
+}
+
+.layer-column[data-edge="right"] .layer-chip.is-clipped {
+  margin-left: 0;
+  margin-right: 6px;
+}
+
+.layer-thumb {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.layer-number {
+  position: absolute;
+  left: 3px;
+  bottom: 2px;
+  font-family: var(--font-ui);
+  font-size: var(--fs-fine);
+  font-weight: 650;
+  font-stretch: var(--w-fine);
+  line-height: 1;
+  letter-spacing: 0.07em;
+  color: var(--graphite);
+}
+
+.layer-chip.is-current .layer-number {
+  color: var(--ink);
+}
+
+/* An empty layer's chip is only its number; the padding recenters it past its letter-spacing. */
+.layer-chip.is-empty .layer-number {
+  left: 0;
+  right: 0;
+  bottom: auto;
+  top: 50%;
+  padding-left: 0.07em;
+  font-size: 13px;
+  text-align: center;
+  transform: translateY(-50%);
+}
+
+.layer-hidden-mark {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: block;
+  color: var(--graphite);
+}
+
+/* Starts level with the front chip, past the list's padding. Like the column's, its box passes touches
+   to the sheet: only the slider's own thumb takes them. */
+.layer-slider {
+  display: flex;
+  padding-block: 4px;
+}
+
+/* Out beside the current chip, toward the sheet; LayerColumn sets its top to the chip's middle. */
+.layer-options {
+  --fly: -6px;
+  position: absolute;
+  top: 0;
+  left: calc(100% + 8px);
+  z-index: 2;
+  transform: translateY(-50%);
+  pointer-events: auto;
+  animation: layer-options-in var(--t-pop) var(--ease-out);
+}
+
+.layer-column[data-edge="right"] .layer-options {
+  --fly: 6px;
+  left: auto;
+  right: calc(100% + 8px);
+}
+
+@keyframes layer-options-in {
+  from {
+    opacity: 0;
+    translate: var(--fly) 0;
+  }
+}

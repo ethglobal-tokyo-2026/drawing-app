@@ -13,9 +13,10 @@ interface Props {
 }
 
 /**
- * Asks before the sheet is cleared, from under the tool strip, where the Smoothing bar opens. It isn't
- * modal: a tap anywhere else closes it, as it closes the other panels. Focus starts on Cancel, so
- * Enter alone never clears, and goes back to the clear tile when the bar closes with focus inside.
+ * Asks before the current layer is cleared, from under the tool strip, where the Smoothing bar
+ * opens. It isn't modal: a tap anywhere else closes it, as it closes the other panels. Focus starts on
+ * Cancel, so Enter alone never clears, and goes back to the clear tile when the bar closes with focus
+ * inside.
  */
 export function ClearBar({ id, open, onClear, onClose }: Props) {
   const { t } = useTranslation();

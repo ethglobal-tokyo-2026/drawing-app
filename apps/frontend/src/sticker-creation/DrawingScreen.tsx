@@ -4,13 +4,19 @@ import {
   useEffectEvent,
   useId,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
   type Ref,
 } from "react";
 import { retryPrivySignIn } from "../identity/privy";
-import type { KyotoSeikaSubject, Sticker, TicketUse } from "@drawing-app/api/client";
+import {
+  MAX_LAYERS,
+  type KyotoSeikaSubject,
+  type Sticker,
+  type TicketUse,
+} from "@drawing-app/api/client";
 import { apiError, type ApiClient } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import type { BeginKeyHandle } from "../kyoto-seika/BeginKey";
@@ -38,9 +44,17 @@ import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas"
 import type { HistoryState, InputMode } from "./canvas/inkEngine";
 import { penDrew, useDrawingHand, useInputMode, usePenPressure } from "./drawingSettings";
 import { isFirstVisit } from "./drawVisits";
-import type { Op, Tool } from "./canvas/ops";
+import { isOp, type Op, type Tool } from "./canvas/ops";
+import type { LayerId } from "./canvas/ops";
 import type { SheetFrame } from "./canvas/sheetFrame";
 import { FIRST_SMOOTHING } from "./canvas/stabilizer";
+import { LayerColumn } from "./layers/LayerColumn";
+import { LayerOptionsBar } from "./layers/LayerOptionsBar";
+import { OpacitySlider } from "./layers/OpacitySlider";
+import { FIRST_LAYER, FIRST_LAYERS, baseOf } from "./layers/layerState";
+import type { LayerView } from "./layers/layerView";
+import { useLayerDrag } from "./layers/useLayerDrag";
+import { usePenMagnify } from "./layers/usePenMagnify";
 import { SealKey } from "./SealKey";
 import { SealSheet } from "./SealSheet";
 import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
@@ -111,6 +125,9 @@ interface Ceremony {
 
 type SealRequest = Parameters<ApiClient["seal"]>[0];
 
+/** What the timelapse plays: the steps since no layer last had ink, and the layers then. */
+type Drawn = ReturnType<DrawingCanvasHandle["timelapse"]>;
+
 /** A seal whose request may have reached the server: a retry sends it as it was, and plays its sticker. */
 interface SentSeal {
   request: SealRequest;
@@ -153,8 +170,8 @@ export function DrawingScreen({
   const { t } = useTranslation();
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<DrawingCanvasHandle>(null);
-  // The seal sheet's preview reads the ink, and its density, as it opens.
-  const readInk = useCallback(() => canvas.current?.inkForReading() ?? null, []);
+  // The seal sheet's preview reads what the sheet shows, and its density, as it opens.
+  const readInk = useCallback(() => canvas.current?.composite() ?? null, []);
   const readDensity = useCallback(() => canvas.current?.frame()?.density ?? null, []);
   const timer = useRef<TimerDotHandle>(null);
   const undoTile = useRef<HTMLButtonElement>(null);
@@ -164,6 +181,8 @@ export function DrawingScreen({
   const colorSheetId = useId();
   const smoothingBarId = useId();
   const clearBarId = useId();
+  const layerList = useRef<HTMLDivElement>(null);
+  const [layerListHeight, setLayerListHeight] = useState(80);
   /** On a large screen the color sheet is a popover, which a tap outside closes. */
   const large = useLargeScreen();
   const hand = useDrawingHand();
@@ -182,6 +201,19 @@ export function DrawingScreen({
   const [sizes, setSizes] = useState(FIRST_SIZES);
   const [smoothing, setSmoothing] = useState(FIRST_SMOOTHING);
   const [panel, setPanel] = useState<Panel>(null);
+  const [layers, setLayers] = useState<LayerView>(() => ({
+    state: FIRST_LAYERS,
+    current: FIRST_LAYER,
+    inked: new Set(),
+    currentInked: false,
+    versions: new Map(),
+  }));
+  const lastCurrentLayer = useRef<LayerId>(FIRST_LAYER);
+  const [opacityHeld, setOpacityHeld] = useState(false);
+  const [reordering, setReordering] = useState(false);
+  const [hiddenNudge, setHiddenNudge] = useState(0);
+  const [layerAnnouncement, setLayerAnnouncement] = useState("");
+  const [inkProblem, setInkProblem] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
   const [sizing, setSizing] = useState(false);
   // How many CSS px a sheet unit spans on screen: the size rail's ghost shows the brush at it.
@@ -222,6 +254,48 @@ export function DrawingScreen({
   // Whether this device keeps the drawing in progress; the timer's note says so while it can't.
   const [kept, setKept] = useState(true);
   const [keeper] = useState(() => new SessionKeeper(me.id, setKept));
+  const edge = hand === "left" ? "right" : "left";
+  const currentLayer =
+    layers.state.layers.find((layer) => layer.id === layers.current) ?? layers.state.layers[0];
+  const currentIndex = layers.state.layers.indexOf(currentLayer);
+  const chips = layers.state.layers.map((layer) => ({
+    id: layer.id,
+    opacity: layer.opacity,
+    locked: layer.locked,
+    clipBase: baseOf(layers.state, layer.id)?.id ?? null,
+    inked: layers.inked.has(layer.id),
+    version: layers.versions.get(layer.id) ?? 0,
+  }));
+  const thumbnails = useCallback((id: LayerId) => canvas.current?.thumbnail(id) ?? null, []);
+  const moveLayer = (id: LayerId, to: number) => {
+    const from = layers.state.layers.findIndex((layer) => layer.id === id);
+    if (from < 0 || from === to) return;
+    const other = layers.state.layers[to];
+    canvas.current?.moveLayer(id, to);
+    setLayerAnnouncement(
+      t(
+        ($) =>
+          from > to ? $.stickerCreation.layers.movedBehind : $.stickerCreation.layers.movedInFront,
+        { number: id, other: other.id },
+      ),
+    );
+  };
+  const drag = useLayerDrag(layerList, {
+    enabled: active && (session.phase === "primed" || session.phase === "drawing"),
+    order: layers.state.layers.map((layer) => layer.id),
+    onMove: moveLayer,
+    onLift: setReordering,
+  });
+  const penHover = usePenMagnify(layerList, { enabled: active && drag.lifted === null, edge });
+  useEffect(() => {
+    const list = layerList.current;
+    if (!list) return;
+    if (typeof ResizeObserver === "undefined") return;
+    const observe = new ResizeObserver(() => setLayerListHeight(list.clientHeight));
+    observe.observe(list);
+    setLayerListHeight(list.clientHeight);
+    return () => observe.disconnect();
+  }, []);
   // The deal of a ticket spent in Kyoto Seika Manga Expression Practice Mode.
   const kyotoSeikaSheet = useKyotoSeikaSheet({ userId: me.id, keeper });
   const begin = useRef<BeginKeyHandle>(null);
@@ -327,7 +401,7 @@ export function DrawingScreen({
   /** The sheet's place in the drawing screen, which the ceremony plays over. */
   function sheetBox(): Rect {
     const screen = root.current?.getBoundingClientRect();
-    const paper = root.current?.querySelector(".ink-sheet")?.getBoundingClientRect();
+    const paper = canvas.current?.sheetRect();
     if (!screen || !paper) throw new Error("the sheet isn't on screen");
     return {
       x: paper.left - screen.left,
@@ -338,9 +412,9 @@ export function DrawingScreen({
   }
 
   /** How the sticker was drawn, gzipped; null when it can't be made, and the sticker seals without it. */
-  async function timelapseOf(ops: readonly Op[], frame: SheetFrame, sticker: SealedSticker) {
+  async function timelapseOf(drawn: Drawn, frame: SheetFrame, sticker: SealedSticker) {
     try {
-      return await gzipTimelapse(encodeTimelapse({ ops, frame, place: sticker.place }));
+      return await gzipTimelapse(encodeTimelapse({ ...drawn, frame, place: sticker.place }));
     } catch (error) {
       console.error("The timelapse couldn’t be made, so the sticker seals without it", error);
       return null;
@@ -349,12 +423,12 @@ export function DrawingScreen({
 
   /**
    * Cuts the sticker from the sheet as it is now, and makes its seal request once the timelapse is
-   * gzipped; null when nothing is drawn. The ops and the 18+ mark are read with the ink's copy, so
-   * nothing on the sheet after it reaches the sticker or its timelapse.
+   * gzipped; null when nothing is drawn. The steps and the 18+ mark are read with the sheet's
+   * composite, so nothing on the sheet after it reaches the sticker or its timelapse.
    */
   async function cutFromSheet(timeUsed: number) {
     canvas.current?.finishStroke();
-    const ops = [...(canvas.current?.ops() ?? [])];
+    const drawn = canvas.current?.timelapse() ?? null;
     const frame = canvas.current?.frame() ?? null;
     // The drawing kept on this device holds what the sticker is cut from, the stroke just ended too.
     keeper.save(canvas.current?.steps() ?? [], clock.elapsed, frame);
@@ -364,8 +438,8 @@ export function DrawingScreen({
     const kept = ({ ja, reading, en }: KyotoSeikaSubject) => ({ ja, reading, en });
     const subjects = pair && ([kept(pair[0]), kept(pair[1])] as const);
     // A sheet that never showed has no frame, and nothing on it to cut.
-    if (!frame) return null;
-    const ink = canvas.current?.inkForReading();
+    if (!frame || !drawn) return null;
+    const ink = canvas.current?.composite();
     if (!ink) return null;
     let sticker: SealedSticker | null;
     try {
@@ -383,7 +457,7 @@ export function DrawingScreen({
       throw new Error("this sheet has no ticket to seal it on");
     }
     const cut = sticker;
-    const request = timelapseOf(ops, frame, cut).then((timelapse): SealRequest => ({
+    const request = timelapseOf(drawn, frame, cut).then((timelapse): SealRequest => ({
       ticketUseId,
       timeUsed,
       width: cut.width,
@@ -588,7 +662,7 @@ export function DrawingScreen({
   /** Keeps the session on this device while it's in progress, so a reload doesn't lose it. */
   const keepProgress = () => {
     const { phase } = latest.current;
-    if (phase === "drawing" || phase === "seal-sheet" || phase === "time-up")
+    if (phase === "primed" || phase === "drawing" || phase === "seal-sheet" || phase === "time-up")
       keeper.save(canvas.current?.steps() ?? [], clock.elapsed, canvas.current?.frame() ?? null);
   };
   // 0:00 puts the pencils down: a stroke being drawn ends where it stands, the time's-up sheet rises,
@@ -627,10 +701,10 @@ export function DrawingScreen({
     // Seika Practice Mode only Begin starts it: a sheet whose pair is dealt again waits at its deal,
     // drawing and all.
     const part = found.kyotoSeika;
-    const drawn = part ? part.begun : found.steps.length > 0 || found.elapsedMs > 0;
+    const drawn = part ? part.begun : found.steps.some(isOp) || found.elapsedMs > 0;
     takeTicket(found.ticket, part !== null);
     if (part) kyotoSeikaSheet.open(found.ticket, part);
-    canvas.current?.load(found.steps, found.frame);
+    canvas.current?.load(found.steps, found.frame, found.currentLayer);
     // It keeps its own color rather than the one a fresh sheet would start in.
     const own = keptColor(found.steps);
     if (own) {
@@ -646,6 +720,7 @@ export function DrawingScreen({
       found.tools,
       found.kyotoSeika,
     );
+    keeper.keepCurrentLayer(lastCurrentLayer.current);
     keepNsfw(found.nsfw);
     if (found.tools) {
       setSizes({ brush: found.tools.brushSize, eraser: found.tools.eraserSize });
@@ -715,13 +790,36 @@ export function DrawingScreen({
   const dealt = session.phase === "dealt";
   // Begin locked the pair in: it prints in the sheet's corner, under the ink.
   const lockedPair = kyotoSeikaSheet.pair;
+  useLayoutEffect(() => {
+    if (!lockedPair) return;
+    const screen = root.current;
+    const print = screen?.querySelector<HTMLElement>(".corner-print");
+    const column = screen?.querySelector<HTMLElement>(".drawing-layer-column");
+    const sheet = screen?.querySelector<HTMLElement>(".ink-sheet");
+    if (!screen || !print || !column || !sheet) return;
+    const measure = () => {
+      // The opacity thumb extends four pixels past the column's box.
+      const clearance = Math.ceil(
+        screen.getBoundingClientRect().bottom - print.getBoundingClientRect().top + 12,
+      );
+      column.style.setProperty("--corner-print-clearance", `${clearance}px`);
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    for (const element of [screen, sheet, print]) observer.observe(element);
+    return () => {
+      observer.disconnect();
+      column.style.removeProperty("--corner-print-clearance");
+    };
+  }, [lockedPair]);
   const canvasName = useCanvasName(lockedPair);
   const waiting = session.phase === "blank" || session.phase === "primed" || dealt;
   if (pickedUp === "restored" && !paused) setPickedUp(null);
   if (pickedUp !== null && pickedUp !== "restored" && !waiting) setPickedUp(null);
   if (startsNote && !waiting) setStartsNote(false);
   // Undo can take the sheet back to blank under an open clear bar, which then has nothing to clear.
-  if (panel === "clear" && !history.hasInk) setPanel(null);
+  if (panel === "clear" && !layers.currentInked) setPanel(null);
 
   // As in the real test, a begun sheet in Kyoto Seika Practice Mode never pauses: neither a tap nor a
   // tool in hand holds its clock, only an interruption: a hidden page, the board over it, a reload.
@@ -749,9 +847,23 @@ export function DrawingScreen({
       color: pausable && panel === "color",
       smoothing: pausable && panel === "smoothing",
       clear: pausable && panel === "clear",
+      layerOptions: pausable && panel === "layer",
+      opacity: pausable && opacityHeld,
+      reorder: pausable && reordering,
       size: pausable && sizing,
     });
-  }, [clock, paused, active, sideways, sealSheet, panel, sizing, pausable]);
+  }, [
+    clock,
+    paused,
+    active,
+    sideways,
+    sealSheet,
+    panel,
+    sizing,
+    opacityHeld,
+    reordering,
+    pausable,
+  ]);
 
   // Out of tickets: the card comes up as Draw opens on a fresh sheet, and stays until the person picks
   // a way on, even if tickets come back meanwhile.
@@ -843,7 +955,7 @@ export function DrawingScreen({
   const clearSheet = () => {
     undoTile.current?.focus({ preventScroll: true });
     setPanel(null);
-    canvas.current?.clear();
+    canvas.current?.clearLayer();
     setSealProblem(null);
   };
 
@@ -856,28 +968,40 @@ export function DrawingScreen({
     closePanel: () => setPanel(null),
   });
 
-  // A tap anywhere but an open panel or its tile closes the panel: the bars always, and the color sheet
-  // where it's a popover, since a bottom sheet covers what's around it. The sheet is left to the ink
-  // engine, which closes it and swallows the tap: closing it here first would let the tap draw.
+  // A press on the sheet closes any open panel and draws nothing: it's swallowed before the ink
+  // engine hears it land. A press anywhere else but the panel or its tile closes the bars, and the
+  // color sheet where it's a popover, since a bottom sheet covers what's around it.
   const closePanelOutside = (e: ReactPointerEvent) => {
+    if (panel === null || !(e.target instanceof Element)) return;
+    if (e.target.closest(".ink-sheet")) {
+      canvas.current?.swallow(e.pointerId);
+      setPanel(null);
+      return;
+    }
     const open =
       panel === "smoothing"
         ? smoothingBarId
         : panel === "clear"
           ? clearBarId
-          : panel === "color" && large
-            ? colorSheetId
-            : null;
-    if (!open || !(e.target instanceof Element)) return;
-    const own = `#${CSS.escape(open)}, [aria-controls="${open}"], .ink-sheet, .color-sheet`;
+          : panel === "layer"
+            ? "layer"
+            : panel === "color" && large
+              ? colorSheetId
+              : null;
+    if (!open) return;
+    const own =
+      panel === "layer"
+        ? ".layer-column"
+        : `#${CSS.escape(open)}, [aria-controls="${open}"], .color-sheet`;
     if (!e.target.closest(own)) setPanel(null);
   };
 
   return (
     <div
       ref={root}
-      className={`drawing-screen ${sealing ? "is-sealing" : ""} ${retrying ? "is-retrying" : ""} ${timeUp ? "is-time-up" : ""} ${dealt ? "is-dealt" : ""} ${dealLeaving ? "is-deal-leaving" : ""}`}
+      className={`drawing-screen ${sealing ? "is-sealing" : ""} ${retrying ? "is-retrying" : ""} ${timeUp ? "is-time-up" : ""} ${dealt ? "is-dealt" : ""} ${dealLeaving ? "is-deal-leaving" : ""} ${panel ? "has-panel" : ""}`}
       data-hand={hand}
+      data-kyoto-pair={lockedPair ? "" : undefined}
       style={{ "--draw-color": color }}
       // It stays mounted under the board so a sticker in progress survives; covered, it takes no focus.
       inert={!active}
@@ -896,13 +1020,13 @@ export function DrawingScreen({
           locked,
           // The dealt sheet takes the paused sheet's path, so a touch nudges Begin.
           paused: paused || dealt,
-          panelOpen: panel !== null,
           inputMode,
           penPressure,
           sessionMs: () => clock.elapsed,
         }}
         onHistory={(next) => {
           hasInk.current = next.hasInk;
+          if (inkProblem) setInkProblem(null);
           setHistory((h) =>
             h.canUndo === next.canUndo && h.canRedo === next.canRedo && h.hasInk === next.hasInk
               ? h
@@ -910,8 +1034,24 @@ export function DrawingScreen({
           );
           keepProgress();
         }}
+        onLayers={(view) => {
+          setLayers(view);
+          if (view.current !== lastCurrentLayer.current) {
+            lastCurrentLayer.current = view.current;
+            keeper.keepCurrentLayer(view.current);
+          }
+        }}
+        onBlockedHidden={() => setHiddenNudge((n) => n + 1)}
+        onInkFailed={(error) => {
+          console.error(
+            "The drawing could not be updated because a canvas could not be made",
+            error,
+          );
+          setInkProblem(t(($) => $.stickerCreation.layers.inkFailed));
+        }}
         onCommit={(op: Op) => {
           if (sealProblem) setSealProblem(null);
+          if (inkProblem) setInkProblem(null);
           send({ type: "ink" });
           if (op.tool === "brush") setRecent((r) => withRecent(r, op.color));
         }}
@@ -919,7 +1059,6 @@ export function DrawingScreen({
           if (dealt) begin.current?.nudge();
           timer.current?.showHint();
         }}
-        onDismissPanel={() => setPanel(null)}
         onPen={penDrew}
         onFit={setSheetScale}
       />
@@ -936,7 +1075,7 @@ export function DrawingScreen({
         <ToolStrip
           tool={tool}
           panel={panel}
-          canClear={history.hasInk}
+          canClear={layers.currentInked}
           colorSheetId={colorSheetId}
           smoothingBarId={smoothingBarId}
           clearBarId={clearBarId}
@@ -997,6 +1136,58 @@ export function DrawingScreen({
         onChange={setSize}
         onHold={setSizing}
       />
+      <div className={`drawing-layer-column ${penHover.hovering ? "is-pen-hovered" : ""}`}>
+        <LayerColumn
+          chips={chips}
+          current={layers.current}
+          canAdd={chips.length < MAX_LAYERS}
+          thumbnails={thumbnails}
+          optionsOpen={panel === "layer"}
+          edge={edge}
+          onAdd={() => canvas.current?.addLayer()}
+          onSelect={(id) => {
+            setPanel(null);
+            canvas.current?.selectLayer(id);
+          }}
+          onToggleOptions={() => setPanel((open) => (open === "layer" ? null : "layer"))}
+          listRef={layerList}
+          options={
+            <LayerOptionsBar
+              id={layers.current}
+              locked={currentLayer.locked}
+              clipped={currentLayer.clipped}
+              canClip={currentIndex > 0}
+              canMoveBack={currentIndex > 0}
+              canMoveForward={currentIndex < chips.length - 1}
+              canDelete={chips.length > 1}
+              onLock={(on) => canvas.current?.setLocked(on)}
+              onClip={(on) => canvas.current?.setClipped(on)}
+              onMoveBack={() => moveLayer(layers.current, currentIndex - 1)}
+              onMoveForward={() => moveLayer(layers.current, currentIndex + 1)}
+              onDelete={() => {
+                canvas.current?.deleteLayer();
+                setPanel(null);
+              }}
+            />
+          }
+          slider={
+            (chips.length > 1 || currentLayer.opacity < 100) && (
+              <OpacitySlider
+                value={currentLayer.opacity}
+                length={layerListHeight}
+                edge={edge}
+                onPreview={(value) => canvas.current?.previewOpacity(value)}
+                onCommit={(value) => canvas.current?.setOpacity(value)}
+                onHold={setOpacityHeld}
+                nudge={hiddenNudge}
+              />
+            )
+          }
+        />
+      </div>
+      <span className="visually-hidden" role="status" aria-live="polite">
+        {layerAnnouncement}
+      </span>
       <HistoryButtons
         canUndo={history.canUndo}
         canRedo={history.canRedo}
@@ -1009,9 +1200,11 @@ export function DrawingScreen({
         // The seal sheet's Seal is the screen's one key while it's up.
         shown={retrying || (history.hasInk && !sealing && !sealSheet && !timeUp)}
         problem={
-          sealProblem?.message ?? (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)
+          inkProblem ??
+          sealProblem?.message ??
+          (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)
         }
-        detail={sealProblem?.detail}
+        detail={inkProblem ? null : sealProblem?.detail}
         onTap={() => {
           setSealProblem(null);
           if (sealProblem && reconnectOnTap.current) {

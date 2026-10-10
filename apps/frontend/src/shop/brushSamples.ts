@@ -1,5 +1,6 @@
 import { StrokeBuilder } from "../sticker-creation/canvas/brush";
 import type { StrokeOp } from "../sticker-creation/canvas/ops";
+import { FIRST_LAYER } from "../sticker-creation/layers/layerState";
 
 /** The brushes on the Brushes shelf; the brush is the one the drawing screen has today. */
 export type BrushKind = "brush" | "marker" | "fineliner" | "pixelPen";
@@ -29,7 +30,7 @@ function shaped(side: number, width: (i: number, direction: number) => number): 
     const [px, py] = path[Math.max(i - 1, 0)];
     return [x, y, width(i, Math.atan2(ny - py, nx - px)), i * 12];
   });
-  return { tool: "brush", color: INK, pts, T: 0 };
+  return { tool: "brush", layer: FIRST_LAYER, color: INK, pts, T: 0 };
 }
 
 /**
@@ -46,6 +47,7 @@ export function brushSample(kind: BrushKind, side: number): StrokeOp {
       // Today's brush as a pen that senses pressure draws it, under the Normal curve.
       const stroke = new StrokeBuilder({
         tool: "brush",
+        layer: FIRST_LAYER,
         color: INK,
         size,
         x,
@@ -86,7 +88,7 @@ export function brushSample(kind: BrushKind, side: number): StrokeOp {
           );
         }
       }
-      return { tool: "brush", color: INK, pts, T: 0 };
+      return { tool: "brush", layer: FIRST_LAYER, color: INK, pts, T: 0 };
     }
     case "fineliner":
       return shaped(side, () => Math.max(1.5, side * 0.025));

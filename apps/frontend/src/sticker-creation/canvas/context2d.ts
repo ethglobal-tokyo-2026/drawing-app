@@ -1,6 +1,9 @@
+import { releaseCanvas } from "../../ui/releaseCanvas";
+import { CanvasUnavailableError } from "./canvasUnavailable";
+
 type Settings = CanvasRenderingContext2DSettings;
 
-/** The canvas's 2D context; throws where the browser can't provide one. */
+/** The canvas's 2D context; throws a CanvasUnavailableError where the browser can't provide one. */
 export function context2d(canvas: HTMLCanvasElement, settings?: Settings): CanvasRenderingContext2D;
 export function context2d(
   canvas: OffscreenCanvas,
@@ -12,7 +15,7 @@ export function context2d(canvas: HTMLCanvasElement | OffscreenCanvas, settings?
     "convertToBlob" in canvas
       ? canvas.getContext("2d", settings)
       : canvas.getContext("2d", settings);
-  if (!ctx) throw new Error("Canvas 2D context unavailable");
+  if (!ctx) throw new CanvasUnavailableError();
   return ctx;
 }
 
@@ -21,11 +24,21 @@ export function blankCanvas(width: number, height: number, settings?: Settings) 
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  return { canvas, g: context2d(canvas, settings) };
+  try {
+    return { canvas, g: context2d(canvas, settings) };
+  } catch (error) {
+    releaseCanvas(canvas);
+    throw error;
+  }
 }
 
 /** A blank canvas off the document, for a worker, and its 2D context. */
 export function blankOffscreenCanvas(width: number, height: number, settings?: Settings) {
   const canvas = new OffscreenCanvas(width, height);
-  return { canvas, g: context2d(canvas, settings) };
+  try {
+    return { canvas, g: context2d(canvas, settings) };
+  } catch (error) {
+    releaseCanvas(canvas);
+    throw error;
+  }
 }

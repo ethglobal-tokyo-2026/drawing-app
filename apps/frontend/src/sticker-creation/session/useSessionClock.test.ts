@@ -18,6 +18,9 @@ const NO_HOLDS: ScreenHolds = {
   color: false,
   smoothing: false,
   clear: false,
+  layerOptions: false,
+  opacity: false,
+  reorder: false,
   size: false,
 };
 

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { TimelapseV1 } from "@drawing-app/api/client";
+import type { TimelapseV2 } from "@drawing-app/api/client";
 import { act, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,7 +12,7 @@ import { i18next } from "../../i18n/i18n";
 import { deferred, fakeTimelapsePlayers, handFrames, TEST_TIMELAPSE } from "./testTimelapse";
 import { testStickerUrls } from "../../stickers/testStickerUrls";
 import { TimelapseButton, TimelapseFailure } from "./TimelapseButton";
-import { TimelapseLayer } from "./TimelapseLayer";
+import { TimelapseOverlay } from "./TimelapseOverlay";
 import {
   FADE_MS,
   FLIGHT_MS,
@@ -46,7 +46,7 @@ let players: ReturnType<typeof fakeTimelapsePlayers>;
 let frames: ReturnType<typeof handFrames>;
 let client: ApiClient;
 
-/** The detail's parts the timelapse reaches: the figure, a layer over it, and its controls. */
+/** The detail's parts the timelapse reaches: the figure, an overlay over it, and its controls. */
 function Detail({ reduced }: { reduced: boolean }) {
   const figure = useRef<HTMLSpanElement>(null);
   const timelapse = useTimelapse({
@@ -68,7 +68,7 @@ function Detail({ reduced }: { reduced: boolean }) {
           width={STICKER.width}
           height={STICKER.height}
         />
-        <TimelapseLayer timelapse={timelapse} />
+        <TimelapseOverlay timelapse={timelapse} />
       </div>
       <p className="fine sticker-detail__fine-print">
         <TimelapseButton timelapse={timelapse} />
@@ -111,7 +111,7 @@ const alert = () => document.querySelector('[role="alert"]')?.textContent;
 const shows = () =>
   Object.fromEntries(Object.entries(document.querySelector("output")?.dataset ?? {}));
 const phase = () => shows().phase;
-const layer = () => document.querySelector<HTMLElement>(".timelapse-layer");
+const overlay = () => document.querySelector<HTMLElement>(".timelapse-overlay");
 const sheen = () => {
   const band = document.querySelector(".live-resin__sheen > b");
   if (!band) throw new Error("The figure has no sheen");
@@ -193,20 +193,20 @@ afterEach(() => {
 
 describe("useTimelapse", () => {
   it("loads, prepares and plays, then holds the ink, fades to the sticker and sweeps its sheen once", async () => {
-    const loaded = deferred<TimelapseV1>();
+    const loaded = deferred<TimelapseV2>();
     client = emptyApi({ timelapse: () => loaded.promise });
     render();
     const swept = vi.spyOn(sheen(), "animate");
 
     press();
     expect(phase()).toBe("loading");
-    expect(layer()).toBeNull();
+    expect(overlay()).toBeNull();
 
     loaded.resolve(TEST_TIMELAPSE);
     await settle();
     expect(phase()).toBe("preparing");
     const player = players.last();
-    expect(player.options.canvas.parentElement).toBe(layer());
+    expect(player.options.canvas.parentElement).toBe(overlay());
     expect(player.calls).toEqual(["prepare"]);
 
     player.prepared.resolve();
@@ -218,16 +218,16 @@ describe("useTimelapse", () => {
 
     await finish();
     advance(HOLD_MS);
-    expect(layer()?.style.opacity).toBe("1");
+    expect(overlay()?.style.opacity).toBe("1");
     advance(FADE_MS / 2);
-    const opacity = Number(layer()?.style.opacity);
+    const opacity = Number(overlay()?.style.opacity);
     expect(opacity).toBeGreaterThan(0);
     expect(opacity).toBeLessThan(1);
     expect(swept).not.toHaveBeenCalled();
 
     advance(FADE_MS / 2);
     expect(shows()).toMatchObject({ phase: "idle", said: "done" });
-    expect(layer()).toBeNull();
+    expect(overlay()).toBeNull();
     expect(swept).toHaveBeenCalledOnce();
     expect(player.calls.at(-1)).toBe("stop");
   });
@@ -240,11 +240,11 @@ describe("useTimelapse", () => {
     player.laidOut = { ...player.laidOut, playing: ON_SHEET };
     player.prepared.resolve();
     await settle();
-    const paper = document.querySelector<HTMLElement>(".timelapse-layer__paper");
+    const paper = document.querySelector<HTMLElement>(".timelapse-overlay__paper");
     const { frame } = player.laidOut;
     expect(paper?.style.width).toBe(`${frame.w * ON_SHEET.scale}px`);
     expect(paper?.style.left).toBe(`${ON_SHEET.left + frame.x * ON_SHEET.scale}px`);
-    expect(layer()?.getAttribute("aria-hidden")).toBe("true");
+    expect(overlay()?.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("flies the sticker onto its sheet, letting taps through to it, and plays its ink once the sticker is gone", async () => {
@@ -270,7 +270,7 @@ describe("useTimelapse", () => {
     expect(player.calls).not.toContain("takeInk");
     advance(PEEL_MS / 2);
     expect(player.calls.filter((call) => call === "takeInk")).toHaveLength(1);
-    const fading = Number(layer()?.style.opacity);
+    const fading = Number(overlay()?.style.opacity);
     expect(fading).toBeGreaterThan(0);
     expect(fading).toBeLessThan(1);
     advance(PEEL_MS / 2);
@@ -291,7 +291,7 @@ describe("useTimelapse", () => {
   it("never flies the sticker under reduced motion: it crossfades with its sheet as it starts and as it ends", async () => {
     await flying({ reduced: true });
     advance(REDUCED_FADE_MS / 2);
-    for (const part of [figure(), layer()]) {
+    for (const part of [figure(), overlay()]) {
       const seen = Number(part?.style.opacity);
       expect(seen).toBeGreaterThan(0);
       expect(seen).toBeLessThan(1);
@@ -317,7 +317,7 @@ describe("useTimelapse", () => {
     const back = Number(figure().style.opacity);
     expect(back).toBeGreaterThan(0);
     expect(back).toBeLessThan(1);
-    expect(layer()?.style.opacity).toBe("1");
+    expect(overlay()?.style.opacity).toBe("1");
     advance(HOLD_MS / 2 + FADE_MS);
     expect(phase()).toBe("idle");
     expect(figure().getAttribute("style") ?? "").not.toMatch(INLINE);
@@ -336,8 +336,8 @@ describe("useTimelapse", () => {
       },
     );
     const player = await flying();
-    const stage = layer();
-    if (!stage) throw new Error("no layer");
+    const stage = overlay();
+    if (!stage) throw new Error("no overlay");
     act(() => watchers.forEach((changed) => changed()));
     expect(phase()).toBe("playing");
     Object.defineProperty(stage, "clientWidth", { value: stage.clientWidth + 100 });
@@ -349,7 +349,7 @@ describe("useTimelapse", () => {
 
   it("skips to the finished ink when the sticker is tapped", async () => {
     const player = await playing();
-    act(() => layer()?.click());
+    act(() => overlay()?.click());
     expect(player.calls).toContain("skip");
   });
 
@@ -372,7 +372,7 @@ describe("useTimelapse", () => {
     advance(HOLD_MS / 2);
     press();
     expect(phase()).toBe("idle");
-    expect(layer()).toBeNull();
+    expect(overlay()).toBeNull();
     advance(HOLD_MS + FADE_MS);
     expect(swept).not.toHaveBeenCalled();
   });
@@ -464,7 +464,7 @@ describe("useTimelapse", () => {
     expect(alert()).toBeUndefined();
   });
 
-  it("stops a player that couldn't prepare, says what failed, and leaves no layer", async () => {
+  it("stops a player that couldn't prepare, says what failed, and leaves no overlay", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     render();
     press();
@@ -480,12 +480,12 @@ describe("useTimelapse", () => {
     expect(label()).toBe(WATCH);
     expect(logged).toHaveBeenCalled();
     expect(player.calls).toContain("stop");
-    expect(layer()).toBeNull();
+    expect(overlay()).toBeNull();
   });
 
   it("logs a failure that comes after stop, naming the sticker, and shows no failure line", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    const loaded = deferred<TimelapseV1>();
+    const loaded = deferred<TimelapseV2>();
     client = emptyApi({ timelapse: () => loaded.promise });
     render();
     press();
@@ -497,16 +497,16 @@ describe("useTimelapse", () => {
     expect(phase()).toBe("idle");
   });
 
-  it("hides the layer at stop, before React renders again, and stops the player", async () => {
+  it("hides the overlay at stop, before React renders again, and stops the player", async () => {
     const player = await playing();
-    const shown = layer();
+    const shown = overlay();
     act(() => {
       control("stop").click();
-      expect(layer()).toBe(shown);
+      expect(overlay()).toBe(shown);
       expect(shown?.style.visibility).toBe("hidden");
     });
     expect(player.calls).toContain("stop");
-    expect(layer()).toBeNull();
+    expect(overlay()).toBeNull();
     expect(phase()).toBe("idle");
   });
 });

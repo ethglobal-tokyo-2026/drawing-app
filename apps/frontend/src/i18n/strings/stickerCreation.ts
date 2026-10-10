@@ -45,8 +45,23 @@ export const stickerCreation = {
       },
       /** Drawing screen, top left: read by screen readers after the timer dot's name while the clear bar is open, which stops the clock */
       clear: {
-        en: "{{time}} left, paused while you choose whether to clear the sheet",
-        ja: "残り{{time}}、キャンバスを消去するか選んでいる間は一時停止中",
+        en: "{{time}} left, paused while you choose whether to clear the layer",
+        ja: "残り{{time}}、レイヤーを消去するか選んでいる間は一時停止中",
+      },
+      /** Drawing screen, top left: read by screen readers after the timer dot's name while the current layer's options bar is open beside its chip, which stops the clock */
+      layerOptions: {
+        en: "{{time}} left, paused while you choose layer options",
+        ja: "残り{{time}}、レイヤー設定を選んでいる間は一時停止中",
+      },
+      /** Drawing screen, top left: read by screen readers after the timer dot's name while a finger is on the opacity slider's thumb, which stops the clock */
+      opacity: {
+        en: "{{time}} left, paused while you set the opacity",
+        ja: "残り{{time}}、不透明度を調整している間は一時停止中",
+      },
+      /** Drawing screen, top left: read by screen readers after the timer dot's name while a layer chip is held up to move it, which stops the clock */
+      reorder: {
+        en: "{{time}} left, paused while you move a layer",
+        ja: "残り{{time}}、レイヤーを移動している間は一時停止中",
       },
       /** Drawing screen, top left: read by screen readers after the timer dot's name while a finger is on the size rail, which stops the clock */
       size: {
@@ -197,8 +212,8 @@ export const stickerCreation = {
     color: { en: "Color", ja: "カラー" },
     /** Drawing screen, top right: the Smoothing tile's name for screen readers, the title of the Smoothing bar it opens, and that bar's slider's name */
     smoothing: { en: "Smoothing", ja: "手ぶれ補正" },
-    /** Drawing screen, top right: the clear tile at the end of the tool strip, which opens the clear bar, named for screen readers; dimmed while the sheet is blank */
-    clear: { en: "Clear the sheet", ja: "キャンバスを消去" },
+    /** Drawing screen, top right: the clear tile at the end of the tool strip, which opens the clear bar for the current layer, named for screen readers; dimmed while that layer is empty */
+    clear: { en: "Clear the layer", ja: "レイヤーを消去" },
     /** Drawing screen, tool strip: the Pencil only tile at its start, shown once a pen has drawn on this device, named for screen readers; pressed, only the pen draws on this sheet and fingers tap to undo and redo */
     pencilOnly: { en: "Pencil only", ja: "ペンのみ" },
   },
@@ -312,6 +327,62 @@ export const stickerCreation = {
     /** Drawing screen, left edge: read by screen readers as the size rail moves; {{size}} is the brush's or eraser's size in px; the number shown on the rail doesn't use this text */
     value: { en: "{{size}} px", ja: "{{size}}ピクセル" },
   },
+  /** The thin line beside the layer chips that sets the current layer's opacity. */
+  opacitySlider: {
+    /** Drawing screen, beside the layer chips: the opacity slider's name for screen readers */
+    label: { en: "Opacity", ja: "不透明度" },
+    /** Drawing screen, beside the layer chips: read by screen readers as the opacity slider moves, and shown beside its thumb while a finger is on it; {{value}} is 0 to 100 */
+    value: { en: "{{value}}%", ja: "{{value}}%" },
+    /** Drawing screen, beside the layer chips: the white label that sticks out from the opacity slider for a few seconds when a stroke meets a hidden layer (opacity 0), also announced; the label never wraps by itself, so the line break is where it wraps */
+    hiddenHint: {
+      en: "Hidden. Raise its\nopacity to draw.",
+      ja: "非表示中です。不透明度を\n上げるとかけます。",
+    },
+  },
+  /** The layer column under the size rail, and the options bar the current chip opens. */
+  layers: {
+    /** Drawing screen, the layer column under the size rail: the list of layer chips, named for screen readers */
+    label: { en: "Layers", ja: "レイヤー" },
+    /** Drawing screen, layer column: a chip's name for screen readers, by the number printed on it, which stays the layer's for life */
+    chip: { en: "Layer {{number}}", ja: "レイヤー{{number}}" },
+    /** Drawing screen, layer column: a chip's name for screen readers with one of its states after it, such as "Layer 2, hidden"; a chip with several states takes each in turn */
+    withState: { en: "{{name}}, {{state}}", ja: "{{name}}、{{state}}" },
+    /** Drawing screen, layer column: read after a chip's name by screen readers while its layer is at 0% opacity, which hides it and blocks ink on it */
+    hidden: { en: "hidden", ja: "非表示" },
+    /** Drawing screen, layer column: read after a chip's name by screen readers while its layer locks its transparent pixels */
+    locked: { en: "locked", ja: "透明ピクセルをロック中" },
+    /** Drawing screen, layer column: read after a chip's name by screen readers while its layer clips to the layer below; {{base}} is the number of the layer it shows through */
+    clippedTo: { en: "clipped to layer {{base}}", ja: "レイヤー{{base}}でクリッピング" },
+    /** Drawing screen, layer column: the + tile above the chips, which adds a layer over the current one, named for screen readers; dimmed at ten layers */
+    add: { en: "New layer", ja: "新規レイヤー" },
+    /** Drawing screen, layer options bar, opened by tapping the current chip: its name for screen readers; {{number}} is the layer's */
+    options: { en: "Layer {{number}} options", ja: "レイヤー{{number}}の設定" },
+    /** Layer options bar: the toggle tile that keeps the brush and the fill to pixels already on the layer, named for screen readers */
+    lock: { en: "Lock transparent pixels", ja: "透明ピクセルをロック" },
+    /** Layer options bar: the toggle tile that shows the layer only where the layer below has ink, named for screen readers; dimmed on the bottom layer */
+    clip: { en: "Clip to layer below", ja: "下のレイヤーでクリッピング" },
+    /** Layer options bar: the tile that moves the layer one place back, under the one below it, named for screen readers; dimmed at the back */
+    moveBack: { en: "Move back", ja: "背面へ" },
+    /** Layer options bar: the tile that moves the layer one place forward, over the one above it, named for screen readers; dimmed at the front */
+    moveForward: { en: "Move forward", ja: "前面へ" },
+    /** Layer options bar: the tile that deletes the layer at once, which undo brings back, named for screen readers; dimmed on the last layer */
+    delete: { en: "Delete layer", ja: "レイヤーを削除" },
+    /** Drawing screen, layer column: announced to screen readers when Move back or a drop puts a layer behind another; {{other}} is that layer's number */
+    movedBehind: {
+      en: "Layer {{number}} moved behind layer {{other}}",
+      ja: "レイヤー{{number}}をレイヤー{{other}}の背面へ移動しました",
+    },
+    /** Drawing screen, layer column: announced to screen readers when Move forward or a drop puts a layer in front of another; {{other}} is that layer's number */
+    movedInFront: {
+      en: "Layer {{number}} moved in front of layer {{other}}",
+      ja: "レイヤー{{number}}をレイヤー{{other}}の前面へ移動しました",
+    },
+    /** Drawing screen, the chip over the seal key: announced when a mark or layer change cannot finish because the device lacks canvas memory; it stays until a drawing change succeeds */
+    inkFailed: {
+      en: "Couldn’t update the drawing: this device is short on memory. Deleting a layer makes room.",
+      ja: "端末の<wbr/>メモリ不足で<wbr/>絵を<wbr/>更新できませんでした。<wbr/>レイヤーを<wbr/>削除すると<wbr/>空きが<wbr/>できます。",
+    },
+  },
   /** The bar under the tools, named like its tile. */
   smoothingBar: {
     /** Smoothing bar, under the tool strip: the small label at the slider's left end, no smoothing; hidden from screen readers */
@@ -319,10 +390,10 @@ export const stickerCreation = {
     /** Smoothing bar, under the tool strip: the small label at the slider's right end, the most smoothing; hidden from screen readers */
     smooth: { en: "Smooth", ja: "強" },
   },
-  /** The bar under the tools that asks before the sheet is cleared. */
+  /** The bar under the tools that asks before the current layer is cleared. */
   clearBar: {
     /** Clear bar, under the tool strip after a tap on the clear tile: its title, which also names it for screen readers */
-    title: { en: "Clear the sheet?", ja: "キャンバスを<wbr/>消去しますか？" },
+    title: { en: "Clear the layer?", ja: "レイヤーを<wbr/>消去しますか？" },
     /** Clear bar: the line under the title, also read by screen readers; the timer keeps its time rather than starting over */
     line: {
       en: "Undo brings it back. The timer won’t start over.",
@@ -330,7 +401,7 @@ export const stickerCreation = {
     },
     /** Clear bar: the quiet link that closes it with nothing cleared */
     cancel: { en: "Cancel", ja: "キャンセル" },
-    /** Clear bar: the red button that clears the sheet; undo brings the drawing back */
+    /** Clear bar: the red button that clears the current layer; undo brings its ink back */
     clear: { en: "Clear", ja: "消去" },
   },
   history: {

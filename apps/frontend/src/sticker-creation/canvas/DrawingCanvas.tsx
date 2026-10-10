@@ -8,9 +8,12 @@ import {
   type Ref,
 } from "react";
 import { useTranslation } from "../../i18n/react";
+import type { LayerControls } from "../layers/layerControls";
+import { LayerDisplay } from "../layers/layerDisplay";
+import { LayerInk } from "../layers/layerInk";
+import { FIRST_LAYERS, type LayerState } from "../layers/layerState";
 import { InkEngine, type HoverRing, type InkEvents, type InkSettings } from "./inkEngine";
-import { InkSurface } from "./inkSurface";
-import type { Op, Step } from "./ops";
+import type { LayerId, Step } from "./ops";
 import { fitScale, type SheetArea, type SheetFrame } from "./sheetFrame";
 import "./DrawingCanvas.css";
 
@@ -28,33 +31,33 @@ function showRing(el: HTMLElement | null, ring: HoverRing | null) {
   el.style.transform = `translate(${ring.x - d / 2}px, ${ring.y - d / 2}px)`;
 }
 
-export interface DrawingCanvasHandle {
+export interface DrawingCanvasHandle extends LayerControls {
   undo: () => void;
   redo: () => void;
-  /** Sets the drawing aside for a blank sheet; undo brings it back. */
-  clear: () => void;
   /** A fresh sheet, with nothing to undo, whose frame follows its area until the first mark. */
   reset: () => void;
   /**
    * A sheet with these steps on it, as a drawing picked up after a reload has, in the frame they
    * were drawn in; with no frame, the sheet's area is taken as that frame.
    */
-  load: (steps: readonly Step[], frame: SheetFrame | null) => void;
-  /** The ops on the ink, oldest first. */
-  ops: () => readonly Op[];
-  /** Every step, oldest first, clears included: what the drawing kept on the device holds. */
+  load: (steps: readonly Step[], frame: SheetFrame | null, current: LayerId | null) => void;
+  /** The steps the timelapse plays, from the last time no layer had ink, and the layers then. */
+  timelapse: () => { steps: readonly Step[]; start: LayerState };
+  /** Every step, oldest first, layer changes included: what the drawing kept on the device holds. */
   steps: () => readonly Step[];
   /** Ends a stroke in progress as if the pointer lifted. */
   finishStroke: () => void;
-  /** A copy of the ink, transparent where nothing is drawn, to read pixels from. */
-  inkForReading: () => HTMLCanvasElement | null;
+  /** A new canvas of what the sheet shows, transparent where nothing is drawn; the caller releases it. */
+  composite: () => HTMLCanvasElement | null;
   /**
    * The sheet's size in units and its ink's density; null until the sheet shows or a kept drawing
    * brings one.
    */
   frame: () => SheetFrame | null;
-  /** Where a point on screen falls on the sheet, in units; null while the sheet has no frame. */
-  screenToSheet: (clientX: number, clientY: number) => [x: number, y: number] | null;
+  /** Where the sheet is on screen, in CSS px; null while it isn't mounted. */
+  sheetRect: () => DOMRect | null;
+  /** The pointer's press closed a panel: it draws, fills and hints nothing on the sheet until it lifts. */
+  swallow: (pointerId: number) => void;
 }
 
 // The hover ring is the paper's own, so its event stays here.
@@ -80,17 +83,19 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
   const { t } = useTranslation();
   const areaRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const layersRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLSpanElement>(null);
-  const ink = useRef<{ engine: InkEngine; surface: InkSurface } | null>(null);
+  const ink = useRef<{ engine: InkEngine; layers: LayerInk } | null>(null);
   const showing = useRef(active);
   const measureAgain = useRef<(() => void) | null>(null);
   const fitAgain = useRef<(() => void) | null>(null);
 
   const onHistory = useEffectEvent(events.onHistory);
+  const onLayers = useEffectEvent(events.onLayers);
+  const onBlockedHidden = useEffectEvent(events.onBlockedHidden);
+  const onInkFailed = useEffectEvent(events.onInkFailed);
   const onCommit = useEffectEvent(events.onCommit);
   const onBlocked = useEffectEvent(events.onBlocked);
-  const onDismissPanel = useEffectEvent(events.onDismissPanel);
   const onPen = useEffectEvent(events.onPen);
   const onFit = useEffectEvent(events.onFit);
   const initialSettings = useEffectEvent(() => settings);
@@ -98,18 +103,21 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
   useEffect(() => {
     const area = areaRef.current;
     const sheet = sheetRef.current;
-    const canvas = canvasRef.current;
-    if (!area || !sheet || !canvas) return;
-    const surface = new InkSurface(canvas);
-    const engine = new InkEngine(surface, initialSettings(), {
+    const host = layersRef.current;
+    if (!area || !sheet || !host) return;
+    const layers = new LayerInk();
+    const engine = new InkEngine(layers, new LayerDisplay(host, layers), initialSettings(), {
       onHistory: (state) => onHistory(state),
+      onLayers: (view) => onLayers(view),
+      onBlockedHidden: () => onBlockedHidden(),
+      onInkFailed: (error) => onInkFailed(error),
       onCommit: (op) => onCommit(op),
       onBlocked: () => onBlocked(),
-      onDismissPanel: () => onDismissPanel(),
       onPen: () => onPen(),
       onHover: (ring) => showRing(ringRef.current, ring),
     });
-    ink.current = { engine, surface };
+    ink.current = { engine, layers };
+    if (!showing.current) engine.suspend();
     const detach = engine.attach(sheet);
     /** The area the sheet last had on screen, in CSS px. */
     let shown: SheetArea | null = null;
@@ -122,6 +130,7 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
       const scale = fitScale(frame, shown);
       sheet.style.width = `${frame.w * scale}px`;
       sheet.style.height = `${frame.h * scale}px`;
+      engine.measurePaper();
       onFit(scale);
     };
     fitAgain.current = fit;
@@ -152,7 +161,10 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
   // So the sheet is fitted only while the drawing screen shows, and measures again as it shows.
   useLayoutEffect(() => {
     showing.current = active;
-    if (active) measureAgain.current?.();
+    if (active) {
+      ink.current?.engine.resume();
+      measureAgain.current?.();
+    } else ink.current?.engine.suspend();
   }, [active]);
 
   useLayoutEffect(() => {
@@ -164,21 +176,31 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
     () => ({
       undo: () => ink.current?.engine.undo(),
       redo: () => ink.current?.engine.redo(),
-      clear: () => ink.current?.engine.clear(),
+      addLayer: () => ink.current?.engine.addLayer(),
+      selectLayer: (id) => ink.current?.engine.selectLayer(id),
+      deleteLayer: () => ink.current?.engine.deleteLayer(),
+      moveLayer: (id, to) => ink.current?.engine.moveLayer(id, to),
+      clearLayer: () => ink.current?.engine.clearLayer(),
+      previewOpacity: (opacity) => ink.current?.engine.previewOpacity(opacity),
+      setOpacity: (opacity) => ink.current?.engine.setOpacity(opacity),
+      setLocked: (on) => ink.current?.engine.setLocked(on),
+      setClipped: (on) => ink.current?.engine.setClipped(on),
+      thumbnail: (id) => ink.current?.engine.thumbnail(id) ?? null,
       reset: () => {
         ink.current?.engine.reset();
         fitAgain.current?.();
       },
-      load: (steps, frame) => {
-        ink.current?.engine.load(steps, frame);
+      load: (steps, frame, current) => {
+        ink.current?.engine.load(steps, frame, current);
         fitAgain.current?.();
       },
-      ops: () => ink.current?.engine.ops ?? [],
+      timelapse: () => ink.current?.engine.timelapse() ?? { steps: [], start: FIRST_LAYERS },
       steps: () => ink.current?.engine.steps ?? [],
       finishStroke: () => ink.current?.engine.finishStroke(),
-      inkForReading: () => ink.current?.surface.copyForReading() ?? null,
+      composite: () => ink.current?.engine.composite() ?? null,
       frame: () => ink.current?.engine.frame ?? null,
-      screenToSheet: (x, y) => ink.current?.engine.screenToSheet(x, y) ?? null,
+      sheetRect: () => sheetRef.current?.getBoundingClientRect() ?? null,
+      swallow: (pointerId) => ink.current?.engine.swallow(pointerId),
     }),
     [],
   );
@@ -187,9 +209,12 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
     <div ref={areaRef} className="ink-area">
       <div ref={sheetRef} className="ink-sheet" data-tool={settings.tool}>
         {under}
-        <canvas
-          ref={canvasRef}
-          className="ink-canvas"
+        {/* The display's canvases: the layers below the current one, the current one with the
+            stroke being drawn over it, and the layers above. */}
+        <div
+          ref={layersRef}
+          className="ink-layers"
+          role="img"
           aria-label={label ?? t(($) => $.stickerCreation.canvas)}
         />
         {/* Where a hovering pen would land. */}

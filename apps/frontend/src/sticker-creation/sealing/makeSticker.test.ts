@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CutSticker } from "./cutSticker";
 import { makeSticker } from "./makeSticker";
-import type { SealReply, SealRequest } from "./sealWorker";
+import type { CutReply, CutRequest } from "./sealWorker";
 
 // happy-dom has no 2D canvas: this one reads every sheet as blank and paints nothing.
 vi.mock("../canvas/context2d", () => {
@@ -22,15 +22,15 @@ vi.mock("../canvas/context2d", () => {
 /** The sealing worker, which each test answers for. */
 class FakeWorker {
   static started: FakeWorker[] = [];
-  onmessage: ((event: MessageEvent<SealReply>) => void) | null = null;
+  onmessage: ((event: MessageEvent<CutReply>) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
   onmessageerror: ((event: MessageEvent) => void) | null = null;
-  sent: { request: SealRequest; transfer: Transferable[] } | null = null;
+  sent: { request: CutRequest; transfer: Transferable[] } | null = null;
   stopped = false;
   constructor() {
     FakeWorker.started.push(this);
   }
-  postMessage(request: SealRequest, transfer: Transferable[]) {
+  postMessage(request: CutRequest, transfer: Transferable[]) {
     this.sent = { request, transfer };
   }
   terminate() {
@@ -38,7 +38,7 @@ class FakeWorker {
   }
 }
 
-const answer = (reply: SealReply) => new MessageEvent("message", { data: reply });
+const answer = (reply: CutReply) => new MessageEvent("message", { data: reply });
 /** The ink's pixels per sheet unit. */
 const DENSITY = 2;
 

@@ -2,8 +2,9 @@ import { timeOurWork } from "../../performance/performanceRecorder";
 import { personKey, parseStored, readStored, writeStored } from "../../ui/deviceStorage";
 import { pickedPair, PICKS } from "../../kyoto-seika/deal";
 import { KINDS, readDealtSubject, type DealtSubject } from "../../kyoto-seika/subjectList";
-import { STRIDE, type Op, type Step } from "../canvas/ops";
+import { STRIDE, type LayerId, type Op, type Step } from "../canvas/ops";
 import type { SheetFrame } from "../canvas/sheetFrame";
+import { FIRST_LAYER, LayerStepError, stateAt } from "../layers/layerState";
 
 /*
  * The session in progress, kept on this device for the person signed in alone, so a reload doesn't
@@ -68,12 +69,14 @@ export interface KeptKyotoSeika {
 /** A sheet in Kyoto Seika Practice Mode before the list deals. */
 export const UNDEALT: KeptKyotoSeika = { subjects: null, picked: [], rolls: 0, begun: false };
 
-/** The ticket use the session spent (the server's id), the time drawn, 18+, and the tools' settings. */
+/** The ticket use the session spent (the server's id), the time drawn, 18+, the layer, and the tools' settings. */
 interface SessionRecord {
   ticket: number;
   elapsedMs: number;
   /** The seal sheet's 18+ switch was left on: it seals as an NSFW sticker. */
   nsfw: boolean;
+  /** The layer being drawn on; the first layer when the record holds none that can be read. */
+  currentLayer: LayerId;
   /** Absent when what's kept holds none, or none that can be read: the drawing still comes back. */
   tools?: KeptTools;
   /** Null exactly for a ticket spent outside Kyoto Seika Practice Mode. */
@@ -203,6 +206,7 @@ export class SessionKeeper {
   private readonly onKept: (kept: boolean) => void;
   private ticket: number | null = null;
   private nsfw = false;
+  private currentLayer: LayerId = FIRST_LAYER;
   private kyotoSeika: KeptKyotoSeika | null = null;
   private elapsedMs = 0;
   /** The tools as the artist last set them: they outlast a sheet, so a new session keeps them too. */
@@ -245,6 +249,7 @@ export class SessionKeeper {
     this.takeLock();
     this.ticket = ticket;
     this.nsfw = false;
+    this.currentLayer = FIRST_LAYER;
     this.kyotoSeika = kyotoSeika;
     this.elapsedMs = 0;
     this.carried = false;
@@ -280,6 +285,7 @@ export class SessionKeeper {
     this.takeLock();
     this.ticket = ticket;
     this.nsfw = false;
+    this.currentLayer = FIRST_LAYER;
     this.kyotoSeika = kyotoSeika;
     this.elapsedMs = 0;
     // The steps kept are the unread drawing's, so the first save writes every step.
@@ -290,6 +296,12 @@ export class SessionKeeper {
   /** Keeps the 18+ mark; on a carried session's blank sheet, it waits for the first save. */
   keepNsfw(nsfw: boolean): void {
     this.nsfw = nsfw;
+    if (!this.carried) this.keepRecord();
+  }
+
+  /** Keeps the layer being drawn on; on a carried session's blank sheet, it waits for the first save. */
+  keepCurrentLayer(layer: LayerId): void {
+    this.currentLayer = layer;
     if (!this.carried) this.keepRecord();
   }
 
@@ -323,6 +335,7 @@ export class SessionKeeper {
     this.carried = false;
     this.ticket = null;
     this.nsfw = false;
+    this.currentLayer = FIRST_LAYER;
     this.kyotoSeika = null;
     this.elapsedMs = 0;
     this.keeping = false;
@@ -398,6 +411,7 @@ export class SessionKeeper {
         ticket: this.ticket,
         elapsedMs: this.elapsedMs,
         nsfw: this.nsfw,
+        currentLayer: this.currentLayer,
         ...(this.tools && { tools: this.tools }),
         ...(this.kyotoSeika && { kyotoSeika: this.kyotoSeika }),
       });
@@ -577,7 +591,19 @@ async function readDrawing(userId: string): Promise<{ steps: Step[]; frame: Shee
     steps.push(step);
   }
   if (missing > 0) throw new UnreadableDrawing(`${missing} of its ${count} steps are missing`);
+  checkLayers(steps);
   return { steps, frame: readFrame(frame) };
+}
+
+/** Every step must fit the layers before it: the engine replays them without checking. */
+function checkLayers(steps: readonly Step[]): void {
+  try {
+    stateAt(steps, steps.length);
+  } catch (error) {
+    if (!(error instanceof LayerStepError)) throw error;
+    const where = error.stepIndex === null ? "A step" : `Step ${error.stepIndex}`;
+    throw new UnreadableDrawing(`${where} doesn't fit its layers (${error.message})`);
+  }
 }
 
 /** `work`'s result, or `late()`'s once `ms` pass without one. `work` must not reject. */
@@ -593,26 +619,59 @@ function within<T>(work: Promise<T>, ms: number, late: () => T): Promise<T> {
 
 const isFiniteNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const isCount = (v: unknown): v is number => isFiniteNumber(v) && Number.isInteger(v) && v >= 0;
+const isLayerId = (v: unknown): v is LayerId => isCount(v) && v >= FIRST_LAYER;
 
-/** A kept step, or undefined when it can't be read: IndexedDB hands back untyped values. */
+/**
+ * A kept step, or undefined when it can't be read: IndexedDB hands back untyped values. Only its
+ * shape is read here; whether it fits the layers before it is `checkLayers`'s.
+ */
 function readStep(v: unknown): Step | undefined {
   if (typeof v !== "object" || v === null || !("tool" in v)) return undefined;
-  if (v.tool === "clear") return { tool: "clear" };
-  if (!("color" in v) || !("T" in v)) return undefined;
-  const { color, T, tool } = v;
-  if (typeof color !== "string" || !isFiniteNumber(T)) return undefined;
+  const { tool } = v;
+  // Steps kept before layers named no layer, and their clears no time. T 0 is harmless: a
+  // single-layer drawing's timelapse starts after its last clear.
+  const beforeLayers = !("layer" in v);
+  const layer = beforeLayers ? FIRST_LAYER : v.layer;
+  const T = "T" in v ? v.T : beforeLayers && tool === "clear" ? 0 : undefined;
+  if (!isLayerId(layer) || !isFiniteNumber(T)) return undefined;
+  switch (tool) {
+    case "brush":
+    case "eraser":
+    case "fill":
+      return readOp(v, tool, layer, T);
+    case "add":
+      return "at" in v && isFiniteNumber(v.at) ? { tool, layer, at: v.at, T } : undefined;
+    case "delete":
+    case "clear":
+      return { tool, layer, T };
+    case "move":
+      return "to" in v && isFiniteNumber(v.to) ? { tool, layer, to: v.to, T } : undefined;
+    case "opacity":
+      return "opacity" in v && isFiniteNumber(v.opacity)
+        ? { tool, layer, opacity: v.opacity, T }
+        : undefined;
+    case "lock":
+    case "clip":
+      return "on" in v && typeof v.on === "boolean" ? { tool, layer, on: v.on, T } : undefined;
+    default:
+      return undefined;
+  }
+}
+
+/** A kept brush stroke, eraser stroke or fill, once its tool, layer and time are read. */
+function readOp(v: object, tool: Op["tool"], layer: LayerId, T: number): Op | undefined {
+  if (!("color" in v) || typeof v.color !== "string") return undefined;
+  const { color } = v;
   if (tool === "fill") {
     if (!("x" in v) || !isFiniteNumber(v.x) || !("y" in v) || !isFiniteNumber(v.y))
       return undefined;
-    // A fill kept before fills recorded their gap closed none.
-    const gap = "gap" in v ? v.gap : 0;
-    return isFiniteNumber(gap) && gap >= 0 ? { tool, x: v.x, y: v.y, color, gap, T } : undefined;
+    if (!("gap" in v) || !isFiniteNumber(v.gap) || v.gap < 0) return undefined;
+    return { tool, layer, x: v.x, y: v.y, color, gap: v.gap, T };
   }
-  if ((tool !== "brush" && tool !== "eraser") || !("pts" in v) || !Array.isArray(v.pts))
-    return undefined;
+  if (!("pts" in v) || !Array.isArray(v.pts)) return undefined;
   const pts: unknown[] = v.pts;
   if (pts.length % STRIDE !== 0 || !pts.every(isFiniteNumber)) return undefined;
-  return { tool, color, pts, T };
+  return { tool, layer, color, pts, T };
 }
 
 const isPositive = (v: unknown): v is number => isFiniteNumber(v) && v > 0;
@@ -657,6 +716,7 @@ function readRecord(userId: string): SessionRecord | "unreadable" | null {
       ticket: value.ticket,
       elapsedMs: value.elapsedMs,
       nsfw: value.nsfw,
+      currentLayer: "currentLayer" in value ? readCurrentLayer(value.currentLayer) : FIRST_LAYER,
       ...(tools && { tools }),
       kyotoSeika: "kyotoSeika" in value ? readKyotoSeika(value.kyotoSeika) : null,
     };
@@ -667,6 +727,19 @@ function readRecord(userId: string): SessionRecord | "unreadable" | null {
 
 const isBetween = (v: unknown, min: number, max: number): v is number =>
   isFiniteNumber(v) && v >= min && v <= max;
+
+/**
+ * The layer a record says was being drawn on. One that can't be read is said, and taken as the
+ * first layer: the drawing still comes back.
+ */
+function readCurrentLayer(v: unknown): LayerId {
+  if (isLayerId(v)) return v;
+  console.error(
+    "The kept drawing's current layer is unreadable, so it opens on the first layer:",
+    v,
+  );
+  return FIRST_LAYER;
+}
 
 /**
  * The record's Kyoto Seika Practice Mode part, its subjects read only as far as the seal needs them. One

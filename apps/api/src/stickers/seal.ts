@@ -25,7 +25,7 @@ import { MAX_FLAT_SIDE, MAX_SHARP_IMAGE_SIDE } from "./imageSides.ts";
 import { mintSticker } from "./mint.ts";
 import { recordVeiledImage } from "./nsfwDrawing.ts";
 import type { SealForm } from "./sealForm.ts";
-import { timelapseProblem } from "./timelapse.ts";
+import { timelapseToStore } from "./timelapse.ts";
 
 /** POST /api/stickers's answer. */
 export const sealResponseSchema = z.object({
@@ -230,8 +230,8 @@ export async function sealSticker(
   if (sharpRefusal) return { refused: sharpRefusal };
   const uploaded = form.timelapse ? Buffer.from(await form.timelapse.arrayBuffer()) : null;
   // The timelapse only replays the drawing: one that can't be read is left out, never the sticker.
-  const unreadable = uploaded && timelapseProblem(uploaded);
-  const timelapse = unreadable ? null : uploaded;
+  const checked = uploaded && timelapseToStore(uploaded);
+  const timelapse = checked && "stored" in checked ? checked : null;
 
   // Hashed here, never taken from the client: the hash names files other stickers may share. The
   // store keeps a name's first files, so a PNG sealed before keeps its first seal's images.
@@ -282,7 +282,9 @@ export async function sealSticker(
       tx.update(ticketUses).set({ stickerId }).where(eq(ticketUses.id, form.ticketUseId)).run();
       // No spot and no seen_at: the sticker tray shows it as NEW.
       tx.insert(stickerPlacements).values({ userId, stickerId }).run();
-      if (timelapse) tx.insert(stickerTimelapses).values({ stickerId, ops: timelapse }).run();
+      if (timelapse) {
+        tx.insert(stickerTimelapses).values({ stickerId, ops: timelapse.stored }).run();
+      }
       return null;
     },
     { behavior: "immediate" },
@@ -290,9 +292,10 @@ export async function sealSticker(
   if (refused) return { refused };
 
   logInfo("sticker.seal.saved", { stickerId, userId });
-  if (unreadable) {
-    logFailure("sticker.timelapse.dropped", new Error(unreadable), { stickerId, userId });
+  if (checked && "problem" in checked) {
+    logFailure("sticker.timelapse.dropped", new Error(checked.problem), { stickerId, userId });
   }
+  if (timelapse?.fromV1) logInfo("sticker.timelapse.v1_converted", { stickerId, userId });
   const mintRefusal = await mintOrRefuse(deps, userId, stickerId);
   if (mintRefusal) return { refused: mintRefusal };
   return { sealed: sealedSticker(deps, userId, stickerId), created: true };

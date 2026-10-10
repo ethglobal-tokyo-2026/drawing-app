@@ -12,6 +12,17 @@ import { REUNION, TEST_SUBJECTS, WIND } from "../../kyoto-seika/testSubjects";
 import { FILL_GAP } from "../canvas/fill";
 import type { FillOp, Op, Step } from "../canvas/ops";
 import { frameFor, SHEET_SHORT_UNITS, type SheetFrame } from "../canvas/sheetFrame";
+import { FIRST_LAYER } from "../layers/layerState";
+import {
+  addLayer,
+  brush,
+  clearLayer,
+  deleteLayer,
+  moveLayer,
+  setClip,
+  setLock,
+  setOpacity,
+} from "../layers/testLayerSteps";
 import {
   firstChanged,
   keptColor,
@@ -32,7 +43,7 @@ vi.mock("../../performance/performanceRecorder", () => ({
   },
 }));
 
-const stroke = (color: string): Op => ({ tool: "brush", color, pts: [], T: 0 });
+const stroke = (color: string): Op => ({ tool: "brush", layer: FIRST_LAYER, color, pts: [], T: 0 });
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 /** A deal of five, one of each kind: the first of each in the test list. */
 const FIVE = TEST_SUBJECTS.filter((s, i, all) => all.findIndex((o) => o.kind === s.kind) === i);
@@ -116,6 +127,28 @@ async function editKeptSteps(edit: (ops: IDBObjectStore) => void) {
   db.close();
 }
 
+/**
+ * Keeps `steps` for `userId` as another build would have written them: drawn as strokes first, then
+ * each replaced by its value.
+ */
+async function keepRaw(userId: string, steps: unknown[]) {
+  draw(
+    userId,
+    steps.map(() => stroke("a")),
+  );
+  // The strokes land before the values replace them.
+  await keptSteps(userId);
+  await Promise.all(steps.map((step, i) => keepStepAs(i, step)));
+}
+
+/** Sets `fields` on the record kept for `userId`, as another build would have written it; `undefined` drops one. */
+function keepRecordAs(userId: string, fields: Record<string, unknown>) {
+  const key = personKey("draw.session", userId);
+  const record: unknown = JSON.parse(localStorage.getItem(key) ?? "null");
+  if (typeof record !== "object" || record === null) throw new Error("No record is kept");
+  localStorage.setItem(key, JSON.stringify({ ...record, ...fields }));
+}
+
 /** Writes `step` as step `i` of the drawing kept, as an older build would have kept it. */
 const keepStepAs = (i: number, step: unknown) => editKeptSteps((ops) => ops.put(step, i));
 
@@ -176,13 +209,21 @@ async function holdStores() {
 
 describe("keptColor", () => {
   it("picks a drawing back up in the color it was last drawn in", () => {
-    const fill: Op = { tool: "fill", x: 0, y: 0, color: "#00868B", gap: 0, T: 0 };
-    const erase: Op = { tool: "eraser", color: "#E8484F", pts: [], T: 0 };
+    const fill: Op = {
+      tool: "fill",
+      layer: FIRST_LAYER,
+      x: 0,
+      y: 0,
+      color: "#00868B",
+      gap: 0,
+      T: 0,
+    };
+    const erase: Op = { tool: "eraser", layer: FIRST_LAYER, color: "#E8484F", pts: [], T: 0 };
     expect(keptColor([stroke("#1478C8"), stroke("#B4299A")])).toBe("#B4299A");
     // A fill counts; the eraser doesn't draw in a color.
     expect(keptColor([stroke("#1478C8"), fill, erase])).toBe("#00868B");
     // A clear draws in no color either.
-    expect(keptColor([stroke("#1478C8"), { tool: "clear" }])).toBe("#1478C8");
+    expect(keptColor([stroke("#1478C8"), clearLayer(FIRST_LAYER)])).toBe("#1478C8");
     // Nothing drawn: it keeps the color a fresh sheet starts in.
     expect(keptColor([])).toBeNull();
   });
@@ -228,18 +269,102 @@ describe("the drawing kept on this device", () => {
 
   it("brings a drawing back with its clears, so undo can still reach what was cleared", async () => {
     const userId = someone();
-    const steps: Step[] = [stroke("a"), { tool: "clear" }, stroke("b")];
+    const steps: Step[] = [stroke("a"), clearLayer(FIRST_LAYER), stroke("b")];
     draw(userId, steps);
     expect(await keptSteps(userId)).toEqual(steps);
   });
 
-  it("keeps each fill's gap, and reads a fill kept before fills recorded one as closing none", async () => {
+  it("keeps each fill's gap", async () => {
     const userId = someone();
-    const fill: FillOp = { tool: "fill", x: 4, y: 5, color: "#00868B", gap: FILL_GAP, T: 0 };
+    const fill: FillOp = {
+      tool: "fill",
+      layer: FIRST_LAYER,
+      x: 4,
+      y: 5,
+      color: "#00868B",
+      gap: FILL_GAP,
+      T: 0,
+    };
     draw(userId, [fill]);
     expect(await keptSteps(userId)).toEqual([fill]);
-    await keepStepAs(0, { tool: "fill", x: 4, y: 5, color: "#00868B", T: 0 });
-    expect(await keptSteps(userId)).toEqual([{ ...fill, gap: 0 }]);
+  });
+
+  it("brings back every change to the layers as it was kept", async () => {
+    const userId = someone();
+    const steps: Step[] = [
+      addLayer(2, 1),
+      brush(2),
+      setOpacity(2, 40),
+      setLock(2, true),
+      setLock(2, false),
+      setClip(2, true),
+      setClip(2, false),
+      moveLayer(2, 0),
+      clearLayer(2),
+      deleteLayer(2),
+    ];
+    draw(userId, steps);
+    expect(await keptSteps(userId)).toEqual(steps);
+  });
+
+  it("brings a step kept before layers existed back on the first layer", async () => {
+    const userId = someone();
+    /** The steps the build before layers kept: none names a layer. */
+    const before = [
+      { tool: "brush", color: "#1478C8", pts: [1, 2, 3, 4], T: 10 },
+      { tool: "eraser", color: "#E8484F", pts: [], T: 20 },
+      { tool: "fill", x: 4, y: 5, color: "#00868B", gap: 3, T: 30 },
+      { tool: "clear", T: 40 },
+    ];
+    await keepRaw(userId, before);
+    expect(await keptSteps(userId)).toEqual(
+      before.map((step) => ({ ...step, layer: FIRST_LAYER })),
+    );
+  });
+
+  it("brings a drawing kept before layers existed back whole, its clear having no layer or time", async () => {
+    const userId = someone();
+    const brushed = { tool: "brush", color: "#1478C8", pts: [1, 2, 3, 4], T: 10 };
+    await keepRaw(userId, [brushed, { tool: "clear" }, brushed]);
+    expect(await keptSteps(userId)).toEqual([
+      { ...brushed, layer: FIRST_LAYER },
+      { tool: "clear", layer: FIRST_LAYER, T: 0 },
+      { ...brushed, layer: FIRST_LAYER },
+    ]);
+  });
+
+  const stroked = { tool: "brush", layer: FIRST_LAYER, color: "#1478C8", pts: [], T: 0 };
+  it.each<[string, unknown]>([
+    ["a tool it doesn't know", { ...stroked, tool: "teleport" }],
+    ["a layer numbered 0", { ...stroked, layer: 0 }],
+    ["a layer numbered between whole numbers", { ...stroked, layer: 1.5 }],
+    ["a layer numbered in a string", { ...stroked, layer: "1" }],
+    ["a stroke with no time", { ...stroked, T: undefined }],
+    [
+      "a fill with no gap",
+      { tool: "fill", layer: FIRST_LAYER, x: 4, y: 5, color: "#00868B", T: 0 },
+    ],
+    ["a stroke with no layer and no time", { tool: "brush", color: "#1478C8", pts: [] }],
+    ["a clear that names a layer but has no time", { tool: "clear", layer: FIRST_LAYER }],
+    ["an add with no place", { tool: "add", layer: 2, T: 0 }],
+    ["a move to a place that isn't a number", { tool: "move", layer: 2, to: "front", T: 0 }],
+    ["an opacity with no value", { tool: "opacity", layer: 2, T: 0 }],
+    ["a lock whose switch isn't on or off", { tool: "lock", layer: 2, on: 1, T: 0 }],
+  ])("loses a drawing with %s", async (_, step) => {
+    const userId = someone();
+    await keepRaw(userId, [step]);
+    expect(await keptSteps(userId)).toBe("lost");
+  });
+
+  it("loses a drawing whose steps don't fit its layers, and says which step", async () => {
+    const userId = someone();
+    // The last stroke is on a layer an earlier step deleted.
+    draw(userId, [addLayer(2, 1), brush(2), deleteLayer(2), brush(2)]);
+    const kept = await loadKept(userId);
+    if (kept.status !== "lost") throw new Error(`The drawing came back ${kept.status}`);
+    // Its ticket still carries over.
+    expect(kept.ticket).toBe(7);
+    expect(String(kept.error)).toContain("Step 3");
   });
 
   it("keeps the frame a drawing is drawn in with it, and has none for one kept without", async () => {
@@ -261,30 +386,64 @@ describe("the drawing kept on this device", () => {
 
   it("leaves a drawing it couldn't read as it was while the carried sheet is still blank", async () => {
     const userId = someone();
-    const ops = [stroke("a")];
+    const ops = [addLayer(2, 1), stroke("a")];
     const before = draw(userId, ops);
     before.keepNsfw(true);
+    before.keepCurrentLayer(2);
     // After a reload whose read was too slow, the screen carries the ticket and sets its tools.
     const after = new SessionKeeper(userId);
     after.carry(7, null);
     after.keepTools({ brushSize: 0.7, eraserSize: 0.2, smoothing: 55 });
     after.keepNsfw(false);
+    after.keepCurrentLayer(FIRST_LAYER);
     expect(await loadKept(userId)).toMatchObject({
       status: "found",
       steps: ops,
       elapsedMs: 1000,
       nsfw: true,
+      currentLayer: 2,
     });
+  });
+
+  it("keeps the layer being drawn on, and starts a new session on the first layer", async () => {
+    const userId = someone();
+    const keeper = draw(userId, [addLayer(2, 1), brush(2)]);
+    keeper.keepCurrentLayer(2);
+    expect(await loadKept(userId)).toMatchObject({ status: "found", currentLayer: 2 });
+    keeper.start(8);
+    expect(await loadKept(userId)).toMatchObject({
+      status: "found",
+      currentLayer: FIRST_LAYER,
+    });
+  });
+
+  it("opens on the first layer when the record holds none it can read, saying so unless it holds none at all", async () => {
+    const userId = someone();
+    draw(userId, [addLayer(2, 1)]).keepCurrentLayer(2);
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    // The build before layers kept none.
+    keepRecordAs(userId, { currentLayer: undefined });
+    expect(await loadKeptSession(userId)).toMatchObject({
+      status: "found",
+      currentLayer: FIRST_LAYER,
+    });
+    expect(error).not.toHaveBeenCalled();
+    const unreadable = [0, 1.5, "2", null];
+    for (const currentLayer of unreadable) {
+      keepRecordAs(userId, { currentLayer });
+      expect(await loadKeptSession(userId)).toMatchObject({
+        status: "found",
+        currentLayer: FIRST_LAYER,
+      });
+    }
+    expect(error).toHaveBeenCalledTimes(unreadable.length);
   });
 
   it("brings the drawing back without tools when what's kept has none it can read", async () => {
     const userId = someone();
     draw(userId, [stroke("a")]).keepTools({ brushSize: 0.7, eraserSize: 0.2, smoothing: 55 });
-    const key = personKey("draw.session", userId);
-    const record: unknown = JSON.parse(localStorage.getItem(key) ?? "null");
-    if (typeof record !== "object" || record === null) throw new Error("No record is kept");
     for (const tools of [undefined, { brushSize: 9, eraserSize: 0.2, smoothing: 55 }, "wide"]) {
-      localStorage.setItem(key, JSON.stringify({ ...record, tools }));
+      keepRecordAs(userId, { tools });
       const kept = await loadKept(userId);
       expect(kept).toMatchObject({ status: "found" });
       expect(kept).not.toHaveProperty("tools");
@@ -462,7 +621,7 @@ describe("the drawing kept on this device", () => {
       rolls: 2,
       begun: true,
     });
-    expect(await loadKept(userId)).toMatchObject({
+    expect(await loadKeptSession(userId)).toMatchObject({
       kyotoSeika: { subjects: [sent(WIND), sent(REUNION)], picked: [0, 1], rolls: 2, begun: true },
     });
 

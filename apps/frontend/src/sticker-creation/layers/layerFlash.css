@@ -1,0 +1,48 @@
+/* The selection flash (layerFlash.ts). Every part rests unseen and takes no touch: only the flash's
+   own animations show it. */
+.layer-flash__band,
+.layer-flash__sheen,
+.layer-flash__glints {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* A strip of the one light, soft at both sides, leaning about the sheet's middle row as the resin's
+   sheen does. The sheen canvas inside turns about the same point, so the two transforms cancel. */
+.layer-flash__band {
+  opacity: 0;
+  transform-origin: 0 50%;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 50%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 50%, transparent);
+}
+
+.layer-flash__sheen {
+  display: block;
+  transform-origin: 0 50%;
+}
+
+/* The covered ink's outline, dashed as a given sticker's outline is (3 on, 2.4 off), by stripes the
+   line crosses. */
+.layer-flash__outline {
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask-image: repeating-linear-gradient(45deg, #000 0 3px, transparent 3px 5.4px);
+  mask-image: repeating-linear-gradient(45deg, #000 0 3px, transparent 3px 5.4px);
+}
+
+.layer-flash__glints {
+  width: 100%;
+}
+
+/* The world's glint, the Gratitude sparkle's, centered on its edge pixel; layerFlash.ts sets its art. */
+.layer-flash__glint {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  background: center / contain no-repeat;
+  opacity: 0;
+}

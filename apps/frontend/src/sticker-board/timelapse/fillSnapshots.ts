@@ -1,14 +1,15 @@
 /**
- * The prepare pass. A fill floods whatever pixels are there, at the density it was drawn at, and
- * can read and write the whole sheet, too slow for playback. So each fill floods once, beforehand,
- * on a full sheet at that density, and what it changed on the display is kept to reveal. A fill can
- * reach past the frame its strokes make, which is known only once it floods: the frame then grows,
- * and the pass runs again in it.
+ * The prepare pass. A fill finds its region on what every visible layer shows, at the density it was
+ * drawn at, and can read and write the whole sheet, too slow for playback. So every step plays once,
+ * beforehand, on full sheets at that density, and what each fill changed on its own layer's view is
+ * kept to reveal there. A fill can reach past the frame its strokes make, which is known only once it
+ * floods: the frame then grows, and the pass runs again in it.
  */
 import { messageOf } from "../../i18n/errorMessage";
 import { context2d } from "../../sticker-creation/canvas/context2d";
-import { InkSurface } from "../../sticker-creation/canvas/inkSurface";
-import type { Op } from "../../sticker-creation/canvas/ops";
+import { isOp, type LayerId, type Step } from "../../sticker-creation/canvas/ops";
+import { LayerInk } from "../../sticker-creation/layers/layerInk";
+import { applyLayerStep, type LayerState } from "../../sticker-creation/layers/layerState";
 import type { Rect } from "../../sticker-creation/sealing/stickerPasses";
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import {
@@ -23,7 +24,7 @@ import { growFrame } from "./timelapseFrame";
 /** Far longer than a phone takes over a sticker's fills: only a runaway pass is given up on. */
 export const PREPARE_TIMEOUT_MS = 30_000;
 
-/** A fill's reveal: the box it changed on the display, px, and those pixels just after it. */
+/** A fill's reveal: the box it changed on its layer's view, display px, and those pixels just after it. */
 export interface FillSnapshot {
   box: Rect;
   /** How far from the tap the change reaches, display px: where the reveal's circle ends. */
@@ -32,7 +33,10 @@ export interface FillSnapshot {
 }
 
 export interface PrepareInput {
-  ops: readonly Op[];
+  /** Every step of the timelapse, in order: ops and layer steps. */
+  steps: readonly Step[];
+  /** The layers where it starts. */
+  layers: LayerState;
   /** The sheet, in sheet units. */
   ink: { width: number; height: number };
   /** Device px per sheet unit to flood at: the density the sticker was drawn at. */
@@ -51,7 +55,7 @@ export interface PrepareControl {
   yieldToPage?: () => Promise<void>;
 }
 
-/** The frame every fill fits in, each fill's snapshot by its op's index, and how many passes it took. */
+/** The frame every fill fits in, each fill's snapshot by its step's index, and how many passes it took. */
 export interface Prepared {
   frame: Rect;
   snapshots: Map<number, FillSnapshot>;
@@ -77,7 +81,7 @@ function cut(from: HTMLCanvasElement, box: Rect): HTMLCanvasElement {
 
 /**
  * Each fill's snapshot in the frame every fill fits in; a fill that changed nothing on the display has
- * none. Null when the player stopped first. Rejects naming the fill that failed.
+ * none. Null when the player stopped first. Rejects naming the step that failed.
  */
 export async function prepareFillSnapshots(
   input: PrepareInput,
@@ -101,49 +105,52 @@ export async function prepareFillSnapshots(
  * every fill, and answers the grown frame with no snapshots.
  */
 async function preparePass(
-  { ops, ink, density, viewOf }: PrepareInput,
+  { steps, layers, ink, density, viewOf }: PrepareInput,
   frame: Rect,
   control: PrepareControl,
   started: number,
 ): Promise<{ snapshots: Map<number, FillSnapshot>; grown: Rect | null } | null> {
-  const fills = ops.filter((op) => op.tool === "fill").length;
-  const lastFill = ops.findLastIndex((op) => op.tool === "fill");
+  const fills = steps.filter((step) => step.tool === "fill").length;
+  const lastFill = steps.findLastIndex((step) => step.tool === "fill");
   const view = viewOf(frame);
   const snapshots = new Map<number, FillSnapshot>();
   const letGoOfSnapshots = () => {
     snapshots.forEach((snapshot) => releaseCanvas(snapshot.canvas));
     snapshots.clear();
   };
-  const sheetCanvas = blankCanvas(1, 1);
+  const sheet = new LayerInk();
   const before = blankCanvas(view.width, view.height);
   const after = blankCanvas(view.width, view.height);
   let grown: Rect | null = null;
   let nth = 0;
   try {
-    const sheet = new InkSurface(sheetCanvas);
     sheet.setFrame({ w: ink.width, h: ink.height, density });
     const crop = sheetCrop(
       view.origin,
-      { width: sheetCanvas.width, height: sheetCanvas.height, density: sheet.density },
+      { width: sheet.width, height: sheet.height, density: sheet.density },
       view,
     );
-    // The sheet's view before and after each fill. One fill's view after is the next one's before,
-    // unless a stroke lands between them, so back-to-back fills read the sheet once each.
+    // A layer's view before and after each fill on it. One fill's view after is the next one's
+    // before, unless a step on that layer lands between them, so a run of fills on one layer reads
+    // it once each.
     let readBefore = context2d(before, { willReadFrequently: true });
     let readAfter = context2d(after, { willReadFrequently: true });
-    let beforeIsCurrent = false;
-    const cropInto = (g: CanvasRenderingContext2D) => {
+    /** The layer whose view `readBefore` holds as the layer is now. */
+    let current: LayerId | null = null;
+    const cropInto = (g: CanvasRenderingContext2D, layer: LayerId) => {
       g.clearRect(0, 0, view.width, view.height);
-      if (!crop) return;
+      const pixels = sheet.layerCanvas(layer);
+      if (!crop || !pixels) return;
       const { source: s, target: t } = crop;
-      g.drawImage(sheetCanvas, s.x, s.y, s.w, s.h, t.x, t.y, t.w, t.h);
+      g.drawImage(pixels, s.x, s.y, s.w, s.h, t.x, t.y, t.w, t.h);
     };
     const read = (g: CanvasRenderingContext2D, box: Rect) =>
       g.getImageData(box.x, box.y, box.w, box.h);
 
+    let state = layers;
     for (let i = 0; i <= lastFill; i++) {
-      const op = ops[i];
-      if (op.tool === "fill") {
+      const step = steps[i];
+      if (step.tool === "fill") {
         nth++;
         await (control.yieldToPage ?? nextTask)();
         if (control.stopped()) {
@@ -157,14 +164,15 @@ async function preparePass(
         }
       }
       try {
-        if (op.tool !== "fill") {
-          sheet.apply(op);
-          beforeIsCurrent = false;
+        if (step.tool !== "fill") {
+          sheet.apply(step, state);
+          if (!isOp(step)) state = applyLayerStep(state, step);
+          if (step.layer === current) current = null;
           continue;
         }
-        if (!grown && !beforeIsCurrent) cropInto(readBefore);
-        beforeIsCurrent = !grown;
-        const flooded = sheet.flood(op);
+        if (!grown && current !== step.layer) cropInto(readBefore, step.layer);
+        current = grown ? null : step.layer;
+        const flooded = sheet.flood(step, state);
         if (!flooded) continue;
         const d = sheet.density;
         const box = { x: flooded.x / d, y: flooded.y / d, w: flooded.w / d, h: flooded.h / d };
@@ -177,8 +185,8 @@ async function preparePass(
         }
         const area = displayBox(view, box);
         if (!area) continue;
-        cropInto(readAfter);
-        const tap = displayPoint(view.origin, view.scale, op);
+        cropInto(readAfter, step.layer);
+        const tap = displayPoint(view.origin, view.scale, step);
         const changed = changedArea(read(readBefore, area), read(readAfter, area), {
           x: tap.x - area.x,
           y: tap.y - area.y,
@@ -190,7 +198,9 @@ async function preparePass(
         [readBefore, readAfter] = [readAfter, readBefore];
       } catch (error) {
         const which =
-          op.tool === "fill" ? `fill ${nth} of ${fills}` : `stroke, op ${i + 1} of ${ops.length},`;
+          step.tool === "fill"
+            ? `fill ${nth} of ${fills}`
+            : `${isOp(step) ? "stroke" : "layer change"}, step ${i + 1} of ${steps.length},`;
         throw new Error(`Preparing the timelapse's ${which} failed: ${messageOf(error)}`, {
           cause: error,
         });
@@ -201,6 +211,7 @@ async function preparePass(
     letGoOfSnapshots();
     throw error;
   } finally {
-    [sheetCanvas, before, after].forEach(releaseCanvas);
+    sheet.releaseAll();
+    [before, after].forEach(releaseCanvas);
   }
 }

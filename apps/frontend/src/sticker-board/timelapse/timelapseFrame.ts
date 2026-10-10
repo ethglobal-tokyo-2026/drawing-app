@@ -2,7 +2,7 @@
  * Where a timelapse plays: the part of the sheet that was drawn on (its frame), and where that sits
  * on the detail's stage while it plays and once the sticker is back in its spot. Pure numbers.
  */
-import { STRIDE, type Op } from "../../sticker-creation/canvas/ops";
+import { STRIDE, type Step } from "../../sticker-creation/canvas/ops";
 import type { Rect } from "../../sticker-creation/sealing/stickerPasses";
 import { clamp } from "../../ui/easing";
 
@@ -55,15 +55,15 @@ const onSheet = ({ x0, y0, x1, y1 }: Edges, sheet: Size): Edges => ({
 });
 
 /**
- * The frame of every brush stroke, each point grown by half its width, and the sticker's place,
- * which it always holds whole: the die-cut can reach past the sheet. Eraser strokes show nothing on
- * bare paper, so they don't count.
+ * The frame of every brush stroke on every layer, each point grown by half its width, and the
+ * sticker's place, which it always holds whole: the die-cut can reach past the sheet. A layer deleted
+ * later still plays its strokes, so they count; eraser strokes show nothing on bare paper, so they don't.
  */
-export function strokeFrame(ops: readonly Op[], place: Rect, sheet: Size): Rect {
+export function strokeFrame(steps: readonly Step[], place: Rect, sheet: Size): Rect {
   const marks: Edges = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
-  for (const op of ops) {
-    if (op.tool !== "brush") continue;
-    const { pts } = op;
+  for (const step of steps) {
+    if (step.tool !== "brush") continue;
+    const { pts } = step;
     for (let i = 0; i + STRIDE <= pts.length; i += STRIDE) {
       const r = pts[i + 2] / 2;
       marks.x0 = Math.min(marks.x0, pts[i] - r);

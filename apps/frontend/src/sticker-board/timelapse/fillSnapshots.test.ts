@@ -1,8 +1,10 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { hexToRgb } from "../../sticker-creation/canvas/color";
-import { InkSurface } from "../../sticker-creation/canvas/inkSurface";
-import type { FillOp, Op, StrokeOp } from "../../sticker-creation/canvas/ops";
+import type { FillOp, Op, Step, StrokeOp } from "../../sticker-creation/canvas/ops";
+import { LayerInk } from "../../sticker-creation/layers/layerInk";
+import { FIRST_LAYERS, type LayerState } from "../../sticker-creation/layers/layerState";
+import { addLayer } from "../../sticker-creation/layers/testLayerSteps";
 import type { Rect } from "../../sticker-creation/sealing/stickerPasses";
 import {
   PREPARE_TIMEOUT_MS,
@@ -12,35 +14,48 @@ import {
 } from "./fillSnapshots";
 import { contextOf, forgetContexts, madeContexts } from "./testCanvas";
 
-vi.mock("../../sticker-creation/canvas/context2d", async () => {
-  const { fakeContext2d } = await import("./testCanvas");
-  return { context2d: fakeContext2d };
-});
+vi.mock(
+  "../../sticker-creation/canvas/context2d",
+  () => import("../../sticker-creation/canvas/testContext2d"),
+);
 /** Ops the sheet fails to apply, as if it ran out of memory. */
 const failing = vi.hoisted(() => new Set<object>());
-vi.mock("../../sticker-creation/canvas/inkSurface", async (importOriginal) => {
-  const real = await importOriginal<{ InkSurface: typeof InkSurface }>();
-  class FailingInkSurface extends real.InkSurface {
-    override apply(op: Op): void {
-      if (failing.has(op)) throw new Error("out of memory");
-      super.apply(op);
+vi.mock("../../sticker-creation/layers/layerInk", async (importOriginal) => {
+  const real = await importOriginal<{ LayerInk: typeof LayerInk }>();
+  class FailingLayerInk extends real.LayerInk {
+    override apply(step: Step, before: LayerState): void {
+      if (failing.has(step)) throw new Error("out of memory");
+      super.apply(step, before);
     }
-    override flood(op: FillOp) {
+    override flood(op: FillOp, state: LayerState) {
       if (failing.has(op)) throw new Error("out of memory");
-      return super.flood(op);
+      return super.flood(op, state);
     }
   }
-  return { ...real, InkSurface: FailingInkSurface };
+  return { ...real, LayerInk: FailingLayerInk };
 });
+/** The boxes a stroke inks black, by op, device px at density 1: the fake canvas paints no paths. */
+const inked = vi.hoisted(() => new Map<object, readonly Rect[]>());
+vi.mock("../../sticker-creation/canvas/paintStroke", () => ({
+  paintStroke: (g: CanvasRenderingContext2D, op: object) => {
+    for (const { x, y, w, h } of inked.get(op) ?? []) {
+      const black = new ImageData(w, h);
+      for (let alpha = 3; alpha < black.data.length; alpha += 4) black.data[alpha] = 255;
+      g.putImageData(black, x, y);
+    }
+  },
+}));
 
 const line: StrokeOp = {
   tool: "brush",
+  layer: 1,
   color: "#1c1824",
   T: 0,
   pts: [30, 40, 4, 0, 60, 40, 4, 16],
 };
 const fill = (color: string, T: number): FillOp => ({
   tool: "fill",
+  layer: 1,
   color,
   x: 40,
   y: 50,
@@ -54,9 +69,10 @@ const BLUE = "#0000ff";
 const SHEET = { x: 0, y: 0, w: 100, h: 100 };
 /** The frame the strokes and the sticker's place make. */
 const STROKES = { x: 20, y: 30, w: 60, h: 40 };
-/** Each frame shown 1:1 from its own top left. */
-const input = (ops: Op[], frame: Rect = SHEET): PrepareInput => ({
-  ops,
+/** Each frame shown 1:1 from its own top left, on a sheet that starts with one layer. */
+const input = (steps: Step[], frame: Rect = SHEET): PrepareInput => ({
+  steps,
+  layers: FIRST_LAYERS,
   ink: { width: SHEET.w, height: SHEET.h },
   density: 1,
   frame,
@@ -69,9 +85,9 @@ const control = (overrides: Partial<PrepareControl> = {}): PrepareControl => ({
   ...overrides,
 });
 const prepare = (
-  ops: Op[],
+  steps: Step[],
   { frame, ...overrides }: Partial<PrepareControl> & { frame?: Rect } = {},
-) => prepareFillSnapshots(input(ops, frame), control(overrides));
+) => prepareFillSnapshots(input(steps, frame), control(overrides));
 
 /** The color of a canvas's first pixel. */
 const firstPixel = (canvas: HTMLCanvasElement) => [
@@ -87,12 +103,13 @@ afterEach(() => {
   vi.restoreAllMocks();
   forgetContexts();
   failing.clear();
+  inked.clear();
 });
 
 describe("the prepare pass", () => {
   it("keeps each fill's change to the display, by its op, and none for a fill that changed nothing", async () => {
-    const applied = vi.spyOn(InkSurface.prototype, "apply");
-    const flooded = vi.spyOn(InkSurface.prototype, "flood");
+    const applied = vi.spyOn(LayerInk.prototype, "apply");
+    const flooded = vi.spyOn(LayerInk.prototype, "flood");
     const ops = [line, fill(RED, 100), fill(RED, 200), fill(BLUE, 300), line];
     const prepared = await prepare(ops);
     if (!prepared) throw new Error("it wasn't stopped");
@@ -112,6 +129,31 @@ describe("the prepare pass", () => {
       spy.mock.calls.map(([op], i) => [spy.mock.invocationCallOrder[i], op] as const);
     const onSheet = [...order(applied), ...order(flooded)].toSorted(([a], [b]) => a - b);
     expect(onSheet.map(([, op]) => op)).toEqual(ops.slice(0, 4));
+  });
+
+  it("reveals a fill on a color layer, bounded by another layer's lines, in the box it changed when drawn", async () => {
+    // A square outline, one px thick, with a spur down into it, on a layer added over the fill's.
+    const { x, y, w, h } = { x: 30, y: 40, w: 30, h: 20 };
+    const spur = { x: 45, y, w: 1, h: 10 };
+    const lines: StrokeOp = { ...line, layer: 2, T: 50 };
+    inked.set(lines, [
+      { x, y, w, h: 1 },
+      { x, y: y + h - 1, w, h: 1 },
+      { x, y, w: 1, h },
+      { x: x + w - 1, y, w: 1, h },
+      spur,
+    ]);
+    const prepared = await prepare([addLayer(2, 1), lines, fill(RED, 100)]);
+    const snapshot = prepared?.snapshots.get(2);
+    if (!snapshot) throw new Error("the fill changed nothing");
+    const inside = { x: x + 1, y: y + 1, w: w - 2, h: h - 2 };
+    expect(snapshot.box).toEqual(inside);
+    // It's the fill's own layer, so the lines' pixels in its box stay clear.
+    const at = (px: number, py: number) => [
+      ...(contextOf(snapshot.canvas)?.getImageData(px - inside.x, py - inside.y, 1, 1).data ?? []),
+    ];
+    expect(at(inside.x, inside.y)).toEqual([...hexToRgb(RED), 255]);
+    expect(at(spur.x, spur.y + 2)).toEqual([0, 0, 0, 0]);
   });
 
   it("grows the frame to hold a fill that reached past the strokes, and cuts its snapshots in that", async () => {
@@ -170,7 +212,7 @@ describe("the prepare pass", () => {
 
   it.each<[string, Op]>([
     ["fill 2 of 3", fill(BLUE, 100)],
-    ["stroke, op 2 of 4,", { ...line, T: 50 }],
+    ["stroke, step 2 of 4,", { ...line, T: 50 }],
   ])("fails naming the %s that failed, letting go of every canvas", async (named, fails) => {
     failing.add(fails);
     const ops = [fill(RED, 0), fails, fill(RED, 200), fill(BLUE, 300)].slice(

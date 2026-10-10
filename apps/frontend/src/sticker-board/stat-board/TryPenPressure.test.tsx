@@ -6,10 +6,10 @@ import type { PenPressure } from "../../sticker-creation/canvas/brush";
 import { contextOf, forgetContexts } from "../timelapse/testCanvas";
 import { TryPenPressure } from "./TryPenPressure";
 
-vi.mock("../../sticker-creation/canvas/context2d", async () => {
-  const { fakeContext2d } = await import("../timelapse/testCanvas");
-  return { context2d: fakeContext2d };
-});
+vi.mock(
+  "../../sticker-creation/canvas/context2d",
+  () => import("../../sticker-creation/canvas/testContext2d"),
+);
 
 /** The strip's size on screen, in CSS px, and the row strokes are drawn along. */
 const [WIDTH, HEIGHT] = [300, 64];
@@ -31,23 +31,23 @@ afterEach(() => {
 });
 
 /** Try it under `response`, measured on screen as it is in Settings. */
-function strip(response: PenPressure, fingersDraw = true): HTMLCanvasElement {
+function strip(response: PenPressure, fingersDraw = true): HTMLElement {
   vi.stubGlobal("requestAnimationFrame", (frame: (time: number) => void) => frames.push(frame));
   vi.stubGlobal("cancelAnimationFrame", () => {});
   const view = renderWithApi(<TryPenPressure response={response} fingersDraw={fingersDraw} />);
   unmount = view.unmount;
-  const canvas = view.host.querySelector<HTMLCanvasElement>(".try-pen-pressure__ink");
-  if (!canvas) throw new Error("No Try it strip");
-  canvas.getBoundingClientRect = () => new DOMRect(0, 0, WIDTH, HEIGHT);
-  Object.defineProperties(canvas, {
+  const paper = view.host.querySelector<HTMLElement>(".try-pen-pressure__ink");
+  if (!paper) throw new Error("No Try it strip");
+  paper.getBoundingClientRect = () => new DOMRect(0, 0, WIDTH, HEIGHT);
+  Object.defineProperties(paper, {
     clientWidth: { value: WIDTH },
     clientHeight: { value: HEIGHT },
   });
-  return canvas;
+  return paper;
 }
 
 /** A pointer landing on the first sample, moving through the rest a frame apart, lifting on the last. */
-function draw(canvas: HTMLCanvasElement, pointerType: string, samples: Sample[]) {
+function draw(paper: HTMLElement, pointerType: string, samples: Sample[]) {
   const send = (type: string, [x, y, pressure]: Sample, t: number) => {
     const event = new PointerEvent(type, {
       bubbles: true,
@@ -61,7 +61,7 @@ function draw(canvas: HTMLCanvasElement, pointerType: string, samples: Sample[])
     });
     Object.defineProperty(event, "timeStamp", { value: t });
     act(() => {
-      canvas.dispatchEvent(event);
+      paper.dispatchEvent(event);
       for (const frame of frames.splice(0)) frame(t);
     });
   };
@@ -71,9 +71,10 @@ function draw(canvas: HTMLCanvasElement, pointerType: string, samples: Sample[])
   send("pointerup", samples[samples.length - 1], samples.length * SAMPLE_MS);
 }
 
-/** Every point the strip painted, as the circles its stroke is built from. */
-const painted = (canvas: HTMLCanvasElement) =>
-  (contextOf(canvas)?.calls ?? [])
+/** Every point the strip's canvases painted, live and once it landed, as the circles its stroke is built from. */
+const painted = (paper: HTMLElement) =>
+  [...paper.querySelectorAll("canvas")]
+    .flatMap((canvas) => contextOf(canvas)?.calls ?? [])
     .filter(([name]) => name === "arc")
     .map(([, x, y, r]) => ({ x: Number(x), y: Number(y), r: Number(r) }));
 
@@ -88,18 +89,18 @@ const pressing = (jitter = 0): Sample[] =>
 
 describe("Try it", () => {
   it("draws with Smoothing as a fresh sheet does: a pen's jitter steadies", () => {
-    const canvas = strip("normal");
-    draw(canvas, "pen", pressing(JITTER));
-    const strays = painted(canvas).map(({ y }) => Math.abs(y - ROW));
+    const paper = strip("normal");
+    draw(paper, "pen", pressing(JITTER));
+    const strays = painted(paper).map(({ y }) => Math.abs(y - ROW));
     expect(strays.length).toBeGreaterThan(0);
     expect(Math.max(...strays)).toBeLessThan(JITTER);
   });
 
   it("draws a pen's pressure through the chosen curve: wider under Light than Firm", () => {
     const middle = (response: PenPressure) => {
-      const canvas = strip(response);
-      draw(canvas, "pen", pressing());
-      const radii = painted(canvas).map(({ r }) => r);
+      const paper = strip(response);
+      draw(paper, "pen", pressing());
+      const radii = painted(paper).map(({ r }) => r);
       return radii.toSorted((a, b) => a - b)[radii.length >> 1];
     };
     expect(middle("light")).toBeGreaterThan(middle("firm"));
@@ -107,9 +108,9 @@ describe("Try it", () => {
 
   it("lets fingers draw only where they draw on the sheet", () => {
     for (const fingersDraw of [false, true]) {
-      const canvas = strip("normal", fingersDraw);
-      draw(canvas, "touch", pressing());
-      expect(painted(canvas).length > 0).toBe(fingersDraw);
+      const paper = strip("normal", fingersDraw);
+      draw(paper, "touch", pressing());
+      expect(painted(paper).length > 0).toBe(fingersDraw);
     }
   });
 });

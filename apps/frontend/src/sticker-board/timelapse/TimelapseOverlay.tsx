@@ -6,24 +6,24 @@ import "./timelapse.css";
  * the figure, not in it, since the detail's lift clones the figure and a cloned canvas is blank. A tap
  * skips to the end.
  */
-export function TimelapseLayer({ timelapse }: { timelapse: Timelapse }) {
+export function TimelapseOverlay({ timelapse }: { timelapse: Timelapse }) {
   const {
     sticker,
     phase,
     skip,
-    attach: { layer: layerRef, paper: paperRef, canvas: canvasRef },
+    attach: { overlay: overlayRef, paper: paperRef, canvas: canvasRef },
   } = timelapse;
   if (!sticker || phase === "idle" || phase === "loading") return null;
   return (
     <div
-      ref={layerRef}
-      className="timelapse-layer"
+      ref={overlayRef}
+      className="timelapse-overlay"
       data-phase={phase}
       aria-hidden="true"
       onClick={skip}
     >
-      <span ref={paperRef} className="timelapse-layer__paper" />
-      <canvas ref={canvasRef} className="timelapse-layer__ink" />
+      <span ref={paperRef} className="timelapse-overlay__paper" />
+      <canvas ref={canvasRef} className="timelapse-overlay__ink" />
     </div>
   );
 }

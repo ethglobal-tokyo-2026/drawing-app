@@ -21,11 +21,46 @@
   --foot-inset: 18px;
   --history-gap: 6px;
   --board-gap: 16px;
+  --phone-rail-h: clamp(120px, calc(100% - 196px), 222px);
+}
+
+/* The layer column continues down the edge after the size rail. Its list scrolls before the foot
+   tiles, while the options bar reaches toward the sheet. */
+.drawing-screen > .drawing-layer-column {
+  position: absolute;
+  top: calc(104px + var(--phone-rail-h) + 12px);
+  bottom: 92px;
+  left: var(--far-left) 0;
+  right: var(--far-right) 0;
+  z-index: 4;
+  pointer-events: none;
+  transition: opacity var(--t-pop) var(--ease-out);
+}
+
+.drawing-layer-column .layer-column {
+  height: 100%;
+}
+.drawing-layer-column .layer-body {
+  flex: 1;
+}
+.drawing-layer-column .layer-list {
+  max-height: 100%;
+}
+.drawing-layer-column.is-pen-hovered .layer-slider {
+  opacity: 0;
+}
+.drawing-layer-column .layer-slider {
+  transition: opacity 120ms var(--ease-out);
 }
 
 .drawing-screen :focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
+}
+
+/* With a panel open, a pen's press on the sheet only closes it, so no ring shows where it would mark. */
+.drawing-screen.has-panel .nib-ring {
+  display: none;
 }
 
 /* One row, the timer on the left and the tools on the right, so the sheet keeps its height. */
@@ -50,7 +85,7 @@
 /* While sealing, the tools step back; the ceremony owns the screen. A seal to try again keeps only
    the seal key and its chip, since the sheet can't change. */
 .drawing-screen:is(.is-sealing, .is-retrying)
-  :is(.drawing-top, .panel-bar, .size-rail, .history-buttons),
+  :is(.drawing-top, .panel-bar, .size-rail, .drawing-layer-column, .history-buttons),
 .drawing-screen.is-sealing :is(.seal-chip, .seal-key) {
   opacity: 0;
   pointer-events: none;
@@ -64,7 +99,7 @@
 
 /* Once faded, the tools leave the tab order and the screen reader's too, so only the seal key is left. */
 .drawing-screen:is(.is-sealing, .is-retrying)
-  :is(.drawing-top, .panel-bar, .size-rail, .history-buttons) {
+  :is(.drawing-top, .panel-bar, .size-rail, .drawing-layer-column, .history-buttons) {
   visibility: hidden;
   transition-property: opacity, visibility;
   transition-delay: 0s, 220ms;
@@ -83,7 +118,8 @@
 
 /* A sheet in Kyoto Seika Practice Mode waits for Begin with its tools put away, as an exam waits for
    始め: only the timer, the balloons and Begin show. */
-.drawing-screen.is-dealt :is(.tool-strip, .size-rail, .history-buttons, .seal-key) {
+.drawing-screen.is-dealt
+  :is(.tool-strip, .size-rail, .drawing-layer-column, .history-buttons, .seal-key) {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -96,7 +132,8 @@
 }
 
 /* 0:00 is pencils down: the tools fade as the time's-up sheet rises, and only the clock stays. */
-.drawing-screen.is-time-up :is(.tool-strip, .size-rail, .history-buttons, .my-board-tile) {
+.drawing-screen.is-time-up
+  :is(.tool-strip, .size-rail, .drawing-layer-column, .history-buttons, .my-board-tile) {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -107,7 +144,8 @@
 
 /* Begin: the tools come back a beat after the deal starts to leave, as after Keep drawing, and My
    board with them, in its own place. */
-.drawing-screen.is-deal-leaving :is(.tool-strip, .size-rail, .history-buttons, .my-board-tile) {
+.drawing-screen.is-deal-leaving
+  :is(.tool-strip, .size-rail, .drawing-layer-column, .history-buttons, .my-board-tile) {
   animation: tools-back 220ms var(--ease-out) 120ms both;
 }
 
@@ -120,7 +158,7 @@
 /* Keep drawing: the fresh sheet's timer and tools come back a beat after the sealed card starts to
    leave, so the eye goes with the card first, and the sheet is never bare. */
 .drawing-screen:has(> .seal-ceremony.is-leaving)
-  :is(.drawing-top, .size-rail, .history-buttons, .my-board-tile) {
+  :is(.drawing-top, .size-rail, .drawing-layer-column, .history-buttons, .my-board-tile) {
   transition-delay: 120ms;
 }
 
@@ -200,6 +238,13 @@
   right: 10px;
 }
 
+/* The note stays in its corner; the list scrolls above its actual height on a Kyoto Seika sheet. */
+@media (max-width: 599px) {
+  .drawing-screen[data-kyoto-pair] > .drawing-layer-column {
+    bottom: var(--corner-print-clearance, 260px);
+  }
+}
+
 .drawing-screen[data-hand="left"] > .kyoto-seika-deal {
   transform-origin: calc(100% - 40px) calc(100% - 270px);
 }
@@ -215,10 +260,11 @@
     /* The app stops the screen above the home indicator. */
     --foot: 8px;
     /* The rail, then undo, redo and My board under it, centered on the sidebar's height. */
-    --rail-h: 180px;
+    --rail-h: 150px;
+    --layer-h: clamp(100px, calc(100% - 470px), 300px);
     --tiles-h: calc(3 * var(--foot-tile) + var(--history-gap) + var(--board-gap));
-    --rail-top: calc(50% - (var(--rail-h) + 16px + var(--tiles-h)) / 2);
-    --tiles-top: calc(var(--rail-top) + var(--rail-h) + 16px);
+    --rail-top: clamp(72px, calc(50% - 390px), 230px);
+    --tiles-top: calc(var(--rail-top) + var(--rail-h) + var(--layer-h) + 32px);
     --timer-inset: 8px;
     --tools-inset: 8px;
   }
@@ -243,6 +289,14 @@
     right: var(--far-right) calc((var(--edge-w) - 40px) / 2);
     top: var(--rail-top);
     height: var(--rail-h);
+  }
+
+  .drawing-screen > .drawing-layer-column {
+    top: calc(var(--rail-top) + var(--rail-h) + 16px);
+    bottom: auto;
+    height: var(--layer-h);
+    left: var(--far-left) calc((var(--edge-w) - 50px) / 2);
+    right: var(--far-right) calc((var(--edge-w) - 50px) / 2);
   }
 
   .drawing-screen > .size-rail .size-num {
