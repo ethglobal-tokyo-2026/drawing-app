@@ -1,5 +1,5 @@
 PRAGMA foreign_keys=OFF;--> statement-breakpoint
--- Each sticker's drawn size is read from its timelapse into sticker_drawn_sizes before this runs (packages/db/src/drawnSizes.ts); a database without stickers has none to read.
+-- Each sticker's drawn size was read from its timelapse into sticker_drawn_sizes before this ran, by a one-shot step since removed; a database without stickers had none to read.
 CREATE TABLE IF NOT EXISTS `sticker_drawn_sizes` (`sticker_id` text PRIMARY KEY NOT NULL, `drawn_width` real NOT NULL, `drawn_height` real NOT NULL);--> statement-breakpoint
 CREATE TABLE `__new_stickers` (
 	`id` text PRIMARY KEY NOT NULL,
