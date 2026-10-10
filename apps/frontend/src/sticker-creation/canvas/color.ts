@@ -1,3 +1,5 @@
+import { clamp01 } from "../../ui/easing";
+
 /** Hue 0–360, saturation and value 0–1. */
 export interface Hsv {
   h: number;
@@ -12,7 +14,7 @@ export function hexToRgb(hex: string): [number, number, number] {
 }
 
 const channel = (unit: number) =>
-  Math.round(Math.min(1, Math.max(0, unit)) * 255)
+  Math.round(clamp01(unit) * 255)
     .toString(16)
     .padStart(2, "0");
 
