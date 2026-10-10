@@ -24,9 +24,18 @@ export type ApiErrorCode =
   | "sponsor_fund_empty"
   | "sponsor_unavailable"
   | "signature_invalid";
+export { replayHitProblems } from "./gratitude/replayHits.ts";
 export { MAX_PERFORMANCE_REPORT_CHARS } from "./performanceReportLimits.ts";
 export { HANDLE_MAX_LENGTH } from "./session/handleLimit.ts";
 export { MAX_LARGE_LAYOUT_BATCH } from "./stickerBoards/largeLayoutLimit.ts";
+export {
+  CUT_PAD,
+  MAX_CUT_SIDE,
+  MAX_FLAT_SIDE,
+  MAX_SHARP_IMAGE_SIDE,
+  MAX_STICKER_IMAGE_SIDE,
+  SHARP_CUT_SIDE,
+} from "./stickers/imageSides.ts";
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
 export { TOKYO_UTC_OFFSET_MS, tokyoTicketDay } from "./ticketDays.ts";
 export { purchaseNamedBy } from "./tickets/paymentReference.ts";

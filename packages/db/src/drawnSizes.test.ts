@@ -1,38 +1,12 @@
-import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { describe, expect, it } from "vitest";
 import { migrateDatabase } from "./migrate.ts";
+import { databaseBefore } from "./testDb.ts";
 
-const DRAWN_SIZE_MIGRATION = /_drawn_size$/;
-
-/** A database migrated up to just before the drawn size migration, as the box's is before it ships. */
+/** A database migrated up to just before the drawn size migration, as the box's was before it shipped. */
 function databaseBeforeDrawnSize() {
-  const dir = mkdtempSync(join(tmpdir(), "drawing-app-drawn-size-"));
-  const folder = join(dir, "drizzle");
-  cpSync(fileURLToPath(new URL("../drizzle", import.meta.url)), folder, { recursive: true });
-  const journalPath = join(folder, "meta", "_journal.json");
-  const journal: unknown = JSON.parse(readFileSync(journalPath, "utf8"));
-  const entries =
-    journal !== null && typeof journal === "object" && "entries" in journal ? journal.entries : [];
-  if (!Array.isArray(entries)) throw new Error("The drizzle journal lists no entries");
-  const at = entries.findIndex(
-    (entry: unknown) =>
-      entry !== null &&
-      typeof entry === "object" &&
-      "tag" in entry &&
-      typeof entry.tag === "string" &&
-      DRAWN_SIZE_MIGRATION.test(entry.tag),
-  );
-  writeFileSync(journalPath, JSON.stringify({ ...Object(journal), entries: entries.slice(0, at) }));
-  const path = join(dir, "test.db");
-  const sqlite = new Database(path);
-  migrate(drizzle({ client: sqlite }), { migrationsFolder: folder });
+  const { path, sqlite } = databaseBefore("0008_drawn_size");
   sqlite.exec(
     "insert into users (id, line_user_id, line_display_name, language) values ('u', 'line-u', 'U', 'ja')",
   );
@@ -51,7 +25,7 @@ function insertOldSticker(
   const id = `sticker-${n}`;
   sqlite
     .prepare(
-      "insert into stickers (id, number, artist_id, owner_id, time_used, width, height, outline, nsfw, content_hash) values (?, ?, 'u', 'u', 1, 100, 100, 'M0 0Z', 0, ?)",
+      "insert into stickers (id, number, artist_id, owner_id, time_used, width, height, outline, nsfw, content_hash) values (?, ?, 'u', 'u', 1, 120, 80, 'M0 0Z', 0, ?)",
     )
     .run(id, n, hash(n));
   if (place) {
@@ -91,11 +65,28 @@ describe("the drawn size migration", () => {
     expect(byId.get(big)?.scale).toBe(0.34);
   });
 
-  it("refuses to migrate, naming the sticker, when a sticker has no timelapse to read it from", () => {
+  it("takes the image's size for a sticker sealed without a timelapse", () => {
     const { path, sqlite } = databaseBeforeDrawnSize();
     insertOldSticker(sqlite, 7, null, 0.3);
     sqlite.close();
 
-    expect(() => migrateDatabase(path)).toThrow(/No\.7 sticker-7 \(it has no timelapse\)/);
+    migrateDatabase(path);
+
+    const migrated = new Database(path, { readonly: true });
+    const sticker = migrated
+      .prepare<[], { width: number; height: number; drawn_width: number; drawn_height: number }>(
+        "select width, height, drawn_width, drawn_height from stickers",
+      )
+      .get();
+    expect(sticker?.drawn_width).toBe(sticker?.width);
+    expect(sticker?.drawn_height).toBe(sticker?.height);
+  });
+
+  it("refuses to migrate, naming the sticker, when its timelapse records no size", () => {
+    const { path, sqlite } = databaseBeforeDrawnSize();
+    insertOldSticker(sqlite, 7, [0, 0, 0, 0], 0.3);
+    sqlite.close();
+
+    expect(() => migrateDatabase(path)).toThrow(/No\.7 sticker-7 \(its timelapse's place/);
   });
 });

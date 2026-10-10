@@ -4,6 +4,7 @@ import type { Clock, LineChatMenu } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
 import type { LineMessaging } from "../services/lineMessaging.ts";
 import { kyotoSeikaPracticeOn } from "../shapes.ts";
+import { oneAtATime } from "../sui/oneAtATime.ts";
 import { ticketsLeftOf } from "../tickets/tickets.ts";
 import { chatMenuFor, menuToLink, type ChatMenuIds, type ChatMenuOffReason } from "./menus.ts";
 
@@ -30,19 +31,18 @@ export function createLineChatMenu({
   line: LineMessaging;
   ids: ChatMenuIds;
 }): LineChatMenu {
-  // Each person's calls run in turn, so a link that read an older count can't land after a newer one.
-  const turns = new Map<string, Promise<void>>();
+  /** Every call made and not yet settled, for idle. */
+  const calls = new Set<Promise<void>>();
 
+  // Each person's calls run in turn, so a link that read an older count can't land after a newer one.
   function inTurn<T>(userId: string, call: () => Promise<T>): Promise<T> {
-    const result = (turns.get(userId) ?? Promise.resolve()).then(call);
-    const turn = result.then(
+    const result = oneAtATime(`chat-menu:${userId}`, call);
+    const settled = result.then(
       () => undefined,
       () => undefined,
     );
-    turns.set(userId, turn);
-    void turn.then(() => {
-      if (turns.get(userId) === turn) turns.delete(userId);
-    });
+    calls.add(settled);
+    void settled.then(() => calls.delete(settled));
     return result;
   }
 
@@ -92,7 +92,7 @@ export function createLineChatMenu({
       }).catch((error: unknown) => logFailure("chat_menu.unlink_failed", error, { userId })),
 
     async idle() {
-      while (turns.size > 0) await Promise.all(turns.values());
+      while (calls.size > 0) await Promise.all(calls);
     },
   };
 }

@@ -21,6 +21,7 @@ import {
   toStickerPlacement,
   type StickerPngKind,
 } from "../shapes.ts";
+import { MAX_FLAT_SIDE, MAX_SHARP_IMAGE_SIDE } from "./imageSides.ts";
 import { mintSticker } from "./mint.ts";
 import type { SealForm } from "./sealForm.ts";
 import { timelapseProblem } from "./timelapse.ts";
@@ -67,14 +68,24 @@ function pngSize(bytes: Uint8Array): { width: number; height: number } | null {
   return { width: view.getUint32(IHDR_WIDTH_AT), height: view.getUint32(IHDR_HEIGHT_AT) };
 }
 
-/** Each image must be a PNG, and the sticker PNG and its mask the sticker's size. */
+/** A refusal of an image whose long side is past `maxSide`, which the app never makes; null within it. */
+function oversized(part: string, size: { width: number; height: number }, maxSide: number) {
+  if (Math.max(size.width, size.height) <= maxSide) return null;
+  return invalid(`${part}: ${size.width}×${size.height} px, past the largest ${maxSide} px side`);
+}
+
+/**
+ * Each image must be a PNG, the sticker PNG and its mask the sticker's size, which the form bounds,
+ * and the flat sheet no larger than the app makes it. Read from the header, before anything decodes it.
+ */
 function checkImages(pngs: StickerPngs, { width, height }: SealForm): SealRefusal | null {
   for (const part of stickerPngsSchema.keyof().options) {
     const size = pngSize(pngs[part]);
     if (!size) return invalid(`${part}: not a PNG`);
-    // flat is sheet-sized, so only these two match the sticker.
-    const stickerSized = part === "png" || part === "mask";
-    if (stickerSized && (size.width !== width || size.height !== height)) {
+    if (part === "flat") {
+      const refused = oversized(part, size, MAX_FLAT_SIDE);
+      if (refused) return refused;
+    } else if (size.width !== width || size.height !== height) {
       return invalid(
         `${part}: ${size.width}×${size.height} px, not the sticker's ${width}×${height}`,
       );
@@ -83,7 +94,7 @@ function checkImages(pngs: StickerPngs, { width, height }: SealForm): SealRefusa
   return null;
 }
 
-/** A sharp copy must be a PNG larger than the sticker's on both sides. */
+/** A sharp copy must be a PNG larger than the sticker's on both sides, and no larger than the app makes it. */
 function checkSharp(sharp: Uint8Array, { width, height }: SealForm): SealRefusal | null {
   const size = pngSize(sharp);
   if (!size) return invalid("sharp: not a PNG");
@@ -92,7 +103,7 @@ function checkSharp(sharp: Uint8Array, { width, height }: SealForm): SealRefusal
       `sharp: ${size.width}×${size.height} px, not larger than the sticker's ${width}×${height}`,
     );
   }
-  return null;
+  return oversized("sharp", size, MAX_SHARP_IMAGE_SIDE);
 }
 
 /** Whether the person can seal on this ticket: theirs, and not yet a sticker. */

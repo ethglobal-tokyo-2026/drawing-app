@@ -14,6 +14,7 @@ import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import type { AppDeps } from "../deps.ts";
+import { describeIssues } from "../diagnostics.ts";
 import { apiError, invalidRequest } from "../errors.ts";
 import {
   bytes32Schema,
@@ -23,7 +24,8 @@ import {
   type Gratitude,
   type Refusal,
 } from "../shapes.ts";
-import { countedTouches, gzipReplay, replayV1Schema } from "./replay.ts";
+import { gzipReplay, replayV1Schema } from "./replay.ts";
+import { replayHitProblems } from "./replayHits.ts";
 
 /** The part of a combo's total that goes to the Original Artist, out of the giver's part. */
 export const ORIGINAL_ARTIST_GRATITUDE_SHARE = 0.2;
@@ -35,8 +37,6 @@ export const ORIGINAL_ARTIST_GRATITUDE_SHARE = 0.2;
 export const MAX_GRATITUDE_PER_HIT = Math.ceil(
   GRATITUDE_PER_HIT * MAX_PEAK_MULT * Math.max(1, METHOD_WEIGHT),
 );
-/** The most a `keepalive` request can carry, and the Mini-game sends its combo with one. */
-export const MAX_GRATITUDE_BODY_BYTES = 64 * 1024;
 const MAX_GAME_CONFIG_VERSION_LENGTH = 64;
 
 /**
@@ -74,22 +74,8 @@ export const recordGratitudeSchema = createInsertSchema(gratitude, {
     }
   })
   .superRefine(({ method, hits, replay }, ctx) => {
-    const report = (field: keyof typeof replay, message: string) =>
+    for (const { field, message } of replayHitProblems({ method, hits }, replay)) {
       ctx.addIssue({ code: "custom", path: ["replay", field], message });
-    const counted = countedTouches(replay);
-    if (method === "tap") {
-      if (counted !== hits)
-        report("hits", `${counted} counted touches in a tap combo of ${hits} hits`);
-      if (replay.switchedAtHit !== null) {
-        report("switchedAtHit", `${replay.switchedAtHit} in a tap combo, which never switched`);
-      }
-    } else {
-      if (counted > hits) report("hits", `${counted} counted touches, more than the ${hits} hits`);
-      if (replay.switchedAtHit === null) {
-        report("switchedAtHit", `null in a ${method} combo, which switched from tapping`);
-      } else if (replay.switchedAtHit > hits) {
-        report("switchedAtHit", `${replay.switchedAtHit}, past the combo's ${hits} hits`);
-      }
     }
   });
 export type RecordGratitude = z.infer<typeof recordGratitudeSchema>;
@@ -102,10 +88,7 @@ export function replayInvalidHook(result: Parameters<typeof invalidRequest>[0], 
   if (result.success) return undefined;
   const { issues } = result.error;
   if (issues.some((issue) => issue.path[0] !== "replay")) return invalidRequest(result, c);
-  const detail = issues
-    .map((issue) => `${issue.path.map(String).join(".")}: ${issue.message}`)
-    .join("; ");
-  return apiError(c, 400, "replay_invalid", detail);
+  return apiError(c, 400, "replay_invalid", describeIssues(issues));
 }
 
 export const gratitudeResponseSchema = z.object({ gratitude: gratitudeSchema });

@@ -315,6 +315,8 @@ describe("GET /api/users", () => {
     const found = ["ALIBI", "alice", "Kali", "malice"];
     expect(await handlesFound(me, "ali")).toEqual(found);
     expect(await handlesFound(me, " @ALI ")).toEqual(found);
+    // Full-width, as a Japanese keyboard can type it, with a full-width @.
+    expect(await handlesFound(me, "＠ＡＬＩ")).toEqual(found);
     expect(await handlesFound(me, "alie")).toEqual([]);
   });
 

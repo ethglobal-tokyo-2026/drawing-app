@@ -7,12 +7,13 @@ export const users = sqliteTable(
   {
     id: text("id").primaryKey(),
     /**
-     * The verified ID token's `sub`, set at the first sign-in. Finds a returning person and their
-     * Privy user, and links their chat menu. Cleared on account deletion.
+     * LINE's user ID (`sub`) in the profile a verified LIFF access token names, set at the first
+     * sign-in. Finds a returning person and their Privy user, and links their chat menu. Cleared on
+     * account deletion.
      */
     lineUserId: text("line_user_id").unique(),
     /**
-     * From the verified ID token, refreshed at every sign-in. LINE gives each person only their own
+     * From that LINE profile, refreshed at every sign-in. LINE gives each person only their own
      * profile, so this is how other people see them. Cleared on account deletion.
      */
     lineDisplayName: text("line_display_name"),

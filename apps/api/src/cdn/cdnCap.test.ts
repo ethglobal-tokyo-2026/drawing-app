@@ -2,6 +2,7 @@ import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest"
 import { fakeClock } from "../testing/fakes.ts";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
 import {
+  CDN_CAP_BLIND_AFTER_MS,
   CDN_CAP_EVERY_MS,
   CDN_PAUSE_SHARE,
   CDN_WARN_SHARE,
@@ -96,17 +97,23 @@ describe("the CDN cap", () => {
       const { state, sent, check } = fakes({ usage: usageAt(CDN_PAUSE_SHARE, by) });
       await check();
       await check();
-      expect(state).toMatchObject({ cap: OCTOBER, warned: OCTOBER });
+      expect(state.cap).toBe(OCTOBER);
       expect(sent).toHaveLength(1);
       expect(sent[0]?.text).toMatch(/paused/);
       logs.expectLogged("cdn.cap.paused", { cap: OCTOBER });
     },
   );
 
-  it("pauses a site it warned about earlier in the month", async () => {
-    const { state, check } = fakes({ usage: PAUSED, warned: OCTOBER });
+  it("pauses a site it warned about earlier in the month, and tells the operator of the pause once", async () => {
+    const { state, sent, check } = fakes({ usage: WARNED });
     await check();
-    expect(state.cap).toBe(OCTOBER);
+    expect(sent).toHaveLength(1);
+    const paused = fakes({ usage: PAUSED, cap: state.cap, warned: state.warned });
+    await paused.check();
+    await paused.check();
+    expect(paused.state.cap).toBe(OCTOBER);
+    expect(paused.sent).toHaveLength(1);
+    expect(paused.sent[0]?.text).toMatch(/paused/);
   });
 
   it("says nothing and changes nothing below the warning", async () => {
@@ -142,8 +149,8 @@ describe("the CDN cap", () => {
     expect(state).toMatchObject({ cap: OCTOBER, warned: "" });
     logs.expectLogged("cdn.cap.warn_failed", { cap: OCTOBER });
     await check();
+    await check();
     expect(sent).toHaveLength(1);
-    expect(state.warned).toBe(OCTOBER);
   });
 
   it("reminds the operator on each of TOKEN_REMINDER_DAYS before Fastly's token expires, and on no other day", async () => {
@@ -213,6 +220,35 @@ describe("the CDN cap", () => {
     await job.idle();
     expect(schedule).toHaveBeenCalledTimes(2);
     expect(logs.entries.filter(({ event }) => event === "cdn.cap.checked")).toHaveLength(1);
+    job.stop();
+  });
+
+  it("tells the operator once a day once checks have failed for CDN_CAP_BLIND_AFTER_MS", async () => {
+    const { cdn, sent, tellOperator } = fakes({ usage: BELOW_WARNING });
+    cdn.usageSince = () => Promise.reject(new Error("Fastly answered HTTP 503"));
+    const clock = fakeClock(LAST_EVENING_OF_OCTOBER);
+    const runs: (() => void)[] = [];
+    const job = startCdnCap({
+      cdn,
+      clock,
+      tellOperator,
+      schedule: (run) => {
+        runs.push(run);
+        return () => {};
+      },
+    });
+    const checkAfter = async (ms: number) => {
+      clock.advance(ms);
+      runs.shift()?.();
+      await job.idle();
+    };
+    await job.idle();
+    await checkAfter(CDN_CAP_BLIND_AFTER_MS - 1);
+    expect(sent).toEqual([]);
+    await checkAfter(1);
+    await checkAfter(CDN_CAP_EVERY_MS);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.text).toContain("Fastly answered HTTP 503");
     job.stop();
   });
 

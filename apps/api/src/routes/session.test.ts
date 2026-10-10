@@ -2,6 +2,7 @@ import { stickers, users } from "@drawing-app/db";
 import { insertUser } from "@drawing-app/db/testing";
 import { MAX_ACCESS_TOKEN_LENGTH } from "@drawing-app/line-auth/line";
 import { eq } from "drizzle-orm";
+import { serializeSigned } from "hono/utils/cookie";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { MAX_BODY_BYTES } from "../app.ts";
@@ -72,6 +73,26 @@ describe("signing in", () => {
   it("keeps the session for SESSION_MAX_AGE_S", async () => {
     const cookie = (await signIn(ALICE)).headers.get("set-cookie") ?? "";
     expect(cookie).toContain(`Max-Age=${SESSION_MAX_AGE_S}`);
+  });
+
+  it("ends the session SESSION_MAX_AGE_S after signing in, for a copy of its cookie too", async () => {
+    const headers = sessionCookie(await signIn(ALICE));
+    test.clock.advance(SESSION_MAX_AGE_S * 1000 - 1);
+    expect((await getMe(headers)).status).toBe(200);
+    test.clock.advance(1);
+    expect(await refusalOf(await getMe(headers))).toMatchObject({
+      status: 401,
+      error: "signed_out",
+    });
+  });
+
+  it("signs out a cookie signed before sessions carried their end", async () => {
+    const { id } = await meIn(await signIn(ALICE));
+    const headers = { Cookie: await serializeSigned(SESSION_COOKIE, id, test.deps.sessionSecret) };
+    expect(await refusalOf(await getMe(headers))).toMatchObject({
+      status: 401,
+      error: "signed_out",
+    });
   });
 
   it("asks for a handle when the LINE name is taken in another letter case, or breaks the rules", async () => {
@@ -255,6 +276,41 @@ describe("your handle", () => {
     // Each emoji is two UTF-16 units but one code point.
     const emoji = "🎨".repeat(HANDLE_MAX_LENGTH);
     expect(await meIn(await setHandle(headers, emoji))).toMatchObject({ handle: emoji });
+  });
+
+  it("is stored NFKC-normalized, so a full-width or decomposed form is the handle it looks like", async () => {
+    insertUser(test.db, { handle: "sakura" });
+    const headers = await test.signInAs(insertUser(test.db));
+    expect(await refusalOf(await setHandle(headers, "ＳＡＫＵＲＡ"))).toMatchObject({
+      status: 409,
+      error: "handle_taken",
+    });
+    // が as か and a combining dakuten, as some keyboards write it.
+    expect(await meIn(await setHandle(headers, "か\u3099く"))).toMatchObject({ handle: "がく" });
+  });
+
+  it("refuses hidden characters, keeping the ones an emoji is written with", async () => {
+    const headers = await test.signInAs(insertUser(test.db));
+    // A zero-width space, a right-to-left override, a soft hyphen, a newline, a Hangul filler, and a
+    // zero-width joiner with no emoji around it.
+    const hiding = [
+      "sakura\u200B",
+      "\u202Esakura",
+      "saku\u00ADra",
+      "saku\nra",
+      "sakura\u3164",
+      "sakura\u200D",
+    ];
+    for (const handle of hiding) {
+      expect(await refusalOf(await setHandle(headers, handle)), handle).toMatchObject({
+        status: 400,
+        error: "handle_invalid",
+      });
+    }
+    // A woman technologist, a heart on fire and a keycap 1: joiners and variation selectors.
+    for (const emoji of ["👩\u200D💻", "❤\uFE0F\u200D🔥", "1\uFE0F\u20E3"]) {
+      expect(await meIn(await setHandle(headers, emoji))).toMatchObject({ handle: emoji });
+    }
   });
 
   it("refuses someone else's handle in another letter case, and a handle that breaks the rules", async () => {

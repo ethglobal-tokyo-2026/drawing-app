@@ -1,3 +1,4 @@
+import { IncomingMessage } from "node:http";
 import { stickers } from "@drawing-app/db";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { eq, or } from "drizzle-orm";
@@ -18,6 +19,7 @@ import { sessionRoutes } from "./routes/session.ts";
 import { stickerBoardRoutes } from "./routes/stickerBoards.ts";
 import { stickerRoutes } from "./routes/stickers.ts";
 import { ticketRoutes } from "./routes/tickets.ts";
+import { storedImageFile } from "./services/imageStore.ts";
 import { requireSession, sessionUser, type AppEnv } from "./session.ts";
 import { optedIntoNsfw } from "./shapes.ts";
 import { isNsfwDrawing } from "./stickers/nsfwDrawing.ts";
@@ -78,21 +80,42 @@ const serverLogQuerySchema = z.object({
 });
 
 /**
- * The files that show a sticker's drawing, by its content hash: its PNG and display WebP, the flat
- * sheet, its sharp copy's PNG and display WebP, and the WebPs that showed the resin dome.
+ * The request's path as its client sent it: node's request line, since the request's URL has its dot
+ * segments resolved; the URL's own path where no node server runs it, as in tests.
  */
-const DRAWING_FILE =
-  /^\/(0x[0-9a-f]{64})(?:(?:\.sharp)?(?:\.png|\.display\.webp|\.webp)|\.flat\.png)$/;
+function sentPath(c: Context): string {
+  const env: unknown = c.env;
+  const sent =
+    typeof env === "object" &&
+    env !== null &&
+    "incoming" in env &&
+    env.incoming instanceof IncomingMessage
+      ? env.incoming.url
+      : undefined;
+  return (sent ?? new URL(c.req.url).pathname).split("?", 1)[0] ?? "";
+}
+
+/**
+ * The stored file a request names, by its path as sent, which the CDN caches it by. An 18+ mark purges
+ * only the names the store writes, so a path in any other form, percent-encoded or with dot segments,
+ * names no image.
+ */
+function requestedImage(c: Context) {
+  const path = sentPath(c);
+  const folder = `${STICKER_IMAGES_PATH}/`;
+  return path.startsWith(folder) ? storedImageFile(path.slice(folder.length)) : null;
+}
 
 /**
  * Serves the files that show a drawing only NSFW stickers show to an opted-in session alone, never
  * publicly cached; anyone else gets 403 nsfw_not_opted_in. Every other image is public, cached for
- * good.
+ * good, and any name the store never writes is 404.
  */
 const imageAccess = (deps: AppDeps) =>
   createMiddleware(async (c, next) => {
-    const drawing = DRAWING_FILE.exec(c.req.path.slice(STICKER_IMAGES_PATH.length));
-    const optInOnly = drawing !== null && isNsfwDrawing(deps.db, drawing[1]);
+    const file = requestedImage(c);
+    if (!file) return apiError(c, 404, "image_not_found", `No sticker image at ${c.req.path}`);
+    const optInOnly = file.showsDrawing && isNsfwDrawing(deps.db, file.contentHash);
     if (optInOnly) {
       const viewer = await sessionUser(c, deps);
       if (!viewer || !optedIntoNsfw(viewer)) {
@@ -106,9 +129,6 @@ const imageAccess = (deps: AppDeps) =>
     const scope = optInOnly ? "private" : "public";
     c.header("Cache-Control", `${scope}, max-age=${IMMUTABLE_MAX_AGE_S}, immutable`);
   });
-
-/** A display WebP, by its content hash: a sticker's or its veiled image's, or a sharp copy's. */
-const DISPLAY_WEBP = /^\/(0x[0-9a-f]{64})(\.sharp)?\.display\.webp$/;
 
 /** Which display WebP a name asks for, by the sticker the database has under its hash; null for none. */
 function displayWebpNamed(deps: AppDeps, hash: string, sharpCopy: boolean): DisplayWebp | null {
@@ -131,8 +151,9 @@ function displayWebpNamed(deps: AppDeps, hash: string, sharpCopy: boolean): Disp
  */
 const displayWebps = (deps: AppDeps) =>
   createMiddleware(async (c, next) => {
-    const display = DISPLAY_WEBP.exec(c.req.path.slice(STICKER_IMAGES_PATH.length));
-    const webp = display && displayWebpNamed(deps, display[1], display[2] !== undefined);
+    const file = requestedImage(c);
+    const webp =
+      file?.displayWebp && displayWebpNamed(deps, file.contentHash, file.displayWebp === "sharp");
     if (webp) {
       try {
         await deps.images.makeDisplayWebp(webp);

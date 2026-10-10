@@ -46,8 +46,8 @@ export const api = {
     },
     /** Handle prompt, after tapping Use @handle: the problem line when the server answers handle_invalid */
     invalid: {
-      en: "A handle is 1 to {{max}} characters, without “@”.",
-      ja: "ユーザー名は「@」なしの1〜{{max}}文字です。",
+      en: "A handle is 1 to {{max}} characters, without “@” or invisible characters.",
+      ja: "ユーザー名は「@」や見えない文字なしの1〜{{max}}文字です。",
     },
     /** Handle prompt, after tapping Use @handle: the problem line when saving fails any other way; {{reason}} is problemOf's message */
     couldntSave: {

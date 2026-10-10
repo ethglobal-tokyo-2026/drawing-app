@@ -6,12 +6,14 @@ import { toPerson, type Person } from "../shapes.ts";
 /** The most people one search answers with. */
 export const USER_SEARCH_SIZE = 20;
 
-/** `GET /api/users`'s query: the handle to look for, trimmed, without one leading `@`. */
+/**
+ * `GET /api/users`'s query: the handle to look for, NFKC-normalized as a new handle is stored, so a
+ * full-width query finds it, then trimmed, without one leading `@`.
+ */
 export const userSearchQuerySchema = z.object({
   handle: z
     .string()
-    .trim()
-    .overwrite((handle) => handle.replace(/^@/, ""))
+    .overwrite((handle) => handle.normalize("NFKC").trim().replace(/^@/, ""))
     .min(1),
 });
 

@@ -1,5 +1,5 @@
 import type { Clock } from "../deps.ts";
-import { logFailure, logInfo } from "../diagnostics.ts";
+import { failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import type { Schedule } from "../midnightJob.ts";
 import { startRepeatingJob } from "../repeatingJob.ts";
 
@@ -15,6 +15,11 @@ export const CDN_WARN_SHARE = 0.8;
 export const CDN_PAUSE_SHARE = 0.95;
 /** Between the cap's checks of the month's usage. */
 export const CDN_CAP_EVERY_MS = 5 * 60_000;
+/**
+ * How long checks fail before the operator hears in LINE that the cap can't read Fastly, once a day:
+ * long enough to pass over a blip, short of what a blind month could cost.
+ */
+export const CDN_CAP_BLIND_AFTER_MS = 12 * CDN_CAP_EVERY_MS;
 /**
  * The days before Fastly's API token expires on which the operator hears about it in LINE: past its
  * expiry the cap can't read Fastly, so it can't pause the site.
@@ -35,7 +40,10 @@ export interface CdnSwitch {
    * allowance. The cap changes neither "stop" nor "keep".
    */
   cap: string;
-  /** The month the operator last heard in LINE how much of the allowance is used, or "". */
+  /**
+   * What the operator last heard in LINE: the month, YYYY-MM, once warned of its usage, then the
+   * month and " paused" once told the cap paused the site; "" before either.
+   */
   warned: string;
 }
 
@@ -75,9 +83,9 @@ interface CdnCapCheck {
 
 /**
  * One check of the CDN cap. At CDN_PAUSE_SHARE of Fastly's free allowance it pauses the site for the
- * rest of the month, and once a later month starts it lifts the pause it set. At CDN_WARN_SHARE, or
- * on pausing, it tells the operator in LINE, once a month; a message LINE didn't take goes again at
- * the next check, and never holds up the pause.
+ * rest of the month, and once a later month starts it lifts the pause it set. At CDN_WARN_SHARE, and
+ * again on pausing, it tells the operator in LINE, each once a month; a message LINE didn't take goes
+ * again at the next check, and never holds up the pause.
  */
 export async function checkCdnCap({
   cdn,
@@ -110,14 +118,16 @@ export async function checkCdnCap({
     logInfo("cdn.cap.lifted", { ...usage, cap });
   }
 
-  if (share >= CDN_WARN_SHARE && warned !== month) {
-    const text =
-      cap === month
-        ? `Fastly has paused Croquis until next month: it answered ${usageWords(usage)}, ${percentOf(share)} of its free allowance. Visitors see a paused page. To serve the rest of the month and pay Fastly, set the cap to keep (deploy/README.md's CDN).`
-        : `Croquis has used ${percentOf(share)} of Fastly's free allowance this month: ${usageWords(usage)}. At ${percentOf(CDN_PAUSE_SHARE)} Fastly pauses the site until next month, unless the cap is set to keep (deploy/README.md's CDN).`;
+  const paused = cap === month;
+  // Once the operator heard of the pause, the warning has nothing to add.
+  const told = warned === `${month} paused` || (!paused && warned === month);
+  if (share >= CDN_WARN_SHARE && !told) {
+    const text = paused
+      ? `Fastly has paused Croquis until next month: it answered ${usageWords(usage)}, ${percentOf(share)} of its free allowance. Visitors see a paused page. To serve the rest of the month and pay Fastly, set the cap to keep (deploy/README.md's CDN).`
+      : `Croquis has used ${percentOf(share)} of Fastly's free allowance this month: ${usageWords(usage)}. At ${percentOf(CDN_PAUSE_SHARE)} Fastly pauses the site until next month, unless the cap is set to keep (deploy/README.md's CDN).`;
     try {
-      await tellOperator(text, `cdn cap ${cap === month ? "paused" : "warned"} ${month}`);
-      await cdn.setSwitch("warned", month);
+      await tellOperator(text, `cdn cap ${paused ? "paused" : "warned"} ${month}`);
+      await cdn.setSwitch("warned", paused ? `${month} paused` : month);
       logInfo("cdn.cap.warned", { ...usage, cap });
     } catch (error) {
       logFailure("cdn.cap.warn_failed", error, { ...usage, cap });
@@ -151,10 +161,27 @@ export async function remindTokenExpiry({
   logInfo("cdn.cap.token_expiring", { reason: `the token expires ${on}`, count: days });
 }
 
+/** The operator's message when a check fails, if they should hear of it, with its key for the day. */
+function blindNotice(error: unknown, checkedAt: Date, now: Date) {
+  const today = dayOf(now);
+  if (error instanceof CdnTokenRefusedError) {
+    return {
+      text: `Fastly refuses the CDN cap's API token (${error.message}), so the cap can't pause the site before Fastly bills. Make a new token for the Croquis service in Fastly, set it as FASTLY_API_TOKEN in deploy/.env, and deploy the API (deploy/README.md's CDN).`,
+      key: `cdn token refused ${today}`,
+    };
+  }
+  if (now.getTime() - checkedAt.getTime() < CDN_CAP_BLIND_AFTER_MS) return null;
+  return {
+    text: `The CDN cap hasn't read Fastly since ${checkedAt.toISOString()} (${failureCause(error)}), so it can't pause the site before Fastly bills. The API's log has each failed check, as cdn.cap.check_failed (deploy/README.md's CDN).`,
+    key: `cdn cap blind ${today}`,
+  };
+}
+
 /**
  * The CDN cap: checks at once, logging the month's usage, then CDN_CAP_EVERY_MS after each check
- * ends. A failed check is logged and changes nothing; while Fastly refuses the token, the operator
- * hears it in LINE once a day. Once a day it also looks at when the token expires.
+ * ends. A failed check is logged and changes nothing. The operator hears in LINE once a day while
+ * Fastly refuses the token, or while checks have failed for CDN_CAP_BLIND_AFTER_MS. Once a day it
+ * also looks at when the token expires.
  */
 export function startCdnCap({
   schedule,
@@ -167,7 +194,9 @@ export function startCdnCap({
 }) {
   let checked = false;
   let expiryLookedOn = "";
-  let refusalToldOn = "";
+  let failureToldOn = "";
+  /** The last check that read Fastly, or the boot, before any has. */
+  let checkedAt = deps.clock.now();
   return startRepeatingJob(
     { everyMs: CDN_CAP_EVERY_MS, failedEvent: "cdn.cap.check_failed", schedule },
     async () => {
@@ -180,16 +209,15 @@ export function startCdnCap({
       }
       try {
         const { usage, cap } = await checkCdnCap(deps);
+        checkedAt = deps.clock.now();
         if (!checked) logInfo("cdn.cap.checked", { ...usage, cap });
         checked = true;
       } catch (error) {
-        if (error instanceof CdnTokenRefusedError && refusalToldOn !== today) {
-          refusalToldOn = today;
+        const notice = blindNotice(error, checkedAt, deps.clock.now());
+        if (notice && failureToldOn !== today) {
+          failureToldOn = today;
           await deps
-            .tellOperator(
-              `Fastly refuses the CDN cap's API token (${error.message}), so the cap can't pause the site before Fastly bills. Make a new token for the Croquis service in Fastly, set it as FASTLY_API_TOKEN in deploy/.env, and deploy the API (deploy/README.md's CDN).`,
-              `cdn token refused ${today}`,
-            )
+            .tellOperator(notice.text, notice.key)
             .catch((told: unknown) => logFailure("cdn.cap.warn_failed", told));
         }
         throw error;

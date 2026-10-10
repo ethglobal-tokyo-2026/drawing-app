@@ -3,6 +3,7 @@
  * worker runs it on OffscreenCanvas; where there's no worker for it, the main thread runs it on canvas
  * elements. Nothing here touches the document, so the worker can import it.
  */
+import { MAX_FLAT_SIDE } from "@drawing-app/api/client";
 import { BORDER_UNITS, dieCut, type Point } from "./dieCut";
 import type { Pixels } from "./pixels";
 import { bakedGloss, sharpSticker, stickerPasses, type Rect } from "./stickerPasses";
@@ -56,14 +57,12 @@ export interface CutSticker {
   contour: Point[];
 }
 
-/** The long side of the flat sheet, at most. */
-const FLAT_SIDE = 1100;
 /** Image pixels between the stored outline's points: finer than a ticket stub or a sheet can show. */
 export const OUTLINE_STEP = 2;
 
 /** The sheet as drawn, on white paper. */
 function flatten({ pixels, image }: Ink, make: MakeCanvas): Promise<Blob> {
-  const s = Math.min(1, FLAT_SIDE / Math.max(pixels.width, pixels.height));
+  const s = Math.min(1, MAX_FLAT_SIDE / Math.max(pixels.width, pixels.height));
   const width = Math.max(1, Math.round(pixels.width * s));
   const height = Math.max(1, Math.round(pixels.height * s));
   const { g, png } = make(width, height);

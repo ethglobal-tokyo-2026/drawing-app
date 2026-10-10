@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ReplayV1 } from "@drawing-app/api/client";
+import { replayHitProblems, type ReplayV1 } from "@drawing-app/api/client";
 import { seededRandom } from "../ui/seededRandom";
 import { createGratitudeCombo, type ComboEvent, type ComboRecord, type EndReason } from "./combo";
 import { FEEL_CONFIG, GAME_CONFIG, type GameConfig } from "./gameConfig";
@@ -25,9 +25,9 @@ function runningRows(flat: readonly number[], size: number, summed: number): num
 const msSteps = (flat: readonly number[], size: number) => flat.filter((_, i) => i % size === 0);
 
 /**
- * The replay as the server's planned check reads it (the REST plan's Task 7): its shape, then its
- * running values, then how it agrees with the record. Throws at the first rule it breaks; returns
- * the running values: every touch, stroke sample and reversal at its time after the first hit.
+ * The replay as the server checks it: its shape, then its running values, then, by the server's own
+ * rule, whether it records the record's hits. Throws at the first rule it breaks; returns the
+ * running values: every touch, stroke sample and reversal at its time after the first hit.
  */
 function readReplay(replay: ReplayV1, record: ComboRecord) {
   const rule = (ok: boolean, what: string) => {
@@ -90,11 +90,11 @@ function readReplay(replay: ReplayV1, record: ComboRecord) {
     "direction",
   );
 
-  const counted = touches.filter(([, , , c]) => c === 1).length;
-  rule(counted <= record.hits, "counted touches past hits");
-  if (record.method === "tap") {
-    rule(switchedAtHit === null && counted === record.hits, "a tap combo's counted touches");
-  } else rule(switchedAtHit !== null, "a stroke or shake combo's switch");
+  const problems = replayHitProblems(record, replay);
+  rule(
+    problems.length === 0,
+    problems.map(({ field, message }) => `${field}: ${message}`).join("; "),
+  );
   return { touches, strokes, shakes };
 }
 
@@ -291,7 +291,7 @@ describe("a replay has all the data to play its combo back", () => {
     );
     expect(broken({ hits: [-1, ...replay.hits.slice(1)] })).toThrow("negative ms step");
     expect(broken({ durationMs: 10 })).toThrow("past durationMs");
-    expect(broken({ switchedAtHit: 2 })).toThrow("a tap combo's counted touches");
+    expect(broken({ switchedAtHit: 2 })).toThrow("switchedAtHit: 2");
   });
 
   it.each(cases)("a tap combo ended by %s", (_, reason, rate, options) => {
@@ -358,5 +358,25 @@ describe("a replay has all the data to play its combo back", () => {
     expect(shakes.length).toBeGreaterThan(record.hits - taps);
     expect(new Set(shakes.map(([, direction]) => direction))).toEqual(new Set([1, -1]));
     expect(playBack(replay)).toMatchObject({ reason: replay.endReason, record });
+  });
+
+  it("a shake combo within the rate limit: one reversal for every hit from the switch", () => {
+    const s = session();
+    s.tap(1000);
+    // A reversal every 100 ms from t = 1100 to 3000, slower than the limit, so each one counts.
+    let reversals = 0;
+    for (let t = 1100; !s.ended; t += 16) {
+      const due = 1100 + 100 * reversals;
+      if (t >= due && due <= 3000) {
+        s.reverse(due, reversals % 2 === 0 ? 1 : -1);
+        reversals++;
+      }
+      s.frame(t);
+    }
+
+    const { ended, replay } = s.finish();
+    const { shakes } = readReplay(replay, ended.record);
+    expect(ended.record).toMatchObject({ method: "shake", switchedAtHit: 1 });
+    expect(shakes).toHaveLength(ended.record.hits - 1);
   });
 });

@@ -90,6 +90,16 @@ describe("the server log", () => {
     await (await nextLog(server)).body?.cancel();
   });
 
+  it("fails the log of a journalctl that exits with an error, rather than ending it as the whole log", async () => {
+    journalctlOnPath("echo line; exit 1");
+    const server = await logServer();
+    const failed = await server.request("/api/logs");
+    expect(failed.status).toBe(200);
+    await expect(failed.text()).rejects.toThrow(/journalctl exited with 1/);
+    logs.expectLogged("server_log.failed");
+    await (await nextLog(server)).body?.cancel();
+  });
+
   it("stops a journalctl whose reader stalls, once it runs past JOURNALCTL_TIMEOUT_MS", async () => {
     journalctlOnPath(PRINTS_UNTIL_LET_GO);
     const server = await logServer();

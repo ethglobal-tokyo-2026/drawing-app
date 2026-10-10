@@ -161,7 +161,7 @@ describe("GET /api/sticker-boards/:userId", () => {
     expect(stickers.get(received)).toMatchObject({ held: true, openGift: null });
   });
 
-  it("sends each cut line simplified, where the sticker's detail sends it whole", async () => {
+  it("sends each cut line simplified, on the board and in the sticker's detail", async () => {
     const me = insertUser(test.db);
     // A circle as the seal stores a cut line: a point every 2 px.
     const points = Array.from({ length: 800 }, (_, i) => {
@@ -170,24 +170,27 @@ describe("GET /api/sticker-boards/:userId", () => {
     });
     const outline = `M${points.join("L")}Z`;
     const stickerId = insertSealedSticker(test.db, me, { outline, width: 600, height: 600 });
+    const simplified = simplifiedOutline(outline, 600, 600);
+    expect(simplified.length).toBeLessThan(outline.length);
     const detail = await test.send("GET", `/api/stickers/${stickerId}`, { as: me });
-    expect((await bodyOf(detail, stickerDetailSchema)).sticker.outline).toBe(outline);
+    expect((await bodyOf(detail, stickerDetailSchema)).sticker.outline).toBe(simplified);
     const [onBoard] = (await boardOf(me, "me")).boardStickers;
-    expect(onBoard?.sticker.outline).toBe(simplifiedOutline(outline, 600, 600));
+    expect(onBoard?.sticker.outline).toBe(simplified);
   });
 
-  it("shows someone else only the stickers on the board its owner holds, without their bag or NEW", async () => {
+  it("shows someone else only the stickers on the board its owner holds and has in no gift, without NEW", async () => {
     const me = insertUser(test.db);
     const friend = insertUser(test.db);
     const onBoard = seal(friend);
-    packGift(test.db, onBoard, friend);
     const givenAway = seal(friend);
+    const inTheBag = seal(friend);
     const onItsWay = seal(friend);
     const inTray = seal(friend);
     seal(friend);
     for (const [stickerId, spot] of [
       [onBoard, SPOT],
       [givenAway, SPOT],
+      [inTheBag, SPOT],
       [onItsWay, SPOT],
       [inTray, IN_TRAY],
     ] as const) {
@@ -199,7 +202,8 @@ describe("GET /api/sticker-boards/:userId", () => {
     }
     // Given away from its spot on the board, which the giver's placement keeps.
     giveSticker(test.db, givenAway, friend, insertUser(test.db));
-    // Sent from its spot: still the giver's until it's received, but no longer on their board.
+    // Packed, or sent, from its spot: still the giver's until it's received, but off their board.
+    packGift(test.db, inTheBag, friend);
     sendGift(onItsWay, friend);
 
     const board = await boardOf(me, friend);

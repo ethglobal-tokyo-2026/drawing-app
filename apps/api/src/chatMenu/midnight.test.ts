@@ -278,6 +278,20 @@ describe("the midnight job", () => {
     job.stop();
   });
 
+  it("leaves the next day's batch for AFTER_MIDNIGHT_MS after midnight, when a run goes past it", async () => {
+    const midnight = new Date(nextMidnight());
+    duringWait = () => {
+      duringWait = undefined;
+      test.clock.set(midnight);
+      return Promise.resolve();
+    };
+    const job = startMidnightBatches(jobDeps());
+    await job.idle();
+    expect(line.batches).toHaveLength(1);
+    expect(timers.map((timer) => timer.ms)).toEqual([AFTER_MIDNIGHT_MS]);
+    job.stop();
+  });
+
   it("doesn't run a batch at boot when the day's has ended", async () => {
     await runChatMenuBatch(jobDeps(), today());
     const job = startMidnightBatches(jobDeps());

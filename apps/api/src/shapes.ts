@@ -19,6 +19,7 @@ import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import type { AppDeps } from "./deps.ts";
 import { kyotoSeikaSubjectsSchema } from "./stickers/kyotoSeikaSubjects.ts";
+import { simplifiedOutlineOf } from "./stickers/outline.ts";
 
 // The contract's shapes that routes share, and the functions that turn rows into them.
 
@@ -369,7 +370,8 @@ export function toSticker(
     height: sticker.height,
     drawnWidth: sticker.drawnWidth,
     drawnHeight: sticker.drawnHeight,
-    outline: sticker.outline,
+    // Simplified: the app packs sheets and places badges by it, never by the stored line's detail.
+    outline: simplifiedOutlineOf(sticker),
     contentHash: sticker.contentHash,
     images: viewer.images(sticker),
     objectId: sticker.objectId,

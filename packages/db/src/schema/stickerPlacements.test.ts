@@ -23,14 +23,16 @@ const place = (values: Partial<typeof stickerPlacements.$inferInsert>) =>
 
 describe("sticker placements", () => {
   it("stores a placement whole or not at all", () => {
-    expect(refusal(() => place({ onBoard: true }))).toMatch(/sticker_placements_placement/);
+    expect(refusal(() => place({ onBoard: true, rotation: 0, z: 0 }))).toMatch(
+      /sticker_placements_placement/,
+    );
     expect(() =>
       place({ onBoard: true, x: 0.5, y: 0.5, scale: 0.5, rotation: 0, z: 0 }),
     ).not.toThrow();
   });
 
   it("stores the large layout's placement whole or not at all, beside the phone's", () => {
-    expect(refusal(() => place({ largeOnBoard: true }))).toMatch(
+    expect(refusal(() => place({ largeOnBoard: true, largeRotation: 0, largeZ: 0 }))).toMatch(
       /sticker_placements_large_placement/,
     );
     expect(() =>

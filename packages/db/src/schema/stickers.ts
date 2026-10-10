@@ -92,6 +92,10 @@ export const stickers = sqliteTable(
     index("stickers_owner").on(t.ownerId),
     // The image server finds every sticker that shows a drawing by it, for each file that shows one.
     index("stickers_content_hash").on(t.contentHash),
+    // The image server finds the sticker a veiled image belongs to; only NSFW stickers have one.
+    index("stickers_veiled_hash")
+      .on(t.veiledHash)
+      .where(sql`${t.veiledHash} is not null`),
     index("stickers_artist").on(t.artistId, t.createdAt),
     index("stickers_created").on(t.createdAt),
     // The CDN purges still due, which the purge sweep reads.

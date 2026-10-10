@@ -1,15 +1,14 @@
+import {
+  CUT_PAD,
+  MAX_CUT_SIDE,
+  MAX_SHARP_IMAGE_SIDE,
+  MAX_STICKER_IMAGE_SIDE,
+  SHARP_CUT_SIDE,
+} from "@drawing-app/api/client";
 import { describe, expect, it } from "vitest";
 import { BORDER_UNITS, dieCut } from "./dieCut";
 import type { Pixels } from "./pixels";
-import {
-  MAX_SIDE,
-  PAD,
-  SHARP_SIDE,
-  bakedGloss,
-  sharpSticker,
-  stickerPasses,
-  type StickerPasses,
-} from "./stickerPasses";
+import { bakedGloss, sharpSticker, stickerPasses, type StickerPasses } from "./stickerPasses";
 
 const RED = [255, 0, 0];
 const GRAY = [120, 120, 120];
@@ -159,18 +158,20 @@ describe("sharpSticker", () => {
   /** The long side an image whose cut's long side is `cutSide` comes out at, margins and all. */
   const sideFor = (cutSide: number) => {
     const side = Math.round(cutSide);
-    return side + 2 * Math.ceil(side * PAD);
+    return side + 2 * Math.ceil(side * CUT_PAD);
   };
   const longSide = ({ width, height }: { width: number; height: number }) =>
     Math.max(width, height);
 
   it(
-    "holds the cut's long side to SHARP_SIDE, from ink that has more",
+    "holds the cut's long side to SHARP_CUT_SIDE, from ink that has more",
     () => {
       const ink = redDisk(2000, 950);
       const sharp = sharpOf(ink);
-      expect(sharp && longSide(sharp)).toBe(sideFor(SHARP_SIDE));
+      expect(sharp && longSide(sharp)).toBe(sideFor(SHARP_CUT_SIDE));
       expect(sharp?.sticker.length).toBe((sharp?.width ?? 0) * (sharp?.height ?? 0) * 4);
+      // Sealing refuses a larger sharp copy.
+      expect(sharp && longSide(sharp)).toBeLessThanOrEqual(MAX_SHARP_IMAGE_SIDE);
     },
     LARGE_INK_TIMEOUT_MS,
   );
@@ -181,11 +182,13 @@ describe("sharpSticker", () => {
       const ink = redDisk(1000, 400);
       const { cut, glossGrid, passes } = passesOf(ink);
       const inkSide = (cut.bounds.x1 - cut.bounds.x0 + 1) / cut.scale;
-      expect(inkSide).toBeGreaterThan(MAX_SIDE);
-      expect(inkSide).toBeLessThan(SHARP_SIDE);
+      expect(inkSide).toBeGreaterThan(MAX_CUT_SIDE);
+      expect(inkSide).toBeLessThan(SHARP_CUT_SIDE);
       const sharp = sharpSticker(ink, cut, glossGrid);
       expect(sharp && longSide(sharp)).toBe(sideFor(inkSide));
-      expect(longSide(passes)).toBe(sideFor(MAX_SIDE));
+      expect(longSide(passes)).toBe(sideFor(MAX_CUT_SIDE));
+      // Sealing refuses a larger sticker image.
+      expect(longSide(passes)).toBeLessThanOrEqual(MAX_STICKER_IMAGE_SIDE);
     },
     LARGE_INK_TIMEOUT_MS,
   );
@@ -199,7 +202,7 @@ describe("sharpSticker", () => {
     "comes out larger than the stored image on both sides, as the server takes it",
     () => {
       // A phone's sheet at density 3 with one wide bar: its cut's long side is one where k × side
-      // lands a hair past MAX_SIDE in floating point.
+      // lands a hair past MAX_CUT_SIDE in floating point.
       const density = 3;
       const [width, height, barW, barH] = [1122, 2232, 504, 60];
       const [x0, y0] = [(width - barW) / 2, (height - barH) / 2];
@@ -210,7 +213,7 @@ describe("sharpSticker", () => {
         (x, y) => x >= x0 && x < x0 + barW && y >= y0 && y < y0 + barH,
       );
       const { cut, glossGrid, passes } = passesOf(ink, BORDER_UNITS * density);
-      expect(longSide(passes)).toBe(sideFor(MAX_SIDE));
+      expect(longSide(passes)).toBe(sideFor(MAX_CUT_SIDE));
       const sharp = sharpSticker(ink, cut, glossGrid);
       expect(sharp?.width).toBeGreaterThan(passes.width);
       expect(sharp?.height).toBeGreaterThan(passes.height);

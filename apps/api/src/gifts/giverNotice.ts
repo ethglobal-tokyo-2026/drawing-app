@@ -4,6 +4,8 @@ import { alias } from "drizzle-orm/sqlite-core";
 import type { MessagingChannel } from "../chatMenu/fromEnvironment.ts";
 import type { Clock, GiverNotice } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
+import type { Schedule } from "../midnightJob.ts";
+import { startRepeatingJob } from "../repeatingJob.ts";
 import {
   LineApiError,
   RETRY_KEY_KEPT_MS,
@@ -179,8 +181,9 @@ export const giverNoticeFor = (
 ): GiverNotice =>
   channel.off === null ? createGiverNotice({ db, clock, line: channel.line }) : giverNoticeOff;
 
-/** Sweeps at once, for what an earlier run left due, then every SWEEP_EVERY_MS. */
-export function startGiverNoticeSweeps(notice: Pick<GiverNotice, "sweep">) {
-  void notice.sweep();
-  setInterval(() => void notice.sweep(), SWEEP_EVERY_MS).unref();
-}
+/** Sweeps at once, for what an earlier run left due, then SWEEP_EVERY_MS after each sweep ends. */
+export const startGiverNoticeSweeps = (notice: Pick<GiverNotice, "sweep">, schedule?: Schedule) =>
+  startRepeatingJob(
+    { everyMs: SWEEP_EVERY_MS, failedEvent: "gift.giver_notice.sweep_failed", schedule },
+    notice.sweep,
+  );

@@ -24,7 +24,6 @@ import {
   toStickerPlacement,
   type StickerViewer,
 } from "../shapes.ts";
-import { simplifiedOutlineOf } from "../stickers/outline.ts";
 import { MAX_LARGE_LAYOUT_BATCH } from "./largeLayoutLimit.ts";
 
 /** `me` in a board's path: the signed-in person. */
@@ -37,7 +36,6 @@ export const MAX_SEEN_BATCH = 500;
 const openGiftStatusSchema = giftSchema.shape.status.extract(["packed", "sent"]);
 
 const boardStickerSchema = stickerPlacementSchema.extend({
-  /** Its outline simplified, which is all a sticker sheet packs by; the sticker's detail has it whole. */
   sticker: stickerSchema,
   /** False: given away; off the board, and an empty spot in the sticker tray. */
   held: z.boolean(),
@@ -106,13 +104,17 @@ export const findBoardOwner = (db: Db, userId: string, viewerId: string) =>
     .where(eq(users.id, userId === ME ? viewerId : userId))
     .get();
 
-/** The owner's gifts in the bag or on their way, by sticker. */
+/** The owner's gifts in the bag or on their way. A sticker in one is off their board, for anyone. */
+const openGiftFrom = (ownerId: string) =>
+  and(eq(gifts.giverId, ownerId), inArray(gifts.status, openGiftStatusSchema.options));
+
+/** The owner's open gifts, by sticker. */
 function openGiftsOf(db: Db, ownerId: string) {
   const rows = db
     .select({ id: gifts.id, stickerId: gifts.stickerId, status: gifts.status, for: users })
     .from(gifts)
     .leftJoin(users, eq(users.id, gifts.forUserId))
-    .where(and(eq(gifts.giverId, ownerId), inArray(gifts.status, openGiftStatusSchema.options)))
+    .where(openGiftFrom(ownerId))
     .all();
   const open = new Map<string, BoardSticker["openGift"]>();
   for (const { id, stickerId, status, for: forUser } of rows) {
@@ -188,15 +190,6 @@ function trailsOf(db: Db, stickerIds: string[]) {
   return trails;
 }
 
-/** A sticker in one of the owner's sent gifts: on its way, so off their board until it's received. */
-const onItsWayFrom = (db: Db, ownerId: string) =>
-  db
-    .select({ id: gifts.id })
-    .from(gifts)
-    .where(
-      and(eq(gifts.stickerId, stickers.id), eq(gifts.giverId, ownerId), eq(gifts.status, "sent")),
-    );
-
 /**
  * A Sticker Board in sticker tray order. Your own lists every sticker that reached you, with NEW and
  * your open gifts; anyone else's lists only the stickers on it, since the bag and NEW are the owner's.
@@ -217,14 +210,20 @@ export function loadStickerBoard(
       and(
         eq(stickerPlacements.userId, owner.id),
         // Receiving writes only the receiver's placement, so a sticker given away keeps the giver's.
-        // A visitor gets no open gifts to tell a sticker on its way by, so it's left off here.
+        // A visitor gets no open gifts to tell a sticker in one by, so it's left off here, as the
+        // owner's own board leaves it off.
         own
           ? undefined
           : and(
               // On the board in either layout: the visitor's screen shows the one for its size.
               or(eq(stickerPlacements.onBoard, true), eq(stickerPlacements.largeOnBoard, true)),
               eq(stickers.ownerId, owner.id),
-              notExists(onItsWayFrom(db, owner.id)),
+              notExists(
+                db
+                  .select({ id: gifts.id })
+                  .from(gifts)
+                  .where(and(eq(gifts.stickerId, stickers.id), openGiftFrom(owner.id))),
+              ),
             ),
       ),
     )
@@ -250,10 +249,7 @@ export function loadStickerBoard(
       return {
         ...stickerPlacement,
         seenAt: own ? stickerPlacement.seenAt : null,
-        sticker: {
-          ...toSticker(sticker, artist, viewer),
-          outline: simplifiedOutlineOf(sticker),
-        },
+        sticker: toSticker(sticker, artist, viewer),
         held,
         hasTimelapse: timelapsed.has(sticker.id) && !viewer.veils(sticker),
         trail: trails.get(sticker.id) ?? NO_TRAIL,

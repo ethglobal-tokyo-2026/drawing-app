@@ -78,27 +78,60 @@ function stickerImageUrls(baseUrl: string, contentHash: string): StickerImages {
   };
 }
 
-/**
- * The URLs among a sticker's images that show its drawing: its PNG, its WebP, the flat sheet, and
- * its sharp copy's PNG and WebP.
- */
-export const drawingUrls = ({ png, flat, webp, sharp }: StickerImages) => [
-  png,
-  flat,
-  webp.sticker,
-  ...(sharp ? [sharp.png, sharp.webp] : []),
-];
-/**
- * Every URL the CDN may hold a sticker's drawing at, which a mark purges: its drawing's files, and the
- * WebPs it showed at before display WebPs, `{contentHash}.webp` and `.sharp.webp`, still cached.
- */
-export const cdnDrawingUrls = (images: StickerImages) => {
-  const stem = images.png.replace(/\.png$/, "");
-  return [...drawingUrls(images), `${stem}.webp`, `${stem}.sharp.webp`];
+/** Which of a sticker's PNGs and WebPs show its drawing; the masks show only its cut. */
+const PNG_SHOWS_DRAWING: Record<StickerPngKind, boolean> = { png: true, mask: false, flat: true };
+const WEBP_SHOWS_DRAWING: Record<StickerWebpKind, boolean> = {
+  sticker: true,
+  mask: false,
+  foil: false,
 };
-/** A sticker's image URLs for each viewer, under `imageBaseUrl`. */
-export function imageUrls(imageBaseUrl: string): Pick<ImageStore, "urls" | "veiledUrls"> {
+
+/** Which display WebP a file is, which the server makes on request when it's missing; null for any other. */
+type DisplayWebpKind = "sticker" | "sharp" | null;
+
+/** A file the box may hold under a content hash. */
+interface StoredImageFile {
+  contentHash: string;
+  /** It shows the drawing, so an 18+ mark makes it the NSFW opt-in's alone. */
+  showsDrawing: boolean;
+  displayWebp: DisplayWebpKind;
+}
+
+/** Every file the box may hold under `contentHash`, by name: the one list the gate and the purge read. */
+function filesUnder(contentHash: string): Map<string, StoredImageFile> {
+  const files = new Map<string, StoredImageFile>();
+  const add = (name: string, showsDrawing: boolean, displayWebp: DisplayWebpKind = null) =>
+    files.set(name, { contentHash, showsDrawing, displayWebp });
+  for (const kind of pngKinds) add(pngName(contentHash, kind), PNG_SHOWS_DRAWING[kind]);
+  for (const kind of webpKinds) {
+    add(webpName(contentHash, kind), WEBP_SHOWS_DRAWING[kind], kind === "sticker" ? kind : null);
+  }
+  const sharp = sharpNames(contentHash);
+  add(sharp.png, true);
+  add(sharp.webp, true, "sharp");
+  // The WebPs a sticker and its sharp copy showed the resin dome at, still on the box and the CDN.
+  add(`${contentHash}.webp`, true);
+  add(`${contentHash}.sharp.webp`, true);
+  return files;
+}
+
+/** The file the box may hold under `name`; null for any name it never writes, such as one percent-encoded. */
+export function storedImageFile(name: string): StoredImageFile | null {
+  const [contentHash = ""] = name.split(".", 1);
+  if (!bytes32Schema.safeParse(contentHash).success) return null;
+  return filesUnder(contentHash).get(name) ?? null;
+}
+
+/** A sticker's image URLs for each viewer, under `imageBaseUrl`, and every URL that shows its drawing. */
+export function imageUrls(
+  imageBaseUrl: string,
+): Pick<ImageStore, "urls" | "veiledUrls" | "drawingUrls"> {
+  const base = imageBaseUrl.replace(/\/+$/, "");
   return {
+    drawingUrls: (contentHash) =>
+      [...filesUnder(contentHash)].flatMap(([name, file]) =>
+        file.showsDrawing ? [`${base}/${name}`] : [],
+      ),
     urls: (contentHash) => stickerImageUrls(imageBaseUrl, contentHash),
     veiledUrls: (contentHash, veiledHash) => {
       const shared = stickerImageUrls(imageBaseUrl, contentHash);

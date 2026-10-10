@@ -2,7 +2,7 @@ import { users, type Db } from "@drawing-app/db";
 import { MAX_ACCESS_TOKEN_LENGTH } from "@drawing-app/line-auth/line";
 import { and, eq, isNull } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
 import {
   LineTokenInvalidError,
@@ -51,13 +51,18 @@ const kyotoSeikaPracticeBody = z.object({ kyotoSeikaPractice: z.boolean() });
 
 type UserRow = typeof users.$inferSelect;
 
+/** The row of `userId`'s account while it's live. */
+const isLive = (userId: string) => and(eq(users.id, userId), isNull(users.deletedAt));
+
 /** A live account's row; undefined once it's deleted. */
-const liveUser = (db: Db, userId: string) =>
-  db
-    .select()
-    .from(users)
-    .where(and(eq(users.id, userId), isNull(users.deletedAt)))
-    .get();
+const liveUser = (db: Db, userId: string) => db.select().from(users).where(isLive(userId)).get();
+
+/** Sets `values` on a live account's row, and answers the row; undefined once it's deleted. */
+const updateLiveUser = (
+  db: Pick<Db, "update">,
+  userId: string,
+  values: Partial<typeof users.$inferInsert>,
+) => db.update(users).set(values).where(isLive(userId)).returning().get();
 
 /** You, with the NEW and pink-tag counts. */
 const meOf = (db: Db, user: UserRow) =>
@@ -65,6 +70,10 @@ const meOf = (db: Db, user: UserRow) =>
     newStickerCount: newStickerCount(db, user.id),
     unseenGratitudeCount: unseenGratitudeCount(db, user.id),
   });
+
+/** You as a change left you, or 401 signed_out once your account is gone. */
+const meAnswer = (c: Context, db: Db, user: UserRow | undefined) =>
+  user ? c.json({ me: meOf(db, user) }, 200) : apiError(c, 401, "signed_out");
 
 /**
  * Who LINE says the access token names, its refusal, or that LINE couldn't be asked. LINE's reason for a
@@ -131,7 +140,7 @@ export const sessionRoutes = (deps: AppDeps) =>
         },
         { behavior: "immediate" },
       );
-      await setSessionCookie(c, deps.sessionSecret, user.id);
+      await setSessionCookie(c, deps, user.id);
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
     // Logging out of LINE ends the session too, so a browser handed to someone else holds none.
@@ -148,7 +157,7 @@ export const sessionRoutes = (deps: AppDeps) =>
       if (lineUserId !== undefined && user.lineUserId !== lineUserId) {
         return apiError(c, 401, "signed_out");
       }
-      return c.json({ me: meOf(deps.db, user) }, 200);
+      return meAnswer(c, deps.db, user);
     })
     .post("/me/handle", validate("json", handleBody), (c) => {
       const handle = parseHandle(c.req.valid("json").handle);
@@ -157,82 +166,50 @@ export const sessionRoutes = (deps: AppDeps) =>
           c,
           400,
           "handle_invalid",
-          `handle: 1 to ${HANDLE_MAX_LENGTH} characters after trimming, with no @`,
+          `handle: 1 to ${HANDLE_MAX_LENGTH} characters after trimming, with no @, and no hidden characters such as zero-width or text-direction marks outside an emoji`,
         );
       }
       const { userId } = c.var;
       const user = deps.db.transaction(
-        (tx) => {
-          if (isHandleTaken(tx, handle, userId)) return null;
-          const updated = tx
-            .update(users)
-            .set({ handle })
-            .where(and(eq(users.id, userId), isNull(users.deletedAt)))
-            .returning()
-            .get();
-          return updated;
-        },
+        (tx) => (isHandleTaken(tx, handle, userId) ? null : updateLiveUser(tx, userId, { handle })),
         { behavior: "immediate" },
       );
       if (user === null) return apiError(c, 409, "handle_taken", `Someone else has @${handle}`);
-      if (!user) return apiError(c, 401, "signed_out");
-      return c.json({ me: meOf(deps.db, user) }, 200);
+      return meAnswer(c, deps.db, user);
     })
     .post("/me/language-choice", validate("json", languageChoiceBody), (c) => {
-      const { language } = c.req.valid("json");
       // The person's language outside the app too, such as their chat menu's, from now on.
-      const user = deps.db
-        .update(users)
-        .set({ language })
-        .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
-        .returning()
-        .get();
-      if (!user) return apiError(c, 401, "signed_out");
-      void deps.lineChatMenu.relink(user.id);
-      return c.json({ me: meOf(deps.db, user) }, 200);
+      const user = updateLiveUser(deps.db, c.var.userId, c.req.valid("json"));
+      if (user) void deps.lineChatMenu.relink(user.id);
+      return meAnswer(c, deps.db, user);
     })
     .post("/me/nsfw-opt-in", validate("json", nsfwOptInBody), (c) => {
       const { nsfwOptIn } = c.req.valid("json");
-      const user = deps.db
-        .update(users)
-        .set({ nsfwOptedInAt: nsfwOptIn ? deps.clock.now() : null })
-        .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
-        .returning()
-        .get();
-      if (!user) return apiError(c, 401, "signed_out");
-      return c.json({ me: meOf(deps.db, user) }, 200);
+      const nsfwOptedInAt = nsfwOptIn ? deps.clock.now() : null;
+      return meAnswer(c, deps.db, updateLiveUser(deps.db, c.var.userId, { nsfwOptedInAt }));
     })
     .post("/me/kyoto-seika-practice", validate("json", kyotoSeikaPracticeBody), (c) => {
       const { kyotoSeikaPractice } = c.req.valid("json");
-      const user = deps.db
-        .update(users)
-        .set({ kyotoSeikaPracticeOnAt: kyotoSeikaPractice ? deps.clock.now() : null })
-        .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
-        .returning()
-        .get();
-      if (!user) return apiError(c, 401, "signed_out");
+      const kyotoSeikaPracticeOnAt = kyotoSeikaPractice ? deps.clock.now() : null;
+      const user = updateLiveUser(deps.db, c.var.userId, { kyotoSeikaPracticeOnAt });
       // The Draw key's menus change with the mode at once, as its count does after a spend.
-      void deps.lineChatMenu.relink(user.id);
-      return c.json({ me: meOf(deps.db, user) }, 200);
+      if (user) void deps.lineChatMenu.relink(user.id);
+      return meAnswer(c, deps.db, user);
     })
     .delete("/me", (c) => {
       // Read before the row loses it: their chat menu goes back to LINE's default, in the background.
       const lineUserId = liveUser(deps.db, c.var.userId)?.lineUserId;
       // The handle goes with the LINE columns, since it started as the LINE name. The row stays, as
       // the Original Artist of their stickers, with their smart wallet and gifts.
-      deps.db
-        .update(users)
-        .set({
-          deletedAt: deps.clock.now(),
-          lineUserId: null,
-          lineDisplayName: null,
-          linePictureUrl: null,
-          handle: null,
-          nsfwOptedInAt: null,
-          kyotoSeikaPracticeOnAt: null,
-        })
-        .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
-        .run();
+      updateLiveUser(deps.db, c.var.userId, {
+        deletedAt: deps.clock.now(),
+        lineUserId: null,
+        lineDisplayName: null,
+        linePictureUrl: null,
+        handle: null,
+        nsfwOptedInAt: null,
+        kyotoSeikaPracticeOnAt: null,
+      });
       if (lineUserId) void deps.lineChatMenu.unlink(c.var.userId, lineUserId);
       clearSessionCookie(c);
       return c.body(null, 204);

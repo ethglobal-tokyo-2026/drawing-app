@@ -68,6 +68,11 @@ function setup(apiEnv = PUBLISHED_API_ENV) {
   mock("pnpm", "process.exit(0);");
   mock("install", "process.exit(0);");
   mock(
+    "npm",
+    `require("node:fs").appendFileSync(process.env.TEST_DEPLOY_EVENTS, "npm " + process.argv[2] + "\\n");
+process.exit(Number(process.env.TEST_NPM_STATUS ?? 0));`,
+  );
+  mock(
     "curl",
     `require("node:fs").appendFileSync(process.env.TEST_DEPLOY_EVENTS, "curl " + process.argv.at(-1) + "\\n");
 console.log(JSON.stringify({ error: "signed_out" }));`,
@@ -86,7 +91,7 @@ console.log(JSON.stringify({ error: "signed_out" }));`,
 while (args[0] === "-o") args.splice(0, 2);
 if (args.shift() !== "local-test") throw new Error("Only the local fake host is allowed");
 const command = args.join(" ")
-  .replace(/\/usr\/local\/lib\/nodejs\/node-\d+\/bin\/npm/g, "true")
+  .replace(/\/usr\/local\/lib\/nodejs\/node-\d+\/bin\/npm/g, "npm")
   .replaceAll("/tmp/drawing-api-deploy.XXXXXXXX", process.env.TEST_DEPLOY_TEMP + "/stage.XXXXXXXX");
 const result = require("node:child_process").spawnSync("bash", ["-c", command], { stdio: "inherit" });
 process.exit(result.status ?? 1);
@@ -135,28 +140,48 @@ process.exit(result.status ?? 1);
     TEST_DEPLOY_EVENTS: events,
     TEST_DEPLOY_TEMP: dir,
   };
-  // deploy-api.sh deploys only the commit main points to, with nothing uncommitted.
+  // deploy-api.sh deploys only the commit main points to, pushed, with nothing uncommitted.
   const git = (...args: string[]) => execFileSync("git", args, { cwd: repo, env });
+  const commit = (message: string) =>
+    git(
+      "-c",
+      "user.name=test",
+      "-c",
+      "user.email=test@example.test",
+      "commit",
+      "--allow-empty",
+      "-qm",
+      message,
+    );
+  const origin = join(dir, "origin.git");
+  execFileSync("git", ["init", "-q", "--bare", origin], { env });
   git("init", "-q", "-b", "main");
   git("add", "-A");
-  git("-c", "user.name=test", "-c", "user.email=test@example.test", "commit", "-qm", "main");
+  commit("main");
+  git("remote", "add", "origin", origin);
+  git("push", "-q", "origin", "main");
   return {
+    commit,
     built: () => readFileSync(join(repo, "apps/api/dist/server.mjs"), "utf8"),
     published: () => readFileSync(join(remote, "server/server.mjs"), "utf8"),
-    /** What the box's systemctl and curl were asked since the last call. */
+    /** What the box's npm, systemctl and curl were asked since the last call. */
     takeEvents: () => {
       const taken = readFileSync(events, "utf8").split("\n").filter(Boolean);
       writeFileSync(events, "");
       return taken;
     },
-    run: () =>
+    /** Runs deploy-api.sh; TEST_NPM_STATUS in `overrides` is the exit status of the box's npm. */
+    run: (overrides: Record<string, string> = {}) =>
       spawnSync("bash", [join(repo, "deploy/deploy-api.sh")], {
-        env,
+        env: { ...env, ...overrides },
         encoding: "utf8",
         timeout: 20_000,
       }),
   };
 }
+
+/** A deploy that installs the native modules and restarts the API, then checks it. */
+const INSTALLED_AND_RESTARTED = ["npm install", "daemon-reload", "enable", "restart"];
 
 /** Whether the API answers, on the box and then publicly. */
 const API_CHECKS: unknown[] = [
@@ -165,15 +190,35 @@ const API_CHECKS: unknown[] = [
 ];
 
 describe("deploy-api.sh", () => {
-  it("publishes the API, restarts it only when something changed, and checks that it answers", () => {
+  it("publishes the API, installs and restarts only when something changed, and checks that it answers", () => {
     const deploy = setup();
     const first = deploy.run();
     expect(first.status, first.stderr).toBe(0);
     expect(deploy.published()).toBe(deploy.built());
-    expect(deploy.takeEvents()).toEqual(["daemon-reload", "enable", "restart", ...API_CHECKS]);
+    expect(deploy.takeEvents()).toEqual([...INSTALLED_AND_RESTARTED, ...API_CHECKS]);
     const second = deploy.run();
     expect(second.status, second.stderr).toBe(0);
     expect(deploy.takeEvents()).toEqual(API_CHECKS);
+  }, 45_000);
+
+  it("installs the native modules again on the deploy after one whose install failed", () => {
+    const deploy = setup();
+    const failed = deploy.run({ TEST_NPM_STATUS: "1" });
+    expect(failed.status).not.toBe(0);
+    expect(deploy.takeEvents()).toEqual(["npm install"]);
+    const next = deploy.run();
+    expect(next.status, next.stderr).toBe(0);
+    expect(deploy.takeEvents()).toEqual([...INSTALLED_AND_RESTARTED, ...API_CHECKS]);
+  }, 45_000);
+
+  it("stops before replacing anything while main has a commit origin's main doesn't", () => {
+    const deploy = setup();
+    deploy.commit("not pushed");
+    const run = deploy.run();
+    expect(run.status).not.toBe(0);
+    expect(run.stderr).toContain("origin's main");
+    expect(deploy.takeEvents()).toEqual([]);
+    expect(deploy.published()).toBe("previous API\n");
   }, 45_000);
 
   it("stops before replacing anything while an ID from publish-sui.mjs is blank", () => {
