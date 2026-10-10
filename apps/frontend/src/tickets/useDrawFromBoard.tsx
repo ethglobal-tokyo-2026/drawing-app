@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useMe } from "../api/meContext";
 import { keepsSession } from "../sticker-creation/session/keptSession";
+import { T_STICK_MS } from "../ui/easing";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { OutOfTickets } from "./OutOfTickets";
 import { ReserveTicketCheckout } from "./ReserveTicketCheckout";
 import { nextKind, ticketsLeft, type Tickets } from "./tickets";
 import { useTickets } from "./useTickets";
-
-/** The key's front ticket peels off in the small stubs' time, --t-stick. */
-export const PEEL_MS = 220;
 
 /**
  * Draw on the sticker board, with zero steps to the canvas. On a fresh sheet with a daily ticket left, Draw spends it
@@ -52,7 +50,8 @@ export function useDrawFromBoard(onDraw: () => void) {
           setPeeling(null);
           onDraw();
         },
-        reduced ? 0 : PEEL_MS,
+        // The key's front ticket peels off in the small stubs' time, --t-stick.
+        reduced ? 0 : T_STICK_MS,
       );
       return;
     }

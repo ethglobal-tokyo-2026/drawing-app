@@ -1,10 +1,5 @@
 /* The timelapse: the sheet a sticker was drawn on, played back over the detail's stage. */
 
-/* The figure keeps its grid cell, which the gift dot's layer shares. */
-.sticker-detail__slide > .sticker-figure {
-  grid-area: 1 / 1;
-}
-
 /* Over the whole stage, so marks drawn beside the sticker show beside it. Positioned after the
    figure, so it paints over it, except while the sticker flies onto or off its paper. */
 .timelapse-layer {

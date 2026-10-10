@@ -1,7 +1,6 @@
 import { CaretDown, CaretRight, GratitudeIcon, Play, Stop } from "../icons";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { PersonView } from "../api/views";
-import type { mountGratitudeReplay } from "../gratitude/replay/mountGratitudeReplay";
 import { ReplayStage } from "../gratitude/replay/ReplayStage";
 import { useGratitudeReplay } from "../gratitude/replay/useGratitudeReplay";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
@@ -27,8 +26,6 @@ interface Props {
   viewerId: string;
   /** The Original Artist, for the artist's share. */
   artist: PersonView;
-  /** Builds a gratitude replay's engine; tests pass a fake. */
-  mountReplay?: typeof mountGratitudeReplay;
   /** Landing where its skeleton held its place: it rises into it. */
   rises?: boolean;
 }
@@ -39,7 +36,7 @@ interface Props {
  * card; any row with gratitude opens with a tap. Past the newest gift, the rest fold into "N
  * earlier gifts".
  */
-export function TransferTrail({ rows, viewerId, artist, mountReplay, rises = false }: Props) {
+export function TransferTrail({ rows, viewerId, artist, rises = false }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const [openId, setOpenId] = useState(() => defaultOpenRow(rows, viewerId));
@@ -74,7 +71,6 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay, rises = fal
     landOn: dot,
     marksSeen: open?.giver.id === viewerId && open.gratitude?.seenByGiverAt === null,
     reduced,
-    mount: mountReplay,
   });
   const idle = replay.phase === "idle";
   // As the heart shrinks into its dot, the amount takes it with one pulse.
@@ -176,6 +172,7 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay, rises = fal
                   <GratitudeIcon size={20} />
                 </span>
                 <span className="transfer-trail__sum">
+                  {/* Five figures and up step down a size, so the total fits beside the heart and Replay. */}
                   <span
                     ref={total}
                     className={`transfer-trail__total ${amount.length > 5 ? "is-long" : ""}`}
@@ -338,7 +335,7 @@ export function TransferTrailSkeleton({
           ),
         )}
         {timesGiven > shown && (
-          // A control's height, as the fold's button is.
+          // A div, not a row's shorter p, so it holds the fold button's height.
           <li className="transfer-trail__row transfer-trail__row--fold">
             <div className="transfer-trail__head">
               <Line width="9em" />

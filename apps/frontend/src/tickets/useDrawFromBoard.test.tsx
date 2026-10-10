@@ -6,8 +6,9 @@ import { ApiError, type ApiClient } from "../api/apiClient";
 import { newIdempotencyKey } from "../api/idempotencyKey";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import { keepSpend } from "./spendKey";
+import { T_STICK_MS } from "../ui/easing";
 import type { Sheet } from "./ticketsContext";
-import { PEEL_MS, useDrawFromBoard } from "./useDrawFromBoard";
+import { useDrawFromBoard } from "./useDrawFromBoard";
 import { useTickets } from "./useTickets";
 
 const onDraw = vi.fn();
@@ -97,7 +98,7 @@ describe("Draw on the sticker board", () => {
     expect(document.querySelector("[data-peeling]")?.getAttribute("data-peeling")).toBe("true");
     expect(document.querySelector("[role=dialog]")).toBeNull();
     expect(onDraw).not.toHaveBeenCalled();
-    wait(PEEL_MS);
+    wait(T_STICK_MS);
     expect(onDraw).toHaveBeenCalledOnce();
   });
 

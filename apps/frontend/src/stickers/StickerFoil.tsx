@@ -16,21 +16,13 @@ interface Props {
   /** Degrees the sticker is turned on screen, which the glint undoes so the light falls alike on all. */
   turn?: number;
   tone?: FoilTone;
-  /**
-   * The band's mask, made on the server; the Shop's bundled sample has none, so its band is dilated
-   * from `--m` here.
-   */
+  /** The band's mask, made on the server; without one the band grows from the container's `--m`. */
   mask?: string;
 }
 
 /**
- * Foil round a sticker, holo, pink or Kyoto Seika: its silhouette grown into a band just past the
- * white edge, from the server's mask when the sticker has one, else dilated in CSS from the `--m` the
- * container sets. The band is the sticker's edge, so its cut and cast shadow fall from the band's
- * outer edge. Holo and pink are bands of color that the light slides under a fine, still grating; Kyoto
- * Seika is a narrower band of manga screentone, with scraped highlights that the light slides through
- * its glint. A glint sits where the app's one light falls, holding where the last tilt left it, so a
- * still light holds every foil still. It goes under the image, which shows only inside its own cut.
+ * Foil round a sticker, holo, pink or Kyoto Seika: a band grown from the server's mask, or from `--m`
+ * without one. sticker-foil.css describes the material.
  */
 export function StickerFoil({ size, turn = 0, tone = "holo", mask }: Props) {
   const foil = useRef<HTMLSpanElement>(null);

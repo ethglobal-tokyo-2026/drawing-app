@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
+import type { mountGratitudeReplay } from "../gratitude/replay/mountGratitudeReplay";
 import { gratitude, people, trailEntry } from "../api/testFixtures";
 import { emptyApi, TEST_OWNER } from "../api/testing";
 import { toPerson } from "../api/views";
@@ -17,8 +18,14 @@ import {
 import { LANDED_HOLD_MS } from "../gratitude/replay/useGratitudeReplay";
 import { errorMessage } from "../i18n/errorMessage";
 import { ReducedMotion } from "../ui/testing";
-import { toTrailRows } from "./trailRows";
+import { toTrailRows, TRAIL_SHOWN } from "./trailRows";
 import { TransferTrail } from "./TransferTrail";
+
+// The replay's engine draws on a canvas, which happy-dom lacks, so a fake mounts instead.
+const replayEngine = vi.hoisted(() => ({ mount: vi.fn<typeof mountGratitudeReplay>() }));
+vi.mock("../gratitude/replay/mountGratitudeReplay", () => ({
+  mountGratitudeReplay: replayEngine.mount,
+}));
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -52,7 +59,6 @@ const show = (trail = [given("g-2", TEST_OWNER, people.bob)]) =>
           rows={toTrailRows(trail)}
           viewerId={TEST_OWNER.id}
           artist={toPerson(people.mika)}
-          mountReplay={engine.mount}
         />
       </ApiProvider>,
     ),
@@ -98,6 +104,7 @@ beforeEach(() => {
     Promise.resolve(gratitude({ giftId, total: REPLAYED_TOTAL, seenByGiverAt: SEEN_AT })),
   );
   engine = fakeReplayEngine();
+  replayEngine.mount.mockImplementation(engine.mount);
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -134,6 +141,21 @@ describe("TransferTrail's rows", () => {
     await press(pill());
     await press(find(".transfer-trail__row.is-open .transfer-trail__head"));
     expect(engine.last().stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("folds the rows past the newest, and opens a tapped row in place of the open one", () => {
+    show([5, 4, 3, 2, 1].map((n) => given(`g-${n}`, people.ken, people.bob)));
+    const rows = () => container.querySelectorAll(".transfer-trail__row");
+    const open = () =>
+      [...container.querySelectorAll<HTMLElement>(".transfer-trail__row.is-open")].map(
+        (row) => row.dataset.giftId,
+      );
+    expect(rows()).toHaveLength(TRAIL_SHOWN + 1);
+    expect(open()).toEqual(["g-5"]);
+    act(() => find(".transfer-trail__row--fold button").click());
+    expect(rows()).toHaveLength(5);
+    act(() => find(".transfer-trail__row:not(.is-open) button").click());
+    expect(open()).toEqual(["g-4"]);
   });
 
   it.each([

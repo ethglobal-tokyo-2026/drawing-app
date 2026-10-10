@@ -24,8 +24,9 @@
   display: block;
 }
 
-/* The silhouette less itself moved down and right: a slim band along the edges that face the light. It
-   comes from the cut alone, so it's the same on every sticker. WebKit composites with its own keywords. */
+/* The silhouette less itself moved down and right, away from the light at rest (how far is a tuning
+   value): a slim band along the edges that face the light. It comes from the cut alone, so it's the
+   same on every sticker. WebKit composites with its own keywords. */
 .live-resin > .live-resin__spec {
   -webkit-mask:
     var(--m) 0 0 / 100% 100% no-repeat,
@@ -63,6 +64,7 @@
   bottom: -30%;
   left: 0;
   width: 46%;
+  /* Unseen at rest: each sweep (resinSheen.ts) sets where it starts and ends. */
   opacity: 0;
   background: linear-gradient(
     100deg,
@@ -70,7 +72,6 @@
     rgba(255, 255, 255, 0.3) 50%,
     rgba(255, 255, 255, 0) 85%
   );
-  transform: translateX(-140%) skewX(-16deg);
 }
 
 /* Stills look alive: the specular sways slowly on its own. */

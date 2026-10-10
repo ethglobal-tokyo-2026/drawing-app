@@ -1,5 +1,5 @@
-import type { Person, TransferTrailEntry } from "@drawing-app/api/client";
 import { describe, expect, it } from "vitest";
+import { gratitude, people, trailEntry } from "../api/testFixtures";
 import type { PersonView } from "../api/views";
 import { artistShareLine, defaultOpenRow, toTrailRows, type TrailRow } from "./trailRows";
 
@@ -38,10 +38,6 @@ describe("the Transfer Trail", () => {
   });
 
   it.each([
-    [
-      "the artist gave it",
-      row("g", mika, me, { total: 600, artistShare: 120, seenByGiverAt: null }),
-    ],
     ["nothing was shared", row("g", ken, me, { total: 600, artistShare: 0, seenByGiverAt: null })],
     ["it has no gratitude", row("g", ken, me, null)],
   ])("has no share line when %s", (_, given) => {
@@ -49,31 +45,12 @@ describe("the Transfer Trail", () => {
   });
 
   it("keeps when the giver watched the gratitude", () => {
-    const person = (id: string): Person => ({
-      id,
-      handle: id,
-      lineDisplayName: id,
-      linePictureUrl: null,
-      nsfwOptIn: false,
-    });
-    const entry = (seenByGiverAt: string | null): TransferTrailEntry => ({
-      giftId: "g",
-      giver: person("mika"),
-      receiver: person("ken"),
-      receivedAt: "2026-09-26T00:00:00.000Z",
-      gratitude: {
+    const entry = (seenByGiverAt: string | null) =>
+      trailEntry({
         giftId: "g",
-        method: "tap",
-        hits: 3,
-        total: 30,
-        peakMult: 1,
-        peakTier: 1,
-        originalArtistGratitudeShare: 0,
-        gameConfigVersion: "test",
-        recordedAt: "2026-09-26T00:00:01.000Z",
-        seenByGiverAt,
-      },
-    });
+        receiver: people.ken,
+        gratitude: gratitude({ giftId: "g", total: 30, seenByGiverAt }),
+      });
     const watchedAt = "2026-09-26T00:00:02.000Z";
     expect(toTrailRows([entry(null)])[0]?.gratitude?.seenByGiverAt).toBeNull();
     expect(toTrailRows([entry(watchedAt)])[0]?.gratitude?.seenByGiverAt).toBe(

@@ -8,13 +8,17 @@ export const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 type Bezier = readonly [number, number, number, number];
 export const cubicBezier = (points: Bezier) => `cubic-bezier(${points.join(", ")})`;
 
-// tokens.css's curves, spelled out: Web Animations can't read CSS variables. The control points are
-// for cutting a curve at a keyframe (splitEasing).
+// tokens.css's curves and times, spelled out: Web Animations can't read CSS variables. The control
+// points are for cutting a curve at a keyframe (splitEasing).
 export const EASE_OUT_POINTS: Bezier = [0.16, 1, 0.3, 1];
 export const EASE_PEEL_POINTS: Bezier = [0.2, 0.7, 0.2, 1];
 export const EASE_OUT = cubicBezier(EASE_OUT_POINTS);
 export const EASE_PEEL = cubicBezier(EASE_PEEL_POINTS);
 export const EASE_SPRING = cubicBezier([0.34, 1.7, 0.5, 1]);
+/** --t-peel */
+export const T_PEEL_MS = 280;
+/** --t-stick */
+export const T_STICK_MS = 220;
 
 type Point = readonly [number, number];
 

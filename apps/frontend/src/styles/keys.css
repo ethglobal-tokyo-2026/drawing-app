@@ -99,11 +99,11 @@
   --deep: var(--seal-deep);
   --edge: var(--ink);
   --line: 2.5px;
-  --lip: 6px;
-  --r: 16px;
+  --lip: var(--key-lip);
+  --r: var(--r-key);
   --press-travel: 4.5px;
   --cast: 0 1px 0 rgba(28, 24, 36, 0.1), 2px 6px 12px -3px rgba(28, 24, 36, 0.24);
-  min-height: calc(60px + var(--lip));
+  min-height: calc(var(--key-h) + var(--lip));
   padding: 0 30px;
   gap: 8px;
   font: 400 20px/1 var(--font-puffy);

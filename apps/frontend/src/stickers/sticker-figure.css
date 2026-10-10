@@ -50,7 +50,8 @@
   filter: var(--sticker-cut) var(--sticker-cast-board);
 }
 
-/* The gloss sweep that presses a sticker flat when it sticks. */
+/* The gloss sweep that presses a sticker flat when it sticks. Unseen at rest: each sweep (stick.ts,
+   the receive dialog) sets where its band starts and ends. */
 .sticker-figure__sweep {
   position: absolute;
   inset: 0;
@@ -73,7 +74,6 @@
     rgba(255, 255, 255, 0.82) 50%,
     rgba(255, 255, 255, 0) 82%
   );
-  transform: translateX(-110%);
 }
 
 /* An NSFW sticker's pink gloss: a faint pink sheen over the image, inside its cut. */

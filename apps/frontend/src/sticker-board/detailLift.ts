@@ -1,13 +1,7 @@
 import { useEffectEvent, useLayoutEffect, useRef, type RefObject } from "react";
 import { playStick } from "../stickers/stick";
-import { EASE_OUT, EASE_PEEL_POINTS, splitEasing } from "../ui/easing";
+import { EASE_OUT, EASE_PEEL_POINTS, splitEasing, T_PEEL_MS, T_STICK_MS } from "../ui/easing";
 import "./detail-lift.css";
-
-// Motion tokens spelled out: Web Animations can't read CSS variables.
-/** --t-peel: the flight off the board. */
-const PEEL_MS = 280;
-/** --t-stick: the flight back, which is the opening played backward. */
-const STICK_MS = 220;
 
 /** On its way the sticker rises and turns toward you, most at this share of the flight's time. */
 const LIFT = { at: 0.35, rise: -8, turnY: -11, perspective: 900 };
@@ -149,19 +143,22 @@ function takeOff(
 
   const flyer = makeFlyer(view, figure, to);
   animations.push(
-    flyer.animate(flightFrames(from, to, origin.turn), { duration: PEEL_MS, fill }),
-    figure.animate([{ opacity: 0 }, { opacity: 0 }], { duration: PEEL_MS, fill }),
+    flyer.animate(flightFrames(from, to, origin.turn), { duration: T_PEEL_MS, fill }),
+    figure.animate([{ opacity: 0 }, { opacity: 0 }], { duration: T_PEEL_MS, fill }),
   );
   if (!leaves) {
     animations.push(
       flyer.animate([{ opacity: 0 }, { opacity: 1, offset: GIVEN_FADE }, { opacity: 1 }], {
-        duration: PEEL_MS,
+        duration: T_PEEL_MS,
         fill,
       }),
     );
     return { animations, flyer, away: null };
   }
-  const fade = leaves.animate([{ opacity: left }, { opacity: left }], { duration: PEEL_MS, fill });
+  const fade = leaves.animate([{ opacity: left }, { opacity: left }], {
+    duration: T_PEEL_MS,
+    fill,
+  });
   animations.push(fade);
   return { animations, flyer, away: { el: leaves, fade } };
 }
@@ -267,8 +264,9 @@ export function useDetailLift({ root, shownId, originOf, into, reduced, onClose 
     view.style.setProperty("pointer-events", "none");
     const back = flight.current ?? takeOffFrom(view);
     flight.current = back;
+    // The flight back is the opening played backward, in a stick's time rather than a peel's.
     for (const a of back.animations) {
-      a.updatePlaybackRate(reduced ? 1 : PEEL_MS / STICK_MS);
+      a.updatePlaybackRate(reduced ? 1 : T_PEEL_MS / T_STICK_MS);
       a.reverse();
     }
     void settled(back.animations).then(() => {

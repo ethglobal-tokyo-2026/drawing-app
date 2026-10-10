@@ -1,10 +1,17 @@
 import { useLayoutEffect, useRef, type PointerEvent } from "react";
-import { EASE_OUT } from "../ui/easing";
+import { EASE_OUT, T_STICK_MS } from "../ui/easing";
 
 /** How far a finger moves on the stage before it counts as a swipe or a scroll. */
-const LOCK_PX = 8;
+export const LOCK_PX = 8;
 /** How far sideways a swipe goes before it pages. */
-const PAGE_PX = 56;
+export const PAGE_PX = 56;
+/** A paged-to slide enters from this far to its side, turned this much, over this long. */
+const ENTER_PX = 60;
+const ENTER_TURN_DEG = 2;
+const ENTER_MS = 260;
+/** The share of a swipe the slide follows, and how far it turns for each px. */
+const FOLLOW = 0.7;
+const FOLLOW_TURN_DEG_PER_PX = 0.02;
 
 type Move = { dx: number; dy: number };
 
@@ -63,10 +70,13 @@ export function useSwipePaging({ index, count, reduced, onPage }: Paging) {
     if (!side || reduced) return;
     slide.current?.animate(
       [
-        { transform: `translateX(${side * 60}px) rotate(${side * 2}deg)`, opacity: 0 },
+        {
+          transform: `translateX(${side * ENTER_PX}px) rotate(${side * ENTER_TURN_DEG}deg)`,
+          opacity: 0,
+        },
         { transform: "none", opacity: 1 },
       ],
-      { duration: 260, easing: EASE_OUT },
+      { duration: ENTER_MS, easing: EASE_OUT },
     );
   }, [index, reduced]);
 
@@ -88,10 +98,11 @@ export function useSwipePaging({ index, count, reduced, onPage }: Paging) {
     if (s.lock !== "swipe") return;
     s.dx = dx;
     if (!reduced && slide.current)
-      slide.current.style.transform = `translateX(${dx * 0.7}px) rotate(${dx * 0.02}deg)`;
+      slide.current.style.transform = `translateX(${dx * FOLLOW}px) rotate(${dx * FOLLOW_TURN_DEG_PER_PX}deg)`;
   };
 
-  // A cancelled swipe springs back rather than paging: the browser or the system took the touch.
+  // A cancelled swipe springs back rather than paging: the browser or the system took the touch. A
+  // swipe that falls short sticks back in place.
   const endSwipe = (e: PointerEvent<HTMLElement>, pages: boolean) => {
     const s = swipe.current;
     if (!s || e.pointerId !== s.pointerId) return;
@@ -104,7 +115,7 @@ export function useSwipePaging({ index, count, reduced, onPage }: Paging) {
     if (next !== index) page(next);
     else if (followed && !reduced)
       el.animate([{ transform: followed }, { transform: "none" }], {
-        duration: 220,
+        duration: T_STICK_MS,
         easing: EASE_OUT,
       });
   };

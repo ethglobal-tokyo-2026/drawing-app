@@ -5,10 +5,9 @@
    grating, so the band glitters rather than crawls, and a glint sits where the light falls. Both move
    by transform only, only as the light moves, so a still light holds the foil still. */
 .sticker-foil {
-  /* Seventeen copies of the silhouette at the image's size, which together dilate it: the center, and
-     sixteen a band's width away, every 22.5°, so the band keeps an even width round curves and
-     points, where eight left lumps. The band and its cast share them. They're painted once, not
-     per frame. */
+  /* Seventeen copies of the silhouette dilate it: the center, and sixteen a band's width away every
+     22.5°, so the band keeps an even width round curves and points. The band and its cast share them,
+     painted once. */
   --foil-s: calc(100% - var(--foil-w) * 2);
   --foil-copies:
     var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m),
@@ -50,10 +49,9 @@
   --band-6: var(--foil-magenta);
 }
 
-/* Kyoto Seika Practice Mode foil: manga screentone. Round ink dots on a 45° screen, printed on paper as
-   a gradation tone that darkens away from the house light, on a band narrower than holo's so the tone
-   never outweighs the sticker. The live light glares the dots out where it falls and slides two
-   scraped highlights through the glare, by transform alone, so the tone is painted once. */
+/* Kyoto Seika Practice Mode foil: manga screentone, round dots on a 45° screen darkening away from the
+   house light, on a band narrower than holo's. The light glares the dots out where it falls and slides
+   two scraped highlights through the glare. */
 .sticker-foil.sticker-foil--kyoto-seika {
   /* A size container, so the band keeps to a share of the sticker's long side, as holo's does. */
   container-type: size;
@@ -77,9 +75,9 @@
     calc(var(--foil-w) * 1.7071) calc(var(--foil-w) * 0.2929);
 }
 
-/* WebKit's mask leaves a trace of whatever is painted on the band's edge when that edge falls between
-   device pixels, as on a turned sticker, which outlined its box. A clear pixel of border moves that
-   edge out past the tone and glint; they and the mask keep to the padding box, the band's box as before. */
+/* WebKit's mask leaves a trace of the band's edge when it falls between device pixels, as on a
+   turned sticker. A clear 1px border moves that edge out past the tone and glint, which keep to the
+   padding box with the mask. */
 .sticker-foil--kyoto-seika .sticker-foil__band {
   inset: calc(var(--foil-w) * -1 - 1px);
   border: 1px solid transparent;
@@ -117,7 +115,8 @@
 }
 
 /* Two highlights scraped out of the tone, a broad one and a fine one, across the screen's rows as a
-   cutter scrapes. The light slides them along their normal only, so they always cross its glare. */
+   cutter scrapes. The light slides them along their normal only, so they always cross its glare: the
+   translate is the light projected on the 112.5° gradient's normal, a quarter of the box per unit. */
 .sticker-foil--kyoto-seika .sticker-foil__glint::after {
   content: "";
   position: absolute;
@@ -195,10 +194,10 @@
   overflow: hidden;
 }
 
-/* The six bands, one period apart. The light slides them along their normal, as tilting a holographic
-   foil runs its colors past: a period as the light goes from top left to bottom right, so they reach
-   past the band's box only up and to the left, a period's worth. Light moving along the bands doesn't
-   slide them, as with a real grating. */
+/* Six bands, one period apart, slid along their normal by the light as a tilted holo foil runs its
+   colors past: a period from top left to bottom right, so they reach past the band's box only up and
+   left. Light along the bands doesn't slide them. The numbers come from the 115° gradient's normal:
+   the light along it over twice its components' sum, and one 96px period along it. */
 .sticker-foil__sheen {
   --foil-slide: calc(var(--lx, -0.6) * 0.341 + var(--ly, -0.6) * 0.159 + 0.5);
   position: absolute;
@@ -256,7 +255,8 @@
     rgba(255, 255, 255, 0.5) 45%,
     rgba(255, 255, 255, 0)
   );
-  /* From the middle to the band's edge as the light goes from 0 to ±1. */
+  /* From the middle to the band's edge as the light goes from 0 to ±1: half the band's size over the
+     glint's, which is 60% of the band's. */
   translate: calc(var(--lx, -0.6) * 83%) calc(var(--ly, -0.6) * 83%);
   transition: translate 280ms var(--ease-out);
 }

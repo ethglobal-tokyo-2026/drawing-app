@@ -137,8 +137,7 @@
     1px 2px 3px rgba(28, 24, 36, 0.14);
 }
 
-/* A sheet has the room, so the whole handle shows, up to the longest (32 characters), running onto a
-   second line rather than being cut short. */
+/* A sheet has the room, so the whole handle shows, running onto a second line rather than cut short. */
 .artist-chip--wrap {
   height: auto;
   min-height: 40px;

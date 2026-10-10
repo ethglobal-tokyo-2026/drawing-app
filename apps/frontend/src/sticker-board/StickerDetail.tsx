@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useEffectEvent,
   useId,
   useLayoutEffect,
   useMemo,
@@ -276,8 +277,8 @@ export function StickerDetail({
   });
   // From the board's listing, so Timelapse shows as the detail opens. A sticker veiled for you plays
   // no timelapse, which shows its drawing: the board says so, and a mark landing here says so at once.
-  const hasTimelapse =
-    sticker !== undefined && sticker.hasTimelapse && !veiledFor(sticker, optedIn);
+  const veiled = sticker !== undefined && veiledFor(sticker, optedIn);
+  const hasTimelapse = sticker !== undefined && sticker.hasTimelapse && !veiled;
   const kyotoSeika = sticker !== undefined && sticker.kyotoSeikaSubjects !== null;
   const timelapse = useTimelapse({ sticker, hasTimelapse, figure, reduced, kyotoSeika });
   // The timelapse's layer goes first: the lift clones the figure and flies it back to the board.
@@ -427,23 +428,20 @@ export function StickerDetail({
   };
   // One landed, from this detail or from one closed since: Give is back, and the status line says
   // where the sticker went.
-  useEffect(
-    () =>
-      onTakenOut((id) => {
-        const s = list.find((x) => x.id === id);
-        if (!s) return;
-        setTakenOut((ids) => new Set(ids).add(id));
-        const no = formatNo(s.no);
-        setTakenOutSaid({
-          stickerId: id,
-          words: s.placement.on
-            ? t(($) => $.stickerBoard.detail.takeOut.backOnBoard, { no })
-            : t(($) => $.stickerBoard.tray.status.returned, { no }),
-          shown: id === shownStickerId,
-        });
-      }),
-    [list, t, shownStickerId],
-  );
+  const tookOut = useEffectEvent((id: string) => {
+    const s = list.find((x) => x.id === id);
+    if (!s) return;
+    setTakenOut((ids) => new Set(ids).add(id));
+    const no = formatNo(s.no);
+    setTakenOutSaid({
+      stickerId: id,
+      words: s.placement.on
+        ? t(($) => $.stickerBoard.detail.takeOut.backOnBoard, { no })
+        : t(($) => $.stickerBoard.tray.status.returned, { no }),
+      shown: id === shownStickerId,
+    });
+  });
+  useEffect(() => onTakenOut((id) => tookOut(id)), []);
   // Take it out goes with the gift shown, so focus goes to the key back in its place. Decided as it
   // lands: paging back to that sticker later moves no focus.
   useLayoutEffect(() => {
@@ -605,8 +603,8 @@ export function StickerDetail({
                     height={sticker.height}
                     foil={byOther ? "detail" : undefined}
                     nsfw={sticker.nsfw}
-                    kyotoSeika={sticker.kyotoSeikaSubjects !== null}
-                    veiled={veiledFor(sticker, optedIn)}
+                    kyotoSeika={kyotoSeika}
+                    veiled={veiled}
                   />
                   <TimelapseLayer timelapse={timelapse} />
                   {/* A gift's state, stuck on the sticker as it pages; its note says it in words. */}
@@ -792,16 +790,16 @@ export function StickerDetail({
                   {ownerId &&
                     (askingTakeOut ? (
                       <div
-                        className="sticker-detail__mark-ask"
+                        className="sticker-detail__confirm"
                         role="group"
                         aria-labelledby={`${markId}-take-out`}
                       >
-                        <p className="sticker-detail__mark-title" id={`${markId}-take-out`}>
+                        <p className="sticker-detail__confirm-title" id={`${markId}-take-out`}>
                           {t(($) => $.stickerBoard.detail.takeOut.title, {
                             no: formatNo(sticker.no),
                           })}
                         </p>
-                        <div className="sticker-detail__mark-actions">
+                        <div className="sticker-detail__confirm-actions">
                           <QuietLink ref={cancelTakeOut} onClick={stopAskingTakeOut}>
                             {t(($) => $.stickerBoard.detail.takeOut.cancel)}
                           </QuietLink>
@@ -914,13 +912,13 @@ export function StickerDetail({
                   {canChangeMark &&
                     (mark ? (
                       <div
-                        className="sticker-detail__mark-ask"
+                        className="sticker-detail__confirm"
                         role="group"
                         aria-labelledby={`${markId}-title`}
                         aria-describedby={`${markId}-lines`}
                         aria-busy={mark.step === "sending"}
                       >
-                        <p className="sticker-detail__mark-title" id={`${markId}-title`}>
+                        <p className="sticker-detail__confirm-title" id={`${markId}-title`}>
                           {sticker.nsfw
                             ? t(($) => $.stickerBoard.detail.unmarkNsfw.title, {
                                 no: formatNo(sticker.no),
@@ -939,7 +937,7 @@ export function StickerDetail({
                             </>
                           )}
                         </div>
-                        <div ref={markActions} className="sticker-detail__mark-actions">
+                        <div ref={markActions} className="sticker-detail__confirm-actions">
                           <QuietLink
                             ref={cancelMark}
                             aria-disabled={mark.step === "sending"}

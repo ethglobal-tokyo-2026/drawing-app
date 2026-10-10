@@ -47,9 +47,9 @@ export function defaultOpenRow(rows: readonly TrailRow[], viewerId: string): str
 }
 
 /**
- * The open row's line for the Original Artist Gratitude Share, when the giver isn't the artist:
- * "2,357 to @ken · 590 to @mika, its artist", or "590 of it came to you, its artist". Never money
- * words.
+ * The open row's line for the Original Artist Gratitude Share, when there is one: "2,357 to @ken ·
+ * 590 to @mika, its artist", or "590 of it came to you, its artist". Never money words. The server
+ * shares none when the Original Artist gave or received the gift.
  */
 export function artistShareLine(
   row: TrailRow,
@@ -57,7 +57,7 @@ export function artistShareLine(
   viewerId: string,
 ): string | null {
   const g = row.gratitude;
-  if (!g || g.artistShare <= 0 || row.giver.id === artist.id) return null;
+  if (!g || g.artistShare <= 0) return null;
   const share = formatCount(g.artistShare);
   if (artist.id === viewerId)
     return i18next.t(($) => $.stickerBoard.transferTrail.artistShare.youDrewIt, { share });

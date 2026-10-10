@@ -114,6 +114,12 @@
      behind. */
   --tabs-lead-w: 228px;
 
+  /* The key, which keys.css builds and a stand-in for one reads too: its face's height, its lip and
+     its corners. */
+  --key-h: 60px;
+  --key-lip: 6px;
+  --r-key: 16px;
+
   /* Layers inside a phone */
   --z-screen: 1;
   --z-header: 30;

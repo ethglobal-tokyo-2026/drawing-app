@@ -5,11 +5,15 @@
   /* The sticker's box: a phone's, grown on a large screen. */
   --figure-phone: 216px;
   --figure: var(--figure-phone);
-  /* The strip's width, the top bar's height, and the pager's with the gap over it, which a large
-     screen's sticker is sized around. */
+  /* The strip's width, the top bar's height, the pager's with the gap over it, the stage's room
+     round the figure, and the main's padding beside and under it, which a large screen's sticker is
+     sized around. */
   --strip-w: 62px;
   --top-h: 54px;
   --pager-h: 38px;
+  --stage-room: 24px;
+  --main-pad: 18px;
+  --main-foot: 44px;
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);
@@ -113,7 +117,7 @@
 .sticker-detail__main {
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 0 18px 44px;
+  padding: 0 var(--main-pad) var(--main-foot);
   overscroll-behavior: contain;
   scrollbar-width: none;
 }
@@ -125,7 +129,7 @@
 /* Only a vertical pan goes to the page; a sideways swipe pages between stickers. */
 .sticker-detail__stage {
   position: relative;
-  height: calc(var(--figure) + 24px);
+  height: calc(var(--figure) + var(--stage-room));
   margin: 0 -6px;
   touch-action: pan-y;
   cursor: grab;
@@ -149,9 +153,14 @@
   aspect-ratio: var(--ar);
 }
 
-/* In the figure's cell, over it and the timelapse; taps go through to them. */
+/* The figure and the gift dot's layer share the slide's one cell. */
+.sticker-detail__slide > .sticker-figure,
 .sticker-detail__dot-layer {
   grid-area: 1 / 1;
+}
+
+/* Over the figure and the timelapse; taps go through to them. */
+.sticker-detail__dot-layer {
   position: relative;
   pointer-events: none;
 }
@@ -324,10 +333,10 @@
   align-self: stretch;
 }
 
-/* Send gratitude's place while the read is out: a key's box and corners, as keys.css draws one. */
+/* Send gratitude's place while the read is out: a key's box and corners. */
 .sticker-detail__acts .sticker-detail__key-skeleton {
-  min-height: calc(60px + 6px);
-  border-radius: 16px;
+  min-height: calc(var(--key-h) + var(--key-lip));
+  border-radius: var(--r-key);
 }
 
 .sticker-detail__check-failed,
@@ -364,7 +373,7 @@
 }
 
 /* A confirm in place, Mark 18+'s or Take it out's: a label lifted off the liner. */
-.sticker-detail__mark-ask {
+.sticker-detail__confirm {
   display: grid;
   gap: 8px;
   padding: 12px 14px;
@@ -376,7 +385,7 @@
   color: var(--ink);
 }
 
-.sticker-detail__mark-title {
+.sticker-detail__confirm-title {
   margin: 0;
   font: 700 15px/1.25 var(--font-ui);
 }
@@ -393,7 +402,7 @@
 }
 
 /* Scrolled up to as Mark 18+'s or Remove 18+'s confirm opens: with the confirm's foot, clear of the home indicator. */
-.sticker-detail__mark-actions {
+.sticker-detail__confirm-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -508,8 +517,8 @@
       var(--figure-phone),
       min(
         70vw,
-        100dvh - env(safe-area-inset-top) - var(--top-h) - 24px - var(--column-fold, 238px) - 44px -
-          env(safe-area-inset-bottom)
+        100dvh - env(safe-area-inset-top) - var(--top-h) - var(--stage-room) -
+          var(--column-fold, 238px) - var(--main-foot) - env(safe-area-inset-bottom)
       )
     );
   }
@@ -527,12 +536,12 @@
   .sticker-detail {
     /* The main's room: inside its padding across, which the column takes up to half of, and under
        the top bar down. */
-    --main-w: calc(100vw - var(--strip-w) - 18px - var(--gutter-large));
+    --main-w: calc(100vw - var(--strip-w) - var(--main-pad) - var(--gutter-large));
     --main-h: calc(100dvh - env(safe-area-inset-top) - var(--top-h));
     --room-w: calc(
       var(--main-w) - min(var(--column-w), var(--main-w) / 2) - 2 * var(--gutter-large) - 48px
     );
-    --room-h: calc(var(--main-h) - 24px - var(--pager-h) - 64px);
+    --room-h: calc(var(--main-h) - var(--stage-room) - var(--pager-h) - 64px);
     --figure: max(var(--figure-phone), min(var(--room-w), var(--room-h)));
   }
 
@@ -541,7 +550,7 @@
     grid-template-columns: minmax(0, 1fr) min(var(--column-w), 50%);
     grid-template-rows: minmax(0, 1fr);
     column-gap: calc(2 * var(--gutter-large));
-    padding: 0 var(--gutter-large) 0 18px;
+    padding: 0 var(--gutter-large) 0 var(--main-pad);
     overflow: hidden;
   }
 
@@ -554,7 +563,7 @@
   .sticker-detail__column {
     min-height: 0;
     padding-top: calc((var(--main-h) - var(--pager-h) - var(--figure) * min(1, 1 / var(--ar))) / 2);
-    padding-bottom: 44px;
+    padding-bottom: var(--main-foot);
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: none;

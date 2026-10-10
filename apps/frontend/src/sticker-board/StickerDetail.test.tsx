@@ -48,7 +48,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 /** Midday in Tokyo, where the app's days turn over, so the day reads the same in any machine's time zone. */
 const day = (d: number) => Date.UTC(2026, 8, d, 3);
 
-const you = { id: "me", handle: "alice", name: "Alice", nsfwOptIn: false };
+const you = toPerson(TEST_OWNER);
 const sticker = (
   no: number,
   createdAt: number,
@@ -110,92 +110,71 @@ const open = (
 /** Lets the detail's check of the Transfer Trail answer. */
 const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
-/** A sticker @ken drew, received from @mika, with or without gratitude. */
-function received(gratitude: Gratitude | null) {
-  const drawn = apiSticker({ id: "s-133", artist: people.ken, ownerId: TEST_OWNER.id });
-  const entry = {
-    giftId: "gift-133",
-    giver: people.mika,
-    receiver: TEST_OWNER,
-    receivedAt: "2026-09-23T12:00:00.000Z",
-    gratitude,
-  };
-  const client = emptyApi({
-    stickerDetail: () =>
-      Promise.resolve({
-        sticker: drawn,
-        owner: TEST_OWNER,
-        transferTrail: [entry],
-      }),
-  });
-  return { drawn, client };
-}
+/** No.0133 as the server has it: @ken drew it, and you hold it. */
+const byKen = apiSticker({ id: "s-133", artist: people.ken, ownerId: TEST_OWNER.id });
+/** No.0133's detail as you read it: @mika gave it to you, with or without gratitude. */
+const detailOf = (gratitude: Gratitude | null): StickerDetailResponse => ({
+  sticker: byKen,
+  owner: TEST_OWNER,
+  transferTrail: [trailEntry({ giftId: "gift-133", receiver: TEST_OWNER, gratitude })],
+});
+/** A server that reads No.0133's detail as `detailOf(gratitude)`. */
+const received = (gratitude: Gratitude | null) =>
+  emptyApi({ stickerDetail: () => Promise.resolve(detailOf(gratitude)) });
 const giveIsTheKey = () => button("Give")?.classList.contains("key");
 
 /**
- * A server whose Transfer Trail read answers only when told, with the gratitude it held as that read
- * went out, so a test sees the detail while a read is going and what a read from before a record
- * says. `server` is what takes a combo: once it has, the reads that go out after hold its gratitude.
+ * A server whose sticker detail reads answer only when told, each with `detail()` as that read went
+ * out, so a test sees the detail while a read is going, and what a read from before a change says.
  */
-function heldReads() {
-  const giftId = "gift-133";
-  const drawn = apiSticker({ id: "s-133", artist: people.ken, ownerId: TEST_OWNER.id });
-  let recorded: Gratitude | null = null;
+function heldReads(detail: () => StickerDetailResponse) {
   const answers: (() => void)[] = [];
   const stickerDetail = vi.fn(
     () =>
       new Promise<StickerDetailResponse>((resolve) => {
-        const seen = recorded;
-        answers.push(() =>
-          resolve({
-            sticker: drawn,
-            owner: TEST_OWNER,
-            transferTrail: [
-              {
-                giftId,
-                giver: people.mika,
-                receiver: TEST_OWNER,
-                receivedAt: "2026-09-23T12:00:00.000Z",
-                gratitude: seen,
-              },
-            ],
-          }),
-        );
+        const asRead = detail();
+        answers.push(() => resolve(asRead));
       }),
   );
   return {
-    giftId,
     client: emptyApi({ stickerDetail }),
+    /** Answers the `n`th read, from zero, and lets it land. */
+    answer: async (n = 0) => {
+      answers[n]?.();
+      await settle();
+    },
+  };
+}
+
+/**
+ * Held reads of No.0133's detail, and the `server` that records gratitude for its gift: the reads that
+ * go out once it has hold that gratitude.
+ */
+function recordingServer() {
+  let recorded: Gratitude | null = null;
+  return {
+    reads: heldReads(() => detailOf(recorded)),
     server: {
       recordGratitude: (body: RecordGratitude) => {
         recorded = gratitudeOf(body);
         return Promise.resolve(recorded);
       },
     },
-    /** Answers the `n`th read, from zero. */
-    answer: (n: number) => answers[n]?.(),
   };
 }
 
-const me = { ...TEST_OWNER, handle: "me", lineDisplayName: "Me" };
 /** A client whose sticker details have Transfer Trails: `trail` for s-133, empty for the rest. */
 const withTrail = (trail: StickerDetailResponse["transferTrail"]) =>
   emptyApi({
     stickerDetail: (id) =>
       Promise.resolve({
         sticker: apiSticker({ id, number: 133 }),
-        owner: me,
+        owner: TEST_OWNER,
         transferTrail: id === "s-133" ? trail : [],
       }),
   });
 const rows = () => [...document.querySelectorAll(".transfer-trail__row")];
 const openRow = () => document.querySelector(".transfer-trail__row.is-open")?.textContent;
-const closedRows = () =>
-  [
-    ...document.querySelectorAll<HTMLButtonElement>(
-      '.transfer-trail__row:not(.is-open) button[aria-expanded="false"]',
-    ),
-  ].filter((b) => !b.textContent?.includes("earlier"));
 
 const heading = () => document.querySelector("h2 .sticker-detail__no")?.textContent;
 /** Whether keyboard focus is in the detail, which hears its keys. */
@@ -227,7 +206,7 @@ async function changeMarkThrough(words: { open: { en: string }; confirm: { en: s
   press(words.confirm.en);
   await settle();
 }
-const confirm = () => document.querySelector(".sticker-detail__mark-ask");
+const confirm = () => document.querySelector(".sticker-detail__confirm");
 const figure = () => document.querySelector(".sticker-detail__slide .sticker-figure");
 const status = () => document.querySelector('[role="status"]')?.textContent;
 
@@ -433,53 +412,48 @@ describe("StickerDetail", () => {
 
   it("offers Send gratitude over Give for a received sticker with no gratitude yet", async () => {
     const onSendGratitude = vi.fn();
-    const { drawn, client } = received(null);
-    open({ onSendGratitude }, client);
+    open({ onSendGratitude }, received(null));
     await settle();
     expect(giveIsTheKey()).toBe(false);
     press("Send gratitude");
     expect(onSendGratitude).toHaveBeenCalledExactlyOnceWith(
       { id: "gift-133" },
-      toSticker(drawn),
+      toSticker(byKen),
       toPerson(people.mika),
     );
   });
 
   it("treats gratitude waiting on this phone as sent, and reads the trail again once the server has it", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    const reads = heldReads();
+    const { reads, server } = recordingServer();
     // Played, and kept for want of a connection.
     const offline = { recordGratitude: () => Promise.reject(new TypeError("Failed to fetch")) };
-    await sendGratitude(offline, TEST_OWNER.id, recordGratitudeBody({ giftId: reads.giftId }));
+    await sendGratitude(offline, TEST_OWNER.id, recordGratitudeBody({ giftId: "gift-133" }));
 
     open({ onSendGratitude: vi.fn() }, reads.client);
-    reads.answer(0);
-    await settle();
+    await reads.answer(0);
     expect(button("Send gratitude")).toBeUndefined();
 
     // Back online, the server records it, and the trail is read again. What was read before, which
     // has no gratitude, never brings Send gratitude back while it is.
-    await act(() => resendPendingGratitude(reads.server, TEST_OWNER.id));
+    await act(() => resendPendingGratitude(server, TEST_OWNER.id));
     expect(reads.client.stickerDetail).toHaveBeenCalledTimes(2);
     expect(button("Send gratitude")).toBeUndefined();
-    reads.answer(1);
-    await settle();
+    await reads.answer(1);
     expect(button("Send gratitude")).toBeUndefined();
   });
 
   it("reads the trail again once its first read lands, when gratitude was recorded while that read was going out", async () => {
-    const reads = heldReads();
+    const { reads, server } = recordingServer();
     open({ onSendGratitude: vi.fn() }, reads.client);
     // The first read is out and unanswered when the server records a combo this phone sent.
-    const body = recordGratitudeBody({ giftId: reads.giftId });
-    await act(() => sendGratitude(reads.server, TEST_OWNER.id, body));
+    const body = recordGratitudeBody({ giftId: "gift-133" });
+    await act(() => sendGratitude(server, TEST_OWNER.id, body));
     // That read went out before the record, so it holds no gratitude, and can't bring Send gratitude back.
-    reads.answer(0);
-    await settle();
+    await reads.answer(0);
     expect(button("Send gratitude")).toBeUndefined();
     expect(reads.client.stickerDetail).toHaveBeenCalledTimes(2);
-    reads.answer(1);
-    await settle();
+    await reads.answer(1);
     expect(button("Send gratitude")).toBeUndefined();
     expect(giveIsTheKey()).toBe(true);
   });
@@ -496,10 +470,10 @@ describe("StickerDetail", () => {
     const reopen = async () => {
       act(() => root.unmount());
       root = createRoot(host);
-      open({ onSendGratitude: vi.fn() }, received(null).client);
+      open({ onSendGratitude: vi.fn() }, received(null));
       await settle();
     };
-    open({ onSendGratitude: vi.fn() }, received(null).client);
+    open({ onSendGratitude: vi.fn() }, received(null));
     await settle();
     expect(refused()).toBeNull();
 
@@ -558,19 +532,8 @@ describe("StickerDetail", () => {
   });
 
   it("keeps Give as the key once gratitude is sent", async () => {
-    const sent: Gratitude = {
-      giftId: "gift-133",
-      method: "tap",
-      hits: 64,
-      total: 320,
-      peakMult: 3,
-      peakTier: 2,
-      originalArtistGratitudeShare: 64,
-      gameConfigVersion: "v1",
-      recordedAt: "2026-09-23T12:05:00.000Z",
-      seenByGiverAt: null,
-    };
-    open({ onSendGratitude: vi.fn() }, received(sent).client);
+    const sent = gratitudeFixture({ giftId: "gift-133", total: 320 });
+    open({ onSendGratitude: vi.fn() }, received(sent));
     await settle();
     expect(button("Send gratitude")).toBeUndefined();
     expect(giveIsTheKey()).toBe(true);
@@ -580,7 +543,7 @@ describe("StickerDetail", () => {
     const openOn = (shown: BoardStickerView) => open({ stickers: [shown], startId: shown.id });
     const thought = () => host.querySelector(".subject-thought");
 
-    it("thinks of a sticker drawn in Kyoto Seika Practice Mode's pair, which screen readers hear", async () => {
+    it("shows the two Kyoto Seika Subjects a sticker drawn in Kyoto Seika Practice Mode combined, which screen readers hear", async () => {
       openOn(sticker(150, day(20), { kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS }));
       const [first, second] = TEST_KYOTO_SEIKA_SUBJECTS;
       expect(thought()).not.toBeNull();
@@ -606,51 +569,35 @@ describe("StickerDetail", () => {
     });
   });
 
-  it("shows where it's been, the most recent gratitude open with its artist's share", async () => {
-    const withGratitude = trailEntry({
-      giftId: "g-2",
-      giver: people.ken,
-      receiver: me,
-      gratitude: gratitudeFixture({
-        giftId: "g-2",
-        total: 2946,
-        originalArtistGratitudeShare: 589,
-      }),
+  it("shows where it's been to its owner as you, with its Original Artist's share", async () => {
+    // @ken gave you a sticker @mika drew, so @mika's share comes out of @ken's part.
+    const sent = gratitudeFixture({
+      giftId: "g-1",
+      total: 2946,
+      originalArtistGratitudeShare: 589,
     });
-    // Drawn by @mika, so the artist's share comes out of @ken's part.
-    const byMika = stickers.map((s) =>
-      s.id === "s-133"
-        ? {
-            ...s,
-            artist: {
-              id: people.mika.id,
-              handle: "mika",
-              name: "Mika",
-              nsfwOptIn: false,
-            },
-          }
-        : s,
-    );
     open(
-      { stickers: byMika, ownerId: "me" },
+      {
+        stickers: [sticker(133, day(14), { artist: toPerson(people.mika) })],
+        ownerId: TEST_OWNER.id,
+      },
       withTrail([
-        withGratitude,
-        trailEntry({ giftId: "g-1", giver: people.mika, receiver: people.ken }),
+        trailEntry({ giftId: "g-1", giver: people.ken, receiver: TEST_OWNER, gratitude: sent }),
       ]),
     );
     await settle();
-    expect(rows()).toHaveLength(2);
-    expect(openRow()).toContain("2,946");
-    expect(openRow()).toContain("From you");
-    expect(openRow()).toContain("2,357 to @ken · 589 to @mika, its artist");
+    expect(openRow()).toContain(i18next.t(($) => $.stickerBoard.transferTrail.fromYou));
+    expect(document.querySelector(".transfer-trail__split")?.textContent).toContain("@mika");
   });
 
   it("opens on a detail read ahead with its Transfer Trail in, asking the server nothing more", async () => {
     const stickerDetail = vi.fn((id: string) =>
       Promise.resolve({
         sticker: apiSticker({ id, number: 133 }),
-        owner: me,
-        transferTrail: [trailEntry({ giftId: "gift-133", giver: me, receiver: people.mika })],
+        owner: TEST_OWNER,
+        transferTrail: [
+          trailEntry({ giftId: "gift-133", giver: TEST_OWNER, receiver: people.mika }),
+        ],
       }),
     );
     const client = emptyApi({ stickerDetail });
@@ -663,7 +610,7 @@ describe("StickerDetail", () => {
       given.filter((s) => s.id === "s-133"),
     );
     await settle();
-    open({ ownerId: me.id, stickers: given }, client);
+    open({ ownerId: TEST_OWNER.id, stickers: given }, client);
     expect(rows()).toHaveLength(1);
     expect(document.querySelector(".sticker-detail__column .skeleton")).toBeNull();
     await settle();
@@ -671,11 +618,11 @@ describe("StickerDetail", () => {
   });
 
   it("reads its detail again once the board lists a gift received since the last read", async () => {
-    let trail = [trailEntry({ giftId: "g-1", giver: me, receiver: people.mika })];
+    let trail = [trailEntry({ giftId: "g-1", giver: TEST_OWNER, receiver: people.mika })];
     const stickerDetail = vi.fn((id: string) =>
       Promise.resolve({
         sticker: apiSticker({ id, number: 133 }),
-        owner: me,
+        owner: TEST_OWNER,
         transferTrail: trail,
       }),
     );
@@ -683,34 +630,19 @@ describe("StickerDetail", () => {
     const listed = (timesGiven: number) => [
       sticker(133, day(14), { trail: { timesGiven, newestHasGratitude: false } }),
     ];
-    open({ ownerId: me.id, stickers: listed(1) }, client);
+    open({ ownerId: TEST_OWNER.id, stickers: listed(1) }, client);
     await settle();
     act(() => root.render(null));
 
     // Within the minute @mika gives it back, and the board's reload lists that gift.
-    trail = [trailEntry({ giftId: "g-2", giver: people.mika, receiver: me }), ...trail];
-    open({ ownerId: me.id, stickers: listed(2) }, client);
+    trail = [trailEntry({ giftId: "g-2", giver: people.mika, receiver: TEST_OWNER }), ...trail];
+    open({ ownerId: TEST_OWNER.id, stickers: listed(2) }, client);
     await settle();
     expect(stickerDetail).toHaveBeenCalledTimes(2);
     expect(rows()).toHaveLength(2);
   });
 
   describe("while its detail is read", () => {
-    /** A client whose read of the sticker's detail answers `answer` only once `land` is called. */
-    function heldDetail(answer: StickerDetailResponse) {
-      let resolve: (detail: StickerDetailResponse) => void = () => {};
-      const stickerDetail = () =>
-        new Promise<StickerDetailResponse>((r) => {
-          resolve = r;
-        });
-      return {
-        client: emptyApi({ stickerDetail }),
-        land: async () => {
-          resolve(answer);
-          await settle();
-        },
-      };
-    }
     const trail = () => document.querySelector(".transfer-trail");
     const skeletons = (within: string) => document.querySelectorAll(`${within} .skeleton`).length;
     /** Each of the trail's rows by the shape that sets its height. */
@@ -732,28 +664,31 @@ describe("StickerDetail", () => {
         givenTo: { receiver: bob, receivedAt: day(23) },
         trail: { timesGiven: 3, newestHasGratitude: true },
       });
-      const read = heldDetail({
+      const read = heldReads(() => ({
         sticker: apiSticker({ id: "s-133", number: 133 }),
         owner: people.bob,
         transferTrail: [
           trailEntry({
             giftId: "g-3",
-            giver: me,
+            giver: TEST_OWNER,
             receiver: people.bob,
             gratitude: gratitudeFixture({ giftId: "g-3", total: 300 }),
           }),
-          trailEntry({ giftId: "g-2", giver: people.ken, receiver: me }),
-          trailEntry({ giftId: "g-1", giver: me, receiver: people.ken }),
+          trailEntry({ giftId: "g-2", giver: people.ken, receiver: TEST_OWNER }),
+          trailEntry({ giftId: "g-1", giver: TEST_OWNER, receiver: people.ken }),
         ],
-      });
-      open({ mode: "given", stickers: [given], startId: given.id, ownerId: me.id }, read.client);
+      }));
+      open(
+        { mode: "given", stickers: [given], startId: given.id, ownerId: TEST_OWNER.id },
+        read.client,
+      );
       const held = shapes();
       expect(skeletons(".transfer-trail")).toBeGreaterThan(0);
       // The line that says who has it is the trail's, so it doesn't show and go as the trail lands.
       const meta = () => document.querySelector(".sticker-detail__meta")?.textContent;
       expect(meta()).not.toContain("You gave it to");
 
-      await read.land();
+      await read.answer();
       expect(skeletons(".transfer-trail")).toBe(0);
       expect(shapes()).toEqual(held);
       expect(openRow()).toContain("300");
@@ -761,11 +696,7 @@ describe("StickerDetail", () => {
     });
 
     it("lays Give out beside Send gratitude's place while it reads whether gratitude is owed, and keeps it there", async () => {
-      const read = heldDetail({
-        sticker: apiSticker({ id: "s-133", artist: people.ken, ownerId: TEST_OWNER.id }),
-        owner: TEST_OWNER,
-        transferTrail: [trailEntry({ giftId: "gift-133", receiver: TEST_OWNER })],
-      });
+      const read = heldReads(() => detailOf(null));
       const fromMika = sticker(133, day(14), {
         artist: toPerson(people.ken),
         trail: { timesGiven: 1, newestHasGratitude: false },
@@ -780,31 +711,12 @@ describe("StickerDetail", () => {
       expect(skeletons(".sticker-detail__acts")).toBe(1);
       const held = shapes();
 
-      await read.land();
+      await read.answer();
       expect(button("Give")).toBe(give);
       expect(button("Send gratitude")?.classList.contains("key")).toBe(true);
       expect(skeletons(".sticker-detail__acts")).toBe(0);
       expect(shapes()).toEqual(held);
     });
-  });
-
-  it("folds the rows past the newest, and opens a tapped row in place of the open one", async () => {
-    const given = (n: number) =>
-      trailEntry({
-        giftId: `g-${n}`,
-        giver: people.ken,
-        receiver: people.bob,
-        gratitude: gratitudeFixture({ giftId: `g-${n}`, total: n * 100 }),
-      });
-    open({ ownerId: "me" }, withTrail([5, 4, 3, 2, 1].map(given)));
-    await settle();
-    expect(rows()).toHaveLength(2);
-    expect(openRow()).toContain("500");
-    press("4 earlier gifts");
-    expect(rows()).toHaveLength(5);
-    act(() => closedRows()[0]?.click());
-    expect(openRow()).toContain("400");
-    expect(document.querySelectorAll(".transfer-trail__row.is-open")).toHaveLength(1);
   });
 
   it("keeps focus in the detail when Try again goes as it checks the sticker again", async () => {
@@ -832,7 +744,7 @@ describe("StickerDetail", () => {
     const withTimelapse = () =>
       emptyApi({
         stickerDetail: (id) =>
-          Promise.resolve({ sticker: apiSticker({ id }), owner: me, transferTrail: [] }),
+          Promise.resolve({ sticker: apiSticker({ id }), owner: TEST_OWNER, transferTrail: [] }),
         timelapse: () => Promise.resolve(TEST_TIMELAPSE),
       });
     const timelapseButton = () => document.querySelector<HTMLButtonElement>(".timelapse-button");
@@ -876,14 +788,12 @@ describe("StickerDetail", () => {
       expect(layer()).toBeNull();
     });
 
-    it("shows Timelapse and the Kyoto Seika pair from the board's sticker before its detail is read", () => {
-      const drawn = { ...timelapsed[1], kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS };
+    it("shows Timelapse from the board's sticker before its detail is read", () => {
       open(
-        { stickers: [drawn], startId: drawn.id },
+        { stickers: timelapsed, startId: "s-133" },
         emptyApi({ stickerDetail: () => new Promise(() => {}) }),
       );
       expect(timelapseButton()).not.toBeNull();
-      expect(document.querySelector(".subject-thought")).not.toBeNull();
     });
 
     it("keeps focus in the dialog when paging from Timelapse takes the button away", async () => {
