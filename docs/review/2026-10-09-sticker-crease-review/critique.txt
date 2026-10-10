@@ -1,0 +1,29 @@
+Sticker crease critique (impeccable critique), 2026-10-09
+Board: crease-ann (32 overlapping stickers, 22 creased), a calm board of three one-stroke stickers, phone
+390x844 DPR 3 and iPad 1024x1366 DPR 2, Chromium and WebKit. Creases on via localStorage board.creases.
+Numbers are luma changes (0-255) between the same frame with creases shown and hidden, from
+/tmp/crease-critique/analysis.txt; tuning values are starting points to try, not calibrated.
+
+1. [P1] On a crowded phone board the crease reads as drawn white lines, not pressed ridges.
+   Screenshot: critique-1.png (left creases hidden, right shown, light at rest).
+   The lit side lands as a thin white line on the sticker's face (+23 to +26 luma at p95 on mid-tone faces,
+   up to +37; up to +41 on dark faces), while the shade side barely registers there. A sticker over several
+   others carries every silhouette beneath it as a pale outline (the purple blob, the blue cloud, the brown
+   bunny), so it looks like a ghost drawing on top of the artist's own strokes. PRODUCT.md: a sticker is cut
+   from its artist's own strokes; DESIGN.md: the crease shows edges "as a real one does pressed down".
+   Fix: make the lit side a soft ramp instead of a line. In crease.ts try RAMP 4 -> 6 and ROUND 1 -> 2 (wider,
+   softer ramp), CREASE_TONE.lit 0.42 -> 0.28 and MOST.lit 0.5 -> 0.32, so the highlight peaks near the
+   shade's strength; keep CREASE_TONE.shade and STRENGTH. Recheck against critique-1's purple blob.
+
+2. [P2] A fast move of the light cross-fades the two opposite bakes, so for a moment every edge is drawn white
+   and ink at once.
+   Screenshot: critique-2.png (crop at rest, 40 ms after the mouse jumps from the top-left to the bottom-right
+   corner, then settled).
+   facts.json, 55 ms after the jump: topLeft 0.438, bottomRight 0.533, topRight 0.169 (sum 1.14). A slow pass
+   fades through the overhead light as designed (sum dips to about 0.22 halfway), but a jump, a pen set down
+   elsewhere, or a flick of the phone runs each layer's own 280 ms opacity transition from where it was, so
+   the lit and shaded images of the same ramp overlap and the ramp turns grey for a beat.
+   Fix: transition the light, not the layers. In sticker-crease.css drop `transition: opacity 280ms` on
+   `.sticker-crease > i`; register --lx and --ly with @property as <number> and transition them on
+   `.sticker-crease` (about 280ms, --ease-out), so the blend follows the light's path through overhead.
+   If @property isn't wanted, shorten the layer transition to 90ms.
