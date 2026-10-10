@@ -29,9 +29,14 @@ const STEP = 0.02;
 const TILT_RANGE = 32;
 /** How far back a phone leans when it's held to read, in degrees. */
 const HELD_BETA = 40;
-/** A tilt change this big sweeps a sheen across the stickers on screen, at most once a pause. */
-const SWEEP_TILT = 9;
-const SWEEP_PAUSE_MS = 1400;
+/**
+ * Tilting this far, in degrees of the light's range, sweeps a sheen across the stickers on screen. Tilt
+ * during the pause after a sweep doesn't count toward the next one.
+ */
+export const SWEEP_TILT = 9;
+export const SWEEP_PAUSE_MS = 1400;
+/** A resin narrower than this on screen, in CSS px, is too small for its sweep to show. */
+const SWEEP_MIN_WIDTH = 30;
 /** The tilt's light glides toward where the phone points, most of the way in this long, so it never jumps. */
 export const GLIDE_MS = 160;
 
@@ -66,7 +71,7 @@ function lightForTilt(beta: number, gamma: number): { x: number; y: number } {
 }
 
 /** The installed light: its listeners, on while any screen with stickers holds the light. */
-let light: { on: () => void; off: () => void; relight: () => void } | null = null;
+let light: { on: () => void; off: () => void } | null = null;
 let holders = 0;
 
 /** Where the light last was, or null before it first moves: what a newly shown sticker starts at. */
@@ -84,11 +89,16 @@ export function lightUp(el: HTMLElement) {
 /** Sweeps a sheen across each live resin big enough to see on screen; returns how many it measured. */
 function sweepVisible(doc: Document, win: Window): number {
   const resins = doc.querySelectorAll(".live-resin");
+  // Every resin is measured before any sweep starts: a sweep started between two measures makes the
+  // next one recompute the page's style.
+  const due: Element[] = [];
   for (const resin of resins) {
     const r = resin.getBoundingClientRect();
     const sheen = sheenIn(resin);
-    if (sheen && r.width > 30 && r.bottom > 0 && r.top < win.innerHeight) sweepSheen(sheen);
+    if (sheen && r.width > SWEEP_MIN_WIDTH && r.bottom > 0 && r.top < win.innerHeight)
+      due.push(sheen);
   }
+  for (const sheen of due) sweepSheen(sheen);
   return resins.length;
 }
 
@@ -99,34 +109,34 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   let y = 0;
   /** The tilt aimed it, so it glides there; a mouse or pen is followed at once. */
   let gliding = false;
-  /** Where the resins were last lit from, or null before the light first moves. */
+  /** Where the light was last written, or null before it first moves. */
   let lit: { x: number; y: number } | null = null;
   let frame = 0;
   let lastWrite = -Infinity;
 
-  /** Sets the light on every lit element, or clears it with null; returns how many. */
-  const setOnResins = (lx: string | null, ly: string | null) => {
+  /** Sets the light on everything that reads it, or clears it with null; returns how many. */
+  const setLight = (lx: string | null, ly: string | null) => {
     lightNow = lx === null || ly === null ? null : { lx, ly };
-    const resins = root.querySelectorAll<HTMLElement>(LIT);
-    for (const resin of resins) {
+    const readers = root.querySelectorAll<HTMLElement>(LIT);
+    for (const el of readers) {
       if (lx === null || ly === null) {
-        resin.style.removeProperty("--lx");
-        resin.style.removeProperty("--ly");
+        el.style.removeProperty("--lx");
+        el.style.removeProperty("--ly");
       } else {
-        resin.style.setProperty("--lx", lx);
-        resin.style.setProperty("--ly", ly);
+        el.style.setProperty("--lx", lx);
+        el.style.setProperty("--ly", ly);
       }
     }
-    return resins.length;
+    return readers.length;
   };
 
-  /** Sets the light from `lit` on every lit element; returns how many. Made once, not per write. */
-  const lightFromLit = () => (lit ? setOnResins(written(lit.x), written(lit.y)) : 0);
+  /** Sets the light from `lit` on everything that reads it; returns how many. Made once, not per write. */
+  const writeLit = () => (lit ? setLight(written(lit.x), written(lit.y)) : 0);
 
-  /** Lights the resins from `lit` as our work, and marks how many it lit while recording. */
-  const lightResins = (why: string) => {
-    const count = timeOurWork("light", lightFromLit);
-    if (isPerformanceRecorderOn()) notePerformance("light", `${why} ${count} highlights`);
+  /** Writes the light from `lit` as our work, and notes how many it lit while recording. */
+  const writeLight = () => {
+    const count = timeOurWork("light", writeLit);
+    if (isPerformanceRecorderOn()) notePerformance("light", `write to ${count} highlights`);
   };
 
   const write = (now: number) => {
@@ -140,12 +150,12 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     if (!lit || !gliding) lit = { x, y };
     else {
       // A low-pass on the tilt, by the time since the last write; close enough, it lands.
-      const k = 1 - Math.exp(-Math.min(since, 10 * GLIDE_MS) / GLIDE_MS);
+      const k = 1 - Math.exp(-since / GLIDE_MS);
       const next = { x: lit.x + (x - lit.x) * k, y: lit.y + (y - lit.y) * k };
       const near = Math.abs(x - next.x) < STEP / 2 && Math.abs(y - next.y) < STEP / 2;
       lit = near ? { x, y } : next;
     }
-    lightResins("write to");
+    writeLight();
     if (lit.x !== x || lit.y !== y) frame = win.requestAnimationFrame(write);
   };
 
@@ -158,37 +168,31 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     if (!frame) frame = win.requestAnimationFrame(write);
   };
 
-  // A screen's resins come in at the middle; they start where the light already is.
-  const relight = () => {
-    if (lit && !reduced.matches) lightResins("relight");
-  };
-
   const fromPointer = (e: PointerEvent) => {
     if (e.pointerType === "touch") return;
     aim((e.clientX / win.innerWidth) * 2 - 1, (e.clientY / win.innerHeight) * 2 - 1, false);
   };
 
-  /** Across the screen, where the last tilt put the light. */
-  let lastAcross: number | null = null;
+  /** Across the screen, where the tilt last swept a sheen, or stood as the pause after it ended. */
+  let sweptFrom: number | null = null;
   let lastSweep = -Infinity;
-  // Made once, like lightFromLit, not per sweep.
+  // Made once, like writeLit, not per sweep.
   const sweep = () => sweepVisible(root.ownerDocument, win);
   const fromTilt = (e: DeviceOrientationEvent) => {
     if (e.gamma === null || e.beta === null) return;
     const to = lightForTilt(e.beta, e.gamma);
     aim(to.x, to.y, true);
     const now = win.performance.now();
-    if (
-      lastAcross !== null &&
-      Math.abs(to.x - lastAcross) > SWEEP_TILT / TILT_RANGE &&
-      now - lastSweep > SWEEP_PAUSE_MS &&
-      !reduced.matches
-    ) {
-      lastSweep = now;
-      const measured = timeOurWork("light sweep", sweep);
-      if (isPerformanceRecorderOn()) notePerformance("light", `sweep measured ${measured} resins`);
+    // The first tilt, and any tilt in the pause, only marks where the next sweep is measured from.
+    if (sweptFrom === null || now - lastSweep < SWEEP_PAUSE_MS || reduced.matches) {
+      sweptFrom = to.x;
+      return;
     }
-    lastAcross = to.x;
+    if (Math.abs(to.x - sweptFrom) <= SWEEP_TILT / TILT_RANGE) return;
+    lastSweep = now;
+    sweptFrom = to.x;
+    const measured = timeOurWork("light sweep", sweep);
+    if (isPerformanceRecorderOn()) notePerformance("light", `sweep measured ${measured} resins`);
   };
 
   // Turning reduced motion on sets the light back in the middle.
@@ -197,7 +201,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     win.cancelAnimationFrame(frame);
     frame = 0;
     lit = null;
-    setOnResins(null, null);
+    setLight(null, null);
   };
 
   // The light never asks for the tilt: where a browser wants permission first (iOS), no tilt
@@ -214,9 +218,8 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
       win.removeEventListener("pointermove", fromPointer);
       win.removeEventListener("pointerdown", fromPointer);
       // A tilt from before the sensor rested isn't a change to sweep for.
-      lastAcross = null;
+      sweptFrom = null;
     },
-    relight,
   };
   light = own;
   if (holders > 0) own.on();
@@ -231,8 +234,8 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
 
 /** Holds the light for a screen with stickers; returns what releases it. */
 export function acquireLight(): () => void {
+  // A screen's stickers start where the light is as they mount (lightUp), so nothing is rewritten here.
   if (holders++ === 0) light?.on();
-  light?.relight();
   return () => {
     if (--holders === 0) light?.off();
   };

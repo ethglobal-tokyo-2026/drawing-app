@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { acquireLight, GLIDE_MS, installLight, lightUp } from "./light";
+import { acquireLight, GLIDE_MS, installLight, lightUp, SWEEP_PAUSE_MS, SWEEP_TILT } from "./light";
 
 const root = document.documentElement;
 let uninstall = () => {};
@@ -22,6 +22,29 @@ const addResin = () => {
   el.append(band);
   document.body.append(el);
   return spec;
+};
+/** A resin on screen, big enough to sweep; returns its sheen's sweeps. */
+const addSweptResin = () => {
+  const resin = addResin().closest<HTMLElement>(".live-resin");
+  if (!resin) throw new Error("A live resin holds its specular");
+  resin.getBoundingClientRect = () => new DOMRect(0, 0, 100, 100);
+  const band = document.createElement("i");
+  band.className = "live-resin__sheen";
+  const sheen = document.createElement("b");
+  band.append(sheen);
+  resin.append(band);
+  const sweeps = vi.fn<Element["animate"]>();
+  sheen.animate = sweeps;
+  return sweeps;
+};
+/** A sensor's frame. */
+const FRAME_MS = 16;
+/** The phone tilted sideways a degree a frame, each step far short of a sweep's tilt. */
+const tiltAcross = (from: number, to: number) => {
+  for (let gamma = from; gamma <= to; gamma++) {
+    tiltTo(gamma, 40);
+    vi.advanceTimersByTime(FRAME_MS);
+  }
 };
 /** A sticker's foil, whose bands and glint read the light. */
 const makeFoil = () => {
@@ -164,14 +187,32 @@ describe("the shared light", () => {
     expect(writes).not.toHaveBeenCalled();
   });
 
-  it("starts a newly shown screen's resins where the light already is", () => {
+  it("starts a resin shown after the light moved where the light already is", () => {
     uninstall = installLight(root);
     showScreen();
     tiltTo(32, 40);
     vi.advanceTimersByTime(100);
+    // As LiveResin does as it mounts.
     const detail = addResin();
-    showScreen();
+    lightUp(detail);
     expect(lightOn(detail)).toEqual(["1.000", "0.000"]);
+  });
+
+  it("sweeps a sheen once the phone has tilted far enough, however slowly, and not again until the pause has passed", () => {
+    const sweeps = addSweptResin();
+    uninstall = installLight(root);
+    showScreen();
+    tiltAcross(0, SWEEP_TILT);
+    expect(sweeps).toHaveBeenCalledTimes(1);
+
+    // Held still through the pause, it doesn't sweep again; tilted on after it, it does.
+    for (let t = 0; t <= SWEEP_PAUSE_MS; t += FRAME_MS) {
+      tiltTo(SWEEP_TILT, 40);
+      vi.advanceTimersByTime(FRAME_MS);
+    }
+    expect(sweeps).toHaveBeenCalledTimes(1);
+    tiltAcross(SWEEP_TILT, 2 * SWEEP_TILT);
+    expect(sweeps).toHaveBeenCalledTimes(2);
   });
 
   it("follows the phone's tilt on a screen with stickers, even in a browser that can also ask", () => {
