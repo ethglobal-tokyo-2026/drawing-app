@@ -14,7 +14,7 @@ export type Failure = { kind: "notSaved" | "notKept"; error: unknown };
  * A setting's last change while it saves, waiting its turn included, or why it didn't take, until it's
  * changed again. A setting that took has none: its control shows it.
  */
-export type Status = { step: "saving"; to: Partial<Shown> } | { step: "failed"; failure: Failure };
+type Status = { step: "saving"; to: Partial<Shown> } | { step: "failed"; failure: Failure };
 
 /** The settings' saves through one client, and each setting's status. */
 class SettingSaves {
