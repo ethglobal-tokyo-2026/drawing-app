@@ -318,6 +318,7 @@ describe("StickerDetail", () => {
       openInFlight(packed);
       expect(note()).toBe(i18next.t(($) => $.giving.inTheBag.title));
       expect(button(takeOut())).toBeDefined();
+      expect(giveIsTheKey()).toBe(true);
       press("Give");
       expect(onGive).toHaveBeenCalledExactlyOnceWith(packed);
     });

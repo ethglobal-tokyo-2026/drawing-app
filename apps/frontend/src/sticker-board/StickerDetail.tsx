@@ -569,7 +569,6 @@ export function StickerDetail({
                     <span
                       className="sticker-detail__dot-layer"
                       style={{
-                        "--ar": (sticker.width / sticker.height).toFixed(4),
                         "--spot-x": giftDot.spot.x.toFixed(4),
                         "--spot-y": giftDot.spot.y.toFixed(4),
                       }}
@@ -862,10 +861,8 @@ export function StickerDetail({
               )}
               {trailHeld && <TransferTrailSkeleton trail={sticker.trail} />}
 
-              {/* A section of its own at the very foot, past a rule, so it never reads as Give's
-                  alternative: plain label stock across the column, its confirm opening in its place,
-                  and the status line there once the mark lands. Its confirm is plain label stock too,
-                  since a mark can be taken off again. */}
+              {/* At the foot past a rule, so it never reads as Give's alternative. Its confirm is plain
+                  label stock too, since a mark can come off again. */}
               {(canChangeMark || markedSaid?.stickerId === sticker.id) && (
                 <section className="sticker-detail__mark">
                   <hr className="sticker-detail__mark-rule" />

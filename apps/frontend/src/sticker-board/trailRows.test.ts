@@ -37,15 +37,15 @@ describe("the Transfer Trail", () => {
     );
   });
 
-  it("has no share line when the artist gave it or nothing was shared", () => {
-    expect(
-      artistShareLine(
-        row("g", mika, me, { total: 600, artistShare: 0, seenByGiverAt: null }),
-        mika,
-        "me",
-      ),
-    ).toBeNull();
-    expect(artistShareLine(row("g", ken, me, null), mika, "me")).toBeNull();
+  it.each([
+    [
+      "the artist gave it",
+      row("g", mika, me, { total: 600, artistShare: 120, seenByGiverAt: null }),
+    ],
+    ["nothing was shared", row("g", ken, me, { total: 600, artistShare: 0, seenByGiverAt: null })],
+    ["it has no gratitude", row("g", ken, me, null)],
+  ])("has no share line when %s", (_, given) => {
+    expect(artistShareLine(given, mika, "me")).toBeNull();
   });
 
   it("keeps when the giver watched the gratitude", () => {

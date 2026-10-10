@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { splitEasing } from "./detailLift";
+import { splitEasing } from "./easing";
 
 type Curve = readonly [number, number, number, number];
 

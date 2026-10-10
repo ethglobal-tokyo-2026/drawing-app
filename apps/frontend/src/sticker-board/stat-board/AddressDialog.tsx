@@ -5,7 +5,7 @@ import { useTranslation } from "../../i18n/react";
 import { ArrowSquareOut, Copy, X } from "../../icons";
 import { suiscanAccountUrl } from "../../identity/explorers";
 import { openLinkInLine } from "../../line/openLink";
-import { cubicBezier, EASE_OUT, EASE_OUT_POINTS, EASE_PEEL } from "../../ui/easing";
+import { cubicBezier, EASE_OUT, EASE_OUT_POINTS, EASE_PEEL, splitEasing } from "../../ui/easing";
 import { ErrorLine } from "../../ui/ErrorLine";
 import { LabelButton } from "../../ui/LabelButton";
 import { QrCode } from "../../ui/QrCode";
@@ -13,7 +13,6 @@ import { useBackToClose } from "../../ui/useBackToClose";
 import { useFocusTrap } from "../../ui/useFocusTrap";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { useToast } from "../../ui/useToast";
-import { splitEasing } from "../detailLift";
 import { addressGroups } from "./addresses";
 import "./address-dialog.css";
 
