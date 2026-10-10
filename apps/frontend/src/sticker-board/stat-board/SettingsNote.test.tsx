@@ -317,6 +317,37 @@ describe("the Settings note's saves", () => {
     expect(switchOf(host).checked).toBe(true);
   });
 
+  it("keeps a save's progress and failure for the note you find back on the board", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let refuse = () => {};
+    const api = emptyApi({
+      setNsfwOptIn: () =>
+        new Promise((_, reject) => {
+          refuse = () => reject(new ApiError(0, { error: "network", detail: "Failed to fetch" }));
+        }),
+    });
+    // Another tab unmounts the board, and the note with it.
+    const visit = () => {
+      const view = renderWithApi(<SettingsNote />, api);
+      unmount = view.unmount;
+      return view.host;
+    };
+    await flip(visit());
+    unmount();
+
+    // Back while it saves, the switch shows the change on its way.
+    let host = visit();
+    expect(busy(host, "nsfw")).toBe("true");
+    expect(switchOf(host).checked).toBe(true);
+    unmount();
+
+    // It fails while you're away again; back on the board, the note says why.
+    await act(async () => refuse());
+    host = visit();
+    expect(alert(host)).toContain(errors.network.en);
+    expect(switchOf(host).checked).toBe(false);
+  });
+
   it("saves a setting changed while another saves once that one has, rather than dropping it", async () => {
     const server = keepingServer();
     let answerLanguage = () => {};

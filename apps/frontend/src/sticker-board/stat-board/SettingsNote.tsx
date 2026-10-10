@@ -1,7 +1,5 @@
-import type { Me } from "@drawing-app/api/client";
 import { Suspense, useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { apiError } from "../../api/apiClient";
-import { useMe, useSetMe } from "../../api/meContext";
+import { useMe } from "../../api/meContext";
 import { useApi } from "../../api/useApi";
 import { problemOf } from "../../i18n/errorMessage";
 import { keepChosenLanguage, type Language } from "../../i18n/language";
@@ -17,6 +15,7 @@ import { useReducedMotion } from "../../ui/useReducedMotion";
 import { forget as forgetKeptBoard } from "../lastBoard";
 import { ChoiceRow } from "./ChoiceRow";
 import { DrawingSettings } from "./DrawingSettings";
+import { useSettingSaves, type Failure, type Setting, type Shown } from "./settingSaves";
 import { statsClearPeek } from "./settingsPeek";
 import "./settings-note.css";
 
@@ -29,21 +28,6 @@ const KyotoSeikaHelp = lazyWithPreload("Kyoto Seika Practice Mode's help", () =>
 
 /** How much of the paper under its title peeks above the cork's foot, in px. */
 const PEEK_UNDER_TITLE = 10;
-
-/**
- * The settings on the note, each saved to your account and applied in place. One saves at a time, in
- * the order they were changed, so each answer is the account as it then is.
- */
-type Setting = "language" | "nsfw" | "kyotoSeika";
-/** The account's settings as the note shows them: a saving one shows its new value. */
-type Shown = Pick<Me, "language" | "nsfwOptIn" | "kyotoSeikaPractice">;
-/** Why a setting didn't take: kept as it failed, so its words follow the app's language. */
-type Failure = { kind: "notSaved" | "notKept"; error: unknown };
-/**
- * A setting's last change while it saves, waiting its turn included, or why it didn't take, until it's
- * changed again. A setting that took has none: its control shows it.
- */
-type Status = { step: "saving"; to: Partial<Shown> } | { step: "failed"; failure: Failure };
 
 /**
  * Sticks the note to the cork's foot with only its title showing, until it scrolls into view: CSS
@@ -105,54 +89,14 @@ export function SettingsNote() {
   const { t } = useTranslation();
   const api = useApi();
   const me = useMe();
-  const setMe = useSetMe();
   const id = useId();
   const note = useRef<HTMLElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
-  const [statuses, setStatuses] = useState<Partial<Record<Setting, Status>>>({});
-  /** The saves, each run once the ones changed before it have. */
-  const saves = useRef(Promise.resolve());
-  /** Each setting's latest change: only its outcome is that setting's status. */
-  const latestChanges = useRef(new Map<Setting, object>());
+  const { statuses, save } = useSettingSaves();
   // Null until "?" is first tapped: only then does the help sheet's code load. It stays mounted after.
   const [helpOpen, setHelpOpen] = useState<boolean | null>(null);
   const { refresh: refreshTickets } = useTickets();
   const reveal = usePeek(note, title);
-
-  /**
-   * Saves a setting after the changes before it, then applies it: `me` takes the answer, and `apply`
-   * does what it changes on this phone, returning what it couldn't do rather than throwing. A setting
-   * still saving takes no other change: its control shows the one on its way.
-   */
-  const save = (
-    setting: Setting,
-    to: Partial<Shown>,
-    request: () => Promise<Me>,
-    apply: () => Promise<Failure | null> | Failure | null,
-  ) => {
-    if (statuses[setting]?.step === "saving") return;
-    const change = {};
-    latestChanges.current.set(setting, change);
-    const settle = (status: Status | undefined) => {
-      if (latestChanges.current.get(setting) === change)
-        setStatuses((all) => ({ ...all, [setting]: status }));
-    };
-    settle({ step: "saving", to });
-    saves.current = saves.current.then(async () => {
-      let saved: Me;
-      try {
-        saved = await request();
-      } catch (error) {
-        const failure = apiError(error);
-        console.error(`The ${setting} setting wasn't saved`, failure);
-        settle({ step: "failed", failure: { kind: "notSaved", error: failure } });
-        return;
-      }
-      setMe(saved);
-      const failure = await apply();
-      settle(failure ? { step: "failed", failure } : undefined);
-    });
-  };
 
   const choose = (choice: Language) =>
     save(
