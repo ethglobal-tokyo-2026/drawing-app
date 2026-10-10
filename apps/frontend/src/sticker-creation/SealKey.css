@@ -1,7 +1,8 @@
 /* The key's own press moves `translate`; the spring-in here uses opacity, transform and scale. */
 .key.seal-key {
   position: absolute;
-  right: 18px;
+  left: var(--near-left) 18px;
+  right: var(--near-right) 18px;
   bottom: 16px;
   opacity: 0;
   transform: scale(0.6);
@@ -43,10 +44,11 @@
 }
 
 /* What went wrong with the last seal: above the foot row, so it never covers the tiles there, the
-   way out included. */
+   way out included, and on the sheet's side of the check's column. */
 .seal-chip {
   position: absolute;
-  right: 88px;
+  left: var(--near-left) 88px;
+  right: var(--near-right) 88px;
   bottom: 92px;
   z-index: 3;
   max-width: min(300px, calc(100% - 102px));

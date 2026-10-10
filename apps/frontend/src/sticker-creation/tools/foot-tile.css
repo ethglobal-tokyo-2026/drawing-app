@@ -2,8 +2,8 @@
 .foot-tile {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
+  width: var(--foot-tile);
+  height: var(--foot-tile);
   padding: 0;
   border: 0;
   border-radius: var(--r-label);

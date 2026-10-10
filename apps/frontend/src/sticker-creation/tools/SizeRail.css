@@ -2,7 +2,8 @@
   /* How far above the rail's foot the thumb stops: room for the px label. SizeRail's drag reads it. */
   --thumb-foot: 44px;
   position: absolute;
-  left: 0;
+  left: var(--far-left) 0;
+  right: var(--far-right) 0;
   top: 104px;
   z-index: 3;
   width: 40px;
@@ -35,7 +36,8 @@
    the digits go from one to two. */
 .size-num {
   position: absolute;
-  left: 7px;
+  left: var(--far-left) 7px;
+  right: var(--far-right) 7px;
   bottom: 4px;
   min-width: 28px;
   height: 18px;

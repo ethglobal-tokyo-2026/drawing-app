@@ -183,7 +183,8 @@
    The hint sticks on as the dot nudges and peels off by itself. Placed from the top row's corner. */
 .timer-hint {
   position: absolute;
-  left: 4px;
+  left: var(--far-left) 4px;
+  right: var(--far-right) 4px;
   top: calc(var(--timer-dot) + 13px);
   z-index: 6;
   display: flex;
@@ -210,7 +211,10 @@
 }
 
 .timer-hint-label {
-  margin: 18px 0 0 -2px;
+  margin: 18px 0 0;
+  /* It tucks under the arrow, on the far side. */
+  margin-left: var(--far-left) -2px;
+  margin-right: var(--far-right) -2px;
   padding: 7px 11px 8px;
   border-radius: var(--r-label);
   background: var(--canvas);

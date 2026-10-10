@@ -31,8 +31,15 @@
     visibility 0s;
 }
 
-/* Under the tool strip, in line with its end. */
+/* Under the tool strip, in line with its end on the drawing hand's side. */
 .under-tool-strip {
   top: 66px;
-  right: 14px;
+  left: var(--near-left) var(--tools-inset);
+  right: var(--near-right) var(--tools-inset);
+}
+
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .under-tool-strip {
+    top: var(--top-h);
+  }
 }
