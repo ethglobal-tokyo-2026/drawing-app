@@ -10,8 +10,7 @@ import type { TraySheets } from "./traySheets";
 
 /**
  * How long the nudge waits once the Zipper's slider reaches its far stop, so the mouth has stopped
- * moving and been looked at. The Zipper's own `settled` waits for the pull's swing to die away, which
- * takes seconds longer.
+ * moving and been looked at; the pull's swing takes seconds longer to die away.
  */
 export const NUDGE_AFTER = 1400;
 /** The sheet rises, and turns about its foot, which swings its grip toward the board. */

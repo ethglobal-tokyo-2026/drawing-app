@@ -157,14 +157,13 @@ describe("the Zipper", () => {
     void zip.open();
     await vi.advanceTimersByTimeAsync(SETTLE_MS);
     const rest = pullTurn();
-    const y = zip.geometry().sliderY;
     // Pushed up slowly, not flicked shut.
-    pointer("pointerdown", y);
+    pointer("pointerdown", 400);
     await vi.advanceTimersByTimeAsync(100);
-    pointer("pointermove", y - 40);
+    pointer("pointermove", 360);
     await vi.advanceTimersByTimeAsync(300);
     expect(hangsDown()).toBe(false);
-    pointer("pointerup", y - 40);
+    pointer("pointerup", 360);
     await vi.advanceTimersByTimeAsync(SETTLE_MS);
     expect(zip.isOpen).toBe(true);
     expect(pullTurn()).toBeCloseTo(rest, 1);
