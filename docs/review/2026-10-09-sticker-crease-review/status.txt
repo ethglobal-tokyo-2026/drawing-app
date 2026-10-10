@@ -8,8 +8,8 @@ On main (350ef728), behind the developer slip's "Show creases on this device", o
 - the performance recorder sends its report to the server log while it's on; read phone reports with
     curl -s 'https://stickeroo.art/api/logs?lines=5000' | rg '"event":"performance.report"'
 
-Not live yet when written: the last deploy was before the upload. A session in the main checkout has
-been asked to pull and deploy.
+Live since main 87034ecc was deployed, 2026-10-10 13:31 UTC. The live bundle has the upload call,
+settle, the worker's base image and bake timeout, and the developer slip.
 
 Open:
 - measure on ad0ll's phone with the recorder once live (performance.txt has this Mac's numbers)
