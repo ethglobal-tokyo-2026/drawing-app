@@ -3,7 +3,7 @@
  * on the detail's stage while it plays and once the sticker is back in its spot. Pure numbers.
  */
 import { STRIDE, type Op } from "../../sticker-creation/canvas/ops";
-import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
+import type { Rect } from "../../sticker-creation/sealing/stickerPasses";
 import { clamp } from "../../ui/easing";
 
 /** Paper kept around the outermost marks, in sheet units, so none runs to the frame's edge. */

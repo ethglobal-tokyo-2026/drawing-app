@@ -65,7 +65,7 @@ const CUT: CutSticker = {
   png: png(),
   sharp: null,
   flat: png(),
-  layers: {
+  passes: {
     plain: png(),
     gloss: png(),
     shadow: png(),
@@ -128,14 +128,14 @@ describe("makeSticker", () => {
     const revoke = vi.spyOn(URL, "revokeObjectURL");
     sticker?.dispose();
     const revoked = revoke.mock.calls.map(([url]) => url);
-    expect(revoked.toSorted()).toEqual(Object.values(sticker?.layers ?? {}).toSorted());
+    expect(revoked.toSorted()).toEqual(Object.values(sticker?.passes ?? {}).toSorted());
     expect(sticker?.maskImage).toMatchObject({ width: 0, height: 0 });
   });
 
   it("fails the seal, saying why, when the cut fails in the worker, and stops the worker", async () => {
     const { sealing, worker } = await sealInWorker();
-    worker.onmessage?.(answer({ ok: false, error: "Encoding a 3 × 2 layer as PNG failed" }));
-    await expect(sealing).rejects.toThrow("Encoding a 3 × 2 layer as PNG failed");
+    worker.onmessage?.(answer({ ok: false, error: "Encoding a 3 × 2 image as PNG failed" }));
+    await expect(sealing).rejects.toThrow("Encoding a 3 × 2 image as PNG failed");
     expect(worker.stopped).toBe(true);
   });
 

@@ -1,5 +1,5 @@
 import { releaseCanvas } from "../../ui/releaseCanvas";
-import type { Rect } from "../sealing/stickerLayers";
+import type { Rect } from "../sealing/stickerPasses";
 import { hexToRgb } from "./color";
 import { context2d } from "./context2d";
 import { floodSheet } from "./fill";

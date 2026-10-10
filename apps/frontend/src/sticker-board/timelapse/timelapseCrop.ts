@@ -5,7 +5,7 @@
 import type { Pixels } from "../../sticker-creation/canvas/fill";
 import { MAX_DPR, maxInkDensity } from "../../sticker-creation/canvas/sheetFrame";
 import type { DecodedTimelapse } from "../../sticker-creation/sealing/timelapse";
-import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
+import type { Rect } from "../../sticker-creation/sealing/stickerPasses";
 import type { Placement } from "./timelapseFrame";
 
 /**

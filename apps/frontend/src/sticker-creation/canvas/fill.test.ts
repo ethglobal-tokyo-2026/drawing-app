@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Rect } from "../sealing/stickerLayers";
+import type { Rect } from "../sealing/stickerPasses";
 import { floodFill, floodSheet, type Pixels } from "./fill";
 
 type Rgba = [number, number, number, number];

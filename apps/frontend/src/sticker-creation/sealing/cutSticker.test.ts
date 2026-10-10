@@ -21,10 +21,10 @@ describe("cutInk", () => {
     const inUnits = (density: number) => {
       const inked = cutInk(diskSheet(side, radius, density), density);
       if (!inked) throw new Error("The sheet has ink, so it cuts");
-      const { cut, layers } = inked;
+      const { cut, passes } = inked;
       return {
         cut: (cut.bounds.x1 - cut.bounds.x0 + 1) / (cut.scale * density),
-        image: layers.place.w / density,
+        image: passes.place.w / density,
       };
     };
     const [phone, tablet] = [inUnits(1), inUnits(2.5)];

@@ -190,7 +190,7 @@ export function DrawingScreen({
   // Transitions start from here, so one sent after an await still starts from the latest session.
   const latest = useRef(FRESH_SESSION);
   const [ceremony, setCeremony] = useState<Ceremony | null>(null);
-  // The sealed sticker's layers are let go when a fresh sheet replaces it, or once its card has left.
+  // The sealed sticker's passes are let go when a fresh sheet replaces it, or once its card has left.
   const lastCeremony = useRef<Ceremony | null>(null);
   const seals = useRef(0);
   // Until the server answers it or refuses it, the sheet can't change: the server may already hold it.
@@ -401,23 +401,23 @@ export function DrawingScreen({
 
   /**
    * Keep drawing or the shop, from the sealed card: the fresh sheet and clock are set up at once,
-   * under the veil, while the card carries the sticker away over them. Its layers go once it's gone.
+   * under the veil, while the card carries the sticker away over them. Its passes go once it's gone.
    */
   function handOver(from: Ceremony) {
-    // The reset lets go of the last ceremony's layers; this one's are still on screen.
+    // The reset lets go of the last ceremony's passes; this one's are still on screen.
     if (lastCeremony.current?.id === from.id) lastCeremony.current = null;
     setCeremony((c) => (c?.id === from.id ? { ...c, leaving: true } : c));
     startNewSticker();
   }
 
-  /** The sealed card has left: its sticker's layers are let go. */
+  /** The sealed card has left: its sticker's passes are let go. */
   function dropCeremony(gone: Ceremony) {
     setCeremony((c) => (c?.id === gone.id ? null : c));
     gone.sticker.dispose();
   }
 
   /**
-   * A failed seal's ceremony fades back to the drawing, then its layers are let go, unless a retry of
+   * A failed seal's ceremony fades back to the drawing, then its passes are let go, unless a retry of
    * the same seal plays them again.
    */
   function dismissCeremony(failed: Ceremony, { keepSticker }: { keepSticker: boolean }) {

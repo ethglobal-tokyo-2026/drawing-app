@@ -374,7 +374,7 @@ export function dieCut(ink: Pixels, borderPx: number): DieCut | null {
   const long = Math.max(iw, ih);
   const border = borderPx * scale;
   const closing = border * CLOSING;
-  // Room past the sheet's edge for the border and its closing, and for the layers' margin round the cut.
+  // Room past the sheet's edge for the border and its closing, and for the passes' margin round the cut.
   const pad = Math.ceil(border + closing + 0.07 * long + 6);
   const width = iw + 2 * pad;
   const height = ih + 2 * pad;

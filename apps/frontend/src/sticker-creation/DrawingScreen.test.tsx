@@ -306,7 +306,7 @@ const cutSticker = () => ({
   inkWidth: 10,
   place: { x: 2, y: 3, w: 24, h: 18 },
   contour: [],
-  layers: {},
+  passes: {},
   maskImage: document.createElement("canvas"),
   dispose: () => {},
 });

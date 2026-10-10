@@ -1,5 +1,5 @@
 /**
- * A sticker's layers, from its die-cut and the ink: the print (white border, kiss-cut groove, ink), the
+ * A sticker's passes, from its die-cut and the ink: the print (white border, kiss-cut groove, ink), the
  * baked gloss of its thin laminate, the cast shadow, the mask and the finished sticker. Pure functions
  * over pixel arrays.
  */
@@ -7,7 +7,7 @@ import { clamp01 } from "../../ui/easing";
 import type { DieCut } from "./dieCut";
 import { boxResample, type Pixels } from "./pixels";
 
-type Layer = Uint8ClampedArray<ArrayBuffer>;
+type Pass = Uint8ClampedArray<ArrayBuffer>;
 
 export interface Rect {
   x: number;
@@ -16,7 +16,7 @@ export interface Rect {
   h: number;
 }
 
-export interface StickerLayers {
+export interface StickerPasses {
   width: number;
   height: number;
   /** The clear margin kept around the cut, in image pixels. */
@@ -24,15 +24,15 @@ export interface StickerLayers {
   /** Where the image sits over the ink, in ink pixels. */
   place: Rect;
   /** The print: white paper to the cut, the kiss-cut groove, and the ink where it was drawn. */
-  plain: Layer;
+  plain: Pass;
   /** Baked and still, and only ever light: a faint broad sheen and a slim highlight on the edges facing the light. */
-  gloss: Layer;
+  gloss: Pass;
   /** The cast shadow, as it falls on the sheet. */
-  shadow: Layer;
+  shadow: Pass;
   /** The cut's shape: white, with the cut as its alpha. */
-  mask: Layer;
+  mask: Pass;
   /** The finished sticker: the shadow, the print, and the gloss. */
-  sticker: Layer;
+  sticker: Pass;
 }
 
 /** The cut's long side in the image, at most. */
@@ -149,23 +149,23 @@ function frameOf({ bounds, scale }: DieCut, maxSide: number): Frame & { pad: num
   return { x0: bounds.x0 - pad / k, y0: bounds.y0 - pad / k, k, width, height, pad };
 }
 
-/** Lays the sticker out from its cut: every layer, the same size and in the same place. */
-export function stickerLayers(ink: Pixels, cut: DieCut): StickerLayers {
+/** Lays the sticker out from its cut: every pass, the same size and in the same place. */
+export function stickerPasses(ink: Pixels, cut: DieCut): StickerPasses {
   const frame = frameOf(cut, MAX_SIDE);
   const { width, height, pad } = frame;
-  const { layers, sticker, place } = paint(ink, cut, frame, 1, true);
-  return { width, height, pad, place, ...layers, sticker };
+  const { passes, sticker, place } = paint(ink, cut, frame, 1, true);
+  return { width, height, pad, place, ...passes, sticker };
 }
 
 /** The finished sticker alone, larger than its stored image, for screens that show it larger. */
 export interface SharpSticker {
   width: number;
   height: number;
-  sticker: Layer;
+  sticker: Pass;
 }
 
 /**
- * The finished sticker with its cut's long side up to SHARP_SIDE, as stickerLayers lays it out; null
+ * The finished sticker with its cut's long side up to SHARP_SIDE, as stickerPasses lays it out; null
  * when the ink holds no more pixels than the stored image already has.
  */
 export function sharpSticker(ink: Pixels, cut: DieCut): SharpSticker | null {
@@ -178,12 +178,12 @@ export function sharpSticker(ink: Pixels, cut: DieCut): SharpSticker | null {
 
 type Painted<All extends boolean> = {
   place: Rect;
-  sticker: Layer;
-  layers: All extends true ? Record<"plain" | "gloss" | "shadow" | "mask", Layer> : null;
+  sticker: Pass;
+  passes: All extends true ? Record<"plain" | "gloss" | "shadow" | "mask", Pass> : null;
 };
 
 /**
- * Paints the finished sticker into `frame`, and every other layer too when `all`. The groove, the
+ * Paints the finished sticker into `frame`, and every other pass too when `all`. The groove, the
  * contact line and the cast's offset keep the stored image's widths, `unit` image px to each of its.
  */
 function paint<All extends boolean>(
@@ -227,12 +227,12 @@ function paint(
   const offY = Math.round(body * CAST_Y + unit);
   const blur = Math.max(unit, body * CAST_BLUR);
 
-  // Only the finished sticker when `all` is false: the sharp copy is large, and needs no other layer.
-  const layer = () => new Uint8ClampedArray(all ? n * 4 : 0);
-  const plain = layer();
-  const gloss = layer();
-  const shadow = layer();
-  const mask = layer();
+  // Only the finished sticker when `all` is false: the sharp copy is large, and needs no other pass.
+  const pass = () => new Uint8ClampedArray(all ? n * 4 : 0);
+  const plain = pass();
+  const gloss = pass();
+  const shadow = pass();
+  const mask = pass();
   const sticker = new Uint8ClampedArray(n * 4);
   const printColor = [0, 0, 0];
 
@@ -293,5 +293,5 @@ function paint(
     }
   }
 
-  return { place, sticker, layers: all ? { plain, gloss, shadow, mask } : null };
+  return { place, sticker, passes: all ? { plain, gloss, shadow, mask } : null };
 }

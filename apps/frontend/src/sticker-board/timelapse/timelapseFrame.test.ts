@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Op } from "../../sticker-creation/canvas/ops";
-import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
+import type { Rect } from "../../sticker-creation/sealing/stickerPasses";
 import {
   FRAME_MARGIN,
   STAGE_INSET,

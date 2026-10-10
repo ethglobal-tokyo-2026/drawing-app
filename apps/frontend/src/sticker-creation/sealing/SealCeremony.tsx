@@ -141,7 +141,7 @@ export function SealCeremony({
   const slot = useRef<HTMLDivElement>(null);
 
   const { box, pour } = stage(sticker, sheet);
-  const { layers } = sticker;
+  const { passes } = sticker;
 
   useLayoutEffect(() => {
     const { box, body, contour } = stage(sticker, sheet);
@@ -324,7 +324,7 @@ export function SealCeremony({
 
   const resin: CSSProperties = {
     ...boxStyle(box),
-    "--m": `url("${layers.mask}")`,
+    "--m": `url("${passes.mask}")`,
   };
 
   // Pink on an 18+ sticker, else the Kyoto Seika Practice Mode foil on one drawn in that mode: the
@@ -379,14 +379,14 @@ export function SealCeremony({
         <img
           className="seal-ceremony__shadow"
           style={boxStyle(box)}
-          src={layers.shadow}
+          src={passes.shadow}
           alt=""
           decoding="sync"
         />
         <div className="seal-ceremony__sticker" style={resin} aria-hidden="true">
           {foil && sealed && <StickerFoil size="board" tone={foil} turn={LANDED_TURN_DEG} />}
-          <img className="seal-ceremony__plain" src={layers.plain} alt="" decoding="sync" />
-          <img className="seal-ceremony__gloss" src={layers.gloss} alt="" decoding="sync" />
+          <img className="seal-ceremony__plain" src={passes.plain} alt="" decoding="sync" />
+          <img className="seal-ceremony__gloss" src={passes.gloss} alt="" decoding="sync" />
           <span className="seal-ceremony__pour">
             <b style={boxStyle(pour)} />
           </span>

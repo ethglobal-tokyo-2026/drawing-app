@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { hexToRgb } from "../../sticker-creation/canvas/color";
 import { InkSurface } from "../../sticker-creation/canvas/inkSurface";
 import type { FillOp, Op, StrokeOp } from "../../sticker-creation/canvas/ops";
-import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
+import type { Rect } from "../../sticker-creation/sealing/stickerPasses";
 import {
   PREPARE_TIMEOUT_MS,
   prepareFillSnapshots,

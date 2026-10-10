@@ -1,4 +1,4 @@
-import type { Rect } from "../sealing/stickerLayers";
+import type { Rect } from "../sealing/stickerPasses";
 
 /** Structural subset of ImageData, so the fill runs in tests without a DOM. */
 export interface Pixels {

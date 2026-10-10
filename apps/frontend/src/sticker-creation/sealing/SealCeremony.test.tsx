@@ -31,7 +31,7 @@ const sticker: SealedSticker = {
     [550, 570],
     [130, 570],
   ],
-  layers: {
+  passes: {
     plain: "blob:plain",
     gloss: "blob:gloss",
     shadow: "blob:shadow",

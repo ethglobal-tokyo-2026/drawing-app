@@ -1,9 +1,9 @@
 import { context2d } from "../canvas/context2d";
 import { releaseCanvas } from "../../ui/releaseCanvas";
-import { cutSticker, type CutSticker, type LayerName, type MakeCanvas } from "./cutSticker";
+import { cutSticker, type CutSticker, type MakeCanvas, type PassName } from "./cutSticker";
 import type { Point } from "./dieCut";
 import type { SealReply, SealRequest } from "./sealWorker";
-import type { Rect } from "./stickerLayers";
+import type { Rect } from "./stickerPasses";
 
 /** A sealed sticker: what's stored, and what the ceremony plays with. */
 export interface SealedSticker {
@@ -27,11 +27,11 @@ export interface SealedSticker {
   place: Rect;
   /** The cut line, closed, in ink pixels. */
   contour: Point[];
-  /** The ceremony's layers, as object URLs. */
-  layers: Record<LayerName, string>;
+  /** The ceremony's passes, as object URLs. */
+  passes: Record<PassName, string>;
   /** The mask, for painting the dim and the used sticker silhouette. */
   maskImage: HTMLCanvasElement;
-  /** Lets the layers' URLs and the mask's canvas go. */
+  /** Lets the passes' URLs and the mask's canvas go. */
   dispose: () => void;
 }
 
@@ -51,7 +51,7 @@ const encode = (canvas: HTMLCanvasElement) =>
       (blob) =>
         blob
           ? resolve(blob)
-          : reject(new Error(`Encoding a ${canvas.width} × ${canvas.height} layer as PNG failed`)),
+          : reject(new Error(`Encoding a ${canvas.width} × ${canvas.height} image as PNG failed`)),
       "image/png",
     ),
   );
@@ -149,20 +149,20 @@ export async function makeSticker(
 ): Promise<SealedSticker | null> {
   const cut = workerCanCut() ? await cutInWorkerOrHere(ink, density) : await cutHere(ink, density);
   if (!cut) return null;
-  const { width, height, layers } = cut;
+  const { width, height, passes } = cut;
   const { canvas: maskImage, g } = blankCanvas(width, height);
   g.putImageData(new ImageData(cut.maskPixels, width, height), 0, 0);
 
-  const urls: Record<LayerName, string> = {
-    plain: URL.createObjectURL(layers.plain),
-    gloss: URL.createObjectURL(layers.gloss),
-    shadow: URL.createObjectURL(layers.shadow),
-    mask: URL.createObjectURL(layers.mask),
+  const urls: Record<PassName, string> = {
+    plain: URL.createObjectURL(passes.plain),
+    gloss: URL.createObjectURL(passes.gloss),
+    shadow: URL.createObjectURL(passes.shadow),
+    mask: URL.createObjectURL(passes.mask),
   };
   return {
     png: cut.png,
     sharp: cut.sharp,
-    mask: layers.mask,
+    mask: passes.mask,
     flat: cut.flat,
     outline: cut.outline,
     width,
@@ -171,7 +171,7 @@ export async function makeSticker(
     inkWidth: cut.inkWidth,
     place: cut.place,
     contour: cut.contour,
-    layers: urls,
+    passes: urls,
     maskImage,
     dispose: () => {
       Object.values(urls).forEach((u) => URL.revokeObjectURL(u));

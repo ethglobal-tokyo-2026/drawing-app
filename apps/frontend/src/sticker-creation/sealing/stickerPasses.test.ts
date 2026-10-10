@@ -6,9 +6,9 @@ import {
   PAD,
   SHARP_SIDE,
   sharpSticker,
-  stickerLayers,
-  type StickerLayers,
-} from "./stickerLayers";
+  stickerPasses,
+  type StickerPasses,
+} from "./stickerPasses";
 
 const RED = [255, 0, 0];
 const GRAY = [120, 120, 120];
@@ -34,32 +34,32 @@ function disk(color: number[], side = 2 * MIDDLE, radius = RADIUS): Pixels {
 
 const redDisk = (side?: number, radius?: number) => disk(RED, side, radius);
 
-function layersOf(ink: Pixels) {
+function passesOf(ink: Pixels) {
   const cut = dieCut(ink, BORDER);
   if (!cut) throw new Error("expected a cut");
-  return { cut, layers: stickerLayers(ink, cut) };
+  return { cut, passes: stickerPasses(ink, cut) };
 }
 
-/** The RGBA of a layer at a point given in sheet pixels. */
-function at(layers: StickerLayers, layer: Uint8ClampedArray, [x, y]: [number, number]) {
-  const { place, width, height } = layers;
+/** The RGBA of a pass at a point given in sheet pixels. */
+function at(passes: StickerPasses, pass: Uint8ClampedArray, [x, y]: [number, number]) {
+  const { place, width, height } = passes;
   const ix = Math.floor(((x - place.x) * width) / place.w);
   const iy = Math.floor(((y - place.y) * height) / place.h);
   const i = (iy * width + ix) * 4;
-  return [...layer.slice(i, i + 4)];
+  return [...pass.slice(i, i + 4)];
 }
 
-describe("stickerLayers", () => {
+describe("stickerPasses", () => {
   it("prints the ink in its own color on white paper, inside the cut", () => {
-    const { layers } = layersOf(redDisk());
-    expect(at(layers, layers.plain, [100, 100])).toEqual([...RED, 255]);
+    const { passes } = passesOf(redDisk());
+    expect(at(passes, passes.plain, [100, 100])).toEqual([...RED, 255]);
     // Between the ink's edge and the cut: the white border.
-    expect(at(layers, layers.plain, [100, 100 - 43])).toEqual([255, 255, 255, 255]);
+    expect(at(passes, passes.plain, [100, 100 - 43])).toEqual([255, 255, 255, 255]);
   });
 
   it("leaves nothing of the print outside the cut, only its groove and cast shadow", () => {
-    const { layers } = layersOf(redDisk());
-    const { sticker, mask, width, height } = layers;
+    const { passes } = passesOf(redDisk());
+    const { sticker, mask, width, height } = passes;
     for (let i = 0; i < width * height; i++) {
       if (mask[i * 4 + 3] > 0 || sticker[i * 4 + 3] === 0) continue;
       // Ink-dark: no paper white or ink color escapes.
@@ -77,8 +77,8 @@ describe("stickerLayers", () => {
   });
 
   it("masks exactly the cut", () => {
-    const { cut, layers } = layersOf(redDisk());
-    const { mask, width, height, place } = layers;
+    const { cut, passes } = passesOf(redDisk());
+    const { mask, width, height, place } = passes;
     for (let y = 0; y < height; y++)
       for (let x = 0; x < width; x++) {
         // This image pixel's center, on the die-cut's grid.
@@ -92,7 +92,7 @@ describe("stickerLayers", () => {
   });
 
   it("keeps the border paper white all the way to the cut", () => {
-    const { plain, mask, sticker, width, height } = layersOf(redDisk()).layers;
+    const { plain, mask, sticker, width, height } = passesOf(redDisk()).passes;
     let paper = 0;
     let tinted = 0;
     for (let q = 0; q < width * height * 4; q += 4) {
@@ -106,7 +106,7 @@ describe("stickerLayers", () => {
   });
 
   it("never darkens the print inside the cut, so no edge is darker than the middle", () => {
-    const { plain, mask, sticker, width, height } = layersOf(disk(GRAY)).layers;
+    const { plain, mask, sticker, width, height } = passesOf(disk(GRAY)).passes;
     let darkened = 0;
     for (let q = 0; q < width * height * 4; q += 4) {
       if (mask[q + 3] < 255) continue;
@@ -116,17 +116,17 @@ describe("stickerLayers", () => {
   });
 
   it("lights the edge that faces the light, and nothing on the side away from it", () => {
-    const { layers } = layersOf(redDisk());
+    const { passes } = passesOf(redDisk());
     // Just inside the cut, on the diagonal toward the light (top left) and away from it.
     const inside = (CUT_RADIUS - 1) / Math.SQRT2;
     const glossAt = (sign: number) =>
-      at(layers, layers.gloss, [MIDDLE + sign * inside, MIDDLE + sign * inside])[3];
+      at(passes, passes.gloss, [MIDDLE + sign * inside, MIDDLE + sign * inside])[3];
     expect(glossAt(-1)).toBeGreaterThan(0);
     expect(glossAt(1)).toBe(0);
   });
 
   it("casts a thin sticker's short shadow, ending in the inner half of the clear margin", () => {
-    const { shadow, mask, width, height, pad } = layersOf(redDisk()).layers;
+    const { shadow, mask, width, height, pad } = passesOf(redDisk()).passes;
     // Straight down the middle: the cut's last row, and the cast's.
     const column = Math.floor(width / 2);
     let cutEnds = 0;
@@ -153,7 +153,7 @@ describe("sharpSticker", () => {
     "holds the cut's long side to SHARP_SIDE, from ink that has more",
     () => {
       const ink = redDisk(2000, 950);
-      const sharp = sharpSticker(ink, layersOf(ink).cut);
+      const sharp = sharpSticker(ink, passesOf(ink).cut);
       expect(sharp && longSide(sharp)).toBe(sideFor(SHARP_SIDE));
       expect(sharp?.sticker.length).toBe((sharp?.width ?? 0) * (sharp?.height ?? 0) * 4);
     },
@@ -164,19 +164,19 @@ describe("sharpSticker", () => {
     "is never larger than the ink was drawn",
     () => {
       const ink = redDisk(1000, 400);
-      const { cut, layers } = layersOf(ink);
+      const { cut, passes } = passesOf(ink);
       const inkSide = (cut.bounds.x1 - cut.bounds.x0 + 1) / cut.scale;
       expect(inkSide).toBeGreaterThan(MAX_SIDE);
       expect(inkSide).toBeLessThan(SHARP_SIDE);
       const sharp = sharpSticker(ink, cut);
       expect(sharp && longSide(sharp)).toBe(sideFor(inkSide));
-      expect(longSide(layers)).toBe(sideFor(MAX_SIDE));
+      expect(longSide(passes)).toBe(sideFor(MAX_SIDE));
     },
     LARGE_INK_TIMEOUT_MS,
   );
 
   it("is null when the ink holds no more than the stored image", () => {
     const ink = redDisk();
-    expect(sharpSticker(ink, layersOf(ink).cut)).toBeNull();
+    expect(sharpSticker(ink, passesOf(ink).cut)).toBeNull();
   });
 });

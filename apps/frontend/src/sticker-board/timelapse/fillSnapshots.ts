@@ -8,7 +8,7 @@
 import { context2d } from "../../sticker-creation/canvas/context2d";
 import { InkSurface } from "../../sticker-creation/canvas/inkSurface";
 import type { Op } from "../../sticker-creation/canvas/ops";
-import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
+import type { Rect } from "../../sticker-creation/sealing/stickerPasses";
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import {
   changedArea,

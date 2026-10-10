@@ -1,6 +1,6 @@
 /**
  * The sealing worker: cuts the sticker off the main thread, so the screen keeps moving while the
- * layers are worked out and encoded. Each worker cuts one sticker; the main thread stops it after.
+ * passes are worked out and encoded. Each worker cuts one sticker; the main thread stops it after.
  */
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { cutSticker, type CutSticker, type MakeCanvas } from "./cutSticker";

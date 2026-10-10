@@ -1,7 +1,7 @@
 import { MAX_TIMELAPSE_BYTES, type TimelapseV1 } from "@drawing-app/api/client";
 import { STRIDE, type Op } from "../canvas/ops";
 import type { SheetFrame } from "../canvas/sheetFrame";
-import type { Rect } from "./stickerLayers";
+import type { Rect } from "./stickerPasses";
 
 interface TimelapseInput {
   ops: readonly Op[];

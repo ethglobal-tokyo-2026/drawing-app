@@ -7,7 +7,7 @@ import { paintStroke } from "../../sticker-creation/canvas/paintStroke";
 import { decodeTimelapse } from "../../sticker-creation/sealing/timelapse";
 import { browserFrames, type FrameSource } from "../../ui/frameSource";
 import { releaseCanvas } from "../../ui/releaseCanvas";
-import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
+import type { Rect } from "../../sticker-creation/sealing/stickerPasses";
 import { prepareFillSnapshots, type FillSnapshot } from "./fillSnapshots";
 import { displayPoint, displayView, drawingDensity, revealRadius } from "./timelapseCrop";
 import { layoutFor, strokeFrame, type TimelapseLayout } from "./timelapseFrame";
