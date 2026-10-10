@@ -1,4 +1,5 @@
 import { useLayoutEffect, useState } from "react";
+import { messageOf } from "../../i18n/errorMessage";
 import { useTranslation } from "../../i18n/react";
 import { AccountRow } from "../../identity/AccountRow";
 import { Copy } from "../../icons";
@@ -13,8 +14,6 @@ import { ErrorLine } from "../../ui/ErrorLine";
 import { LabelButton } from "../../ui/LabelButton";
 import { useLargeScreen } from "../../ui/largeScreen";
 import "./device-details.css";
-
-const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /**
  * The developer slip's Device paper: what the device and its browser say about themselves and
@@ -49,7 +48,7 @@ export function DeviceDetails() {
       setCopied(true);
     } catch (error) {
       console.error("The device details couldn't be copied", error);
-      setProblem(t(($) => $.stickerBoard.developer.device.notCopied, { reason: reason(error) }));
+      setProblem(t(($) => $.stickerBoard.developer.device.notCopied, { reason: messageOf(error) }));
       setUncopied(text);
     }
   };

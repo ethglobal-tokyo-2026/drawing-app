@@ -1,4 +1,5 @@
 import type { TimelapseV1 } from "@drawing-app/api/client";
+import { messageOf } from "../../i18n/errorMessage";
 import { notePerformance, timeOurWork } from "../../performance/performanceRecorder";
 import { context2d } from "../../sticker-creation/canvas/context2d";
 import { MAX_DPR } from "../../sticker-creation/canvas/sheetFrame";
@@ -54,8 +55,6 @@ export interface TimelapsePlayer {
 type Outcome = { result: "done" | "stopped" } | { error: Error };
 
 const TAU = Math.PI * 2;
-
-const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /**
  * Plays a sticker's timelapse on `canvas`, blank to finished, showing the part of the sheet that was

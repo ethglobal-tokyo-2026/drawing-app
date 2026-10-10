@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { errorDetail, errorMessage } from "../i18n/errorMessage";
+import { errorDetail, errorMessage, messageOf } from "../i18n/errorMessage";
 import { followAccountLanguage, lineLanguage } from "../i18n/pageLanguage";
 import { useTranslation } from "../i18n/react";
 import { GateNotice, GateOpening, GatePaper } from "../line/GateParts";
@@ -13,8 +13,6 @@ import { HandlePrompt } from "./HandlePrompt";
 import type { SessionApi } from "./httpApi";
 import { MeContext, SetMeContext } from "./meContext";
 import { onSessionLost } from "./sessionLoss";
-
-const describe = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 type Session =
   | { step: "signing-in" }
@@ -89,7 +87,7 @@ export function SessionGate({
       try {
         token = accessToken();
       } catch (error) {
-        throw new ApiError(0, { error: "no_line_token", detail: describe(error) });
+        throw new ApiError(0, { error: "no_line_token", detail: messageOf(error) });
       }
       if (!token) {
         throw new ApiError(0, {

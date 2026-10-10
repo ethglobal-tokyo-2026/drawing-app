@@ -1,5 +1,6 @@
 import type { AppType, ErrorBody, Me } from "@drawing-app/api/client";
 import { hc, type InferRequestType } from "hono/client";
+import { messageOf } from "../i18n/errorMessage";
 import { ApiError, type ApiClient, type GiftOpening } from "./apiClient";
 import { startNftRequest } from "./httpDiagnostics";
 import { reportSessionLost } from "./sessionLoss";
@@ -21,8 +22,6 @@ const isErrorBody = (v: unknown): v is ErrorBody =>
 
 const urlOf = (input: RequestInfo | URL) =>
   typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-
-const describe = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /**
  * The typed client over the REST API on this origin, so the session cookie goes along. A request
@@ -47,7 +46,7 @@ export function createServerClient(fetchImpl: typeof fetch = fetch) {
         diagnostic?.networkFailed();
         throw new ApiError(0, {
           error: "network",
-          detail: `${init?.method ?? "GET"} ${urlOf(input)} got no answer: ${describe(error)}`,
+          detail: `${init?.method ?? "GET"} ${urlOf(input)} got no answer: ${messageOf(error)}`,
         });
       }
     },

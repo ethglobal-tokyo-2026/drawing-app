@@ -5,6 +5,7 @@
  * reach past the frame its strokes make, which is known only once it floods: the frame then grows,
  * and the pass runs again in it.
  */
+import { messageOf } from "../../i18n/errorMessage";
 import { context2d } from "../../sticker-creation/canvas/context2d";
 import { InkSurface } from "../../sticker-creation/canvas/inkSurface";
 import type { Op } from "../../sticker-creation/canvas/ops";
@@ -58,7 +59,6 @@ export interface Prepared {
 }
 
 const nextTask = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
-const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error));
 const sameRect = (a: Rect, b: Rect) => a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
 
 function blankCanvas(width: number, height: number): HTMLCanvasElement {
