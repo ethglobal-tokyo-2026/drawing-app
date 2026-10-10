@@ -1,0 +1,67 @@
+{
+  "artifact": "/Users/adoll/.codex/visualizations/2026/10/09/01a122b3-7708-7ef1-ae40-18592e2c60ab/csp-croquis-replay-artifacts.zip",
+  "sha256": "b9eea0a7ba6320bcd365859e64d2a32864e3bdf35be968cfc755339dafea1599",
+  "bytes": 1435804,
+  "entries": [
+    {
+      "path": "results/batch-results.json",
+      "bytes": 127063
+    },
+    {
+      "path": "results/fixtures.json",
+      "bytes": 797557
+    },
+    {
+      "path": "results/pixels-output.txt",
+      "bytes": 1951
+    },
+    {
+      "path": "results/pixels.bundle.js",
+      "bytes": 117574
+    },
+    {
+      "path": "results/pixels.json",
+      "bytes": 1950
+    },
+    {
+      "path": "results/provenance.json",
+      "bytes": 1462
+    },
+    {
+      "path": "results/replay-output.txt",
+      "bytes": 1494
+    },
+    {
+      "path": "results/samples.csv",
+      "bytes": 6921788
+    },
+    {
+      "path": "results/summary.csv",
+      "bytes": 17307
+    },
+    {
+      "path": "results/summary.json",
+      "bytes": 67021
+    },
+    {
+      "path": "results/validation.json",
+      "bytes": 415
+    },
+    {
+      "path": "scripts/replay.mts",
+      "bytes": 13325
+    },
+    {
+      "path": "scripts/pixels.ts",
+      "bytes": 4679
+    },
+    {
+      "path": "scripts/pixels.cjs",
+      "bytes": 2123
+    },
+    {
+      "path": "README.md",
+      "bytes": 10761
+    }
+  ]
+}

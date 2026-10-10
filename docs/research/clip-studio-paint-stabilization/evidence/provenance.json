@@ -1,0 +1,15 @@
+{
+  "application": "Clip Studio Paint",
+  "version": "5.1.4",
+  "architecture": "arm64",
+  "analysis_date": "2026-10-09",
+  "sha256_arm64": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "application_path": "/Applications/CLIP STUDIO 1.5/App/CLIP STUDIO PAINT.app",
+  "english_resource": "Contents/Resources/english/E79C2AC5-BC3F-4838-9E87-F49B629F84B5",
+  "method": "Read-only disassembly, RTTI, Mach-O function boundaries, call-site and constant tracing",
+  "runtime_comparison_performed": false,
+  "original_source_code_available": false,
+  "executable_included": false,
+  "address_kind": "Unslid virtual addresses in the identified arm64 image",
+  "disassembly_cleanup": "Removed misleading enclosing-symbol labels and heuristic STRING annotations; instructions retained."
+}

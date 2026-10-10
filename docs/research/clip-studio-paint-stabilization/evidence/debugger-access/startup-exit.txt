@@ -1,0 +1,51 @@
+["/Applications/Xcode.app/Contents/Developer/usr/bin/lldb", "--batch", "-o", "target create \"/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT\"", "-o", "breakpoint set -n exit -n _exit", "-o", "process launch", "-o", "process status", "-o", "thread backtrace -c 16", "-o", "register read x0", "-o", "process detach --keep-stopped false", "-o", "quit"]
+(lldb) target create "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT"
+Current executable set to '/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT' (arm64).
+(lldb) breakpoint set -n exit -n _exit
+Breakpoint 1: 9 locations.
+(lldb) process launch
+4 locations added to breakpoint 1
+Process 90219 launched: '/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT' (arm64)
+Process 90219 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.5
+    frame #0: 0x00000001810c5c1c libsystem_c.dylib`exit
+libsystem_c.dylib`exit:
+->  0x1810c5c1c <+0>:  pacibsp 
+    0x1810c5c20 <+4>:  stp    x20, x19, [sp, #-0x20]!
+    0x1810c5c24 <+8>:  stp    x29, x30, [sp, #0x10]
+    0x1810c5c28 <+12>: add    x29, sp, #0x10
+Target 0: (CLIP STUDIO PAINT) stopped.
+(lldb) process status
+Process 90219 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.5
+    frame #0: 0x00000001810c5c1c libsystem_c.dylib`exit
+libsystem_c.dylib`exit:
+->  0x1810c5c1c <+0>:  pacibsp 
+    0x1810c5c20 <+4>:  stp    x20, x19, [sp, #-0x20]!
+    0x1810c5c24 <+8>:  stp    x29, x30, [sp, #0x10]
+    0x1810c5c28 <+12>: add    x29, sp, #0x10
+(lldb) thread backtrace -c 16
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.5
+  * frame #0: 0x00000001810c5c1c libsystem_c.dylib`exit
+    frame #1: 0x00000001858f8a18 AppKit`-[NSApplication terminate:] + 2004
+    frame #2: 0x000000010204bc88 CLIP STUDIO PAINT`___lldb_unnamed_symbol_10204ba7c + 524
+    frame #3: 0x00000001812c164c CoreFoundation`__CFNOTIFICATIONCENTER_IS_CALLING_OUT_TO_AN_OBSERVER__ + 148
+    frame #4: 0x000000018134dabc CoreFoundation`___CFXRegistrationPost_block_invoke + 92
+    frame #5: 0x000000018134da00 CoreFoundation`_CFXRegistrationPost + 440
+    frame #6: 0x0000000181290170 CoreFoundation`_CFXNotificationPost + 740
+    frame #7: 0x0000000182ac44a4 Foundation`-[NSNotificationCenter postNotificationName:object:userInfo:] + 88
+    frame #8: 0x00000001856ff5e8 AppKit`-[NSApplication _postDidFinishNotification] + 308
+    frame #9: 0x00000001856ff380 AppKit`-[NSApplication _sendFinishLaunchingNotification] + 172
+    frame #10: 0x00000001856fd9c4 AppKit`-[NSApplication(NSAppleEventHandling) _handleAEOpenEvent:] + 488
+    frame #11: 0x00000001856fd5d8 AppKit`-[NSApplication(NSAppleEventHandling) _handleCoreEvent:withReplyEvent:] + 488
+    frame #12: 0x0000000182aecfbc Foundation`-[NSAppleEventManager dispatchRawAppleEvent:withRawReply:handlerRefCon:] + 316
+    frame #13: 0x0000000182aecdb4 Foundation`_NSAppleEventManagerGenericHandler + 80
+    frame #14: 0x00000001894f5f34 AE`___lldb_unnamed_symbol_1887d5904 + 1584
+    frame #15: 0x00000001894f588c AE`___lldb_unnamed_symbol_1887d5860 + 44
+(lldb) register read x0
+      x0 = 0x0000000000000000
+(lldb) process detach --keep-stopped false
+Process 90219 detached
+(lldb) quit
+
+Exit: 0

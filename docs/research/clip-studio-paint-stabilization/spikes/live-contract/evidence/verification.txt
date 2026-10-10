@@ -1,0 +1,19 @@
+Binary SHA-256: 6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd
+correct-pressure.asm 66 lines
+device-type.asm 7 lines
+dispatch-producer.asm 31 lines
+event-to-packet-selectors.asm 247 lines
+event-to-packet.asm 247 lines
+fallback-clock.asm 34 lines
+fallback-timestamp.asm 25 lines
+interval-settings.asm 100 lines
+interval-writer.asm 35 lines
+mac-packet-producer-selectors.asm 215 lines
+mac-packet-producer.asm 215 lines
+other-packet-producer.asm 158 lines
+output-callback.asm 535 lines
+platform-version-selectors.asm 36 lines
+platform-version.asm 36 lines
+Confirmed image constants and platform-return instruction.
+Selector evidence: event:toPacket: maps to implementation 0x1020572a8 in PWLegacyApplicationMac; metadata was read from the image.
+This verification checks captured static evidence and constants; no CSP function was executed.

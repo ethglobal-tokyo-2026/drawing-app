@@ -1,0 +1,14 @@
+{
+  "sample_rows": 40464,
+  "summary_rows": 144,
+  "engine_batch_checks": 504,
+  "engine_batch_failures": 0,
+  "raw_bypass_rows": 6744,
+  "analytical_fixed_window_checks": 9,
+  "idle": {
+    "geometry_equal": false,
+    "no_idle_last_time": 2800,
+    "idle_last_time": 2840,
+    "note": "Genuine empty frames after the last sample introduce hold processing. This is deliberately outside delivery equivalence."
+  }
+}

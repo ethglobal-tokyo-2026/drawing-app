@@ -1,0 +1,142 @@
+[
+  {
+    "group": 15,
+    "subgroup": 1,
+    "label": 12,
+    "offset": 151070,
+    "text": "Stabilization"
+  },
+  {
+    "group": 15,
+    "subgroup": 1,
+    "label": 13,
+    "offset": 151087,
+    "text": "Change how much to stabilize input from tablet pen"
+  },
+  {
+    "group": 15,
+    "subgroup": 1,
+    "label": 14,
+    "offset": 151141,
+    "text": "Adjust by speed"
+  },
+  {
+    "group": 15,
+    "subgroup": 1,
+    "label": 15,
+    "offset": 151160,
+    "text": "Adjust stabilization depending on drawing speed"
+  },
+  {
+    "group": 15,
+    "subgroup": 1,
+    "label": 16,
+    "offset": 151211,
+    "text": "Stabilization mode"
+  },
+  {
+    "group": 15,
+    "subgroup": 1,
+    "label": 17,
+    "offset": 151233,
+    "text": "Select the type of stabilization adjustment"
+  },
+  {
+    "group": 15,
+    "subgroup": 1,
+    "label": 18,
+    "offset": 151280,
+    "text": "Reduce stabilization when drawing quickly"
+  },
+  {
+    "group": 15,
+    "subgroup": 1,
+    "label": 19,
+    "offset": 151325,
+    "text": "Increase stabilization when drawing slowly"
+  },
+  {
+    "group": 15,
+    "subgroup": 1,
+    "label": 20,
+    "offset": 151371,
+    "text": "Taper"
+  },
+  {
+    "group": 15,
+    "subgroup": 1,
+    "label": 21,
+    "offset": 151380,
+    "text": "Change how much thinner lines are drawn like brush with long tip after releasing pen from tablet."
+  },
+  {
+    "group": 24,
+    "subgroup": 1,
+    "label": 132,
+    "offset": 168308,
+    "text": "Post correction"
+  },
+  {
+    "group": 24,
+    "subgroup": 1,
+    "label": 133,
+    "offset": 168327,
+    "text": "Change whether to make line smoother and degree of correction"
+  },
+  {
+    "group": 24,
+    "subgroup": 1,
+    "label": 134,
+    "offset": 168392,
+    "text": "Adjust by speed"
+  },
+  {
+    "group": 24,
+    "subgroup": 1,
+    "label": 135,
+    "offset": 168411,
+    "text": "Degree of post correction changes according velocity of stroke"
+  },
+  {
+    "group": 24,
+    "subgroup": 1,
+    "label": 136,
+    "offset": 168477,
+    "text": "Adjust by scale"
+  },
+  {
+    "group": 24,
+    "subgroup": 1,
+    "label": 137,
+    "offset": 168496,
+    "text": "Strength of correction depends on canvas magnification"
+  },
+  {
+    "group": 24,
+    "subgroup": 1,
+    "label": 138,
+    "offset": 168554,
+    "text": "Bezier curve"
+  },
+  {
+    "group": 24,
+    "subgroup": 1,
+    "label": 139,
+    "offset": 168570,
+    "text": "Line after correction becomes quadratic bezier curve"
+  },
+  {
+    "group": 24,
+    "subgroup": 1,
+    "label": 153,
+    "offset": 169155,
+    "text": "Sharp angles"
+  },
+  {
+    "group": 24,
+    "subgroup": 1,
+    "label": 154,
+    "offset": 169171,
+    "text": "Make angles in the line appear sharp and pointed"
+  }
+]

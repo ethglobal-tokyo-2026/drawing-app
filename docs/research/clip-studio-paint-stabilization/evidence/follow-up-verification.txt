@@ -1,0 +1,40 @@
+Follow-up verification, 2026-10-09
+
+Command:
+node --test docs/research/clip-studio-paint-stabilization/*.test.ts
+Observed exit: 0
+Tests: 23; pass: 23; fail: 0; skipped: 0
+Independent FMA oracle: 1005 binary64 cases agree bit-for-bit with Python math.fma.
+
+Command:
+python3 docs/research/clip-studio-paint-stabilization/spikes/post-contract/verify_evidence.py
+Observed exit: 0
+PASS: 38 assembly text hashes and complete instruction ranges
+PASS: 21 saved data records and decoded constants/RTTI
+Executable comparison omitted in this root verification. The spike's separate
+verification.txt records its original-image comparison.
+
+Durable Croquis replay rerun by the replay spike:
+40,464 measured rows; 144 summary rows; 504 engine comparisons; 0 batching failures.
+6,744 raw-bypass rows; 9 analytical fixed-window checks.
+Real-canvas snapshot replacement matched corrected replay for both tested tools.
+Existing eraser raster/replay discrepancy: 609 channels, including 216 alpha pixels.
+This is an observed integration issue, not a passing equality result.
+See spikes/croquis-replay/results and its archive manifest for full outputs.
+
+Research-copy verification:
+Installed app signature verified outside the command sandbox.
+775 original app manifest entries matched after copy/signing preparation.
+Only the copied main executable changed; all 36 ARM64 sections matched.
+Research-copy strict signature verification passed, with Hardened Runtime and
+both original entitlements preserved, plus com.apple.security.get-task-allow.
+See debugger-access/copy-verification.json and signing-verification.txt.
+
+Runtime limitations:
+Debugger-controlled launch/stop/detach succeeded (debug-launch.txt).
+First bounded capture read active globals and matched 528 loaded instruction bytes.
+Two hardware breakpoints installed, but zero input/output pairs arrived.
+The recording deadline fired; total cleanup took 32.115 seconds, exceeding 30 seconds.
+The helper's detach-state confirmation failed, although LLDB printed detachment.
+Its failed/incomplete JSONL evidence remains intact.
+No full CSP computation replay or natural tablet-feel match has been validated.

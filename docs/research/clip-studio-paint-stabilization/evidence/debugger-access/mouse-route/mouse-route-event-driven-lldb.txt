@@ -1,0 +1,59 @@
+["xcrun", "lldb", "--batch", "-o", "process attach --pid 21626", "-o", "script import sys; sys.dont_write_bytecode=True; sys.path.insert(0,\"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture\"); import capture_mouse_route as mouse; mouse.run(lldb.debugger,21626,\"/private/tmp/csp-debug-research-20261009/mouse-route-event-driven.jsonl\",timeout_seconds=30,max_events=128)", "-o", "quit"]
+(lldb) process attach --pid 21626
+Process 21626 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = signal SIGSTOP
+    frame #0: 0x00000001811cbb20 libsystem_kernel.dylib`_kernelrpc_mach_port_extract_member_trap + 8
+libsystem_kernel.dylib`_kernelrpc_mach_port_extract_member_trap:
+->  0x1811cbb20 <+8>: ret    
+
+libsystem_kernel.dylib`_kernelrpc_mach_port_construct_trap:
+    0x1811cbb24 <+0>: mov    x16, #-0x18               ; =-24 
+    0x1811cbb28 <+4>: svc    #0x80
+    0x1811cbb2c <+8>: ret    
+Target 0: (CLIP STUDIO PAINT) stopped.
+Executable binary set to "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT".
+Architecture set to: arm64-apple-macosx-.
+(lldb) script import sys; sys.dont_write_bytecode=True; sys.path.insert(0,"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture"); import capture_mouse_route as mouse; mouse.run(lldb.debugger,21626,"/private/tmp/csp-debug-research-20261009/mouse-route-event-driven.jsonl",timeout_seconds=30,max_events=128)
+CSP mouse route recording active; draw one short mouse drag and release.
+Process 21626 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
+    frame #0: 0x000000010205cb9c CLIP STUDIO PAINT`___lldb_unnamed_symbol_10205c7fc + 928
+CLIP STUDIO PAINT`___lldb_unnamed_symbol_10205c7fc:
+->  0x10205cb9c <+928>: blr    x8
+    0x10205cba0 <+932>: ldrb   w8, [x20, #0xc0]
+    0x10205cba4 <+936>: tbz    w8, #0x6, 0x10205cbd4     ; <+984>
+    0x10205cba8 <+940>: cmp    x22, #0x1
+Target 0: (CLIP STUDIO PAINT) stopped.
+Process 21626 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 2.1
+    frame #0: 0x000000010205c4d4 CLIP STUDIO PAINT`___lldb_unnamed_symbol_10205c2ec + 488
+CLIP STUDIO PAINT`___lldb_unnamed_symbol_10205c2ec:
+->  0x10205c4d4 <+488>: blr    x8
+    0x10205c4d8 <+492>: strb   wzr, [x22, #0x4f2]
+    0x10205c4dc <+496>: mov    x0, x20
+    0x10205c4e0 <+500>: mov    x2, x19
+Target 0: (CLIP STUDIO PAINT) stopped.
+Process 21626 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 3.1
+    frame #0: 0x000000010205ce3c CLIP STUDIO PAINT`___lldb_unnamed_symbol_10205cc64 + 472
+CLIP STUDIO PAINT`___lldb_unnamed_symbol_10205cc64:
+->  0x10205ce3c <+472>: blr    x8
+    0x10205ce40 <+476>: mov    x0, x21
+    0x10205ce44 <+480>: mov    x2, x20
+    0x10205ce48 <+484>: bl     0x103be8920
+Target 0: (CLIP STUDIO PAINT) stopped.
+Process 21626 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 4.1
+    frame #0: 0x000000010205ce40 CLIP STUDIO PAINT`___lldb_unnamed_symbol_10205cc64 + 476
+CLIP STUDIO PAINT`___lldb_unnamed_symbol_10205cc64:
+->  0x10205ce40 <+476>: mov    x0, x21
+    0x10205ce44 <+480>: mov    x2, x20
+    0x10205ce48 <+484>: bl     0x103be8920
+    0x10205ce4c <+488>: tbnz   w0, #0x0, 0x10205ce58     ; <+500>
+Target 0: (CLIP STUDIO PAINT) stopped.
+Process 21626 detached
+CSP mouse capture saved: /private/tmp/csp-debug-research-20261009/mouse-route-event-driven.jsonl; events=3; drags=1; up_return=True; mouse_route_complete=True; digitizer_fixture_complete=False
+{'output_path': '/private/tmp/csp-debug-research-20261009/mouse-route-event-driven.jsonl', 'mouse_route_complete': True, 'event_count': 3, 'drag_count': 1, 'up_return_observed': True, 'digitizer_fixture_complete': False, 'pen_feel_validated': False, 'detach_request_succeeded': True, 'detached_state_observed': True, 'resume_independently_verified': False, 'cleanup_errors': [], 'cleanup_warnings': []}
+(lldb) quit
+
+LLDB exit: 0

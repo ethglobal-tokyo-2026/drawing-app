@@ -1,0 +1,2015 @@
+$ git rev-parse HEAD
+52493b5618ec22291b32caa8fd1f803c15384416
+
+$ git status --short
+?? docs/research/
+?? docs/reviews/
+
+$ nl -ba /Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/stabilizer.ts
+     1	import { clamp01 } from "../../ui/easing";
+     2	
+     3	/**
+     4	 * The Smoothing a fresh sheet starts at, from 0 (Raw) to 100 (Smooth): a light touch, as artists keep
+     5	 * Clip Studio's Stabilization low.
+     6	 */
+     7	export const FIRST_SMOOTHING = 35;
+     8	/** How long the line trails a slow nib at Smooth, in ms. */
+     9	const SLOW_LAG_MS = 170;
+    10	/**
+    11	 * Smoothing's share of Smooth to this power scales the slow lag and the half-lag speed, so the low
+    12	 * end, where artists draw, steps finely.
+    13	 */
+    14	const SMOOTHING_CURVE = 2;
+    15	/**
+    16	 * The nib speed at Smooth, in sheet units per second, at which the line trails by half a slow nib's
+    17	 * lag, and less the quicker it goes: jitter shows on a slow stroke, and lag on a quick one. It
+    18	 * scales down with Smoothing, so a light one gives way to speed soonest, as Clip Studio's speed
+    19	 * options apply only at its low Stabilization.
+    20	 */
+    21	const HALF_LAG_SPEED = 2000;
+    22	/** The nib's speed is smoothed at this cutoff, in Hz, before it sets the line's: quick enough to follow a stroke that speeds up. */
+    23	const SPEED_CUTOFF_HZ = 4;
+    24	/** A nib that has sent no sample for this many ms has stopped, and its line glides the rest of the way to it. */
+    25	export const PAUSE_MS = 40;
+    26	/** A held nib's line moves at most this many ms a frame, so its glide starts where it stopped. */
+    27	const HOLD_STEP_MS = 1000 / 60;
+    28	/** A held nib's line is on it once this close, in sheet units. */
+    29	const ON_NIB = 0.1;
+    30	/** A lifted nib's line reaches it in steps this many ms apart. */
+    31	const CATCH_UP_MS = 8;
+    32	/** A lifted nib's line is put on it after this many steps, should it not have arrived. */
+    33	const MAX_CATCH_UP_STEPS = 1000;
+    34	/** The interval between samples, in ms, until two have come: a display frame's. */
+    35	const FIRST_INTERVAL_MS = 1000 / 60;
+    36	
+    37	/** The filter at a Smoothing: its cutoff for a still nib, in Hz, and the Hz each unit per second of speed adds. */
+    38	export interface FilterTuning {
+    39	  minCutoff: number;
+    40	  beta: number;
+    41	}
+    42	
+    43	/** The filter's tuning at a Smoothing from 0 (Raw) to 100 (Smooth); null at Raw, which leaves the nib's samples as they are. */
+    44	export function filterTuning(smoothing: number): FilterTuning | null {
+    45	  const share = clamp01(smoothing / 100) ** SMOOTHING_CURVE;
+    46	  if (share === 0) return null;
+    47	  const minCutoff = 1000 / (2 * Math.PI * SLOW_LAG_MS * share);
+    48	  return { minCutoff, beta: minCutoff / (HALF_LAG_SPEED * share) };
+    49	}
+    50	
+    51	/** A low-pass step's weight on the new value, for a cutoff in Hz over `dt` seconds. */
+    52	const weight = (cutoff: number, dt: number) => 1 / (1 + 1 / (2 * Math.PI * cutoff * dt));
+    53	
+    54	/**
+    55	 * Smoothing, as a One Euro filter (Casiez, Roussel and Vogel, 2012) on the nib's samples, run on their
+    56	 * timestamps: a low-pass whose cutoff rises with the nib's speed, so a slow nib's jitter goes and a
+    57	 * quick nib's line keeps up. One cutoff from the speed in the plane serves both axes, so a stroke
+    58	 * smooths alike in every direction. The line starts where the nib lands; at Raw it is the nib.
+    59	 */
+    60	export class Stabilizer {
+    61	  /** Where the line is. */
+    62	  private x: number;
+    63	  private y: number;
+    64	  /** The nib's latest sample. */
+    65	  private nibX: number;
+    66	  private nibY: number;
+    67	  /** The time the line stands at: the latest sample's, or a later frame's while the nib is held. */
+    68	  private t: number;
+    69	  /** The nib's velocity, smoothed, in sheet units per second. */
+    70	  private vx = 0;
+    71	  private vy = 0;
+    72	  /** The latest interval between samples, in ms, which a sample stamped no later than the last takes. */
+    73	  private interval = FIRST_INTERVAL_MS;
+    74	  private readonly tuning: FilterTuning | null;
+    75	
+    76	  /** `smoothing` runs from 0 (Raw) to 100 (Smooth). */
+    77	  constructor(x: number, y: number, t: number, smoothing: number) {
+    78	    [this.x, this.y, this.nibX, this.nibY, this.t] = [x, y, x, y, t];
+    79	    this.tuning = filterTuning(smoothing);
+    80	  }
+    81	
+    82	  /** The time the line stands at, in the samples' ms. */
+    83	  get time(): number {
+    84	    return this.t;
+    85	  }
+    86	
+    87	  /** The line is on the nib. */
+    88	  get settled(): boolean {
+    89	    return this.x === this.nibX && this.y === this.nibY;
+    90	  }
+    91	
+    92	  /** Takes the nib's next sample; returns where the line is now. */
+    93	  add(x: number, y: number, t: number): [number, number] {
+    94	    if (t > this.t) [this.interval, this.t] = [t - this.t, t];
+    95	    this.step(x, y, this.interval / 1000);
+    96	    return [this.x, this.y];
+    97	  }
+    98	
+    99	  /**
+   100	   * A frame at time `t` passed with no sample from a nib that has stopped: the line glides toward it,
+   101	   * a frame's time at a time, and lands on it once close. Returns where the line is now.
+   102	   */
+   103	  hold(t: number): [number, number] {
+   104	    if (t <= this.t || this.settled) return [this.x, this.y];
+   105	    this.step(this.nibX, this.nibY, Math.min(t - this.t, HOLD_STEP_MS) / 1000);
+   106	    this.t = t;
+   107	    if (Math.hypot(this.nibX - this.x, this.nibY - this.y) < ON_NIB)
+   108	      [this.x, this.y] = [this.nibX, this.nibY];
+   109	    return [this.x, this.y];
+   110	  }
+   111	
+   112	  /** The nib lifted at x, y: where the line goes on its way there, and when, ending on it. */
+   113	  finish(x: number, y: number): [x: number, y: number, t: number][] {
+   114	    const way: [number, number, number][] = [];
+   115	    if (x !== this.nibX || y !== this.nibY) way.push([...this.add(x, y, this.t), this.t]);
+   116	    for (let steps = 0; !this.settled && steps < MAX_CATCH_UP_STEPS; steps++)
+   117	      way.push([...this.hold(this.t + CATCH_UP_MS), this.t]);
+   118	    if (!this.settled) {
+   119	      [this.x, this.y] = [x, y];
+   120	      way.push([x, y, this.t]);
+   121	    }
+   122	    return way;
+   123	  }
+   124	
+   125	  /** One step of the filter toward x, y over `dt` seconds. */
+   126	  private step(x: number, y: number, dt: number): void {
+   127	    const { tuning } = this;
+   128	    if (tuning) {
+   129	      const toward = weight(SPEED_CUTOFF_HZ, dt);
+   130	      this.vx += toward * ((x - this.nibX) / dt - this.vx);
+   131	      this.vy += toward * ((y - this.nibY) / dt - this.vy);
+   132	      const share = weight(tuning.minCutoff + tuning.beta * Math.hypot(this.vx, this.vy), dt);
+   133	      this.x += share * (x - this.x);
+   134	      this.y += share * (y - this.y);
+   135	    } else [this.x, this.y] = [x, y];
+   136	    [this.nibX, this.nibY] = [x, y];
+   137	  }
+   138	}
+
+$ nl -ba /Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/inkEngine.ts
+     1	import { timeOurWork } from "../../performance/performanceRecorder";
+     2	import { previewWidth, StrokeBuilder, type PenPressure } from "./brush";
+     3	import { FILL_GAP } from "./fill";
+     4	import { isPalm, TapRecognizer } from "./gestures";
+     5	import { History, type Surface } from "./history";
+     6	import type { FillOp, Op, Step, StrokeOp, Tool } from "./ops";
+     7	import { areaFrame, frameFor, type SheetArea, type SheetFrame } from "./sheetFrame";
+     8	import { PAUSE_MS, Stabilizer } from "./stabilizer";
+     9	
+    10	/** A fill takes a tap: a pointer that lifts within this many sheet units of where it landed. */
+    11	const TAP_SLOP = 10;
+    12	/** A touch on a paused sheet that drags this many CSS px gets the paused hint before it lifts. */
+    13	const BLOCKED_DRAG = 8;
+    14	/** When the browser takes a pointer mid-stroke, the stroke stays if it had gone this many units. */
+    15	const CANCEL_KEEPS = 4;
+    16	
+    17	/** How the sheet takes input: Pencil only, where fingers only tap, or Pencil and finger. */
+    18	export const INPUT_MODES = ["pencilOnly", "pencilAndFinger"] as const;
+    19	export type InputMode = (typeof INPUT_MODES)[number];
+    20	
+    21	/** The ink's work as the performance recorder's report names it, so a slow Pencil stroke can be told. */
+    22	export const INK_WORK = {
+    23	  paint: "ink paint",
+    24	  fill: "ink fill",
+    25	  replay: "ink replay",
+    26	  snapshot: "ink snapshot",
+    27	} as const;
+    28	
+    29	/** What the engine paints on: the ink canvas in the app, a record of calls in tests. */
+    30	export interface InkLayer extends Surface<unknown> {
+    31	  /** Sizes the ink to a frame, which clears it; says whether its size changed. */
+    32	  setFrame: (frame: SheetFrame) => boolean;
+    33	  /** Paints points [from, to) of a stroke in progress. */
+    34	  paint: (op: StrokeOp, from: number, to: number) => void;
+    35	  /** Floods from the op's point; false when nothing changed. */
+    36	  fill: (op: FillOp) => boolean;
+    37	}
+    38	
+    39	/** What the drawing screen has set; the engine reads it as each pointer lands. */
+    40	export interface InkSettings {
+    41	  tool: Tool;
+    42	  color: string;
+    43	  /** Brush or eraser width, in sheet units. */
+    44	  size: number;
+    45	  /** Smoothing, from 0 (Raw) to 100 (Smooth). */
+    46	  smoothing: number;
+    47	  /** No input at all: sealing, sealed, or the ticket card is up. */
+    48	  locked: boolean;
+    49	  /** The person paused the clock: the sheet takes no marks. */
+    50	  paused: boolean;
+    51	  /** A tool panel is open: a touch on the sheet closes it and draws nothing. */
+    52	  panelOpen: boolean;
+    53	  /**
+    54	   * Pencil only: fingers tap, to undo and redo, and never draw. Pencil and finger: both draw. Null on
+    55	   * a device no pen has drawn on: fingers draw, and no contact is judged a palm by its size.
+    56	   */
+    57	  inputMode: InputMode | null;
+    58	  /** How a pen's pressure sets its width. */
+    59	  penPressure: PenPressure;
+    60	  /** ms into the session, to stamp each op with. */
+    61	  sessionMs: () => number;
+    62	}
+    63	
+    64	/** What undo and redo can do, and whether there's ink on the sheet. */
+    65	export interface HistoryState {
+    66	  canUndo: boolean;
+    67	  canRedo: boolean;
+    68	  /** There are ops on the ink: the seal key shows, and the sheet can be cleared. */
+    69	  hasInk: boolean;
+    70	}
+    71	
+    72	/** Where a hovering pen would land on the paper, and how wide its stroke would show, in CSS px. */
+    73	export interface HoverRing {
+    74	  x: number;
+    75	  y: number;
+    76	  diameter: number;
+    77	}
+    78	
+    79	export interface InkEvents {
+    80	  onHistory: (state: HistoryState) => void;
+    81	  /** A stroke or fill landed. */
+    82	  onCommit: (op: Op) => void;
+    83	  /** Someone tried to draw on a paused sheet. */
+    84	  onBlocked: () => void;
+    85	  onDismissPanel: () => void;
+    86	  /** A pen touched the sheet. */
+    87	  onPen: () => void;
+    88	  /** A pen hovering over the sheet; null once it lands or leaves, or the sheet takes no mark. */
+    89	  onHover: (ring: HoverRing | null) => void;
+    90	}
+    91	
+    92	/** The parts of a PointerEvent the engine reads. */
+    93	export interface PointerInput {
+    94	  pointerId: number;
+    95	  pointerType: string;
+    96	  button: number;
+    97	  /** The buttons held: none for a pen hovering over the sheet. */
+    98	  buttons: number;
+    99	  clientX: number;
+   100	  clientY: number;
+   101	  pressure: number;
+   102	  /** The contact's size in CSS px: a palm's is far wider than a fingertip's. */
+   103	  width: number;
+   104	  height: number;
+   105	  timeStamp: number;
+   106	  getCoalescedEvents?: () => PointerInput[];
+   107	  preventDefault: () => void;
+   108	}
+   109	
+   110	/** Where the sheet's paper is on screen, in CSS px. */
+   111	interface PaperRect {
+   112	  left: number;
+   113	  top: number;
+   114	  width: number;
+   115	}
+   116	
+   117	/** Asks for one animation frame, which hears its time; returns a function that withdraws the request. */
+   118	export type RequestFrame = (frame: (time: number) => void) => () => void;
+   119	
+   120	const browserFrame: RequestFrame = (frame) => {
+   121	  const id = requestAnimationFrame(frame);
+   122	  return () => cancelAnimationFrame(id);
+   123	};
+   124	
+   125	interface LiveStroke {
+   126	  id: number;
+   127	  pointerType: string;
+   128	  builder: StrokeBuilder;
+   129	  stabilizer: Stabilizer;
+   130	  /** Samples since the last frame, flat: x, y, pressure, t. */
+   131	  queue: number[];
+   132	  /** Points already on the ink. */
+   133	  painted: number;
+   134	  /** When and where it landed. */
+   135	  t0: number;
+   136	  x0: number;
+   137	  y0: number;
+   138	  /** The furthest it has gone from where it landed, in sheet units. */
+   139	  moved: number;
+   140	  /** The latest sample: where the stroke ends if the pointer lifts now. */
+   141	  x: number;
+   142	  y: number;
+   143	  pressure: number;
+   144	  t: number;
+   145	  /** A pen's brush stroke: the ink as it landed, which goes back on lift under its narrowed tail. */
+   146	  before: { ink: unknown } | null;
+   147	}
+   148	
+   149	/**
+   150	 * Turns pointer input into ink. Pointer events only queue samples; one animation frame at a time
+   151	 * feeds them through Smoothing's stabilizer and the width model and paints just the new segments.
+   152	 * Ink lies only where the stabilized line has reached, never ahead of it toward the nib. It never
+   153	 * touches React: it reads `settings` as pointers land and reports through `events`.
+   154	 *
+   155	 * Ink is in sheet units: a pointer's offset on the paper over the CSS px a unit spans there. The
+   156	 * sheet's frame follows its area while the sheet is blank, and is fixed from the first mark.
+   157	 *
+   158	 * Touch: two fingers tap to undo, three to redo, and a second finger landing early takes back the
+   159	 * first one's stroke. In Pencil only, fingers only tap; in either mode, a finger stroke a pen
+   160	 * interrupts was a resting palm.
+   161	 */
+   162	export class InkEngine {
+   163	  settings: InkSettings;
+   164	  private readonly layer: InkLayer;
+   165	  private readonly history: History<unknown>;
+   166	  private readonly events: InkEvents;
+   167	  private readonly requestFrame: RequestFrame;
+   168	  private readonly taps = new TapRecognizer();
+   169	  private live: LiveStroke | null = null;
+   170	  private fillTap: { id: number; x: number; y: number } | null = null;
+   171	  /** Pointers that closed a panel or met a paused sheet: they do nothing more until they lift. */
+   172	  private readonly swallowed = new Set<number>();
+   173	  /** A touch on a paused sheet, waiting a beat before the hint in case a second finger makes a tap. */
+   174	  private blocked: { id: number; cx: number; cy: number } | null = null;
+   175	  /** Every finger left the screen: the next touch to land is the only one down. */
+   176	  private fingersGone = false;
+   177	  /** This page's pen has shown its pressure moving: its strokes start at their first sample's width. */
+   178	  private pressurePen = false;
+   179	  /** A hover ring shows. */
+   180	  private hovering = false;
+   181	  private cancelFrame: (() => void) | null = null;
+   182	  /** The sheet's frame; null until its area is measured or a kept drawing brings one. */
+   183	  private sheet: SheetFrame | null = null;
+   184	  /**
+   185	   * How the frame is decided at the next measure: it follows the area while the sheet is blank,
+   186	   * takes the area itself for a drawing kept without one, and stays once the drawing has marks.
+   187	   */
+   188	  private frameRule: "follows" | "area" | "fixed" = "follows";
+   189	  private locate: () => PaperRect = () => ({ left: 0, top: 0, width: this.sheet?.w ?? 1 });
+   190	  /** Where the paper was and how many CSS px a unit spanned there, as the pointer landed. */
+   191	  private origin = { left: 0, top: 0, scale: 1 };
+   192	
+   193	  constructor(
+   194	    layer: InkLayer,
+   195	    settings: InkSettings,
+   196	    events: InkEvents,
+   197	    requestFrame: RequestFrame = browserFrame,
+   198	  ) {
+   199	    this.layer = layer;
+   200	    this.settings = settings;
+   201	    this.events = events;
+   202	    this.requestFrame = requestFrame;
+   203	    this.history = new History(layer);
+   204	  }
+   205	
+   206	  /** Listens for pointers on the sheet; returns the detach. */
+   207	  attach(sheet: HTMLElement): () => void {
+   208	    this.locate = () => sheet.getBoundingClientRect();
+   209	    const onDown = (e: PointerEvent) => {
+   210	      this.down(e);
+   211	      if (!this.tracks(e.pointerId)) return;
+   212	      try {
+   213	        sheet.setPointerCapture(e.pointerId);
+   214	      } catch {
+   215	        // The pointer already lifted, or never existed (a synthetic event): nothing left to capture.
+   216	      }
+   217	    };
+   218	    const onMove = (e: PointerEvent) => this.move(e);
+   219	    const onUp = (e: PointerEvent) => this.up(e);
+   220	    const onCancel = (e: PointerEvent) => this.cancel(e);
+   221	    const onLeave = () => this.leave();
+   222	    // Capture ends with every lift; losing it without one means the pointer is gone for good.
+   223	    const onLostCapture = (e: PointerEvent) => {
+   224	      if (this.tracks(e.pointerId)) this.cancel(e);
+   225	    };
+   226	    const prevent = (e: Event) => e.preventDefault();
+   227	    const touch = { passive: false };
+   228	    // The screen's own count of fingers, heard wherever they lift, outlasts a lift the sheet missed.
+   229	    const onTouchEnd = (e: TouchEvent) => {
+   230	      if (e.touches.length === 0) this.screenClear();
+   231	    };
+   232	    document.addEventListener("touchend", onTouchEnd);
+   233	    document.addEventListener("touchcancel", onTouchEnd);
+   234	    sheet.addEventListener("pointerdown", onDown);
+   235	    sheet.addEventListener("pointermove", onMove);
+   236	    sheet.addEventListener("pointerup", onUp);
+   237	    sheet.addEventListener("pointercancel", onCancel);
+   238	    sheet.addEventListener("lostpointercapture", onLostCapture);
+   239	    sheet.addEventListener("pointerleave", onLeave);
+   240	    sheet.addEventListener("contextmenu", prevent);
+   241	    // iOS can still start a scroll or a text selection from a touch, whatever touch-action says.
+   242	    sheet.addEventListener("touchstart", prevent, touch);
+   243	    sheet.addEventListener("touchmove", prevent, touch);
+   244	    // Safari's own pinch zoom.
+   245	    document.addEventListener("gesturestart", prevent);
+   246	    return () => {
+   247	      sheet.removeEventListener("pointerdown", onDown);
+   248	      sheet.removeEventListener("pointermove", onMove);
+   249	      sheet.removeEventListener("pointerup", onUp);
+   250	      sheet.removeEventListener("pointercancel", onCancel);
+   251	      sheet.removeEventListener("lostpointercapture", onLostCapture);
+   252	      sheet.removeEventListener("pointerleave", onLeave);
+   253	      sheet.removeEventListener("contextmenu", prevent);
+   254	      sheet.removeEventListener("touchstart", prevent);
+   255	      sheet.removeEventListener("touchmove", prevent);
+   256	      document.removeEventListener("gesturestart", prevent);
+   257	      document.removeEventListener("touchend", onTouchEnd);
+   258	      document.removeEventListener("touchcancel", onTouchEnd);
+   259	      this.cancelFrame?.();
+   260	      this.cancelFrame = null;
+   261	    };
+   262	  }
+   263	
+   264	  /** Every finger left the screen, so whatever lifts went missing, the next touch is the only one down. */
+   265	  screenClear(): void {
+   266	    this.fingersGone = true;
+   267	  }
+   268	
+   269	  down(e: PointerInput): void {
+   270	    this.hideHover();
+   271	    const s = this.settings;
+   272	    const { pointerId: id, pointerType } = e;
+   273	    if (s.locked || !this.sheet || (pointerType === "mouse" && e.button !== 0)) return;
+   274	    // Pointer ids come back; one that lifted where we couldn't see it starts over.
+   275	    this.swallowed.delete(id);
+   276	    if (pointerType === "touch") {
+   277	      if (this.fingersGone) this.forgetTouches();
+   278	      if (this.live?.pointerType === "pen") return;
+   279	      const stroke = this.live?.pointerType === "touch" ? this.live : null;
+   280	      // The tap recognizer judges fingers on the glass, so the stroke's reach goes to it in CSS px.
+   281	      const result = this.taps.down(
+   282	        id,
+   283	        e.clientX,
+   284	        e.clientY,
+   285	        e.timeStamp,
+   286	        stroke
+   287	          ? { age: e.timeStamp - stroke.t0, moved: stroke.moved * this.origin.scale }
+   288	          : undefined,
+   289	        this.palmContact(e),
+   290	      );
+   291	      if (result === "cancel-stroke") this.endStroke(true);
+   292	      if (result === "cancel-stroke" || result === "gesture") {
+   293	        this.fillTap = null;
+   294	        this.blocked = null;
+   295	      }
+   296	      if (result !== "draw") return;
+   297	    } else if (pointerType === "pen") {
+   298	      this.events.onPen();
+   299	      if (this.live && this.live.pointerType !== "pen") this.endStroke(true);
+   300	    }
+   301	    if (this.live || this.fillTap) return;
+   302	    if (s.panelOpen) {
+   303	      this.swallowed.add(id);
+   304	      this.events.onDismissPanel();
+   305	      return;
+   306	    }
+   307	    if (pointerType === "touch" && s.inputMode === "pencilOnly") return;
+   308	    e.preventDefault();
+   309	    if (s.paused) {
+   310	      this.swallowed.add(id);
+   311	      if (pointerType === "touch") this.blocked = { id, cx: e.clientX, cy: e.clientY };
+   312	      else this.events.onBlocked();
+   313	      return;
+   314	    }
+   315	    this.origin = this.place();
+   316	    const [x, y] = this.toSheet(e);
+   317	    if (s.tool === "fill") this.fillTap = { id, x, y };
+   318	    else this.beginStroke(e, x, y);
+   319	  }
+   320	
+   321	  move(e: PointerInput): void {
+   322	    const id = e.pointerId;
+   323	    // A pen with nothing pressed hovers: a ring shows where it would land, and it never draws.
+   324	    if (e.pointerType === "pen" && e.buttons === 0 && this.live?.id !== id) {
+   325	      this.hover(e);
+   326	      return;
+   327	    }
+   328	    if (e.pointerType === "touch") {
+   329	      const palm = this.palmContact(e);
+   330	      this.taps.move(id, e.clientX, e.clientY, palm);
+   331	      // A fingertip that spreads into a palm as it settles never meant its stroke.
+   332	      if (palm && this.live?.id === id) {
+   333	        this.endStroke(true);
+   334	        this.swallowed.add(id);
+   335	        return;
+   336	      }
+   337	    }
+   338	    const blocked = this.blocked;
+   339	    if (
+   340	      blocked?.id === id &&
+   341	      Math.hypot(e.clientX - blocked.cx, e.clientY - blocked.cy) > BLOCKED_DRAG
+   342	    ) {
+   343	      this.blocked = null;
+   344	      this.events.onBlocked();
+   345	    }
+   346	    const live = this.live;
+   347	    if (live?.id !== id) return;
+   348	    const coalesced = e.getCoalescedEvents?.() ?? [];
+   349	    for (const sample of coalesced.length ? coalesced : [e]) {
+   350	      const [x, y] = this.toSheet(sample);
+   351	      live.queue.push(x, y, sample.pressure, sample.timeStamp);
+   352	      live.moved = Math.max(live.moved, Math.hypot(x - live.x0, y - live.y0));
+   353	      live.x = x;
+   354	      live.y = y;
+   355	      live.pressure = sample.pressure;
+   356	      live.t = sample.timeStamp;
+   357	    }
+   358	    if (!this.cancelFrame) this.cancelFrame = this.requestFrame(this.paintFrame);
+   359	  }
+   360	
+   361	  up(e: PointerInput): void {
+   362	    this.lift(e, false);
+   363	  }
+   364	
+   365	  /** The browser took the pointer: a scroll, a system gesture, or a lost capture. */
+   366	  cancel(e: PointerInput): void {
+   367	    this.lift(e, true);
+   368	  }
+   369	
+   370	  /** Nothing while the sheet is locked: a seal is cut from the ink as it stands. */
+   371	  undo(): void {
+   372	    if (this.settings.locked) return;
+   373	    this.endStroke(true);
+   374	    if (timeOurWork(INK_WORK.replay, () => this.history.undo())) this.notifyHistory();
+   375	  }
+   376	
+   377	  redo(): void {
+   378	    if (this.settings.locked) return;
+   379	    this.endStroke(true);
+   380	    if (timeOurWork(INK_WORK.replay, () => this.history.redo())) this.notifyHistory();
+   381	  }
+   382	
+   383	  /**
+   384	   * Sets the drawing aside for a blank sheet; undo brings it back. A stroke still in progress goes
+   385	   * with it, and a fill whose finger hasn't lifted is dropped. Nothing while the sheet is locked.
+   386	   */
+   387	  clear(): void {
+   388	    if (this.settings.locked) return;
+   389	    this.endStroke(false);
+   390	    this.fillTap = null;
+   391	    if (!this.history.hasInk) return;
+   392	    this.history.clear();
+   393	    this.notifyHistory();
+   394	  }
+   395	
+   396	  /** Ends a stroke in progress as if the pointer lifted, as time running out does. */
+   397	  finishStroke(): void {
+   398	    this.endStroke(false);
+   399	  }
+   400	
+   401	  /** The pointer left the paper: a hovering pen's ring goes. */
+   402	  leave(): void {
+   403	    this.hideHover();
+   404	  }
+   405	
+   406	  /** The ops on the ink, oldest first. */
+   407	  get ops(): readonly Op[] {
+   408	    return this.history.committed;
+   409	  }
+   410	
+   411	  /** Every step, oldest first, clears included: what the drawing kept on the device holds. */
+   412	  get steps(): readonly Step[] {
+   413	    return this.history.steps;
+   414	  }
+   415	
+   416	  /**
+   417	   * The sheet's size in units and its ink's density; null until its area is measured or a kept
+   418	   * drawing brings one.
+   419	   */
+   420	  get frame(): SheetFrame | null {
+   421	    return this.sheet;
+   422	  }
+   423	
+   424	  /**
+   425	   * The sheet's area was measured on screen, in CSS px. A blank sheet's frame follows it, and a
+   426	   * drawing kept without a frame takes it as its own. A drawing with marks keeps its frame: the
+   427	   * paper only rescales, so nothing clears or replays.
+   428	   */
+   429	  fit(area: SheetArea, devicePixelRatio: number): void {
+   430	    if (this.frameRule === "fixed") return;
+   431	    if (this.frameRule === "follows") {
+   432	      this.useFrame(frameFor(area, devicePixelRatio));
+   433	      return;
+   434	    }
+   435	    this.frameRule = "fixed";
+   436	    this.useFrame(areaFrame(area, devicePixelRatio));
+   437	  }
+   438	
+   439	  /** Where a point on screen falls on the sheet, in units; null until the sheet has a frame. */
+   440	  screenToSheet(clientX: number, clientY: number): [x: number, y: number] | null {
+   441	    if (!this.sheet) return null;
+   442	    const { left, top, scale } = this.place();
+   443	    return [(clientX - left) / scale, (clientY - top) / scale];
+   444	  }
+   445	
+   446	  /** A fresh sheet: no ink, nothing to undo or redo, its frame following its area again. */
+   447	  reset(): void {
+   448	    this.load([], null);
+   449	  }
+   450	
+   451	  /**
+   452	   * A sheet with these steps on it and nothing to redo, as a drawing picked up after a reload has,
+   453	   * in the frame it was drawn in. A drawing kept without a frame has none until the next measure
+   454	   * takes its area as its frame, so a save can't keep the last sheet's with it; with no steps, the
+   455	   * frame follows the area.
+   456	   */
+   457	  load(steps: readonly Step[], frame: SheetFrame | null): void {
+   458	    this.endStroke(true);
+   459	    this.fillTap = null;
+   460	    this.blocked = null;
+   461	    this.swallowed.clear();
+   462	    this.taps.clear();
+   463	    if (steps.length === 0) this.frameRule = "follows";
+   464	    else if (frame) {
+   465	      this.frameRule = "fixed";
+   466	      this.useFrame(frame);
+   467	    } else {
+   468	      this.frameRule = "area";
+   469	      this.sheet = null;
+   470	    }
+   471	    timeOurWork(INK_WORK.replay, () => this.history.load(steps));
+   472	    this.notifyHistory();
+   473	  }
+   474	
+   475	  /** The sheet is going: its undo snapshots are freed now rather than when they're collected. */
+   476	  dispose(): void {
+   477	    this.history.release();
+   478	  }
+   479	
+   480	  /** Every touch pointer is taken as lifted: a finger's stroke stays, and a tap or fill in progress goes. */
+   481	  private forgetTouches(): void {
+   482	    this.fingersGone = false;
+   483	    for (const id of this.taps.clear()) {
+   484	      this.swallowed.delete(id);
+   485	      if (this.fillTap?.id === id) this.fillTap = null;
+   486	    }
+   487	    this.blocked = null;
+   488	    if (this.live?.pointerType === "touch") this.endStroke(false);
+   489	  }
+   490	
+   491	  // Every finger the tap recognizer holds is captured too, so its lift or lost capture comes here.
+   492	  private tracks(id: number): boolean {
+   493	    return (
+   494	      this.live?.id === id ||
+   495	      this.fillTap?.id === id ||
+   496	      this.blocked?.id === id ||
+   497	      this.swallowed.has(id) ||
+   498	      this.taps.holds(id)
+   499	    );
+   500	  }
+   501	
+   502	  /** Sizes the ink to a new frame; sized afresh, it clears, so what was on it goes back on. */
+   503	  private useFrame(frame: SheetFrame): void {
+   504	    const was = this.sheet;
+   505	    if (was?.w === frame.w && was.h === frame.h && was.density === frame.density) return;
+   506	    this.sheet = frame;
+   507	    timeOurWork(INK_WORK.replay, () => {
+   508	      if (this.layer.setFrame(frame)) this.history.invalidate();
+   509	    });
+   510	  }
+   511	
+   512	  /** Where the paper is now, and how many CSS px a unit spans on it. */
+   513	  private place(): { left: number; top: number; scale: number } {
+   514	    const paper = this.locate();
+   515	    return {
+   516	      left: paper.left,
+   517	      top: paper.top,
+   518	      scale: paper.width / (this.sheet?.w ?? paper.width),
+   519	    };
+   520	  }
+   521	
+   522	  private toSheet(e: PointerInput): [number, number] {
+   523	    const { left, top, scale } = this.origin;
+   524	    return [(e.clientX - left) / scale, (e.clientY - top) / scale];
+   525	  }
+   526	
+   527	  /** A palm-sized contact, judged only on a device a pen has drawn on: before that, size rules nothing. */
+   528	  private palmContact(e: PointerInput): boolean {
+   529	    return this.settings.inputMode !== null && isPalm(e.width, e.height);
+   530	  }
+   531	
+   532	  /** A hovering pen's ring, while the sheet would take its mark. */
+   533	  private hover(e: PointerInput): void {
+   534	    const s = this.settings;
+   535	    if (s.locked || s.paused || s.panelOpen || s.tool === "fill" || this.live || !this.sheet) {
+   536	      this.hideHover();
+   537	      return;
+   538	    }
+   539	    const { left, top, scale } = this.place();
+   540	    const share = s.tool === "eraser" ? 1 : previewWidth(s.penPressure, this.pressurePen);
+   541	    this.hovering = true;
+   542	    this.events.onHover({
+   543	      x: e.clientX - left,
+   544	      y: e.clientY - top,
+   545	      diameter: s.size * share * scale,
+   546	    });
+   547	  }
+   548	
+   549	  private hideHover(): void {
+   550	    if (!this.hovering) return;
+   551	    this.hovering = false;
+   552	    this.events.onHover(null);
+   553	  }
+   554	
+   555	  private lift(e: PointerInput, cancelled: boolean): void {
+   556	    const id = e.pointerId;
+   557	    if (e.pointerType === "touch") {
+   558	      const tapping = this.taps.inGesture(id);
+   559	      let gesture = null;
+   560	      if (cancelled) this.taps.cancel(id);
+   561	      else gesture = this.taps.up(id, e.timeStamp);
+   562	      if (this.blocked?.id === id) {
+   563	        this.blocked = null;
+   564	        if (!tapping && !cancelled) this.events.onBlocked();
+   565	      }
+   566	      if (gesture === "undo") this.undo();
+   567	      else if (gesture === "redo") this.redo();
+   568	      // A finger of a tap is never a stroke or a fill.
+   569	      if (tapping) {
+   570	        this.swallowed.delete(id);
+   571	        return;
+   572	      }
+   573	    }
+   574	    if (this.swallowed.delete(id)) return;
+   575	    const tap = this.fillTap;
+   576	    if (tap?.id === id) {
+   577	      this.fillTap = null;
+   578	      const [x, y] = this.toSheet(e);
+   579	      if (!cancelled && Math.hypot(x - tap.x, y - tap.y) < TAP_SLOP) this.applyFill(tap.x, tap.y);
+   580	      return;
+   581	    }
+   582	    const live = this.live;
+   583	    if (live?.id !== id) return;
+   584	    if (!cancelled) [live.x, live.y] = this.toSheet(e);
+   585	    this.endStroke(cancelled && live.moved < CANCEL_KEEPS);
+   586	  }
+   587	
+   588	  private beginStroke(e: PointerInput, x: number, y: number): void {
+   589	    const s = this.settings;
+   590	    // The first mark fixes the frame for the life of the drawing.
+   591	    this.frameRule = "fixed";
+   592	    const builder = new StrokeBuilder({
+   593	      tool: s.tool === "eraser" ? "eraser" : "brush",
+   594	      color: s.color,
+   595	      size: s.size,
+   596	      x,
+   597	      y,
+   598	      t: e.timeStamp,
+   599	      T: s.sessionMs(),
+   600	      pressure: e.pressure,
+   601	      pointerType: e.pointerType,
+   602	      pressureVaries: this.pressurePen,
+   603	      response: s.penPressure,
+   604	    });
+   605	    // A copy now costs the same whatever is on the sheet; a replay on lift grows with the strokes.
+   606	    const before =
+   607	      e.pointerType === "pen" && s.tool !== "eraser"
+   608	        ? { ink: timeOurWork(INK_WORK.snapshot, () => this.layer.snapshot()) }
+   609	        : null;
+   610	    this.live = {
+   611	      id: e.pointerId,
+   612	      pointerType: e.pointerType,
+   613	      builder,
+   614	      stabilizer: new Stabilizer(x, y, e.timeStamp, s.smoothing),
+   615	      queue: [],
+   616	      painted: 1,
+   617	      t0: e.timeStamp,
+   618	      x0: x,
+   619	      y0: y,
+   620	      moved: 0,
+   621	      x,
+   622	      y,
+   623	      pressure: e.pressure,
+   624	      t: e.timeStamp,
+   625	      before,
+   626	    };
+   627	    // The dot shows as the pointer lands, not a frame later.
+   628	    timeOurWork(INK_WORK.paint, () => this.layer.paint(builder.op, 0, 1));
+   629	  }
+   630	
+   631	  /** `time` is the frame's, on the clock pointer samples are stamped with. */
+   632	  private readonly paintFrame = (time: number): void => {
+   633	    this.cancelFrame = null;
+   634	    const live = this.live;
+   635	    if (!live) return;
+   636	    timeOurWork(INK_WORK.paint, () => {
+   637	      if (live.queue.length > 0) this.feed(live);
+   638	      else this.catchUp(live, time);
+   639	      this.paintNew(live);
+   640	    });
+   641	    // Until the line is on the nib, each frame brings it closer.
+   642	    if (!live.stabilizer.settled || !live.builder.settled)
+   643	      this.cancelFrame ??= this.requestFrame(this.paintFrame);
+   644	  };
+   645	
+   646	  /** Feeds the queued samples through the stabilizer to the stroke. */
+   647	  private feed(live: LiveStroke): void {
+   648	    const { queue, stabilizer, builder } = live;
+   649	    if (queue.length === 0) return;
+   650	    for (let i = 0; i < queue.length; i += 4) {
+   651	      const nib = { x: queue[i], y: queue[i + 1], t: queue[i + 3] };
+   652	      const [x, y] = stabilizer.add(nib.x, nib.y, nib.t);
+   653	      builder.add(x, y, queue[i + 2], stabilizer.time, nib);
+   654	    }
+   655	    queue.length = 0;
+   656	  }
+   657	
+   658	  /**
+   659	   * A frame at `time` with no new sample. Frames come between a moving nib's samples too, so only a
+   660	   * nib silent for `PAUSE_MS` has stopped: its line glides to it, and once there, curves all the way.
+   661	   */
+   662	  private catchUp(live: LiveStroke, time: number): void {
+   663	    const { stabilizer, builder } = live;
+   664	    if (!stabilizer.settled && time - live.t >= PAUSE_MS) {
+   665	      const [x, y] = stabilizer.hold(time);
+   666	      builder.add(x, y, live.pressure, stabilizer.time, null);
+   667	    }
+   668	    if (stabilizer.settled) builder.settle(live.x, live.y);
+   669	  }
+   670	
+   671	  /** Paints the segments the stroke has added since the last paint. */
+   672	  private paintNew(live: LiveStroke): void {
+   673	    const { builder } = live;
+   674	    if (builder.count > live.painted) {
+   675	      this.layer.paint(builder.op, live.painted, builder.count);
+   676	      live.painted = builder.count;
+   677	    }
+   678	  }
+   679	
+   680	  /** Commits the stroke in progress, or takes it back off the ink. */
+   681	  private endStroke(takeBack: boolean): void {
+   682	    const live = this.live;
+   683	    if (!live) return;
+   684	    this.live = null;
+   685	    this.cancelFrame?.();
+   686	    this.cancelFrame = null;
+   687	    // A pen whose pressure moved senses it: its next strokes start at their first sample's width.
+   688	    if (live.builder.pressured) this.pressurePen = true;
+   689	    if (takeBack) {
+   690	      if (live.before) this.layer.discard(live.before.ink);
+   691	      timeOurWork(INK_WORK.replay, () => this.history.repaint());
+   692	      return;
+   693	    }
+   694	    timeOurWork(INK_WORK.paint, () => {
+   695	      this.feed(live);
+   696	      // The way to the lift point is the line catching up, not the pointer moving: it keeps the width.
+   697	      for (const [x, y, t] of live.stabilizer.finish(live.x, live.y))
+   698	        live.builder.add(x, y, live.pressure, t, null);
+   699	      live.builder.settle(live.x, live.y);
+   700	      this.paintNew(live);
+   701	    });
+   702	    // A pen's tail narrows once it's known where the stroke ends, over ink already painted wider.
+   703	    const { before } = live;
+   704	    if (before) {
+   705	      if (live.builder.taperEnd() < live.builder.count)
+   706	        timeOurWork(INK_WORK.paint, () => {
+   707	          this.layer.restore(before.ink);
+   708	          this.layer.paint(live.builder.op, 0, live.builder.count);
+   709	        });
+   710	      this.layer.discard(before.ink);
+   711	    }
+   712	    timeOurWork(INK_WORK.snapshot, () => this.history.commit(live.builder.op));
+   713	    this.events.onCommit(live.builder.op);
+   714	    this.notifyHistory();
+   715	  }
+   716	
+   717	  private applyFill(x: number, y: number): void {
+   718	    const op: FillOp = {
+   719	      tool: "fill",
+   720	      x,
+   721	      y,
+   722	      color: this.settings.color,
+   723	      gap: FILL_GAP,
+   724	      T: this.settings.sessionMs(),
+   725	    };
+   726	    if (!timeOurWork(INK_WORK.fill, () => this.layer.fill(op))) return;
+   727	    this.frameRule = "fixed";
+   728	    timeOurWork(INK_WORK.snapshot, () => this.history.commit(op));
+   729	    this.events.onCommit(op);
+   730	    this.notifyHistory();
+   731	  }
+   732	
+   733	  private notifyHistory(): void {
+   734	    const { canUndo, canRedo, hasInk } = this.history;
+   735	    this.events.onHistory({ canUndo, canRedo, hasInk });
+   736	  }
+   737	}
+
+$ nl -ba /Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/brush.ts
+     1	import { clamp, clamp01 } from "../../ui/easing";
+     2	import { STRIDE, type StrokeOp } from "./ops";
+     3	import { StrokeCurve } from "./strokeCurve";
+     4	
+     5	/**
+     6	 * The size rail's value (0–1) as a width in sheet units, the px the rail shows, squared so the
+     7	 * fine sizes get most of the travel.
+     8	 */
+     9	export const sizePx = (value: number) => 1.5 + 46.5 * value * value;
+    10	
+    11	/** How a pen's pressure sets its width: not at all (Off), or along a light, normal or firm curve. */
+    12	export const PEN_PRESSURES = ["off", "light", "normal", "firm"] as const;
+    13	export type PenPressure = (typeof PEN_PRESSURES)[number];
+    14	
+    15	/** Points closer than this many sheet units to the last one add cost and nothing else. */
+    16	const MIN_STEP = 0.5;
+    17	/** A finger's or a mouse's stroke starts as a dot this fraction of its first width, then widens by `TAPER_STEP` a point. */
+    18	const FIRST_DOT = 0.6;
+    19	const TAPER_STEP = 0.08;
+    20	/**
+    21	 * A pen's stroke widens from a dot this share of its width until it reaches `travel` sheet units from
+    22	 * where it landed, and narrows back to one over its last `travel` units. By distance, not points: a
+    23	 * Pencil samples so often that a tap's wobble made points enough to reach full width.
+    24	 */
+    25	export const PEN_TAPER = { dot: 0.35, travel: 8 } as const;
+    26	/** A pen's width at a feather-light touch, as a fraction of the size. */
+    27	const PRESSURE_FLOOR = 0.28;
+    28	/**
+    29	 * Each curve's exponent on the pressure up to a half press: under 1 a light touch already draws
+    30	 * wide, over 1 the width takes more force. Normal is the curve a pen has always had.
+    31	 */
+    32	const PRESSURE_EXPONENTS = {
+    33	  light: 0.5,
+    34	  normal: 0.75,
+    35	  firm: 1.25,
+    36	} as const satisfies Record<Exclude<PenPressure, "off">, number>;
+    37	/** A pen pressed halfway: what the hover ring previews, as Apple's guidance asks of a preview. */
+    38	const MID_PRESSURE = 0.5;
+    39	/** A full press draws at most this many times a half press's width, which the hover ring shows. */
+    40	export const PRESSURE_CAP = 1.2;
+    41	/** A pen's pressure moving less than this within a stroke is a pen that senses none. */
+    42	const PRESSURE_STEP = 0.01;
+    43	/** A pressing pen's width is the mean of its last this-many samples' widths: steady, and a step lands in full by then. */
+    44	export const PEN_PRESSURE_SAMPLES = 2;
+    45	/** Touch, mouse and a pen with no pressure draw between these fractions of the size: thin when quick. */
+    46	const SPEED_WIDTHS = { fast: 0.68, slow: 1.1 } as const;
+    47	
+    48	/**
+    49	 * How wide a pen draws at this pressure under `response`, as a fraction of the size; Off is the size.
+    50	 * Up to a half press it follows the curve's exponent; past it, the width eases out to `PRESSURE_CAP`
+    51	 * times a half press's, at first as steeply, so pressing harder adds less and less.
+    52	 */
+    53	const pressureWidth = (pressure: number, response: PenPressure) => {
+    54	  if (response === "off") return 1;
+    55	  const exponent = PRESSURE_EXPONENTS[response];
+    56	  const range = 1 - PRESSURE_FLOOR;
+    57	  if (pressure <= MID_PRESSURE) return PRESSURE_FLOOR + range * pressure ** exponent;
+    58	  const half = PRESSURE_FLOOR + range * MID_PRESSURE ** exponent;
+    59	  const rise = (PRESSURE_CAP - 1) * half;
+    60	  const slope = range * exponent * MID_PRESSURE ** (exponent - 1);
+    61	  const past = clamp01((pressure - MID_PRESSURE) / (1 - MID_PRESSURE));
+    62	  return half + rise * (1 - (1 - past) ** ((slope * (1 - MID_PRESSURE)) / rise));
+    63	};
+    64	/** The share of a pen stroke's width at this many units from where it lands or lifts. */
+    65	const penTaper = (travel: number) =>
+    66	  PEN_TAPER.dot + (1 - PEN_TAPER.dot) * Math.min(1, travel / PEN_TAPER.travel);
+    67	/** Touch, mouse and a pen with no pressure: a quick flick draws thinner, the way ink runs thin. */
+    68	const speedWidth = (speed: number) =>
+    69	  clamp(1.12 - 0.15 * speed, SPEED_WIDTHS.fast, SPEED_WIDTHS.slow);
+    70	
+    71	/**
+    72	 * How wide a pen's mark will be before it lands, as a fraction of the size: a middle pressure under
+    73	 * its curve, or the speed model's middle for a pen not known to sense pressure. Off is the size.
+    74	 */
+    75	export const previewWidth = (response: PenPressure, pressureVaries: boolean) =>
+    76	  response === "off"
+    77	    ? 1
+    78	    : pressureVaries
+    79	      ? pressureWidth(MID_PRESSURE, response)
+    80	      : (SPEED_WIDTHS.fast + SPEED_WIDTHS.slow) / 2;
+    81	
+    82	/** Where the pointer itself was, in sheet units, and when, in ms. */
+    83	export interface Nib {
+    84	  x: number;
+    85	  y: number;
+    86	  t: number;
+    87	}
+    88	
+    89	interface StrokeStart {
+    90	  tool: StrokeOp["tool"];
+    91	  color: string;
+    92	  /** Width in sheet units. */
+    93	  size: number;
+    94	  x: number;
+    95	  y: number;
+    96	  /** When the first point landed, in ms. */
+    97	  t: number;
+    98	  /** ms into the session. */
+    99	  T: number;
+   100	  /** The first sample's pressure, and the pointer drawing. */
+   101	  pressure: number;
+   102	  pointerType: string;
+   103	  /** This pen has shown its pressure moving before, so pressure sets the width from the first sample. */
+   104	  pressureVaries: boolean;
+   105	  /** How a pen's pressure sets its width; a finger or a mouse goes by speed whatever it is. */
+   106	  response: PenPressure;
+   107	}
+   108	
+   109	/**
+   110	 * Builds a stroke point by point. A brush's width follows a pen's pressure through its curve within
+   111	 * a few samples, or the speed for touch, mouse and a pen whose pressure never moves, smoothed so it
+   112	 * never jumps, and tapers in from a dot. It starts from the first sample's width, so a light start
+   113	 * stays light; a pen's also tapers out once it lifts (`taperEnd`). The eraser keeps one width, and so
+   114	 * does a pen with its pressure Off.
+   115	 */
+   116	export class StrokeBuilder {
+   117	  readonly op: StrokeOp;
+   118	  private readonly size: number;
+   119	  private readonly t0: number;
+   120	  /** The pointer's own sample as the last point went in, which a speed-drawn width measures from. */
+   121	  private nib: Nib;
+   122	  private readonly pen: boolean;
+   123	  private readonly response: PenPressure;
+   124	  private readonly firstPressure: number;
+   125	  /** Pressure sets the width: this pen has shown its pressure moving, in this stroke or before. */
+   126	  private pressed: boolean;
+   127	  private smoothed: number;
+   128	  /** A pressing pen's latest widths, newest last, that its width is the mean of. */
+   129	  private readonly pressedWidths: number[] = [];
+   130	  /** The curve through the points, which adds the points the stroke paints along it. */
+   131	  private readonly curve: StrokeCurve;
+   132	  /** Points added so far, the first included: the taper counts these, not the curve's pieces between them. */
+   133	  private points = 1;
+   134	  /** How far a pen's stroke has reached from where it landed, which its taper in goes by. */
+   135	  private reach = 0;
+   136	
+   137	  constructor(start: StrokeStart) {
+   138	    const { tool, color, size, x, y, t, T, pressure, pointerType, pressureVaries, response } =
+   139	      start;
+   140	    this.size = size;
+   141	    this.t0 = t;
+   142	    this.nib = { x, y, t };
+   143	    this.pen = pointerType === "pen";
+   144	    this.response = response;
+   145	    this.firstPressure = pressure;
+   146	    this.pressed = this.pen && pressureVaries && pressure > 0;
+   147	    this.smoothed = this.pressed ? pressureWidth(pressure, response) : 1;
+   148	    const dot = this.pen ? penTaper(0) : FIRST_DOT;
+   149	    const width = tool === "eraser" ? size : size * dot * this.smoothed;
+   150	    this.op = { tool, color, pts: [x, y, width, 0], T };
+   151	    this.curve = new StrokeCurve(this.op.pts);
+   152	  }
+   153	
+   154	  get count(): number {
+   155	    return this.op.pts.length / STRIDE;
+   156	  }
+   157	
+   158	  /** The line reaches the newest point: nothing waits for the next one to set its curve. */
+   159	  get settled(): boolean {
+   160	    return this.curve.settled;
+   161	  }
+   162	
+   163	  /** Whether pressure set this stroke's width: its pen senses pressure. */
+   164	  get pressured(): boolean {
+   165	    return this.pressed;
+   166	  }
+   167	
+   168	  /**
+   169	   * Adds a point unless it's within half a unit of the last one; says whether it did. `nib` is the
+   170	   * pointer's own sample, whose motion since the last point sets a speed-drawn width, as the line
+   171	   * lags it under Smoothing; null for a point the line glides to with no new sample, which keeps
+   172	   * the width.
+   173	   */
+   174	  add(x: number, y: number, pressure: number, t: number, nib: Nib | null = { x, y, t }): boolean {
+   175	    const { tool } = this.op;
+   176	    const n = this.points;
+   177	    const dist = Math.hypot(x - this.curve.x, y - this.curve.y);
+   178	    if (dist < MIN_STEP) return false;
+   179	    let width = this.size;
+   180	    if (tool === "brush") {
+   181	      if (this.pen && Math.abs(pressure - this.firstPressure) > PRESSURE_STEP) this.pressed = true;
+   182	      // Off, a pen draws the brush's size, whatever it reports.
+   183	      const off = this.pen && this.response === "off";
+   184	      if (off || !this.pressed) {
+   185	        this.pressedWidths.length = 0;
+   186	        if (nib)
+   187	          this.smoothed = 0.7 * this.smoothed + 0.3 * (off ? 1 : speedWidth(this.speedTo(nib)));
+   188	      } else if (pressure > 0) {
+   189	        // Pressure shows at the nib at once; speed, under a finger, eases in so it never jumps. A
+   190	        // pressing pen that reads no pressure, as it can while lifting, keeps its width.
+   191	        const widths = this.pressedWidths;
+   192	        if (widths.length === 0) widths.push(this.smoothed);
+   193	        widths.push(pressureWidth(pressure, this.response));
+   194	        if (widths.length > PEN_PRESSURE_SAMPLES)
+   195	          widths.splice(0, widths.length - PEN_PRESSURE_SAMPLES);
+   196	        this.smoothed = widths.reduce((sum, w) => sum + w, 0) / widths.length;
+   197	      }
+   198	      const { pts } = this.op;
+   199	      if (this.pen) this.reach = Math.max(this.reach, Math.hypot(x - pts[0], y - pts[1]));
+   200	      width *=
+   201	        this.smoothed * (this.pen ? penTaper(this.reach) : Math.min(1, FIRST_DOT + TAPER_STEP * n));
+   202	    }
+   203	    if (nib) this.nib = nib;
+   204	    this.curve.add(x, y, width, Math.round(t - this.t0));
+   205	    this.points++;
+   206	    return true;
+   207	  }
+   208	
+   209	  /** How fast the pointer itself moved since the last point, in sheet units per ms. */
+   210	  private speedTo(nib: Nib): number {
+   211	    const was = this.nib;
+   212	    return Math.hypot(nib.x - was.x, nib.y - was.y) / Math.max(1, nib.t - was.t);
+   213	  }
+   214	
+   215	  /**
+   216	   * The nib paused or lifted at x, y: the line ends there, curved all the way. The point before
+   217	   * waits for the next one until then, which sets the curve's way through it.
+   218	   */
+   219	  settle(x: number, y: number): void {
+   220	    this.curve.settle(x, y);
+   221	  }
+   222	
+   223	  /**
+   224	   * The pen lifted and the line settled: narrows a pen's brush stroke over the last
+   225	   * `PEN_TAPER.travel` units along its curve, never past the dot it landed with. Returns the first
+   226	   * point it narrowed, the count when it narrowed none, so what was painted from there can be
+   227	   * painted again. Once per stroke.
+   228	   */
+   229	  taperEnd(): number {
+   230	    const { pts, tool } = this.op;
+   231	    const count = this.count;
+   232	    if (tool !== "brush" || !this.pen) return count;
+   233	    // Each point's share of its width from the taper in, by how far the line had reached there.
+   234	    const tapersIn: number[] = [];
+   235	    let reach = 0;
+   236	    for (let j = 0; j < pts.length; j += STRIDE) {
+   237	      reach = Math.max(reach, Math.hypot(pts[j] - pts[0], pts[j + 1] - pts[1]));
+   238	      tapersIn.push(penTaper(reach));
+   239	    }
+   240	    let from = count;
+   241	    let back = 0;
+   242	    for (let i = count - 1; i > 0 && back < PEN_TAPER.travel; i--) {
+   243	      const j = i * STRIDE;
+   244	      const out = penTaper(back);
+   245	      if (out < tapersIn[i]) {
+   246	        pts[j + 2] *= out / tapersIn[i];
+   247	        from = i;
+   248	      }
+   249	      back += Math.hypot(pts[j] - pts[j - STRIDE], pts[j + 1] - pts[j - STRIDE + 1]);
+   250	    }
+   251	    return from;
+   252	  }
+   253	}
+
+$ nl -ba /Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/strokeCurve.ts
+     1	import { STRIDE } from "./ops";
+     2	
+     3	/**
+     4	 * A span is cut until each piece strays no further than this from the curve, in sheet units: closer
+     5	 * than shows, so close samples add no points and sparse ones still curve.
+     6	 */
+     7	export const CURVE_FLATNESS = 0.25;
+     8	/** A span is halved at most this many times over, so a cusp can't cut it endlessly. */
+     9	const MAX_HALVINGS = 6;
+    10	/** A cubic Bézier strays from its chord at most this share of its inner points' distance from it. */
+    11	const BEZIER_STRAY = 0.75;
+    12	/** Centripetal: the knots step by the square root of each chord, so the curve never loops or overshoots. */
+    13	const KNOT_POWER = 0.5;
+    14	
+    15	/** A cubic Bézier's four control points, flat: x, y for each. */
+    16	type Bezier = [number, number, number, number, number, number, number, number];
+    17	
+    18	/** How far a point is from the segment between two others. */
+    19	function fromSegment(x: number, y: number, ax: number, ay: number, bx: number, by: number) {
+    20	  const [dx, dy] = [bx - ax, by - ay];
+    21	  const along = dx === 0 && dy === 0 ? 0 : ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy);
+    22	  const s = Math.min(1, Math.max(0, along));
+    23	  return Math.hypot(x - ax - dx * s, y - ay - dy * s);
+    24	}
+    25	
+    26	/** How far a Bézier strays from its chord at most, from where its inner points are. */
+    27	function strays(b: Bezier): number {
+    28	  const off = (x: number, y: number) => fromSegment(x, y, b[0], b[1], b[6], b[7]);
+    29	  return BEZIER_STRAY * Math.max(off(b[2], b[3]), off(b[4], b[5]));
+    30	}
+    31	
+    32	/** De Casteljau at the middle: the two halves of a Bézier. */
+    33	function halve(b: Bezier): [Bezier, Bezier] {
+    34	  const mid = (i: number, j: number) => (b[i] + b[j]) / 2;
+    35	  const [ax, ay, bx, by, cx, cy] = [
+    36	    mid(0, 2),
+    37	    mid(1, 3),
+    38	    mid(2, 4),
+    39	    mid(3, 5),
+    40	    mid(4, 6),
+    41	    mid(5, 7),
+    42	  ];
+    43	  const [dx, dy, ex, ey] = [(ax + bx) / 2, (ay + by) / 2, (bx + cx) / 2, (by + cy) / 2];
+    44	  const [mx, my] = [(dx + ex) / 2, (dy + ey) / 2];
+    45	  return [
+    46	    [b[0], b[1], ax, ay, dx, dy, mx, my],
+    47	    [mx, my, ex, ey, cx, cy, b[6], b[7]],
+    48	  ];
+    49	}
+    50	
+    51	/**
+    52	 * The line a stroke paints through its points: a centripetal Catmull-Rom curve, which passes through
+    53	 * every point however unevenly they're spaced, cut into pieces straight enough to paint as capsules,
+    54	 * with widths and times eased along it. A span is cut once the point after it is
+    55	 * known, so the painted line ends a point short until the stroke settles.
+    56	 */
+    57	export class StrokeCurve {
+    58	  /** The stroke's points, flat, `STRIDE` numbers each; the curve appends its pieces' ends. */
+    59	  private readonly out: number[];
+    60	  /** The latest points the curve passes through, flat like `out`: the last one waits for its span. */
+    61	  private keys: number[];
+    62	
+    63	  /** `out` holds the stroke's first point, already painted. */
+    64	  constructor(out: number[]) {
+    65	    this.out = out;
+    66	    this.keys = out.slice(-STRIDE);
+    67	  }
+    68	
+    69	  /** The line has reached the newest point: none waits for its span. */
+    70	  get settled(): boolean {
+    71	    return this.keys.length === STRIDE;
+    72	  }
+    73	
+    74	  /** The newest point the curve passes through. */
+    75	  get x(): number {
+    76	    return this.keys[this.keys.length - STRIDE];
+    77	  }
+    78	
+    79	  get y(): number {
+    80	    return this.keys[this.keys.length - STRIDE + 1];
+    81	  }
+    82	
+    83	  /** The curve passes through x, y next, at this width and ms; the span before it is cut. */
+    84	  add(x: number, y: number, width: number, t: number): void {
+    85	    this.keys.push(x, y, width, t);
+    86	    const n = this.keys.length / STRIDE;
+    87	    if (n < 3) return;
+    88	    this.span(n - 3);
+    89	    this.keys = this.keys.slice(-3 * STRIDE);
+    90	  }
+    91	
+    92	  /**
+    93	   * The line ends at x, y for now, as the nib pauses or lifts: the waiting point moves there, a step
+    94	   * it was too near to take, and its span is cut. The next point starts a fresh curve from it.
+    95	   */
+    96	  settle(x: number, y: number): void {
+    97	    const { keys } = this;
+    98	    let last = keys.length - STRIDE;
+    99	    if (keys[last] !== x || keys[last + 1] !== y) {
+   100	      if (last === 0) {
+   101	        keys.push(x, y, keys[2], keys[3]);
+   102	        last += STRIDE;
+   103	      } else [keys[last], keys[last + 1]] = [x, y];
+   104	    }
+   105	    if (last > 0) this.span(last / STRIDE - 1);
+   106	    this.keys = keys.slice(-STRIDE);
+   107	  }
+   108	
+   109	  /** Cuts the span from key `i` to the next, whose neighbors set its tangents. */
+   110	  private span(i: number): void {
+   111	    const k = this.keys;
+   112	    const n = k.length / STRIDE;
+   113	    const at = (j: number) => [k[j * STRIDE], k[j * STRIDE + 1]] as const;
+   114	    const [x1, y1] = at(i);
+   115	    const [x2, y2] = at(i + 1);
+   116	    if (x1 === x2 && y1 === y2) return;
+   117	    // Past either end of the run, the curve's neighbor is its own point mirrored.
+   118	    const [x0, y0] = i > 0 ? at(i - 1) : [2 * x1 - x2, 2 * y1 - y2];
+   119	    const [x3, y3] = i + 2 < n ? at(i + 2) : [2 * x2 - x1, 2 * y2 - y1];
+   120	    const knot = (ax: number, ay: number, bx: number, by: number) =>
+   121	      Math.max(Math.hypot(bx - ax, by - ay) ** KNOT_POWER, 1e-6);
+   122	    const [d0, d1, d2] = [knot(x0, y0, x1, y1), knot(x1, y1, x2, y2), knot(x2, y2, x3, y3)];
+   123	    // The Barry–Goldman tangents at each end, scaled to the span, as a Bézier's inner points.
+   124	    const tangent = (pa: number, pb: number, pc: number, da: number, db: number) =>
+   125	      (d1 * ((pb - pa) / da - (pc - pa) / (da + db) + (pc - pb) / db)) / 3;
+   126	    const bezier: Bezier = [
+   127	      x1,
+   128	      y1,
+   129	      x1 + tangent(x0, x1, x2, d0, d1),
+   130	      y1 + tangent(y0, y1, y2, d0, d1),
+   131	      x2 - tangent(x1, x2, x3, d1, d2),
+   132	      y2 - tangent(y1, y2, y3, d1, d2),
+   133	      x2,
+   134	      y2,
+   135	    ];
+   136	    const [w1, t1, w2, t2] = [
+   137	      k[i * STRIDE + 2],
+   138	      k[i * STRIDE + 3],
+   139	      k[(i + 1) * STRIDE + 2],
+   140	      k[(i + 1) * STRIDE + 3],
+   141	    ];
+   142	    const cut = (b: Bezier, s0: number, s1: number, halvings: number) => {
+   143	      if (halvings < MAX_HALVINGS && strays(b) > CURVE_FLATNESS) {
+   144	        const [left, right] = halve(b);
+   145	        const mid = (s0 + s1) / 2;
+   146	        cut(left, s0, mid, halvings + 1);
+   147	        cut(right, mid, s1, halvings + 1);
+   148	        return;
+   149	      }
+   150	      this.out.push(b[6], b[7], w1 + (w2 - w1) * s1, Math.round(t1 + (t2 - t1) * s1));
+   151	    };
+   152	    cut(bezier, 0, 1, 0);
+   153	  }
+   154	}
+
+$ nl -ba /Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/paintStroke.ts
+     1	import { STRIDE, type StrokeOp } from "./ops";
+     2	
+     3	const TAU = Math.PI * 2;
+     4	/** Radius floor, so the finest point still paints a pixel. */
+     5	const MIN_RADIUS = 0.3;
+     6	
+     7	/**
+     8	 * The hull of two circles: one round-capped segment whose width can change along it. Every subpath
+     9	 * winds the same way, so a whole stroke fills as one union with clean edges.
+    10	 */
+    11	function capsule(
+    12	  g: CanvasRenderingContext2D,
+    13	  x0: number,
+    14	  y0: number,
+    15	  r0: number,
+    16	  x1: number,
+    17	  y1: number,
+    18	  r1: number,
+    19	): void {
+    20	  const dx = x1 - x0;
+    21	  const dy = y1 - y0;
+    22	  const d = Math.hypot(dx, dy);
+    23	  // One circle inside the other: the bigger one is the whole hull.
+    24	  if (d <= Math.abs(r1 - r0) + 1e-3) {
+    25	    const [x, y, r] = r0 >= r1 ? [x0, y0, r0] : [x1, y1, r1];
+    26	    g.moveTo(x + r, y);
+    27	    g.arc(x, y, r, 0, TAU);
+    28	    return;
+    29	  }
+    30	  const a = Math.atan2(dy, dx);
+    31	  const phi = Math.acos((r0 - r1) / d);
+    32	  g.moveTo(x0 + r0 * Math.cos(a + phi), y0 + r0 * Math.sin(a + phi));
+    33	  g.arc(x0, y0, r0, a + phi, a - phi + TAU);
+    34	  g.arc(x1, y1, r1, a - phi, a + phi);
+    35	  g.closePath();
+    36	}
+    37	
+    38	const radius = (pts: number[], i: number) => Math.max(pts[i * STRIDE + 2] / 2, MIN_RADIUS);
+    39	
+    40	/**
+    41	 * Paints points [from, to) of a stroke, joined to the point before `from`, so a stroke in progress
+    42	 * paints only what's new each frame. The brush is opaque; the eraser clears to transparent.
+    43	 */
+    44	export function paintStroke(
+    45	  g: CanvasRenderingContext2D,
+    46	  op: StrokeOp,
+    47	  from = 0,
+    48	  to = op.pts.length / STRIDE,
+    49	): void {
+    50	  if (to <= from) return;
+    51	  const { pts } = op;
+    52	  g.save();
+    53	  g.globalCompositeOperation = op.tool === "eraser" ? "destination-out" : "source-over";
+    54	  g.fillStyle = op.tool === "eraser" ? "#000" : op.color;
+    55	  g.beginPath();
+    56	  let i = from;
+    57	  if (i === 0) {
+    58	    const r = radius(pts, 0);
+    59	    g.moveTo(pts[0] + r, pts[1]);
+    60	    g.arc(pts[0], pts[1], r, 0, TAU);
+    61	    i = 1;
+    62	  }
+    63	  for (; i < to; i++) {
+    64	    const j = i * STRIDE;
+    65	    capsule(
+    66	      g,
+    67	      pts[j - STRIDE],
+    68	      pts[j - STRIDE + 1],
+    69	      radius(pts, i - 1),
+    70	      pts[j],
+    71	      pts[j + 1],
+    72	      radius(pts, i),
+    73	    );
+    74	  }
+    75	  g.fill();
+    76	  g.restore();
+    77	}
+
+$ nl -ba /Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/inkSurface.ts
+     1	import { releaseCanvas } from "../../ui/releaseCanvas";
+     2	import type { Rect } from "../sealing/stickerLayers";
+     3	import { hexToRgb } from "./color";
+     4	import { context2d } from "./context2d";
+     5	import { floodSheet } from "./fill";
+     6	import type { Surface } from "./history";
+     7	import type { FillOp, Op, StrokeOp } from "./ops";
+     8	import { paintStroke } from "./paintStroke";
+     9	import type { SheetFrame } from "./sheetFrame";
+    10	
+    11	/** A fill reads, floods and rewrites pixels, far more work than painting a stroke. */
+    12	const FILL_COST = 24;
+    13	/**
+    14	 * Sheet units on a side of the square a fill reads first, around its seed: room for a shape drawn to
+    15	 * be filled. A region reaching past it costs one more read, of the whole sheet.
+    16	 */
+    17	const FILL_NEAR = 160;
+    18	
+    19	const wholeOf = (canvas: HTMLCanvasElement): Rect => ({
+    20	  x: 0,
+    21	  y: 0,
+    22	  w: canvas.width,
+    23	  h: canvas.height,
+    24	});
+    25	
+    26	/** A blank canvas the size of `box`, holding a copy of that box of `source`. */
+    27	function copyOf(source: HTMLCanvasElement, box: Rect, settings?: CanvasRenderingContext2DSettings) {
+    28	  const copy = document.createElement("canvas");
+    29	  copy.width = box.w;
+    30	  copy.height = box.h;
+    31	  const ctx = context2d(copy, settings);
+    32	  ctx.drawImage(source, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
+    33	  return { copy, ctx };
+    34	}
+    35	
+    36	/**
+    37	 * The ink: a transparent canvas over the white paper, drawn in sheet units and backed at its
+    38	 * frame's density. It's painted every frame, so it's never read back itself: fills and the seal read
+    39	 * a copy made for reading, which keeps this one on the GPU.
+    40	 */
+    41	export class InkSurface implements Surface<HTMLCanvasElement> {
+    42	  private readonly canvas: HTMLCanvasElement;
+    43	  private readonly ctx: CanvasRenderingContext2D;
+    44	  private dpr = 1;
+    45	
+    46	  constructor(canvas: HTMLCanvasElement) {
+    47	    this.canvas = canvas;
+    48	    this.ctx = context2d(canvas);
+    49	  }
+    50	
+    51	  /** Device pixels per sheet unit. */
+    52	  get density(): number {
+    53	    return this.dpr;
+    54	  }
+    55	
+    56	  /** Sizes the canvas to the frame, which clears it; says whether its size changed. */
+    57	  setFrame({ w, h, density }: SheetFrame): boolean {
+    58	    const width = Math.max(1, Math.round(w * density));
+    59	    const height = Math.max(1, Math.round(h * density));
+    60	    if (width === this.canvas.width && height === this.canvas.height && density === this.dpr)
+    61	      return false;
+    62	    this.dpr = density;
+    63	    this.canvas.width = width;
+    64	    this.canvas.height = height;
+    65	    this.ctx.setTransform(density, 0, 0, density, 0, 0);
+    66	    return true;
+    67	  }
+    68	
+    69	  /** Paints points [from, to) of a stroke in progress. */
+    70	  paint(op: StrokeOp, from: number, to: number): void {
+    71	    paintStroke(this.ctx, op, from, to);
+    72	  }
+    73	
+    74	  /** Floods from the op's point; false when nothing changed. */
+    75	  fill(op: FillOp): boolean {
+    76	    const read = (box: Rect) => {
+    77	      const { copy, ctx } = copyOf(this.canvas, box, { willReadFrequently: true });
+    78	      try {
+    79	        return ctx.getImageData(0, 0, box.w, box.h);
+    80	      } finally {
+    81	        releaseCanvas(copy);
+    82	      }
+    83	    };
+    84	    const flood = floodSheet(
+    85	      this.canvas,
+    86	      read,
+    87	      Math.floor(op.x * this.dpr),
+    88	      Math.floor(op.y * this.dpr),
+    89	      hexToRgb(op.color),
+    90	      op.gap * this.dpr,
+    91	      Math.round(FILL_NEAR * this.dpr),
+    92	    );
+    93	    if (!flood) return false;
+    94	    const { pixels, at, changed } = flood;
+    95	    this.ctx.putImageData(pixels, at.x, at.y, changed.x, changed.y, changed.w, changed.h);
+    96	    return true;
+    97	  }
+    98	
+    99	  /** A copy of the ink to read pixels from, as sealing does. */
+   100	  copyForReading(): HTMLCanvasElement {
+   101	    return copyOf(this.canvas, wholeOf(this.canvas), { willReadFrequently: true }).copy;
+   102	  }
+   103	
+   104	  apply(op: Op): void {
+   105	    if (op.tool === "fill") this.fill(op);
+   106	    else paintStroke(this.ctx, op);
+   107	  }
+   108	
+   109	  cost(op: Op): number {
+   110	    return op.tool === "fill" ? FILL_COST : 1;
+   111	  }
+   112	
+   113	  snapshot(): HTMLCanvasElement {
+   114	    return copyOf(this.canvas, wholeOf(this.canvas)).copy;
+   115	  }
+   116	
+   117	  discard(snapshot: HTMLCanvasElement): void {
+   118	    releaseCanvas(snapshot);
+   119	  }
+   120	
+   121	  restore(snapshot: HTMLCanvasElement | null): void {
+   122	    this.ctx.save();
+   123	    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+   124	    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+   125	    if (snapshot) this.ctx.drawImage(snapshot, 0, 0);
+   126	    this.ctx.restore();
+   127	  }
+   128	}
+
+$ nl -ba /Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/ops.ts
+     1	/** The drawing tools. Brush and eraser make strokes; fill makes fills. */
+     2	export type Tool = "brush" | "eraser" | "fill";
+     3	
+     4	/** Numbers per point in `StrokeOp.pts`: x, y, width, t. */
+     5	export const STRIDE = 4;
+     6	
+     7	/**
+     8	 * One stroke, in sheet units. `pts` is flat, `STRIDE` numbers per point: position, width, and ms
+     9	 * since the stroke began. `T` is ms into the session when it began.
+    10	 */
+    11	export interface StrokeOp {
+    12	  tool: "brush" | "eraser";
+    13	  color: string;
+    14	  pts: number[];
+    15	  T: number;
+    16	}
+    17	
+    18	/** A fill seeded at a point in sheet units, `T` ms into the session. */
+    19	export interface FillOp {
+    20	  tool: "fill";
+    21	  x: number;
+    22	  y: number;
+    23	  color: string;
+    24	  /** The widest opening, in sheet units, it treated as closed; 0 for a fill that closed none. */
+    25	  gap: number;
+    26	  T: number;
+    27	}
+    28	
+    29	/** Every mark on the ink is one op; history replays them in order. */
+    30	export type Op = StrokeOp | FillOp;
+    31	
+    32	/** One entry in the undo history: a mark on the ink, or a clear, which sets the marks before it aside. */
+    33	export type Step = Op | { tool: "clear" };
+
+$ nl -ba /Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/canvas/sheetFrame.ts
+     1	/**
+     2	 * The sheet a drawing is drawn on: its size in sheet units, fixed for the life of the drawing,
+     3	 * and the density its ink is backed at. A unit is a CSS px on a 390 px phone's sheet. Every
+     4	 * screen shows the sheet scaled to fit, so a sticker comes out the same from any device, and
+     5	 * turning the screen or resizing the window only rescales it.
+     6	 */
+     7	import { clamp } from "../../ui/easing";
+     8	
+     9	/** The sheet's short side, in units: the sheet on a 390 px phone. */
+    10	export const SHEET_SHORT_UNITS = 374;
+    11	/** The long side follows the area's shape as the drawing starts, between these times the short. */
+    12	const MIN_SHEET_ASPECT = 1;
+    13	export const MAX_SHEET_ASPECT = 2.2;
+    14	/** The most device px the ink is backed with: a bigger screen gets softer ink, not more memory. */
+    15	export const MAX_INK_PIXELS = 4_200_000;
+    16	/** Past this many device px per CSS px, a sharper canvas costs memory and shows nothing more. */
+    17	export const MAX_DPR = 3;
+    18	
+    19	/** A sheet's size in units, and the device px its ink holds per unit. */
+    20	export type SheetFrame = { w: number; h: number; density: number };
+    21	
+    22	/** The room the sheet has on screen, in CSS px. */
+    23	export type SheetArea = { width: number; height: number };
+    24	
+    25	type Size = Pick<SheetFrame, "w" | "h">;
+    26	
+    27	/** Densities are kept to the thousandth, as the timelapse records them, so replays flood alike. */
+    28	const thousandthBelow = (n: number) => Math.floor(n * 1000) / 1000;
+    29	/** Sizes are kept to the tenth, as the timelapse records them. */
+    30	const tenth = (n: number) => Math.round(n * 10) / 10;
+    31	
+    32	/** CSS px per unit, with the sheet shown as large as it fits in the area. */
+    33	export const fitScale = (frame: Size, area: SheetArea) =>
+    34	  Math.min(area.width / frame.w, area.height / frame.h);
+    35	
+    36	/** The densest a sheet this size is backed at, held under MAX_INK_PIXELS. */
+    37	export const maxInkDensity = ({ w, h }: Size) =>
+    38	  thousandthBelow(Math.sqrt(MAX_INK_PIXELS / (w * h)));
+    39	
+    40	/**
+    41	 * Device px per unit for a sheet shown in this area: the screen's own at the size it's shown, never
+    42	 * coarser than a phone's sheet on the same screen, and held under MAX_INK_PIXELS.
+    43	 */
+    44	function densityFor(size: Size, area: SheetArea, devicePixelRatio: number): number {
+    45	  const shown = Math.max(1, fitScale(size, area)) * Math.min(devicePixelRatio || 1, MAX_DPR);
+    46	  return Math.min(thousandthBelow(shown), maxInkDensity(size));
+    47	}
+    48	
+    49	/** A new drawing's frame: SHEET_SHORT_UNITS on its short side, the area's shape on its long. */
+    50	export function frameFor(area: SheetArea, devicePixelRatio: number): SheetFrame {
+    51	  const long = Math.max(area.width, area.height);
+    52	  const short = Math.min(area.width, area.height);
+    53	  const aspect = clamp(long / short, MIN_SHEET_ASPECT, MAX_SHEET_ASPECT);
+    54	  const longUnits = Math.round(SHEET_SHORT_UNITS * aspect);
+    55	  const size =
+    56	    area.height >= area.width
+    57	      ? { w: SHEET_SHORT_UNITS, h: longUnits }
+    58	      : { w: longUnits, h: SHEET_SHORT_UNITS };
+    59	  return { ...size, density: densityFor(size, area, devicePixelRatio) };
+    60	}
+    61	
+    62	/**
+    63	 * The area itself as a frame, shown at scale 1: the sheet a drawing kept without a frame was drawn
+    64	 * on, its ops in that sheet's CSS px.
+    65	 */
+    66	export function areaFrame(area: SheetArea, devicePixelRatio: number): SheetFrame {
+    67	  const size = { w: tenth(area.width), h: tenth(area.height) };
+    68	  return { ...size, density: densityFor(size, area, devicePixelRatio) };
+    69	}
+
+$ nl -ba /Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/tools/SmoothingBar.tsx
+     1	import { useEffect, useEffectEvent, useId, useRef } from "react";
+     2	import { useTranslation } from "../../i18n/react";
+     3	import "./SmoothingBar.css";
+     4	
+     5	interface Props {
+     6	  id: string;
+     7	  open: boolean;
+     8	  /** 0 (Raw) to 100 (Smooth). */
+     9	  value: number;
+    10	  onChange: (value: number) => void;
+    11	}
+    12	
+    13	/**
+    14	 * Smoothing: a compact bar under the tools, Raw to Smooth. Smoothing has no standard icon, so its name
+    15	 * shows here, and only while the bar is open. The track redraws as the thumb moves; the value lands
+    16	 * once the thumb is let go.
+    17	 */
+    18	export function SmoothingBar({ id, open, value, onChange }: Props) {
+    19	  const { t } = useTranslation();
+    20	  const titleId = useId();
+    21	  const range = useRef<HTMLInputElement>(null);
+    22	  const commit = useEffectEvent(onChange);
+    23	
+    24	  useEffect(() => {
+    25	    const input = range.current;
+    26	    if (!input) return;
+    27	    const onCommit = () => commit(input.valueAsNumber);
+    28	    // The native change event fires on release, where React's onChange fires on every step.
+    29	    input.addEventListener("change", onCommit);
+    30	    return () => input.removeEventListener("change", onCommit);
+    31	  }, []);
+    32	
+    33	  // The slider is the one that moves the value; a value that came from elsewhere, such as a kept
+    34	  // drawing picked back up, moves the slider to it.
+    35	  useEffect(() => {
+    36	    const input = range.current;
+    37	    if (input && input.valueAsNumber !== value) input.value = String(value);
+    38	  }, [value]);
+    39	
+    40	  return (
+    41	    <div
+    42	      id={id}
+    43	      className={`smoothing-bar ${open ? "is-open" : ""}`}
+    44	      role="group"
+    45	      aria-labelledby={titleId}
+    46	    >
+    47	      <span className="smoothing-title" id={titleId}>
+    48	        {t(($) => $.stickerCreation.tools.smoothing)}
+    49	      </span>
+    50	      <span className="smoothing-end" aria-hidden="true">
+    51	        {t(($) => $.stickerCreation.smoothingBar.raw)}
+    52	      </span>
+    53	      <input
+    54	        ref={range}
+    55	        className="smoothing-range"
+    56	        type="range"
+    57	        min={0}
+    58	        max={100}
+    59	        step={1}
+    60	        defaultValue={value}
+    61	        aria-label={t(($) => $.stickerCreation.tools.smoothing)}
+    62	        style={{ "--p": `${value}%` }}
+    63	        onInput={(e) => e.currentTarget.style.setProperty("--p", `${e.currentTarget.value}%`)}
+    64	      />
+    65	      <span className="smoothing-end" aria-hidden="true">
+    66	        {t(($) => $.stickerCreation.smoothingBar.smooth)}
+    67	      </span>
+    68	    </div>
+    69	  );
+    70	}
+
+$ nl -ba /Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/drawingSettings.ts
+     1	import { useSyncExternalStore } from "react";
+     2	import { deviceSetting } from "../ui/deviceSetting";
+     3	import { PEN_PRESSURES, type PenPressure } from "./canvas/brush";
+     4	import { INPUT_MODES, type InputMode } from "./canvas/inkEngine";
+     5	
+     6	/*
+     7	 * Settings' Drawing group, kept on this device rather than the account, since each suits a device and
+     8	 * the hand that draws on it. Each `keep…` applies at once and says whether the device kept it.
+     9	 */
+    10	
+    11	export const DRAWING_HANDS = ["right", "left"] as const;
+    12	export type DrawingHand = (typeof DRAWING_HANDS)[number];
+    13	
+    14	/** The hand that draws, which Left mirrors the drawing screen for. Anything but Left is Right. */
+    15	const hand = deviceSetting<DrawingHand>("draw.hand", {
+    16	  parse: (text) => (text === "left" ? "left" : "right"),
+    17	  serialize: (value) => (value === "left" ? "left" : null),
+    18	  name: "The drawing hand",
+    19	});
+    20	
+    21	export const useDrawingHand = (): DrawingHand => useSyncExternalStore(hand.subscribe, hand.get);
+    22	export const keepDrawingHand = (value: DrawingHand): boolean => hand.set(value);
+    23	
+    24	/** The input each sheet starts in; null until a pen has drawn on this device. */
+    25	const inputMode = deviceSetting<InputMode | null>("draw.inputMode", {
+    26	  parse: (text) => INPUT_MODES.find((mode) => mode === text) ?? null,
+    27	  serialize: (mode) => mode,
+    28	  name: "The input mode",
+    29	});
+    30	
+    31	/** How a pen's pressure sets its width, Normal until chosen. */
+    32	const penPressure = deviceSetting<PenPressure>("draw.penPressure", {
+    33	  parse: (text) => PEN_PRESSURES.find((each) => each === text) ?? "normal",
+    34	  serialize: (value) => (value === "normal" ? null : value),
+    35	  name: "The pen pressure",
+    36	});
+    37	
+    38	/** Settings' default input for each sheet; null before a pen has drawn on this device. */
+    39	export const useInputMode = (): InputMode | null =>
+    40	  useSyncExternalStore(inputMode.subscribe, inputMode.get);
+    41	export const readInputMode = inputMode.get;
+    42	export const keepInputMode = (mode: InputMode): boolean => inputMode.set(mode);
+    43	/** A pen drew on the sheet: the first time on this device, every sheet starts in Pencil only. */
+    44	export function penDrew(): void {
+    45	  if (inputMode.get() === null) inputMode.set("pencilOnly");
+    46	}
+    47	
+    48	export const usePenPressure = (): PenPressure =>
+    49	  useSyncExternalStore(penPressure.subscribe, penPressure.get);
+    50	export const readPenPressure = penPressure.get;
+    51	export const keepPenPressure = (value: PenPressure): boolean => penPressure.set(value);
+
+$ nl -ba /Users/adoll/projects/drawing-app/apps/frontend/src/sticker-creation/sealing/timelapse.ts
+     1	import { MAX_TIMELAPSE_BYTES, type TimelapseV1 } from "@drawing-app/api/client";
+     2	import { STRIDE, type Op } from "../canvas/ops";
+     3	import type { SheetFrame } from "../canvas/sheetFrame";
+     4	import type { Rect } from "./stickerLayers";
+     5	
+     6	interface TimelapseInput {
+     7	  ops: readonly Op[];
+     8	  /** The sheet the ops were drawn on: its size in units and its ink's density. */
+     9	  frame: SheetFrame;
+    10	  /** Where makeSticker cut the sticker from, in the ink canvas's device pixels. */
+    11	  place: Rect;
+    12	}
+    13	
+    14	const tenths = (n: number) => Math.round(n * 10);
+    15	/** A length to the tenth of a pixel, as JSON keeps it short. */
+    16	const toTenth = (n: number) => tenths(n) / 10;
+    17	/**
+    18	 * A fill's tap as the middle of the device pixel it seeded, to the hundredth of a sheet unit: the
+    19	 * tap itself, rounded, could land in the pixel beside it.
+    20	 */
+    21	const seededPixel = (n: number, density: number) =>
+    22	  Math.round(((Math.floor(n * density) + 0.5) / density) * 100) / 100;
+    23	/** A density to the thousandth, as phones report ones like 2.625. */
+    24	const toThousandth = (n: number) => Math.round(n * 1000) / 1000;
+    25	
+    26	/** A stroke's points as changes from the point before; the first is from zero. */
+    27	function pointChanges(pts: readonly number[]): number[] {
+    28	  const changes: number[] = [];
+    29	  let last = [0, 0, 0, 0];
+    30	  for (let i = 0; i + STRIDE <= pts.length; i += STRIDE) {
+    31	    const [x = 0, y = 0, width = 0, ms = 0] = pts.slice(i, i + STRIDE);
+    32	    const point = [tenths(x), tenths(y), tenths(width), Math.round(ms)];
+    33	    changes.push(...point.map((value, k) => value - (last[k] ?? 0)));
+    34	    last = point;
+    35	  }
+    36	  return changes;
+    37	}
+    38	
+    39	/** A length on the ink canvas in sheet units, to the tenth, as the timelapse and the drawn size keep it. */
+    40	const inUnits = (n: number, density: number) => toTenth(n / density);
+    41	
+    42	/**
+    43	 * The sticker image's size on the sheet, in units, from where it was cut: its drawn size, which sizes
+    44	 * it on a sticker board. The same as its timelapse's `place`, and recorded without one.
+    45	 */
+    46	export const drawnSizeOf = (place: Rect, density: number) => ({
+    47	  drawnWidth: inUnits(place.w, density),
+    48	  drawnHeight: inUnits(place.h, density),
+    49	});
+    50	
+    51	export function encodeTimelapse({ ops, frame, place }: TimelapseInput): TimelapseV1 {
+    52	  const { density } = frame;
+    53	  const sheet = (n: number) => inUnits(n, density);
+    54	  return {
+    55	    v: 1,
+    56	    ink: [toTenth(frame.w), toTenth(frame.h)],
+    57	    place: [sheet(place.x), sheet(place.y), sheet(place.w), sheet(place.h)],
+    58	    density: toThousandth(density),
+    59	    ops: ops.map((op) =>
+    60	      op.tool === "fill"
+    61	        ? [
+    62	            "fill",
+    63	            op.color,
+    64	            Math.round(op.T),
+    65	            seededPixel(op.x, density),
+    66	            seededPixel(op.y, density),
+    67	            op.gap,
+    68	          ]
+    69	        : [op.tool, op.color, Math.round(op.T), pointChanges(op.pts)],
+    70	    ),
+    71	  };
+    72	}
+    73	
+    74	/** A timelapse as the drawing screen's own ops again, in sheet units. */
+    75	export interface DecodedTimelapse {
+    76	  ink: { width: number; height: number };
+    77	  place: Rect;
+    78	  /** Device pixels per sheet unit where it was drawn. */
+    79	  density: number;
+    80	  ops: Op[];
+    81	}
+    82	
+    83	/** A stroke's points from their changes, tenths back to pixels. */
+    84	function pointsFrom(changes: readonly number[]): number[] {
+    85	  const pts: number[] = [];
+    86	  const running = [0, 0, 0, 0];
+    87	  for (let i = 0; i + STRIDE <= changes.length; i += STRIDE) {
+    88	    for (let k = 0; k < STRIDE; k++) running[k] += changes[i + k] ?? 0;
+    89	    pts.push(running[0] / 10, running[1] / 10, running[2] / 10, running[3]);
+    90	  }
+    91	  return pts;
+    92	}
+    93	
+    94	export function decodeTimelapse(timelapse: TimelapseV1): DecodedTimelapse {
+    95	  const [x, y, w, h] = timelapse.place;
+    96	  return {
+    97	    ink: { width: timelapse.ink[0], height: timelapse.ink[1] },
+    98	    place: { x, y, w, h },
+    99	    density: timelapse.density,
+   100	    ops: timelapse.ops.map((op): Op =>
+   101	      op[0] === "fill"
+   102	        ? {
+   103	            tool: "fill",
+   104	            color: op[1],
+   105	            T: op[2],
+   106	            x: op[3],
+   107	            y: op[4],
+   108	            // A fill sealed before fills recorded their gap closed none.
+   109	            gap: op.length === 6 ? op[5] : 0,
+   110	          }
+   111	        : { tool: op[0], color: op[1], T: op[2], pts: pointsFrom(op[3]) },
+   112	    ),
+   113	  };
+   114	}
+   115	
+   116	/** CRC-32 as gzip's trailer carries it, one table entry per byte value. */
+   117	const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
+   118	  let c = n;
+   119	  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+   120	  return c >>> 0;
+   121	});
+   122	
+   123	function crc32(bytes: Uint8Array): number {
+   124	  let crc = 0xffffffff;
+   125	  for (const byte of bytes) crc = (CRC_TABLE[(crc ^ byte) & 0xff] ?? 0) ^ (crc >>> 8);
+   126	  return (crc ^ 0xffffffff) >>> 0;
+   127	}
+   128	
+   129	/** The most bytes one stored deflate block holds. */
+   130	const STORED_BLOCK_BYTES = 0xffff;
+   131	const GZIP_HEADER = [0x1f, 0x8b, 8, 0, 0, 0, 0, 0, 0, 0xff];
+   132	
+   133	/**
+   134	 * `data` as gzip that stores it uncompressed, for browsers without CompressionStream (iOS before
+   135	 * 16.4): the server reads it as any other gzip.
+   136	 */
+   137	function storedGzip(data: Uint8Array): Blob {
+   138	  const parts: Uint8Array[] = [Uint8Array.from(GZIP_HEADER)];
+   139	  let at = 0;
+   140	  do {
+   141	    const block = data.subarray(at, at + STORED_BLOCK_BYTES);
+   142	    at += block.length;
+   143	    const head = new Uint8Array(5);
+   144	    const view = new DataView(head.buffer);
+   145	    head[0] = at >= data.length ? 1 : 0;
+   146	    view.setUint16(1, block.length, true);
+   147	    view.setUint16(3, ~block.length & 0xffff, true);
+   148	    parts.push(head, block);
+   149	  } while (at < data.length);
+   150	  const trailer = new Uint8Array(8);
+   151	  const view = new DataView(trailer.buffer);
+   152	  view.setUint32(0, crc32(data), true);
+   153	  view.setUint32(4, data.length >>> 0, true);
+   154	  parts.push(trailer);
+   155	  return new Blob(parts.map((part) => part.slice()));
+   156	}
+   157	
+   158	/**
+   159	 * The timelapse gzipped for POST /api/stickers, or null when it's over the server's limit: the
+   160	 * sticker then seals without one, rather than not at all.
+   161	 */
+   162	export async function gzipTimelapse(
+   163	  timelapse: TimelapseV1,
+   164	  report: (message: string) => void = console.error,
+   165	): Promise<Blob | null> {
+   166	  const json = JSON.stringify(timelapse);
+   167	  const blob =
+   168	    typeof CompressionStream === "function"
+   169	      ? await new Response(
+   170	          new Blob([json]).stream().pipeThrough(new CompressionStream("gzip")),
+   171	        ).blob()
+   172	      : storedGzip(new TextEncoder().encode(json));
+   173	  if (blob.size <= MAX_TIMELAPSE_BYTES) return blob;
+   174	  report(
+   175	    `The timelapse is ${blob.size} bytes gzipped, over the server's limit of ${MAX_TIMELAPSE_BYTES}, so the sticker seals without it`,
+   176	  );
+   177	  return null;
+   178	}
+
+$ nl -ba /Users/adoll/projects/drawing-app/apps/frontend/package.json
+     1	{
+     2	  "name": "frontend",
+     3	  "version": "0.0.0",
+     4	  "private": true,
+     5	  "type": "module",
+     6	  "scripts": {
+     7	    "dev": "vite",
+     8	    "build": "tsc -b && vite build",
+     9	    "lint": "oxlint --type-check",
+    10	    "typecheck": "tsc -b",
+    11	    "test": "vitest run",
+    12	    "test:e2e": "playwright test",
+    13	    "chat-menus": "tsx --tsconfig tsconfig.scripts.json scripts/renderChatMenus.tsx",
+    14	    "croquis-sans": "uv run --script scripts/buildCroquisSans.py",
+    15	    "test:ipad-safari": "tsx --tsconfig tsconfig.scripts.json scripts/ipadSafari.ts",
+    16	    "preview": "vite preview",
+    17	    "demo:build": "vite build --config vite.demo.config.ts",
+    18	    "demo:serve": "vite preview --config vite.demo.config.ts"
+    19	  },
+    20	  "dependencies": {
+    21	    "@line/liff": "^2.31.1",
+    22	    "@mysten/sui": "2.31.3",
+    23	    "@paulmillr/qr": "0.3.0",
+    24	    "@phosphor-icons/react": "2.1.10",
+    25	    "@privy-io/react-auth": "3.45.0",
+    26	    "hono": "^4.13.8",
+    27	    "i18next": "26.4.2",
+    28	    "react": "^19.3.0",
+    29	    "react-dom": "^19.3.0",
+    30	    "react-i18next": "17.0.15"
+    31	  },
+    32	  "devDependencies": {
+    33	    "@drawing-app/api": "workspace:*",
+    34	    "@line/liff-mock": "1.0.4",
+    35	    "@playwright/test": "1.64.0-alpha-1790635538000",
+    36	    "@types/node": "^24.13.6",
+    37	    "@types/react": "^19.3.0",
+    38	    "@types/react-dom": "^19.3.0",
+    39	    "@vitejs/plugin-react": "^6.1.1",
+    40	    "fake-indexeddb": "6.2.5",
+    41	    "happy-dom": "^20.14.5",
+    42	    "oxlint": "^1.85.0",
+    43	    "oxlint-tsgolint": "^7.0.2002",
+    44	    "tsx": "4.23.15",
+    45	    "typescript": "~7.0.2",
+    46	    "vite": "^8.3.0",
+    47	    "vitest": "^5.0.1"
+    48	  }
+    49	}
+
+$ nl -ba /Users/adoll/projects/drawing-app/package.json
+     1	{
+     2	  "name": "drawing-app",
+     3	  "private": true,
+     4	  "scripts": {
+     5	    "dev": "turbo run dev",
+     6	    "build": "turbo run build",
+     7	    "lint": "turbo run lint",
+     8	    "typecheck": "turbo run typecheck",
+     9	    "test": "turbo run test",
+    10	    "test:e2e": "pnpm --filter frontend test:e2e",
+    11	    "format": "oxfmt",
+    12	    "format:check": "oxfmt --check",
+    13	    "knip": "knip --no-exit-code",
+    14	    "check": "turbo run lint typecheck test && oxfmt --check && pnpm test:move",
+    15	    "check:full": "pnpm check && turbo run build && knip --no-exit-code",
+    16	    "db:migrate": "pnpm --filter @drawing-app/db db:migrate",
+    17	    "prepare": "husky",
+    18	    "test:move": "sui move test --path contracts/sui-payment-contract/jpy_coin && sui move test --path contracts/sui-payment-contract/payment && sui move test --path contracts/sui-sticker-contract/stickers"
+    19	  },
+    20	  "devDependencies": {
+    21	    "husky": "^9.1.7",
+    22	    "knip": "^6.37.0",
+    23	    "lint-staged": "^17.5.1",
+    24	    "oxfmt": "^0.70.0",
+    25	    "oxlint": "^1.85.0",
+    26	    "oxlint-tsgolint": "^7.0.2002",
+    27	    "turbo": "^2.11.3",
+    28	    "typescript": "~7.0.2"
+    29	  },
+    30	  "lint-staged": {
+    31	    "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": [
+    32	      "oxlint --type-check --fix",
+    33	      "oxlint --type-check",
+    34	      "oxfmt --no-error-on-unmatched-pattern"
+    35	    ],
+    36	    "!(*.{js,jsx,mjs,cjs,ts,tsx,mts,cts})": "oxfmt --no-error-on-unmatched-pattern"
+    37	  },
+    38	  "devEngines": {
+    39	    "runtime": {
+    40	      "name": "node",
+    41	      "version": "24.21.0",
+    42	      "onFail": "download"
+    43	    }
+    44	  },
+    45	  "packageManager": "pnpm@12.6.0"
+    46	}

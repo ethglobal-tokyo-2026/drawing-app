@@ -1,0 +1,14 @@
+VA 0x104b22068; file offset 0x4b22068; format <q; value (10,); bytes 0a00000000000000
+section [('0x104af9fa0', '0x104b274f0', '0x4af9fa0', '__data')]
+VA 0x104b22070; file offset 0x4b22070; format <I; value (1,); bytes 01000000
+section [('0x104af9fa0', '0x104b274f0', '0x4af9fa0', '__data')]
+VA 0x104513b28; file offset 0x4513b28; format <3q; value (15, 20, 0); bytes 0f0000000000000014000000000000000000000000000000
+section [('0x1042e23a0', '0x1045de2e9', '0x42e23a0', '__const')]
+VA 0x1042ecf58; file offset 0x42ecf58; format <d; value (1000.0,); bytes 0000000000408f40
+section [('0x1042e23a0', '0x1045de2e9', '0x42e23a0', '__const')]
+VA 0x1042ef008; file offset 0x42ef008; format <2I; value (2, 0); bytes 0200000000000000
+section [('0x1042e23a0', '0x1045de2e9', '0x42e23a0', '__const')]
+VA 0x104510f80; file offset 0x4510f80; format <2I; value (360, 90); bytes 680100005a000000
+section [('0x1042e23a0', '0x1045de2e9', '0x42e23a0', '__const')]
+VA 0x104510f88; file offset 0x4510f88; format <d; value (0.033,); bytes 4c37894160e5a03f
+section [('0x1042e23a0', '0x1045de2e9', '0x42e23a0', '__const')]

@@ -1,0 +1,408 @@
+Working directory: /Users/adoll/projects/drawing-app
+Verification date: 2026-10-09
+Scope: reference arithmetic, strict TypeScript checking, selected installed-binary instructions, formatting, and native instruction semantics. No CSP runtime replay and no application test suite.
+
+Command:
+node --test docs/research/clip-studio-paint-stabilization/*.test.ts
+Exit code: 0
+Output:
+✔ configuration recovers initial window, flag precedence, reciprocal, and scales (0.962291ms)
+✔ fixed growth includes +1 in its numerator and clamps excess H (0.096833ms)
+✔ fast reduction uses packet distance, with a separate timestamp rejection (0.136125ms)
+✔ uniform average gives only the oldest selected sample fractional weight (0.106583ms)
+✔ history pads the last recent sample, accepts age 1000, and freezes at a gap (0.232291ms)
+✔ slow mode uses positive segments, quarter steps, and catch-up half steps (0.867458ms)
+✔ slow mode's history-minus-one cap is skipped in catch-up (0.128083ms)
+✔ stationary ordinary slow mode skips all caps; stationary catch-up still adjusts (0.0995ms)
+✔ first-segment pressure boundary resets H before slow adjustment (0.121042ms)
+✔ slow scan includes the boundary segment and does not seed from newest pressure (0.2245ms)
+✔ pressure extrapolation clips to [-0.2, 0] and is conditional (0.45375ms)
+✔ ending threshold subtracts both products; equality of motion lengths continues (0.104084ms)
+✔ phase-3 transition defers geometry, but zero pressure can terminate immediately (0.169959ms)
+✔ output gate distinguishes timestamp and remembered skip-count conditions (0.08675ms)
+✔ event mapping and terminal count use numeric evidence without event-name guesses (0.077708ms)
+FMA: 1005 binary64 cases agree bit-for-bit with Python math.fma.
+Settings, uint32 square overflow, f32 limits, pass schedule, caller cap, and segment tolerance cases pass.
+Corner degeneracy, straight, obtuse, deviation threshold, and inclusive boundary cases pass.
+Scalar float-slack boundaries, interpolation acceptance, strict distance boundary, and cubic control cases pass.
+✔ docs/research/clip-studio-paint-stabilization/post-reference.test.ts (106.483792ms)
+✔ fractional averaging preserves a constant position and pressure with padded history (1.0405ms)
+✔ constant-speed lag equals the first moment of the fractional history weights (0.163292ms)
+✔ fractional averaging commutes with translation and uniform coordinate scaling (0.088958ms)
+✔ fast adjustment depends on packet distance while the stale threshold is not crossed (0.432708ms)
+✔ corner classification survives rotation and translation (0.934917ms)
+✔ corner classification has the expected dimensional scaling (0.208833ms)
+✔ recovered quadratic-to-cubic controls represent the same parametric curve (0.10575ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 114.665958
+
+Command:
+node node_modules/typescript/bin/tsc --noEmit --strict --target ES2022 --module ESNext docs/research/clip-studio-paint-stabilization/live-reference.ts docs/research/clip-studio-paint-stabilization/post-reference.ts
+Exit code: 0
+Output:
+(no output)
+
+Command:
+python3 docs/research/clip-studio-paint-stabilization/verify_core.py --range 0x1027878ec:0x102787a1c --double 0x1042e3690
+Exit code: 0
+Output:
+Installed version: 5.1.4
+Analyzed arm64 SHA256: 6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd
+0x1042ecb78 double = 0.1
+0x104302fd8 double = 0.2
+0x1042ee828 double = 0.01
+0x104520f48 double = 1.3
+0x10433f0a0 double = 0.4
+0x1042e3690 double = 1e-08
+0x104517f58 two int32 = (200, 25)
+0x1042e4790 two int32 = (0, 1)
+0x1042ed458 two int32 = (1, 0)
+
+Window configuration:
+1021366bc:     	str	w1, [x0, #0x3c]
+1021366c0:     	str	w2, [x0, #0x68]
+1021366c4:     	str	w1, [x0, #0x50]
+1021366c8:     	mov	x8, x1
+1021366cc:     	cmp	w1, #0x3
+1021366d0:     	b.lt	0x102136704
+1021366d4:     	cmp	w1, w2
+1021366d8:     	csel	w8, w1, w2, lt
+1021366dc:     	asr	w8, w8, #1
+1021366e0:     	str	w8, [x0, #0x50]
+1021366e4:     	cmp	w8, #0xf
+1021366e8:     	b.le	0x1021366f4
+1021366ec:     	mov	w8, #0xf                ; =15
+1021366f0:     	b	0x102136700
+1021366f4:     	cmp	w8, #0x1
+1021366f8:     	b.gt	0x102136704
+1021366fc:     	mov	w8, #0x2                ; =2
+102136700:     	str	w8, [x0, #0x50]
+102136704:     	cbz	w2, 0x102136718
+102136708:     	scvtf	d0, w2
+10213670c:     	fmov	d1, #1.00000000
+102136710:     	fdiv	d0, d1, d0
+102136714:     	b	0x10213671c
+102136718:     	fmov	d0, #1.00000000
+10213671c:     	str	d0, [x0, #0x70]
+102136720:     	cbz	w4, 0x102136734
+102136724:     	adrp	x9, 0x1042e4000
+102136728:     	ldr	d0, [x9, #0x790]
+10213672c:     	str	d0, [x0, #0x40]
+102136730:     	b	0x102136760
+102136734:     	cmp	w1, #0x3
+102136738:     	b.lt	0x10213675c
+10213673c:     	cbz	w3, 0x10213675c
+102136740:     	adrp	x9, 0x1042ed000
+102136744:     	ldr	d0, [x9, #0x458]
+102136748:     	str	d0, [x0, #0x40]
+10213674c:     	lsl	w9, w1, #1
+102136750:     	add	w9, w9, #0x64
+102136754:     	ucvtf	d0, w9
+102136758:     	b	0x102136764
+10213675c:     	str	xzr, [x0, #0x40]
+102136760:     	movi	d0, #0000000000000000
+102136764:     	scvtf	d1, w8
+102136768:     	stp	d1, d0, [x0, #0x58]
+10213676c:     	ret
+102136770:     	ldr	x0, [x0, #0x80]
+102136774:     	ret
+102136778:     	ldr	w0, [x0, #0x68]
+10213677c:     	ret
+102136780:     	ldr	d0, [x0, #0x58]
+102136784:     	ret
+102136788:     	ldr	w0, [x0, #0xd8]
+10213678c:     	ret
+102136790:     	ldr	w0, [x0, #0x88]
+102136794:     	ret
+102136798:     	ldp	d0, d1, [x0, #0xb8]
+10213679c:     	ret
+1021367a0:     	str	w1, [x0, #0xd8]
+1021367a4:     	ret
+1021367a8:     	str	w1, [x0, #0xdc]
+1021367ac:     	ret
+1021367b0:     	str	w1, [x0, #0x88]
+1021367b4:     	ret
+1021367b8:     	str	w1, [x0, #0xe0]
+1021367bc:     	ret
+
+Fast-motion and fixed-mode window updates:
+102136a94:     	cbz	w8, 0x102136b1c
+102136a98:     	ldr	w8, [x22, #0x38]
+102136a9c:     	subs	w8, w8, #0x2
+102136aa0:     	b.lt	0x102136b1c
+102136aa4:     	ldr	x9, [x22, #0x28]
+102136aa8:     	add	x8, x9, x8
+102136aac:     	ldr	x9, [x22, #0x10]
+102136ab0:     	lsr	x10, x8, #4
+102136ab4:     	and	x10, x10, #0xffffffffffffff8
+102136ab8:     	ldr	x9, [x9, x10]
+102136abc:     	and	x8, x8, #0x7f
+102136ac0:     	add	x0, x9, x8, lsl #5
+102136ac4:     	ldr	x8, [x0, #0x18]
+102136ac8:     	sub	x8, x21, x8
+102136acc:     	cmp	x8, #0x3e8
+102136ad0:     	b.gt	0x102136f8c
+102136ad4:     	mov	x1, x20
+102136ad8:     	bl	0x102193618
+102136adc:     	ldp	d2, d1, [x22, #0x58]
+102136ae0:     	fsub	d0, d1, d0
+102136ae4:     	fdiv	d0, d0, d1
+102136ae8:     	fmov	d1, #0.50000000
+102136aec:     	fmul	d1, d0, d1
+102136af0:     	fcmp	d0, #0.0
+102136af4:     	fcsel	d0, d1, d0, gt
+102136af8:     	fadd	d0, d2, d0
+102136afc:     	str	d0, [x22, #0x58]
+102136b00:     	fmov	d1, #2.00000000
+102136b04:     	fcmp	d0, d1
+102136b08:     	b.mi	0x102136e24
+102136b0c:     	ldr	w8, [x22, #0x88]
+102136b10:     	cbz	w8, 0x102136e14
+102136b14:     	ldr	w8, [x22, #0x3c]
+102136b18:     	b	0x102136e18
+102136b1c:     	ldr	w8, [x22, #0x44]
+102136b20:     	cmp	w8, #0x0
+102136b24:     	ccmp	w24, #0x1e, #0x0, ne
+102136b28:     	b.le	0x102136b6c
+102136b2c:     	ldr	w8, [x22, #0x88]
+102136b30:     	cbz	w8, 0x102136cf8
+102136b34:     	ldr	d0, [x22, #0x58]
+102136b38:     	scvtf	d1, w24
+102136b3c:     	fcmp	d0, d1
+102136b40:     	b.pl	0x102136e20
+102136b44:     	fsub	d2, d1, d0
+102136b48:     	fmov	d3, #1.00000000
+102136b4c:     	fadd	d2, d2, d3
+102136b50:     	fdiv	d2, d2, d1
+102136b54:     	fmov	d3, #0.50000000
+102136b58:     	fcmp	d2, d3
+102136b5c:     	fcsel	d2, d3, d2, gt
+102136b60:     	fadd	d0, d0, d2
+102136b64:     	str	d0, [x22, #0x58]
+102136b68:     	b	0x102136e1c
+
+Normalized averaging:
+102136ef0:     	mov	w11, #0x0               ; =0
+102136ef4:     	mov	x9, #0x0                ; =0
+102136ef8:     	mov	w13, #0x0               ; =0
+102136efc:     	movi.2d	v1, #0000000000000000
+102136f00:     	movi	d2, #0000000000000000
+102136f04:     	mov	w12, #-0x1              ; =-1
+102136f08:     	cbnz	w13, 0x102136f4c
+102136f0c:     	ldr	w10, [x22, #0x38]
+102136f10:     	cmp	w11, w10
+102136f14:     	b.ge	0x102136f4c
+102136f18:     	add	w10, w12, w10
+102136f1c:     	ldr	x13, [x22, #0x28]
+102136f20:     	add	x10, x13, w10, sxtw
+102136f24:     	ldr	x13, [x22, #0x10]
+102136f28:     	lsr	x14, x10, #4
+102136f2c:     	and	x14, x14, #0xffffffffffffff8
+102136f30:     	ldr	x13, [x13, x14]
+102136f34:     	and	x10, x10, #0x7f
+102136f38:     	add	x14, x13, x10, lsl #5
+102136f3c:     	ldr	x10, [x14, #0x18]
+102136f40:     	sub	x10, x21, x10
+102136f44:     	cmp	x10, #0x3e9
+102136f48:     	b.lt	0x102136f7c
+102136f4c:     	cbz	x9, 0x102136f8c
+102136f50:     	mov	w10, #0x0               ; =0
+102136f54:     	mov	w13, #0x1               ; =1
+102136f58:     	ldr	q3, [x9]
+102136f5c:     	fadd.2d	v1, v1, v3
+102136f60:     	ldr	d3, [x9, #0x10]
+102136f64:     	fadd	d2, d2, d3
+102136f68:     	add	w11, w11, #0x1
+102136f6c:     	sub	w12, w12, #0x1
+102136f70:     	cmp	w8, w11
+102136f74:     	b.ne	0x102136f08
+102136f78:     	b	0x102136f94
+102136f7c:     	mov	w13, #0x0               ; =0
+102136f80:     	mov	w10, #0x1               ; =1
+102136f84:     	mov	x9, x14
+102136f88:     	b	0x102136f58
+102136f8c:     	mov	w0, #0x0                ; =0
+102136f90:     	b	0x102137028
+102136f94:     	add	x11, x9, #0x18
+102136f98:     	ldr	x11, [x11]
+102136f9c:     	str	x11, [x22, #0x80]
+102136fa0:     	scvtf	d3, w8
+102136fa4:     	fsub	d0, d0, d3
+102136fa8:     	fcmp	d0, #0.0
+102136fac:     	b.eq	0x10213700c
+102136fb0:     	cbz	w10, 0x102136ff8
+102136fb4:     	ldr	w10, [x22, #0x38]
+102136fb8:     	cmp	w8, w10
+102136fbc:     	b.ge	0x102136ff8
+102136fc0:     	mvn	w8, w8
+102136fc4:     	add	w8, w10, w8
+102136fc8:     	ldr	x10, [x22, #0x28]
+102136fcc:     	add	x8, x10, w8, sxtw
+102136fd0:     	ldr	x10, [x22, #0x10]
+102136fd4:     	lsr	x11, x8, #4
+102136fd8:     	and	x11, x11, #0xffffffffffffff8
+102136fdc:     	ldr	x10, [x10, x11]
+102136fe0:     	and	x8, x8, #0x7f
+102136fe4:     	add	x8, x10, x8, lsl #5
+102136fe8:     	ldr	x10, [x8, #0x18]
+102136fec:     	sub	x10, x21, x10
+102136ff0:     	cmp	x10, #0x3e8
+102136ff4:     	csel	x9, x9, x8, gt
+102136ff8:     	ldr	q4, [x9]
+102136ffc:     	fmla.2d	v1, v4, v0[0]
+102137000:     	ldr	d4, [x9, #0x10]
+102137004:     	fmadd	d2, d4, d0, d2
+102137008:     	fadd	d3, d0, d3
+10213700c:     	fmov	d0, #1.00000000
+102137010:     	fdiv	d0, d0, d3
+102137014:     	fmul.2d	v1, v1, v0[0]
+102137018:     	str	q1, [x20]
+10213701c:     	fmul	d0, d2, d0
+102137020:     	str	d0, [x23]
+
+Post-correction strength conversion:
+1028e13d8:     	ldr	w8, [x27]
+1028e13dc:     	mul	w8, w8, w8
+1028e13e0:     	ucvtf	d0, w8
+1028e13e4:     	adrp	x8, 0x1042ec000
+1028e13e8:     	ldr	d1, [x8, #0xb78]
+1028e13ec:     	fmul	d0, d0, d1
+1028e13f0:     	adrp	x8, 0x104302000
+1028e13f4:     	ldr	d1, [x8, #0xfd8]
+1028e13f8:     	fcmp	d0, d1
+1028e13fc:     	ccmp	w26, #0x0, #0x4, mi
+1028e1400:     	fcsel	d0, d1, d0, ne
+1028e1404:     	str	d0, [x19]
+
+Post-correction scale conversion:
+1028e1504:     	bl	0x102992930
+1028e1508:     	adrp	x8, 0x1042ee000
+1028e150c:     	ldr	d1, [x8, #0x828]
+1028e1510:     	fmul	d8, d0, d1
+1028e1514:     	mov	x0, x22
+1028e1518:     	bl	0x10001022c
+1028e151c:     	fmov	d0, #1.00000000
+1028e1520:     	fdiv	d0, d0, d8
+1028e1524:     	str	d0, [x20]
+1028e1528:     	ldr	w8, [sp, #0x68]
+1028e152c:     	cbz	w8, 0x1028e153c
+1028e1530:     	ldr	d1, [x19]
+1028e1534:     	fmul	d0, d0, d1
+1028e1538:     	str	d0, [x19]
+1028e153c:     	mov	w0, #0x1                ; =1
+
+Requested range 0x1027878ec:0x102787a1c:
+1027878ec:     	ldp	d16, d17, [x1]
+1027878f0:     	ldp	d4, d5, [x0]
+1027878f4:     	fsub	d2, d16, d4
+1027878f8:     	fsub	d3, d17, d5
+1027878fc:     	fmul	d6, d3, d3
+102787900:     	fmadd	d18, d2, d2, d6
+102787904:     	adrp	x8, 0x1042e3000
+102787908:     	ldr	d19, [x8, #0x690]
+10278790c:     	fcmp	d18, d19
+102787910:     	b.mi	0x102787930
+102787914:     	ldp	d6, d7, [x2]
+102787918:     	fsub	d16, d6, d16
+10278791c:     	fsub	d20, d7, d17
+102787920:     	fmul	d17, d20, d20
+102787924:     	fmadd	d21, d16, d16, d17
+102787928:     	fcmp	d21, d19
+10278792c:     	b.pl	0x102787938
+102787930:     	mov	w0, #0x1                ; =1
+102787934:     	ret
+102787938:     	fsqrt	d22, d18
+10278793c:     	fdiv	d17, d2, d22
+102787940:     	fdiv	d18, d3, d22
+102787944:     	fsqrt	d23, d21
+102787948:     	fdiv	d19, d16, d23
+10278794c:     	fadd	d16, d22, d23
+102787950:     	fmul	d21, d16, d1
+102787954:     	fmov	d1, #1.00000000
+102787958:     	fcmp	d21, d1
+10278795c:     	fdiv	d1, d20, d23
+102787960:     	b.pl	0x102787970
+102787964:     	adrp	x8, 0x1042f8000
+102787968:     	ldr	d20, [x8, #0x38]
+10278796c:     	b	0x1027879b8
+102787970:     	fmov	d20, #3.00000000
+102787974:     	fcmp	d21, d20
+102787978:     	b.pl	0x102787988
+10278797c:     	adrp	x8, 0x1042e6000
+102787980:     	ldr	d20, [x8, #0xfc8]
+102787984:     	b	0x1027879b8
+102787988:     	fmov	d20, #10.00000000
+10278798c:     	fcmp	d21, d20
+102787990:     	b.pl	0x1027879a0
+102787994:     	adrp	x8, 0x10430a000
+102787998:     	ldr	d20, [x8, #0x470]
+10278799c:     	b	0x1027879b8
+1027879a0:     	fmov	d20, #30.00000000
+1027879a4:     	fcmp	d21, d20
+1027879a8:     	adrp	x8, 0x10433f000
+1027879ac:     	ldr	d20, [x8, #0xa0]
+1027879b0:     	fmov	d21, #0.50000000
+1027879b4:     	fcsel	d20, d21, d20, mi
+1027879b8:     	fmul	d1, d18, d1
+1027879bc:     	fmadd	d1, d17, d19, d1
+1027879c0:     	fcmp	d1, d20
+1027879c4:     	b.le	0x1027879d0
+1027879c8:     	mov	w0, #0x0                ; =0
+1027879cc:     	ret
+1027879d0:     	fcmp	d1, #0.0
+1027879d4:     	b.mi	0x102787930
+1027879d8:     	fsub	d1, d6, d4
+1027879dc:     	fsub	d4, d7, d5
+1027879e0:     	fmul	d5, d4, d4
+1027879e4:     	fmadd	d5, d1, d1, d5
+1027879e8:     	fcmp	d5, #0.0
+1027879ec:     	b.eq	0x102787930
+1027879f0:     	fsqrt	d5, d5
+1027879f4:     	fadd	d6, d5, d5
+1027879f8:     	fcmp	d6, d16
+1027879fc:     	b.mi	0x102787930
+102787a00:     	fnmul	d2, d2, d4
+102787a04:     	fmadd	d1, d3, d1, d2
+102787a08:     	fabs	d1, d1
+102787a0c:     	fmul	d0, d5, d0
+102787a10:     	fcmp	d1, d0
+102787a14:     	cset	w0, pl
+102787a18:     	ret
+
+Command:
+pnpm exec oxfmt --check docs/research/clip-studio-paint-stabilization/README.md docs/research/clip-studio-paint-stabilization/live-analysis.md docs/research/clip-studio-paint-stabilization/post-analysis.md docs/research/clip-studio-paint-stabilization/croquis-integration.md docs/research/clip-studio-paint-stabilization/live-reference.ts docs/research/clip-studio-paint-stabilization/post-reference.ts docs/research/clip-studio-paint-stabilization/live-reference.test.ts docs/research/clip-studio-paint-stabilization/post-reference.test.ts docs/research/clip-studio-paint-stabilization/reference-invariants.test.ts docs/research/clip-studio-paint-stabilization/package.json
+Exit code: 0
+Output:
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 185ms on 10 files using 18 threads.
+
+Command:
+python3 - <<'PY'
+import subprocess
+commands = [
+ ['clang','-std=c11','-Wall','-Wextra','-Werror','docs/research/clip-studio-paint-stabilization/evidence/arm64-numeric-probe.c','-o','/private/tmp/csp-arm64-numeric-probe'],
+ ['/private/tmp/csp-arm64-numeric-probe'],
+]
+for command in commands:
+ print('Command:', ' '.join(command), flush=True)
+ subprocess.run(command, check=True, timeout=30)
+PY
+Exit code: 0
+Output:
+Command: clang -std=c11 -Wall -Wextra -Werror docs/research/clip-studio-paint-stabilization/evidence/arm64-numeric-probe.c -o /private/tmp/csp-arm64-numeric-probe
+Command: /private/tmp/csp-arm64-numeric-probe
+FMSUB(10, 0.04, 2) = 1.6000000000000001
+FCVTZS(inf) = 2147483647
+FCVTZS(-inf) = -2147483648
+FCVTZS(nan) = 0
+FCVTZS(1.8999999999999999) = 1
+FCVTZS(-1.8999999999999999) = -1
+

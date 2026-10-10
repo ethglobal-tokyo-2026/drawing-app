@@ -1,0 +1,41 @@
+{
+  "checked_at_utc": "2026-10-10T00:35:40.109912+00:00",
+  "scope": "Prepared research recorders; verified mouse route and no-input tablet preflight. No actual tablet fixture or numerical replay equality.",
+  "files": [
+    {
+      "file": "capture_live_contract.py",
+      "sha256": "ae3509094b99d510d8218b3566ea02c13bedeade158fbcc359d66ac0eb047316",
+      "bytes": 30909
+    },
+    {
+      "file": "capture_mouse_route.py",
+      "sha256": "53e98bad3d347b46348b41665cc4669c9b68363b3c53e54eb00e81e580af482d",
+      "bytes": 15073
+    },
+    {
+      "file": "capture_tablet_stroke.py",
+      "sha256": "07ce8ff76e8de6043963957ca86b5bc55498a9744194f37495684cc6ac4960a6",
+      "bytes": 38196
+    },
+    {
+      "file": "check_capture_helper.py",
+      "sha256": "23024e3182eab295ab1ae619e89bedfe568ab8699867382a936d88bad93b3bc9",
+      "bytes": 10502
+    },
+    {
+      "file": "check_mouse_route.py",
+      "sha256": "a20f17273ab6e635d1cf1a40794f83abcf7450ec4c038494e610c1b1e9e3d365",
+      "bytes": 5074
+    },
+    {
+      "file": "check_tablet_max_history.py",
+      "sha256": "36a0bf22f23dffdca2cd589c3c786f3d38428058d2fd44d1d69404d2ded75ae4",
+      "bytes": 1334
+    },
+    {
+      "file": "check_tablet_stroke.py",
+      "sha256": "81efe370490bf7a8720a55980bcfdb45d714ca27595ec56c0e0084ffff5be2a0",
+      "bytes": 22897
+    }
+  ]
+}

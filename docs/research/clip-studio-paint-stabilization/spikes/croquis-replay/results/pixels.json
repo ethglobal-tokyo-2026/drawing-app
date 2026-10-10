@@ -1,0 +1,66 @@
+{
+  "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.8059.12 Safari/537.36",
+  "results": [
+    {
+      "test": "current_engine_terminal_vs_final_operation_replay",
+      "tool": "brush",
+      "equal": true,
+      "differentChannels": 0,
+      "maxDelta": 0,
+      "differentAlpha": 0,
+      "maxAlphaDelta": 0,
+      "channels": 1119008
+    },
+    {
+      "test": "current_engine_terminal_vs_final_operation_replay",
+      "tool": "eraser",
+      "equal": false,
+      "differentChannels": 609,
+      "maxDelta": 255,
+      "differentAlpha": 216,
+      "maxAlphaDelta": 62,
+      "channels": 1119008
+    },
+    {
+      "test": "explicit_terminal_replacement_vs_corrected_replay",
+      "tool": "brush",
+      "equal": true,
+      "differentChannels": 0,
+      "maxDelta": 0,
+      "differentAlpha": 0,
+      "maxAlphaDelta": 0,
+      "channels": 1119008
+    },
+    {
+      "test": "negative_control_repaint_without_restore",
+      "tool": "brush",
+      "equal": false,
+      "differentChannels": 6335,
+      "maxDelta": 255,
+      "differentAlpha": 838,
+      "maxAlphaDelta": 255,
+      "channels": 1119008
+    },
+    {
+      "test": "explicit_terminal_replacement_vs_corrected_replay",
+      "tool": "eraser",
+      "equal": true,
+      "differentChannels": 0,
+      "maxDelta": 0,
+      "differentAlpha": 0,
+      "maxAlphaDelta": 0,
+      "channels": 1119008
+    },
+    {
+      "test": "negative_control_repaint_without_restore",
+      "tool": "eraser",
+      "equal": false,
+      "differentChannels": 4286,
+      "maxDelta": 255,
+      "differentAlpha": 1093,
+      "maxAlphaDelta": 255,
+      "channels": 1119008
+    }
+  ],
+  "boundary": "Real Canvas2D via exported InkEngine/InkSurface/paintStroke. Explicit correction is synthetic; no CSP offline correction or generalized production terminal replacement is implemented. No device input or display timing measured."
+}

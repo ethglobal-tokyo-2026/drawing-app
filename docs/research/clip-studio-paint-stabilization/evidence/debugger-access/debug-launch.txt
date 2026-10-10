@@ -1,0 +1,21 @@
+["/Applications/Xcode.app/Contents/Developer/usr/bin/lldb", "--batch", "-o", "target create \"/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT\"", "-o", "process launch --stop-at-entry", "-o", "process status", "-o", "image list -o -f \"CLIP STUDIO PAINT\"", "-o", "process detach --keep-stopped false", "-o", "quit"]
+(lldb) target create "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT"
+Current executable set to '/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT' (arm64).
+(lldb) process launch --stop-at-entry
+Process 89663 launched: '/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT' (arm64)
+(lldb) process status
+Process 89663 stopped
+* thread #1, stop reason = signal SIGSTOP
+    frame #0: 0x00000001058849c0 dyld`_dyld_start
+dyld`_dyld_start:
+->  0x1058849c0 <+0>:  mov    x0, sp
+    0x1058849c4 <+4>:  and    sp, x0, #0xfffffffffffffff0
+    0x1058849c8 <+8>:  mov    x29, #0x0                 ; =0 
+    0x1058849cc <+12>: mov    x30, #0x0                 ; =0 
+(lldb) image list -o -f "CLIP STUDIO PAINT"
+[  0] 0x0000000000000000 /private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT
+(lldb) process detach --keep-stopped false
+Process 89663 detached
+(lldb) quit
+
+Exit: 0

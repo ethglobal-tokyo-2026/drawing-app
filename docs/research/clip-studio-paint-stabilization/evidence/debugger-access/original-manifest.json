@@ -1,0 +1,2327 @@
+{
+  "Contents/Frameworks/IccProfLib_CRT.framework/IccProfLib_CRT": {
+    "symlink": "Versions/Current/IccProfLib_CRT"
+  },
+  "Contents/Frameworks/IccProfLib_CRT.framework/Resources": {
+    "symlink": "Versions/Current/Resources"
+  },
+  "Contents/Frameworks/IccProfLib_CRT.framework/Versions/A/IccProfLib_CRT": {
+    "sha256": "300b8c0e0c5c03b045d307e5cb50b73df6968b254776bb42b208acb72062f9da"
+  },
+  "Contents/Frameworks/IccProfLib_CRT.framework/Versions/A/Resources/Info.plist": {
+    "sha256": "1241deb1fa160d69e7e4992f3acb60bc12270797d171a1cbe70c3704a8a31a47"
+  },
+  "Contents/Frameworks/IccProfLib_CRT.framework/Versions/A/_CodeSignature/CodeResources": {
+    "sha256": "857976979aec1a614dbfdabab3fe47b2d81abf3dfa19041ee57e46fda87162f8"
+  },
+  "Contents/Frameworks/IccProfLib_CRT.framework/Versions/Current": {
+    "symlink": "A"
+  },
+  "Contents/Frameworks/TGCxsPlugIn.cfpi/Contents/Info.plist": {
+    "sha256": "fae9ce75201e6d331754fba0bd184f8992d9d7064a9d3a07a3de9feb50f3682d"
+  },
+  "Contents/Frameworks/TGCxsPlugIn.cfpi/Contents/MacOS/TGCxsPlugIn": {
+    "sha256": "ef861a7bdbde7549b6700b7f1a11111b49b453587b5b51fd0ad61ec400f7dc25"
+  },
+  "Contents/Frameworks/TGCxsPlugIn.cfpi/Contents/_CodeSignature/CodeResources": {
+    "sha256": "6686de10a28a2fe11b36cbb86dcbacc827cfc4ea116b4dabf1845e5aee629e9b"
+  },
+  "Contents/Frameworks/TGMaterialPlugIn.cfpi/Contents/Info.plist": {
+    "sha256": "533817430e3941dadcc28b70864d6a53aeea44f504c415ac7419fd4991c498b4"
+  },
+  "Contents/Frameworks/TGMaterialPlugIn.cfpi/Contents/MacOS/TGMaterialPlugIn": {
+    "sha256": "617083804067f0616ba1597b52d5ff50e448e926e58f24ec8260da0d9856a28a"
+  },
+  "Contents/Frameworks/TGMaterialPlugIn.cfpi/Contents/Resources/en.lproj/InfoPlist.strings": {
+    "sha256": "39cf2ee07b7b333e7c179d0bf4d798a5b72af6a4e584f51e642703bbfa4fc828"
+  },
+  "Contents/Frameworks/TGMaterialPlugIn.cfpi/Contents/_CodeSignature/CodeResources": {
+    "sha256": "36e1f8c8c832bdb8cd06688960184ca6183a1f386b0d28b20a89af25a4b9ac57"
+  },
+  "Contents/Frameworks/TGTosPlugIn.cfpi/Contents/Info.plist": {
+    "sha256": "545be327863590499647e878591ef38da28197a5ee8a8226bf683edbb56fea1a"
+  },
+  "Contents/Frameworks/TGTosPlugIn.cfpi/Contents/MacOS/TGTosPlugIn": {
+    "sha256": "eb176f8f0938ef95e8a43c29b4f24f7e36d6ada002f70d53147d18d23b83dbdc"
+  },
+  "Contents/Frameworks/TGTosPlugIn.cfpi/Contents/Resources/en.lproj/InfoPlist.strings": {
+    "sha256": "39cf2ee07b7b333e7c179d0bf4d798a5b72af6a4e584f51e642703bbfa4fc828"
+  },
+  "Contents/Frameworks/TGTosPlugIn.cfpi/Contents/_CodeSignature/CodeResources": {
+    "sha256": "36e1f8c8c832bdb8cd06688960184ca6183a1f386b0d28b20a89af25a4b9ac57"
+  },
+  "Contents/Frameworks/TGXpgPlugIn.cfpi/Contents/Info.plist": {
+    "sha256": "8a070204b8207595c766ae97320330eae0367033bd61642f87271ced7584d8fc"
+  },
+  "Contents/Frameworks/TGXpgPlugIn.cfpi/Contents/MacOS/TGXpgPlugIn": {
+    "sha256": "c758700d6d6f2f338a0f5b19dd59fcbfdbc74f3d2772637d2e0f0c76d92958e5"
+  },
+  "Contents/Frameworks/TGXpgPlugIn.cfpi/Contents/Resources/en.lproj/InfoPlist.strings": {
+    "sha256": "39cf2ee07b7b333e7c179d0bf4d798a5b72af6a4e584f51e642703bbfa4fc828"
+  },
+  "Contents/Frameworks/TGXpgPlugIn.cfpi/Contents/_CodeSignature/CodeResources": {
+    "sha256": "36e1f8c8c832bdb8cd06688960184ca6183a1f386b0d28b20a89af25a4b9ac57"
+  },
+  "Contents/Frameworks/WKBridge.bundle/Contents/Info.plist": {
+    "sha256": "224eda0017813913bbe56059de7befa0d0ce83963c3f3697e4296009074395c7"
+  },
+  "Contents/Frameworks/WKBridge.bundle/Contents/MacOS/WKBridge": {
+    "sha256": "693552f43ead16b451af470794b9bf19d088e5d92bb04db578f82e7680b68ed3"
+  },
+  "Contents/Frameworks/WKBridge.bundle/Contents/_CodeSignature/CodeResources": {
+    "sha256": "6686de10a28a2fe11b36cbb86dcbacc827cfc4ea116b4dabf1845e5aee629e9b"
+  },
+  "Contents/Frameworks/libAudioUtl.dylib": {
+    "sha256": "6d4ef7bc4dfe7788217109eae306498d0e3d71dc6c9e1ac0e63710ee23d3bcd7"
+  },
+  "Contents/Frameworks/libailia.dylib": {
+    "sha256": "910c511d86aaeb4adb5b1a5d4703e64cd4add1c835645122719cc713cee2b6cc"
+  },
+  "Contents/Frameworks/libailia_blas.dylib": {
+    "sha256": "b7c2f2432e35a49e914fe79ec525c10e407aa16bc1e6cc477a353a8bb971f2ff"
+  },
+  "Contents/Frameworks/libboost_atomic.dylib": {
+    "sha256": "a5e8c9ecad0a59c39bc8f79ef68f4b713dcd6dff96d3f30873090f0f3875d3c3"
+  },
+  "Contents/Frameworks/libboost_chrono.dylib": {
+    "sha256": "b6eb78ed0a69bef7e529ac9d784db11e556daba1a96d5966af7865e79193c2de"
+  },
+  "Contents/Frameworks/libboost_container.dylib": {
+    "sha256": "b1ffc49eff31e5f8b6aade5739c993a2fb9c74dafc9426e3cb0b75eeca869239"
+  },
+  "Contents/Frameworks/libboost_date_time.dylib": {
+    "sha256": "196d04ca497519d350ca4827f0c1e4c38dc2ebef332826a5e6baf5e4ea1d710b"
+  },
+  "Contents/Frameworks/libboost_regex.dylib": {
+    "sha256": "3ed59fe7fc6fb9ea77969ad88b0c941b9debd8f4ab5422903dd6f1f6eb9bc835"
+  },
+  "Contents/Frameworks/libboost_thread.dylib": {
+    "sha256": "d1f9214734dd9ff990fe666012120e6770cd5b04e6ed3657b56ff34178e1bd2a"
+  },
+  "Contents/Frameworks/libboost_timer.dylib": {
+    "sha256": "6abc531feb5f8ce04741edd49b92aef453f26eb1e886e3af55a4f053437d67de"
+  },
+  "Contents/Frameworks/libgiflib.dylib": {
+    "sha256": "41a7dfd9080e2663e0e64b3bd504ce128a4b8fed7318467430e07f1c435d88d4"
+  },
+  "Contents/Frameworks/libicudata65.dylib": {
+    "sha256": "ac02a39d85afcbaac214fb56f90c4b01ba02b9755d99a31eeeeb2344ed73d75c"
+  },
+  "Contents/Frameworks/libicui18n65.dylib": {
+    "sha256": "7b299315144f13e4b93736c6698513af4fdc6ea8090a7a4c17209fad56b09528"
+  },
+  "Contents/Frameworks/libicuuc65.dylib": {
+    "sha256": "878da7333c5c2818330bb0b41934b498b4d06fe55a5dbf086be048e187c060af"
+  },
+  "Contents/Frameworks/libjpeg.dylib": {
+    "sha256": "8121b60a1296c9638d9171ce62ddfde0af39943e46140b5b071c917baabf8279"
+  },
+  "Contents/Frameworks/libjpeg.framework/Resources": {
+    "symlink": "Versions/Current/Resources"
+  },
+  "Contents/Frameworks/libjpeg.framework/Versions/A/Resources/English.lproj/InfoPlist.strings": {
+    "sha256": "e27cacbf4f9358e9ad2056696e8c4cc4ebffd80d3030eb2c2fa94e6d57dca0f2"
+  },
+  "Contents/Frameworks/libjpeg.framework/Versions/A/Resources/Info.plist": {
+    "sha256": "3b3bae24a590b1b5be2b218968a0aa5712a8f8e3cd521eeb4e4d43a9bb5d2b2a"
+  },
+  "Contents/Frameworks/libjpeg.framework/Versions/A/_CodeSignature/CodeResources": {
+    "sha256": "4173348325d95bb20523b5885615f1fad1651ab0f357296ce9a6c92a3ca5496f"
+  },
+  "Contents/Frameworks/libjpeg.framework/Versions/A/libjpeg": {
+    "sha256": "db5afe23632338342523735437c9b232a89e58922fa73206efe44af88013bfd8"
+  },
+  "Contents/Frameworks/libjpeg.framework/Versions/Current": {
+    "symlink": "A"
+  },
+  "Contents/Frameworks/libjpeg.framework/libjpeg": {
+    "symlink": "Versions/Current/libjpeg"
+  },
+  "Contents/Frameworks/libosqp.dylib": {
+    "sha256": "cca2fbbfb628fd4a222c34739267952b6d13a05e27b3d9889279bc904665abab"
+  },
+  "Contents/Frameworks/libpng16.dylib": {
+    "sha256": "ef79434da6ee2d6552cad4fd10cafa80ebc6ca372a3e7863805db9c6952c6297"
+  },
+  "Contents/Frameworks/libsharpyuv.dylib": {
+    "sha256": "9f68f1da25d018f5f238191574bc8201e0281b3f4b2fcf4596f77ff185ac4f3f"
+  },
+  "Contents/Frameworks/libskia.dylib": {
+    "sha256": "55f9843bea9791d727f4b1e8d7b53fbc90824d4924b7a2777f864b54b3bbd674"
+  },
+  "Contents/Frameworks/libskshaper.dylib": {
+    "sha256": "a96a5dace6688520afe21c31990a451f8fc1c5e8217560bd616685df304e3017"
+  },
+  "Contents/Frameworks/libskunicode.dylib": {
+    "sha256": "f8fbf8e9d8c3b657f217b602bb44ce2ee3e68de48e75787cc6deae5095f5d21a"
+  },
+  "Contents/Frameworks/libwebp.dylib": {
+    "sha256": "f80afed9f550129ebe4b614b1f0a7e3e9786f0e58954e382e13c106c316a526b"
+  },
+  "Contents/Frameworks/libwebpdecoder.dylib": {
+    "sha256": "c989d1485e1db358f68eb9c0f90ffe8b3d84fc9451dafb3bee2823761bacb77c"
+  },
+  "Contents/Frameworks/libwebpdemux.dylib": {
+    "sha256": "ae21a8fbf1149bc4e1c1b7285d8de29dbd186d2903303c3137a5b77ed192c5c1"
+  },
+  "Contents/Frameworks/libwebpmux.dylib": {
+    "sha256": "31fc92aa1bf34cd7823bbee9940c8348843476bbefe014598f5141a35e4f54cf"
+  },
+  "Contents/Info.plist": {
+    "sha256": "668d4809af13887d38586d89cb1cd8084b0a37e62d75a22b768486d2cdf9eb4a"
+  },
+  "Contents/Library/QuickLook/LipPreview.qlgenerator/Contents/Info.plist": {
+    "sha256": "bbd9bc7eb05789dc0f45f9c05d3010de243161b56cb76fceda6678876b8adc8c"
+  },
+  "Contents/Library/QuickLook/LipPreview.qlgenerator/Contents/MacOS/LipPreview": {
+    "sha256": "bae15d1b181541e3d15749aa53ca6934d091ae0d2e08adafd8dee5a717d41db2"
+  },
+  "Contents/Library/QuickLook/LipPreview.qlgenerator/Contents/_CodeSignature/CodeResources": {
+    "sha256": "6686de10a28a2fe11b36cbb86dcbacc827cfc4ea116b4dabf1845e5aee629e9b"
+  },
+  "Contents/MacOS/CLIP STUDIO PAINT": {
+    "sha256": "8e74fea2754d2590ef91e90a88fbdc53faab09761965f6c36bd2734e0135838e"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Frameworks/libboost_regex.dylib": {
+    "sha256": "372f75e7ea3298d2ea4d49932191bab737a5fead6fa9079493005becb54802d8"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Frameworks/libboost_system.dylib": {
+    "sha256": "a012965d34ab93467a0554c2d7374b780b49f40d98bdf88b8738508abb6c3131"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Frameworks/libboost_thread.dylib": {
+    "sha256": "48def7d29576dd3036866533ea803687f3e2df3be4b0d6ea67fb734804ea69e9"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Frameworks/libgiflib.dylib": {
+    "sha256": "41a7dfd9080e2663e0e64b3bd504ce128a4b8fed7318467430e07f1c435d88d4"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Frameworks/libjpeg.dylib": {
+    "sha256": "8121b60a1296c9638d9171ce62ddfde0af39943e46140b5b071c917baabf8279"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Frameworks/libpng16.dylib": {
+    "sha256": "610fb0572aef62e08e0ecdd3dcb368b52c6da22495711275ad5515070ce1049b"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Frameworks/libsharpyuv.dylib": {
+    "sha256": "9f68f1da25d018f5f238191574bc8201e0281b3f4b2fcf4596f77ff185ac4f3f"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Frameworks/libwebp.dylib": {
+    "sha256": "f80afed9f550129ebe4b614b1f0a7e3e9786f0e58954e382e13c106c316a526b"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Frameworks/libwebpdecoder.dylib": {
+    "sha256": "c989d1485e1db358f68eb9c0f90ffe8b3d84fc9451dafb3bee2823761bacb77c"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Frameworks/libwebpdemux.dylib": {
+    "sha256": "ae21a8fbf1149bc4e1c1b7285d8de29dbd186d2903303c3137a5b77ed192c5c1"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Frameworks/libwebpmux.dylib": {
+    "sha256": "31fc92aa1bf34cd7823bbee9940c8348843476bbefe014598f5141a35e4f54cf"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Info.plist": {
+    "sha256": "813c9e225d6d321b92c5b410a3dd66bc4753c1cb2d2111b2fbefe9aa7e2b45ab"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/MacOS/scan": {
+    "sha256": "08d53ab4b07e7ec5a87c6251e5b579ec6d68851327b42af0b195a6f9716e9f71"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/PkgInfo": {
+    "sha256": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/InfoPlist.strings": {
+    "sha256": "39cf2ee07b7b333e7c179d0bf4d798a5b72af6a4e584f51e642703bbfa4fc828"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/Scan.icns": {
+    "sha256": "8f48b540587760b8761e6bde94e705891d9f1acd278b36bea3769b4b96a9d007"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/chinese_tc/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "aa71c872379b87ebed28014a515f8e9f7fea16babc686441dd5093e10068cd7a"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/chinese_tc/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "f956a675d1f818b1429d8b2b4e73f870caa9b7c0d7ce1c79635a47b768059340"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/chinese_tc/EEAB25AD-7B24-4778-8ABC-3A2EBD6DD701": {
+    "sha256": "cebf1b93f99a0d4c9dc5667ef9726d7a67f8c9eea043df1358020c476068de89"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/cursor_wait.tiff": {
+    "sha256": "6d3ec7fba7ec002e28a7b5bf993bae53214a6e39599667d4abd18c245a2815ad"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/cursor_wait@2x.tiff": {
+    "sha256": "debfe71cacc8e5ae97b48c16526a481b5969e634149c34904935b14e94e59a19"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/en.lproj/DeviceBrowserWindow.nib": {
+    "sha256": "a88f63462b4a8fbaa6024307fce94a675103c055dff37efaa3926f647865b2f9"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/en.lproj/MainMenu.nib": {
+    "sha256": "5e19244d9ed353fc5dcbde13cb3d70deb7a33b131f9137c64e9018a46bd1442e"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/en.lproj/ScannerDeviceWindowController.nib/keyedobjects-101300.nib": {
+    "sha256": "0fbf4ecefbdfa7b43b1cfe199cb16ad33e75ea730985f3a2ef57e3e6ff7937d0"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/en.lproj/ScannerDeviceWindowController.nib/keyedobjects.nib": {
+    "sha256": "5914382be8b2d7b716e4a3aece15af6b28f28a883a4f3f6bcc3c00a7b5ece704"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/english/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "85e90d66d981ac6ab84f01360fb262c489af067f7d30d48e2bf2dc221cf38a73"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/english/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "28dc286c4233ca86104b1e39589d131c0a047ff2df4788fbc79227b9c843ab61"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/english/EEAB25AD-7B24-4778-8ABC-3A2EBD6DD701": {
+    "sha256": "7b3752ec78bc9ed1fe375da5c2d7ea8a5191ba8fdc5a1cd690652672a78c70e8"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/french/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "f5feb44cbc7c2b7d4ef6c24372a679309fc0720daf4e891fd13018effe81a522"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/french/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "b0c91678d9220f9f94046b5af38227c6a7d6392847c0f4d223533f217147fbef"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/german/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "7c9388a01892f5bc5e0bc65860de09b80215d5c451b8391b6f11d35e173a694c"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/german/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "a0a02d836c144f04e933f1ded3be075ef9e0a9d710ca6f17a6ff2bd7963b48e3"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/ja.lproj/DeviceBrowserWindow.nib": {
+    "sha256": "1750fc9d043b534e1d8f6af6ea902f9c2757d9b25ca460b90abed26ae214054f"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/ja.lproj/MainMenu.nib": {
+    "sha256": "4db3685ad7a101b651c3f7a036a00f854d3f751652024c77cf88361f396871a8"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/ja.lproj/ScannerDeviceWindowController.nib/keyedobjects-101300.nib": {
+    "sha256": "f8ec8f62665ade9f4b5d54b096bad4cfd5a76a898ea651181de3051f39536bff"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/ja.lproj/ScannerDeviceWindowController.nib/keyedobjects.nib": {
+    "sha256": "7e4ad39921919f763262cd70c2aeeef330f15e393fbdf75bc5e7c288e1d2b412"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/japanese/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "f7be0627ac9e063c1ea0f42e5115ef185b20dd227f1980b69259df07826de58e"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/japanese/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "ed71856b54f850053e6d6ba22984ecf37df03f8aa425106d23369c6482513d47"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/japanese/EEAB25AD-7B24-4778-8ABC-3A2EBD6DD701": {
+    "sha256": "ab49727a54dca8e491e9db9189d9a0db1585c1d03c679055c5e6b6f3fa300f2c"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/korean/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "49ce930af854df8094a4f38134eb83e77595395ec665675c90cac7f5a6857e47"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/korean/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "d75f9ef9f1205af19561859ff9a11ee1365f31536690543b0faa367c2f9ab647"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/operationNotAllowedCursor.tiff": {
+    "sha256": "0b4de289864de96f064710e97fef42bc0658c193474a3219ad319f7727cc5070"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/operationNotAllowedCursor@2x.tiff": {
+    "sha256": "b64afc694541bf94fcb752b823f04c93ae625937b775c840e7e0c2471e28d81d"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/other/87775483-5B8B-42D0-AF50-BA7731354B65": {
+    "sha256": "253be2040f3a156c3b7fbf017433a8f1246b81ab8375d251605fced74d9acad5"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/other/A0AA5020-377F-4A40-A37D-95C44B3D3EFD": {
+    "sha256": "71bb202b1587b7275476b400a8a897dd77ed9ea270b1b5c3f6c6298a574a9da1"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/other/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "85e90d66d981ac6ab84f01360fb262c489af067f7d30d48e2bf2dc221cf38a73"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/other/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "28dc286c4233ca86104b1e39589d131c0a047ff2df4788fbc79227b9c843ab61"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/other/EEAB25AD-7B24-4778-8ABC-3A2EBD6DD701": {
+    "sha256": "7b3752ec78bc9ed1fe375da5c2d7ea8a5191ba8fdc5a1cd690652672a78c70e8"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/spanish/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "13f8386cf9010ab13a3dff8e6dae20553fa63dff7f573daae556ab2fbd114d80"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/spanish/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "3c81aea3dc7b7e3c760c72f345cd7e812d3a312ffb3f49c8602c074e6f0a96ba"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/windowResizeEastWestCursor.tiff": {
+    "sha256": "8ecb3947f86de4841ad003eebd8655c93f2f2787f4b3a8a259ebfd4832adde85"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/windowResizeEastWestCursor@2x.tiff": {
+    "sha256": "23ec85469cd1c898c657bab0eb71edd98a5bdeb78f19f6c4ab309b9554965839"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/windowResizeNorthEastSouthWestCursor.tiff": {
+    "sha256": "4adf97eccfcf7f728111bdbe2692029c79e9a5baf486e05bc0f622a24169a2a5"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/windowResizeNorthEastSouthWestCursor@2x.tiff": {
+    "sha256": "ea3fbcbb74205f9352e0073144a1fbb8ee742859daaf24b5dcc2fd07fed816d4"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/windowResizeNorthSouthCursor.tiff": {
+    "sha256": "7e8a7490cd73a74f98c2a7e50d454380ad9dd5a76f872e87f2bd1760007cbb9c"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/windowResizeNorthSouthCursor@2x.tiff": {
+    "sha256": "bc05c459ec6cd37a89867a6ae0e62eb19a36546ae41d5f9fa0842f854f2e8b37"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/windowResizeNorthWestSouthEastCursor.tiff": {
+    "sha256": "4446b8c41ef91c243afdaaabb27bdf813a982adf0f8afb9c2d1b47b8f204d616"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/Resources/windowResizeNorthWestSouthEastCursor@2x.tiff": {
+    "sha256": "0c623bfa0618a1ac1945297a275458ef85d1cfd253f5be73a17e5554bd31df54"
+  },
+  "Contents/MacOS/Scan/scan.app/Contents/_CodeSignature/CodeResources": {
+    "sha256": "b695b6de33a16a0db901ca76b0c0c3ce8f03ff2499ef12717f5839114a935d18"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Frameworks/libboost_regex.dylib": {
+    "sha256": "372f75e7ea3298d2ea4d49932191bab737a5fead6fa9079493005becb54802d8"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Frameworks/libboost_system.dylib": {
+    "sha256": "a012965d34ab93467a0554c2d7374b780b49f40d98bdf88b8738508abb6c3131"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Frameworks/libboost_thread.dylib": {
+    "sha256": "48def7d29576dd3036866533ea803687f3e2df3be4b0d6ea67fb734804ea69e9"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Frameworks/libgiflib.dylib": {
+    "sha256": "41a7dfd9080e2663e0e64b3bd504ce128a4b8fed7318467430e07f1c435d88d4"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Frameworks/libjpeg.dylib": {
+    "sha256": "8121b60a1296c9638d9171ce62ddfde0af39943e46140b5b071c917baabf8279"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Frameworks/libpng16.dylib": {
+    "sha256": "610fb0572aef62e08e0ecdd3dcb368b52c6da22495711275ad5515070ce1049b"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Info.plist": {
+    "sha256": "deecb95c802812054e80987dd02a3d5e2d1ddaef8b8e2832c1082252f071e8ed"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/MacOS/CLIP STUDIO UPDATER": {
+    "sha256": "b6f175c923677ed300ea532e309fc56e3ed32be69f35ca494463d3f029f7e6d6"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/PkgInfo": {
+    "sha256": "f72d75317c72c37cd14a85b32912911ad55111ec4fff31468764ff6fc5ee31de"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/ApplicationIcon.icns": {
+    "sha256": "0eb32b3909d2c3ea5cbcef1c9f8b6e5ee0090f22a5d916765320c1f7b5a9d9a4"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/chinese_sc/6DA08F47-7F05-42D4-AD3C-0BDC557FB08A": {
+    "sha256": "260cdd602bf33b8501881f59a995b9a4d205b7a115f984a58456ed4c3da1c3bf"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/chinese_sc/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "877794bfe373042e00c5505e7ed885d0d6bdb84bdcd3ce4702c0ee295f160aa9"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/chinese_sc/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "226d6f2437ef90bfa7af9314514b2bb3cd7e8accb6c31d5498a03d334640fbc4"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/chinese_tc/6DA08F47-7F05-42D4-AD3C-0BDC557FB08A": {
+    "sha256": "39ff5cc6d49428e2d32a2c39b702feb2751ab3d2adbcaac8dffbee3322cf038b"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/chinese_tc/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "aa71c872379b87ebed28014a515f8e9f7fea16babc686441dd5093e10068cd7a"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/chinese_tc/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "b4cc59e53c6c19c235b4b94f957b10c98c49598b5112a491037b0cb32ec45974"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/cursor_wait.tiff": {
+    "sha256": "6d3ec7fba7ec002e28a7b5bf993bae53214a6e39599667d4abd18c245a2815ad"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/cursor_wait@2x.tiff": {
+    "sha256": "debfe71cacc8e5ae97b48c16526a481b5969e634149c34904935b14e94e59a19"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/de.lproj/FileTypeAccessory.nib": {
+    "sha256": "465efd0694f347cb2c7b1147ab5ff3af937368745a7e702d4cc766e18b02ad19"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/en.lproj/FileTypeAccessory.nib": {
+    "sha256": "465efd0694f347cb2c7b1147ab5ff3af937368745a7e702d4cc766e18b02ad19"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/en.lproj/InfoPlist.strings": {
+    "sha256": "39cf2ee07b7b333e7c179d0bf4d798a5b72af6a4e584f51e642703bbfa4fc828"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/en.lproj/MainMenu.nib/keyedobjects-101300.nib": {
+    "sha256": "4589fccdfd06c2237296bf71f8c7fcc2073aff3c82d156b2d44578d5f3957a91"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/en.lproj/MainMenu.nib/keyedobjects.nib": {
+    "sha256": "fbd3f57907dfb477ffb94d09b8e13b3b7fe17c37aa41ef494519352a22b7b96b"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/english/6DA08F47-7F05-42D4-AD3C-0BDC557FB08A": {
+    "sha256": "29fe6a1721bfc0a4c7f120c0918e5cc8820d6524046a8d622afda0f6d7fac140"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/english/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "85e90d66d981ac6ab84f01360fb262c489af067f7d30d48e2bf2dc221cf38a73"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/english/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "4438a9c73159dbbc73890aea19b1240f159c2f94ce8eee73ce19df31ff2c22a6"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/es.lproj/FileTypeAccessory.nib": {
+    "sha256": "f9a6bdf2784a4f3dfb38f478dafc69e14179618a1165cbc9ef6c61f16623e795"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/fr.lproj/FileTypeAccessory.nib": {
+    "sha256": "38e63e16a2bbbde7721a8d0c82ebd3a9a97e0fcb23f5acaed0eee566253a040b"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/french/6DA08F47-7F05-42D4-AD3C-0BDC557FB08A": {
+    "sha256": "81158d874359eb65456920356000c962dc05f8d7e76f7f3e6b127c70dee19718"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/french/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "f5feb44cbc7c2b7d4ef6c24372a679309fc0720daf4e891fd13018effe81a522"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/french/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "937f023212f0aceec62161e773e6869eb52ccf732b8c8f1b29a209de1d33bd7f"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/german/6DA08F47-7F05-42D4-AD3C-0BDC557FB08A": {
+    "sha256": "56982c3570ee789f3d021d3c8c3fe9916b2b4ebdc24fb4bcd991d9967cb32246"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/german/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "7c9388a01892f5bc5e0bc65860de09b80215d5c451b8391b6f11d35e173a694c"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/german/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "74d320e30947bf4458bdcd6b7dd6e500807d328c9ed03b74c86eb808cb708772"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/id.lproj/FileTypeAccessory.nib": {
+    "sha256": "1712257985e8216ba5beae2ebd6cdbc1eebc41909e96d1a7aa9c714d1dce2b9b"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/indonesian/6DA08F47-7F05-42D4-AD3C-0BDC557FB08A": {
+    "sha256": "8ba5a0bacedb59b5ff8187f0b2a0017003163b1546733bd9992b86bdd88302d0"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/indonesian/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "772a333d04eeb1ab60404aafcb837683d1d22186f52cc26d87d8fa01ef0773c0"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/indonesian/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "5e2bb7e398e5a5fd8d1dc0604a9945a0c30293199d028f135fc63b03bf609e2d"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/ja.lproj/FileTypeAccessory.nib": {
+    "sha256": "449e083b9fcffd6b97e03984029f4b7f420627124c170ce65b8c7dbfdfd4f5e6"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/ja.lproj/InfoPlist.strings": {
+    "sha256": "39cf2ee07b7b333e7c179d0bf4d798a5b72af6a4e584f51e642703bbfa4fc828"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/ja.lproj/MainMenu.nib/keyedobjects-101300.nib": {
+    "sha256": "b37c2682d5f32b654b06e21889d011a4f61b026e9c86051f5388c17d86b0e449"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/ja.lproj/MainMenu.nib/keyedobjects.nib": {
+    "sha256": "f7ef0f9d3599d4718faffd8106dc227a1d0e493c45a67816cd36bb1effad2495"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/japanese/6DA08F47-7F05-42D4-AD3C-0BDC557FB08A": {
+    "sha256": "68d3bfe4fbc6b75d5421c07a20dca02fda534600c76be7a7e3577197ad03d463"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/japanese/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "f7be0627ac9e063c1ea0f42e5115ef185b20dd227f1980b69259df07826de58e"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/japanese/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "f82f4267be933e3b8132a2335cad2c6900d7790414a20a0247771bfa39557e82"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/ko.lproj/FileTypeAccessory.nib": {
+    "sha256": "322935a046a3bf4fb0e6ecd427b1a605adec393dba027da4701ae0a79ec8cb93"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/korean/6DA08F47-7F05-42D4-AD3C-0BDC557FB08A": {
+    "sha256": "dd7f886e02e383d66cda4b48522034121dca11a124d20e30f90aa6e614844078"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/korean/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "49ce930af854df8094a4f38134eb83e77595395ec665675c90cac7f5a6857e47"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/korean/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "094b2f6491e899572b478c4eb48762c6371abed8d142c6684c210da1079832f2"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/operationNotAllowedCursor.tiff": {
+    "sha256": "0b4de289864de96f064710e97fef42bc0658c193474a3219ad319f7727cc5070"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/operationNotAllowedCursor@2x.tiff": {
+    "sha256": "b64afc694541bf94fcb752b823f04c93ae625937b775c840e7e0c2471e28d81d"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/other/6DA08F47-7F05-42D4-AD3C-0BDC557FB08A": {
+    "sha256": "29fe6a1721bfc0a4c7f120c0918e5cc8820d6524046a8d622afda0f6d7fac140"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/other/87775483-5B8B-42D0-AF50-BA7731354B65": {
+    "sha256": "253be2040f3a156c3b7fbf017433a8f1246b81ab8375d251605fced74d9acad5"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/other/A0AA5020-377F-4A40-A37D-95C44B3D3EFD": {
+    "sha256": "5a8b44e9a67bd66ea241c506f76c0ee8135e9575325bc894d72cd674f241bcfc"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/other/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "85e90d66d981ac6ab84f01360fb262c489af067f7d30d48e2bf2dc221cf38a73"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/other/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "4438a9c73159dbbc73890aea19b1240f159c2f94ce8eee73ce19df31ff2c22a6"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/portuguese/6DA08F47-7F05-42D4-AD3C-0BDC557FB08A": {
+    "sha256": "a7cfe798418706be3a4f0e7dcd652dbafaa2caf0647d471c677728933f7f4552"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/portuguese/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "4ad601ad01de21aafa712de89e9071c24eb5ea2b37e2c1a49a536ff32aae282d"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/portuguese/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "9b2b617a1cdc058313e7a66638ac2d252901f43974f355f899e24aea7f81fee8"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/pt-BR.lproj/FileTypeAccessory.nib": {
+    "sha256": "bb14d680cb2e10a2dcb2c0af0c0bf03be25c7034b3658805e662ed0570686a11"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/spanish/6DA08F47-7F05-42D4-AD3C-0BDC557FB08A": {
+    "sha256": "b1b91d9e73ea36502b90df86544e0d92e46931841c69edfedd97e21a622b79aa"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/spanish/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "13f8386cf9010ab13a3dff8e6dae20553fa63dff7f573daae556ab2fbd114d80"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/spanish/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "b7c76447b863a6f4b9ca5954266c8c17af7680009eb39b4a873054e33dcbcf83"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/th.lproj/FileTypeAccessory.nib": {
+    "sha256": "fccaef17c3a910022e14b101ee1f2bdba3ac884d940ff8cd0d13a93578fee036"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/thai/6DA08F47-7F05-42D4-AD3C-0BDC557FB08A": {
+    "sha256": "76cae5fb16caaa9e1f526cc51ffeff2c58401cc727707caa68e2033bfe99cf5e"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/thai/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "70e86e901bb44c1c9da57c3b128ab7601753d835af5b13ff5b878d230c756c23"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/thai/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "121cc26dcbe5ab59d5eed0ced6c67145d373455eab44fe9f2538c4c2b9ac2175"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/windowResizeEastWestCursor.tiff": {
+    "sha256": "8ecb3947f86de4841ad003eebd8655c93f2f2787f4b3a8a259ebfd4832adde85"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/windowResizeEastWestCursor@2x.tiff": {
+    "sha256": "23ec85469cd1c898c657bab0eb71edd98a5bdeb78f19f6c4ab309b9554965839"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/windowResizeNorthEastSouthWestCursor.tiff": {
+    "sha256": "4adf97eccfcf7f728111bdbe2692029c79e9a5baf486e05bc0f622a24169a2a5"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/windowResizeNorthEastSouthWestCursor@2x.tiff": {
+    "sha256": "ea3fbcbb74205f9352e0073144a1fbb8ee742859daaf24b5dcc2fd07fed816d4"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/windowResizeNorthSouthCursor.tiff": {
+    "sha256": "7e8a7490cd73a74f98c2a7e50d454380ad9dd5a76f872e87f2bd1760007cbb9c"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/windowResizeNorthSouthCursor@2x.tiff": {
+    "sha256": "bc05c459ec6cd37a89867a6ae0e62eb19a36546ae41d5f9fa0842f854f2e8b37"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/windowResizeNorthWestSouthEastCursor.tiff": {
+    "sha256": "4446b8c41ef91c243afdaaabb27bdf813a982adf0f8afb9c2d1b47b8f204d616"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/windowResizeNorthWestSouthEastCursor@2x.tiff": {
+    "sha256": "0c623bfa0618a1ac1945297a275458ef85d1cfd253f5be73a17e5554bd31df54"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/zh-Hans.lproj/FileTypeAccessory.nib": {
+    "sha256": "465efd0694f347cb2c7b1147ab5ff3af937368745a7e702d4cc766e18b02ad19"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Resources/zh-Hant.lproj/FileTypeAccessory.nib": {
+    "sha256": "88c28740b0be40b18b21e07bd62c6daba5749ccd8f6172f78518f1eae7cf76ab"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/Script/macUninstallScript": {
+    "sha256": "1862f65d3bdb4761514a719e37210f1e7937f86947f659d6dcdf8fef8a758013"
+  },
+  "Contents/MacOS/Updater/CLIP STUDIO UPDATER.app/Contents/_CodeSignature/CodeResources": {
+    "sha256": "c90f2fb16d60c6023dff74e63f924133cee8f164d5595e6945997185ee287f1a"
+  },
+  "Contents/PkgInfo": {
+    "sha256": "47e67939365c858e467e8b1abbb8ab07857a0d36ac8ee23b60fa549b4c9b5473"
+  },
+  "Contents/PlugIns/LipPreview.appex/Contents/Info.plist": {
+    "sha256": "6cdf09c3342c74089743909d1399b286cbe79f26db7064781a465b786a2bbb35"
+  },
+  "Contents/PlugIns/LipPreview.appex/Contents/MacOS/LipPreview": {
+    "sha256": "fabea52cb9b873fbf548f75c62c890e8e7532ac0b02edace94ba79b0ab24f25b"
+  },
+  "Contents/PlugIns/LipPreview.appex/Contents/Resources/Base.lproj/PreviewViewController.nib": {
+    "sha256": "b4b65ba29f289095f0bee6d7cf6e3270dfcbc39b668801c1389d9b5252f6bd29"
+  },
+  "Contents/PlugIns/LipPreview.appex/Contents/_CodeSignature/CodeResources": {
+    "sha256": "ac8008f202d9d4473a9077cc94ef4c4a75a3a22949e36a0f30185fc30a107030"
+  },
+  "Contents/PlugIns/LipThumbnail.appex/Contents/Info.plist": {
+    "sha256": "9bcfdaad3528951bfe6a16feddaf1a1a3513ebebf2150251da000aa3dc5af55f"
+  },
+  "Contents/PlugIns/LipThumbnail.appex/Contents/MacOS/LipThumbnail": {
+    "sha256": "a965a0479bacd788f6c41589f8bf50f8a3903a538d5d29ac21b9821ec4148719"
+  },
+  "Contents/PlugIns/LipThumbnail.appex/Contents/_CodeSignature/CodeResources": {
+    "sha256": "6686de10a28a2fe11b36cbb86dcbacc827cfc4ea116b4dabf1845e5aee629e9b"
+  },
+  "Contents/Resources/3DFile_Character.icns": {
+    "sha256": "c3ab79297481c33c25a716ceefc232ad4ce4222d7d3fb0483fcf00f7982c06fa"
+  },
+  "Contents/Resources/3DFile_Object.icns": {
+    "sha256": "d241ee896a475b3fc5d7727ace2ba051fdb726b942fbac8da63e83a665219668"
+  },
+  "Contents/Resources/3DFile_Stage.icns": {
+    "sha256": "0793f314734c4ac33bc179ac8c6bfcb65b1ea3d0f94c19f2862ef569b18958c6"
+  },
+  "Contents/Resources/CLIP_STUDIO_PAINT_Icon.icns": {
+    "sha256": "a69f23ed8942dcf7d42c1aeec23c0d6f5541f9872eaf24aa1de79b29a14dbe0f"
+  },
+  "Contents/Resources/CSCDocument.icns": {
+    "sha256": "5dd6a111ffeb456d2d2632be541b930848951f31100aef745ed0692dff51f93e"
+  },
+  "Contents/Resources/CSPDocument.icns": {
+    "sha256": "acd740fcf1f9e1b145e2f8493855182e2318d1f265d4bb04dcd111e61b2bc3d2"
+  },
+  "Contents/Resources/ExportStore.icns": {
+    "sha256": "f2b841cc98bb9506ee57ff724b31c8b533956d1c8fc6cf0e35ec550ffe567cbf"
+  },
+  "Contents/Resources/PageManagement_icon.icns": {
+    "sha256": "2869ef2314b3b2834749c372d95499e4993ba528f70ec720395d0d624109a738"
+  },
+  "Contents/Resources/chinese_sc/0238E722-8627-47F2-B174-2F6EBE210C1C": {
+    "sha256": "74d5a235f28786c4873c766e86303695c76c845938f0e3264e5a5f2ea9f9a5cd"
+  },
+  "Contents/Resources/chinese_sc/05F925FA-9F2F-4C42-9228-9F504F918D21": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/chinese_sc/0A24C606-7FC7-4694-930C-9ED7407B9A18": {
+    "sha256": "0d21d4d1a5706a694447c6c46a553209b14935880b56861cdf5dd97aec789275"
+  },
+  "Contents/Resources/chinese_sc/2D481AE5-8794-43D4-9BBF-EA645AFD782F": {
+    "sha256": "00d3b62e2bb340bd22dfe9c8fe000bb44428932374aec1829787f12cce5a1fc4"
+  },
+  "Contents/Resources/chinese_sc/3CC82939-20AD-415C-9EB7-52B4C8E50033": {
+    "sha256": "4df52b790f6d2ca012e0814222318050d5e8b3b2673db8e682f6cbe766ba915b"
+  },
+  "Contents/Resources/chinese_sc/3D51C869-1035-4A35-BF52-CBA0874A3365": {
+    "sha256": "6e71b016f62d077ab7a6ec2a5bcc7b5b54773ff73073e707218be6d8821270bf"
+  },
+  "Contents/Resources/chinese_sc/3DC534C9-F66D-4F6C-A5B0-818F9FE7013E": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/chinese_sc/3FE1708D-6716-4E13-BFD8-AEC0BEF20719": {
+    "sha256": "04dd386e865cffc0451c607c010aa400c06b94f189d521902cffe50d7aabae9b"
+  },
+  "Contents/Resources/chinese_sc/46B67EA9-0F39-4DE3-A9C2-EAFF2FE37099": {
+    "sha256": "f14f9c0ff06eab1bfe11e63930d303f965ff7263b9944c2a4773fb29821c23a8"
+  },
+  "Contents/Resources/chinese_sc/48B1A2B7-E83F-4C64-AC7A-4E74DF76A169": {
+    "sha256": "121e5f6ad3bf5db3dfd259c1318fdcde831c4a3faa29113e11b6c6b8ed193201"
+  },
+  "Contents/Resources/chinese_sc/4CB47456-1E3C-4ECB-B114-D7FEB961ACC6": {
+    "sha256": "f9a6bdba782bef9b057a414e338c322221df73125ec5ec3d3ce2382e2d2777a2"
+  },
+  "Contents/Resources/chinese_sc/4ed3a72f-2ed9-0377-b6f9-d09515d19dcb": {
+    "sha256": "843e9cda9c2fe33b328beaf14780eea819ca438417dd2f541cd086f5e8493a6c"
+  },
+  "Contents/Resources/chinese_sc/549DCB7C-5B31-4E8D-85B6-1D71004B3A63": {
+    "sha256": "2bf57c6facbf852838420dcecec4c428f8128b0fb6c66fc30a2d39ce79373367"
+  },
+  "Contents/Resources/chinese_sc/5634F3A9-5D0B-4f87-8BC1-DAB1F89966C3": {
+    "sha256": "2ec7b0e183f71e82dc532dfac7009857c25f402cb0096dd396fbbb537a5d370a"
+  },
+  "Contents/Resources/chinese_sc/58F2FDAB-882A-468B-A03F-9D420E26F685": {
+    "sha256": "852edc68d714ccbc2c52eaa58f784ec873387c9450ce94ed3adcbabce1962784"
+  },
+  "Contents/Resources/chinese_sc/5B080EAF-68DA-4CA4-9ABF-77DDD13ACBFE": {
+    "sha256": "f2fe0e9b10254effd0d02ad4ee6c531608005c905d9e9ca2a99564a5e0e37d75"
+  },
+  "Contents/Resources/chinese_sc/61F04D2D-50BD-4486-B128-E81FFBBF9A31": {
+    "sha256": "2a7a48ef7223ba473ba015df56c126be486a67da8d683d772546eac6f66fc16d"
+  },
+  "Contents/Resources/chinese_sc/6FFACA71-426A-4685-9014-D84E4FEC117B": {
+    "sha256": "3fbe6fe05fdcf7b87a16f4525f4f06eb4ccf1fb5fa98136e32c90457aa462ee0"
+  },
+  "Contents/Resources/chinese_sc/742DEA58-ED6B-4402-BC11-20DFC6D08040": {
+    "sha256": "31ac59e75b279fe44dea17c00edbb1d0295370630ea6dbc893050215cd3c467b"
+  },
+  "Contents/Resources/chinese_sc/7D4C5370-EC7F-48FB-A5C8-9050D6585BFA": {
+    "sha256": "6d625de78d45dd9f2d92a94f66e2f8654b73ceb8b6104aa59d388e75be38180f"
+  },
+  "Contents/Resources/chinese_sc/7F9F9530-3EF0-4be4-8E6B-1C3BF59C3754": {
+    "sha256": "3fd68534b42a04c6d2669ae36dd1349136a9c28b253530e669d17af762326749"
+  },
+  "Contents/Resources/chinese_sc/8AF4B718-C73D-4EC2-A97E-AE6D5355985C": {
+    "sha256": "a5398a307f850b793609316238f456e3fda7fcd9ef543b099969c5f761744202"
+  },
+  "Contents/Resources/chinese_sc/97CDB75A-B29E-4AA3-A591-715B5C9B6701": {
+    "sha256": "8796281948c312931951976f33a0edcba4189356b80be2b0d2ca7418c78ae197"
+  },
+  "Contents/Resources/chinese_sc/9D7A23F7-C2E6-43FC-9675-DCD3D7CF0317": {
+    "sha256": "62b4ecb02e12add1f62c86b0ebd75aec2f7fa4a583c771dd0b73f0632416c3c3"
+  },
+  "Contents/Resources/chinese_sc/9D97267F-B378-42D6-9DD6-D096539F28A7": {
+    "sha256": "54ec0b95e441173f2545e20ccf67bd41b23393276fecf4fd6ee8827c4b0789e1"
+  },
+  "Contents/Resources/chinese_sc/A9BED959-98FF-4AAA-8B72-8AF99B4B1D88": {
+    "sha256": "af638d332ed549be7e4c9afded5d0be9f1ea031e2c069507a0ed0e27790e9217"
+  },
+  "Contents/Resources/chinese_sc/B4E918F2-1A08-4669-82AB-00CDC8C0DD7E": {
+    "sha256": "50617f6373cc481ec4bbc99d484c5983443820094017d817022b94938c381178"
+  },
+  "Contents/Resources/chinese_sc/B7DCE242-4C4F-44DE-8F05-BD4CCE9A4557": {
+    "sha256": "5160de9867dbe0962479825d9b1eeef6eba4ec0e66322dc49ce22050b8d2734c"
+  },
+  "Contents/Resources/chinese_sc/B8DA21EC-427A-48E4-8A50-E7EB8988580F": {
+    "sha256": "9a253cf678c6a42e57c8d1d4db5340d4ff5d6fabb0530e766f0c862b5a2c03a8"
+  },
+  "Contents/Resources/chinese_sc/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "742a7b33277d4de74a0279bcb8a2fb333ecef57d6f04b801e198be2ff419840d"
+  },
+  "Contents/Resources/chinese_sc/C50ECAA0-1D35-4F57-9756-12C7256B62CF": {
+    "sha256": "652ba142f15e6d5bc069d6a676a1a29481c471e3d702092f264fdc7f7814f689"
+  },
+  "Contents/Resources/chinese_sc/D6B9C91F-A4A6-49ed-91D0-622FD6F76045": {
+    "sha256": "a81c2f525140fc699e49e3137ba7308ce0cdfedb6d3516dcd03be3b718c1b2b0"
+  },
+  "Contents/Resources/chinese_sc/DD705E0D-FB6F-4DFE-9887-305FD87766AE": {
+    "sha256": "7d5b5e8e8ba33c4d324c69bc101268c81b3615b156eec1301d85a5eb9b9a4067"
+  },
+  "Contents/Resources/chinese_sc/DE958EF5-49B5-486A-9AC0-274F63076976": {
+    "sha256": "cbe678a15b47269d92597af397e5a1ecafef4b2d8d11f02a78a223f2978a182b"
+  },
+  "Contents/Resources/chinese_sc/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "ada57bdfb41b99f709e93257acae9b1cdf37d98598d5285f0a6d36bdac988fe9"
+  },
+  "Contents/Resources/chinese_sc/F2AD839B-B279-42C8-AC79-DEA5B560E953": {
+    "sha256": "c24beebedc02db638fae420bcf78003fe9750fca48ff06aaa51010a9a4387817"
+  },
+  "Contents/Resources/chinese_sc/F40FE4A2-CD27-4A51-AD22-02D62D636AB4": {
+    "sha256": "faf0fa18eb46424369df4e4885d0c62e42cae4897bbbbf849628e16d173dc0e3"
+  },
+  "Contents/Resources/chinese_sc/F549CE76-1849-437C-82E1-27A3AD67B5FD": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/chinese_sc/FCBD92AE-8CC0-4019-92AB-F384F0517E0C": {
+    "sha256": "8e4bf2e01bd4fd6c0b288436cbec74e102bbb36df07bd26e036346af6acbbbf2"
+  },
+  "Contents/Resources/chinese_tc/0238E722-8627-47F2-B174-2F6EBE210C1C": {
+    "sha256": "30284c0b188d6e95c437185cb4cf17a823048d913d2523a651330da290ba1553"
+  },
+  "Contents/Resources/chinese_tc/05F925FA-9F2F-4C42-9228-9F504F918D21": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/chinese_tc/0A24C606-7FC7-4694-930C-9ED7407B9A18": {
+    "sha256": "4727295bf2b4dee781001d8a3cdd50a25a050014271470c8fb8912d8f87dbe95"
+  },
+  "Contents/Resources/chinese_tc/2D481AE5-8794-43D4-9BBF-EA645AFD782F": {
+    "sha256": "10083a89677bee03943bb01513f2de8fabfe06a920bf6545add2ef9f61ca427d"
+  },
+  "Contents/Resources/chinese_tc/3CC82939-20AD-415C-9EB7-52B4C8E50033": {
+    "sha256": "3a87ac01b434f6fd9f96fd11167fa1a88b57441d75a36240aa57a9de3efa0799"
+  },
+  "Contents/Resources/chinese_tc/3D51C869-1035-4A35-BF52-CBA0874A3365": {
+    "sha256": "c5524b39491f3758fc343f209fa3c1b24f4cb90ad8371cfaa08a5f59ca8ad93d"
+  },
+  "Contents/Resources/chinese_tc/3DC534C9-F66D-4F6C-A5B0-818F9FE7013E": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/chinese_tc/3FE1708D-6716-4E13-BFD8-AEC0BEF20719": {
+    "sha256": "f86ee6b1c7e4301a28359650bf4b54e122a51bf86f6107618f1514de414eaea1"
+  },
+  "Contents/Resources/chinese_tc/46B67EA9-0F39-4DE3-A9C2-EAFF2FE37099": {
+    "sha256": "f9840b41ecf066007f19c4e1cf960f9f71edb8d2c2d185bb4b9e46e5244e540a"
+  },
+  "Contents/Resources/chinese_tc/48B1A2B7-E83F-4C64-AC7A-4E74DF76A169": {
+    "sha256": "d60fd3fdc041d3fe7379a4d39d26f30b709f3a8c9777ffa930bde262c1162619"
+  },
+  "Contents/Resources/chinese_tc/4CB47456-1E3C-4ECB-B114-D7FEB961ACC6": {
+    "sha256": "b95dbc67596a73216cdf1c5accb3dadcad2180c65d7128427146caa61cbeae2b"
+  },
+  "Contents/Resources/chinese_tc/4ed3a72f-2ed9-0377-b6f9-d09515d19dcb": {
+    "sha256": "d128045732f738167bdc1d5649ae908076710b33f77a0b68abafb2384051b2fd"
+  },
+  "Contents/Resources/chinese_tc/549DCB7C-5B31-4E8D-85B6-1D71004B3A63": {
+    "sha256": "fa43b457c2c46701b34436af980e01d0550891ece301852fcc3088d48809e43a"
+  },
+  "Contents/Resources/chinese_tc/5634F3A9-5D0B-4f87-8BC1-DAB1F89966C3": {
+    "sha256": "252764ef410bfcca62f69adb654e5575fc21e52ca6ba5c5a231309b3e40f1d35"
+  },
+  "Contents/Resources/chinese_tc/58F2FDAB-882A-468B-A03F-9D420E26F685": {
+    "sha256": "e3123511b033dd629a205a1764e1d41a2751e167a5b41c60e4f0f42e3421e638"
+  },
+  "Contents/Resources/chinese_tc/5B080EAF-68DA-4CA4-9ABF-77DDD13ACBFE": {
+    "sha256": "fc70489e85ab2add56ef43dbb9260d5fc82df91ef965acaf78cb5a26995a8379"
+  },
+  "Contents/Resources/chinese_tc/61F04D2D-50BD-4486-B128-E81FFBBF9A31": {
+    "sha256": "6a00c7f25859892db2b77f45b098db1da12e27e71cf127fc5e0b5f5e92aa646d"
+  },
+  "Contents/Resources/chinese_tc/6FFACA71-426A-4685-9014-D84E4FEC117B": {
+    "sha256": "453511c283a40161d69d32d212083d37b8cf49a40a203655a347b78244dc9da9"
+  },
+  "Contents/Resources/chinese_tc/742DEA58-ED6B-4402-BC11-20DFC6D08040": {
+    "sha256": "5422a38bf0c7ae9a332f6705f36778cbfee47fc6e77a3814a4fe5dc73c793016"
+  },
+  "Contents/Resources/chinese_tc/7D4C5370-EC7F-48FB-A5C8-9050D6585BFA": {
+    "sha256": "aab25e2ee0194b321a1706df6b9108e04aa96d9c71aa0e8f1bec765bd3eb113e"
+  },
+  "Contents/Resources/chinese_tc/7F9F9530-3EF0-4be4-8E6B-1C3BF59C3754": {
+    "sha256": "a8ded1ddfad7302a4941444611aa69c54eeb9ef21435225ccbb293718f301692"
+  },
+  "Contents/Resources/chinese_tc/8AF4B718-C73D-4EC2-A97E-AE6D5355985C": {
+    "sha256": "a2fb0af88d52af51d27ffbca303a1f7055ac3efab36f49de7fab26372d1cd211"
+  },
+  "Contents/Resources/chinese_tc/97CDB75A-B29E-4AA3-A591-715B5C9B6701": {
+    "sha256": "d6802db41e7437ca101eed4f3146025a71496f4b68455ba299c777a8bdb5ec81"
+  },
+  "Contents/Resources/chinese_tc/9D7A23F7-C2E6-43FC-9675-DCD3D7CF0317": {
+    "sha256": "3c26c0c45afb0a48486cb2ab9f1e141f3e59755469036944e5a8d4362667fede"
+  },
+  "Contents/Resources/chinese_tc/9D97267F-B378-42D6-9DD6-D096539F28A7": {
+    "sha256": "b6d54556a864d815023fe94acbb7875f852ac88a9ca1857f33816391f274d165"
+  },
+  "Contents/Resources/chinese_tc/A9BED959-98FF-4AAA-8B72-8AF99B4B1D88": {
+    "sha256": "af638d332ed549be7e4c9afded5d0be9f1ea031e2c069507a0ed0e27790e9217"
+  },
+  "Contents/Resources/chinese_tc/B4E918F2-1A08-4669-82AB-00CDC8C0DD7E": {
+    "sha256": "6b024b730ed1d7a2822f64f462845fa0434b02e8b3419e56bc750d9fa7ce71e1"
+  },
+  "Contents/Resources/chinese_tc/B7DCE242-4C4F-44DE-8F05-BD4CCE9A4557": {
+    "sha256": "e3b2853dcfe5d0e1243f870e54c73cdf9653c530c101c2466ff16b6d3617c7c0"
+  },
+  "Contents/Resources/chinese_tc/B8DA21EC-427A-48E4-8A50-E7EB8988580F": {
+    "sha256": "9a253cf678c6a42e57c8d1d4db5340d4ff5d6fabb0530e766f0c862b5a2c03a8"
+  },
+  "Contents/Resources/chinese_tc/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "151bf72a50c1bacc51a584a23a1a27c219b885c9360ee82bf837579aadef7f90"
+  },
+  "Contents/Resources/chinese_tc/C50ECAA0-1D35-4F57-9756-12C7256B62CF": {
+    "sha256": "324ed66c380bbd6c08a80246a32015aa58110bb2c96c45ef52981135f557603d"
+  },
+  "Contents/Resources/chinese_tc/D6B9C91F-A4A6-49ed-91D0-622FD6F76045": {
+    "sha256": "284a4b2def6991d73e6aa3ba65cfbc900742fb960fc8e601b740ea150b499669"
+  },
+  "Contents/Resources/chinese_tc/DD705E0D-FB6F-4DFE-9887-305FD87766AE": {
+    "sha256": "95d18d58fcf5bb698c4d85028dbf880b7acf7863639649e91150f55e986c1d4b"
+  },
+  "Contents/Resources/chinese_tc/DE958EF5-49B5-486A-9AC0-274F63076976": {
+    "sha256": "abdd5194e7819a0c52d0246d71e591ae8a67de5f2f4559ec033192548091ff38"
+  },
+  "Contents/Resources/chinese_tc/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "269163e5386ba55888797385fab29f2d967d23066837cfe6c40b0326579eed99"
+  },
+  "Contents/Resources/chinese_tc/F2AD839B-B279-42C8-AC79-DEA5B560E953": {
+    "sha256": "9aa2fcc285381d6b44e4777422f7a73fe9ba9ee4d7fceee07c76c8bf134c478d"
+  },
+  "Contents/Resources/chinese_tc/F40FE4A2-CD27-4A51-AD22-02D62D636AB4": {
+    "sha256": "faf0fa18eb46424369df4e4885d0c62e42cae4897bbbbf849628e16d173dc0e3"
+  },
+  "Contents/Resources/chinese_tc/F549CE76-1849-437C-82E1-27A3AD67B5FD": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/chinese_tc/FCBD92AE-8CC0-4019-92AB-F384F0517E0C": {
+    "sha256": "ae55a45bb95a0590b6097205a9a7f4ea395853cbc2327b569ce036b0bb8a137c"
+  },
+  "Contents/Resources/clipstudio_assets/asset01.fto": {
+    "sha256": "45c40fc14604f2f5a0b25cd578a133b80a42042aeab9fc4447c4adf20486f77d"
+  },
+  "Contents/Resources/clipstudio_assets/asset02.fto": {
+    "sha256": "d3862f1f038fc9d109d2c615c22965f862c2f28657aba5094297cbd8d75f6918"
+  },
+  "Contents/Resources/clipstudio_assets/asset03.fto": {
+    "sha256": "bdf77255e2dab2fb3c4de6cd064ae9c3c43ba643484eb79d781721ea4c989765"
+  },
+  "Contents/Resources/clipstudio_assets/asset04.fto": {
+    "sha256": "6da46b5cadc6e279f01df663556c77b1e052e0777414dc0cac8ed9822f06fff9"
+  },
+  "Contents/Resources/clipstudio_assets/asset05.fto": {
+    "sha256": "297aef078718f359f6ee9f974d9f524711098a0e2a43bdeab60f0faa7034359b"
+  },
+  "Contents/Resources/cursor_wait.tiff": {
+    "sha256": "6d3ec7fba7ec002e28a7b5bf993bae53214a6e39599667d4abd18c245a2815ad"
+  },
+  "Contents/Resources/cursor_wait@2x.tiff": {
+    "sha256": "debfe71cacc8e5ae97b48c16526a481b5969e634149c34904935b14e94e59a19"
+  },
+  "Contents/Resources/de.lproj/FileTypeAccessory.nib": {
+    "sha256": "7f54e57a4d47ba5567093cddae16043c21fd9db5678ecaf96d85c1f483590e5e"
+  },
+  "Contents/Resources/de.lproj/InfoPlist.strings": {
+    "sha256": "572d3e11550242ab2f5a3d6d7e88b89a7450477a3a1d969a4ca570d519bd0500"
+  },
+  "Contents/Resources/de.lproj/Localizable.strings": {
+    "sha256": "22eda673ac79ffcf09b3d9703e901668244d59c4a2a84ce15b6147b463593a2e"
+  },
+  "Contents/Resources/de.lproj/MainMenu.nib": {
+    "sha256": "87867d2ae32f21241d77fc1df112415df167371a87b902556620dd8dcbf2e3e1"
+  },
+  "Contents/Resources/de.lproj/PrintResolutionSetDialog.nib": {
+    "sha256": "94860d78f35b6812f3d451fe1fdcf913ec6392c55d0499c4d8d3623c60f42d64"
+  },
+  "Contents/Resources/en.lproj/FileTypeAccessory.nib": {
+    "sha256": "7f54e57a4d47ba5567093cddae16043c21fd9db5678ecaf96d85c1f483590e5e"
+  },
+  "Contents/Resources/en.lproj/InfoPlist.strings": {
+    "sha256": "b7458a9b2ddf4f126998f7fc5105b577772f24c2ce50a0f755ff4fa5d77d5bbf"
+  },
+  "Contents/Resources/en.lproj/Localizable.strings": {
+    "sha256": "22eda673ac79ffcf09b3d9703e901668244d59c4a2a84ce15b6147b463593a2e"
+  },
+  "Contents/Resources/en.lproj/MainMenu.nib": {
+    "sha256": "87867d2ae32f21241d77fc1df112415df167371a87b902556620dd8dcbf2e3e1"
+  },
+  "Contents/Resources/en.lproj/PrintResolutionSetDialog.nib": {
+    "sha256": "94860d78f35b6812f3d451fe1fdcf913ec6392c55d0499c4d8d3623c60f42d64"
+  },
+  "Contents/Resources/english/0238E722-8627-47F2-B174-2F6EBE210C1C": {
+    "sha256": "d901df27322f3c8d9056bf7b8caba361d42b8d02684c9eb164c11a96138c6f4a"
+  },
+  "Contents/Resources/english/05F925FA-9F2F-4C42-9228-9F504F918D21": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/english/0A24C606-7FC7-4694-930C-9ED7407B9A18": {
+    "sha256": "10276d56fa25b52a3f2cab69c3e16a1aaa0c3d799d358c4c2f1bb1a0d84d5d2b"
+  },
+  "Contents/Resources/english/2D481AE5-8794-43D4-9BBF-EA645AFD782F": {
+    "sha256": "c7fc43ab66546e78bb2ef9d31fb8267e7e6f83cf7895bcb4802205a3128e5057"
+  },
+  "Contents/Resources/english/3CC82939-20AD-415C-9EB7-52B4C8E50033": {
+    "sha256": "a2a622b018939752c1c9611efc3cb7462ca68705e1c650d7f7c869d1eeecb22d"
+  },
+  "Contents/Resources/english/3D51C869-1035-4A35-BF52-CBA0874A3365": {
+    "sha256": "4f99bee0690e091a494db3ebaafb9b5257044443461eebfdac0d8093e45206cd"
+  },
+  "Contents/Resources/english/3DC534C9-F66D-4F6C-A5B0-818F9FE7013E": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/english/3FE1708D-6716-4E13-BFD8-AEC0BEF20719": {
+    "sha256": "5ab65901be6dbe5bbd3591caaff8ace445e47dba06716afb3504150114e9186d"
+  },
+  "Contents/Resources/english/46B67EA9-0F39-4DE3-A9C2-EAFF2FE37099": {
+    "sha256": "2a6bffa2ab41f67ccacf998c89be4c2a812f50400b45f79e89167509fa20cc8a"
+  },
+  "Contents/Resources/english/48B1A2B7-E83F-4C64-AC7A-4E74DF76A169": {
+    "sha256": "fc5e37560315790875b24906cd9c9c2fd631a5f4df42a83324847a7b845fc2d0"
+  },
+  "Contents/Resources/english/4CB47456-1E3C-4ECB-B114-D7FEB961ACC6": {
+    "sha256": "d6e5c438edf8c20203540884c471cc76ce587eec3e70d0b01ccb269a9475c861"
+  },
+  "Contents/Resources/english/4ed3a72f-2ed9-0377-b6f9-d09515d19dcb": {
+    "sha256": "36430ebaa4f8b7d7b31d6cd075f3a1fa2325e4dd713d72b611dc9dbf7ebb7412"
+  },
+  "Contents/Resources/english/549DCB7C-5B31-4E8D-85B6-1D71004B3A63": {
+    "sha256": "982525b18c1e56288d468b9b384e7f1c5d1c1717e5bc7a74bab2fe929e37379b"
+  },
+  "Contents/Resources/english/5634F3A9-5D0B-4f87-8BC1-DAB1F89966C3": {
+    "sha256": "72cb77390e792bc55111f6c5b28d9bee4484cc14a70a1359efaac74e16d756d6"
+  },
+  "Contents/Resources/english/58F2FDAB-882A-468B-A03F-9D420E26F685": {
+    "sha256": "89d740313a6e5636d41de2d78ea149645ed82109e6e554408d94dc918e20412a"
+  },
+  "Contents/Resources/english/5B080EAF-68DA-4CA4-9ABF-77DDD13ACBFE": {
+    "sha256": "04843b44f256b974b26edd3c52c93d00c334030459e1c1cbffcdf055f2d082b1"
+  },
+  "Contents/Resources/english/61F04D2D-50BD-4486-B128-E81FFBBF9A31": {
+    "sha256": "1f72c9cc08169852ef6b25c3d7779028b46ff9db1b9ad1bd82448666069b9406"
+  },
+  "Contents/Resources/english/6FFACA71-426A-4685-9014-D84E4FEC117B": {
+    "sha256": "a8243ce14995c2003f180d3b065ad19b9dbb300e42eaa7ef6e4491cfcb2c7532"
+  },
+  "Contents/Resources/english/742DEA58-ED6B-4402-BC11-20DFC6D08040": {
+    "sha256": "c21f84c50e741b5c99ccce45e4a7a5a505cba33bdc8c96b927ffaa6d94749089"
+  },
+  "Contents/Resources/english/7D4C5370-EC7F-48FB-A5C8-9050D6585BFA": {
+    "sha256": "23664df0af3bc215c78704e8d2eeb4b118df67e268aadc15a425dbd2abe3521f"
+  },
+  "Contents/Resources/english/7F9F9530-3EF0-4be4-8E6B-1C3BF59C3754": {
+    "sha256": "22f126f6a7e6c0e02e0f3b707b4e9de2a1559535a6104ccebf6d12c4811bfda2"
+  },
+  "Contents/Resources/english/8AF4B718-C73D-4EC2-A97E-AE6D5355985C": {
+    "sha256": "0f233234042f2da5e4965cf7e18b3a1be4ac9b6a8420c882ab41f446ee94c96e"
+  },
+  "Contents/Resources/english/97CDB75A-B29E-4AA3-A591-715B5C9B6701": {
+    "sha256": "337eba8f49f40e136a0366c84625a4a075c1d81b5d59b30e043f0bfb3c98600c"
+  },
+  "Contents/Resources/english/9D7A23F7-C2E6-43FC-9675-DCD3D7CF0317": {
+    "sha256": "0b1d80352a05ce0367fc534908fa483e19a8f610b6d618311978dbde0ae36338"
+  },
+  "Contents/Resources/english/9D97267F-B378-42D6-9DD6-D096539F28A7": {
+    "sha256": "364caebc4627fe356ca94760bb29dd8853e77f451d55cccec31591067c329014"
+  },
+  "Contents/Resources/english/A9BED959-98FF-4AAA-8B72-8AF99B4B1D88": {
+    "sha256": "af638d332ed549be7e4c9afded5d0be9f1ea031e2c069507a0ed0e27790e9217"
+  },
+  "Contents/Resources/english/B4E918F2-1A08-4669-82AB-00CDC8C0DD7E": {
+    "sha256": "ef22fb0a93816787a2d87c82fa1543a75941329f2f4de68b3bb0251fd8fb9dd9"
+  },
+  "Contents/Resources/english/B7DCE242-4C4F-44DE-8F05-BD4CCE9A4557": {
+    "sha256": "3cccbf54005cf8f246a0e8e57f9e220fa9b02263284d8f54c201d0283014fa42"
+  },
+  "Contents/Resources/english/B8DA21EC-427A-48E4-8A50-E7EB8988580F": {
+    "sha256": "9a253cf678c6a42e57c8d1d4db5340d4ff5d6fabb0530e766f0c862b5a2c03a8"
+  },
+  "Contents/Resources/english/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "a5396356e5b32c0d65599081125d38aaf9dadb8026ca2f52cd1998251906f10a"
+  },
+  "Contents/Resources/english/C50ECAA0-1D35-4F57-9756-12C7256B62CF": {
+    "sha256": "5a90e30397fc33b1a8a4bebfcef427f8fe57c444719950fa158c88f7b20fee8f"
+  },
+  "Contents/Resources/english/D6B9C91F-A4A6-49ed-91D0-622FD6F76045": {
+    "sha256": "08e27a772eb74df391dcc8c65f56fbf97a2ba58c9df679f51bc6e3dddd58cc72"
+  },
+  "Contents/Resources/english/DD705E0D-FB6F-4DFE-9887-305FD87766AE": {
+    "sha256": "e0b67924acb408807fe48720e432cfd1c8569acf1d5f47d88ca3656070dadbd4"
+  },
+  "Contents/Resources/english/DE958EF5-49B5-486A-9AC0-274F63076976": {
+    "sha256": "ebc8ddd640990d62f93400ed17ce5756cb46ca4638d824aa7ba9051844641bda"
+  },
+  "Contents/Resources/english/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "6bbf25aa8b1808977be5a362df3e46549d0971d7acefd4df23e8eb83d388172c"
+  },
+  "Contents/Resources/english/F2AD839B-B279-42C8-AC79-DEA5B560E953": {
+    "sha256": "5802d7a84d5e5778823e884ba5d5151a2b181f3538a00dab8de519fe9929862a"
+  },
+  "Contents/Resources/english/F40FE4A2-CD27-4A51-AD22-02D62D636AB4": {
+    "sha256": "faf0fa18eb46424369df4e4885d0c62e42cae4897bbbbf849628e16d173dc0e3"
+  },
+  "Contents/Resources/english/F549CE76-1849-437C-82E1-27A3AD67B5FD": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/english/FCBD92AE-8CC0-4019-92AB-F384F0517E0C": {
+    "sha256": "ef548b04787b7898cd1a131377a7ccf9902d503d450fec6e62f5411babacfdfe"
+  },
+  "Contents/Resources/es.lproj/FileTypeAccessory.nib": {
+    "sha256": "01967b2883592af5411eb6c990e4c55da517dffd22bbc32942876d6978144dda"
+  },
+  "Contents/Resources/es.lproj/InfoPlist.strings": {
+    "sha256": "a2a4284330c1c8aaac50b316605d5c16141ff549b1ab90a77f74f68ac63062da"
+  },
+  "Contents/Resources/es.lproj/Localizable.strings": {
+    "sha256": "81d7613c9c4d5e8f4bb621d71240243bfdf24f2e3964bfb7521871444b9e81eb"
+  },
+  "Contents/Resources/es.lproj/MainMenu.nib": {
+    "sha256": "ac11f7d621e87500e2d0dda9653edbdea7a2f982d1e64228f02346dde5d15d27"
+  },
+  "Contents/Resources/es.lproj/PrintResolutionSetDialog.nib": {
+    "sha256": "4c83bea87e8d487a7260ed45550e05f181b32486cd5a0192cabfcc7500c0a0be"
+  },
+  "Contents/Resources/fr.lproj/FileTypeAccessory.nib": {
+    "sha256": "14ef0411b77085552ee85dfe4a8f80c6581b72101e37eac2af6c9abf602db3a7"
+  },
+  "Contents/Resources/fr.lproj/InfoPlist.strings": {
+    "sha256": "e0bb1ab9916101e7d9dc80f7d8dcddea8f028355264b1464d18e35631a49cc9a"
+  },
+  "Contents/Resources/fr.lproj/Localizable.strings": {
+    "sha256": "b8e0efc272919ba57ff6d43a00f23a16a10cc65744ee15b196e1c3672e56484e"
+  },
+  "Contents/Resources/fr.lproj/MainMenu.nib": {
+    "sha256": "f7c7f2d288b195d19d3d86f16def11aaf2ef31695ec92324df6b21ee3c1b6e57"
+  },
+  "Contents/Resources/fr.lproj/PrintResolutionSetDialog.nib": {
+    "sha256": "573de39a1b16d896e8fa3bb77db9a79b3f6ac41b5ca00a6063a2470a1cdc030a"
+  },
+  "Contents/Resources/french/0238E722-8627-47F2-B174-2F6EBE210C1C": {
+    "sha256": "ae22046cb2f8be694e2cc17b5046c4eb00c629870feb15ed4f880d3c37d22f1a"
+  },
+  "Contents/Resources/french/05F925FA-9F2F-4C42-9228-9F504F918D21": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/french/0A24C606-7FC7-4694-930C-9ED7407B9A18": {
+    "sha256": "c9181751d1504e47f6c898a5d545bebdb5677cef0828358f2854c48ee8cebd9b"
+  },
+  "Contents/Resources/french/2D481AE5-8794-43D4-9BBF-EA645AFD782F": {
+    "sha256": "3e287c8a1fbf4228e059de2546f96e1d297d4859577da89dc2cec2dd3cd1852b"
+  },
+  "Contents/Resources/french/3CC82939-20AD-415C-9EB7-52B4C8E50033": {
+    "sha256": "fba6611f117097b5ab6d9772e8717e8cfcbbc7390ca08bdda88e84c4df4070bb"
+  },
+  "Contents/Resources/french/3D51C869-1035-4A35-BF52-CBA0874A3365": {
+    "sha256": "adf8b76e462839705658688735b820a1ac7741a4361e01142e4cae69ca4f3b30"
+  },
+  "Contents/Resources/french/3DC534C9-F66D-4F6C-A5B0-818F9FE7013E": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/french/3FE1708D-6716-4E13-BFD8-AEC0BEF20719": {
+    "sha256": "aaf5b647d3fb6ec1e0cb97fe1a553a33323d3eda56b41c83500bcd759da9bc71"
+  },
+  "Contents/Resources/french/46B67EA9-0F39-4DE3-A9C2-EAFF2FE37099": {
+    "sha256": "ea543f795f4bd4fb17d926ee565233afdfcd84e19630c6ed5152865f2a08d9d9"
+  },
+  "Contents/Resources/french/48B1A2B7-E83F-4C64-AC7A-4E74DF76A169": {
+    "sha256": "4149bf87d9c81be67b6d4bd197cc0a97b0502a14201a2d06513d2301f4fcf5f3"
+  },
+  "Contents/Resources/french/4CB47456-1E3C-4ECB-B114-D7FEB961ACC6": {
+    "sha256": "083253f17b29879c8c2e7ac5cf145ae42c82d0d43566d4d57f43dd896f386273"
+  },
+  "Contents/Resources/french/4ed3a72f-2ed9-0377-b6f9-d09515d19dcb": {
+    "sha256": "f10b0a5389e14671fee902ec7d53446e7b6b3f38d61d31dcdbcf72957f78cdb2"
+  },
+  "Contents/Resources/french/549DCB7C-5B31-4E8D-85B6-1D71004B3A63": {
+    "sha256": "00604b94c328f0675c44b049d4f93000cab98d275bf5c10f642ba7f5a2104669"
+  },
+  "Contents/Resources/french/5634F3A9-5D0B-4f87-8BC1-DAB1F89966C3": {
+    "sha256": "01175719d8c4daf87148e693dd4c4ef2b00c4c07988ffb5219e2bf824cbad3c3"
+  },
+  "Contents/Resources/french/58F2FDAB-882A-468B-A03F-9D420E26F685": {
+    "sha256": "83d71b2a0d51c89a08b34dd5fa7846412dd655b2dc253362243faff72f27756c"
+  },
+  "Contents/Resources/french/5B080EAF-68DA-4CA4-9ABF-77DDD13ACBFE": {
+    "sha256": "851e7bd6222bff107a819cada07d44ce7d889d674519e67c9c4f4b84d36b7a59"
+  },
+  "Contents/Resources/french/61F04D2D-50BD-4486-B128-E81FFBBF9A31": {
+    "sha256": "41f880329384e5789b5f9038b88e0d8f6eba95832faf0d539d519a49a5c78e35"
+  },
+  "Contents/Resources/french/6FFACA71-426A-4685-9014-D84E4FEC117B": {
+    "sha256": "46b571d31b3c34f8ac6234799342789b14f93ca0abc43b6998dc484609405e88"
+  },
+  "Contents/Resources/french/742DEA58-ED6B-4402-BC11-20DFC6D08040": {
+    "sha256": "5055fa8425a5d94d9e0d0e6873d3678a5b70f2dfade1efa4edb992a6f28d3c67"
+  },
+  "Contents/Resources/french/7D4C5370-EC7F-48FB-A5C8-9050D6585BFA": {
+    "sha256": "d0caf09f91f57d35d96c4c1cfcf980fa151b1bde5da78af1c3f4707a726604a0"
+  },
+  "Contents/Resources/french/7F9F9530-3EF0-4be4-8E6B-1C3BF59C3754": {
+    "sha256": "3d586a2042e217fc2ed84d269b476567753c9ce762d52e153775f38bc0a7b4a6"
+  },
+  "Contents/Resources/french/8AF4B718-C73D-4EC2-A97E-AE6D5355985C": {
+    "sha256": "c46e17664d98bad956d08a3a7840edda304d4d1c15b70592ed0386f4e907b04d"
+  },
+  "Contents/Resources/french/97CDB75A-B29E-4AA3-A591-715B5C9B6701": {
+    "sha256": "01651d876eff7f820a5e9875a567f2d367bf9d918ead15c3a9ea8930dbdf75e1"
+  },
+  "Contents/Resources/french/9D7A23F7-C2E6-43FC-9675-DCD3D7CF0317": {
+    "sha256": "ab5dd1d41ddd7b7eaab44b29888c5b9423b124efe0604bc5eb1fe0412d001365"
+  },
+  "Contents/Resources/french/9D97267F-B378-42D6-9DD6-D096539F28A7": {
+    "sha256": "95c5667fc137b7cae6448202aa8328b997a4bc93d537ab8d1e922692eda4a209"
+  },
+  "Contents/Resources/french/A9BED959-98FF-4AAA-8B72-8AF99B4B1D88": {
+    "sha256": "af638d332ed549be7e4c9afded5d0be9f1ea031e2c069507a0ed0e27790e9217"
+  },
+  "Contents/Resources/french/B4E918F2-1A08-4669-82AB-00CDC8C0DD7E": {
+    "sha256": "67406d5f8d94dc924578a47b33eee886afe211b586601061dd8022da8dd9459f"
+  },
+  "Contents/Resources/french/B7DCE242-4C4F-44DE-8F05-BD4CCE9A4557": {
+    "sha256": "c599ec5d09a3df44081e07bce93c8bd533d19ddf0257ba5d7dc02248fa1fe881"
+  },
+  "Contents/Resources/french/B8DA21EC-427A-48E4-8A50-E7EB8988580F": {
+    "sha256": "9a253cf678c6a42e57c8d1d4db5340d4ff5d6fabb0530e766f0c862b5a2c03a8"
+  },
+  "Contents/Resources/french/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "96f7622dc333a4c8135017b9b84007d3f03e31a880d58c20a78b203b56a34362"
+  },
+  "Contents/Resources/french/C50ECAA0-1D35-4F57-9756-12C7256B62CF": {
+    "sha256": "2ea0466669510c023708cfd95d568863702b747b748172f62f419644f9b33bfc"
+  },
+  "Contents/Resources/french/D6B9C91F-A4A6-49ed-91D0-622FD6F76045": {
+    "sha256": "e2630bbb23ba9bf6fefac1a06fb7894f85a9dda1dad233eaa2f0eaf38b83ffe8"
+  },
+  "Contents/Resources/french/DD705E0D-FB6F-4DFE-9887-305FD87766AE": {
+    "sha256": "9287ddf4b2f0eb3afaac066ce59ebcf871c5e3bdb487328f52a681978b8f7cd7"
+  },
+  "Contents/Resources/french/DE958EF5-49B5-486A-9AC0-274F63076976": {
+    "sha256": "c39fa7f268829af0ee9b4d06396a739a6702a973eebec21b85730db303071149"
+  },
+  "Contents/Resources/french/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "e4237d41661206dff0b5b63619982ada42c6e2bab2ed6f3129f9e60e0046c525"
+  },
+  "Contents/Resources/french/F2AD839B-B279-42C8-AC79-DEA5B560E953": {
+    "sha256": "cef74616059d518e728275baa530904362214d1532e7ac8aece7df45717ac9e0"
+  },
+  "Contents/Resources/french/F40FE4A2-CD27-4A51-AD22-02D62D636AB4": {
+    "sha256": "faf0fa18eb46424369df4e4885d0c62e42cae4897bbbbf849628e16d173dc0e3"
+  },
+  "Contents/Resources/french/F549CE76-1849-437C-82E1-27A3AD67B5FD": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/french/FCBD92AE-8CC0-4019-92AB-F384F0517E0C": {
+    "sha256": "33e18ee910d5045d323d859cef602e6474c51c54fd5793a22954efb77bf4bfad"
+  },
+  "Contents/Resources/german/0238E722-8627-47F2-B174-2F6EBE210C1C": {
+    "sha256": "6cfc5dfa317f99ee8df5b2cee2b1c3f2a776615a3975e4432b3ec36f7c68145c"
+  },
+  "Contents/Resources/german/05F925FA-9F2F-4C42-9228-9F504F918D21": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/german/0A24C606-7FC7-4694-930C-9ED7407B9A18": {
+    "sha256": "98847636b6fdb8d3b06c2081dd8e11e39c6286301ded461f0ae8fbb2bc4bb1fd"
+  },
+  "Contents/Resources/german/2D481AE5-8794-43D4-9BBF-EA645AFD782F": {
+    "sha256": "33fcd0a6389bf8cabddac349d0a665d68a9f7c09b03bc8a208e70a1643411edb"
+  },
+  "Contents/Resources/german/3CC82939-20AD-415C-9EB7-52B4C8E50033": {
+    "sha256": "b0970006f58e2bec1a4785be8316692af4a91ae2dc72ce7ffad261e8ff5b751f"
+  },
+  "Contents/Resources/german/3D51C869-1035-4A35-BF52-CBA0874A3365": {
+    "sha256": "8eb0ca6df402886feda627db1a6d9eac75687554f232371ab3e440260f5f6d89"
+  },
+  "Contents/Resources/german/3DC534C9-F66D-4F6C-A5B0-818F9FE7013E": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/german/3FE1708D-6716-4E13-BFD8-AEC0BEF20719": {
+    "sha256": "5e6585cc6a86e8d48a40787bfcf937679132f6d079d9338e6d9b6531f152c385"
+  },
+  "Contents/Resources/german/46B67EA9-0F39-4DE3-A9C2-EAFF2FE37099": {
+    "sha256": "9343f3032f9d3ffb6a451985a19f44457a5066ecaf4669e559b23be7f20ccf7f"
+  },
+  "Contents/Resources/german/48B1A2B7-E83F-4C64-AC7A-4E74DF76A169": {
+    "sha256": "96700c0d8b61ac2ed45c0e080036bff18d690b4e81b65c5be42e98cd7c282348"
+  },
+  "Contents/Resources/german/4CB47456-1E3C-4ECB-B114-D7FEB961ACC6": {
+    "sha256": "6e732b523dbf4e2dfa3f55650127ef6454aa0cf50f94c87cfbde31029da411f6"
+  },
+  "Contents/Resources/german/4ed3a72f-2ed9-0377-b6f9-d09515d19dcb": {
+    "sha256": "4fabb73936554a1f83d9cfff3837ba7a04b601b190c0499a46c8d6115b29f742"
+  },
+  "Contents/Resources/german/549DCB7C-5B31-4E8D-85B6-1D71004B3A63": {
+    "sha256": "6d3e1fc340648ef32505317199ef18422955734fb82edc30b6a696bbd3a06179"
+  },
+  "Contents/Resources/german/5634F3A9-5D0B-4f87-8BC1-DAB1F89966C3": {
+    "sha256": "4631c2a8da323d78dc98df04fd360f5eab0fd0f211f3002db9f8b867d9e4a635"
+  },
+  "Contents/Resources/german/58F2FDAB-882A-468B-A03F-9D420E26F685": {
+    "sha256": "7e2e6d29ce7ae8fd3340cc615365ffce23051d8277350b252828e7f59dbd7e7f"
+  },
+  "Contents/Resources/german/5B080EAF-68DA-4CA4-9ABF-77DDD13ACBFE": {
+    "sha256": "50eee853eedb24061ecf374ab9164f612483fb937fc1f2c2d47e2cf742879ba5"
+  },
+  "Contents/Resources/german/61F04D2D-50BD-4486-B128-E81FFBBF9A31": {
+    "sha256": "34f39d9b3c8d006f3985c85a12663c319188ad3b41dd8e83becb5097e03c7c62"
+  },
+  "Contents/Resources/german/6FFACA71-426A-4685-9014-D84E4FEC117B": {
+    "sha256": "082085546c304dbceb90a8e17be97356ee118403a32d092c0768269470d6a469"
+  },
+  "Contents/Resources/german/742DEA58-ED6B-4402-BC11-20DFC6D08040": {
+    "sha256": "acafc95dec350865bf4342af364bd855e176131ed0906bb4a2a70ef2f365926a"
+  },
+  "Contents/Resources/german/7D4C5370-EC7F-48FB-A5C8-9050D6585BFA": {
+    "sha256": "ecf12dc6612934b635162022f41a230d261c9e26376d0f9ef80923a575892959"
+  },
+  "Contents/Resources/german/7F9F9530-3EF0-4be4-8E6B-1C3BF59C3754": {
+    "sha256": "2f6227183e3d3e6dbecec3a93c211237cf420193510c0fa7a3d53fcf33e5d065"
+  },
+  "Contents/Resources/german/8AF4B718-C73D-4EC2-A97E-AE6D5355985C": {
+    "sha256": "99575c0ae22b329b491b32cfb3b1c184c23f0016f3c12ca70ac238eaaf21686f"
+  },
+  "Contents/Resources/german/97CDB75A-B29E-4AA3-A591-715B5C9B6701": {
+    "sha256": "3b7bca25f9230fb61cda2087fe04a3e10c5059d646995e434d37420956fedb81"
+  },
+  "Contents/Resources/german/9D7A23F7-C2E6-43FC-9675-DCD3D7CF0317": {
+    "sha256": "41a68b70bd216ebdbf45a4d9f50b2cc07ce11b1e5c8d3187c4610db0fd3eaf1a"
+  },
+  "Contents/Resources/german/9D97267F-B378-42D6-9DD6-D096539F28A7": {
+    "sha256": "87d098563c3ce9609b3bf42cf15e2f5eeb70e07734916055bd232f2cd39b1471"
+  },
+  "Contents/Resources/german/A9BED959-98FF-4AAA-8B72-8AF99B4B1D88": {
+    "sha256": "af638d332ed549be7e4c9afded5d0be9f1ea031e2c069507a0ed0e27790e9217"
+  },
+  "Contents/Resources/german/B4E918F2-1A08-4669-82AB-00CDC8C0DD7E": {
+    "sha256": "fb968fd2ec23d8f895080fa1a6abcd0b394afeee80b4b7caec7062d25dab6ea8"
+  },
+  "Contents/Resources/german/B7DCE242-4C4F-44DE-8F05-BD4CCE9A4557": {
+    "sha256": "d90b4e27cf4dd3c5d38912ba28fc4f1ce21025f0089d576b5df8426b33f0f460"
+  },
+  "Contents/Resources/german/B8DA21EC-427A-48E4-8A50-E7EB8988580F": {
+    "sha256": "9a253cf678c6a42e57c8d1d4db5340d4ff5d6fabb0530e766f0c862b5a2c03a8"
+  },
+  "Contents/Resources/german/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "f05c59ffcd0c126ce45bc427c4cf30a77d496f14052077ffa22f8515a4acf700"
+  },
+  "Contents/Resources/german/C50ECAA0-1D35-4F57-9756-12C7256B62CF": {
+    "sha256": "b11aa229e67f98a32f2cf80ab05c402be9e591d8fdaf0e79d2eb807b6a370fa7"
+  },
+  "Contents/Resources/german/D6B9C91F-A4A6-49ed-91D0-622FD6F76045": {
+    "sha256": "ea75ef7dc14e252659f7a00d0f6b24c067d240152d46b01f2defbce0a791c03a"
+  },
+  "Contents/Resources/german/DD705E0D-FB6F-4DFE-9887-305FD87766AE": {
+    "sha256": "9073cc66d04b533184e6555a7ff3b80e495892202a2d016fb2bcc2e700dbbbd2"
+  },
+  "Contents/Resources/german/DE958EF5-49B5-486A-9AC0-274F63076976": {
+    "sha256": "44e4ffb634d3891d650894af4b9fad0beab2761243449232bd089df2ebd19744"
+  },
+  "Contents/Resources/german/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "a2c3acb06d0c4fe5069d21d97526cb56641a0c6a29c58dccef068949928e8303"
+  },
+  "Contents/Resources/german/F2AD839B-B279-42C8-AC79-DEA5B560E953": {
+    "sha256": "de083e3a1579dcc3d3614449e59f213c40e826ca7f0a401c393f0a782eddfbe4"
+  },
+  "Contents/Resources/german/F40FE4A2-CD27-4A51-AD22-02D62D636AB4": {
+    "sha256": "faf0fa18eb46424369df4e4885d0c62e42cae4897bbbbf849628e16d173dc0e3"
+  },
+  "Contents/Resources/german/F549CE76-1849-437C-82E1-27A3AD67B5FD": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/german/FCBD92AE-8CC0-4019-92AB-F384F0517E0C": {
+    "sha256": "3c1780d923083a26e621df2582c15d00eb7a665cb00f9f334ffc223d7c0ab070"
+  },
+  "Contents/Resources/ibisPaint.icns": {
+    "sha256": "a82d5e6c116991bfb9203cb2425af1924e4cf14598f0e453d64e324b0e78150d"
+  },
+  "Contents/Resources/id.lproj/FileTypeAccessory.nib": {
+    "sha256": "d38df5a481d28d4f3464f041ff599c1a8fd15f18b7e78f1af17ea7eb535e052a"
+  },
+  "Contents/Resources/id.lproj/InfoPlist.strings": {
+    "sha256": "7becc3a7d004aa142ebd32c25888c049833ba3c863dcd563009b2d7ab79a6791"
+  },
+  "Contents/Resources/id.lproj/Localizable.strings": {
+    "sha256": "3ce2fe944c9f50e18b5977a10a3544d1216ddc9a57e10a617ea9134e5122ccd8"
+  },
+  "Contents/Resources/id.lproj/MainMenu.nib": {
+    "sha256": "1f093fc5b399abd4fa056435a8f1fb5a844058a72182cfd64541da8fc628c804"
+  },
+  "Contents/Resources/id.lproj/PrintResolutionSetDialog.nib": {
+    "sha256": "7ab4ff9b3b87357d25d17b73d61b8d8d32d790d25cdf0173cad8c5d39b760b45"
+  },
+  "Contents/Resources/indonesian/0238E722-8627-47F2-B174-2F6EBE210C1C": {
+    "sha256": "3b2baacb8c29cf9fd984378e1bc6a543d5729110ab8297500e4a5ace6f9e619e"
+  },
+  "Contents/Resources/indonesian/05F925FA-9F2F-4C42-9228-9F504F918D21": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/indonesian/0A24C606-7FC7-4694-930C-9ED7407B9A18": {
+    "sha256": "23127ee381666524213d554dd85d0c9f76840769c01767cbf1bd237d3deb7e60"
+  },
+  "Contents/Resources/indonesian/2D481AE5-8794-43D4-9BBF-EA645AFD782F": {
+    "sha256": "db4ca013b7c6de9561cd61d82d7a63af8df281d522f9930694f08fcbd354b4d6"
+  },
+  "Contents/Resources/indonesian/3CC82939-20AD-415C-9EB7-52B4C8E50033": {
+    "sha256": "f3fc2ac9fd58b67f66bcc697f166cf53291f9e3b83992768182a8f8ef8cda314"
+  },
+  "Contents/Resources/indonesian/3D51C869-1035-4A35-BF52-CBA0874A3365": {
+    "sha256": "4ca8b10712e45bccf3775484071bd4cf78bf1d05d928db9979004acb07af4ebc"
+  },
+  "Contents/Resources/indonesian/3DC534C9-F66D-4F6C-A5B0-818F9FE7013E": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/indonesian/3FE1708D-6716-4E13-BFD8-AEC0BEF20719": {
+    "sha256": "0d0ec60dc8b7a69ea2d3409f4981363f889ffcb73833069e797483bec18f50df"
+  },
+  "Contents/Resources/indonesian/46B67EA9-0F39-4DE3-A9C2-EAFF2FE37099": {
+    "sha256": "874201bc2b8a4f4d1f5e874cd4f4800288b00d73a2bfc6a82fcc6de7d628a799"
+  },
+  "Contents/Resources/indonesian/48B1A2B7-E83F-4C64-AC7A-4E74DF76A169": {
+    "sha256": "458fc066ae5eaf78ce69c57af72211b5e2fc8e8dcdcf3e70111d99bd5623486b"
+  },
+  "Contents/Resources/indonesian/4CB47456-1E3C-4ECB-B114-D7FEB961ACC6": {
+    "sha256": "3832045e00d509220e97af740e1b02cb47e5425e7c9cd513736b56e42bd2220a"
+  },
+  "Contents/Resources/indonesian/4ed3a72f-2ed9-0377-b6f9-d09515d19dcb": {
+    "sha256": "18228d1e73036cef2cf22c5a83d55f2b0165cc948ef33dbcc1fea151230d78bc"
+  },
+  "Contents/Resources/indonesian/549DCB7C-5B31-4E8D-85B6-1D71004B3A63": {
+    "sha256": "e048ed426c5c71f20fde378b377384ad23f347387720bdde840c6b70917781f6"
+  },
+  "Contents/Resources/indonesian/5634F3A9-5D0B-4f87-8BC1-DAB1F89966C3": {
+    "sha256": "ecd8d374615bec50f0d33c26e1e4c58cbe5ffadf7494727504f7efd08568f83d"
+  },
+  "Contents/Resources/indonesian/58F2FDAB-882A-468B-A03F-9D420E26F685": {
+    "sha256": "811ecc71bc3a64f9e8173f492bf8dd3b6fac254ed603a7f700a6f41f909e47dd"
+  },
+  "Contents/Resources/indonesian/5B080EAF-68DA-4CA4-9ABF-77DDD13ACBFE": {
+    "sha256": "411ef0398992de44f67abb3b8a85e98d7791ba2611a4253ab9a730b695181616"
+  },
+  "Contents/Resources/indonesian/61F04D2D-50BD-4486-B128-E81FFBBF9A31": {
+    "sha256": "6f13680721ddf4a6e95116a73ee41acda7a0c0d5467beea3ca2665f77a772e9a"
+  },
+  "Contents/Resources/indonesian/6FFACA71-426A-4685-9014-D84E4FEC117B": {
+    "sha256": "f9a580a6e576ae234710bd931981463c215ef3c68c270a01863f7fcbd0c2a677"
+  },
+  "Contents/Resources/indonesian/742DEA58-ED6B-4402-BC11-20DFC6D08040": {
+    "sha256": "a34364f0cd529b139d66ac4081a20d27d542012de928421811e6acae02f23ac8"
+  },
+  "Contents/Resources/indonesian/7D4C5370-EC7F-48FB-A5C8-9050D6585BFA": {
+    "sha256": "281ad96ed9b0f0794b204a2290199f686e509a8528b9ecc3eb40d592a343d5c9"
+  },
+  "Contents/Resources/indonesian/7F9F9530-3EF0-4be4-8E6B-1C3BF59C3754": {
+    "sha256": "ad904769094a792e8494077a2905d763a99d6a8ab4ffa76cfd6f9661bead0708"
+  },
+  "Contents/Resources/indonesian/8AF4B718-C73D-4EC2-A97E-AE6D5355985C": {
+    "sha256": "708038123ec81980799d5312a4c70542b1bd030818e4d299882c24df4f751ada"
+  },
+  "Contents/Resources/indonesian/97CDB75A-B29E-4AA3-A591-715B5C9B6701": {
+    "sha256": "bb09393f068b5bf628222f5d54e433ec72008c9f571e6e4496f49d501cacb344"
+  },
+  "Contents/Resources/indonesian/9D7A23F7-C2E6-43FC-9675-DCD3D7CF0317": {
+    "sha256": "cd84b267882b781cd6ab50ce77e526662b1942abd4e9adf112da1fa78cc9e46b"
+  },
+  "Contents/Resources/indonesian/9D97267F-B378-42D6-9DD6-D096539F28A7": {
+    "sha256": "ccf957520045e95214783eeec0a354852eb2f7a75d20344230cc0aff4720c977"
+  },
+  "Contents/Resources/indonesian/A9BED959-98FF-4AAA-8B72-8AF99B4B1D88": {
+    "sha256": "af638d332ed549be7e4c9afded5d0be9f1ea031e2c069507a0ed0e27790e9217"
+  },
+  "Contents/Resources/indonesian/B4E918F2-1A08-4669-82AB-00CDC8C0DD7E": {
+    "sha256": "1aeaad6956d474226f7cbe78519047f04ffe7efbc1c74ef3358a88beec7b07ee"
+  },
+  "Contents/Resources/indonesian/B7DCE242-4C4F-44DE-8F05-BD4CCE9A4557": {
+    "sha256": "f301f7ae911c1d26454036d2d8ebcb4b11084d9b5fbac466e2e247f1ee5018ba"
+  },
+  "Contents/Resources/indonesian/B8DA21EC-427A-48E4-8A50-E7EB8988580F": {
+    "sha256": "9a253cf678c6a42e57c8d1d4db5340d4ff5d6fabb0530e766f0c862b5a2c03a8"
+  },
+  "Contents/Resources/indonesian/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "e051e878747a138611d6e73afc20d5372903095a520bca76c01fb3d433b6b1fb"
+  },
+  "Contents/Resources/indonesian/C50ECAA0-1D35-4F57-9756-12C7256B62CF": {
+    "sha256": "0200ca87424499b2608502266e150c5efa880f5f00e71a2b605ae0ed4f307d7a"
+  },
+  "Contents/Resources/indonesian/D6B9C91F-A4A6-49ed-91D0-622FD6F76045": {
+    "sha256": "46d261bf40c2e8f3c32fc77992a2fd2f5f9da46b6ecd73e3367c44430e95299d"
+  },
+  "Contents/Resources/indonesian/DD705E0D-FB6F-4DFE-9887-305FD87766AE": {
+    "sha256": "8252af52b6fb22813c997e1a3eb5d10cef002c1eff3f78b76ede57f133d6be4e"
+  },
+  "Contents/Resources/indonesian/DE958EF5-49B5-486A-9AC0-274F63076976": {
+    "sha256": "12316c4c1b0a89780d8ae16ce2a6048342d136d0c89dafb2549ce139da036a7a"
+  },
+  "Contents/Resources/indonesian/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "fd4ed683a10edd8bc76ee08994eeb5e5b079301f4b5f3fdece24bbe518fd321e"
+  },
+  "Contents/Resources/indonesian/F2AD839B-B279-42C8-AC79-DEA5B560E953": {
+    "sha256": "bd434758fbf6b5ac507be0d4e069dfe8d588f876de6554493686bb730e74c8ff"
+  },
+  "Contents/Resources/indonesian/F40FE4A2-CD27-4A51-AD22-02D62D636AB4": {
+    "sha256": "faf0fa18eb46424369df4e4885d0c62e42cae4897bbbbf849628e16d173dc0e3"
+  },
+  "Contents/Resources/indonesian/F549CE76-1849-437C-82E1-27A3AD67B5FD": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/indonesian/FCBD92AE-8CC0-4019-92AB-F384F0517E0C": {
+    "sha256": "34a8d6abcf12478e06eb2974c7dc51516d0645fb849b9531706a4a5092598fe1"
+  },
+  "Contents/Resources/ja.lproj/FileTypeAccessory.nib": {
+    "sha256": "e5ec95acb676a4abae4b91863f97c858f2d26dcd0f8a3be6a6529f0128e08ced"
+  },
+  "Contents/Resources/ja.lproj/InfoPlist.strings": {
+    "sha256": "885ed179abc9b0ceab2404f83dfa3f0bd05d9d138095d8a940702b73f41e06c5"
+  },
+  "Contents/Resources/ja.lproj/Localizable.strings": {
+    "sha256": "1e82561902b1fc66635f193d6224d3f28296b2be495a5f8b1ba62bc95f84c95c"
+  },
+  "Contents/Resources/ja.lproj/MainMenu.nib": {
+    "sha256": "e0c34c8205237149e19c117b4259eac4b47947f2abe0ec4de8fc2b4676dbbb72"
+  },
+  "Contents/Resources/ja.lproj/PrintResolutionSetDialog.nib": {
+    "sha256": "b1f29e1bfa13405149ea621aab95289450738f8a51a2c1eb64e7d38b08090104"
+  },
+  "Contents/Resources/japanese/0238E722-8627-47F2-B174-2F6EBE210C1C": {
+    "sha256": "6a8f7d0988b07ffa69b34116a13582b43e07888e907748df61e4d062c9c051f7"
+  },
+  "Contents/Resources/japanese/05F925FA-9F2F-4C42-9228-9F504F918D21": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/japanese/0A24C606-7FC7-4694-930C-9ED7407B9A18": {
+    "sha256": "6431bad3f94ac4ac6ecd0c9f4712202d62caaf0735b46cbda9d53a674e6f172d"
+  },
+  "Contents/Resources/japanese/2D481AE5-8794-43D4-9BBF-EA645AFD782F": {
+    "sha256": "76407c632eec56e5b9d820f60982b0754644e58d35553ffe49cc75e889721f9e"
+  },
+  "Contents/Resources/japanese/3CC82939-20AD-415C-9EB7-52B4C8E50033": {
+    "sha256": "d46d67a64c004cd33afac64b21ea778a66285497c7bc21311ea1d359fb420b59"
+  },
+  "Contents/Resources/japanese/3D51C869-1035-4A35-BF52-CBA0874A3365": {
+    "sha256": "066c3dd8eb3725967a1f325828350a28d79f1f222af5c169a8234b6260dd9c31"
+  },
+  "Contents/Resources/japanese/3DC534C9-F66D-4F6C-A5B0-818F9FE7013E": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/japanese/3FE1708D-6716-4E13-BFD8-AEC0BEF20719": {
+    "sha256": "ec1ed892dc7a4013f6a884c42db23cd1d22894d4771048a31153f0a125450c8b"
+  },
+  "Contents/Resources/japanese/46B67EA9-0F39-4DE3-A9C2-EAFF2FE37099": {
+    "sha256": "d1a73c51ff2a079a29f7eee34fbe16a22d9c2abf2e446df66b3043ebc1c1d457"
+  },
+  "Contents/Resources/japanese/48B1A2B7-E83F-4C64-AC7A-4E74DF76A169": {
+    "sha256": "0cc8d0839b809d209d256aad6fe5451df8ab9b1428813e2ed10f7c8ade639b96"
+  },
+  "Contents/Resources/japanese/4CB47456-1E3C-4ECB-B114-D7FEB961ACC6": {
+    "sha256": "aca2bc1ef1a632eb468e096991c21f1164ee18b6e323beb562393a6ac9491471"
+  },
+  "Contents/Resources/japanese/4ed3a72f-2ed9-0377-b6f9-d09515d19dcb": {
+    "sha256": "a41ff2ba856295b4f44bb3ee562a2a00cd6f5cbb34df7477e1a67c41629a09ae"
+  },
+  "Contents/Resources/japanese/549DCB7C-5B31-4E8D-85B6-1D71004B3A63": {
+    "sha256": "c7f86ad1ae544724730123841aabf3a08c330b7851dd752786a81634c6e3988b"
+  },
+  "Contents/Resources/japanese/5634F3A9-5D0B-4f87-8BC1-DAB1F89966C3": {
+    "sha256": "ffb93d05f3ea4fe5a63799454cd481a63e98a6083f9096c106ecc16191ffe782"
+  },
+  "Contents/Resources/japanese/58F2FDAB-882A-468B-A03F-9D420E26F685": {
+    "sha256": "14d6c51d190acc1ce276f830eaa2f396a35f382f57a5d86a079cf0eff069eb3d"
+  },
+  "Contents/Resources/japanese/5B080EAF-68DA-4CA4-9ABF-77DDD13ACBFE": {
+    "sha256": "1682e618ae68a8e3edd2575b88823654137e1254ce987ff440fac83bfb1e54ee"
+  },
+  "Contents/Resources/japanese/61F04D2D-50BD-4486-B128-E81FFBBF9A31": {
+    "sha256": "1b81370ea2139e7f96c93d737de45358f689cc8ab4aff11a9cd4e5d61418622f"
+  },
+  "Contents/Resources/japanese/6FFACA71-426A-4685-9014-D84E4FEC117B": {
+    "sha256": "2855ba01c094c4991f95a76a02804c7cedcaa6386e9200bc1eaec73b0d7744d8"
+  },
+  "Contents/Resources/japanese/742DEA58-ED6B-4402-BC11-20DFC6D08040": {
+    "sha256": "39e43489565f5a54de5a3c1b30144fd9a60d84fd86dfb76c6a38503baab46998"
+  },
+  "Contents/Resources/japanese/7D4C5370-EC7F-48FB-A5C8-9050D6585BFA": {
+    "sha256": "d56ad296e5ba568c3e431aced6c28536db05adbddf1ea675eebb0a94e24b7455"
+  },
+  "Contents/Resources/japanese/7F9F9530-3EF0-4be4-8E6B-1C3BF59C3754": {
+    "sha256": "133207aecd5d3d63dda973bf1f8b86880524939f82a0f27cf5d7ca5de5378b77"
+  },
+  "Contents/Resources/japanese/8AF4B718-C73D-4EC2-A97E-AE6D5355985C": {
+    "sha256": "4b0f0d4e81ab48a9c78c63261645485929274fa0276f5afed56e493b933e2c8d"
+  },
+  "Contents/Resources/japanese/97CDB75A-B29E-4AA3-A591-715B5C9B6701": {
+    "sha256": "295c4e4519b16589d832faecc2e7ee56b80c5aaca85c978a4fe391730fac3772"
+  },
+  "Contents/Resources/japanese/9D7A23F7-C2E6-43FC-9675-DCD3D7CF0317": {
+    "sha256": "e88b70a091c80a8d013b458b56c885a65906a221d8ae6f56d82cc006613ffc9a"
+  },
+  "Contents/Resources/japanese/9D97267F-B378-42D6-9DD6-D096539F28A7": {
+    "sha256": "0bfb516e992dde5d68b7026cf2c9a6065d26237f88a7b153a593a07c0556ac84"
+  },
+  "Contents/Resources/japanese/A9BED959-98FF-4AAA-8B72-8AF99B4B1D88": {
+    "sha256": "af638d332ed549be7e4c9afded5d0be9f1ea031e2c069507a0ed0e27790e9217"
+  },
+  "Contents/Resources/japanese/B4E918F2-1A08-4669-82AB-00CDC8C0DD7E": {
+    "sha256": "1bcaaf44f58b4f44468de88422d30b9f53696ef83d1379b8ef8bd4ab2d36afef"
+  },
+  "Contents/Resources/japanese/B7DCE242-4C4F-44DE-8F05-BD4CCE9A4557": {
+    "sha256": "61f7a3582f33294ce5d2608670b0fae086c0345984b14e8d3d45aa8e7cf19879"
+  },
+  "Contents/Resources/japanese/B8DA21EC-427A-48E4-8A50-E7EB8988580F": {
+    "sha256": "9a253cf678c6a42e57c8d1d4db5340d4ff5d6fabb0530e766f0c862b5a2c03a8"
+  },
+  "Contents/Resources/japanese/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "4b35286bea993fcf9d27a1078aa1067cc2d627e8356015538cec0d5bdad2fb80"
+  },
+  "Contents/Resources/japanese/C50ECAA0-1D35-4F57-9756-12C7256B62CF": {
+    "sha256": "effe49e7009037ddf28e5f3fd404cfba46726164bf417ccae307375a1f94a0f5"
+  },
+  "Contents/Resources/japanese/D6B9C91F-A4A6-49ed-91D0-622FD6F76045": {
+    "sha256": "65111b291a8d2530749ab26187bb29fb6c1584759a65ef90f0961e056dae5e11"
+  },
+  "Contents/Resources/japanese/DD705E0D-FB6F-4DFE-9887-305FD87766AE": {
+    "sha256": "4eedbde68b1d47bc29a7131b2ac3e145272b71206173d86bfea2fa91388deb6f"
+  },
+  "Contents/Resources/japanese/DE958EF5-49B5-486A-9AC0-274F63076976": {
+    "sha256": "c077eec32278ba0e6e75628d1daa6b736bf8118d119e927772f25646cd626d31"
+  },
+  "Contents/Resources/japanese/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "a04c2da18fa6dc344731a75c903ca27160a21ba8fbba152bebfb0ea68f557de1"
+  },
+  "Contents/Resources/japanese/F2AD839B-B279-42C8-AC79-DEA5B560E953": {
+    "sha256": "088748bcc77414d418a527b6a408f8ffd656657c5486c97341067549bd02cbb7"
+  },
+  "Contents/Resources/japanese/F40FE4A2-CD27-4A51-AD22-02D62D636AB4": {
+    "sha256": "faf0fa18eb46424369df4e4885d0c62e42cae4897bbbbf849628e16d173dc0e3"
+  },
+  "Contents/Resources/japanese/F549CE76-1849-437C-82E1-27A3AD67B5FD": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/japanese/FCBD92AE-8CC0-4019-92AB-F384F0517E0C": {
+    "sha256": "5c75e0b76806e557ecbf3e9d7f2ea0cebb478a882ebaa94a2549342e0ebbd644"
+  },
+  "Contents/Resources/ko.lproj/FileTypeAccessory.nib": {
+    "sha256": "aff62417d6fa4af1fa988e854c7bc03b64ba6c516297dadeedd38cc788fb9d17"
+  },
+  "Contents/Resources/ko.lproj/InfoPlist.strings": {
+    "sha256": "7fbadd844c436eae860adda213ef890082ebffb9d313b8bbc032a5627ba6a513"
+  },
+  "Contents/Resources/ko.lproj/Localizable.strings": {
+    "sha256": "3267d7400ffffa005e84efcf6cbcb0a61da89fc0a25407c9bfb5cdb6ce3d7462"
+  },
+  "Contents/Resources/ko.lproj/MainMenu.nib": {
+    "sha256": "e37c20efc211d68e1e3e5d6f0c8020f9c8263e4e4097fa601fdcf05c9e5886ff"
+  },
+  "Contents/Resources/ko.lproj/PrintResolutionSetDialog.nib": {
+    "sha256": "6842e96768a8982e72e33d4efa5166b859dee9f439f0fb67834da6ed0a38d0da"
+  },
+  "Contents/Resources/korean/0238E722-8627-47F2-B174-2F6EBE210C1C": {
+    "sha256": "858fafad3487a435787901cdd51e69d7a446b82da1935ac7031def1018eb25b5"
+  },
+  "Contents/Resources/korean/05F925FA-9F2F-4C42-9228-9F504F918D21": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/korean/0A24C606-7FC7-4694-930C-9ED7407B9A18": {
+    "sha256": "47f977906b40d6c020f542ecc533eaac287b9ee432f717db4f5e65e6937ca805"
+  },
+  "Contents/Resources/korean/2D481AE5-8794-43D4-9BBF-EA645AFD782F": {
+    "sha256": "c5bf853b17a22501e584bb33ed997862e4410cfdb0209b83f9b793ecd3368282"
+  },
+  "Contents/Resources/korean/3CC82939-20AD-415C-9EB7-52B4C8E50033": {
+    "sha256": "d10b1e8e789180f04494e52cb079b5f00e132e42274cc0553c730e116429e31f"
+  },
+  "Contents/Resources/korean/3D51C869-1035-4A35-BF52-CBA0874A3365": {
+    "sha256": "f40cc5adff721905419bb01b0a62374b271661edc488002d9cdf9d4603b31d86"
+  },
+  "Contents/Resources/korean/3DC534C9-F66D-4F6C-A5B0-818F9FE7013E": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/korean/3FE1708D-6716-4E13-BFD8-AEC0BEF20719": {
+    "sha256": "4228c4342ec8bf4c2f1a3336b8885bc825300e1ec1c75d93b707b8c70822746f"
+  },
+  "Contents/Resources/korean/46B67EA9-0F39-4DE3-A9C2-EAFF2FE37099": {
+    "sha256": "09856654a714250ffe2a1ae11fd0553edbfc3d36cb7f95aa48a5485794937f18"
+  },
+  "Contents/Resources/korean/48B1A2B7-E83F-4C64-AC7A-4E74DF76A169": {
+    "sha256": "e5399a37f905cd07f5185b955408174980d4871772709734f8db82038b82fe5d"
+  },
+  "Contents/Resources/korean/4CB47456-1E3C-4ECB-B114-D7FEB961ACC6": {
+    "sha256": "9c456010eb6f7595930aa47c5d6f75f6ce5d0750cc20c439e46933c759d32135"
+  },
+  "Contents/Resources/korean/4ed3a72f-2ed9-0377-b6f9-d09515d19dcb": {
+    "sha256": "274fb14cdbb50f06b076de185849a9d33588709d1794b9beace695ab824437c7"
+  },
+  "Contents/Resources/korean/549DCB7C-5B31-4E8D-85B6-1D71004B3A63": {
+    "sha256": "13f8147b474e07ff4664e82ee6265d8c3c914e10484c3f9895d62f6a7f0889e0"
+  },
+  "Contents/Resources/korean/5634F3A9-5D0B-4f87-8BC1-DAB1F89966C3": {
+    "sha256": "ac1c314d64c674aab8076a0c3d310de281856d27ff16eff8b550f54d85d6e51e"
+  },
+  "Contents/Resources/korean/58F2FDAB-882A-468B-A03F-9D420E26F685": {
+    "sha256": "619367685e1ec1062ccb248a3e0812f28196ab420bdc194274e0b7b40ffbe6d5"
+  },
+  "Contents/Resources/korean/5B080EAF-68DA-4CA4-9ABF-77DDD13ACBFE": {
+    "sha256": "187b792ff7abcd2ae02c16298f212cfdcda75fe511c468fc5783805a95b42c48"
+  },
+  "Contents/Resources/korean/61F04D2D-50BD-4486-B128-E81FFBBF9A31": {
+    "sha256": "a902140b1de35ca03b651fb05fbbd1a6c523ac4031bd516cef338539c7043052"
+  },
+  "Contents/Resources/korean/6FFACA71-426A-4685-9014-D84E4FEC117B": {
+    "sha256": "ca0d547b4c92969209f59e4d6297d3f1fc21390372571ddbd002bbc71ddf3ce6"
+  },
+  "Contents/Resources/korean/742DEA58-ED6B-4402-BC11-20DFC6D08040": {
+    "sha256": "568f2918bef1327876544fd706c9545c1a8f2a10b771909914b83bdf3a3f5c65"
+  },
+  "Contents/Resources/korean/7D4C5370-EC7F-48FB-A5C8-9050D6585BFA": {
+    "sha256": "da7af8b2e6e870a57a7346dfaa943f16d467f34bcd92d185d0719aba351949c2"
+  },
+  "Contents/Resources/korean/7F9F9530-3EF0-4be4-8E6B-1C3BF59C3754": {
+    "sha256": "c6dee6b8d3a30fb668865b1a39ce836eeafbd0530a84d25f9c1fe9858fc661c2"
+  },
+  "Contents/Resources/korean/8AF4B718-C73D-4EC2-A97E-AE6D5355985C": {
+    "sha256": "1b8fc857475811b0ca0a93dc0371e88dcf9be7dea3e99a57de46963dd3744f1c"
+  },
+  "Contents/Resources/korean/97CDB75A-B29E-4AA3-A591-715B5C9B6701": {
+    "sha256": "ca7360ed9f1210dd90bf0656834686a8f4565f5877e2b4c5d1ab6e02c073867b"
+  },
+  "Contents/Resources/korean/9D7A23F7-C2E6-43FC-9675-DCD3D7CF0317": {
+    "sha256": "f2eb0f5f59922b909da8c3dae3ea9d39e5f896958dca38872fad1ac7630237c9"
+  },
+  "Contents/Resources/korean/9D97267F-B378-42D6-9DD6-D096539F28A7": {
+    "sha256": "eb62962cc9790f2c022d6478c6527dbb361387daf0d474cb7656a46a31e0a949"
+  },
+  "Contents/Resources/korean/A9BED959-98FF-4AAA-8B72-8AF99B4B1D88": {
+    "sha256": "af638d332ed549be7e4c9afded5d0be9f1ea031e2c069507a0ed0e27790e9217"
+  },
+  "Contents/Resources/korean/B4E918F2-1A08-4669-82AB-00CDC8C0DD7E": {
+    "sha256": "04855ffac545e5922f9c391e9905ad4b535d82e6ebb4fff5d97e260b2c7c5958"
+  },
+  "Contents/Resources/korean/B7DCE242-4C4F-44DE-8F05-BD4CCE9A4557": {
+    "sha256": "0e3f7a8c7b1d0941c62727124784d4e5519585b1f4f02efbca1b3ae4dfb2b8ec"
+  },
+  "Contents/Resources/korean/B8DA21EC-427A-48E4-8A50-E7EB8988580F": {
+    "sha256": "9a253cf678c6a42e57c8d1d4db5340d4ff5d6fabb0530e766f0c862b5a2c03a8"
+  },
+  "Contents/Resources/korean/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "51e0c0d203c8dcf2f5ac43d36b94da65b44af7d3b5dd13c678dbba24561fa83e"
+  },
+  "Contents/Resources/korean/C50ECAA0-1D35-4F57-9756-12C7256B62CF": {
+    "sha256": "bbb1104cdccccdf500e48fe9cf5061387271f7259fbc3b70d5c0deb5e4200978"
+  },
+  "Contents/Resources/korean/D6B9C91F-A4A6-49ed-91D0-622FD6F76045": {
+    "sha256": "264e8c4625890db721691a3cd173a93685d71b9d4598da1b9cf82fe5ef8dc5d1"
+  },
+  "Contents/Resources/korean/DD705E0D-FB6F-4DFE-9887-305FD87766AE": {
+    "sha256": "5523d2ff0aef8e5a6a258a5fec024057c39c7c7f79ac0887db7da045ca1f5365"
+  },
+  "Contents/Resources/korean/DE958EF5-49B5-486A-9AC0-274F63076976": {
+    "sha256": "ec08662c2ee60a049db16f03bf1ebc106cd40b74e51168419ca8b3c53d6f9284"
+  },
+  "Contents/Resources/korean/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "8c01394ed75b8a76b023b239c31ffeca100b83429d93c22e893bd7757301d290"
+  },
+  "Contents/Resources/korean/F2AD839B-B279-42C8-AC79-DEA5B560E953": {
+    "sha256": "e3a55c512b3442f02d749ecfa98f65f19e7a0e11c9459261bc1668da9cfb8933"
+  },
+  "Contents/Resources/korean/F40FE4A2-CD27-4A51-AD22-02D62D636AB4": {
+    "sha256": "faf0fa18eb46424369df4e4885d0c62e42cae4897bbbbf849628e16d173dc0e3"
+  },
+  "Contents/Resources/korean/F549CE76-1849-437C-82E1-27A3AD67B5FD": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/korean/FCBD92AE-8CC0-4019-92AB-F384F0517E0C": {
+    "sha256": "4330dd44c25191ca522d13d24bad3808315df9f9404b60d4b866f473b12ff41d"
+  },
+  "Contents/Resources/operationNotAllowedCursor.tiff": {
+    "sha256": "0b4de289864de96f064710e97fef42bc0658c193474a3219ad319f7727cc5070"
+  },
+  "Contents/Resources/operationNotAllowedCursor@2x.tiff": {
+    "sha256": "b64afc694541bf94fcb752b823f04c93ae625937b775c840e7e0c2471e28d81d"
+  },
+  "Contents/Resources/other/0238E722-8627-47F2-B174-2F6EBE210C1C": {
+    "sha256": "d901df27322f3c8d9056bf7b8caba361d42b8d02684c9eb164c11a96138c6f4a"
+  },
+  "Contents/Resources/other/05F925FA-9F2F-4C42-9228-9F504F918D21": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/other/0A24C606-7FC7-4694-930C-9ED7407B9A18": {
+    "sha256": "10276d56fa25b52a3f2cab69c3e16a1aaa0c3d799d358c4c2f1bb1a0d84d5d2b"
+  },
+  "Contents/Resources/other/22A6FE03-6D4E-4872-9B96-5791B7E67A7C": {
+    "sha256": "2ea88ff13b42c1523a206c8defb28aec0bcf9944d90e5120c8c624e79ee46f93"
+  },
+  "Contents/Resources/other/2BA04592-0AC3-4361-A718-2BF18B7932B7": {
+    "sha256": "77de6ed25816d085dddf92ce8fb369a6227af167e46270e14dedcb2ee14e2ffb"
+  },
+  "Contents/Resources/other/2D481AE5-8794-43D4-9BBF-EA645AFD782F": {
+    "sha256": "c7fc43ab66546e78bb2ef9d31fb8267e7e6f83cf7895bcb4802205a3128e5057"
+  },
+  "Contents/Resources/other/3CC82939-20AD-415C-9EB7-52B4C8E50033": {
+    "sha256": "a2a622b018939752c1c9611efc3cb7462ca68705e1c650d7f7c869d1eeecb22d"
+  },
+  "Contents/Resources/other/3D51C869-1035-4A35-BF52-CBA0874A3365": {
+    "sha256": "4f99bee0690e091a494db3ebaafb9b5257044443461eebfdac0d8093e45206cd"
+  },
+  "Contents/Resources/other/3D54DF37-F4B0-490A-8AF3-3F2F4B08B752": {
+    "sha256": "7c130b1d52b7c8cdb453b58efe57d9b210170dc3f9c34df220a88f86dfca801b"
+  },
+  "Contents/Resources/other/3DC534C9-F66D-4F6C-A5B0-818F9FE7013E": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/other/3FE1708D-6716-4E13-BFD8-AEC0BEF20719": {
+    "sha256": "5ab65901be6dbe5bbd3591caaff8ace445e47dba06716afb3504150114e9186d"
+  },
+  "Contents/Resources/other/46B67EA9-0F39-4DE3-A9C2-EAFF2FE37099": {
+    "sha256": "2a6bffa2ab41f67ccacf998c89be4c2a812f50400b45f79e89167509fa20cc8a"
+  },
+  "Contents/Resources/other/48B1A2B7-E83F-4C64-AC7A-4E74DF76A169": {
+    "sha256": "fc5e37560315790875b24906cd9c9c2fd631a5f4df42a83324847a7b845fc2d0"
+  },
+  "Contents/Resources/other/4B945704-F844-4541-94E2-6B6881A849A1": {
+    "sha256": "2871136f3c0a38aa651a004a6a92267fb3189b35ae9bb428d0268b45ebe9c500"
+  },
+  "Contents/Resources/other/4CB47456-1E3C-4ECB-B114-D7FEB961ACC6": {
+    "sha256": "d6e5c438edf8c20203540884c471cc76ce587eec3e70d0b01ccb269a9475c861"
+  },
+  "Contents/Resources/other/4ed3a72f-2ed9-0377-b6f9-d09515d19dcb": {
+    "sha256": "36430ebaa4f8b7d7b31d6cd075f3a1fa2325e4dd713d72b611dc9dbf7ebb7412"
+  },
+  "Contents/Resources/other/549DCB7C-5B31-4E8D-85B6-1D71004B3A63": {
+    "sha256": "982525b18c1e56288d468b9b384e7f1c5d1c1717e5bc7a74bab2fe929e37379b"
+  },
+  "Contents/Resources/other/5634F3A9-5D0B-4f87-8BC1-DAB1F89966C3": {
+    "sha256": "72cb77390e792bc55111f6c5b28d9bee4484cc14a70a1359efaac74e16d756d6"
+  },
+  "Contents/Resources/other/58F2FDAB-882A-468B-A03F-9D420E26F685": {
+    "sha256": "89d740313a6e5636d41de2d78ea149645ed82109e6e554408d94dc918e20412a"
+  },
+  "Contents/Resources/other/5B080EAF-68DA-4CA4-9ABF-77DDD13ACBFE": {
+    "sha256": "04843b44f256b974b26edd3c52c93d00c334030459e1c1cbffcdf055f2d082b1"
+  },
+  "Contents/Resources/other/61F04D2D-50BD-4486-B128-E81FFBBF9A31": {
+    "sha256": "1f72c9cc08169852ef6b25c3d7779028b46ff9db1b9ad1bd82448666069b9406"
+  },
+  "Contents/Resources/other/6FFACA71-426A-4685-9014-D84E4FEC117B": {
+    "sha256": "a8243ce14995c2003f180d3b065ad19b9dbb300e42eaa7ef6e4491cfcb2c7532"
+  },
+  "Contents/Resources/other/71A395BE-BAC5-4885-9A32-4D145C5B5427": {
+    "sha256": "51e1f223bd29f2f1ec033ed4286cc2b21979636088cc26416af7581a560d5ac2"
+  },
+  "Contents/Resources/other/742DEA58-ED6B-4402-BC11-20DFC6D08040": {
+    "sha256": "c21f84c50e741b5c99ccce45e4a7a5a505cba33bdc8c96b927ffaa6d94749089"
+  },
+  "Contents/Resources/other/7D4C5370-EC7F-48FB-A5C8-9050D6585BFA": {
+    "sha256": "23664df0af3bc215c78704e8d2eeb4b118df67e268aadc15a425dbd2abe3521f"
+  },
+  "Contents/Resources/other/7F9F9530-3EF0-4be4-8E6B-1C3BF59C3754": {
+    "sha256": "22f126f6a7e6c0e02e0f3b707b4e9de2a1559535a6104ccebf6d12c4811bfda2"
+  },
+  "Contents/Resources/other/8083E4D1-EB4D-42A8-ADE3-DA241583B16C": {
+    "sha256": "f0ed07e17bb653afbdf4027c098d5fe0c68e89a8fb0b05d7c3f56f7815fdb6e9"
+  },
+  "Contents/Resources/other/87775483-5B8B-42D0-AF50-BA7731354B65": {
+    "sha256": "253be2040f3a156c3b7fbf017433a8f1246b81ab8375d251605fced74d9acad5"
+  },
+  "Contents/Resources/other/8AF4B718-C73D-4EC2-A97E-AE6D5355985C": {
+    "sha256": "0f233234042f2da5e4965cf7e18b3a1be4ac9b6a8420c882ab41f446ee94c96e"
+  },
+  "Contents/Resources/other/97CDB75A-B29E-4AA3-A591-715B5C9B6701": {
+    "sha256": "337eba8f49f40e136a0366c84625a4a075c1d81b5d59b30e043f0bfb3c98600c"
+  },
+  "Contents/Resources/other/9D7A23F7-C2E6-43FC-9675-DCD3D7CF0317": {
+    "sha256": "0b1d80352a05ce0367fc534908fa483e19a8f610b6d618311978dbde0ae36338"
+  },
+  "Contents/Resources/other/9D97267F-B378-42D6-9DD6-D096539F28A7": {
+    "sha256": "364caebc4627fe356ca94760bb29dd8853e77f451d55cccec31591067c329014"
+  },
+  "Contents/Resources/other/A089C205-6972-4B15-B80E-2799AC848F32": {
+    "sha256": "39d78364cf4463c472c06a211236ca4cfa4faa79e5cc1f8abfd31f36b09dd88d"
+  },
+  "Contents/Resources/other/A0AA5020-377F-4A40-A37D-95C44B3D3EFD": {
+    "sha256": "9c504fe2e23521cc0e2136d39785a58500513b6578340a164fe8e899e726bad5"
+  },
+  "Contents/Resources/other/A3C23E07-E60C-4522-8555-04D90240DA1A": {
+    "sha256": "3a2592626863e66597290ca3c0bb05f140dd3c820ac13bf952ccb0ecc54b8753"
+  },
+  "Contents/Resources/other/A9BED959-98FF-4AAA-8B72-8AF99B4B1D88": {
+    "sha256": "af638d332ed549be7e4c9afded5d0be9f1ea031e2c069507a0ed0e27790e9217"
+  },
+  "Contents/Resources/other/B4E918F2-1A08-4669-82AB-00CDC8C0DD7E": {
+    "sha256": "ef22fb0a93816787a2d87c82fa1543a75941329f2f4de68b3bb0251fd8fb9dd9"
+  },
+  "Contents/Resources/other/B7DCE242-4C4F-44DE-8F05-BD4CCE9A4557": {
+    "sha256": "3cccbf54005cf8f246a0e8e57f9e220fa9b02263284d8f54c201d0283014fa42"
+  },
+  "Contents/Resources/other/B8DA21EC-427A-48E4-8A50-E7EB8988580F": {
+    "sha256": "9a253cf678c6a42e57c8d1d4db5340d4ff5d6fabb0530e766f0c862b5a2c03a8"
+  },
+  "Contents/Resources/other/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "a5396356e5b32c0d65599081125d38aaf9dadb8026ca2f52cd1998251906f10a"
+  },
+  "Contents/Resources/other/C1DBD787-3EDC-4654-929E-83C7F9C717F8": {
+    "sha256": "154f2a88a634b71871d2e6f8215235b00f10abe6776ce82ac6eaa60fe825ca57"
+  },
+  "Contents/Resources/other/C50ECAA0-1D35-4F57-9756-12C7256B62CF": {
+    "sha256": "5a90e30397fc33b1a8a4bebfcef427f8fe57c444719950fa158c88f7b20fee8f"
+  },
+  "Contents/Resources/other/CC28C18D-1E1A-463C-AA5F-574892EC978A": {
+    "sha256": "da1a96109eca119ea046a4f52b9f8518bee385bfb56ff4aa63af51f2424fabc5"
+  },
+  "Contents/Resources/other/D6B9C91F-A4A6-49ed-91D0-622FD6F76045": {
+    "sha256": "08e27a772eb74df391dcc8c65f56fbf97a2ba58c9df679f51bc6e3dddd58cc72"
+  },
+  "Contents/Resources/other/DBDAB24C-288D-4A5E-B99E-0DC1B3DACF2B": {
+    "sha256": "dd2d1f5ccb2d74d918c2d10c8a2afd3e68f45874398a88f7abab3d44ab2f63df"
+  },
+  "Contents/Resources/other/DD705E0D-FB6F-4DFE-9887-305FD87766AE": {
+    "sha256": "e0b67924acb408807fe48720e432cfd1c8569acf1d5f47d88ca3656070dadbd4"
+  },
+  "Contents/Resources/other/DE958EF5-49B5-486A-9AC0-274F63076976": {
+    "sha256": "ebc8ddd640990d62f93400ed17ce5756cb46ca4638d824aa7ba9051844641bda"
+  },
+  "Contents/Resources/other/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "6bbf25aa8b1808977be5a362df3e46549d0971d7acefd4df23e8eb83d388172c"
+  },
+  "Contents/Resources/other/EA5DA820-50CC-4525-9A8D-F7F3441F452B": {
+    "sha256": "98c32815d02a28a0e8192da0bbea271bf65ae311dfc10b662db503a2de086276"
+  },
+  "Contents/Resources/other/F281E790-0734-424B-A54D-006E47724D03": {
+    "sha256": "908784511a6ad9960827ca5cc2c4f4107c2b81570aaca1d9fca3c51fad7c87d3"
+  },
+  "Contents/Resources/other/F2AD839B-B279-42C8-AC79-DEA5B560E953": {
+    "sha256": "5802d7a84d5e5778823e884ba5d5151a2b181f3538a00dab8de519fe9929862a"
+  },
+  "Contents/Resources/other/F40FE4A2-CD27-4A51-AD22-02D62D636AB4": {
+    "sha256": "faf0fa18eb46424369df4e4885d0c62e42cae4897bbbbf849628e16d173dc0e3"
+  },
+  "Contents/Resources/other/F549CE76-1849-437C-82E1-27A3AD67B5FD": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/other/FBD7D97E-269A-483F-8414-164D65CF1CCD": {
+    "sha256": "514fb654cfd34009aaa2d1d85207962b0bca8d1410fa1561270a9b942be0b07c"
+  },
+  "Contents/Resources/other/FCBD92AE-8CC0-4019-92AB-F384F0517E0C": {
+    "sha256": "ef548b04787b7898cd1a131377a7ccf9902d503d450fec6e62f5411babacfdfe"
+  },
+  "Contents/Resources/pep.icns": {
+    "sha256": "76de8be21159afa2d1013060737bef50942a3097e84593965def4532597eac7e"
+  },
+  "Contents/Resources/portuguese/0238E722-8627-47F2-B174-2F6EBE210C1C": {
+    "sha256": "b91d75a980d99eb9dc53506dff883e8f0ab0ec73bf00bcc16dec7ae5c5209c4d"
+  },
+  "Contents/Resources/portuguese/05F925FA-9F2F-4C42-9228-9F504F918D21": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/portuguese/0A24C606-7FC7-4694-930C-9ED7407B9A18": {
+    "sha256": "b9d23569e8abb3c0d3afafce044f286e606b6d5936ec7554bb765c0e2bc5d2dc"
+  },
+  "Contents/Resources/portuguese/2D481AE5-8794-43D4-9BBF-EA645AFD782F": {
+    "sha256": "2a246e73b1460211ac981e4c49eeaa35d691e4e7f1497d6f41c964a9710636e4"
+  },
+  "Contents/Resources/portuguese/3CC82939-20AD-415C-9EB7-52B4C8E50033": {
+    "sha256": "5eca69ed0ec8f38a535986277469f4745caacaa807af6afe6af1623a04897431"
+  },
+  "Contents/Resources/portuguese/3D51C869-1035-4A35-BF52-CBA0874A3365": {
+    "sha256": "c3c87c0ba0b6143b9b93a3ff4c0f6ec98addf25fd36aba2fd02fd597a00e3f52"
+  },
+  "Contents/Resources/portuguese/3DC534C9-F66D-4F6C-A5B0-818F9FE7013E": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/portuguese/3FE1708D-6716-4E13-BFD8-AEC0BEF20719": {
+    "sha256": "141fc7c0f23a84bfe69d00b0bec8c1b2c9ed9f0213ac87f16f3fa1a7f63ac5cf"
+  },
+  "Contents/Resources/portuguese/46B67EA9-0F39-4DE3-A9C2-EAFF2FE37099": {
+    "sha256": "0bc3add174cf3a25466a4cfbae3029fc792fb5fea1961524027278f7b15beb68"
+  },
+  "Contents/Resources/portuguese/48B1A2B7-E83F-4C64-AC7A-4E74DF76A169": {
+    "sha256": "5fc1e06db1da66cbdbf4ddcbb9fa394041b522fc48eff19bfe42abc67af0662f"
+  },
+  "Contents/Resources/portuguese/4CB47456-1E3C-4ECB-B114-D7FEB961ACC6": {
+    "sha256": "5697f73db805c447460c2f9cc4668339a387650917b5c99766d29272e97cd0e1"
+  },
+  "Contents/Resources/portuguese/4ed3a72f-2ed9-0377-b6f9-d09515d19dcb": {
+    "sha256": "871d62fec619c89e2d0d46ed8aad081f17038108513b0b62a0852fedd23a7679"
+  },
+  "Contents/Resources/portuguese/549DCB7C-5B31-4E8D-85B6-1D71004B3A63": {
+    "sha256": "6bab8f6587abe956f58f79cadd4e7570e79ab8d35da8b56ea6424c35fb272c79"
+  },
+  "Contents/Resources/portuguese/5634F3A9-5D0B-4f87-8BC1-DAB1F89966C3": {
+    "sha256": "90d35b50f89eae3b50cbe5261603149f8d9ef6073dda9d144c7a27d728978b1b"
+  },
+  "Contents/Resources/portuguese/58F2FDAB-882A-468B-A03F-9D420E26F685": {
+    "sha256": "4219825ad72c82b37a87ce32a119ac7d63aab60b5ebc33a4074110d84ed4ac25"
+  },
+  "Contents/Resources/portuguese/5B080EAF-68DA-4CA4-9ABF-77DDD13ACBFE": {
+    "sha256": "8e16eaa636ba22ba780d4224909c9f00b0464785f051f47f451f85bb5718beec"
+  },
+  "Contents/Resources/portuguese/61F04D2D-50BD-4486-B128-E81FFBBF9A31": {
+    "sha256": "977068117a1d62e2d5033bebb9eab91ed958d1adcff7c78ea40a85bd89baa726"
+  },
+  "Contents/Resources/portuguese/6FFACA71-426A-4685-9014-D84E4FEC117B": {
+    "sha256": "ec7012e799b45340c87c42e8ebffc532149f544756bd5068052f9aa4fa9d5003"
+  },
+  "Contents/Resources/portuguese/742DEA58-ED6B-4402-BC11-20DFC6D08040": {
+    "sha256": "f37f0b8ebd4f2c143b5ec357ffb069453ed5b9248f8fa1f1c6364e9a01fb7967"
+  },
+  "Contents/Resources/portuguese/7D4C5370-EC7F-48FB-A5C8-9050D6585BFA": {
+    "sha256": "d4e7640c9fd4d4562299606fe8f19a9c83be8c22bfba9253146d874a9a21aa72"
+  },
+  "Contents/Resources/portuguese/7F9F9530-3EF0-4be4-8E6B-1C3BF59C3754": {
+    "sha256": "f6fb82a91ed86b3317e2dbd5fddb2e26119b2914b7fbef154e69bd3fd6a496c4"
+  },
+  "Contents/Resources/portuguese/8AF4B718-C73D-4EC2-A97E-AE6D5355985C": {
+    "sha256": "387f7bd34d0578d75e7721189c0989ca1f30b1689d2d7682d0bbb5a83cfe7024"
+  },
+  "Contents/Resources/portuguese/97CDB75A-B29E-4AA3-A591-715B5C9B6701": {
+    "sha256": "214d366700d75145d5d92273ef33ffd46838be62c26680c533868368a2321dac"
+  },
+  "Contents/Resources/portuguese/9D7A23F7-C2E6-43FC-9675-DCD3D7CF0317": {
+    "sha256": "9242283f2493b540bbe2df4900bc6e303d2b3be4644ddd6add49b439ad4548b3"
+  },
+  "Contents/Resources/portuguese/9D97267F-B378-42D6-9DD6-D096539F28A7": {
+    "sha256": "383d78681d53934a7d010d5c21a75a498c4d8a00a5b6d2872fe52bd75d51f83c"
+  },
+  "Contents/Resources/portuguese/A9BED959-98FF-4AAA-8B72-8AF99B4B1D88": {
+    "sha256": "af638d332ed549be7e4c9afded5d0be9f1ea031e2c069507a0ed0e27790e9217"
+  },
+  "Contents/Resources/portuguese/B4E918F2-1A08-4669-82AB-00CDC8C0DD7E": {
+    "sha256": "a224d7beff16752e4b4024847b30493734050b17e1f6c0c4597a6fcdaf4cfbf2"
+  },
+  "Contents/Resources/portuguese/B7DCE242-4C4F-44DE-8F05-BD4CCE9A4557": {
+    "sha256": "b23c81c2932f4c2949e495096a0f9118ee730ebe06f5ed306a5e2016542ccf15"
+  },
+  "Contents/Resources/portuguese/B8DA21EC-427A-48E4-8A50-E7EB8988580F": {
+    "sha256": "9a253cf678c6a42e57c8d1d4db5340d4ff5d6fabb0530e766f0c862b5a2c03a8"
+  },
+  "Contents/Resources/portuguese/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "ecd43e2a614916577e948ac1c170019732b3ef6a86127f2491baba627c13589c"
+  },
+  "Contents/Resources/portuguese/C50ECAA0-1D35-4F57-9756-12C7256B62CF": {
+    "sha256": "f88bb7d761ef3b63307ae5947d2a717d888825d5910fcd45d28f5b7a1000964a"
+  },
+  "Contents/Resources/portuguese/D6B9C91F-A4A6-49ed-91D0-622FD6F76045": {
+    "sha256": "b7687254d50f3e565fe03ad9c039cbed472a24c510f8858f60d10839d6fbca08"
+  },
+  "Contents/Resources/portuguese/DD705E0D-FB6F-4DFE-9887-305FD87766AE": {
+    "sha256": "d414b82e66473eb6f630c36ca89b1a24d61ef30b505a17d5a2f9f0ff2cdcacd6"
+  },
+  "Contents/Resources/portuguese/DE958EF5-49B5-486A-9AC0-274F63076976": {
+    "sha256": "16ab3394baace857971b9bc167af160035bb564cdc7fe5d3a080c0cc51a32bce"
+  },
+  "Contents/Resources/portuguese/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "e08cf615f74c351fa505bfde78b5bed7ab4eb5fcf39dcbf417150f3219d8207d"
+  },
+  "Contents/Resources/portuguese/F2AD839B-B279-42C8-AC79-DEA5B560E953": {
+    "sha256": "9e7aa703442ce30c122d4df5727357cfb8729a75518357634d5169fb25625e66"
+  },
+  "Contents/Resources/portuguese/F40FE4A2-CD27-4A51-AD22-02D62D636AB4": {
+    "sha256": "faf0fa18eb46424369df4e4885d0c62e42cae4897bbbbf849628e16d173dc0e3"
+  },
+  "Contents/Resources/portuguese/F549CE76-1849-437C-82E1-27A3AD67B5FD": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/portuguese/FCBD92AE-8CC0-4019-92AB-F384F0517E0C": {
+    "sha256": "b84926147634ada7e29c6de5c60bf32487b14df9405d5e6b0d69bac9559c99c6"
+  },
+  "Contents/Resources/pt-BR.lproj/FileTypeAccessory.nib": {
+    "sha256": "97cbb57c266719dfbb1cecda4f027e122f3ce8c1494ee8a24c6947b50db24d7d"
+  },
+  "Contents/Resources/pt-BR.lproj/InfoPlist.strings": {
+    "sha256": "6fc136718e389a4d1bdd8ef71d4f45aff0b477015944fd28b86a26e0ae72cebe"
+  },
+  "Contents/Resources/pt-BR.lproj/Localizable.strings": {
+    "sha256": "a0d72c5d91886c4ea7325739d68efd8de196efd920f7489357ceb15fa536b77d"
+  },
+  "Contents/Resources/pt-BR.lproj/MainMenu.nib": {
+    "sha256": "3dc7eb3e3c9640089a78fbaf44e394d25719edd560be6652d5a1ae09bb6b5404"
+  },
+  "Contents/Resources/pt-BR.lproj/PrintResolutionSetDialog.nib": {
+    "sha256": "0300bfe43398f6aa3de60c0c87ca6518ccca1d7541827b4b20c705d2025d3250"
+  },
+  "Contents/Resources/spanish/0238E722-8627-47F2-B174-2F6EBE210C1C": {
+    "sha256": "a1ebafa64d72e65f5370edc52955059c4418475447a4b40a78452b5257ccac9f"
+  },
+  "Contents/Resources/spanish/05F925FA-9F2F-4C42-9228-9F504F918D21": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/spanish/0A24C606-7FC7-4694-930C-9ED7407B9A18": {
+    "sha256": "a1edd9640c642cd79344af921c185533a99d6dee0c53c8143b8ed052eb597c84"
+  },
+  "Contents/Resources/spanish/2D481AE5-8794-43D4-9BBF-EA645AFD782F": {
+    "sha256": "c12682176df422552ed5fc1037c27d8f53d0fec3f150a7e76726aa6c686397b8"
+  },
+  "Contents/Resources/spanish/3CC82939-20AD-415C-9EB7-52B4C8E50033": {
+    "sha256": "d1fd1a7eb7233a234d1c49dfa1dbb6eb862a1ffff991b29f07d3c40f34d4241e"
+  },
+  "Contents/Resources/spanish/3D51C869-1035-4A35-BF52-CBA0874A3365": {
+    "sha256": "b653276986d923edf582b0e3d0c5c09f44bfff552a4dc9fdfe632271e86b4e1c"
+  },
+  "Contents/Resources/spanish/3DC534C9-F66D-4F6C-A5B0-818F9FE7013E": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/spanish/3FE1708D-6716-4E13-BFD8-AEC0BEF20719": {
+    "sha256": "6ecd1f89372aa46642e7917ed05d1f7e7111d76098bbe7110fdd75c69a300077"
+  },
+  "Contents/Resources/spanish/46B67EA9-0F39-4DE3-A9C2-EAFF2FE37099": {
+    "sha256": "9cc4745bce2ab9c16e49f4120253201bcf1680d84c0e69890ce4156732ecda54"
+  },
+  "Contents/Resources/spanish/48B1A2B7-E83F-4C64-AC7A-4E74DF76A169": {
+    "sha256": "cee63a38eda16d5fafe9d083d13c45c85ee15ec129c2bd221cf4d4685befcd56"
+  },
+  "Contents/Resources/spanish/4CB47456-1E3C-4ECB-B114-D7FEB961ACC6": {
+    "sha256": "4709dd95c9cd0dd7ec64fc68fba2a41a119e04877520c00664f9f4e2ef33d5e7"
+  },
+  "Contents/Resources/spanish/4ed3a72f-2ed9-0377-b6f9-d09515d19dcb": {
+    "sha256": "0217a1d73dae64ca61faa1dab6f60c4154c88da1f7f83b252d7e56795e5b57d5"
+  },
+  "Contents/Resources/spanish/549DCB7C-5B31-4E8D-85B6-1D71004B3A63": {
+    "sha256": "e05c3095a9271728b3b3675f86dce86daf10a88394dcba1804350d78912ba2aa"
+  },
+  "Contents/Resources/spanish/5634F3A9-5D0B-4f87-8BC1-DAB1F89966C3": {
+    "sha256": "92ed6f190346b7fd65a2ee5408651575537961056b5c9abddda59d7253230e92"
+  },
+  "Contents/Resources/spanish/58F2FDAB-882A-468B-A03F-9D420E26F685": {
+    "sha256": "34b0a5ca62877e0cc154f574929d60d949fc7d1804dfa8813bd4503d8feacf06"
+  },
+  "Contents/Resources/spanish/5B080EAF-68DA-4CA4-9ABF-77DDD13ACBFE": {
+    "sha256": "37c0b46eb04c3aa71420dff363576daab688b178fbbdb903c50a64a8b01133d6"
+  },
+  "Contents/Resources/spanish/61F04D2D-50BD-4486-B128-E81FFBBF9A31": {
+    "sha256": "1838c6436d64af73f01cbbaa0547629c7ec5cfbdbe186fae1ec9eb575bd9fb6d"
+  },
+  "Contents/Resources/spanish/6FFACA71-426A-4685-9014-D84E4FEC117B": {
+    "sha256": "a6578f674bb3951611e8b98f628a49b07a975d462aa210e468ee1915abb371be"
+  },
+  "Contents/Resources/spanish/742DEA58-ED6B-4402-BC11-20DFC6D08040": {
+    "sha256": "16f59fe78f9e9abd7f025563961c65674149ff9a40e465545575daa46dba426c"
+  },
+  "Contents/Resources/spanish/7D4C5370-EC7F-48FB-A5C8-9050D6585BFA": {
+    "sha256": "ae15f0f12646d5a0e1bd4a61fcabb6125081852f7420ce322765487afdfcc497"
+  },
+  "Contents/Resources/spanish/7F9F9530-3EF0-4be4-8E6B-1C3BF59C3754": {
+    "sha256": "f6e059a190fe3c925cb552dc597e9bdb1c12523a982bd1445bd274202c7e0466"
+  },
+  "Contents/Resources/spanish/8AF4B718-C73D-4EC2-A97E-AE6D5355985C": {
+    "sha256": "353b5cc6f47853a2b174eda67c8f13c229c43bcc86e783d0b10e1450335aeed1"
+  },
+  "Contents/Resources/spanish/97CDB75A-B29E-4AA3-A591-715B5C9B6701": {
+    "sha256": "a1a2e81fa305d7bf4736dd4787dae1169f600bdb3b06e2562f59422ed1aadaa6"
+  },
+  "Contents/Resources/spanish/9D7A23F7-C2E6-43FC-9675-DCD3D7CF0317": {
+    "sha256": "719df448bef8491f308af7e7df9b2aba7c5cfdcfbbffefd0a819aa2a16f01c00"
+  },
+  "Contents/Resources/spanish/9D97267F-B378-42D6-9DD6-D096539F28A7": {
+    "sha256": "f8f663ea5649896dac08375557cb8386dfd43f6316db996313572d3feb13f38a"
+  },
+  "Contents/Resources/spanish/A9BED959-98FF-4AAA-8B72-8AF99B4B1D88": {
+    "sha256": "af638d332ed549be7e4c9afded5d0be9f1ea031e2c069507a0ed0e27790e9217"
+  },
+  "Contents/Resources/spanish/B4E918F2-1A08-4669-82AB-00CDC8C0DD7E": {
+    "sha256": "a2d3244a00c4ea6b90fbdec668490f3a181108052901507ce472f8f5fc4e0e07"
+  },
+  "Contents/Resources/spanish/B7DCE242-4C4F-44DE-8F05-BD4CCE9A4557": {
+    "sha256": "13d9b50503290383f6d0d9840f4e9cd50ef7a1d6ddc82306259b3e0aa90819de"
+  },
+  "Contents/Resources/spanish/B8DA21EC-427A-48E4-8A50-E7EB8988580F": {
+    "sha256": "9a253cf678c6a42e57c8d1d4db5340d4ff5d6fabb0530e766f0c862b5a2c03a8"
+  },
+  "Contents/Resources/spanish/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "4bf7b7e928971ac14b90cc8038c143f2082ae4884c5c11b6208a20b2db2b3cf8"
+  },
+  "Contents/Resources/spanish/C50ECAA0-1D35-4F57-9756-12C7256B62CF": {
+    "sha256": "5381ff4d860cccffbc5724285940d912cb08361973072cb5b303ebd01ded0283"
+  },
+  "Contents/Resources/spanish/D6B9C91F-A4A6-49ed-91D0-622FD6F76045": {
+    "sha256": "ff20950dd1ac1215019b246b58601afd77815087f02012e0d5735c53c88f19b1"
+  },
+  "Contents/Resources/spanish/DD705E0D-FB6F-4DFE-9887-305FD87766AE": {
+    "sha256": "18e0185f07ab751a3d7d881a3a648bd547aaa76c1fba24e06e38d71326076712"
+  },
+  "Contents/Resources/spanish/DE958EF5-49B5-486A-9AC0-274F63076976": {
+    "sha256": "a5a5398acbddb7a0dc825ff353c17f012e999a9cbf5f6d0c80b3a85715feb348"
+  },
+  "Contents/Resources/spanish/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "60ec62c4de542d86c096adff8bf4145670b82d2b8cb02e21eff6b19ba18f780c"
+  },
+  "Contents/Resources/spanish/F2AD839B-B279-42C8-AC79-DEA5B560E953": {
+    "sha256": "9228d3660bd847650c68ad0792c8aa4e402a605f235ccbe3d920e1eece93f847"
+  },
+  "Contents/Resources/spanish/F40FE4A2-CD27-4A51-AD22-02D62D636AB4": {
+    "sha256": "faf0fa18eb46424369df4e4885d0c62e42cae4897bbbbf849628e16d173dc0e3"
+  },
+  "Contents/Resources/spanish/F549CE76-1849-437C-82E1-27A3AD67B5FD": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/spanish/FCBD92AE-8CC0-4019-92AB-F384F0517E0C": {
+    "sha256": "a653238e9c2a7d6fa4fe784572d4b4eef39a4fa959201551871e56b9d178c56b"
+  },
+  "Contents/Resources/th.lproj/FileTypeAccessory.nib": {
+    "sha256": "6dd117e8fdc6f6ca1f2d4fb48d43de6065c9c1c5c34db84b82b3fa073f7e4453"
+  },
+  "Contents/Resources/th.lproj/InfoPlist.strings": {
+    "sha256": "1d6854ac7f30f7e5796e00ff6a9d73efe7be555463eeba37c21ebe57cf1fd118"
+  },
+  "Contents/Resources/th.lproj/Localizable.strings": {
+    "sha256": "b97af39b83338a07aa24143d0cb4fc38db8a6949d1ee59dd45c94ecc7c5aff73"
+  },
+  "Contents/Resources/th.lproj/MainMenu.nib": {
+    "sha256": "bffa67e4e64c90180405913e12e44dbce9a7b81d68e1fce8f780152624514fe8"
+  },
+  "Contents/Resources/th.lproj/PrintResolutionSetDialog.nib": {
+    "sha256": "e986a3cff6d781c77cb2f64fdf22129b68ab4b05379692bc46d773cb2a349f8e"
+  },
+  "Contents/Resources/thai/0238E722-8627-47F2-B174-2F6EBE210C1C": {
+    "sha256": "83084657fc88645e1527d4e4cafabd192a118c931ad8fbe5d05b47ca2e5e7177"
+  },
+  "Contents/Resources/thai/05F925FA-9F2F-4C42-9228-9F504F918D21": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/thai/0A24C606-7FC7-4694-930C-9ED7407B9A18": {
+    "sha256": "972bb6941bbb3b5b1ce7dbb76442be4fbcf08c9086fe29dc4edba63779b12c2c"
+  },
+  "Contents/Resources/thai/2D481AE5-8794-43D4-9BBF-EA645AFD782F": {
+    "sha256": "89a44efe88020182ed48d750cd0fcd2414a227705538f1636a69aa0a049210f4"
+  },
+  "Contents/Resources/thai/3CC82939-20AD-415C-9EB7-52B4C8E50033": {
+    "sha256": "608a3dc10393240f3c588aa4cafdf3d62fc27610cbfb6d6dec5a48b0e5467694"
+  },
+  "Contents/Resources/thai/3D51C869-1035-4A35-BF52-CBA0874A3365": {
+    "sha256": "ede869db27ac07e2039dc018c5a6785f77a5be7ca574a576a50a034eb30ce47b"
+  },
+  "Contents/Resources/thai/3DC534C9-F66D-4F6C-A5B0-818F9FE7013E": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/thai/3FE1708D-6716-4E13-BFD8-AEC0BEF20719": {
+    "sha256": "7e4e1580505f41e92a4101d7dc75eb8f65cf12c6cfa59480056048e3dd8687e4"
+  },
+  "Contents/Resources/thai/46B67EA9-0F39-4DE3-A9C2-EAFF2FE37099": {
+    "sha256": "cda97dd6d0b6c6f0d3b799300cfd54d96ef822ddba805ecb80573e39bc7117b1"
+  },
+  "Contents/Resources/thai/48B1A2B7-E83F-4C64-AC7A-4E74DF76A169": {
+    "sha256": "7bbd2d22897923660e22ce7d278cb0923985354daa3b1b31efbb52af73ff94df"
+  },
+  "Contents/Resources/thai/4CB47456-1E3C-4ECB-B114-D7FEB961ACC6": {
+    "sha256": "309f0409c2a8f6b4e49266d2f02408504a0901a55d01e90a00ee48fd986ac3ba"
+  },
+  "Contents/Resources/thai/4ed3a72f-2ed9-0377-b6f9-d09515d19dcb": {
+    "sha256": "6caa6997cf58766a42651885e01418b24202909b5cc19fd8dc3b96f19b05c794"
+  },
+  "Contents/Resources/thai/549DCB7C-5B31-4E8D-85B6-1D71004B3A63": {
+    "sha256": "5af567e539639ceadbf4047835745379b21c19356a0a38a22845c71c6043842a"
+  },
+  "Contents/Resources/thai/5634F3A9-5D0B-4f87-8BC1-DAB1F89966C3": {
+    "sha256": "bd89c6de9486b939808d69d782e3e00a01cdafd15c22a1801d77c5c1a735c3e9"
+  },
+  "Contents/Resources/thai/58F2FDAB-882A-468B-A03F-9D420E26F685": {
+    "sha256": "4735525a533a50bbce46fef962a451de0b4a4b694a7e8a34e88e2751bb006d11"
+  },
+  "Contents/Resources/thai/5B080EAF-68DA-4CA4-9ABF-77DDD13ACBFE": {
+    "sha256": "5ba769666b9b3906b2655ad99db408468d59b676f42248bcf4c763d879a5c4c7"
+  },
+  "Contents/Resources/thai/61F04D2D-50BD-4486-B128-E81FFBBF9A31": {
+    "sha256": "6b59d768f50f722655dabd04f7f476f7913586e3a32d7bcc0a802b611770ca23"
+  },
+  "Contents/Resources/thai/6FFACA71-426A-4685-9014-D84E4FEC117B": {
+    "sha256": "977af6887b396cc3a6a67c95b3e17005186a7a6b84c2a9cb2744ca42235e1a89"
+  },
+  "Contents/Resources/thai/742DEA58-ED6B-4402-BC11-20DFC6D08040": {
+    "sha256": "8415998270145854e664810fb8fc19b7dfa993806f4e18c56eb79e30fbc8848a"
+  },
+  "Contents/Resources/thai/7D4C5370-EC7F-48FB-A5C8-9050D6585BFA": {
+    "sha256": "371509e8480f41bcd6ce009aea66ef02e4b95c205baf5bf338f9ca79eaadc99c"
+  },
+  "Contents/Resources/thai/7F9F9530-3EF0-4be4-8E6B-1C3BF59C3754": {
+    "sha256": "91d21384469a42ece2aaa5ceb403b190dd32b0925a2e2f2b2803822292aec0ce"
+  },
+  "Contents/Resources/thai/8AF4B718-C73D-4EC2-A97E-AE6D5355985C": {
+    "sha256": "f7c5f1b0665636e2e4d9b7fe2850c23a5cc7f44d027f887810e599cc5088ec01"
+  },
+  "Contents/Resources/thai/97CDB75A-B29E-4AA3-A591-715B5C9B6701": {
+    "sha256": "f1cab348ab053ca8bc58d0c7853415476b204d4316d9a05794f2dd65a38aec5c"
+  },
+  "Contents/Resources/thai/9D7A23F7-C2E6-43FC-9675-DCD3D7CF0317": {
+    "sha256": "b393f77e9b9197fb62f080bc55cfe2055d196cab3a21c18c56bd6767a329096c"
+  },
+  "Contents/Resources/thai/9D97267F-B378-42D6-9DD6-D096539F28A7": {
+    "sha256": "1db5799224a74a68ab2cbe013c5994f4c877f42872480261d757925308b2b993"
+  },
+  "Contents/Resources/thai/A9BED959-98FF-4AAA-8B72-8AF99B4B1D88": {
+    "sha256": "af638d332ed549be7e4c9afded5d0be9f1ea031e2c069507a0ed0e27790e9217"
+  },
+  "Contents/Resources/thai/B4E918F2-1A08-4669-82AB-00CDC8C0DD7E": {
+    "sha256": "3f76b9d4a03efeae5563233fce87a1a1fafd9f0227f2e246c0baa4cffd09a847"
+  },
+  "Contents/Resources/thai/B7DCE242-4C4F-44DE-8F05-BD4CCE9A4557": {
+    "sha256": "e5aaa38a528cf8aed2d2d2e4724b4c03cd8f6d98f71b6d38c7fa19d6cc20fdbb"
+  },
+  "Contents/Resources/thai/B8DA21EC-427A-48E4-8A50-E7EB8988580F": {
+    "sha256": "9a253cf678c6a42e57c8d1d4db5340d4ff5d6fabb0530e766f0c862b5a2c03a8"
+  },
+  "Contents/Resources/thai/BFA867AE-51E0-42E0-BF18-A092381CB0D9": {
+    "sha256": "72c408bd83cd7e59d06e731f1d9da834b575590ff4af694335ee9730ca756eac"
+  },
+  "Contents/Resources/thai/C50ECAA0-1D35-4F57-9756-12C7256B62CF": {
+    "sha256": "6b42e22367fe69eba1fe909ccd4bfa29b288dac0de5e0f0ef72369206a887afd"
+  },
+  "Contents/Resources/thai/D6B9C91F-A4A6-49ed-91D0-622FD6F76045": {
+    "sha256": "dff219507e750b7d76457332e2896fad75cc8c2f45a2cbf728b8da12ad3a4d24"
+  },
+  "Contents/Resources/thai/DD705E0D-FB6F-4DFE-9887-305FD87766AE": {
+    "sha256": "673ebb7312dc34d43127c90be38e7881d955708cb1b75127b6089266414db3a1"
+  },
+  "Contents/Resources/thai/DE958EF5-49B5-486A-9AC0-274F63076976": {
+    "sha256": "76b3a7003ceee426ed36a369e3a8917be2fef53eabe17d2133dde5463549eeaa"
+  },
+  "Contents/Resources/thai/E79C2AC5-BC3F-4838-9E87-F49B629F84B5": {
+    "sha256": "254b7b36f91261091fe3d4e8715f409333b0ad8b5ce60a27d020e1133497c880"
+  },
+  "Contents/Resources/thai/F2AD839B-B279-42C8-AC79-DEA5B560E953": {
+    "sha256": "bbd52bc6df0c49c6c8219a7d85966d3b0588364173e16840e08441d2a814a6bc"
+  },
+  "Contents/Resources/thai/F40FE4A2-CD27-4A51-AD22-02D62D636AB4": {
+    "sha256": "faf0fa18eb46424369df4e4885d0c62e42cae4897bbbbf849628e16d173dc0e3"
+  },
+  "Contents/Resources/thai/F549CE76-1849-437C-82E1-27A3AD67B5FD": {
+    "sha256": "708f9c7a9e4dd2544efd34c0416f511594cd9410a60003e4de2f899e2446d525"
+  },
+  "Contents/Resources/thai/FCBD92AE-8CC0-4019-92AB-F384F0517E0C": {
+    "sha256": "ef1a4b7dd45d51aecfd8fa9322419bbad1f04bedd662a86341cc0db8afcb74b4"
+  },
+  "Contents/Resources/windowResizeEastWestCursor.tiff": {
+    "sha256": "8ecb3947f86de4841ad003eebd8655c93f2f2787f4b3a8a259ebfd4832adde85"
+  },
+  "Contents/Resources/windowResizeEastWestCursor@2x.tiff": {
+    "sha256": "23ec85469cd1c898c657bab0eb71edd98a5bdeb78f19f6c4ab309b9554965839"
+  },
+  "Contents/Resources/windowResizeNorthEastSouthWestCursor.tiff": {
+    "sha256": "4adf97eccfcf7f728111bdbe2692029c79e9a5baf486e05bc0f622a24169a2a5"
+  },
+  "Contents/Resources/windowResizeNorthEastSouthWestCursor@2x.tiff": {
+    "sha256": "ea3fbcbb74205f9352e0073144a1fbb8ee742859daaf24b5dcc2fd07fed816d4"
+  },
+  "Contents/Resources/windowResizeNorthSouthCursor.tiff": {
+    "sha256": "7e8a7490cd73a74f98c2a7e50d454380ad9dd5a76f872e87f2bd1760007cbb9c"
+  },
+  "Contents/Resources/windowResizeNorthSouthCursor@2x.tiff": {
+    "sha256": "bc05c459ec6cd37a89867a6ae0e62eb19a36546ae41d5f9fa0842f854f2e8b37"
+  },
+  "Contents/Resources/windowResizeNorthWestSouthEastCursor.tiff": {
+    "sha256": "4446b8c41ef91c243afdaaabb27bdf813a982adf0f8afb9c2d1b47b8f204d616"
+  },
+  "Contents/Resources/windowResizeNorthWestSouthEastCursor@2x.tiff": {
+    "sha256": "0c623bfa0618a1ac1945297a275458ef85d1cfd253f5be73a17e5554bd31df54"
+  },
+  "Contents/Resources/xdts.icns": {
+    "sha256": "f868a357b4bdb43af65c84ccc8d0ea43cf770953b120a2e94415c8190ee11f07"
+  },
+  "Contents/Resources/zh-Hans.lproj/FileTypeAccessory.nib": {
+    "sha256": "7f54e57a4d47ba5567093cddae16043c21fd9db5678ecaf96d85c1f483590e5e"
+  },
+  "Contents/Resources/zh-Hans.lproj/InfoPlist.strings": {
+    "sha256": "159df6c0cef9bafa16c308b652f59d6fa726642b0f5e0f928d8eb511cf70955f"
+  },
+  "Contents/Resources/zh-Hans.lproj/Localizable.strings": {
+    "sha256": "22eda673ac79ffcf09b3d9703e901668244d59c4a2a84ce15b6147b463593a2e"
+  },
+  "Contents/Resources/zh-Hans.lproj/MainMenu.nib": {
+    "sha256": "87867d2ae32f21241d77fc1df112415df167371a87b902556620dd8dcbf2e3e1"
+  },
+  "Contents/Resources/zh-Hans.lproj/PrintResolutionSetDialog.nib": {
+    "sha256": "94860d78f35b6812f3d451fe1fdcf913ec6392c55d0499c4d8d3623c60f42d64"
+  },
+  "Contents/Resources/zh-Hant.lproj/FileTypeAccessory.nib": {
+    "sha256": "b9748a492a73cedad0620cfae41289ad380cbf03967e7306f147d43d6b9e5690"
+  },
+  "Contents/Resources/zh-Hant.lproj/InfoPlist.strings": {
+    "sha256": "ed0c5385551a470ad8f46dd347c7c4ead7bcb5e5a7c940bf71456763c5989a66"
+  },
+  "Contents/Resources/zh-Hant.lproj/Localizable.strings": {
+    "sha256": "26d86b776e504f6869de7474ab8c58a08da804e0fef25f73cfe112654f3d9952"
+  },
+  "Contents/Resources/zh-Hant.lproj/MainMenu.nib": {
+    "sha256": "db2969a181d8488a0798502f81c3e9bfba3c4cd5b6adcd345d857dd637f7ba9a"
+  },
+  "Contents/Resources/zh-Hant.lproj/PrintResolutionSetDialog.nib": {
+    "sha256": "32a4ac75c714dbe21c40931f13f3110f0850b9f8b2fab392567e45ba4ee90b8c"
+  },
+  "Contents/_CodeSignature/CodeResources": {
+    "sha256": "71946cea57844a758946cd0cbcf9eeb422f83c357cd6b7049ad0f6d1ea5bdaf1"
+  }
+}

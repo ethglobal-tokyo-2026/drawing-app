@@ -1,0 +1,110 @@
+["/usr/bin/codesign", "--verify", "--strict", "--verbose=2", "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app"]
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/PlugIns/LipPreview.appex
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/PlugIns/LipThumbnail.appex
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/PlugIns/LipPreview.appex
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/PlugIns/LipThumbnail.appex
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/Updater/CLIP STUDIO UPDATER.app
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/Scan/scan.app
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/Updater/CLIP STUDIO UPDATER.app
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/Scan/scan.app
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/TGTosPlugIn.cfpi
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/TGTosPlugIn.cfpi
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/TGCxsPlugIn.cfpi
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/TGCxsPlugIn.cfpi
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/TGXpgPlugIn.cfpi
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/TGXpgPlugIn.cfpi
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/TGMaterialPlugIn.cfpi
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/TGMaterialPlugIn.cfpi
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/IccProfLib_CRT.framework/Versions/Current/.
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/IccProfLib_CRT.framework/Versions/Current/.
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libskia.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libskia.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libailia_blas.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libailia_blas.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libskshaper.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libskshaper.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/WKBridge.bundle
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/WKBridge.bundle
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_thread.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_thread.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_regex.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_regex.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libicuuc65.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libwebpdecoder.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libicuuc65.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_container.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libwebpdecoder.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libwebp.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_container.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libicudata65.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libwebp.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libicudata65.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libjpeg.framework/Versions/Current/.
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libjpeg.framework/Versions/Current/.
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libskunicode.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libskunicode.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libgiflib.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libgiflib.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libpng16.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libpng16.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libosqp.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libosqp.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libjpeg.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libjpeg.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libicui18n65.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libicui18n65.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libwebpmux.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libwebpmux.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libwebpdemux.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libwebpdemux.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_timer.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_timer.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_date_time.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_date_time.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libsharpyuv.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libsharpyuv.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_atomic.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_atomic.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libAudioUtl.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libAudioUtl.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libailia.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libailia.dylib
+--prepared:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_chrono.dylib
+--validated:/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/Frameworks/libboost_chrono.dylib
+/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app: valid on disk
+/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app: satisfies its Designated Requirement
+Exit: 0
+["/usr/bin/codesign", "-d", "--entitlements", "-", "--xml", "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app"]
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.cs.disable-library-validation</key><true/><key>com.apple.security.device.camera</key><true/><key>com.apple.security.get-task-allow</key><true/></dict></plist>
+Executable=/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT
+Exit: 0
+["/usr/bin/codesign", "-dv", "--verbose=4", "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app"]
+Executable=/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT
+Identifier=jp.co.celsys.CLIPSTUDIOPAINT
+Format=app bundle with Mach-O universal (x86_64 arm64)
+CodeDirectory v=20500 size=176221 flags=0x10002(adhoc,runtime) hashes=5496+7 location=embedded
+VersionPlatform=1
+VersionMin=720896
+VersionSDK=1704448
+Hash type=sha256 size=32
+CandidateCDHash sha256=a18726e0a063a84173cc7d261e279c1e4f081558
+CandidateCDHashFull sha256=a18726e0a063a84173cc7d261e279c1e4f0815588f0a6c08c6aa663043470728
+Hash choices=sha256
+CMSDigest=a18726e0a063a84173cc7d261e279c1e4f0815588f0a6c08c6aa663043470728
+CMSDigestType=2
+Executable Segment base=0
+Executable Segment limit=76316672
+Executable Segment flags=0x1
+Page size=16384
+CDHash=a18726e0a063a84173cc7d261e279c1e4f081558
+Signature=adhoc
+Info.plist entries=33
+TeamIdentifier=not set
+Runtime Version=26.2.0
+Sealed Resources version=2 rules=13 files=606
+Internal requirements count=0 size=12
+Exit: 0
+["/usr/bin/lipo", "/Applications/CLIP STUDIO 1.5/App/CLIP STUDIO PAINT.app/Contents/MacOS/CLIP STUDIO PAINT", "-thin", "arm64", "-output", "/private/tmp/csp-debug-research-20261009/original-arm64"]
+Exit: 0
+["/usr/bin/lipo", "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT", "-thin", "arm64", "-output", "/private/tmp/csp-debug-research-20261009/research-arm64"]
+Exit: 0

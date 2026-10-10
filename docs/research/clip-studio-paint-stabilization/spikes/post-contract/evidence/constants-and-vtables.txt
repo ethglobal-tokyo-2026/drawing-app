@@ -1,0 +1,14 @@
+Image SHA256: 6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd
+0x1042ecb78: double 0.1
+0x1044b80a0: double -0.15
+0x1042ef010: double 90.0
+0x104552918: double 0.011111111111111112
+0x10451cbd8: first eight lookup doubles (0.0, 0.0174524064372835, 0.034899496702501, 0.0523359562429438, 0.0697564737441253, 0.0871557427476582, 0.104528463267653, 0.121869343405147)
+vtable 0x104a53390, typeinfo 0x104a533b0, name 0x10454dc78: N12Planeswalker12PWVectorPoolINS_19PWVectorSplineCurveEEE
+  slot 0x10: 0x10277f2bc
+vtable 0x104a53300, typeinfo 0x104a53320, name 0x10454dbff: N12Planeswalker12PWVectorPoolINS_19PWVectorBezierCurveEEE
+  slot 0x10: 0x10277f17c
+vtable 0x104a53918, typeinfo 0x104a53a50, name 0x10454df29: N12Planeswalker19PWVectorSplineCurveE
+  slot 0xf8: 0x102789114
+vtable 0x104a527b0, typeinfo 0x104a528e8, name 0x10454d630: N12Planeswalker19PWVectorBezierCurveE
+  slot 0xf8: 0x1027653d4

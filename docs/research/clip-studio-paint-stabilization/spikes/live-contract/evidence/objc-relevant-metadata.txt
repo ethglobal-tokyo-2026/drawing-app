@@ -1,0 +1,51 @@
+1920:     isa        0x104af9110
+1921:     superclass 0x0 _OBJC_CLASS_$_NSApplication
+1922:     cache      0x0 __objc_empty_cache
+1923:     vtable     0x0
+1924:     data       0x104aefdb0
+1925:         flags          0x00
+1926:         instanceStart  8
+1927:         instanceSize   96
+1928:         reserved       0x00000000
+1929:         ivarLayout     0x0
+1930:         name           0x104752d97 PWLegacyApplicationMac
+1931:         baseMethods    0x103bef9d0
+1932:             entsize 12 (relative)
+1933:             count   68
+1934:             name    0xf064f8 (0x104af5ed0 extends past end of file)
+1935:             types   0xb63a09 (0x1047533e5 extends past end of file)
+1936:             imp     0xfe46179c (0x10205117c extends past end of file)
+1937:             name    0xf0743c (0x104af6e20 extends past end of file)
+1938:             types   0xb63a15 (0x1047533fd extends past end of file)
+1939:             imp     0xfe46181c (0x102051208 extends past end of file)
+1940:             name    0xf063e8 (0x104af5dd8 extends past end of file)
+2045:             name    0xf065bc (0x104af6150 extends past end of file)
+2046:             types   0xb64277 (0x104753e0f extends past end of file)
+2047:             imp     0xfe466d80 (0x10205691c extends past end of file)
+2048:             name    0xf07d40 (0x104af78e0 extends past end of file)
+2049:             types   0xb63859 (0x1047533fd extends past end of file)
+2050:             imp     0xfe4672f4 (0x102056e9c extends past end of file)
+2051:             name    0xf0672c (0x104af62d8 extends past end of file)
+2052:             types   0xb63863 (0x104753413 extends past end of file)
+2053:             imp     0xfe46756c (0x102057120 extends past end of file)
+2054:             name    0xf05ca0 (0x104af5858 extends past end of file)
+2055:             types   0xb64315 (0x104753ed1 extends past end of file)
+2056:             imp     0xfe4675e8 (0x1020571a8 extends past end of file)
+2057:             name    0xf05ffc (0x104af5bc0 extends past end of file)
+2058:             types   0xb64314 (0x104753edc extends past end of file)
+2059:             imp     0xfe4676dc (0x1020572a8 extends past end of file)
+2060:             name    0xf07b48 (0x104af7718 extends past end of file)
+2061:             types   0xb6433f (0x104753f13 extends past end of file)
+2062:             imp     0xfe467aa4 (0x10205767c extends past end of file)
+2063:             name    0xf07b44 (0x104af7720 extends past end of file)
+2064:             types   0xb6381d (0x1047533fd extends past end of file)
+2065:             imp     0xfe467ca8 (0x10205788c extends past end of file)
+2066:             name    0xf065e0 (0x104af61c8 extends past end of file)
+2067:             types   0xb63809 (0x1047533f5 extends past end of file)
+2068:             imp     0xfe467d18 (0x102057908 extends past end of file)
+2069:             name    0xf073ec (0x104af6fe0 extends past end of file)
+2070:             types   0xb63fa7 (0x104753b9f extends past end of file)
+0x104af5858 -> 0x10474b08a -> correctPressure:
+0x104af5bc0 -> 0x104748d60 -> event:toPacket:
+0x104af7718 -> 0x10475174f -> tabletEvent:tabletEventKind:useLastPenAttitude:
+0x104af7720 -> 0x10475178c -> tabletProximity:

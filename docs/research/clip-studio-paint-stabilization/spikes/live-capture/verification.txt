@@ -1,0 +1,84 @@
+2026-10-09 local session. Host checks below did not attach, launch, or operate
+a target process. Separate live checks and their limitations are recorded later.
+
+Python compile() syntax check, retained helper .py files:
+PASS: Python syntax
+Exit: 0
+
+Host-only checks under installed LLDB 2100.0.17.203:
+PASS: host-only suppression/emission, saved-pointer reuse, bounded common queue snapshots, thread and SP pairing guards
+PASS: event-driven stops ignore restarted events, reject foreign/terminal events, and respect deadlines without polling public state
+PASS: host-only delayed detach event, stale current state, matching process identity, and unobserved acknowledgement
+PASS: explicit executable/reference path configuration without temporary files
+No target behavior was tested.
+Exit: 0
+
+Installed local API documentation was inspected for:
+- SBCommandInterpreter.HandleCommand and breakpoint set --hardware --address
+- SBBreakpoint.IsHardware, GetNumLocations, and SBBreakpointLocation.IsResolved
+- SBProcessInfo.GetExecutableFile/GetTriple and SBModule.ResolveFileAddress
+- SBFrame.FindRegister and SBData.GetUnsignedInt64
+- SBProcess.ReadMemory, Continue, SendAsyncInterrupt, and Detach(False)
+- SBListener.StartListeningForEvents and GetNextEventForBroadcasterWithType
+- SBProcess.EventIsProcessEvent, GetProcessFromEvent, GetStateFromEvent, GetUniqueID
+
+The first actual run is retained separately at
+../../evidence/debugger-access/live-contract-first-call.jsonl.
+It predates the asynchronous detach-observation revision and contains no paired
+input/output call. It must not be described as a successful replay fixture.
+The later mouse-pair-check.jsonl exercised revised cleanup against CSP:
+0 filter calls; capture incomplete; elapsed27.124177042 seconds;
+detach request acknowledged; matching eStateDetached event observed;
+cleanup_errors=[]; cleanup_warnings=[]; no deadline overrun.
+A separate OS observation found research PID21626 in stateS afterward.
+This validates timeout/detach behavior for that run, not tablet input pairing.
+
+Queue-size regression:
+RED: AssertionError: Capture reads outside available memory: 0x1000, 256 bytes
+GREEN: All existing host checks pass using a236-byte bounded memory fixture.
+Reason: shared ingestion accepts both 248-byte gesture and 256-byte digitizer queues.
+
+New mouse-route host checks:
+PASS: decoded packet, ordered mouse sequence, equal timestamps, and required up callback return
+PASS: click-only, missing down, timestamp regression, identity and packet-kind rejection
+PASS: final-return thread/SP pairing and event limit cannot certify incomplete capture
+
+Live mouse-route check:
+The first attempt retained down only, then failed while polling stale public
+debugger state after Continue. See mouse-route-complete.jsonl (summary false).
+After the shared event-driven fix, mouse-route-event-driven.jsonl retained
+down + drag + up + same-thread/SP up callback return. Summary complete true
+for mouse route only; elapsed 7.737629291 seconds; cleanup_errors=[];
+cleanup_warnings=[]; detach acknowledged and matching detached event observed.
+Independent raw-byte decoding/order/pairing checks PASS. Research PID 21626
+observed in state S after detach; canvas displayed the new stroke.
+Independent code/evidence review found no actionable completion defect for
+this mouse-only scope. All three native packet timestamps equal 41922872ms;
+the saved record cannot exercise speed-dependent behavior or natural cadence.
+
+Mouse success does not validate tablet-filter arithmetic, final rendering
+completion, natural cadence, post-correction, or pen feel. No actual tablet
+filter input/output fixture has been recorded.
+
+Tablet preparation:
+27 host tests PASS, independently rerun. Coverage includes nonempty initial
+hover history, complete release/final source return, provisional early
+pressure ending, mode1 later hover completion, source breakpoint rotation,
+matching thread/SP, wrong instruction bytes, dropped pairs, suppressed output,
+settings/FPCR mutation, and explicit call limits.
+
+Live no-input preflight:
+All original instruction checks PASS: ingestion528 bytes, dispatcher608 bytes,
+terminal wrapper320 bytes. Four simultaneous hardware probes installed.
+Main-thread registers readable: fpcr0x00000000, fpsr0x08000015.
+Expected capture_deadline_reached with0 entries/0 pairs/0 source events and
+fixture_complete=false. Elapsed5.119384209 seconds within8-second total budget;
+clean acknowledged/observed detach; no cleanup errors/warnings or overrun.
+Separate OS check: research PID21626 stateS after debugger exit0.
+Actual tablet source observations/rotation and reconstructed numerical equality
+remain unvalidated. This is a setup check, not a passing tablet stroke fixture.
+
+Final artifact checks:
+PASS: syntax for 7 Python files; 205 local document links; 34 evidence hashes.
+PASS: formatting for the three edited Markdown overview/instruction files.
+PASS: portable maximum-history probe, all 1,000 records across nine blocks.

@@ -1,0 +1,160 @@
+{
+  "original_arm64_sha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "records": [
+    {
+      "file": "csp-complete-capture-contract.md",
+      "bytes": 10587,
+      "sha256": "dfe14590fd7335a18cb8bcdf16ab07686a21ba6dd9a79f1f7d8b662597528c2d"
+    },
+    {
+      "file": "csp-view-mouse-events-selectors.asm",
+      "bytes": 39688,
+      "sha256": "07273527859ce9728f60ccf0b7fcf555a16921275df4f919b8781f87179d9a11"
+    },
+    {
+      "file": "csp-mouse-send-event-selectors.asm",
+      "bytes": 20205,
+      "sha256": "2b7747980ea7d5ea9da55155dba9be60e24f2aeb7c33a7c1becf38dea2875632"
+    },
+    {
+      "file": "csp-is-tablet-event.asm",
+      "bytes": 721,
+      "sha256": "6f573f6d90688782dcd90b1adbdb9712563154912188303183d4416d27975c2e"
+    },
+    {
+      "file": "csp-mouse-queue.asm",
+      "bytes": 19549,
+      "sha256": "de6375c7d0bf361e12d3fbdfad6ba50ba84730942250eaec0218aca4bcd59fff"
+    },
+    {
+      "file": "csp-complete-capture-refs.txt",
+      "bytes": 627,
+      "sha256": "8746d688605c466d870c12129c2f125c4ed978e5ed290ac8f1c872e591b28ec3"
+    },
+    {
+      "file": "mouse-pair-check.jsonl",
+      "bytes": 5492,
+      "sha256": "d6811a81ab0251c102bb0598db2ad4dad8f83c207d5290b5338a3777c915bf56"
+    },
+    {
+      "file": "mouse-pair-check-lldb.txt",
+      "bytes": 2507,
+      "sha256": "0ccfae2ef2a148058fefd81728fada21e1a75e4f97115745e9290296b20a02d5"
+    },
+    {
+      "file": "mouse-route-complete.jsonl",
+      "bytes": 6107,
+      "sha256": "cae543c5906190247ec744f47067c6dd0e41d98e9a15cf393f72416c0d0127be"
+    },
+    {
+      "file": "mouse-route-complete-lldb.txt",
+      "bytes": 2620,
+      "sha256": "01972ccc18ff9f90192fd2a45925830fa8f51b24f72e6dbdb4903f13672f400b"
+    },
+    {
+      "file": "mouse-route-event-driven.jsonl",
+      "bytes": 9277,
+      "sha256": "760c95c905a72258b7914baa2de6a49c6e78ea2b1eacdecd0494a621e0a7b0cf"
+    },
+    {
+      "file": "mouse-route-event-driven-lldb.txt",
+      "bytes": 4046,
+      "sha256": "9c4008ee97b0e59fe75c54259af347a6f272b30b5edc95d323f72d9c364230d3"
+    },
+    {
+      "file": "mouse-route-independent-verification.json",
+      "bytes": 752,
+      "sha256": "cd6c3b58d74094e46b9dc2585f02515d1c2f33b94366b1bb8c5eb43c49f7bfd5"
+    },
+    {
+      "file": "static/README.md",
+      "bytes": 8563,
+      "sha256": "8c75f3095801853b8d92a254a0e555884b246756fa2217524b208cf1eeb48563"
+    },
+    {
+      "file": "static/SHA256SUMS",
+      "bytes": 1698,
+      "sha256": "97df8f76c539ad178cce3c1390b5cb5725795e758fe2e19a024aa5f8be7ae2e6"
+    },
+    {
+      "file": "static/complete-capture-contract.md",
+      "bytes": 10880,
+      "sha256": "8a0ce5657ef34670b41741110e3bd2279f3dd706e305c21ecb2c49c35b42ce03"
+    },
+    {
+      "file": "static/evidence/brush-gesture-configuration.asm",
+      "bytes": 38179,
+      "sha256": "06104ef354a54a7f096d23590990c51730526c44997f3bf9ac9b3d0882cadedb"
+    },
+    {
+      "file": "static/evidence/brush-tool-gesture-configuration.asm",
+      "bytes": 40853,
+      "sha256": "b7dcfe4da25d5e6b776adc3a95ecff6d5c48c307632f7f36b84f4877e44d7762"
+    },
+    {
+      "file": "static/evidence/complete-capture-refs.txt",
+      "bytes": 627,
+      "sha256": "8746d688605c466d870c12129c2f125c4ed978e5ed290ac8f1c872e591b28ec3"
+    },
+    {
+      "file": "static/evidence/gesture-initialization.asm",
+      "bytes": 9400,
+      "sha256": "b113aed5d29f580ad4f72108442f17cd6a08315cc91e2bfbaa8f9423c978d76f"
+    },
+    {
+      "file": "static/evidence/is-tablet-event.asm",
+      "bytes": 721,
+      "sha256": "6f573f6d90688782dcd90b1adbdb9712563154912188303183d4416d27975c2e"
+    },
+    {
+      "file": "static/evidence/live-two-queue-configuration.asm",
+      "bytes": 4907,
+      "sha256": "167e2d53f20fb7b81f9f3e51584b622a12c9419d5d6fbf5845e87b27dc0ba6c3"
+    },
+    {
+      "file": "static/evidence/mouse-dispatch.asm",
+      "bytes": 38550,
+      "sha256": "e97488b54158b6f87cd689b2914ef317213ec4b4353be366b20d74d06cdf7e31"
+    },
+    {
+      "file": "static/evidence/mouse-queue.asm",
+      "bytes": 19420,
+      "sha256": "b88873b7373e81990838223b2ba9f57ef2388ab0c07577735828d8a997984707"
+    },
+    {
+      "file": "static/evidence/mouse-send-event-selectors.asm",
+      "bytes": 20205,
+      "sha256": "2b7747980ea7d5ea9da55155dba9be60e24f2aeb7c33a7c1becf38dea2875632"
+    },
+    {
+      "file": "static/evidence/native-pen-type.asm",
+      "bytes": 2620,
+      "sha256": "e920e68e8296ec33e80fbbd3f72e40406904a2fc17b3d495fe14e0495615e746"
+    },
+    {
+      "file": "static/evidence/native-touch-events.asm",
+      "bytes": 10533,
+      "sha256": "96986cff68d0c0c2dee5170f61ad7ce6521c499ee4fea00160fe1afccbf6e15a"
+    },
+    {
+      "file": "static/evidence/native-window-create.asm",
+      "bytes": 6370,
+      "sha256": "2b2412cb727610062fc62093ef17a74130015169b958de776f2c5eb4ed959161"
+    },
+    {
+      "file": "static/evidence/queue-memory-functions.asm",
+      "bytes": 6257,
+      "sha256": "15c3040daeffd5ec7b3572b3b53e77a90df0902f973f82e39a5dfd611c65b792"
+    },
+    {
+      "file": "static/evidence/view-mouse-events-selectors.asm",
+      "bytes": 39688,
+      "sha256": "07273527859ce9728f60ccf0b7fcf555a16921275df4f919b8781f87179d9a11"
+    },
+    {
+      "file": "static/evidence/window-callback-installation.asm",
+      "bytes": 6720,
+      "sha256": "785ade807a9dd55660bc2876a53edf2ba1a80c4d5f336359c452492bec20d309"
+    }
+  ]
+}

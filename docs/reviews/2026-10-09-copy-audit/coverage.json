@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-09",
+  "commit": "da37f50fc3086f2171af477f9998d471f8777edc",
+  "catalog_rows": 947,
+  "public_catalog_rows": 853,
+  "individual_public_assessments": 853,
+  "developer_english_only_rows": 94,
+  "public_japanese_present": 827,
+  "intentional_japanese_plural_omissions": 25,
+  "subject_format_fallbacks": 1,
+  "missing_assessment_keys": [],
+  "duplicate_assessment_keys": [],
+  "actions": {
+    "keep": 585,
+    "shorten": 84,
+    "rewrite": 113,
+    "context": 41,
+    "intentional-fallback": 24,
+    "remove": 6
+  },
+  "severity": {
+    "none": 609,
+    "low": 148,
+    "medium": 73,
+    "high": 23
+  },
+  "catalog_sha256": {
+    "apps/frontend/src/i18n/strings/identity.ts": "23c2a3a25ac2def8fd9b568ae5e7fd1871ea62d8a2ad775064037497ed2e5611",
+    "apps/frontend/src/i18n/strings/shop.ts": "c4e0a4a69fce35688c6a3f08b18707b5f9ed63480a7fb4e85f85d07931b99a87",
+    "apps/frontend/src/i18n/strings/stickerCreation.ts": "e394fabc5550bdb7dbee3192eae4434e5dc6f1b2f0882dd58030af1983acf252",
+    "apps/frontend/src/i18n/strings/gratitude.ts": "4abe63a0bc48a42a4bc37d529a33dbeed448923ffbba962273109e3813e901ec",
+    "apps/frontend/src/i18n/strings/errors.ts": "d92aaf111e39698c4f8ae97fde4ac0b44433db8c0c812472e0651f6d72cda920",
+    "apps/frontend/src/i18n/strings/explore.ts": "112bc9a0451af2235945fe2feccf3c7775914ade978b9a387c2a0a33932afca7",
+    "apps/frontend/src/i18n/strings/stickers.ts": "a619a24449e0c509d6759107d2423394f2511fb20c85e8beaef05532e6343809",
+    "apps/frontend/src/i18n/strings/app.ts": "8351e4fc63ebd3d29fd801f7bd678c42fd101b20120f4347ba68474fbeae92e1",
+    "apps/frontend/src/i18n/strings/pages.ts": "7a9bb3da65e6d585fc6bb06da2ffcc4211859b2a375d4070185c1f1e24324cab",
+    "apps/frontend/src/i18n/strings/stickerBoard.ts": "55a86bc0735d9b90388c1d50f0062f936178e7f8f52e230353791185f3e09f4b",
+    "apps/frontend/src/i18n/strings/api.ts": "a5413bcfadec48dc7150c787f9f9a5c68e859368aae642f2f72f0a8a964dad0b",
+    "apps/frontend/src/i18n/strings/line.ts": "49bfbc2b8d7e4802dd1bbee0328e397ed67eeab282ba309a4713ef2081adfde2",
+    "apps/frontend/src/i18n/strings/receiving.ts": "b1166466cbfc1242f2e474df2862faed1986adae20e1ca6d30bb600c745d9c67",
+    "apps/frontend/src/i18n/strings/ui.ts": "f33ce70ad13d334923fda8353e9cdeca792605a8ba9b319816f594312980c025",
+    "apps/frontend/src/i18n/strings/giving.ts": "80923df399bb92031c0e2b705de15dd65b5c2ecd9560c8403e7f9c3c92face22",
+    "apps/frontend/src/i18n/strings/index.ts": "871483dcfcd6643cb1398f72f2c14cfa8f1c1d96faf74672d8e38c726b18a9a1",
+    "apps/frontend/src/i18n/strings/tickets.ts": "388d07eff975e3fa0385c4ef94f7cf906635893da051c14c338d4e61d13b5b79",
+    "apps/frontend/src/i18n/strings/kyotoSeika.ts": "1991cc9643a701c1a30838d51409edba9e7b5c152882879fdc8e799c78cce433"
+  },
+  "validation": {
+    "command": "pnpm --filter frontend exec vitest run src/i18n scripts/catalogImport.test.ts",
+    "output": "Test Files 5 passed (5); Tests 23 passed (23)",
+    "placeholders_and_tags": "No mismatches after excluding deliberate <wbr/> hints.",
+    "context_comments": "Every public catalog entry has context.",
+    "japanese_plural_resolution": "All 25 omitted _one groups select Japanese _other for counts 0, 1, 2, and 10.",
+    "literal_jsx_sweep": "No prose in JSXText nodes in non-test frontend TSX files; other text factories reviewed separately."
+  },
+  "limits": [
+    "This is an editorial and implementation-based audit, not a native-speaker usability study.",
+    "All public catalog rows assessed individually; developer strings read separately and intentionally English.",
+    "Representative live browser inspection: English and Japanese board/settings, Japanese Explore empty search, Shop and checkout. Failure branches assessed from code, not all triggered live.",
+    "Kyoto Seika subject data is Japanese-source vocabulary, not an English-to-Japanese UI translation catalog. Provenance/structure and samples reviewed; every subject/reading was not individually linguistically validated.",
+    "Third-party diagnostics, proper names, original license notices, and intentional Japanese animation lettering are not blanket translation defects.",
+    "Proposed copy is review material, not an import-ready patch. Context findings can require behavior, layout, or approved vocabulary decisions.",
+    "Japanese public Terms/Privacy are deliberate placeholders with different content from English; they cannot be called fully translated policy pages."
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "records": [
+    {
+      "file": "tablet-no-input-preflight.jsonl",
+      "bytes": 8091,
+      "sha256": "f52d88f2f5fcd018eca2a35a5654bbf0756d71b15568a2a14117472653858097"
+    },
+    {
+      "file": "tablet-no-input-preflight-lldb.txt",
+      "bytes": 2588,
+      "sha256": "c2e9ec2518ead10dc8d828184cd2b8dabad57482de3d30b3db81468108b28caa"
+    },
+    {
+      "file": "independent-audit.md",
+      "bytes": 5192,
+      "sha256": "b26762945a4f3baa7390dd76b3a302d7ef9bfd9afb6b965fa69780f5bda83cf7"
+    }
+  ],
+  "scope": "Four-probe installation and timeout/detach only; no pen input received.",
+  "independent_process_observation": "PID21626 stateS at research executable after debugger exit0.",
+  "fpcr_observed": "0x00000000",
+  "fpsr_observed": "0x08000015"
+}

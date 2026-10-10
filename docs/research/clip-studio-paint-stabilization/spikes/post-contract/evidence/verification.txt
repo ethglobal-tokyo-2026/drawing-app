@@ -1,0 +1,24 @@
+2026-10-09, repository root, Python 3
+
+Command:
+python3 docs/research/clip-studio-paint-stabilization/spikes/post-contract/verify_evidence.py
+Output:
+PASS: 38 assembly text hashes and complete instruction ranges
+PASS: 21 saved data records and decoded constants/RTTI
+Executable comparison omitted; supply --binary to perform it.
+Static evidence integrity only; no stroke replay or output-equivalence claim.
+Exit: 0
+
+Command:
+python3 docs/research/clip-studio-paint-stabilization/spikes/post-contract/verify_evidence.py --binary /private/tmp/csp-stabilization-research/paint-arm64
+Output:
+PASS: 38 assembly text hashes and complete instruction ranges
+PASS: 21 saved data records and decoded constants/RTTI
+PASS: executable SHA256 6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd
+PASS: all function boundaries, instruction-byte hashes, and data bytes match executable
+Static evidence integrity only; no stroke replay or output-equivalence claim.
+Exit: 0
+
+The second command records the executed local comparison. Reproduction accepts
+any separately supplied path to the same image; the first command needs no
+temporary directory or executable.

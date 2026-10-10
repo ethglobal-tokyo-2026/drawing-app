@@ -1,0 +1,32 @@
+["xcrun", "lldb", "--batch", "-o", "process attach --pid 21626", "-o", "script import sys; sys.dont_write_bytecode=True; sys.path.insert(0,\"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture\"); import capture_mouse_route as mouse; mouse.run(lldb.debugger,21626,\"/private/tmp/csp-debug-research-20261009/mouse-route-complete.jsonl\",timeout_seconds=30,max_events=128)", "-o", "quit"]
+(lldb) process attach --pid 21626
+Process 21626 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = signal SIGSTOP
+    frame #0: 0x00000001811cbc34 libsystem_kernel.dylib`mach_msg2_trap + 8
+libsystem_kernel.dylib`mach_msg2_trap:
+->  0x1811cbc34 <+8>: ret    
+
+libsystem_kernel.dylib`macx_swapon:
+    0x1811cbc38 <+0>: mov    x16, #-0x30               ; =-48 
+    0x1811cbc3c <+4>: svc    #0x80
+    0x1811cbc40 <+8>: ret    
+Target 0: (CLIP STUDIO PAINT) stopped.
+Executable binary set to "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT".
+Architecture set to: arm64-apple-macosx-.
+(lldb) script import sys; sys.dont_write_bytecode=True; sys.path.insert(0,"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture"); import capture_mouse_route as mouse; mouse.run(lldb.debugger,21626,"/private/tmp/csp-debug-research-20261009/mouse-route-complete.jsonl",timeout_seconds=30,max_events=128)
+CSP mouse route recording active; draw one short mouse drag and release.
+Process 21626 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
+    frame #0: 0x000000010205cb9c CLIP STUDIO PAINT`___lldb_unnamed_symbol_10205c7fc + 928
+CLIP STUDIO PAINT`___lldb_unnamed_symbol_10205c7fc:
+->  0x10205cb9c <+928>: blr    x8
+    0x10205cba0 <+932>: ldrb   w8, [x20, #0xc0]
+    0x10205cba4 <+936>: tbz    w8, #0x6, 0x10205cbd4     ; <+984>
+    0x10205cba8 <+940>: cmp    x22, #0x1
+Target 0: (CLIP STUDIO PAINT) stopped.
+Process 21626 detached
+CSP mouse capture saved: /private/tmp/csp-debug-research-20261009/mouse-route-complete.jsonl; events=1; drags=0; up_return=False; mouse_route_complete=False; digitizer_fixture_complete=False
+{'output_path': '/private/tmp/csp-debug-research-20261009/mouse-route-complete.jsonl', 'mouse_route_complete': False, 'event_count': 1, 'drag_count': 0, 'up_return_observed': False, 'digitizer_fixture_complete': False, 'pen_feel_validated': False, 'detach_request_succeeded': True, 'detached_state_observed': True, 'resume_independently_verified': False, 'cleanup_errors': [], 'cleanup_warnings': []}
+(lldb) quit
+
+LLDB exit: 0

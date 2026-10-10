@@ -1,0 +1,4 @@
+0x0000000103bd9e00  4933 _CGDisplayBounds
+0x0000000103bd9e3c  4938 _CGEventGetDoubleValueField
+0x0000000103bd9f98  4967 _CGMainDisplayID
+0x0000000103bdf4e8  6546 _mach_absolute_time

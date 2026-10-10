@@ -1,0 +1,22 @@
+{
+  "source": "mouse-route-event-driven.jsonl",
+  "sha256": "760c95c905a72258b7914baa2de6a49c6e78ea2b1eacdecd0494a621e0a7b0cf",
+  "verification": "PASS",
+  "checks": [
+    "full JSONL parses; metadata first and summary last; no capture errors",
+    "down/drag/up order and matching window/thread",
+    "all recorded coordinate/pressure/timestamp fields decoded independently from raw bytes",
+    "callback0x1021e3708 matches static assignment",
+    "up callback returned on same thread and SP",
+    "clean acknowledged/observed detach within time budget"
+  ],
+  "counts": {
+    "down": 1,
+    "drag": 1,
+    "up": 1,
+    "up_return": 1
+  },
+  "elapsed_seconds": 7.737629291000001,
+  "digitizer_fixture_complete": false,
+  "pen_feel_validated": false
+}

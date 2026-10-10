@@ -1,0 +1,37 @@
+["xcrun", "lldb", "--batch", "-o", "process attach --pid 21626", "-o", "register read fpcr fpsr", "-o", "script import sys; sys.dont_write_bytecode=True; sys.path.insert(0,\"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture\"); import capture_tablet_stroke as tablet; tablet.run(lldb.debugger,21626,\"/private/tmp/csp-debug-research-20261009/tablet-no-input-preflight.jsonl\",timeout_seconds=8,max_calls=512)", "-o", "quit"]
+(lldb) process attach --pid 21626
+Process 21626 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = signal SIGSTOP
+    frame #0: 0x00000001811cbc34 libsystem_kernel.dylib`mach_msg2_trap + 8
+libsystem_kernel.dylib`mach_msg2_trap:
+->  0x1811cbc34 <+8>: ret    
+
+libsystem_kernel.dylib`macx_swapon:
+    0x1811cbc38 <+0>: mov    x16, #-0x30               ; =-48 
+    0x1811cbc3c <+4>: svc    #0x80
+    0x1811cbc40 <+8>: ret    
+Target 0: (CLIP STUDIO PAINT) stopped.
+Executable binary set to "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT".
+Architecture set to: arm64-apple-macosx-.
+(lldb) register read fpcr fpsr
+    fpcr = 0x00000000
+    fpsr = 0x08000015
+(lldb) script import sys; sys.dont_write_bytecode=True; sys.path.insert(0,"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture"); import capture_tablet_stroke as tablet; tablet.run(lldb.debugger,21626,"/private/tmp/csp-debug-research-20261009/tablet-no-input-preflight.jsonl",timeout_seconds=8,max_calls=512)
+CSP tablet capture active; waiting for one new pen stroke. Instrumented capture <=30s.
+Process 21626 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = signal SIGSTOP
+    frame #0: 0x00000001811cbc34 libsystem_kernel.dylib`mach_msg2_trap + 8
+libsystem_kernel.dylib`mach_msg2_trap:
+->  0x1811cbc34 <+8>: ret    
+
+libsystem_kernel.dylib`macx_swapon:
+    0x1811cbc38 <+0>: mov    x16, #-0x30               ; =-48 
+    0x1811cbc3c <+4>: svc    #0x80
+    0x1811cbc40 <+8>: ret    
+Target 0: (CLIP STUDIO PAINT) stopped.
+Process 21626 detached
+CSP tablet capture saved: /private/tmp/csp-debug-research-20261009/tablet-no-input-preflight.jsonl; pairs=0; fixture_complete=False; detached_observed=True
+{'output_path': '/private/tmp/csp-debug-research-20261009/tablet-no-input-preflight.jsonl', 'fixture_complete': False, 'paired_calls': 0, 'stop_reason': 'CaptureError: capture_deadline_reached', 'detached_state_observed': True, 'cleanup_errors': [], 'resume_independently_verified': False}
+(lldb) quit
+
+LLDB exit: 0

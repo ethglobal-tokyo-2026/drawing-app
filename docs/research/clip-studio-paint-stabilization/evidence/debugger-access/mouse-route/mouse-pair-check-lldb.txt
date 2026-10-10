@@ -1,0 +1,34 @@
+["xcrun", "lldb", "--batch", "-o", "process attach --pid 21626", "-o", "script import sys; sys.dont_write_bytecode=True; sys.path.insert(0,\"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture\"); import capture_live_contract as capture; capture.run(lldb.debugger,21626,\"/private/tmp/csp-debug-research-20261009/mouse-pair-check.jsonl\",timeout_seconds=30,max_samples=1)", "-o", "quit"]
+(lldb) process attach --pid 21626
+Process 21626 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = signal SIGSTOP
+    frame #0: 0x00000001811cbc34 libsystem_kernel.dylib`mach_msg2_trap + 8
+libsystem_kernel.dylib`mach_msg2_trap:
+->  0x1811cbc34 <+8>: ret    
+
+libsystem_kernel.dylib`macx_swapon:
+    0x1811cbc38 <+0>: mov    x16, #-0x30               ; =-48 
+    0x1811cbc3c <+4>: svc    #0x80
+    0x1811cbc40 <+8>: ret    
+Target 0: (CLIP STUDIO PAINT) stopped.
+Executable binary set to "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app/Contents/MacOS/CLIP STUDIO PAINT".
+Architecture set to: arm64-apple-macosx-.
+(lldb) script import sys; sys.dont_write_bytecode=True; sys.path.insert(0,"/Users/adoll/projects/drawing-app/docs/research/clip-studio-paint-stabilization/spikes/live-capture"); import capture_live_contract as capture; capture.run(lldb.debugger,21626,"/private/tmp/csp-debug-research-20261009/mouse-pair-check.jsonl",timeout_seconds=30,max_samples=1)
+CSP contract capture active: at most 1 calls, deadline <=30s.
+Process 21626 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = signal SIGSTOP
+    frame #0: 0x00000001811cbc34 libsystem_kernel.dylib`mach_msg2_trap + 8
+libsystem_kernel.dylib`mach_msg2_trap:
+->  0x1811cbc34 <+8>: ret    
+
+libsystem_kernel.dylib`macx_swapon:
+    0x1811cbc38 <+0>: mov    x16, #-0x30               ; =-48 
+    0x1811cbc3c <+4>: svc    #0x80
+    0x1811cbc40 <+8>: ret    
+Target 0: (CLIP STUDIO PAINT) stopped.
+Process 21626 detached
+CSP capture saved: /private/tmp/csp-debug-research-20261009/mouse-pair-check.jsonl; paired=0; contract_complete=False; detach_acknowledged=True; detached_observed=True; fixture_complete=False
+{'output_path': '/private/tmp/csp-debug-research-20261009/mouse-pair-check.jsonl', 'contract_capture_complete': False, 'paired_calls': 0, 'detach_request_succeeded': True, 'detached_state_observed': True, 'resume_independently_verified': False, 'cleanup_warnings': [], 'cleanup_errors': [], 'fixture_complete': False}
+(lldb) quit
+
+LLDB exit: 0

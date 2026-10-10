@@ -1,0 +1,2480 @@
+[
+  {
+    "key": "public.ja.terms.body",
+    "action": "rewrite",
+    "severity": "high",
+    "current_en": "English Terms of Use contains a collection of attributed Richard Stallman quotations.",
+    "current_ja": "The Japanese Terms page contains an English parody speech inside <div lang=\"en\">.",
+    "proposed_en": "",
+    "proposed_ja": "",
+    "rationale": "This is a deliberate placeholder, not a Japanese translation of the English page. Do not report this surface as fully localized. Its gift rule also wrongly promises receipt only by the intended friend. Decide the intended content first; translating the current unrelated parody would not establish English/Japanese parity.",
+    "evidence": "apps/frontend/public/terms.html:83; apps/frontend/public/ja/terms.html:77; apps/frontend/public/ja/terms.html:121",
+    "basis": "editorial",
+    "confidence": "high"
+  },
+  {
+    "key": "public.privacy.content",
+    "action": "context",
+    "severity": "medium",
+    "current_en": "Privacy Policy title and a dancing-man video.",
+    "current_ja": "プライバシーポリシー title and a ferry video.",
+    "proposed_en": "",
+    "proposed_ja": "",
+    "rationale": "Titles and back links are correctly translated; the pages contain different joke videos rather than substantive policy text. Record this as intentional placeholder content, not as a vetted translated policy. This audit makes no legal assessment.",
+    "evidence": "apps/frontend/public/privacy.html:57; apps/frontend/public/ja/privacy.html:57",
+    "basis": "editorial",
+    "confidence": "high"
+  },
+  {
+    "key": "public.ja.privacy.videoLabel",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "静かなフィヨルドを進むフェリー。画面の上に番組変更のお知らせ",
+    "proposed_en": "",
+    "proposed_ja": "",
+    "rationale": "Natural Japanese description of this page's distinct video. It is not intended as a translation of the English page's different video description. Visual accuracy of every video frame was not assessed.",
+    "evidence": "apps/frontend/public/ja/privacy.html:65",
+    "basis": "editorial",
+    "confidence": "medium"
+  },
+  {
+    "key": "public.ja.pageTitlesAndBackLinks",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "利用規約 / プライバシーポリシー / 出典 / アプリに戻る",
+    "proposed_en": "",
+    "proposed_ja": "",
+    "rationale": "All static page titles and return links have ordinary, accurate Japanese. The heading repeats the browser title structurally, which is not redundant visible body copy.",
+    "evidence": "apps/frontend/public/ja/terms.html; apps/frontend/public/ja/privacy.html; apps/frontend/public/ja/sources.html",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "public.ja.terms.caption",
+    "action": "context",
+    "severity": "low",
+    "current_ja": "ギレン・ザビ、ガルマ・ザビ国葬での演説（『機動戦士ガンダム』第12話「ジオンの脅威」、1979年）",
+    "proposed_en": "",
+    "proposed_ja": "",
+    "rationale": "Japanese is grammatical but presents a source attribution above an original English parody. If retaining the joke, explicitly identify it as a parody rather than implying the body is the original speech. No historical source-verification was performed for the episode attribution.",
+    "evidence": "apps/frontend/public/ja/terms.html:76",
+    "basis": "editorial",
+    "confidence": "medium"
+  },
+  {
+    "key": "public.ja.sources.intro",
+    "action": "rewrite",
+    "severity": "low",
+    "current_ja": "入試モードの題材は、下の出典からつくったリストから配られます。読みと英語を含むこのリストはCC BY-SA 4.0で公開しています。",
+    "proposed_en": "",
+    "proposed_ja": "題材は、以下の資料をもとに選んでいます。題材のリスト（読み・英訳を含む）はCC BY-SA 4.0で公開しています。",
+    "rationale": "から…から is repetitive, 英語 does not name what the English contains, and generic 入試モード weakens the approved mode identity. This page already has subject-source context, so omit the repeated mode label. Preserve the license statement.",
+    "evidence": "apps/frontend/public/ja/sources.html:84; apps/frontend/src/i18n/glossary.md",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "public.ja.sources.jmdict",
+    "action": "rewrite",
+    "severity": "low",
+    "current_ja": "語、読み、英語。",
+    "proposed_en": "Words, readings, and English meanings.",
+    "proposed_ja": "単語・読み・英訳。",
+    "rationale": "英語 is understandable but 英訳 names the supplied information more precisely. JMdict describes a multilingual dictionary; this supports the data role, not every custom sentence here.",
+    "evidence": "apps/frontend/public/ja/sources.html:93; https://www.edrdg.org/jmdict/j_jmdict.html",
+    "basis": "source-backed",
+    "confidence": "high"
+  },
+  {
+    "key": "public.ja.sources.kanjidic",
+    "action": "rewrite",
+    "severity": "low",
+    "current_ja": "漢字の学年。選ぶためだけに使っています。",
+    "proposed_en": "",
+    "proposed_ja": "漢字の学年。題材の選定にのみ使用しています。",
+    "rationale": "Name what is selected. The current Japanese is semantically faithful but underspecified. Keep this role distinct from shipped dictionary content.",
+    "evidence": "apps/frontend/public/ja/sources.html:100; apps/frontend/src/kyoto-seika/subjects/README.md",
+    "basis": "editorial",
+    "confidence": "high"
+  },
+  {
+    "key": "public.ja.sources.wiktionary",
+    "action": "rewrite",
+    "severity": "low",
+    "current_ja": "語義の確認。選ぶためだけに使い、配布はしていません。",
+    "proposed_en": "",
+    "proposed_ja": "語義の確認と題材の選定に使用しています。データはアプリに含めていません。",
+    "rationale": "Nothing ships means the source data is not included, not necessarily that nothing is distributed anywhere. State the scope and selected object.",
+    "evidence": "apps/frontend/public/ja/sources.html:107",
+    "basis": "editorial",
+    "confidence": "medium"
+  },
+  {
+    "key": "public.ja.sources.princeton",
+    "action": "rewrite",
+    "severity": "low",
+    "current_ja": "題材の種類分け。選ぶためだけに使い、配布はしていません。ライセンスは下にあります。",
+    "proposed_en": "",
+    "proposed_ja": "題材の分類に使用しています。データはアプリに含めていません。ライセンスは以下に掲載しています。",
+    "rationale": "The selection phrase is repeated without adding useful detail to the classification role; naturalize the reference to the following notice while retaining it.",
+    "evidence": "apps/frontend/public/ja/sources.html:114",
+    "basis": "editorial",
+    "confidence": "medium"
+  },
+  {
+    "key": "public.ja.sources.japaneseWordNet",
+    "action": "rewrite",
+    "severity": "low",
+    "current_ja": "語とWordNetの語義を結ぶため、選ぶためだけに使っています。表示は下にあります。",
+    "proposed_en": "",
+    "proposed_ja": "単語とWordNetの語義の対応を、題材の選定に使用しています。著作権・ライセンス表示は以下に掲載しています。",
+    "rationale": "ため、選ぶため is awkward; bare 表示 is not an adequate translation of the English notice. Name the notice and the purpose clearly.",
+    "evidence": "apps/frontend/public/ja/sources.html:118",
+    "basis": "editorial",
+    "confidence": "high"
+  },
+  {
+    "key": "public.ja.sources.jlpt",
+    "action": "rewrite",
+    "severity": "low",
+    "current_ja": "レベル。選ぶためだけに使っています。",
+    "proposed_en": "",
+    "proposed_ja": "語彙のレベル。題材の選定にのみ使用しています。",
+    "rationale": "A level needs its domain and the selection needs its object. Preserve the source author and license labels.",
+    "evidence": "apps/frontend/public/ja/sources.html:126",
+    "basis": "editorial",
+    "confidence": "high"
+  },
+  {
+    "key": "public.ja.sources.wordfreq",
+    "action": "rewrite",
+    "severity": "low",
+    "current_ja": "語の頻度。選ぶためだけに使っています。データは CC BY-SA 4.0。",
+    "proposed_en": "",
+    "proposed_ja": "単語の使用頻度。題材の選定にのみ使用しています。データのライセンスはCC BY-SA 4.0です。",
+    "rationale": "More natural and precise description of frequency data. This is editorial localization, not a change to attribution or license terms.",
+    "evidence": "apps/frontend/public/ja/sources.html:130",
+    "basis": "editorial",
+    "confidence": "high"
+  },
+  {
+    "key": "public.ja.sources.noticeHeadings",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "題材の出典 / ライセンスの表示（原文）",
+    "proposed_en": "",
+    "proposed_ja": "",
+    "rationale": "Both headings accurately organize source roles and original license notices. Original third-party license text staying in English is intentional, not a missing UI translation.",
+    "evidence": "apps/frontend/public/ja/sources.html:88; apps/frontend/public/ja/sources.html:135",
+    "basis": "editorial",
+    "confidence": "high"
+  },
+  {
+    "key": "identity.developer.copy.button",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Copy",
+    "proposed_ja": "",
+    "rationale": "Short clipboard action; address/ID is visibly associated with it. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/identity.ts:8",
+      "apps/frontend/src/identity/AccountRow.tsx:24",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "identity.developer.copy.ariaLabel",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Copy the {{label}}",
+    "proposed_ja": "",
+    "rationale": "Accessible label adds the row name to disambiguate repeated Copy controls. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/identity.ts:9",
+      "apps/frontend/src/identity/AccountRow.tsx:24",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "identity.developer.copy.copied",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "{{label}} copied",
+    "proposed_ja": "",
+    "rationale": "Correct transient confirmation of successful clipboard write. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/identity.ts:10",
+      "apps/frontend/src/identity/AccountRow.tsx:24",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "identity.developer.copy.failed",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Couldn’t copy the {{label}}. Select it above to copy it by hand.",
+    "proposed_ja": "",
+    "rationale": "Persistent failure includes a manual-copy fallback. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/identity.ts:11",
+      "apps/frontend/src/identity/AccountRow.tsx:24",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "identity.developer.privyId",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Privy ID",
+    "proposed_ja": "",
+    "rationale": "Correct provider-specific identifier label. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/identity.ts:13",
+      "apps/frontend/src/identity/PrivyAccount.tsx:14",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "identity.developer.suiAddress.label",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Sui address",
+    "proposed_ja": "",
+    "rationale": "Uses the approved Sui address term. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/identity.ts:15",
+      "apps/frontend/src/identity/PrivyAccount.tsx:14",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "identity.developer.suiAddress.failed",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Privy couldn’t make it: {{reason}}",
+    "proposed_ja": "",
+    "rationale": "Provider error reason is useful developer detail. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/identity.ts:17",
+      "apps/frontend/src/identity/PrivyAccount.tsx:14",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "identity.developer.onExplorer",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "{{label}} {{address}} on {{explorer}}",
+    "proposed_ja": "",
+    "rationale": "Accessible link includes object, address and external destination. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/identity.ts:20",
+      "apps/frontend/src/identity/PrivyAccount.tsx:14",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "identity.developer.explorer.suiscan",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Suiscan, Sui Testnet’s explorer",
+    "proposed_ja": "",
+    "rationale": "The local URL helper points to Sui Testnet, matching this label. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/identity.ts:22",
+      "apps/frontend/src/identity/PrivyAccount.tsx:14",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.checking",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Checking…",
+    "proposed_ja": "",
+    "rationale": "Names an in-progress developer lookup; expected short status. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:36",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.couldntCheck",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Couldn’t check: {{reason}}",
+    "proposed_ja": "",
+    "rationale": "Preserves the concrete lookup failure cause. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:37",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.none",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "None",
+    "proposed_ja": "",
+    "rationale": "Correct empty diagnostic value; not a missing-user placeholder. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:38",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.userId",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "LINE user ID",
+    "proposed_ja": "",
+    "rationale": "Names the LINE platform ID displayed verbatim. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:39",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.name",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "LINE name",
+    "proposed_ja": "",
+    "rationale": "Names LINE profile displayName, distinct from the Croquis handle. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:40",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.statusMessage",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Status message",
+    "proposed_ja": "",
+    "rationale": "Matches the optional LINE profile statusMessage field. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:41",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.openedIn.label",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Opened in",
+    "proposed_ja": "",
+    "rationale": "Separates runtime environment from entry context. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:43",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.openedIn.lineApp",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "The LINE app {{version}} on {{os}}",
+    "proposed_ja": "",
+    "rationale": "Combines actual LINE version and operating system. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:44",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.openedIn.lineAppUnknownVersion",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "The LINE app on {{os}}",
+    "proposed_ja": "",
+    "rationale": "Necessary fallback when LINE omits version. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:45",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.openedIn.browser",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "A browser on {{os}}, through LINE Login",
+    "proposed_ja": "",
+    "rationale": "Accurately identifies the authenticated external browser. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:46",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.openedIn.unknownOs",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "an unknown OS",
+    "proposed_ja": "",
+    "rationale": "Avoids inventing an OS when LIFF returns none. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:47",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.openedFrom.label",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Opened from",
+    "proposed_ja": "",
+    "rationale": "Names entry context read through liff.getContext. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:50",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.openedFrom.contextType.utou",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "a one-to-one chat",
+    "proposed_ja": "",
+    "rationale": "Maps the actual one-to-one LINE context enum. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:53",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.openedFrom.contextType.group",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "a group chat",
+    "proposed_ja": "",
+    "rationale": "Maps the actual group LINE context enum. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:54",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.openedFrom.contextType.room",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "a multi-person chat",
+    "proposed_ja": "",
+    "rationale": "Maps the legacy multi-person LINE context enum. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:55",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.openedFrom.contextType.square_chat",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "an OpenChat",
+    "proposed_ja": "",
+    "rationale": "Maps the OpenChat context enum. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:56",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.openedFrom.contextType.none",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "LINE, outside any chat",
+    "proposed_ja": "",
+    "rationale": "Names the in-app, no-chat context. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:57",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.openedFrom.contextType.external",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "a browser",
+    "proposed_ja": "",
+    "rationale": "Names the external-browser context. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:58",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.openedFrom.unknown",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "LINE didn’t say",
+    "proposed_ja": "",
+    "rationale": "Clearly says the platform did not supply context. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:60",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.officialAccount.label",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Official account",
+    "proposed_ja": "",
+    "rationale": "Names the actual account friendship lookup. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:63",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.officialAccount.friend",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Added as a friend",
+    "proposed_ja": "",
+    "rationale": "Correctly reports friendFlag true. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:64",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.officialAccount.notFriend",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Not a friend yet",
+    "proposed_ja": "",
+    "rationale": "Correctly reports friendFlag false. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:65",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.label",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Chat menu",
+    "proposed_ja": "",
+    "rationale": "Names the deployment-specific chat menu diagnostic. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:68",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.waiting",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Links after sign-in",
+    "proposed_ja": "",
+    "rationale": "States that menu linking waits for sign-in. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:69",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.plain",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Draw · My board · Explore, with no count",
+    "proposed_ja": "",
+    "rationale": "Describes the actual uncounted menu image. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:72",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.3",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Draw with 3 daily tickets left",
+    "proposed_ja": "",
+    "rationale": "Describes the three-daily-ticket menu state. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:73",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.2",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Draw with 2 daily tickets left",
+    "proposed_ja": "",
+    "rationale": "Describes the two-daily-ticket menu state. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:74",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.1",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Draw with 1 daily ticket left",
+    "proposed_ja": "",
+    "rationale": "Uses correct singular for one daily ticket. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:75",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.reserve",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Draw with reserve tickets",
+    "proposed_ja": "",
+    "rationale": "Accurately distinguishes purchased reserve tickets. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:76",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.none",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Draw with no tickets left",
+    "proposed_ja": "",
+    "rationale": "Names the no-ticket menu state. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:77",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.kyoto-seika-10",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Kyoto Seika Manga Expression Practice Mode: draw with 10 daily tickets left",
+    "proposed_ja": "",
+    "rationale": "The diagnostic menu label explicitly keeps Kyoto Seika Manga Expression Practice Mode and names its corresponding ticket state: kyoto-seika-10. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:78",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.kyoto-seika-9",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Kyoto Seika Manga Expression Practice Mode: draw with 9 daily tickets left",
+    "proposed_ja": "",
+    "rationale": "The diagnostic menu label explicitly keeps Kyoto Seika Manga Expression Practice Mode and names its corresponding ticket state: kyoto-seika-9. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:81",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.kyoto-seika-8",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Kyoto Seika Manga Expression Practice Mode: draw with 8 daily tickets left",
+    "proposed_ja": "",
+    "rationale": "The diagnostic menu label explicitly keeps Kyoto Seika Manga Expression Practice Mode and names its corresponding ticket state: kyoto-seika-8. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:84",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.kyoto-seika-7",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Kyoto Seika Manga Expression Practice Mode: draw with 7 daily tickets left",
+    "proposed_ja": "",
+    "rationale": "The diagnostic menu label explicitly keeps Kyoto Seika Manga Expression Practice Mode and names its corresponding ticket state: kyoto-seika-7. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:87",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.kyoto-seika-6",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Kyoto Seika Manga Expression Practice Mode: draw with 6 daily tickets left",
+    "proposed_ja": "",
+    "rationale": "The diagnostic menu label explicitly keeps Kyoto Seika Manga Expression Practice Mode and names its corresponding ticket state: kyoto-seika-6. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:90",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.kyoto-seika-5",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Kyoto Seika Manga Expression Practice Mode: draw with 5 daily tickets left",
+    "proposed_ja": "",
+    "rationale": "The diagnostic menu label explicitly keeps Kyoto Seika Manga Expression Practice Mode and names its corresponding ticket state: kyoto-seika-5. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:93",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.kyoto-seika-4",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Kyoto Seika Manga Expression Practice Mode: draw with 4 daily tickets left",
+    "proposed_ja": "",
+    "rationale": "The diagnostic menu label explicitly keeps Kyoto Seika Manga Expression Practice Mode and names its corresponding ticket state: kyoto-seika-4. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:96",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.kyoto-seika-3",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Kyoto Seika Manga Expression Practice Mode: draw with 3 daily tickets left",
+    "proposed_ja": "",
+    "rationale": "The diagnostic menu label explicitly keeps Kyoto Seika Manga Expression Practice Mode and names its corresponding ticket state: kyoto-seika-3. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:99",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.kyoto-seika-2",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Kyoto Seika Manga Expression Practice Mode: draw with 2 daily tickets left",
+    "proposed_ja": "",
+    "rationale": "The diagnostic menu label explicitly keeps Kyoto Seika Manga Expression Practice Mode and names its corresponding ticket state: kyoto-seika-2. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:102",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.kyoto-seika-1",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Kyoto Seika Manga Expression Practice Mode: draw with 1 daily ticket left",
+    "proposed_ja": "",
+    "rationale": "The diagnostic menu label explicitly keeps Kyoto Seika Manga Expression Practice Mode and names its corresponding ticket state: kyoto-seika-1. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:105",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.kyoto-seika-reserve",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Kyoto Seika Manga Expression Practice Mode: draw with reserve tickets",
+    "proposed_ja": "",
+    "rationale": "The diagnostic menu label explicitly keeps Kyoto Seika Manga Expression Practice Mode and names its corresponding ticket state: kyoto-seika-reserve. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:108",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.menus.kyoto-seika-none",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Kyoto Seika Manga Expression Practice Mode: draw with no tickets left",
+    "proposed_ja": "",
+    "rationale": "The diagnostic menu label explicitly keeps Kyoto Seika Manga Expression Practice Mode and names its corresponding ticket state: kyoto-seika-none. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:111",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.notAFriend",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Open Sticker Board: add the official account as a friend to switch",
+    "proposed_ja": "",
+    "rationale": "Names the actual default menu and actionable friendship condition. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:115",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.off.not_configured",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Off: the server has no Messaging API channel",
+    "proposed_ja": "",
+    "rationale": "Names missing Messaging API setup rather than implying a user failure. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:118",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.off.dev_sign_in",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Off under dev sign-in",
+    "proposed_ja": "",
+    "rationale": "Explicitly names the intentional development bypass. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:119",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.off.no_menu",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Off: no chat menu in this language yet",
+    "proposed_ja": "",
+    "rationale": "Diagnoses missing language-specific menu configuration. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:120",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.chatMenu.failed",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Didn’t link: {{reason}}",
+    "proposed_ja": "",
+    "rationale": "Preserves the reason the menu link failed. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:122",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.permissions",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Permissions",
+    "proposed_ja": "",
+    "rationale": "Names granted permission scopes, which are diagnostic identifiers. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:124",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.idToken.label",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "ID token",
+    "proposed_ja": "",
+    "rationale": "Correct developer protocol term for the displayed expiry. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:126",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.idToken.expires",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Expires {{time}}",
+    "proposed_ja": "",
+    "rationale": "Reports future token expiry at the time the slip opened. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:127",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.idToken.expired",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Expired {{time}}",
+    "proposed_ja": "",
+    "rationale": "Reports past token expiry at the time the slip opened. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:128",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.liffApp.label",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "LIFF app",
+    "proposed_ja": "",
+    "rationale": "Names the LIFF app-ID and SDK row. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:131",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.liffApp.value",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "{{id}} · SDK {{version}}",
+    "proposed_ja": "",
+    "rationale": "Compact diagnostic ID/version formatting; not translatable prose. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:132",
+      "apps/frontend/src/line/LineDetails.tsx:92",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.testMessage.send",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Send a test message",
+    "proposed_ja": "",
+    "rationale": "Clear explicit control before an actual external test message is sent. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:135",
+      "apps/frontend/src/line/SendTestMessage.tsx:29",
+      "apps/frontend/src/i18n/glossary.md",
+      "apps/frontend/src/line/friendPicker.ts:57",
+      "https://developers.line.biz/ja/docs/liff/developing-liff-apps/#share-target-picker"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.testMessage.message",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Test message from Croquis, sent by {{name}} through LINE’s friend picker.",
+    "proposed_ja": "",
+    "rationale": "The test payload deliberately identifies Croquis and sender; English is expected for this developer action. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:137",
+      "apps/frontend/src/line/SendTestMessage.tsx:29",
+      "apps/frontend/src/i18n/glossary.md",
+      "apps/frontend/src/line/friendPicker.ts:57",
+      "https://developers.line.biz/ja/docs/liff/developing-liff-apps/#share-target-picker"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.testMessage.pick",
+    "action": "rewrite",
+    "severity": "low",
+    "proposed_en": "Choose LINE chats to receive a test message from you.",
+    "proposed_ja": "",
+    "rationale": "The instruction says one friend, but the implementation opens the multi-recipient picker. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:138",
+      "apps/frontend/src/line/SendTestMessage.tsx:29",
+      "apps/frontend/src/i18n/glossary.md",
+      "apps/frontend/src/line/friendPicker.ts:57",
+      "https://developers.line.biz/ja/docs/liff/developing-liff-apps/#share-target-picker"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.testMessage.unavailable",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "LINE’s friend list isn’t available here. It needs LINE Login, in LINE or a browser.",
+    "proposed_ja": "",
+    "rationale": "States the real LINE Login requirement and acknowledges external browsers. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:139",
+      "apps/frontend/src/line/SendTestMessage.tsx:29",
+      "apps/frontend/src/i18n/glossary.md",
+      "apps/frontend/src/line/friendPicker.ts:57",
+      "https://developers.line.biz/ja/docs/liff/developing-liff-apps/#share-target-picker"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.testMessage.sent",
+    "action": "rewrite",
+    "severity": "low",
+    "proposed_en": "Sent to the chats you chose.",
+    "proposed_ja": "",
+    "rationale": "The success message incorrectly assumes a single one-to-one friend chat. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:142",
+      "apps/frontend/src/line/SendTestMessage.tsx:29",
+      "apps/frontend/src/i18n/glossary.md",
+      "apps/frontend/src/line/friendPicker.ts:57",
+      "https://developers.line.biz/ja/docs/liff/developing-liff-apps/#share-target-picker"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.testMessage.cancelled",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Nothing sent: the friend list was closed.",
+    "proposed_ja": "",
+    "rationale": "Correctly distinguishes cancellation from failed or confirmed send. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:143",
+      "apps/frontend/src/line/SendTestMessage.tsx:29",
+      "apps/frontend/src/i18n/glossary.md",
+      "apps/frontend/src/line/friendPicker.ts:57",
+      "https://developers.line.biz/ja/docs/liff/developing-liff-apps/#share-target-picker"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "line.developer.testMessage.unknown",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "LINE didn’t say whether it was sent.",
+    "proposed_ja": "",
+    "rationale": "Preserves outcome uncertainty and does not falsely claim send failure. The developer slip is explicitly English-only under the project rules; absent Japanese is intentional, not a localization defect.",
+    "evidence": [
+      "apps/frontend/src/i18n/strings/line.ts:144",
+      "apps/frontend/src/line/SendTestMessage.tsx:29",
+      "apps/frontend/src/i18n/glossary.md",
+      "apps/frontend/src/line/friendPicker.ts:57",
+      "https://developers.line.biz/ja/docs/liff/developing-liff-apps/#share-target-picker"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "outgoing.giverNotice.received",
+    "action": "context",
+    "severity": "low",
+    "proposed_en": "{{name}} received your sticker ♡",
+    "proposed_ja": "{{name}}があなたのシールを受け取りました♡",
+    "rationale": "Correct receipt event and natural Japanese notification. It is separately authored outside the translator export, so it must be included in translation reviews or moved into a shared authoritative message catalog. The missing さん is a neutral-notification tone choice, not a grammatical error; do not mechanically add さん because the fallback name is だれか.",
+    "evidence": [
+      "apps/api/src/gifts/giverNotice.ts:27",
+      "apps/frontend/src/i18n/glossary.md",
+      "https://linegift.line.me/faq/faq0008/"
+    ],
+    "basis": "editorial",
+    "confidence": "high"
+  },
+  {
+    "key": "outgoing.giverNotice.someone",
+    "action": "keep",
+    "severity": "none",
+    "proposed_en": "Someone",
+    "proposed_ja": "だれか",
+    "rationale": "Correct privacy-preserving fallback for a deleted receiver, and it fits the containing Japanese sentence. Keep this separately reviewed backend string; no invented identity.",
+    "evidence": [
+      "apps/api/src/gifts/giverNotice.ts:32",
+      "apps/api/src/gifts/giverNotice.ts:39",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "editorial",
+    "confidence": "medium"
+  },
+  {
+    "key": "deploy.line.greeting",
+    "action": "shorten",
+    "severity": "low",
+    "proposed_en": "Draw a sticker in three minutes. Keep it on your board or give it to a friend. Open your sticker board below.",
+    "proposed_ja": "3分でかいた絵がシールになります。シールボードに貼ったり、友だちに贈ったりできます。下のメニューからひらいてください。",
+    "rationale": "Bilingual first-time onboarding is justified because no language is known. Keep the concept and destination, but shorten the English chain and remove Japanese freedom filler. Replace あげる with the approved 贈る. This is editorial brand copy using LINE’s gift vocabulary; no exact Japanese-app match claimed.",
+    "evidence": [
+      "deploy/line/greeting.md:10",
+      "deploy/line/greeting.md:12",
+      "apps/frontend/src/i18n/glossary.md",
+      "https://guide.line.me/ja/services/birthday.html"
+    ],
+    "basis": "editorial",
+    "confidence": "high"
+  },
+  {
+    "key": "deploy.line.defaultMenu.visible",
+    "action": "keep",
+    "severity": "none",
+    "proposed_en": "Open Sticker Board",
+    "proposed_ja": "シールボードをひらく",
+    "rationale": "A single bilingual navigation action is appropriate before the account language is known. It identifies the board destination and uses approved ひらく; no extra helper sentence is needed.",
+    "evidence": [
+      "deploy/line/returning-menu.html:268",
+      "deploy/line/greeting.md:16",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "deploy.line.defaultMenu.accessible",
+    "action": "context",
+    "severity": "medium",
+    "proposed_en": "Open your sticker board",
+    "proposed_ja": "シールボードをひらく",
+    "rationale": "The default image is bilingual but its LINE action label is Japanese-only. Preserve a Japanese accessible default and, if LINE’s platform behavior permits, offer language-specific accessible variants after language is known; do not claim full bilingual accessibility from the image alone. Exact remedy depends on LINE action-label character limits.",
+    "evidence": [
+      "deploy/line/create-returning-menu.sh:93",
+      "deploy/line/returning-menu.html:268",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "editorial",
+    "confidence": "medium"
+  },
+  {
+    "key": "deploy.line.chatBar.default",
+    "action": "keep",
+    "severity": "none",
+    "proposed_en": "Croquis",
+    "proposed_ja": "クロッキー",
+    "rationale": "Default chat bar prints both approved app names; returning menus select the account’s language. Appropriate brand identification rather than redundant prose.",
+    "evidence": [
+      "deploy/line/create-returning-menu.sh:56",
+      "deploy/line/create-returning-menu.sh:70",
+      "deploy/line/create-returning-menu.sh:89",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "deploy.line.returning.draw.plain",
+    "action": "keep",
+    "severity": "none",
+    "proposed_en": "Draw",
+    "proposed_ja": "かく",
+    "rationale": "Both action labels follow the catalog’s approved draw verb and match the image. Japanese intentionally stays in hiragana.",
+    "evidence": [
+      "deploy/line/create-returning-menu.sh:58",
+      "deploy/line/create-returning-menu.sh:72",
+      "apps/frontend/scripts/renderChatMenus.tsx:73",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "deploy.line.returning.draw.count",
+    "action": "keep",
+    "severity": "none",
+    "proposed_en": "Draw, {{count}} tickets left",
+    "proposed_ja": "かく（のこり{{count}}枚）",
+    "rationale": "Accessible label verbalizes the image’s numeric ticket count. The Japanese counter 枚 is correct, and English singular is handled separately; it is useful accessibility content.",
+    "evidence": [
+      "deploy/line/create-returning-menu.sh:59",
+      "deploy/line/create-returning-menu.sh:73",
+      "apps/frontend/scripts/renderChatMenus.tsx:76",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "deploy.line.returning.draw.ten",
+    "action": "keep",
+    "severity": "none",
+    "proposed_en": "Draw, 10 left",
+    "proposed_ja": "かく（のこり10枚）",
+    "rationale": "English compression is deliberate to fit LINE’s action-label limit. Japanese still fits with its counter; no need to force equal string lengths across languages.",
+    "evidence": [
+      "deploy/line/create-returning-menu.sh:61",
+      "deploy/line/create-returning-menu.sh:73",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "editorial",
+    "confidence": "high"
+  },
+  {
+    "key": "deploy.line.returning.draw.reserve",
+    "action": "keep",
+    "severity": "none",
+    "proposed_en": "Draw, reserve ticket",
+    "proposed_ja": "かく（有償チケット）",
+    "rationale": "Correctly distinguishes reserve from daily tickets and uses the engineer-approved 有償チケット. Do not substitute an inferred free/paid vocabulary.",
+    "evidence": [
+      "deploy/line/create-returning-menu.sh:63",
+      "deploy/line/create-returning-menu.sh:74",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "deploy.line.returning.draw.none",
+    "action": "context",
+    "severity": "low",
+    "proposed_en": "Draw, out of tickets",
+    "proposed_ja": "かく（チケットなし）",
+    "rationale": "Accurately says no tickets, but the rendered image also tells the refill time and the accessible label omits it. Consider a compact time-bearing label within LINE’s limit if parity is required. This is a content-equivalence observation, not a Japanese translation error.",
+    "evidence": [
+      "deploy/line/create-returning-menu.sh:64",
+      "deploy/line/create-returning-menu.sh:75",
+      "apps/frontend/scripts/renderChatMenus.tsx:78",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "editorial",
+    "confidence": "medium"
+  },
+  {
+    "key": "deploy.line.returning.board",
+    "action": "keep",
+    "severity": "none",
+    "proposed_en": "My board",
+    "proposed_ja": "マイボード",
+    "rationale": "Exact approved navigation term, synchronized conceptually with the catalog-fed image. Short and clear.",
+    "evidence": [
+      "deploy/line/create-returning-menu.sh:66",
+      "deploy/line/create-returning-menu.sh:77",
+      "apps/frontend/scripts/renderChatMenus.tsx:74",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "deploy.line.returning.explore",
+    "action": "keep",
+    "severity": "none",
+    "proposed_en": "Explore",
+    "proposed_ja": "さがす",
+    "rationale": "Exact approved navigation term in both image and action label. No additional sentence is necessary.",
+    "evidence": [
+      "deploy/line/create-returning-menu.sh:67",
+      "deploy/line/create-returning-menu.sh:78",
+      "apps/frontend/scripts/renderChatMenus.tsx:75",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "deploy.line.returning.imageCopy",
+    "action": "keep",
+    "severity": "none",
+    "proposed_en": "Draw / My board / Explore / count / refill time",
+    "proposed_ja": "かく／マイボード／さがす／枚数／補充時刻",
+    "rationale": "Returning menu images read these strings from the app catalog through renderChatMenus.tsx rather than carrying a second translation. The localization status of source catalog keys is handled by their owning audit groups.",
+    "evidence": [
+      "apps/frontend/scripts/renderChatMenus.tsx:69",
+      "deploy/line/returning-menu.html:292",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "deploy.line.returning.refillTimeZone",
+    "action": "context",
+    "severity": "medium",
+    "proposed_en": "New at {{time}} JST",
+    "proposed_ja": "{{time}}（日本時間）に届く",
+    "rationale": "The image renderer fixes the clock to Asia/Tokyo, unlike an interactive page that can adapt to the viewer’s time zone. The inspected English image only says NEW AT 12:00 AM and Japanese only 0:00に届く. Add a Japan-time qualifier if the chat menu is offered to people outside Japan; this is a content-context issue, not a need to replace the approved refill metaphor.",
+    "evidence": [
+      "apps/frontend/scripts/renderChatMenus.tsx:51",
+      "deploy/line/images/returning-en-none.png",
+      "deploy/line/images/returning-ja-none.png",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "editorial",
+    "confidence": "high"
+  },
+  {
+    "key": "development.liffMock",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "proposed_en": "Development identity and simulated platform responses",
+    "proposed_ja": "",
+    "rationale": "Local LIFF Mock supplies machine states and a stand-in account name; the inspected project code does not author a user-facing mock friend-picker UI. Mock names, IDs, SDK errors and test controls are developer data, not untranslated production Japanese UI. This statement is limited to the inspected project implementation.",
+    "evidence": [
+      "apps/frontend/src/line/liff.ts:174",
+      "apps/frontend/src/line/liff.ts:190",
+      "apps/frontend/src/line/SendTestMessage.tsx:29",
+      "apps/frontend/src/i18n/glossary.md"
+    ],
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.label",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Developer tools",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:340",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.title",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "LINE and Privy",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:341",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.privy.signedIn",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Signed in to Privy",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:343",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.privy.signingIn",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Signing in to Privy…",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:344",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.privy.failed",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Privy sign-in failed: {{reason}}",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:345",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.privy.off",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Privy is off on the dev server, where LIFF Mock signs you in",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:346",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.privy.tryAgain",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Try again",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:347",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.gratitudeDemo.title",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Gratitude mini-game",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:350",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.gratitudeDemo.try",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Try the gratitude mini-game",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:351",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.gratitudeDemo.drawFirst",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Draw a sticker first",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:352",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.gratitudeDemo.fullEffects",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Full effects",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:353",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.gratitudeDemo.showFrameTimes",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Show frame times",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:354",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.performance.title",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Performance",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:357",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.performance.record",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Record performance",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:358",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.performance.what",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Slow frames and what happened around them, and each kind of pointer. While it’s on, it records from the app’s start.",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:359",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.performance.nothingYet",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Nothing recorded yet",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:362",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.performance.copy",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Copy report",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:363",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.performance.clear",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Clear",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:364",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.performance.copied",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Copied. Paste it into the chat.",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:365",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.performance.onUntilRestart",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Recording is on until the app restarts: {{reason}}",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:367",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.performance.offUntilRestart",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Recording is off until the app restarts: {{reason}}",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:368",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.performance.couldntStart",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Recording couldn’t start: {{reason}}",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:369",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.performance.couldntStop",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Recording couldn’t stop: {{reason}}",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:370",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.performance.notCopied",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "The report couldn’t be copied: {{reason}}. It’s below to copy by hand.",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:371",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "stickerBoard.developer.performance.report",
+    "action": "intentional-fallback",
+    "severity": "none",
+    "current_en": "Performance report",
+    "current_ja": "",
+    "rationale": "English-only developer slip text by explicit glossary policy. The diagnostic label/status is understandable in its tool context; it is not a missing Japanese translation.",
+    "evidence": "apps/frontend/src/i18n/strings/stickerBoard.ts:372",
+    "basis": "product-glossary",
+    "confidence": "high"
+  },
+  {
+    "key": "gratitude.expressive.1",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ありがと",
+    "current_en": "thanks",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/tierNames.ts:10",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.2",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "照れ",
+    "current_en": "blushing",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/tierNames.ts:11",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.3",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ドキドキ",
+    "current_en": "heart racing",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/tierNames.ts:12",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.4",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "オーバーヒート",
+    "current_en": "overheat",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/tierNames.ts:13",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.5",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "昇天",
+    "current_en": "ascension",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/tierNames.ts:14",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.6",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "!?",
+    "current_en": "",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/tierSlamAndPopIns.ts:26",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.7",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ポンッ",
+    "current_en": "*pop*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/tierSlamAndPopIns.ts:27",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.8",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ありがと",
+    "current_en": "thanks",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:14",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.9",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ぺこり",
+    "current_en": "*bow*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:15",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.10",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "えへへ",
+    "current_en": "*hehe*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:16",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.11",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "うれしい",
+    "current_en": "so happy",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:17",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.12",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "にこっ",
+    "current_en": "*smile*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:18",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.13",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "キラッ",
+    "current_en": "*sparkle*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:19",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.14",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "どうも〜",
+    "current_en": "thank you kindly",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:20",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.15",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ほわ〜",
+    "current_en": "*warm fuzzies*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:21",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.16",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "やった",
+    "current_en": "yay",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:22",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.17",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ぽっ",
+    "current_en": "*blush*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:25",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.18",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "てれてれ",
+    "current_en": "*so shy*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:26",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.19",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "もじもじ",
+    "current_en": "*fidget*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:27",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.20",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "あわわ",
+    "current_en": "*flustered*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:28",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.21",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "はわわ",
+    "current_en": "*eep*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:29",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.22",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "きゃっ",
+    "current_en": "*eek*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:30",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.23",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "そんな…",
+    "current_en": "oh, stop…",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:31",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.24",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "照れる…",
+    "current_en": "you’ll make me blush",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:32",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.25",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ドキッ",
+    "current_en": "*ba-dump*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:33",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.26",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ドキドキ",
+    "current_en": "*ba-dump ba-dump*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:36",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.27",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "バクバク",
+    "current_en": "*thump thump*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:37",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.28",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "きゅんきゅん",
+    "current_en": "*squee*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:38",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.29",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "はぅっ",
+    "current_en": "*gasp*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:39",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.30",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ずっきゅん",
+    "current_en": "*direct hit*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:40",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.31",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ふわぁ",
+    "current_en": "*swoon*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:41",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.32",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "もっと…",
+    "current_en": "more…",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:42",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.33",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "だめ…",
+    "current_en": "no fair…",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:43",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.34",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ハァハァ",
+    "current_en": "*pant pant*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:46",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.35",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "アツい…",
+    "current_en": "so hot…",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:47",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.36",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ぷしゅー",
+    "current_en": "*steam*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:48",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.37",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "とけちゃう",
+    "current_en": "I’m melting",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:49",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.38",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "もうだめ",
+    "current_en": "can’t take it",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:50",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.39",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "はげしい",
+    "current_en": "so intense",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:51",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.40",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ビクッ",
+    "current_en": "*twitch*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:52",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.41",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ぜぇぜぇ",
+    "current_en": "*wheeze*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:53",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.42",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ブッ",
+    "current_en": "*nosebleed*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:54",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.43",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "そこ…",
+    "current_en": "right there…",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:55",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.44",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "尊い…",
+    "current_en": "*too precious…*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:58",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.45",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "昇天",
+    "current_en": "ascension",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:59",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.46",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "天国…",
+    "current_en": "heaven…",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:60",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.47",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "召される",
+    "current_en": "being called home",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:61",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.48",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "真っ白…",
+    "current_en": "all white…",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:62",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.49",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "限界",
+    "current_en": "at the limit",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:63",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.50",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ありがたや",
+    "current_en": "bless",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:64",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.51",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "成仏",
+    "current_en": "at peace",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:65",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.52",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "あぁ…",
+    "current_en": "ahh…",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:66",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.53",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "なでなで",
+    "current_en": "*pat pat*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:69",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.54",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "すりすり",
+    "current_en": "*nuzzle*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:70",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.55",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "シュッ",
+    "current_en": "*swish*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:71",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.56",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ぞくぞく",
+    "current_en": "*shiver*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:72",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.57",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "もふもふ",
+    "current_en": "*fluff fluff*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:73",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.58",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "よしよし",
+    "current_en": "*there, there*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:74",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.59",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ゴロゴロ",
+    "current_en": "*purr*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:75",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.60",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "うっとり",
+    "current_en": "*entranced*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:76",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.61",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ぶるぶる",
+    "current_en": "*wobble*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:79",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.62",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ゆさゆさ",
+    "current_en": "*sway*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:80",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.63",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ガクガク",
+    "current_en": "*rattle*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:81",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.64",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "ぐわんぐわん",
+    "current_en": "*dizzy*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:82",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.65",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "尊い…",
+    "current_en": "*too precious…*",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:85",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "gratitude.expressive.66",
+    "action": "keep",
+    "severity": "none",
+    "current_ja": "天国…",
+    "current_en": "heaven…",
+    "rationale": "Read as native Japanese manga lettering, retained under the glossary’s explicit rule. This is expressive character copy, not a functional instruction or a claim of external app precedent. Functional gesture announcements are assessed separately.",
+    "evidence": "apps/frontend/src/gratitude/popInWords.ts:86",
+    "basis": "product-glossary",
+    "confidence": "medium"
+  },
+  {
+    "key": "kyotoSeika.subjectData.scope",
+    "action": "context",
+    "severity": "low",
+    "rationale": "Provenance, rendering, and sampled lexical review only: 1507 Japanese-source subject entries, including 41 marked dark. These are Japanese source words with English glosses, not English-to-Japanese interface translations. Individual spelling, reading, and sense validation of every entry was not performed. Sampled English-gloss candidates include イカ → cuttlefish, うちわ → uchiwa, 梨 → nashi, 丼 → porcelain bowl; these need sense review rather than being declared dictionary errors.",
+    "evidence": "apps/frontend/src/kyoto-seika/subjects/README.md; apps/frontend/src/kyoto-seika/subjects/subjects.json; https://www.edrdg.org/jmdict/j_jmdict.html",
+    "basis": "source-backed",
+    "confidence": "medium"
+  }
+]

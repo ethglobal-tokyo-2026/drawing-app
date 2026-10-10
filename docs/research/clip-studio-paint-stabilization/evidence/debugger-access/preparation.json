@@ -1,0 +1,13 @@
+{
+  "createdUtc": "2026-10-09T22:46:06.110636+00:00",
+  "original": "/Applications/CLIP STUDIO 1.5/App/CLIP STUDIO PAINT.app",
+  "researchCopy": "/private/tmp/csp-debug-research-20261009/CLIP STUDIO PAINT Research.app",
+  "manifestEntries": 775,
+  "copyMatchesOriginalBeforeSigning": true,
+  "existingEntitlementsPreserved": [
+    "com.apple.security.cs.disable-library-validation",
+    "com.apple.security.device.camera"
+  ],
+  "addedEntitlement": "com.apple.security.get-task-allow",
+  "userAuthorizedCopyAndLaunch": true
+}

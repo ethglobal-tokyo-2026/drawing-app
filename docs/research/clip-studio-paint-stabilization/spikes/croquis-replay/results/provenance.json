@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-09T22:44:09.030Z",
+  "node": "v24.21.0",
+  "source_audit_head": "ebe0d143f134d7e28cd2da386044a8327f0fe10b",
+  "initial_spike_head": "52493b5618ec22291b32caa8fd1f803c15384416",
+  "replay_head": "2018111dfc429945f7a7e0b3807b8531fa8de0b9",
+  "files": [
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/stabilizer.ts",
+      "sha256": "26d52e056adb1c159c5541283a4c5dceda78fb235bfdf52ce4cb64253e9ce4c1"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/brush.ts",
+      "sha256": "bb2c126d00a89ccbef8f33a59c8446983065f03248fe7e370adbaac95685ff0a"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/strokeCurve.ts",
+      "sha256": "708177b779bfac436aaa3126cadadf4464e67282ef399e64f8997cf45fd9921f"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/inkEngine.ts",
+      "sha256": "5da439ed56ef27712d558ab85b1482de05a2ae0afff7f9f3b19ce662d369ddb9"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/inkSurface.ts",
+      "sha256": "448b1747a6f4c680412ca9ef5e95159020c143d7c16a44ef7dbe21df6b37e905"
+    },
+    {
+      "path": "apps/frontend/src/sticker-creation/canvas/paintStroke.ts",
+      "sha256": "c66db175e9958c54534aacf1ec582f2c25a787b27bbfd7d5450f601780e439ae"
+    },
+    {
+      "path": "docs/research/clip-studio-paint-stabilization/live-reference.ts",
+      "sha256": "2cc18473317bdcc9876bdac1a73b9e3be0bee526919866a0e4d69393c5da74b0"
+    }
+  ]
+}

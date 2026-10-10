@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Croquis — functional frontend review</title>
+    <style>
+      :root { color-scheme: light dark; font-family: system-ui, sans-serif; line-height: 1.55; }
+      body { max-width: 960px; margin: 48px auto; padding: 0 24px 64px; }
+      h1 { font-size: 2rem; line-height: 1.2; }
+      h2 { margin-top: 40px; font-size: 1.4rem; }
+      h3 { font-size: 1.13rem; line-height: 1.4; }
+      article { border-top: 1px solid #8886; margin-top: 28px; padding-top: 12px; }
+      code, pre { font-family: ui-monospace, monospace; font-size: .88em; }
+      code { overflow-wrap: anywhere; }
+      pre { overflow-x: auto; padding: 16px; background: #8881; white-space: pre-wrap; }
+      .note { opacity: .8; }
+      .priority { font-weight: 750; white-space: nowrap; }
+      .p1 { color: light-dark(#a51b21, #ff9c9c); }
+      .p2 { color: light-dark(#775000, #ffd087); }
+      nav li { margin: 6px 0; }
+      a { color: light-dark(#174e9b, #9dc6ff); }
+      dt { font-weight: 650; margin-top: 12px; }
+      dd { margin-left: 0; }
+      @media print { body { margin: 0; max-width: none; } article { break-inside: avoid; } }
+    </style>
+  </head>
+  <body>
+    <h1>Croquis: functional frontend review</h1>
+    <p>October 10, 2026. Prioritized fixes for frontend behavior, persistence, asynchronous operations, and performance. Application source was not changed by this review.</p>
+    <p class="note">Working review record: remove after the findings are resolved. Review began at <code>8e4db409</code>; findings were checked against <code>6b592f6e</code> after concurrent commits. Those commits did not resolve the findings below. Source references are relative to the repository root.</p>
+    <p><strong>P1:</strong> address first because normal use can lose saved changes. <strong>P2:</strong> confirmed functional defects or a demonstrated resource-growth problem to address next. <strong>P3:</strong> test reliability. Order within P2 reflects impact and breadth of the trigger.</p>
+
+    <nav aria-label="Fix list">
+      <ol>
+        <li><a href="#board-saves">P1 — Preserve board save ordering across tab changes</a></li>
+        <li><a href="#saved-session">P2 — Associate saved strokes with their ticket</a></li>
+        <li><a href="#gift-recipient">P2 — Preserve the recipient when recovering a gift</a></li>
+        <li><a href="#gift-storage">P2 — Preserve gift send state when device storage fails</a></li>
+        <li><a href="#wallet-retry">P2 — Recover the wallet provider after its error boundary trips</a></li>
+        <li><a href="#paused-stroke">P2 — Stop captured strokes when drawing is paused</a></li>
+        <li><a href="#replay-memory">P2 — Bound timelapse fill snapshot memory</a></li>
+        <li><a href="#checkout-balance">P2 — Refresh checkout balance after funding the wallet</a></li>
+        <li><a href="#ticket-order">P2 — Reconcile ticket counts when a read overtakes a spend</a></li>
+        <li><a href="#gratitude-back">P2 — Handle Android and LINE Back in the Gratitude Mini-game</a></li>
+        <li><a href="#explore-pages">P2 — Keep Explore pages and position through phone searches</a></li>
+        <li><a href="#escape-test">P3 — Wait for sticker-detail closing in the Escape test</a></li>
+      </ol>
+    </nav>
+
+    <article id="board-saves">
+      <h3><span class="priority p1">1 · P1</span> Preserve board save ordering across tab changes</h3>
+      <p><code>apps/frontend/src/sticker-board/StickerBoard.tsx:401–418</code>; board unmount: <code>apps/frontend/src/app/App.tsx:235–244</code>.</p>
+      <p>The placement queue belongs to a mounted Sticker Board. Leaving and returning creates a second queue while callbacks from the first continue sending. An older queued placement can reach the server after a newer move and permanently replace it.</p>
+      <dl>
+        <dt>Reproduction</dt>
+        <dd>Move a sticker left; delay that request; move it left again; leave and return to the board; move it right; release the original request. The previous visit sends its queued leftward move after the rightward move. A second reproduction shows a pending move disappearing from the screen and local cache when a stale board response is adopted on return.</dd>
+        <dt>Evidence</dt>
+        <dd>Focused regression assertions fail: the server ends at <code>x=0.4402</code> instead of the latest <code>x=0.5299</code>; the simpler return loses <code>x=0.4701</code> and shows <code>x=0.5</code>. See the verification output below.</dd>
+        <dt>Fix</dt>
+        <dd>Keep placement requests, pending placements, and failures in account-scoped state that survives board mounts. Apply pending placements over server reads until acknowledged. Preserve ordering across every visit, including Large layout edits.</dd>
+        <dt>Regression to retain</dt>
+        <dd>A delayed save and a queued move from an earlier visit cannot overwrite the latest move, and a stale read cannot erase a pending placement or its failure.</dd>
+      </dl>
+    </article>
+
+    <article id="saved-session">
+      <h3><span class="priority p2">2 · P2</span> Associate saved strokes with their ticket</h3>
+      <p><code>apps/frontend/src/sticker-creation/session/keptSession.ts:244–252,517–518</code>.</p>
+      <p>Starting a session writes its new ticket into localStorage before clearing IndexedDB. The stored steps have no ticket identifier. If the clear fails, restoration combines the old steps with the new ticket.</p>
+      <dl>
+        <dt>Reproduction and evidence</dt>
+        <dd>Save a red stroke under ticket 7; make IndexedDB writes fail while reads remain available; start ticket 8; reload the session. The actual result is <code>status: found</code>, ticket 8, and ticket 7's red stroke. This can attach an old drawing to a newly spent ticket.</dd>
+        <dt>Fix</dt>
+        <dd>Store the ticket or session identity in the same IndexedDB transaction as its steps and validate that identity during restoration. A mismatched record must enter explicit recovery instead of being accepted as the current drawing.</dd>
+        <dt>Regression to retain</dt>
+        <dd>Failure or interruption of the reset between two tickets never restores the previous ticket's strokes as the new one's.</dd>
+      </dl>
+    </article>
+
+    <article id="gift-recipient">
+      <h3><span class="priority p2">3 · P2</span> Preserve the recipient when recovering a gift</h3>
+      <p><code>apps/frontend/src/giving/giftBackend.ts:226–238</code>; related API behavior: <code>apps/api/src/gifts/packaging.ts:172–174,195</code>.</p>
+      <p>Gift recovery calls the mutating packaging endpoint before checking saved send state. When Giving is reopened from your own board, no recipient is supplied. The API interprets that as clearing the recipient of the already packed gift.</p>
+      <dl>
+        <dt>Reproduction and evidence</dt>
+        <dd>Start Giving from Bob's board; retain an uncertain LINE send outcome; reopen the sticker from your own board; confirm “It went out.” A reproduction using the actual API test app confirms that Bob's Gifts for you response is empty afterward. The original Gift Message can still carry a link, but Bob loses delivery through his board.</dd>
+        <dt>Fix</dt>
+        <dd>Separate resuming a packed gift from changing its recipient. Inspect saved send state before a recipient-changing request, and preserve the existing destination unless the giver explicitly changes it.</dd>
+        <dt>Regression to retain</dt>
+        <dd>A selected recipient survives uncertain-send and failed-report recovery from the giver's own board.</dd>
+      </dl>
+    </article>
+
+    <article id="gift-storage">
+      <h3><span class="priority p2">4 · P2</span> Preserve gift send state when device storage fails</h3>
+      <p><code>apps/frontend/src/giving/keptGifts.ts:69–73</code>; recovery reads: <code>apps/frontend/src/giving/giftBackend.ts:229–250</code>.</p>
+      <p><code>keepGift()</code> discards the result of the storage write and keeps no in-memory fallback for “sent” or “maybe sent.” Gift Claim Tokens are retained separately in memory, so a failed marker write permits the same message to be offered again.</p>
+      <dl>
+        <dt>Reproduction and evidence</dt>
+        <dd>Make localStorage throw <code>QuotaExceededError</code> when the uncertain-send marker is saved, then reopen Giving on the same page. The backend returns the identical Gift Message and token for another send. After a reload, losing that marker also permits the recovery path to take the gift out without recognizing that its message may already have gone out.</dd>
+        <dt>Fix</dt>
+        <dd>Retain send state in memory and surface persistence failure to Giving. Protect reload recovery with durable server state or an explicit restriction when the app cannot safely retain the outcome. Logging alone does not preserve this invariant.</dd>
+        <dt>Regression to retain</dt>
+        <dd>Full or unavailable storage cannot reoffer a possibly sent token or silently authorize taking that gift out during recovery.</dd>
+      </dl>
+    </article>
+
+    <article id="wallet-retry">
+      <h3><span class="priority p2">5 · P2</span> Recover the wallet provider after its error boundary trips</h3>
+      <p><code>apps/frontend/src/identity/PrivySignIn.tsx:12–28,41–45</code>; retry status change: <code>apps/frontend/src/identity/privy.ts:87–93</code>.</p>
+      <p>Once the wallet provider throws, <code>PrivyBoundary</code> permanently renders nothing. Retry resets the shared status to “signing in” but neither resets nor remounts that boundary. The wallet provider remains absent, so sealing, giving, receiving, and paid purchases cannot recover through the offered retry.</p>
+      <dl>
+        <dt>Reproduction and evidence</dt>
+        <dd>Make the provider fail once, allow it to succeed afterward, then invoke the app's retry and rerender. Status changes to “signing in,” but the provider's render count does not increase and the boundary still renders nothing.</dd>
+        <dt>Fix</dt>
+        <dd>Provide a real reset/remount path for a provider failure. For a failed module import cached by the browser or React, offer reload as the recovery action rather than a retry that changes only status.</dd>
+        <dt>Regression to retain</dt>
+        <dd>A transient provider failure followed by Retry either restores the wallet provider or explicitly offers the reload required to do so.</dd>
+      </dl>
+    </article>
+
+    <article id="paused-stroke">
+      <h3><span class="priority p2">6 · P2</span> Stop captured strokes when drawing is paused</h3>
+      <p><code>apps/frontend/src/sticker-creation/canvas/inkEngine.ts:228–233</code>; clock holds: <code>apps/frontend/src/sticker-creation/DrawingScreen.tsx:744–753</code>.</p>
+      <p>The input settings terminate a live stroke only when <code>locked</code> changes. Changes to <code>paused</code> or <code>panelOpen</code> leave a captured stroke active, and later move events continue adding ink while the regular session's clock is stopped.</p>
+      <dl>
+        <dt>Reproduction and evidence</dt>
+        <dd>Hold the Pencil down, pause with a finger, then continue moving the Pencil. The engine reproduction pauses at <code>x=30</code> and still commits the later endpoint at <code>x=220</code>. Opening a tool panel during that stroke has the same missing interruption.</dd>
+        <dt>Fix</dt>
+        <dd>End a live stroke and cancel a pending fill when settings transition into a state that prevents drawing. Require a new permitted pointer-down before accepting new ink.</dd>
+        <dt>Regression to retain</dt>
+        <dd>Pausing or opening a panel during a captured stroke preserves only the ink drawn before the hold.</dd>
+      </dl>
+    </article>
+
+    <article id="replay-memory">
+      <h3><span class="priority p2">7 · P2</span> Bound timelapse fill snapshot memory</h3>
+      <p><code>apps/frontend/src/sticker-board/timelapse/fillSnapshots.ts:186–188</code>.</p>
+      <p>Preparation retains a separate canvas for each changed fill until playback begins. A timeout bounds the duration of preparation, but there is no limit on the total retained pixels. Repeated fills produce compact recorded operations while their expanded snapshots can be large.</p>
+      <dl>
+        <dt>Reproduction and evidence</dt>
+        <dd>Using the existing test canvas implementation, 40 full-region fills retain 40 canvases and 1,600,000 RGBA bytes at only 100 × 100 pixels. The same allocation formula at 1000 × 1000 is <code>40 × 1000 × 1000 × 4 = 160,000,000 bytes</code>, before working canvases and browser overhead. Allocation growth is demonstrated; a browser crash threshold was not measured.</dd>
+        <dt>Fix</dt>
+        <dd>Set a total snapshot-byte budget. Prepare only a bounded number of upcoming fills, or deliberately fall back when the budget is exceeded. Keep failure and cancellation cleanup.</dd>
+        <dt>Regression to retain</dt>
+        <dd>A replay with many large fills stays within its allocation budget and either plays or reports a controlled fallback.</dd>
+      </dl>
+    </article>
+
+    <article id="checkout-balance">
+      <h3><span class="priority p2">8 · P2</span> Refresh checkout balance after funding the wallet</h3>
+      <p><code>apps/frontend/src/tickets/ReserveTicketCheckout.tsx:110–132,533</code>.</p>
+      <p>A successful balance read is not refreshed when the app resumes or when the wallet receives JPYC. The checkout tells someone with insufficient funds to add JPYC, but its Pay button stays disabled against the old balance until the checkout is closed and reopened.</p>
+      <dl>
+        <dt>Reproduction and evidence</dt>
+        <dd>Open checkout with a zero balance, then make the balance provider return enough JPYC. Dispatch visibility, focus, and online events and advance the clock. The provider is still called only once, the checkout still shows ¥0, and Pay remains disabled.</dd>
+        <dt>Fix</dt>
+        <dd>Refresh after returning to the app and provide an explicit balance refresh action, or use bounded polling while insufficient funds are shown. Keep the request timeout and avoid overlapping balance requests.</dd>
+        <dt>Regression to retain</dt>
+        <dd>Funding the wallet and returning to checkout updates the balance and enables an affordable pack without reopening the checkout.</dd>
+      </dl>
+    </article>
+
+    <article id="ticket-order">
+      <h3><span class="priority p2">9 · P2</span> Reconcile ticket counts when a read overtakes a spend</h3>
+      <p><code>apps/frontend/src/tickets/TicketsProvider.tsx:110–114</code>.</p>
+      <p>Request numbers prevent an older request's answer from replacing a newer one, but request-start order does not guarantee the order in which the server processed them. A ticket read started after a slow spend can return the pre-spend count. The eventual spend answer is discarded without the reconciliation already used for purchases.</p>
+      <dl>
+        <dt>Reproduction and evidence</dt>
+        <dd>Start a spend; refresh tickets while it is pending; let that read return three daily tickets; then resolve the spend with two. The provider continues showing three and issues no follow-up read. A refill or resume-triggered read can create this overlap.</dd>
+        <dt>Fix</dt>
+        <dd>If a completed spend's count cannot be adopted, refresh the authoritative ticket count, as the purchase paths already do. A server-provided revision would also allow reliable ordering.</dd>
+        <dt>Regression to retain</dt>
+        <dd>A read that overtakes a pending spend cannot leave the UI displaying a ticket that has already been consumed.</dd>
+      </dl>
+    </article>
+
+    <article id="gratitude-back">
+      <h3><span class="priority p2">10 · P2</span> Handle Android and LINE Back in the Gratitude Mini-game</h3>
+      <p><code>apps/frontend/src/gratitude/GratitudeMiniGame.tsx:292–299</code>.</p>
+      <p>The game handles its close button, Escape, and receipt drag, but does not register with the app's Back stack. From sticker detail, the previous overlay entry is removed without a game entry taking its place. Android or LINE Back can leave the app instead of ending the combo and showing its receipt; a game opened over the stat board can instead affect that underlying board.</p>
+      <dl>
+        <dt>Reproduction and evidence</dt>
+        <dd>The rendered game creates no history entry and ignores a popstate event. Its parents and the shared Back implementation were checked to confirm that no other layer handles this game's transition.</dd>
+        <dt>Fix</dt>
+        <dd>Register the game with <code>useBackToClose</code>. Back during play should end the combo and retain an entry for the receipt; Back on the receipt should close it.</dd>
+        <dt>Regression to retain</dt>
+        <dd>Back before play closes, Back during play records once and shows the receipt, and Back from the receipt closes without leaving Croquis.</dd>
+      </dl>
+    </article>
+
+    <article id="explore-pages">
+      <h3><span class="priority p2">11 · P2</span> Keep Explore pages and position through phone searches</h3>
+      <p><code>apps/frontend/src/explore/ExploreScreen.tsx:804</code>; pagination state: <code>apps/frontend/src/explore/pilePages.ts:65</code>.</p>
+      <p>In one column, a search unmounts the pile and its pagination state. Clearing the search creates a fresh pile containing only the first page. Previously loaded older stickers disappear, the reading position is lost, and those pages must be fetched again. Switching to This week follows the same unmount path.</p>
+      <dl>
+        <dt>Reproduction and evidence</dt>
+        <dd>Load Today and an older day's page; search for an artist; clear the search. A focused regression assertion expects both days but receives only Today. Existing retention coverage exercises the two-column layout, which hides the pile instead.</dd>
+        <dt>Fix</dt>
+        <dd>Keep the pile's state through temporary search and leaderboard views, and retain its scroll position. Hidden work can be suspended without discarding loaded pages.</dd>
+        <dt>Regression to retain</dt>
+        <dd>Phone search/clear and pile/leaderboard switches preserve loaded pages and return to the previous reading position without duplicate page requests.</dd>
+      </dl>
+    </article>
+
+    <article id="escape-test">
+      <h3><span class="priority">12 · P3</span> Wait for sticker-detail closing in the Escape test</h3>
+      <p><code>apps/frontend/src/sticker-board/StickerDetail.test.tsx:111,1019–1020</code>; close completion: <code>apps/frontend/src/sticker-board/detailLift.ts:268–279</code>.</p>
+      <p>The test waits one zero-delay timer tick before asserting that <code>onClose</code> ran. Closing intentionally waits for reversed animations to finish. Under scheduling contention, those animation timers can complete after the test's single tick and fail an otherwise correct close.</p>
+      <dl>
+        <dt>Reproduction and evidence</dt>
+        <dd>The full suite failed the Escape assertion after an earlier clean pass. The entire sticker-detail test file and repeated isolated runs passed. A controlled scheduling-delay reproduction confirmed that closing starts immediately, disables pointer interaction, and calls <code>onClose</code> once after the animation completes.</dd>
+        <dt>Fix</dt>
+        <dd>Wait for the observable close with <code>vi.waitFor</code>, or explicitly finish the animations using a deterministic test clock. Do not change application closing behavior to satisfy the premature assertion.</dd>
+        <dt>Regression to retain</dt>
+        <dd>The existing test verifies that another sticker's pending 18+ mark does not block closing, regardless of animation scheduling.</dd>
+      </dl>
+    </article>
+
+    <h2>Verification</h2>
+    <p>Baseline command and output at the start of review:</p>
+    <pre>pnpm --filter frontend test
+Test Files  218 passed (218)
+Tests       1853 passed (1853)</pre>
+    <p>After concurrent frontend changes, a fresh full run reported an intermittent existing failure. Its investigation is recorded below; the final test state must not be described as an unconditional clean pass.</p>
+    <pre>pnpm --filter frontend test
+Test Files  1 failed | 217 passed (218)
+Tests       1 failed | 1852 passed (1853)
+
+StickerDetail &gt; Mark 18+ &gt;
+closes on Escape while another sticker's mark is on its way
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+apps/frontend/src/sticker-board/StickerDetail.test.tsx:1020:23</pre>
+    <p id="escape-investigation">The failure was isolated to the test's animation wait, as described in finding 12. The app enters its closing state immediately; a condition-based assertion sees the expected single callback. This review did not modify the test or application behavior.</p>
+    <pre>pnpm --filter frontend exec vitest run --config /tmp/croquis-board-review/vite.config.mjs -t "REVIEW close waits"
+Tests  1 passed | 162 skipped (163)
+Controlled animation-scheduling delay confirms closing completes after the test's original wait.</pre>
+    <pre>pnpm --filter frontend lint
+Exit 0
+
+pnpm --filter frontend typecheck
+Exit 0
+
+pnpm --filter frontend build
+tsc -b &amp;&amp; vite build
+Exit 0</pre>
+    <p>Temporary focused reproductions were run outside the repository source. Some assert the observed defect and pass; the board and Explore tests assert the intended behavior and fail. These results establish the issues rather than certify fixes.</p>
+    <pre>pnpm --filter frontend exec vitest run --config /tmp/croquis-board-review/vite.config.mjs -t REVIEW
+Tests  3 failed | 72 skipped (75)
+Expected latest x=0.5299; received older x=0.4402
+Expected pending x=0.4701; received x=0.5
+Expected both loaded days; received Today only
+
+pnpm --filter frontend exec vitest run --config /private/tmp/croquis-functional-review/vite.config.ts
+Tests  3 passed (3)
+Observed defects: wallet boundary retry, ticket count ordering, checkout balance refresh
+
+pnpm --filter frontend exec vitest run --config /private/tmp/croquis-review-gifts/vite.config.ts
+Tests  4 passed (4)
+Observed defects: recipient recovery, failed gift-marker storage, missing game Back handling
+Also confirms a delayed outbox cleanup gap, excluded from the main fix list below
+
+node --import ./apps/frontend/node_modules/tsx/dist/loader.mjs /tmp/croquis-review-repro.mts
+New session restored after reset write failed:
+  status=found, ticket=8, steps include ticket 7's red stroke
+Stroke endpoint after pause at x=30: [220,20,2.6950000000000003,5010]
+
+node --import ./apps/frontend/node_modules/tsx/dist/loader.mjs /tmp/croquis-replay-memory.mts
+{ fills: 40, retainedCanvases: 40, retainedRgbaBytes: 1600000 }</pre>
+
+    <h2>Scope and limits</h2>
+    <p>Reviewed functional paths across app startup and navigation, API queries and session recovery, LINE and Privy integration, ticket spending and purchases, drawing input and saved sessions, Kyoto Seika Practice Mode, sealing, boards and Large layout, sticker detail and settings, Explore, giving and receiving, Gratitude and its replay/outbox, timelapse, shared hooks, and performance instrumentation. API handlers were traced where they determine frontend behavior. Existing tests were read alongside the implementation.</p>
+    <p>No live LINE picker, live wallet transaction, device sensor, physical Pencil, or device-memory measurement was performed. The full browser end-to-end suite was not run. The timelapse finding demonstrates allocation growth, not a measured crash threshold.</p>
+    <p>A delayed Gratitude outbox resend continues after its listener cleanup. A focused test reproduces that behavior and deletion following a 403, but a normal account-switch path without page teardown was not established. It is excluded from the confirmed fix list rather than presented as proven cross-account data loss.</p>
+    <p>Start with board-save persistence, saved-session identity, and gift-recovery state. Follow with wallet recovery, pause behavior, and the timelapse allocation budget; then close the checkout, ticket-count, Back-navigation, and Explore retention gaps.</p>
+  </body>
+</html>
