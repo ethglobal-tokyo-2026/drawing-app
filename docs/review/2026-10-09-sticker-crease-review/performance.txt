@@ -127,3 +127,25 @@ both engines, and the crease follows the light 250 ms after it rests, gliding on
 beat keeps following during the move but only helps Chromium (about half of current's extra cost);
 on WebKit it's no better than current. no-fade is rejected (WebKit 13-15 fps). Next, for the
 WebKit rest hitch and layer memory: two layers per crease instead of four.
+
+AFTER THE FIX PASS (branch fix/sticker-crease-review, 2026-10-10)
+final = settle plus the base layer (a fifth image per crease at constant opacity, no transition: 22
+creases, 110 layers), the mask cache cap and the worker safeguards. Same harness (production build with
+LIFF Mock, 240 moves round the ellipse, TAIL_MS 1200), one round, order WebKit off, final, Chromium
+final, off. Load averages 45-73 (1-min) through the round: compare within it only.
+
+WebKit 1x       fps    p50 ms  p95 ms  >25 ms  >50 ms  move s  tail: longest frame ms
+  off           58.1   17      20      5       4       8.8     34
+  final         59.1   17      18      3       2       8.1     204
+
+Chromium 4x     fps    p50 ms  p95 ms  >25 ms  >50 ms  main s  style s  tail longest ms
+  off           59.9   16.7    16.8    1       0       4.5     1.5      16.8
+  final         59.0   16.7    16.7    6       0       3.9     1.3      16.8
+
+Bakes, whole board (28 jobs, 6 empty), five PNGs each: WebKit sum 884 ms (decode 524, draw 180, shade
+121, encode 59), max 69 ms; Chromium sum 221 ms (encode 34), max 14 ms. Within the earlier rounds'
+spread (WebKit 750-866 ms, Chromium 149-228 ms); the fifth encode is small next to decode and draw.
+
+Reading: settle's result holds with the base layer: a moving light costs final what it costs off, in
+both engines. WebKit's rest hitch is still there (204 ms, in the 120-263 ms range before), as expected:
+the base layer doesn't change the four fading layers.
