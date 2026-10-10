@@ -1,6 +1,14 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { acquireLight, GLIDE_MS, installLight, lightUp, SWEEP_PAUSE_MS, SWEEP_TILT } from "./light";
+import {
+  acquireLight,
+  CREASE_SETTLE_MS,
+  GLIDE_MS,
+  installLight,
+  lightUp,
+  SWEEP_PAUSE_MS,
+  SWEEP_TILT,
+} from "./light";
 
 const root = document.documentElement;
 let uninstall = () => {};
@@ -79,7 +87,15 @@ const showScreen = () => {
 };
 
 beforeEach(() => {
-  vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"] });
+  vi.useFakeTimers({
+    toFake: [
+      "requestAnimationFrame",
+      "cancelAnimationFrame",
+      "performance",
+      "setTimeout",
+      "clearTimeout",
+    ],
+  });
   resin = addResin();
   const add = window.addEventListener.bind(window);
   const remove = window.removeEventListener.bind(window);
@@ -270,6 +286,24 @@ describe("the shared light", () => {
     const later = makeFoil();
     lightUp(later.foil);
     expect(later.parts.map(lightOn)).toEqual([lightAt(), lightAt()]);
+  });
+
+  it("lights a crease only once the light rests, where it rests", () => {
+    const crease = document.createElement("span");
+    crease.className = "sticker-crease";
+    document.body.append(crease);
+    uninstall = installLight(root);
+    showScreen();
+    // A pointer that keeps moving, never resting as long as a crease waits.
+    for (const x of [0, 0.25, 0.5, 0.75, 1]) {
+      pointAt(x * window.innerWidth, 0);
+      vi.advanceTimersByTime(CREASE_SETTLE_MS / 2);
+      expect(lightOn(crease)).toEqual(["", ""]);
+    }
+    expect(lightAt()).toEqual(["1.000", "-1.000"]);
+
+    vi.advanceTimersByTime(CREASE_SETTLE_MS);
+    expect(lightOn(crease)).toEqual(lightAt());
   });
 
   it("stays in the middle under reduced motion", () => {
