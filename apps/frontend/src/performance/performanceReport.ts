@@ -1,3 +1,4 @@
+import { i18next } from "../i18n/i18n";
 import type { BootMilestone } from "./bootMilestones";
 import type {
   FrameWindow,
@@ -27,28 +28,56 @@ const count = (n: number) => n.toLocaleString("en-US");
 const ms = (value: number, digits = 0) => `${value.toFixed(digits)}ms`;
 const share = (part: number, whole: number) =>
   `${whole > 0 ? ((part / whole) * 100).toFixed(1) : "0.0"}%`;
-const fps = (typicalMs: number) => Math.round(1000 / typicalMs);
-const screenName = (screen: string) => screen || "untitled";
-const calls = (n: number) => `${count(n)} ${n === 1 ? "call" : "calls"}`;
+const fps = (typicalMs: number) => `${Math.round(1000 / typicalMs)} fps`;
+const screenName = (screen: string) =>
+  screen || i18next.t(($) => $.stickerBoard.developer.performance.lines.untitled);
+const calls = (n: number) =>
+  i18next.t(($) => $.stickerBoard.developer.performance.lines.slowFrames.calls, {
+    count: n,
+    calls: count(n),
+  });
 const range = ({ min, max }: Span, digits: number) =>
   `${min.toFixed(digits)}–${max.toFixed(digits)}`;
 
-/** Samples a move, on average and at most, or that the browser has no such list. */
-const perMove = (samples: SampleCount | null, moves: number, name: string) =>
+/**
+ * Samples a move, on average and at most, or that the browser has no such list. `events` names the
+ * list as PointerEvent does: coalesced or predicted.
+ */
+const perMove = (samples: SampleCount | null, moves: number, events: string) =>
   samples === null
-    ? `no ${name} events`
-    : `${(moves > 0 ? samples.total / moves : 0).toFixed(1)} ${name} a move (most ${samples.most})`;
+    ? i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.noEvents, { events })
+    : i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.perMove, {
+        average: (moves > 0 ? samples.total / moves : 0).toFixed(1),
+        events,
+        most: samples.most,
+      });
 
 /** One kind of pointer: its contacts and hovering, how hard and how big, and the samples a move carried. */
-function pointerLine(type: string, kind: PointerKindSummary): string {
-  const head = `${type}: ${count(kind.downs)} down, ${count(kind.moves)} moves, ${count(kind.hovers)} hovering`;
+function pointerLine(pointer: string, kind: PointerKindSummary): string {
+  const head = i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.counts, {
+    pointer,
+    downs: count(kind.downs),
+    moves: count(kind.moves),
+    hovers: count(kind.hovers),
+  });
   const { pressure, landing, width, height } = kind;
-  if (!pressure || !width || !height) return `${head} · no contact`;
+  if (!pressure || !width || !height)
+    return `${head} · ${i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.noContact)}`;
   return [
     head,
-    `pressure ${range(pressure, 2)}`,
-    ...(landing ? [`landing ${range(landing, 2)}`] : []),
-    `contact ${range(width, 1)} × ${range(height, 1)}px`,
+    i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.pressure, {
+      range: range(pressure, 2),
+    }),
+    ...(landing
+      ? [
+          i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.landing, {
+            range: range(landing, 2),
+          }),
+        ]
+      : []),
+    i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.contact, {
+      size: `${range(width, 1)} × ${range(height, 1)}px`,
+    }),
     perMove(kind.coalesced, kind.moves, "coalesced"),
     perMove(kind.predicted, kind.moves, "predicted"),
   ].join(" · ");
@@ -56,8 +85,13 @@ function pointerLine(type: string, kind: PointerKindSummary): string {
 
 /** The pointers seen, for checking a Pencil, or that none was. */
 function pointerLines(pointers: PerformanceSummary["pointers"]): string[] {
-  if (pointers.size === 0) return ["Pointers: none seen", ""];
-  return ["Pointers", ...[...pointers].map(([type, kind]) => `  ${pointerLine(type, kind)}`), ""];
+  if (pointers.size === 0)
+    return [i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.noneSeen), ""];
+  return [
+    i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.title),
+    ...[...pointers].map(([pointer, kind]) => `  ${pointerLine(pointer, kind)}`),
+    "",
+  ];
 }
 
 /** 45s, or 3m 12s. */
@@ -75,13 +109,24 @@ function since(at: number, startedAt: number): string {
 
 /** The slip's line: time recorded, slow frames, the worst and the pace. */
 export function formatSummaryLine(summary: PerformanceSummary): string {
-  if (summary.frames === 0) return "Nothing recorded yet";
+  if (summary.frames === 0)
+    return i18next.t(($) => $.stickerBoard.developer.performance.nothingYet);
   const { slow, frames, worst } = summary;
   return [
     span(summary.recordedMs),
-    `${count(slow)} slow of ${count(frames)} frames (${share(slow, frames)})`,
-    ...(worst ? [`worst ${ms(worst.ms)}`] : []),
-    `${fps(summary.typicalMs)} fps`,
+    i18next.t(($) => $.stickerBoard.developer.performance.summary.slow, {
+      slow: count(slow),
+      frames: count(frames),
+      share: share(slow, frames),
+    }),
+    ...(worst
+      ? [
+          i18next.t(($) => $.stickerBoard.developer.performance.summary.worst, {
+            worst: ms(worst.ms),
+          }),
+        ]
+      : []),
+    fps(summary.typicalMs),
   ].join(" · ");
 }
 
@@ -114,9 +159,17 @@ function slowFrameLines(frame: SlowFrame, startedAt: number): string[] {
     happened.push(line);
     latest.set(key, line);
   }
+  const oursLine = i18next.t(($) => $.stickerBoard.developer.performance.lines.slowFrames.ours, {
+    ours: ms(ours, 1),
+  });
   return [
-    `${since(frame.start, startedAt)} ${screenName(frame.screen)}: ${ms(frame.end - frame.start)} (typical ${ms(frame.typicalMs, 1)})`,
-    `  ours ${ms(ours, 1)}${split ? `: ${split}` : ""}`,
+    i18next.t(($) => $.stickerBoard.developer.performance.lines.slowFrames.frame, {
+      at: since(frame.start, startedAt),
+      screen: screenName(frame.screen),
+      interval: ms(frame.end - frame.start),
+      typical: ms(frame.typicalMs, 1),
+    }),
+    `  ${oursLine}${split ? `: ${split}` : ""}`,
     ...happened.map(({ line, times }) => (times > 1 ? `${line} ×${times}` : line)),
   ];
 }
@@ -128,7 +181,7 @@ const onPageClock = (at: number) => `${(at / 1000).toFixed(2)}s`;
 function startLines(start: readonly BootMilestone[]): string[] {
   if (start.length === 0) return [];
   return [
-    "Start, on the page's clock",
+    i18next.t(($) => $.stickerBoard.developer.performance.lines.start),
     ...start.map(
       ({ step, at, detail }) => `  ${onPageClock(at)} ${step}${detail ? `: ${detail}` : ""}`,
     ),
@@ -145,17 +198,35 @@ function percentile(values: readonly number[], part: number): number {
 /** A watched stretch's frames: how many, the slow ones, the worst, the pace and the long tail. */
 function windowLine(w: FrameWindow): string {
   const shown = w.intervals.reduce((sum, interval) => sum + interval, 0);
-  const head = `${w.label.charAt(0).toUpperCase()}${w.label.slice(1)}`;
-  if (w.frames === 0) return `${head}: no frames recorded`;
+  const label = `${w.label.charAt(0).toUpperCase()}${w.label.slice(1)}`;
+  if (w.frames === 0)
+    return i18next.t(($) => $.stickerBoard.developer.performance.lines.window.noFrames, { label });
   const typical = percentile(w.intervals, 0.5);
   return [
-    `${head}: ${count(w.frames)} frames in ${(shown / 1000).toFixed(1)}s`,
-    `${count(w.slow)} slow (${share(w.slow, w.frames)})`,
+    i18next.t(($) => $.stickerBoard.developer.performance.lines.window.frames, {
+      label,
+      frames: count(w.frames),
+      seconds: `${(shown / 1000).toFixed(1)}s`,
+    }),
+    i18next.t(($) => $.stickerBoard.developer.performance.lines.window.slow, {
+      slow: count(w.slow),
+      share: share(w.slow, w.frames),
+    }),
     ...(w.worst
-      ? [`worst ${ms(w.worst.ms)} at +${((w.worst.at - w.from) / 1000).toFixed(1)}s`]
+      ? [
+          i18next.t(($) => $.stickerBoard.developer.performance.lines.window.worst, {
+            worst: ms(w.worst.ms),
+            at: `+${((w.worst.at - w.from) / 1000).toFixed(1)}s`,
+          }),
+        ]
       : []),
-    `typical ${ms(typical, 1)} (${fps(typical)} fps)`,
-    `95th percentile ${ms(percentile(w.intervals, 0.95), 1)}`,
+    i18next.t(($) => $.stickerBoard.developer.performance.lines.window.typical, {
+      typical: ms(typical, 1),
+      fps: fps(typical),
+    }),
+    i18next.t(($) => $.stickerBoard.developer.performance.lines.window.percentile95, {
+      interval: ms(percentile(w.intervals, 0.95), 1),
+    }),
   ].join(" · ");
 }
 
@@ -163,12 +234,13 @@ function windowLine(w: FrameWindow): string {
 function windowLines(summary: PerformanceSummary, start: readonly BootMilestone[]): string[] {
   if (summary.windows.length > 0) return [...summary.windows.map(windowLine), ""];
   if (!start.some((m) => m.step === "board complete")) return [];
-  return ["The 5s after the board was complete: not recorded, as the recorder was off then", ""];
+  return [i18next.t(($) => $.stickerBoard.developer.performance.lines.window.boardNotRecorded), ""];
 }
 
 /**
  * The report, as plain text to paste into a chat. Within a limit, it holds the latest slow frames
- * that fit, and says how many of the slow frames it holds.
+ * that fit, and says how many of the slow frames it holds. Its words are the developer slip's, which
+ * stay English, so the server log reads the same whatever the app's language.
  */
 export function formatPerformanceReport(input: ReportInput): string {
   const { slowFrames, within = Infinity } = input;
@@ -183,9 +255,12 @@ export function formatPerformanceReport(input: ReportInput): string {
 }
 
 function formatReport({ summary, slowFrames, takenAt, device, start = [] }: ReportInput): string {
-  const head = `Performance report, taken ${takenAt.toISOString()}`;
+  const head = i18next.t(($) => $.stickerBoard.developer.performance.lines.taken, {
+    time: takenAt.toISOString(),
+  });
   if (summary.frames === 0) {
-    return [head, device, "", ...startLines(start), "Nothing recorded yet"].join("\n");
+    const nothingYet = i18next.t(($) => $.stickerBoard.developer.performance.nothingYet);
+    return [head, device, "", ...startLines(start), nothingYet].join("\n");
   }
   const { worst, startedAt, typicalMs } = summary;
   const lines = [
@@ -194,27 +269,51 @@ function formatReport({ summary, slowFrames, takenAt, device, start = [] }: Repo
     "",
     ...startLines(start),
     ...windowLines(summary, start),
-    `${span(summary.recordedMs)} recorded · ${count(summary.frames)} frames · ${count(summary.slow)} slow (${share(summary.slow, summary.frames)})`,
+    i18next.t(($) => $.stickerBoard.developer.performance.lines.recorded, {
+      span: span(summary.recordedMs),
+      frames: count(summary.frames),
+      slow: count(summary.slow),
+      share: share(summary.slow, summary.frames),
+    }),
     ...(worst
-      ? [`Worst ${ms(worst.ms)} at ${since(worst.at, startedAt)} on ${screenName(worst.screen)}`]
+      ? [
+          i18next.t(($) => $.stickerBoard.developer.performance.lines.worst, {
+            worst: ms(worst.ms),
+            at: since(worst.at, startedAt),
+            screen: screenName(worst.screen),
+          }),
+        ]
       : []),
-    `Typical frame ${ms(typicalMs, 1)} (${fps(typicalMs)} fps)`,
+    i18next.t(($) => $.stickerBoard.developer.performance.lines.typical, {
+      typical: ms(typicalMs, 1),
+      fps: fps(typicalMs),
+    }),
     ...(typicalMs >= THIRTY_FPS_MS.from && typicalMs <= THIRTY_FPS_MS.to
-      ? ["30 fps: Low Power Mode or throttling"]
+      ? [i18next.t(($) => $.stickerBoard.developer.performance.lines.thirtyFps)]
       : []),
     "",
     ...pointerLines(summary.pointers),
-    "Slow frames by screen",
+    i18next.t(($) => $.stickerBoard.developer.performance.lines.byScreen.title),
     ...[...summary.byScreen]
       .sort(([, a], [, b]) => b.slow - a.slow)
       .map(
         ([screen, { frames, slow }]) =>
-          `  ${screenName(screen)}: ${count(slow)} of ${count(frames)} (${share(slow, frames)})`,
+          `  ${i18next.t(($) => $.stickerBoard.developer.performance.lines.byScreen.screen, {
+            screen: screenName(screen),
+            slow: count(slow),
+            frames: count(frames),
+            share: share(slow, frames),
+          })}`,
       ),
     "",
     slowFrames.length === summary.slow
-      ? `All ${slowFrames.length} slow frames, oldest first`
-      : `The latest ${slowFrames.length} of ${count(summary.slow)} slow frames, oldest first`,
+      ? i18next.t(($) => $.stickerBoard.developer.performance.lines.slowFrames.all, {
+          kept: slowFrames.length,
+        })
+      : i18next.t(($) => $.stickerBoard.developer.performance.lines.slowFrames.latest, {
+          kept: slowFrames.length,
+          slow: count(summary.slow),
+        }),
   ];
   for (const frame of slowFrames) lines.push("", ...slowFrameLines(frame, startedAt));
   return lines.join("\n");

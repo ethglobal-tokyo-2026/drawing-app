@@ -5,6 +5,7 @@ import {
 } from "@drawing-app/api/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
+import { i18next } from "../i18n/i18n";
 import {
   clearPerformanceRecording,
   notePerformance,
@@ -106,8 +107,12 @@ describe("uploading the performance report", () => {
     await pass(REPORT_UPLOAD_EVERY_MS);
     expect(upload).toHaveBeenCalledTimes(2);
     const [first, second] = upload.mock.calls.map(([sent]) => sent);
-    expect(first.report).toContain("Performance report, taken");
-    expect(first.device).toContain("User agent: ");
+    expect(first.report).toContain(`\n${first.device}\n`);
+    expect(
+      first.device.startsWith(
+        `${i18next.t(($) => $.stickerBoard.developer.device.userAgent.label)}: `,
+      ),
+    ).toBe(true);
     expect(second.frames - first.frames).toBe(10);
   });
 
@@ -222,10 +227,17 @@ describe("uploading the performance report", () => {
     const [sent] = upload.mock.calls.map(([sentReport]) => sentReport);
     expect(sent.report.length).toBeLessThanOrEqual(MAX_PERFORMANCE_REPORT_CHARS);
     expect(sent.slowFrames).toBe(SLOW_FRAMES_KEPT);
-    const listed = /The latest (\d+) of (\d+) slow frames/.exec(sent.report);
-    expect(Number(listed?.[1])).toBeGreaterThan(0);
-    expect(Number(listed?.[1])).toBeLessThan(SLOW_FRAMES_KEPT);
-    expect(Number(listed?.[2])).toBe(SLOW_FRAMES_KEPT);
+    // How many slow frames the report says it lists, of all it kept.
+    const listed = [...Array(SLOW_FRAMES_KEPT).keys()].find((kept) =>
+      sent.report.includes(
+        i18next.t(($) => $.stickerBoard.developer.performance.lines.slowFrames.latest, {
+          kept,
+          slow: SLOW_FRAMES_KEPT.toLocaleString("en-US"),
+        }),
+      ),
+    );
+    expect(listed).toBeGreaterThan(0);
+    expect(listed).toBeLessThan(SLOW_FRAMES_KEPT);
     expect(sent.report).toContain(`mark-${SLOW_FRAMES_KEPT - 1}- `);
     expect(sent.report).not.toContain("mark-0- ");
   });

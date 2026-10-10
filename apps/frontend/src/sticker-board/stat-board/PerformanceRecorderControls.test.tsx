@@ -15,6 +15,10 @@ import { buttonNamed, renderInHost, type HostView } from "../../ui/testing";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
 
 const COPY_REPORT = i18next.t(($) => $.stickerBoard.developer.performance.copy);
+/** A line every report with frames has. */
+const SLOW_FRAMES_BY_SCREEN = i18next.t(
+  ($) => $.stickerBoard.developer.performance.lines.byScreen.title,
+);
 
 let view: HostView;
 const writeText = vi.fn<(text: string) => Promise<void>>();
@@ -63,7 +67,7 @@ describe("PerformanceRecorderControls", () => {
     record();
     writeText.mockResolvedValue();
     await copyReport();
-    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Typical frame"));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining(SLOW_FRAMES_BY_SCREEN));
     expect(control('[role="status"]').textContent).toBe(
       i18next.t(($) => $.stickerBoard.developer.performance.copied),
     );
@@ -79,7 +83,7 @@ describe("PerformanceRecorderControls", () => {
         reason: "Not allowed here",
       }),
     );
-    expect(control<HTMLTextAreaElement>("textarea").value).toContain("Typical frame");
+    expect(control<HTMLTextAreaElement>("textarea").value).toContain(SLOW_FRAMES_BY_SCREEN);
   });
 
   it("shows in one line why a report upload failed, until the next one is accepted", async () => {

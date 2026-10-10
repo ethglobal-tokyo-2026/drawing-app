@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
+import { i18next } from "../i18n/i18n";
 import type { BootMilestone } from "./bootMilestones";
 import type {
   FrameWindow,
@@ -71,27 +72,77 @@ const report = (
     within,
   });
 
+const NOTHING_YET = i18next.t(($) => $.stickerBoard.developer.performance.nothingYet);
+const START = i18next.t(($) => $.stickerBoard.developer.performance.lines.start);
+const THIRTY_FPS = i18next.t(($) => $.stickerBoard.developer.performance.lines.thirtyFps);
+/** The summary's line in the report, as `summary` makes it. */
+const RECORDED = i18next.t(($) => $.stickerBoard.developer.performance.lines.recorded, {
+  span: "3m 12s",
+  frames: "11,520",
+  slow: "212",
+  share: "1.8%",
+});
+const latestOf = (kept: number) =>
+  i18next.t(($) => $.stickerBoard.developer.performance.lines.slowFrames.latest, {
+    kept,
+    slow: "212",
+  });
+const calls = (n: number) =>
+  i18next.t(($) => $.stickerBoard.developer.performance.lines.slowFrames.calls, {
+    count: n,
+    calls: String(n),
+  });
+
 describe("the performance report", () => {
   it("sums up the recording: its time, the slow share, the worst frame, the pace and each screen", () => {
     const text = report();
-    expect(text).toContain("3m 12s recorded · 11,520 frames · 212 slow (1.8%)");
-    expect(text).toContain("Worst 184ms at 1:04.2 on Send gratitude");
-    expect(text).toContain("Typical frame 16.7ms (60 fps)");
+    const byScreen = (screen: string, slow: string, frames: string, share: string) =>
+      `  ${i18next.t(($) => $.stickerBoard.developer.performance.lines.byScreen.screen, {
+        screen,
+        slow,
+        frames,
+        share,
+      })}`;
+    expect(text).toContain(RECORDED);
     expect(text).toContain(
-      "  Send gratitude: 180 of 5,400 (3.3%)\n  Sticker Board: 32 of 6,120 (0.5%)",
+      i18next.t(($) => $.stickerBoard.developer.performance.lines.worst, {
+        worst: "184ms",
+        at: "1:04.2",
+        screen: "Send gratitude",
+      }),
     );
-    expect(text).not.toContain("Low Power Mode");
+    expect(text).toContain(
+      i18next.t(($) => $.stickerBoard.developer.performance.lines.typical, {
+        typical: "16.7ms",
+        fps: "60 fps",
+      }),
+    );
+    expect(text).toContain(
+      [
+        byScreen("Send gratitude", "180", "5,400", "3.3%"),
+        byScreen("Sticker Board", "32", "6,120", "0.5%"),
+      ].join("\n"),
+    );
+    expect(text).not.toContain(THIRTY_FPS);
   });
 
   it("names 30 fps as Low Power Mode or throttling", () => {
-    expect(report({ typicalMs: 33.4 })).toContain("30 fps: Low Power Mode or throttling");
+    expect(report({ typicalMs: 33.4 })).toContain(THIRTY_FPS);
   });
 
   it("lists a slow frame with our work in it and what happened around it, repeats counted", () => {
+    const ours = i18next.t(($) => $.stickerBoard.developer.performance.lines.slowFrames.ours, {
+      ours: "12.4ms",
+    });
     expect(report()).toContain(
       [
-        "1:04.2 Send gratitude: 184ms (typical 16.7ms)",
-        "  ours 12.4ms: gratitude 11.9ms (3 calls), light 0.5ms (1 call)",
+        i18next.t(($) => $.stickerBoard.developer.performance.lines.slowFrames.frame, {
+          at: "1:04.2",
+          screen: "Send gratitude",
+          interval: "184ms",
+          typical: "16.7ms",
+        }),
+        `  ${ours}: gratitude 11.9ms (${calls(3)}), light 0.5ms (${calls(1)})`,
         '  -210ms tap: pointerdown button "Send gratitude to @alice"',
         "  -20ms light: write to 3 resins ×2",
         "  +10ms gratitude: tier-up オーバーヒート",
@@ -113,7 +164,7 @@ describe("the performance report", () => {
   });
 
   it("says how many slow frames it lists of all of them", () => {
-    expect(report()).toContain("The latest 1 of 212 slow frames, oldest first");
+    expect(report()).toContain(latestOf(1));
   });
 
   it("leaves out the oldest slow frames to fit a limit, and keeps a report that already fits whole", () => {
@@ -131,14 +182,14 @@ describe("the performance report", () => {
     expect(listed.length).toBeGreaterThan(0);
     expect(listed.length).toBeLessThan(slowFrames.length);
     expect(listed.at(-1)).toBe(slowFrames.length - 1);
-    expect(fitted).toContain(`The latest ${listed.length} of 212 slow frames, oldest first`);
+    expect(fitted).toContain(latestOf(listed.length));
   });
 
   it("tells the open's start step by step, on the page's clock, before the recording", () => {
     const text = report({}, [slowFrame], start);
     expect(text).toContain(
       [
-        "Start, on the page's clock",
+        START,
         "  0.31s HTML in",
         "  0.42s JS running",
         "  0.95s LIFF ready",
@@ -150,20 +201,42 @@ describe("the performance report", () => {
         "  2.45s board complete",
       ].join("\n"),
     );
-    expect(text.indexOf("Start, on the page's clock")).toBeLessThan(text.indexOf("recorded ·"));
+    expect(text.indexOf(START)).toBeLessThan(text.indexOf(RECORDED));
   });
 
   it("sums up the 5s after the board was complete: the slow ones, the worst and the long tail", () => {
     expect(report({ windows: [afterTheBoard] }, [slowFrame], start)).toContain(
-      "The 5s after the board was complete: 300 frames in 4.8s · 1 slow (0.3%) · worst 50ms at +0.4s · typical 16.0ms (63 fps) · 95th percentile 16.0ms",
+      [
+        i18next.t(($) => $.stickerBoard.developer.performance.lines.window.frames, {
+          label: "The 5s after the board was complete",
+          frames: "300",
+          seconds: "4.8s",
+        }),
+        i18next.t(($) => $.stickerBoard.developer.performance.lines.window.slow, {
+          slow: "1",
+          share: "0.3%",
+        }),
+        i18next.t(($) => $.stickerBoard.developer.performance.lines.window.worst, {
+          worst: "50ms",
+          at: "+0.4s",
+        }),
+        i18next.t(($) => $.stickerBoard.developer.performance.lines.window.typical, {
+          typical: "16.0ms",
+          fps: "63 fps",
+        }),
+        i18next.t(($) => $.stickerBoard.developer.performance.lines.window.percentile95, {
+          interval: "16.0ms",
+        }),
+      ].join(" · "),
     );
   });
 
   it("says when the board's first seconds weren't recorded", () => {
-    expect(report({}, [slowFrame], start)).toContain(
-      "The 5s after the board was complete: not recorded, as the recorder was off then",
+    const notRecorded = i18next.t(
+      ($) => $.stickerBoard.developer.performance.lines.window.boardNotRecorded,
     );
-    expect(report({}, [slowFrame], [])).not.toContain("after the board was complete");
+    expect(report({}, [slowFrame], start)).toContain(notRecorded);
+    expect(report({}, [slowFrame], [])).not.toContain(notRecorded);
   });
 
   it("lists each kind of pointer: contacts and hovering, pressure and its landing, contact size and samples a move", () => {
@@ -193,27 +266,74 @@ describe("the performance report", () => {
         ["mouse", hovering],
       ]),
     });
+    const counts = (pointer: string, downs: string, moves: string) =>
+      i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.counts, {
+        pointer,
+        downs,
+        moves,
+        hovers: "57",
+      });
     expect(text).toContain(
       [
-        "Pointers",
-        "  pen: 2 down, 400 moves, 57 hovering · pressure 0.03–0.97 · landing 0.00–0.40 · contact 0.5–0.5 × 0.5–0.5px · 3.9 coalesced a move (most 6) · no predicted events",
-        "  mouse: 0 down, 0 moves, 57 hovering · no contact",
+        i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.title),
+        `  ${[
+          counts("pen", "2", "400"),
+          i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.pressure, {
+            range: "0.03–0.97",
+          }),
+          i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.landing, {
+            range: "0.00–0.40",
+          }),
+          i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.contact, {
+            size: "0.5–0.5 × 0.5–0.5px",
+          }),
+          i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.perMove, {
+            average: "3.9",
+            events: "coalesced",
+            most: 6,
+          }),
+          i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.noEvents, {
+            events: "predicted",
+          }),
+        ].join(" · ")}`,
+        `  ${counts("mouse", "0", "0")} · ${i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.noContact)}`,
       ].join("\n"),
     );
-    expect(report()).toContain("Pointers: none seen");
+    expect(report()).toContain(
+      i18next.t(($) => $.stickerBoard.developer.performance.lines.pointers.noneSeen),
+    );
   });
 
   it("tells the start even before any frame is recorded", () => {
     const text = report({ frames: 0 }, [], start);
     expect(text).toContain("  2.45s board complete");
-    expect(text).toContain("Nothing recorded yet");
+    expect(text).toContain(NOTHING_YET);
+  });
+
+  it("reads the same while the app is in Japanese, as the server log keeps it", async () => {
+    const english = report({ windows: [afterTheBoard] }, [slowFrame], start);
+    await i18next.changeLanguage("ja");
+    onTestFinished(async () => {
+      await i18next.changeLanguage("en");
+    });
+    expect(report({ windows: [afterTheBoard] }, [slowFrame], start)).toBe(english);
   });
 });
 
 describe("the slip's summary line", () => {
-  it("gives the time, the slow frames, the worst and the pace", () => {
+  it("gives the time, the slow frames, the worst and the pace, or that nothing is recorded yet", () => {
     expect(formatSummaryLine(summary)).toBe(
-      "3m 12s · 212 slow of 11,520 frames (1.8%) · worst 184ms · 60 fps",
+      [
+        "3m 12s",
+        i18next.t(($) => $.stickerBoard.developer.performance.summary.slow, {
+          slow: "212",
+          frames: "11,520",
+          share: "1.8%",
+        }),
+        i18next.t(($) => $.stickerBoard.developer.performance.summary.worst, { worst: "184ms" }),
+        "60 fps",
+      ].join(" · "),
     );
+    expect(formatSummaryLine({ ...summary, frames: 0 })).toBe(NOTHING_YET);
   });
 });

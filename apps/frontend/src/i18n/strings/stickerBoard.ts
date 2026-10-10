@@ -320,6 +320,56 @@ export const stickerBoard = {
       notCopied: { en: "The report couldn’t be copied: {{reason}}. It’s below to copy by hand." },
       notUploaded: { en: "The report wasn’t uploaded: {{reason}}. The next send tries again." },
       report: { en: "Performance report" },
+      /** The slip's line: time recorded, slow frames, the worst and the pace. */
+      summary: {
+        slow: { en: "{{slow}} slow of {{frames}} frames ({{share}})" },
+        worst: { en: "worst {{worst}}" },
+      },
+      /** The report's lines, which the server log keeps for agents to read. */
+      lines: {
+        taken: { en: "Performance report, taken {{time}}" },
+        clock: { en: "Clock: {{step}} steps" },
+        start: { en: "Start, on the page's clock" },
+        window: {
+          frames: { en: "{{label}}: {{frames}} frames in {{seconds}}" },
+          noFrames: { en: "{{label}}: no frames recorded" },
+          slow: { en: "{{slow}} slow ({{share}})" },
+          worst: { en: "worst {{worst}} at {{at}}" },
+          typical: { en: "typical {{typical}} ({{fps}})" },
+          percentile95: { en: "95th percentile {{interval}}" },
+          boardNotRecorded: {
+            en: "The 5s after the board was complete: not recorded, as the recorder was off then",
+          },
+        },
+        recorded: { en: "{{span}} recorded · {{frames}} frames · {{slow}} slow ({{share}})" },
+        worst: { en: "Worst {{worst}} at {{at}} on {{screen}}" },
+        typical: { en: "Typical frame {{typical}} ({{fps}})" },
+        thirtyFps: { en: "30 fps: Low Power Mode or throttling" },
+        pointers: {
+          title: { en: "Pointers" },
+          noneSeen: { en: "Pointers: none seen" },
+          counts: { en: "{{pointer}}: {{downs}} down, {{moves}} moves, {{hovers}} hovering" },
+          noContact: { en: "no contact" },
+          pressure: { en: "pressure {{range}}" },
+          landing: { en: "landing {{range}}" },
+          contact: { en: "contact {{size}}" },
+          perMove: { en: "{{average}} {{events}} a move (most {{most}})" },
+          noEvents: { en: "no {{events}} events" },
+        },
+        byScreen: {
+          title: { en: "Slow frames by screen" },
+          screen: { en: "{{screen}}: {{slow}} of {{frames}} ({{share}})" },
+        },
+        untitled: { en: "untitled" },
+        slowFrames: {
+          all: { en: "All {{kept}} slow frames, oldest first" },
+          latest: { en: "The latest {{kept}} of {{slow}} slow frames, oldest first" },
+          frame: { en: "{{at}} {{screen}}: {{interval}} (typical {{typical}})" },
+          ours: { en: "ours {{ours}}" },
+          calls_one: { en: "{{calls}} call" },
+          calls_other: { en: "{{calls}} calls" },
+        },
+      },
     },
     device: {
       title: { en: "Device" },

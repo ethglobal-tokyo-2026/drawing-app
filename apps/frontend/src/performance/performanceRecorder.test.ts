@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { i18next } from "../i18n/i18n";
 import {
   clearPerformanceRecording,
   createPerformanceLog,
@@ -488,11 +489,15 @@ describe("the recorder on the page", () => {
     let t = 0;
     const now = vi.spyOn(performance, "now").mockImplementation(() => Math.floor((t += 0.3)));
     const device = describeDevice();
-    expect(device).toMatch(/^User agent: .+\nPlatform: /);
-    expect(device).toContain("\nLarge screen: ");
-    expect(device).toMatch(/\nClock: 1ms steps$/);
+    const label = (row: "userAgent" | "largeScreen") =>
+      i18next.t(($) => $.stickerBoard.developer.device[row].label);
+    expect(device.startsWith(`${label("userAgent")}: `)).toBe(true);
+    expect(device).toContain(`\n${label("largeScreen")}: `);
+    expect(device.split("\n").at(-1)).toBe(
+      i18next.t(($) => $.stickerBoard.developer.performance.lines.clock, { step: "1ms" }),
+    );
     now.mockImplementation(() => (t += 0.005));
-    expect(describeDevice()).not.toContain("Clock");
+    expect(describeDevice()).toBe(device.split("\n").slice(0, -1).join("\n"));
   });
 
   it("starts and stops at once from the switch, and keeps the setting for the next start", () => {

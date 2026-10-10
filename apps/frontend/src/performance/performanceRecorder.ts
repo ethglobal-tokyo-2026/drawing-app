@@ -6,6 +6,7 @@
  * return at their first check.
  */
 
+import { i18next } from "../i18n/i18n";
 import { LARGE_SCREEN } from "../ui/largeScreen";
 import { deviceLines, readDeviceFacts } from "./deviceFacts";
 
@@ -493,7 +494,13 @@ export function readPerformanceRecording(): {
 export function describeDevice(): string {
   const lines = deviceLines(readDeviceFacts(), window.matchMedia(LARGE_SCREEN).matches);
   const step = clockStepMs();
-  if (step >= 1) lines.push(`Clock: ${Math.round(step)}ms steps`);
+  if (step >= 1) {
+    lines.push(
+      i18next.t(($) => $.stickerBoard.developer.performance.lines.clock, {
+        step: `${Math.round(step)}ms`,
+      }),
+    );
+  }
   return lines.join("\n");
 }
 
