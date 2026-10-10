@@ -19,8 +19,13 @@ const FILTERS: readonly Filter[] = ["all", "mine", "gifts"];
 
 export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: TraySheets) {
   const { zip, reduced, listen, make, stack, tabsEl, ui } = tray;
-  const { itemOf, resetOrder } = trayModel;
-  const { restAt, renderStack, catchUp, sayFront, sayFilter } = traySheets;
+  const { itemOf, resetOrder, fitPages } = trayModel;
+  const { restAt, renderStack, rerenderPulled, catchUp, sayFront, sayFilter } = traySheets;
+  /** Deals the stack anew for the filter, on pages as tall as the stack it deals needs. */
+  function deal() {
+    resetOrder();
+    if (fitPages()) rerenderPulled();
+  }
 
   /* ---------------------------------------------------------------- the folder tabs: the stack's dividers */
   const tabs = FILTERS.map((f) => {
@@ -174,7 +179,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
     if (!ui.order.includes(f)) {
       ui.filter = "all";
       syncTabs();
-      resetOrder();
+      deal();
       if (!ui.order.includes(f)) return;
     }
     const i = ui.order.indexOf(f);
@@ -215,7 +220,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
     ui.filter = f;
     deals++;
     syncTabs();
-    resetOrder();
+    deal();
     // A tab change already on its way: this one lands at once.
     const again = shuffling !== null;
     if (!zip.isOpen || reduced() || again || ui.busy) {

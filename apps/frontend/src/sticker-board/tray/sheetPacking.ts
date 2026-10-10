@@ -84,10 +84,16 @@ export interface PackOptions {
   max?: number;
   /** A sheet with room for another line spreads its lines over its page. */
   spread?: boolean;
+  /**
+   * The page the sheets are drawn on, when taller than `sheet`: the lines keep their places from its
+   * fill edge, and a spread sheet spreads over all of it. Which sheet a sticker is on never depends on it.
+   */
+  page?: number;
 }
 
 interface Resolved {
   sheet: { w: number; h: number };
+  page: number;
   margin: Margin;
   clearance: number;
   breathe: number;
@@ -118,7 +124,7 @@ const OUTLINE_TOLERANCE = 0.0035;
 /** How closely a traced mask is kept, in mask cells. */
 const TRACE_TOLERANCE = 0.6;
 
-const DEFAULTS: Omit<Resolved, "sheet" | "margin"> = {
+const DEFAULTS: Omit<Resolved, "sheet" | "page" | "margin"> = {
   clearance: 6,
   breathe: 4,
   fit: { w: 66, h: 76 },
@@ -387,6 +393,7 @@ function options(opts: PackOptions): Resolved {
   const { margin } = opts;
   return {
     sheet: opts.sheet,
+    page: Math.max(opts.page ?? opts.sheet.h, opts.sheet.h),
     margin:
       typeof margin === "number"
         ? { top: margin, right: margin, bottom: margin, left: margin }
@@ -428,6 +435,8 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
   const o = options(opts);
   const W = Math.round(o.sheet.w);
   const H = o.sheet.h;
+  /** How much taller the page is than the sheet packed. */
+  const lower = o.page - H;
   const up = o.fill !== "down";
   // Packed with the fill edge at the bottom: filling down is the same sheet mirrored top to bottom.
   const m = up ? o.margin : { ...o.margin, top: o.margin.bottom, bottom: o.margin.top };
@@ -500,7 +509,7 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
    * rises at least as far as the lines before it, which it sits above, so cut lines only part.
    */
   function spreadLines(sheet: Sheet) {
-    const free = sheet.high - m.top;
+    const free = sheet.high + lower - m.top;
     // Too little for a sticker at the fit's height, clear of the line below: the sheet is full.
     if (free < o.fit.h + c) return;
     sheet.items.forEach((it, i) => {
@@ -555,7 +564,7 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
       id: it.id,
       n,
       x: at.x,
-      y: up ? at.y : H - at.y,
+      y: up ? at.y + lower : H - at.y,
       r,
       s,
       w: sh.w * s,

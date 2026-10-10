@@ -23,15 +23,13 @@ import { createTraySpread } from "./traySpread";
 import {
   COL,
   GMAX,
-  PHONE_FIT,
-  SHEET,
   STACK_Y,
   SVG_NS,
   trayTopFor,
   createTrayModel,
+  createTrayState,
   modelOf,
   mouthShortFor,
-  sheetHeightFor,
   trayFitFor,
   type BoardView,
   type Geometry,
@@ -40,7 +38,6 @@ import {
   type TrayBoard,
   type TrayDrag,
   type TraySticker,
-  type TrayState,
 } from "./trayModel";
 import { createZipper, mouthRange, showsFrom } from "./zipper";
 import "../../stickers/nsfw-mark.css";
@@ -227,39 +224,19 @@ export function createTrayEngine(
   const w1 = make("div", "tray__w1", c1, deepTop);
   zip.slot.append(w1);
 
-  const ui: TrayState = {
-    filter: "all",
-    order: [],
-    stackAt: { x: 0, y: STACK_Y },
-    band: null,
-    geo: null,
-    busy: false,
-    g: null,
-    target: null,
-    dwell: 0,
-    drop: null,
-    shutTimer: 0,
-    relaxTimer: 0,
-    spreadOpen: false,
-    shown: new Set(),
-    pulled: null,
-    model: modelOf(read(), seen),
-    fit: PHONE_FIT,
-    sheetH: SHEET.h,
-    onShow: false,
-    stale: false,
-    orderedFor: 0,
-    imagesOn: false,
-    destroyed: false,
-  };
+  const ui = createTrayState(modelOf(read(), seen));
   const trayModel = createTrayModel(ui, seen, problem);
-  const { newIds, applyPack, relayout, resetOrder } = trayModel;
+  const { newIds, applyPack, fitPages, relayout, resetOrder, sheetsMatching } = trayModel;
 
   /**
    * The board's size and place on screen, measured as they change: a drag reading them would lay the
    * page out before the board's own changes are drawn, and the frame would lay out twice.
    */
-  const placed = { w: 0, h: 0, view: { left: 0, top: 0, k: 1 } as BoardView };
+  const placed: { w: number; h: number; view: BoardView } = {
+    w: 0,
+    h: 0,
+    view: { left: 0, top: 0, k: 1 },
+  };
   const measure = () => {
     const r = board.getBoundingClientRect();
     placed.w = board.clientWidth;
@@ -364,13 +341,12 @@ export function createTrayEngine(
       if (Math.abs(fit.scale - was.scale) >= 0.001)
         stack.style.setProperty("--scale", fit.scale.toFixed(4));
       if (fit.room !== was.room || fit.scale !== was.scale) {
-        // Until every cut line is known, the stand-in spots sit on pages that fill it all the same.
-        if (!applyPack()) ui.sheetH = sheetHeightFor(fit, ui.model.count);
+        fitPages();
         if (ui.order.length) redraw();
       }
     }
-    // The mouth closes in under the stack there is, whose sheets a refresh changes too.
-    const short = mouthShortFor(ui.fit, ui.model.count, ui.sheetH);
+    // The mouth closes in under the stack the filter deals, whose sheets a refresh changes too.
+    const short = mouthShortFor(ui.fit, Math.max(1, sheetsMatching()), ui.sheetH);
     const moved = ui.fit.grow !== was.grow || short !== mouthShort;
     if (moved) {
       mouthShort = short;

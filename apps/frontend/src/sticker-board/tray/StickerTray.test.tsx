@@ -953,14 +953,17 @@ describe("StickerTray", () => {
   describe("on a board of this height", () => {
     /** Where the tray starts on the board, on the screen the test's media queries describe. */
     const trayTop = () => trayTopFor(window.matchMedia(LARGE_SCREEN).matches);
-    /** Opens the tray on a board this tall, its column running from under the header to the foot. */
-    const openOn = async (height: number, stickers = 30) => {
+    /** The board's height: the tray's column runs from under the header to its foot. */
+    let boardHeight = 0;
+    /** Opens the tray on a board this tall, holding these stickers, or this many. */
+    const openOn = async (height: number, stickers: number | BoardStickerView[] = 30) => {
+      boardHeight = height;
       vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
         this: HTMLElement,
       ) {
-        return this.classList.contains("tray__col") ? height - trayTop() : height;
+        return this.classList.contains("tray__col") ? boardHeight - trayTop() : boardHeight;
       });
-      render(manyStickers(stickers));
+      render(typeof stickers === "number" ? manyStickers(stickers) : stickers);
       await openTray();
     };
     /** The numbers an inline transform holds, such as 0 and 12.5 in translate(0px,12.5px). */
@@ -988,14 +991,44 @@ describe("StickerTray", () => {
       return { scale, stackFoot, mouthFoot: height - trayTop() + mouthFootShift };
     };
 
-    it("packs more stickers to a sheet on a taller board, whose sheets are taller", async () => {
+    it("packs the same sheets on a taller board, drawing them taller", async () => {
       await openOn(523, 40);
       const onShort = sheetCount();
       act(() => root.unmount());
       root = createRoot(host);
       await openOn(900, 40);
       expect(pageH()).toBeGreaterThan(SHEET.h);
-      expect(sheetCount()).toBeLessThan(onShort);
+      expect(sheetCount()).toBe(onShort);
+    });
+
+    it("keeps a pulled-out sheet's stickers on it as the board's height changes, as an iPad turns", async () => {
+      endAnimationsAtOnce();
+      const observers = stubResizeObservers();
+      await openOn(776, 40);
+      const onPulled = () =>
+        [...(pulledSheet()?.querySelectorAll(".tray__slot") ?? [])].map((el) =>
+          el.getAttribute("data-id"),
+        );
+      await pullOut();
+      const before = onPulled();
+      expect(before.length).toBeGreaterThan(0);
+      boardHeight = 560;
+      const col = board.querySelector(".tray__col");
+      if (col) act(() => observers.resize(col));
+      expect(onPulled()).toEqual(before);
+    });
+
+    it("fills the open pouch with the pages a folder tab deals, though it deals fewer", async () => {
+      // Only the newest sticker is a gift: Gifts deals its one sheet.
+      await openOn(
+        776,
+        manyStickers(60).map((s, i) => (i === 59 ? { ...s, artist: friend } : s)),
+      );
+      act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
+      expect(sheetCount()).toBe(1);
+      const { stackFoot, mouthFoot } = openStack(776);
+      expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
+      expect(mouthFoot - stackFoot).toBeLessThan(2 * POUCH_LINING);
     });
 
     it("grows the stack on a large screen, and opens the mouth only a little past it", async () => {

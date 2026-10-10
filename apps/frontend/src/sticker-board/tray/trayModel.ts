@@ -309,7 +309,7 @@ export interface TrayFit {
 }
 
 /** Before the board has a size: the page at its least height. */
-export const PHONE_FIT: TrayFit = { scale: 1, grow: 1, room: SHEET.h };
+const PHONE_FIT: TrayFit = { scale: 1, grow: 1, room: SHEET.h };
 
 /**
  * The tray on its board. The stack shrinks until a deep stack of least-height pages fits the mouth
@@ -387,6 +387,35 @@ export function modelOf(list: readonly TraySticker[], seen: Set<string>) {
   return { slots, count: Math.max(1, ...slots.map((s) => s.sheet + 1)) };
 }
 
+/** A new tray's state, holding `model`: shut, with every sheet dealt and nothing in hand. */
+export function createTrayState(model: TrayState["model"]): TrayState {
+  return {
+    filter: "all",
+    order: [],
+    stackAt: { x: 0, y: STACK_Y },
+    band: null,
+    geo: null,
+    busy: false,
+    g: null,
+    target: null,
+    dwell: 0,
+    drop: null,
+    shutTimer: 0,
+    relaxTimer: 0,
+    spreadOpen: false,
+    shown: new Set(),
+    pulled: null,
+    model,
+    fit: PHONE_FIT,
+    sheetH: SHEET.h,
+    onShow: false,
+    stale: false,
+    orderedFor: 0,
+    imagesOn: false,
+    destroyed: false,
+  };
+}
+
 /** The model's reads, and its packing and dealing, over the tray's state. */
 export function createTrayModel(
   ui: TrayState,
@@ -402,38 +431,46 @@ export function createTrayModel(
     ui.filter === "all" || sheetItems(f).some((s) => s.state !== "given" && matches(s));
   const itemOf = (id: string) => ui.model.slots.find((s) => s.id === id) ?? null;
   const topF = () => ui.order[0] ?? ui.model.count - 1;
+  /** How many sheets the filter deals: the stack, and a sheet pulled out of it. */
+  const sheetsMatching = () =>
+    Array.from({ length: ui.model.count }, (_, f) => f).filter(sheetMatches).length;
+  /** The page's height for the stack the filter deals: it fills the room above that stack's foot. */
+  const pageHeight = () => sheetHeightFor(ui.fit, Math.max(1, sheetsMatching()));
 
   /* ---------------------------------------------------------------- where each sticker sits: on its cut line */
+  /** The model whose sheets were last packed, and so drawn. */
+  let packedModel: TrayState["model"] | null = null;
   function packWith(shapes: readonly Shape[]) {
     const items = ui.model.slots.map((s, i) => ({ id: s.id, shape: shapes[i] }));
-    const packOn = (h: number) =>
-      packSheets(items, { sheet: { w: SHEET.w, h }, margin: PACK_MARGIN, spread: true });
-    // The more sheets, the deeper the stack's foot and the shorter the page above it: packed on the
-    // tallest page first, then on each shorter one until the stack it makes fits.
-    let sheetH = sheetHeightFor(ui.fit, 1);
-    let packed = packOn(sheetH);
-    for (
-      let next = sheetHeightFor(ui.fit, packed.sheets.length);
-      next < sheetH;
-      next = sheetHeightFor(ui.fit, packed.sheets.length)
-    ) {
-      sheetH = next;
-      packed = packOn(sheetH);
-    }
-    const { sheets, byId } = packed;
+    // Packed on the page's least height whatever the board, so a sticker's sheet never changes with the
+    // board's height or the stickers after it; the drawn page, taller, spreads them over it.
+    const packOn = (page: number) =>
+      packSheets(items, { sheet: SHEET, margin: PACK_MARGIN, spread: true, page });
+    let packed = packOn(SHEET.h);
+    // A sheet pulled out over the board follows its oldest sticker to the sheet it's packed on now.
+    const pulled = ui.pulled;
+    const followed = pulled && (packedModel ?? ui.model).slots.find((s) => s.sheet === pulled.f);
     for (const s of ui.model.slots) {
-      const b = byId.get(s.id);
-      if (b) {
-        s.sheet = b.f;
-        s.pos = b;
-      }
+      const b = packed.byId.get(s.id);
+      if (b) s.sheet = b.f;
+    }
+    ui.model.count = Math.max(1, packed.sheets.length);
+    packedModel = ui.model;
+    const f = followed ? itemOf(followed.id)?.sheet : undefined;
+    if (pulled && f !== undefined && f !== pulled.f) {
+      pulled.f = f;
+      resetOrder();
+    }
+    const sheetH = pageHeight();
+    if (sheetH !== SHEET.h) packed = packOn(sheetH);
+    for (const s of ui.model.slots) {
+      s.pos = packed.byId.get(s.id) ?? s.pos;
       const why = unreadableCut(s.id);
       if (why !== undefined && !toldCuts.has(s.id)) {
         toldCuts.add(s.id);
         problem({ kind: "cut", nos: [s.no], detail: why });
       }
     }
-    ui.model.count = Math.max(1, sheets.length);
     ui.sheetH = sheetH;
   }
   /** Packs at once when every cut line is known; until then, the stand-in spots stay. */
@@ -452,6 +489,15 @@ export function createTrayModel(
     packWith(shapes);
     return true;
   }
+  /**
+   * Sets the stickers out on pages as tall as the stack the filter deals needs, when that changed:
+   * packed when every cut line is known, else on stand-in spots from the page's foot. Whether it did.
+   */
+  function fitPages() {
+    if (pageHeight() === ui.sheetH) return false;
+    if (!applyPack()) ui.sheetH = pageHeight();
+    return true;
+  }
   /** The stack as the filter deals it: its sheets, newest in front. */
   function resetOrder() {
     const all = Array.from({ length: ui.model.count }, (_, i) => ui.model.count - 1 - i).filter(
@@ -468,7 +514,9 @@ export function createTrayModel(
     sheetMatches,
     itemOf,
     topF,
+    sheetsMatching,
     applyPack,
+    fitPages,
     relayout,
     resetOrder,
   };
