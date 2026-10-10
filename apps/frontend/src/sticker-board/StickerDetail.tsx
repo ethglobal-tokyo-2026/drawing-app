@@ -506,6 +506,28 @@ export function StickerDetail({
     if (dialog && !dialog.contains(document.activeElement)) dialog.focus({ preventScroll: true });
   }, [shownId]);
 
+  // What the column holds from under the sticker's stage down to Give, or to its last line before the
+  // trail, which an upright large screen leaves room for under the sticker (sticker-detail.css).
+  // Measured by layout alone, so the column's entrance doesn't count.
+  const hasSticker = sticker !== undefined;
+  useLayoutEffect(() => {
+    const detail = root.current;
+    const column = detail?.querySelector(".sticker-detail__column");
+    if (!detail || !column) return;
+    const observer = new ResizeObserver(() => {
+      const stage = detail.querySelector<HTMLElement>(".sticker-detail__stage");
+      const ends = column.querySelectorAll<HTMLElement>(
+        ".sticker-detail__meta, .sticker-detail__in-flight, .sticker-detail__acts",
+      );
+      const end = ends[ends.length - 1];
+      if (!stage || !end) return;
+      const fold = end.offsetTop + end.offsetHeight - (stage.offsetTop + stage.offsetHeight);
+      detail.style.setProperty("--column-fold", `${Math.ceil(fold)}px`);
+    });
+    observer.observe(column);
+    return () => observer.disconnect();
+  }, [hasSticker]);
+
   // The shown sticker's thumb scrolls to the strip's middle, again when its place in the list moves,
   // as a sticker taken out of its gift goes back among the rest.
   useLayoutEffect(() => {
