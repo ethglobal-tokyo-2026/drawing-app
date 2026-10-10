@@ -229,21 +229,24 @@ export function createTrayPresses(
       return;
     }
     if (e.key !== "Enter" && e.key !== " ") return;
-    const target = targetOf(e);
-    const foot = target?.closest(".tray__foot");
+    const foot = targetOf(e)?.closest(".tray__foot");
     const f = sheetOf(foot ?? null);
     if (foot && f !== null) {
       e.preventDefault();
       void bringToFront(f);
       return;
     }
+    tapSlotKey(e);
+  });
+  /** Enter or Space on a sticker, in front or on the pulled-out sheet, does what a tap does. */
+  function tapSlotKey(e: KeyboardEvent) {
     // A given sticker's spot, or one in a gift, opens on its click, which the press sends as it pops.
-    const slot = target?.closest<HTMLElement>(".tray__slot");
+    const slot = targetOf(e)?.closest<HTMLElement>(".tray__slot");
     if (slot && !opens(slot)) {
       e.preventDefault();
       tapSlot(slot);
     }
-  });
+  }
   /** A given sticker's spot, or one in a gift, packed or sent: it opens on its click, and never peels. */
   function opens(el: HTMLElement) {
     const { state } = el.dataset;
@@ -380,6 +383,9 @@ export function createTrayPresses(
     on("click", (e) => {
       if (targetOf(e)?.closest(".tray__x")) void sendHome();
       else openSpotAt(e);
+    });
+    on("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") tapSlotKey(e);
     });
     on("pointerdown", (e) => {
       const target = targetOf(e);

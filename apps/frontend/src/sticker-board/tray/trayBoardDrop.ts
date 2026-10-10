@@ -31,7 +31,7 @@ export function createTrayBoardDrop(
   const { reduced, later, cancel, zip, api, root, stack, ui } = tray;
   const { Wb, colLeft, trayTop, pouchFoot, boardView } = tray;
   const { itemOf, topF } = trayModel;
-  const { renderStack, rerenderPulled, sayReturned } = traySheets;
+  const { renderStack, rerenderPulled, sayReturned, catchUp } = traySheets;
   const { bringToFront } = trayPaging;
   const { rectOfFit, makeFlyer, setSlotState, slotHome, pressIn } = trayPeel;
   const { sendHome } = trayPresses;
@@ -133,8 +133,6 @@ export function createTrayBoardDrop(
     clearTarget();
     if (!drop.wasOpen && zip.isOpen) void zip.close();
   }
-  /** Board stickers on their way into their used sticker silhouettes. */
-  const landing = new Set<string>();
   /**
    * A board sticker let go: over the tray it goes back into its used sticker silhouette. Whether the
    * tray was open when the drag, or Remove, began decides the ending: it stays open if it was, else it
@@ -143,7 +141,7 @@ export function createTrayBoardDrop(
   async function boardDrop(id: string, pt: Point) {
     // On its way into its used sticker silhouette already: it isn't the board's to drop again until
     // it lands.
-    if (landing.has(id)) return false;
+    if (ui.landing.has(id)) return false;
     const s = itemOf(id);
     if (ui.dwell) {
       cancel(ui.dwell);
@@ -162,11 +160,11 @@ export function createTrayBoardDrop(
       if (!wasOpen && zip.isOpen) void zip.close();
       return false;
     }
-    landing.add(id);
+    ui.landing.add(id);
     try {
       return await takeHome(s, pt, wasOpen, onPulled);
     } finally {
-      landing.delete(id);
+      ui.landing.delete(id);
     }
   }
   /**
@@ -215,6 +213,10 @@ export function createTrayBoardDrop(
         ),
       );
     flyer.remove();
+    // Landed: the sheets catch up with the board, which let go of it during the flight, before it's
+    // pressed in.
+    ui.landing.delete(id);
+    catchUp();
     pressIn(id);
     // Shown home, then shut: unless a hand is back on the tray or another sticker is on its way.
     if (!wasOpen) {

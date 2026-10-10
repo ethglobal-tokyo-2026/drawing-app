@@ -166,7 +166,8 @@ export function createTrayEngine(
   /* ---------------------------------------------------------------- the parts */
   const col = make("div", "tray__col");
   const land = decorative(make("div", "tray__land", make("i", "")));
-  const fly = decorative(make("div", "tray__fly"));
+  // A pulled-out sheet is out here, for screen readers too; each sticker in hand is hidden on its own.
+  const fly = make("div", "tray__fly");
   const mat = make("div", "tray__mat");
   const spreadLayer = make("div", "tray__spread", mat);
   spreadLayer.hidden = true;

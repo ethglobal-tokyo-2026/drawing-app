@@ -171,6 +171,8 @@ export interface TrayState {
   drop: { id: string; wasOpen: boolean; view: BoardView } | null;
   shutTimer: number;
   relaxTimer: number;
+  /** Board stickers flying back into their used sticker silhouettes: the sheets redraw once they land. */
+  landing: Set<string>;
   spreadOpen: boolean;
   /** What's been on show in the open tray: seen once the tray zips shut. */
   shown: Set<string>;
@@ -402,6 +404,7 @@ export function createTrayState(model: TrayState["model"]): TrayState {
     drop: null,
     shutTimer: 0,
     relaxTimer: 0,
+    landing: new Set(),
     spreadOpen: false,
     shown: new Set(),
     pulled: null,

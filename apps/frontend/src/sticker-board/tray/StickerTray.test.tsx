@@ -537,6 +537,100 @@ describe("StickerTray", () => {
     expect(frontSheet()?.getAttribute("data-f")).toBe(chosen);
   });
 
+  it("lays a sticker pressed off its center back down when let go before it's drawn free", async () => {
+    endAnimationsAtOnce();
+    const place = vi.fn((_id: string) => Promise.resolve(null));
+    render(manyStickers(8), { place });
+    await openTray();
+    const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+    // The sticker's center is 30px right of the press.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains("tray__fit") ? new DOMRect(110, 180, 40, 40) : new DOMRect();
+    });
+    pointer(slot ?? null, "pointerdown", 100, 200);
+    pointer(stackEl(), "pointermove", 88, 200);
+    pointer(stackEl(), "pointerup", 88, 200);
+    await act(async () => {});
+    expect(place).not.toHaveBeenCalled();
+    expect(stateOf(slot?.dataset.id ?? "")).toBe("here");
+  });
+
+  it("sticks a sticker in hand on where its landing shadow showed, though it trails the finger", async () => {
+    endAnimationsAtOnce();
+    const place = vi.fn((_id: string, _at?: { x: number; y: number; r: number }) =>
+      Promise.resolve(document.createElement("div")),
+    );
+    render(manyStickers(8), { place });
+    await openTray();
+    const peeled = peelFrom(frontSheet(), stackEl());
+    // Drawn on faster than it follows, and let go.
+    pointer(stackEl(), "pointermove", 20, 320);
+    pointer(stackEl(), "pointerup", 20, 320);
+    await act(async () => {});
+    expect(place).toHaveBeenCalledExactlyOnceWith(
+      peeled,
+      expect.objectContaining({ x: 20, y: 320 }),
+    );
+  });
+
+  it("keeps the mouth a crack under a sticker in hand when one tapped before it lands", async () => {
+    let landTapped = () => {};
+    const place = vi.fn(
+      (_id: string) =>
+        new Promise<HTMLElement>((resolve) => {
+          landTapped = () => resolve(document.createElement("div"));
+        }),
+    );
+    render(manyStickers(8), { place });
+    await openTray();
+    const foot = () => Number.parseFloat(stackEl()?.style.getPropertyValue("--foot") || "1");
+    const tapped = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+    act(() => {
+      tapped?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    peelFrom(frontSheet(), stackEl());
+    await act(async () => landTapped());
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+    });
+    expect(foot()).toBeLessThan(1);
+  });
+
+  it("sticks a sticker on from the pulled-out sheet with Enter, a sheet screen readers reach", async () => {
+    endAnimationsAtOnce();
+    const place = vi.fn((_id: string) => Promise.resolve(document.createElement("div")));
+    render(manyStickers(8), { place });
+    await openTray();
+    const pulled = await pullOut();
+    const slot = pulled?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+    act(() => {
+      slot?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    await act(async () => {});
+    expect(place).toHaveBeenCalledExactlyOnceWith(slot?.dataset.id, undefined);
+    expect(pulled?.closest('[aria-hidden="true"]')).toBeNull();
+  });
+
+  it("keeps a sticker put back out of its slot until its flying copy lands, though the board rereads its stickers", async () => {
+    const motion = holdAnimations();
+    // The board lets go of it as the board does: its stickers change, and the tray rereads them.
+    const remove = () => render([sticker("a", 1, false), sticker("b", 2, false)]);
+    render([sticker("a", 1, true), sticker("b", 2, false)], { remove });
+    await openTray();
+    motion.animate();
+    let back: Promise<boolean> | undefined;
+    await act(async () => {
+      back = tray.current?.boardDrop("a", { x: 380, y: 300 });
+    });
+    expect(flyers()).toHaveLength(1);
+    expect(stateOf("a")).toBe("peeling");
+    await motion.finishAll();
+    expect(await back).toBe(true);
+    expect(stateOf("a")).toBe("here");
+  });
+
   it("turns no page for a quick lift held still before it's let go", async () => {
     vi.useFakeTimers({ toFake: ["performance"] });
     onTestFinished(() => void vi.useRealTimers());

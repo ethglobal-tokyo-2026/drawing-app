@@ -401,8 +401,9 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     });
   }
   /**
-   * Rebuilds the sheets for the stickers as they are now. Out of sight, under a hand or mid-turn,
-   * they wait: a sheet redrawn there would drop what's being done to it.
+   * Rebuilds the sheets for the stickers as they are now. Out of sight, under a hand, mid-turn or
+   * while a sticker flies into its slot, they wait: a sheet redrawn there would drop what's being
+   * done to it.
    */
   function redraw() {
     if (!ui.onShow) {
@@ -410,7 +411,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       return;
     }
     if (ui.model.count !== ui.orderedFor || ui.order.some((f) => f >= ui.model.count)) resetOrder();
-    if (ui.g || ui.busy) {
+    if (ui.g || ui.busy || ui.landing.size > 0) {
       ui.stale = true;
       return;
     }
