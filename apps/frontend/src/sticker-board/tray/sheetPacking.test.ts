@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PACK_MARGIN, SHEET } from "./trayModel";
 import {
   outline,
   outlineShape,
@@ -35,11 +36,7 @@ const items = (n: number): PackItem[] =>
   Array.from({ length: n }, (_, i) => ({ id: `s${i}`, shape: square }));
 const mixed = (n: number): PackItem[] =>
   Array.from({ length: n }, (_, i) => ({ id: `m${i}`, shape: i % 3 === 1 ? diamond : square }));
-const opts = {
-  sheet: { w: 156, h: 364 },
-  margin: { top: 30, right: 10, bottom: 24, left: 10 },
-  clearance: 6,
-};
+const opts = { sheet: SHEET, margin: PACK_MARGIN, clearance: 6 };
 /** As the sticker tray packs: a sheet with room to spare spreads its stickers over its page. */
 const spread = { ...opts, spread: true };
 

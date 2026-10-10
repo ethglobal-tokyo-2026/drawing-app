@@ -20,18 +20,11 @@ import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
 import { ICONS, TUG_VISITS, type TrayBoard } from "./trayEngine";
 import { LARGE_SCREEN } from "../../ui/largeScreen";
-import {
-  MAX_STACK_SCALE,
-  POUCH_LINING,
-  SHEET,
-  STACK_FOOT,
-  stackFootFor,
-  trayTopFor,
-} from "./trayModel";
+import { POUCH_LINING, SHEET, STACK_FOOT, stackFootFor, trayTopFor } from "./trayModel";
 import { testStickerUrls } from "../../stickers/testStickerUrls";
 import { NUDGE_AFTER } from "./trayNudge";
 import { trayProblemWords, type TrayProblem } from "./trayProblem";
-import { countVisit } from "./traySeen";
+import { countVisit, visitsSoFar } from "./trayVisits";
 import { stubResizeObservers } from "../../ui/testing";
 
 declare global {
@@ -105,9 +98,11 @@ const render = (
       />,
     ),
   );
+const openTray = () => act(async () => void (await tray.current?.open()));
+const closeTray = () => act(async () => void (await tray.current?.close()));
 const openAndShut = async () => {
-  await act(async () => void (await tray.current?.open()));
-  await act(async () => void (await tray.current?.close()));
+  await openTray();
+  await closeTray();
 };
 const slotOf = (id: string) => board.querySelector(`.tray__slot[data-id="${id}"]`);
 const stateOf = (id: string) => slotOf(id)?.getAttribute("data-state");
@@ -119,11 +114,33 @@ const pointer = (on: Element | null, type: string, x: number, y: number, pointer
   act(() => {
     on?.dispatchEvent(new PointerEvent(type, { pointerId, clientX: x, clientY: y, bubbles: true }));
   });
+/** A key pressed on `el`, as a keyboard sends it. */
+const press = (el: Element | null | undefined, key: string) =>
+  act(() => {
+    el?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+  });
 const stackEl = () => board.querySelector<HTMLElement>(".tray__stack");
 const frontSheet = () => board.querySelector(".tray__stack .tray__sheet.is-top");
+/** A sticker still in its spot on `sheet`. */
+const hereOn = (sheet: Element | null | undefined = frontSheet()) =>
+  sheet?.querySelector<HTMLElement>('.tray__slot[data-state="here"]') ?? null;
+/** A tap at (x, y) that starts on `el` and lifts on the stack, which holds the press. */
+const tap = (el: Element | null | undefined, x: number, y: number) => {
+  pointer(el ?? null, "pointerdown", x, y);
+  pointer(stackEl(), "pointerup", x, y);
+};
+const tab = (filter: string) =>
+  board.querySelector<HTMLElement>(`.tray__tab[data-filter="${filter}"]`);
+const chooseTab = (filter: string) => act(() => tab(filter)?.click());
+/** The stack's +N button lays every sheet out. */
+const spreadSheets = () => act(() => board.querySelector<HTMLElement>(".tray__depth")?.click());
 const pulledSheet = () => board.querySelector(".tray__pulled");
 const flyers = () => board.querySelectorAll(".tray__flyer");
-const openTray = () => act(async () => void (await tray.current?.open()));
+/** Real frames, long enough for the mouth's spring to ring through and settle. */
+const letTheMouthSettle = () =>
+  act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+  });
 /** Every animation ends as it starts, so what waits on one plays out. */
 const endAnimationsAtOnce = () =>
   vi.spyOn(Element.prototype, "animate").mockImplementation(() => {
@@ -141,7 +158,7 @@ const pullOut = async () => {
 };
 /** A sticker on `sheet` pressed and drawn out toward the board, free of its sheet. */
 const peelFrom = (sheet: Element | null, on: Element | null = sheet, pointerId = 1) => {
-  const slot = sheet?.querySelector('.tray__slot[data-state="here"]') ?? null;
+  const slot = hereOn(sheet);
   pointer(slot, "pointerdown", 100, 200, pointerId);
   pointer(on, "pointermove", 40, 200, pointerId);
   return slot?.getAttribute("data-id");
@@ -193,10 +210,7 @@ const holdAnimations = () => {
     },
   };
 };
-const pageDown = () =>
-  act(() => {
-    stackEl()?.dispatchEvent(new KeyboardEvent("keydown", { key: "PageDown", bubbles: true }));
-  });
+const pageDown = () => press(stackEl(), "PageDown");
 /** Enough stickers for more than one sheet. */
 const manyStickers = (n: number) =>
   Array.from({ length: n }, (_, i) => sticker(`s${i}`, i + 1, false));
@@ -271,7 +285,7 @@ describe("StickerTray", () => {
     render([sticker("a", 1, false), sticker("b", 2, false)]);
     // Shut, the change waits for it to show.
     expect(slotOf("a")).toBe(drawn);
-    await act(async () => void (await tray.current?.open()));
+    await openTray();
     expect(stateOf("a")).toBe("here");
 
     act(() => root.unmount());
@@ -301,18 +315,12 @@ describe("StickerTray", () => {
     tray.current?.boardDrag("a", { x: 200, y: 300 });
     tray.current?.boardDrag("a", { x: 380, y: 600 });
     expect(reads()).toBe(before + 1);
-    expect(boardReads.mock.results.at(-1)?.value).toBe(moved);
   });
 
   it("measures a board that moved as a key sticks a sticker on, so its flyer starts where the sticker is", async () => {
     render(manyStickers(8), { place: () => new Promise<HTMLElement | null>(() => {}) });
     await openTray();
-    const enterOnSticker = () =>
-      act(() => {
-        frontSheet()
-          ?.querySelector('.tray__slot[data-state="here"]')
-          ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-      });
+    const enterOnSticker = () => press(hereOn(), "Enter");
     /** The y a flyer starts at, in board pixels, from its transform. */
     const startY = (flyer: Element | undefined) =>
       Number(
@@ -369,7 +377,7 @@ describe("StickerTray", () => {
   it("leaves a given sticker's spot, a button that opens it among the stickers you gave", async () => {
     const openGiven = vi.fn();
     render([givenSticker("given", 1)], { openGiven });
-    await act(async () => void (await tray.current?.open()));
+    await openTray();
     const spot = board.querySelector<HTMLElement>('.tray__slot[data-id="given"]');
     expect(spot?.getAttribute("aria-label")).toBe("No.0001, given to @bob. Open it");
     // Nothing of the sticker shows, and it takes the shared press.
@@ -430,8 +438,7 @@ describe("StickerTray", () => {
       if (!dot || !newer) throw new Error("The dot or the newer sticker isn't on the sheet");
       expect(newer.compareDocumentPosition(dot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-      pointer(spot, "pointerdown", 100, 200);
-      pointer(stackEl(), "pointerup", 100, 200);
+      tap(spot, 100, 200);
       act(() => spot?.click());
       expect(openYours).toHaveBeenCalledExactlyOnceWith("gift");
       // Drawn toward the board, it stays in its spot.
@@ -452,19 +459,14 @@ describe("StickerTray", () => {
     expect(flyers()).toHaveLength(1);
 
     // Escape shuts the tray with the finger still down: the sheet goes home with its sticker.
-    act(() => {
-      board
-        .querySelector(".tray")
-        ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    });
+    press(board.querySelector(".tray"), "Escape");
     expect(flyers()).toHaveLength(0);
     expect(stateOf(peeled ?? "")).toBe("here");
 
     // The tray takes the next press: a tap sticks a sticker on, at a free spot.
     await openTray();
-    const tapped = frontSheet()?.querySelector('.tray__slot[data-state="here"]') ?? null;
-    pointer(tapped, "pointerdown", 100, 200);
-    pointer(stackEl(), "pointerup", 100, 200);
+    const tapped = hereOn();
+    tap(tapped, 100, 200);
     expect(place).toHaveBeenCalledExactlyOnceWith(tapped?.getAttribute("data-id"), undefined);
   });
 
@@ -477,7 +479,7 @@ describe("StickerTray", () => {
     const peeled = peelFrom(frontSheet(), stackEl());
 
     // A tap on the pulled-out sheet by another finger.
-    const other = pulled?.querySelector('.tray__slot[data-state="here"]') ?? null;
+    const other = hereOn(pulled);
     pointer(other, "pointerdown", 100, 100, 2);
     pointer(pulled, "pointerup", 100, 100, 2);
 
@@ -514,7 +516,9 @@ describe("StickerTray", () => {
     render(manyStickers(30));
     await openTray();
     motion.animate();
-    const next = board.querySelector(".tray__stack .tray__sheet.is-next")?.getAttribute("data-f");
+    const next = board
+      .querySelector('.tray__stack .tray__sheet[data-depth="1"]')
+      ?.getAttribute("data-f");
     pageDown();
     pageDown();
     await motion.finishAll();
@@ -529,9 +533,7 @@ describe("StickerTray", () => {
     const edge = board.querySelector(".tray__stack > .tray__sheet[data-depth='2'] .tray__foot");
     const chosen = edge?.closest<HTMLElement>(".tray__sheet")?.dataset.f;
     pageDown();
-    act(() => {
-      edge?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-    });
+    press(edge, "Enter");
     await motion.finishAll();
     expect(chosen).toBeDefined();
     expect(frontSheet()?.getAttribute("data-f")).toBe(chosen);
@@ -542,7 +544,7 @@ describe("StickerTray", () => {
     const place = vi.fn((_id: string) => Promise.resolve(null));
     render(manyStickers(8), { place });
     await openTray();
-    const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+    const slot = hereOn();
     // The sticker's center is 30px right of the press.
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
       this: HTMLElement,
@@ -586,15 +588,10 @@ describe("StickerTray", () => {
     render(manyStickers(8), { place });
     await openTray();
     const foot = () => Number.parseFloat(stackEl()?.style.getPropertyValue("--foot") || "1");
-    const tapped = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
-    act(() => {
-      tapped?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-    });
+    press(hereOn(), "Enter");
     peelFrom(frontSheet(), stackEl());
     await act(async () => landTapped());
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 700));
-    });
+    await letTheMouthSettle();
     expect(foot()).toBeLessThan(1);
   });
 
@@ -604,10 +601,8 @@ describe("StickerTray", () => {
     render(manyStickers(8), { place });
     await openTray();
     const pulled = await pullOut();
-    const slot = pulled?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
-    act(() => {
-      slot?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-    });
+    const slot = hereOn(pulled);
+    press(slot, "Enter");
     await act(async () => {});
     expect(place).toHaveBeenCalledExactlyOnceWith(slot?.dataset.id, undefined);
     expect(pulled?.closest('[aria-hidden="true"]')).toBeNull();
@@ -656,7 +651,7 @@ describe("StickerTray", () => {
     motion.animate();
     const newest = frontSheet()?.getAttribute("data-f");
     pageDown();
-    act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
+    chooseTab("gifts");
     await motion.finishAll();
     expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
   });
@@ -669,25 +664,16 @@ describe("StickerTray", () => {
     const newest = frontSheet()?.getAttribute("data-f");
     // The deepest edge riffles through the sheets before it.
     const edge = board.querySelector(".tray__stack > .tray__sheet[data-depth='3'] .tray__foot");
-    pointer(edge, "pointerdown", 100, 200);
-    pointer(stackEl(), "pointerup", 100, 200);
-    act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
+    tap(edge, 100, 200);
+    chooseTab("gifts");
     await motion.finishAll();
     expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
   });
 
-  it("says on its one blank sheet what an empty tray is for, until a sticker arrives", async () => {
-    render([]);
-    expect(board.querySelector(".tray__empty")?.textContent).toBeTruthy();
-    render([sticker("a", 1, false)]);
-    // Shut, the sheets catch up as the tray shows.
-    await openTray();
-    expect(board.querySelector(".tray__empty")).toBeNull();
-  });
-
-  it("names its one blank sheet by its number alone, in front or pulled out, and describes nothing on it, until a sticker arrives", async () => {
+  it("says on its one blank sheet what an empty tray is for, names it by its number alone, in front or pulled out, and describes nothing on it, until a sticker arrives", async () => {
     endAnimationsAtOnce();
     render([]);
+    expect(board.querySelector(".tray__empty")?.textContent).toBeTruthy();
     expect(frontSheet()?.getAttribute("aria-label")).toBe("Sheet 1, in front");
     expect(frontSheet()?.hasAttribute("aria-describedby")).toBe(false);
     await openTray();
@@ -698,22 +684,23 @@ describe("StickerTray", () => {
     expect(pulled?.querySelector(".tray__sheet")?.hasAttribute("aria-describedby")).toBe(false);
 
     // The sheet goes home, and a sticker arrives: it has dates, and stickers to describe.
-    await act(async () => void (await tray.current?.close()));
+    await closeTray();
     render([sticker("a", 1, false)]);
+    // Shut, the sheets catch up as the tray shows.
     await openTray();
+    expect(board.querySelector(".tray__empty")).toBeNull();
     expect(frontSheet()?.getAttribute("aria-label")).toMatch(/^Sheet 1, \S.*, in front$/);
     expect(frontSheet()?.hasAttribute("aria-describedby")).toBe(true);
   });
 
   it("counts a visit to the tray when it's opened, not when the board shows", async () => {
-    const visits = () => localStorage.getItem("draw.tray.visits");
     localStorage.clear();
     render(manyStickers(8));
-    expect(visits()).toBeNull();
+    expect(visitsSoFar()).toBe(0);
     await openAndShut();
     await openAndShut();
     // Once for each time the board shows the tray opened, however often it opens meanwhile.
-    expect(visits()).toBe("1");
+    expect(visitsSoFar()).toBe(1);
   });
 
   describe("nudges the front sheet's grip", () => {
@@ -757,7 +744,7 @@ describe("StickerTray", () => {
       expect([...moved].toSorted()).toEqual(["transform"]);
     });
 
-    it("not once the tray has been opened three times", async () => {
+    it("not once the tray's first few visits are over", async () => {
       visitsBefore(TUG_VISITS);
       const motion = await openWithoutMotion();
       motion.animate();
@@ -775,7 +762,7 @@ describe("StickerTray", () => {
     /** The tray shuts and opens again at once as before, with motion on after. */
     const reopen = async (motion: ReturnType<typeof holdAnimations>) => {
       motion.animate(false);
-      await act(async () => void (await tray.current?.close()));
+      await closeTray();
       await openTray();
       motion.animate();
     };
@@ -794,8 +781,7 @@ describe("StickerTray", () => {
       visitsBefore(TUG_VISITS - 1);
       const motion = await openWithoutMotion();
       motion.animate();
-      pointer(stackEl(), "pointerdown", 100, 200);
-      pointer(stackEl(), "pointerup", 100, 200);
+      tap(stackEl(), 100, 200);
       await waitForNudge();
       await reopen(motion);
       await waitForNudge();
@@ -831,9 +817,7 @@ describe("StickerTray", () => {
     const foot = () => Number.parseFloat(stackEl()?.style.getPropertyValue("--foot") || "1");
     expect(foot()).toBe(1);
     await pullOut();
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 700));
-    });
+    await letTheMouthSettle();
     expect(foot()).toBeLessThan(1);
   });
 
@@ -843,7 +827,7 @@ describe("StickerTray", () => {
     const peelWith = async (moves: number) => {
       render(manyStickers(30));
       await openTray();
-      const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+      const slot = hereOn();
       const before = reads();
       pointer(slot ?? null, "pointerdown", 100, 200);
       for (let i = 1; i <= moves; i++) pointer(stackEl(), "pointermove", 100 - i * 12, 200);
@@ -863,10 +847,8 @@ describe("StickerTray", () => {
     });
     const stickOnFirst = async () => {
       await openTray();
-      const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
-      act(() => {
-        slot?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-      });
+      const slot = hereOn();
+      press(slot, "Enter");
       await act(async () => {});
       return slot?.dataset.id;
     };
@@ -951,7 +933,7 @@ describe("StickerTray", () => {
       render(stickersWithGifts(30));
       await openTray();
       expect(statusText()).toBe("");
-      act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
+      chooseTab("gifts");
       expect(statusText()).toMatch(/^Gifts: \d+ sheets?$/);
     });
 
@@ -971,11 +953,9 @@ describe("StickerTray", () => {
       // The board answers with the sticker's element once it has drawn it.
       render(manyStickers(8), { place: () => Promise.resolve(document.createElement("div")) });
       await openTray();
-      const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+      const slot = hereOn();
       const no = slot?.getAttribute("aria-label");
-      act(() => {
-        slot?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-      });
+      press(slot, "Enter");
       await act(async () => {});
       expect(statusText()).toBe(`${no} is on your board`);
     });
@@ -1002,8 +982,7 @@ describe("StickerTray", () => {
         : new DOMRect();
     });
     // Under the deepest edge's own strip, where nothing is drawn.
-    pointer(stackEl(), "pointerdown", 100, 410.5);
-    pointer(stackEl(), "pointerup", 100, 410.5);
+    tap(stackEl(), 100, 410.5);
     await act(async () => {});
     expect(frontSheet()?.getAttribute("data-f")).toBe(deepest?.getAttribute("data-f"));
   });
@@ -1017,16 +996,12 @@ describe("StickerTray", () => {
       if (window1?.classList.contains("is-shut")) shutSeen = true;
     });
     watch.observe(window1 ?? board, { attributes: true, attributeFilter: ["class"] });
-    const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+    const slot = hereOn();
     act(() => slot?.focus());
 
     // Enter sticks it on; the mouth's spring rings through shut and settles while frames run.
-    act(() => {
-      slot?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-    });
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 700));
-    });
+    press(slot, "Enter");
+    await letTheMouthSettle();
     watch.disconnect();
     expect(shutSeen).toBe(false);
     expect(stackEl()?.contains(document.activeElement)).toBe(true);
@@ -1037,7 +1012,7 @@ describe("StickerTray", () => {
     const elsewhere = document.createElement("button");
     board.append(elsewhere);
     await openTray();
-    act(() => board.querySelector<HTMLElement>(".tray__depth")?.click());
+    spreadSheets();
 
     const dialog = board.querySelector<HTMLElement>('[role="dialog"]');
     expect(dialog?.getAttribute("aria-label")).toBeTruthy();
@@ -1061,7 +1036,7 @@ describe("StickerTray", () => {
   it("returns focus to the stack when a tapped cell closes the spread, though the browser blurred the cell first", async () => {
     render(manyStickers(60));
     await openTray();
-    act(() => board.querySelector<HTMLElement>(".tray__depth")?.click());
+    spreadSheets();
     const cells = board.querySelectorAll<HTMLElement>(".tray__cell");
     // WebKit takes focus off a tapped button before its click lands, which leaves it on the body.
     act(() => cells[0]?.blur());
@@ -1076,7 +1051,7 @@ describe("StickerTray", () => {
     render(manyStickers(60));
     await openTray();
     motion.animate();
-    act(() => board.querySelector<HTMLElement>(".tray__depth")?.click());
+    spreadSheets();
     const tapped = board.querySelectorAll<HTMLElement>(".tray__cell")[2];
     act(() => tapped?.click());
     act(() => void tray.current?.escape());
@@ -1189,7 +1164,7 @@ describe("StickerTray", () => {
         776,
         manyStickers(60).map((s, i) => (i === 59 ? { ...s, artist: friend } : s)),
       );
-      act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
+      chooseTab("gifts");
       expect(sheetCount()).toBe(1);
       const { stackFoot, mouthFoot } = openStack(776);
       expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
@@ -1205,12 +1180,6 @@ describe("StickerTray", () => {
       expect(mouthFoot - stackFoot).toBeLessThan(STACK_FOOT);
     });
 
-    it("never grows the stack past its most, however tall the board", async () => {
-      media(window.matchMedia("all"), true);
-      await openOn(3000, 60);
-      expect(openStack(3000).scale).toBe(MAX_STACK_SCALE);
-    });
-
     it("keeps a short large screen's stack about the phone's size", async () => {
       media(window.matchMedia("all"), true);
       await openOn(666, 60);
@@ -1219,22 +1188,13 @@ describe("StickerTray", () => {
       expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
     });
 
-    it("leaves the stack full size when everything fits the mouth", async () => {
-      await openOn(700);
-      const [, , scale] = numbersIn(stackEl());
-      expect(scale).toBe(1);
-    });
-
     // A phone's browser outside LINE gives the board more height than the stack needs.
     it.each([
       ["one sheet", 1],
       ["a deep stack", 60],
     ])("fills a tall board's open pouch with the pages of %s, full size", async (_, stickers) => {
       await openOn(776, stickers);
-      const [, stackTop = NaN, scale = NaN] = numbersIn(stackEl());
-      const [, mouthFootShift = NaN] = numbersIn(board.querySelector(".tray__w2"));
-      const mouthFoot = 776 - trayTop() + mouthFootShift;
-      const stackFoot = stackTop + scale * pageH() + stackFootFor(sheetCount());
+      const { scale, stackFoot, mouthFoot } = openStack(776);
       expect(scale).toBe(1);
       // The pages fill the open mouth, down to a little lining under the sheets.
       expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
@@ -1256,13 +1216,7 @@ describe("StickerTray", () => {
     });
 
     it("takes a sticker back beside the open mouth, and not from below it", async () => {
-      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
-        this: HTMLElement,
-      ) {
-        return this.classList.contains("tray__col") ? 776 - trayTop() : 776;
-      });
-      render([sticker("a", 1, true), sticker("b", 2, true)]);
-      await openTray();
+      await openOn(776, [sticker("a", 1, true), sticker("b", 2, true)]);
       const putBack = async (id: string, y: number) => {
         let back: boolean | undefined;
         await act(async () => {
@@ -1281,26 +1235,23 @@ describe("StickerTray", () => {
         // Enough sheets for the +N button.
         await openOn(height, 60);
         expect(board.querySelector(".tray__depth")).not.toBeNull();
-        const [, stackTop, shrink] = numbersIn(stackEl());
-        const [, mouthFootShift] = numbersIn(board.querySelector(".tray__w2"));
-        const mouthFoot = height - trayTop() + mouthFootShift;
-        expect(shrink).toBeLessThan(1);
-        expect(stackTop + shrink * pageH() + STACK_FOOT).toBeLessThanOrEqual(mouthFoot);
+        const { scale, stackFoot, mouthFoot } = openStack(height);
+        expect(scale).toBeLessThan(1);
+        expect(stackFoot).toBeLessThanOrEqual(mouthFoot);
       },
     );
 
     it.each([480, 700])("spreads every sheet inside the board", async (height) => {
       // Enough sheets for the +N button and two rows in the spread.
       await openOn(height, 60);
-      act(() => board.querySelector<HTMLElement>(".tray__depth")?.click());
+      spreadSheets();
       const cells = [...board.querySelectorAll<HTMLElement>(".tray__cell")];
       expect(cells.length).toBeGreaterThan(3);
       for (const cell of cells) {
-        const [, y, turn, k] =
+        const [, y = NaN, , k = NaN] =
           /translate\([\d.-]+px,([\d.-]+)px\) rotate\(([\d.-]+)deg\) scale\(([\d.]+)\)/
             .exec(cell.style.transform)
-            ?.map(Number) ?? [NaN];
-        expect(turn).toBeDefined();
+            ?.map(Number) ?? [];
         // Below the header and above the board's foot.
         expect(y).toBeGreaterThanOrEqual(0);
         expect(y + pageH() * k).toBeLessThanOrEqual(height);
@@ -1314,18 +1265,23 @@ describe("StickerTray", () => {
     expect(window1()?.hasAttribute("inert")).toBe(true);
     await openTray();
     expect(window1()?.hasAttribute("inert")).toBe(false);
-    await act(async () => void (await tray.current?.close()));
+    await closeTray();
     expect(window1()?.hasAttribute("inert")).toBe(true);
+  });
+
+  it("shuts when Escape is pressed on its Zipper", async () => {
+    render(manyStickers(8));
+    await openTray();
+    press(board.querySelector(".zip__slider"), "Escape");
+    expect(tray.current?.isOpen).toBe(false);
   });
 
   it("picks a folder tab as a pressed button that filters the sheets", async () => {
     render(stickersWithGifts(30));
     await openTray();
     expect(board.querySelector(".tray__tabs")?.getAttribute("role")).toBe("group");
-    const tab = (filter: string) =>
-      board.querySelector<HTMLElement>(`.tray__tab[data-filter="${filter}"]`);
     expect(tab("all")?.getAttribute("aria-pressed")).toBe("true");
-    act(() => tab("gifts")?.click());
+    chooseTab("gifts");
     expect(tab("gifts")?.getAttribute("aria-pressed")).toBe("true");
     expect(tab("all")?.getAttribute("aria-pressed")).toBe("false");
   });

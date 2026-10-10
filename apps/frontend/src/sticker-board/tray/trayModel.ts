@@ -9,7 +9,7 @@ import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape, unreadableCut } from "./stickerShape";
 import type { TrayProblem } from "./trayProblem";
 import { newSlots, type TraySlot } from "./traySlots";
-import type { Zipper } from "./zipper";
+import { showsFrom, type Zipper } from "./zipper";
 
 /** A sticker as the sticker tray holds it: its slot, and what it's drawn from. */
 export interface TraySticker extends TraySlot {
@@ -91,7 +91,9 @@ export interface TrayDrag {
 }
 
 export type Geometry = ReturnType<Zipper["geometry"]>;
-export type Filter = "all" | "mine" | "gifts";
+/** The folder tabs' filters, in their order. */
+export const FILTERS = ["all", "mine", "gifts"] as const;
+export type Filter = (typeof FILTERS)[number];
 export type SlotState = TraySlot["state"] | "peeling";
 
 export interface Slot extends TraySticker {
@@ -116,6 +118,8 @@ export interface Gesture {
   vy: number;
   /** How far a page turn has lifted the front sheet. */
   dy: number;
+  /** The front sheet a page turn lifts, found as the turn begins. */
+  sheet: HTMLElement | null;
   peel: Peel | null;
   /** Where the pulled-out sheet was when this move began. */
   at: Point | null;
@@ -159,8 +163,8 @@ export interface TrayState {
   order: number[];
   /** The stack's top left, in the column's pixels. */
   stackAt: Point;
-  /** The mouth's top and foot, in the column's pixels: a sheet below the foot is behind the fabric. */
-  band: { top: number; bot: number } | null;
+  /** The foot of the window the stack shows through, in the column's pixels: a sheet below it is behind the fabric. */
+  windowBot: number | null;
   geo: Geometry | null;
   busy: boolean;
   g: Gesture | null;
@@ -248,6 +252,8 @@ export interface Tray {
   Wb: () => number;
   Hb: () => number;
   colLeft: () => number;
+  /** The open mouth's left lip, as the board's x; null before the Zipper has drawn. */
+  lipLeft: () => number | null;
   /** Where the tray starts on the board, under its header (see `trayTopFor`). */
   trayTop: () => number;
   /** Where the open pouch ends, as the board's y: where its mouth closes in. */
@@ -259,8 +265,11 @@ export interface Tray {
 export const PEEK = 15;
 /** Sheets shown behind the front one; deeper ones become the stack's depth, a button that spreads them. */
 export const PEEKS = 3;
+/** The +N button's height, and its gap under the last edge behind the front sheet. */
+export const DEPTH_BUTTON_H = 22;
+export const DEPTH_GAP = 3;
 /** The +N button under the edges behind the front sheet, with its gap. */
-const DEPTH_ROOM = 3 + 22;
+const DEPTH_ROOM = DEPTH_GAP + DEPTH_BUTTON_H;
 /** Under the front sheet of a deep stack: the edges behind it, and the +N button. */
 export const STACK_FOOT = PEEKS * PEEK + DEPTH_ROOM;
 /** Under the front sheet of a stack of `sheets`: the edges shown behind it, and the +N button once deeper ones hide. */
@@ -269,16 +278,28 @@ export const stackFootFor = (sheets: number) =>
 /** A sheet's width, and its page's least height: the page grows taller to fill the open pouch. */
 export const SHEET = { w: 156, h: 364 };
 /** Packing keeps clear of the sheet's tear strip at the top and its dated foot. */
-const PACK_MARGIN = { top: 30, right: 10, bottom: 24, left: 10 };
+export const PACK_MARGIN = { top: 30, right: 10, bottom: 24, left: 10 };
 /** The tray runs from under the board's header and its gifts badge to its foot; a large screen's header
- * row, where the gifts sit beside your name, is taller (sticker-tray.css sets --tray-top to match). */
+ * row, where the gifts sit beside your name, is taller. */
 export const trayTopFor = (largeScreen: boolean) => (largeScreen ? 80 : 72);
 /** The tray's column: wide enough for the left row's full travel. */
 export const COL = 205;
 /** How far the left row travels open: the tray takes about half the screen. */
 export const GMAX = 172;
+/** The chain's center line runs this far in from the column's right edge. */
+const CHAIN_INSET = 15;
+/** The chain's center line, from the left of a column grown by `grow`. */
+export const chainAtFor = (grow: number) => COL * grow - CHAIN_INSET;
+/** The Zipper's track keeps this clear above and below it in the column. */
+export const TRACK_INSETS = [6, 6] as const;
+/** The window the stack shows through starts this far inside the left lip, and the open stack this far inside it. */
+const WINDOW_INSET = 3;
+export const STACK_X = 3;
 /** The stack's top in the open tray, under its folder tabs. */
 export const STACK_Y = 72;
+/** The window's left edge, in the column's px: inside the left lip, where a mouth `G` wide shows through. */
+export const windowLeft = (chainX: number, G: number, spread: number) =>
+  chainX - showsFrom(spread) * G + WINDOW_INSET;
 /** How the mouth sags to a crack while something is out over the board. */
 export const CRACK = 0.12;
 /**
@@ -377,12 +398,13 @@ export function ended(a: Animation): Promise<void> {
 }
 
 /** A pointer's place in board pixels: the board may be drawn scaled, mid-turn. */
-export const local = (e: PointerEvent, view: BoardView): Point => ({
+export const boardPoint = (e: PointerEvent, view: BoardView): Point => ({
   x: (e.clientX - view.left) / view.k,
   y: (e.clientY - view.top) / view.k,
 });
 export const targetOf = (e: Event) => (e.target instanceof Element ? e.target : null);
 
+/** Copies the stickers into slots, and remembers the ones already seen. */
 export function modelOf(list: readonly TraySticker[], seen: Set<string>) {
   for (const s of list) if (s.seen) seen.add(s.id);
   const slots: Slot[] = list.map((s) => ({ ...s }));
@@ -395,7 +417,7 @@ export function createTrayState(model: TrayState["model"]): TrayState {
     filter: "all",
     order: [],
     stackAt: { x: 0, y: STACK_Y },
-    band: null,
+    windowBot: null,
     geo: null,
     busy: false,
     g: null,
@@ -443,6 +465,7 @@ export function createTrayModel(
   /* ---------------------------------------------------------------- where each sticker sits: on its cut line */
   /** The model whose sheets were last packed, and so drawn. */
   let packedModel: TrayState["model"] | null = null;
+  /** Given stickers stay in the list, so the blanks they leave on their sheets stay put. */
   function packWith(shapes: readonly Shape[]) {
     const items = ui.model.slots.map((s, i) => ({ id: s.id, shape: shapes[i] }));
     // Packed on the page's least height whatever the board, so a sticker's sheet never changes with the

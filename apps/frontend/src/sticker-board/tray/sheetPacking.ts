@@ -1,16 +1,9 @@
 /**
  * Sticker sheets packed by each sticker's cut line, as on a die-cut sheet: varied gaps, slight turns,
- * as many to a sheet as the shapes allow. Pure and deterministic.
- * - Order: a later sticker never sits on an earlier sheet; a sheet reads in lines from its fill edge,
- *   left to right, so the newest sits highest.
- * - Stable: a spot depends only on the stickers before it, so appending moves nothing but a spread
- *   sheet's lines. Given stickers stay in the list, so the blanks they leave stay put.
- * - Clear: cut lines keep `clearance` apart, and `margin` from the paper's edge.
- * - Legible: never shrunk to fit; a sheet that can't take the next sticker turns.
- * - Spread: a sheet with room for another line can share that paper evenly under, between and over
- *   its lines, as a printed sheet lays out a few stickers; a full one stays packed.
- * Each sheet keeps a skyline, every column's highest point grown by the clearance. A new sticker is
- * lowered onto it at every x and settles on its own cut line, nesting into the valleys below.
+ * never shrunk to fit. Deterministic: a spot depends only on the stickers before it, so a later one
+ * never sits on an earlier sheet and appending moves nothing but a spread sheet's lines. Each sheet
+ * keeps a skyline grown by the clearance; a new sticker is lowered onto it at every x and settles on
+ * its own cut line. `spread` shares a sheet's spare room evenly between its lines.
  */
 import { seededRandom } from "../../ui/seededRandom";
 
@@ -45,7 +38,7 @@ export interface PackedItem {
   h: number;
 }
 
-export interface Packed {
+interface Packed {
   /** Each sheet's stickers, in arrival order. */
   sheets: { items: PackedItem[] }[];
   /** Each sticker's spot, with the index `f` of its sheet. */
@@ -78,15 +71,11 @@ export interface PackOptions {
   turn?: number;
   /** How far in from the left margin a line may start, seeded. */
   inset?: number;
-  /** "up" fills a sheet from the bottom, the newest highest; "down" from the top. */
-  fill?: "up" | "down";
-  /** The most stickers one sheet takes. */
-  max?: number;
   /** A sheet with room for another line spreads its lines over its page. */
   spread?: boolean;
   /**
    * The page the sheets are drawn on, when taller than `sheet`: the lines keep their places from its
-   * fill edge, and a spread sheet spreads over all of it. Which sheet a sticker is on never depends on it.
+   * foot, and a spread sheet spreads over all of it. Which sheet a sticker is on never depends on it.
    */
   page?: number;
 }
@@ -102,8 +91,6 @@ interface Resolved {
   vary: number;
   turn: number;
   inset: number;
-  fill: "up" | "down";
-  max: number;
   spread: boolean;
 }
 
@@ -124,16 +111,17 @@ const OUTLINE_TOLERANCE = 0.0035;
 /** How closely a traced mask is kept, in mask cells. */
 const TRACE_TOLERANCE = 0.6;
 
+/** The box each sticker's image is fitted into on a sheet: the size stickers show at. */
+export const STICKER_FIT = { w: 66, h: 76 };
+
 const DEFAULTS: Omit<Resolved, "sheet" | "page" | "margin"> = {
   clearance: 6,
   breathe: 4,
-  fit: { w: 66, h: 76 },
+  fit: STICKER_FIT,
   minSize: 44,
   vary: 0.04,
   turn: 3,
   inset: 12,
-  fill: "up",
-  max: Infinity,
   spread: false,
 };
 
@@ -313,7 +301,7 @@ export function outline(shape: Shape, item: Pick<PackedItem, "x" | "y" | "r" | "
 }
 
 /** A turned, scaled cut centered on 0, 0: the highest and lowest points of each pixel column. */
-export interface Profile {
+interface Profile {
   /** The first column's x. */
   j0: number;
   /** The number of columns. */
@@ -405,8 +393,6 @@ function options(opts: PackOptions): Resolved {
     vary: opts.vary ?? DEFAULTS.vary,
     turn: opts.turn ?? DEFAULTS.turn,
     inset: opts.inset ?? DEFAULTS.inset,
-    fill: opts.fill ?? DEFAULTS.fill,
-    max: opts.max ?? DEFAULTS.max,
     spread: opts.spread ?? DEFAULTS.spread,
   };
 }
@@ -416,7 +402,7 @@ interface Sheet {
   /** Per column, the highest point taken, grown by the clearance. */
   sky: Float64Array;
   last: { x: number; y: number; pf: Profile } | null;
-  /** How many lines it holds, and each sticker's line, counted from the fill edge. */
+  /** How many lines it holds, and each sticker's line, counted up from its foot. */
   lines: number;
   lineOf: number[];
   /** The highest point of any cut line on it. */
@@ -437,9 +423,7 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
   const H = o.sheet.h;
   /** How much taller the page is than the sheet packed. */
   const lower = o.page - H;
-  const up = o.fill !== "down";
-  // Packed with the fill edge at the bottom: filling down is the same sheet mirrored top to bottom.
-  const m = up ? o.margin : { ...o.margin, top: o.margin.bottom, bottom: o.margin.top };
+  const m = o.margin;
   const c = Math.max(0, o.clearance) + SAFE;
   const K = Math.ceil(c) + 1;
   const grow = new Float64Array(K + 1);
@@ -514,7 +498,7 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
     if (free < o.fit.h + c) return;
     sheet.items.forEach((it, i) => {
       const lift = ((sheet.lineOf[i] + 1) * free) / (sheet.lines + 1);
-      it.y += up ? -lift : lift;
+      it.y -= lift;
     });
   }
 
@@ -545,12 +529,13 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
         (Math.max(...vs) - Math.min(...vs)) * sh.h,
       ) * s;
     if (cutLong < o.minSize) s *= o.minSize / cutLong;
-    const pf = profileOf(sh, sh.w * s, sh.h * s, up ? r : -r, !up);
+    const pf = profileOf(sh, sh.w * s, sh.h * s, r, false);
     const seed = { lift: u[3] * o.breathe, gap: u[4] * o.breathe, inset: u[5] * o.inset };
     let sheet = sheets.at(-1);
-    let at = sheet && sheet.items.length < o.max ? spotFor(sheet, pf, seed) : null;
+    let at = sheet ? spotFor(sheet, pf, seed) : null;
     if (!sheet || !at) {
       sheet = newSheet();
+      // A sticker too big for an empty sheet still gets one, centered at its foot.
       at = spotFor(sheet, pf, seed) ?? {
         x: Math.round(W / 2),
         y: H - m.bottom - (pf.tmin + pf.h),
@@ -564,7 +549,7 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
       id: it.id,
       n,
       x: at.x,
-      y: up ? at.y + lower : H - at.y,
+      y: at.y + lower,
       r,
       s,
       w: sh.w * s,

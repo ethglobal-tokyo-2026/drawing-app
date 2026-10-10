@@ -11,9 +11,11 @@ import { i18next } from "../../i18n/i18n";
 import { whenBoardQuiet } from "../boardComplete";
 import { clamp, lerp } from "../../ui/easing";
 import { LARGE_SCREEN } from "../../ui/largeScreen";
+import { PHONE_BOARD_SIZE } from "../placement";
 import type { TrayProblem } from "./trayProblem";
 import { createTrayBoardDrop } from "./trayBoardDrop";
-import { countVisit, visitsSoFar } from "./traySeen";
+import { elementMaker, timeoutsIn, windowOf } from "./trayDom";
+import { countVisit, visitsSoFar } from "./trayVisits";
 import { createTrayNudge } from "./trayNudge";
 import { createTrayPaging } from "./trayPaging";
 import { createTrayPeel } from "./trayPeel";
@@ -23,9 +25,14 @@ import { createTraySpread } from "./traySpread";
 import {
   COL,
   GMAX,
+  STACK_X,
   STACK_Y,
   SVG_NS,
+  TRACK_INSETS,
+  chainAtFor,
+  px,
   trayTopFor,
+  windowLeft,
   createTrayModel,
   createTrayState,
   modelOf,
@@ -74,18 +81,26 @@ export interface TrayEngine {
 
 /** The stack's foot (dates, NEW, +N) is hidden below this share of the mouth's open width, whole above the other. */
 const FOOT_FADE = { hidden: 0.35, whole: 0.7 };
+/** The mouth counts as wide open at this share of its full width. */
+const WIDE_OPEN = 0.97;
+/** The stack slides out from under the left lip as the mouth opens: from this far left and up, easing in by these powers. */
+const SLIDE_IN = { x: -58, y: -40, easeX: 0.85, easeY: 0.8 };
+/**
+ * The tray's shadow where the sheets go down into it: lighter by this share once spread flat, and
+ * fainter, down to `least`, in a window shorter than `fullAt` px.
+ */
+const DEEP = { spreadFade: 0.72, fullAt: 150, least: 0.35 };
 /** The pull tugs itself, and the front sheet's grip nudges, on this many visits to the tray. */
 export const TUG_VISITS = 3;
+/**
+ * The pull's idle tug, on those visits or while something is NEW: the first this long after the board
+ * shows, the next this long after it, at most `perVisit` a visit; one the tray is busy for waits `retry`.
+ */
+const TUG = { first: 2400, between: 7000, retry: 4000, perVisit: 2 };
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 /** Trays made so far, which keeps each one's ids its own. */
 let trays = 0;
-
-function windowOf(doc: Document): Window & typeof globalThis {
-  const win = doc.defaultView;
-  if (!win) throw new Error("The sticker tray's board isn't in a document with a window");
-  return win;
-}
 
 export function createTrayEngine(
   board: HTMLElement,
@@ -110,7 +125,7 @@ export function createTrayEngine(
   },
 ): TrayEngine {
   const doc = board.ownerDocument;
-  const win = windowOf(doc);
+  const win = windowOf(board, "The sticker tray's board");
   const reducedMotion = win.matchMedia(REDUCED_MOTION);
   const reduced = () => reducedMotion.matches;
   const listening = new AbortController();
@@ -119,30 +134,8 @@ export function createTrayEngine(
     type: K,
     fn: (e: HTMLElementEventMap[K]) => void,
   ) => el.addEventListener(type, fn, { signal: listening.signal });
-  const timers = new Set<number>();
-  const later = (fn: () => void, ms: number) => {
-    const t = win.setTimeout(() => {
-      timers.delete(t);
-      fn();
-    }, ms);
-    timers.add(t);
-    return t;
-  };
-  const cancel = (t: number) => {
-    win.clearTimeout(t);
-    timers.delete(t);
-  };
-
-  function make<K extends keyof HTMLElementTagNameMap>(
-    tag: K,
-    className: string,
-    ...kids: (Node | string)[]
-  ): HTMLElementTagNameMap[K] {
-    const el = doc.createElement(tag);
-    if (className) el.className = className;
-    el.append(...kids);
-    return el;
-  }
+  const { later, cancel, clearAll } = timeoutsIn(win);
+  const make = elementMaker(doc);
   const decorative = <T extends Element>(el: T) => {
     el.setAttribute("aria-hidden", "true");
     return el;
@@ -165,7 +158,7 @@ export function createTrayEngine(
 
   /* ---------------------------------------------------------------- the parts */
   const col = make("div", "tray__col");
-  const land = decorative(make("div", "tray__land", make("i", "")));
+  const land = decorative(make("div", "tray__land"));
   // A pulled-out sheet is out here, for screen readers too; each sticker in hand is hidden on its own.
   const fly = make("div", "tray__fly");
   const mat = make("div", "tray__mat");
@@ -180,9 +173,15 @@ export function createTrayEngine(
     fly,
     spreadLayer,
   );
+  // One query for the tray's life: a board drag reads it on every move.
+  const large = win.matchMedia(LARGE_SCREEN);
+  const trayTop = () => trayTopFor(large.matches);
+  // The column starts under the header before the Zipper measures it.
+  const placeTop = () => root.style.setProperty("--tray-top", px(trayTop()));
+  placeTop();
   board.append(root);
 
-  const zip = createZipper(col, { chainAt: COL - 15, insets: [6, 6], maxGap: GMAX });
+  const zip = createZipper(col, { chainAt: chainAtFor(1), insets: TRACK_INSETS, maxGap: GMAX });
   /** The tray's fixed words, in the app's language. */
   const words = {
     sheets: i18next.t(($) => $.stickerBoard.tray.sheets),
@@ -258,12 +257,11 @@ export function createTrayEngine(
   // layout is still clean, and whatever else moved the board, it can't have moved since.
   board.addEventListener("pointerdown", measure, { capture: true, signal: listening.signal });
   board.addEventListener("keydown", measure, { capture: true, signal: listening.signal });
-  const Wb = () => placed.w || 390;
-  const Hb = () => placed.h || 657;
+  // A phone's board stands in until the board has a size.
+  const Wb = () => placed.w || PHONE_BOARD_SIZE.W;
+  const Hb = () => placed.h || PHONE_BOARD_SIZE.H;
   const colLeft = () => Wb() - COL * ui.fit.grow;
-  // One query for the tray's life: a board drag reads it on every move.
-  const large = win.matchMedia(LARGE_SCREEN);
-  const trayTop = () => trayTopFor(large.matches);
+  const lipLeft = () => (ui.geo ? colLeft() + ui.geo.chainX - ui.geo.G : null);
   /** Where the open pouch ends, as the board's y: where its mouth closes in. */
   let openFoot = 0;
   const pouchFoot = () => openFoot || Hb();
@@ -296,6 +294,7 @@ export function createTrayEngine(
     Wb,
     Hb,
     colLeft,
+    lipLeft,
     trayTop,
     pouchFoot,
     boardView,
@@ -321,11 +320,8 @@ export function createTrayEngine(
   /** How far short of the bottom stop the Zipper's open mouth was last shaped to close in. */
   let mouthShort = 0;
   /**
-   * Fits the tray to its board: the stack shrunk until its sheets, the edges behind them and the +N
-   * button all fit a short board's mouth, and on a large screen grown to fill it, the column and the
-   * mouth's travel with it; the pages grow taller to fill the pouch down to the bottom stop, and the
-   * stickers are packed again onto them. True when that reshaped the Zipper, which has drawn this
-   * frame already.
+   * Fits the tray to its board: the stack shrunk for a short board's mouth or grown with the column on
+   * a large screen, the pages repacked to fill the pouch. True when that reshaped, and so redrew, the Zipper.
    */
   function fitTray(height: number) {
     if (!height) return false;
@@ -353,7 +349,7 @@ export function createTrayEngine(
     if (moved) {
       mouthShort = short;
       zip.reshape({
-        chainAt: COL * ui.fit.grow - 15,
+        chainAt: chainAtFor(ui.fit.grow),
         maxGap: GMAX * ui.fit.grow,
         mouthShort,
       });
@@ -370,7 +366,7 @@ export function createTrayEngine(
     const G = g.G;
     const k = showsFrom(g.spread);
     const { scale, grow } = ui.fit;
-    const open = clamp(G / (0.97 * GMAX * grow), 0, 1);
+    const open = clamp(G / (WIDE_OPEN * GMAX * grow), 0, 1);
     const range = G > 3 ? mouthRange(g, G, k) : null;
     const show = range !== null;
     // A mouth sagged to a crack rings through shut for a few frames: the stack stays as it was, so it
@@ -386,7 +382,7 @@ export function createTrayEngine(
       }
     }
     if (range) {
-      const xw = g.chainX - k * G + 3;
+      const xw = windowLeft(g.chainX, G, g.spread);
       const yTop = Math.min(g.yOf(range.to), g.yOf(range.from));
       const yBot = Math.max(g.yOf(range.to), g.yOf(range.from));
       w1.style.transform = `translate(${xw.toFixed(2)}px,${yTop.toFixed(2)}px)`;
@@ -394,9 +390,12 @@ export function createTrayEngine(
       w2.style.transform = `translate(0px,${(yBot - g.H).toFixed(2)}px)`;
       c2.style.transform = `translate(0px,${(g.H - yBot).toFixed(2)}px)`;
       // The stack slides out from under the left lip as the mouth opens, and settles a little lower.
-      const bx = lerp(-58 * grow, 3, Math.pow(open, 0.85));
-      const by = lerp(-40, STACK_Y, Math.pow(open, 0.8));
-      const deep = ((1 - 0.72 * g.spread) * clamp((yBot - yTop) / 150, 0.35, 1)).toFixed(3);
+      const bx = lerp(SLIDE_IN.x * grow, STACK_X, Math.pow(open, SLIDE_IN.easeX));
+      const by = lerp(SLIDE_IN.y, STACK_Y, Math.pow(open, SLIDE_IN.easeY));
+      const deep = (
+        (1 - DEEP.spreadFade * g.spread) *
+        clamp((yBot - yTop) / DEEP.fullAt, DEEP.least, 1)
+      ).toFixed(3);
       deepTop.style.opacity = deep;
       deepBot.style.opacity = deep;
       // A mouth sagged to a crack shows a sliver of the stack: its foot fades so no cut-off dates, NEW
@@ -413,8 +412,9 @@ export function createTrayEngine(
       tabsEl.style.transform = `translate(${bx.toFixed(2)}px,${by.toFixed(2)}px)`;
       stack.style.transform = `translate(${(bx + stackInset()).toFixed(2)}px,${by.toFixed(2)}px) scale(${scale.toFixed(4)})`;
       ui.stackAt = { x: xw + bx + stackInset(), y: by };
-      ui.band = { top: yTop, bot: yBot };
+      ui.windowBot = yBot;
     }
+    // The folder tabs take Tab once the mouth has spread flat and is held wide open.
     const out = ui.spreadOpen
       ? 0
       : clamp((g.spread - 0.55) / 0.45, 0, 1) * clamp((g.relax - 0.85) / 0.15, 0, 1);
@@ -424,8 +424,12 @@ export function createTrayEngine(
   zip.on("frame", onFrame);
   // The Zipper drew itself before this listened.
   onFrame(zip.geometry());
-  // The board resizing redraws the Zipper, which fits the tray again; so does the screen turning large.
-  const fitForScreen = () => onFrame(zip.geometry());
+  // The board resizing redraws the Zipper, which fits the tray again; so does the screen turning large,
+  // whose header row is taller.
+  const fitForScreen = () => {
+    placeTop();
+    onFrame(zip.geometry());
+  };
   large.addEventListener("change", fitForScreen);
   zip.on("commit", ({ open }) => {
     cancelTugs();
@@ -497,7 +501,7 @@ export function createTrayEngine(
     e.stopPropagation();
   });
 
-  /* ---------------------------------------------------------------- the hints: the pull's idle tug on the first few visits, or while something is NEW, twice a visit at most; the front sheet's grip nudges on the first few, once a visit */
+  /* ---------------------------------------------------------------- the hints */
   let tugs = 0;
   let tugTimer = 0;
   /** The hints are for a person's first few visits to the tray, which opening it counts, not the board showing. */
@@ -506,55 +510,54 @@ export function createTrayEngine(
   createTrayNudge(tray, traySheets, trayPaging, { early: tugVisits < TUG_VISITS });
   function scheduleTug(ms: number) {
     cancel(tugTimer);
-    if (reduced() || tugs >= 2) return;
+    if (reduced() || tugs >= TUG.perVisit) return;
     tugTimer = later(() => {
       // An empty tray has nothing to invite anyone to open.
       if (ui.model.slots.length === 0) return;
       if (!(tugVisits < TUG_VISITS || hasNew())) return;
       if (zip.isOpen || ui.g || doc.hidden) {
-        scheduleTug(4000);
+        scheduleTug(TUG.retry);
         return;
       }
       if (zip.hint()) tugs++;
-      if (tugs < 2) scheduleTug(7000);
+      if (tugs < TUG.perVisit) scheduleTug(TUG.between);
     }, ms);
   }
+  /** No more tugs this visit. */
   function cancelTugs() {
-    tugs = 2;
+    tugs = TUG.perVisit;
     cancel(tugTimer);
   }
 
   /* ---------------------------------------------------------------- the stickers change under it */
+  /** Packs the sheets once every cut line is read, then does `after` unless the stickers changed meanwhile. */
+  const relayoutThen = (after: () => void) =>
+    relayout().then(
+      (ok) => {
+        if (ok) after();
+      },
+      (error: unknown) => console.error("Laying out the sticker sheets failed", error),
+    );
   function refresh() {
     if (ui.destroyed) return;
     ui.model = modelOf(read(), seen);
     syncTabsShown();
     if (applyPack()) redraw();
-    else
-      relayout().then(
-        (ok) => {
-          if (ok) redraw();
-        },
-        (error: unknown) => console.error("Laying out the sticker sheets failed", error),
-      );
+    else void relayoutThen(redraw);
   }
 
-  /* ---------------------------------------------------------------- start: the stand-in spots at once, packed as soon as every cut line is known */
+  /* ---------------------------------------------------------------- start */
   syncTabsShown();
   // Packed at once when every cut line is known; else on stand-in spots until they are.
   const packed = applyPack();
   resetOrder();
   renderStack();
   if (!packed)
-    relayout().then(
-      (ok) => {
-        if (!ok) return;
-        resetOrder();
-        redraw();
-      },
-      (error: unknown) => console.error("Laying out the sticker sheets failed", error),
-    );
-  scheduleTug(2400);
+    void relayoutThen(() => {
+      resetOrder();
+      redraw();
+    });
+  scheduleTug(TUG.first);
   void whenBoardQuiet().then(loadImages);
 
   return {
@@ -575,8 +578,7 @@ export function createTrayEngine(
       ui.destroyed = true;
       // Torn down open, as for a new language, it was seen all the same: it never shuts to say so.
       seeShown();
-      for (const t of timers) win.clearTimeout(t);
-      timers.clear();
+      clearAll();
       const peel = ui.g?.peel;
       if (peel) win.cancelAnimationFrame(peel.raf);
       ui.pulled?.listening.abort();

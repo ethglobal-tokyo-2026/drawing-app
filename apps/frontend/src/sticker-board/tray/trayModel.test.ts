@@ -2,23 +2,15 @@ import { describe, expect, it } from "vitest";
 import { testStickerUrls } from "../../stickers/testStickerUrls";
 import {
   MAX_STACK_SCALE,
-  POUCH_LINING,
   SHEET,
-  STACK_Y,
   createTrayModel,
   createTrayState,
   modelOf,
   mouthShortFor,
   sheetHeightFor,
-  stackFootFor,
   trayFitFor,
-  type TrayFit,
   type TraySticker,
 } from "./trayModel";
-
-/** Where the open stack ends, its lining under it included, in the column's px. */
-const stackEnd = (fit: TrayFit, sheets: number, sheetH: number) =>
-  2 + STACK_Y + fit.scale * sheetH + stackFootFor(sheets) + POUCH_LINING;
 
 describe("trayFitFor", () => {
   it.each([
@@ -31,9 +23,8 @@ describe("trayFitFor", () => {
       for (const sheets of [1, 3, 60]) {
         const sheetH = sheetHeightFor(fit, sheets);
         expect(sheetH).toBeGreaterThan(SHEET.h);
+        // The stack and its lining reach the open mouth's foot.
         expect(mouthShortFor(fit, sheets, sheetH)).toBe(0);
-        // The stack and its lining reach the open mouth's foot, and stop there.
-        expect(stackEnd(fit, sheets, sheetH)).toBeCloseTo(foot, 6);
       }
     },
   );

@@ -3,14 +3,14 @@
    no gloss. Motion is transform and opacity only. */
 
 .zip {
-  --zip-tape: #1c1824;
-  --zip-weave: rgba(255, 255, 255, 0.05);
-  --zip-selvedge: rgba(255, 255, 255, 0.08);
-  --zip-stitch: rgba(242, 241, 246, 0.34);
-  --zip-tooth: #eeecf3;
-  --zip-tooth-lit: #ffffff;
-  --zip-tooth-shade: #c3bed1;
-  --zip-tooth-rim: rgba(28, 24, 36, 0.5);
+  --zip-tape: var(--tray-tape);
+  --zip-weave: rgba(255, 255, 255, 0.2);
+  --zip-selvedge: rgba(255, 255, 255, 0.3);
+  --zip-stitch: rgba(255, 255, 255, 0.85);
+  --zip-tooth: var(--canvas);
+  --zip-tooth-lit: var(--canvas);
+  --zip-tooth-shade: #ebdde8;
+  --zip-tooth-rim: rgba(150, 40, 95, 0.42);
   /* The slider: matte painted metal, the chain's own color. */
   --zip-body: #e4e1ea;
   --zip-body-lit: #ffffff;
@@ -21,9 +21,9 @@
   --zip-slider-lit: color-mix(in srgb, var(--pink) 65%, var(--canvas));
   --zip-slider-deep: var(--pink-deep);
   --zip-slider-rim: rgba(96, 12, 52, 0.5);
-  --zip-lining: #2a2434;
-  --zip-lining-deep: #110e16;
-  --zip-pitch: 12px;
+  --zip-lining: var(--tray-lining);
+  /* The lip's shadow on a light fabric: a blush, not a smudge. */
+  --zip-lining-deep: color-mix(in srgb, var(--tray-lining) 90%, #8a3a66);
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -33,11 +33,13 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.zip * {
-  box-sizing: border-box;
-}
-
-.zip__layer {
+/* Points, not boxes: each part is placed by its transform and drawn round its anchor. */
+.zip__layer,
+.zip__seg,
+.zip__slider,
+.zip__part,
+.zip__pull,
+.zip__flop {
   position: absolute;
   left: 0;
   top: 0;
@@ -54,7 +56,6 @@
   z-index: 2;
   position: absolute;
   inset: 0;
-  pointer-events: none;
 }
 
 .zip__row {
@@ -91,14 +92,6 @@
 
 /* ---------- A segment: one tooth and its slice of tape ----------
    Anchored where the chain's center line runs when shut, so moving a row moves its segments whole. */
-
-.zip__seg {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
-}
 
 /* Each slice overlaps its neighbors, so a tight bend never shows a notch. */
 .zip__tape {
@@ -179,39 +172,36 @@
 }
 
 /* The molded step where the tooth grips its tape, and the hollow in its head that takes the other
-   row's hook. */
-.zip__seg--a .zip__tooth::before {
-  left: 2.4px;
+   row's hook; each row's are mirrored. */
+.zip__tooth::before {
   top: 0.9px;
   bottom: 0.9px;
   width: 0.8px;
   background: rgba(28, 24, 36, 0.22);
+}
+
+.zip__tooth::after {
+  top: 1.8px;
+  width: 2px;
+  height: 2.2px;
+  border-radius: 1.1px;
+  background: rgba(28, 24, 36, 0.15);
+}
+
+.zip__seg--a .zip__tooth::before {
+  left: 2.4px;
 }
 
 .zip__seg--b .zip__tooth::before {
   right: 2.4px;
-  top: 0.9px;
-  bottom: 0.9px;
-  width: 0.8px;
-  background: rgba(28, 24, 36, 0.22);
 }
 
 .zip__seg--a .zip__tooth::after {
   right: 1.1px;
-  top: 1.8px;
-  width: 2px;
-  height: 2.2px;
-  border-radius: 1.1px;
-  background: rgba(28, 24, 36, 0.15);
 }
 
 .zip__seg--b .zip__tooth::after {
   left: 1.1px;
-  top: 1.8px;
-  width: 2px;
-  height: 2.2px;
-  border-radius: 1.1px;
-  background: rgba(28, 24, 36, 0.15);
 }
 
 /* ---------- Stops ---------- */
@@ -258,11 +248,6 @@
    a full touch target. */
 
 .zip__slider {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
   margin: 0;
   padding: 0;
   border: 0;
@@ -290,14 +275,6 @@
   cursor: grabbing;
 }
 
-.zip__part {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
-}
-
 .zip__body {
   position: absolute;
   left: -12px;
@@ -310,21 +287,11 @@
 }
 
 .zip__pull {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
   /* Close enough that a pull lifted toward you grows at its free end. */
   perspective: 200px;
 }
 
 .zip__flop {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
   transform-style: preserve-3d;
 }
 

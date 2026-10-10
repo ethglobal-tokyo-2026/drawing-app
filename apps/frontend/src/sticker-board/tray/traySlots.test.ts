@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BoardStickerView } from "../boardSticker";
-import { newSlots, traySlots } from "./traySlots";
+import { PER_SHEET, newSlots, traySlots } from "./traySlots";
 
 const sticker = (
   id: string,
@@ -20,14 +20,15 @@ const sent = { openGift: { id: "x", status: "sent" as const } };
 const packed = { openGift: { id: "y", status: "packed" as const } };
 
 describe("traySlots", () => {
-  it("keeps each sticker's slot for good, in arrival order", () => {
-    const slots = traySlots([sticker("b", 2), sticker("a", 1), sticker("c", 3)]);
-    expect(slots.map((s) => s.id)).toEqual(["a", "b", "c"]);
-    expect(slots.map((s) => [s.sheet, s.slot])).toEqual([
-      [0, 0],
-      [0, 1],
-      [0, 2],
-    ]);
+  it("keeps each sticker's slot for good, in arrival order, a given one's too", () => {
+    const given = { held: false };
+    const later = Array.from({ length: PER_SHEET }, (_, i) => sticker(`later-${i}`, 3 + i));
+    const slots = traySlots([sticker("b", 2, false, given), sticker("a", 1), ...later]);
+    expect(slots.map((s) => s.id).slice(0, 3)).toEqual(["a", "b", "later-0"]);
+    // Nothing after a given sticker moves up into its slot: the next sheet starts where it would.
+    const before = traySlots([sticker("a", 1), sticker("b", 2), ...later]);
+    expect(slots.map((s) => [s.sheet, s.slot])).toEqual(before.map((s) => [s.sheet, s.slot]));
+    expect(slots.at(-1)?.sheet).toBe(1);
   });
 
   it("marks stickers out on the board, in the bag, on their way or received, or here", () => {

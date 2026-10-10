@@ -4,14 +4,11 @@
  * to show the sheet pulls out. Once a visit; a hand on the tray, or reduced motion, spares it.
  */
 import { EASE_OUT } from "../../ui/easing";
-import { ended, type Tray } from "./trayModel";
+import type { Tray } from "./trayModel";
 import type { TrayPaging } from "./trayPaging";
 import type { TraySheets } from "./traySheets";
 
-/**
- * How long the nudge waits once the Zipper's slider reaches its far stop, so the mouth has stopped
- * moving and been looked at; the pull's swing takes seconds longer to die away.
- */
+/** How long the nudge waits once the Zipper's slider reaches its far stop: the mouth has stopped moving and been looked at. */
 export const NUDGE_AFTER = 1400;
 /** The sheet rises, and turns about its foot, which swings its grip toward the board. */
 const NUDGE = { rise: -2, turn: -1, ms: 640 };
@@ -55,7 +52,6 @@ export function createTrayNudge(
       ],
       { duration: NUDGE.ms },
     );
-    void ended(playing);
   }
 
   zip.on("opened", () => {

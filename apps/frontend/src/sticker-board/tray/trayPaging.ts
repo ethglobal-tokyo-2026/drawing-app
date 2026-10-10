@@ -3,8 +3,9 @@
  * whose filter deals the stack anew in a shuffle.
  */
 import { i18next } from "../../i18n/i18n";
-import { EASE_OUT, clamp } from "../../ui/easing";
+import { EASE_OUT } from "../../ui/easing";
 import {
+  FILTERS,
   PEEKS,
   ended,
   matchesFilter,
@@ -13,9 +14,17 @@ import {
   type Tray,
   type TrayModel,
 } from "./trayModel";
-import type { TraySheets } from "./traySheets";
+import { shadeOf, type TraySheets } from "./traySheets";
 
-const FILTERS: readonly Filter[] = ["all", "mine", "gifts"];
+/** A page turn lifts the front sheet this far out of the stack's top, turned this many degrees. */
+const LIFT = { dy: -118, r: 2.2 };
+/** A folder tab gathers the stack: it dips this far into the mouth, its levels this much as far apart. */
+const GATHER = { dip: 30, apart: 0.15 };
+/**
+ * A sheet a folder tab puts back drops behind the fabric: `past` px past the window's foot, at least
+ * `least`; before the window has shown, a phone's stands in, `fallback` px below the stack's top.
+ */
+const DROP = { past: 12, least: 320, fallback: 470 };
 
 export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: TraySheets) {
   const { zip, reduced, listen, make, stack, tabsEl, ui } = tray;
@@ -63,8 +72,6 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
       }),
     );
   };
-  // As the CSS shades each level back; a sheet changing level eases between them.
-  const shadeOf = (d: number) => clamp(d * 0.3, 0, 0.9);
   const shade = (
     el: HTMLElement,
     d0: number,
@@ -128,16 +135,19 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
         shade(el, d, d - 1, 240 * T);
       }
       await ended(
-        front.animate([{ transform: restAt(0, fromY) }, { transform: restAt(0, -118, -2.2) }], {
-          duration: 150 * T,
-          easing: EASE_OUT,
-          fill: "forwards",
-        }),
+        front.animate(
+          [{ transform: restAt(0, fromY) }, { transform: restAt(0, LIFT.dy, -LIFT.r) }],
+          {
+            duration: 150 * T,
+            easing: EASE_OUT,
+            fill: "forwards",
+          },
+        ),
       );
       front.style.zIndex = "-1";
       shade(front, 0, k, 200 * T);
       await ended(
-        front.animate([{ transform: restAt(0, -118, -2.2) }, { transform: restAt(k) }], {
+        front.animate([{ transform: restAt(0, LIFT.dy, -LIFT.r) }, { transform: restAt(k) }], {
           duration: 200 * T,
           easing: "cubic-bezier(.45,0,.55,1)",
           fill: "forwards",
@@ -166,7 +176,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
         shade(t, k, 0, 370 * T, "none");
         t.style.zIndex = "-1";
         await ended(
-          t.animate([{ transform: restAt(k) }, { transform: restAt(0, -118, 2.2) }], {
+          t.animate([{ transform: restAt(k) }, { transform: restAt(0, LIFT.dy, LIFT.r) }], {
             duration: 170 * T,
             easing: EASE_OUT,
             fill: "forwards",
@@ -174,7 +184,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
         );
         t.style.zIndex = "";
         await ended(
-          t.animate([{ transform: restAt(0, -118, 2.2) }, { transform: restAt(0) }], {
+          t.animate([{ transform: restAt(0, LIFT.dy, LIFT.r) }, { transform: restAt(0) }], {
             duration: 200 * T,
             easing: EASE_OUT,
           }),
@@ -259,9 +269,10 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
     const shown = new Set(ui.order.slice(0, Math.min(PEEKS, ui.order.length - 1) + 1));
     // The front, and every sheet without a match.
     const drop = before.filter((el, i) => i === 0 || !shown.has(Number(el.dataset.f)));
-    const pile = (d: number, dy = 0, r = 0) => restAt(d * 0.15, 30 + dy, r);
-    // Far enough that a sheet's top is behind the fabric.
-    const DROP = Math.max(320, ((ui.band ? ui.band.bot - ui.stackAt.y : 470) + 12) / ui.fit.scale);
+    const pile = (d: number, dy = 0, r = 0) => restAt(d * GATHER.apart, GATHER.dip + dy, r);
+    // Far enough below the pile that a sheet's top is behind the fabric.
+    const below = ui.windowBot === null ? DROP.fallback : ui.windowBot - ui.stackAt.y;
+    const dropBy = Math.max(DROP.least, (below + DROP.past) / ui.fit.scale) - GATHER.dip;
     stack
       .querySelector(".tray__depth")
       ?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 100, fill: "forwards" });
@@ -285,7 +296,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
           el.animate(
             [
               { transform: pile(depthOf(el)) },
-              { transform: pile(depthOf(el), DROP - 30, (i % 2 ? 1 : -1) * 2.5) },
+              { transform: pile(depthOf(el), dropBy, (i % 2 ? 1 : -1) * 2.5) },
             ],
             { duration: 180, delay: i * 60, easing: "cubic-bezier(.55,0,.8,.3)", fill: "forwards" },
           ),
@@ -311,7 +322,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
       const k: Keyframe[] =
         d0 === undefined
           ? [
-              { transform: pile(d, DROP - 30), offset: 0, easing: EASE_OUT },
+              { transform: pile(d, dropBy), offset: 0, easing: EASE_OUT },
               { transform: pile(d), offset: o(130) },
             ]
           : [
@@ -335,7 +346,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
     });
     if (front) {
       const d0 = inPile.get(Number(front.dataset.f));
-      const from = d0 === undefined ? pile(0, DROP - 30) : pile(d0);
+      const from = d0 === undefined ? pile(0, dropBy) : pile(d0);
       anims.push(
         front.animate(
           [
@@ -352,6 +363,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
     // On the sheets that stayed, stickers that stop or start matching fade rather than jump.
     const kept = els.filter((el) => inPile.has(Number(el.dataset.f)));
     fadeSlots(kept, prev);
+    // Commits the old filter's fade, so the new one transitions from it.
     void stack.offsetWidth;
     fadeSlots(kept, f);
     const more = stack.querySelector(".tray__depth");

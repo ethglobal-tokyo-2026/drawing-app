@@ -5,19 +5,25 @@
 import { i18next } from "../../i18n/i18n";
 import { formatMonthDay, formatNo } from "../../stickers/format";
 import { lightUp } from "../../stickers/light";
+import { clamp } from "../../ui/easing";
+import { STICKER_FIT } from "./sheetPacking";
 import { dotSpot, knownShape } from "./stickerShape";
 import {
-  COL,
+  DEPTH_BUTTON_H,
+  DEPTH_GAP,
   GMAX,
   ICONS,
   PEEK,
   PEEKS,
   SHEET,
+  STACK_X,
   STACK_Y,
   SVG_NS,
+  chainAtFor,
   cssUrl,
   dayOf,
   px,
+  windowLeft,
   type Box,
   type Point,
   type Size,
@@ -25,6 +31,7 @@ import {
   type Tray,
   type TrayModel,
 } from "./trayModel";
+import { STAND_IN } from "./traySlots";
 
 /**
  * How a sheet's stickers take a press: on the sheet in front, inert behind it, or as pictures inside
@@ -36,21 +43,16 @@ type SheetName = "back" | "spreadFront" | "front" | "pulled";
 
 /** Each level back is this much narrower. */
 const INSET = 0.025;
-/** Where stickers sit until every cut line is known: a zigzag from the bottom up, the newest highest. */
-const STAND_IN: readonly (readonly [x: number, y: number, r: number])[] = [
-  [44, 286, -2.5],
-  [110, 306, 2.5],
-  [44, 184, 2],
-  [110, 204, -2.5],
-  [44, 82, -2],
-  [110, 102, 3],
-];
-/** The box a sticker's image is fitted into on a sheet. */
-const FIT = { w: 66, h: 76 };
+/** How dark a sheet's shade is at each level back; a sheet changing level eases between them. */
+export const shadeOf = (depth: number) => clamp(depth * 0.3, 0, 0.9);
 
 export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   const { doc, zip, make, decorative, icon, words, hint, say, stack, ui, colLeft, trayTop } = tray;
   const { newIds, matches, sheetItems, sheetMatches, topF, resetOrder } = trayModel;
+  // The CSS draws every sheet, edge and +N button to these sizes.
+  tray.root.style.setProperty("--sheet-w", px(SHEET.w));
+  tray.root.style.setProperty("--peek", px(PEEK));
+  tray.root.style.setProperty("--depth-h", px(DEPTH_BUTTON_H));
 
   /** A sheet's transform at a depth in the stack: lower, and narrower from its foot, the further back. */
   const restAt = (depth: number, dy = 0, r = 0) =>
@@ -60,9 +62,12 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   /** The stack's top left with the tray wide open, in board pixels. */
   function stackHome(): Point {
     const { grow } = ui.fit;
-    const xw = (ui.geo ? ui.geo.chainX : COL * grow - 15) - 0.97 * GMAX * grow + 3;
-    return { x: colLeft() + xw + 3 + stackInset(), y: trayTop() + STACK_Y };
+    const chainX = ui.geo ? ui.geo.chainX : chainAtFor(grow);
+    const x = colLeft() + windowLeft(chainX, GMAX * grow, 1) + STACK_X + stackInset();
+    return { x, y: trayTop() + STACK_Y };
   }
+  /** The stack's top left where it stands now, in board pixels. */
+  const stackOnBoard = (): Point => ({ x: colLeft() + ui.stackAt.x, y: trayTop() + ui.stackAt.y });
 
   function loadImages() {
     if (ui.imagesOn || ui.destroyed) return;
@@ -74,10 +79,10 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     }
   }
 
-  /* ---------------------------------------------------------------- drawing a sheet */
   function fitOf(s: Slot): Size {
     const ar = s.width / s.height;
-    return ar >= FIT.w / FIT.h ? { w: FIT.w, h: FIT.w / ar } : { w: FIT.h * ar, h: FIT.h };
+    const { w, h } = STICKER_FIT;
+    return ar >= w / h ? { w, h: w / ar } : { w: h * ar, h };
   }
   function placeOf(s: Slot): Box {
     if (s.pos) return { x: s.pos.x, y: s.pos.y, r: s.pos.r, w: s.pos.w, h: s.pos.h };
@@ -302,6 +307,12 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
         count: Array.from({ length: ui.model.count }, (_, f) => f).filter(sheetMatches).length,
       }),
     );
+  /** A sticker's slot in `host`; by default on the pulled-out sheet, else in the stack. */
+  function slotFor(id: string, host?: Element) {
+    const sel = `.tray__slot[data-id="${CSS.escape(id)}"]`;
+    if (host) return host.querySelector<HTMLElement>(sel);
+    return ui.pulled?.el.querySelector<HTMLElement>(sel) ?? stack.querySelector<HTMLElement>(sel);
+  }
   /**
    * A loose sheet: a tear strip to grip at its top, stickers on their cut lines, its dates on its foot.
    * Behind the front sheet only its foot is a stop; in the spread the whole sheet is one button, so
@@ -309,10 +320,12 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
    */
   function sheetEl(
     f: number,
-    cls: string,
     depth: number,
-    news: ReadonlySet<string> = newIds(),
-    use: SlotUse = depth > 0 ? "behind" : "live",
+    {
+      news = newIds(),
+      use = depth > 0 ? "behind" : "live",
+      pulled = false,
+    }: { news?: ReadonlySet<string>; use?: SlotUse; pulled?: boolean } = {},
   ) {
     sizePages();
     const paper = make("div", "tray__paper", decorative(make("i", "tray__tear")));
@@ -342,15 +355,23 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       foot.setAttribute("aria-label", sheetLabel(f));
     }
     paper.append(foot, make("i", "tray__shade"));
-    const el = make("div", `tray__sheet ${cls}`, paper);
+    const el = make(
+      "div",
+      `tray__sheet${depth === 0 ? " is-top" : ""}${pulled ? " is-pulled" : ""}`,
+      paper,
+    );
     if (use === "live") {
       el.setAttribute("role", "group");
-      el.setAttribute("aria-label", sheetLabel(f, cls.includes("is-pulled") ? "pulled" : "front"));
+      el.setAttribute("aria-label", sheetLabel(f, pulled ? "pulled" : "front"));
       // The hint is about the stickers on the sheet; a blank sheet has none.
       if (ui.model.slots.length > 0) el.setAttribute("aria-describedby", hint.id);
     }
     el.dataset.f = String(f);
     el.dataset.depth = String(depth);
+    // Its level back: what it stacks under, how dark its shade, and how narrow, which its dates make up for.
+    el.style.setProperty("--depth", String(depth));
+    el.style.setProperty("--shade", shadeOf(depth).toFixed(2));
+    el.style.setProperty("--narrow", (1 - INSET * depth).toFixed(4));
     el.style.transform = restAt(depth);
     return el;
   }
@@ -374,13 +395,12 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     const k = Math.min(PEEKS, order.length - 1);
     const hidden = order.length - 1 - k;
     const news = newIds();
-    const kids: HTMLElement[] = [sheetEl(order[0], "is-top", 0, news)];
-    for (let i = 1; i <= k; i++)
-      kids.push(sheetEl(order[i], i === 1 ? "is-next" : "is-peek", i, news));
+    const kids: HTMLElement[] = [];
+    for (let i = 0; i <= k; i++) kids.push(sheetEl(order[i], i, { news }));
     if (hidden > 0) {
       const more = make("button", "tray__depth", icon(ICONS.stack), make("span", "", `+${hidden}`));
       more.type = "button";
-      more.style.transform = `translateY(${(ui.sheetH + (k * PEEK + 3) / ui.fit.scale).toFixed(1)}px) scale(${(1 / ui.fit.scale).toFixed(4)})`;
+      more.style.transform = `translateY(${(ui.sheetH + (k * PEEK + DEPTH_GAP) / ui.fit.scale).toFixed(1)}px) scale(${(1 / ui.fit.scale).toFixed(4)})`;
       const spread = i18next.t(($) => $.stickerBoard.tray.moreSheets, { count: hidden });
       more.setAttribute("aria-label", spread);
       kids.push(more);
@@ -393,9 +413,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   /** Redrawn under a keyboard, the stack keeps focus: on the same sticker if it's still in front. */
   function keepFocus(id: string | undefined) {
     const front = stack.querySelector(".tray__sheet.is-top");
-    const same = id
-      ? front?.querySelector<HTMLElement>(`.tray__slot[data-id="${CSS.escape(id)}"]`)
-      : null;
+    const same = id && front ? slotFor(id, front) : null;
     (same ?? front?.querySelector<HTMLElement>(".tray__slot") ?? stack).focus({
       preventScroll: true,
     });
@@ -434,14 +452,16 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   }
   function rerenderPulled() {
     const p = ui.pulled;
-    p?.el.querySelector(".tray__sheet")?.replaceWith(sheetEl(p.f, "is-top is-pulled", 0));
+    p?.el.querySelector(".tray__sheet")?.replaceWith(sheetEl(p.f, 0, { pulled: true }));
   }
 
   return {
     restAt,
     stackInset,
     stackHome,
+    stackOnBoard,
     placeOf,
+    slotFor,
     sheetEl,
     sheetLabel,
     renderStack,

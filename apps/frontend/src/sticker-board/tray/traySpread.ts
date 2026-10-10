@@ -3,13 +3,18 @@
  * them back, the one tapped in front.
  */
 import { EASE_OUT, EASE_PEEL } from "../../ui/easing";
-import { inertBesides } from "./inertBesides";
+import { holdBehind } from "../../ui/useModalDialog";
 import { MIN_SCALE, SHEET, ended, px, targetOf, type Tray, type TrayModel } from "./trayModel";
 import type { TrayPresses } from "./trayPresses";
 import type { TraySheets } from "./traySheets";
 
 /** Where the spread lays each sheet down: a slight turn apiece. */
 const SPREAD_TURNS = [-1.2, 0.8, -0.5, 1.1, -0.9, 0.6, 1.3, -0.7];
+/**
+ * The spread's room: `margin` at the board's sides, gaps between its columns and rows, `foot` kept
+ * under the last row, and up to `overHeader` px of its first row over the header.
+ */
+const SPREAD = { margin: 18, colGap: 14, rowGap: 18, foot: 30, overHeader: 6 };
 
 /**
  * Where the spread lays out `n` sheets `sheetH` tall on a board this big, whose tray starts at `top`
@@ -23,25 +28,24 @@ export function spreadCells(
   grow: number,
   sheetH: number,
 ) {
-  const margin = 18;
-  const gap = 14;
+  const { margin, colGap, rowGap, foot, overHeader } = SPREAD;
   const cols = n <= 1 ? 1 : n <= 2 ? 2 : n <= 6 ? 3 : 4;
   const rows = Math.ceil(n / cols);
   const k = Math.min(
     (n <= 2 ? 0.95 : 0.8) * grow,
-    (W - margin * 2 - gap * (cols - 1)) / cols / SHEET.w,
+    (W - margin * 2 - colGap * (cols - 1)) / cols / SHEET.w,
     // Shrunk no further than the stack is, so its dates still sit beside its number: past that, the
     // spread scrolls.
-    Math.max(MIN_SCALE, (H - top - 30 - (rows - 1) * 18) / (rows * sheetH)),
+    Math.max(MIN_SCALE, (H - top - foot - (rows - 1) * rowGap) / (rows * sheetH)),
   );
   const cw = SHEET.w * k;
   const ch = sheetH * k;
-  const totalH = rows * ch + (rows - 1) * 18;
-  const left0 = (W - (cols * cw + (cols - 1) * gap)) / 2;
-  const top0 = Math.max(top - 6, (H - totalH) / 2);
+  const totalH = rows * ch + (rows - 1) * rowGap;
+  const left0 = (W - (cols * cw + (cols - 1) * colGap)) / 2;
+  const top0 = Math.max(top - overHeader, (H - totalH) / 2);
   return Array.from({ length: n }, (_, d) => ({
-    x: left0 + (d % cols) * (cw + gap),
-    y: top0 + Math.floor(d / cols) * (ch + 18),
+    x: left0 + (d % cols) * (cw + colGap),
+    y: top0 + Math.floor(d / cols) * (ch + rowGap),
     k,
     rot: SPREAD_TURNS[d % SPREAD_TURNS.length],
   }));
@@ -54,10 +58,18 @@ export function createTraySpread(
   trayPresses: TrayPresses,
 ) {
   const { doc, board, reduced, listen, make, zip, stack, spreadLayer, mat, ui } = tray;
-  const { Wb, Hb, colLeft, trayTop } = tray;
+  const { Wb, Hb, trayTop } = tray;
   const { newIds, topF } = trayModel;
-  const { stackHome, sheetEl, sheetLabel, renderStack, holdsFocus, keepFocus, sayFront } =
-    traySheets;
+  const {
+    stackHome,
+    stackOnBoard,
+    sheetEl,
+    sheetLabel,
+    renderStack,
+    holdsFocus,
+    keepFocus,
+    sayFront,
+  } = traySheets;
   const { sendHome } = trayPresses;
   /**
    * Whether focus is the spread's to return. The board is inert behind the spread, and WebKit blurs a
@@ -65,8 +77,6 @@ export function createTraySpread(
    */
   const spreadHasFocus = () => holdsFocus(spreadLayer) || doc.activeElement === doc.body;
 
-  /* ---------------------------------------------------------------- the spread: the stack's depth button lays every sheet out */
-  const stackOnBoard = () => ({ x: colLeft() + ui.stackAt.x, y: trayTop() + ui.stackAt.y });
   /** Undoes the inert board behind the open spread. */
   let endAside: (() => void) | null = null;
   function openSpread({ focus = false } = {}) {
@@ -91,7 +101,7 @@ export function createTraySpread(
       const c = make(
         "button",
         `tray__cell${d === 0 ? " is-here" : ""}`,
-        sheetEl(f, "is-top", 0, news, "picture"),
+        sheetEl(f, 0, { news, use: "picture" }),
       );
       c.type = "button";
       c.dataset.f = String(f);
@@ -130,7 +140,7 @@ export function createTraySpread(
     mat.style.opacity = "1";
     zip.relax(0.55);
     endAside?.();
-    endAside = inertBesides(spreadLayer, board);
+    endAside = holdBehind(spreadLayer, board);
     if (focus || hadFocus) els[0]?.focus({ preventScroll: true });
   }
   /** The spread closing: a second tap or Escape meanwhile waits for it, and keeps the sheet tapped first. */

@@ -18,8 +18,20 @@ export interface TraySlot {
   state: TraySlotState;
 }
 
+/**
+ * Where stickers sit on a sheet until every cut line is known, in sheet px from its top left: a zigzag
+ * from the bottom up, the newest highest.
+ */
+export const STAND_IN: readonly (readonly [x: number, y: number, r: number])[] = [
+  [44, 286, -2.5],
+  [110, 306, 2.5],
+  [44, 184, 2],
+  [110, 204, -2.5],
+  [44, 82, -2],
+  [110, 102, 3],
+];
 /** Stand-in spots to a sticker sheet. */
-const PER_SHEET = 6;
+export const PER_SHEET = STAND_IN.length;
 
 /** A sticker in a gift waits in its spot, wherever its spot on the board. */
 function stateOf(s: Pick<BoardStickerView, "placement" | "held" | "openGift">): TraySlotState {

@@ -1,20 +1,15 @@
 /**
- * The sticker tray's Zipper, down the Sticker Board's right edge; it's the tray's alone. The slider rests
- * at the top and is pulled down to open, as real zippers open, and pushed back up to close. The left row
- * parts toward the board; the right row stays sewn to the tray.
- *
- * It's drawn from the real part: two woven tapes, molded teeth in two rows offset by half a pitch, a top
- * stop on each tape, a bottom stop across both, a slider whose wedge parts the teeth behind it, and a pull
- * hinged on the slider's bridge. Every tooth is its own element with a slice of its tape, placed each
- * frame along the mouth's curve, and the lining is a stack of slivers scaled across, so motion is
- * transform and opacity only, on one rAF loop that sleeps whenever everything is still.
- *
- * Coordinates: `a` runs along the track from the rest end at the top down to the far end at `L`; `c`
- * runs across from the chain's center line, negative toward the board.
+ * The sticker tray's Zipper, down the Sticker Board's right edge. The slider rests at the top, is
+ * pulled down to open and pushed back up to close; the left row parts toward the board, the right
+ * stays sewn to the tray. Drawn from the real part: woven tapes, two offset rows of teeth, stops, a
+ * slider and a hinged pull, moved by transform and opacity on one rAF loop that sleeps when still.
+ * Coordinates: `a` runs down the track from the rest end to `L`; `c` runs across from the chain's
+ * center line, negative toward the board.
  */
 import { i18next } from "../../i18n/i18n";
 import { timeOurWork } from "../../performance/performanceRecorder";
 import { clamp, lerp } from "../../ui/easing";
+import { elementMaker, timeoutsIn, windowOf } from "./trayDom";
 import "./zipper.css";
 
 type ZipperState = "rest" | "drag" | "run" | "hint";
@@ -31,11 +26,6 @@ export interface ZipperOptions {
    * stop; below that, the parted rows lie back together down to the slider.
    */
   mouthShort?: number;
-}
-
-interface RunOptions {
-  /** Jump to the end at once; the default under reduced motion. */
-  instant?: boolean;
 }
 
 /** The Zipper's live shape, in the host's pixels. */
@@ -80,9 +70,12 @@ export interface Zipper {
   readonly progress: number;
   /** Committed open: true from the moment a run toward open begins. */
   readonly isOpen: boolean;
-  /** Runs the slider; resolves when it knocks its stop, with whether it's open. */
-  open: (opts?: RunOptions) => Promise<boolean>;
-  close: (opts?: RunOptions) => Promise<boolean>;
+  /**
+   * Runs the slider; resolves when it knocks its stop, with whether it's open. Under reduced motion it
+   * gets there at once.
+   */
+  open: () => Promise<boolean>;
+  close: () => Promise<boolean>;
   /** The mouth's hold: wide open, down to a crack. */
   relax: (k?: number) => void;
   /** One idle tug; the caller rations them. Returns whether it tugged. */
@@ -264,20 +257,9 @@ function spring(x: number, v: number, target: number, s: Spring, dt: number): [n
   return [x + nv * dt, nv];
 }
 const f2 = (v: number) => v.toFixed(2);
+const f3 = (v: number) => v.toFixed(3);
 
 /* ---------------------------------------------------------------- the molded parts */
-
-function make<K extends keyof HTMLElementTagNameMap>(
-  doc: Document,
-  tag: K,
-  className: string,
-  ...kids: Node[]
-): HTMLElementTagNameMap[K] {
-  const el = doc.createElement(tag);
-  el.className = className;
-  el.append(...kids);
-  return el;
-}
 
 function svg(
   doc: Document,
@@ -450,7 +432,7 @@ function pullFace(doc: Document, id: number, side: "front" | "back"): SVGElement
   );
 }
 
-/** The mouth's curve at one moment: see `setShape`. */
+/** The mouth's curve at one moment: see `fillShape`. */
 interface MouthShape {
   S: number;
   sM: number;
@@ -517,7 +499,7 @@ interface Segment {
   el: HTMLElement;
   tape: HTMLElement;
   a: number;
-  /** Its transform sewn in the shut chain, which only `build` moves. */
+  /** Its transform sewn in the shut chain, which only `sew` moves. */
   home: string;
   /** The transforms last written, so an unchanged part isn't written again. */
   t: string;
@@ -577,15 +559,11 @@ interface State {
   knocked: boolean;
 }
 
-function windowOf(doc: Document): Window & typeof globalThis {
-  const win = doc.defaultView;
-  if (!win) throw new Error("The Zipper's host isn't in a document with a window to animate in");
-  return win;
-}
-
+/** The Zipper in `host`, which places and clips it. */
 export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper {
   const doc = host.ownerDocument;
-  const win = windowOf(doc);
+  const win = windowOf(host, "The Zipper's host");
+  const make = elementMaker(doc);
   // Its own copy: `reshape` moves the chain line, the travel and where the mouth closes in.
   const o = { mouthShort: 0, ...options };
   const id = ++uid;
@@ -611,35 +589,25 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     }
   }
 
-  if (win.getComputedStyle(host).position === "static") host.style.position = "relative";
-  host.style.overflow = "hidden";
-
-  const lining = make(doc, "div", "zip__layer zip__lining");
-  const slot = make(doc, "div", "zip__slot");
-  const rowB = make(doc, "div", "zip__layer zip__row zip__row--b");
-  const rowA = make(doc, "div", "zip__layer zip__row zip__row--a");
-  const stopA = make(doc, "i", "zip__stop zip__stop--top");
-  const stopB = make(doc, "i", "zip__stop zip__stop--top");
-  const stopFar = make(doc, "i", "zip__stop zip__stop--bottom");
-  const tabShadow = make(doc, "i", "zip__tabshadow");
-  const shadowPart = make(doc, "span", "zip__part zip__shadowpart", tabShadow);
-  const flop = make(
-    doc,
-    "span",
-    "zip__flop",
-    pullFace(doc, id, "front"),
-    pullFace(doc, id, "back"),
-  );
-  const pull = make(doc, "span", "zip__pull", flop);
+  const lining = make("div", "zip__layer zip__lining");
+  const slot = make("div", "zip__slot");
+  const rowB = make("div", "zip__layer zip__row zip__row--b");
+  const rowA = make("div", "zip__layer zip__row zip__row--a");
+  const stopA = make("i", "zip__stop zip__stop--top");
+  const stopB = make("i", "zip__stop zip__stop--top");
+  const stopFar = make("i", "zip__stop zip__stop--bottom");
+  const tabShadow = make("i", "zip__tabshadow");
+  const shadowPart = make("span", "zip__part zip__shadowpart", tabShadow);
+  const flop = make("span", "zip__flop", pullFace(doc, id, "front"), pullFace(doc, id, "back"));
+  const pull = make("span", "zip__pull", flop);
   pull.style.transform = `translateY(${HINGE}px)`;
   const slider = make(
-    doc,
     "button",
     "zip__slider",
     shadowPart,
     sliderBody(doc, id),
     pull,
-    make(doc, "i", "zip__ring"),
+    make("i", "zip__ring"),
   );
   slider.type = "button";
   slider.setAttribute(
@@ -648,7 +616,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   );
   // The slider leads, so Tab goes from it into what the open mouth shows; the layers stack by z-index.
   const root = make(
-    doc,
     "div",
     "zip",
     slider,
@@ -656,7 +623,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     slot,
     rowB,
     rowA,
-    make(doc, "div", "zip__layer zip__stops", stopA, stopB, stopFar),
+    make("div", "zip__layer zip__stops", stopA, stopB, stopFar),
   );
   root.style.setProperty("--zip-pitch", `${PITCH}px`);
   host.append(root);
@@ -676,16 +643,16 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   const yOf = (a: number) => o.insets[0] + a;
 
   function segment(row: "a" | "b", a: number): Segment {
-    const tape = make(doc, "i", "zip__tape");
-    const el = make(doc, "i", `zip__seg zip__seg--${row}`, tape, make(doc, "i", "zip__tooth"));
-    return { el, tape, a, home: `translate(${f2(chainX)}px,${f2(yOf(a))}px)`, t: "", ts: "" };
+    const tape = make("i", "zip__tape");
+    const el = make("i", `zip__seg zip__seg--${row}`, tape, make("i", "zip__tooth"));
+    return { el, tape, a, home: "", t: "", ts: "" };
   }
+  /** Lays the track out for the host's size: its teeth, its lining and the slider's travel. */
   function build(): boolean {
     W = host.clientWidth;
     H = host.clientHeight;
     if (!W || !H) return false;
     L = Math.max(MIN_TRACK, H - o.insets[0] - Math.max(o.insets[1], HANG));
-    chainX = o.chainAt;
     const aMin = STOP + STOP_GAP;
     const aMax = L - STOP - STOP_GAP;
     const wantA: number[] = [];
@@ -696,24 +663,30 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     teethB = wantB.map((a) => segment("b", a));
     rowA.replaceChildren(...teethA.map((s) => s.el));
     rowB.replaceChildren(...teethB.map((s) => s.el));
-    // The right row stays sewn to the tray, so it's placed only here.
-    for (const s of teethB) put(s, s.home);
     slivers = [];
     for (let a = LINING.step / 2; a < L; a += LINING.step) {
-      slivers.push({ el: make(doc, "i", "zip__sliver"), a, t: "", on: false });
+      slivers.push({ el: make("i", "zip__sliver"), a, t: "", on: false });
     }
     lining.replaceChildren(...slivers.map((s) => s.el));
     S0 = STOP + SLIDER / 2;
     S1 = Math.max(S0 + 1, L - FAR_STOP - SLIDER / 2);
     travel = S1 - S0;
+    sew();
+    return true;
+  }
+  /** Sews the teeth and the stops on along the chain line, which `reshape` moves without a new track. */
+  function sew() {
+    chainX = o.chainAt;
+    for (const s of [...teethA, ...teethB]) s.home = `translate(${f2(chainX)}px,${f2(yOf(s.a))}px)`;
+    // The right row stays sewn to the tray, so it's placed only here.
+    for (const s of teethB) put(s, s.home);
     // The stops are sewn on and never move.
     const topY = f2(yOf(STOP / 2));
     stopA.style.transform = `translate(${f2(chainX - STOP_SIDE)}px,${topY}px)`;
     stopB.style.transform = `translate(${f2(chainX + STOP_SIDE)}px,${topY}px)`;
     stopFar.style.transform = `translate(${f2(chainX)}px,${f2(yOf(L - FAR_STOP / 2))}px)`;
-    // New teeth have never been drawn.
+    // Teeth sewn on anew haven't been drawn there.
     drawn.S = NaN;
-    return true;
   }
 
   /* ---------------------------------------------------------------- state */
@@ -743,23 +716,15 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   };
   slider.setAttribute("aria-expanded", String(st.open));
   let waiters: ((open: boolean) => void)[] = [];
-  const timers = new Set<number>();
-  const later = (fn: () => void, ms: number) => {
-    const t = win.setTimeout(() => {
-      timers.delete(t);
-      fn();
-    }, ms);
-    timers.add(t);
-  };
+  const { later, clearAll } = timeoutsIn(win);
   const buzz = (ms: number) => {
     win.navigator.vibrate?.(ms);
   };
 
-  /* The mouth this frame: a V from the slider that starts gentle, and a rounder corner under the top
-   * stops; spread flat, both corners square up. Past its foot, where what's inside stops holding it
-   * open, the parted rows lie together down to the slider. `Ts` and `Te` are how far each curve
-   * reaches, `ms` and `me` how steeply each starts. */
   const shape = blankShape();
+  /* The mouth this frame: a V from the slider and a rounder corner under the top stops, both squaring
+   * up as it spreads flat; past its foot the parted rows lie together. `Ts`/`Te` are how far each
+   * curve reaches, `ms`/`me` how steeply each starts. */
   function fillShape(
     into: MouthShape,
     p: number,
@@ -1062,7 +1027,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
       if (total > 0 && s.a < shape.sM) {
         const q = at((shape.sM - s.a) * stretch);
         put(s, `translate(${f2(chainX + q.c)}px,${f2(yOf(q.a))}px) rotate(${f2(q.ang)}deg)`);
-        putTape(s, stretch > 1.002 ? `scaleY(${stretch.toFixed(3)})` : "");
+        putTape(s, stretch > 1.002 ? `scaleY(${f3(stretch)})` : "");
       } else {
         put(s, s.home);
         putTape(s, "");
@@ -1092,7 +1057,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
       const right = LINING.underChain;
       put(
         sl,
-        `translate(${f2(chainX + left)}px,${f2(yOf(sl.a))}px) scaleX(${((right - left) / LINING.width).toFixed(3)})`,
+        `translate(${f2(chainX + left)}px,${f2(yOf(sl.a))}px) scaleX(${f3((right - left) / LINING.width)})`,
       );
     }
     slider.style.transform = `translate(${f2(chainX)}px,${f2(yOf(shape.S))}px)`;
@@ -1110,9 +1075,9 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     const along = Math.cos(st.tilt);
     const lean = -sw * along + PULL_SHADOW.fallX * off;
     const length = cw * along + PULL_SHADOW.fallY * off;
-    const m = [cw, sw, lean, length].map((v) => v.toFixed(3)).join(",");
+    const m = `${f3(cw)},${f3(sw)},${f3(lean)},${f3(length)}`;
     shadowPart.style.transform = `translate(${f2(PULL_SHADOW.dx)}px,${f2(HINGE + PULL_SHADOW.dy)}px) matrix(${m},0,0)`;
-    tabShadow.style.opacity = (PULL_SHADOW.opacity * (1 - PULL_SHADOW.fade * off)).toFixed(3);
+    tabShadow.style.opacity = f3(PULL_SHADOW.opacity * (1 - PULL_SHADOW.fade * off));
   }
 
   function geometry(): ZipperGeometry {
@@ -1130,14 +1095,15 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   }
 
   /* ---------------------------------------------------------------- acts */
-  function run(open: boolean, { instant = reduced() }: RunOptions = {}): Promise<boolean> {
+  function run(open: boolean): Promise<boolean> {
     if (destroyed) return Promise.resolve(st.open);
     const changed = open !== st.open;
     st.open = open;
     slider.setAttribute("aria-expanded", String(open));
     if (changed) emit("commit", { open });
     const done = new Promise<boolean>((resolve) => waiters.push(resolve));
-    if (instant) {
+    // Under reduced motion it gets there at once.
+    if (reduced()) {
       st.p = open ? 1 : 0;
       st.pv = 0;
       st.mode = "rest";
@@ -1274,20 +1240,23 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     if (e.key === "ArrowDown") {
       e.preventDefault();
       void run(true);
-    } else if (e.key === "ArrowUp" || (e.key === "Escape" && st.open)) {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       void run(false);
     }
   };
-  slider.addEventListener("pointerdown", onDown);
-  slider.addEventListener("pointermove", onMove);
-  slider.addEventListener("pointerup", onUp);
-  slider.addEventListener("pointercancel", onCancel);
-  slider.addEventListener("lostpointercapture", onLostCapture);
-  slider.addEventListener("pointerenter", onEnter);
-  slider.addEventListener("pointerleave", onLeave);
-  slider.addEventListener("click", onClick);
-  slider.addEventListener("keydown", onKey);
+  // Every listener the Zipper adds goes when it's destroyed.
+  const listening = new AbortController();
+  const { signal } = listening;
+  slider.addEventListener("pointerdown", onDown, { signal });
+  slider.addEventListener("pointermove", onMove, { signal });
+  slider.addEventListener("pointerup", onUp, { signal });
+  slider.addEventListener("pointercancel", onCancel, { signal });
+  slider.addEventListener("lostpointercapture", onLostCapture, { signal });
+  slider.addEventListener("pointerenter", onEnter, { signal });
+  slider.addEventListener("pointerleave", onLeave, { signal });
+  slider.addEventListener("click", onClick, { signal });
+  slider.addEventListener("keydown", onKey, { signal });
 
   /* A jolt of the phone swings a hanging pull out toward you, and gravity lets it fall back; the
    * slider and the chain are sewn on and stay put. It never opens the tray. */
@@ -1319,16 +1288,16 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   };
   // The Zipper listens whenever reduced motion is off and never asks for motion itself: where the
   // platform wants permission first (iOS), no events arrive until the app has been granted it.
-  let listening = false;
+  let motionHeard = false;
   const listenForMotion = () => {
     const want = !reduced();
-    if (want === listening) return;
-    listening = want;
-    if (want) win.addEventListener("devicemotion", onMotion);
+    if (want === motionHeard) return;
+    motionHeard = want;
+    if (want) win.addEventListener("devicemotion", onMotion, { signal });
     else win.removeEventListener("devicemotion", onMotion);
   };
   listenForMotion();
-  reducedMotion.addEventListener("change", listenForMotion);
+  reducedMotion.addEventListener("change", listenForMotion, { signal });
 
   const resizes = new win.ResizeObserver(() => {
     if (host.clientWidth === W && host.clientHeight === H) return;
@@ -1347,8 +1316,8 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     get isOpen() {
       return st.open;
     },
-    open: (opts) => run(true, opts),
-    close: (opts) => run(false, opts),
+    open: () => run(true),
+    close: () => run(false),
     relax(k = 1) {
       if (destroyed) return;
       st.relax = clamp(k, 0, RELAX_MAX);
@@ -1380,12 +1349,15 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     reshape({ chainAt, maxGap, mouthShort }) {
       const same = chainAt === o.chainAt && maxGap === o.maxGap && mouthShort === o.mouthShort;
       if (destroyed || same) return;
+      const moved = chainAt !== o.chainAt;
       o.chainAt = chainAt;
       o.maxGap = maxGap;
       o.mouthShort = mouthShort;
-      L = 0;
-      if (build()) render();
-      // An open mouth settles to its new shape.
+      // A new chain line moves what's sewn on; the track's length stays.
+      if (L && moved) sew();
+      // The mouth is drawn to its new shape at once, and an open one settles to it.
+      drawn.S = NaN;
+      render();
       wake();
     },
     on(event, fn) {
@@ -1399,20 +1371,9 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
       destroyed = true;
       win.cancelAnimationFrame(raf);
       raf = 0;
-      for (const t of timers) win.clearTimeout(t);
-      timers.clear();
+      clearAll();
       resizes.disconnect();
-      reducedMotion.removeEventListener("change", listenForMotion);
-      if (listening) win.removeEventListener("devicemotion", onMotion);
-      slider.removeEventListener("pointerdown", onDown);
-      slider.removeEventListener("pointermove", onMove);
-      slider.removeEventListener("pointerup", onUp);
-      slider.removeEventListener("pointercancel", onCancel);
-      slider.removeEventListener("lostpointercapture", onLostCapture);
-      slider.removeEventListener("pointerenter", onEnter);
-      slider.removeEventListener("pointerleave", onLeave);
-      slider.removeEventListener("click", onClick);
-      slider.removeEventListener("keydown", onKey);
+      listening.abort();
       root.remove();
       // Nothing moves again, so whatever waits on a run settles with the state it was left in.
       flush(st.open);

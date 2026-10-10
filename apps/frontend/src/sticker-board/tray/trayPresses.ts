@@ -9,8 +9,8 @@ import {
   CRACK,
   ICONS,
   SHEET,
+  boardPoint,
   ended,
-  local,
   px,
   targetOf,
   type Gesture,
@@ -31,6 +31,18 @@ const PAGE_UP = { px: -36, speed: -0.35 };
 const PAGE_DOWN = { px: 30, speed: 0.35 };
 /** Dragged this far toward the board, a sheet comes free of the tray. */
 const PULL_FREE = 60;
+/** How much each move counts toward a press's speed. */
+const SPEED_SMOOTHING = 0.4;
+/**
+ * A page turn's sheet follows the finger up by `up` of its move and down by `down`, turning up to
+ * `turn` degrees over its first `turnPx` up.
+ */
+const PAGE_DRAG = { up: 0.9, down: 0.45, turnPx: -60, turn: -1.6 };
+/**
+ * A pulled-out sheet let go over the board settles wholly on screen: `side` px from the board's left,
+ * `right` from its right, `foot` from its foot, and up to `overHeader` px over the header.
+ */
+const PULLED_SETTLE = { side: 8, right: 40, foot: 10, overHeader: 6 };
 
 /**
  * `openSpread` lays every sheet out, from the stack's depth button; `cancelTugs` stops the Zipper's
@@ -48,9 +60,10 @@ export function createTrayPresses(
   }: { openSpread: (options: { focus: boolean }) => void; cancelTugs: () => void },
 ) {
   const { reduced, listen, make, icon, words, zip, api, fly, stack, ui } = tray;
-  const { Wb, Hb, colLeft, trayTop, boardView } = tray;
+  const { Wb, Hb, trayTop, boardView } = tray;
   const { topF } = trayModel;
-  const { restAt, sheetEl, renderStack, holdsFocus, keepFocus, catchUp, sheetOf } = traySheets;
+  const { restAt, stackOnBoard, sheetEl, renderStack, holdsFocus, keepFocus, catchUp, sheetOf } =
+    traySheets;
   const { page, bringToFront, settle, topSheet, sheetEls, depthOf } = trayPaging;
   const { startPeel, movePeel, dropPeel, putBack, lieDown, quickAdd, showOnBoard } = trayPeel;
 
@@ -61,8 +74,7 @@ export function createTrayPresses(
   const pulledFrom = (x: number, y: number, scale: number, turn = 0) =>
     `translate(${px(x - (SHEET.w / 2) * (1 - scale))},${px(y - ui.sheetH * 0.4 * (1 - scale))}) rotate(${turn.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
 
-  /* ---------------------------------------------------------------- gestures on the stack. The first move decides:
-   * up or down pages, from anywhere; toward the board on a sticker peels it, on the paper pulls the sheet out. */
+  /* ---------------------------------------------------------------- gestures on the stack */
   /** A press begins on `on`, the stack or `pulled`'s sheet, which holds its pointer until it ends. */
   function pressOn(
     on: HTMLElement,
@@ -72,7 +84,7 @@ export function createTrayPresses(
     depth: number,
   ) {
     const view = boardView();
-    const p0 = local(e, view);
+    const p0 = boardPoint(e, view);
     ui.g = {
       id: e.pointerId,
       view,
@@ -86,6 +98,7 @@ export function createTrayPresses(
       vx: 0,
       vy: 0,
       dy: 0,
+      sheet: null,
       peel: null,
       at: null,
     };
@@ -110,7 +123,7 @@ export function createTrayPresses(
     const still = e.timeStamp - g.lt;
     g.vx = releaseSpeed(g.vx, still);
     g.vy = releaseSpeed(g.vy, still);
-    void letGo(g, local(e, g.view)).then(catchUp);
+    void letGo(g, boardPoint(e, g.view)).then(catchUp);
   };
   /** Its pointer cancelled, or the capture it took lost: the press is called off. */
   const cancelOn = (on: HTMLElement, pulled: Pulled | null) => (e: PointerEvent) => {
@@ -162,10 +175,14 @@ export function createTrayPresses(
   const liftOf = (g: Gesture) => (ui.fit.grow > 1 ? g.dy / ui.fit.scale : g.dy);
   /** The dated edge, as its depth in the stack, that a press at this screen height is for. */
   function edgeUnder(clientY: number) {
-    const feet = sheetEls().map((el) => el.querySelector<HTMLElement>(".tray__foot"));
-    const [front, ...edges] = feet.map((foot) => foot?.getBoundingClientRect());
-    if (!front || edges.some((r) => !r)) return null;
-    const behind = edges.flatMap((r) => (r ? [r] : []));
+    const feet: DOMRect[] = [];
+    for (const el of sheetEls()) {
+      const foot = el.querySelector(".tray__foot");
+      if (!foot) return null;
+      feet.push(foot.getBoundingClientRect());
+    }
+    const [front, ...behind] = feet;
+    if (!front) return null;
     const i = edgeAt(clientY, front, behind);
     return i === null ? null : i + 1;
   }
@@ -181,30 +198,36 @@ export function createTrayPresses(
   listen(stack, "pointermove", (e) => {
     const g = pressOf(e, null);
     if (!g) return;
-    const pt = local(e, g.view);
+    const pt = boardPoint(e, g.view);
     // When the move was made, not when it's handled, as the Zipper reads its pull.
     const t = e.timeStamp;
     const dt = Math.max(1, t - g.lt);
-    g.vx = lerp(g.vx, (pt.x - g.last.x) / dt, 0.4);
-    g.vy = lerp(g.vy, (pt.y - g.last.y) / dt, 0.4);
+    g.vx = lerp(g.vx, (pt.x - g.last.x) / dt, SPEED_SMOOTHING);
+    g.vy = lerp(g.vy, (pt.y - g.last.y) / dt, SPEED_SMOOTHING);
     g.last = pt;
     g.lt = t;
     const dx = pt.x - g.p0.x;
     const dy = pt.y - g.p0.y;
     if (g.mode === "maybe") {
       if (Math.hypot(dx, dy) < DECIDE) return;
-      if (Math.abs(dy) >= Math.abs(dx)) g.mode = "page";
-      else if (dx < 0) g.mode = g.slotEl?.dataset.state === "here" ? "peel" : "pull";
+      if (Math.abs(dy) >= Math.abs(dx)) {
+        g.mode = "page";
+        g.sheet = topSheet();
+      } else if (dx < 0) g.mode = g.slotEl?.dataset.state === "here" ? "peel" : "pull";
       else g.mode = "none";
       holdPress(g.slotEl);
       if (g.mode === "peel") startPeel(g);
       else if (g.mode === "pull") startPull(g);
     }
     if (g.mode === "page") {
-      const el = topSheet();
+      const el = g.sheet;
       if (el) {
-        g.dy = dy < 0 ? dy * 0.9 : dy * 0.45;
-        el.style.transform = restAt(0, liftOf(g), clamp(g.dy / -60, -1, 1) * -1.6);
+        g.dy = dy * (dy < 0 ? PAGE_DRAG.up : PAGE_DRAG.down);
+        el.style.transform = restAt(
+          0,
+          liftOf(g),
+          clamp(g.dy / PAGE_DRAG.turnPx, -1, 1) * PAGE_DRAG.turn,
+        );
       }
     } else if (g.mode === "peel") movePeel(g, pt);
     else if (g.mode === "pull") movePull(g, pt);
@@ -302,7 +325,7 @@ export function createTrayPresses(
     const x = make("button", "tray__x", icon(ICONS.x));
     x.type = "button";
     x.setAttribute("aria-label", words.putBack);
-    const wrap = make("div", "tray__pulled", sheetEl(f, "is-top is-pulled", 0), x);
+    const wrap = make("div", "tray__pulled", sheetEl(f, 0, { pulled: true }), x);
     // Out over the board it's drawn at its full size, whose dates and X keep their size on screen.
     wrap.style.setProperty("--scale", String(ui.fit.grow));
     wrap.style.transform = pulledFrom(x0, y0, ui.fit.scale);
@@ -358,8 +381,9 @@ export function createTrayPresses(
     stepAside();
     // It settles over the board, wholly on screen, hovering.
     const size = pulledSize();
-    const x = clamp(p.x, 8, Wb() - size.w - 40);
-    const y = clamp(p.y, trayTop() - 6, Hb() - size.h - 10);
+    const { side, right, foot, overHeader } = PULLED_SETTLE;
+    const x = clamp(p.x, side, Wb() - size.w - right);
+    const y = clamp(p.y, trayTop() - overHeader, Hb() - size.h - foot);
     await ended(
       p.el.animate([{ transform: p.el.style.transform }, { transform: pulledAt(x, y) }], {
         duration: 240,
@@ -397,7 +421,7 @@ export function createTrayPresses(
     on("pointermove", (e) => {
       const g = pressOf(e, p);
       if (!g) return;
-      const pt = local(e, g.view);
+      const pt = boardPoint(e, g.view);
       const dx = pt.x - g.p0.x;
       const dy = pt.y - g.p0.y;
       if (g.mode === "maybe") {
@@ -451,7 +475,7 @@ export function createTrayPresses(
     const focused = holdsFocus(p.el);
     ui.order = [p.f, ...ui.order.filter((o) => o !== p.f)];
     zip.relax(1);
-    const home = { x: colLeft() + ui.stackAt.x, y: trayTop() + ui.stackAt.y };
+    const home = stackOnBoard();
     if (!reduced() && !instant)
       await ended(
         p.el.animate(

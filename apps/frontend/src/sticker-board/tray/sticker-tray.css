@@ -1,7 +1,8 @@
 /* The sticker tray: pink canvas zipped down the board's right edge, holding a stack of loose
    sticker sheets, a sticker in each kiss-cut slot and a used sticker silhouette wherever one is out
-   on the board. Paper hints only, no grid. trayEngine.ts places everything; motion is transform and
-   opacity only. */
+   on the board. Paper hints only, no grid. The tray's scripts place everything, and set its sizes
+   (--tray-top, --tray-col, --sheet-w, --sheet-h, --peek, --depth-h); motion is transform and
+   opacity, but for a folder tab's fill. */
 
 .tray {
   /* The tray's material, from the tokens: candy colors, no gloss; ink only in thin lines. */
@@ -12,7 +13,6 @@
   --tray-edge-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.4), -0.5px 0 0 rgba(120, 20, 70, 0.3);
   --tray-weave: rgba(255, 255, 255, 0.55);
   --tray-deep: rgba(150, 30, 90, 0.22);
-  --tray-top: 72px;
   --tray-col: 205px;
   position: absolute;
   inset: 0;
@@ -21,30 +21,12 @@
   pointer-events: none;
 }
 
-.tray * {
-  box-sizing: border-box;
-}
-
 /* Every part of the tray you can reach wears the house focus ring: 2px Ink at a 3px offset. A spread
    sheet is drawn scaled by --k, so its ring is sized back; a dated edge sits on the paper's clipped
    edge, so its ring is drawn inside it. The pull draws its own, round its body. */
 .tray :focus-visible:not(.zip__slider) {
   outline: calc(2px / var(--k, 1)) solid var(--ink);
   outline-offset: calc(var(--ring-offset, 3px) / var(--k, 1));
-}
-
-.tray .zip {
-  --zip-tape: var(--tray-tape);
-  --zip-weave: rgba(255, 255, 255, 0.2);
-  --zip-selvedge: rgba(255, 255, 255, 0.3);
-  --zip-stitch: rgba(255, 255, 255, 0.85);
-  --zip-tooth: var(--canvas);
-  --zip-tooth-lit: var(--canvas);
-  --zip-tooth-shade: #ebdde8;
-  --zip-tooth-rim: rgba(150, 40, 95, 0.42);
-  --zip-lining: var(--tray-lining);
-  /* The lip's shadow on a light fabric: a blush, not a smudge. */
-  --zip-lining-deep: color-mix(in srgb, var(--tray-lining) 90%, #8a3a66);
 }
 
 /* ---------- The tray's edge, where the right tape is sewn on ---------- */
@@ -68,6 +50,7 @@
   top: var(--tray-top);
   bottom: 0;
   width: var(--tray-col);
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -138,8 +121,8 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 156px;
-  height: calc(var(--sheet-h, 364px) + 72px);
+  width: var(--sheet-w);
+  height: calc(var(--sheet-h) + 72px);
   /* The engine shrinks the stack on a short board and grows it on a large screen; its edges keep their
      size on screen. */
   --scale: 1;
@@ -156,26 +139,14 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 156px;
-  height: var(--sheet-h, 364px);
+  width: var(--sheet-w);
+  height: var(--sheet-h);
   transform-origin: 50% 100%;
 }
 
-/* The front sheet is first in the page, so the sheets behind it stack under it by depth. */
-.tray__stack > .tray__sheet[data-depth="0"] {
-  z-index: 4;
-}
-
-.tray__stack > .tray__sheet[data-depth="1"] {
-  z-index: 3;
-}
-
-.tray__stack > .tray__sheet[data-depth="2"] {
-  z-index: 2;
-}
-
-.tray__stack > .tray__sheet[data-depth="3"] {
-  z-index: 1;
+/* The front sheet is first in the page, so the three behind it stack under it by depth. */
+.tray__stack > .tray__sheet {
+  z-index: calc(4 - var(--depth));
 }
 
 .tray__paper {
@@ -250,7 +221,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(15px / var(--scale, 1));
+  height: calc(var(--peek) / var(--scale, 1));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -261,9 +232,11 @@
     inset 0 -1.5px 0 rgba(28, 24, 36, 0.05);
 }
 
+/* Each level back is a little narrower, and the stack may be shrunk to fit, so its dates are set
+   larger to land on the fine-print floor. */
 .tray__foot .fine {
   position: relative;
-  font-size: calc(var(--fs-fine) / var(--scale, 1));
+  font-size: calc(var(--fs-fine) / (var(--narrow) * var(--scale, 1)));
   line-height: 1;
   letter-spacing: 0.05em;
   white-space: nowrap;
@@ -302,38 +275,13 @@
   background: rgba(28, 24, 36, 0.07);
 }
 
+/* Further back, a shade darker. */
 .tray__shade {
   position: absolute;
   inset: 0;
-  opacity: 0;
+  opacity: var(--shade);
   pointer-events: none;
   background: rgba(28, 24, 36, 0.12);
-}
-
-/* Further back, a shade darker. Each level is also a little narrower, and the stack may be shrunk to
-   fit, so its dates are set larger to land on the fine-print floor. */
-.tray__sheet[data-depth="1"] .tray__shade {
-  opacity: 0.3;
-}
-
-.tray__sheet[data-depth="2"] .tray__shade {
-  opacity: 0.6;
-}
-
-.tray__sheet[data-depth="3"] .tray__shade {
-  opacity: 0.9;
-}
-
-.tray__sheet[data-depth="1"] .tray__foot .fine {
-  font-size: calc(var(--fs-fine) / (0.975 * var(--scale, 1)));
-}
-
-.tray__sheet[data-depth="2"] .tray__foot .fine {
-  font-size: calc(var(--fs-fine) / (0.95 * var(--scale, 1)));
-}
-
-.tray__sheet[data-depth="3"] .tray__foot .fine {
-  font-size: calc(var(--fs-fine) / (0.925 * var(--scale, 1)));
 }
 
 /* The rest of the stack: a button, its depth, that spreads every sheet out. */
@@ -341,7 +289,7 @@
   position: absolute;
   left: 50%;
   top: 0;
-  height: 22px;
+  height: var(--depth-h);
   margin: 0 0 0 -30px;
   /* The engine keeps it its own size when the stack is shrunk. */
   transform-origin: 50% 0;
@@ -391,8 +339,8 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 156px;
-  height: var(--sheet-h, 364px);
+  width: var(--sheet-w);
+  height: var(--sheet-h);
   transform-origin: 50% 40%;
 }
 
@@ -459,13 +407,11 @@
 
 /* ---------- A slot: a sticker, its used sticker silhouette, or plain paper ---------- */
 
+/* Sized and centered on its spot by the script. */
 .tray__slot {
   position: absolute;
   left: 0;
   top: 0;
-  width: 72px;
-  height: 84px;
-  margin: -42px 0 0 -36px;
   padding: 0;
   border: 0;
   border-radius: 10px;
@@ -545,11 +491,11 @@
 }
 
 /* A sticker on a sheet lies flat: its cut and a short contact shadow, from its image, or from its
-   foil's band when someone else drew it. */
+   foil's band when someone else drew it; so does one in hand until it's drawn free. */
 .tray__img,
-.tray__fit .sticker-foil__cast {
-  filter: drop-shadow(0 0 0.5px rgba(28, 24, 36, 0.55))
-    drop-shadow(0.4px 0.8px 0.5px rgba(28, 24, 36, 0.18));
+.tray__fit .sticker-foil__cast,
+.tray__flyer.is-flat img {
+  filter: var(--sticker-cut) drop-shadow(0.4px 0.8px 0.5px rgba(28, 24, 36, 0.18));
 }
 
 /* A used sticker silhouette shows no sticker. */
@@ -692,7 +638,7 @@
   z-index: 1;
   left: 0;
   top: 0;
-  width: 156px;
+  width: var(--sheet-w);
   height: 0;
   display: flex;
   gap: 3px;
@@ -840,11 +786,6 @@
     drop-shadow(8px 16px 18px rgba(28, 24, 36, 0.14));
 }
 
-.tray__flyer.is-flat img {
-  filter: drop-shadow(0 0 0.5px rgba(28, 24, 36, 0.55))
-    drop-shadow(0.4px 0.8px 0.5px rgba(28, 24, 36, 0.18));
-}
-
 /* ---------- The spread: every sheet laid out on the tray's lining ---------- */
 
 .tray__spread {
@@ -874,8 +815,8 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 156px;
-  height: var(--sheet-h, 364px);
+  width: var(--sheet-w);
+  height: var(--sheet-h);
   margin: 0;
   padding: 0;
   border: 0;
@@ -925,13 +866,8 @@
 }
 
 /* On a large screen the sheets grow; the dot badges stuck on them and a pulled-out sheet's X keep their
-   size, stuck on by the same hand as every other. The header row is taller, so the tray starts lower
-   (the tray engine's trayTop reads the same query). */
+   size, stuck on by the same hand as every other. */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
-  .tray {
-    --tray-top: 80px;
-  }
-
   .tray__new,
   .tray__gift-dot,
   .tray__x {

@@ -42,15 +42,25 @@ function release(el: HTMLElement) {
   el.inert = entry.wasInert;
 }
 
-/** Everything beside the path from `layer` up to the page: the app as it stands behind it. */
-function behind(layer: HTMLElement): HTMLElement[] {
+/** Everything beside the path from `layer` up to `within`: what stands behind it. */
+function behind(layer: HTMLElement, within: HTMLElement = document.body): HTMLElement[] {
   const found: HTMLElement[] = [];
-  for (let node = layer; node !== document.body && node.parentElement; node = node.parentElement) {
+  for (let node = layer; node !== within && node.parentElement; node = node.parentElement) {
     for (const sibling of node.parentElement.children) {
       if (sibling !== node && sibling instanceof HTMLElement) found.push(sibling);
     }
   }
   return found;
+}
+
+/**
+ * Holds everything beside `layer`, up to `within`, inert, so Tab, taps and screen readers reach only
+ * the layer. Returns what lets go, which leaves inert whatever its owner wants inert.
+ */
+export function holdBehind(layer: HTMLElement, within?: HTMLElement): () => void {
+  const held = behind(layer, within);
+  held.forEach(hold);
+  return () => held.forEach(release);
 }
 
 interface Options {
@@ -75,10 +85,9 @@ export function useModalDialog(
     const kept = layer ? layer.current : dialog;
     if (!active || !dialog || !kept) return;
     dialog.setAttribute("aria-modal", "true");
-    const held = behind(kept);
-    held.forEach(hold);
+    const letGo = holdBehind(kept);
     return () => {
-      held.forEach(release);
+      letGo();
       dialog.removeAttribute("aria-modal");
     };
   }, [inside, layer, active]);

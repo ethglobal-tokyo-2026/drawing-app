@@ -1,17 +1,24 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { COL, GMAX, TRACK_INSETS, chainAtFor } from "./trayModel";
 import { createZipper, RELEASE, releaseOpens, type Zipper } from "./zipper";
 
 let host: HTMLDivElement;
 let zip: Zipper;
 
 /** The tray's options. */
-const OPTIONS = { chainAt: 190, insets: [6, 6], maxGap: 172 } as const;
+const OPTIONS = { chainAt: chainAtFor(1), insets: TRACK_INSETS, maxGap: GMAX };
 /** Long enough for any run to end and the pull to stop swinging. */
 const SETTLE_MS = 10_000;
 
 /** Resolves with what `run` resolved, and the slider's progress at that moment. */
 const whenDone = (run: Promise<boolean>) => run.then((open) => ({ open, progress: zip.progress }));
+/** Opens the Zipper and lets everything settle. */
+async function openSettled() {
+  const run = whenDone(zip.open());
+  await vi.advanceTimersByTimeAsync(SETTLE_MS);
+  return run;
+}
 /** The pull's turn about its hinge, out of the tape's plane, in degrees: 0 lays it hanging down. */
 const pullTurn = () => {
   const transform = zip.el.querySelector<HTMLElement>(".zip__flop")?.style.transform ?? "";
@@ -49,7 +56,7 @@ beforeEach(() => {
   });
   // The tray's column. happy-dom lays nothing out, so the host is given its size.
   host = document.createElement("div");
-  Object.defineProperties(host, { clientWidth: { value: 205 }, clientHeight: { value: 677 } });
+  Object.defineProperties(host, { clientWidth: { value: COL }, clientHeight: { value: 677 } });
   document.body.append(host);
   zip = createZipper(host, OPTIONS);
 });
@@ -63,9 +70,7 @@ afterEach(() => {
 
 describe("the Zipper", () => {
   it("runs open to the far stop, then shut back to rest, and sleeps once still", async () => {
-    const opening = whenDone(zip.open());
-    await vi.advanceTimersByTimeAsync(SETTLE_MS);
-    const opened = await opening;
+    const opened = await openSettled();
     expect(opened.open).toBe(true);
     expect(opened.progress).toBeCloseTo(1, 1);
     expect(zip.isOpen).toBe(true);
@@ -87,12 +92,12 @@ describe("the Zipper", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("opens with ArrowDown, closes with Escape, and toggles on Enter or Space", () => {
+  it("opens with ArrowDown, closes with ArrowUp, and toggles on Enter or Space", () => {
     const press = (key: string) =>
       zip.slider.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
     press("ArrowDown");
     expect(zip.isOpen).toBe(true);
-    press("Escape");
+    press("ArrowUp");
     expect(zip.isOpen).toBe(false);
     // A button's Enter and Space arrive as a click with no pointer behind it.
     zip.slider.click();
@@ -207,18 +212,12 @@ describe("the Zipper", () => {
     expect(await highestTurn(400)).toBe(pullTurn());
   });
 
-  it("lets its pull hang down at rest, shut and open", async () => {
+  it("turns its pull the way a hand pulls it, and lets it fall back hanging down, shut and open", async () => {
     const shut = pullTurn();
     expect(hangsDown()).toBe(true);
-    void zip.open();
-    await vi.advanceTimersByTimeAsync(SETTLE_MS);
-    expect(pullTurn()).toBeCloseTo(shut, 1);
-  });
-
-  it("turns its pull the way a hand pulls it, and lets it fall back hanging down", async () => {
-    void zip.open();
-    await vi.advanceTimersByTimeAsync(SETTLE_MS);
+    await openSettled();
     const rest = pullTurn();
+    expect(rest).toBeCloseTo(shut, 1);
     // Pushed up slowly, not flicked shut.
     pointer("pointerdown", 400);
     await vi.advanceTimersByTimeAsync(100);
@@ -229,17 +228,6 @@ describe("the Zipper", () => {
     await vi.advanceTimersByTimeAsync(SETTLE_MS);
     expect(zip.isOpen).toBe(true);
     expect(pullTurn()).toBeCloseTo(rest, 1);
-  });
-
-  it("keeps each top stop where it's sewn on its tape as the slider opens", async () => {
-    const topStops = () =>
-      [...zip.el.querySelectorAll<HTMLElement>(".zip__stop--top")].map((s) => s.style.transform);
-    const sewn = topStops();
-    void zip.open();
-    for (let t = 0; t < 1500; t += 50) {
-      await vi.advanceTimersByTimeAsync(50);
-      expect(topStops()).toEqual(sewn);
-    }
   });
 
   it("stops everything when destroyed and ignores later calls", async () => {

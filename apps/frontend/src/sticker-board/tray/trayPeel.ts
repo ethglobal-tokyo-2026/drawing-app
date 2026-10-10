@@ -27,6 +27,29 @@ import type { TraySheets } from "./traySheets";
 
 /** A sticker in hand comes free of its sheet this far from where it was pressed. */
 const PEEL_FREE = 26;
+/** Curling off its sheet, it trails `trail` of the finger's move, grows by `grow` and tilts up to `tilt` degrees. */
+const CURL = { trail: 0.18, grow: 0.05, tilt: 38 };
+/**
+ * Free, it closes `ease` of the way to the finger each frame, its speed eased by `speedEase`; it grows
+ * to `scale` over its first `outPx` toward the board, and leans `lean` degrees per px a frame, at most
+ * `leanMax`, turned `leanShare` of the way from its turn on the sheet.
+ */
+const FOLLOW = {
+  ease: 0.34,
+  speedEase: 0.3,
+  outPx: 80,
+  scale: 1.04,
+  lean: 1.4,
+  leanMax: 12,
+  leanShare: 0.9,
+};
+/** The mouth stays a crack this long once a sticker in hand is dropped, or one tapped has landed. */
+const HOLD_OPEN = { dropped: 420, tapped: 160 };
+/**
+ * A used sticker silhouette's sticker more than `share` of its width under the left lip (past `px`) is
+ * hidden: the mouth sags for `ms`, and the board shows it after `showAfter`.
+ */
+const HIDDEN = { share: 0.2, px: 15, ms: 1100, showAfter: 220 };
 
 /** A sticker in hand's transform: a box this big, centered on `x`, `y`, scaled and turned. */
 export const flyerAt = (x: number, y: number, size: Size, scale: number, r: number) =>
@@ -39,11 +62,13 @@ export function createTrayPeel(
   traySheets: TraySheets,
   cancelTugs: () => void,
 ) {
-  const { win, reduced, later, cancel, make, decorative, zip, api, problem, fly, land, stack, ui } =
-    tray;
-  const { Wb, Hb, colLeft, boardView } = tray;
+  const { win, reduced, later, cancel, make, decorative, zip, api, problem, fly, land, ui } = tray;
+  const { Wb, Hb, lipLeft, boardView } = tray;
   const { itemOf } = trayModel;
-  const { placeOf, stackHome, sayStuckOn } = traySheets;
+  const { placeOf, slotFor, stackHome, sayStuckOn } = traySheets;
+  /** Where a sticker in hand would land: its shadow, cut to its shape. */
+  const landMark = make("i", "");
+  land.append(landMark);
 
   /* ---------------------------------------------------------------- peeling: a sticker from its sheet onto the board */
   /** A slot's sticker, in board pixels: its center, its fitted size, and its turn. */
@@ -74,9 +99,7 @@ export function createTrayPeel(
     return { el, curl };
   }
   function setSlotState(id: string, state: SlotState) {
-    const sel = `.tray__slot[data-id="${CSS.escape(id)}"]`;
-    const el =
-      ui.pulled?.el.querySelector<HTMLElement>(sel) ?? stack.querySelector<HTMLElement>(sel);
+    const el = slotFor(id);
     if (el) el.dataset.state = state;
     return el;
   }
@@ -125,14 +148,14 @@ export function createTrayPeel(
       const k = clamp(dist / PEEL_FREE, 0, 1);
       const ux = dist ? d.x / dist : 1;
       const uy = dist ? d.y / dist : 0;
-      const ang = reduced() ? 0 : k * 38;
+      const ang = reduced() ? 0 : k * CURL.tilt;
       pk.curl.style.transformOrigin = `${(50 - ux * 50).toFixed(1)}% ${(50 - uy * 50).toFixed(1)}%`;
       pk.curl.style.transform = `rotate3d(${(-uy).toFixed(3)},${ux.toFixed(3)},0,${ang.toFixed(1)}deg)`;
       pk.el.style.transform = flyerAt(
-        pk.r.x + d.x * 0.18,
-        pk.r.y + d.y * 0.18,
+        pk.r.x + d.x * CURL.trail,
+        pk.r.y + d.y * CURL.trail,
         pk.size,
-        pk.scale * (1 + 0.05 * k),
+        pk.scale * (1 + CURL.grow * k),
         pk.r.r,
       );
       if (dist >= PEEL_FREE) freePeel(pk);
@@ -154,18 +177,19 @@ export function createTrayPeel(
     // Where it would land is this sticker's size and cut for the whole peel; only its place follows.
     land.style.width = px(pk.size.w);
     land.style.height = px(pk.size.h);
-    if (landMark instanceof HTMLElement) landMark.style.setProperty("--m", cssUrl(pk.s.urls.mask));
+    landMark.style.setProperty("--m", cssUrl(pk.s.urls.mask));
     // Made once for the peel, so no frame makes a closure.
     const follow = () => {
       if (pk.target) {
         const was = pk.x;
-        pk.x = lerp(pk.x, pk.target.x, 0.34);
-        pk.y = lerp(pk.y, pk.target.y, 0.34);
-        pk.vx = lerp(pk.vx, pk.x - was, 0.3);
-        const out = clamp((pk.startX - pk.x) / 80, 0, 1);
+        pk.x = lerp(pk.x, pk.target.x, FOLLOW.ease);
+        pk.y = lerp(pk.y, pk.target.y, FOLLOW.ease);
+        pk.vx = lerp(pk.vx, pk.x - was, FOLLOW.speedEase);
+        const out = clamp((pk.startX - pk.x) / FOLLOW.outPx, 0, 1);
         const ez = 1 - Math.pow(1 - out, 2);
-        pk.scale = lerp(pk.r.w / pk.size.w, 1.04, ez);
-        pk.rot = lerp(pk.r.r, clamp(pk.vx * 1.4, -12, 12), ez * 0.9);
+        pk.scale = lerp(pk.r.w / pk.size.w, FOLLOW.scale, ez);
+        const lean = clamp(pk.vx * FOLLOW.lean, -FOLLOW.leanMax, FOLLOW.leanMax);
+        pk.rot = lerp(pk.r.r, lean, ez * FOLLOW.leanShare);
         pk.el.style.transform = flyerAt(pk.x, pk.y, pk.size, pk.scale, pk.rot);
         showLanding(overBoard(pk.target) ? pk : null);
       }
@@ -177,8 +201,8 @@ export function createTrayPeel(
   function movePeel(g: Gesture, pt: Point) {
     if (g.peel) placeFlyer(g.peel, pt, g.p0);
   }
+  /** Over the board: clear of the tray's edge and the board's top. */
   const overBoard = (pt: Point) => pt.x < Wb() - 46 && pt.y > 8;
-  const landMark = land.firstElementChild;
   function showLanding(pk: Peel | null) {
     if (!pk?.target) {
       land.style.opacity = "0";
@@ -195,7 +219,7 @@ export function createTrayPeel(
     showLanding(null);
     const rot = Math.round(clamp(pk.rot, -8, 8) * 10) / 10;
     ui.shown.add(pk.s.id);
-    if (!ui.pulled) holdOpen(420);
+    if (!ui.pulled) holdOpen(HOLD_OPEN.dropped);
     // It lands where its shadow showed, under the finger, not where it trailed behind it; in hand
     // there until the board has drawn it.
     pk.el.style.transform = flyerAt(pt.x, pt.y, pk.size, pk.scale, rot);
@@ -255,7 +279,7 @@ export function createTrayPeel(
     win.cancelAnimationFrame(pk.raf);
     showLanding(null);
     pk.el.remove();
-    const el = p.el.querySelector<HTMLElement>(`.tray__slot[data-id="${CSS.escape(pk.s.id)}"]`);
+    const el = slotFor(pk.s.id, p.el);
     if (el) el.dataset.state = "here";
   }
   /** Its placing failed, so it stays in the tray. */
@@ -305,10 +329,8 @@ export function createTrayPeel(
   }
   /** A tap on a sticker: it peels off and sticks itself onto a free spot. */
   async function quickAdd(id: string) {
-    const sel = `.tray__slot[data-id="${CSS.escape(id)}"]`;
     const s = itemOf(id);
-    const el =
-      ui.pulled?.el.querySelector<HTMLElement>(sel) ?? stack.querySelector<HTMLElement>(sel);
+    const el = slotFor(id);
     if (!s || !el) return;
     const r = rectOfFit(el);
     const size = api.sizeFor(id);
@@ -324,7 +346,7 @@ export function createTrayPeel(
       reportPlace(s, error);
       flyer.remove();
       pressIn(id);
-      if (!ui.pulled) holdOpen(160);
+      if (!ui.pulled) holdOpen(HOLD_OPEN.tapped);
       return;
     }
     if (ui.destroyed) return;
@@ -361,7 +383,7 @@ export function createTrayPeel(
         { duration: 220, easing: EASE_PEEL },
       );
     sayStuckOn(s);
-    if (!ui.pulled) holdOpen(160);
+    if (!ui.pulled) holdOpen(HOLD_OPEN.tapped);
   }
   /**
    * A used sticker silhouette: its sticker is out on the board; show it there, from behind the tray
@@ -369,13 +391,13 @@ export function createTrayPeel(
    */
   function showOnBoard(id: string) {
     const r = api.stickerRect(id);
-    const hidden =
-      !ui.pulled && r && ui.geo && r.x + r.w * 0.2 > colLeft() + ui.geo.chainX - ui.geo.G - 15;
+    const lip = lipLeft();
+    const hidden = !ui.pulled && r && lip !== null && r.x + r.w * HIDDEN.share > lip - HIDDEN.px;
     if (hidden) {
       zip.relax(CRACK);
-      holdOpen(1100);
+      holdOpen(HIDDEN.ms);
     }
-    later(() => api.pulse(id), hidden ? 220 : 0);
+    later(() => api.pulse(id), hidden ? HIDDEN.showAfter : 0);
   }
 
   return {
