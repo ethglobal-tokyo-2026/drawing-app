@@ -13,6 +13,7 @@ import {
 import { useTranslation } from "../i18n/react";
 import { EASE_OUT } from "../ui/easing";
 import { useReducedMotion } from "../ui/useReducedMotion";
+import { isCancelled } from "../ui/webAnimations";
 import {
   beadShape,
   cloudShape,
@@ -72,8 +73,9 @@ function useDrift(
       iterations: Infinity,
     });
     motion.current = playing ?? null;
-    // Cancelling rejects `finished` with an AbortError: that's the cancel asked for, not a failure.
-    playing?.finished.catch(() => {});
+    playing?.finished.catch((error: unknown) => {
+      if (!isCancelled(error)) console.error("A subject balloon's drift failed", error);
+    });
     return () => {
       playing?.cancel();
       motion.current = null;
@@ -141,10 +143,11 @@ function PoppedCloud({ pop, placed, inks, fit, phase, onGone }: PoppedProps) {
       ...motion.rim.map((piece, i) => play(rim.current?.children[i], piece.motion)),
       ...motion.beads.map((bead, i) => play(spray.current?.children[i], bead.motion)),
     ].filter((played) => played !== undefined);
-    // Cancelling rejects `finished` with an AbortError: that's the cancel asked for, not a failure.
     Promise.all(played.map((motion) => motion.finished)).then(
       () => onGone(pop.id),
-      () => {},
+      (error: unknown) => {
+        if (!isCancelled(error)) console.error("A popped subject balloon failed to animate", error);
+      },
     );
     return () => played.forEach((motion) => motion.cancel());
   }, [pop, onGone]);
@@ -308,10 +311,13 @@ function SubjectBalloon({
     const played = layers.map(({ layer, corner }) =>
       layer?.animate({ clipPath: [poolClip(at, from, corner), poolClip(at, to, corner)] }, timing),
     );
-    // Drained, or cut short by a pick or a new layout, the ink goes. Cancelling rejects `finished`
-    // with an AbortError: that's the cancel asked for, not a failure.
+    // Drained, or cut short by a pick or a new layout, the ink goes.
     const settle = picked ? () => {} : () => setDraining(false);
-    for (const motion of played) motion?.finished.then(settle, settle);
+    const cut = (error: unknown) => {
+      if (!isCancelled(error)) console.error("A subject balloon's ink failed to drain", error);
+      settle();
+    };
+    for (const motion of played) motion?.finished.then(settle, cut);
     return () => played.forEach((motion) => motion?.cancel());
   }, [picked, reduced, box, spec.w, spec.h]);
 

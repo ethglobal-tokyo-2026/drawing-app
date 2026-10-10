@@ -7,6 +7,7 @@ import {
   type RefObject,
 } from "react";
 import { useReducedMotion } from "../../ui/useReducedMotion";
+import { isCancelled } from "../../ui/webAnimations";
 import "./board-flip.css";
 import { RestingSide, type BoardSide } from "./restingSide";
 
@@ -44,7 +45,7 @@ const REAR_SHADE: Keyframe[] = [
 
 // Landing and unmounting cancel the turn, which rejects `finished`; anything else is a real failure.
 function reportUnlessCancelled(error: unknown) {
-  if (error instanceof DOMException && error.name === "AbortError") return;
+  if (isCancelled(error)) return;
   console.error("The board's turn failed", error);
 }
 

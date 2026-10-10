@@ -5,6 +5,7 @@
 import { tokyoTicketDay } from "@drawing-app/api/client";
 import type { StickerUrls } from "../../stickers/stickerUrls";
 import { clamp } from "../../ui/easing";
+import { isCancelled } from "../../ui/webAnimations";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape, unreadableCut } from "./stickerShape";
 import type { TrayProblem } from "./trayProblem";
@@ -391,8 +392,7 @@ export function ended(a: Animation): Promise<void> {
   return a.finished.then(
     () => undefined,
     (error: unknown) => {
-      if (!(error instanceof DOMException && error.name === "AbortError"))
-        console.error("A sticker tray animation failed", error);
+      if (!isCancelled(error)) console.error("A sticker tray animation failed", error);
     },
   );
 }

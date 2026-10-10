@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { currentLanguage } from "../i18n/i18n";
 import { useTranslation } from "../i18n/react";
 import { EASE_OUT } from "../ui/easing";
+import { isCancelled } from "../ui/webAnimations";
 import { cloudShape, type PairSize, type Pt } from "./balloonGeometry";
 import { ARRIVE, BOIL, CLOUD_ARRIVE, PEEK, SPRING, WORD_STAMP } from "./dealMotion";
 import { SubjectWord } from "./SubjectWord";
@@ -56,8 +57,9 @@ export function SubjectThought({ subjects, size, toward, reduced, at, onDone }: 
       const motion = el?.animate(keyframes, timing);
       if (!motion) return undefined;
       played.push(motion);
-      // Cancelling rejects `finished` with an AbortError: that's the cancel asked for, not a failure.
-      motion.finished.catch(() => {});
+      motion.finished.catch((error: unknown) => {
+        if (!isCancelled(error)) console.error("The subjects' thought failed to animate", error);
+      });
       return motion;
     };
     let shown: number;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { EASE_OUT } from "../../ui/easing";
+import { isCancelled } from "../../ui/webAnimations";
 
 /** How far the rubber band can show what's under the end, in px: each px of pull shows less toward it. */
 const LIMIT = 120;
@@ -100,7 +101,11 @@ export function usePullToReveal({ wrapper, enabled, reduced, onReveal }: Options
       });
       settling.finished.then(
         () => (settling = null),
-        () => {}, // cancelled by a pull that caught it
+        // A pull that catches the band, an open and unmounting each cancel it.
+        (error: unknown) => {
+          if (!isCancelled(error))
+            console.error("The pull's rubber band failed to settle back", error);
+        },
       );
     };
 

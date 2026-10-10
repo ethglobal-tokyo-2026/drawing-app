@@ -1,3 +1,5 @@
+import { isCancelled } from "../ui/webAnimations";
+
 /**
  * Starts a Web Animation on `el`, `rate` times as fast as its timing says: a replay's clock can run
  * faster than real time, and every animation keeps pace with it.
@@ -16,5 +18,5 @@ export function animate(
 }
 
 function rethrowUnlessCancelled(error: unknown) {
-  if (!(error instanceof Error && error.name === "AbortError")) throw error;
+  if (!isCancelled(error)) throw error;
 }

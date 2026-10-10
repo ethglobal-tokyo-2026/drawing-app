@@ -12,6 +12,7 @@ import { QrCode } from "../../ui/QrCode";
 import { useBackToClose } from "../../ui/useBackToClose";
 import { useFocusTrap } from "../../ui/useFocusTrap";
 import { useReducedMotion } from "../../ui/useReducedMotion";
+import { isCancelled } from "../../ui/webAnimations";
 import { useToast } from "../../ui/useToast";
 import { addressGroups } from "./addresses";
 import "./address-dialog.css";
@@ -226,7 +227,7 @@ function putBack(parts: Parts, paper: HTMLElement | null, reduced: boolean): Ani
 
 // Unmounting cancels the flights, which rejects `finished`; anything else is a real failure.
 function reportUnlessCancelled(error: unknown) {
-  if (error instanceof DOMException && error.name === "AbortError") return;
+  if (isCancelled(error)) return;
   console.error("The Sui address paper's flight failed", error);
 }
 
