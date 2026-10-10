@@ -2,8 +2,9 @@
  * Tests Croquis in real iPadOS Safari, on the iPad Air 11-inch simulator through safaridriver (W3C
  * WebDriver over fetch), for what Safari's own UI can get wrong and Playwright's WebKit can't show:
  * Safari's toolbars and the home indicator over controls, overflow, turning the iPad, iOS's motion
- * prompt, its native pickers, touch and pen ink, and the session cookie surviving a reload. Run it after
- * changing large-screen layouts, sheets, the tab bar, or touch and pen input:
+ * prompt, its native pickers, touch ink, and the session cookie surviving a reload. It makes no Apple
+ * Pencil input: Simulator has none, and safaridriver turns a pen action into a finger's touch. Run it
+ * after changing large-screen layouts, sheets, the tab bar, or touch input:
  *
  *   pnpm --filter frontend test:ipad-safari
  *
@@ -383,18 +384,18 @@ ${LIB}
       log(`FAIL ${name}: ${messageOf(error)}${shot ? ` (${shot})` : ""}`);
     }
   };
-  /** A touch, or a pen with `extra` (pressure, tilt), through `points` in viewport CSS px. */
-  const pointer = async (pointerType: "touch" | "pen", points: Point[], extra = {}) => {
+  /** A finger touching down at the first of `points`, through the rest, in viewport CSS px. */
+  const touch = async (points: Point[]) => {
     const actions = [
       { type: "pointerMove", duration: 0, origin: "viewport", ...points[0] },
-      { type: "pointerDown", button: 0, ...extra },
+      { type: "pointerDown", button: 0 },
       ...points
         .slice(1)
-        .map((at) => ({ type: "pointerMove", duration: 16, origin: "viewport", ...at, ...extra })),
+        .map((at) => ({ type: "pointerMove", duration: 16, origin: "viewport", ...at })),
       { type: "pointerUp", button: 0 },
     ];
     await wd("POST", "/actions", {
-      actions: [{ type: "pointer", id: pointerType, parameters: { pointerType }, actions }],
+      actions: [{ type: "pointer", id: "touch", parameters: { pointerType: "touch" }, actions }],
     });
     await wd("DELETE", "/actions");
   };
@@ -436,7 +437,7 @@ ${LIB}
       choice,
     );
     if (!isPoint(at)) throw new Error(`No ${choice} in ${group}`);
-    await pointer("touch", [at]);
+    await touch([at]);
     return page(
       `await rest(600);
        const radios = [...named("radiogroup", args[0]).querySelectorAll("[role=radio]")];
@@ -554,21 +555,13 @@ ${LIB}
           const after = await until(
             "ink from a touch stroke",
             async () => {
-              await pointer("touch", await strokeAcross(0.35));
+              await touch(await strokeAcross(0.35));
               const inked = await inkedPixels();
               return inked > before ? inked : 0;
             },
             20_000,
             500,
           );
-          return `painted px ${before} → ${after}`;
-        });
-        await check("a pen stroke with pressure paints the canvas", async () => {
-          const before = await inkedPixels();
-          await pointer("pen", await strokeAcross(0.6), { pressure: 0.6, tiltX: 30 });
-          await sleep(500);
-          const after = await inkedPixels();
-          if (after <= before) throw new Error(`painted px stayed at ${before}`);
           return `painted px ${before} → ${after}`;
         });
       }
