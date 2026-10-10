@@ -82,22 +82,24 @@ test("Search: Bob finds Alice by her handle and opens her sticker board", async 
   await expectTheirBoard(bob, aliceHandle);
 });
 
-test("This week: Bob's combo puts Alice on Most gratitude and him on Best combo, and Alice, who sealed today, is on Streak", async ({
-  page: alice,
+test("This week: Bob's combo puts Ada on Most gratitude and him on Best combo, and Ada, who sealed today, is on Streak", async ({
+  page: ada,
   friend: bob,
 }) => {
-  const aliceHandle = handleOf(await signIn(alice, "alice", language));
-  const no = await sealFromBoard(alice, language);
-  const giftClaimToken = giftClaimTokenFrom(alice);
-  await giveFromBoard(alice, language, no);
-  await backToBoardOnceSent(alice, language);
+  // Streak ties go A to Z by handle, and the suite's other artists seal today too: Ada's name sorts
+  // before theirs, so her one day stays on the leaderboard.
+  const adaHandle = handleOf(await signIn(ada, "ada", language));
+  const no = await sealFromBoard(ada, language);
+  const giftClaimToken = giftClaimTokenFrom(ada);
+  await giveFromBoard(ada, language, no);
+  await backToBoardOnceSent(ada, language);
 
   const bobHandle = handleOf(await signIn(bob, "bob", language));
   await bob.goto(`/g/${await giftClaimToken}`);
-  await unpackageAndAccept(bob, language, aliceHandle);
+  await unpackageAndAccept(bob, language, adaHandle);
   // Longer than the suite's other combos, so these two stay on the leaderboards beside the other
   // browser's run of this spec, which shares this week's leaderboards: rows are found by handle, not place.
-  const { combo, receipt } = await playCombo(bob, language, aliceHandle, 3 * GAME_CONFIG.burst);
+  const { combo, receipt } = await playCombo(bob, language, adaHandle, 3 * GAME_CONFIG.burst);
   await receipt.getByRole("button", { name: say(ui.backToBoard, language) }).click();
 
   await openExplore(bob, language);
@@ -109,7 +111,7 @@ test("This week: Bob's combo puts Alice on Most gratitude and him on Best combo,
   };
 
   // She gave a sticker she drew, so the whole combo is hers.
-  const mostGratitude = (await rows("mostGratitude")).filter({ hasText: aliceHandle });
+  const mostGratitude = (await rows("mostGratitude")).filter({ hasText: adaHandle });
   await expect(
     mostGratitude.getByText(
       say(explore.figure.gratitude, language, { amount: combo.total.toLocaleString(language) }),
@@ -126,9 +128,9 @@ test("This week: Bob's combo puts Alice on Most gratitude and him on Best combo,
   ).toBeAttached();
 
   // Her first seal, today, starts a streak of one day.
-  const aliceStreak = (await rows("longestStreak")).filter({ hasText: aliceHandle });
+  const adaStreak = (await rows("longestStreak")).filter({ hasText: adaHandle });
   await expect(
-    aliceStreak.getByText(say(explore.figure.streakSpoken_one, language, { count: 1 }), {
+    adaStreak.getByText(say(explore.figure.streakSpoken_one, language, { count: 1 }), {
       exact: true,
     }),
   ).toBeAttached();
