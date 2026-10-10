@@ -383,9 +383,9 @@
     finish-light-y 5s cubic-bezier(0.37, 0, 0.63, 1) -2.5s infinite alternate;
 }
 
-/* Important, since the app's light writes its own inline on what reads it. */
-.finish-preview
-  :is(.live-resin__spec > b, .sticker-foil__sheen, .sticker-foil__glint, .laminate-haze) {
+/* The whole preview inherits it; important on what the app's light writes its own on inline. */
+.finish-preview,
+.finish-preview :is(.live-resin__spec > b, .sticker-foil__sheen, .sticker-foil__glint) {
   --lx: var(--finish-lx) !important;
   --ly: var(--finish-ly) !important;
 }
