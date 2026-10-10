@@ -32,6 +32,8 @@ test("a foil holds still under a still light, and its bands slide as the light m
   await page.addStyleTag({
     content: ".sticker-foil ~ *, .sticker-foil__glint { visibility: hidden !important; }",
   });
+  // A copy of the sticker flies from the board to its place in the detail, over it, until it lands.
+  await expect(page.locator(".detail-lift__flyer")).toHaveCount(0);
 
   // The light holds where the last click left it, and nothing on the foil moves.
   await expect.poll(() => runningOn(foil)).toBe(0);
