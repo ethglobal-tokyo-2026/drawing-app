@@ -3,6 +3,7 @@
  * baked gloss of its thin laminate, the cast shadow, the mask and the finished sticker. Pure functions
  * over pixel arrays.
  */
+import { CUT_PAD, MAX_CUT_SIDE, SHARP_CUT_SIDE } from "@drawing-app/api/client";
 import { clamp01 } from "../../ui/easing";
 import type { DieCut } from "./dieCut";
 import { boxRows, type Pixels } from "./pixels";
@@ -35,15 +36,6 @@ export interface StickerPasses {
   sticker: Pass;
 }
 
-/** The cut's long side in the image, at most. */
-export const MAX_SIDE = 640;
-/**
- * The cut's long side in the sharp copy, at most: the sticker detail's largest figure on an iPad,
- * at 2×. Only the sticker gets a sharp copy, since the ink's edge is what reads as soft.
- */
-export const SHARP_SIDE = 1600;
-/** The margin around the cut, as a share of its long side. */
-export const PAD = 0.05;
 const INK = [28, 24, 36];
 const PAPER = [255, 255, 255];
 /** The one light, from the top left, across the sticker. */
@@ -162,7 +154,7 @@ function frameOf({ bounds, scale }: DieCut, maxSide: number): Frame & { pad: num
   const h = Math.round(mh * k);
   // A share of the long side in whole pixels: k × side can land a hair past a round number, which
   // would round the margin up a pixel.
-  const pad = Math.ceil(Math.max(w, h) * PAD);
+  const pad = Math.ceil(Math.max(w, h) * CUT_PAD);
   const width = w + pad * 2;
   const height = h + pad * 2;
   return { x0: bounds.x0 - pad / k, y0: bounds.y0 - pad / k, k, width, height, pad };
@@ -170,7 +162,7 @@ function frameOf({ bounds, scale }: DieCut, maxSide: number): Frame & { pad: num
 
 /** Lays the sticker out from its cut and its gloss: every pass, the same size and in the same place. */
 export function stickerPasses(ink: Pixels, cut: DieCut, glossGrid: GlossGrid): StickerPasses {
-  const frame = frameOf(cut, MAX_SIDE);
+  const frame = frameOf(cut, MAX_CUT_SIDE);
   const { width, height, pad } = frame;
   const { passes, sticker, place } = paint(ink, cut, glossGrid, frame, 1, true);
   return { width, height, pad, place, ...passes, sticker };
@@ -184,13 +176,13 @@ export interface SharpSticker {
 }
 
 /**
- * The finished sticker with its cut's long side up to SHARP_SIDE, as stickerPasses lays it out; null
+ * The finished sticker with its cut's long side up to SHARP_CUT_SIDE, as stickerPasses lays it out; null
  * unless that comes out larger than the stored image on both sides, the only sharp copy the server
  * takes, as when the ink holds no more pixels than the stored image already has.
  */
 export function sharpSticker(ink: Pixels, cut: DieCut, glossGrid: GlossGrid): SharpSticker | null {
-  const frame = frameOf(cut, SHARP_SIDE);
-  const base = frameOf(cut, MAX_SIDE);
+  const frame = frameOf(cut, SHARP_CUT_SIDE);
+  const base = frameOf(cut, MAX_CUT_SIDE);
   if (frame.width <= base.width || frame.height <= base.height) return null;
   const { sticker } = paint(ink, cut, glossGrid, frame, frame.k / base.k, false);
   return { width: frame.width, height: frame.height, sticker };

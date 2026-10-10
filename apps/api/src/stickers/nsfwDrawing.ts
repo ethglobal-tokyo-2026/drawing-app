@@ -4,7 +4,6 @@ import type { AppDeps } from "../deps.ts";
 import { logInfo } from "../diagnostics.ts";
 import type { Schedule } from "../midnightJob.ts";
 import { startRepeatingJob } from "../repeatingJob.ts";
-import { cdnDrawingUrls } from "../services/imageStore.ts";
 import { oneAtATime } from "../sui/oneAtATime.ts";
 
 /** Between the sweeps that retry the CDN purges still due. */
@@ -15,7 +14,8 @@ type PurgeDeps = Pick<AppDeps, "db" | "clock" | "cdnPurge" | "images">;
 /**
  * Whether the files that show a drawing are only for the NSFW opt-in: some sticker sealed with its
  * content hash is NSFW, and none that isn't. Anyone can seal a copy of a public PNG, so marking the
- * copy never hides the drawing another sticker shows.
+ * copy never hides the drawing another sticker shows; nor a veil, which everyone without the opt-in
+ * sees.
  */
 export function isNsfwDrawing(db: Pick<Db, "select">, contentHash: string): boolean {
   const marks = db
@@ -23,7 +23,13 @@ export function isNsfwDrawing(db: Pick<Db, "select">, contentHash: string): bool
     .from(stickers)
     .where(eq(stickers.contentHash, contentHash))
     .all();
-  return marks.length > 0 && marks.every(({ nsfw }) => nsfw);
+  if (marks.length === 0 || !marks.every(({ nsfw }) => nsfw)) return false;
+  const veil = db
+    .select({ id: stickers.id })
+    .from(stickers)
+    .where(eq(stickers.veiledHash, contentHash))
+    .get();
+  return veil === undefined;
 }
 
 /** Whether a purge of the drawing's files is due, on any sticker that shows it. */
@@ -52,7 +58,7 @@ export function purgeDueDrawing(
   return oneAtATime(`cdn-purge:${contentHash}`, async () => {
     if (!purgeIsDue(db, contentHash)) return true;
     const began = clock.now();
-    if (!(await cdnPurge.purge(cdnDrawingUrls(images.urls(contentHash))))) return false;
+    if (!(await cdnPurge.purge(images.drawingUrls(contentHash)))) return false;
     db.update(stickers)
       .set({ cdnPurgeDueAt: null })
       .where(and(eq(stickers.contentHash, contentHash), lte(stickers.cdnPurgeDueAt, began)))

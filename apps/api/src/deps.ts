@@ -146,6 +146,8 @@ export interface ImageStore {
   urls: (contentHash: string) => StickerImages;
   /** What a viewer without the NSFW opt-in gets for an NSFW sticker: `urls` with its veiled image in place. */
   veiledUrls: (contentHash: string, veiledHash: string) => StickerImages;
+  /** Every URL the CDN may hold the drawing at, which an 18+ mark purges: the retired names too. */
+  drawingUrls: (contentHash: string) => string[];
 }
 
 /** Sui couldn't be read or reached: its RPC failed, timed out, or gave an answer that doesn't decode. */

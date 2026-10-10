@@ -24,6 +24,11 @@ import {
   unmarkNsfwResponseSchema,
   unmarkStickerNsfw,
 } from "../stickers/markNsfw.ts";
+import {
+  MAX_FLAT_SIDE,
+  MAX_SHARP_IMAGE_SIDE,
+  MAX_STICKER_IMAGE_SIDE,
+} from "../stickers/imageSides.ts";
 import { sealResponseSchema } from "../stickers/seal.ts";
 import { MAX_SEAL_BYTES } from "../stickers/sealForm.ts";
 import { stickerDetailSchema } from "../stickers/stickerDetail.ts";
@@ -284,6 +289,23 @@ describe("POST /api/stickers", () => {
       part: "sharp",
       why: "no larger than the sticker",
       overrides: { sharp: pngFile(testPng(SHARP_SIZE.width, STICKER_SIZE.height), "sharp") },
+    },
+    {
+      part: "sharp",
+      why: "larger than the app makes one",
+      overrides: {
+        sharp: pngFile(testPng(MAX_SHARP_IMAGE_SIDE + 1, SHARP_SIZE.height), "sharp"),
+      },
+    },
+    {
+      part: "flat",
+      why: "larger than the app makes one",
+      overrides: { flat: pngFile(testPng(MAX_FLAT_SIDE + 1, STICKER_SIZE.height), "flat") },
+    },
+    {
+      part: "width",
+      why: "past the largest sticker image",
+      overrides: { width: String(MAX_STICKER_IMAGE_SIDE + 1) },
     },
   ];
 

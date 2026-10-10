@@ -1,11 +1,11 @@
 import { KYOTO_SEIKA_TIME_USED_S, stickers, ticketUses } from "@drawing-app/db";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { MAX_STICKER_IMAGE_SIDE } from "./imageSides.ts";
 import { kyotoSeikaSubjectsSchema } from "./kyotoSeikaSubjects.ts";
 import { MAX_TIMELAPSE_BYTES } from "./timelapseLimit.ts";
 
-// Generous bounds, not measured: makeSticker caps the sticker and its flat sheet well below them.
-const MAX_IMAGE_SIDE = 4096;
+// A generous bound, not measured: makeSticker caps the sticker and its flat sheet well below it.
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 /** The sharp copy is larger: room for its raw pixels at its largest, never reached as a PNG. */
 const MAX_SHARP_IMAGE_BYTES = 16 * 1024 * 1024;
@@ -21,8 +21,8 @@ const OUTLINE_PATH = /^M[-\d. LZ]*Z$/;
 const stickerColumns = createInsertSchema(stickers, {
   // The longest clock; the seal holds each sticker to its own ticket's.
   timeUsed: (schema) => schema.min(0).max(KYOTO_SEIKA_TIME_USED_S),
-  width: (schema) => schema.min(1).max(MAX_IMAGE_SIDE),
-  height: (schema) => schema.min(1).max(MAX_IMAGE_SIDE),
+  width: (schema) => schema.min(1).max(MAX_STICKER_IMAGE_SIDE),
+  height: (schema) => schema.min(1).max(MAX_STICKER_IMAGE_SIDE),
   drawnWidth: (schema) => schema.positive().max(MAX_DRAWN_SIDE),
   drawnHeight: (schema) => schema.positive().max(MAX_DRAWN_SIDE),
   outline: (schema) =>

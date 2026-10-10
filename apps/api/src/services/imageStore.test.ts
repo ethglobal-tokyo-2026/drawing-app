@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { stickerPngsSchema, stickerWebpsSchema } from "../shapes.ts";
+import { stickerPngsSchema, stickerWebpsSchema, type StickerImages } from "../shapes.ts";
 import { sealImages, STICKER_SIZE } from "../stickers/testPngs.ts";
 import { foilMaskAlpha } from "./foilMask.ts";
-import { createDiskImageStore } from "./imageStore.ts";
+import { createDiskImageStore, pngName, storedImageFile } from "./imageStore.ts";
 
 const sha256Hex = (bytes: Uint8Array) => `0x${createHash("sha256").update(bytes).digest("hex")}`;
 
@@ -110,5 +110,25 @@ describe("the disk image store", () => {
   it("refuses a name that isn't a content hash", async () => {
     const store = createDiskImageStore(imageDir, IMAGE_BASE_URL);
     await expect(store.save("../escape", sealImages())).rejects.toThrow(/content hash/);
+  });
+
+  it("hands out only names the image routes serve, the image each sticker is minted with too", () => {
+    const store = createDiskImageStore(imageDir, IMAGE_BASE_URL);
+    const contentHash = sha256Hex(new Uint8Array([1]));
+    const veiledHash = sha256Hex(new Uint8Array([2]));
+    const everyUrl = ({ webp, sharp, ...pngs }: StickerImages) => [
+      ...Object.values(pngs),
+      ...Object.values(webp),
+      ...(sharp ? [sharp.png, sharp.webp] : []),
+    ];
+    const handedOut = [
+      ...everyUrl(store.urls(contentHash)),
+      ...everyUrl(store.veiledUrls(contentHash, veiledHash)),
+      ...store.drawingUrls(contentHash),
+    ].map((url) => new URL(url).pathname.slice(IMAGE_FOLDER.length));
+    // Sui's Display joins the minted name to IMAGE_BASE_URL, so it's each sticker's picture on chain.
+    const minted = [contentHash, veiledHash].map((hash) => pngName(hash, "png"));
+    for (const name of [...handedOut, ...minted])
+      expect(storedImageFile(name), name).not.toBeNull();
   });
 });
