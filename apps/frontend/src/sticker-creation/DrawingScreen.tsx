@@ -50,6 +50,7 @@ import { SealingStatusLabel } from "./sealing/SealingStatusLabel";
 import { LEAVE_MS, type Box } from "./sealing/sealTimeline";
 import { drawnSizeOf, encodeTimelapse, gzipTimelapse } from "./sealing/timelapse";
 import {
+  keepsSession,
   keptColor,
   SessionKeeper,
   UNDEALT,
@@ -693,6 +694,19 @@ export function DrawingScreen({
     primedOn: (ticketUseId) =>
       latest.current.phase === "primed" && ticketUseId === (ticket.current?.id ?? null),
   });
+  // Shown again with no drawing of its own after another tab started one, the sheet takes that
+  // drawing up as a reload does, so this tab can't replace it with a new ticket's.
+  const pickUpOnShow = useEffectEvent(() => {
+    const blank = latest.current.phase === "blank" && ticket.current === null;
+    if (blank && !restoring && !spending && keepsSession(me.id)) location.reload();
+  });
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") pickUpOnShow();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
 
   // "Picked up" stays until the clock runs again; word of a lost drawing, or of a carried-over
   // ticket, until the first stroke.
