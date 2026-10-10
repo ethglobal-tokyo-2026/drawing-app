@@ -33,13 +33,16 @@ const sticker: BoardSticker = {
   placement: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
 };
 
+/** Each sticker carries a corner handle, as a placed sticker does. */
 function Board(props: BoardProps) {
   const stage = useRef<HTMLDivElement>(null);
   useBoardGestures({ ...props, stage });
   return (
     <div ref={stage} className="board-stage">
       {props.stickers.map((s) => (
-        <div key={s.id} className="placed-sticker" data-sticker-id={s.id} tabIndex={0} />
+        <div key={s.id} className="placed-sticker" data-sticker-id={s.id} tabIndex={0}>
+          <span data-handle="scale" />
+        </div>
       ))}
     </div>
   );
@@ -55,6 +58,7 @@ const trayWith = (overrides: Partial<StickerTrayHandle>): RefObject<StickerTrayH
     close: () => Promise.resolve(false),
     boardDrag: () => null,
     boardDrop: () => Promise.resolve(false),
+    boardDragEnd: () => {},
     escape: () => false,
     pouchFoot: () => null,
     focusZipper: () => {},
@@ -170,6 +174,91 @@ describe("useBoardGestures", () => {
     });
   });
 
+  it("keeps a sticker pinched bigger at the field's edge whole on the field, as its handles do", () => {
+    const onCommit = vi.fn<Options["onCommit"]>();
+    const atEdge = { ...sticker, placement: { ...sticker.placement, x: 1 } };
+    show({ stickers: [atEdge], onCommit });
+    const el = stickerEl();
+
+    // Two fingers on it spread apart, toward the edge.
+    act(() => {
+      point(el, "pointerdown", 1, 300, 300);
+      point(el, "pointerdown", 2, 340, 300);
+      point(el, "pointermove", 2, 380, 300);
+      point(el, "pointerup", 1, 300, 300);
+      point(el, "pointerup", 2, 380, 300);
+    });
+    const [, placement] = onCommit.mock.calls[0];
+    expect(placement.s).toBeGreaterThan(sticker.placement.s);
+    const { x } = toPx(phoneField, placement);
+    const { w } = sizeOf(phone.U, placement.s, sticker);
+    // Within the saved spot's rounding.
+    expect(x + w / 2).toBeLessThanOrEqual(phoneField.left + phoneField.w + 0.05);
+  });
+
+  describe("a gesture the system takes, as iOS or LINE can", () => {
+    /** Each gesture begun on the sticker, which moves it; returns the pointers it holds. */
+    const gestures = {
+      drag: (el: HTMLElement) => {
+        point(el, "pointerdown", 1, 100, 300);
+        point(el, "pointermove", 1, 160, 300);
+        return [1];
+      },
+      pinch: (el: HTMLElement) => {
+        point(el, "pointerdown", 1, 100, 300);
+        point(el, "pointerdown", 2, 200, 300);
+        point(el, "pointermove", 2, 260, 300);
+        return [1, 2];
+      },
+      resize: (el: HTMLElement) => {
+        const handle = el.querySelector("[data-handle]");
+        if (!handle) throw new Error("the sticker has no handle");
+        point(handle, "pointerdown", 1, 250, 250);
+        point(handle, "pointermove", 1, 300, 200);
+        return [1];
+      },
+    };
+
+    it.each(Object.entries(gestures))(
+      "puts the sticker back where its %s began, and saves nothing",
+      async (_, begin) => {
+        const onCommit = vi.fn<Options["onCommit"]>();
+        const boardDrop = vi.fn<StickerTrayHandle["boardDrop"]>(() => Promise.resolve(true));
+        show({ onCommit, tray: trayWith({ boardDrop }) });
+        const el = stickerEl();
+        await act(async () => {
+          const held = begin(el);
+          expect(el.style.transform).not.toBe(drawnAt(sticker.placement));
+          for (const pointerId of held) point(el, "pointercancel", pointerId, 0, 0);
+        });
+        expect(onCommit).not.toHaveBeenCalled();
+        expect(boardDrop).not.toHaveBeenCalled();
+        expect(el.style.transform).toBe(drawnAt(sticker.placement));
+      },
+    );
+  });
+
+  it("ends the tray's part in a drag that becomes a pinch, or that the system takes", () => {
+    const boardDragEnd = vi.fn<StickerTrayHandle["boardDragEnd"]>();
+    show({ tray: trayWith({ boardDragEnd }) });
+    const el = stickerEl();
+    act(() => {
+      point(el, "pointerdown", 1, 100, 300);
+      point(el, "pointermove", 1, 160, 300);
+      point(el, "pointerdown", 2, 200, 300);
+    });
+    expect(boardDragEnd).toHaveBeenCalledExactlyOnceWith(sticker.id);
+
+    act(() => {
+      point(el, "pointerup", 1, 100, 300);
+      point(el, "pointerup", 2, 200, 300);
+      point(el, "pointerdown", 3, 100, 300);
+      point(el, "pointermove", 3, 160, 300);
+      point(el, "pointercancel", 3, 160, 300);
+    });
+    expect(boardDragEnd).toHaveBeenCalledTimes(2);
+  });
+
   it("lets a sticker on its way into the tray take no new gesture, so nothing done meanwhile is undone", async () => {
     let land: (into: boolean) => void = () => {};
     const boardDrop = vi
@@ -189,6 +278,27 @@ describe("useBoardGestures", () => {
 
     expect(boardDrop).toHaveBeenCalledTimes(1);
     expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it("takes a sticker removed while another rides into the tray in after it", async () => {
+    let land: (into: boolean) => void = () => {};
+    const boardDrop = vi
+      .fn<StickerTrayHandle["boardDrop"]>()
+      .mockReturnValueOnce(new Promise((resolve) => (land = resolve)))
+      .mockResolvedValue(true);
+    const onRemove = vi.fn();
+    const b = { ...sticker, id: "b", placement: { ...sticker.placement, x: 0.8 } };
+    const shown = { stickers: [sticker, b], tray: trayDropping(boardDrop), onRemove };
+    show(shown);
+    press("Delete", stickerEl("a"));
+    show({ ...shown, selected: "b" });
+    press("Delete", stickerEl("b"));
+    const dropped = () => boardDrop.mock.calls.map(([id]) => id);
+    expect(dropped()).toEqual(["a"]);
+
+    await act(async () => land(true));
+    expect(dropped()).toEqual(["a", "b"]);
+    expect(onRemove).not.toHaveBeenCalled();
   });
 
   it("goes between stickers on focus alone, and moves one only once it's selected", () => {
@@ -320,6 +430,23 @@ describe("useBoardGestures", () => {
       const [frames] = calls[contexts.indexOf(el)] ?? [];
       const first = Array.isArray(frames) ? frames[0]?.transform : undefined;
       expect(first).toContain(drawnAt(saved));
+    });
+
+    it("take a sticker removed into the tray with motion off from where they left it", async () => {
+      const onCommit = vi.fn<Options["onCommit"]>();
+      /** Each spot the board is told to take the sticker off from: the last one stays. */
+      const offFrom: Placement[] = [];
+      // The tray takes it off at once, through the board's remove as React last drew it.
+      const tray = trayDropping(() => {
+        offFrom.push(sticker.placement);
+        return Promise.resolve(true);
+      });
+      show({ onCommit, tray, onRemove: (_, at) => offFrom.push(at ?? sticker.placement) });
+      pressRight(2);
+      await act(async () => void keyDown("Delete", stickerEl()));
+
+      const [, saved] = onCommit.mock.calls[0];
+      expect(offFrom.at(-1)).toEqual(saved);
     });
 
     it("take a sticker removed before the tray has loaded off from where they left it", () => {

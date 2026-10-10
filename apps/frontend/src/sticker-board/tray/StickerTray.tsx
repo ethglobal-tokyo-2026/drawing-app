@@ -22,6 +22,8 @@ export interface StickerTrayHandle {
   boardDrag: (id: string, at: { x: number; y: number }) => TrayDrag | null;
   /** A dragged board sticker let go: true when it went back into its used sticker silhouette. */
   boardDrop: (id: string, at: { x: number; y: number }) => Promise<boolean>;
+  /** A dragged board sticker that won't be let go over the tray: it became a pinch, or the system took it. */
+  boardDragEnd: (id: string) => void;
   /** Closes the spread, else the tray; whether it did anything. */
   escape: () => boolean;
   /** Where the pouch ends, as the board's y; null before the tray has laid out. */
@@ -148,6 +150,7 @@ export const StickerTray = memo(function StickerTray({
       close: () => engine.current?.close() ?? Promise.resolve(false),
       boardDrag: (id, at) => engine.current?.boardDrag(id, at) ?? null,
       boardDrop: (id, at) => engine.current?.boardDrop(id, at) ?? Promise.resolve(false),
+      boardDragEnd: (id) => engine.current?.boardDragEnd(id),
       escape: () => engine.current?.escape() ?? false,
       pouchFoot: () => engine.current?.pouchFoot() ?? null,
       focusZipper: () => engine.current?.focusZipper(),

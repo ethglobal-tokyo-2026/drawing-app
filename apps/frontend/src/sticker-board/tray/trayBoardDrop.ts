@@ -118,6 +118,21 @@ export function createTrayBoardDrop(
     }
     return { over, snap: null };
   }
+  /**
+   * A board sticker's drag ended without a drop: it became a pinch, or the system took the touch. The
+   * tray lets it go, and shuts if it opened for it.
+   */
+  function boardDragEnd(id: string) {
+    const drop = ui.drop;
+    if (drop?.id !== id) return;
+    if (ui.dwell) {
+      cancel(ui.dwell);
+      ui.dwell = 0;
+    }
+    ui.drop = null;
+    clearTarget();
+    if (!drop.wasOpen && zip.isOpen) void zip.close();
+  }
   /** Board stickers on their way into their used sticker silhouettes. */
   const landing = new Set<string>();
   /**
@@ -215,5 +230,5 @@ export function createTrayBoardDrop(
     return true;
   }
 
-  return { boardDrag, boardDrop };
+  return { boardDrag, boardDrop, boardDragEnd };
 }

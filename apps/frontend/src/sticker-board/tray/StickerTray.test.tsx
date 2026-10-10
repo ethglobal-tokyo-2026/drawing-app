@@ -321,6 +321,27 @@ describe("StickerTray", () => {
     expect(remove).toHaveBeenCalledTimes(1);
   });
 
+  it("stays shut for a sticker held at its edge whose drag ends without a drop, or shuts again", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    onTestFinished(() => void vi.useRealTimers());
+    render([sticker("a", 1, true)]);
+    const atEdge = { x: 380, y: 600 };
+    const wait = () => act(async () => void (await vi.advanceTimersByTimeAsync(1000)));
+
+    tray.current?.boardDrag("a", atEdge);
+    tray.current?.boardDragEnd("a");
+    await wait();
+    expect(tray.current?.isOpen).toBe(false);
+
+    // Held there long enough, it opens for the sticker; the drag ending shuts it again.
+    tray.current?.boardDrag("a", atEdge);
+    await wait();
+    expect(tray.current?.isOpen).toBe(true);
+    tray.current?.boardDragEnd("a");
+    await wait();
+    expect(tray.current?.isOpen).toBe(false);
+  });
+
   it("leaves a given sticker's spot, a button that opens it among the stickers you gave", async () => {
     const openGiven = vi.fn();
     render([givenSticker("given", 1)], { openGiven });

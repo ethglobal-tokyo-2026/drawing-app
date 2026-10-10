@@ -64,6 +64,8 @@ export interface TrayEngine {
    * `remove` was called.
    */
   boardDrop: (id: string, at: Point) => Promise<boolean>;
+  /** A dragged board sticker that won't be let go over the tray: it became a pinch, or the system took it. */
+  boardDragEnd: (id: string) => void;
   /** Closes the spread, else the tray; whether it did anything. */
   escape: () => boolean;
   /** Puts focus on the Zipper's pull. */
@@ -489,7 +491,7 @@ export function createTrayEngine(
   });
   const { sendHome } = trayPresses;
 
-  const { boardDrag, boardDrop } = createTrayBoardDrop(
+  const { boardDrag, boardDrop, boardDragEnd } = createTrayBoardDrop(
     tray,
     trayModel,
     traySheets,
@@ -586,6 +588,7 @@ export function createTrayEngine(
     refresh,
     boardDrag,
     boardDrop,
+    boardDragEnd,
     escape,
     focusZipper: () => zip.slider.focus(),
     pouchFoot,

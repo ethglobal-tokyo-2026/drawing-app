@@ -171,11 +171,15 @@ export function useBoardGestures(options: Options) {
       const s = sticker.placement.s;
       return size ? sRangeOf(sticker, layout, field, size.U) : { min: s, max: s };
     };
-    /** `live` at its new size: grown past `from`'s, it moves in so its handles stay on the board. */
-    const grownOnField = (sticker: BoardSticker, field: Field, from: Live, live: Live): Live => {
+    /**
+     * `live` with its center held on the field, as a drag's is; grown past `from`'s size, it moves in
+     * so its handles stay on the board too.
+     */
+    const heldOnField = (sticker: BoardSticker, field: Field, from: Live, live: Live): Live => {
+      const held = { ...live, ...toPx(field, toFrac(field, live)) };
       const unit = latest.current.size?.U;
-      if (!unit || live.s <= from.s) return live;
-      return { ...live, ...keptOnField(live, sizeOf(unit, live.s, sticker), field) };
+      if (!unit || held.s <= from.s) return held;
+      return { ...held, ...keptOnField(held, sizeOf(unit, held.s, sticker), field) };
     };
 
     const local = (e: PointerEvent): Pt => ({
@@ -250,12 +254,7 @@ export function useBoardGestures(options: Options) {
       if (!field || !sticker || !el || leaving.has(id)) return;
       if (stepped && stepped.id !== id) saveSteps();
       const from = stepped?.live ?? liveOf(sticker.placement, field);
-      const next = stepBy(from, by, rangeFor(sticker, field));
-      // Past the field's edge it holds at the edge, as a drag does.
-      const live = grownOnField(sticker, field, from, {
-        ...next,
-        ...toPx(field, toFrac(field, next)),
-      });
+      const live = heldOnField(sticker, field, from, stepBy(from, by, rangeFor(sticker, field)));
       draw(el, sticker, live);
       if (stepped) clearTimeout(stepped.timer);
       const last: SettledStep =
@@ -329,39 +328,19 @@ export function useBoardGestures(options: Options) {
     };
 
     /**
-     * Remove: the sticker peels up, rides to the tray's edge, and the tray takes it into its used
-     * sticker silhouette.
+     * A removed sticker's ride: it peels up, rides to the tray's edge, and the tray takes it into its
+     * used sticker silhouette. `steppedTo` is where steps just saved left it.
      */
-    let stowingId: string | null = null;
-    const stow = async (id: string) => {
-      const saved = saveSteps();
+    const rideIn = async (id: string, steppedTo?: Placement) => {
       const { field, size, reduced } = latest.current;
       const sticker = stickerOf(id);
-      if (!sticker || !field || !size || stowingId || leaving.has(id)) return;
-      // Focus on it or its toolbar moves on at once, rather than after the ride back to the tray.
-      const focused = stage.ownerDocument.activeElement;
-      if (
-        focused instanceof HTMLElement &&
-        (focused.closest(".sticker-toolbar") ||
-          focused.closest<HTMLElement>(".placed-sticker")?.dataset.stickerId === id)
-      )
-        handFocusOn(
-          stage,
-          latest.current.tray.current,
-          orderOn(latest.current.stickers, field),
-          id,
-          (other) => !leaving.has(other),
-        );
-      latest.current.onSelect(null);
       const el = stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`);
-      if (!latest.current.tray.current || !el) {
-        latest.current.onRemove(id, saved?.id === id ? saved.placement : undefined);
+      if (!sticker || !field || !size || !el || !latest.current.tray.current) {
+        leaving.delete(id);
+        if (sticker) latest.current.onRemove(id, steppedTo);
         return;
       }
-      stowingId = id;
-      leaving.add(id);
-      // The steps just saved aren't in the stickers until React draws them, so it peels from them.
-      const from = liveOf(saved?.id === id ? saved.placement : sticker.placement, field);
+      const from = liveOf(steppedTo ?? sticker.placement, field);
       peelMark(sticker, from);
       const { w, h } = sizeOf(size.U, from.s, sticker);
       // It rides in level with where it was, but never below a shortened pouch's foot.
@@ -386,12 +365,51 @@ export function useBoardGestures(options: Options) {
       el.style.transform = at(to, 0.9);
       for (const a of el.getAnimations()) a.cancel();
       const into = await intoTray(id, to);
-      stowingId = null;
       leaving.delete(id);
       release(id);
-      if (!into) latest.current.onRemove(id);
+      // The tray takes it off from the spot React last drew. With no ride to wait for, that's from
+      // before steps just saved, so the board takes it off again from where they left it.
+      if (!into || (reduced && steppedTo)) latest.current.onRemove(id, steppedTo);
     };
-    stowing.current = (id) => void stow(id);
+
+    /** The ride into the tray under way, if any. */
+    let riding: Promise<void> | null = null;
+    /**
+     * Remove. One sticker rides into the tray at a time, so the tray opens and pages for one at a
+     * time: a sticker removed meanwhile is let go of at once, and rides after it.
+     */
+    const stow = (id: string) => {
+      const saved = saveSteps();
+      const { field, size } = latest.current;
+      const sticker = stickerOf(id);
+      if (!sticker || !field || !size || leaving.has(id)) return;
+      // Focus on it or its toolbar moves on at once, rather than after the ride back to the tray.
+      const focused = stage.ownerDocument.activeElement;
+      if (
+        focused instanceof HTMLElement &&
+        (focused.closest(".sticker-toolbar") ||
+          focused.closest<HTMLElement>(".placed-sticker")?.dataset.stickerId === id)
+      )
+        handFocusOn(
+          stage,
+          latest.current.tray.current,
+          orderOn(latest.current.stickers, field),
+          id,
+          (other) => !leaving.has(other),
+        );
+      latest.current.onSelect(null);
+      leaving.add(id);
+      // The steps just saved aren't in the stickers until React draws them, so they go along.
+      const steppedTo = saved?.id === id ? saved.placement : undefined;
+      const go = () => rideIn(id, steppedTo);
+      // A ride ahead that failed has said so; this one goes all the same.
+      const ride = riding ? riding.then(go, go) : go();
+      riding = ride;
+      void ride.finally(() => {
+        if (riding === ride) riding = null;
+      });
+    };
+    stowing.current = stow;
 
     /** A sticker a pointer picked: selected, and focused so the arrow keys reach it, with no ring. */
     const pick = (id: string, el: HTMLElement, by?: "tap") => {
@@ -428,6 +446,8 @@ export function useBoardGestures(options: Options) {
           ? stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(pinchId)}"]`)
           : null);
       if (pointers.size === 2 && pinched && pinchEl) {
+        // Pinched, a dragged sticker is no longer on its way to the tray.
+        if (inHand?.mode === "drag") latest.current.tray.current?.boardDragEnd(inHand.id);
         const b0 = inHand && "live" in inHand ? inHand.live : liveOf(pinched.placement, field);
         pick(pinched.id, pinchEl);
         gesture.current = { mode: "pinch", id: pinched.id, el: pinchEl, ...pairOf(), b0, live: b0 };
@@ -489,7 +509,7 @@ export function useBoardGestures(options: Options) {
         }
       } else if (g.mode === "scale") {
         const s = scaleBy(g.b0, g.from, pt, g.b0.s, rangeFor(sticker, field));
-        g.live = grownOnField(sticker, field, g.b0, { ...g.b0, s });
+        g.live = heldOnField(sticker, field, g.b0, { ...g.b0, s });
       } else if (g.mode === "rotate") {
         g.live = { ...g.b0, r: turnBy(g.b0, g.from, pt, g.b0.r) };
       } else if (g.mode === "pinch") {
@@ -497,8 +517,7 @@ export function useBoardGestures(options: Options) {
         const b = pointers.get(g.pair[1]);
         if (!a || !b) return;
         const next = pinchBy(g.start, [a, b], g.b0, rangeFor(sticker, field));
-        const at = toPx(field, toFrac(field, next));
-        g.live = { ...next, ...at };
+        g.live = heldOnField(sticker, field, g.b0, next);
       }
       draw(g.el, sticker, g.live);
     };
@@ -520,9 +539,8 @@ export function useBoardGestures(options: Options) {
         return;
       }
       setHold(null);
-      const tap = e.type === "pointerup";
       if (g.mode === "bg") {
-        if (!tap || passedSlop(g.p0, local(e))) return;
+        if (passedSlop(g.p0, local(e))) return;
         latest.current.onSelect(null);
         closeTray();
         // A press here doesn't move focus as it would on a page, so a focused sticker is let go of
@@ -532,7 +550,6 @@ export function useBoardGestures(options: Options) {
         return;
       }
       if (g.mode === "maybe") {
-        if (!tap) return;
         if (latest.current.selected === g.id) latest.current.onOpen(g.id);
         else pick(g.id, g.el, "tap");
         // Its toolbar mustn't sit under the tray.
@@ -541,6 +558,23 @@ export function useBoardGestures(options: Options) {
       }
       const sticker = stickerOf(g.id);
       if (sticker) commit(g.el, sticker, g.live);
+    };
+
+    /**
+     * A touch the system took, as iOS or LINE can, was never let go: the sticker goes back where the
+     * gesture began, and nothing is saved.
+     */
+    const onCancel = (e: PointerEvent) => {
+      if (!pointers.delete(e.pointerId)) return;
+      const g = gesture.current;
+      gesture.current = null;
+      if (!g || g.mode === "maybe" || g.mode === "bg") return;
+      if (g.mode === "drag") latest.current.tray.current?.boardDragEnd(g.id);
+      release(g.id);
+      const { field } = latest.current;
+      const sticker = stickerOf(g.id);
+      // A gesture saves nothing until it ends, so the board's spot is where it began.
+      if (sticker && field) draw(g.el, sticker, liveOf(sticker.placement, field));
     };
 
     const onKey = (e: KeyboardEvent) => {
@@ -580,7 +614,7 @@ export function useBoardGestures(options: Options) {
       }
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
-        void stow(sticker.id);
+        stow(sticker.id);
         return;
       }
       const by = KEY_STEPS[e.key];
@@ -603,7 +637,7 @@ export function useBoardGestures(options: Options) {
     stage.addEventListener("pointerdown", onDown);
     stage.addEventListener("pointermove", onMove);
     stage.addEventListener("pointerup", onUp);
-    stage.addEventListener("pointercancel", onUp);
+    stage.addEventListener("pointercancel", onCancel);
     stage.addEventListener("keydown", onKey);
     stage.addEventListener("focusin", onFocus);
     // Focus leaving the board takes the steps not yet saved with it.
@@ -614,7 +648,7 @@ export function useBoardGestures(options: Options) {
       stage.removeEventListener("pointerdown", onDown);
       stage.removeEventListener("pointermove", onMove);
       stage.removeEventListener("pointerup", onUp);
-      stage.removeEventListener("pointercancel", onUp);
+      stage.removeEventListener("pointercancel", onCancel);
       stage.removeEventListener("keydown", onKey);
       stage.removeEventListener("focusin", onFocus);
       stowing.current = () => {};
