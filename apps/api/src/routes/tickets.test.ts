@@ -263,7 +263,11 @@ describe("tickets", () => {
       );
       expect(BigInt(pack.priceJpyc)).toBe(jpycOf(pack));
     }
-    expect(shop.payment).toMatchObject(TEST_PAYMENT_TARGET);
+    // Its events keep the payment package's original ID, which only Sui knows.
+    expect(shop.payment).toEqual({
+      ...TEST_PAYMENT_TARGET,
+      originalPackage: await test.deps.sui?.paymentOriginalPackage(),
+    });
   });
 
   it("start a purchase of a pack, unpaid, with a payment the server built for the buyer's wallet", async () => {
@@ -421,13 +425,18 @@ describe("tickets", () => {
     }
   });
 
-  it("start and pay nothing in mock chain mode", async () => {
+  it("start and pay nothing in mock chain mode, where the shop names the configured package", async () => {
     const mock = await createTestApp();
     const someone = insertUser(mock.db);
     expect(await refusalOf(await startPurchase(mock, someone, PACK))).toMatchObject({
-      status: 503,
+      status: 502,
       error: "chain_unavailable",
     });
+    const offered = await bodyOf(
+      await mock.send("GET", "/api/ticket-shop", { as: someone }),
+      shopBodySchema,
+    );
+    expect(offered.shop.payment.originalPackage).toBe(TEST_PAYMENT_TARGET.paymentPackage);
   });
 
   it("refuse a start at a price that isn't the pack's for the buyer with price_changed, recording nothing", async () => {

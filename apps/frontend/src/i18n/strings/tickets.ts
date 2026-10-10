@@ -254,7 +254,7 @@ export const tickets = {
       en: "Reading your ticket purchases from Sui…",
       ja: "Suiからチケット購入履歴を読み込んでいます…",
     },
-    /** Shop and reserve ticket checkout, purchases list: when Sui couldn't be read, before Try again and Sui's own English words for a report */
+    /** Shop and reserve ticket checkout, purchases list: when Sui couldn't be read, and the Shop under the reserve tickets when where packs are paid didn't load, before Try again and the English words for a report */
     problem: {
       en: "Couldn’t read your ticket purchases from Sui.",
       ja: "Suiからチケット購入履歴を読み込めませんでした。",

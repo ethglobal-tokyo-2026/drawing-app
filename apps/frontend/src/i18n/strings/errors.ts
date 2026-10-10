@@ -43,10 +43,10 @@ export const errors = {
     en: "This gift was already opened.",
     ja: "このギフトは、すでにひらかれています。",
   },
-  /** Giving and Receiving: packing a gift, opening a gift's link, Accept, taking a gift out, the deposit's check after Send, or reading when a gift expires, when the chain can't be read, through the error line */
+  /** Giving, Receiving, the Shop and the reserve ticket checkout: packing a gift, opening a gift's link, Accept, taking a gift out, the deposit's check after Send, reading when a gift expires, loading where packs are paid or paying, when Sui can't be read, through the error line */
   chain_unavailable: {
-    en: "Couldn’t check on the gift just now. Try again in a moment.",
-    ja: "ギフトの状態をいま確認できません。少し待ってから、もう一度お試しください。",
+    en: "Couldn’t reach Sui just now. Try again in a moment.",
+    ja: "いまSuiに接続できません。少し待ってから、もう一度お試しください。",
   },
   /** Receive gift dialog, Accept sheet: tapping Accept (POST /api/gifts/receive, or /:giftId/receive from the board) when the chain fails or doesn't confirm the sticker's claim, in “… wasn’t received” through problemOf; a gift its giver took back, or that went back to them, answers its own refusal instead */
   claim_failed: {
@@ -72,6 +72,11 @@ export const errors = {
   gift_in_transit: {
     en: "This sticker is already on its way in a gift.",
     ja: "このシールは、すでにギフトとして贈られている途中です。",
+  },
+  /** Giving, In the bag: packing a sticker (POST /api/gifts) or taking a gift out (POST /api/gifts/:giftId/take-out/start) after a day of more packing and taking out than anyone giving does, in “couldn’t be packed” or “couldn’t be taken out” through problemOf */
+  giving_limit_reached: {
+    en: "You’ve put stickers in gift bags and taken them out many times today. Try again tomorrow.",
+    ja: "今日はシールをギフト袋に入れたり取り出したりした回数が多すぎます。明日もう一度お試しください。",
   },
   /** Giving, In the bag: a deposit, picker outcome or take-out (POST /api/gifts/:giftId/…) for a gift that doesn't exist, through problemOf; the Receive gift dialog and the Gratitude Mini-game show their own lines for it instead */
   gift_not_found: {

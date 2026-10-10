@@ -47,9 +47,8 @@ import {
   type SealParts,
 } from "../stickers/testPngs.ts";
 import { timelapseProblem, timelapseV1Schema } from "../stickers/timelapse.ts";
-import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { fakeCdnPurge, fakeSuiWallets } from "../testing/fakes.ts";
-import { fakeSui, type FakeSui } from "../testing/fakeSui.ts";
+import { createChainTestApp, createTestApp, type TestApp } from "../testing/createTestApp.ts";
+import { fakeCdnPurge } from "../testing/fakes.ts";
 import { captureLogLines } from "../testing/logLines.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { giveSticker, insertSealedSticker } from "../testing/rows.ts";
@@ -63,13 +62,9 @@ const hashOf = (png: Uint8Array) => `0x${createHash("sha256").update(png).digest
 
 /** The app on the fake Sui chain, where everyone has a Sui wallet. */
 async function chainApp() {
-  let chain: FakeSui | undefined;
-  test = await createTestApp(({ db, clock }) => {
-    chain = fakeSui(clock);
-    return { sui: chain.sui, gasStation: chain.gasStation, suiWallets: fakeSuiWallets(db) };
-  });
-  if (!chain) throw new Error("createTestApp built no overrides");
-  return chain;
+  const onChain = await createChainTestApp();
+  test = onChain.test;
+  return onChain.chain;
 }
 
 let test: TestApp;
@@ -209,7 +204,7 @@ describe("POST /api/stickers", () => {
   it("mints the sticker on Sui as it seals, and answers with its object", async () => {
     const chain = await chainApp();
     const { sticker } = await seal(insertUser(test.db));
-    expect(sticker.objectId).toBe(chain.sui.stickerObjectId(sticker.id));
+    expect(sticker.objectId).toBe(chain.stickerObjectIdOf(sticker.id));
     expect(allStickers()).toMatchObject([{ objectId: sticker.objectId }]);
   });
 
@@ -233,7 +228,7 @@ describe("POST /api/stickers", () => {
     expect(test.images.saved.get(saved.contentHash)).toEqual(sealImages());
 
     const retried = (await bodyOf(await sealOnTicket(), sealResponseSchema)).sticker;
-    expect(retried).toMatchObject({ id: saved.id, objectId: chain.sui.stickerObjectId(saved.id) });
+    expect(retried).toMatchObject({ id: saved.id, objectId: chain.stickerObjectIdOf(saved.id) });
     expect(allStickers()).toHaveLength(1);
     expect(test.db.select().from(ticketUses).all()).toHaveLength(1);
     const mints = () => chain.built.filter(({ kind }) => kind === "mint").length;

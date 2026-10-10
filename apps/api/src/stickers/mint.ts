@@ -10,8 +10,8 @@ import {
   follow,
   runAsServer,
   sponsored,
+  suiDepsOf,
   type OnSucceeded,
-  type SuiTransactionDeps,
 } from "../sui/transactions.ts";
 import { SponsorshipError } from "../sui/types.ts";
 
@@ -73,17 +73,18 @@ const recordMint =
  * land: the sticker stays sealed and unminted for the next attempt. The mock chain mints nothing.
  */
 export function mintSticker(deps: AppDeps, stickerId: string): Promise<void> {
-  const { db, clock, sui, gasStation } = deps;
+  const { db } = deps;
+  const chain = suiDepsOf(deps);
   const sticker = stickerOf(db, stickerId);
-  if (!sui || !gasStation || sticker.objectId !== null) return Promise.resolve();
-  const chain: SuiTransactionDeps = { db, clock, sui, gasStation };
-  const objectId = sui.stickerObjectId(stickerId);
-  const record = recordMint(stickerId, objectId);
+  if (!chain || sticker.objectId !== null) return Promise.resolve();
+  const { sui } = chain;
   const recorded = (how: string, txDigest?: string) =>
     logInfo("sticker.mint.recorded", { stickerId, ...(txDigest && { txDigest }), reason: how });
 
   return oneAtATime(`sticker:${stickerId}`, async () => {
     if (stickerOf(db, stickerId).objectId !== null) return;
+    const objectId = await sui.stickerObjectId(stickerId);
+    const record = recordMint(stickerId, objectId);
     const last = lastMint(db, stickerId);
     if (last && last.outcome === null) {
       const { row } = await follow(chain, last, record);

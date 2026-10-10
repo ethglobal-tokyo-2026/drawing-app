@@ -72,7 +72,12 @@ export const priceYenFor = (db: DbOrTx, userId: string, pack: TicketPack): numbe
   pack.tickets === freePackFor(db, userId) ? 0 : pack.priceYen;
 
 /** The ticket shop as `userId` sees it: its packs at their prices for them, and where they're paid. */
-export function ticketShop(db: DbOrTx, userId: string, target: TicketPaymentTarget): TicketShop {
+export function ticketShop(
+  db: DbOrTx,
+  userId: string,
+  target: TicketPaymentTarget,
+  originalPackage: string,
+): TicketShop {
   const free = freePackFor(db, userId);
   return {
     packs: TICKET_PACKS.map(({ tickets, priceYen: regular }) => {
@@ -84,7 +89,7 @@ export function ticketShop(db: DbOrTx, userId: string, target: TicketPaymentTarg
         priceJpyc: jpycFor(priceYen, target.decimals).toString(),
       };
     }),
-    payment: target,
+    payment: { ...target, originalPackage },
   };
 }
 

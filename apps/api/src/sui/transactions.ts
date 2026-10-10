@@ -3,7 +3,7 @@ import { fromBase64 } from "@mysten/sui/utils";
 import { isValidTransactionSignature } from "@mysten/sui/verify";
 import { and, eq, isNull, type SQL } from "drizzle-orm";
 import type { AppDeps, Clock } from "../deps.ts";
-import { logFailure, logInfo, type DiagnosticFields } from "../diagnostics.ts";
+import { failureCause, logFailure, logInfo, type DiagnosticFields } from "../diagnostics.ts";
 import {
   TransactionRefusedError,
   type GasStation,
@@ -282,15 +282,29 @@ export async function runSigned(
   }
   if (row.outcome !== null || row.submittedAt !== null) return follow(deps, row, onSucceeded);
   if (lapsed(deps, row)) return { row: drop(deps, row), events: null };
-  const signedBySender = await isValidTransactionSignature(fromBase64(row.txBytes), signature, {
-    address: row.sender,
-  });
-  if (!signedBySender) {
+  if (!(await signedBy(row, signature))) {
     throw new SignatureInvalidError(
       `The signature isn't ${row.sender}'s over transaction ${row.digest}`,
     );
   }
   return submitSigned(deps, row, signature, onSucceeded);
+}
+
+/**
+ * Whether `signature` is the row's sender's over its bytes. Only a zkLogin signature needs Sui to
+ * check it, and the verifier throws for one: a Privy wallet never signs that way, so it's refused.
+ */
+async function signedBy(row: SuiTransaction, signature: string) {
+  try {
+    return await isValidTransactionSignature(fromBase64(row.txBytes), signature, {
+      address: row.sender,
+    });
+  } catch (error) {
+    throw new SignatureInvalidError(
+      `The signature over transaction ${row.digest} can't be checked without asking Sui: ${failureCause(error)}`,
+      { cause: error },
+    );
+  }
 }
 
 /**

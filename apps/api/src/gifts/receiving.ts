@@ -6,7 +6,6 @@ import { logFailure, logInfo } from "../diagnostics.ts";
 import {
   giftSchema,
   isoTimeSchema,
-  optedIntoNsfw,
   personSchema,
   refuse,
   stickerLookup,
@@ -27,14 +26,22 @@ import {
   type OnSucceeded,
   type SuiTransactionDeps,
 } from "../sui/transactions.ts";
+import type { EscrowGift } from "../sui/types.ts";
 import {
+  alreadyReceived,
   claimSucceeded,
   currentGift,
   openGiftTransaction,
+  recordEscrowClosing,
   settleOpenGiftTransaction,
   type GiftRow,
 } from "./giftTransactions.ts";
-import { claimCommitmentOf, giftClaimTokenSchema, giftHoldingSticker } from "./packaging.ts";
+import {
+  claimCommitmentOf,
+  giftClaimTokenSchema,
+  giftHoldingSticker,
+  nsfwRefusal,
+} from "./packaging.ts";
 
 /** `liff.getContext().type`: where the Gift Message was opened. */
 const liffContextTypeSchema = z.enum(["utou", "room", "group", "square_chat", "external", "none"]);
@@ -93,24 +100,18 @@ const groupChatRefusal = (liffContextType: LiffContextType) =>
 
 const notFound = () => refuse("gift_not_found", "No gift has this Gift Claim Token");
 
-/** An NSFW sticker goes only to someone with the NSFW opt-in on. */
 function nsfwOptInRefusal(db: Pick<Db, "select">, gift: GiftRow, userId: string) {
   const sticker = db
-    .select({ nsfw: stickers.nsfw })
+    .select({ id: stickers.id, nsfw: stickers.nsfw })
     .from(stickers)
     .where(eq(stickers.id, gift.stickerId))
     .get();
-  if (!sticker?.nsfw) return null;
   const receiver = db
-    .select({ nsfwOptedInAt: users.nsfwOptedInAt })
+    .select({ id: users.id, nsfwOptedInAt: users.nsfwOptedInAt })
     .from(users)
     .where(eq(users.id, userId))
     .get();
-  if (receiver && optedIntoNsfw(receiver)) return null;
-  return refuse(
-    "nsfw_not_opted_in",
-    `Gift ${gift.id} is an NSFW sticker, and the receiver has the NSFW opt-in off`,
-  );
+  return sticker ? nsfwRefusal(sticker, receiver) : null;
 }
 
 const takenBack = (gift: GiftRow) =>
@@ -276,7 +277,11 @@ export async function receiveGift(
   return receiveOpened(deps, userId, opened, liffContextType);
 }
 
-/** The gifts waiting for this person, which they can receive from their board. */
+/**
+ * The gifts waiting for this person, which they can receive from their board: sent ones only, since
+ * one still in the bag may be a send its giver cancelled. A send whose report was lost turns sent
+ * once the giver's app reports it; the link receives it meanwhile.
+ */
 export function giftsForYou(deps: AppDeps, userId: string): GiftsForYou {
   const { db, clock } = deps;
   const rows = db
@@ -397,9 +402,6 @@ function received(deps: AppDeps, userId: string, giftId: string): Receiving {
   };
 }
 
-const alreadyReceived = (gift: GiftRow) =>
-  refuse("already_received", `Gift ${gift.id} was already received`);
-
 /** Receives an opened gift for this person: the server checked its token, or they're who it waits for. */
 async function completeReceive(
   deps: AppDeps,
@@ -473,7 +475,7 @@ async function claimOnSui(
   }
   const now = sui.clock.now();
   const gift = currentGift(db, giftId);
-  if (claimSucceeded(db, giftId)) return reconcileClaim(deps, sui, userId, recipient, gift, now);
+  if (claimSucceeded(db, giftId)) return reconcileClaim(deps, sui, userId, recipient, gift);
   const refusal = receiveRefusal(db, gift, userId, liffContextType, now);
   if (refusal) return refusal;
 
@@ -494,8 +496,8 @@ async function claimOnSui(
     "claim_failed",
     `Gift ${giftId} wasn't received: Sui ${row.outcome === "dead" ? "refused" : "failed"} its claim (${row.failure ?? "no reason given"})`,
   );
-  // It didn't run: the escrow says whether the giver took the gift back, or it went home, first.
-  // When the escrow can't be read, the claim's own failure is the answer.
+  // It didn't run: the escrow says whether the gift went on, the giver took it back, or it went
+  // home, first, and that's recorded. When it can't be read, the claim's own failure is the answer.
   let escrow;
   try {
     escrow = await sui.sui.readGift(giftId);
@@ -503,9 +505,55 @@ async function claimOnSui(
     logFailure("gift.claim.check_failed", error, { giftId, userId });
     return failed;
   }
-  if (escrow.status === "taken_out") return takenBack(gift);
-  if (escrow.status === "expired_returned") return giftReturned(gift);
+  if (escrow.status === "claimed") return answerClaimShown(deps, userId, recipient, gift, escrow);
+  const closed = recordEscrowClosing(db, gift, escrow.status, now);
+  if (closed.status === "taken_out") return takenBack(closed);
+  if (closed.status === "returned") return giftReturned(closed);
   return failed;
+}
+
+/**
+ * Records a claim the escrow shows ran as the receive of the person whose wallet it sent the
+ * sticker to: `asker`'s when it's theirs, else whoever the database knows has that wallet. Answers
+ * who received it; null when no one is known to.
+ */
+export function recordClaimShown(
+  deps: AppDeps,
+  gift: GiftRow,
+  recipient: string,
+  asker?: { userId: string; wallet: string },
+): string | null {
+  const receiverId =
+    asker?.wallet === recipient
+      ? asker.userId
+      : deps.db.select({ id: users.id }).from(users).where(eq(users.suiAddress, recipient)).get()
+          ?.id;
+  if (receiverId === undefined) return null;
+  const now = deps.clock.now();
+  deps.db.transaction((tx) => recordReceive(gift, receiverId, now)(tx, []), {
+    behavior: "immediate",
+  });
+  logInfo("gift.receive.reconciled", { giftId: gift.id, userId: receiverId });
+  return receiverId;
+}
+
+/** Answers this person's Accept of a gift a claim took, as the escrow shows it. */
+function answerClaimShown(
+  deps: AppDeps,
+  userId: string,
+  wallet: string,
+  gift: GiftRow,
+  escrow: EscrowGift,
+): Receiving {
+  // A lagging node can still show the gift pending after the claim ran.
+  if (escrow.status !== "claimed" || escrow.recipient === null) {
+    return refuse(
+      "claim_failed",
+      `Sui doesn't show gift ${gift.id}'s claim in the escrow yet; Accept again in a moment`,
+    );
+  }
+  const receiverId = recordClaimShown(deps, gift, escrow.recipient, { userId, wallet });
+  return receiverId === userId ? received(deps, userId, gift.id) : alreadyReceived(gift);
 }
 
 /** A claim of the gift ran: the receive is this person's only if the escrow sent them the sticker. */
@@ -515,16 +563,11 @@ async function reconcileClaim(
   userId: string,
   recipient: string,
   gift: GiftRow,
-  now: Date,
 ): Promise<Receiving> {
   if (gift.status === "received") {
     return (
       (gift.receiverId === userId && recordedReceive(deps, userId, gift)) || alreadyReceived(gift)
     );
   }
-  const escrow = await sui.sui.readGift(gift.id);
-  if (escrow.recipient !== recipient) return alreadyReceived(gift);
-  sui.db.transaction((tx) => recordReceive(gift, userId, now)(tx, []), { behavior: "immediate" });
-  logInfo("gift.receive.reconciled", { giftId: gift.id, userId });
-  return received(deps, userId, gift.id);
+  return answerClaimShown(deps, userId, recipient, gift, await sui.sui.readGift(gift.id));
 }

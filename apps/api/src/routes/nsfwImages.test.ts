@@ -11,9 +11,7 @@ import {
   testPng,
   testTimelapse,
 } from "../stickers/testPngs.ts";
-import { createTestApp } from "../testing/createTestApp.ts";
-import { fakeSuiWallets } from "../testing/fakes.ts";
-import { fakeSui, type FakeSui } from "../testing/fakeSui.ts";
+import { createChainTestApp } from "../testing/createTestApp.ts";
 import { insertSealedSticker, SPOT } from "../testing/rows.ts";
 
 /**
@@ -115,11 +113,7 @@ describe("an NSFW sticker's images", () => {
 
 describe("a newly sealed sticker's Sui object", () => {
   it("names an NSFW sticker's veiled image, and any other sticker's own PNG", async () => {
-    let chain: FakeSui | undefined;
-    const test = await createTestApp(({ db, clock }) => {
-      chain = fakeSui(clock);
-      return { sui: chain.sui, gasStation: chain.gasStation, suiWallets: fakeSuiWallets(db) };
-    });
+    const { test, chain } = await createChainTestApp();
     const optedInId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
     for (const nsfw of ["true", "false"]) {
       const ticketUseId = insertTicketUse(test.db, optedInId);
@@ -132,7 +126,7 @@ describe("a newly sealed sticker's Sui object", () => {
       });
       expect(sealing.status).toBe(201);
     }
-    const [nsfwMint, plainMint] = (chain?.built ?? []).flatMap((built) =>
+    const [nsfwMint, plainMint] = chain.built.flatMap((built) =>
       built.kind === "mint" ? [built.mint] : [],
     );
     if (!nsfwMint || !plainMint) throw new Error("Sealing minted neither sticker");

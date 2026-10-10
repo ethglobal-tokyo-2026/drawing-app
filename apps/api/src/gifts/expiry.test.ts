@@ -5,7 +5,12 @@ import { AFTER_MIDNIGHT_MS } from "../midnightJob.ts";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { nextTokyoTicketDayStart } from "../ticketDays.ts";
-import { returnExpiredGifts, startExpiredGiftReturns, type ExpirySweep } from "./expiry.ts";
+import {
+  RETURN_CLOCK_MARGIN_MS,
+  returnExpiredGifts,
+  startExpiredGiftReturns,
+  type ExpirySweep,
+} from "./expiry.ts";
 import { receivedGiftSchema } from "./receiving.ts";
 import { createGiftsTestApp, giftOf, takeOutStartOf, type GiftsTestApp } from "./testGifts.ts";
 
@@ -134,7 +139,7 @@ describe("The expiry sweep", () => {
     expect(returnsBuilt(test)).toBe(0);
   });
 
-  it("leaves a gift whose claim ran while its answer was lost for Receiving to record, and logs why", async () => {
+  it("records a gift whose claim ran while its answer was lost as its receiver's, without sending it back", async () => {
     const test = await createGiftsTestApp({ onSui: true });
     const { gift, giftClaimToken } = await giftInEscrow(test);
     const receiverId = insertUser(test.db);
@@ -143,14 +148,39 @@ describe("The expiry sweep", () => {
     expect(await answerLost(test, receive)).toMatchObject({ error: "claim_failed" });
     test.clock.advance(PAST_EXPIRY_MS);
 
-    expect(await sweep(test)).toEqual(swept({ left: 1 }));
-    expect(test.giftRow(gift.id)).toMatchObject({ status: "sent", escrowStatus: "pending" });
+    expect(await sweep(test)).toEqual(swept({ recorded: 1 }));
+    expect(test.giftRow(gift.id)).toMatchObject({
+      status: "received",
+      escrowStatus: "claimed",
+      receiverId,
+    });
+    expect(test.ownerOf(gift.stickerId)).toBe(receiverId);
     expect(returnsBuilt(test)).toBe(0);
-    logs.expectLogged("gift.expiry.left", { giftId: gift.id });
     expect((await bodyOf(await receive(), receivedGiftSchema)).gift).toMatchObject({
       status: "received",
       receiverId,
     });
+  });
+
+  it("records a gift its giver took out from their own wallet, without sending it back", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { giverId, gift } = await giftInEscrow(test);
+    test.chain.escrow.set(gift.id, { status: "taken_out", recipient: null });
+    test.clock.advance(PAST_EXPIRY_MS);
+
+    expect(await sweep(test)).toEqual(swept({ recorded: 1 }));
+    expect(test.giftRow(gift.id)).toMatchObject({ status: "taken_out", escrowStatus: "taken_out" });
+    expect(returnsBuilt(test)).toBe(0);
+    expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({ status: 201 });
+  });
+
+  it("waits until Sui's clock is surely past a gift's expiry before sending it back", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { gift } = await giftInEscrow(test);
+    test.clock.set(new Date(test.giftRow(gift.id).expiresAt.getTime() + 1));
+    expect(await sweep(test)).toEqual(swept({}));
+    test.clock.advance(RETURN_CLOCK_MARGIN_MS);
+    expect(await sweep(test)).toEqual(swept({ returned: 1 }));
   });
 
   it("sends back a packed gift whose deposit ran while its answer was lost", async () => {
@@ -221,10 +251,18 @@ describe("The expiry sweep", () => {
     expect(logs.raw.find((line) => line.includes("gift.expiry.failed"))).toContain(failure);
   });
 
-  it("runs at boot, for what downtime left, then just after each midnight, Tokyo time", async () => {
+  it("runs at boot, for what downtime left, then just after each midnight, Tokyo time, after following lost gift transactions", async () => {
     const test = await createGiftsTestApp({ onSui: true });
     const { gift } = await giftInEscrow(test);
     test.clock.advance(PAST_EXPIRY_MS);
+    const claimed = await giftInEscrow(test);
+    const receiverId = insertUser(test.db);
+    const receive = () =>
+      test.post(receiverId, "/receive", {
+        giftClaimToken: claimed.giftClaimToken,
+        liffContextType: "utou",
+      });
+    expect(await answerLost(test, receive)).toMatchObject({ error: "claim_failed" });
     const waits: number[] = [];
     const job = startExpiredGiftReturns({
       ...test.deps,
@@ -237,6 +275,8 @@ describe("The expiry sweep", () => {
     await job.idle();
 
     expect(test.giftRow(gift.id).status).toBe("returned");
+    expect(test.giftRow(claimed.gift.id)).toMatchObject({ status: "received", receiverId });
+    expect(test.ownerOf(claimed.gift.stickerId)).toBe(receiverId);
     const now = test.clock.now();
     expect(waits).toEqual([
       nextTokyoTicketDayStart(now).getTime() + AFTER_MIDNIGHT_MS - now.getTime(),

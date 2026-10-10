@@ -1,8 +1,7 @@
 import { Hono, type Context } from "hono";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { AppDeps } from "../deps.ts";
 import { diagnosticStep, logInfo } from "../diagnostics.ts";
-import { apiError, validate } from "../errors.ts";
+import { refused, validate } from "../errors.ts";
 import { submitDeposit } from "../gifts/deposit.ts";
 import {
   packageBodySchema,
@@ -21,46 +20,7 @@ import {
   type Receiving,
 } from "../gifts/receiving.ts";
 import type { AppEnv } from "../session.ts";
-import {
-  giftIdParam,
-  signedTransactionSchema,
-  toGift,
-  toSponsoredTransaction,
-  type Refusal,
-} from "../shapes.ts";
-
-/**
- * Each Giving and Receiving refusal's status. A transaction whose answer from Sui was lost is a 503:
- * the app sends the same signature again.
- */
-const REFUSAL_STATUS = {
-  sticker_not_found: 404,
-  gift_not_found: 404,
-  user_not_found: 404,
-  not_yours: 403,
-  not_minted: 409,
-  no_sui_wallet: 409,
-  gift_in_transit: 409,
-  sponsorship_expired: 409,
-  transaction_failed: 409,
-  take_out_not_landed: 503,
-  deposit_not_landed: 503,
-  not_deposited: 409,
-  gift_closed: 409,
-  already_received: 409,
-  group_chat: 403,
-  own_gift: 403,
-  taken_back: 409,
-  gift_returned: 410,
-  gift_expired: 410,
-  nsfw_not_opted_in: 403,
-  claim_failed: 503,
-} as const satisfies Record<string, ContentfulStatusCode>;
-
-const refused = <Code extends keyof typeof REFUSAL_STATUS>(
-  c: Context,
-  { refusal, detail }: Refusal<Code>,
-) => apiError(c, REFUSAL_STATUS[refusal], refusal, detail);
+import { giftIdParam, signedTransactionSchema, toGift, toSponsoredTransaction } from "../shapes.ts";
 
 /** A Receiving's answer: the sticker on the receiver's board, or why not. */
 function received(c: Context<AppEnv>, receiving: Receiving) {

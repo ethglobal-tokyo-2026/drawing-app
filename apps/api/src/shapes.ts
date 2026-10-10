@@ -520,6 +520,8 @@ export const ticketShopSchema = z.object({
     /** JPYC base units per JPYC. */
     decimals: count,
     paymentPackage: suiIdSchema,
+    /** The payment package's original ID: PaymentReceived's type keeps it across upgrades. */
+    originalPackage: suiIdSchema,
     vault: suiIdSchema,
   }),
 });

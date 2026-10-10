@@ -1,6 +1,5 @@
 import { bcs } from "@mysten/sui/bcs";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
-import type { TicketPaymentTarget } from "../deps.ts";
 import type { SuiEvents } from "./transactions.ts";
 
 /** The stickers package's StickerSealed, field for field. */
@@ -20,6 +19,11 @@ export const paymentReceivedEvent = bcs.struct("PaymentReceived", {
   reference: bcs.vector(bcs.u8()),
 });
 
+/*
+ * Events are found by module and name: an event's type keeps its package's original ID across
+ * upgrades, and the server built the transaction, so no other package's call is in it.
+ */
+
 /** The sticker a mint's StickerSealed names, or null when the mint emitted none. */
 export function stickerSealedIn(events: SuiEvents): { sticker: string; key: string } | null {
   const event = events.find(({ type }) => type.endsWith("::sticker::StickerSealed"));
@@ -28,13 +32,11 @@ export function stickerSealedIn(events: SuiEvents): { sticker: string; key: stri
   return { sticker: normalizeSuiAddress(sealed.sticker), key: sealed.key };
 }
 
-/** A payment's PaymentReceived from `payment`'s contract, or null when it emitted none. */
+/** A payment's PaymentReceived, or null when it emitted none. */
 export function paymentReceivedIn(
   events: SuiEvents,
-  payment: TicketPaymentTarget,
 ): { vault: string; payer: string; amount: bigint; reference: string } | null {
-  const type = `${normalizeSuiAddress(payment.paymentPackage)}::payment::PaymentReceived`;
-  const event = events.find((candidate) => candidate.type === type);
+  const event = events.find(({ type }) => type.endsWith("::payment::PaymentReceived"));
   if (!event) return null;
   const paid = paymentReceivedEvent.parse(event.bcs);
   return {

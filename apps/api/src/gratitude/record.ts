@@ -11,7 +11,6 @@ import {
 import { eq } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import type { Context } from "hono";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import type { AppDeps } from "../deps.ts";
 import { describeIssues } from "../diagnostics.ts";
@@ -93,16 +92,9 @@ export function replayInvalidHook(result: Parameters<typeof invalidRequest>[0], 
 
 export const gratitudeResponseSchema = z.object({ gratitude: gratitudeSchema });
 
-/** Each refusal of a combo, and its status. */
-export const RECORD_REFUSAL_STATUS = {
-  gift_not_found: 404,
-  gift_not_received: 409,
-  not_receiver: 403,
-  gratitude_already_recorded: 409,
-} as const satisfies Record<string, ContentfulStatusCode>;
-
+/** A combo recorded, or why not; each refusal's status is in errors.ts's REFUSAL_STATUS. */
 export type Recording =
-  | Refusal<keyof typeof RECORD_REFUSAL_STATUS>
+  | Refusal<"gift_not_found" | "gift_not_received" | "not_receiver" | "gratitude_already_recorded">
   | { refusal: null; created: boolean; gratitude: Gratitude };
 
 /** None when the Original Artist gave or received the gift: gratitude to or from them is all theirs. */

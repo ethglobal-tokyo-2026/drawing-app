@@ -4,9 +4,8 @@ import { eq } from "drizzle-orm";
 import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 import { AFTER_MIDNIGHT_MS } from "../midnightJob.ts";
 import { SponsorshipError } from "../sui/types.ts";
-import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { fakeSuiWallets } from "../testing/fakes.ts";
-import { fakeSui, type FakeSui } from "../testing/fakeSui.ts";
+import { createChainTestApp, createTestApp, type TestApp } from "../testing/createTestApp.ts";
+import type { FakeSui } from "../testing/fakeSui.ts";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
 import { bodyOf } from "../testing/responses.ts";
 import { insertSealedSticker } from "../testing/rows.ts";
@@ -24,19 +23,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-/** The app on the fake Sui chain: everyone has a Sui wallet but those in `wallets.without`. */
-async function chainApp() {
-  const made: { chain?: FakeSui; wallets?: ReturnType<typeof fakeSuiWallets> } = {};
-  const test = await createTestApp(({ db, clock }) => {
-    made.chain = fakeSui(clock);
-    made.wallets = fakeSuiWallets(db);
-    return { sui: made.chain.sui, gasStation: made.chain.gasStation, suiWallets: made.wallets };
-  });
-  const { chain, wallets } = made;
-  assert(chain && wallets, "createTestApp built the overrides");
-  return { test, chain, wallets };
-}
 
 const objectOf = (test: TestApp, stickerId: string) =>
   test.db
@@ -56,7 +42,7 @@ const caughtUp = (counts: Partial<Awaited<ReturnType<typeof mintUnminted>>>) => 
 
 describe("minting a sealed sticker on Sui", () => {
   it("mints it to its Original Artist with its public image, and records its object", async () => {
-    const { test, chain, wallets } = await chainApp();
+    const { test, chain, wallets } = await createChainTestApp();
     const artistId = insertUser(test.db);
     const stickerId = insertSealedSticker(test.db, artistId, { nsfw: true });
     await mintSticker(test.deps, stickerId);
@@ -71,11 +57,11 @@ describe("minting a sealed sticker on Sui", () => {
       // An NSFW sticker shows its veiled image to anyone.
       image: `${sticker?.veiledHash}.png`,
     });
-    expect(objectOf(test, stickerId)).toBe(chain.sui.stickerObjectId(stickerId));
+    expect(objectOf(test, stickerId)).toBe(chain.stickerObjectIdOf(stickerId));
   });
 
   it("follows a mint whose answer was lost instead of minting again", async () => {
-    const { test, chain } = await chainApp();
+    const { test, chain } = await createChainTestApp();
     const stickerId = insertSealedSticker(test.db, insertUser(test.db));
     chain.answerNext("lost");
     await expect(mintSticker(test.deps, stickerId)).rejects.toThrow(/answer .* was lost/);
@@ -84,31 +70,31 @@ describe("minting a sealed sticker on Sui", () => {
     chain.show(lost.digest, { ok: true, events: chain.eventsFor(lost.digest) });
     await mintSticker(test.deps, stickerId);
     expect(mintsOf(chain)).toHaveLength(1);
-    expect(objectOf(test, stickerId)).toBe(chain.sui.stickerObjectId(stickerId));
+    expect(objectOf(test, stickerId)).toBe(chain.stickerObjectIdOf(stickerId));
   });
 
   it("records a sticker whose earlier mint failed when its object is already on Sui", async () => {
-    const { test, chain } = await chainApp();
+    const { test, chain } = await createChainTestApp();
     const stickerId = insertSealedSticker(test.db, insertUser(test.db));
     chain.answerNext({ ok: false, failure: "MoveAbort(…, 1) in command 0" });
     await expect(mintSticker(test.deps, stickerId)).rejects.toThrow(/failed/);
     chain.minted.add(stickerId);
     await mintSticker(test.deps, stickerId);
     expect(mintsOf(chain)).toHaveLength(1);
-    expect(objectOf(test, stickerId)).toBe(chain.sui.stickerObjectId(stickerId));
+    expect(objectOf(test, stickerId)).toBe(chain.stickerObjectIdOf(stickerId));
   });
 
   it("records a sticker whose mint Shinami refuses because Sui already minted it", async () => {
-    const { test, chain } = await chainApp();
+    const { test, chain } = await createChainTestApp();
     const stickerId = insertSealedSticker(test.db, insertUser(test.db));
     chain.minted.add(stickerId);
     chain.refuseNext(new SponsorshipError("refused", "MoveAbort(…, 1): EAlreadyMinted"));
     await mintSticker(test.deps, stickerId);
-    expect(objectOf(test, stickerId)).toBe(chain.sui.stickerObjectId(stickerId));
+    expect(objectOf(test, stickerId)).toBe(chain.stickerObjectIdOf(stickerId));
   });
 
   it("keeps a mint open, unrecorded, when its success names another object", async () => {
-    const { test, chain } = await chainApp();
+    const { test, chain } = await createChainTestApp();
     const stickerId = insertSealedSticker(test.db, insertUser(test.db));
     chain.answerNext({ ok: true, events: [] });
     await expect(mintSticker(test.deps, stickerId)).rejects.toThrow(/no StickerSealed/);
@@ -120,13 +106,13 @@ describe("minting a sealed sticker on Sui", () => {
 
 describe("the mint catch-up", () => {
   it("mints an unminted sticker at boot, then runs again just after midnight", async () => {
-    const { test, chain } = await chainApp();
+    const { test, chain } = await createChainTestApp();
     const stickerId = insertSealedSticker(test.db, insertUser(test.db));
     const schedule = vi.fn(() => () => {});
     const job = startMintCatchUp({ ...test.deps, schedule });
     assert(job, "Sui runs the mint catch-up");
     await job.idle();
-    expect(objectOf(test, stickerId)).toBe(chain.sui.stickerObjectId(stickerId));
+    expect(objectOf(test, stickerId)).toBe(chain.stickerObjectIdOf(stickerId));
     logs.expectLogged("sticker.mint.catch_up.swept", { count: 1, ...caughtUp({ minted: 1 }) });
     const now = test.clock.now();
     expect(schedule).toHaveBeenCalledWith(
@@ -137,7 +123,7 @@ describe("the mint catch-up", () => {
   });
 
   it("leaves a minted sticker alone: no wallet lookup, no mint, not counted", async () => {
-    const { test, chain } = await chainApp();
+    const { test, chain } = await createChainTestApp();
     const stickerId = insertSealedSticker(test.db, insertUser(test.db), {
       objectId: `0x${"7".repeat(64)}`,
     });
@@ -169,7 +155,7 @@ describe("the mint catch-up", () => {
         }),
     },
   ])("skips a sticker whose Original Artist $why, and logs why", async ({ status, artist }) => {
-    const { test, chain, wallets } = await chainApp();
+    const { test, chain, wallets } = await createChainTestApp();
     const stickerId = insertSealedSticker(test.db, artist(test, wallets.without));
     expect(await mintUnminted(test.deps)).toEqual(caughtUp({ skipped: 1 }));
     expect(mintsOf(chain)).toEqual([]);
@@ -178,14 +164,14 @@ describe("the mint catch-up", () => {
   });
 
   it("logs a sticker whose mint fails with its sticker ID, and goes on to mint the next", async () => {
-    const { test, chain } = await chainApp();
+    const { test, chain } = await createChainTestApp();
     const artistId = insertUser(test.db);
     const failing = insertSealedSticker(test.db, artistId);
     const next = insertSealedSticker(test.db, artistId);
     chain.answerNext({ ok: false, failure: "MoveAbort(…, 0) in command 0" });
     expect(await mintUnminted(test.deps)).toEqual(caughtUp({ minted: 1, failed: 1 }));
     expect(objectOf(test, failing)).toBeNull();
-    expect(objectOf(test, next)).toBe(chain.sui.stickerObjectId(next));
+    expect(objectOf(test, next)).toBe(chain.stickerObjectIdOf(next));
     logs.expectLogged("sticker.mint.catch_up.failed", { stickerId: failing });
   });
 
@@ -195,7 +181,7 @@ describe("the mint catch-up", () => {
   });
 
   it("mints a sticker once when Sealing's retry and the catch-up mint it together", async () => {
-    const { test, chain } = await chainApp();
+    const { test, chain } = await createChainTestApp();
     const artistId = insertUser(test.db);
     const stickerId = insertSealedSticker(test.db, artistId);
     // The ticket use Sealing's transaction left pointing at the sticker it saved.
@@ -212,7 +198,7 @@ describe("the mint catch-up", () => {
     });
     const { sticker } = await bodyOf(retry, sealResponseSchema);
     await job.idle();
-    expect(sticker.objectId).toBe(chain.sui.stickerObjectId(stickerId));
+    expect(sticker.objectId).toBe(chain.stickerObjectIdOf(stickerId));
     expect(mintsOf(chain)).toHaveLength(1);
     job.stop();
   });

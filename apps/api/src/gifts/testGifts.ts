@@ -4,10 +4,8 @@ import { fromBase64 } from "@mysten/sui/utils";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
 import type { SignedTransaction, SponsoredTransaction } from "../shapes.ts";
-import { createTestApp } from "../testing/createTestApp.ts";
+import { createChainTestApp } from "../testing/createTestApp.ts";
 import { giverNoticeThrough, type FakeLine } from "../testing/fakeLine.ts";
-import { fakeSuiWallets } from "../testing/fakes.ts";
-import { fakeSui, type FakeSui } from "../testing/fakeSui.ts";
 import { bodyOf } from "../testing/responses.ts";
 import { insertSealedSticker } from "../testing/rows.ts";
 import {
@@ -34,21 +32,10 @@ export async function createGiftsTestApp({
   line,
   onSui = false,
 }: { line?: FakeLine; onSui?: boolean } = {}) {
-  const made: { chain?: FakeSui; wallets?: ReturnType<typeof fakeSuiWallets> } = {};
-  const test = await createTestApp((base) => {
-    made.chain = fakeSui(base.clock);
-    made.wallets = fakeSuiWallets(base.db);
-    return {
-      ...(onSui && {
-        sui: made.chain.sui,
-        gasStation: made.chain.gasStation,
-        suiWallets: made.wallets,
-      }),
-      ...(line && giverNoticeThrough(line)(base)),
-    };
+  const { test, chain, wallets } = await createChainTestApp({
+    onSui,
+    overrides: (base) => (line ? giverNoticeThrough(line)(base) : {}),
   });
-  const { chain, wallets } = made;
-  if (!chain || !wallets) throw new Error("The test app was made without its chain");
   test.clock.set(new Date());
 
   const post = (userId: string, path: string, body?: unknown) =>
@@ -66,7 +53,7 @@ export async function createGiftsTestApp({
     if (minted) {
       test.db
         .update(stickers)
-        .set({ objectId: chain.sui.stickerObjectId(stickerId) })
+        .set({ objectId: chain.stickerObjectIdOf(stickerId) })
         .where(eq(stickers.id, stickerId))
         .run();
     }

@@ -92,6 +92,7 @@ export interface SuiChainSettings {
   client: SuiGrpcClient;
   /** `suiprivkey…`, an Ed25519 key: the server's address, which holds no SUI. */
   serverPrivateKey: string;
+  /** The package's latest version, which calls go to. */
   stickerPackage: string;
   stickerRegistry: string;
   serverConfig: string;
@@ -118,11 +119,45 @@ export function createSuiChain(settings: SuiChainSettings): SuiChain {
   const serverKey = Ed25519Keypair.fromSecretKey(secretKey);
   const server = serverKey.toSuiAddress();
 
-  const giftObjectId = (giftId: string) =>
+  /**
+   * A package's original ID. Its types, the derivation keys and events among them, keep it across
+   * upgrades, while calls go to the latest version. Read from Sui once per package, and again after
+   * a read that failed.
+   */
+  const originalIds = new Map<string, Promise<string>>();
+  const originalIdOf = (packageId: string) => {
+    const known = originalIds.get(packageId);
+    if (known) return known;
+    const reading = read(`package ${packageId}`, (signal) =>
+      client.movePackageService
+        .getPackage({ packageId }, { abort: signal })
+        .then(({ response }) => {
+          const originalId = response.package?.originalId;
+          if (!originalId) throw new Error(`Sui shows no original ID for package ${packageId}`);
+          return normalizeSuiAddress(originalId);
+        }),
+    );
+    originalIds.set(packageId, reading);
+    reading.catch(() => {
+      if (originalIds.get(packageId) === reading) originalIds.delete(packageId);
+    });
+    return reading;
+  };
+  const typeOrigin = () => originalIdOf(pkg);
+  const paymentPackage = normalizeSuiAddress(payment.paymentPackage);
+
+  const giftObjectId = async (giftId: string) =>
     deriveObjectID(
       escrow,
-      `${pkg}::gift::GiftKey`,
+      `${await typeOrigin()}::gift::GiftKey`,
       bcs.vector(bcs.u8()).serialize(bytesOf(giftId)).toBytes(),
+    );
+
+  const stickerObjectId = async (stickerId: string) =>
+    deriveObjectID(
+      registry,
+      `${await typeOrigin()}::sticker::StickerKey`,
+      bcs.string().serialize(stickerId).toBytes(),
     );
 
   /**
@@ -180,7 +215,6 @@ export function createSuiChain(settings: SuiChainSettings): SuiChain {
 
   return {
     server,
-    payment,
 
     mintKind: (mint) =>
       kindOf(`the mint of sticker ${mint.stickerId}`, () => {
@@ -222,24 +256,24 @@ export function createSuiChain(settings: SuiChainSettings): SuiChain {
       }),
 
     takeOutKind: (sender, giftId) =>
-      kindOf(`the take-out of gift ${giftId}`, () => {
+      kindOf(`the take-out of gift ${giftId}`, async () => {
         const tx = new Transaction();
         tx.setSender(sender);
         tx.moveCall({
           target: `${pkg}::gift::take_out`,
-          arguments: [tx.object(giftObjectId(giftId))],
+          arguments: [tx.object(await giftObjectId(giftId))],
         });
         return tx;
       }),
 
     claimKind: (giftId, recipient) =>
-      kindOf(`the claim of gift ${giftId}`, () => {
+      kindOf(`the claim of gift ${giftId}`, async () => {
         const tx = new Transaction();
         tx.moveCall({
           target: `${pkg}::gift::claim`,
           arguments: [
             tx.object(serverConfig),
-            tx.object(giftObjectId(giftId)),
+            tx.object(await giftObjectId(giftId)),
             tx.pure.address(recipient),
             tx.object.clock(),
           ],
@@ -248,11 +282,15 @@ export function createSuiChain(settings: SuiChainSettings): SuiChain {
       }),
 
     returnKind: (giftId) =>
-      kindOf(`the return of gift ${giftId}`, () => {
+      kindOf(`the return of gift ${giftId}`, async () => {
         const tx = new Transaction();
         tx.moveCall({
           target: `${pkg}::gift::return_expired`,
-          arguments: [tx.object(serverConfig), tx.object(giftObjectId(giftId)), tx.object.clock()],
+          arguments: [
+            tx.object(serverConfig),
+            tx.object(await giftObjectId(giftId)),
+            tx.object.clock(),
+          ],
         });
         return tx;
       }),
@@ -334,19 +372,12 @@ export function createSuiChain(settings: SuiChainSettings): SuiChain {
       return result === null ? null : outcomeFrom(result);
     },
 
-    stickerObjectId: (stickerId) =>
-      deriveObjectID(
-        registry,
-        `${pkg}::sticker::StickerKey`,
-        bcs.string().serialize(stickerId).toBytes(),
-      ),
+    stickerObjectId,
+
+    paymentOriginalPackage: () => originalIdOf(paymentPackage),
 
     stickerMinted: async (stickerId) => {
-      const objectId = deriveObjectID(
-        registry,
-        `${pkg}::sticker::StickerKey`,
-        bcs.string().serialize(stickerId).toBytes(),
-      );
+      const objectId = await stickerObjectId(stickerId);
       const object = await read(`sticker ${stickerId}'s object`, (signal) =>
         client
           .getObject({ objectId, signal })
@@ -360,11 +391,12 @@ export function createSuiChain(settings: SuiChainSettings): SuiChain {
     },
 
     readGift: async (giftId): Promise<EscrowGift> => {
+      const objectId = await giftObjectId(giftId);
       // A gift deposited a moment ago can be missing from a lagging node, so missing waits out readLanded.
       const object = await read(`gift ${giftId}`, () =>
         readLanded((signal) =>
           client
-            .getObject({ objectId: giftObjectId(giftId), include: { content: true }, signal })
+            .getObject({ objectId, include: { content: true }, signal })
             .then(({ object }) => object)
             .catch((error: unknown) => {
               if (objectNotFound(error)) return null;
@@ -401,6 +433,9 @@ export function createSuiChain(settings: SuiChainSettings): SuiChain {
         }
         missing.push(name);
       }
+      // Read now, so the first gift, mint or ticket shop after boot doesn't wait on them.
+      if (!missing.includes("SUI_STICKER_PACKAGE")) await typeOrigin();
+      if (!missing.includes("JPYC_PAYMENT_PACKAGE")) await originalIdOf(paymentPackage);
       if (missing.includes("SUI_SERVER_CONFIG")) return { serverMatches: false, missing };
       const config = await read("ServerConfig", (signal) =>
         client.getObject({ objectId: serverConfig, include: { content: true }, signal }),

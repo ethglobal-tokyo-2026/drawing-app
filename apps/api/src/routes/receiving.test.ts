@@ -277,17 +277,37 @@ describe("Receiving on Sui", () => {
     await expectRefused(test, receiverId, unclaimed.giftClaimToken, 410, "gift_expired");
     const someoneElse = await receive(test, insertUser(test.db), giftClaimToken);
     expect(await refusalOf(someoneElse)).toMatchObject({ status: 409, error: "already_received" });
-    expect(test.giftRow(gift.id).receiverId).toBeNull();
+    expect(test.giftRow(gift.id)).toMatchObject({ status: "received", receiverId });
     await receivedOf(await receive(test, receiverId, giftClaimToken));
     expect(test.ownerOf(gift.stickerId)).toBe(receiverId);
   });
 
+  it("asks for Accept again while a lagging node doesn't show the claim that ran, then records it", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { gift, giftClaimToken, receiverId } = await openedOnSui(test);
+    await claimLandedUnrecorded(test, receiverId, giftClaimToken);
+    vi.spyOn(test.chain.sui, "readGift").mockResolvedValueOnce({
+      status: "pending",
+      recipient: null,
+    });
+
+    expect(await refusalOf(await receive(test, receiverId, giftClaimToken))).toMatchObject({
+      status: 503,
+      error: "claim_failed",
+    });
+    expect((await receivedOf(await receive(test, receiverId, giftClaimToken))).gift).toMatchObject({
+      status: "received",
+      receiverId,
+    });
+    expect(test.ownerOf(gift.stickerId)).toBe(receiverId);
+  });
+
   it.each([
-    { escrow: "taken_out", status: 409, refusal: "taken_back" },
-    { escrow: "expired_returned", status: 410, refusal: "gift_returned" },
+    { escrow: "taken_out", status: 409, refusal: "taken_back", recorded: "taken_out" },
+    { escrow: "expired_returned", status: 410, refusal: "gift_returned", recorded: "returned" },
   ] as const)(
-    "answers a claim that failed because the escrow let the gift go ($escrow) with its refusal",
-    async ({ escrow, status, refusal }) => {
+    "records a claim that failed because the escrow let the gift go ($escrow), so its sticker packs again",
+    async ({ escrow, status, refusal, recorded }) => {
       const test = await createGiftsTestApp({ onSui: true });
       const { giverId, gift, giftClaimToken, receiverId } = await openedOnSui(test);
       test.chain.escrow.set(gift.id, { status: escrow, recipient: null });
@@ -296,7 +316,9 @@ describe("Receiving on Sui", () => {
         status,
         error: refusal,
       });
+      expect(test.giftRow(gift.id)).toMatchObject({ status: recorded, escrowStatus: escrow });
       expect(test.ownerOf(gift.stickerId)).toBe(giverId);
+      expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({ status: 201 });
     },
   );
 

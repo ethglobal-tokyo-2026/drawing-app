@@ -3,9 +3,7 @@ import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { fromBase64 } from "@mysten/sui/utils";
 import { z } from "zod";
 import { sponsoredTransactionSchema, type SponsoredTransaction } from "../shapes.ts";
-import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { fakeSuiWallets } from "../testing/fakes.ts";
-import { fakeSui, type FakeSui } from "../testing/fakeSui.ts";
+import { createChainTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { bodyOf } from "../testing/responses.ts";
 import {
   FREE_FIRST_PACK_TICKETS,
@@ -25,14 +23,7 @@ const startedBodySchema = z.object({
  * wallet would.
  */
 export async function purchasesApp(databaseFile?: string) {
-  let chain: FakeSui | undefined;
-  let wallets: ReturnType<typeof fakeSuiWallets> | undefined;
-  const test = await createTestApp(({ db, clock }) => {
-    chain = fakeSui(clock);
-    wallets = fakeSuiWallets(db);
-    return { sui: chain.sui, gasStation: chain.gasStation, suiWallets: wallets };
-  }, databaseFile);
-  if (!chain || !wallets) throw new Error("createTestApp built no overrides");
+  const { test, chain, wallets } = await createChainTestApp({ databaseFile });
   const { keyOf, without } = wallets;
   return { test, chain, buyer: () => insertUser(test.db), walletOf: keyOf, without };
 }

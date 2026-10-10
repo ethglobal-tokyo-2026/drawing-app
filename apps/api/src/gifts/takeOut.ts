@@ -12,21 +12,22 @@ import {
   type SuiTransactionDeps,
 } from "../sui/transactions.ts";
 import {
+  alreadyReceived,
   claimSucceeded,
   closeUndeposited,
-  closingDates,
   currentGift,
   giftRecord,
   giftTransaction,
+  givingLimitRefusal,
   openGiftTransaction,
   ownGift,
+  recordEscrowClosing,
+  recordTakenOut,
   settleOpenGiftTransaction,
   type GiftRow,
   type GiftStep,
 } from "./giftTransactions.ts";
-
-const alreadyReceived = (gift: GiftRow) =>
-  refuse("already_received", `Gift ${gift.id} was already received`);
+import { recordClaimShown } from "./receiving.ts";
 
 /**
  * A take-out its gift's status already answers: one that landed before, answered again, or a
@@ -46,6 +47,7 @@ export type TakeOutStarting =
       | "no_sui_wallet"
       | "deposit_not_landed"
       | "take_out_not_landed"
+      | "giving_limit_reached"
     >
   | { refusal: null; gift: GiftRow; takeOut: SuiTransaction | null };
 
@@ -73,17 +75,8 @@ export async function startTakeOut(
 function takeOutOnMockChain({ db, clock }: AppDeps, gift: GiftRow): TakeOutStarting {
   const answered = takeOutState(gift);
   if (answered) return answered.refusal === null ? { ...answered, takeOut: null } : answered;
-  const takenOut = db
-    .update(gifts)
-    .set({
-      status: "taken_out",
-      escrowStatus: "taken_out",
-      ...closingDates("taken_out", gift, clock.now()),
-    })
-    .where(eq(gifts.id, gift.id))
-    .returning()
-    .get();
-  return { refusal: null, gift: takenOut, takeOut: null };
+  recordTakenOut(db, gift, clock.now());
+  return { refusal: null, gift: currentGift(db, gift.id), takeOut: null };
 }
 
 async function startTakeOutOnSui(
@@ -101,7 +94,8 @@ async function startTakeOutOnSui(
   }
   const settled = await settleOpenGiftTransaction(sui, before);
   if (settled?.outcome === null) {
-    const what = settled.kind === "take_out" ? "take_out_not_landed" : "deposit_not_landed";
+    // A receiver's claim or the expiry's return in flight holds the take-out up as its own would.
+    const what = settled.kind === "deposit" ? "deposit_not_landed" : "take_out_not_landed";
     return refuse(
       what,
       `Sui hasn't shown gift ${giftId}'s ${settled.kind} yet; try again in a moment`,
@@ -122,6 +116,8 @@ async function startTakeOutOnSui(
       `Person ${gift.giverId} has no Sui wallet to take the gift out to`,
     );
   }
+  const limited = givingLimitRefusal(db, gift.giverId, sui.clock.now());
+  if (limited) return limited;
   const takeOut = await sponsored(
     sui,
     { kind: "take_out", sender, userId: gift.giverId, giftId, stickerId: gift.stickerId },
@@ -185,21 +181,14 @@ export async function submitTakeOut(
           : `Gift ${giftId}'s take-out ${signed.digest} lapsed unsigned; start the take-out again`,
       );
     }
-    // It failed: the escrow says whether the gift went on, or back, first.
+    // It failed: the escrow says whether the gift went on, or back, first, and that's recorded.
     const escrow = await sui.sui.readGift(giftId);
-    if (escrow.status === "claimed") return alreadyReceived(gift);
+    if (escrow.status === "claimed") {
+      if (escrow.recipient) recordClaimShown(deps, gift, escrow.recipient);
+      return alreadyReceived(gift);
+    }
     if (escrow.status === "expired_returned") {
-      const returned = sui.db
-        .update(gifts)
-        .set({
-          status: "returned",
-          escrowStatus: "expired_returned",
-          ...closingDates("returned", gift, now),
-        })
-        .where(eq(gifts.id, giftId))
-        .returning()
-        .get();
-      return { refusal: null, gift: returned };
+      return { refusal: null, gift: recordEscrowClosing(sui.db, gift, escrow.status, now) };
     }
     return refuse(
       "transaction_failed",

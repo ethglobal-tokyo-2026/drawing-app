@@ -101,7 +101,8 @@ export async function getTicketPayments(
     query: PAYMENT_EVENTS,
     variables: {
       sender: owner,
-      type: `${payment.paymentPackage}::payment::PaymentReceived`,
+      // An event's type keeps its package's original ID across upgrades.
+      type: `${payment.originalPackage}::payment::PaymentReceived`,
       last: HISTORY_PAGE,
       before: cursor,
     },

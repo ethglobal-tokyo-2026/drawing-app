@@ -1,7 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import type { AppDeps } from "../deps.ts";
-import { apiError, validate } from "../errors.ts";
+import { apiError, refused, validate } from "../errors.ts";
 import { gratitudeEvents, gratitudeEventsQuerySchema } from "../gratitude/events.ts";
 import {
   gratitudeWithGiver,
@@ -9,12 +9,7 @@ import {
   markGratitudeWatched,
   unseenGratitude,
 } from "../gratitude/feed.ts";
-import {
-  RECORD_REFUSAL_STATUS,
-  recordGratitude,
-  recordGratitudeSchema,
-  replayInvalidHook,
-} from "../gratitude/record.ts";
+import { recordGratitude, recordGratitudeSchema, replayInvalidHook } from "../gratitude/record.ts";
 import type { AppEnv } from "../session.ts";
 import { giftIdParam, stickerViewer } from "../shapes.ts";
 
@@ -27,10 +22,7 @@ export const gratitudeRoutes = (deps: AppDeps) =>
     // The app-wide body limit holds a combo, which the Mini-game sends with a keepalive request.
     .post("/", zValidator("json", recordGratitudeSchema, replayInvalidHook), (c) => {
       const recording = recordGratitude(deps, c.var.userId, c.req.valid("json"));
-      if (recording.refusal !== null) {
-        const { refusal, detail } = recording;
-        return apiError(c, RECORD_REFUSAL_STATUS[refusal], refusal, detail);
-      }
+      if (recording.refusal !== null) return refused(c, recording);
       const body = { gratitude: recording.gratitude };
       return recording.created ? c.json(body, 201) : c.json(body, 200);
     })

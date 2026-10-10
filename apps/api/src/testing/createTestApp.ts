@@ -12,9 +12,11 @@ import {
   fakeImageStore,
   fakeLineVerifier,
   fakeServerLog,
+  fakeSuiWallets,
   TEST_PAYMENT_TARGET,
   sequentialIds,
 } from "./fakes.ts";
+import { fakeSui, type FakeSui } from "./fakeSui.ts";
 
 type Overrides = Partial<Omit<AppDeps, "db" | "sessionSecret" | "clock" | "images">>;
 
@@ -100,3 +102,28 @@ export async function createTestApp(
 }
 
 export type TestApp = Awaited<ReturnType<typeof createTestApp>>;
+
+/**
+ * The app on the fake Sui chain and gas station, where everyone has a Privy Sui wallet that signs,
+ * but those in `wallets.without`; with `onSui` false, on the mock chain with the fakes unused.
+ * `overrides` adds to the deps.
+ */
+export async function createChainTestApp({
+  onSui = true,
+  overrides,
+  databaseFile,
+}: { onSui?: boolean; overrides?: (base: TestBase) => Overrides; databaseFile?: string } = {}) {
+  const made: { chain?: FakeSui; wallets?: ReturnType<typeof fakeSuiWallets> } = {};
+  const test = await createTestApp((base) => {
+    const chain = fakeSui(base.clock);
+    const wallets = fakeSuiWallets(base.db);
+    Object.assign(made, { chain, wallets });
+    return {
+      ...(onSui && { sui: chain.sui, gasStation: chain.gasStation, suiWallets: wallets }),
+      ...overrides?.(base),
+    };
+  }, databaseFile);
+  const { chain, wallets } = made;
+  if (!chain || !wallets) throw new Error("The test app was made without its chain");
+  return { test, chain, wallets };
+}

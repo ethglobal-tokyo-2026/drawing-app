@@ -34,6 +34,56 @@ export function apiError<const Status extends ContentfulStatusCode, const Code e
 }
 
 /**
+ * Each refusal's status, for every route that answers a domain step's Refusal. A transaction whose
+ * answer from Sui was lost is a 503: the app sends the same signature again.
+ */
+const REFUSAL_STATUS = {
+  // Giving and Receiving.
+  sticker_not_found: 404,
+  gift_not_found: 404,
+  user_not_found: 404,
+  not_yours: 403,
+  not_minted: 409,
+  no_sui_wallet: 409,
+  gift_in_transit: 409,
+  sponsorship_expired: 409,
+  transaction_failed: 409,
+  take_out_not_landed: 503,
+  deposit_not_landed: 503,
+  not_deposited: 409,
+  gift_closed: 409,
+  already_received: 409,
+  group_chat: 403,
+  own_gift: 403,
+  taken_back: 409,
+  gift_returned: 410,
+  gift_expired: 410,
+  nsfw_not_opted_in: 403,
+  claim_failed: 503,
+  giving_limit_reached: 429,
+  // Ticket purchases.
+  pack_unknown: 400,
+  free_pack_used: 409,
+  price_changed: 409,
+  chain_unavailable: 502,
+  purchase_not_found: 404,
+  payment_not_yours: 403,
+  payment_not_landed: 503,
+  // Gratitude.
+  gift_not_received: 409,
+  not_receiver: 403,
+  gratitude_already_recorded: 409,
+} as const satisfies Record<string, ContentfulStatusCode>;
+
+type RefusalCode = keyof typeof REFUSAL_STATUS;
+
+/** Answers a domain step's refusal with its status from REFUSAL_STATUS. */
+export const refused = <Code extends RefusalCode>(
+  c: Context,
+  { refusal, detail }: { refusal: Code; detail: string },
+) => apiError(c, REFUSAL_STATUS[refusal], refusal, detail);
+
+/**
  * Shinami's refusals, which any route that sponsors a transaction can meet: its dry run failing
  * the kind, in its words; its fund running dry; or it being unreachable after its retry.
  */
@@ -83,8 +133,9 @@ export const onError: ErrorHandler = (error, c) => {
   }
   // Any route that reads or writes Sui can meet these, so they're answered here rather than in each.
   if (error instanceof ChainUnavailableError) {
-    logFailure("request.failed", error, { status: 502 });
-    return apiError(c, 502, "chain_unavailable", `${error.message}: ${failureCause(error)}`);
+    const status = REFUSAL_STATUS.chain_unavailable;
+    logFailure("request.failed", error, { status });
+    return apiError(c, status, "chain_unavailable", `${error.message}: ${failureCause(error)}`);
   }
   if (error instanceof SponsorshipError) {
     const { status, error: code } = SPONSORSHIP_REFUSALS[error.reason];

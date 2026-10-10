@@ -1,4 +1,4 @@
-import { TransactionDataBuilder } from "@mysten/sui/transactions";
+import { Inputs, Transaction, TransactionDataBuilder } from "@mysten/sui/transactions";
 import { toBase64 } from "@mysten/sui/utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SponsorshipError } from "../sui/types.ts";
@@ -10,15 +10,68 @@ import {
 } from "./gasStation.ts";
 
 const ACCESS_KEY = "us1_sui_testnet_secret";
-const KIND = new Uint8Array([1, 2, 3]);
 const SENDER = `0x${"5".repeat(64)}`;
-const TX_BYTES = new Uint8Array([9, 8, 7, 6]);
 /** Unix seconds, an hour after the sponsorship, as Shinami sets it. */
 const EXPIRE_AT_TIME = 1_791_000_000;
 
-/** Shinami's answer to a sponsorship of TX_BYTES. */
-const sponsored = (txDigest = TransactionDataBuilder.getDigestFromBytes(TX_BYTES)) => ({
-  txBytes: toBase64(TX_BYTES),
+/**
+ * A transaction kind with every kind of input the server's builders use: pure values, an owned
+ * object, a mutable shared object and the clock. `calls` repeats its call.
+ */
+async function aKind(calls: number) {
+  const tx = new Transaction();
+  const owned = tx.object(
+    Inputs.ObjectRef({
+      objectId: `0x${"a1".repeat(32)}`,
+      version: "7",
+      digest: "11111111111111111111111111111111",
+    }),
+  );
+  const shared = tx.object(
+    Inputs.SharedObjectRef({
+      objectId: `0x${"b2".repeat(32)}`,
+      initialSharedVersion: "3",
+      mutable: true,
+    }),
+  );
+  for (let call = 0; call < calls; call++) {
+    tx.moveCall({
+      target: `0x${"c3".repeat(32)}::gift::deposit`,
+      arguments: [
+        shared,
+        owned,
+        tx.pure.vector("u8", [1, 2, 3]),
+        tx.pure.u64(1_791_000_000_000n),
+        tx.pure.address(SENDER),
+        tx.object.clock(),
+      ],
+    });
+  }
+  return tx.build({ onlyTransactionKind: true });
+}
+
+/** The transaction Shinami makes of `kind` for `sender`, its own gas coin paying. */
+function sponsorshipOf(kind: Uint8Array, sender: string) {
+  const tx = Transaction.fromKind(kind);
+  tx.setSender(sender);
+  tx.setGasOwner(`0x${"6".repeat(64)}`);
+  tx.setGasPrice(1_000);
+  tx.setGasBudget(10_000_000);
+  tx.setGasPayment([
+    { objectId: `0x${"9".repeat(64)}`, version: "1", digest: "11111111111111111111111111111111" },
+  ]);
+  return tx.build();
+}
+
+const KIND = await aKind(1);
+const TX_BYTES = await sponsorshipOf(KIND, SENDER);
+
+/** Shinami's answer to a sponsorship of `txBytes`, TX_BYTES unless said. */
+const sponsored = (
+  txBytes = TX_BYTES,
+  txDigest = TransactionDataBuilder.getDigestFromBytes(txBytes),
+) => ({
+  txBytes: toBase64(txBytes),
   txDigest,
   signature: toBase64(new Uint8Array([4, 4])),
   expireAtTime: EXPIRE_AT_TIME,
@@ -113,8 +166,18 @@ describe("Shinami Gas Station", () => {
   });
 
   it("refuses a sponsorship whose digest isn't its bytes'", async () => {
-    const shinami = fakeShinami(result(sponsored("11111111111111111111111111111111")));
+    const shinami = fakeShinami(result(sponsored(TX_BYTES, "11111111111111111111111111111111")));
     await expect(shinami.gasStation.sponsor(KIND, SENDER)).rejects.toThrow(/digest/);
+  });
+
+  it.each([
+    { other: "kind", txBytes: async () => sponsorshipOf(await aKind(2), SENDER) },
+    { other: "sender", txBytes: () => sponsorshipOf(KIND, `0x${"7".repeat(64)}`) },
+  ])("refuses a sponsorship of another $other than was asked for", async ({ txBytes }) => {
+    const shinami = fakeShinami(result(sponsored(await txBytes())));
+    const { error } = await settled(shinami.gasStation.sponsor(KIND, SENDER));
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(SponsorshipError);
   });
 
   it.each([
@@ -145,12 +208,12 @@ describe("Shinami Gas Station", () => {
     logs.expectLogged("sponsor.retrying", { stage: "gas_sponsorTransactionBlock" });
   });
 
-  it("gives up as unavailable within its deadline when a request and its retry both stall", async () => {
+  it("gives up as unavailable at its deadline when Shinami stalls, without asking again, since it may have sponsored", async () => {
     const shinami = fakeShinami(STALL, STALL);
     const started = Date.now();
     const { error } = await settled(shinami.gasStation.sponsor(KIND, SENDER));
     expect(error).toMatchObject({ name: "SponsorshipError", reason: "unavailable" });
-    expect(shinami.requests).toHaveLength(2);
+    expect(shinami.requests).toHaveLength(1);
     expect(Date.now() - started).toBeLessThanOrEqual(GAS_STATION_DEADLINE_MS);
   });
 

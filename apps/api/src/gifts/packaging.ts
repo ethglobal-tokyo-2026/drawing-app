@@ -26,6 +26,7 @@ import {
 import {
   closeUndeposited,
   currentGift,
+  givingLimitRefusal,
   openGiftTransaction,
   ownGift,
   settleOpenGiftTransaction,
@@ -114,10 +115,23 @@ export type Packaging =
       | "own_gift"
       | "nsfw_not_opted_in"
       | "deposit_not_landed"
+      | "giving_limit_reached"
     >
   | { refusal: null; created: boolean; packaged: PackagedGift };
 
 type Packaged = Extract<Packaging, { refusal: null }>;
+
+/** An NSFW sticker goes only to someone with the NSFW opt-in on. */
+export function nsfwRefusal(
+  sticker: Pick<typeof stickers.$inferSelect, "id" | "nsfw">,
+  receiver: Pick<typeof users.$inferSelect, "id" | "nsfwOptedInAt"> | undefined,
+) {
+  if (!sticker.nsfw || (receiver && optedIntoNsfw(receiver))) return null;
+  return refuse(
+    "nsfw_not_opted_in",
+    `Sticker ${sticker.id} is NSFW, and ${receiver?.id ?? "its receiver"} has the NSFW opt-in off`,
+  );
+}
 
 /**
  * The checks every Packaging makes: the sticker is the giver's, and the person it's for can have it.
@@ -141,12 +155,8 @@ function checkPackaging(
   if (forUserId !== null) {
     const recipient = db.select().from(users).where(eq(users.id, forUserId)).get();
     if (!recipient) return refuse("user_not_found", `There's no person ${forUserId} to give it to`);
-    if (sticker.nsfw && !optedIntoNsfw(recipient)) {
-      return refuse(
-        "nsfw_not_opted_in",
-        `Sticker ${stickerId} is NSFW, and ${forUserId} has the NSFW opt-in off`,
-      );
-    }
+    const nsfw = nsfwRefusal(sticker, recipient);
+    if (nsfw) return nsfw;
   }
   const open = giftHoldingSticker(db, stickerId) ?? null;
   if (open && !(open.status === "packed" && open.giverId === userId)) {
@@ -255,6 +265,9 @@ async function packageOnSui(
       packageAgain(sui, bagged, forUserId, terms),
     );
     if (again) return again;
+    // The gift left the bag meanwhile: sent, received or closed, so the checks run again.
+    const rechecked = checkPackaging(deps.db, userId, stickerId, forUserId);
+    if (rechecked.refusal !== null) return rechecked;
   }
   return packageNew(sui, forUserId, terms);
 }
@@ -290,6 +303,8 @@ async function packageAgain(
     closeUndeposited(db, gift, now);
     return null;
   }
+  const limited = givingLimitRefusal(db, terms.userId, now);
+  if (limited) return limited;
   const kind = await sui.sui.depositKind({
     sender: terms.sender,
     stickerObjectId: terms.stickerObjectId,
@@ -320,8 +335,11 @@ async function packageNew(
   forUserId: string | null,
   terms: DepositTerms,
 ): Promise<Packaging> {
+  const now = sui.clock.now();
+  const limited = givingLimitRefusal(sui.db, terms.userId, now);
+  if (limited) return limited;
   const claim = newGiftClaim();
-  const expiresAt = new Date(sui.clock.now().getTime() + GIFT_EXPIRY_MS);
+  const expiresAt = new Date(now.getTime() + GIFT_EXPIRY_MS);
   const kind = await sui.sui.depositKind({
     sender: terms.sender,
     stickerObjectId: terms.stickerObjectId,

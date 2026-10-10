@@ -1,5 +1,5 @@
 import { gifts, suiTransactions, type Db } from "@drawing-app/db";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { refuse, type Refusal } from "../shapes.ts";
 import {
   drop,
@@ -8,6 +8,7 @@ import {
   type SuiTransaction,
   type SuiTransactionDeps,
 } from "../sui/transactions.ts";
+import type { GiftObjectStatus } from "../sui/types.ts";
 
 type Reader = Pick<Db, "select">;
 
@@ -31,7 +32,7 @@ export function ownGift(
  * The dates a gift moving to `status` needs, as gifts_status_dates asks: a take-out keeps its first
  * date, and a return has none.
  */
-export function closingDates(status: GiftRow["status"], gift: GiftRow, now: Date) {
+function closingDates(status: GiftRow["status"], gift: GiftRow, now: Date) {
   if (status === "taken_out") return { takenOutAt: gift.takenOutAt ?? now };
   if (status === "returned") return { takenOutAt: null, returnedAt: now };
   return {};
@@ -85,10 +86,53 @@ export function currentGift(db: Reader, giftId: string): GiftRow {
   return gift;
 }
 
+export const alreadyReceived = (gift: GiftRow) =>
+  refuse("already_received", `Gift ${gift.id} was already received`);
+
+/** The gift taken out by its giver: its sticker back in their wallet. */
+export function recordTakenOut(db: Pick<Db, "update">, gift: GiftRow, now: Date) {
+  db.update(gifts)
+    .set({
+      status: "taken_out",
+      escrowStatus: "taken_out",
+      ...closingDates("taken_out", gift, now),
+    })
+    .where(eq(gifts.id, gift.id))
+    .run();
+}
+
+/** The gift sent back to its giver once it expired. */
+function recordReturned(db: Pick<Db, "update">, gift: GiftRow, now: Date) {
+  db.update(gifts)
+    .set({
+      status: "returned",
+      escrowStatus: "expired_returned",
+      ...closingDates("returned", gift, now),
+    })
+    .where(eq(gifts.id, gift.id))
+    .run();
+}
+
+/**
+ * Records a take-out or a return the escrow shows that no transaction this server followed made:
+ * one from the giver's own wallet, or one Sui stopped showing. Any other status records nothing.
+ * Answers the gift as it now stands.
+ */
+export function recordEscrowClosing(
+  db: Db,
+  gift: GiftRow,
+  escrow: GiftObjectStatus,
+  now: Date,
+): GiftRow {
+  if (escrow === "taken_out") recordTakenOut(db, gift, now);
+  if (escrow === "expired_returned") recordReturned(db, gift, now);
+  return currentGift(db, gift.id);
+}
+
 /**
  * What a gift transaction that succeeded records, by its kind, in the database transaction that
  * settles it. A claim's record is the receive, which only Receiving can write, knowing the receiver:
- * another flow settling a claim leaves the receive to Receiving's reconcile.
+ * another flow settling a claim leaves the receive to what the escrow shows.
  */
 export function giftRecord(
   row: SuiTransaction,
@@ -112,33 +156,43 @@ export function giftRecord(
           .run();
       };
     case "take_out":
-      return (tx) => {
-        tx.update(gifts)
-          .set({
-            status: "taken_out",
-            escrowStatus: "taken_out",
-            ...closingDates("taken_out", gift, now),
-          })
-          .where(eq(gifts.id, gift.id))
-          .run();
-      };
+      return (tx) => recordTakenOut(tx, gift, now);
     case "return":
-      return (tx) => {
-        tx.update(gifts)
-          .set({
-            status: "returned",
-            escrowStatus: "expired_returned",
-            ...closingDates("returned", gift, now),
-          })
-          .where(eq(gifts.id, gift.id))
-          .run();
-      };
+      return (tx) => recordReturned(tx, gift, now);
     case "claim":
       return receive;
     case "mint":
     case "payment":
       return undefined;
   }
+}
+
+/**
+ * How many deposits and take-outs one person can have sponsored in GIVING_LIMIT_WINDOW_MS: far more
+ * than anyone giving makes, so only a loop of packaging and taking out reaches it, which would
+ * otherwise tie up Shinami's fund for everyone.
+ */
+export const GIVING_LIMIT = 60;
+export const GIVING_LIMIT_WINDOW_MS = 24 * 60 * 60_000;
+
+/** Refuses a person who already had GIVING_LIMIT deposits and take-outs sponsored in the window. */
+export function givingLimitRefusal(db: Reader, userId: string, now: Date) {
+  const { count } = db
+    .select({ count: sql<number>`count(*)` })
+    .from(suiTransactions)
+    .where(
+      and(
+        eq(suiTransactions.userId, userId),
+        inArray(suiTransactions.kind, ["deposit", "take_out"]),
+        gt(suiTransactions.createdAt, new Date(now.getTime() - GIVING_LIMIT_WINDOW_MS)),
+      ),
+    )
+    .get() ?? { count: 0 };
+  if (count < GIVING_LIMIT) return null;
+  return refuse(
+    "giving_limit_reached",
+    `Person ${userId} had ${count} deposits and take-outs sponsored in the last ${GIVING_LIMIT_WINDOW_MS / 3_600_000} hours, the most allowed`,
+  );
 }
 
 /**

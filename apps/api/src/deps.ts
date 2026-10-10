@@ -155,5 +155,8 @@ export class ChainUnavailableError extends Error {
   name = "ChainUnavailableError";
 }
 
-/** Where ticket packs are paid: the JPYC payment contract's vault on Sui. */
-export type TicketPaymentTarget = TicketShop["payment"];
+/**
+ * Where ticket packs are paid: the JPYC payment contract's vault on Sui. The ticket shop adds the
+ * package's original ID, which only Sui knows.
+ */
+export type TicketPaymentTarget = Omit<TicketShop["payment"], "originalPackage">;

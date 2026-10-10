@@ -17,6 +17,8 @@ import { TEST_PAYMENT_TARGET } from "./fakes.ts";
 const SPONSORSHIP_MS = 60 * 60_000;
 /** The stickers package the fake chain's events come from. */
 const PACKAGE = `0x${"5c".repeat(32)}`;
+/** The payment package's original ID, as after an upgrade: not TEST_PAYMENT_TARGET's package. */
+const PAYMENT_ORIGINAL_PACKAGE = `0x${"b0".repeat(32)}`;
 
 /** What one of the fake chain's builders was asked for, by the kind of transaction it builds. */
 export type BuiltKind =
@@ -95,12 +97,15 @@ export function fakeSui(clock: Clock) {
     }
   };
 
+  /** The ID a sticker's object has on the fake chain. */
+  const stickerObjectIdOf = (stickerId: string) => bytes32(`sticker object ${stickerId}`);
+
   /** What a success of `asked` emits, as the packages' functions do. */
   const eventsOf = (asked: BuiltKind | undefined, sender: string) => {
     if (asked?.kind === "mint") {
       const { stickerId, number, artist, nsfw } = asked.mint;
       const event = {
-        sticker: sui.stickerObjectId(stickerId),
+        sticker: stickerObjectIdOf(stickerId),
         key: stickerId,
         number,
         artist,
@@ -121,7 +126,7 @@ export function fakeSui(clock: Clock) {
         amount,
         reference: [...utf8(reference)],
       };
-      const type = `${TEST_PAYMENT_TARGET.paymentPackage}::payment::PaymentReceived`;
+      const type = `${PAYMENT_ORIGINAL_PACKAGE}::payment::PaymentReceived`;
       return [{ type, bcs: paymentReceivedEvent.serialize(event).toBytes() }];
     }
     return [];
@@ -132,7 +137,6 @@ export function fakeSui(clock: Clock) {
 
   const sui: SuiChain = {
     server: `0x${"5e".repeat(32)}`,
-    payment: TEST_PAYMENT_TARGET,
     mintKind: (mint) => build({ kind: "mint", mint }),
     depositKind: (deposit) => build({ kind: "deposit", deposit }),
     takeOutKind: (sender, giftId) => build({ kind: "take_out", sender, giftId }),
@@ -154,7 +158,8 @@ export function fakeSui(clock: Clock) {
       return Promise.resolve(answer);
     },
     outcomeOf: (digest) => Promise.resolve(shown.get(digest) ?? null),
-    stickerObjectId: (stickerId) => bytes32(`sticker object ${stickerId}`),
+    stickerObjectId: (stickerId) => Promise.resolve(stickerObjectIdOf(stickerId)),
+    paymentOriginalPackage: () => Promise.resolve(PAYMENT_ORIGINAL_PACKAGE),
     stickerMinted: (stickerId) => Promise.resolve(minted.has(stickerId)),
     readGift: (giftId) =>
       Promise.resolve(escrow.get(giftId) ?? { status: "missing", recipient: null }),
@@ -197,6 +202,8 @@ export function fakeSui(clock: Clock) {
     escrow,
     /** Stickers whose object exists on the fake chain. */
     minted,
+    /** The ID a sticker's object has on the fake chain, as `sui.stickerObjectId` answers it. */
+    stickerObjectIdOf,
     /** What a success of the transaction `digest` emits, as the fake chain answers it by default. */
     eventsFor: (digest: string) => eventsOf(builtByDigest.get(digest), senders.get(digest) ?? ""),
     /** Shinami refuses the next sponsorship with `error`, such as a SponsorshipError. */

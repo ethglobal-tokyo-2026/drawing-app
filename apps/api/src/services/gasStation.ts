@@ -1,5 +1,5 @@
 import { TransactionDataBuilder } from "@mysten/sui/transactions";
-import { fromBase64, toBase64 } from "@mysten/sui/utils";
+import { fromBase64, fromHex, normalizeSuiAddress, toBase64 } from "@mysten/sui/utils";
 import { z } from "zod";
 import { failureCause, logFailure } from "../diagnostics.ts";
 import { SponsorshipError, type GasStation } from "../sui/types.ts";
@@ -7,15 +7,37 @@ import { SponsorshipError, type GasStation } from "../sui/types.ts";
 /** Shinami's Gas Station on Sui, in the region its keys default to. */
 export const SHINAMI_GAS_STATION_URL = "https://api.us1.shinami.com/sui/gas/v1";
 /**
- * A request's two attempts and the pause between them, together. Packaging and the checkout build
- * a kind and then wait on this inside the app's own request limit (REQUEST_TIMEOUT_MS in the
+ * A request's attempts and the pause between them, together. Packaging and the checkout build a
+ * kind and then wait on this inside the app's own request limit (REQUEST_TIMEOUT_MS in the
  * frontend's httpApi.ts), so their answer, which can carry a Gift Claim Token, still reaches it.
  */
 export const GAS_STATION_DEADLINE_MS = 6_000;
 /** The pause before the one retry of a request Shinami couldn't answer, as it asks of rate limits. */
 const GAS_STATION_RETRY_MS = 500;
-/** Each attempt's share of the deadline, so a stalled first attempt leaves its retry as long. */
-const ATTEMPT_TIMEOUT_MS = (GAS_STATION_DEADLINE_MS - GAS_STATION_RETRY_MS) / 2;
+
+/**
+ * Whether BCS TransactionData runs exactly `kind` from `sender`. Its V1 variant's first fields are
+ * the kind and the sender, and BCS has one encoding per value, so their bytes are the request's.
+ */
+function runsKindFrom(txBytes: Uint8Array, kind: Uint8Array, sender: string) {
+  const senderAt = 1 + kind.length;
+  const same = (bytes: Uint8Array, expected: Uint8Array) => Buffer.from(bytes).equals(expected);
+  return (
+    txBytes[0] === 0 &&
+    same(txBytes.subarray(1, senderAt), kind) &&
+    same(txBytes.subarray(senderAt, senderAt + 32), fromHex(normalizeSuiAddress(sender)))
+  );
+}
+
+/**
+ * Shinami did nothing with the request: it couldn't be reached, or answered that it's busy. Only
+ * this is asked again, since a sponsorship sent twice holds two gas coins until each lapses.
+ */
+class NothingSponsoredError extends SponsorshipError {
+  constructor(message: string, options?: ErrorOptions) {
+    super("unavailable", message, options);
+  }
+}
 
 /** gas_sponsorTransactionBlock's answer. */
 const sponsoredSchema = z.object({
@@ -63,7 +85,7 @@ function rpcFailure(method: string, answer: z.infer<typeof rpcErrorSchema>): Err
     case -1:
     case -32010:
     case -32603:
-      return new SponsorshipError("unavailable", words);
+      return new NothingSponsoredError(words);
     default:
       return new Error(
         `Shinami's ${method} failed with JSON-RPC error ${answer.error.code}: ${words}`,
@@ -84,27 +106,34 @@ export function createShinamiGasStation({
   url?: string;
   fetchImpl?: typeof fetch;
 }): GasStation {
-  async function request<T>(method: string, params: unknown[], schema: z.ZodType<T>): Promise<T> {
+  /** One attempt, within `deadline`, which covers reading the body too. */
+  async function request<T>(
+    method: string,
+    params: unknown[],
+    schema: z.ZodType<T>,
+    deadline: AbortSignal,
+  ): Promise<T> {
     const unavailable = (why: string, cause?: unknown) =>
       new SponsorshipError("unavailable", `Shinami's ${method} ${why}`, { cause });
-    // The timeout covers reading the body too.
-    const signal = AbortSignal.timeout(ATTEMPT_TIMEOUT_MS);
     let response: Response;
     try {
       response = await fetchImpl(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Api-Key": accessKey },
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-        signal,
+        signal: deadline,
       });
     } catch (error) {
-      throw unavailable(`couldn't be reached: ${failureCause(error)}`, error);
+      const why = `couldn't be reached: ${failureCause(error)}`;
+      // Cut off by the deadline, Shinami may have sponsored it all the same.
+      if (deadline.aborted) throw unavailable(why, error);
+      throw new NothingSponsoredError(`Shinami's ${method} ${why}`, { cause: error });
     }
     if (response.status === 401 || response.status === 403) {
       throw new Error(`Shinami refused the access key for ${method} (HTTP ${response.status})`);
     }
     if (response.status === 429 || response.status >= 500) {
-      throw unavailable(`answered HTTP ${response.status}`);
+      throw new NothingSponsoredError(`Shinami's ${method} answered HTTP ${response.status}`);
     }
     if (!response.ok) throw new Error(`Shinami's ${method} answered HTTP ${response.status}`);
     let body: unknown;
@@ -126,15 +155,20 @@ export function createShinamiGasStation({
     return result.data;
   }
 
-  async function withOneRetry<T>(method: string, attempt: () => Promise<T>): Promise<T> {
+  /** Runs `attempt` again once, after a pause, when Shinami did nothing and the deadline allows. */
+  async function withOneRetry<T>(
+    method: string,
+    attempt: (deadline: AbortSignal) => Promise<T>,
+  ): Promise<T> {
+    const deadline = AbortSignal.timeout(GAS_STATION_DEADLINE_MS);
     try {
       try {
-        return await attempt();
+        return await attempt(deadline);
       } catch (error) {
-        if (!(error instanceof SponsorshipError) || error.reason !== "unavailable") throw error;
+        if (!(error instanceof NothingSponsoredError) || deadline.aborted) throw error;
         logFailure("sponsor.retrying", error, { stage: method });
         await new Promise((resolve) => setTimeout(resolve, GAS_STATION_RETRY_MS));
-        return await attempt();
+        return await attempt(deadline);
       }
     } catch (error) {
       logFailure("sponsor.failed", error, {
@@ -147,17 +181,26 @@ export function createShinamiGasStation({
 
   return {
     sponsor: (kind, sender) =>
-      withOneRetry("gas_sponsorTransactionBlock", async () => {
+      withOneRetry("gas_sponsorTransactionBlock", async (deadline) => {
         const sponsored = await request(
           "gas_sponsorTransactionBlock",
           [toBase64(kind), sender],
           sponsoredSchema,
+          deadline,
         );
+        const txBytes = fromBase64(sponsored.txBytes);
         // Every row is followed by its digest, so it must be the one the bytes hash to.
-        const digest = TransactionDataBuilder.getDigestFromBytes(fromBase64(sponsored.txBytes));
+        const digest = TransactionDataBuilder.getDigestFromBytes(txBytes);
         if (digest !== sponsored.txDigest) {
           throw new Error(
             `Shinami named digest ${sponsored.txDigest} for a transaction whose digest is ${digest}`,
+          );
+        }
+        // The server and the person's wallet sign these bytes as they are, so they must run the
+        // kind that was asked for, from its sender.
+        if (!runsKindFrom(txBytes, kind, sender)) {
+          throw new Error(
+            `Shinami sponsored transaction ${digest}, which doesn't run the kind asked for from ${sender}`,
           );
         }
         return {
@@ -168,8 +211,8 @@ export function createShinamiGasStation({
         };
       }),
     available: () =>
-      withOneRetry("gas_getFund", async () => {
-        const fund = await request("gas_getFund", [], fundSchema);
+      withOneRetry("gas_getFund", async (deadline) => {
+        const fund = await request("gas_getFund", [], fundSchema, deadline);
         return BigInt(fund.balance) - BigInt(fund.inFlight);
       }),
   };

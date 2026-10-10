@@ -9,6 +9,7 @@ import {
 } from "@drawing-app/db/testing";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { fromBase64 } from "@mysten/sui/utils";
+import { getZkLoginSignature } from "@mysten/sui/zklogin";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChainUnavailableError } from "../deps.ts";
@@ -67,7 +68,7 @@ async function sponsorDeposit({
   const sender = wallet.toSuiAddress();
   const kind = await chain.sui.depositKind({
     sender,
-    stickerObjectId: chain.sui.stickerObjectId(sticker),
+    stickerObjectId: chain.stickerObjectIdOf(sticker),
     giftId: gift,
     claimCommitment: bytes32(`commitment ${gift}`),
     expiresAt: new Date(clock.now().getTime() + GIFT_EXPIRY_MS),
@@ -192,11 +193,38 @@ describe("runAsServer", () => {
   });
 });
 
+/** A well-formed zkLogin signature over the row's bytes, which only Sui itself could check. */
+async function zkLoginSignatureOf(row: SuiTransaction) {
+  const claim = Buffer.from('"iss":"https://accounts.google.com",').toString("base64url");
+  return getZkLoginSignature({
+    inputs: {
+      proofPoints: {
+        a: ["1", "2", "1"],
+        b: [
+          ["1", "2"],
+          ["3", "4"],
+          ["1", "0"],
+        ],
+        c: ["1", "2", "1"],
+      },
+      issBase64Details: { value: claim, indexMod4: 0 },
+      headerBase64: "e30",
+      addressSeed: "1",
+    },
+    maxEpoch: 10,
+    userSignature: await signatureOf(row),
+  });
+}
+
 describe("runSigned", () => {
-  it("refuses a signature that isn't the sender's wallet's, and runs the row on a good one", async () => {
+  it("refuses a signature that isn't the sender's wallet's, or can't be checked here, and runs the row on a good one", async () => {
     const deposit = await sponsorDeposit();
-    const forged = await signatureOf(deposit, Ed25519Keypair.generate());
-    await expect(runSigned(deps, deposit, forged)).rejects.toBeInstanceOf(SignatureInvalidError);
+    for (const refused of [
+      await signatureOf(deposit, Ed25519Keypair.generate()),
+      await zkLoginSignatureOf(deposit),
+    ]) {
+      await expect(runSigned(deps, deposit, refused)).rejects.toBeInstanceOf(SignatureInvalidError);
+    }
     expect(stored(deposit)).toMatchObject({ senderSignature: null, submittedAt: null });
 
     const signature = await signatureOf(deposit);

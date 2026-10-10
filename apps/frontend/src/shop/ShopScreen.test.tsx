@@ -33,6 +33,7 @@ const SHOP: Shop = {
     coinType: `0x${"a".repeat(64)}::jpy_coin::JPY_COIN`,
     decimals: 6,
     paymentPackage: `0x${"b".repeat(64)}`,
+    originalPackage: `0x${"b".repeat(64)}`,
     vault: `0x${"c".repeat(64)}`,
   },
 };
@@ -129,6 +130,25 @@ describe("ShopScreen", () => {
     await settle();
     expect(getTicketPayments).toHaveBeenCalledTimes(2);
     expect(rows()).toHaveLength(1);
+  });
+
+  it("says your purchases can't be read when where packs are paid didn't load, and loads it again", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const ticketShop = vi
+      .fn<() => Promise<Shop>>()
+      .mockRejectedValueOnce(new ApiError(502, { error: "chain_unavailable" }))
+      .mockResolvedValue(SHOP);
+    view = renderWithApi(<ShopScreen onBuyReserveTickets={() => {}} />, emptyApi({ ticketShop }));
+    act(() => setPrivyStatus({ state: "signed-in", userId: "privy-me", suiWallet: SUI_WALLET }));
+    await settle();
+    const alert = () => document.querySelector(".shop__purchases [role=alert]")?.textContent;
+    expect(alert()).toContain("Couldn’t read your ticket purchases");
+    expect(buttonNamed(SHORT_ADDRESS)).toBeUndefined();
+
+    click("Try again");
+    await settle();
+    expect(alert()).toBeUndefined();
+    expect(buttonNamed(SHORT_ADDRESS)).toBeDefined();
   });
 
   it("offers Deposit once your Sui address is known, which holds that address up", async () => {

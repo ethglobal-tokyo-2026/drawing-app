@@ -1,5 +1,4 @@
 import type { escrowStatuses } from "@drawing-app/db";
-import type { TicketPaymentTarget } from "../deps.ts";
 
 /** Shinami Gas Station: pays the gas of every transaction the server builds. */
 export interface GasStation {
@@ -100,13 +99,19 @@ export interface SuiChain {
   submit: (txBytes: string, signatures: string[]) => Promise<SuiOutcome | null>;
   /** The transaction's outcome; null while Sui doesn't show it, after readLanded's retries. */
   outcomeOf: (digest: string) => Promise<SuiOutcome | null>;
-  /** The ID the sticker's object has, or will have once minted (deriveObjectID). */
-  stickerObjectId: (stickerId: string) => string;
+  /**
+   * The ID the sticker's object has, or will have once minted (deriveObjectID). Rejects with
+   * ChainUnavailableError when Sui can't be asked for the package's original ID.
+   */
+  stickerObjectId: (stickerId: string) => Promise<string>;
+  /**
+   * The payment package's original ID, which PaymentReceived's type keeps across upgrades. Rejects
+   * with ChainUnavailableError when Sui can't be asked.
+   */
+  paymentOriginalPackage: () => Promise<string>;
   /** Whether the sticker's object exists: a mint of it ran, whatever this server recorded. */
   stickerMinted: (stickerId: string) => Promise<boolean>;
   readGift: (giftId: string) => Promise<EscrowGift>;
   /** Whether ServerConfig names `server`, and the objects the env names exist: the boot check. */
   check: () => Promise<{ serverMatches: boolean; missing: string[] }>;
-  /** Where ticket packs are paid. */
-  payment: TicketPaymentTarget;
 }

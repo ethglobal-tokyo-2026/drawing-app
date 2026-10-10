@@ -1,11 +1,12 @@
 import { users } from "@drawing-app/db";
 import { createTestDb, insertUser } from "@drawing-app/db/testing";
 import { privySubject } from "@drawing-app/line-auth/line-privy-jwt";
-import { APIConnectionTimeoutError, type User } from "@privy-io/node";
+import type { User } from "@privy-io/node";
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
 import { privyEmbeddedWallet, privySmartWallet, privyUser } from "../testing/privy.ts";
-import { createPrivySuiWallets } from "./privySuiWallets.ts";
+import { createPrivySuiWallets, PRIVY_LOOKUP_TIMEOUT_MS } from "./privySuiWallets.ts";
 
 const APP_SECRET = "privy-secret";
 const CHANNEL_ID = "line-channel";
@@ -37,9 +38,11 @@ async function setup(fetchImpl: typeof fetch) {
     privyAppSecret: APP_SECRET,
     fetchImpl,
   });
-  /** The wallet kept on the person's row. */
-  const kept = () => db.select({ suiAddress: users.suiAddress }).from(users).get()?.suiAddress;
-  return { userId, wallets, kept };
+  /** The wallet kept on someone's row. */
+  const keptBy = (id: string) =>
+    db.select({ suiAddress: users.suiAddress }).from(users).where(eq(users.id, id)).get()
+      ?.suiAddress;
+  return { db, userId, wallets, kept: () => keptBy(userId), keptBy };
 }
 
 /** Privy answering every lookup with a user who has `accounts`. */
@@ -92,23 +95,77 @@ describe("Privy Sui wallets", () => {
     logs.expectLogged("wallet.lookup.failed", { userId: test.userId, status });
   });
 
-  it("gives up on a stalled lookup without a retry", async () => {
-    const fetchImpl = vi.fn<typeof fetch>(
-      async (_input, init) =>
+  it.each([
+    {
+      stalls: "before its headers",
+      answer: (signal: AbortSignal) =>
         new Promise<Response>((_resolve, reject) => {
-          init?.signal?.addEventListener("abort", () =>
-            reject(new DOMException("Aborted", "AbortError")),
-          );
+          signal.addEventListener("abort", () => reject(signal.reason));
         }),
-    );
+    },
+    {
+      stalls: "in its body",
+      // As fetch does, the body fails once the request's signal aborts.
+      answer: (signal: AbortSignal) =>
+        Promise.resolve(
+          new Response(
+            new ReadableStream({
+              start: (body) => signal.addEventListener("abort", () => body.error(signal.reason)),
+            }),
+            { headers: { "Content-Type": "application/json" } },
+          ),
+        ),
+    },
+  ])(
+    "gives up on a lookup that stalls $stalls at its deadline, without a retry",
+    async ({ answer }) => {
+      const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
+        if (!init?.signal) throw new Error("Privy's request carries no signal");
+        return answer(init.signal);
+      });
+      const test = await setup(fetchImpl);
+      vi.useFakeTimers();
+      // Node's own AbortSignal.timeout runs on the real clock, which the fake one doesn't move.
+      vi.spyOn(AbortSignal, "timeout").mockImplementation((ms) => {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(new DOMException("Timed out", "TimeoutError")), ms);
+        return controller.signal;
+      });
+      const failed = expect(test.wallets.addressFor(test.userId)).rejects.toThrow(
+        `within ${PRIVY_LOOKUP_TIMEOUT_MS} ms`,
+      );
+      await vi.runAllTimersAsync();
+      await failed;
+      expect(fetchImpl).toHaveBeenCalledOnce();
+      logs.expectLogged("wallet.lookup.failed", { userId: test.userId });
+    },
+  );
+
+  it("answers the wallet kept on the person's row without asking Privy", async () => {
+    const fetchImpl = privyWith(privyEmbeddedWallet(SUI_ADDRESS));
     const test = await setup(fetchImpl);
-    vi.useFakeTimers();
-    const failed = expect(test.wallets.addressFor(test.userId)).rejects.toBeInstanceOf(
-      APIConnectionTimeoutError,
-    );
-    await vi.runAllTimersAsync();
-    await failed;
+    await test.wallets.addressFor(test.userId);
+    await expect(test.wallets.addressFor(test.userId)).resolves.toBe(SUI_ADDRESS.toLowerCase());
     expect(fetchImpl).toHaveBeenCalledOnce();
-    logs.expectLogged("wallet.lookup.failed", { userId: test.userId });
+  });
+
+  it("moves the wallet from a deleted account to the same person signing up again", async () => {
+    const test = await setup(privyWith(privyEmbeddedWallet(SUI_ADDRESS)));
+    const address = SUI_ADDRESS.toLowerCase();
+    test.db
+      .update(users)
+      .set({
+        suiAddress: address,
+        deletedAt: new Date(),
+        lineUserId: null,
+        lineDisplayName: null,
+      })
+      .where(eq(users.id, test.userId))
+      .run();
+    const returning = insertUser(test.db, { lineUserId: LINE_USER_ID });
+
+    await expect(test.wallets.addressFor(returning)).resolves.toBe(address);
+    expect(test.keptBy(returning)).toBe(address);
+    expect(test.keptBy(test.userId)).toBeNull();
   });
 });

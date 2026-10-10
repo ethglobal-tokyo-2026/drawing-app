@@ -16,6 +16,7 @@ import {
   follow,
   runSigned,
   sponsored,
+  suiDepsOf,
   type OnSucceeded,
   type SuiTransaction,
   type SuiTransactionDeps,
@@ -39,9 +40,10 @@ import {
 type Purchase = typeof ticketPurchases.$inferSelect;
 
 /** Paying checks for Sui first, so only mock chain mode lacks it, where nothing is bought. */
-function chainOf({ db, clock, sui, gasStation }: AppDeps): SuiTransactionDeps {
-  if (!sui || !gasStation) throw new Error("Ticket purchases need Sui and Shinami Gas Station");
-  return { db, clock, sui, gasStation };
+function chainOf(deps: AppDeps): SuiTransactionDeps {
+  const chain = suiDepsOf(deps);
+  if (!chain) throw new Error("Ticket purchases need Sui and Shinami Gas Station");
+  return chain;
 }
 
 const purchaseOf = (db: Db, purchaseId: number) =>
@@ -101,7 +103,7 @@ export function giveUp(deps: Pick<AppDeps, "db" | "clock">, purchase: Purchase, 
 const creditOnSuccess =
   (deps: Pick<AppDeps, "clock" | "ticketPayment">, purchase: Purchase): OnSucceeded =>
   (tx, events) => {
-    const paid = paymentReceivedIn(events, deps.ticketPayment);
+    const paid = paymentReceivedIn(events);
     const reference = ticketPaymentReference(purchase.userId, purchase.id);
     const price = jpycFor(purchase.priceYen, deps.ticketPayment.decimals);
     if (

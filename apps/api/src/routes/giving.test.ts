@@ -2,7 +2,8 @@ import { GIFT_EXPIRY_MS } from "@drawing-app/db";
 import { bytes32, insertUser, receiveGift } from "@drawing-app/db/testing";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { fromBase64 } from "@mysten/sui/utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { GIVING_LIMIT, GIVING_LIMIT_WINDOW_MS } from "../gifts/giftTransactions.ts";
 import { claimCommitmentOf, giftClaimTokenSchema } from "../gifts/packaging.ts";
 import {
   createGiftsTestApp,
@@ -107,7 +108,7 @@ describe("Packaging on Sui", () => {
         kind: "deposit",
         deposit: {
           sender: test.wallets.keyOf(giverId).toSuiAddress(),
-          stickerObjectId: test.chain.sui.stickerObjectId(gift.stickerId),
+          stickerObjectId: test.chain.stickerObjectIdOf(gift.stickerId),
           giftId: row.id,
           claimCommitment: row.claimCommitment,
           expiresAt: row.expiresAt,
@@ -130,6 +131,37 @@ describe("Packaging on Sui", () => {
       deposit: null,
     });
     expect(test.chain.sponsorships).toHaveLength(1);
+  });
+
+  it("answers a gift sent while it was packaged again as in transit, sponsoring nothing", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { giverId, gift } = await test.depositedGift();
+    const lookUp = test.wallets.addressFor;
+    vi.spyOn(test.wallets, "addressFor").mockImplementationOnce(async (userId) => {
+      await giftOf(await test.share(giverId, gift.id, "sent"));
+      return lookUp(userId);
+    });
+    const sponsored = test.chain.sponsorships.length;
+    expect(
+      await refusalOf(await test.post(giverId, "", { stickerId: gift.stickerId })),
+    ).toMatchObject({ status: 409, error: "gift_in_transit" });
+    expect(test.chain.sponsorships).toHaveLength(sponsored);
+  });
+
+  it("refuses a giver past GIVING_LIMIT deposits and take-outs in its window, and packs again after", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const giverId = insertUser(test.db);
+    const stickerId = test.sealSticker(giverId);
+    for (let packed = 0; packed < GIVING_LIMIT; packed++) {
+      const { gift } = await test.packageSticker(giverId, stickerId);
+      await giftOf(await test.takeOut(giverId, gift.id));
+    }
+    expect(await refusalOf(await test.post(giverId, "", { stickerId }))).toMatchObject({
+      status: 429,
+      error: "giving_limit_reached",
+    });
+    test.clock.advance(GIVING_LIMIT_WINDOW_MS + 60 * 60_000);
+    expect(await test.packageSticker(giverId, stickerId)).toMatchObject({ status: 201 });
   });
 
   it("sponsors the same gift's deposit again once the last one is about to lapse unsigned", async () => {
@@ -305,18 +337,37 @@ describe("Taking out on Sui", () => {
     expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({ status: 201 });
   });
 
-  it("answers a take-out that failed because the gift was received first as already received", async () => {
+  it("holds a take-out up as not landed while a receiver's claim hasn't shown on Sui", async () => {
+    const test = await createGiftsTestApp({ onSui: true });
+    const { giverId, gift, giftClaimToken } = await test.depositedGift();
+    test.chain.answerNext("lost");
+    const receiving = { giftClaimToken, liffContextType: "utou" };
+    expect(
+      await refusalOf(await test.post(insertUser(test.db), "/receive", receiving)),
+    ).toMatchObject({ error: "claim_failed" });
+    test.chain.answerNext("lost");
+    expect(await refusalOf(await test.takeOut(giverId, gift.id))).toMatchObject({
+      status: 503,
+      error: "take_out_not_landed",
+    });
+  });
+
+  it("answers a take-out that failed because the gift was received first as already received, and records the receive", async () => {
     const test = await createGiftsTestApp({ onSui: true });
     const { giverId, gift } = await test.depositedGift();
     const { takeOut } = await takeOutStartOf(await test.takeOut(giverId, gift.id));
     if (!takeOut) throw new Error("Take-out's start answered no take-out to sign");
-    test.chain.escrow.set(gift.id, { status: "claimed", recipient: `0x${"7".repeat(64)}` });
+    const receiverId = insertUser(test.db);
+    const recipient = await test.wallets.addressFor(receiverId);
+    test.chain.escrow.set(gift.id, { status: "claimed", recipient });
     test.chain.answerNext({ ok: false, failure: "MoveAbort(gift, 2)" });
     expect(
       await refusalOf(
         await test.submitTakeOut(giverId, gift.id, await test.signed(giverId, takeOut)),
       ),
     ).toMatchObject({ status: 409, error: "already_received" });
+    expect(test.giftRow(gift.id)).toMatchObject({ status: "received", receiverId });
+    expect(test.ownerOf(gift.stickerId)).toBe(receiverId);
   });
 });
 

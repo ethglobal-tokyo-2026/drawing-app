@@ -283,6 +283,7 @@ const SHOP: Shop = {
     coinType: `0x${"a".repeat(64)}::jpy_coin::JPY_COIN`,
     decimals: 6,
     paymentPackage: `0x${"b".repeat(64)}`,
+    originalPackage: `0x${"b".repeat(64)}`,
     vault: `0x${"c".repeat(64)}`,
   },
 };
