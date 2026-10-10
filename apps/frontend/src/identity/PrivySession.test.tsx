@@ -61,11 +61,6 @@ vi.mock("./SuiWalletBridge", () => ({ SuiWalletBridge: () => null }));
 const { privyStatus, retryPrivySignIn, setPrivyStatus } = await import("./privy");
 const { default: PrivySession } = await import("./PrivySession");
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 const person: User = {
   id: "did:privy:artist",
   createdAt: new Date("2026-01-01"),

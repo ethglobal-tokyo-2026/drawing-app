@@ -6,8 +6,8 @@ import type { GiftPreview, ReceivedGift, ReceiveRefusal } from "@drawing-app/api
 import { MARKUP_LIKE_NAME, markupLikePerson, people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi, shownText } from "../api/testing";
 import { toPerson } from "../api/views";
-import { i18next } from "../i18n/i18n";
 import { formatDay, formatDuration, formatNo } from "../stickers/format";
+import { inLanguage } from "../ui/testing";
 import { PULL } from "./pullTab";
 import type { RefusalKind } from "./receiveFlow";
 import { refusalScreen } from "./refusals";
@@ -353,16 +353,12 @@ describe("ReceiveGiftDialog", () => {
   });
 
   it("points the terms line's links at the /ja/ pages in Japanese", async () => {
-    await i18next.changeLanguage("ja");
-    try {
-      await unpackage(vi.fn(() => Promise.resolve(received)));
-      const links = [...document.querySelectorAll(".receive-gift__terms a")];
-      expect(links.map((a) => a.getAttribute("href"))).toEqual([
-        "/ja/terms.html",
-        "/ja/privacy.html",
-      ]);
-    } finally {
-      await act(() => i18next.changeLanguage("en"));
-    }
+    await inLanguage("ja");
+    await unpackage(vi.fn(() => Promise.resolve(received)));
+    const links = [...document.querySelectorAll(".receive-gift__terms a")];
+    expect(links.map((a) => a.getAttribute("href"))).toEqual([
+      "/ja/terms.html",
+      "/ja/privacy.html",
+    ]);
   });
 });

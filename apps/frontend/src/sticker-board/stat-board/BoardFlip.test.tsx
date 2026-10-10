@@ -1,37 +1,24 @@
 // @vitest-environment happy-dom
 import { act, createRef, lazy, Suspense, type ReactNode } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ReducedMotion } from "../../ui/testing";
+import { buttonNamed, ReducedMotion, renderInHost, type HostView } from "../../ui/testing";
 import { BoardFlip } from "./BoardFlip";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
-let host: HTMLDivElement;
-let root: Root;
+let view: HostView;
 const onTurnedChange = vi.fn();
 const onBackPressed = vi.fn();
 
 const render = (turned: boolean) =>
-  act(() =>
-    root.render(
-      <BoardFlip
-        turned={turned}
-        onTurnedChange={onTurnedChange}
-        front={<button>front</button>}
-        back={<button onClick={onBackPressed}>back</button>}
-      />,
-    ),
+  view.rerender(
+    <BoardFlip
+      turned={turned}
+      onTurnedChange={onTurnedChange}
+      front={<button>front</button>}
+      back={<button onClick={onBackPressed}>back</button>}
+    />,
   );
 
-const button = (label: string) => {
-  const found = [...host.querySelectorAll("button")].find((b) => b.textContent === label);
-  if (!found) throw new Error(`No "${label}" button`);
-  return found;
-};
+const button = (label: string) => buttonNamed(view.host, label);
 const isInert = (label: string) => button(label).closest("[inert]") !== null;
 
 beforeEach(() => {
@@ -39,14 +26,11 @@ beforeEach(() => {
   // would start happy-dom's playback, whose cancel rejects `finished` unhandled.
   vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
   vi.spyOn(Animation.prototype, "reverse").mockImplementation(() => {});
-  host = document.createElement("div");
-  document.body.append(host);
-  root = createRoot(host);
+  view = renderInHost();
 });
 
 afterEach(() => {
-  act(() => root.unmount());
-  host.remove();
+  view.unmount();
   vi.restoreAllMocks();
   onTurnedChange.mockReset();
   onBackPressed.mockReset();
@@ -74,22 +58,20 @@ describe("BoardFlip", () => {
     );
     // As on the Sticker Board: the stat board mounts as the board first turns over.
     const board = (turned: boolean) =>
-      act(() =>
-        root.render(
-          <BoardFlip
-            turned={turned}
-            onTurnedChange={onTurnedChange}
-            backFocus={flipBack}
-            front={<button>front</button>}
-            back={
-              turned && (
-                <Suspense fallback={null}>
-                  <LateBack />
-                </Suspense>
-              )
-            }
-          />,
-        ),
+      view.rerender(
+        <BoardFlip
+          turned={turned}
+          onTurnedChange={onTurnedChange}
+          backFocus={flipBack}
+          front={<button>front</button>}
+          back={
+            turned && (
+              <Suspense fallback={null}>
+                <LateBack />
+              </Suspense>
+            )
+          }
+        />,
       );
     board(false);
     // Reduced motion lands the turn at once, before the stat board's code is in.

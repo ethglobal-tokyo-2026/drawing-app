@@ -1,8 +1,47 @@
-import { act } from "react";
+import { act, type ReactNode } from "react";
+import { createRoot } from "react-dom/client";
 import { onTestFinished, vi } from "vitest";
+import { i18next } from "../i18n/i18n";
+import type { Language } from "../i18n/language";
 import { LARGE_SCREEN } from "./largeScreen";
 import { LANDSCAPE_TOUCH } from "./sideways";
 import { REDUCED_MOTION } from "./useReducedMotion";
+
+/** Renders `ui` with no providers in a fresh host on the page, or nothing until `rerender`. `unmount` removes both. */
+export function renderInHost(ui: ReactNode = null) {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  act(() => root.render(ui));
+  return {
+    host,
+    rerender: (next: ReactNode) => act(() => root.render(next)),
+    unmount: () => {
+      act(() => root.unmount());
+      host.remove();
+    },
+  };
+}
+
+/** What `renderInHost` returns. */
+export type HostView = ReturnType<typeof renderInHost>;
+
+/** The first button in `host` whose text or aria-label is `name`; throws when there's none. */
+export function buttonNamed(host: ParentNode, name: string): HTMLButtonElement {
+  const found = [...host.querySelectorAll("button")].find(
+    (b) => b.textContent === name || b.getAttribute("aria-label") === name,
+  );
+  if (!found) throw new Error(`No "${name}" button`);
+  return found;
+}
+
+/** Switches the app to `language`, re-rendering what's mounted, and back to English when the test ends. */
+export async function inLanguage(language: Language) {
+  onTestFinished(async () => {
+    await act(() => i18next.changeLanguage("en"));
+  });
+  await act(() => i18next.changeLanguage(language));
+}
 
 /** A media query switched by the test: a matchMedia spy returns it, and `change` tells its listeners. */
 class SwitchedQuery extends EventTarget implements MediaQueryList {

@@ -4,6 +4,7 @@ import { TEST_OWNER } from "../api/testing";
 import { toPerson } from "../api/views";
 import { testStickerUrls } from "../stickers/testStickerUrls";
 import type { PlacedBoardSticker } from "./boardSticker";
+import { testBoardSticker } from "./testBoardSticker";
 import {
   forgetBoardUnlessFor,
   forgetsSoFar,
@@ -15,29 +16,15 @@ import {
   type KeptBoard,
 } from "./lastBoard";
 
-const sticker = (id: string): PlacedBoardSticker => ({
-  id,
-  no: 1,
-  createdAt: 0,
-  timeUsed: 60,
-  drawnWidth: 480,
-  drawnHeight: 480,
-  width: 600,
-  height: 600,
-  nsfw: false,
-  kyotoSeikaSubjects: null,
-  outline: "M0 0L600 0L600 600Z",
-  urls: testStickerUrls(`/api/images/${id}`),
-  placements: { phone: { on: true, x: 0.5, y: 0.5, s: 1, r: 0, z: 1 }, large: null },
-  artist: toPerson(TEST_OWNER),
-  held: true,
-  hasTimelapse: false,
-  trail: { timesGiven: 0, newestHasGratitude: false },
-  givenTo: null,
-  openGift: null,
-  seenAt: null,
-  arrivedAt: 0,
-});
+/** A sticker as the board kept on this phone holds it: placed, without the layout's own spot. */
+const sticker = (id: string): PlacedBoardSticker => {
+  const { placement: _placement, ...placed } = testBoardSticker({
+    id,
+    outline: "M0 0L600 0L600 600Z",
+    urls: testStickerUrls(`/api/images/${id}`),
+  });
+  return placed;
+};
 const board: KeptBoard = { owner: toPerson(TEST_OWNER), stickers: [sticker("s1"), sticker("s2")] };
 
 beforeEach(() => {

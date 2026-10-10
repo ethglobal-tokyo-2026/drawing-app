@@ -4,11 +4,6 @@ import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ErrorLine } from "./ErrorLine";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 const writeText = vi.fn<(text: string) => Promise<void>>();
 let cleanup = () => {};
 

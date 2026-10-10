@@ -1,19 +1,14 @@
 // @vitest-environment happy-dom
 import type { UserStats } from "@drawing-app/api/client";
 import { act, createRef, useState, type Ref } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { ApiError } from "../../api/apiClient";
 import { errorDetail } from "../../i18n/errorMessage";
 import { errors } from "../../i18n/strings/errors";
 import { formatDay } from "../../stickers/format";
+import { buttonNamed, renderInHost, type HostView } from "../../ui/testing";
 import { StatCork, type StatCorkHandle } from "./StatCork";
 import { statFigures } from "./statFigures";
-
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 /** A new artist's stats as the API sends them: zeros, not nulls. */
 const NEW_ARTIST: UserStats = {
@@ -31,8 +26,7 @@ const FAILURE = {
   retry: () => {},
 };
 
-let host: HTMLDivElement;
-let root: Root;
+let view: HostView;
 
 const render = (
   stats: UserStats | null,
@@ -42,23 +36,21 @@ const render = (
     cork,
   }: { onFlipBack?: () => void; loading?: boolean; cork?: Ref<StatCorkHandle> } = {},
 ) =>
-  act(() =>
-    root.render(
-      <StatCork
-        ref={cork}
-        figures={{
-          name: "Mika",
-          handle: "mika",
-          own: false,
-          loading,
-          failure: stats || loading ? null : FAILURE,
-          since: null,
-          ...statFigures(stats),
-        }}
-        onFlipBack={onFlipBack}
-        flipBackRef={null}
-      />,
-    ),
+  view.rerender(
+    <StatCork
+      ref={cork}
+      figures={{
+        name: "Mika",
+        handle: "mika",
+        own: false,
+        loading,
+        failure: stats || loading ? null : FAILURE,
+        since: null,
+        ...statFigures(stats),
+      }}
+      onFlipBack={onFlipBack}
+      flipBackRef={null}
+    />,
   );
 
 /** What a screen reader hears from `element`: its text without the parts hidden from it. */
@@ -72,26 +64,23 @@ function spoken(element: Element | null) {
 /** Rows of term and value, as each reads out. */
 const rows = (selector: string) =>
   Object.fromEntries(
-    [...host.querySelectorAll(selector)].map(
+    [...view.host.querySelectorAll(selector)].map(
       (row) => [spoken(row.querySelector("dt")), spoken(row.querySelector("dd"))] as const,
     ),
   );
 
-const receipt = () => host.querySelector(".stat-board__receipt");
+const receipt = () => view.host.querySelector(".stat-board__receipt");
 
 beforeEach(() => {
-  host = document.createElement("div");
-  document.body.append(host);
-  root = createRoot(host);
+  view = renderInHost();
 });
 
 afterEach(() => {
-  act(() => root.unmount());
-  host.remove();
+  view.unmount();
 });
 
 describe("StatCork's receipt", () => {
-  const total = () => spoken(host.querySelector(".stat-board__receipt-total b"));
+  const total = () => spoken(view.host.querySelector(".stat-board__receipt-total b"));
 
   it("shows everything received as one total, Direct and Residual together", () => {
     render({ ...NEW_ARTIST, gratitude: { direct: 2460, residual: 395, total: 2855 } });
@@ -100,14 +89,15 @@ describe("StatCork's receipt", () => {
 
   it("says there's no gratitude yet in place of a total of 0", () => {
     render(NEW_ARTIST);
-    expect(host.querySelector(".stat-board__receipt-total")).toBeNull();
+    expect(view.host.querySelector(".stat-board__receipt-total")).toBeNull();
     expect(receipt()?.textContent).toContain("No gratitude yet.");
   });
 
   it("is dated the day the cork shows, not the day it mounted, unseen, behind the board", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     onTestFinished(() => void vi.useRealTimers());
-    const printed = () => host.querySelector(".stat-board__receipt-top > :last-child")?.textContent;
+    const printed = () =>
+      view.host.querySelector(".stat-board__receipt-top > :last-child")?.textContent;
     // Just before midnight in Tokyo, where the day turns over.
     vi.setSystemTime(new Date("2026-10-09T14:58:00Z"));
     const cork = createRef<StatCorkHandle>();
@@ -125,23 +115,23 @@ describe("StatCork's receipt", () => {
     render(null);
     expect(receipt()?.textContent).toContain(errors.network.en);
     expect(receipt()?.textContent).toContain(errorDetail(FAILURE.error));
-    expect(host.querySelector(".stat-board__receipt-total")).toBeNull();
+    expect(view.host.querySelector(".stat-board__receipt-total")).toBeNull();
   });
 });
 
 describe("StatCork while the stats load", () => {
   it("draws outlines and one status line, not the dashes a failure leaves", () => {
     render(null, { loading: true });
-    expect(host.textContent).not.toContain("not known");
-    expect(host.textContent).not.toContain("–");
-    expect(host.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
-    expect(host.querySelector('[role="status"]')?.textContent).toBe("Loading Mika’s stats");
+    expect(view.host.textContent).not.toContain("not known");
+    expect(view.host.textContent).not.toContain("–");
+    expect(view.host.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
+    expect(view.host.querySelector('[role="status"]')?.textContent).toBe("Loading Mika’s stats");
   });
 
   it("says nothing more once they've loaded", () => {
     render(NEW_ARTIST);
-    expect(host.querySelector('[role="status"]')?.textContent).toBe("");
-    expect(host.querySelector(".skeleton")).toBeNull();
+    expect(view.host.querySelector('[role="status"]')?.textContent).toBe("");
+    expect(view.host.querySelector(".skeleton")).toBeNull();
   });
 });
 
@@ -168,15 +158,13 @@ function Reloading({ onFlipBack }: { onFlipBack: () => void }) {
 describe("StatCork's Try again", () => {
   it("keeps focus on the stat board as the failure goes, so Escape still turns it back", () => {
     const onFlipBack = vi.fn();
-    act(() => root.render(<Reloading onFlipBack={onFlipBack} />));
-    const tryAgain = [...host.querySelectorAll("button")].find(
-      (b) => b.textContent === "Try again",
-    );
-    act(() => tryAgain?.focus());
-    act(() => tryAgain?.click());
+    view.rerender(<Reloading onFlipBack={onFlipBack} />);
+    const tryAgain = buttonNamed(view.host, "Try again");
+    act(() => tryAgain.focus());
+    act(() => tryAgain.click());
 
-    expect(host.querySelector('[role="alert"]')).toBeNull();
-    expect(document.activeElement).toBe(host.querySelector(".stat-board"));
+    expect(view.host.querySelector('[role="alert"]')).toBeNull();
+    expect(document.activeElement).toBe(view.host.querySelector(".stat-board"));
     act(() => {
       document.activeElement?.dispatchEvent(
         new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
@@ -224,7 +212,7 @@ describe("StatCork's Flip back", () => {
   it("comes first on the stat board, before the papers, for keyboards and screen readers too", () => {
     // The receipt's Try again is a button among the papers.
     render(null);
-    const buttons = [...host.querySelectorAll(".stat-board__cork button")].map(
+    const buttons = [...view.host.querySelectorAll(".stat-board__cork button")].map(
       (b) => b.textContent,
     );
     expect(buttons).toContain("Try again");
@@ -236,7 +224,7 @@ describe("StatCork's bare cork", () => {
   it("turns the board back for a tap on it", () => {
     const onFlipBack = vi.fn();
     render(NEW_ARTIST, { onFlipBack });
-    act(() => host.querySelector<HTMLElement>(".stat-board__cork")?.click());
+    act(() => view.host.querySelector<HTMLElement>(".stat-board__cork")?.click());
     expect(onFlipBack).toHaveBeenCalledOnce();
   });
 });

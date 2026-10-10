@@ -3,11 +3,6 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 // Privy's SDK stands in as a marker: what's tested is when it loads, not what it does.
 const loadedSdk = vi.hoisted(() => vi.fn());
 vi.mock("./PrivySession", () => {

@@ -1,44 +1,34 @@
 // @vitest-environment happy-dom
 import { act, createRef } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { buttonNamed, renderInHost, type HostView } from "../../ui/testing";
 import { AddressPapers } from "./AddressPapers";
 import type { ChainAddress } from "./addresses";
-
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const SUI: ChainAddress = {
   state: "ready",
   address: "0x7a1e00000000000000000000000000000000000000000000000000000000b04d",
 };
 
-let host: HTMLDivElement;
-let root: Root;
+let view: HostView;
 const onOpen = vi.fn();
 const paperRef = createRef<HTMLButtonElement>();
 
 const render = (sui: ChainAddress, lifted = false) =>
-  act(() =>
-    root.render(<AddressPapers sui={sui} lifted={lifted} paperRef={paperRef} onOpen={onOpen} />),
-  );
+  view.rerender(<AddressPapers sui={sui} lifted={lifted} paperRef={paperRef} onOpen={onOpen} />);
 
 const paper = () =>
-  host.querySelector<HTMLButtonElement>('button[aria-label="Show your Sui address as a QR code"]');
-const button = (label: string) =>
-  [...host.querySelectorAll("button")].find((b) => b.textContent === label);
+  view.host.querySelector<HTMLButtonElement>(
+    'button[aria-label="Show your Sui address as a QR code"]',
+  );
+const button = (label: string) => buttonNamed(view.host, label);
 
 beforeEach(() => {
-  host = document.createElement("div");
-  document.body.append(host);
-  root = createRoot(host);
+  view = renderInHost();
 });
 
 afterEach(() => {
-  act(() => root.unmount());
-  host.remove();
+  view.unmount();
   vi.restoreAllMocks();
   onOpen.mockReset();
 });
@@ -64,17 +54,17 @@ describe("AddressPapers", () => {
   it("has no paper to open while the address is on its way", () => {
     render({ state: "loading" });
     expect(paper()).toBeNull();
-    expect(host.textContent).toContain("Getting your Sui address…");
+    expect(view.host.textContent).toContain("Getting your Sui address…");
   });
 
   it("offers Try again only where asking again can bring the address", () => {
     render({ state: "failed" });
-    expect(host.textContent).toContain("Sui address didn’t load");
-    expect(button("Try again")).toBeUndefined();
+    expect(view.host.textContent).toContain("Sui address didn’t load");
+    expect(() => button("Try again")).toThrow();
 
     const retry = vi.fn();
     render({ state: "failed", retry });
-    act(() => button("Try again")?.click());
+    act(() => button("Try again").click());
     expect(retry).toHaveBeenCalledOnce();
   });
 

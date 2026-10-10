@@ -13,7 +13,6 @@ import {
 } from "vitest";
 import { TEST_KYOTO_SEIKA_SUBJECTS } from "../../api/testFixtures";
 import { forgetBoardComplete, markBoardComplete, QUIET_MS } from "../boardComplete";
-import { i18next } from "../../i18n/i18n";
 import { errors } from "../../i18n/strings/errors";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import type { BoardStickerView } from "../boardSticker";
@@ -21,16 +20,11 @@ import { StickerTray, type StickerTrayHandle } from "./StickerTray";
 import { ICONS, TUG_VISITS, type TrayBoard } from "./trayEngine";
 import { LARGE_SCREEN } from "../../ui/largeScreen";
 import { POUCH_LINING, SHEET, STACK_FOOT, stackFootFor, trayTopFor } from "./trayModel";
-import { testStickerUrls } from "../../stickers/testStickerUrls";
+import { testBoardSticker } from "../testBoardSticker";
 import { NUDGE_AFTER } from "./trayNudge";
 import { trayProblemWords, type TrayProblem } from "./trayProblem";
 import { countVisit, visitsSoFar } from "./trayVisits";
-import { stubResizeObservers } from "../../ui/testing";
-
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+import { inLanguage, stubResizeObservers } from "../../ui/testing";
 
 let host: HTMLDivElement;
 let board: HTMLDivElement;
@@ -44,32 +38,16 @@ const sticker = (
   arrivedAt: number,
   on: boolean,
   extra: Partial<BoardStickerView> = {},
-): BoardStickerView => ({
-  id,
-  no: 1,
-  createdAt: arrivedAt,
-  arrivedAt,
-  seenAt: null,
-  timeUsed: 120,
-  drawnWidth: 480,
-  drawnHeight: 480,
-  nsfw: false,
-  kyotoSeikaSubjects: null,
-  width: 100,
-  height: 80,
-  // A stored cut line, so its shape is known without reading an image.
-  outline: "M10.0 10.0L90.0 10.0L90.0 70.0L10.0 70.0Z",
-  urls: testStickerUrls(id),
-  placement: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
-  placements: { phone: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 }, large: null },
-  artist: { id: "me", handle: "you", name: "You", nsfwOptIn: false },
-  held: true,
-  hasTimelapse: false,
-  trail: { timesGiven: 0, newestHasGratitude: false },
-  givenTo: null,
-  openGift: null,
-  ...extra,
-});
+): BoardStickerView =>
+  testBoardSticker({
+    id,
+    createdAt: arrivedAt,
+    arrivedAt,
+    // A stored cut line, so its shape is known without reading an image.
+    outline: "M10.0 10.0L90.0 10.0L90.0 70.0L10.0 70.0Z",
+    placement: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
+    ...extra,
+  });
 const api: TrayBoard = {
   stickerRect: () => null,
   sizeFor: () => ({ w: 100, h: 80 }),
@@ -1287,13 +1265,10 @@ describe("StickerTray", () => {
   });
 
   it("renames its Zipper and folder tabs when the app's language changes, keeping what it has shown", async () => {
-    onTestFinished(async () => {
-      await i18next.changeLanguage("en");
-    });
     // Arrived today, so each is NEW until a tray has shown it.
     render(stickersWithGifts(6).map((s) => ({ ...s, arrivedAt: Date.now() })));
     await openAndShut();
-    await act(() => i18next.changeLanguage("ja"));
+    await inLanguage("ja");
     expect(board.querySelectorAll(".tray")).toHaveLength(1);
     expect(board.querySelector(".zip__slider")?.getAttribute("aria-label")).toBe(
       stickerBoard.tray.zipper.ja,
@@ -1323,14 +1298,11 @@ describe("StickerTray", () => {
   });
 
   it("reports what the open tray showed as seen when a new language rebuilds it open, as shutting does", async () => {
-    onTestFinished(async () => {
-      await i18next.changeLanguage("en");
-    });
     const onSeen = vi.fn();
     render([sticker("new", Date.now(), false)], {}, onSeen);
     await openTray();
     expect(onSeen).not.toHaveBeenCalled();
-    await act(() => i18next.changeLanguage("ja"));
+    await inLanguage("ja");
     expect(onSeen).toHaveBeenCalledExactlyOnceWith(["new"]);
     // The rebuilt tray shows it as seen, and has nothing more to report.
     expect(dotOf("new")).toBeNull();

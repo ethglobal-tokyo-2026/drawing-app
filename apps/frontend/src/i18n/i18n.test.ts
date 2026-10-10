@@ -1,4 +1,5 @@
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, expect, it } from "vitest";
+import { inLanguage } from "../ui/testing";
 import { BREAK_HINT } from "./catalog";
 import { i18next, withBreakHints } from "./i18n";
 import { shop } from "./strings/shop";
@@ -13,19 +14,13 @@ describe("i18next", () => {
   });
 
   it("shows a string's English where it has no Japanese, as the developer slip's never does", async () => {
-    await i18next.changeLanguage("ja");
-    onTestFinished(async () => {
-      await i18next.changeLanguage("en");
-    });
+    await inLanguage("ja");
     expect(i18next.t(($) => $.stickerBoard.settings.title)).toBe(stickerBoard.settings.title.ja);
     expect(i18next.t(($) => $.stickerBoard.developer.label)).toBe(stickerBoard.developer.label.en);
   });
 
   it("hands out a Japanese string's break hints as zero-width spaces, so no tag shows as text", async () => {
-    await i18next.changeLanguage("ja");
-    onTestFinished(async () => {
-      await i18next.changeLanguage("en");
-    });
+    await inLanguage("ja");
     const marked = shop.reserve.lead.ja;
     expect(marked).toContain(BREAK_HINT);
     expect(i18next.t(($) => $.shop.reserve.lead)).toBe(

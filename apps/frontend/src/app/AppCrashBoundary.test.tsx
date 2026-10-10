@@ -5,11 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { strings } from "../i18n/strings";
 import { AppCrashBoundary } from "./AppCrashBoundary";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 let host: HTMLDivElement;
 let root: Root;
 const reload = vi.fn<() => void>();

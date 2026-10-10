@@ -1,29 +1,19 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, onTestFinished } from "vitest";
-import { i18next } from "../i18n/i18n";
+import { afterEach, describe, expect, it } from "vitest";
+import { inLanguage } from "../ui/testing";
 import type { PairSize } from "./balloonGeometry";
 import { SubjectThought } from "./SubjectThought";
 import { DETAIL_TOWARD } from "./thoughtLayout";
 import { REUNION, SPORTS, WIND } from "./testSubjects";
-
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 let cleanup = () => {};
 afterEach(() => cleanup());
 
 /** The pair's clouds at `size`, in `language`. */
 async function thought(size: PairSize, language: "en" | "ja", pair = [WIND, REUNION] as const) {
-  await act(async () => {
-    await i18next.changeLanguage(language);
-  });
-  onTestFinished(async () => {
-    await i18next.changeLanguage("en");
-  });
+  await inLanguage(language);
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);

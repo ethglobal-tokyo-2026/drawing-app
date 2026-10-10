@@ -4,11 +4,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { useFocusLoop } from "./useFocusLoop";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 /** A screen whose last two controls take no Tab stop: an inert bar and a control stepped aside. */
 function Screen({ active }: { active: boolean }) {
   const ref = useRef<HTMLDivElement>(null);

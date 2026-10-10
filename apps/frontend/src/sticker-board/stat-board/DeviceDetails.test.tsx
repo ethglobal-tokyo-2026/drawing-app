@@ -1,20 +1,13 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
-import { onLargeScreen } from "../../ui/testing";
+import { buttonNamed, onLargeScreen, renderInHost, type HostView } from "../../ui/testing";
 import { DeviceDetails } from "./DeviceDetails";
-
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const strings = stickerBoard.developer.device;
 const writeText = vi.fn<(text: string) => Promise<void>>();
-let host: HTMLDivElement;
-let root: Root;
+let view: HostView;
 
 /** The window at `width` × `height`. */
 function windowAt(width: number, height: number) {
@@ -23,26 +16,20 @@ function windowAt(width: number, height: number) {
 }
 /** The paper's value for `label`. */
 const row = (label: string) =>
-  [...host.querySelectorAll(".account-rows__row")]
+  [...view.host.querySelectorAll(".account-rows__row")]
     .find((r) => r.querySelector("dt")?.textContent === label)
     ?.querySelector("dd")?.textContent;
-const copy = () =>
-  act(async () =>
-    [...host.querySelectorAll("button")].find((b) => b.textContent === strings.copy.en)?.click(),
-  );
+const copy = () => act(async () => buttonNamed(view.host, strings.copy.en).click());
 // No ToastProvider: the board's tests show the slip without one, so the paper mustn't need it.
-const render = () => act(() => root.render(<DeviceDetails />));
+const render = () => view.rerender(<DeviceDetails />);
 
 beforeEach(() => {
   Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-  host = document.createElement("div");
-  document.body.append(host);
-  root = createRoot(host);
+  view = renderInHost();
 });
 
 afterEach(() => {
-  act(() => root.unmount());
-  host.remove();
+  view.unmount();
   writeText.mockReset();
   vi.restoreAllMocks();
 });
@@ -59,7 +46,7 @@ describe("DeviceDetails", () => {
     const copied = writeText.mock.lastCall?.[0] ?? "";
     expect(copied).toMatch(/^Device details, taken .+\nUser agent: /);
     expect(copied).toContain("\nLarge screen: yes");
-    expect(host.querySelector('[role="status"]')?.textContent).toBe(strings.copied.en);
+    expect(view.host.querySelector('[role="status"]')?.textContent).toBe(strings.copied.en);
   });
 
   it("follows the window as it turns", () => {
@@ -76,9 +63,9 @@ describe("DeviceDetails", () => {
     render();
     writeText.mockRejectedValue(new DOMException("Not allowed here", "NotAllowedError"));
     await copy();
-    expect(host.querySelector('[role="alert"]')?.textContent).toBe(
+    expect(view.host.querySelector('[role="alert"]')?.textContent).toBe(
       strings.notCopied.en.replace("{{reason}}", "Not allowed here"),
     );
-    expect(host.querySelector("textarea")?.value).toContain("Viewport: 820×1180");
+    expect(view.host.querySelector("textarea")?.value).toContain("Viewport: 820×1180");
   });
 });

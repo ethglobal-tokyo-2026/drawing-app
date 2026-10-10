@@ -27,11 +27,6 @@ vi.mock("../gratitude/replay/mountGratitudeReplay", () => ({
   mountGratitudeReplay: replayEngine.mount,
 }));
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 const SEEN_AT = "2026-09-27T00:00:00.000Z";
 const PLAY_LABEL = "Play the replay of @bob’s 2,946 gratitude";
 const read = vi.fn<ApiClient["gratitude"]>();

@@ -3,11 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18next } from "../i18n/i18n";
-
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+import { inLanguage } from "../ui/testing";
 
 // LINE as each test needs it to behave.
 const liff = vi.hoisted(() => ({
@@ -61,7 +57,6 @@ beforeEach(() => {
 afterEach(async () => {
   act(() => root.unmount());
   host.remove();
-  await i18next.changeLanguage("en");
   vi.restoreAllMocks();
   vi.useRealTimers();
 });
@@ -108,7 +103,7 @@ describe("LineGate", () => {
     await openApp();
     await settle();
     // After openApp, whose fresh import of the gate starts i18next again in English.
-    await act(() => i18next.changeLanguage("ja"));
+    await inLanguage("ja");
     expect(host.textContent).toContain("LINEでログイン");
   });
 
@@ -159,7 +154,7 @@ describe("LineGate", () => {
     await act(() => vi.advanceTimersByTimeAsync(START_TIMEOUT_MS));
     const detail = () => host.querySelector(".copyable-fine-print__text")?.textContent;
     expect(detail()).toBe(`LINE didn’t answer within ${START_TIMEOUT_MS / 1000} s`);
-    await act(() => i18next.changeLanguage("ja"));
+    await inLanguage("ja");
     expect(detail()).toContain(`${START_TIMEOUT_MS / 1000}秒`);
   });
 

@@ -7,11 +7,6 @@ import { suiscanAccountUrl } from "../identity/explorers";
 import { clamp } from "./easing";
 import { QrCode } from "./QrCode";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 const ADDRESS = "0x7a1e5b0c9d1e4f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192ab04d";
 
 let host: HTMLDivElement;

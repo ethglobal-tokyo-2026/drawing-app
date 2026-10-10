@@ -1,7 +1,8 @@
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, expect, it } from "vitest";
 import { ApiError } from "../../api/apiClient";
-import { i18next, withBreakHints } from "../../i18n/i18n";
+import { withBreakHints } from "../../i18n/i18n";
 import { errors } from "../../i18n/strings/errors";
+import { inLanguage } from "../../ui/testing";
 import { trayProblemKey, trayProblemWords, type TrayProblem } from "./trayProblem";
 
 const problem = (overrides: Partial<TrayProblem> = {}): TrayProblem => ({
@@ -29,14 +30,11 @@ describe("trayProblemKey", () => {
 
 describe("trayProblemWords", () => {
   it("says why in the app's language at the time it's read", async () => {
-    onTestFinished(async () => {
-      await i18next.changeLanguage("en");
-    });
     const offline = problem({
       error: new ApiError(0, { error: "network", detail: "Failed to fetch" }),
     });
     expect(trayProblemWords(offline).reason).toBe(withBreakHints(errors.network.en));
-    await i18next.changeLanguage("ja");
+    await inLanguage("ja");
     expect(trayProblemWords(offline).reason).toBe(withBreakHints(errors.network.ja));
   });
 });

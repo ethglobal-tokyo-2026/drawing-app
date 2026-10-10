@@ -4,11 +4,6 @@ import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useVisibleArea, type VisibleArea } from "./visibleArea";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 /** A visual viewport that fills the page until a test moves it, as iOS's does for the keyboard. */
 const viewport = () =>
   Object.assign(new EventTarget(), { height: innerHeight, offsetTop: 0, scale: 1 });

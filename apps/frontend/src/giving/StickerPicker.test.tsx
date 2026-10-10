@@ -6,11 +6,6 @@ import { canGiveTo } from "../stickers/nsfw";
 import type { KeptSticker } from "../stickers/useKeptStickers";
 import { StickerPicker } from "./StickerPicker";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 let host: HTMLDivElement;
 let root: Root;
 const onPick = vi.fn();

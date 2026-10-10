@@ -6,32 +6,12 @@ import type { BoardSticker } from "./boardSticker";
 import { fieldOf, PHONE_BOARD, sizeOf, toPx, transformAt, type Placement } from "./placement";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import { STEP_SAVE_IDLE_MS, useBoardGestures } from "./useBoardGestures";
-import { yoursHeld } from "./testBoardSticker";
-import { testStickerUrls } from "../stickers/testStickerUrls";
-
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+import { testBoardSticker } from "./testBoardSticker";
 
 type Options = Parameters<typeof useBoardGestures>[0];
 type BoardProps = Omit<Options, "stage">;
 
-const sticker: BoardSticker = {
-  id: "a",
-  no: 1,
-  createdAt: 1,
-  timeUsed: 60,
-  drawnWidth: 480,
-  drawnHeight: 480,
-  ...yoursHeld,
-  width: 100,
-  height: 80,
-  nsfw: false,
-  kyotoSeikaSubjects: null,
-  urls: testStickerUrls("a"),
-  placement: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
-};
+const sticker: BoardSticker = testBoardSticker({ id: "a" });
 
 /** Each sticker carries a corner handle, as a placed sticker does. */
 function Board(props: BoardProps) {

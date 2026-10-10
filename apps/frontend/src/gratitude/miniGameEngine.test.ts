@@ -1,13 +1,13 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReplayV1 } from "@drawing-app/api/client";
-import { i18next } from "../i18n/i18n";
 import { fullBarSeconds, type ComboRecord } from "./combo";
 import { FEEL_CONFIG, GAME_CONFIG } from "./gameConfig";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
 import { mountGratitudeReplay } from "./replay/mountGratitudeReplay";
 import { REPLAY_REAL_TIME_MS } from "./replay/replayFeed";
 import { handFrames } from "./replay/testing";
+import { inLanguage } from "../ui/testing";
 import { liveHeartRest, liveScale } from "./stageLayout";
 import { TIER_NAMES } from "./tierNames";
 
@@ -664,10 +664,8 @@ describe("switching to stroke or shake after the first tap", () => {
 });
 
 describe("in Japanese", () => {
-  afterEach(() => i18next.changeLanguage("en"));
-
   it("slams a tier-up's name and pops words in with no gloss, and says the name itself", async () => {
-    await i18next.changeLanguage("ja");
+    await inLanguage("ja");
     for (let i = 0; i < 30 && host.dataset.tier !== "1"; i++) await mash(1);
     expect(host.dataset.tier).toBe("1");
     const { jp } = TIER_NAMES[1];

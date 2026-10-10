@@ -10,11 +10,6 @@ vi.mock("@privy-io/react-auth/extended-chains", () => ({
 }));
 vi.mock("@line/liff", () => ({ default: {} }));
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 const SUI = `0x${"34".repeat(32)}`;
 
 let host: HTMLDivElement;

@@ -3,20 +3,15 @@ import type { KyotoSeikaSubject } from "@drawing-app/api/client";
 import { act, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { i18next } from "../i18n/i18n";
 import { strings } from "../i18n/strings";
 import { seededRandom } from "../ui/seededRandom";
+import { inLanguage } from "../ui/testing";
 import { dealLayout } from "./balloonGeometry";
 import { dealKinds, PICKS, rollDie, togglePick, type Deal } from "./deal";
 import { FADED } from "./dealMotion";
 import { CHARRED_AT_ROLL, TEASE_LINES } from "./dieMood";
 import { SubjectBalloons } from "./SubjectBalloons";
 import { DEAL, SPORTS, TEST_SUBJECTS, WIND } from "./testSubjects";
-
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const LAYOUT = dealLayout({
   width: 390,
@@ -29,11 +24,10 @@ const LAYOUT = dealLayout({
 const idle = () => {};
 
 let cleanup = () => {};
-afterEach(async () => {
+afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.restoreAllMocks();
-  await i18next.changeLanguage("en");
 });
 
 /** Renders `node`, and returns its host and a way to render something else in its place. */
@@ -127,7 +121,7 @@ describe("the Kyoto Seika clouds", () => {
     );
     expect(toggles(host).map((t) => t.getAttribute("aria-label"))).toEqual(DEAL.subjects.map(said));
     expect(pressed(host)).toEqual(DEAL.subjects.map(() => "false"));
-    await act(() => i18next.changeLanguage("ja"));
+    await inLanguage("ja");
     expect(toggles(host).map((t) => t.getAttribute("aria-label"))).toEqual(
       DEAL.subjects.map((s) => s.ja),
     );
@@ -190,7 +184,7 @@ describe("the Kyoto Seika clouds", () => {
     const dealt = dealtNow.subjects.filter((s, place) => s !== DEAL.subjects[place]);
     expect(dealt.length).toBeGreaterThan(0);
     expect(status(host)).toBe(dealt.map(said).join(" "));
-    await act(() => i18next.changeLanguage("ja"));
+    await inLanguage("ja");
     expect(die(host).textContent).toBe(strings.kyotoSeika.balloons.reroll.ja);
   });
 
@@ -199,8 +193,8 @@ describe("the Kyoto Seika clouds", () => {
     const [wind, sports] = [...host.querySelectorAll(".subject-balloon__words")];
     expect([...wind.querySelectorAll("rt")].map((rt) => rt.textContent)).toEqual([WIND.reading]);
     expect(sports.querySelector("rt")).toBeNull();
-    for (const language of ["en", "ja"]) {
-      await act(() => i18next.changeLanguage(language));
+    for (const language of ["en", "ja"] as const) {
+      await inLanguage(language);
       expect(wind.textContent).toBe(`${WIND.ja}${WIND.reading}`);
       expect(sports.textContent).toBe(SPORTS.ja);
     }

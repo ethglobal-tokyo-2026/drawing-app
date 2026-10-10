@@ -1,14 +1,9 @@
 // @vitest-environment happy-dom
 import { act, useRef, useState } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { buttonNamed, renderInHost, type HostView } from "../../ui/testing";
 import { ToastProvider } from "../../ui/ToastProvider";
 import { AddressDialog } from "./AddressDialog";
-
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const liff = vi.hoisted(() => ({ isInClient: vi.fn(() => false), openWindow: vi.fn() }));
 vi.mock("@line/liff", () => ({ default: liff }));
@@ -16,8 +11,7 @@ vi.mock("@line/liff", () => ({ default: liff }));
 const ADDRESS = "0x7a1e5b0c9d1e4f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192ab04d";
 const SUISCAN_PAGE = `https://suiscan.xyz/testnet/account/${ADDRESS}`;
 
-let host: HTMLDivElement;
-let root: Root;
+let view: HostView;
 const onClose = vi.fn();
 const writeText = vi.fn<(text: string) => Promise<void>>();
 /** Every flight the dialog starts; happy-dom never plays them. */
@@ -46,14 +40,8 @@ function Board() {
   );
 }
 
-const find = <E extends Element>(selector: string) => host.querySelector<E>(selector);
-const button = (name: string) => {
-  const found = [...host.querySelectorAll("button")].find(
-    (b) => b.textContent === name || b.getAttribute("aria-label") === name,
-  );
-  if (!found) throw new Error(`No "${name}" button`);
-  return found;
-};
+const find = <E extends Element>(selector: string) => view.host.querySelector<E>(selector);
+const button = (name: string) => buttonNamed(view.host, name);
 const dialog = () => find<HTMLElement>('[role="dialog"]');
 const toastText = () => find('[role="status"]')?.textContent;
 /** Lands every flight under way, as the browser would once they've played. */
@@ -61,7 +49,7 @@ const land = () => act(async () => flights.forEach((a) => a.finish()));
 
 /** Opens the dialog from the focused paper, as a tap on the cork does. */
 async function open() {
-  act(() => root.render(<Board />));
+  view.rerender(<Board />);
   button("Sui address paper").focus();
   await act(async () => button("Sui address paper").click());
   await land();
@@ -75,14 +63,11 @@ beforeEach(() => {
     return flight;
   });
   Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-  host = document.createElement("div");
-  document.body.append(host);
-  root = createRoot(host);
+  view = renderInHost();
 });
 
 afterEach(() => {
-  act(() => root.unmount());
-  host.remove();
+  view.unmount();
   onClose.mockReset();
   writeText.mockReset();
   liff.isInClient.mockReset().mockReturnValue(false);
@@ -156,7 +141,7 @@ describe("AddressDialog", () => {
   });
 
   it("turns the paper around mid-flight rather than starting the way back over", async () => {
-    act(() => root.render(<Board />));
+    view.rerender(<Board />);
     await act(async () => button("Sui address paper").click());
     const opening = [...flights];
     act(() => button("Close").click());

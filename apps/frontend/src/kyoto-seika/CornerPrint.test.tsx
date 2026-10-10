@@ -5,11 +5,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CornerPrint } from "./CornerPrint";
 import { SPORTS, WIND } from "./testSubjects";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 let cleanup = () => {};
 afterEach(() => cleanup());
 

@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { people } from "../api/testFixtures";
 import { toPerson } from "../api/views";
-import { i18next } from "../i18n/i18n";
+import { inLanguage } from "../ui/testing";
 import { refusalScreen } from "./refusals";
 
 describe("refusalScreen", () => {
@@ -13,8 +13,7 @@ describe("refusalScreen", () => {
   });
 
   describe("in Japanese", () => {
-    beforeEach(() => i18next.changeLanguage("ja"));
-    afterEach(() => i18next.changeLanguage("en"));
+    beforeEach(() => inLanguage("ja"));
 
     it("says an already opened gift opens once", () => {
       expect(refusalScreen("already_received", null)).toMatchObject({

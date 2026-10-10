@@ -4,11 +4,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { useModalDialog } from "./useModalDialog";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 /** A layer of its own, a scrim and a sheet, the way Giving lays it out. */
 function Layer({ active = true }: { active?: boolean }) {
   const layer = useRef<HTMLDivElement>(null);

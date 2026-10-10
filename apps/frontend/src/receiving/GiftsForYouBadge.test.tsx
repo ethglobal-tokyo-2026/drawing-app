@@ -6,11 +6,6 @@ import { gift, people, sticker } from "../api/testFixtures";
 import { formatHandle } from "../stickers/format";
 import { GiftsForYouBadge, type GiftForYou } from "./GiftsForYouBadge";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 let host: HTMLDivElement;
 let root: Root;
 const onOpen = vi.fn();

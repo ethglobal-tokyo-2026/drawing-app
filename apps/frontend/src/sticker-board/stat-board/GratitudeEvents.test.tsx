@@ -7,7 +7,7 @@ import { emptyApi, renderWithApi } from "../../api/testing";
 import { people, sticker } from "../../api/testFixtures";
 import { problemOf } from "../../i18n/errorMessage";
 import { formatHandle } from "../../stickers/format";
-import { dragBy, onLargeScreen } from "../../ui/testing";
+import { buttonNamed, dragBy, onLargeScreen } from "../../ui/testing";
 import { DISMISS_PX } from "../../ui/useSheetDrag";
 import { GratitudeEventsSheet } from "./GratitudeEvents";
 import { StatCork } from "./StatCork";
@@ -76,14 +76,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const buttonIn = (host: Element, text: string) =>
-  [...host.querySelectorAll("button")].find((button) => button.textContent === text);
-
 /** Your receipt with its link pressed: the sheet, loading through `gratitudeEvents`. */
 async function openEvents(gratitudeEvents: ApiClient["gratitudeEvents"]) {
   const view = renderWithApi(<YourReceipt />, emptyApi({ gratitudeEvents }));
   unmount = view.unmount;
-  await act(async () => buttonIn(view.host, "See where it came from")?.click());
+  await act(async () => buttonNamed(view.host, "See where it came from").click());
   return view.host;
 }
 
@@ -116,7 +113,7 @@ it("says why your gratitude events didn't load, with Try again, which loads them
   expect(alert?.textContent).toContain(problemOf(failure).message);
   expect(rowsIn(host)).toEqual([]);
 
-  await act(async () => buttonIn(host, "Try again")?.click());
+  await act(async () => buttonNamed(host, "Try again").click());
   expect(gratitudeEvents).toHaveBeenCalledTimes(2);
   expect(host.querySelector('.gratitude-events [role="alert"]')).toBeNull();
   expect(rowsIn(host)).toHaveLength(EVENTS.events.length);

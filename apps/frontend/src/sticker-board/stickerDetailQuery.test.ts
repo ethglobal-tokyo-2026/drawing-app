@@ -5,30 +5,16 @@ import { emptyApi } from "../api/testing";
 import { testStickerUrls } from "../stickers/testStickerUrls";
 import type { BoardStickerView } from "./boardSticker";
 import { detailsAhead, MAX_DETAILS_AHEAD, preloadStickerDetails } from "./stickerDetailQuery";
-import { yoursHeld } from "./testBoardSticker";
+import { testBoardSticker } from "./testBoardSticker";
 
 /** A sticker of yours at height `z`, on the board or in the sticker tray. */
-const boardSticker = (z: number, on = true): BoardStickerView => {
-  const placement = { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z };
-  return {
-    ...yoursHeld,
+const boardSticker = (z: number, on = true): BoardStickerView =>
+  testBoardSticker({
     id: `s-${z}`,
     no: z,
-    createdAt: 0,
-    arrivedAt: 0,
-    timeUsed: 60,
-    drawnWidth: 480,
-    drawnHeight: 480,
-    width: 100,
-    height: 100,
-    nsfw: false,
-    kyotoSeikaSubjects: null,
     urls: testStickerUrls(`blob:${z}`),
-    placement,
-    placements: { phone: placement, large: null },
-    seenAt: 0,
-  };
-};
+    placement: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z },
+  });
 
 describe("sticker details read ahead", () => {
   it("are the topmost stickers on the board, up to the cap, read one at a time", async () => {

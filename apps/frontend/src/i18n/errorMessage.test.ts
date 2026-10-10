@@ -1,16 +1,14 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { ApiError } from "../api/apiClient";
+import { inLanguage } from "../ui/testing";
 import { errorDetail, errorMessage, joinedDetails, problemOf } from "./errorMessage";
-import { i18next } from "./i18n";
 import { errors } from "./strings/errors";
-
-afterEach(() => i18next.changeLanguage("en"));
 
 describe("an error's message", () => {
   it("is its code's message in the app's language", async () => {
     const error = new ApiError(409, { error: "handle_taken" });
     expect(errorMessage(error)).toBe(errors.handle_taken.en);
-    await i18next.changeLanguage("ja");
+    await inLanguage("ja");
     expect(errorMessage(error)).toBe(errors.handle_taken.ja);
   });
 
@@ -40,7 +38,7 @@ describe("a failure as a problem", () => {
       message: errors.unexpected.en,
       detail: "QuotaExceededError: The quota has been exceeded",
     });
-    await i18next.changeLanguage("ja");
+    await inLanguage("ja");
     expect(problemOf(error).message).toBe(errors.unexpected.ja);
   });
 });

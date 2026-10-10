@@ -5,8 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
-import { i18next } from "../i18n/i18n";
-import { onLargeScreen, stubResizeObservers } from "../ui/testing";
+import { inLanguage, onLargeScreen, stubResizeObservers } from "../ui/testing";
 import { TWO_COLUMNS_MIN_WIDTH } from "./exploreColumns";
 import { ExploreScreen } from "./ExploreScreen";
 
@@ -102,7 +101,6 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   EndObserver.watching.clear();
   localStorage.clear();
-  await i18next.changeLanguage("en");
 });
 
 const wait = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
@@ -175,7 +173,7 @@ describe("ExploreScreen's sticker pile", () => {
     const host = await openExplore(exploreWith(unGiven(drawn)));
 
     expect(labelsOf(host, ".pile-sticker__button")[0]).toMatch(/, just now$/);
-    await act(() => i18next.changeLanguage("ja"));
+    await inLanguage("ja");
     expect(labelsOf(host, ".pile-sticker__button")[0]).toMatch(/、たった今$/);
   });
 

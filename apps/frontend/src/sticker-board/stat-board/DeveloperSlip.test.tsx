@@ -1,34 +1,26 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { renderInHost, type HostView } from "../../ui/testing";
 import { DeveloperSlip } from "./DeveloperSlip";
 import { RestingSide, type BoardSide } from "./restingSide";
 import { PULL_THRESHOLD } from "./usePullToReveal";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
-let host: HTMLDivElement;
-let root: Root;
+let view: HostView;
 
 const render = (side: BoardSide = "back") =>
-  act(() =>
-    root.render(
-      <RestingSide value={side}>
-        <div className="stat-board__cork">
-          <DeveloperSlip>
-            <button type="button">Record performance</button>
-          </DeveloperSlip>
-        </div>
-      </RestingSide>,
-    ),
+  view.rerender(
+    <RestingSide value={side}>
+      <div className="stat-board__cork">
+        <DeveloperSlip>
+          <button type="button">Record performance</button>
+        </DeveloperSlip>
+      </div>
+    </RestingSide>,
   );
 
-const cork = () => host.querySelector<HTMLElement>(".stat-board__cork");
-const isOut = () => host.querySelector(".dev-slip")?.hasAttribute("inert") === false;
+const cork = () => view.host.querySelector<HTMLElement>(".stat-board__cork");
+const isOut = () => view.host.querySelector(".dev-slip")?.hasAttribute("inert") === false;
 
 /** Fingers on the cork, one at each y given: none once the last has lifted. */
 function touch(type: string, ...ys: number[]) {
@@ -58,14 +50,11 @@ const pull = (travel: number) =>
 
 beforeEach(() => {
   vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
-  host = document.createElement("div");
-  document.body.append(host);
-  root = createRoot(host);
+  view = renderInHost();
 });
 
 afterEach(() => {
-  act(() => root.unmount());
-  host.remove();
+  view.unmount();
   vi.restoreAllMocks();
 });
 
@@ -73,7 +62,7 @@ describe("DeveloperSlip", () => {
   it("lies collapsed under the cork's end, out of reach", () => {
     render();
     expect(isOut()).toBe(false);
-    expect(host.querySelector(".dev-slip [inert], .dev-slip[inert]")).not.toBeNull();
+    expect(view.host.querySelector(".dev-slip [inert], .dev-slip[inert]")).not.toBeNull();
   });
 
   it("comes out after a pull past the threshold, and not after a short one", () => {
@@ -87,7 +76,7 @@ describe("DeveloperSlip", () => {
   it("goes back under when a second finger lands mid-pull", () => {
     render();
     const shown = () =>
-      host.querySelector<HTMLElement>(".dev-slip")?.style.getPropertyValue("--pull");
+      view.host.querySelector<HTMLElement>(".dev-slip")?.style.getPropertyValue("--pull");
     act(() => {
       pullUp(PULL_THRESHOLD / 2);
       touch("touchstart", 600 - PULL_THRESHOLD / 2, 600);
@@ -103,11 +92,11 @@ describe("DeveloperSlip", () => {
 
   it("comes out from its hidden button, with focus on the slip", () => {
     render();
-    const open = host.querySelector<HTMLButtonElement>(".dev-slip__open");
+    const open = view.host.querySelector<HTMLButtonElement>(".dev-slip__open");
     act(() => open?.click());
     expect(isOut()).toBe(true);
     expect(document.activeElement?.classList.contains("stat-board__slip")).toBe(true);
-    expect(host.querySelector(".dev-slip__open")).toBeNull();
+    expect(view.host.querySelector(".dev-slip__open")).toBeNull();
   });
 
   it("goes back under once the board rests on its front", () => {

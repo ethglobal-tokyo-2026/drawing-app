@@ -10,11 +10,6 @@ import { STAGE_EASE_MS } from "./ReplayStage";
 import { fakeReplayEngine, REPLAYED_TOTAL, replayAnswer } from "./testReplayEngine";
 import { LANDED_HOLD_MS, useGratitudeReplay } from "./useGratitudeReplay";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 const SEEN_AT = "2026-09-27T00:00:00.000Z";
 const read = vi.fn<ApiClient["gratitude"]>();
 const markSeen = vi.fn<ApiClient["markGratitudeSeen"]>();

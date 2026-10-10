@@ -11,11 +11,6 @@ import { pages } from "../i18n/strings/pages";
 import { stickerBoard } from "../i18n/strings/stickerBoard";
 import { KyotoSeikaHelp } from "./KyotoSeikaHelp";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 let host: HTMLDivElement;
 let root: Root;
 const onClose = vi.fn();

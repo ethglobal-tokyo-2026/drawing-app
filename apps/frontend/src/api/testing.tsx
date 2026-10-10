@@ -1,15 +1,10 @@
 import type { Gratitude, Me, Person, RecordGratitude, Tickets } from "@drawing-app/api/client";
 import { act, createRef, type ReactNode } from "react";
-import { createRoot } from "react-dom/client";
+import { renderInHost } from "../ui/testing";
 import { ApiError, type ApiClient } from "./apiClient";
 import { ApiProvider } from "./ApiProvider";
 import { TicketsProvider } from "../tickets/TicketsProvider";
 import { MeHolder } from "./MeHolder";
-
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 /** The board's owner in tests: you. */
 export const TEST_OWNER: Person = {
@@ -165,9 +160,6 @@ export function shownText(selector: string): string {
 
 /** Renders `ui` as you, under an ApiProvider, in a fresh host. `unmount` removes both. */
 export function renderWithApi(ui: ReactNode, client: ApiClient = emptyApi(), me: Me = TEST_ME) {
-  const host = document.createElement("div");
-  document.body.append(host);
-  const root = createRoot(host);
   const replace = createRef<(me: Me) => void>();
   const wrap = (node: ReactNode) => (
     <MeHolder me={me} replace={replace}>
@@ -176,17 +168,12 @@ export function renderWithApi(ui: ReactNode, client: ApiClient = emptyApi(), me:
       </ApiProvider>
     </MeHolder>
   );
-  act(() => root.render(wrap(ui)));
+  const view = renderInHost(wrap(ui));
   return {
-    host,
-    root,
+    ...view,
     client,
-    rerender: (next: ReactNode) => act(() => root.render(wrap(next))),
+    rerender: (next: ReactNode) => view.rerender(wrap(next)),
     /** Replaces you, as a setting saved on the Settings note does. */
     setMe: (next: Me) => act(() => replace.current?.(next)),
-    unmount: () => {
-      act(() => root.unmount());
-      host.remove();
-    },
   };
 }

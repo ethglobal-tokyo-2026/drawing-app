@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../api/apiClient";
 import {
@@ -11,27 +10,18 @@ import {
   REPORT_UPLOAD_EVERY_MS,
   uploadPerformanceReports,
 } from "../../performance/performanceUpload";
+import { buttonNamed, renderInHost, type HostView } from "../../ui/testing";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
-let host: HTMLDivElement;
-let root: Root;
+let view: HostView;
 const writeText = vi.fn<(text: string) => Promise<void>>();
 
 const control = <E extends HTMLElement>(selector: string) => {
-  const el = host.querySelector<E>(selector);
+  const el = view.host.querySelector<E>(selector);
   if (!el) throw new Error(`Nothing matches ${selector}`);
   return el;
 };
-const button = (label: string) => {
-  const found = [...host.querySelectorAll("button")].find((b) => b.textContent === label);
-  if (!found) throw new Error(`No "${label}" button`);
-  return found;
-};
+const button = (label: string) => buttonNamed(view.host, label);
 /** Turns recording on and lets it see a few frames. */
 const record = () => {
   act(() => control<HTMLInputElement>("input[type=checkbox]").click());
@@ -48,15 +38,11 @@ beforeEach(() => {
     toFake: ["setInterval", "clearInterval", "requestAnimationFrame", "cancelAnimationFrame"],
   });
   Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-  host = document.createElement("div");
-  document.body.append(host);
-  root = createRoot(host);
-  act(() => root.render(<PerformanceRecorderControls />));
+  view = renderInHost(<PerformanceRecorderControls />);
 });
 
 afterEach(() => {
-  act(() => root.unmount());
-  host.remove();
+  view.unmount();
   stopUploading?.();
   stopUploading = undefined;
   stopPerformanceRecorder();
@@ -106,15 +92,15 @@ describe("PerformanceRecorderControls", () => {
     );
 
     await act(() => vi.advanceTimersByTimeAsync(REPORT_UPLOAD_EVERY_MS));
-    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(view.host.querySelector('[role="alert"]')).toBeNull();
   });
 
   it("runs its once-a-second update only while the slip shows", async () => {
     record();
     const running = vi.getTimerCount();
-    await act(async () => host.setAttribute("inert", ""));
+    await act(async () => view.host.setAttribute("inert", ""));
     expect(vi.getTimerCount()).toBe(running - 1);
-    await act(async () => host.removeAttribute("inert"));
+    await act(async () => view.host.removeAttribute("inert"));
     expect(vi.getTimerCount()).toBe(running);
   });
 

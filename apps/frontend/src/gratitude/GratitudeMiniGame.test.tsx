@@ -9,17 +9,12 @@ import { MeContext } from "../api/meContext";
 import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_ME } from "../api/testing";
 import { errorDetail } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
-import { dragBy, onLargeScreen, refusingStorage } from "../ui/testing";
+import { dragBy, inLanguage, onLargeScreen, refusingStorage } from "../ui/testing";
 import { DISMISS_PX } from "../ui/useSheetDrag";
 import { testStickerUrls } from "../stickers/testStickerUrls";
 import { GratitudeMiniGame } from "./GratitudeMiniGame";
 import { isGratitudeWaiting, resendPendingGratitude } from "./gratitudeOutbox";
 import { TIER_NAMES } from "./tierNames";
-
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 /** The receipt's note for gratitude kept on the device until it can go to @alice. */
@@ -431,10 +426,8 @@ describe("GratitudeMiniGame", () => {
 });
 
 describe("GratitudeMiniGame in Japanese", () => {
-  afterEach(() => i18next.changeLanguage("en"));
-
   it("names the combo's peak tier on the receipt with no gloss", async () => {
-    await i18next.changeLanguage("ja");
+    await inLanguage("ja");
     open({ giftId: "g1" });
     tapOnce();
     await play(ONE_TAP_ENDS_MS);

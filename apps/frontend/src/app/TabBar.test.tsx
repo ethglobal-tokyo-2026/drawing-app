@@ -2,15 +2,9 @@
 import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { i18next } from "../i18n/i18n";
 import { TabsLead } from "../ui/TabsLead";
-import { onLargeScreen } from "../ui/testing";
+import { inLanguage, onLargeScreen } from "../ui/testing";
 import { TabBar } from "./TabBar";
-
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 let host: HTMLDivElement;
 let root: Root;
@@ -21,15 +15,14 @@ beforeEach(() => {
   root = createRoot(host);
 });
 
-afterEach(async () => {
+afterEach(() => {
   act(() => root.unmount());
   host.remove();
-  await i18next.changeLanguage("en");
 });
 
 describe("TabBar", () => {
   it("reads マイボード, 発見 and ショップ in Japanese, and names itself in Japanese", async () => {
-    await i18next.changeLanguage("ja");
+    await inLanguage("ja");
     act(() => root.render(<TabBar active="board" onChange={() => {}} />));
     const nav = host.querySelector("nav");
     const tabs = [...(nav?.querySelectorAll("button") ?? [])].map((tab) => tab.textContent);

@@ -14,7 +14,7 @@ import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
 import { forgetNoticedHere, markNoticed, noticeReceivesFromNow } from "../giving/noticedGifts";
-import { i18next, withBreakHints } from "../i18n/i18n";
+import { withBreakHints } from "../i18n/i18n";
 import { api as apiStrings } from "../i18n/strings/api";
 import { errors } from "../i18n/strings/errors";
 import { stickerBoard } from "../i18n/strings/stickerBoard";
@@ -23,7 +23,7 @@ import { formatNo } from "../stickers/format";
 import type { Sheet } from "../tickets/ticketsContext";
 import { useTickets } from "../tickets/useTickets";
 import { TabsLeadSlot } from "../ui/TabsLead";
-import { onLargeScreen } from "../ui/testing";
+import { inLanguage, onLargeScreen } from "../ui/testing";
 import { forgetGreetings } from "./artistChipGreeting";
 import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
@@ -503,8 +503,7 @@ describe("StickerBoard's stat board", () => {
       await act(async () => {});
       expect(receipt()).toContain(withBreakHints(errors.network.en));
     });
-    onTestFinished(async () => void (await i18next.changeLanguage("en")));
-    await act(() => i18next.changeLanguage("ja"));
+    await inLanguage("ja");
     expect(receipt()).toContain(withBreakHints(errors.network.ja));
   });
 });
@@ -872,10 +871,6 @@ describe("StickerBoard while it loads", () => {
 });
 
 describe("StickerBoard when the app's language changes", () => {
-  afterEach(async () => {
-    await i18next.changeLanguage("en");
-  });
-
   it("names a deleted account's sticker in the new language", async () => {
     const gone: Person = { ...people.ken, handle: null, lineDisplayName: null };
     const theirs = boardSticker({ placement: placedAt(0.5), sticker: sticker({ artist: gone }) });
@@ -885,7 +880,7 @@ describe("StickerBoard when the app's language changes", () => {
         .querySelector(`[data-sticker-id="${theirs.stickerId}"]`)
         ?.getAttribute("aria-label");
     expect(label()).toContain(apiStrings.person.unnamed.en);
-    await act(() => i18next.changeLanguage("ja"));
+    await inLanguage("ja");
     expect(label()).toContain(apiStrings.person.unnamed.ja);
   });
 
@@ -900,7 +895,7 @@ describe("StickerBoard when the app's language changes", () => {
     );
     const alert = () => view.host.querySelector(".board-alerts")?.textContent;
     expect(alert()).toContain(withBreakHints(errors.network.en));
-    await act(() => i18next.changeLanguage("ja"));
+    await inLanguage("ja");
     expect(alert()).toContain(withBreakHints(errors.network.ja));
   });
 });

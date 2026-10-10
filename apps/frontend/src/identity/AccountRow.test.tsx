@@ -5,11 +5,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/ToastProvider";
 import { AccountRow } from "./AccountRow";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 const writeText = vi.fn<(text: string) => Promise<void>>();
 let cleanup = () => {};
 

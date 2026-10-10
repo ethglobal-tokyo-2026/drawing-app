@@ -15,6 +15,7 @@ import type { SessionApi } from "./httpApi";
 import { useMe, useSetMe } from "./meContext";
 import { RECOVERY_HOLD_MS, SessionGate } from "./SessionGate";
 import { reportSessionLost } from "./sessionLoss";
+import { inLanguage } from "../ui/testing";
 import { emptyApi } from "./testing";
 
 const me: Me = {
@@ -156,11 +157,10 @@ describe("SessionGate", () => {
     async (line, kept) => {
       keepChosenLanguage(kept);
       startInLineLanguage(line);
-      await i18next.changeLanguage(kept);
-      onTestFinished(async () => {
+      await inLanguage(kept);
+      onTestFinished(() => {
         localStorage.clear();
         startInLineLanguage("en");
-        await i18next.changeLanguage("en");
       });
       const signIn = vi.fn(() => Promise.resolve({ me }));
       const host = render(session({ signIn }));
@@ -179,11 +179,8 @@ describe("SessionGate", () => {
     "opens in the account's language (%s) over this device's (%s), which then keeps it",
     async (account, device) => {
       keepChosenLanguage(device);
-      await i18next.changeLanguage(device);
-      onTestFinished(async () => {
-        localStorage.clear();
-        await i18next.changeLanguage("en");
-      });
+      await inLanguage(device);
+      onTestFinished(() => localStorage.clear());
       const signIn = () => Promise.resolve({ me: { ...me, language: account } });
       const host = render(session({ signIn }));
       await settle();

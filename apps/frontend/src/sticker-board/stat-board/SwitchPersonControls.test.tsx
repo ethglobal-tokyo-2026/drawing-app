@@ -1,11 +1,11 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildGiftMessage } from "../../giving/giftMessage";
 import { keepMockGiftMessage } from "../../giving/mockGiftMessages";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import { mockPerson } from "../../line/liff";
+import { buttonNamed, renderInHost, type HostView } from "../../ui/testing";
 import { SwitchPersonControls } from "./SwitchPersonControls";
 
 // LIFF Mock signs the tab in here even where a real-LINE .env switches it off.
@@ -14,38 +14,25 @@ vi.mock("../../line/liff", async (importOriginal) => ({
   liffMockActive: true,
 }));
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 const strings = stickerBoard.developer.demoPeople;
-let host: HTMLDivElement;
-let root: Root;
+let view: HostView;
 
 /** The section with VITE_DEMO_PEOPLE set to `people`, in a tab LIFF Mock signed in as `signedIn`. */
 function render(people: string, signedIn: string) {
   vi.stubEnv("VITE_DEMO_PEOPLE", people);
   mockPerson(`?as=${signedIn}`, sessionStorage);
-  act(() => root.render(<SwitchPersonControls />));
+  view.rerender(<SwitchPersonControls />);
 }
 const switchTo = (name: string) => strings.switchTo.en.replace("{{name}}", name);
-const buttons = () => [...host.querySelectorAll("button")];
-const button = (label: string) => {
-  const found = buttons().find((b) => b.textContent === label);
-  if (!found) throw new Error(`No "${label}" button`);
-  return found;
-};
+const buttons = () => [...view.host.querySelectorAll("button")];
+const button = (label: string) => buttonNamed(view.host, label);
 
 beforeEach(() => {
-  host = document.createElement("div");
-  document.body.append(host);
-  root = createRoot(host);
+  view = renderInHost();
 });
 
 afterEach(() => {
-  act(() => root.unmount());
-  host.remove();
+  view.unmount();
   sessionStorage.clear();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
