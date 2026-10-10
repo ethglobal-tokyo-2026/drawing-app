@@ -69,6 +69,9 @@ interface Props {
 const artistName = (artist: PersonView) =>
   artist.handle ? formatHandle(artist.handle) : artist.name;
 
+/** Nothing lands on someone else's board. */
+const noLanding = () => {};
+
 /** Someone else's board has no sticker tray, so its field runs to the right inset too. */
 const visitField = (w: number, h: number): Field => {
   const f = fieldOf(w, h);
@@ -193,27 +196,24 @@ export function ArtistBoard({ person, onBack }: Props) {
     return () => observer.disconnect();
   }, [size, large]);
 
-  // What's on their board in the layout this screen shows, bottom of the stack first.
+  // What's on their board in the layout this screen shows, bottom of the stack first. From the answer
+  // itself, since the query's own object is new on every render.
+  const answer = board.state === "ready" ? board.data.boardStickers : null;
   const stickers = useMemo(
     () =>
-      shownIn(
-        layout,
-        laidOutForVisitor(
-          (board.state === "ready" ? board.data.boardStickers : []).map(toBoardSticker),
-          layout,
-          size,
-        ),
-      )
+      shownIn(layout, laidOutForVisitor((answer ?? []).map(toBoardSticker), layout, size))
         .filter(onTheBoard)
         .sort((a, b) => a.placement.z - b.placement.z),
-    [board, layout, size],
+    [answer, layout, size],
   );
-  const field = size && visitField(size.W, size.H);
+  // The same field from render to render, so their stickers' memo holds.
+  const field = useMemo(() => size && visitField(size.W, size.H), [size]);
   // Screen readers and the arrow keys take the stickers in reading order, which is the DOM's too.
   const order = field
     ? readingOrder(stickers.map((s) => ({ id: s.id, ...toPx(field, s.placement) })))
     : [];
-  const inOrder = order.flatMap((id) => stickers.filter((s) => s.id === id));
+  const byId = new Map(stickers.map((s, i) => [s.id, { sticker: s, stack: i }]));
+  const inOrder = order.flatMap((id) => byId.get(id) ?? []);
   const tabbable = [tabStop, selected].find((id) => id && order.includes(id)) ?? order[0];
   const byOther = (s: BoardStickerView) => s.artist.id !== person.id;
   const creases = useCreases({
@@ -430,20 +430,20 @@ export function ArtistBoard({ person, onBack }: Props) {
         <CreasesContext value={creases}>
           {field &&
             size &&
-            inOrder.map((s) => (
+            inOrder.map(({ sticker: s, stack }, i) => (
               <Fragment key={s.id}>
                 <PlacedSticker
                   sticker={s}
                   field={field}
                   unit={size.U}
-                  stack={s.id === selected ? stickers.length : stickers.indexOf(s)}
+                  stack={s.id === selected ? stickers.length : stack}
                   selected={s.id === selected}
                   knobBelow={false}
                   landing={false}
-                  onLanded={() => {}}
+                  onLanded={noLanding}
                   reduced={reduced}
                   tabbable={s.id === tabbable}
-                  position={order.indexOf(s.id) + 1}
+                  position={i + 1}
                   setSize={order.length}
                   hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
                   foil={byOther(s)}

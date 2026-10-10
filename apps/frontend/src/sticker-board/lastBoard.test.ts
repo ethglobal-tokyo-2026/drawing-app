@@ -6,6 +6,7 @@ import { testStickerUrls } from "../stickers/testStickerUrls";
 import type { PlacedBoardSticker } from "./boardSticker";
 import {
   forgetBoardUnlessFor,
+  KEEP_WRITE_WITHIN_MS,
   keepBoard,
   keptBoardFor,
   readKeptBoardAgain,
@@ -45,19 +46,33 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
+/** The board the next open of the app starts from, as it reads storage. */
+const nextOpen = () => {
+  readKeptBoardAgain();
+  return keptBoardFor("me");
+};
+
 describe("the board kept on this phone", () => {
-  it("gives back the last board shown to the person signed in, without outlines", () => {
+  it("gives back the last board shown to the person signed in, without outlines, once the page is idle or as it hides", () => {
+    // Without requestIdleCallback, as in Safari, the write waits on a timer.
+    vi.stubGlobal("requestIdleCallback", undefined);
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     keepBoard("me", board);
-    readKeptBoardAgain();
-    const kept = keptBoardFor("me");
+    vi.advanceTimersByTime(KEEP_WRITE_WITHIN_MS);
+    const kept = nextOpen();
     expect(kept?.stickers.map((s) => s.id)).toEqual(["s1", "s2"]);
     expect(kept?.stickers[0]).not.toHaveProperty("outline");
     expect(kept?.stickers[0].placements).toEqual(board.stickers[0].placements);
     expect(kept?.owner).toEqual(board.owner);
+
+    keepBoard("me", { ...board, stickers: [sticker("s2")] });
+    dispatchEvent(new Event("pagehide"));
+    expect(nextOpen()?.stickers.map((s) => s.id)).toEqual(["s2"]);
   });
 
   it("forgets it when someone else signs in", () => {
@@ -107,6 +122,7 @@ describe("the board kept on this phone", () => {
       },
     });
     keepBoard("me", board);
+    dispatchEvent(new Event("pagehide"));
     expect(keptBoardFor("me")?.stickers).toHaveLength(2);
     expect(error).toHaveBeenCalledWith(
       "The board couldn't be kept on this phone for its next open",

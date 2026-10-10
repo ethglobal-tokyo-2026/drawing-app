@@ -333,17 +333,19 @@ export function useCreases<S extends CreaseSticker>({
   const [store] = useState(() => new CreaseStore());
   const shown = useCreasesShown();
   const scale = Math.min(MAX_SCALE, window.devicePixelRatio || 1);
-  const signature = [
-    shown,
-    held,
-    field && `${field.left},${field.top},${field.w},${field.h}`,
-    unit,
-    scale,
-    ...stickers.map((s) => {
-      const p = s.placement;
-      return `${s.id}:${p.x},${p.y},${p.s},${p.r},${foilOf(s)}`;
-    }),
-  ].join("|");
+  // With creases off, as on most devices, there's nothing to bake, so no sticker is read.
+  const signature = shown
+    ? [
+        held,
+        field && `${field.left},${field.top},${field.w},${field.h}`,
+        unit,
+        scale,
+        ...stickers.map((s) => {
+          const p = s.placement;
+          return `${s.id}:${p.x},${p.y},${p.s},${p.r},${foilOf(s)}`;
+        }),
+      ].join("|")
+    : "off";
 
   useEffect(() => {
     stores.set(board, store);

@@ -1,4 +1,4 @@
-import { useImperativeHandle, useLayoutEffect, useRef, type Ref } from "react";
+import { memo, useImperativeHandle, useLayoutEffect, useMemo, useRef, type Ref } from "react";
 import { useTranslation } from "../../i18n/react";
 import { formatHandle } from "../../stickers/format";
 import { useMyNsfwOptIn, veiledFor } from "../../stickers/nsfw";
@@ -74,8 +74,19 @@ function trayStickers(
   });
 }
 
-/** The sticker tray on the board: its engine, fed the board's stickers and asked through `ref`. */
-export function StickerTray({ board, stickers, ownerId, api, onSeen, onProblem, ref }: Props) {
+/**
+ * The sticker tray on the board: its engine, fed the board's stickers and asked through `ref`. It
+ * renders only when its props change, so the board hands it callbacks that never do.
+ */
+export const StickerTray = memo(function StickerTray({
+  board,
+  stickers,
+  ownerId,
+  api,
+  onSeen,
+  onProblem,
+  ref,
+}: Props) {
   const engine = useRef<TrayEngine | null>(null);
   const { i18n } = useTranslation();
   /** What this visit's trays have shown, so a tray rebuilt for a new language shows none of it as NEW. */
@@ -88,7 +99,10 @@ export function StickerTray({ board, stickers, ownerId, api, onSeen, onProblem, 
 
   // What the sheets show: a sticker moved, raised or dropped on the board leaves it as it was, so the
   // tray doesn't repack and redraw for it.
-  const shown = JSON.stringify(trayStickers(stickers, ownerId, optedIn));
+  const shown = useMemo(
+    () => JSON.stringify(trayStickers(stickers, ownerId, optedIn)),
+    [stickers, ownerId, optedIn],
+  );
   // Before the engine's own effect, so a new engine doesn't redraw what it has just drawn.
   useLayoutEffect(() => {
     engine.current?.refresh();
@@ -141,4 +155,4 @@ export function StickerTray({ board, stickers, ownerId, api, onSeen, onProblem, 
     [],
   );
   return null;
-}
+});

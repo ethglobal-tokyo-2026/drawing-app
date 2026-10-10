@@ -28,6 +28,8 @@ interface Kept {
 const KEY = "draw.lastBoard";
 /** This build: the address of its own code, which changes with every deploy. */
 const BUILD = import.meta.url;
+/** The longest a kept board waits for an idle moment to be written. */
+export const KEEP_WRITE_WITHIN_MS = 2000;
 
 /** A kept sticker holds its spot in each layout. The dev server keeps one build across edits. */
 const hasSpots = (s: unknown) => typeof s === "object" && s !== null && "placements" in s;
@@ -69,11 +71,50 @@ const removeKept = () =>
  */
 export function forget() {
   kept = null;
+  dropWrite();
   removeKept();
 }
 
 /** Read once, as the app's code starts; kept up to date in memory from then on. */
 let kept: Kept | null = read();
+/** `kept` has changed since storage last had it. */
+let unwritten = false;
+let cancelWrite: (() => void) | null = null;
+
+function dropWrite() {
+  unwritten = false;
+  cancelWrite?.();
+  cancelWrite = null;
+}
+
+function writeKept() {
+  const due = unwritten && kept;
+  dropWrite();
+  if (due)
+    writeStored(
+      KEY,
+      JSON.stringify(due),
+      "The board couldn't be kept on this phone for its next open",
+    );
+}
+
+/** Safari has no requestIdleCallback, so there the write waits out the longest wait. */
+function writeWhenIdle() {
+  if (cancelWrite) return;
+  if (typeof requestIdleCallback === "function") {
+    const id = requestIdleCallback(writeKept, { timeout: KEEP_WRITE_WITHIN_MS });
+    cancelWrite = () => cancelIdleCallback(id);
+  } else {
+    const id = setTimeout(writeKept, KEEP_WRITE_WITHIN_MS);
+    cancelWrite = () => clearTimeout(id);
+  }
+}
+
+// A hidden page can be ended without another word, so a board still waiting is written as it hides.
+addEventListener("pagehide", writeKept);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") writeKept();
+});
 
 /** Forgets the kept board unless it's `userId`'s. */
 export function forgetBoardUnlessFor(userId: string): void {
@@ -86,19 +127,20 @@ export function keptBoardFor(userId: string): KeptBoard | null {
   return kept?.board ?? null;
 }
 
-/** Keeps the board as it shows now for `userId`'s next open, without the stickers' outlines. */
+/**
+ * Keeps the board as it shows now for `userId`'s next open, without the stickers' outlines. Storage
+ * gets it once the page is idle, or as it's hidden, so a tap or a drop doesn't wait on the write.
+ */
 export function keepBoard(userId: string, board: KeptBoard): void {
   const stickers = board.stickers.map(({ outline: _outline, ...s }) => s);
   kept = { build: BUILD, userId, board: { owner: board.owner, stickers } };
-  writeStored(
-    KEY,
-    JSON.stringify(kept),
-    "The board couldn't be kept on this phone for its next open",
-  );
+  unwritten = true;
+  writeWhenIdle();
 }
 
 /** For tests: reads storage again, as the app's code does when it starts. */
 export function readKeptBoardAgain(): void {
+  dropWrite();
   kept = read();
 }
 
