@@ -82,6 +82,13 @@ async function keptSteps(userId: string) {
   return kept.status === "found" ? kept.steps : kept.status;
 }
 
+/**
+ * Waits for the steps kept for `userId` to be `expected`: a write merged behind one that failed
+ * starts only once that failure reaches its keeper, which no load can wait for.
+ */
+const untilKept = (userId: string, expected: Step[]) =>
+  vi.waitFor(async () => expect(await keptSteps(userId)).toEqual(expected));
+
 /** A second connection to the one database kept, as another tab would open. */
 async function openKept(): Promise<IDBDatabase> {
   const [{ name } = {}] = await indexedDB.databases();
@@ -326,7 +333,7 @@ describe("the drawing kept on this device", () => {
     expect(await keptSteps(userId)).toEqual(live);
     const [t3, t4] = ["t3", "t4"].map(stroke);
     await abortFirstWrite(keeper, live, [() => live.push(t3), () => live.push(t4)]);
-    expect(await keptSteps(userId)).toEqual(live);
+    await untilKept(userId, live);
 
     // Three strokes on a new sheet, the first of whose writes fails, then an undo.
     const steps = [s0, s1];
@@ -337,7 +344,7 @@ describe("the drawing kept on this device", () => {
       () => steps.push(s4),
       () => steps.pop(),
     ]);
-    expect(await keptSteps(userId)).toEqual(steps);
+    await untilKept(userId, steps);
   });
 
   it("says the drawing isn't kept once a write hasn't landed in time, and writes what waited once, whole, when it does", async () => {
