@@ -2,6 +2,7 @@ import { useEffect, useId, useRef } from "react";
 import { useTranslation } from "../../i18n/react";
 import { LabelButton } from "../../ui/LabelButton";
 import { QuietLink } from "../../ui/QuietLink";
+import "./panel-bar.css";
 import "./ClearBar.css";
 
 interface Props {
@@ -40,7 +41,7 @@ export function ClearBar({ id, open, onClear, onClose }: Props) {
     <div
       ref={bar}
       id={id}
-      className={`clear-bar keep-phrases ${open ? "is-open" : ""}`}
+      className={`panel-bar under-tool-strip clear-bar keep-phrases ${open ? "is-open" : ""}`}
       role="dialog"
       aria-labelledby={titleId}
       aria-describedby={lineId}

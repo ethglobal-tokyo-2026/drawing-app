@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useId, useRef } from "react";
 import { useTranslation } from "../../i18n/react";
+import "./panel-bar.css";
 import "./SmoothingBar.css";
 
 interface Props {
@@ -40,7 +41,7 @@ export function SmoothingBar({ id, open, value, onChange }: Props) {
   return (
     <div
       id={id}
-      className={`smoothing-bar ${open ? "is-open" : ""}`}
+      className={`panel-bar under-tool-strip smoothing-bar ${open ? "is-open" : ""}`}
       role="group"
       aria-labelledby={titleId}
     >

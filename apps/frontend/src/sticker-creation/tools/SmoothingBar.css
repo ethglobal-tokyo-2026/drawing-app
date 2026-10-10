@@ -1,41 +1,11 @@
 .smoothing-bar {
-  position: absolute;
-  top: 66px;
-  right: 14px;
-  z-index: 4;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-rows: auto 44px;
   align-items: center;
   column-gap: 10px;
   row-gap: 3px;
-  width: 244px;
   padding: 9px 12px 6px;
-  background: var(--liner-lift);
-  border-radius: var(--r-label);
-  box-shadow:
-    inset 0 0 0 1px var(--rule),
-    var(--shadow-lift);
-  opacity: 0;
-  transform: translateY(-6px);
-  visibility: hidden;
-  /* Closing, it takes no touch while it fades, so a stroke started there reaches the sheet. */
-  pointer-events: none;
-  transition:
-    opacity 160ms var(--ease-out),
-    transform 220ms var(--ease-out),
-    visibility 0s linear 220ms;
-}
-
-.smoothing-bar.is-open {
-  opacity: 1;
-  transform: none;
-  visibility: visible;
-  pointer-events: auto;
-  transition:
-    opacity 160ms var(--ease-out),
-    transform 220ms var(--ease-out),
-    visibility 0s;
 }
 
 .smoothing-title {

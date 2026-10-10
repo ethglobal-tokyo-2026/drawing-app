@@ -42,7 +42,7 @@
 /* While sealing, the tools step back; the ceremony owns the screen. A seal to try again keeps only
    the seal key and its chip, since the sheet can't change. */
 .drawing-screen:is(.is-sealing, .is-retrying)
-  :is(.drawing-top, .smoothing-bar, .clear-bar, .size-rail, .history-buttons),
+  :is(.drawing-top, .panel-bar, .size-rail, .history-buttons),
 .drawing-screen.is-sealing :is(.seal-chip, .seal-key) {
   opacity: 0;
   pointer-events: none;
@@ -56,7 +56,7 @@
 
 /* Once faded, the tools leave the tab order and the screen reader's too, so only the seal key is left. */
 .drawing-screen:is(.is-sealing, .is-retrying)
-  :is(.drawing-top, .smoothing-bar, .clear-bar, .size-rail, .history-buttons) {
+  :is(.drawing-top, .panel-bar, .size-rail, .history-buttons) {
   visibility: hidden;
   transition-property: opacity, visibility;
   transition-delay: 0s, 220ms;
@@ -162,7 +162,7 @@
   translate: -4px 4px;
 }
 
-.drawing-screen[data-hand="left"] > :is(.smoothing-bar, .clear-bar) {
+.drawing-screen[data-hand="left"] > .under-tool-strip {
   left: 14px;
   right: auto;
 }
@@ -301,7 +301,7 @@
     bottom: calc(var(--foot) + 8px);
   }
 
-  .drawing-screen > :is(.smoothing-bar, .clear-bar) {
+  .drawing-screen > .under-tool-strip {
     top: var(--top-h);
     right: 8px;
   }
@@ -345,7 +345,7 @@
     right: calc(var(--edge-w) + 4px);
   }
 
-  .drawing-screen[data-hand="left"] > :is(.smoothing-bar, .clear-bar) {
+  .drawing-screen[data-hand="left"] > .under-tool-strip {
     left: 8px;
     right: auto;
   }
