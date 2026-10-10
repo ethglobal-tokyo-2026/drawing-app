@@ -31,6 +31,7 @@ import type { HistoryState, InputMode } from "./canvas/inkEngine";
 import type { Op } from "./canvas/ops";
 import { frameFor, SHEET_SHORT_UNITS } from "./canvas/sheetFrame";
 import { DrawingScreen, type DrawingScreenHandle } from "./DrawingScreen";
+import type { SealedSticker } from "./sealing/makeSticker";
 import { keepDrawingHand, penDrew, readInputMode } from "./drawingSettings";
 import { CHARRED_AT_ROLL } from "../kyoto-seika/dieMood";
 import { REUNION, TEST_SUBJECTS, WIND } from "../kyoto-seika/testSubjects";
@@ -304,21 +305,26 @@ const spentDaily = (kyotoSeikaPractice: boolean) =>
   }) as const;
 
 /** A sticker the phone cuts from the sheet, so its seal goes out. */
-const cutSticker = () => ({
-  png: new Blob(["png"]),
-  mask: new Blob(["mask"]),
-  flat: new Blob(["flat"]),
-  outline: "M0 0L1 1Z",
-  width: 10,
-  height: 10,
-  pad: 0,
-  inkWidth: 10,
-  place: { x: 2, y: 3, w: 24, h: 18 },
-  contour: [],
-  passes: {},
-  maskImage: document.createElement("canvas"),
-  dispose: () => {},
-});
+const cutSticker = (): SealedSticker => {
+  const pass = { width: 1, height: 1, close() {} };
+  return {
+    png: new Blob(["png"]),
+    sharp: null,
+    mask: new Blob(["mask"]),
+    flat: new Blob(["flat"]),
+    outline: "M0 0L1 1Z",
+    width: 10,
+    height: 10,
+    pad: 0,
+    inkWidth: 10,
+    place: { x: 2, y: 3, w: 24, h: 18 },
+    contour: [],
+    passes: { plain: pass, gloss: pass, shadow: pass },
+    maskUrl: "blob:mask",
+    maskImage: document.createElement("canvas"),
+    dispose: () => {},
+  };
+};
 
 const startOver = () =>
   [...document.querySelectorAll("button")].find(
