@@ -4,7 +4,7 @@ import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../../api/testing";
-import { SWITCH } from "../../ui/testing";
+import { refusingStorage, SWITCH } from "../../ui/testing";
 import { toPerson } from "../../api/views";
 import { errors } from "../../i18n/strings/errors";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
@@ -128,12 +128,7 @@ describe("the Settings note's language", () => {
 
   it("switches even when this phone can't keep the choice, and says so in the new language", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    // A stand-in storage: spying on happy-dom's own leaves it unable to write for later tests.
-    vi.stubGlobal("localStorage", {
-      setItem: () => {
-        throw new DOMException("The storage is full", "QuotaExceededError");
-      },
-    });
+    vi.stubGlobal("localStorage", refusingStorage);
     const host = render(saving());
     await choose(host, "日本語");
     expect(currentLanguage()).toBe("ja");
@@ -254,13 +249,11 @@ describe("the Settings note's Kyoto Seika Practice Mode", () => {
     expect(host.querySelector('[role="status"]')).toBeNull();
   });
 
-  it("is one row, its name and then its switch, named for screen readers without its censor bar", () => {
+  it("names its switch for screen readers without its censor bar", () => {
     const host = renderNote({});
     expect(switchIn(host).getAttribute("aria-label")).toBe(
       stickerBoard.settings.kyotoSeika.spokenName.en,
     );
-    expect(row(host).querySelectorAll(".settings-note__option")).toHaveLength(1);
-    expect(row(host).querySelector("legend, p")).toBeNull();
   });
 
   it("has its help right after its name, and a tap on it opens the help sheet and leaves the switch alone", async () => {

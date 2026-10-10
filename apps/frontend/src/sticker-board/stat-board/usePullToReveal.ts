@@ -9,11 +9,14 @@ export const PULL_THRESHOLD = 150;
 const WHEEL_GAP_MS = 160;
 const SETTLE_MS = 320;
 
+/** iOS's rubber-band coefficient: how much of each px of pull shows, before the band's resistance. */
+const RUBBER_BAND = 0.55;
+
 /** iOS's rubber band: `pull` px past the end shows this much, and never `LIMIT`. */
-const rubberBand = (pull: number) => LIMIT * (1 - 1 / ((pull * 0.55) / LIMIT + 1));
+const rubberBand = (pull: number) => LIMIT * (1 - 1 / ((pull * RUBBER_BAND) / LIMIT + 1));
 
 /** The pull that shows `shown` px, so a band still settling back can be caught where it is. */
-const pullShowing = (shown: number) => ((LIMIT / (LIMIT - shown) - 1) * LIMIT) / 0.55;
+const pullShowing = (shown: number) => ((LIMIT / (LIMIT - shown) - 1) * LIMIT) / RUBBER_BAND;
 
 /** A wheel event's travel in px, whatever unit the device counts in. */
 function wheelPx(e: WheelEvent, page: number) {

@@ -57,11 +57,9 @@ interface Props {
   figures: CorkFigures;
   onFlipBack: () => void;
   flipBackRef: Ref<HTMLButtonElement>;
-  /** Escape closes this first when it returns true, before flipping back. */
-  onEscape?: () => boolean;
   /** Labels after Flip back, such as logging out of LINE on your own board. */
   afterFlipBack?: ReactNode;
-  /** Paper pinned below the stats, such as your addresses and Settings. */
+  /** Paper pinned below the stats, such as Settings and your Sui address. */
   children?: ReactNode;
   /** Paper at the foot of the leaf-and-stamps column, such as someone else's Sui address. */
   side?: ReactNode;
@@ -119,7 +117,6 @@ export const StatCork = memo(function StatCork({
   figures: f,
   onFlipBack,
   flipBackRef,
-  onEscape,
   afterFlipBack,
   children,
   side,
@@ -171,7 +168,7 @@ export const StatCork = memo(function StatCork({
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== "Escape") return;
     e.stopPropagation();
-    if (!onEscape?.()) onFlipBack();
+    onFlipBack();
   };
 
   // The failure goes as it retries, so focus moves to the dialog, which holds Escape.

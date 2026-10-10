@@ -30,13 +30,9 @@ const KyotoSeikaHelp = lazyWithPreload("Kyoto Seika Practice Mode's help", () =>
 const PEEK_UNDER_TITLE = 10;
 
 /**
- * Sticks the note to the cork's foot with only its title showing, until it scrolls into view: CSS
- * tucks it down by the rest of its height, measured here whenever that changes. A sticky box keeps
- * clear of its scroller's padding, so the tuck reaches through the cork's too. Where the stats run
- * into that band it stays below them instead, and scrolling finds it.
- *
- * Returns `reveal`, which scrolls the cork until the whole note shows above its foot. A tap on the
- * tucked note uses it, and so does focus, which the browser's own scrolling can't bring out of a tuck.
+ * Tucks the note against the cork's foot so only its title shows, counting the cork's padding, which a
+ * sticky box keeps clear of; below the stats instead where they'd run under it. `reveal` scrolls the
+ * whole note into view, for a tap or focus, which the browser's own scrolling can't untuck.
  */
 function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLElement | null>) {
   const reduced = useReducedMotion();
