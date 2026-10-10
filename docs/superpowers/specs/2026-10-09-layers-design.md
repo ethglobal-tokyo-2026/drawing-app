@@ -158,11 +158,15 @@ Artists use layers to sketch and then ink, to color under the lines, and to shad
 ### Steps and undo
 
 - Every op names its layer. Layer changes are steps of their own: add, delete, move, opacity, lock, clip and clear.
-- Undo rebuilds from the nearest checkpoint and replays every layer's steps since it, in order. A fill reads the other layers, so one layer can't replay alone and come out the same.
+- **Undo rebuilds only the layer the undone step changed:** from that layer's nearest checkpoint copy, replaying that layer's own steps since.
+  - Undoing add, move, opacity, lock or clip changes no ink, so nothing is rebuilt.
+  - Strokes read only their own layer. A fill reads every visible layer, so each fill's region is kept in memory with its step: a layer replays alone and comes out the same. Regions aren't kept with the drawing or in the timelapse. Picking a drawing back up replays it whole and finds them again.
+  - In the undo spike's 30-minute, ten-layer drawing, replaying every layer made the worst undo about five times longer than rebuilding one.
 - A checkpoint copies only the layers changed since the previous one and shares the rest.
 - Checkpoint copies live under a memory budget that shrinks as layers fill.
-  - Past the budget, older checkpoints thin out rather than vanish.
-  - So a deep undo in a 30-minute Kyoto Seika drawing replays a bounded stretch, not the whole drawing.
+  - Past the budget, checkpoints thin out by how much replay each one saves for the copies it frees, so recent undos stay short and older ones stay bounded.
+  - The checkpoint just taken is never the one dropped, and checkpoints past the undo point (only a redo returns to them) go first.
+  - Picking a drawing back up plans its checkpoints before replaying, and takes only those.
 - A deleted layer's canvas stays until the next step, so undoing the delete is instant.
 
 ### What's on screen
@@ -258,7 +262,7 @@ So:
 
 - **One canvas per layer, all on the page.** Simplest, but each shown canvas may hold a second backing store in WebKit, and the browser can't mask one canvas with another, so clipping would need composites anyway.
 - **Tiles, as Krita and MyPaint use.** Memory would follow the inked area, at the cost of rewriting the engine.
-- **Storing each fill's result,** as Klecks and Drawpile do, so a layer replays alone. That means heavier steps and timelapses.
+- **Storing each fill's result in its step,** as Klecks and Drawpile do. It would make every kept drawing and timelapse heavier; keeping regions in memory only gives undo the same speed.
 - **A fill that reads only the current layer,** Procreate's default. It floods a fresh layer whole, the trap that coloring under the lines falls into.
 - **A horizontal strip,** under the tool strip or above undo. It took room from the top of the sheet, or crowded undo and the Kyoto Seika corner print, and it needed a stated rule for which end is in front.
 - **Merging,** by drag or by command. No phone painting app merges by drag, and on a 40px chip the drop zone is about 3 mm against a fingertip's 7–12 mm (https://www.uxmatters.com/mt/archives/2017/07/design-for-fingers-touch-and-people-part-3.php).
