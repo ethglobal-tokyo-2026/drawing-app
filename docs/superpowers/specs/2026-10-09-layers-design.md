@@ -168,7 +168,7 @@ Artists use layers to sketch and then ink, to color under the lines, and to shad
   - Undo reaches the start of the sheet, as today: a deep undo replays one layer at most.
   - The checkpoint just taken is never the one dropped, and checkpoints past the undo point (only a redo returns to them) go first.
   - Picking a drawing back up plans its checkpoints before replaying, and takes only those.
-- A deleted layer's canvas stays until the next step, so undoing the delete is instant.
+- A deleted layer's canvas is let go at once; undoing the delete rebuilds it like any other layer.
 
 ### What's on screen
 
