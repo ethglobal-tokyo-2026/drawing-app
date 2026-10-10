@@ -25,7 +25,8 @@ export type Step =
 const STEP_MOVE = 10;
 const STEP_TURN = 5;
 const STEP_GROW = 1.08;
-const STEP_SHRINK = 0.92;
+/** Smaller undoes Bigger. */
+const STEP_SHRINK = 1 / STEP_GROW;
 
 /** A sticker's spot as one step changes it, its size kept in `range`: its center, size and turn. */
 export function stepBy<T extends { x: number; y: number; s: number; r: number }>(

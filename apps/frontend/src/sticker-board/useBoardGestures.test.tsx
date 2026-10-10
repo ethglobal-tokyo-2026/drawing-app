@@ -3,7 +3,15 @@ import { act, useRef, type RefObject } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BoardSticker } from "./boardSticker";
-import { fieldOf, PHONE_BOARD, sizeOf, toPx, transformAt, type Placement } from "./placement";
+import {
+  fieldOf,
+  PHONE_BOARD,
+  roundSpot,
+  sizeOf,
+  toPx,
+  transformAt,
+  type Placement,
+} from "./placement";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import { STEP_SAVE_IDLE_MS, useBoardGestures } from "./useBoardGestures";
 import { testBoardSticker } from "./testBoardSticker";
@@ -386,6 +394,30 @@ describe("useBoardGestures", () => {
       pressRight(phoneField.w);
       act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
       expect(onStepsSettled).toHaveBeenLastCalledWith({ step: "right", moved: false });
+    });
+
+    it("undo each other's size across a save, Smaller after Bigger and Bigger after Smaller", () => {
+      /** The size `keys` leave the sticker at, each saved before the next, as the board takes each spot. */
+      const sizeAfter = (s: number, ...keys: string[]) => {
+        let placed: BoardSticker = { ...sticker, placement: { ...sticker.placement, s } };
+        const onCommit = vi.fn<Options["onCommit"]>((_, placement) => {
+          placed = { ...placed, placement };
+        });
+        for (const key of keys) {
+          show({ stickers: [placed], onCommit });
+          act(() => stickerEl().focus());
+          press(key);
+          act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+        }
+        act(() => root.render(null));
+        return placed.placement.s;
+      };
+      // Sizes as they're saved, spread so the rounding falls differently on each.
+      for (let i = 0; i < 40; i++) {
+        const s = roundSpot({ ...sticker.placement, s: 0.2 + i * 0.0037 }).s;
+        expect(sizeAfter(s, "=", "-")).toBe(s);
+        expect(sizeAfter(s, "-", "=")).toBe(s);
+      }
     });
 
     it("save when the board is let go of, without waiting for the idle", () => {

@@ -44,6 +44,8 @@ describe("board gestures", () => {
     expect(step(step(at, "turnLeft"), "turnRight")).toEqual(at);
     expect(step(at, "bigger").s).toBeGreaterThan(at.s);
     expect(step(at, "smaller").s).toBeLessThan(at.s);
+    expect(step(step(at, "bigger"), "smaller").s).toBeCloseTo(at.s, 12);
+    expect(step(step(at, "smaller"), "bigger").s).toBeCloseTo(at.s, 12);
     expect(step({ ...at, s: RANGE.max }, "bigger").s).toBe(RANGE.max);
   });
 

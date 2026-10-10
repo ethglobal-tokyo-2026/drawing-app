@@ -217,6 +217,16 @@ export function useBoardGestures(options: Options) {
 
     const focusSticker = (id: string) => stickerElIn(stage, id)?.focus();
 
+    /**
+     * Each sticker's size as its last saved steps left it. A spot is saved rounded, so steps go on from
+     * this size while the saved one is it rounded: Smaller then undoes Bigger across a save, and back.
+     */
+    const steppedSizes = new Map<string, number>();
+    const stepFrom = (sticker: BoardSticker, field: Field): Live => {
+      const saved = liveOf(sticker.placement, field);
+      const s = steppedSizes.get(sticker.id);
+      return s !== undefined && roundSpot({ ...saved, s }).s === saved.s ? { ...saved, s } : saved;
+    };
     /** Steps on one sticker, drawn as they come and saved once, when they've been quiet. */
     let stepped: {
       id: string;
@@ -233,7 +243,9 @@ export function useBoardGestures(options: Options) {
       clearTimeout(s.timer);
       const sticker = stickerOf(s.id);
       const placement = sticker && commit(s.el, sticker, s.live);
-      return placement ? { id: s.id, placement } : null;
+      if (!placement) return null;
+      steppedSizes.set(s.id, s.live.s);
+      return { id: s.id, placement };
     };
     /** Steps gone quiet: saved, and the last of them told. */
     const settle = () => {
@@ -247,7 +259,7 @@ export function useBoardGestures(options: Options) {
       const el = stickerElIn(stage, id);
       if (!field || !sticker || !el || leaving.has(id)) return;
       if (stepped && stepped.id !== id) saveSteps();
-      const from = stepped?.live ?? liveOf(sticker.placement, field);
+      const from = stepped?.live ?? stepFrom(sticker, field);
       const live = heldOnField(sticker, field, from, stepBy(from, by, rangeFor(sticker, field)));
       draw(el, sticker, live);
       if (stepped) clearTimeout(stepped.timer);
