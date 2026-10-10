@@ -24,7 +24,9 @@ vi.mock("../../performance/performanceRecorder", async (importOriginal) => ({
   notePerformance: vi.fn(),
 }));
 
-/** The sheet is 100 sheet units square, drawn at density 1; the sticker's image covers `PLACE`. */
+/** The sheet, 100 sheet units square, drawn at density 1. */
+const SHEET = { w: 100, h: 100, density: 1 };
+/** Where the sticker's image covers the sheet. */
 const PLACE = { x: 20, y: 30, w: 60, h: 40 };
 /** The stage, CSS px, which the figure fills at 2 px per sheet unit. */
 const STAGE = { width: 120, height: 80 };
@@ -44,7 +46,7 @@ const pointCount = (op: StrokeOp) => op.pts.length / STRIDE;
 const sameObject = (a: object, b: object | undefined) => a === b;
 
 function setup(ops: Op[], { reduced = false } = {}) {
-  const timelapse = encodeTimelapse({ ops, frame: { w: 100, h: 100, density: 1 }, place: PLACE });
+  const timelapse = encodeTimelapse({ ops, frame: SHEET, place: PLACE });
   const canvas = document.createElement("canvas");
   const clock = handFrames();
   const player = createTimelapsePlayer({
@@ -228,6 +230,23 @@ describe("the timelapse player", () => {
     }
   });
 
+  it("ends a stroke run past the sheet's edge there, as the drawing screen's canvas did", async () => {
+    const pastTheEdge: StrokeOp = {
+      ...stroke(0, steady(32)),
+      pts: [40, 45, 4, 0, 5, 45, 4, 16, -30, 45, 4, 32],
+    };
+    const { display, player } = setup([pastTheEdge]);
+    player.skip();
+    await expect(player.play()).resolves.toBe("done");
+    const calls = display?.calls ?? [];
+    const names = calls.map(([name]) => name);
+    // The stroke paints inside a clip, made under the frame's transform, to the sheet's own rect.
+    const painted = names.indexOf("fill");
+    const clip = names.lastIndexOf("clip", painted);
+    expect(clip).toBeGreaterThan(names.lastIndexOf("setTransform", painted));
+    expect(calls[clip - 1]).toEqual(["rect", 0, 0, SHEET.w, SHEET.h]);
+  });
+
   it("is prepared at once when there are no fills, making no canvas", async () => {
     const { player, display } = setup([stroke(0, steady(900))]);
     await expect(player.prepare()).resolves.toBeUndefined();
@@ -243,9 +262,11 @@ describe("the timelapse player's fills", () => {
     const fill: FillOp = { tool: "fill", color: "#ff0000", ...TAP, gap: 0, T: 500 };
     return [stroke(0, steady(300)), fill, stroke(800, steady(300))];
   };
-  /** The circles the display was clipped to, in order: the arc just before each clip. */
+  /** The circles a reveal clipped the display to, in order: the arc just before each such clip. */
   const clips = (display: FakeContext | undefined) =>
-    (display?.calls ?? []).flatMap((call, i, calls) => (call[0] === "clip" ? [calls[i - 1]] : []));
+    (display?.calls ?? []).flatMap((call, i, calls) =>
+      call[0] === "clip" && calls[i - 1]?.[0] === "arc" ? [calls[i - 1]] : [],
+    );
   const draws = (display: FakeContext | undefined) =>
     (display?.calls ?? []).filter(([name]) => name === "drawImage");
   /** The canvases made that still hold memory. */

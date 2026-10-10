@@ -86,7 +86,14 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
   const g = context2d(canvas);
   const showFrame = () => {
     const { scale, origin } = view;
+    // Only a restore takes a clip away, so each frame's replaces the last's; with nothing saved, it does nothing.
+    g.restore();
+    g.save();
     g.setTransform(scale, 0, 0, scale, -origin.x * scale, -origin.y * scale);
+    // Ink run past the sheet's edge never reached the sticker: the drawing screen's canvas ended there.
+    g.beginPath();
+    g.rect(0, 0, sheet.width, sheet.height);
+    g.clip();
   };
   showFrame();
 
