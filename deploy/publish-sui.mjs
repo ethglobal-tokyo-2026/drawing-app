@@ -11,7 +11,6 @@
 // UpgradeCap and the DisplayCap. SUI_NETWORK and SUI_STICKER_PACKAGE come from deploy/drawing-api.env,
 // and the keys from deploy/.env, or the file DEPLOY_ENV_FILE names. It prints addresses and IDs,
 // never a key.
-import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,17 +30,23 @@ import {
   deriveObjectID,
   fromBase64,
   normalizeStructTag,
-  normalizeSuiAddress,
   toBase64,
 } from "../node_modules/.pnpm/node_modules/@mysten/sui/dist/utils/index.mjs";
+import {
+  DISPLAY_REGISTRY,
+  buildPackage,
+  createdByType,
+  createdTypes,
+  isRecord,
+  publishTransaction,
+  publishedObjects,
+  setupTransaction,
+} from "./stickers-package.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const PACKAGE_DIR = join(ROOT, "contracts/sui-sticker-contract/stickers");
-const DISPLAY_REGISTRY = normalizeSuiAddress("0xd");
 const SHINAMI_GAS_STATION = "https://api.us1.shinami.com/sui/gas/v1";
 const SHINAMI_TIMEOUT_MS = 30_000;
 const SUI_CALL_TIMEOUT_MS = 60_000;
-const BUILD_TIMEOUT_MS = 5 * 60_000;
 // The SDK's own reads while it builds a transaction take no signal, so the whole run has a limit.
 const RUN_TIMEOUT_MS = 15 * 60_000;
 
@@ -58,13 +63,6 @@ setTimeout(() => {
   log(`✗ stopped after ${RUN_TIMEOUT_MS / 60_000} minutes${sent}`);
   process.exit(1);
 }, RUN_TIMEOUT_MS).unref();
-
-/** @param {unknown} value @returns {value is Record<string, unknown>} */
-const isRecord = (value) => typeof value === "object" && value !== null;
-
-/** @param {unknown} value @returns {value is string[]} */
-const isStrings = (value) =>
-  Array.isArray(value) && value.every((item) => typeof item === "string");
 
 /** @param {bigint} mist */
 function sui(mist) {
@@ -130,23 +128,6 @@ const displayFields = (host) => ({
   image_url: imageUrl(host),
   project_url: liffLink(),
 });
-
-/** @param {string} network */
-function buildPackage(network) {
-  log(`→ building contracts/sui-sticker-contract/stickers for ${network}`);
-  /** @type {unknown} */
-  const built = JSON.parse(
-    execFileSync(
-      "sui",
-      ["move", "build", "--dump-bytecode-as-base64", "-e", network, "--path", PACKAGE_DIR],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"], timeout: BUILD_TIMEOUT_MS },
-    ),
-  );
-  if (!isRecord(built) || !isStrings(built.modules) || !isStrings(built.dependencies)) {
-    throw new Error("sui move build answered no modules and dependencies");
-  }
-  return { modules: built.modules, dependencies: built.dependencies };
-}
 
 /** Shinami answered a JSON-RPC error: it won't sponsor the transaction, or its fund can't. */
 class ShinamiRefusal extends Error {
@@ -299,60 +280,6 @@ async function logPayers(chain, deployer) {
   log(`  the deployer, ${deployer}, holds ${sui(BigInt(balance.balance))}`);
 }
 
-/** @typedef {{ digest: string, effects: { changedObjects: { objectId: string, idOperation: string, outputState: string }[] }, objectTypes: Record<string, string> }} Executed */
-
-/**
- * The types of what the transaction created, normalized, by ID.
- * @param {Executed} executed
- */
-function createdTypes(executed) {
-  return executed.effects.changedObjects.flatMap((change) => {
-    const type = executed.objectTypes[change.objectId];
-    if (change.idOperation !== "Created" || !type) return [];
-    return [{ id: change.objectId, type: type.includes("::") ? normalizeStructTag(type) : type }];
-  });
-}
-
-/**
- * Finds the one object of a type the transaction created.
- * @param {Executed} executed
- */
-function createdByType(executed) {
-  const created = createdTypes(executed);
-  /** @param {string} type */
-  return (type) => {
-    const ids = created.filter((object) => object.type === normalizeStructTag(type));
-    const [object] = ids;
-    if (ids.length !== 1 || !object) {
-      throw new Error(`${executed.digest} created ${ids.length} ${type}, not one`);
-    }
-    return object.id;
-  };
-}
-
-/**
- * What a publish of the package creates that the second transaction and the API's settings name.
- * A simulation runs the same lookups, so a package that would publish without them fails there.
- * @param {Executed} executed
- */
-function publishedObjects(executed) {
-  const pkg = executed.effects.changedObjects.find(
-    (change) => change.outputState === "PackageWrite",
-  )?.objectId;
-  if (!pkg) throw new Error(`the publish, ${executed.digest}, wrote no package`);
-  const created = createdByType(executed);
-  return {
-    ids: {
-      SUI_STICKER_PACKAGE: pkg,
-      SUI_STICKER_REGISTRY: created(`${pkg}::sticker::StickerRegistry`),
-      SUI_SERVER_CONFIG: created(`${pkg}::sticker::ServerConfig`),
-      SUI_GIFT_ESCROW: created(`${pkg}::gift::Escrow`),
-    },
-    adminCap: created(`${pkg}::sticker::AdminCap`),
-    upgradeCap: created("0x2::package::UpgradeCap"),
-  };
-}
-
 /**
  * Publishes the package, then names the server and creates the Display in a second transaction:
  * a transaction can't call the package it publishes.
@@ -367,20 +294,15 @@ async function publishPackage(chain, env, host, publish) {
   const deployer = deployerKey ? keypair("SUI_DEPLOYER_PRIVATE_KEY", deployerKey) : null;
   const serverKey = env.SUI_SERVER_PRIVATE_KEY;
   const server = serverKey ? keypair("SUI_SERVER_PRIVATE_KEY", serverKey).toSuiAddress() : null;
+  log(`→ building contracts/sui-sticker-contract/stickers for ${chain.network}`);
   const build = buildPackage(chain.network);
-  /** @param {string} owner */
-  const publishTx = (owner) => {
-    const tx = new Transaction();
-    tx.transferObjects([tx.publish(build)], owner);
-    return tx;
-  };
 
   if (!publish) {
     const from = deployer?.toSuiAddress() ?? new Ed25519Keypair().toSuiAddress();
     if (!deployer) {
       log(`  SUI_DEPLOYER_PRIVATE_KEY isn't set, so a throwaway address, ${from}, simulates`);
     }
-    const simulated = await simulate(chain, publishTx(from), from, "the publish");
+    const simulated = await simulate(chain, publishTransaction(build, from), from, "the publish");
     publishedObjects(simulated);
     // Without the package's ID, which a publish gets anew.
     const types = createdTypes(simulated).map(({ type }) =>
@@ -399,29 +321,17 @@ async function publishPackage(chain, env, host, publish) {
     throw new Error("--publish needs SUI_DEPLOYER_PRIVATE_KEY and SUI_SERVER_PRIVATE_KEY");
   }
 
-  const published = await send(chain, publishTx(deployer.toSuiAddress()), deployer, "the publish");
-  const { ids, adminCap, upgradeCap } = publishedObjects(published);
+  const published = await send(
+    chain,
+    publishTransaction(build, deployer.toSuiAddress()),
+    deployer,
+    "the publish",
+  );
+  const objects = publishedObjects(published);
+  const { ids, adminCap, upgradeCap } = objects;
   const pkg = ids.SUI_STICKER_PACKAGE;
 
-  const setup = new Transaction();
-  setup.moveCall({
-    target: `${pkg}::sticker::set_server`,
-    arguments: [
-      setup.object(adminCap),
-      setup.object(ids.SUI_SERVER_CONFIG),
-      setup.pure.address(server),
-    ],
-  });
-  const displayCap = setup.moveCall({
-    target: `${pkg}::sticker::create_display`,
-    arguments: [
-      setup.object(adminCap),
-      setup.object(DISPLAY_REGISTRY),
-      setup.pure.vector("string", Object.keys(fields)),
-      setup.pure.vector("string", Object.values(fields)),
-    ],
-  });
-  setup.transferObjects([displayCap], deployer.toSuiAddress());
+  const setup = setupTransaction(objects, { server, deployer: deployer.toSuiAddress(), fields });
   /** @type {Awaited<ReturnType<typeof send>>} */
   let setUp;
   try {
