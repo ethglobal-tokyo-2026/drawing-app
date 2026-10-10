@@ -85,12 +85,12 @@ if [ "$MENU" = default ]; then
   MENU_JSON="$(jq -n --arg uri "$LIFF_URL" '{
     size: { width: 2500, height: 843 },
     selected: true,
-    name: "Default: Open Sticker Board",
+    name: "Default: Open Croquis",
     chatBarText: "クロッキー Croquis",
     areas: [
       {
         bounds: { x: 0, y: 0, width: 2500, height: 843 },
-        action: { type: "uri", label: "シールボードをひらく", uri: $uri }
+        action: { type: "uri", label: "クロッキーをひらく", uri: $uri }
       }
     ]
   }')"
