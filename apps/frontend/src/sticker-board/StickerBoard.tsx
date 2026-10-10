@@ -1126,7 +1126,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
               ))}
             </ErrorLine>
           )}
-          {checkFailure && unsavedStickers.length === 0 && (
+          {checkFailure && (
             <ErrorLine detail={errorDetail(checkFailure)} onRetry={() => setChecks((n) => n + 1)}>
               {t(($) => $.stickerBoard.board.gratitudeCheckFailed, {
                 reason: errorMessage(checkFailure),

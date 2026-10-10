@@ -226,6 +226,30 @@ describe("StickerBoard's check for gratitude to send", () => {
     expect(stickerDetail).toHaveBeenCalledTimes(2);
     expect(alert()).toContain("gone");
   });
+
+  it("says so beside a spot that didn't save", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    // Received: the board gives it a spot, which doesn't save.
+    const a = boardSticker({ placement: null });
+    const offline = new ApiError(0, { error: "network", detail: "Failed to fetch" });
+    const api = emptyApi({
+      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a] }),
+      stickerDetail: () => Promise.reject(offline),
+      saveStickerPlacement: () => Promise.reject(offline),
+    });
+    const view = renderWithApi(
+      <StickerBoard freshId={a.stickerId} onDraw={() => {}} onOpenGift={() => {}} />,
+      api,
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    await act(async () => {});
+    const alerts = view.host.querySelectorAll(".board-alerts [role='alert']");
+    expect([...alerts].map((alert) => alert.textContent)).toEqual([
+      expect.stringContaining("Couldn’t save where"),
+      expect.stringContaining("Couldn’t check whether gratitude is waiting"),
+    ]);
+  });
 });
 
 describe("StickerBoard's tickets", () => {
