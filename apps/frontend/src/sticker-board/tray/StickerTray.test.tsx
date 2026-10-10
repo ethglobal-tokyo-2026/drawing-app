@@ -304,6 +304,30 @@ describe("StickerTray", () => {
     expect(boardReads.mock.results.at(-1)?.value).toBe(moved);
   });
 
+  it("measures a board that moved as a key sticks a sticker on, so its flyer starts where the sticker is", async () => {
+    render(manyStickers(8), { place: () => new Promise<HTMLElement | null>(() => {}) });
+    await openTray();
+    const enterOnSticker = () =>
+      act(() => {
+        frontSheet()
+          ?.querySelector('.tray__slot[data-state="here"]')
+          ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      });
+    /** The y a flyer starts at, in board pixels, from its transform. */
+    const startY = (flyer: Element | undefined) =>
+      Number(
+        /translate\([-\d.]+px,([-\d.]+)px\)/.exec(
+          flyer instanceof HTMLElement ? flyer.style.transform : "",
+        )?.[1],
+      );
+    enterOnSticker();
+    boardReads.mockReturnValue(new DOMRect(0, 120, 390, 657));
+    enterOnSticker();
+    // Both stickers are at the same place on screen, and the board moved down under the second.
+    const [first, second] = flyers();
+    expect(startY(first) - startY(second)).toBeCloseTo(120);
+  });
+
   it("refuses a second drop of a sticker already on its way into its used sticker silhouette", async () => {
     const remove = vi.fn();
     render([sticker("a", 1, true)], { remove });
@@ -495,6 +519,22 @@ describe("StickerTray", () => {
     pageDown();
     await motion.finishAll();
     expect(frontSheet()?.getAttribute("data-f")).toBe(next);
+  });
+
+  it("brings a sheet chosen mid-turn to the front once the turn is over", async () => {
+    const motion = holdAnimations();
+    render(manyStickers(60));
+    await openTray();
+    motion.animate();
+    const edge = board.querySelector(".tray__stack > .tray__sheet[data-depth='2'] .tray__foot");
+    const chosen = edge?.closest<HTMLElement>(".tray__sheet")?.dataset.f;
+    pageDown();
+    act(() => {
+      edge?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    await motion.finishAll();
+    expect(chosen).toBeDefined();
+    expect(frontSheet()?.getAttribute("data-f")).toBe(chosen);
   });
 
   it("keeps the newest match in front when a folder tab is chosen mid-turn", async () => {
@@ -917,6 +957,19 @@ describe("StickerTray", () => {
 
     await act(async () => cells[2]?.click());
     expect(stackEl()?.contains(document.activeElement)).toBe(true);
+  });
+
+  it("keeps the sheet tapped in the spread in front, though Escape comes as the spread closes", async () => {
+    const motion = holdAnimations();
+    render(manyStickers(60));
+    await openTray();
+    motion.animate();
+    act(() => board.querySelector<HTMLElement>(".tray__depth")?.click());
+    const tapped = board.querySelectorAll<HTMLElement>(".tray__cell")[2];
+    act(() => tapped?.click());
+    act(() => void tray.current?.escape());
+    await motion.finishAll();
+    expect(frontSheet()?.getAttribute("data-f")).toBe(tapped?.dataset.f);
   });
 
   it("takes the folder tabs, then the front sheet's stickers, then the edges of the sheets behind in Tab order, and nothing hidden", async () => {

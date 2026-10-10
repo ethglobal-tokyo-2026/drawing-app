@@ -854,8 +854,11 @@
   pointer-events: none;
 }
 
+/* More rows than fit the board, at the least scale a sheet is drawn at, scroll. */
 .tray__spread.is-on {
   pointer-events: auto;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
 }
 
 /* Every sheet laid out on the tray's own material. */

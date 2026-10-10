@@ -253,9 +253,10 @@ export function createTrayEngine(
     passive: true,
     signal: listening.signal,
   });
-  // And measured as each gesture begins, ahead of the gesture's own handlers changing anything: the
+  // And measured as each gesture or key press begins, ahead of its own handlers changing anything: the
   // layout is still clean, and whatever else moved the board, it can't have moved since.
   board.addEventListener("pointerdown", measure, { capture: true, signal: listening.signal });
+  board.addEventListener("keydown", measure, { capture: true, signal: listening.signal });
   const Wb = () => placed.w || 390;
   const Hb = () => placed.h || 657;
   const colLeft = () => Wb() - COL * ui.fit.grow;

@@ -283,7 +283,7 @@ export const CRACK = 0.12;
  * However short the tray, the stack is shrunk to no less than this, so the dates on its narrowest
  * edge, kept at the fine-print floor, still sit beside the sheet's number.
  */
-const MIN_SCALE = 0.5;
+export const MIN_SCALE = 0.5;
 /**
  * On a large screen the stack grows no larger than this: its stickers come out about the size of the
  * board's, and the open pouch leaves most of the board in view.

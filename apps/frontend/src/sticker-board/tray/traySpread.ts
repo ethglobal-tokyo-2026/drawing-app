@@ -4,7 +4,7 @@
  */
 import { EASE_OUT, EASE_PEEL } from "../../ui/easing";
 import { inertBesides } from "./inertBesides";
-import { SHEET, ended, px, targetOf, type Tray, type TrayModel } from "./trayModel";
+import { MIN_SCALE, SHEET, ended, px, targetOf, type Tray, type TrayModel } from "./trayModel";
 import type { TrayPresses } from "./trayPresses";
 import type { TraySheets } from "./traySheets";
 
@@ -15,7 +15,14 @@ const SPREAD_TURNS = [-1.2, 0.8, -0.5, 1.1, -0.9, 0.6, 1.3, -0.7];
  * Where the spread lays out `n` sheets `sheetH` tall on a board this big, whose tray starts at `top`
  * and grew by `grow`.
  */
-function spreadCells(n: number, W: number, H: number, top: number, grow: number, sheetH: number) {
+export function spreadCells(
+  n: number,
+  W: number,
+  H: number,
+  top: number,
+  grow: number,
+  sheetH: number,
+) {
   const margin = 18;
   const gap = 14;
   const cols = n <= 1 ? 1 : n <= 2 ? 2 : n <= 6 ? 3 : 4;
@@ -23,7 +30,9 @@ function spreadCells(n: number, W: number, H: number, top: number, grow: number,
   const k = Math.min(
     (n <= 2 ? 0.95 : 0.8) * grow,
     (W - margin * 2 - gap * (cols - 1)) / cols / SHEET.w,
-    (H - top - 30 - (rows - 1) * 18) / (rows * sheetH),
+    // Shrunk no further than the stack is, so its dates still sit beside its number: past that, the
+    // spread scrolls.
+    Math.max(MIN_SCALE, (H - top - 30 - (rows - 1) * 18) / (rows * sheetH)),
   );
   const cw = SHEET.w * k;
   const ch = sheetH * k;
@@ -71,6 +80,10 @@ export function createTraySpread(
     const list = ui.order.length ? ui.order : [topF()];
     const cells = spreadCells(list.length, Wb(), Hb(), trayTop(), ui.fit.grow, ui.sheetH);
     for (const c of spreadLayer.querySelectorAll(".tray__cell")) c.remove();
+    // The mat runs under every row, however far the spread scrolls.
+    const last = cells.at(-1);
+    mat.style.height = px(Math.max(Hb(), last ? last.y + ui.sheetH * last.k + 18 : 0));
+    spreadLayer.scrollTop = 0;
     const from = stackOnBoard();
     const news = newIds();
     const els = list.map((f, d) => {
@@ -120,14 +133,24 @@ export function createTraySpread(
     endAside = inertBesides(spreadLayer, board);
     if (focus || hadFocus) els[0]?.focus({ preventScroll: true });
   }
+  /** The spread closing: a second tap or Escape meanwhile waits for it, and keeps the sheet tapped first. */
+  let closing: Promise<void> | null = null;
   /** Back into the tray, with sheet `f`, the one tapped, in front. */
-  async function closeSpread(f = topF()) {
-    if (!ui.spreadOpen) return;
+  function closeSpread(f = topF()) {
+    if (!ui.spreadOpen) return Promise.resolve();
+    closing ??= gather(f).finally(() => {
+      closing = null;
+    });
+    return closing;
+  }
+  async function gather(f: number) {
     const focused = spreadHasFocus();
     const cells = [...spreadLayer.querySelectorAll<HTMLElement>(".tray__cell")];
     const pick = cells.find((c) => Number(c.dataset.f) === f);
     zip.relax(1);
-    const home = stackHome();
+    // The stack's place among the cells, which scroll with the spread.
+    const { x, y } = stackHome();
+    const home = { x, y: y + spreadLayer.scrollTop };
     if (!reduced()) {
       mat.animate([{ opacity: 1 }, { opacity: 0 }], {
         duration: 320,

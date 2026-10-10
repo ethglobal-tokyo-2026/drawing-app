@@ -79,6 +79,20 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
         easing: EASE_OUT,
         fill,
       });
+  /** Resolves once the stack is still: no turn or shuffle under way. */
+  let still = Promise.resolve();
+  let letGoOf = () => {};
+  /** A turn or a shuffle takes the stack: nothing else turns it until it lets go. */
+  function hold() {
+    ui.busy = true;
+    still = new Promise<void>((resolve) => {
+      letGoOf = resolve;
+    });
+  }
+  function letGo() {
+    ui.busy = false;
+    letGoOf();
+  }
   /** One step: +1 sends the front sheet to the back, -1 brings the back one to the front. */
   async function page(dir: 1 | -1, { fromY = 0, quick = false, silent = false } = {}) {
     // One turn at a time: a key held down, or pressed mid-shuffle, doesn't start another.
@@ -100,7 +114,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
       if (!silent) sayFront();
       return;
     }
-    ui.busy = true;
+    hold();
     if (dir > 0) {
       // The front sheet slides up out of the stack and tucks in at the back; the rest step forward.
       for (const el of sheetEls()) {
@@ -168,7 +182,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
         for (const a of t.getAnimations()) a.cancel();
       }
     }
-    ui.busy = false;
+    letGo();
     catchUp();
     if (!silent) sayFront();
   }
@@ -193,10 +207,13 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
     // A tab chosen mid-riffle deals the newest match to the front: the rest of the riffle would turn
     // that stack, so it stops.
     const dealt = deals;
-    const hops = i <= ui.order.length / 2 ? i : ui.order.length - i;
-    const dir = i <= ui.order.length / 2 ? 1 : -1;
-    for (let hop = 0; hop < hops && deals === dealt; hop++)
-      await page(dir, { quick: true, silent: true });
+    // Each hop waits out a turn or shuffle under way, then turns from where the sheet is by then.
+    for (;;) {
+      while (ui.busy) await still;
+      const at = ui.order.indexOf(f);
+      if (deals !== dealt || at <= 0) break;
+      await page(at <= ui.order.length / 2 ? 1 : -1, { quick: true, silent: true });
+    }
     if (deals === dealt) sayFront();
   }
 
@@ -226,7 +243,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
     if (!zip.isOpen || reduced() || again || ui.busy) {
       if (again) {
         shuffling = null;
-        ui.busy = false;
+        letGo();
       }
       renderStack();
       if (reduced() && zip.isOpen)
@@ -237,7 +254,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
     }
     const token = {};
     shuffling = token;
-    ui.busy = true;
+    hold();
     const before = sheetEls();
     const shown = new Set(ui.order.slice(0, Math.min(PEEKS, ui.order.length - 1) + 1));
     // The front, and every sheet without a match.
@@ -347,7 +364,7 @@ export function createTrayPaging(tray: Tray, trayModel: TrayModel, traySheets: T
     await Promise.all(anims.map(ended));
     if (shuffling === token) {
       shuffling = null;
-      ui.busy = false;
+      letGo();
       catchUp();
       sayFilter();
     }
