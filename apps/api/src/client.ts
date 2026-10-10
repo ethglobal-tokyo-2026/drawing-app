@@ -24,6 +24,7 @@ export type ApiErrorCode =
   | "sponsor_fund_empty"
   | "sponsor_unavailable"
   | "signature_invalid";
+export { MAX_PERFORMANCE_REPORT_CHARS } from "./performanceReportLimits.ts";
 export { HANDLE_MAX_LENGTH } from "./session/handleLimit.ts";
 export { MAX_LARGE_LAYOUT_BATCH } from "./stickerBoards/largeLayoutLimit.ts";
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
@@ -62,6 +63,7 @@ export type { GratitudeEvents } from "./gratitude/events.ts";
 export type { GratitudeWithReplay, UnseenGratitude } from "./gratitude/feed.ts";
 export type { RecordGratitude } from "./gratitude/record.ts";
 export type { ReplayV1 } from "./gratitude/replay.ts";
+export type { PerformanceReportUpload } from "./routes/performanceReports.ts";
 export type {
   Gift,
   Gratitude,

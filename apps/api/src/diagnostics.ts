@@ -61,6 +61,15 @@ export interface DiagnosticFields {
   purgeId?: string;
   /** Why a step was skipped, in words. */
   reason?: string;
+  /**
+   * A performance report: the time it recorded, its frames and slow frames, the device's description
+   * and the report itself, which is kept whole.
+   */
+  recordedMs?: number;
+  frames?: number;
+  slowFrames?: number;
+  device?: string;
+  report?: string;
 }
 
 /** A sticker image's URL names nothing but its public content hash, so it's logged whole. */
@@ -183,6 +192,11 @@ const loggedFields = {
   imageUrl: true,
   purgeId: true,
   reason: true,
+  recordedMs: true,
+  frames: true,
+  slowFrames: true,
+  device: true,
+  report: true,
 } satisfies Record<keyof DiagnosticFields, true>;
 
 const isLoggedField = (key: string): key is keyof DiagnosticFields =>

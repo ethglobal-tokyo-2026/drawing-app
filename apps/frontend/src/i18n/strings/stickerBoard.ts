@@ -305,7 +305,7 @@ export const stickerBoard = {
       title: { en: "Performance" },
       record: { en: "Record performance" },
       what: {
-        en: "Slow frames and what happened around them, and each kind of pointer. While it’s on, it records from the app’s start.",
+        en: "Slow frames and what happened around them, and each kind of pointer. While it’s on, it records from the app’s start and sends its report to the server as it goes.",
       },
       nothingYet: { en: "Nothing recorded yet" },
       copy: { en: "Copy report" },
@@ -317,6 +317,7 @@ export const stickerBoard = {
       couldntStart: { en: "Recording couldn’t start: {{reason}}" },
       couldntStop: { en: "Recording couldn’t stop: {{reason}}" },
       notCopied: { en: "The report couldn’t be copied: {{reason}}. It’s below to copy by hand." },
+      notUploaded: { en: "The report wasn’t uploaded: {{reason}}. The next send tries again." },
       report: { en: "Performance report" },
     },
     device: {
