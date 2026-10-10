@@ -1,0 +1,70 @@
+Sticker crease: performance review (2026-10-09, origin/main at 95a45b14)
+
+Board under test: crease-ann, 32 own stickers on the phone layout (U = 390 px, s 0.30-0.36, so long sides
+117-140 CSS px). 28 crease bakes, 6 of them empty, so 22 creases on screen, 88 crease layers (<i>).
+
+PART 1: RISKS, RANKED (computed from the code; "unverified" = not measured here)
+
+1. The moving light restyles every crease layer and restarts its fade, every write.
+   light.ts writes --lx/--ly on each .sticker-crease at most every 45 ms while the light moves. Each
+   write re-resolves the calc/hypot chain on 4 <i> per crease (88 here) and, through
+   `transition: opacity 280ms`, cancels and restarts up to 88 opacity transitions. A running opacity
+   transition promotes its element to its own compositing layer in Chromium and WebKit, so a moving
+   light keeps up to 88 extra layers alive, and everything above them that overlaps (resin, sweep,
+   veil, the stickers stacked higher) may need layers too (overlap promotion). Measured in Part 2.
+   Fixes: drop the fade (no-fade), or write the light to creases only once it settles (settle), or
+   collapse the 4 layers into fewer (see 5).
+
+2. Layer memory on iOS while the light moves (unverified on a device). One <i> layer at DPR 3 for a
+   109x140 sticker is 327x420 device px = 0.55 MB; 88 of them = ~48 MB of backing store, before
+   overlap-promoted layers. iPad (DPR 2, large layout stickers 1.25x): ~0.38 MB each. WebKit's web
+   content process is jetsam-killed on memory pressure inside LINE. Fix: same as 1; fewer layers per
+   crease (5).
+
+3. The worker's mask cache never lets go. creaseWorker.ts keeps every mask URL's ImageBitmap (up to
+   320 px a side: a 549x704 cut is 250x320 = 0.32 MB) for the worker's life, across boards. ~35 masks
+   per board here = ~11 MB; every other person's board visited adds theirs (30 boards ~ 300 MB,
+   unverified extrapolation). Fix: an LRU cap (a board's worth, ~64 masks), or clear when no board
+   holds the worker; or keep alpha only as a Uint8Array at bake size (1 B/px, not 4).
+
+4. Bake cost grows with the pile, quadratic in the worst case. Per job: draw and getImageData each
+   sticker underneath (k reads of w*h*4), then stackedSurface blurs a full-size copy once per layer
+   above the first (k-1 blurs of 6 sliding passes each), then drape (4 envelope passes + blur) and 4
+   PNG encodes. A pile where every sticker overlaps every other costs O(n^2) draws and blurs. At 32
+   stickers it's small (Part 2: whole board 120 ms Chromium, 870 ms WebKit on this Mac; an iPhone
+   maybe 2-4x WebKit's, unverified). Re-bakes: every board mount (the store is per mount, so every
+   visit to someone else's board and every remount of your own); picking a sticker up re-bakes every
+   neighbor without it, and the drop re-bakes them again; on someone else's board, selecting moves the
+   sticker to the top, which re-bakes it and what it now covers. iPad: stickers land 1.25x, so ~1.56x
+   the pixels per bake (DPR doesn't matter: scale is capped at 1). Fix if piles grow: cache bakes by
+   key across mounts (a module-level LRU of blobs), and cap k to the nearest few underneath.
+
+5. Four images per crease where two would do (design-level fix for 1 and 2). The blend weights are
+   clamp(a), clamp(-a), clamp(b), clamp(-b): at most two sides show at once. Two layers per crease
+   (lit-from-a and lit-from-b, signed) or one canvas per board would halve layers and decoded images.
+   Decoded images today: 4 x 109x140x4 B = 0.25 MB per crease, ~5.4 MB for this board.
+
+6. Landing creases one at a time. Each worker reply lands alone: 4 createObjectURL, a React commit of
+   that one sticker, a style/paint of the board and 4 PNG decodes, 22 times over the bake span. Fine
+   at 32 stickers (unverified as a jank source); batch landings per frame if bakes get faster than
+   frames.
+
+Low risk, checked: useCreases per render builds a signature string only (cheap); creaseJobs (n^2/2
+SAT overlap tests, JSON keys) runs only when the signature changes, and a drag moves the sticker by
+writing its transform directly (useBoardGestures.ts), not through React state, so it doesn't run per
+drag frame. Object URLs are revoked on every replace and on unmount.
+
+PART 2: MEASUREMENTS
+Harness: production build with LIFF Mock kept (untracked vite.perf.config.ts), vite preview on 5227,
+API on 8827 against a copy of the crease board, Playwright 390x844 DPR 3, session cookie from a Node
+sign-in. After creases settle (count still for 1.5 s, then 2.5 s more), 240 page.mouse.move calls round
+an ellipse (rx 180, ry 400 about the middle), 16 ms apart; rAF intervals recorded over the moves.
+off = the current build with board.creases unset. Chromium: CDP CPU throttle 4x, plus
+Performance.getMetrics deltas (main = TaskDuration, style = RecalcStyleDuration). WebKit: 1x, rAF only.
+This Mac was heavily loaded by other sessions (load averages 18-30 during the runs): compare variants
+within a round, not across rounds.
+
+Smoke run, Chromium 4x, current: 33 fps, p50 33 ms, p95 50 ms, 202 frames > 25 ms, 32 > 50 ms; main
+thread busy 10.7 s over a 11.0 s move, 5.2 s of it style recalc.
+Bake timings (worker, whole board, 28 jobs): Chromium sum 119 ms, max 9 ms; WebKit sum 866 ms (decode
+378, draw 308, shade 128, encode 52), max 88 ms.

@@ -1,0 +1,46 @@
+diff --git a/apps/frontend/src/stickers/light.ts b/apps/frontend/src/stickers/light.ts
+index f9b33044..0efb3048 100644
+--- a/apps/frontend/src/stickers/light.ts
++++ b/apps/frontend/src/stickers/light.ts
+@@ -21,6 +21,11 @@ const REDUCED = "(prefers-reduced-motion: reduce)";
+  * rather than the resin or foil they're in, a move restyles only them, not the masked layers around them.
+  */
+ const LIT = ".live-resin__spec > b, .sticker-foil__sheen, .sticker-foil__glint, .sticker-crease";
++/** What follows the light as it moves; a crease follows it only once it settles. */
++const MOVING = ".live-resin__spec > b, .sticker-foil__sheen, .sticker-foil__glint";
++const SETTLED = ".sticker-crease";
++/** How long the light holds still before the creases follow it. */
++const SETTLE_MS = 250;
+ /** The light is written at most this often; the highlights' transitions glide between writes. */
+ const BEAT_MS = 45;
+ /** A move shorter than this, on the -1 to 1 scale, isn't written, so the hand's tremor keeps still. */
+@@ -104,10 +109,10 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
+   let frame = 0;
+   let lastWrite = -Infinity;
+ 
+-  /** Sets the light on every lit element, or clears it with null; returns how many. */
+-  const setOnResins = (lx: string | null, ly: string | null) => {
+-    lightNow = lx === null || ly === null ? null : { lx, ly };
+-    const resins = root.querySelectorAll<HTMLElement>(LIT);
++  let settle = 0;
++  /** Sets the light on what `selector` picks, or clears it with null; returns how many. */
++  const setOn = (selector: string, lx: string | null, ly: string | null) => {
++    const resins = root.querySelectorAll<HTMLElement>(selector);
+     for (const resin of resins) {
+       if (lx === null || ly === null) {
+         resin.style.removeProperty("--lx");
+@@ -119,6 +124,14 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
+     }
+     return resins.length;
+   };
++  /** Sets the light on every lit element, or clears it with null; creases once it settles. */
++  const setOnResins = (lx: string | null, ly: string | null) => {
++    lightNow = lx === null || ly === null ? null : { lx, ly };
++    win.clearTimeout(settle);
++    if (lx === null || ly === null) setOn(SETTLED, null, null);
++    else settle = win.setTimeout(() => setOn(SETTLED, lx, ly), SETTLE_MS);
++    return setOn(MOVING, lx, ly);
++  };
+ 
+   /** Sets the light from `lit` on every lit element; returns how many. Made once, not per write. */
+   const lightFromLit = () => (lit ? setOnResins(written(lit.x), written(lit.y)) : 0);

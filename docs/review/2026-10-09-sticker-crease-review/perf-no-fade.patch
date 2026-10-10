@@ -1,0 +1,12 @@
+diff --git a/apps/frontend/src/stickers/sticker-crease.css b/apps/frontend/src/stickers/sticker-crease.css
+index 6e16145d..e207f373 100644
+--- a/apps/frontend/src/stickers/sticker-crease.css
++++ b/apps/frontend/src/stickers/sticker-crease.css
+@@ -27,7 +27,6 @@
+   position: absolute;
+   inset: 0;
+   background: var(--crease) 0 0 / 100% 100% no-repeat;
+-  transition: opacity 280ms var(--ease-out);
+ }
+ 
+ /* Without hypot() the blend can't be worked out, and every side would show: there it's the crease at
