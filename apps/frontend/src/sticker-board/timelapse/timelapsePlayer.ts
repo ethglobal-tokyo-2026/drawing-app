@@ -31,6 +31,8 @@ export interface TimelapsePlayerOptions {
   stage: { width: number; height: number };
   /** The sticker's figure on the stage, CSS px. */
   figure: Rect;
+  /** The sticker's cut as alpha, over its image's place: the ink it takes along as it peels away. */
+  cut?: CanvasImageSource;
   reduced: boolean;
   /** A sticker drawn in Kyoto Seika Manga Expression Practice Mode, whose timelapse may play longer. */
   kyotoSeika: boolean;
@@ -50,6 +52,8 @@ export interface TimelapsePlayer {
   setReduced: (reduced: boolean) => void;
   /** Where the sheet plays on the stage and where the sticker's spot is: final once prepared. */
   layout: () => TimelapseLayout;
+  /** Clears the ink inside the sticker's cut, which it takes along as it peels off; until the cut loads, nothing. */
+  takeInk: () => void;
 }
 
 type Outcome = { result: "done" | "stopped" } | { error: Error };
@@ -256,5 +260,15 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
       reduced = next;
     },
     layout: () => layout,
+    takeInk: () => {
+      const { cut } = options;
+      if (!cut || (cut instanceof HTMLImageElement && !(cut.complete && cut.naturalWidth > 0)))
+        return;
+      // In sheet units, under the sheet's transform and clip, as the strokes are drawn.
+      g.save();
+      g.globalCompositeOperation = "destination-out";
+      g.drawImage(cut, place.x, place.y, place.w, place.h);
+      g.restore();
+    },
   };
 }

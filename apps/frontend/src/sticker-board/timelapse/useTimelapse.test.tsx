@@ -17,6 +17,7 @@ import {
   FLIGHT_MS,
   HOLD_MS,
   LAND_MS,
+  PAPER_IN_MS,
   PEEL_MS,
   REDUCED_FADE_MS,
   useTimelapse,
@@ -114,7 +115,17 @@ const sheen = () => {
   return band;
 };
 
-/** Presses Timelapse and lets it load, prepare and start playing. */
+/** The longest take-off: the paper coming up, a flight onto the sheet, or a crossfade. */
+const TAKE_OFF_MS = Math.max(PAPER_IN_MS, FLIGHT_MS + LAND_MS, REDUCED_FADE_MS);
+/** Runs the take-off's frames, after which the ink plays. */
+const tookOff = async () => {
+  advance(TAKE_OFF_MS);
+  await settle();
+};
+/** Any inline style the timelapse puts on the figure. */
+const INLINE = /transform|opacity|z-index|will-change|pointer-events/;
+
+/** Presses Timelapse and lets it load, prepare, take off and start playing. */
 async function playing({ reduced = false } = {}) {
   render(reduced);
   press();
@@ -122,6 +133,7 @@ async function playing({ reduced = false } = {}) {
   players.last().prepared.resolve();
   await settle();
   expect(phase()).toBe("playing");
+  await tookOff();
   return players.last();
 }
 
@@ -173,6 +185,7 @@ afterEach(() => {
   act(() => root.unmount());
   host.remove();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("useTimelapse", () => {
@@ -196,6 +209,8 @@ describe("useTimelapse", () => {
     player.prepared.resolve();
     await settle();
     expect(shows()).toMatchObject({ phase: "playing", said: "playing" });
+    expect(player.calls).toEqual(["prepare"]);
+    await tookOff();
     expect(player.calls).toEqual(["prepare", "play"]);
 
     await finish();
@@ -229,30 +244,36 @@ describe("useTimelapse", () => {
     expect(layer()?.getAttribute("aria-hidden")).toBe("true");
   });
 
-  it("flies the sticker onto its sheet, then plays its ink with the sticker gone", async () => {
+  it("flies the sticker onto its sheet, letting taps through to it, and plays its ink once the sticker is gone", async () => {
     const player = await flying();
-    expect(player.calls).toEqual(["prepare"]);
+    expect(figure().style.pointerEvents).toBe("none");
     advance(FLIGHT_MS);
     await settle();
     expect(figure().style.transform).toBe(onSheet());
-    expect(player.calls).toEqual(["prepare", "play"]);
-    advance(LAND_MS);
+    // Still fading into its blank sheet: the first stroke waits for bare paper.
+    expect(player.calls).toEqual(["prepare"]);
+    await tookOff();
     expect(figure().style.opacity).toBe("0");
+    expect(player.calls).toEqual(["prepare", "play"]);
   });
 
-  it("peels the sticker back into its spot as the sheet fades, then sweeps its sheen", async () => {
-    await flying();
-    advance(FLIGHT_MS + LAND_MS);
+  it("peels the sticker back into its spot with its ink as the sheet fades, then sweeps its sheen", async () => {
+    const player = await flying();
+    await tookOff();
     const swept = vi.spyOn(sheen(), "animate");
     await finish();
-    advance(HOLD_MS + LAND_MS + PEEL_MS / 2);
+    advance(HOLD_MS + LAND_MS);
+    expect(figure().style.opacity).toBe("1");
+    expect(player.calls).not.toContain("takeInk");
+    advance(PEEL_MS / 2);
+    expect(player.calls.filter((call) => call === "takeInk")).toHaveLength(1);
     const fading = Number(layer()?.style.opacity);
     expect(fading).toBeGreaterThan(0);
     expect(fading).toBeLessThan(1);
-    expect(figure().style.opacity).toBe("1");
     advance(PEEL_MS / 2);
     expect(phase()).toBe("idle");
-    expect(figure().getAttribute("style") ?? "").not.toMatch(/transform|opacity|z-index/);
+    expect(figure().getAttribute("style") ?? "").not.toMatch(INLINE);
+    expect(player.calls.filter((call) => call === "takeInk")).toHaveLength(1);
     expect(swept).toHaveBeenCalledOnce();
   });
 
@@ -261,33 +282,66 @@ describe("useTimelapse", () => {
     advance(FLIGHT_MS / 2);
     expect(figure().style.transform).not.toBe("");
     act(() => control("stop").click());
-    expect(figure().getAttribute("style") ?? "").not.toMatch(/transform|opacity|z-index/);
+    expect(figure().getAttribute("style") ?? "").not.toMatch(INLINE);
   });
 
-  it("never flies the sticker under reduced motion: hidden while its sheet plays, it fades in as the sheet fades", async () => {
+  it("never flies the sticker under reduced motion: it crossfades with its sheet as it starts and as it ends", async () => {
     await flying({ reduced: true });
+    advance(REDUCED_FADE_MS / 2);
+    for (const part of [figure(), layer()]) {
+      const seen = Number(part?.style.opacity);
+      expect(seen).toBeGreaterThan(0);
+      expect(seen).toBeLessThan(1);
+    }
+    await tookOff();
     expect(figure().style.opacity).toBe("0");
-    advance(FLIGHT_MS + LAND_MS);
-    expect(figure().style.transform).toBe("");
     await finish();
     advance(HOLD_MS + REDUCED_FADE_MS / 2);
     const shown = Number(figure().style.opacity);
     expect(shown).toBeGreaterThan(0);
     expect(shown).toBeLessThan(1);
-    expect(figure().style.transform).toBe("");
     advance(REDUCED_FADE_MS / 2);
     expect(phase()).toBe("idle");
-    expect(figure().getAttribute("style") ?? "").not.toMatch(/transform|opacity|z-index/);
+    expect(figure().getAttribute("style") ?? "").not.toMatch(INLINE);
   });
 
-  it("fades a sticker that plays in its spot out under its paper, and has it back under the sheet at the end", async () => {
+  it("hides a sticker that plays in its spot once its paper covers it, and brings it back under the sheet during the hold", async () => {
     await playing();
-    advance(LAND_MS);
     expect(figure().style.opacity).toBe("0");
     expect(figure().style.transform).toBe("");
     await finish();
-    expect(figure().getAttribute("style") ?? "").not.toMatch(/transform|opacity|z-index/);
-    expect(layer()?.style.opacity).toBe("");
+    advance(HOLD_MS / 2);
+    const back = Number(figure().style.opacity);
+    expect(back).toBeGreaterThan(0);
+    expect(back).toBeLessThan(1);
+    expect(layer()?.style.opacity).toBe("1");
+    advance(HOLD_MS / 2 + FADE_MS);
+    expect(phase()).toBe("idle");
+    expect(figure().getAttribute("style") ?? "").not.toMatch(INLINE);
+  });
+
+  it("ends at once when the stage changes size, as when an iPad turns", async () => {
+    const watchers: (() => void)[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(changed: () => void) {
+          watchers.push(changed);
+        }
+        observe = () => {};
+        disconnect = () => {};
+      },
+    );
+    const player = await flying();
+    const stage = layer();
+    if (!stage) throw new Error("no layer");
+    act(() => watchers.forEach((changed) => changed()));
+    expect(phase()).toBe("playing");
+    Object.defineProperty(stage, "clientWidth", { value: stage.clientWidth + 100 });
+    act(() => watchers.forEach((changed) => changed()));
+    expect(phase()).toBe("idle");
+    expect(player.calls).toContain("stop");
+    expect(figure().getAttribute("style") ?? "").not.toMatch(INLINE);
   });
 
   it("skips to the finished ink when the sticker is tapped", async () => {
@@ -368,6 +422,7 @@ describe("useTimelapse", () => {
       "Playing how No.0147 was drawn",
     );
 
+    await tookOff();
     await finish();
     advance(HOLD_MS + FADE_MS);
     expect(label()).toBe("Timelapse");

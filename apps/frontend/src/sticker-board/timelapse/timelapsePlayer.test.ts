@@ -26,10 +26,13 @@ vi.mock("../../performance/performanceRecorder", async (importOriginal) => ({
 
 /** The sheet, 100 sheet units square, drawn at density 1. */
 const SHEET = { w: 100, h: 100, density: 1 };
-/** Where the sticker's image covers the sheet. */
-const PLACE = { x: 20, y: 30, w: 60, h: 40 };
+/**
+ * Where the sticker's image covers the sheet: as a real one does, it reaches past its marks by more
+ * than the frame's margin, since its die-cut border is wider.
+ */
+const PLACE = { x: 10, y: 10, w: 80, h: 80 };
 /** The stage, CSS px, which the figure fills at 2 px per sheet unit. */
-const STAGE = { width: 120, height: 80 };
+const STAGE = { width: 160, height: 160 };
 const FIGURE = { x: 0, y: 0, w: STAGE.width, h: STAGE.height };
 
 /** A stroke that stays well inside the sticker's cut, as every mark of one drawn within it does. */
@@ -45,7 +48,10 @@ const pointCount = (op: StrokeOp) => op.pts.length / STRIDE;
 
 const sameObject = (a: object, b: object | undefined) => a === b;
 
-function setup(ops: Op[], { reduced = false } = {}) {
+function setup(
+  ops: Op[],
+  { reduced = false, cut }: { reduced?: boolean; cut?: CanvasImageSource } = {},
+) {
   const timelapse = encodeTimelapse({ ops, frame: SHEET, place: PLACE });
   const canvas = document.createElement("canvas");
   const clock = handFrames();
@@ -54,6 +60,7 @@ function setup(ops: Op[], { reduced = false } = {}) {
     canvas,
     stage: STAGE,
     figure: FIGURE,
+    cut,
     reduced,
     kyotoSeika: false,
     frames: clock.source,
@@ -245,6 +252,23 @@ describe("the timelapse player", () => {
     const clip = names.lastIndexOf("clip", painted);
     expect(clip).toBeGreaterThan(names.lastIndexOf("setTransform", painted));
     expect(calls[clip - 1]).toEqual(["rect", 0, 0, SHEET.w, SHEET.h]);
+  });
+
+  it("clears the ink inside the sticker's cut when the sticker takes it along, once its cut has loaded", () => {
+    const takeWith = (cut: CanvasImageSource) => {
+      const { display, player } = setup([stroke(0, steady(100))], { cut });
+      if (!display) throw new Error("the player made no display");
+      const drawn: unknown[][] = [];
+      vi.spyOn(display, "drawImage").mockImplementation((...args) => {
+        drawn.push([display.globalCompositeOperation, ...args]);
+      });
+      player.takeInk();
+      return drawn;
+    };
+    const cut = document.createElement("canvas");
+    expect(takeWith(cut)).toEqual([["destination-out", cut, PLACE.x, PLACE.y, PLACE.w, PLACE.h]]);
+    // An image still loading takes nothing.
+    expect(takeWith(new Image())).toEqual([]);
   });
 
   it("is prepared at once when there are no fills, making no canvas", async () => {
