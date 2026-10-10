@@ -5,7 +5,7 @@ import type { AppDeps } from "../deps.ts";
 import { diagnosticStep, logInfo } from "../diagnostics.ts";
 import { loadStickers, stickerSchema, stickerViewer } from "../shapes.ts";
 import { oneAtATime } from "../sui/oneAtATime.ts";
-import { isNsfwDrawing, purgeDueDrawing } from "./nsfwDrawing.ts";
+import { isNsfwDrawing, purgeDueDrawing, recordVeiledImage } from "./nsfwDrawing.ts";
 
 /** POST /api/stickers/:stickerId/nsfw's answer. */
 export const markNsfwResponseSchema = z.object({
@@ -94,8 +94,8 @@ function artistsRow(
 }
 
 /**
- * The mark's checks, its veil, then its row, with the CDN purge it makes due when no other sticker
- * that isn't 18+ shows its drawing.
+ * The mark's checks, its veil, then its row and the veil's record, with the CDN purge it makes due
+ * when no other sticker that isn't 18+ shows its drawing.
  */
 async function markRow(
   deps: AppDeps,
@@ -123,6 +123,7 @@ async function markRow(
         .returning({ id: stickers.id })
         .get();
       if (!updated) return null;
+      recordVeiledImage(tx, veiledHash, stickerId);
       const madePrivate = isNsfwDrawing(tx, row.contentHash);
       if (madePrivate) {
         tx.update(stickers)
@@ -140,8 +141,9 @@ async function markRow(
 
 /**
  * Takes a sticker's 18+ mark off, for its Original Artist alone, so everyone sees its drawing again.
- * Its veiled files stay on disk and on the CDN, and its Sui object keeps the mark it was minted
- * with. A sticker without the mark answers as it is, so a retry after a lost answer lands too.
+ * Its veil stays recorded, so its files stay public on disk and on the CDN, and its Sui object
+ * keeps the mark it was minted with. A sticker without the mark answers as it is, so a retry after
+ * a lost answer lands too.
  */
 export async function unmarkStickerNsfw(
   deps: AppDeps,

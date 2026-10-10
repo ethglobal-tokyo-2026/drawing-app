@@ -23,6 +23,7 @@ import {
 } from "../shapes.ts";
 import { MAX_FLAT_SIDE, MAX_SHARP_IMAGE_SIDE } from "./imageSides.ts";
 import { mintSticker } from "./mint.ts";
+import { recordVeiledImage } from "./nsfwDrawing.ts";
 import type { SealForm } from "./sealForm.ts";
 import { timelapseProblem } from "./timelapse.ts";
 
@@ -277,6 +278,7 @@ export async function sealSticker(
           hasSharpCopy: sharp !== undefined,
         })
         .run();
+      if (veiledHash) recordVeiledImage(tx, veiledHash, stickerId);
       tx.update(ticketUses).set({ stickerId }).where(eq(ticketUses.id, form.ticketUseId)).run();
       // No spot and no seen_at: the sticker tray shows it as NEW.
       tx.insert(stickerPlacements).values({ userId, stickerId }).run();

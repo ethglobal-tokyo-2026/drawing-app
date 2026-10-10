@@ -1,4 +1,4 @@
-import { stickers, type Db } from "@drawing-app/db";
+import { stickers, veiledImages, type Db } from "@drawing-app/db";
 import { and, asc, eq, isNotNull, lte } from "drizzle-orm";
 import type { AppDeps } from "../deps.ts";
 import { logInfo } from "../diagnostics.ts";
@@ -14,8 +14,8 @@ type PurgeDeps = Pick<AppDeps, "db" | "clock" | "cdnPurge" | "images">;
 /**
  * Whether the files that show a drawing are only for the NSFW opt-in: some sticker sealed with its
  * content hash is NSFW, and none that isn't. Anyone can seal a copy of a public PNG, so marking the
- * copy never hides the drawing another sticker shows; nor a veil, which everyone without the opt-in
- * sees.
+ * copy never hides the drawing another sticker shows; nor any veil ever made, which everyone without
+ * the opt-in sees, and which a sticker minted while NSFW names on Sui for good.
  */
 export function isNsfwDrawing(db: Pick<Db, "select">, contentHash: string): boolean {
   const marks = db
@@ -25,12 +25,19 @@ export function isNsfwDrawing(db: Pick<Db, "select">, contentHash: string): bool
     .all();
   if (marks.length === 0 || !marks.every(({ nsfw }) => nsfw)) return false;
   const veil = db
-    .select({ id: stickers.id })
-    .from(stickers)
-    .where(eq(stickers.veiledHash, contentHash))
+    .select({ veiledHash: veiledImages.veiledHash })
+    .from(veiledImages)
+    .where(eq(veiledImages.veiledHash, contentHash))
     .get();
   return veil === undefined;
 }
+
+/**
+ * Records the veil `stickerId`'s 18+ mark made, in the transaction that writes the mark, so it stays
+ * public after the mark comes off. A veil already recorded keeps the sticker that first made it.
+ */
+export const recordVeiledImage = (db: Pick<Db, "insert">, veiledHash: string, stickerId: string) =>
+  db.insert(veiledImages).values({ veiledHash, stickerId }).onConflictDoNothing().run();
 
 /** Whether a purge of the drawing's files is due, on any sticker that shows it. */
 const purgeIsDue = (db: Db, contentHash: string) =>

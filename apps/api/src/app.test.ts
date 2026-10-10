@@ -4,7 +4,7 @@ import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { stickers } from "@drawing-app/db";
-import { insertUser } from "@drawing-app/db/testing";
+import { insertTicketUse, insertUser } from "@drawing-app/db/testing";
 import { serve } from "@hono/node-server";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
@@ -15,9 +15,10 @@ import { validate } from "./errors.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { setSessionCookie, type AppEnv } from "./session.ts";
 import type { StickerImages } from "./shapes.ts";
-import { markNsfwResponseSchema } from "./stickers/markNsfw.ts";
+import { markNsfwResponseSchema, unmarkNsfwResponseSchema } from "./stickers/markNsfw.ts";
 import { sweepCdnPurges } from "./stickers/nsfwDrawing.ts";
-import { sealImages, sharpImage } from "./stickers/testPngs.ts";
+import { sealResponseSchema } from "./stickers/seal.ts";
+import { sealFormData, sealImages, sealParts, sharpImage } from "./stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
 import { fakeCdnPurge, fakeServerLog } from "./testing/fakes.ts";
 import { captureLogLines } from "./testing/logLines.ts";
@@ -317,12 +318,12 @@ describe("sticker images", () => {
       const server = createServer(deps, imageDir);
       const aliceId = insertUser(test.db);
       const aliceSticker = insertSealedSticker(test.db, aliceId, { contentHash });
+      /** Sends `method path` to the server, signed in as `userId`. */
+      const send = async (method: string, path: string, userId: string, body?: FormData) =>
+        server.request(path, { method, body, headers: await test.signInAs(userId) });
       const mark = async (userId: string, stickerId: string) =>
         bodyOf(
-          await server.request(`/api/stickers/${stickerId}/nsfw`, {
-            method: "POST",
-            headers: await test.signInAs(userId),
-          }),
+          await send("POST", `/api/stickers/${stickerId}/nsfw`, userId),
           markNsfwResponseSchema,
         );
       return {
@@ -331,10 +332,45 @@ describe("sticker images", () => {
         purge,
         aliceId,
         aliceSticker,
+        send,
         mark,
         sweep: () => sweepCdnPurges(deps),
         drawing: storedDrawing(store, contentHash),
       };
+    }
+
+    /** The veil sticker `stickerId`'s row names. */
+    function veilOf(stickerId: string) {
+      const veiledHash = test.db
+        .select({ veiledHash: stickers.veiledHash })
+        .from(stickers)
+        .where(eq(stickers.id, stickerId))
+        .get()?.veiledHash;
+      if (!veiledHash) throw new Error(`Sticker ${stickerId} has no veil`);
+      return veiledHash;
+    }
+
+    /**
+     * Mallory seals the veil's PNG, public as every veil is: the box stores it, and the API's store
+     * makes her mark's own veil from it. She marks hers 18+, and the veil must stay public, with
+     * nothing purged.
+     */
+    async function expectVeilStaysPublic(
+      scene: Awaited<ReturnType<typeof aliceSealed>>,
+      veiledHash: string,
+    ) {
+      await scene.store.save(veiledHash, sealImages());
+      await test.images.save(veiledHash, sealImages());
+      const malloryId = insertUser(test.db);
+      const copy = insertSealedSticker(test.db, malloryId, { contentHash: veiledHash });
+      const purgedBefore = [...scene.purge.urls];
+
+      const marked = await scene.mark(malloryId, copy);
+      await scene.sweep();
+      expect(marked).toMatchObject({ sticker: { nsfw: true }, cdnPurged: false });
+      expect(scene.purge.urls).toEqual(purgedBefore);
+      const veil = scene.store.veiledUrls(scene.contentHash, veiledHash);
+      for (const url of [veil.png, veil.webp.sticker]) await expectPublic(url);
     }
 
     it("stay public, and purge nothing, while another sticker that isn't marked shows the drawing", async () => {
@@ -368,26 +404,26 @@ describe("sticker images", () => {
     it("leave a veil public, and purge nothing, when someone seals it as their own and marks that 18+", async () => {
       const scene = await aliceSealed();
       await scene.mark(scene.aliceId, scene.aliceSticker);
-      const veiledHash = test.db
-        .select({ veiledHash: stickers.veiledHash })
-        .from(stickers)
-        .where(eq(stickers.id, scene.aliceSticker))
-        .get()?.veiledHash;
-      if (!veiledHash) throw new Error("Alice's mark left her sticker without its veil");
-      // Mallory seals the veil's PNG, public as every veil is: the box stores it, and the API's store
-      // makes the mark's own veil from it.
-      await scene.store.save(veiledHash, sealImages());
-      await test.images.save(veiledHash, sealImages());
-      const malloryId = insertUser(test.db);
-      const copy = insertSealedSticker(test.db, malloryId, { contentHash: veiledHash });
-      const purgedBefore = [...scene.purge.urls];
+      await expectVeilStaysPublic(scene, veilOf(scene.aliceSticker));
+    });
 
-      const marked = await scene.mark(malloryId, copy);
-      await scene.sweep();
-      expect(marked).toMatchObject({ sticker: { nsfw: true }, cdnPurged: false });
-      expect(scene.purge.urls).toEqual(purgedBefore);
-      const veil = scene.store.veiledUrls(scene.contentHash, veiledHash);
-      for (const url of [veil.png, veil.webp.sticker]) await expectPublic(url);
+    // A sticker minted while NSFW names its veil on Sui for good, whatever becomes of its mark.
+    it("leave a veil public, and purge nothing, when someone seals it as their own and marks that 18+ after the sticker sealed with it lost its mark", async () => {
+      const scene = await aliceSealed();
+      const ticketUseId = insertTicketUse(test.db, scene.aliceId);
+      const form = sealFormData(sealParts(ticketUseId, { nsfw: "true" }));
+      const sealing = await scene.send("POST", "/api/stickers", scene.aliceId, form);
+      const { sticker } = await bodyOf(sealing, sealResponseSchema, 201);
+      const veiledHash = veilOf(sticker.id);
+      const unmarking = await scene.send(
+        "DELETE",
+        `/api/stickers/${sticker.id}/nsfw`,
+        scene.aliceId,
+      );
+      expect(await bodyOf(unmarking, unmarkNsfwResponseSchema)).toMatchObject({
+        sticker: { nsfw: false },
+      });
+      await expectVeilStaysPublic(scene, veiledHash);
     });
   });
 });
