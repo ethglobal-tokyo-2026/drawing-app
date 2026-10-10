@@ -39,9 +39,9 @@ const utf8 = (text: string) => new TextEncoder().encode(text);
 
 /**
  * Sui and Shinami Gas Station without either. Builders record what they're asked for, and each
- * sponsorship lasts an hour by `clock`. A submission runs at once and succeeds, unless the test
- * answers it otherwise first, and a transaction that succeeds moves its gift in `escrow` as the
- * package does.
+ * sponsorship lasts an hour by `clock`, the server's, which Sui's Clock reads too until a test sets
+ * it apart. A submission runs at once and succeeds, unless the test answers it otherwise first, and
+ * a transaction that succeeds moves its gift in `escrow` as the package does.
  */
 export function fakeSui(clock: Clock) {
   const built: BuiltKind[] = [];
@@ -56,6 +56,8 @@ export function fakeSui(clock: Clock) {
   const answers: SubmissionAnswer[] = [];
   /** Stickers whose object exists, by sticker id. */
   const minted = new Set<string>();
+  /** Where a test set Sui's Clock apart from the server's; null while it reads the server's. */
+  let suiClock: Date | null = null;
 
   /** Records what was asked for, and answers a kind that names it. */
   const build = (asked: BuiltKind) => {
@@ -163,6 +165,7 @@ export function fakeSui(clock: Clock) {
     stickerMinted: (stickerId) => Promise.resolve(minted.has(stickerId)),
     readGift: (giftId) =>
       Promise.resolve(escrow.get(giftId) ?? { status: "missing", recipient: null }),
+    readClock: () => Promise.resolve(suiClock ?? clock.now()),
     check: () => Promise.resolve({ serverMatches: true, missing: [] }),
   };
 
@@ -216,6 +219,10 @@ export function fakeSui(clock: Clock) {
     },
     /** Sui ran the transaction `digest` to `outcome`, as it shows from now on. */
     show: ran,
+    /** Sui's Clock stands at `date` from now on, whatever the server's clock reads. */
+    setClock: (date: Date) => {
+      suiClock = date;
+    },
   };
 }
 

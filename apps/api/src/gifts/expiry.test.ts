@@ -5,12 +5,7 @@ import { AFTER_MIDNIGHT_MS } from "../midnightJob.ts";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { nextTokyoTicketDayStart } from "../ticketDays.ts";
-import {
-  RETURN_CLOCK_MARGIN_MS,
-  returnExpiredGifts,
-  startExpiredGiftReturns,
-  type ExpirySweep,
-} from "./expiry.ts";
+import { returnExpiredGifts, startExpiredGiftReturns, type ExpirySweep } from "./expiry.ts";
 import { receivedGiftSchema } from "./receiving.ts";
 import { createGiftsTestApp, giftOf, takeOutStartOf, type GiftsTestApp } from "./testGifts.ts";
 
@@ -174,12 +169,14 @@ describe("The expiry sweep", () => {
     expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({ status: 201 });
   });
 
-  it("waits until Sui's clock is surely past a gift's expiry before sending it back", async () => {
+  it("sends a gift back only once Sui's clock, which return_expired checks, is past its expiry, though the server's clock passed it first", async () => {
     const test = await createGiftsTestApp({ onSui: true });
     const { gift } = await giftInEscrow(test);
-    test.clock.set(new Date(test.giftRow(gift.id).expiresAt.getTime() + 1));
+    const { expiresAt } = test.giftRow(gift.id);
+    test.clock.advance(PAST_EXPIRY_MS);
+    test.chain.setClock(expiresAt);
     expect(await sweep(test)).toEqual(swept({}));
-    test.clock.advance(RETURN_CLOCK_MARGIN_MS);
+    test.chain.setClock(new Date(expiresAt.getTime() + 1));
     expect(await sweep(test)).toEqual(swept({ returned: 1 }));
   });
 

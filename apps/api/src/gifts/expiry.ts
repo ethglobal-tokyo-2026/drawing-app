@@ -24,26 +24,18 @@ import {
 } from "./giftTransactions.ts";
 import { recordClaimShown } from "./receiving.ts";
 
-/**
- * How long past its expiry a gift waits for the sweep: return_expired aborts until Sui's clock,
- * which can lag the box's, is past the expiry.
- */
-export const RETURN_CLOCK_MARGIN_MS = 60_000;
-
 /** What the sweep did with the gifts it found, by how many. */
 export type ExpirySweep = Record<"returned" | "recorded" | "closed" | "left" | "failed", number>;
 
-/** Gifts in the bag or sent, past their expiry by RETURN_CLOCK_MARGIN_MS, oldest first. */
-const expiredOpenGifts = (db: Db, now: Date) =>
+/**
+ * Gifts in the bag or sent whose expiry Sui's clock, `suiNow`, is past, oldest first: the check
+ * return_expired makes, which aborts the return otherwise, after Shinami has paid its gas.
+ */
+const expiredOpenGifts = (db: Db, suiNow: Date) =>
   db
     .select()
     .from(gifts)
-    .where(
-      and(
-        inArray(gifts.status, ["packed", "sent"]),
-        lt(gifts.expiresAt, new Date(now.getTime() - RETURN_CLOCK_MARGIN_MS)),
-      ),
-    )
+    .where(and(inArray(gifts.status, ["packed", "sent"]), lt(gifts.expiresAt, suiNow)))
     .orderBy(asc(gifts.expiresAt))
     .all();
 
@@ -135,17 +127,19 @@ async function settleExpired(
 }
 
 /**
- * The expiry sweep: every gift in the bag or sent past its expiry is settled, oldest first, each
- * holding its gift's key: one the escrow holds goes back to its giver and is recorded returned, so
- * its sticker can be given again, one it never held closes, and one it let go is recorded as it
- * went. One gift's failure is logged, and the sweep goes on to the next. Nothing to do on the mock
- * chain.
+ * The expiry sweep: every gift in the bag or sent past its expiry by Sui's clock is settled, oldest
+ * first, each holding its gift's key: one the escrow holds goes back to its giver and is recorded
+ * returned, so its sticker can be given again, one it never held closes, and one it let go is
+ * recorded as it went. One gift's failure is logged, and the sweep goes on to the next. Rejects,
+ * settling none, when Sui's clock can't be read. Nothing to do on the mock chain.
  */
 export async function returnExpiredGifts(deps: AppDeps): Promise<ExpirySweep> {
   const tally: ExpirySweep = { returned: 0, recorded: 0, closed: 0, left: 0, failed: 0 };
   const sui = suiDepsOf(deps);
   if (!sui) return tally;
-  const due = expiredOpenGifts(deps.db, deps.clock.now());
+  // One read serves the sweep: a lagging fullnode answers an older time, never a newer one, and
+  // each return runs after the read, so none runs before its expiry by the Clock it checks.
+  const due = expiredOpenGifts(deps.db, await sui.sui.readClock());
   if (due.length > 0) logInfo("gift.expiry.sweep", { count: due.length });
   // One at a time, so the server's transactions and Sui's reads never come in a burst.
   for (const gift of due) {

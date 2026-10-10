@@ -112,6 +112,12 @@ export interface SuiChain {
   /** Whether the sticker's object exists: a mint of it ran, whatever this server recorded. */
   stickerMinted: (stickerId: string) => Promise<boolean>;
   readGift: (giftId: string) => Promise<EscrowGift>;
+  /**
+   * The time Sui's Clock object holds, which the package's expiry checks read; a lagging fullnode
+   * answers an older one, never a newer one. Rejects with ChainUnavailableError when Sui can't be
+   * asked.
+   */
+  readClock: () => Promise<Date>;
   /** Whether ServerConfig names `server`, and the objects the env names exist: the boot check. */
   check: () => Promise<{ serverMatches: boolean; missing: string[] }>;
 }

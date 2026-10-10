@@ -4,7 +4,13 @@ import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 import type { SuiGrpcClient } from "@mysten/sui/grpc";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { coinWithBalance, Transaction } from "@mysten/sui/transactions";
-import { deriveObjectID, fromBase64, fromHex, normalizeSuiAddress } from "@mysten/sui/utils";
+import {
+  deriveObjectID,
+  fromBase64,
+  fromHex,
+  normalizeSuiAddress,
+  SUI_CLOCK_OBJECT_ID,
+} from "@mysten/sui/utils";
 import { ChainUnavailableError, type TicketPaymentTarget } from "../deps.ts";
 import { NOT_LANDED_RETRY_MS, readLanded, SUI_READ_TIMEOUT_MS } from "../sui/readLanded.ts";
 import {
@@ -46,6 +52,9 @@ const giftObject = bcs.struct("Gift", {
   }),
   recipient: bcs.option(bcs.Address),
 });
+
+/** Sui's Clock, field for field. */
+const clockObject = bcs.struct("Clock", { id: bcs.Address, timestamp_ms: bcs.u64() });
 
 const giftStatusOf = {
   Pending: "pending",
@@ -411,6 +420,13 @@ export function createSuiChain(settings: SuiChainSettings): SuiChain {
         recipient: gift.recipient === null ? null : normalizeSuiAddress(gift.recipient),
       };
     },
+
+    readClock: () =>
+      read("the Clock", (signal) =>
+        client
+          .getObject({ objectId: SUI_CLOCK_OBJECT_ID, include: { content: true }, signal })
+          .then(({ object }) => new Date(Number(clockObject.parse(object.content).timestamp_ms))),
+      ),
 
     check: async () => {
       const named = {

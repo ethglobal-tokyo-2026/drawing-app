@@ -37,7 +37,7 @@ function eventsOf(outcome: SuiOutcome | null) {
 }
 
 it(
-  "mints, deposits, claims, takes out and returns through the upgraded stickers package, at the IDs the server derives",
+  "mints, deposits, claims, takes out and returns through the upgraded stickers package, at the IDs the server derives and by the Clock it reads",
   async () => {
     const localnet = await startLocalnet();
     try {
@@ -146,8 +146,17 @@ it(
       const expiresAt = new Date((await chainNow(localnet)) + SHORT_EXPIRY_MS);
       await depositBy(receiver, returned, expiresAt);
       expect(await sui.readGift(returned)).toEqual({ status: "pending", recipient: null });
+      // The server's read of the Clock falls between two of the test's own.
+      const before = await chainNow(localnet);
+      const read = (await sui.readClock()).getTime();
+      expect(read).toBeGreaterThanOrEqual(before);
+      expect(read).toBeLessThanOrEqual(await chainNow(localnet));
+      // The expiry sweep's rule: once the server's read is past the expiry, the return runs.
       await expect
-        .poll(() => chainNow(localnet), { timeout: SHORT_EXPIRY_MS * 3, interval: CLOCK_POLL_MS })
+        .poll(async () => (await sui.readClock()).getTime(), {
+          timeout: SHORT_EXPIRY_MS * 3,
+          interval: CLOCK_POLL_MS,
+        })
         .toBeGreaterThan(expiresAt.getTime());
       await runAsServer(sui.returnKind(returned));
       expect(await sui.readGift(returned)).toEqual({ status: "expired_returned", recipient: null });
