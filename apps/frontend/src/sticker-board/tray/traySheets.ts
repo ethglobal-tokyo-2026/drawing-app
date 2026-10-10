@@ -16,6 +16,7 @@ import {
   PEEK,
   PEEKS,
   SHEET,
+  STACK_FOOT,
   STACK_X,
   STACK_Y,
   SVG_NS,
@@ -49,10 +50,11 @@ export const shadeOf = (depth: number) => clamp(depth * 0.3, 0, 0.9);
 export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   const { doc, zip, make, decorative, icon, words, hint, say, stack, ui, colLeft, trayTop } = tray;
   const { newIds, matches, sheetItems, sheetMatches, topF, resetOrder } = trayModel;
-  // The CSS draws every sheet, edge and +N button to these sizes.
+  // The CSS draws every sheet, edge and +N button, and the stack's press area, to these sizes.
   tray.root.style.setProperty("--sheet-w", px(SHEET.w));
   tray.root.style.setProperty("--peek", px(PEEK));
   tray.root.style.setProperty("--depth-h", px(DEPTH_BUTTON_H));
+  tray.root.style.setProperty("--stack-foot", px(STACK_FOOT));
 
   /** A sheet's transform at a depth in the stack: lower, and narrower from its foot, the further back. */
   const restAt = (depth: number, dy = 0, r = 0) =>

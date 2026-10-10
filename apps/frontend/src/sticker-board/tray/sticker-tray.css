@@ -1,8 +1,8 @@
 /* The sticker tray: pink canvas zipped down the board's right edge, holding a stack of loose
    sticker sheets, a sticker in each kiss-cut slot and a used sticker silhouette wherever one is out
    on the board. Paper hints only, no grid. The tray's scripts place everything, and set its sizes
-   (--tray-top, --tray-col, --sheet-w, --sheet-h, --peek, --depth-h); motion is transform and
-   opacity, but for a folder tab's fill. */
+   (--tray-top, --tray-col, --sheet-w, --sheet-h, --peek, --depth-h, --stack-foot); motion is
+   transform and opacity, but for a folder tab's fill. */
 
 .tray {
   /* The tray's material, from the tokens: candy colors, no gloss; ink only in thin lines. */
@@ -122,7 +122,8 @@
   left: 0;
   top: 0;
   width: var(--sheet-w);
-  height: calc(var(--sheet-h) + 72px);
+  /* Its press area: the front sheet, and a deep stack's foot under it, which keeps its size on screen. */
+  height: calc(var(--sheet-h) + var(--stack-foot) / var(--scale, 1));
   /* The engine shrinks the stack on a short board and grows it on a large screen; its edges keep their
      size on screen. */
   --scale: 1;
