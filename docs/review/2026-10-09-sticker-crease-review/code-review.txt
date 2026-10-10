@@ -1,0 +1,23 @@
+Sticker crease code review: the feature as on origin/main 95a45b14cb7a54a1f8da3b79761b0f7ee6e9465b (apps/frontend crease files, boards, e2e). Read-only; no code changed.
+
+F1  MEDIUM  apps/frontend/src/sticker-board/useCreases.ts:120-128 (roundAffine, used at :175); useCreases.test.ts:14-15,86-87
+What: the underneath sticker's placement matrix is rounded to two decimals in all six entries. The four linear entries (cos, sin times scale) then carry up to 0.005 of error each, and that error multiplies by the sticker's size, so the silhouette the worker draws is displaced and slightly sheared whenever either sticker is turned.
+Measured: scratch script that copies mul/move/turn/roundAffine (useCreases.ts:64-72,121-128) and the steps at :167-174, swept over turns of both stickers (every 7 and 11 degrees), worst corner of the lower box:
+  156x78 boxes   max 1.17 px, mean 0.65
+  300x200 boxes  max 2.41 px, mean 1.34
+  600x400 boxes  max 4.81 px, mean 2.68
+  780x520 boxes  max 6.26 px, mean 3.48
+Sizes this big are allowed: MAX_SCALE 1.4 and MAX_LARGE_SCALE 2 of a 390 px unit (packages/db/src/schema/limits.ts:43-45).
+Failure: on the iPad's large layout (or a phone sticker stretched to its ceiling), a turned sticker over another draws its crease up to a full ramp (RAMP, 4 px) off the real edge, so the shade sits beside the edge or on the wrong side of it. Unturned pairs are exact (turn(0) is the identity), which is why nobody saw it.
+The test can't see it: its stickers are 156x78 at three turns, and ROUNDING_PX = 1 with "under a pixel" (useCreases.test.ts:14) is already false at that size in the sweep (max 1.17 px).
+Fix: round only the translation (entries 4 and 5) to two places and the linear entries to four or five; keys stay stable (float noise is ~1e-15). Add a large, turned pair to the first creaseJobs test.
+
+F2  MEDIUM  apps/frontend/src/sticker-board/useCreases.ts:250-253,348-354,367-368; apps/frontend/src/stickers/creaseWorker.ts:195-216
+What: the worker drops a board's old batch only when a newer batch for that board arrives. Three paths post nothing: the board unmounting (store.clear()), the switch going off (want([]) returns an empty todo, so bake() returns before posting), and any restack whose todo is empty. The worker then bakes every remaining job (mask fetch and decode, one getImageData per layer, drape, four PNG encodes) and posts replies that land() drops (#wanted is empty or the board is gone from `stores`).
+Failure: creases on, open an artist's board with ~25 overlapping stickers, back out after a second: the other ~20 jobs still run to completion on the one worker, competing with the next board's batch (the loops alternate at their awaits) and costing battery for output nobody sees. Switching creases off on the slip mid-bake does the same. `current` (creaseWorker.ts:195) also keeps one entry per board ever mounted.
+Fix: on unmount, and whenever want() leaves nothing to bake, post an empty batch for the board ({ board, batch: ++batches, jobs: [] }); the worker deletes the board's entry when jobs is empty.
+
+F3  LOW  apps/frontend/src/sticker-board/useCreases.ts:232-247,367-371; apps/frontend/src/stickers/StickerFigure.tsx:108; apps/frontend/src/stickers/sticker-crease.css:23
+What: a second reply for a key that is already shown replaces the first. want() counts an in-flight job as not baked (:237), and `todo` is fixed when the effect runs, 90 ms before the timer posts it (:367-371), so a job that lands in between, or is mid-bake, is in the next batch too. land() (:241-247) has no check for an existing baked entry with the same key, so the second reply revokes the first's four object URLs, makes four new ones, changes `key={crease.topLeft}` and remounts StickerCrease, which replays the 360 ms fade-in.
+Failure: while creases are still baking on a board, drop a sticker far from the others: any crease whose job was in flight or had just landed blinks out and fades back in, and its bake ran twice.
+Fix: in land(), return when this.#baked.get(id)?.key === key; filter `todo` against the store inside the timer; optionally have the worker skip a job whose key it already posted for that board.
