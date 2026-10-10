@@ -1,4 +1,5 @@
 import { timeOurWork } from "../../performance/performanceRecorder";
+import { capturePointer } from "../../ui/capturePointer";
 import { browserFrames, type FrameSource } from "../../ui/frameSource";
 import { previewWidth, StrokeBuilder, type PenPressure } from "./brush";
 import { FILL_GAP } from "./fill";
@@ -238,12 +239,7 @@ export class InkEngine {
     this.locate = () => sheet.getBoundingClientRect();
     const onDown = (e: PointerEvent) => {
       this.down(e);
-      if (!this.pointers.has(e.pointerId)) return;
-      try {
-        sheet.setPointerCapture(e.pointerId);
-      } catch {
-        // The pointer already lifted, or never existed (a synthetic event): nothing left to capture.
-      }
+      if (this.pointers.has(e.pointerId)) capturePointer(sheet, e.pointerId);
     };
     const onMove = (e: PointerEvent) => this.move(e);
     const onUp = (e: PointerEvent) => this.up(e);
