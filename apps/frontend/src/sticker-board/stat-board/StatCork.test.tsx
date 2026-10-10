@@ -1,9 +1,13 @@
 // @vitest-environment happy-dom
 import type { UserStats } from "@drawing-app/api/client";
-import { act, useState } from "react";
+import { act, createRef, useState, type Ref } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { StatCork } from "./StatCork";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import { ApiError } from "../../api/apiClient";
+import { errorDetail } from "../../i18n/errorMessage";
+import { errors } from "../../i18n/strings/errors";
+import { formatDay } from "../../stickers/format";
+import { StatCork, type StatCorkHandle } from "./StatCork";
 import { statFigures } from "./statFigures";
 
 declare global {
@@ -23,8 +27,7 @@ const NEW_ARTIST: UserStats = {
 };
 
 const FAILURE = {
-  message: "the network is down",
-  detail: "GET /api/stats got no answer",
+  error: new ApiError(0, { error: "network", detail: "GET /api/stats got no answer" }),
   retry: () => {},
 };
 
@@ -33,11 +36,16 @@ let root: Root;
 
 const render = (
   stats: UserStats | null,
-  { onFlipBack = () => {}, loading = false }: { onFlipBack?: () => void; loading?: boolean } = {},
+  {
+    onFlipBack = () => {},
+    loading = false,
+    cork,
+  }: { onFlipBack?: () => void; loading?: boolean; cork?: Ref<StatCorkHandle> } = {},
 ) =>
   act(() =>
     root.render(
       <StatCork
+        ref={cork}
         figures={{
           name: "Mika",
           handle: "mika",
@@ -96,10 +104,27 @@ describe("StatCork's receipt", () => {
     expect(receipt()?.textContent).toContain("No gratitude yet.");
   });
 
+  it("is dated the day the cork shows, not the day it mounted, unseen, behind the board", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    onTestFinished(() => void vi.useRealTimers());
+    const printed = () => host.querySelector(".stat-board__receipt-top > :last-child")?.textContent;
+    // Just before midnight in Tokyo, where the day turns over.
+    vi.setSystemTime(new Date("2026-10-09T14:58:00Z"));
+    const cork = createRef<StatCorkHandle>();
+    render(NEW_ARTIST, { cork });
+    const mounted = printed();
+
+    vi.setSystemTime(new Date("2026-10-09T15:02:00Z"));
+    // The board lands on the cork.
+    act(() => cork.current?.settle());
+    expect(printed()).toBe(formatDay(Date.now()));
+    expect(printed()).not.toBe(mounted);
+  });
+
   it("says why the stats didn't load in place of the total", () => {
     render(null);
-    expect(receipt()?.textContent).toContain(`Their stats didn’t load: ${FAILURE.message}`);
-    expect(receipt()?.textContent).toContain(FAILURE.detail);
+    expect(receipt()?.textContent).toContain(errors.network.en);
+    expect(receipt()?.textContent).toContain(errorDetail(FAILURE.error));
     expect(host.querySelector(".stat-board__receipt-total")).toBeNull();
   });
 });

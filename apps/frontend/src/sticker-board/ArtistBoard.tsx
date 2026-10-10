@@ -17,7 +17,7 @@ import type { Person } from "@drawing-app/api/client";
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, type PersonView } from "../api/views";
 import { GiveSheet } from "../giving/GiveSheet";
-import { errorDetail, errorMessage, problemOf } from "../i18n/errorMessage";
+import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { Duration } from "../stickers/Duration";
@@ -312,8 +312,7 @@ export function ArtistBoard({ person, onBack }: Props) {
     if (hasKyotoSeika) void ThoughtLayer.preload();
   }, [hasKyotoSeika]);
 
-  const statsProblem =
-    stats.state === "failed" ? { ...problemOf(stats.error), retry: stats.retry } : null;
+  const statsProblem = stats.state === "failed" ? { error: stats.error, retry: stats.retry } : null;
   /** Their Sui address paper; none while they have no wallet. */
   const sui: ChainAddress | null =
     address.state === "loading"

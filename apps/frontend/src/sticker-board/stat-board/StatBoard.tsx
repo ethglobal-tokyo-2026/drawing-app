@@ -2,7 +2,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type Ref } fro
 import { logOut } from "../../api/logOut";
 import { useMe } from "../../api/meContext";
 import { useApiQuery } from "../../api/useApiQuery";
-import { problemOf } from "../../i18n/errorMessage";
 import { useTranslation } from "../../i18n/react";
 import { SignOut } from "../../icons";
 import { retryPrivySignIn, usePrivyStatus, type PrivyStatus } from "../../identity/privy";
@@ -78,7 +77,7 @@ export const StatBoard = memo(function StatBoard({
       handle: account.handle ?? me.displayName,
       own: true,
       loading,
-      failure: error && retry ? { ...problemOf(error), retry } : null,
+      failure: error && retry ? { error, retry } : null,
       ...statFigures(data),
       since: Date.parse(data ? data.since : account.createdAt),
     }),

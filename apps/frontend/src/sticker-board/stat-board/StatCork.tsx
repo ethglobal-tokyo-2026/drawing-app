@@ -12,7 +12,7 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import type { Problem } from "../../i18n/errorMessage";
+import { problemOf } from "../../i18n/errorMessage";
 import { formatCount } from "../../i18n/format";
 import { useTranslation } from "../../i18n/react";
 import { ArrowUUpLeft, GratitudeIcon, StreakIcon } from "../../icons";
@@ -26,7 +26,7 @@ import { useReducedMotion } from "../../ui/useReducedMotion";
 import "./stat-board.css";
 
 export interface StatCorkHandle {
-  /** The papers swing and settle, as the board lands after its turn. */
+  /** As the board lands on the cork: the receipt prints anew, and the papers swing and settle. */
   settle: () => void;
 }
 
@@ -36,8 +36,11 @@ export interface CorkFigures {
   handle: string;
   /** Your own board, which the notes address as "you". */
   own: boolean;
-  /** Why the figures didn't load, said on the receipt; null while they load and once they have. */
-  failure: (Problem & { retry: () => void }) | null;
+  /**
+   * Why the figures didn't load, said on the receipt; null while they load and once they have. Kept
+   * as it failed, so its words follow the app's language.
+   */
+  failure: { error: unknown; retry: () => void } | null;
   /** The figures are on their way: outlines stand where they'll be. */
   loading: boolean;
   /** The gratitude received in all; null when it didn't load, and 0 reads as "No gratitude yet". */
@@ -128,15 +131,17 @@ export const StatCork = memo(function StatCork({
   const dialog = useRef<HTMLDivElement>(null);
   const cork = useRef<HTMLDivElement>(null);
   const id = useId();
-  // The receipt is printed when the cork first shows.
-  const [printedAt] = useState(() => Date.now());
+  // The receipt is printed as the cork shows: it mounts unseen behind the board, maybe the day before.
+  const [printedAt, setPrintedAt] = useState(() => Date.now());
   const since = f.since === null ? null : formatDay(f.since);
   const gratitude = f.gratitude;
+  const failure = f.failure && problemOf(f.failure.error);
 
   useImperativeHandle(
     ref,
     () => ({
       settle: () => {
+        setPrintedAt(Date.now());
         if (reduced || !cork.current) return;
         cork.current
           .querySelectorAll(".stat-board__note > .stat-board__paper")
@@ -223,14 +228,14 @@ export const StatCork = memo(function StatCork({
                     <GratitudeIcon className="stat-board__heart" size={14} />
                     {t(($) => $.stickerBoard.statBoard.gratitude.title)}
                   </h3>
-                  {f.failure ? (
-                    <ErrorLine detail={f.failure.detail} onRetry={retry}>
+                  {failure ? (
+                    <ErrorLine detail={failure.detail} onRetry={retry}>
                       {f.own
                         ? t(($) => $.stickerBoard.statBoard.didntLoadOwnBecause, {
-                            reason: f.failure.message,
+                            reason: failure.message,
                           })
                         : t(($) => $.stickerBoard.artistBoard.statsDidntLoad, {
-                            reason: f.failure.message,
+                            reason: failure.message,
                           })}
                     </ErrorLine>
                   ) : gratitude === 0 ? (

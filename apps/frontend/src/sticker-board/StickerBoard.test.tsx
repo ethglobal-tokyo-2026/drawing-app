@@ -414,6 +414,29 @@ describe("StickerBoard's artist chips", () => {
     });
   });
 
+  it("say why your User Stats didn't load in the app's language, after it changes", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const offline = new ApiError(0, { error: "network", detail: "Failed to fetch" });
+    const view = openBoard(
+      undefined,
+      emptyApi({
+        stickerBoard: () => new Promise(() => {}),
+        userStats: () => Promise.reject(offline),
+      }),
+    );
+    unmount = view.unmount;
+    const receipt = () => view.host.querySelector(".stat-board__receipt")?.textContent;
+
+    flip(view.host);
+    await vi.waitFor(async () => {
+      await act(async () => {});
+      expect(receipt()).toContain(withBreakHints(errors.network.en));
+    });
+    onTestFinished(async () => void (await i18next.changeLanguage("en")));
+    await act(() => i18next.changeLanguage("ja"));
+    expect(receipt()).toContain(withBreakHints(errors.network.ja));
+  });
+
   it("end with a turn of the board while they play, and don't start over when it turns back", () => {
     keep(TEST_ME.id, byMika());
     const view = openBoard();
