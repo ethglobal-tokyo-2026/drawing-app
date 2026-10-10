@@ -7,7 +7,7 @@ import type { Rect } from "../../sticker-creation/sealing/stickerPasses";
 import { clamp } from "../../ui/easing";
 
 /** Paper kept around the outermost marks, in sheet units, so none runs to the frame's edge. */
-export const FRAME_MARGIN = 10;
+export const FRAME_MARGIN = 20;
 /** Liner kept between the paper and the stage's edges, CSS px, where the figure leaves it spare. */
 export const STAGE_INSET = 6;
 

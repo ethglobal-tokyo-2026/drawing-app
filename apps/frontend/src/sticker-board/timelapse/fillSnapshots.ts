@@ -127,8 +127,11 @@ async function preparePass(
       { width: sheetCanvas.width, height: sheetCanvas.height, density: sheet.density },
       view,
     );
-    const readBefore = context2d(before, { willReadFrequently: true });
-    const readAfter = context2d(after, { willReadFrequently: true });
+    // The sheet's view before and after each fill. One fill's view after is the next one's before,
+    // unless a stroke lands between them, so back-to-back fills read the sheet once each.
+    let readBefore = context2d(before, { willReadFrequently: true });
+    let readAfter = context2d(after, { willReadFrequently: true });
+    let beforeIsCurrent = false;
     const cropInto = (g: CanvasRenderingContext2D) => {
       g.clearRect(0, 0, view.width, view.height);
       if (!crop) return;
@@ -156,9 +159,11 @@ async function preparePass(
       try {
         if (op.tool !== "fill") {
           sheet.apply(op);
+          beforeIsCurrent = false;
           continue;
         }
-        if (!grown) cropInto(readBefore);
+        if (!grown && !beforeIsCurrent) cropInto(readBefore);
+        beforeIsCurrent = !grown;
         const flooded = sheet.flood(op);
         if (!flooded) continue;
         const d = sheet.density;
@@ -178,9 +183,11 @@ async function preparePass(
           x: tap.x - area.x,
           y: tap.y - area.y,
         });
-        if (!changed) continue;
-        const on = { ...changed.box, x: changed.box.x + area.x, y: changed.box.y + area.y };
-        snapshots.set(i, { box: on, reach: changed.reach, canvas: cut(after, on) });
+        if (changed) {
+          const on = { ...changed.box, x: changed.box.x + area.x, y: changed.box.y + area.y };
+          snapshots.set(i, { box: on, reach: changed.reach, canvas: cut(readAfter.canvas, on) });
+        }
+        [readBefore, readAfter] = [readAfter, readBefore];
       } catch (error) {
         const which =
           op.tool === "fill" ? `fill ${nth} of ${fills}` : `stroke, op ${i + 1} of ${ops.length},`;

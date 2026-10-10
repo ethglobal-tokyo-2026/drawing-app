@@ -11,16 +11,13 @@
   position: absolute;
   inset: 0;
   cursor: pointer;
+  /* It fades in as it starts and out as it ends: composited from the first frame, not mid-fade. */
+  will-change: opacity;
 }
 
 /* In the page while its fills are prepared, unseen until it plays. */
 .timelapse-layer[data-phase="preparing"] {
   visibility: hidden;
-}
-
-/* The paper comes up as the sticker leaves its spot. */
-.timelapse-layer[data-phase="playing"] {
-  animation: timelapse-paper-in 160ms var(--ease-out);
 }
 
 /* The part of the sheet that was drawn on, as the drawing screen shows the sheet. */
@@ -64,16 +61,4 @@
 
 .timelapse-failed {
   margin: 8px 0 0;
-}
-
-@keyframes timelapse-paper-in {
-  from {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .timelapse-layer[data-phase="playing"] {
-    animation: none;
-  }
 }

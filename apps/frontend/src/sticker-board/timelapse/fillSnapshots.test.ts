@@ -134,6 +134,19 @@ describe("the prepare pass", () => {
     expect(prepared?.snapshots.get(0)?.box).toEqual({ x: 10, y: 5, w: SHEET.w, h: SHEET.h });
   });
 
+  it("reads the sheet's view once per fill, and once more where a stroke lands between fills", async () => {
+    const ops = [line, fill(RED, 100), fill(BLUE, 200), line, fill(RED, 300)];
+    await prepare(ops);
+    // Each read of the view clears the canvas it reads into first.
+    const reads = madeContexts()
+      .filter((context) => context.settings?.willReadFrequently)
+      .flatMap((context) => context.calls)
+      .filter(([name]) => name === "clearRect");
+    const fills = ops.filter((op) => op.tool === "fill").length;
+    // Two runs of fills: each reads before its first fill, then after every one.
+    expect(reads).toHaveLength(fills + 2);
+  });
+
   it("lets go of its own canvases when done, keeping only the snapshots", async () => {
     const prepared = await prepare([line, fill(RED, 100), fill(BLUE, 200)], { frame: STROKES });
     const kept = [...(prepared?.snapshots.values() ?? [])].map((s) => s.canvas);

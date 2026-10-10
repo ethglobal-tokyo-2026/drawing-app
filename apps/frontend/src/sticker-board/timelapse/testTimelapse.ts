@@ -72,6 +72,9 @@ export function fakeTimelapsePlayers() {
       setReduced: () => {
         calls.push("setReduced");
       },
+      takeInk: () => {
+        calls.push("takeInk");
+      },
     };
     made.push(player);
     return player;
