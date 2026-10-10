@@ -1,6 +1,6 @@
 import { MAX_TIMELAPSE_BYTES, type TimelapseV1 } from "@drawing-app/api/client";
 import { STRIDE, type Op } from "../canvas/ops";
-import type { SheetFrame } from "../canvas/sheetFrame";
+import { fromTenths, tenths, toTenth, toThousandth, type SheetFrame } from "../canvas/sheetFrame";
 import type { Rect } from "./stickerPasses";
 
 interface TimelapseInput {
@@ -11,17 +11,12 @@ interface TimelapseInput {
   place: Rect;
 }
 
-const tenths = (n: number) => Math.round(n * 10);
-/** A length to the tenth of a pixel, as JSON keeps it short. */
-const toTenth = (n: number) => tenths(n) / 10;
 /**
  * A fill's tap as the middle of the device pixel it seeded, to the hundredth of a sheet unit: the
  * tap itself, rounded, could land in the pixel beside it.
  */
 const seededPixel = (n: number, density: number) =>
   Math.round(((Math.floor(n * density) + 0.5) / density) * 100) / 100;
-/** A density to the thousandth, as phones report ones like 2.625. */
-const toThousandth = (n: number) => Math.round(n * 1000) / 1000;
 
 /** A stroke's points as changes from the point before; the first is from zero. */
 function pointChanges(pts: readonly number[]): number[] {
@@ -86,7 +81,7 @@ function pointsFrom(changes: readonly number[]): number[] {
   const running = [0, 0, 0, 0];
   for (let i = 0; i + STRIDE <= changes.length; i += STRIDE) {
     for (let k = 0; k < STRIDE; k++) running[k] += changes[i + k] ?? 0;
-    pts.push(running[0] / 10, running[1] / 10, running[2] / 10, running[3]);
+    pts.push(fromTenths(running[0]), fromTenths(running[1]), fromTenths(running[2]), running[3]);
   }
   return pts;
 }

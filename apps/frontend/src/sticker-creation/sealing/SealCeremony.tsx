@@ -26,11 +26,11 @@ import {
   stopAt,
   T,
   TOTAL,
-  type Box,
   type Flight,
   type SealFrame,
 } from "./sealTimeline";
 import { trackSlot } from "./slotTracker";
+import type { Rect } from "./stickerPasses";
 import "./SealCeremony.css";
 
 /** Once the seal is recorded, the cutter fades as the resin starts to pour. */
@@ -61,14 +61,14 @@ interface Props {
   leaving: boolean;
   onLeft: () => void;
   /** The sheet the sticker was cut from, in the ceremony's own pixels. */
-  sheet: Box;
+  sheet: Rect;
   onKeepDrawing: () => void;
   onBoard: () => void;
   onShop: () => void;
 }
 
 const px = (v: number) => `${v}px`;
-const boxStyle = (b: Box): CSSProperties => ({
+const boxStyle = (b: Rect): CSSProperties => ({
   left: px(b.x),
   top: px(b.y),
   width: px(b.w),
@@ -76,9 +76,9 @@ const boxStyle = (b: Box): CSSProperties => ({
 });
 
 /** Where the sticker sits on the sheet and where its resin lands, in the ceremony's pixels. */
-function stage(sticker: SealedSticker, sheet: Box) {
+function stage(sticker: SealedSticker, sheet: Rect) {
   const k = sheet.w / sticker.inkWidth;
-  const box: Box = {
+  const box: Rect = {
     x: sheet.x + sticker.place.x * k,
     y: sheet.y + sticker.place.y * k,
     w: sticker.place.w * k,
@@ -130,8 +130,8 @@ export function SealCeremony({
   // The card's first key has faded up: the card takes presses, and taps and keys stop skipping.
   const [keyShown, setKeyShown] = useState(false);
   const skip = useRef<() => void>(() => {});
-  // A finger's tap that skips only skips: the skip puts the card's keys under the finger, and Chromium
-  // sends the tap's click to whichever one it lifts over, unless the touch's end is cancelled.
+  // A tap that skips only skips: the skip puts the card's keys under the finger or pen, and the
+  // browser sends the tap's click to whichever one it lifts over, unless the touch's end is cancelled.
   const skippingTouch = useRef(false);
   const wake = useRef<() => void>(() => {});
   const root = useRef<HTMLDivElement>(null);
@@ -339,7 +339,7 @@ export function SealCeremony({
         skippingTouch.current = false;
         if (keyShown || failed) return;
         e.preventDefault();
-        skippingTouch.current = e.pointerType === "touch";
+        skippingTouch.current = e.pointerType !== "mouse";
         skip.current();
       }}
       onTouchEnd={(e) => {

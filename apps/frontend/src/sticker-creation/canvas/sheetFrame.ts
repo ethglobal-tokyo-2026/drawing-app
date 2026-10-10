@@ -24,10 +24,19 @@ export type SheetArea = { width: number; height: number };
 
 type Size = Pick<SheetFrame, "w" | "h">;
 
+/** The timelapse records sizes and stroke points to the tenth of a unit, and densities to the thousandth. */
+const TENTHS = 10;
+const THOUSANDTHS = 1000;
+/** A length in whole tenths of a unit. */
+export const tenths = (n: number) => Math.round(n * TENTHS);
+/** Whole tenths of a unit back to a length. */
+export const fromTenths = (n: number) => n / TENTHS;
+/** A length to the tenth of a unit. */
+export const toTenth = (n: number) => fromTenths(tenths(n));
+/** A density to the thousandth, as phones report ones like 2.625. */
+export const toThousandth = (n: number) => Math.round(n * THOUSANDTHS) / THOUSANDTHS;
 /** Densities are kept to the thousandth, as the timelapse records them, so replays flood alike. */
-const thousandthBelow = (n: number) => Math.floor(n * 1000) / 1000;
-/** Sizes are kept to the tenth, as the timelapse records them. */
-const tenth = (n: number) => Math.round(n * 10) / 10;
+const thousandthBelow = (n: number) => Math.floor(n * THOUSANDTHS) / THOUSANDTHS;
 
 /** CSS px per unit, with the sheet shown as large as it fits in the area. */
 export const fitScale = (frame: Size, area: SheetArea) =>
@@ -64,6 +73,6 @@ export function frameFor(area: SheetArea, devicePixelRatio: number): SheetFrame 
  * on, its ops in that sheet's CSS px.
  */
 export function areaFrame(area: SheetArea, devicePixelRatio: number): SheetFrame {
-  const size = { w: tenth(area.width), h: tenth(area.height) };
+  const size = { w: toTenth(area.width), h: toTenth(area.height) };
   return { ...size, density: densityFor(size, area, devicePixelRatio) };
 }

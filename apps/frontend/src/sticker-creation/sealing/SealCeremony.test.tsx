@@ -4,15 +4,28 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyApi, FRESH_TICKETS, renderWithApi, shownText } from "../../api/testing";
 import { sticker as apiSticker, TEST_KYOTO_SEIKA_SUBJECTS } from "../../api/testFixtures";
 import type { Sticker, Tickets } from "@drawing-app/api/client";
+import { i18next } from "../../i18n/i18n";
 import { formatDay, formatDuration, formatNo } from "../../stickers/format";
 import { formatRefillTime } from "../../tickets/refill";
 import { useTickets } from "../../tickets/useTickets";
 import { ReducedMotion, stubResizeObservers } from "../../ui/testing";
 import type { SealedSticker } from "./makeSticker";
 import { SealCeremony } from "./SealCeremony";
-import { lineShownAt, T, TOTAL } from "./sealTimeline";
+import { lineShownAt, sealFrame, T, TOTAL } from "./sealTimeline";
 
 const NOW = new Date(2026, 8, 26, 21, 4);
+
+const KEEP_DRAWING = i18next.t(($) => $.stickerCreation.sealedCard.keepDrawing);
+const BACK_TO_BOARD = i18next.t(($) => $.ui.backToBoard);
+const BUY_RESERVE_TICKETS = i18next.t(($) => $.stickerCreation.sealedCard.buyReserveTickets);
+/** The card's line once a sticker used the day's last daily ticket. */
+const REFILL = i18next.t(($) => $.stickerCreation.sealedCard.refill, {
+  time: formatRefillTime(new Date(FRESH_TICKETS.nextRefillAt)),
+});
+/** The ticket row's name for screen readers: `tickets`, such as "2 daily tickets", left. */
+const ticketsLeft = (tickets: string) => i18next.t(($) => $.tickets.summary.left, { tickets });
+/** The sticker's turn as the timeline ends it, landed on the card. */
+const LANDED_TURN = `rotate(${sealFrame(TOTAL, { peel: { x: 0, y: 0 }, dx: 0, dy: 0, scale: 1 }, 0).sticker.rotate}deg)`;
 
 const sticker: SealedSticker = {
   png: new Blob(),
@@ -80,7 +93,7 @@ const use = (dayIndex: number, kind: "daily" | "reserve" = "daily") => ({
 });
 
 /**
- * Opens the ceremony with `used` of the day's three tickets used, then `reserveUsed` reserve tickets,
+ * Opens the ceremony with `used` of the day's daily tickets used, then `reserveUsed` reserve tickets,
  * and `reserveLeft` held. `answer` is the server's: null while the seal is on its way.
  */
 async function seal(
@@ -94,7 +107,12 @@ async function seal(
   const usedToday = Array.from({ length: used + reserveUsed }, (_, i) =>
     use(i, i < used ? "daily" : "reserve"),
   );
-  const tickets = { ...FRESH_TICKETS, dailyLeft: 3 - used, reserveLeft, usedToday };
+  const tickets = {
+    ...FRESH_TICKETS,
+    dailyLeft: FRESH_TICKETS.dailyPerDay - used,
+    reserveLeft,
+    usedToday,
+  };
   view = renderWithApi(ceremony(answer), emptyApi({ tickets: () => Promise.resolve(tickets) }));
   host = view.host;
   mountedAt = Date.now();
@@ -141,15 +159,16 @@ const tapOn = (el: HTMLElement) =>
     el.click();
   });
 /**
- * A finger's tap on `key`'s spot. While its line is inert the touch lands on the carrier under it; the
- * browser sends the click to what's under the finger as it lifts, unless the touch's end is cancelled.
+ * A finger's or a pen's tap on `key`'s spot. While its line is inert the touch lands on the carrier
+ * under it; the browser sends the click to what's under the touch as it lifts, unless the touch's end
+ * is cancelled.
  */
-const fingerTap = (key: HTMLElement) => {
+const touchTap = (key: HTMLElement, pointerType: "touch" | "pen") => {
   const hit = key.closest("[inert]") ? host.querySelector(".seal-ceremony__carrier") : key;
   // The touch's start and end are separate events, with React's updates rendered between them.
   act(() => {
     hit?.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "touch" }),
+      new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType }),
     );
   });
   act(() => {
@@ -211,13 +230,13 @@ describe("SealCeremony", () => {
     act(skip);
     expect(card()?.hasAttribute("inert")).toBe(false);
     expect(host.querySelector<HTMLElement>(".seal-ceremony__sticker")?.style.transform).toContain(
-      "rotate(-2deg)",
+      LANDED_TURN,
     );
   });
 
   it.each([
-    ["Keep drawing", 1, onKeepDrawing],
-    ["Back to My board", 3, onBoard],
+    [KEEP_DRAWING, 1, onKeepDrawing],
+    [BACK_TO_BOARD, 3, onBoard],
   ])(
     "takes %s once its line has faded up, before the ceremony ends, and only once",
     async (name, used, action) => {
@@ -243,24 +262,30 @@ describe("SealCeremony", () => {
     },
   );
 
-  it("takes a finger's tap that hurries the ceremony as a skip, not as a press on the key it puts there", async () => {
-    await seal(1);
-    wait(T.card0);
-    const key = button("Keep drawing");
-    fingerTap(key);
-    expect(card()?.hasAttribute("inert")).toBe(false);
-    wait(1000);
-    expect(onKeepDrawing).not.toHaveBeenCalled();
-    // The next tap is the key's.
-    fingerTap(key);
-    wait(1000);
-    expect(onKeepDrawing).toHaveBeenCalledOnce();
-  });
+  it.each([
+    ["a finger's", "touch"],
+    ["a pen's", "pen"],
+  ] as const)(
+    "takes %s tap that hurries the ceremony as a skip, not as a press on the key it puts there",
+    async (_, pointerType) => {
+      await seal(1);
+      wait(T.card0);
+      const key = button(KEEP_DRAWING);
+      touchTap(key, pointerType);
+      expect(card()?.hasAttribute("inert")).toBe(false);
+      wait(1000);
+      expect(onKeepDrawing).not.toHaveBeenCalled();
+      // The next tap is the key's.
+      touchTap(key, pointerType);
+      wait(1000);
+      expect(onKeepDrawing).toHaveBeenCalledOnce();
+    },
+  );
 
   it("keeps a key under the first from presses until its own line has faded up", async () => {
     await seal(1);
-    const board = button("Back to My board");
-    toShown(button("Keep drawing"));
+    const board = button(BACK_TO_BOARD);
+    toShown(button(KEEP_DRAWING));
     act(() => board.click());
     wait(1000);
     expect(onBoard).not.toHaveBeenCalled();
@@ -271,7 +296,7 @@ describe("SealCeremony", () => {
 
   it("takes Escape to the board from when its first key has faded up", async () => {
     await seal(1);
-    toShown(button("Keep drawing"));
+    toShown(button(KEEP_DRAWING));
     act(() => {
       document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
@@ -282,22 +307,23 @@ describe("SealCeremony", () => {
   it("keeps drawing at once, since the card's exit carries the change, but lets the press show before the board", async () => {
     await seal(1);
     playThrough();
-    act(() => button("Keep drawing").click());
+    act(() => button(KEEP_DRAWING).click());
     expect(onKeepDrawing).toHaveBeenCalledOnce();
     view?.unmount();
 
     await seal(1);
     playThrough();
-    act(() => button("Back to My board").click());
+    act(() => button(BACK_TO_BOARD).click());
     expect(onBoard).not.toHaveBeenCalled();
-    wait(200);
+    // Once the press has shown.
+    act(() => void vi.runOnlyPendingTimers());
     expect(onBoard).toHaveBeenCalledOnce();
   });
 
   it("carries the card away over the fresh sheet, then lets it go", async () => {
     await seal(1);
     // Kept drawing as soon as it could: the rest of the ceremony plays out on the way.
-    toShown(button("Keep drawing"));
+    toShown(button(KEEP_DRAWING));
     view?.rerender(ceremony(sealed, { leaving: true }));
     expect(root()?.classList.contains("is-leaving")).toBe(true);
     expect(host.querySelector(".ticket-stub.is-peeling")).not.toBeNull();
@@ -329,8 +355,8 @@ describe("SealCeremony", () => {
     view?.rerender(<WithTickets leaving />);
     // Keep drawing spends the last ticket as the card leaves: it doesn't turn into the last ticket's card.
     await setTickets();
-    expect(button("Keep drawing")).toBeTruthy();
-    expect(host.textContent).not.toContain("New daily tickets at");
+    expect(button(KEEP_DRAWING)).toBeTruthy();
+    expect(host.textContent).not.toContain(REFILL);
   });
 
   it("fades a line the card changes to mid-ceremony up in its turn", async () => {
@@ -342,11 +368,11 @@ describe("SealCeremony", () => {
     };
     await sealWithTickets(lastOfAll, FRESH_TICKETS);
     wait(T.card0);
-    expect(button("Buy reserve tickets")).toBeTruthy();
+    expect(button(BUY_RESERVE_TICKETS)).toBeTruthy();
     await setTickets();
     wait(50);
     // The shop's line gives way to the board's, which waits below the lines still to fade up.
-    const board = button("Back to My board");
+    const board = button(BACK_TO_BOARD);
     expect(board.style.opacity).toBe("0");
     playThrough();
     expect(board.style.opacity).toBe("1");
@@ -355,43 +381,40 @@ describe("SealCeremony", () => {
   it("ends the day on when new daily tickets come, with reserve tickets quiet under it", async () => {
     await seal(1);
     playThrough();
-    expect(button("Keep drawing")).toBeTruthy();
-    expect(button("Back to My board").classList.contains("label-btn")).toBe(true);
+    expect(button(KEEP_DRAWING)).toBeTruthy();
+    expect(button(BACK_TO_BOARD).classList.contains("label-btn")).toBe(true);
     expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(
-      "2 daily tickets left",
+      ticketsLeft(i18next.t(($) => $.tickets.summary.daily, { count: 2 })),
     );
     view?.unmount();
 
     await seal(3);
     playThrough();
-    expect(button("Back to My board").classList.contains("key")).toBe(true);
-    expect(host.querySelector(".sealed-card__refill")?.textContent).toBe(
-      `New daily tickets at ${formatRefillTime(new Date(FRESH_TICKETS.nextRefillAt))}`,
-    );
+    expect(button(BACK_TO_BOARD).classList.contains("key")).toBe(true);
+    expect(host.querySelector(".sealed-card__refill")?.textContent).toBe(REFILL);
     // Small label stock, not a second full-width button.
-    expect(button("Buy reserve tickets").classList.contains("label-btn--sm")).toBe(true);
-    act(() => button("Buy reserve tickets").click());
+    expect(button(BUY_RESERVE_TICKETS).classList.contains("label-btn--sm")).toBe(true);
+    act(() => button(BUY_RESERVE_TICKETS).click());
     wait(1000);
     expect(onShop).toHaveBeenCalledOnce();
   });
 
   it("says when daily tickets come back only when this sticker used the day's last one", async () => {
-    const refill = `New daily tickets at ${formatRefillTime(new Date(FRESH_TICKETS.nextRefillAt))}`;
     await seal(3, { reserveLeft: 2 });
     playThrough();
-    expect(host.textContent).toContain(refill);
+    expect(host.textContent).toContain(REFILL);
     // One reserve ticket in the daily slots' place, with its count.
     expect(host.querySelectorAll(".ticket-stub")).toHaveLength(1);
     expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(
-      "2 reserve tickets left",
+      ticketsLeft(i18next.t(($) => $.tickets.summary.reserve, { count: 2 })),
     );
     view?.unmount();
 
     // A reserve ticket sealed this one: the daily tickets were already gone.
     await seal(3, { reserveLeft: 1, reserveUsed: 1 });
     playThrough();
-    expect(button("Keep drawing")).toBeTruthy();
-    expect(host.textContent).not.toContain("New daily tickets at");
+    expect(button(KEEP_DRAWING)).toBeTruthy();
+    expect(host.textContent).not.toContain(REFILL);
   });
 
   it("waits at the cut while the seal is on its way, then peels onto the card", async () => {
@@ -433,7 +456,7 @@ describe("SealCeremony", () => {
     wait(100);
     expect(host.querySelector<HTMLElement>(".sealed-card")?.style.opacity).toBe("1");
     expect(host.querySelector<HTMLElement>(".seal-ceremony__sticker")?.style.transform).toContain(
-      "rotate(-2deg)",
+      LANDED_TURN,
     );
   });
 
@@ -489,11 +512,10 @@ describe("SealCeremony", () => {
   it.each([
     ["a sticker made plainly", {}, null],
     ["an 18+ sticker", { nsfw: true }, "pink"],
-    ["a Kyoto Seika sticker", { kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS }, "kyoto-seika"],
     [
-      "a Kyoto Seika 18+ sticker",
-      { nsfw: true, kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS },
-      "pink",
+      "a sticker drawn in Kyoto Seika Practice Mode",
+      { kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS },
+      "kyoto-seika",
     ],
   ])("lands %s on the card in the foil that marks how it was made", async (_, made, tone) => {
     await seal(1, { answer: { ...sealed, ...made } });

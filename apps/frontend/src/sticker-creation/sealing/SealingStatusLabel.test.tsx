@@ -2,10 +2,25 @@
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithApi } from "../../api/testing";
-import { SealingStatusLabel } from "./SealingStatusLabel";
+import { i18next } from "../../i18n/i18n";
+import {
+  SealingStatusLabel,
+  SHOW_AFTER_MS,
+  TAKES_A_WHILE_MS,
+  TAKING_LONGER_MS,
+} from "./SealingStatusLabel";
+
+const SEALING = i18next.t(($) => $.stickerCreation.sealCeremony.sealing);
+const TAKES_A_WHILE = i18next.t(($) => $.stickerCreation.sealCeremony.takesAWhile);
+const TAKING_LONGER = i18next.t(($) => $.stickerCreation.sealCeremony.takingLonger);
 
 let view: ReturnType<typeof renderWithApi> | undefined;
-const wait = (ms: number) => act(() => void vi.advanceTimersByTime(ms));
+/** The clock moves on only in act, so each step's timers render before the test looks. */
+let now = 0;
+const until = (ms: number) => {
+  act(() => void vi.advanceTimersByTime(ms - now));
+  now = ms;
+};
 const label = () => view?.host.querySelector(".sealing-status") ?? null;
 const shown = (part: "line" | "note") =>
   label()?.querySelector(`.sealing-status__${part}`)?.textContent ?? null;
@@ -13,6 +28,7 @@ const heard = () => view?.host.querySelector('[role="status"]')?.textContent;
 
 beforeEach(() => {
   vi.useFakeTimers();
+  now = 0;
 });
 
 afterEach(() => {
@@ -24,32 +40,32 @@ afterEach(() => {
 describe("SealingStatusLabel", () => {
   it("sticks on once sealing takes a moment, and says more as the wait goes on", () => {
     view = renderWithApi(<SealingStatusLabel waiting />);
-    wait(900);
+    until(SHOW_AFTER_MS - 1);
     expect(label()).toBeNull();
     expect(heard()).toBe("");
-    wait(200);
-    expect(shown("line")).toBe("Sealing your sticker…");
+    until(SHOW_AFTER_MS);
+    expect(shown("line")).toBe(SEALING);
     expect(shown("note")).toBeNull();
-    expect(heard()).toBe("Sealing your sticker…");
-    wait(9_000);
-    expect(shown("note")).toBe("It can take up to half a minute.");
+    expect(heard()).toBe(SEALING);
+    until(TAKES_A_WHILE_MS);
+    expect(shown("note")).toBe(TAKES_A_WHILE);
     expect(label()?.classList.contains("is-restuck")).toBe(true);
-    expect(heard()).toBe("Sealing your sticker… It can take up to half a minute.");
-    wait(20_000);
-    expect(shown("note")).toBe("It’s taking longer than usual.");
+    expect(heard()).toBe(`${SEALING} ${TAKES_A_WHILE}`);
+    until(TAKING_LONGER_MS);
+    expect(shown("note")).toBe(TAKING_LONGER);
   });
 
   it("never shows for a quick seal", () => {
     view = renderWithApi(<SealingStatusLabel waiting />);
-    wait(600);
+    until(SHOW_AFTER_MS - 1);
     view.rerender(<SealingStatusLabel waiting={false} />);
-    wait(40_000);
+    until(TAKING_LONGER_MS);
     expect(label()).toBeNull();
   });
 
   it("peels off when the wait ends, and starts afresh for the next seal", () => {
     view = renderWithApi(<SealingStatusLabel waiting />);
-    wait(12_000);
+    until(TAKES_A_WHILE_MS);
     view.rerender(<SealingStatusLabel waiting={false} />);
     expect(label()?.classList.contains("is-peeling")).toBe(true);
     expect(heard()).toBe("");
@@ -61,7 +77,8 @@ describe("SealingStatusLabel", () => {
     expect(label()).toBeNull();
 
     view.rerender(<SealingStatusLabel waiting />);
-    wait(1_100);
+    until(TAKES_A_WHILE_MS + SHOW_AFTER_MS);
+    expect(shown("line")).toBe(SEALING);
     expect(shown("note")).toBeNull();
   });
 });

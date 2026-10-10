@@ -3,10 +3,10 @@ import { useTranslation } from "../../i18n/react";
 import "./SealingStatusLabel.css";
 
 /** It sticks on only if sealing takes more than a moment, so a quick seal never flashes it. */
-const SHOW_AFTER_MS = 1_000;
+export const SHOW_AFTER_MS = 1_000;
 /** Then it says how long sealing can take, and later that it's taking longer than that. */
-const TAKES_A_WHILE_MS = 10_000;
-const TAKING_LONGER_MS = 30_000;
+export const TAKES_A_WHILE_MS = 10_000;
+export const TAKING_LONGER_MS = 30_000;
 
 type Stage = "sealing" | "takesAWhile" | "takingLonger";
 

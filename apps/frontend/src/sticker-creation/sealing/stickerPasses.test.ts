@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dieCut } from "./dieCut";
+import { BORDER_UNITS, dieCut } from "./dieCut";
 import type { Pixels } from "./pixels";
 import {
   MAX_SIDE,
@@ -21,22 +21,27 @@ const RADIUS = 40;
 /** How far the cut runs from the middle. */
 const CUT_RADIUS = RADIUS + BORDER;
 
-/** A `side` px square sheet with a disk of `color` and `radius` in the middle: 200 and 40 unless given. */
-function disk(color: number[], side = 2 * MIDDLE, radius = RADIUS): Pixels {
-  const width = side;
-  const height = side;
+/** A `width` × `height` px sheet inked with `color` wherever `inked` says, and clear elsewhere. */
+function sheet(
+  width: number,
+  height: number,
+  color: number[],
+  inked: (x: number, y: number) => boolean,
+): Pixels {
   const data = new Uint8ClampedArray(width * height * 4);
   for (let y = 0; y < height; y++)
-    for (let x = 0; x < width; x++)
-      if (Math.hypot(x + 0.5 - side / 2, y + 0.5 - side / 2) <= radius)
-        data.set([...color, 255], (y * width + x) * 4);
+    for (let x = 0; x < width; x++) if (inked(x, y)) data.set([...color, 255], (y * width + x) * 4);
   return { data, width, height };
 }
 
+/** A `side` px square sheet with a disk of `color` and `radius` in the middle: 200 and 40 unless given. */
+const disk = (color: number[], side = 2 * MIDDLE, radius = RADIUS) =>
+  sheet(side, side, color, (x, y) => Math.hypot(x + 0.5 - side / 2, y + 0.5 - side / 2) <= radius);
+
 const redDisk = (side?: number, radius?: number) => disk(RED, side, radius);
 
-function passesOf(ink: Pixels) {
-  const cut = dieCut(ink, BORDER);
+function passesOf(ink: Pixels, border = BORDER) {
+  const cut = dieCut(ink, border);
   if (!cut) throw new Error("expected a cut");
   const glossGrid = bakedGloss(cut);
   return { cut, glossGrid, passes: stickerPasses(ink, cut, glossGrid) };
@@ -152,7 +157,10 @@ const LARGE_INK_TIMEOUT_MS = 30_000;
 
 describe("sharpSticker", () => {
   /** The long side an image whose cut's long side is `cutSide` comes out at, margins and all. */
-  const sideFor = (cutSide: number) => Math.round(cutSide) + 2 * Math.ceil(cutSide * PAD);
+  const sideFor = (cutSide: number) => {
+    const side = Math.round(cutSide);
+    return side + 2 * Math.ceil(side * PAD);
+  };
   const longSide = ({ width, height }: { width: number; height: number }) =>
     Math.max(width, height);
 
@@ -186,4 +194,27 @@ describe("sharpSticker", () => {
     const ink = redDisk();
     expect(sharpOf(ink)).toBeNull();
   });
+
+  it(
+    "comes out larger than the stored image on both sides, as the server takes it",
+    () => {
+      // A phone's sheet at density 3 with one wide bar: its cut's long side is one where k × side
+      // lands a hair past MAX_SIDE in floating point.
+      const density = 3;
+      const [width, height, barW, barH] = [1122, 2232, 504, 60];
+      const [x0, y0] = [(width - barW) / 2, (height - barH) / 2];
+      const ink = sheet(
+        width,
+        height,
+        RED,
+        (x, y) => x >= x0 && x < x0 + barW && y >= y0 && y < y0 + barH,
+      );
+      const { cut, glossGrid, passes } = passesOf(ink, BORDER_UNITS * density);
+      expect(longSide(passes)).toBe(sideFor(MAX_SIDE));
+      const sharp = sharpSticker(ink, cut, glossGrid);
+      expect(sharp?.width).toBeGreaterThan(passes.width);
+      expect(sharp?.height).toBeGreaterThan(passes.height);
+    },
+    LARGE_INK_TIMEOUT_MS,
+  );
 });

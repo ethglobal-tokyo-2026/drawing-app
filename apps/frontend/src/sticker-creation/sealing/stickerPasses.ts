@@ -158,9 +158,13 @@ function frameOf({ bounds, scale }: DieCut, maxSide: number): Frame & { pad: num
   const mh = bounds.y1 - bounds.y0 + 1;
   // Never larger than the ink was drawn.
   const k = Math.min(maxSide / Math.max(mw, mh), 1 / scale);
-  const pad = Math.ceil(Math.max(mw, mh) * k * PAD);
-  const width = Math.round(mw * k) + pad * 2;
-  const height = Math.round(mh * k) + pad * 2;
+  const w = Math.round(mw * k);
+  const h = Math.round(mh * k);
+  // A share of the long side in whole pixels: k × side can land a hair past a round number, which
+  // would round the margin up a pixel.
+  const pad = Math.ceil(Math.max(w, h) * PAD);
+  const width = w + pad * 2;
+  const height = h + pad * 2;
   return { x0: bounds.x0 - pad / k, y0: bounds.y0 - pad / k, k, width, height, pad };
 }
 
@@ -181,12 +185,13 @@ export interface SharpSticker {
 
 /**
  * The finished sticker with its cut's long side up to SHARP_SIDE, as stickerPasses lays it out; null
- * when the ink holds no more pixels than the stored image already has.
+ * unless that comes out larger than the stored image on both sides, the only sharp copy the server
+ * takes, as when the ink holds no more pixels than the stored image already has.
  */
 export function sharpSticker(ink: Pixels, cut: DieCut, glossGrid: GlossGrid): SharpSticker | null {
   const frame = frameOf(cut, SHARP_SIDE);
   const base = frameOf(cut, MAX_SIDE);
-  if (frame.width <= base.width) return null;
+  if (frame.width <= base.width || frame.height <= base.height) return null;
   const { sticker } = paint(ink, cut, glossGrid, frame, frame.k / base.k, false);
   return { width: frame.width, height: frame.height, sticker };
 }

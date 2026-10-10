@@ -1,7 +1,7 @@
 import { blankCanvas, context2d } from "../canvas/context2d";
 import { lerp } from "../../ui/easing";
 import { releaseCanvas } from "../../ui/releaseCanvas";
-import type { Box } from "./sealTimeline";
+import type { Rect } from "./stickerPasses";
 
 /** The paper's backing. */
 const BACKING = "#E7E5EE";
@@ -33,7 +33,7 @@ function cover(canvas: HTMLCanvasElement, { w, h }: Size, r: number) {
 export function paintDim(
   canvas: HTMLCanvasElement,
   size: Size,
-  box: Box,
+  box: Rect,
   mask: CanvasImageSource,
   r: number,
 ) {
@@ -51,7 +51,7 @@ export function paintDim(
 /** The used sticker silhouette: the backing liner, its maker's print, and the cut wall. */
 export function paintUsedStickerSilhouette(
   canvas: HTMLCanvasElement,
-  box: Box,
+  box: Rect,
   mask: CanvasImageSource,
   r: number,
 ) {

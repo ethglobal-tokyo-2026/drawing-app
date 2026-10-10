@@ -54,8 +54,8 @@
   }
 }
 
-/* The title, a Kyoto Seika sheet's pair, and the switch row directly under them, as one group
-   centered on the sticker. */
+/* The title, the pair on a sheet in Kyoto Seika Practice Mode, and the switch row directly under
+   them, as one group centered on the sticker. */
 .seal-sheet__side {
   display: flex;
   flex-direction: column;
@@ -87,7 +87,7 @@
   visibility: hidden;
 }
 
-/* A Kyoto Seika sheet's やめ: the proctor's call in the deal's hand lettering (書き文字), as
+/* やめ on a sheet in Kyoto Seika Practice Mode: the proctor's call in the deal's hand lettering (書き文字), as
    はじめ began it, on one line in the plain title's line box. */
 .seal-sheet__title.is-lettered {
   justify-self: start;
@@ -130,7 +130,8 @@
   }
 }
 
-/* A Kyoto Seika sheet's pair, as the sealed card prints it, its furigana clear of the title. */
+/* The pair on a sheet in Kyoto Seika Practice Mode, as the sealed card prints it, its furigana clear
+   of the title. */
 .seal-sheet__pair {
   margin: 0;
   padding-top: 6px;
@@ -152,7 +153,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Seal, and Not yet 12px under its lip, 44px to touch. */
+/* Seal, and Not yet just under its lip, tall enough to touch. */
 .seal-sheet__foot {
   display: flex;
   flex-direction: column;
@@ -185,34 +186,6 @@
   transition:
     opacity 220ms var(--ease-out),
     visibility 0s linear 220ms;
-}
-
-/* A large screen's layer (SealSheet.tsx): it only groups the scrim and the card, for what stays live
-   while the card is up, so it takes no room and covers nothing while the card is down. */
-.seal-sheet-layer {
-  display: contents;
-}
-
-/* Over the whole drawing screen, under the card, as Send gratitude's scrim is over the board. */
-.seal-sheet-layer__scrim {
-  position: absolute;
-  inset: 0;
-  z-index: var(--z-sheet);
-  background: var(--scrim);
-  opacity: 0;
-  visibility: hidden;
-  /* Fading out, it lets the next stroke through to the sheet. */
-  pointer-events: none;
-  transition:
-    opacity var(--t-peel) var(--ease-out),
-    visibility 0s linear var(--t-peel);
-}
-
-.seal-sheet-layer__scrim.is-shown {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transition: opacity var(--t-peel) var(--ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {

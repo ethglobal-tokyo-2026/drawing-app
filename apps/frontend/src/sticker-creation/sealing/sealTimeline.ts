@@ -3,7 +3,8 @@
  * rises and forms, the sticker peels off its backing and flies onto the card, then the card's lines
  * fade up. SealCeremony writes one frame to the page per animation frame.
  */
-import { clamp01, easeOutCubic as easeOut } from "../../ui/easing";
+import { clamp, clamp01, easeOutCubic as easeOut } from "../../ui/easing";
+import type { Rect } from "./stickerPasses";
 
 export const TOTAL = 2580;
 
@@ -32,6 +33,19 @@ export const T = {
   txt0: 2080,
 };
 
+/** When each part that keeps another part's time starts and ends, in ms. */
+export const SPANS = {
+  /** The wet front fades as it finishes spreading. */
+  frontFade: [T.flow1 - 40, T.flow1 + 220],
+  /** The gloss comes up just behind the resin's rise. */
+  gloss: [T.rise0 + 80, T.rise1 + 80],
+  /** The cut line and the dim clear as the sticker peels. */
+  cutLineFade: [T.peel0, T.peel0 + 220],
+  dimClear: [T.peel0, T.peel0 + 320],
+  /** The used sticker silhouette goes once the card is up. */
+  silhouetteFade: [T.card1, T.card1 + 260],
+} as const;
+
 /** The card's lines fade up in turn from T.txt0: each starts this long after the one before… */
 const LINE_STAGGER = 40;
 /** …and takes this long. */
@@ -41,13 +55,6 @@ const LINE_FADE = 240;
 export const lineShownAt = (i: number) => T.txt0 + i * LINE_STAGGER + LINE_FADE;
 
 const easeInOut = (u: number) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
-
-export interface Box {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
 
 /** Where the sticker goes: up off its backing, then across to the card's slot. */
 export interface Flight {
@@ -61,7 +68,7 @@ export interface Flight {
 }
 
 /** `box` is the sticker image, `body` the cut inside its margin, and `slot` the card's sticker slot. */
-export function flight(box: Box, body: { w: number; h: number }, slot: Box): Flight {
+export function flight(box: Rect, body: { w: number; h: number }, slot: Rect): Flight {
   return {
     peel: { x: -14, y: -Math.min(120, body.h * 0.55) },
     dx: slot.x + slot.w / 2 - (box.x + box.w / 2),
@@ -128,18 +135,18 @@ export function sealFrame(t: number, path: Flight, items: number): SealFrame {
   const card = easeOut(span(T.card0, T.card1));
 
   return {
-    cut: { progress: easeInOut(span(T.cut0, T.cut1)), alpha: 1 - span(T.peel0, T.peel0 + 220) },
+    cut: { progress: easeInOut(span(T.cut0, T.cut1)), alpha: 1 - span(...SPANS.cutLineFade) },
     // The paper dims for the cut, then turns back into white kiss-cut paper for the peel.
-    dim: 0.66 * easeOut(span(T.dim0, T.dim1)) * (1 - easeOut(span(T.peel0, T.peel0 + 320))),
+    dim: 0.66 * easeOut(span(T.dim0, T.dim1)) * (1 - easeOut(span(...SPANS.dimClear))),
     veil: card,
     plain: t >= T.cut1 ? 1 : 0,
     pour: {
       scale: 0.02 + 0.98 * easeOut(pf),
       turn: -10 + 22 * pf,
-      opacity: pf <= 0 ? 0 : 1 - span(T.flow1 - 40, T.flow1 + 220),
+      opacity: pf <= 0 ? 0 : 1 - span(...SPANS.frontFade),
     },
     foil: risen,
-    gloss: easeOut(span(T.rise0 + 80, T.rise1 + 80)),
+    gloss: easeOut(span(...SPANS.gloss)),
     spec: { opacity: formed, scale: 1.8 - 0.8 * formed },
     sticker: { x, y, rotate, rotateX: -11 * up, rotateY: 9 * up, scale },
     // Lifted, it falls farther and fainter; landed, it's the cast as baked, as the sticker then shows.
@@ -151,7 +158,7 @@ export function sealFrame(t: number, path: Flight, items: number): SealFrame {
       scale: scale * (1 + 0.03 * height),
     },
     lifted: t >= T.peel0,
-    usedStickerSilhouette: t >= T.peel0 ? 1 - span(T.card1, T.card1 + 260) : 0,
+    usedStickerSilhouette: t >= T.peel0 ? 1 - span(...SPANS.silhouetteFade) : 0,
     card: { opacity: Math.min(1, card * 1.8), y: (1 - card) * 60 },
     items: Array.from({ length: items }, (_, i) => {
       const shownAt = lineShownAt(i);
@@ -185,19 +192,19 @@ export function ceremonyTime(
 }
 
 /** While it waits, the cutter keeps running round the cut: this fast, in px per ms… */
-const CUTTER_SPEED = 0.42;
+export const CUTTER_SPEED = 0.42;
 /** …but a lap never takes less or more than these, however short or long the line. */
-const LAP_MIN = 1300;
-const LAP_MAX = 2600;
+export const LAP_MIN = 1300;
+export const LAP_MAX = 2600;
 /** The cut leaves it at rest, and it gets up to speed over this long. */
-const CUTTER_RAMP = 500;
+export const CUTTER_RAMP = 500;
 
 /**
  * Where the cutter is `ms` into the wait, as a share (0–1) of a cut line `length` px long: it keeps
  * running round the cut, pass after pass, from where the cut ended.
  */
 export function cutterAt(ms: number, length: number): number {
-  const lap = Math.min(LAP_MAX, Math.max(LAP_MIN, length / CUTTER_SPEED));
+  const lap = clamp(length / CUTTER_SPEED, LAP_MIN, LAP_MAX);
   const run = ms < CUTTER_RAMP ? (ms * ms) / (2 * CUTTER_RAMP) : ms - CUTTER_RAMP / 2;
   return (Math.max(0, run) / lap) % 1;
 }

@@ -7,18 +7,16 @@ import { SubjectPair } from "../kyoto-seika/SubjectPair";
 import { madeFoil } from "../stickers/madeFoil";
 import { StickerFoil } from "../stickers/StickerFoil";
 import { Key } from "../ui/Key";
-import { useLargeScreen } from "../ui/largeScreen";
 import { QuietLink } from "../ui/QuietLink";
 import { releaseCanvas } from "../ui/releaseCanvas";
 import { Sheet } from "../ui/Sheet";
 import { Switch } from "../ui/Switch";
 import { context2d } from "./canvas/context2d";
+import { BORDER_UNITS } from "./sealing/dieCut";
 import "./SealSheet.css";
 
 /** The ink's bounds are found on a copy this many pixels on its long side: the sheet is millions. */
 const SCAN_PX = 192;
-/** The white round the drawing, as a share of its long side, as the die-cut's border leaves. */
-const BORDER = 0.08;
 /** The preview's long side in device pixels, enough for a sharp 140px box on a 3× phone. */
 const PREVIEW_PX = 420;
 /** The preview's turn, as a sticker's on a board, which the foil's glint undoes. */
@@ -34,6 +32,8 @@ interface Props {
   subjects: readonly [KyotoSeikaSubject, KyotoSeikaSubject] | null;
   /** A copy of the ink as it is now, which the preview lets go. */
   ink: () => HTMLCanvasElement | null;
+  /** The ink's device px per sheet unit; null while the sheet has no frame, and so no ink. */
+  density: () => number | null;
   onNsfwChange: (on: boolean) => void;
   onSeal: () => void;
   onNotYet: () => void;
@@ -51,13 +51,12 @@ export function SealSheet({
   nsfw,
   subjects,
   ink,
+  density,
   onNsfwChange,
   onSeal,
   onNotYet,
 }: Props) {
   const { t } = useTranslation();
-  const large = useLargeScreen();
-  const layer = useRef<HTMLDivElement>(null);
   const lettered = timeUp && subjects !== null;
   const words = !timeUp
     ? t(($) => $.stickerCreation.sealSheet.title)
@@ -77,18 +76,25 @@ export function SealSheet({
     if (timeUp && notYet.current && document.activeElement === notYet.current)
       switchRow.current?.querySelector("input")?.focus({ preventScroll: true });
   }, [timeUp]);
-  const sheet = (
+  // On a large screen its scrim dims the whole drawing screen, the foot row's My board tile included.
+  return (
     <Sheet
       label={words}
       open={open}
       closable={!timeUp}
       card
-      layer={large ? layer : undefined}
+      scrim
       className={`seal-sheet keep-phrases ${timeUp ? "is-time-up" : ""}`}
       onClose={onNotYet}
       head={
         <div className="seal-sheet__body">
-          <SealPreview open={open} nsfw={nsfw} kyotoSeika={subjects !== null} ink={ink} />
+          <SealPreview
+            open={open}
+            nsfw={nsfw}
+            kyotoSeika={subjects !== null}
+            ink={ink}
+            density={density}
+          />
           <div className="seal-sheet__side">
             {/* Turned in place, the title it had stays unseen in the same cell, so a shorter one
                 keeps the sheet's height. */}
@@ -146,49 +152,38 @@ export function SealSheet({
       </div>
     </Sheet>
   );
-  if (!large) return sheet;
-  // The scrim dims the whole drawing screen, the foot row's My board tile included, and is Not yet
-  // until time's up. It stays mounted with the sheet, so it can fade out as the card leaves.
-  return (
-    <div className="seal-sheet-layer" ref={layer}>
-      <div
-        className={`seal-sheet-layer__scrim ${open ? "is-shown" : ""}`}
-        onClick={() => {
-          if (!timeUp) onNotYet();
-        }}
-      />
-      {sheet}
-    </div>
-  );
 }
 
 /**
- * The drawing on white, cropped to its ink with a border as the cut leaves, so it opens at once:
- * nothing waits on the cut. Its edge wears the foil the sticker will: pink on an 18+ sticker, else
- * the Kyoto Seika Practice Mode foil on a sheet in that mode.
+ * The drawing on white, cropped to its ink with the die-cut's white border round it, so it opens at
+ * once: nothing waits on the cut. Its edge wears the foil the sticker will: pink on an 18+ sticker,
+ * else the Kyoto Seika Practice Mode foil on a sheet in that mode.
  */
 function SealPreview({
   open,
   nsfw,
   kyotoSeika,
   ink,
-}: Pick<Props, "open" | "nsfw" | "ink"> & { kyotoSeika: boolean }) {
+  density,
+}: Pick<Props, "open" | "nsfw" | "ink" | "density"> & { kyotoSeika: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   // Drawn as the sheet opens; the drawing can't change while it's up.
   useLayoutEffect(() => {
     const target = canvas.current;
     if (!open || !target) return;
+    const perUnit = density();
+    if (perUnit === null) return;
     const copy = ink();
     if (!copy) return;
     try {
-      drawPreview(target, copy);
+      drawPreview(target, copy, BORDER_UNITS * perUnit);
     } catch (error) {
       // The preview is only a picture: the sheet still seals without it.
       console.error("The seal sheet's preview couldn't be drawn", error);
     } finally {
       releaseCanvas(copy);
     }
-  }, [open, ink]);
+  }, [open, ink, density]);
   const tone = madeFoil({ nsfw, kyotoSeika });
   return (
     <div className="seal-preview" aria-hidden="true">
@@ -201,10 +196,13 @@ function SealPreview({
   );
 }
 
-/** Paints the ink's drawn part on white into `target`, at most PREVIEW_PX on its long side. */
-function drawPreview(target: HTMLCanvasElement, ink: HTMLCanvasElement) {
+/**
+ * Paints the ink's drawn part on white into `target`, `border` ink px of white round it, at most
+ * PREVIEW_PX on its long side.
+ */
+function drawPreview(target: HTMLCanvasElement, ink: HTMLCanvasElement, border: number) {
   const bounds = inkBounds(ink) ?? { x: 0, y: 0, w: ink.width, h: ink.height };
-  const pad = Math.round(Math.max(bounds.w, bounds.h) * BORDER);
+  const pad = Math.round(border);
   const crop = {
     x: bounds.x - pad,
     y: bounds.y - pad,

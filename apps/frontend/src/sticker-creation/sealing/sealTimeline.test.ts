@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   ceremonyTime,
+  CUTTER_RAMP,
+  CUTTER_SPEED,
   cutterAt,
   flight,
   HOLD,
+  LAP_MAX,
+  LAP_MIN,
   lineShownAt,
   sealFrame,
+  SPANS,
   T,
   TOTAL,
   type SealFrame,
@@ -25,17 +30,17 @@ describe("sealTimeline", () => {
     ["the cut line runs around the contour", (f) => f.cut.progress, T.cut0, T.cut1],
     ["the paper outside the cut dims", (f) => f.dim, T.dim0, T.dim1],
     ["the wet front spreads", (f) => f.pour.scale, T.flow0, T.flow1],
-    ["the wet front fades", (f) => f.pour.opacity, T.flow1 - 40, T.flow1 + 220],
+    ["the wet front fades", (f) => f.pour.opacity, ...SPANS.frontFade],
     ["a made foil rises with the resin", (f) => f.foil, T.rise0, T.rise1],
-    ["the gloss follows", (f) => f.gloss, T.rise0 + 80, T.rise1 + 80],
+    ["the gloss follows", (f) => f.gloss, ...SPANS.gloss],
     ["the specular gathers", (f) => f.spec.scale, T.form0, T.form1],
     ["the sticker peels up", (f) => f.sticker.rotateX, T.peel0, T.peel1],
-    ["the cut line fades", (f) => f.cut.alpha, T.peel0, T.peel0 + 220],
-    ["the dim clears", (f) => f.dim, T.peel0, T.peel0 + 320],
+    ["the cut line fades", (f) => f.cut.alpha, ...SPANS.cutLineFade],
+    ["the dim clears", (f) => f.dim, ...SPANS.dimClear],
     ["the veil rises", (f) => f.veil, T.card0, T.card1],
     ["the card slides up", (f) => f.card.y, T.card0, T.card1],
     ["the sticker flies to the card", (f) => f.sticker.x, T.move0, T.move1],
-    ["the used sticker silhouette goes", (f) => f.usedStickerSilhouette, T.card1, T.card1 + 260],
+    ["the used sticker silhouette goes", (f) => f.usedStickerSilhouette, ...SPANS.silhouetteFade],
     ["the card's first line fades up", (f) => f.items[0].y, T.txt0, lineShownAt(0)],
     ["its second line follows", (f) => f.items[1].y, lineShownAt(1) - LINE_FADE, lineShownAt(1)],
   ])("%s, and only over its own span", (_, value, start, end) => {
@@ -95,13 +100,14 @@ describe("sealTimeline", () => {
   it("waits at the cut until the seal is recorded, then runs to the end", () => {
     const waiting = { recorded: false, reduced: false };
     const recorded = { recorded: true, reduced: false };
-    expect(ceremonyTime(0, 400, waiting)).toBe(400);
-    expect(ceremonyTime(600, 400, waiting)).toBe(HOLD);
-    expect(ceremonyTime(HOLD, 20_000, waiting)).toBe(HOLD);
-    expect(ceremonyTime(HOLD, 400, recorded)).toBe(HOLD + 400);
+    const half = HOLD / 2;
+    expect(ceremonyTime(0, half, waiting)).toBe(half);
+    expect(ceremonyTime(half, HOLD, waiting)).toBe(HOLD);
+    expect(ceremonyTime(HOLD, TOTAL, waiting)).toBe(HOLD);
+    expect(ceremonyTime(HOLD, 1, recorded)).toBe(HOLD + 1);
     // Recorded before the cut is made, it never waits.
-    expect(ceremonyTime(600, 400, recorded)).toBe(1000);
-    expect(ceremonyTime(TOTAL - 10, 400, recorded)).toBe(TOTAL);
+    expect(ceremonyTime(half, half + 1, recorded)).toBe(HOLD + 1);
+    expect(ceremonyTime(TOTAL - 1, half, recorded)).toBe(TOTAL);
   });
 
   it("starts at the wait under reduced motion, and goes to the end once recorded", () => {
@@ -110,14 +116,19 @@ describe("sealTimeline", () => {
   });
 
   it("keeps the cutter running round the cut while it waits, from rest, a lap at a time", () => {
-    // 840 px at the cutter's speed is a 2 s lap, which starts after half the 500 ms ramp.
-    expect(cutterAt(0, 840)).toBe(0);
-    expect(cutterAt(1250, 840)).toBeCloseTo(0.5);
-    expect(cutterAt(2250, 840)).toBeCloseTo(0);
-    // It gets up to speed: its first 100 ms cover less than 100 ms at full speed.
-    expect(cutterAt(100, 840)).toBeLessThan(cutterAt(1100, 840) - cutterAt(1000, 840));
-    // However long or short the line, a lap takes 1.3–2.6 s.
-    expect(cutterAt(250 + 1300, 20_000)).toBeCloseTo(0.5);
-    expect(cutterAt(250 + 650, 40)).toBeCloseTo(0.5);
+    // A line whose lap at the cutter's speed is neither the shortest nor the longest it allows.
+    const lap = (LAP_MIN + LAP_MAX) / 2;
+    const length = lap * CUTTER_SPEED;
+    // Its laps run as if it had set off at full speed half the ramp late.
+    const late = CUTTER_RAMP / 2;
+    expect(cutterAt(0, length)).toBe(0);
+    expect(cutterAt(late + lap / 2, length)).toBeCloseTo(0.5);
+    expect(cutterAt(late + lap, length)).toBeCloseTo(0);
+    // It gets up to speed: the ramp's first half covers less than as long at full speed.
+    const fullSpeed = cutterAt(CUTTER_RAMP + late, length) - cutterAt(CUTTER_RAMP, length);
+    expect(cutterAt(late, length)).toBeLessThan(fullSpeed);
+    // However long or short the line, a lap takes from LAP_MIN to LAP_MAX.
+    expect(cutterAt(late + LAP_MAX / 2, LAP_MAX * CUTTER_SPEED * 10)).toBeCloseTo(0.5);
+    expect(cutterAt(late + LAP_MIN / 2, (LAP_MIN * CUTTER_SPEED) / 10)).toBeCloseTo(0.5);
   });
 });

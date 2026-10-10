@@ -1,5 +1,6 @@
 import { MAX_TIMELAPSE_BYTES, type TimelapseV1 } from "@drawing-app/api/client";
 import { describe, expect, it, vi } from "vitest";
+import { seededRandom } from "../../ui/seededRandom";
 import { FILL_GAP } from "../canvas/fill";
 import type { Op } from "../canvas/ops";
 import { decodeTimelapse, encodeTimelapse, gzipTimelapse } from "./timelapse";
@@ -62,10 +63,6 @@ describe("the timelapse", () => {
     },
   );
 
-  it("records the density the sticker was drawn at, so fills can flood as they did", () => {
-    expect(encodeTimelapse(input).density).toBe(DENSITY);
-  });
-
   it("decodes back to the drawing screen's ops, in sheet units", () => {
     const decoded = decodeTimelapse(encodeTimelapse(input));
     expect(decoded.ink).toEqual({ width: input.frame.w, height: input.frame.h });
@@ -75,6 +72,7 @@ describe("the timelapse", () => {
       w: 300 / DENSITY,
       h: 400 / DENSITY,
     });
+    // The density it was drawn at, so fills flood as they did.
     expect(decoded.density).toBe(DENSITY);
     // Stroke points come back to the tenth (21.25 is 21.3), times to the ms, and fill taps as the
     // middle of the pixel they seeded at DENSITY.
@@ -112,12 +110,13 @@ describe("the timelapse", () => {
 
   it("goes without one over the server's limit, and says so", async () => {
     const report = vi.fn();
+    const random = seededRandom(1);
     const huge: TimelapseV1 = {
       ...encodeTimelapse(input),
       // Random colors don't compress, so this stays over the limit once gzipped.
       ops: Array.from({ length: MAX_TIMELAPSE_BYTES / 8 }, () => [
         "fill",
-        Math.random().toString(36),
+        random().toString(36),
         0,
         0,
         0,

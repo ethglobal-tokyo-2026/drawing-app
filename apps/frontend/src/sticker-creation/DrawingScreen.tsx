@@ -47,7 +47,8 @@ import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
 import { SealCeremony } from "./sealing/SealCeremony";
 import { describeSealFailure, sealFailure } from "./sealing/sealFailure";
 import { SealingStatusLabel } from "./sealing/SealingStatusLabel";
-import { LEAVE_MS, type Box } from "./sealing/sealTimeline";
+import { LEAVE_MS } from "./sealing/sealTimeline";
+import type { Rect } from "./sealing/stickerPasses";
 import { drawnSizeOf, encodeTimelapse, gzipTimelapse } from "./sealing/timelapse";
 import {
   keepsSession,
@@ -105,7 +106,7 @@ interface Ceremony {
   /** Keep drawing or the shop was chosen: the card is leaving over the fresh sheet. */
   leaving: boolean;
   /** Where the sheet sat in the drawing screen when it was sealed. */
-  sheet: Box;
+  sheet: Rect;
 }
 
 type SealRequest = Parameters<ApiClient["seal"]>[0];
@@ -152,8 +153,9 @@ export function DrawingScreen({
   const { t } = useTranslation();
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<DrawingCanvasHandle>(null);
-  // The seal sheet's preview reads the ink as it opens.
+  // The seal sheet's preview reads the ink, and its density, as it opens.
   const readInk = useCallback(() => canvas.current?.inkForReading() ?? null, []);
+  const readDensity = useCallback(() => canvas.current?.frame()?.density ?? null, []);
   const timer = useRef<TimerDotHandle>(null);
   const undoTile = useRef<HTMLButtonElement>(null);
   const api = useApi();
@@ -323,7 +325,7 @@ export function DrawingScreen({
   }
 
   /** The sheet's place in the drawing screen, which the ceremony plays over. */
-  function sheetBox(): Box {
+  function sheetBox(): Rect {
     const screen = root.current?.getBoundingClientRect();
     const paper = root.current?.querySelector(".ink-sheet")?.getBoundingClientRect();
     if (!screen || !paper) throw new Error("the sheet isn't on screen");
@@ -1034,6 +1036,7 @@ export function DrawingScreen({
         nsfw={nsfwOn}
         subjects={lockedPair}
         ink={readInk}
+        density={readDensity}
         onNsfwChange={(on) => {
           keepNsfw(on);
           keeper.keepNsfw(on);
