@@ -1,8 +1,9 @@
 import type { BoardSticker } from "../boardSticker";
 import { messageOf } from "../../i18n/errorMessage";
+import { formatNo } from "../../stickers/format";
 import { maskPixels } from "../../stickers/maskPixels";
 import type { StickerUrls } from "../../stickers/stickerUrls";
-import { boxShape, outlineShape, shapeFromMask, type Shape } from "./sheetPacking";
+import { outlineShape, shapeFromMask, type Shape } from "./sheetPacking";
 
 /** A traced mask's long side, in cells: fine enough for a sticker sheet, quick to trace. */
 const TRACE_SIDE = 120;
@@ -16,24 +17,36 @@ type ShapeSource = Pick<BoardSticker, "id" | "no" | "width" | "height" | "outlin
 // By sticker: a sealed sticker's cut never changes.
 const known = new Map<string, Shape>();
 const tracing = new Map<string, Promise<Shape>>();
+/**
+ * Stickers whose mask couldn't be traced, by id: kept, so they aren't traced again, until a stored
+ * outline takes their place.
+ */
+const untraced = new Map<string, Shape>();
 /** Stickers whose cut line couldn't be read, by id, and why: their sheets pack each as a box. */
 const unreadable = new Map<string, string>();
 
 /** Why a sticker's cut line couldn't be read, or undefined when it could. */
 export const unreadableCut = (id: string): string | undefined => unreadable.get(id);
 
-/** A sticker's shape if it's known now: a stored outline always is, and a mask once it's traced. */
+/**
+ * A sticker's shape if it's known now: a stored outline always is, and a mask once it's traced or its
+ * trace has failed.
+ */
 export function knownShape(sticker: ShapeSource): Shape | undefined {
   let shape = known.get(sticker.id);
   if (!shape && sticker.outline !== undefined) {
     shape = outlineShape(sticker.outline, sticker.width, sticker.height);
+    untraced.delete(sticker.id);
+    unreadable.delete(sticker.id);
     if (shape.poly.length < 3) {
       unreadable.set(sticker.id, "its stored cut line has fewer than 3 points");
-      console.error(`No.${sticker.no}'s stored cut line is unreadable, so its sheet packs its box`);
+      console.error(
+        `${formatNo(sticker.no)}'s stored cut line is unreadable, so its sheet packs its box`,
+      );
     }
     known.set(sticker.id, shape);
   }
-  return shape;
+  return shape ?? untraced.get(sticker.id);
 }
 
 /**
@@ -78,15 +91,19 @@ export function stickerShape(
       (traced) => {
         known.set(sticker.id, traced);
         tracing.delete(sticker.id);
-        unreadable.delete(sticker.id);
         return traced;
       },
       (error: unknown) => {
-        // Not kept, so the next call tries again.
+        // No cut line, so it packs as its box, and its spot traces none.
+        const box: Shape = { w: sticker.width, h: sticker.height, poly: [] };
+        untraced.set(sticker.id, box);
         tracing.delete(sticker.id);
         unreadable.set(sticker.id, messageOf(error));
-        console.error(`Tracing No.${sticker.no}'s cut failed, so its sheet packs its box`, error);
-        return boxShape(sticker.width, sticker.height);
+        console.error(
+          `Tracing ${formatNo(sticker.no)}'s cut failed, so its sheet packs its box`,
+          error,
+        );
+        return box;
       },
     );
     tracing.set(sticker.id, trace);
