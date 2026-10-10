@@ -41,12 +41,13 @@
   display: contents;
 }
 
-/* Over all of what the sheet sits in, under the card. */
+/* Over all of what the sheet sits in, under the sheet. A caller tints it with --sheet-scrim, set where
+   the sheet is held. */
 .sheet-scrim {
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);
-  background: var(--scrim);
+  background: var(--sheet-scrim, var(--scrim));
   animation: sheet-scrim-in var(--t-peel) var(--ease-out);
 }
 

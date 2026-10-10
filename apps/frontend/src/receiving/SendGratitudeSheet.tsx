@@ -68,5 +68,9 @@ export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
   );
   if (!large) return sheet;
   // On a large screen it's a card in the middle, over a scrim that dims the board and the tab row.
-  return <PhonePortal eachRender>{sheet}</PhonePortal>;
+  return (
+    <PhonePortal eachRender>
+      <div className="send-gratitude-layer">{sheet}</div>
+    </PhonePortal>
+  );
 }

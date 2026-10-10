@@ -45,10 +45,11 @@ interface Props {
    */
   card?: boolean;
   /**
-   * As a card on a large screen, it sits over a scrim that dims what's around it and closes it at a
-   * tap, while it can close.
+   * It sits over a scrim that dims what's around it and closes it at a tap, while it can close: as a
+   * card on a large screen, or on every screen when "always". The scrim is tinted `--sheet-scrim`
+   * where the sheet is held, the Ink veil by default.
    */
-  scrim?: boolean;
+  scrim?: boolean | "always";
   className?: string;
   children: ReactNode;
 }
@@ -158,7 +159,7 @@ export function Sheet({
   if (!scrim) return sheet;
   return (
     <div ref={ownLayer} className="sheet-layer">
-      {card && large && (
+      {(scrim === "always" || (card && large)) && (
         // Fading out with the sheet, it lets the next tap through to what's under it.
         <div
           className={leaving ? "sheet-scrim is-leaving" : "sheet-scrim"}

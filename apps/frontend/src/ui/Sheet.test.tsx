@@ -35,6 +35,11 @@ const back = () =>
   act(() => void window.dispatchEvent(new PopStateEvent("popstate", { state: null })));
 const animationEnds = () =>
   act(() => void sheet()?.dispatchEvent(new Event("animationend", { bubbles: true })));
+/** A tap on the scrim. A browser's tap passes through an inert element, so it only counts if it's live. */
+const tapScrim = () => {
+  const scrim = host.querySelector<HTMLElement>(".sheet-scrim");
+  if (scrim && !scrim.closest("[inert]")) act(() => scrim.click());
+};
 
 /** A finger on the perforation, moved by each of `path`'s offsets in turn, then lifted there. */
 const drag = (...path: [dx: number, dy: number][]) => dragBy(perf(), ...path);
@@ -74,11 +79,6 @@ describe("Sheet", () => {
 
   it("on a large screen closes a card from its scrim while it can close, and lets taps through the scrim as it goes", () => {
     onLargeScreen();
-    // A browser's tap passes through an inert element, so the scrim only counts if it's live.
-    const tapScrim = () => {
-      const scrim = host.querySelector<HTMLElement>(".sheet-scrim");
-      if (scrim && !scrim.closest("[inert]")) act(() => scrim.click());
-    };
     render(true, { card: true, scrim: true, closable: false });
     tapScrim();
     expect(onClose).not.toHaveBeenCalled();
@@ -86,6 +86,17 @@ describe("Sheet", () => {
     tapScrim();
     expect(onClose).toHaveBeenCalledTimes(1);
     render(false, { card: true, scrim: true });
+    tapScrim();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("on a phone draws a scrim only when it's always there, which closes the sheet unless it's busy", () => {
+    render(true, { scrim: true });
+    expect(host.querySelector(".sheet-scrim")).toBeNull();
+    render(true, { scrim: "always", busy: true });
+    tapScrim();
+    expect(onClose).not.toHaveBeenCalled();
+    render(true, { scrim: "always" });
     tapScrim();
     expect(onClose).toHaveBeenCalledTimes(1);
   });
