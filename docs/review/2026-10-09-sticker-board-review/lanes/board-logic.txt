@@ -1,0 +1,91 @@
+board-logic lane (useBoardGestures, boardGesture, placement, boardSticker, testBoardSticker, boardComplete, boardSettled, largeLayout, lastBoard, keepAnimations, useCreases, stickerOrder) — snapshot 52493b56
+Status: in progress; findings appended as verified.
+
+[2 simplify] placement.ts:404 — `const room = others.length ? Math.min(...others.map((o) => gapOf(at, o))) : Infinity;`
+  Math.min() with no arguments is already Infinity, so the guard repeats it. Fix: `const room = Math.min(...others.map((o) => gapOf(at, o)));` Confidence: high.
+
+[2 naming] lastBoard.ts:70 — `export function forget()`; every importer renames it: giving/takeOuts.ts:3, stat-board/SettingsNote.tsx:17, StickerDetail.tsx:56 all `import { forget as forgetKeptBoard }`.
+  Fix: export it as `forgetKeptBoard` (StickerBoard.test.tsx:29 imports it bare). Confidence: high.
+
+[4 test] largeLayout.test.ts:29 — `const PHONE: BoardSize = { ...PHONE_BOARD, U: unitOf("phone", PHONE_BOARD.W) };`
+  The same expression as placement.ts:347 `PHONE_BOARD_SIZE`. Fix: import PHONE_BOARD_SIZE. Confidence: high.
+
+[4 test] largeLayout.test.ts:54-62 — lines 55-58 (`largeSpotFrom(corner|far|spot(0.5,0.5), ANY_SIZE)` and `holding(corner)`) don't depend on `ipad`, so they run three times inside `for (const ipad of IPADS)`.
+  Fix: assert the spread once before the loop; keep only the largeOf(...) size check in the loop. Confidence: high.
+
+[4 test] placement.test.ts:117-122 "gives the same spot for the same board" — with one sticker at (0.5,0.45) a laid-out spot has room, so freeSpot never reaches seededSpots; the call is plain arithmetic and can't differ between two calls. Swapping seededRandom for Math.random would not turn it red. Determinism of the seeded path is already asserted at :168 `expect(fill()).toEqual(board)`.
+  Fix: delete the test. Confidence: high.
+
+[4 test] boardSettled.test.ts:25-27 — `advanceTimersByTimeAsync(999)` then `(1)` restate QUIET_MS, which boardComplete.ts exports.
+  Fix: `const { markBoardComplete, QUIET_MS } = await import("./boardComplete");` and advance `QUIET_MS - 1`, then 1. Confidence: high.
+
+[4 test] boardComplete.test.ts:101-108 "counts as complete 10s after it first showed" — `advanceTimersByTimeAsync(9_999)` restates the private GIVE_UP_MS (10_000), as does the test name.
+  Fix: export GIVE_UP_MS, advance `GIVE_UP_MS - 1`, rename to "counts as complete once it has waited GIVE_UP_MS…" / "…when an image never arrives". Confidence: medium-high.
+
+[6 magic] boardComplete.ts:30 — `watchFrames("the 5s after the board was complete", completeAt, FRAMES_AFTER_MS);`
+  The label spells FRAMES_AFTER_MS's value; retuning the constant makes the performance report mislabel its window. Fix: `` `the ${FRAMES_AFTER_MS / 1000}s after the board was complete` ``. Confidence: high.
+
+--- batch 2 ---
+[1 dup, HIGH VALUE] boardSticker.ts:164 — `export const handleOf = (p: PersonView) => (p.handle === null ? p.name : formatHandle(p.handle));`
+  "How a person is printed" lives in the board's sticker model and is still re-spelled inline at least 9 times: receiving/ReceiveGiftDialog.tsx:65, receiving/SendGratitudeSheet.tsx:35, giving/GiftReceivedNotice.tsx:73, receiving/GiftsForYouBadge.tsx:29, explore/LiftedSticker.tsx:92, stickers/ArtistChip.tsx:36, sticker-board/ArtistBoard.tsx:70 and :145, StickerBoard.tsx:652-653 (`printedArtist`).
+  Fix: move handleOf to stickers/format.ts beside formatHandle and call it from each copy. Confidence: high.
+
+[1 unused export] boardSticker.ts:85 `export interface Placements`, boardComplete.ts:70 `export interface AssemblingSticker`, stickerOrder.ts:4 `export interface StickerPoint` — each is used only inside its own file.
+  Proof: `rg -n -w 'Placements' apps/frontend/src` -> boardSticker.ts:85,95,99 only; `rg -n -w AssemblingSticker` -> boardComplete.ts:70,75,89 only; `rg -n -w StickerPoint` -> stickerOrder.ts:4,14,15,26,53 only (the in-file hits are the known hits). Fix: drop `export`. Confidence: high.
+
+[2 naming] "held" means three things in these files: BoardStickerView.held (still yours, not given away), placeUnplaced's `held` parameter (boardSticker.ts:200, the stickers the board already shows; line 221 then reads `s.held`, the other meaning, in the same function), and useCreases' `held?: string` (useCreases.ts:328-329, the sticker in hand; useBoardGestures calls that "in hand"/`hold`).
+  Fix: rename placeUnplaced's parameter to `shown` (heldSpots -> shownSpots) and useCreases' option to `inHand`. Confidence: medium-high.
+
+[2 naming] useCreases.ts:38 `const MAX_SCALE = 1;` (crease pixels per CSS px) — placement.ts:1 imports the API's MAX_SCALE (a sticker's largest `s`) in the same folder; one name, two meanings. Fix: `MAX_BAKE_SCALE`. Confidence: medium.
+
+[2 naming] useCreases.ts:60 `type Box = { x; y; w; h; r }` shadows placement.ts's exported `Box` (left/top/right/bottom). Fix: `TurnedBox`. Confidence: medium-low.
+
+[2 simplify] placement.ts:343-344 `largeLandingSize = (s) => Number((s * LARGE_LANDING_GROWTH).toFixed(3))` has one caller, largeLayout.ts:40 `s: round4(clampS(largeLandingSize(phone.s), range))`, which rounds again to 4 places; naturalSOf(…, "large") applies the same growth a second way.
+  Fix: drop largeLandingSize; largeLayout.ts:40 `s: round4(clampS(phone.s * LARGE_LANDING_GROWTH, range))`. Confidence: medium.
+
+[2 simplify / 5 guard] useBoardGestures takes both `field` and `size`, but its only caller derives one from the other (StickerBoard.tsx:648 `const field = useMemo(() => size && fieldOf(size.W, size.H), [size])`), so "field without size" can't happen. The hook still guards it: useBoardGestures.ts:169 `size ? sRangeOf(...) : { min: s, max: s }`, :173-174 `if (!unit ...)`, :191 and :268 `latest.current.size?.U ?? 0` (a 0-px sticker if it ever ran).
+  Fix: take `size` only and derive the field inside (or guard `!field || !size` once per handler and pass size.U down); the four fallbacks go. Confidence: medium.
+
+[7 perf] useBoardGestures.ts:631-643 — a useLayoutEffect with no deps re-sorts every sticker into reading order (`orderOn` = toPx per sticker + sort) on every StickerBoard render, though it acts only when the focused sticker left the board; `stickers` is `onBoard`, a fresh `.filter` each render (StickerBoard.tsx:628), so adding deps alone won't help.
+  Fix: check the cheap conditions first (`lost`, `tabStop !== null`, tabStop gone from `stickers`), keep the previous `stickers` array in the ref, and compute reading order only then. Confidence: medium.
+
+[7 perf] useCreases.ts:335-345 — the bake signature strings every sticker's placement and calls foilOf for each on every board render, even with creases off, which is every device unless its developer slip switched them on (creasesShown defaults off). Fix: `const signature = shown ? [...].join("|") : "off";` (bake still runs once on the flip to clear). Confidence: medium.
+
+--- batch 3 ---
+[2 naming/vocab] boardSticker.ts:110-114 `export interface GivenSpots` ("The spots the board gave a sticker"), :195-196 "Each spot given is listed for saving", boardSticker.test.ts:101 `spotsGiven` — "given/gave" here means assigned a spot, but Giving is the gift flow; boardSticker.test.ts:99 `const given = boardSticker({ ..., held: false })` uses the gift meaning two lines above `spotsGiven`. StickerBoard.tsx:446 already calls the state `newlyPlaced`.
+  Fix: `NewSpots` / "The spots the board found for a sticker it had never placed, by layout, for saving." / `newSpots`. Confidence: medium-high.
+
+[2 naming] useBoardGestures.ts:60 `export type Hold` (a sticker in hand) shares its exported name with sticker-creation/session/session.ts:193 `export type Hold` (what holds the drawing clock). Fix: `InHand`. Confidence: low-medium.
+
+[2 simplify] placement.ts:280 `if (top + toolbar.h > board.H - 12 || meets(top))` restates `lowest` (:275 `board.H - toolbar.h - 12`). Fix: `if (top > lowest || meets(top))`. Confidence: high.
+
+[3 comment] placement.ts:124-128 NATURAL_SCALE: "A quarter lands a sticker drawn at the usual size where every new sticker landed when they all landed alike." — history of a replaced landing rule, and spells the value.
+  Rewrite: "/** Board px per sheet unit at a sticker's natural size, on the phone board: every sticker shows at the same share of the size it was drawn, so line weights match from sticker to sticker. */" Confidence: high.
+
+[3 comment] placement.ts:150-151 sRangeOf: "half to twice its natural size" spells RESIZE_REACH (2). Rewrite: "The sizes a sticker takes in `layout`, on a board with this field and unit: its natural size over RESIZE_REACH up to times it, as long as it fits the field and the layout's ceiling, which win." Confidence: medium.
+
+[3 comment/vocab] boardSticker.ts:69-71 "`to` is the handle of who it waits for: the artist picked in the app, or whoever first opened its link" — "artist" alone is ambiguous here (AGENTS.md: any user who makes stickers is an artist); the Gift Claim Token entry says "the person the giver picked in the app".
+  Rewrite: "`to` is the handle of who it waits for: the person the giver picked in the app, or whoever first opened its link, since LINE's friend picker never says who was picked." Confidence: medium-high.
+
+[6 magic/mirror] placement.ts:204-207 `KNOB_REACH = 42.5` "(see the CSS)" and `KNOB_TOUCH = 22` copy StickerBoard.css: the frame's `inset: -10px` less its 1.5px border (:160-161), the stem's 20px (:249), half the 28px knob (:259-260; its `top: -48px` :256), and the knob's `::before inset: -8px` (:275). A change to any of those four rules moves the knob off the spot knobHidden/knobBox compute. Same pattern as the already-reported kyotoSeikaBandWidth mirror.
+  Fix: one source, e.g. set the frame inset, stem and knob size as custom properties from these constants on the board, or at least name the rules in the comment. Confidence: medium.
+
+[6 magic] placement.ts:262-265 toolbarSpot: `+ 12`, `const [below, above] = knobBelow ? [50, 14] : [14, 50]`, `10`, `TRAY_EDGE - 4`, `HEADER - 6`: none says what it keeps clear. `50` is the knob's disc plus a gap but isn't derived from KNOB_REACH, so retuning the knob strands the toolbar; as written, with the knob below, the toolbar's top (y + h/2 + 62) sits 2.5px inside the knob's touch area (knobBox bottom y + h/2 + 64.5).
+  Fix: derive the knob side's gap from KNOB_REACH and KNOB_TOUCH (plus CLEARANCE), name the others. Confidence: medium.
+
+[6 magic] placement.ts:101,110-113 `const INSET = 12;` is only ever used as `INSET + 4` (left and width), and `h: Math.max(120, height - FOOT - HEADER)` has an unexplained floor. Fix: one named left margin; name the floor and say why. Confidence: medium-low.
+
+[6 magic] useBoardGestures.ts:374 `y: Math.min(size.H - 90, foot - 60, Math.max(field.top + 40, from.y))` — the comment above explains the min with the pouch's foot but not 90/60/40. Fix: name them for what they keep clear (the tray's foot, the pouch's mouth, the header). Confidence: medium-low.
+
+[4 test] placement.test.ts:189 `board.W - 40` restates TRAY_EDGE, which placement.ts exports; :191 `sticker.y + sticker.h / 2 + 42.5 + 14` restates the private KNOB_REACH and the knob's radius; :222 `top > y + 22 || top + bar.h < y - 22` restates the private MIDDLE_CLEAR.
+  Fix: import TRAY_EDGE; export and import KNOB_REACH/MIDDLE_CLEAR (or assert against knobBox(sticker, true), noting that today fails by the 2.5px above). Confidence: medium-high.
+
+[4 test] boardGesture.test.ts:91-94 `passedSlop({0,0},{6,0})` false / `({0,0},{5,5})` true pins the private SLOP at 6: retuning it to 8 turns the test red without any behavior breaking. Fix: export SLOP and test at SLOP and just past it. Confidence: medium.
+
+[4 test] lastBoard.test.ts:15 `const KEY = "draw.lastBoard";` and StickerBoard.test.tsx:196 `localStorage.getItem("draw.lastBoard")` copy lastBoard.ts:28's private KEY. Fix: export it (e.g. KEPT_BOARD_KEY) and import it. Confidence: medium.
+
+[4 test] useBoardGestures.test.tsx:191 `vi.useFakeTimers(...)` in "goes between stickers on focus alone…" is never undone (the file's afterEach :89-93 only restores mocks), so fake timers leak into the next four tests until the "steps" describe's afterEach (:366). Fix: `vi.useRealTimers()` in the file's afterEach. Confidence: medium.
+
+[4 test] useBoardGestures.test.tsx keydown dispatch `x.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }))` spelled 6 times (:182, :219, :348-350, :405, :426, :504-505); dragAcross's inner `at` (:72-75) duplicates `point` (:96-99). Fix: one `keyDown(el, key)` helper beside `point`, and dragAcross built from `point`. Confidence: medium.
+
+[4 test] useBoardGestures.test.tsx:12-15 declares and sets `IS_REACT_ACT_ENVIRONMENT` itself; `rg -l "IS_REACT_ACT_ENVIRONMENT = true" apps/frontend/src | wc -l` -> 44 files do the same (api/testing.tsx is one; boardComplete.test.ts imports it just for that), and vite.config.ts has no test setup (`rg -n "setupFiles|environment|test:" apps/frontend/vite.config.ts` -> exit 1; known hit `plugins` at :9). Fix (app-wide): one vitest `setupFiles` entry. Confidence: medium.
