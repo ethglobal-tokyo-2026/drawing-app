@@ -114,14 +114,27 @@ export class FakeContext {
     return out;
   }
 
-  putImageData(image: ImageData, x: number, y: number): void {
-    this.record("putImageData", [image, x, y]);
+  /**
+   * `putImageData(image, dx, dy)`, or with a dirty rect: only that part of the image is written. As
+   * in a browser, a negative size flips the rect, and it's cut to the image and to the canvas.
+   */
+  putImageData(image: ImageData, dx: number, dy: number, ...dirty: number[]): void {
+    this.record("putImageData", [image, dx, dy, ...dirty]);
+    if (dirty.length !== 0 && dirty.length !== 4) {
+      throw new Error(`The fake canvas takes a dirty rect of 4 numbers, not ${dirty.length}`);
+    }
+    const [x, y, w, h] = dirty.length === 4 ? dirty : [0, 0, image.width, image.height];
     const to = this.image;
-    for (let row = 0; row < image.height; row++) {
-      const start = row * image.width * 4;
+    const left = Math.max(0, Math.min(x, x + w), -dx);
+    const right = Math.min(image.width, Math.max(x, x + w), to.width - dx);
+    const top = Math.max(0, Math.min(y, y + h), -dy);
+    const bottom = Math.min(image.height, Math.max(y, y + h), to.height - dy);
+    if (right <= left) return;
+    for (let row = top; row < bottom; row++) {
+      const start = (row * image.width + left) * 4;
       to.data.set(
-        image.data.subarray(start, start + image.width * 4),
-        ((y + row) * to.width + x) * 4,
+        image.data.subarray(start, start + (right - left) * 4),
+        ((dy + row) * to.width + dx + left) * 4,
       );
     }
   }
