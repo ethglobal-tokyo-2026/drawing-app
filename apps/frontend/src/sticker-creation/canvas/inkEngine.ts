@@ -8,8 +8,8 @@ import type { FillOp, Op, Step, StrokeOp, Tool } from "./ops";
 import { areaFrame, frameFor, type SheetArea, type SheetFrame } from "./sheetFrame";
 import { PAUSE_MS, Stabilizer } from "./stabilizer";
 
-/** A fill takes a tap: a pointer that lifts within this many sheet units of where it landed. */
-const TAP_SLOP = 10;
+/** A fill takes a tap: a pointer that lifts within this many CSS px of where it landed. */
+export const FILL_TAP_SLOP = 10;
 /** A touch on a paused sheet that drags this many CSS px gets the paused hint before it lifts. */
 const BLOCKED_DRAG = 8;
 /** When the browser takes a pointer mid-stroke, the stroke stays if it had gone this many units. */
@@ -145,7 +145,7 @@ type PointerRole = { pointerType: string } &
   (
     | { kind: "stroke" }
     /** It fills where it landed, in sheet units, if it lifts close by. */
-    | { kind: "fill"; x: number; y: number }
+    | { kind: "fill"; x: number; y: number; cx: number; cy: number }
     /** A touch on a paused sheet: the paused hint waits a beat in case a second finger makes a tap. */
     | { kind: "blocked"; cx: number; cy: number }
     /** A touch held for the tap recognizer alone. */
@@ -155,6 +155,12 @@ type PointerRole = { pointerType: string } &
   );
 
 const swallowed = (pointerType: string): PointerRole => ({ pointerType, kind: "swallowed" });
+
+/**
+ * WebKit marks an Apple Pencil's touch, which lib.dom's Touch leaves out; another browser may not
+ * list a stylus among the touches at all, so only this mark ends a pen stroke.
+ */
+const isStylus = (touch: Touch) => "touchType" in touch && touch.touchType === "stylus";
 
 /**
  * Turns pointer input into ink. Pointer events only queue samples; one animation frame at a time
@@ -247,6 +253,7 @@ export class InkEngine {
     // The screen's own count of fingers, heard wherever they lift, outlasts a lift the sheet missed.
     const onTouchEnd = (e: TouchEvent) => {
       if (e.touches.length === 0) this.screenClear();
+      if (Array.from(e.changedTouches).some(isStylus)) this.pencilLifted();
     };
     document.addEventListener("touchend", onTouchEnd);
     document.addEventListener("touchcancel", onTouchEnd);
@@ -283,6 +290,14 @@ export class InkEngine {
   /** Every finger left the screen, so whatever lifts went missing, the next touch is the only one down. */
   screenClear(): void {
     this.fingersGone = true;
+  }
+
+  /** The Pencil's touch ended: a pen stroke still live lifted where the sheet couldn't hear. */
+  private pencilLifted(): void {
+    const live = this.live;
+    if (live?.pointerType !== "pen") return;
+    this.pointers.delete(live.id);
+    this.endStroke(false);
   }
 
   down(e: PointerInput): void {
@@ -345,7 +360,8 @@ export class InkEngine {
     }
     this.origin = this.place();
     const [x, y] = this.toSheet(e);
-    if (s.tool === "fill") this.pointers.set(id, { pointerType, kind: "fill", x, y });
+    if (s.tool === "fill")
+      this.pointers.set(id, { pointerType, kind: "fill", x, y, cx: e.clientX, cy: e.clientY });
     else this.beginStroke(e, x, y);
   }
 
@@ -595,12 +611,14 @@ export class InkEngine {
     if (role.kind === "blocked") {
       if (!cancelled) this.events.onBlocked();
     } else if (role.kind === "fill") {
-      const [x, y] = this.toSheet(e);
-      if (!cancelled && Math.hypot(x - role.x, y - role.y) < TAP_SLOP)
+      if (!cancelled && Math.hypot(e.clientX - role.cx, e.clientY - role.cy) < FILL_TAP_SLOP)
         this.applyFill(role.x, role.y);
     } else if (role.kind === "stroke" && this.live) {
       const { live } = this;
-      if (!cancelled) [live.x, live.y] = this.toSheet(e);
+      if (!cancelled) {
+        [live.x, live.y] = this.toSheet(e);
+        live.t = e.timeStamp;
+      }
       this.endStroke(cancelled && live.moved < CANCEL_KEEPS);
     }
   }
@@ -720,9 +738,11 @@ export class InkEngine {
     }
     timeOurWork(INK_WORK.paint, () => {
       this.feed(live);
-      // The way to the lift point is the line catching up, not the pointer moving: it keeps the width.
-      for (const [x, y, t] of live.stabilizer.finish(live.x, live.y))
-        live.builder.add(x, y, live.pressure, t, null);
+      // The way to the lift point is the line catching up, not the pointer moving: it keeps the width,
+      // and shows at once, so it's recorded at the lift's time.
+      const lifted = Math.max(live.t, live.stabilizer.time);
+      for (const [x, y] of live.stabilizer.finish(live.x, live.y))
+        live.builder.add(x, y, live.pressure, lifted, null);
       live.builder.settle(live.x, live.y);
       this.paintNew(live);
     });

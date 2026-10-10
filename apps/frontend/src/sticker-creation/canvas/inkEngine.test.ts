@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { PALM_CONTACT_PX, YOUNG_MS } from "./gestures";
 import {
   CANCEL_KEEPS,
+  FILL_TAP_SLOP,
   INK_WORK,
   InkEngine,
   type HoverRing,
@@ -294,6 +295,22 @@ describe("InkEngine", () => {
     }
   });
 
+  it("records the line's catch-up to where a quick pen lifted at the lift's time, as it shows at once", () => {
+    const { engine, at, runFrame, committed } = setup({ smoothing: SMOOTH });
+    engine.down(at("pen", 1, 0, 0, 0));
+    for (let i = 1; i <= ROW_STEPS; i++) {
+      engine.move(at("pen", 1, i * ROW_STEP, 0, i * QUICK_MS));
+      runFrame();
+    }
+    const lifted = (ROW_STEPS + 1) * QUICK_MS;
+    engine.up(at("pen", 1, ROW_STEPS * ROW_STEP, 0, lifted));
+    const op = committed()[0];
+    if (op.tool === "fill") throw new Error("Expected a stroke, got a fill");
+    const times = Array.from({ length: op.pts.length / STRIDE }, (_, i) => op.pts[i * STRIDE + 3]);
+    expect(Math.max(...times)).toBe(lifted);
+    expect(lastPoint(op)).toEqual([ROW_STEPS * ROW_STEP, 0]);
+  });
+
   it("takes back a stroke when a second finger lands on it, and undoes on the tap", () => {
     const { engine, at, stroke, committed, events } = setup();
     stroke("touch", 1, [0, 0], [100, 0]);
@@ -433,11 +450,22 @@ describe("InkEngine", () => {
     expect(committed()).toHaveLength(1);
   });
 
-  it("fills on a tap, not on a drag", () => {
-    const { stroke, committed } = setup({ tool: "fill" });
-    stroke("touch", 1, [40, 40], [46, 40]);
-    stroke("touch", 2, [40, 40], [80, 40], 1000);
-    expect(committed()).toEqual([expect.objectContaining({ tool: "fill", x: 40, y: 40 })]);
+  it("fills on a tap, not on a drag, by how far the finger went on screen whatever the sheet's scale", () => {
+    for (const scale of [1, 2.5]) {
+      const { engine, at, committed } = setup({ tool: "fill" });
+      const detach = engine.attach(paperAt(framed(engine), 0, 0, scale));
+      /** A finger landing at 40, 40 on screen and lifting `drift` CSS px to its right. */
+      const tapAt = (id: number, drift: number, t: number) => {
+        engine.down(at("touch", id, 40, 40, t));
+        engine.up(at("touch", id, 40 + drift, 40, t + 50));
+      };
+      tapAt(1, FILL_TAP_SLOP - 1, 0);
+      tapAt(2, FILL_TAP_SLOP, 1000);
+      detach();
+      expect(committed()).toEqual([
+        expect.objectContaining({ tool: "fill", x: 40 / scale, y: 40 / scale }),
+      ]);
+    }
   });
 
   it("keeps a stroke the browser takes once it has gone far enough, where it was last seen, and fills or undoes nothing for a touch it takes", () => {
@@ -629,6 +657,32 @@ describe("InkEngine", () => {
       expect(lastPoint(stale)).toEqual([50, 0]);
       expect(next?.tool === "fill" ? [] : next?.pts.slice(0, 2)).toEqual([0, 50]);
     }
+  });
+
+  it("ends a pen stroke where it stands once the Pencil's touch ends unheard by the sheet, and not when only a finger's does", () => {
+    const { engine, at, runFrame, stroke, committed } = setup({ inputMode: "pencilAndFinger" });
+    const detach = engine.attach(paperAt(framed(engine), 0, 0, 1));
+    /** The screen's touchend for a touch of this type, with no touch left down. */
+    const touchEnds = (touchType: string) =>
+      document.dispatchEvent(
+        new TouchEvent("touchend", {
+          touches: [],
+          changedTouches: [
+            Object.assign(new Touch({ identifier: 1, target: document.body }), { touchType }),
+          ],
+        }),
+      );
+    engine.down(at("pen", 1, 0, 0, 0));
+    engine.move(at("pen", 1, 50, 0, 16));
+    runFrame();
+    touchEnds("direct");
+    expect(committed()).toEqual([]);
+    touchEnds("stylus");
+    expect(committed().map(lastPoint)).toEqual([[50, 0]]);
+    // Fingers draw again.
+    stroke("touch", 2, [0, 50], [100, 50], 1000);
+    expect(committed()).toHaveLength(2);
+    detach();
   });
 
   it("takes a two-finger tap begun just before a pen lands as the hand resting: it undoes nothing", () => {

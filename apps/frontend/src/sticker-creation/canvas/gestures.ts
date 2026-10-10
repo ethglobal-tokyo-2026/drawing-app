@@ -1,13 +1,13 @@
-/** Every finger must lift within this long of the gesture's start… */
-const TAP_MS = 420;
+/** A multi-finger tap: every finger lifts within this many ms of the tap's start… */
+export const MULTI_FINGER_TAP_MS = 420;
 /** …each having moved less than this many CSS px. */
-const TAP_SLOP = 14;
+export const MULTI_FINGER_TAP_SLOP = 14;
 /**
  * A stroke younger and shorter than this when a second finger lands was the start of a tap. A touch
  * down this long when a tap begins was there before it, and rests.
  */
 export const YOUNG_MS = 260;
-const YOUNG_PX = 26;
+export const YOUNG_PX = 26;
 /** A contact this wide on its longer side, in CSS px, is a palm, never a fingertip. */
 export const PALM_CONTACT_PX = 80;
 
@@ -35,10 +35,13 @@ interface LiveStroke {
   moved: number;
 }
 
-/** Where and when a touch landed, and whether it rests: a resting touch counts toward no tap. */
+/** Where a touch is, when it landed, and whether it rests: a resting touch counts toward no tap. */
 interface HeldTouch {
+  /** Where it was as the tap began, or where it landed after: a tap measures its movement from here. */
   x0: number;
   y0: number;
+  x: number;
+  y: number;
   t0: number;
   resting: boolean;
 }
@@ -56,7 +59,7 @@ export class TapRecognizer {
     // A tap begins with this touch: whatever has been down a while was there before it.
     if (!this.gesture)
       for (const touch of this.touches.values()) if (t - touch.t0 >= YOUNG_MS) touch.resting = true;
-    this.touches.set(id, { x0: x, y0: y, t0: t, resting: palm });
+    this.touches.set(id, { x0: x, y0: y, x, y, t0: t, resting: palm });
     if (palm) return "ignore";
     const fingers = this.fingers();
     if (fingers < 2 && !this.gesture) return "draw";
@@ -65,7 +68,14 @@ export class TapRecognizer {
       if (stroke.age >= YOUNG_MS || stroke.moved >= YOUNG_PX) return "ignore";
       result = "cancel-stroke";
     }
-    this.gesture ??= { t0: t, fingers: 0, moved: 0 };
+    if (!this.gesture) {
+      // A finger already down may have drawn the dash the tap takes back: only its moves from here count.
+      for (const touch of this.touches.values()) {
+        touch.x0 = touch.x;
+        touch.y0 = touch.y;
+      }
+      this.gesture = { t0: t, fingers: 0, moved: 0 };
+    }
     this.gesture.fingers = Math.max(this.gesture.fingers, fingers);
     return result;
   }
@@ -73,6 +83,8 @@ export class TapRecognizer {
   move(id: number, x: number, y: number, palm = false): void {
     const touch = this.touches.get(id);
     if (!touch) return;
+    touch.x = x;
+    touch.y = y;
     // A fingertip that spreads into a palm rests from then on.
     if (palm) touch.resting = true;
     if (!this.gesture || touch.resting) return;
@@ -91,7 +103,8 @@ export class TapRecognizer {
     const gesture = this.gesture;
     if (!gesture || this.fingers() > 0) return null;
     this.gesture = null;
-    if (t - gesture.t0 >= TAP_MS || gesture.moved >= TAP_SLOP) return null;
+    if (t - gesture.t0 >= MULTI_FINGER_TAP_MS || gesture.moved >= MULTI_FINGER_TAP_SLOP)
+      return null;
     if (gesture.fingers === 2) return "undo";
     return gesture.fingers >= 3 ? "redo" : null;
   }
