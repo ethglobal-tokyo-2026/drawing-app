@@ -9,7 +9,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { isPerformanceRecorderOn, notePerformance } from "../performance/performanceRecorder";
-import { CREASE_SIDES, lightIn, type CreaseSide } from "../stickers/crease";
+import { CREASE_SIDES, lightIn, type CreaseImage, type CreaseSide } from "../stickers/crease";
 import type {
   Affine,
   CreaseBatch,
@@ -115,6 +115,12 @@ const bySide = <T>(of: (side: CreaseSide) => T): Record<CreaseSide, T> => ({
   bottomRight: of("bottomRight"),
   topRight: of("topRight"),
   bottomLeft: of("bottomLeft"),
+});
+
+/** A value for each of a crease's images. */
+const byImage = <T>(of: (image: CreaseImage) => T): Record<CreaseImage, T> => ({
+  base: of("base"),
+  ...bySide(of),
 });
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -242,7 +248,7 @@ export class CreaseStore {
     if (this.#wanted.get(id) !== key) return;
     this.#put(id, {
       key,
-      ...(crease && { crease: bySide((side) => URL.createObjectURL(crease[side])) }),
+      ...(crease && { crease: byImage((image) => URL.createObjectURL(crease[image])) }),
     });
   }
 

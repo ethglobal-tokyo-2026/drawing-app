@@ -4,7 +4,7 @@
  * replaces whatever of the last one hasn't started.
  */
 import { releaseCanvas } from "../ui/releaseCanvas";
-import { creasePixels, stackedSurface, type CreaseSide } from "./crease";
+import { creasePixels, stackedSurface, type CreaseImage, type CreaseSide } from "./crease";
 
 /** A 2D affine, as setTransform takes it. */
 export type Affine = [number, number, number, number, number, number];
@@ -61,14 +61,14 @@ export interface CreaseTimings {
   total: number;
 }
 
-/** A baked crease, lit from each side; null when nothing underneath shows a step. */
+/** A baked crease, its base and its rise lit from each side; null when nothing underneath shows a step. */
 export type CreaseReply =
   | {
       ok: true;
       board: string;
       id: string;
       key: string;
-      crease: Record<CreaseSide, Blob> | null;
+      crease: Record<CreaseImage, Blob> | null;
       timings: CreaseTimings;
     }
   | { ok: false; board: string; id: string; key: string; error: string };
@@ -172,6 +172,7 @@ async function bake(board: string, job: CreaseJob): Promise<CreaseReply> {
     });
     const t3 = performance.now();
     const crease = pixels && {
+      base: await pngOf(canvas, pixels.base),
       topLeft: await pngOf(canvas, pixels.topLeft),
       bottomRight: await pngOf(canvas, pixels.bottomRight),
       topRight: await pngOf(canvas, pixels.topRight),

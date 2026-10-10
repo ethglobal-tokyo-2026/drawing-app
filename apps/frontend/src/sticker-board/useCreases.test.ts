@@ -168,7 +168,7 @@ describe("CreaseStore", () => {
 
   const [job] = jobsFor([sticker("lower", { x: 0.4 }), sticker("top", { x: 0.6 })]);
 
-  /** The worker's answer to `of`: the crease lit from each side, or none when nothing showed a step. */
+  /** The worker's answer to `of`: the crease's images, or none when nothing showed a step. */
   const bake = (of: CreaseJob, made = true): Extract<CreaseReply, { ok: true }> => ({
     ok: true,
     board: "board",
@@ -176,6 +176,7 @@ describe("CreaseStore", () => {
     key: of.key,
     crease: made
       ? {
+          base: new Blob(["base"]),
           topLeft: new Blob(["topLeft"]),
           bottomRight: new Blob(["bottomRight"]),
           topRight: new Blob(["topRight"]),

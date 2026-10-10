@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { CREASE_SIDES, RAMP, creasePixels, drape, stackedSurface, type CreaseSide } from "./crease";
+import {
+  CREASE_SIDES,
+  RAMP,
+  creasePixels,
+  drape,
+  stackedSurface,
+  type CreaseImage,
+} from "./crease";
 
 const W = 120;
 const H = 60;
@@ -13,10 +20,10 @@ const field = (value: (x: number, y: number) => number) => {
 const everywhere = field(() => 1);
 
 /**
- * The crease of an unturned sticker covering the whole field over `layers`, at one pixel per CSS px,
- * lit from `side`: the one light at rest unless another is named.
+ * The crease of an unturned sticker covering the whole field over `layers`, at one pixel per CSS px:
+ * its image lit from the one light at rest unless another is named.
  */
-function creaseOver(layers: Float32Array[], side: CreaseSide = "topLeft") {
+function creaseOver(layers: Float32Array[], image: CreaseImage = "topLeft") {
   const pixels = creasePixels({
     width: W,
     height: H,
@@ -26,7 +33,7 @@ function creaseOver(layers: Float32Array[], side: CreaseSide = "topLeft") {
     lights: CREASE_SIDES,
   });
   if (!pixels) throw new Error("No crease over a step");
-  return pixels[side];
+  return pixels[image];
 }
 
 /** The crease's lit (white) and shaded (ink) alpha, summed over a box. */
@@ -98,6 +105,26 @@ describe("crease", () => {
     ]) {
       expect(lit.lit).toBeGreaterThan(lit.shade);
       expect(shaded.shade).toBeGreaterThan(shaded.lit);
+    }
+  });
+
+  it("keeps a step's shoulder and foot in the base, which shows with the light overhead", () => {
+    const step = field((x) => (x < W / 2 ? 1 : 0));
+    const ramp = tones(creaseOver([step], "base"), W / 2 - RAMP, W / 2 + 2 * RAMP, 5, H - 5);
+    expect(ramp.lit).toBeGreaterThan(0);
+    expect(ramp.shade).toBeGreaterThan(0);
+  });
+
+  it("leaves what doesn't slope out of each side's image: a ridge's level crest shows only in the base", () => {
+    // A strip beneath, one column either side of the middle, so the crest over it is level.
+    const middle = W / 2;
+    const strip = field((x) => (Math.abs(x - middle) <= 1 ? 1 : 0));
+    /** How opaque `image` is on the crest. */
+    const onCrest = (image: CreaseImage) =>
+      creaseOver([strip], image)[((H / 2) * W + middle) * 4 + 3];
+    expect(onCrest("base")).toBeGreaterThan(0);
+    for (const side of ["topLeft", "bottomRight", "topRight", "bottomLeft"] as const) {
+      expect(onCrest(side)).toBe(0);
     }
   });
 });
