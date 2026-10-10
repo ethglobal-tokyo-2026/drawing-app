@@ -17,6 +17,13 @@ export const errorMessage = (error: ApiError): string => {
     : i18next.t(($) => $.errors.unknown, { code: wrappable(code) });
 };
 
+/**
+ * What anything thrown says of itself: an Error's message, anything else as a string. Its own English
+ * words, for a detail or a log, never the sentence a screen shows.
+ */
+export const messageOf = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
 /** The status, code and server's English detail, for the fine print beside Copy. */
 export const errorDetail = (error: ApiError): string =>
   `${error.status > 0 ? `${error.status} · ` : ""}${error.message}`;

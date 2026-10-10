@@ -23,14 +23,14 @@ Seven verifiers checked every candidate against main, one verdict each, and a sw
 | `fix/review-seal-speed`   | A3-4, O-6, O-7/A3-5, A3-6, S-2, R-2 (`blankCanvas`), K-9, K-11                                           |
 | `fix/review-screen`       | Z-3/A4-7, S-5, S-6, S-7/R-4, S-8, A2-5, K-1, K-2 (code), K-5, K-10, X-1, X-5 (timer), X-8, X-9           |
 | `fix/review-kept-drawing` | A4-1, A4-2, A4-3, A4-4, A4-5, Z-1/X-6 (rolls and picks), K-4                                             |
-| `fix/review-clock`        | S-4/H-6/D-7/A4-8, Z-4, B-4, X-4/X-7 (clock), K-6/K-9/K-10 (session), one error-text helper               |
+| ~~`fix/review-clock`~~    | S-4/H-6/D-7/A4-8, Z-4, B-4, X-4/X-7 (clock), K-6/K-9/K-10 (session), one error-text helper               |
 | `fix/review-tools-css`    | R-3, Z-7, T-6, K-3/K-6/K-7/K-10 (CSS), X-9 (Smoothing bar)                                               |
 
 At merge: A4-3's call site and R-5's density prop in `DrawingScreen.tsx`, and the die-cut's inline clamp and second segment distance (R-extras) once the stroke lane lands.
 
 **The layers build** (`docs/superpowers/plans/2026-10-09-layers.md`) takes what sits in the files it rewrites: the wet-stroke canvas for P-1/T-1/M-1/M-2/H-2/H-3/A1-8/A1-11 and C-1/P-2; history for O-1/A1-7/M-3, H-1/P-3/M-4/O-4, O-3 and O-8; and B-1, A1-12, H-5, T-8, S-1/D-2, S-3, C-5, O-5/D-4, R-2 (`copyOf`), R-7 (`Rect`, `Pixels`), A4-6 and `readStep`'s `gap` fallback.
 
-**The whole-sheet timelapse's plan** has SW-1.
+**Fixed on main** besides: SW-1 (the timelapse clips its ink to the sheet), and every finding of `fix/review-clock`.
 
 **Left, and why:**
 

@@ -9,14 +9,13 @@ import {
 } from "../../performance/performanceRecorder";
 import { readBootMilestones } from "../../performance/bootMilestones";
 import { formatPerformanceReport, formatSummaryLine } from "../../performance/performanceReport";
+import { messageOf } from "../../i18n/errorMessage";
 import { useTranslation } from "../../i18n/react";
 import { Copy } from "../../icons";
 import { ErrorLine } from "../../ui/ErrorLine";
 import { LabelButton } from "../../ui/LabelButton";
 import { QuietLink } from "../../ui/QuietLink";
 import "./performance-recorder-controls.css";
-
-const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /** The performance recorder's switch, live summary and report, on the stat board's developer slip. */
 export function PerformanceRecorderControls() {
@@ -67,7 +66,7 @@ export function PerformanceRecorderControls() {
     } catch (error) {
       console.error("The performance recorder's switch failed", error);
       // Either it switched and only its setting wasn't kept, or it couldn't switch at all.
-      const why = { reason: reason(error) };
+      const why = { reason: messageOf(error) };
       setProblem(
         isPerformanceRecorderOn() === next
           ? next
@@ -100,7 +99,7 @@ export function PerformanceRecorderControls() {
     } catch (error) {
       console.error("The performance report couldn't be copied", error);
       setProblem(
-        t(($) => $.stickerBoard.developer.performance.notCopied, { reason: reason(error) }),
+        t(($) => $.stickerBoard.developer.performance.notCopied, { reason: messageOf(error) }),
       );
       setUncopied(report);
     }

@@ -121,8 +121,6 @@ type PagePointer = {
   primary: boolean;
   /** When it happened, in ms since the epoch. */
   time?: number;
-  /** Where the pen goes next, as the browser would guess it. */
-  next?: At;
 };
 
 /**
@@ -168,12 +166,7 @@ function dispatchPointer(e: PagePointer) {
   };
   const target = state.landed ?? document.elementFromPoint(e.at.x, e.at.y);
   moveTo(target);
-  const event = new PointerEvent(e.type, {
-    ...init,
-    predictedEvents: e.next
-      ? [new PointerEvent("pointermove", { ...init, clientX: e.next.x, clientY: e.next.y })]
-      : [],
-  });
+  const event = new PointerEvent(e.type, init);
   if (e.time !== undefined)
     Object.defineProperty(event, "timeStamp", { value: e.time - performance.timeOrigin });
   target?.dispatchEvent(event);
@@ -185,18 +178,14 @@ function dispatchPointer(e: PagePointer) {
 
 function pagePencil(page: Page): Pencil {
   const id = 2;
-  let last: At | null = null;
   const send = (
     type: PagePointer["type"],
     at: At,
     force: number,
     pressed: boolean,
     time?: number,
-  ) => {
-    // A pressed pen's next point, as far on as it just came.
-    const next = pressed && last ? { x: 2 * at.x - last.x, y: 2 * at.y - last.y } : undefined;
-    last = pressed ? at : null;
-    return page.evaluate(dispatchPointer, {
+  ) =>
+    page.evaluate(dispatchPointer, {
       type,
       id,
       kind: "pen" as const,
@@ -206,9 +195,7 @@ function pagePencil(page: Page): Pencil {
       pressed,
       primary: true,
       time,
-      next: type === "pointermove" ? next : undefined,
     });
-  };
   return {
     hover: (point) => send("pointermove", point, 0, false),
     down: (point, force, time) => send("pointerdown", point, force, true, time),

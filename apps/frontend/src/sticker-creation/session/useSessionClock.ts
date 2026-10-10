@@ -1,20 +1,32 @@
 import { useEffect, useEffectEvent, useState } from "react";
+import { clamp } from "../../ui/easing";
 import { browserFrames, type FrameSource } from "../../ui/frameSource";
 import { useReducedMotion } from "../../ui/useReducedMotion";
-import { heldBy, sessionMs, type Hold } from "./session";
+import { sessionMs } from "./session";
 
 /** A frame can count at most this much, so a stalled or throttled page never eats the session. */
-const MAX_FRAME_MS = 5_000;
+export const MAX_FRAME_MS = 5_000;
 /** After a hidden page returns, the clock waits this long, while the dot's lifted corner settles. */
-const HIDDEN_RESUME_MS = 420;
+export const HIDDEN_RESUME_MS = 420;
 /** The timer turns Tomato for this last stretch. */
-const LATE_MS = 10_000;
+export const LATE_MS = 10_000;
 /**
- * The clock warns, once each, as it counts down through these many seconds left: the proctor's time
- * calls, which only Kyoto Seika Manga Expression Practice Mode's clock is long enough to reach, then
- * the last 30 and 10 seconds.
+ * The clock warns, once each, as it counts down through these many seconds left: first the proctor's
+ * time calls, in whole minutes, which only Kyoto Seika Manga Expression Practice Mode's clock is long
+ * enough to reach, then the last two, which every clock reaches.
  */
 export const WARN_AT_SECONDS = [10 * 60, 5 * 60, 30, 10] as const;
+
+/** Which hold the timer shows when several hold the clock, most important first. */
+const HOLDS = ["paused", "hidden", "away", "seal", "color", "smoothing", "clear", "size"] as const;
+
+/**
+ * Why the clock is held: the person's pause, a hidden page, the drawing screen being covered, the
+ * seal sheet, or a tool in hand (the color sheet, the Smoothing bar, the clear bar, a finger on the
+ * size rail). Only a started clock is held; before the first stroke it just waits, and nothing shows
+ * as paused.
+ */
+export type Hold = (typeof HOLDS)[number];
 
 /** What the timer dot shows. A new object only when one of these changes. */
 export interface ClockView {
@@ -31,16 +43,6 @@ export interface ClockView {
 
 /** The holds the drawing screen sets. The clock watches the page itself for `hidden`. */
 export type ScreenHolds = Record<Exclude<Hold, "hidden">, boolean>;
-
-const SCREEN_HOLDS = [
-  "paused",
-  "away",
-  "seal",
-  "color",
-  "smoothing",
-  "clear",
-  "size",
-] as const satisfies readonly (keyof ScreenHolds)[];
 
 /**
  * The sheet's drawing clock, as long as its ticket gives. Frames run only while it counts, or while a
@@ -63,6 +65,8 @@ export class SessionClock {
     size: false,
   };
   private hidden = false;
+  /** The hold the timer shows, found only as the holds or `hidden` change: a frame just reads it. */
+  private held: Hold | null = null;
   private resumeAt: number | null = null;
   private cancelFrame: (() => void) | null = null;
   private onTimeUp: (() => void) | null = null;
@@ -73,7 +77,7 @@ export class SessionClock {
   constructor(frames: FrameSource = browserFrames, lengthMs = sessionMs(false)) {
     this.frames = frames;
     this.lengthMs = lengthMs;
-    this.view = this.computeView();
+    this.view = this.viewAfter(null);
   }
 
   /** Time drawn so far, in ms. */
@@ -95,7 +99,7 @@ export class SessionClock {
 
   /**
    * Hears each warning that time is nearly up, with the seconds left. Only counting down through one
-   * warns, so a kept drawing picked back up inside the last 30 seconds says nothing of it.
+   * warns, so a kept drawing picked back up past a warning says nothing of it.
    */
   onWarning = (listener: (secondsLeft: number) => void): (() => void) => {
     this.warnings.add(listener);
@@ -145,12 +149,13 @@ export class SessionClock {
   /** Picks a drawing kept across a reload back up: started, with the time it had drawn. */
   restore(elapsedMs: number): void {
     if (this.state !== "idle") return;
-    this.elapsedMs = Math.min(this.lengthMs, Math.max(0, elapsedMs));
+    this.elapsedMs = clamp(elapsedMs, 0, this.lengthMs);
     this.setState("running");
   }
 
   setHolds(holds: ScreenHolds): void {
     this.holds = holds;
+    this.findHeld();
     this.changed();
   }
 
@@ -161,6 +166,7 @@ export class SessionClock {
     } else if (this.hidden && this.resumeAt === null) {
       this.resumeAt = this.frames.now() + resumeDelayMs;
     }
+    this.findHeld();
     this.changed();
   }
 
@@ -169,14 +175,12 @@ export class SessionClock {
     this.changed();
   }
 
-  private activeHolds(): Set<Hold> {
-    const active = new Set<Hold>(SCREEN_HOLDS.filter((hold) => this.holds[hold]));
-    if (this.hidden) active.add("hidden");
-    return active;
+  private findHeld(): void {
+    this.held = HOLDS.find((hold) => (hold === "hidden" ? this.hidden : this.holds[hold])) ?? null;
   }
 
   private counting(): boolean {
-    return this.state === "running" && heldBy(this.activeHolds()) === null;
+    return this.state === "running" && this.held === null;
   }
 
   private readonly frame = (t: number): void => {
@@ -184,11 +188,12 @@ export class SessionClock {
     if (this.resumeAt !== null && t >= this.resumeAt) {
       this.resumeAt = null;
       this.hidden = false;
+      this.findHeld();
     }
     if (this.counting()) {
       // Null when the clock came back in this very frame, with nothing to count yet.
       if (this.last !== null) {
-        const delta = Math.min(MAX_FRAME_MS, Math.max(0, t - this.last));
+        const delta = clamp(t - this.last, 0, MAX_FRAME_MS);
         const before = this.elapsedMs;
         this.elapsedMs = Math.min(this.lengthMs, before + delta);
         this.warn(before, this.elapsedMs);
@@ -215,15 +220,8 @@ export class SessionClock {
   private changed(): void {
     if (!this.counting()) this.last = null;
     else if (this.last === null) this.last = this.frames.now();
-    const next = this.computeView();
-    const v = this.view;
-    if (
-      next.secondsLeft !== v.secondsLeft ||
-      next.late !== v.late ||
-      next.held !== v.held ||
-      next.lifted !== v.lifted ||
-      next.waiting !== v.waiting
-    ) {
+    const next = this.viewAfter(this.view);
+    if (next !== this.view) {
       this.view = next;
       this.listeners.forEach((listener) => listener());
     }
@@ -239,15 +237,22 @@ export class SessionClock {
     }
   }
 
-  private computeView(): ClockView {
+  /** The view as the clock stands: `last` itself while none of its fields changed, so a frame builds none. */
+  private viewAfter(last: ClockView | null): ClockView {
     const left = this.lengthMs - this.elapsedMs;
-    return {
-      secondsLeft: Math.ceil(left / 1000),
-      late: left <= LATE_MS,
-      held: this.state === "running" ? heldBy(this.activeHolds()) : null,
-      lifted: this.hidden,
-      waiting: this.state === "idle",
-    };
+    const secondsLeft = Math.ceil(left / 1000);
+    const late = left <= LATE_MS;
+    const held = this.state === "running" ? this.held : null;
+    const lifted = this.hidden;
+    const waiting = this.state === "idle";
+    return last !== null &&
+      last.secondsLeft === secondsLeft &&
+      last.late === late &&
+      last.held === held &&
+      last.lifted === lifted &&
+      last.waiting === waiting
+      ? last
+      : { secondsLeft, late, held, lifted, waiting };
   }
 }
 

@@ -1,0 +1,107 @@
+Sticker board code review, final ranking (code-review skill, max effort, recall mode)
+Target: apps/frontend/src/sticker-board (whole folder; today's 62 commits 8a305dd1..7c7ef4b2 read first).
+14 finder lanes -> 66 candidates -> 1 verifier vote each -> gap sweep. Verdicts: skill-verdicts.txt beside this file.
+Format: rank. ID | verdict | severity | path:line
+            summary / failure scenario
+
+=== TOP 15 (the skill's output; correctness bugs first)
+
+1. ADOPT-1 | CONFIRMED | medium-high (server data overwritten) | apps/frontend/src/sticker-board/boardSticker.ts:204
+   Adopting a load keeps each held-over sticker's local placements, including a stale large:null, so placeUnplaced lands it at a fresh freeSpot large spot and the newlyPlaced effect PATCHes that over the large spot the server holds (savePlacements, apps/api/src/stickerBoards/board.ts:277-280, writes unconditionally).
+   Scenario: (a) the phone opens from its kept board, which predates the iPad's first large layout, and the person drags or only taps sticker X (select's z raise makes a new placements object) before GET /sticker-boards/me lands: X's iPad spot is replaced by one computed on PHONE_BOARD_SIZE. (b) a phone visit open since before the iPad derived its layout reloads (Giving closes, gratitude recorded) after a sticker was sealed or received on the iPad: every held sticker gets a new large spot, overwriting the whole arranged large layout. Probe adopt-placeUnplaced-probe.mts reproduced it.
+
+2. DETAIL-1 | CONFIRMED | medium (error swallowed; sticker stays unblurred) | apps/frontend/src/sticker-board/StickerDetail.tsx:471
+   An 18+ mark or unmark that fails after the artist pages away is kept for the old sticker, never shown, and erased by the next page turn (onPage: setMarking((m) => (m?.step === "sending" ? m : null))); only console.error hears of it. Escape (:442) tests marking, not mark, so it can't close the detail while another sticker's mark sends.
+   Scenario: Original Artist confirms Mark 18+ on A, pages to B while it sends; the request fails (5xx, network); B shows nothing; paging back to A shows the plain button with no error. A stays unmarked and unblurred for everyone while the artist believes it was marked.
+
+3. TRAY-2 | CONFIRMED | medium (every put-back) | apps/frontend/src/sticker-board/tray/trayBoardDrop.ts:174
+   takeHome's api.remove re-renders StickerTray; the [shown] layout effect's refresh -> redraw -> renderStack rebuilds the slot takeHome just set to 'peeling' as data-state=here with its image, while the flying copy is still in the air.
+   Scenario: drag a board sticker into the open tray on its sheet, or press Remove: removeFromBoard's setPlacement (no flushSync, StickerBoard.tsx:697-702) commits inside the 230 ms flight, shown flips used->here, redraw isn't held (takeHome sets neither ui.g nor ui.busy). Two copies show until the flyer lands.
+
+4. PEEL-2 | CONFIRMED | medium | apps/frontend/src/sticker-board/tray/trayPeel.ts:116
+   PEEL_FREE is documented as the distance from the press but measured from the sticker's center (pt - pk.r), so a press 26+ px off-center comes free on the first decided move, skipping the curl and dropPeel's "still curling -> lay it back" guard.
+   Scenario: press ~28 px left of a tray sticker's center (most of a large sticker's box on a phone, more on an iPad's grown stack), drag 10 px left, let go at x < Wb()-46: it is stuck on the board behind the tray strip instead of lying back down.
+
+5. DETAIL-4 | CONFIRMED | medium (pre-existing) | apps/frontend/src/sticker-board/ArtistBoard.css:96
+   .visit-view-art { aspect-ratio: 1 } squares the StickerFigure box, and the figure's image and masks fill it at 100% x 100% with no object-fit.
+   Scenario: someone else's board from Explore, select a 300x400 sticker, press View: it renders squashed to 200x200, cut and gloss with it. The detail and Explore's lifted sticker use aspect-ratio: var(--ar).
+
+6. ENGINE-1 | CONFIRMED | medium | apps/frontend/src/sticker-board/tray/trayModel.ts:412
+   Packing height comes from the board's height and the sheet count the pack itself makes (sheetHeightFor(ui.fit, packed.sheets.length), adc6e1bd), so one more sticker or a board-height change moves earlier stickers to other sheets, breaking sheetPacking.ts's "appending moves nothing" contract.
+   Scenario: scratch run engine1-append-moves-sheets.ts: room 602, 16 -> 17 stickers moves #14 and #15 from sheet 0 to sheet 1; a 30-sticker large board repacks 17 stickers between a 760 and an 1100 foot (an iPad turn); a count change also resets the paged stack.
+
+7. KEPT-3 | CONFIRMED | low-medium (NSFW drawing shown unblurred) | apps/frontend/src/stickers/nsfw.ts:30
+   withoutNsfwDrawings (called at StickerBoard.tsx:334 and StickerDetail.tsx:318-319) swaps urls.png to NO_DRAWING but keeps urls.sharp; useSharpSrc keeps returning a decoded sharp copy while decoded === urls.sharp, and .is-veiled sets filter:none.
+   Scenario: someone turns the NSFW opt-in off; until the board's reload lands (the whole visit if it fails), any NSFW sticker whose sharp copy had decoded (enlarged on a 3x phone; nearly always in the detail, from browser cache) shows crisp under its 18+ mark. The server sends sharp:null for veiled stickers, so the helper must drop sharp too.
+
+8. KEPT-2 | CONFIRMED | low | apps/frontend/src/sticker-board/StickerBoard.tsx:521
+   After forgetKeptBoard() (18+ mark or unmark, a take-out), any setStickers before the refresh lands, or after it fails, lets the keepBoard effect write the pre-change board back to device storage (lastBoard.ts keepBoard has no forget generation).
+   Scenario: an Original Artist without the opt-in marks a sticker 18+, the refresh fails (offline, 5xx), they tap any sticker: the kept board lists it unmarked with its real image URL, and the next open draws it unblurred with no pink foil until a fresh load lands. A take-out keeps showing the sticker in its gift.
+
+9. DEPTH-2 | CONFIRMED | medium (deliberate size trade-off, spacing cost unacknowledged) | apps/frontend/src/sticker-board/placement.ts:61
+   unitOf caps a phone layout's unit at PHONE_UNIT_MAX (440) while every phone-layout window shares the same saved placements.phone fractions, so spacing doesn't carry between a wide phone-layout window and a phone.
+   Scenario: scratch run phone-unit-cap-spacing.ts: two s=0.4 stickers at x 0.3 and 0.7 sit 25.6 px apart in a 560 px window (LINE's sheet on an iPad, Split View) and overlap by 22.4 px on a 390 px phone; before the cap they overlapped the same at every width.
+
+10. ADOPT-3 | CONFIRMED | low-medium | apps/frontend/src/sticker-board/boardSticker.ts:206
+   takenIn/landIn count every listed sticker with placement.on as taken, including stickers given away (the giver's row keeps on_board=1) or in a gift, which onTheBoard hides.
+   Scenario: probes: the only sticker was given away (still on at FIRST_SPOT): the next sealed sticker lands at {0.72,0.8}, not the dashed first spot the empty board shows; one visible sticker plus five given-away ones on the other laid-out spots: a new sticker lands at {0.6443,0.5603}, overlapping the visible one.
+
+11. PEEL-1 | CONFIRMED | low | apps/frontend/src/sticker-board/tray/trayPeel.ts:263
+   holdOpen's relax(1) timer (and showOnBoard's ui.relaxTimer) is never cancelled when the next sticker comes free or a sheet is pulled out.
+   Scenario: tap sticker A (quickAdd ... holdOpen(160)), peel B free during A's flight: ~160 ms after A lands the pouch opens wide under B; a release over it still passes overBoard (x < Wb()-46), so B is placed on the board hidden under the tray.
+
+12. KEPT-4 | CONFIRMED | low | apps/frontend/src/sticker-board/stickerDetailQuery.ts:22
+   Sticker detail answers are the answer for 60 s and nothing forgets them (giving, receiving, take-outs, marks and the board's remount leave the module-level QueryAnswers alone).
+   Scenario: open A's given detail (owner Bob); within 60 s Bob gives A back and you receive it, choose Later, open A: no request; the Transfer Trail lacks Bob's gift and owedGratitude reads owner=Bob, hiding Send gratitude (or offering it for your own gift to Bob, a Mini-game the server refuses). Found by 3 lanes.
+
+13. GEST-2 | CONFIRMED | low | apps/frontend/src/sticker-board/useBoardGestures.ts:436
+   A board drag that turns into a pinch never calls tray.boardDrop, so the drag's dwell timer, ui.drop and .is-target stay live.
+   Scenario: tray shut, drag a sticker within 74 px of the right edge (arms the 180 ms dwell), add a second finger within 180 ms: the tray unzips over the pinched sticker, which is committed under the open tray; the stale ui.drop {wasOpen:false} later zips the tray shut when that sticker is next dropped or removed.
+
+14. ZIP-1 | CONFIRMED | low | apps/frontend/src/sticker-board/tray/zipper.ts:1196
+   The Zipper's onDown never checks st.grab, so a second touch on the pull replaces the first finger's grab.
+   Scenario: probe zip1-zip2-second-pointer-and-burst-velocity.test.ts: finger 1 pulls to 0.16; a second pointer goes down and up 80 ms later: release reads a tap and runs the tray open; finger 1's moves and lift are ignored; the tray ends fully open.
+
+15. STAT-2 | CONFIRMED | low (AGENTS.md error rule) | apps/frontend/src/sticker-board/stat-board/SettingsNote.tsx:147
+   A setting's save that fails after the person leaves the board tab is only console.error'd: its status lived in the unmounted note.
+   Scenario: flip 18+ or Kyoto Seika Practice Mode on a flaky network, tap Explore before the answer (App.tsx mounts the board only on its tab): back on the board the switch is silently back where it was, with no ErrorLine.
+
+=== CONFIRMED, below the cut (correctness, ranked)
+16. STAT-1 | low | stat-board/BoardFlip.tsx:119 - first turn focuses Flip back before the lazy StatBoard mounts; focus drops to <body> (reduced motion or slow network).
+17. DETAIL-3 | low | StickerDetail.tsx:173 - when the shown sticker leaves the list (a sent gift received, then a reload), index falls to 0 and the detail jumps to the first sticker; the mark's confirmation line never shows.
+18. KEPT-1 | low | StickerBoard.tsx:475 - first large layout derived in render with the phone layout's size on a runtime flip to large; saved once for good (probes: s 0.8507 vs 1.125).
+19. TRAY-1 | low | tray/trayPresses.ts:376 - pulled-out sheet: no keydown (Enter/Space do nothing on a sticker), and it sits in aria-hidden fly, hidden from VoiceOver.
+20. DETAIL-2 | low | StickerDetail.tsx:352 - a mark landing after a page turn stops the timelapse playing on the sticker now shown and pulls focus.
+21. TRAY-3 | low | tray/trayPaging.ts:80 - page() returns while busy and bringToFront counts it as a hop, so a quick drop mid-riffle flies to a sheet still behind.
+22. TRAY-4 | low | tray/traySpread.ts:163 - a second close during the spread's close animation undoes the tapped sheet.
+23. GEST-4 | low | useBoardGestures.ts:502 - pinch keeps only the center on the field (no grownOnField), so handles and knob end off the board (probe: 35 px). Size-range half refuted by migration 0008.
+24. GEST-3 | low | useBoardGestures.ts:391 - reduced motion: Remove within 400 ms of Arrange steps saves the pre-step spot over the stepped one.
+25. GEST-1 | low | useBoardGestures.ts:610 - pointercancel runs onUp, so a gesture iOS or LINE takes over is saved as a real move or goes into the tray.
+26. ENGINE-2 | low | tray/trayEngine.ts:361 - a refit that changes only the room (phone layout on an iPad turned) repacks; a pulled-out sheet goes blank and is put back in front.
+27. PEEL-3 | low | tray/trayPeel.ts:195 - dropPeel places at the lagging flyer position (~29 px short at 900 px/s) while the shadow follows the finger.
+28. ADOPT-2 | low | StickerBoard.tsx:173 - a tap during a kept-board open keeps that sticker's stale spots over the fresh load for the visit.
+29. DEPTH-1 | low | sticker-detail.css:506 - fixed 360px reserve: a packed gift or a Kyoto Seika sticker pushes Give below the fold in a short upright iPad window.
+30. ENGINE-4 | low | tray/trayEngine.ts:368 - page and mouth sized for every sheet; a filtered stack shows up to 70 px of bare lining.
+31. TRAY-5 | low | tray/traySpread.ts:23 - spread scale unclamped: unreadable past ~240 stickers, zero then mirrored at 125 sheets on a phone.
+32. STAT-3 | low | stat-board/addresses.ts:39 - Sui address paper loads forever while Privy is 'off' (dev server, demo build).
+33. SWEEP-1 | low | stat-board/StatBoard.tsx:76 - memoized problemOf(error) keeps the stats error's reason in the old language after a language switch.
+34. STAT-4 | low | stat-board/StatCork.tsx:132 - receipt date fixed at mount; reads yesterday after midnight JST.
+35. SWEEP-2 | low (tests) | useBoardGestures.test.tsx:191 - fake timers turned on in one test and never restored; later tests in the file run on them.
+36. DEPTH-4 | low (maintenance) | apps/frontend/src/stickers/kyotoSeikaFoil.ts:5 - band width computed in TS and CSS separately; agree today.
+
+=== CONFIRMED cleanup (efficiency, reuse, simplification, conventions)
+EFF-4 ArtistBoard.tsx:197 (stickers memo never hits; 3 lanes) | EFF-1 tray/StickerTray.tsx:91 (repack key stringified each render; 0.2-0.6 ms per render in Node for 100-300 stickers) | EFF-2 StickerBoard.tsx:520 (keepBoard writes storage on every change) | EFF-3 StickerBoard.tsx:391 (aheadKey restarts preload on each raise) | EFF-5 StickerBoard.tsx:550 | EFF-6 tray/trayBoardDrop.ts:102 | EFF-7 stickerDetailQuery.ts:22
+REUSE-1 StickerBoard.tsx:652 (four handleOf copies) | REUSE-2 boardGesture.ts:60 | REUSE-3 largeLayout.ts:45 | REUSE-4 stat-board/DeviceDetails.tsx:42 | REUSE-5 largeLayout.ts:25 | REUSE-6 placement.ts:168
+SIMP-1 useBoardGestures.ts:118 | SIMP-2 StickerBoard.tsx:999 | SIMP-3 ArtistBoard.tsx:171 | SIMP-4 stat-board/ChoiceRow.tsx:12 | SIMP-5 placement.ts:214 | SIMP-6 thoughtPlacement.ts:30
+CONV-1 useBoardGestures.test.tsx:247 (7 copies of one render) | CONV-2 useCreases.test.ts:120 (coined "Kyoto Seika band/pair") | CONV-4 stat-board/settings-note.css:97 (hard numbers in comments)
+
+=== PLAUSIBLE (mechanism real, trigger uncertain)
+ADOPT-4 StickerBoard.tsx:490 (derived-layout POST answer dropped; two-device first open) | ENGINE-3 tray/trayEngine.ts:546 (failed mask trace never cached; kept board only) | ZIP-2 tray/zipper.ts:1247 (burst velocity reads as a flick) | MEASURE-1 tray/trayEngine.ts:261 (cached board view after the tab arrival animation) | CONV-3 stat-board/DeviceDetails.tsx:61 (inline English labels in performance/deviceFacts.ts)
+
+=== UNVERIFIED
+DEPTH-3 keepAnimations.ts:75 - transitions on reordered stickers may still drop (its verifier didn't finish).
+NEW-ZIP-1 tray/zipper.ts:1265 - a tug, a pause, then a release reads the old speed as a flick (a verifier's probe reproduced it; no independent vote).
+NEW-STAT-1 stat-board/AddressDialog.tsx:375 - the Sui address Copy (and ErrorLine's Copy) go through the press's delayed click, which the developer slip opts out of for the clipboard; needs a check in LINE's iOS browser.
+
+=== REFUTED
+ENGINE-5 tray/trayModel.ts:341 - mouthShortFor is 0 for every fit and count (scratch grid).

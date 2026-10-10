@@ -89,3 +89,49 @@ Status: in progress; findings appended as verified.
 [4 test] useBoardGestures.test.tsx keydown dispatch `x.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }))` spelled 6 times (:182, :219, :348-350, :405, :426, :504-505); dragAcross's inner `at` (:72-75) duplicates `point` (:96-99). Fix: one `keyDown(el, key)` helper beside `point`, and dragAcross built from `point`. Confidence: medium.
 
 [4 test] useBoardGestures.test.tsx:12-15 declares and sets `IS_REACT_ACT_ENVIRONMENT` itself; `rg -l "IS_REACT_ACT_ENVIRONMENT = true" apps/frontend/src | wc -l` -> 44 files do the same (api/testing.tsx is one; boardComplete.test.ts imports it just for that), and vite.config.ts has no test setup (`rg -n "setupFiles|environment|test:" apps/frontend/vite.config.ts` -> exit 1; known hit `plugins` at :9). Fix (app-wide): one vitest `setupFiles` entry. Confidence: medium.
+
+--- batch 4 (re-sent after a tool outage) ---
+[correction] The fake-timer leak above reaches the next THREE tests (:243, :301, :312), not four; the "steps" describe's beforeEach re-fakes them after that. None of the three waits on a timer today, so nothing fails yet.
+
+[4 test boilerplate] testBoardSticker.ts holds only `yoursHeld`, while lastBoard.test.ts:17-39, useBoardGestures.test.tsx:19-33 and stickerDetailQuery.test.ts:11-31 each hand-build the same board sticker (timeUsed 60, drawnWidth/Height 480, nsfw false, kyotoSeikaSubjects null, testStickerUrls…); `rg -l "drawnWidth: 480" apps/frontend/src` also lists StickerDetail.test.tsx and tray/StickerTray.test.tsx. lastBoard.test.ts:31-36 re-spells yoursHeld's six fields instead of spreading it.
+  Fix: a `testBoardSticker(id, overrides)` builder in testBoardSticker.ts, used by all five. Confidence: medium.
+
+[4 test overlap] lastBoard.test.ts:63-68 "forgets it when someone else signs in" and :70-76 "forgets it at sign-in unless it's the same person's" both prove another userId clears storage (keptBoardFor calls forgetBoardUnlessFor). Fix: one test. Confidence: low-medium. (Keep :91-97: only it would catch read() calling forget(), which throws while `kept` is in its TDZ.)
+
+[4 test] lastBoard.test.ts:111-114 asserts console.error's exact message text, restating lastBoard.ts:96. Fix: `expect(error).toHaveBeenCalledWith(expect.any(String), expect.any(DOMException))`. Confidence: low-medium.
+
+[4 test] boardSticker.test.ts:115 `toBeGreaterThan(spots.phone?.s ?? Infinity)` is implied by :116's `toBeCloseTo(phone.s * LARGE_LANDING_GROWTH)`; the test also overlaps placement.test.ts:68-74. Fix: drop :115. Confidence: medium.
+
+[4 test dup] largeLayout.test.ts:37-46 `overlapOn` is another hand-written box overlap (unturned), beside largeLayout's depthOf/overlap and placement's gapOf (already reported). Fix: use the shared one once it exists. Confidence: low.
+
+[2 simplify] useBoardGestures.ts:96-97 `TAP_SLOP = 8` and :529 `Math.hypot(pt.x - g.p0.x, pt.y - g.p0.y) >= TAP_SLOP` re-implement boardGesture.ts:79 `passedSlop` (SLOP = 6, `>`) with another number and no reason for the difference. Fix: `if (!tap || passedSlop(g.p0, pt)) return;` and drop TAP_SLOP, or say why bare board allows more wander. Confidence: medium-low.
+
+[2 readability] useBoardGestures.ts:317 `const leaving = new Set<string>()` is declared after `step` (:247) and `stow` (:343) use it; it works only because neither runs before the effect body finishes. Fix: declare it with `pointers`/`origin` at the top of the effect. Confidence: low-medium.
+
+[5 swallow] useBoardGestures.ts:378-388 `await Promise.allSettled([el.animate(...).finished])` — a one-element allSettled to absorb a cancelled ride's AbortError, with no comment saying so. Fix: say why in a comment (a cancelled ride still goes on into the tray), or `.finished.catch(...)` with that comment. Confidence: low-medium.
+
+[2 simplify] useBoardGestures.ts:252-255 and :503-504 both clamp a moved center onto the field as `{ ...next, ...toPx(field, toFrac(field, next)) }`. Fix: one `onField(field, live)` beside liveOf. Confidence: low.
+
+[2 trivial] useBoardGestures.ts:6 `import type { Placement } from "./placement";` and :20-29 import from "./placement" again. Fix: one import. Confidence: high (trivial).
+
+[6 magic] boardGesture.ts:27-28 `STEP_GROW = 1.08; STEP_SHRINK = 0.92;` — every other step pair undoes itself (boardGesture.test.ts:38 checks move and turn only); Bigger then Smaller leaves a sticker 0.64% smaller (1.08 × 0.92 = 0.9936). Fix: `STEP_SHRINK = 1 / STEP_GROW`, and add the size pair to that test. Confidence: low-medium (a product call).
+
+[4 test mirror] boardGesture.test.ts:66-73 recomputes keptOnField's own turned-box formula to check it, so a wrong formula passes in both places; :64 `{ left: 16, top: 86, w: 334, h: 549 }` is fieldOf(PHONE_BOARD.W, PHONE_BOARD.H) typed out. Fix: check the turned box's corners against `fieldOf(...)`. Confidence: low-medium.
+
+[1 dup] The turned box's half extents `(|cos|·w + |sin|·h)/2, (|sin|·w + |cos|·h)/2` are spelled at placement.ts:262-263 (toolbarSpot's `reach`, plus 12), placement.ts:371-373 (footprintOf) and boardGesture.ts:65-67 (keptOnField, already reported). Fix: one `extentsOf(w, h, r)` in placement.ts. Confidence: medium-low.
+
+[1 dup] `(r * Math.PI) / 180` is inlined 7 times in these files (boardGesture.ts:65; placement.ts:214, 232, 261, 371; useCreases.ts:74, 80) and more in tray/ and stickers/; ui/ has no helper (`rg -n "toRad|radians|toDeg|degToRad|DEG" apps/frontend/src/ui` -> exit 1; known hit: `rg -c "Math\.PI\) / 180" placement.ts` -> 4). Fix: `radians(deg)` in ui/easing.ts. Confidence: low.
+
+[2 merge] boardSettled.ts (18 lines, one promise plus whenBoardSettled over whenBoardQuiet) is the same app-open sequencing as boardComplete.ts; merged, forgetBoardComplete could reset the chips promise and boardSettled.test.ts would drop vi.resetModules + per-test dynamic imports. Confidence: low-medium.
+
+[1 shim] lastBoard.ts:32-33,48 `hasSpots` / `.every(hasSpots)` guards a kept board from before per-layout spots (added with the large layout, `git log -S hasSpots` -> 2e9f8f02); production already forgets other builds' boards, so it only protects dev storage, for this one shape change. Fix: drop it once dev storage has turned over. Confidence: low.
+
+[6 magic] boardComplete.ts:123 `requestIdleCallback(run, { timeout: 2000 })` — no reason given for the cap. Confidence: low.
+
+Not reached / nothing found: keepAnimations.ts(+test) and stickerOrder.ts(+test) read in full, nothing worth reporting.
+
+--- corrections after re-checking batch 4 ---
+WITHDRAWN: largeLayout.test.ts:37-46 overlapOn. It is the test's independent check; swapping in the shared helper would make it a mirror test.
+WITHDRAWN: the boardGesture.test.ts:64 remark. The literal field is fine; any field works for that test. The mirror-formula finding stays.
+SOFTENED: boardSticker.test.ts:115 is implied by :116. Drop the "overlaps placement.test.ts" clause: that test covers freeSpot, this one covers landIn. Confidence: low.
+Lane complete; final report sent.

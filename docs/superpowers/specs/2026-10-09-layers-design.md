@@ -234,7 +234,7 @@ So:
 - A layer's canvas exists only once the layer has ink.
 - The checkpoint budget shrinks as layers fill.
 - If a canvas can't be made, adding the layer or its first stroke fails with an error line, and nothing drawn is lost: every layer replays from its steps.
-- Measured before the build (see To measure): whether WebKit gives each shown canvas a second backing store.
+- No sheet canvas gets `will-change`, which doubles a canvas's memory in WebKit. Shown that way, the display spike measured each canvas held once.
 
 ### Timelapse v2
 

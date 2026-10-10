@@ -1,0 +1,63 @@
+Sticker crease critique (impeccable critique), 2026-10-09
+Method: dual-agent (A: design review, B: detector), one batched browser round plus one follow-up.
+Boards: crease-ann (32 overlapping stickers, 22 creased) and a calm board of three one-stroke stickers;
+phone 390x844 DPR 3, iPad 1024x1366 DPR 2; Chromium. Creases on via localStorage board.creases.
+Luma changes (0-255) compare the same frame with creases shown and hidden at the same light. Tuning values
+are starting points to try, not calibrated. "Computed" means arithmetic from the constants, not measured.
+
+Score (Nielsen, passive material: H3, H5, H6, H7, H9, H10 n/a): H1 3, H2 3, H4 2, H8 3 = 11/16 (Good).
+Verdict: specific to Croquis (a stiff sheet draped over the edges beneath, buried edges hidden); where it
+fails, it fails on the artist's own art.
+
+1. [P1] The crease reads as strokes drawn on the art, white at rest and ink with the light on the far side.
+   Screenshots: critique-1.png (left hidden, right shown, light at rest); critique-3.png (rest, far-side light
+   hidden, far-side light shown).
+   At rest the lit side is a thin white line on the face (+23 to +26 luma at p95 on mid-tone faces, up to +41
+   on dark ones); a sticker over several others carries every silhouette beneath as a pale outline (the
+   purple blob, the blue cloud). With the light at the bottom right the same edge turns into a dark arc that
+   passes for a pen line. PRODUCT.md: a sticker is cut from its artist's own strokes; DESIGN.md: edges show
+   "as a real one does pressed down".
+   Fix (crease.ts): soften and lower both sides: RAMP 4 -> 6, ROUND 1 -> 2, CREASE_TONE.lit 0.42 -> 0.28,
+   MOST.lit 0.5 -> 0.32, CREASE_TONE.foot 0.2 -> 0.12, MOST.shade 0.3 -> 0.22.
+
+2. [P1] Every crease on the board fades out together when the light passes overhead, and that spot is inside
+   ordinary use.
+   No screenshot (a frame at the null shows nothing); facts.json slowBRtoTL: the four opacities sum to 0.22
+   halfway (bottomRight 0.048, topRight 0.172).
+   With --crease-swing 1.5 the null sits at a pointer about 69% across and 77% down, or a phone leaned about
+   52 degrees (computed): a pen working the lower right of an iPad board, or a phone held a little upright,
+   blanks all 22 creases at once. A real ridge under an overhead light keeps a faint shoulder glint and foot.
+   Fix: bake CREASE_TONE.shoulder and .foot into a fifth layer at constant opacity, out of the four directional
+   bakes. Quick tune: --crease-swing 1.5 -> 1.1 moves the null to about 76% / 87% (computed).
+
+3. [P2] Off-axis lights show the crease stronger than at rest, against the CSS's own "never stronger than at
+   rest".
+   Measured total change vs rest: crowded phone board 1.21x (top right) and 1.33x (bottom right), iPad 1.34x
+   (top right), calm board 1.92x and 2.01x. Two neighbouring sides' opacities sum to as much as 1.38 (facts.json
+   opacity-tr 0.544 + 0.839).
+   Fix: the fifth layer in 2 takes the light-independent terms out of the sum; or divide each side's opacity
+   by max(1, |a| + |b|) in sticker-crease.css, with |v| written max(v, -1 * v).
+
+4. [P2] A fast move of the light cross-fades the two opposite bakes, so the ramp turns grey for a beat.
+   Screenshot: critique-2.png (rest, 40 ms after the mouse jumps from the top-left to the bottom-right corner,
+   settled). facts.json at 55 ms: topLeft 0.438, bottomRight 0.533, topRight 0.169.
+   A slow pass fades through overhead as designed, but a jump or a pen set down elsewhere runs each layer's own
+   280 ms opacity transition from where it was.
+   Fix: transition the light, not the layers: drop `transition: opacity 280ms` on `.sticker-crease > i`,
+   register --lx and --ly with @property as <number> and transition them on `.sticker-crease`; or cut the layer
+   transition to 90ms.
+
+5. [P3] On a white border only the ink half can show, so a crease there is a grey smudge.
+   Screenshot: critique-4.png (calm board: hidden, rest, bottom-right light).
+   Shade-only on white is physically fair; the foot's ink is what reads as dirt. Fix: the foot cut in 1.
+
+Holds up: only edges directly beneath show (no deeper outlines in the crops); it reads the one light and
+honors reduced motion; the slow sweep turns smoothly through all four sides; lifting clears it and a drop
+presses it in.
+
+Not verified: WebKit's rendering. Playwright's WebKit screenshots show the board's 3D back face (the stat
+board, mirrored), headless and headed, so every WebKit crop compares the stat board with itself. Its DOM
+matched Chromium (22 creases, the same opacities). Check on an iPhone or with test:ipad-safari.
+Detector: CLI 0 findings in StickerCrease.tsx, StickerFigure.tsx and PlacedSticker.tsx. In the page, 66
+buried-raster findings (22 creases x 3 sides at opacity 0, the blend working as intended); the rest are not
+the crease's.

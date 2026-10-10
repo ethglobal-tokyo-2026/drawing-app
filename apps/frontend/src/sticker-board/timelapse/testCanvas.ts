@@ -55,6 +55,9 @@ export class FakeContext {
   arc(...args: number[]): void {
     this.record("arc", args);
   }
+  rect(...args: number[]): void {
+    this.record("rect", args);
+  }
   closePath(): void {
     this.record("closePath", []);
   }
