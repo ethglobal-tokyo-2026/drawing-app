@@ -262,12 +262,17 @@ export function DrawingScreen({
 
   function run(effect: SessionEffect) {
     switch (effect) {
-      case "keep-session":
-        keeper.start(ticket.current?.id ?? null, ticket.current?.kyotoSeika ? UNDEALT : null);
+      case "keep-session": {
+        const recorded = keeper.start(
+          ticket.current?.id ?? null,
+          ticket.current?.kyotoSeika ? UNDEALT : null,
+        );
         if (ticket.current?.kyotoSeika) kyotoSeikaSheet.open(ticket.current.id, null);
-        // The ticket use is kept with this sheet now, so the spend's key can go.
-        tickets.forgetKeptSpend();
+        // Once the sheet's record holds the ticket use, the spend's key can go; until then, a reload
+        // gets the same ticket use back with it rather than spending another.
+        if (recorded) tickets.forgetKeptSpend();
         return;
+      }
       case "start-clock":
         clock.start();
         return;

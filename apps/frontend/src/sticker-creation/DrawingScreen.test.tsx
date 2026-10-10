@@ -23,6 +23,7 @@ import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing"
 import { openedFrom } from "../app/openedView";
 import { i18next } from "../i18n/i18n";
 import { strings } from "../i18n/strings";
+import { keptSpend } from "../tickets/spendKey";
 import { useTickets } from "../tickets/useTickets";
 import { personKey } from "../ui/deviceStorage";
 import { onLargeScreen, onTouchScreen, SWITCH } from "../ui/testing";
@@ -1076,5 +1077,27 @@ describe("the drawing hand", () => {
     expect(hand()).toBe("right");
     act(() => void keepDrawingHand("left"));
     expect(hand()).toBe("left");
+  });
+});
+
+describe("spending a sheet's ticket", () => {
+  it("keeps the spend's key while the sheet's record can't be written, so a reload gets that ticket use back", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const write = localStorage.setItem.bind(localStorage);
+    const setItem = vi.spyOn(localStorage, "setItem").mockImplementation((key, value) => {
+      if (key === personKey("draw.session", TEST_ME.id))
+        throw new DOMException("full", "QuotaExceededError");
+      write(key, value);
+    });
+    onTestFinished(() => {
+      setItem.mockRestore();
+      vi.mocked(console.error).mockRestore();
+    });
+    reopen({ status: "none" }, {}, TEST_ME, {
+      spendTicket: () => Promise.resolve(spentDaily(false)),
+    });
+    await settle();
+    expect(sheet).toBe("held");
+    expect(keptSpend(TEST_ME.id)).not.toBeNull();
   });
 });
