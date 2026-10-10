@@ -14,7 +14,7 @@ import { failureCause, logFailure } from "../diagnostics.ts";
 import { apiError, validate } from "../errors.ts";
 import { unseenGratitudeCount } from "../gratitude/feed.ts";
 import { HANDLE_MAX_LENGTH } from "../session/handleLimit.ts";
-import { isHandleTaken, parseHandle } from "../session/handles.ts";
+import { handleFromLineName, isHandleTaken, parseHandle } from "../session/handles.ts";
 import { clearSessionCookie, setSessionCookie, type AppEnv } from "../session.ts";
 import { toMe } from "../shapes.ts";
 import { newStickerCount } from "../stickerBoards/board.ts";
@@ -124,7 +124,7 @@ export const sessionRoutes = (deps: AppDeps) =>
             .returning()
             .get();
           if (returning) return returning;
-          const handle = parseHandle(profile.name);
+          const handle = handleFromLineName(profile.name);
           const created = tx
             .insert(users)
             .values({

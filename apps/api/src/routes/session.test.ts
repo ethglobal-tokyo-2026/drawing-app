@@ -27,6 +27,36 @@ const ALICE: LineProfile = {
   picture: "https://profile.line-scdn.net/alice",
 };
 
+/**
+ * A LINE name of `parts`, each written as its code points, with the hidden character `hidden` between
+ * them; and the handle it makes, the parts alone.
+ */
+function nameHolding(hidden: number, ...parts: number[][]) {
+  const texts = parts.map((codePoints) => String.fromCodePoint(...codePoints));
+  return { name: texts.join(String.fromCodePoint(hidden)), handle: texts.join("") };
+}
+
+/** Real names that need a hidden character outside an emoji. */
+const NAMES_WITH_HIDDEN_CHARACTERS = [
+  // Katsuragi, its first kanji in a family's own glyph, picked by an ideographic variation selector.
+  nameHolding(0xe0100, [0x845b], [0x57ce]),
+  // Alireza in Persian, its two names kept apart by a zero-width non-joiner.
+  nameHolding(0x200c, [0x639, 0x644, 0x6cc], [0x631, 0x636, 0x627]),
+  // Sri in Sinhala, whose conjunct needs a zero-width joiner.
+  nameHolding(0x200d, [0xdc1, 0xdca], [0xdbb, 0xdd3]),
+];
+
+/** A black flag, `region` in tag letters (ASCII moved to the tags block), and a cancel tag. */
+const subdivisionFlag = (region: string) =>
+  String.fromCodePoint(
+    0x1f3f4,
+    ...Array.from(region, (letter) => 0xe0000 + letter.charCodeAt(0)),
+    0xe007f,
+  );
+
+/** England's, Scotland's and Wales's flags. */
+const SUBDIVISION_FLAGS = ["gbeng", "gbsct", "gbwls"].map(subdivisionFlag);
+
 let test: TestApp;
 beforeEach(async () => {
   test = await createTestApp();
@@ -70,6 +100,21 @@ describe("signing in", () => {
     expect(await meIn(await getMe(sessionCookie(response)))).toEqual(me);
   });
 
+  it("makes a LINE name a handle without its hidden characters, keeping an emoji's", async () => {
+    // A woman technologist, an emoji joined by a zero-width joiner.
+    const emoji = [String.fromCodePoint(0x1f469, 0x200d, 0x1f4bb), ...SUBDIVISION_FLAGS];
+    const names = [
+      ...NAMES_WITH_HIDDEN_CHARACTERS,
+      ...emoji.map((name) => ({ name, handle: name })),
+      // A double exclamation mark emoji, which NFKC writes as !!, leaving its variation selector stray.
+      { name: String.fromCodePoint(0x203c, 0xfe0f), handle: "!!" },
+    ];
+    for (const { name, handle } of names) {
+      const me = await meIn(await signIn({ sub: `line-${name}`, name }));
+      expect(me, name).toMatchObject({ handle, needsHandle: false });
+    }
+  });
+
   it("keeps the session for SESSION_MAX_AGE_S", async () => {
     const cookie = (await signIn(ALICE)).headers.get("set-cookie") ?? "";
     expect(cookie).toContain(`Max-Age=${SESSION_MAX_AGE_S}`);
@@ -97,7 +142,15 @@ describe("signing in", () => {
 
   it("asks for a handle when the LINE name is taken in another letter case, or breaks the rules", async () => {
     insertUser(test.db, { handle: ALICE.name.toUpperCase() });
-    const names = [ALICE.name, `@${ALICE.name}`, "a".repeat(HANDLE_MAX_LENGTH + 1)];
+    const names = [
+      ALICE.name,
+      // A lookalike of the name, with a zero-width space.
+      ALICE.name + String.fromCodePoint(0x200b),
+      `@${ALICE.name}`,
+      "a".repeat(HANDLE_MAX_LENGTH + 1),
+      // Nothing but hidden characters: a Hangul filler, a zero-width space and a right-to-left override.
+      String.fromCodePoint(0x3164, 0x200b, 0x202e),
+    ];
     for (const name of names) {
       const me = await meIn(await signIn({ sub: `line-${name}`, name }));
       expect(me).toMatchObject({ handle: null, needsHandle: true, lineDisplayName: name });
@@ -291,8 +344,9 @@ describe("your handle", () => {
 
   it("refuses hidden characters, keeping the ones an emoji is written with", async () => {
     const headers = await test.signInAs(insertUser(test.db));
-    // A zero-width space, a right-to-left override, a soft hyphen, a newline, a Hangul filler, and a
-    // zero-width joiner with no emoji around it.
+    // A zero-width space, a right-to-left override, a soft hyphen, a newline, a Hangul filler, a
+    // zero-width joiner with no emoji around it, a black flag with California's tag letters, which no
+    // flag shows, and the names sign-in makes handles of without their hidden characters.
     const hiding = [
       "sakura\u200B",
       "\u202Esakura",
@@ -300,6 +354,8 @@ describe("your handle", () => {
       "saku\nra",
       "sakura\u3164",
       "sakura\u200D",
+      subdivisionFlag("usca"),
+      ...NAMES_WITH_HIDDEN_CHARACTERS.map(({ name }) => name),
     ];
     for (const handle of hiding) {
       expect(await refusalOf(await setHandle(headers, handle)), handle).toMatchObject({
@@ -307,9 +363,17 @@ describe("your handle", () => {
         error: "handle_invalid",
       });
     }
-    // A woman technologist, a heart on fire and a keycap 1: joiners and variation selectors.
-    for (const emoji of ["👩\u200D💻", "❤\uFE0F\u200D🔥", "1\uFE0F\u20E3"]) {
+    // A woman technologist, a heart on fire, a keycap 1 and the flags: joiners, variation selectors and
+    // tag letters.
+    for (const emoji of ["👩\u200D💻", "❤\uFE0F\u200D🔥", "1\uFE0F\u20E3", ...SUBDIVISION_FLAGS]) {
       expect(await meIn(await setHandle(headers, emoji))).toMatchObject({ handle: emoji });
+    }
+    // Emoji NFKC writes as text, a double exclamation mark and a trade mark, keep the text alone.
+    for (const [emoji, handle] of [
+      [String.fromCodePoint(0x203c, 0xfe0f), "!!"],
+      [String.fromCodePoint(0x2122, 0xfe0f), "TM"],
+    ]) {
+      expect(await meIn(await setHandle(headers, emoji)), emoji).toMatchObject({ handle });
     }
   });
 
