@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { literal, timestamps } from "./columns.ts";
+import { literal, oneOf, timestamps } from "./columns.ts";
 import { DAILY_TICKETS_PER_DAY } from "./limits.ts";
 import { stickers } from "./stickers.ts";
 import { users } from "./users.ts";
@@ -45,6 +45,7 @@ export const ticketUses = sqliteTable(
     uniqueIndex("ticket_uses_day").on(t.userId, t.ticketDay, t.dayIndex),
     uniqueIndex("ticket_uses_idempotency_key").on(t.userId, t.idempotencyKey),
     check("ticket_uses_day_index", sql`${t.dayIndex} >= 0`),
+    check("ticket_uses_known_kind", oneOf(t.kind, ticketKinds)),
     // Kyoto Seika Manga Expression Practice Mode's daily tickets can follow a reserve one, so only
     // the smaller allowance holds.
     check(

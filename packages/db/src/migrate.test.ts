@@ -4,6 +4,7 @@ import { join } from "node:path";
 import Database from "better-sqlite3";
 import { describe, expect, it } from "vitest";
 import { migrateDatabase, migrationsFolder } from "./migrate.ts";
+import { DAILY_TICKETS_PER_DAY } from "./schema/limits.ts";
 import { bytes32, createTestDb, databaseBefore, journalEntries, refusal } from "./testDb.ts";
 
 /**
@@ -59,6 +60,26 @@ describe("migrateDatabase", () => {
   });
 });
 
+/** Signs up 'u', who holds every row the migration tests below write. */
+const signUpU = (sqlite: Database.Database) =>
+  sqlite.exec(
+    "insert into users (id, line_user_id, line_display_name, language) values ('u', 'line-u', 'U', 'en')",
+  );
+
+/** Every row of `table`, by its `key` column. */
+function rowsBy(sqlite: Database.Database, table: string, key: string) {
+  const rows = sqlite.prepare<[], Record<string, unknown>>(`select * from ${table}`).all();
+  const byKey = new Map(rows.map((row) => [row[key], row]));
+  return (value: string) => {
+    const row = byKey.get(value);
+    if (!row) throw new Error(`No ${table} row with ${key} ${value}`);
+    return row;
+  };
+}
+
+/** A row the migration rewrote, which moves its updated_at. */
+const REWRITTEN: { updated_at: unknown } = { updated_at: expect.any(Number) };
+
 /** One layout's values, in this order. */
 const PHONE = ["on_board", "x", "y", "scale", "rotation", "z"];
 const LARGE = PHONE.map((column) => `large_${column}`);
@@ -90,24 +111,15 @@ function insertPlacement(
 }
 
 /** Every placement's row, by its sticker. */
-function placements(sqlite: Database.Database) {
-  const rows = sqlite.prepare<[], { sticker_id: string }>("select * from sticker_placements").all();
-  const byId = new Map(rows.map((row) => [row.sticker_id, row]));
-  return (stickerId: string) => {
-    const row = byId.get(stickerId);
-    if (!row) throw new Error(`No placement of ${stickerId}`);
-    return row;
-  };
-}
+const placements = (sqlite: Database.Database) =>
+  rowsBy(sqlite, "sticker_placements", "sticker_id");
 
 const inTheTray = (layout: string[]) => Object.fromEntries(layout.map((column) => [column, null]));
 
 describe("the whole placements migration", () => {
   it("puts each half-placed layout back in the sticker tray, copies every other as it was, and refuses one after", () => {
     const { path, sqlite } = databaseBefore("0010_whole_placements");
-    sqlite.exec(
-      "insert into users (id, line_user_id, line_display_name, language) values ('u', 'line-u', 'U', 'en')",
-    );
+    signUpU(sqlite);
     insertPlacement(sqlite, "placed", PLACED, PLACED);
     insertPlacement(sqlite, "unplaced", UNPLACED, UNPLACED);
     insertPlacement(sqlite, "phone without a scale", NO_SCALE, PLACED);
@@ -121,22 +133,64 @@ describe("the whole placements migration", () => {
     const after = placements(migrated);
     expect(after("placed")).toEqual(before("placed"));
     expect(after("unplaced")).toEqual(before("unplaced"));
-    const moved: { updated_at: unknown } = { updated_at: expect.any(Number) };
     expect(after("phone without a scale")).toEqual({
       ...before("phone without a scale"),
       ...inTheTray(PHONE),
-      ...moved,
+      ...REWRITTEN,
     });
     expect(after("large without a spot")).toEqual({
       ...before("large without a spot"),
       ...inTheTray(LARGE),
-      ...moved,
+      ...REWRITTEN,
     });
     expect(refusal(() => insertPlacement(migrated, "no scale", NO_SCALE, UNPLACED))).toMatch(
       /sticker_placements_placement/,
     );
     expect(refusal(() => insertPlacement(migrated, "no spot", UNPLACED, NO_SPOT))).toMatch(
       /sticker_placements_large_placement/,
+    );
+  });
+});
+
+/** When the uses below were spent: before the migration runs, so a use it rewrites shows it. */
+const SPENT_AT = Date.UTC(2026, 8, 26);
+
+/** Spends a ticket of `kind` for 'u' under the spend key `key`, as a hand edit writes one. */
+function insertUse(sqlite: Database.Database, key: string, kind: string, dayIndex: number) {
+  sqlite
+    .prepare(
+      "insert into ticket_uses (user_id, idempotency_key, ticket_day, day_index, kind, created_at, updated_at) values ('u', ?, '2026-09-26', ?, ?, ?, ?)",
+    )
+    .run(key, dayIndex, kind, SPENT_AT, SPENT_AT);
+}
+
+/** Every use's row, by its spend key. */
+const uses = (sqlite: Database.Database) => rowsBy(sqlite, "ticket_uses", "idempotency_key");
+
+describe("the ticket kinds migration", () => {
+  it("makes each use of another kind daily, copies every other as it was, and refuses one after", () => {
+    const { path, sqlite } = databaseBefore("0012_ticket_kinds");
+    signUpU(sqlite);
+    insertUse(sqlite, "daily", "daily", 0);
+    insertUse(sqlite, "reserve", "reserve", DAILY_TICKETS_PER_DAY);
+    // Past the day's daily tickets, where the old checks take any kind.
+    insertUse(sqlite, "hand-written", "bonus", DAILY_TICKETS_PER_DAY + 1);
+    const before = uses(sqlite);
+    sqlite.close();
+
+    migrateDatabase(path);
+
+    const migrated = new Database(path);
+    const after = uses(migrated);
+    expect(after("daily")).toEqual(before("daily"));
+    expect(after("reserve")).toEqual(before("reserve"));
+    expect(after("hand-written")).toEqual({
+      ...before("hand-written"),
+      kind: "daily",
+      ...REWRITTEN,
+    });
+    expect(refusal(() => insertUse(migrated, "after", "bonus", DAILY_TICKETS_PER_DAY + 2))).toMatch(
+      /ticket_uses_known_kind/,
     );
   });
 });
