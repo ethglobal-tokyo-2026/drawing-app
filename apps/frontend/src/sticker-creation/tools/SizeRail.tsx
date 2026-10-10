@@ -1,6 +1,6 @@
 import { useRef, type CSSProperties, type KeyboardEvent } from "react";
 import { useTranslation } from "../../i18n/react";
-import { clamp01 } from "../../ui/easing";
+import { clamp, clamp01 } from "../../ui/easing";
 import { sizePx } from "../canvas/brush";
 import { useDrag } from "./useDrag";
 import "./SizeRail.css";
@@ -9,8 +9,11 @@ import "./SizeRail.css";
 const THUMB_TOP = 18;
 /** …to `--thumb-foot` above its foot, room for the px label; this when no CSS lays the rail out. */
 const THUMB_FOOT = 44;
-/** How far one arrow key moves the size. */
-const KEY_STEP = 0.04;
+/** How far one arrow key, or [ and ] on the drawing screen, moves the size. */
+export const SIZE_STEP = 0.04;
+/** The rail's ends as it reads them out, rounded as its value is. */
+const LEAST_PX = Math.round(sizePx(0));
+const MOST_PX = Math.round(sizePx(1));
 
 /** The rail's length from top to foot, as its CSS lays it out. */
 interface Travel {
@@ -38,7 +41,7 @@ function sizeStyle(value: number, scale: number): CSSProperties {
   return {
     "--v": value,
     "--d": `${px * scale}px`,
-    "--tip": `${Math.min(24, Math.max(5, px))}px`,
+    "--tip": `${clamp(px, 5, 24)}px`,
     "--px": Math.round(px),
   };
 }
@@ -93,13 +96,14 @@ export function SizeRail({ value, eraser, active, scale, onChange, onHold }: Pro
       onChange(dragged.current);
       onHold(false);
     },
+    onAbandon: () => onHold(false),
   });
 
   const onKeyDown = (e: KeyboardEvent) => {
     const step = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[e.key];
     if (!step) return;
     e.preventDefault();
-    onChange(clamp01(value + step * KEY_STEP));
+    onChange(clamp01(value + step * SIZE_STEP));
   };
 
   const px = Math.round(sizePx(value));
@@ -117,8 +121,8 @@ export function SizeRail({ value, eraser, active, scale, onChange, onHold }: Pro
             : t(($) => $.stickerCreation.sizeRail.brush)
         }
         aria-orientation="vertical"
-        aria-valuemin={1}
-        aria-valuemax={48}
+        aria-valuemin={LEAST_PX}
+        aria-valuemax={MOST_PX}
         aria-valuenow={px}
         aria-valuetext={t(($) => $.stickerCreation.sizeRail.value, { size: px })}
         style={style}

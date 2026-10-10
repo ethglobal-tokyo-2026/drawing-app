@@ -1,20 +1,18 @@
 // @vitest-environment happy-dom
 import { act, createRef } from "react";
-import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
+import { renderWithApi } from "../api/testing";
 import { strings } from "../i18n/strings";
 import { sessionMs } from "./session/session";
 import { clockOnFrames } from "./session/testClock";
 import { WARN_AT_SECONDS } from "./session/useSessionClock";
 import { TimerDot, WIDE_FROM_SECONDS, type TimerDotHandle } from "./TimerDot";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
-let cleanup = () => {};
-afterEach(() => cleanup());
+let view: ReturnType<typeof renderWithApi> | undefined;
+afterEach(() => {
+  view?.unmount();
+  view = undefined;
+});
 
 /** The timer dot over a clock on hand-driven frames, as the drawing screen shows it. */
 function renderDot({
@@ -30,26 +28,18 @@ function renderDot({
 }) {
   const { clock, advance } = clockOnFrames({ length, started });
   const timer = createRef<TimerDotHandle>();
-  const host = document.createElement("div");
-  document.body.append(host);
-  const root = createRoot(host);
-  act(() =>
-    root.render(
-      <TimerDot
-        ref={timer}
-        clock={clock}
-        paused={false}
-        note={null}
-        waitsFor={waitsFor}
-        pausable={pausable}
-        onToggle={() => {}}
-      />,
-    ),
+  view = renderWithApi(
+    <TimerDot
+      ref={timer}
+      clock={clock}
+      paused={false}
+      note={null}
+      waitsFor={waitsFor}
+      pausable={pausable}
+      onToggle={() => {}}
+    />,
   );
-  cleanup = () => {
-    act(() => root.unmount());
-    host.remove();
-  };
+  const { host } = view;
   return { clock, host, timer, advance: (ms: number) => act(() => advance(ms, 250)) };
 }
 

@@ -81,6 +81,9 @@ function ColorPicker({
     onPick(hex);
   };
 
+  // A drag the sheet's going cuts off picks nothing, so the screen shows the drawn color again.
+  const dropPreview = () => onPreview(color);
+
   const pad = useDrag({
     onStart: () => (live.current = picked.hsv),
     onMove: (x, y, box) =>
@@ -90,11 +93,13 @@ function ColorPicker({
         v: live.current.v < DARK ? LIFT_TO : live.current.v,
       }),
     onEnd: () => commit(live.current),
+    onAbandon: dropPreview,
   });
   const brightness = useDrag({
     onStart: () => (live.current = picked.hsv),
     onMove: (x, _y, box) => show({ ...live.current, v: clamp01((x - box.left) / box.width) }),
     onEnd: () => commit(live.current),
+    onAbandon: dropPreview,
   });
 
   const { h, s, v } = picked.hsv;

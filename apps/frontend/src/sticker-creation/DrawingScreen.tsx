@@ -28,7 +28,7 @@ import { nextKind, ticketsLeft, type TicketKind, type Tickets } from "../tickets
 import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { TicketsNotLoaded } from "../tickets/TicketsNotLoaded";
 import { useTickets } from "../tickets/useTickets";
-import { clamp01 } from "../ui/easing";
+import { clamp, clamp01 } from "../ui/easing";
 import { useSideways } from "../ui/sideways";
 import { useLargeScreen } from "../ui/largeScreen";
 import { QuietLink } from "../ui/QuietLink";
@@ -72,7 +72,7 @@ import { ColorSheet } from "./tools/ColorSheet";
 import { HistoryButtons } from "./tools/HistoryButtons";
 import { MyBoardTile } from "./tools/MyBoardTile";
 import { FIRST_RECENT, startingColor, withRecent } from "./tools/palette";
-import { SizeRail } from "./tools/SizeRail";
+import { SIZE_STEP, SizeRail } from "./tools/SizeRail";
 import { SmoothingBar } from "./tools/SmoothingBar";
 import { ToolStrip, type Panel } from "./tools/ToolStrip";
 import { useShortcuts } from "./useShortcuts";
@@ -80,8 +80,6 @@ import "./DrawingScreen.css";
 
 /** Where the size rail starts for each tool, remembered per tool from then on. */
 const FIRST_SIZES = { brush: 0.34, eraser: 0.52 };
-/** How far [ and ] move the size rail. */
-const SIZE_STEP = 0.04;
 
 /** The timer's note while a reload's picked-up session has word to give. */
 const PICKED_UP_NOTES = {
@@ -432,7 +430,7 @@ export function DrawingScreen({
    */
   async function seal() {
     setPanel(null);
-    const timeUsed = Math.min(clock.length / 1000, Math.max(1, Math.round(clock.elapsed / 1000)));
+    const timeUsed = clamp(Math.round(clock.elapsed / 1000), 1, clock.length / 1000);
     let sticker: SealedSticker | null = null;
     let request: SealRequest | null = null;
     let shown: Ceremony | null = null;
