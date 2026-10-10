@@ -2,7 +2,43 @@
 
 A max-effort `code-review` of `apps/frontend/src/sticker-creation/` at main `3f2c21bd`, plus where its ink pipeline can be simplified or made faster. Each lane's full text is in `data/scratch/drawing-review/` (gitignored). This record goes once its findings are fixed or decided.
 
-Status: every finder lane has reported; verifiers are checking each candidate against current main. Nothing below is verified yet.
+Status: verified; fixes are on main or in flight on the branches below. A finding leaves this record once it's merged or decided, and the record goes when none is left.
+
+## Verdicts and owners
+
+Seven verifiers checked every candidate against main, one verdict each, and a sweep looked for gaps. Their notes are in `data/scratch/drawing-review/*-verification.txt`.
+
+**Refuted:** A3-7 (nothing makes the screen inactive mid-seal), Z-5 (tests import those constants, as the project does), Z-6 (`pixels.ts` holds the `Pixels` type), H-7 (a save costs 0.25 ms), A1-9/H-8 (no forced layout while drawing), the `penDrew` read, and P-7's cost (it's simplified anyway). Everything else is confirmed or plausible.
+
+**Fixed on main** (3aaace3e, 5479fa28): A2-1/A1-3/D-1, A2-2, A2-3, A2-4, A2-6, A1-1, A1-6, A1-4/B-2, A1-10, and D-6 for a pen landing again. B-5, K-2 and K-12 are fixed in the docs.
+
+**Fix lanes**, each a branch from 140cc5fb:
+
+| Branch                    | Findings                                                                                                 |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `fix/review-engine-input` | T-7, A1-5, D-8, B-3, R-1/C-6, H-4 (engine), D-6 (fingers), H-9, X-2, X-3, X-4 (gestures), K-9 (engine)   |
+| `fix/review-stroke`       | T-2/P-6, P-7, H-4/P-8 (curve), A1-13/D-5, T-3, R-8, X-4 (brush), K-7, K-8 (brush)                        |
+| `fix/review-fill`         | A1-2, O-2/M-5, C-4, X-4 (fill), K-9 (fill)                                                               |
+| `fix/review-seal`         | A3-1, A3-2/T-4, A3-3/C-2, R-5, R-6, R-7 (`Box`), T-5, X-4/X-5/X-7/X-9/X-10 (sealing), K-3, K-6 (sealing) |
+| `fix/review-seal-speed`   | A3-4, O-6, O-7/A3-5, A3-6, S-2, R-2 (`blankCanvas`), K-9, K-11                                           |
+| `fix/review-screen`       | Z-3/A4-7, S-5, S-6, S-7/R-4, S-8, A2-5, K-1, K-2 (code), K-5, K-10, X-1, X-5 (timer), X-8, X-9           |
+| `fix/review-kept-drawing` | A4-1, A4-2, A4-3, A4-4, A4-5, Z-1/X-6 (rolls and picks), K-4                                             |
+| `fix/review-clock`        | S-4/H-6/D-7/A4-8, Z-4, B-4, X-4/X-7 (clock), K-6/K-9/K-10 (session), one error-text helper               |
+| `fix/review-tools-css`    | R-3, Z-7, T-6, K-3/K-6/K-7/K-10 (CSS), X-9 (Smoothing bar)                                               |
+
+At merge: A4-3's call site and R-5's density prop in `DrawingScreen.tsx`, and the die-cut's inline clamp and second segment distance (R-extras) once the stroke lane lands.
+
+**The layers build** (`docs/superpowers/plans/2026-10-09-layers.md`) takes what sits in the files it rewrites: the wet-stroke canvas for P-1/T-1/M-1/M-2/H-2/H-3/A1-8/A1-11 and C-1/P-2; history for O-1/A1-7/M-3, H-1/P-3/M-4/O-4, O-3 and O-8; and B-1, A1-12, H-5, T-8, S-1/D-2, S-3, C-5, O-5/D-4, R-2 (`copyOf`), R-7 (`Rect`, `Pixels`), A4-6 and `readStep`'s `gap` fallback.
+
+**The whole-sheet timelapse's plan** has SW-1.
+
+**Left, and why:**
+
+- P-4, P-5 and K-8's stabilizer comments: Smoothing is being rebuilt from Clip Studio Paint's stabilizer (`docs/research/clip-studio-paint-stabilization/`), which settles pressure timing and the speed term.
+- Z-2: `drawnSizes.ts` can go only once every database with stickers, teammates' dev databases included, has applied 0008.
+- M-7: React's root listeners and `press.ts` run on each pointermove, about 20 µs unthrottled; skipping them means stopping propagation other listeners rely on.
+- M-8: the color sheet's 20-30 ms opening falls between strokes.
+- The error-text idiom's inline copies outside the drawing screen.
 
 ## Lanes
 
@@ -221,3 +257,8 @@ Nearly every candidate lands at pen down or lift; only GC can land mid-stroke. A
 - **X-8** (high): repeated setup in DrawingScreen.test.tsx.
 - **X-9** (medium): four test files build their own React root where `renderWithApi` does it.
 - **X-10** (low): foil precedence checked in three places; `Math.random()` input.
+
+### Sweep (SW)
+
+- **SW-1** (high) `sticker-board/timelapse/timelapsePlayer.ts:84-91`: the player paints on a canvas covering the whole stage with no clip to the sheet, while the paper stops at the sheet's edge, so ink a stroke drew past the edge plays beside the paper and the timelapse's last frame differs from the sticker. Fix: clip to the sheet in `showFrame`.
+- Checked clean: the die-cut's contour never stops early (3000 random inks), the timelapse frame never grows from float error, and the recent refactors kept their guards.

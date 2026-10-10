@@ -191,7 +191,7 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
 
 - `apps/frontend` — Vite + React + TypeScript
   - `src/app` — app shell: tab bar and screen switching
-  - `src/sticker-creation` — the drawing screen: canvas engine (`canvas/`), tools and drawers (`tools/`), sealing (`sealing/`)
+  - `src/sticker-creation` — the drawing screen: canvas engine (`canvas/`), tools and their panels (`tools/`), sealing (`sealing/`), the session in progress, kept on the device, and its clock (`session/`)
   - `src/sticker-board` — the sticker board, its stat board, sticker detail and placement; someone else's sticker board and its stat board; the sticker detail's timelapse, which plays how a sticker was drawn (`timelapse/`)
   - `src/explore` — Explore: artist search, the pile of stickers by the day they were sealed, paging back by day (`pilePages.ts`), and this week's leaderboards
   - `src/giving` — Giving: the give sheet and gift bag, the gift message, and sending it through LINE's friend picker; the give sheet and sticker picker on someone else's board

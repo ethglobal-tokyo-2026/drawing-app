@@ -8,7 +8,7 @@
 - The sticker still shows that it existed: its detail has a burned view, with its final owner.
 - Its Original Artist keeps the credit for it.
 - It can no longer be given or traded.
-- Why: some drawings are bad, and their owner wants them gone.
+- Why: some stickers are bad, and their owner wants them gone.
 
 ## Open questions for the plan
 
