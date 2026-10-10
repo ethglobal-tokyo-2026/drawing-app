@@ -108,7 +108,7 @@
   outline: none;
 }
 
-/* A sticker drawn smaller than a fingertip shows at its own size, and still takes a 44px touch. */
+/* A sticker drawn smaller than a fingertip shows at its own size, and still takes a fingertip's touch. */
 .placed-sticker::before {
   content: "";
   position: absolute;
@@ -154,7 +154,7 @@
 }
 
 /* Selection: a clear frame, four corner handles to resize, and a knob on a short stem to turn. The
-   frame is the focus ring too. Each handle reaches 44px. */
+   frame is the focus ring too. Each handle takes a fingertip. */
 .placed-sticker__frame {
   position: absolute;
   inset: -10px;
@@ -321,7 +321,7 @@
 }
 
 /* Arrange's step tiles: moves on the first row, sizes and turns on the second, one step each, for
-   whoever can't or won't drag, each 44px to touch. Over the sticker they open above the toolbar's
+   whoever can't or won't drag, each a fingertip wide. Over the sticker they open above the toolbar's
    row, on its far side from the sticker. */
 .sticker-toolbar__arrange {
   display: grid;
@@ -359,7 +359,7 @@
 }
 
 /* The Arrange tile ends the toolbar's row: a flat tile level with the labels' faces, reversed out of
-   Ink while the step tiles are out, 44px to touch. */
+   Ink while the step tiles are out, a fingertip wide. */
 .sticker-toolbar__arrange-toggle {
   position: relative;
   display: grid;
@@ -438,8 +438,6 @@
   background: rgba(255, 255, 255, 0.62);
 }
 
-/* The empty board: a quiet die-cut spot in the field, where the first sticker lands. Draw is the
-   way in. The board places it on that sticker's spot. */
 /* While the stickers load: faint die-cut shapes where stickers usually sit (BoardLoading.tsx). */
 .board-loading-sticker {
   position: absolute;
@@ -448,6 +446,8 @@
   opacity: 0.7;
 }
 
+/* The empty board: a quiet die-cut spot in the field, where the first sticker lands. Draw is the
+   way in. The board places it on that sticker's spot. */
 .board-blank {
   position: absolute;
   left: 50%;
@@ -497,8 +497,7 @@
   text-wrap: balance;
 }
 
-/* A spot that didn't save stays in view, over the board and above Draw, until a save of it succeeds. */
-/* The board's alerts, stacked over its foot above Draw: what didn't save, and what the tray couldn't do. */
+/* The board's alerts, stacked over its foot above Draw. */
 .board-alerts {
   position: absolute;
   z-index: 955;

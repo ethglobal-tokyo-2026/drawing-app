@@ -7,7 +7,7 @@ import { playStick } from "../stickers/stick";
 import { StickerFigure } from "../stickers/StickerFigure";
 import type { BoardSticker } from "./boardSticker";
 import { stickerBox, type Field } from "./placement";
-import type { Hold } from "./useBoardGestures";
+import type { InHand } from "./useBoardGestures";
 import { useCrease } from "./useCreases";
 
 interface Props {
@@ -21,7 +21,7 @@ interface Props {
   /** Whether its rotate knob hangs below it, where above it couldn't be reached. */
   knobBelow: boolean;
   /** How it's held, while it's in hand. */
-  held?: Hold["kind"];
+  inHand?: InHand["kind"];
   /** Whether it arrives by landing on the board; `onLanded` says when it has stuck. */
   landing: boolean;
   onLanded: () => void;
@@ -54,7 +54,7 @@ export const PlacedSticker = memo(function PlacedSticker({
   stack,
   selected,
   knobBelow,
-  held,
+  inHand,
   landing,
   onLanded,
   reduced,
@@ -92,8 +92,8 @@ export const PlacedSticker = memo(function PlacedSticker({
     "placed-sticker",
     selected && "is-selected",
     knobBelow && "is-knob-below",
-    held === "drag" && "is-dragging",
-    held === "handle" && "is-handling",
+    inHand === "drag" && "is-dragging",
+    inHand === "handle" && "is-handling",
     landing && "is-landing",
   ];
   const named = {

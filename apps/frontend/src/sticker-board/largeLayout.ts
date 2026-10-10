@@ -7,12 +7,15 @@ import {
   type PlacedBoardSticker,
   type UnplacedBoardSticker,
 } from "./boardSticker";
+import { clamp } from "../ui/easing";
 import {
   clampS,
   fieldOf,
   footprintOf,
-  largeLandingSize,
+  gapOf,
+  LARGE_LANDING_GROWTH,
   PHONE_BOARD_SIZE,
+  roundSpot,
   sRangeOf,
   type Art,
   type BoardLayout,
@@ -21,8 +24,6 @@ import {
   type Placement,
   type SRange,
 } from "./placement";
-
-const round4 = (v: number) => Number(v.toFixed(4));
 
 /** The share of each axis of the large board's field the phone's arrangement spreads across, centered. */
 export const LARGE_SPREAD = 0.88;
@@ -33,12 +34,12 @@ export const LARGE_SPREAD = 0.88;
  * lands there, inside its `range` there.
  */
 export function largeSpotFrom(phone: Placement, range: SRange): Placement {
-  return {
+  return roundSpot({
     ...phone,
-    x: round4(0.5 + (phone.x - 0.5) * LARGE_SPREAD),
-    y: round4(0.5 + (phone.y - 0.5) * LARGE_SPREAD),
-    s: round4(clampS(largeLandingSize(phone.s), range)),
-  };
+    x: 0.5 + (phone.x - 0.5) * LARGE_SPREAD,
+    y: 0.5 + (phone.y - 0.5) * LARGE_SPREAD,
+    s: clampS(phone.s * LARGE_LANDING_GROWTH, range),
+  });
 }
 
 /** How deep two footprints overlap on each axis; at or below zero on either, they're clear. */
@@ -46,11 +47,6 @@ const depthOf = (a: Footprint, b: Footprint) => ({
   x: a.ex + b.ex - Math.abs(a.x - b.x),
   y: a.ey + b.ey - Math.abs(a.y - b.y),
 });
-
-const overlap = (a: Footprint, b: Footprint) => {
-  const depth = depthOf(a, b);
-  return depth.x > 0 && depth.y > 0;
-};
 
 /** Passes over the pairs the spread pushed together; each pass settles what the last one left. */
 const PULL_PASSES = 32;
@@ -72,7 +68,8 @@ function pulledApart(
   const phone = items.map((s) => footprintOf(phoneField, phoneUnit, s.phone, s.art));
   const pairs: [number, number][] = [];
   for (let i = 0; i < items.length; i++)
-    for (let j = i + 1; j < items.length; j++) if (!overlap(phone[i], phone[j])) pairs.push([i, j]);
+    for (let j = i + 1; j < items.length; j++)
+      if (gapOf(phone[i], phone[j]) >= 0) pairs.push([i, j]);
   const field = fieldOf(board.W, board.H);
   const at = items.map((s) => footprintOf(field, board.U, s.large, s.art));
   const bounds = { x: [field.left, field.left + field.w], y: [field.top, field.top + field.h] };
@@ -80,7 +77,7 @@ function pulledApart(
   const move = (f: Footprint, axis: "x" | "y", by: number) => {
     const [lo, hi] = bounds[axis];
     const was = f[axis];
-    f[axis] = Math.min(hi, Math.max(lo, was + by));
+    f[axis] = clamp(was + by, lo, hi);
     return Math.abs(f[axis] - was);
   };
   for (let pass = 0; pass < PULL_PASSES; pass++) {
@@ -101,11 +98,11 @@ function pulledApart(
   return new Map(
     items.map((s, i) => [
       s.id,
-      {
+      roundSpot({
         ...s.large,
-        x: round4((at[i].x - field.left) / field.w),
-        y: round4((at[i].y - field.top) / field.h),
-      },
+        x: (at[i].x - field.left) / field.w,
+        y: (at[i].y - field.top) / field.h,
+      }),
     ]),
   );
 }

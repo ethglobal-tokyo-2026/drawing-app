@@ -43,7 +43,6 @@ describe("where a peek at a sticker's subjects goes", () => {
       const at = sticker(x, 420);
       const spot = thoughtPlacement({ sticker: at, board, shape, avoid: [] });
       const { box, middle } = placed(spot);
-      expect(spot.above).toBe(true);
       expect(box.bottom).toBeLessThanOrEqual(at.y);
       expect(inside(box)).toBe(true);
       expect(Math.sign(middle - at.x)).toBe(at.x < W / 2 ? 1 : -1);
@@ -69,7 +68,6 @@ describe("where a peek at a sticker's subjects goes", () => {
       avoid: [header, knobBox(at, true)],
     });
     const { box } = placed(spot);
-    expect(spot.above).toBe(false);
     expect(box.top).toBeGreaterThanOrEqual(at.y);
     expect(inside(box)).toBe(true);
   });

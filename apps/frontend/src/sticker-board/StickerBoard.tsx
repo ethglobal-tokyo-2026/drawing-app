@@ -69,11 +69,12 @@ import {
   toBoardSticker,
   type BoardSticker,
   type BoardStickerView,
-  type GivenSpots,
+  type NewSpots,
   type PlacedBoardSticker,
 } from "./boardSticker";
 import { KeepAnimations } from "./keepAnimations";
 import { PlacedSticker } from "./PlacedSticker";
+import { stickerElIn } from "./placedStickerEl";
 import {
   FIRST_SPOT,
   PHONE_BOARD_SIZE,
@@ -84,6 +85,7 @@ import {
   knobHidden,
   layoutsIn,
   nextZ,
+  roundSpot,
   sizeOf,
   spotsIn,
   stickerBox,
@@ -110,11 +112,12 @@ import { forgetsSoFar, keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { arrangeLeftOpen, keepArrangeOpen } from "./arrangeOpen";
-import { inGiftsLast, readingOrder } from "./stickerOrder";
+import { inGiftsLast, orderOn } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
 import { SendGratitudeSheet } from "../receiving/SendGratitudeSheet";
 import { GiftsForYouBadge, type GiftForYou } from "../receiving/GiftsForYouBadge";
 import { ArtistChipLayer } from "./ArtistChipLayer";
+import { ThoughtLayer, useSubjectsPeek } from "./subjectsPeek";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
 import { trayProblemKey, trayProblemWords, type TrayProblem } from "./tray/trayProblem";
@@ -145,10 +148,6 @@ const StatBoard = lazyWithPreload("the stat board", () =>
 const GratitudeMiniGame = lazyWithPreload("the Gratitude Mini-game", () =>
   import("../gratitude/GratitudeMiniGame").then((m) => m.GratitudeMiniGame),
 );
-// A tap on a sticker drawn in Kyoto Seika Practice Mode peeks at its subjects.
-const ThoughtLayer = lazyWithPreload("the subjects' peek", () =>
-  import("./ThoughtLayer").then((m) => m.ThoughtLayer),
-);
 const OPENED_FROM_BOARD = [StickerDetail, Giving, StatBoard, GratitudeMiniGame, ThoughtLayer];
 
 interface Props {
@@ -163,8 +162,6 @@ interface Props {
 
 /** Stickers that have landed this session. */
 const landed = new Set<string>();
-
-const round4 = (v: number) => Number(v.toFixed(4));
 
 interface LoadedBoard {
   owner: PersonView;
@@ -181,17 +178,6 @@ function zOnTop(stickers: readonly BoardSticker[], id: string) {
   const top = nextZ(stickers.filter((s) => s.id !== id).map((s) => s.placement));
   return own >= top ? own : top;
 }
-
-/**
- * Each sticker's place in the stack, from the bottom. The board stacks by rank rather than by the
- * stored order, which only grows, so stickers always stay under the header and the toolbar.
- */
-const stackOf = (stickers: readonly BoardSticker[]) =>
-  new Map(
-    [...stickers]
-      .sort((a, b) => a.placement.z - b.placement.z || a.createdAt - b.createdAt)
-      .map((s, i) => [s.id, i]),
-  );
 
 /** A sticker's spots that didn't save, the layouts they're in, and why. */
 interface Unsaved {
@@ -355,7 +341,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const size = useBoardSize(stage, layout);
   /** The board measured in the layout it shows: a flip at runtime leaves one render on the last one's. */
   const measured = size?.layout === layout ? size : null;
-  /** On a large screen Draw stands at the tab strip's left end (ui/TabsLead.tsx). */
+  /** A large screen, where Draw stands in the tabs' row. */
   const large = useLargeScreen();
   /** The name button's box on the board, which a sticker's knob must stay clear of. */
   const [name, setName] = useState<Box | null>(null);
@@ -367,8 +353,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   /** The sticker landing as this visit opened. `landingId` clears once it sticks; its chip plays on. */
   const [arrivedId] = useState(landingId);
   const [selected, setSelected] = useState<string | null>(null);
-  /** The sticker drawn in Kyoto Seika Practice Mode a tap just selected, peeking at its subjects; each peek its own. */
-  const [peek, setPeek] = useState<{ id: string; n: number } | null>(null);
+  const subjectsPeek = useSubjectsPeek();
   /** The sticker the detail shows, among your stickers or among the ones you gave. */
   const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
   const openYours = (id: string) => setOpen({ id, mode: "yours" });
@@ -380,7 +365,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const { tickets, error: ticketsError, refresh: refreshTickets } = useTickets();
   // Draw spends a daily ticket at once, its ticket peeling off the key; with none at all, a card says when.
   const drawKey = useDrawFromBoard(onDraw);
-  /** The sticker the gratitude mini-game is open for, from the stat board's developer slip. */
+  /** The sticker the Gratitude Mini-game is open for: a received gift's, or the developer slip's demo. */
   const [gratitudeFor, setGratitudeFor] = useState<GratitudeFor | null>(null);
   /** Received gifts whose notice closed on this visit, by receive: each close brings on the next. */
   const [noticesClosed, setNoticesClosed] = useState<ReadonlySet<string>>(() => new Set());
@@ -454,8 +439,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [adoptedAnswer, setAdoptedAnswer] = useState<typeof answer>(null);
   /** The language the board's names were made in: "Someone", a deleted account's, is the app's word. */
   const [namedIn, setNamedIn] = useState(i18n.language);
-  /** Stickers the board had never placed, given a spot as their answer was adopted. */
-  const [newlyPlaced, setNewlyPlaced] = useState<readonly GivenSpots[]>([]);
+  /** Stickers the board had never placed, with the spots it found for them as their answer was adopted. */
+  const [newlyPlaced, setNewlyPlaced] = useState<readonly NewSpots[]>([]);
   /** The large layout derived here from the phone's, to save once. */
   const [derivedLayout, setDerivedLayout] = useState<readonly LargeSpot[]>([]);
   /**
@@ -503,7 +488,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       setDerivedLayout(derived);
     }
   }
-  // Each spot the board gave is saved, so the sticker stays there.
+  // Each spot the board found is saved, so the sticker stays there.
   useEffect(() => {
     for (const { sticker, spots } of newlyPlaced) save(sticker, spots);
   }, [newlyPlaced, save]);
@@ -579,7 +564,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     else board.retry();
   }
 
-  // A Gift Message's send the server heard only late, as the app started, left the board behind too.
+  // Your board changed on the server behind the one on screen, so it loads again.
   useEffect(() => onMyStickerBoardChanged(() => setReloadForGift(true)), []);
   // A preview can make a gift wait here even when the person chooses Not now.
   const forYou = useApiQuery(`gifts-for-you:${giftClosures}`, (client) => client.giftsForYou());
@@ -673,7 +658,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
 
   // A given sticker has left the board: on its way, for its spot in the tray; received, for good.
   const onBoard = (stickers ?? []).filter(onTheBoard);
-  // The gratitude mini-game's demo always sends gratitude for whichever sticker landed most recently.
+  // The Gratitude Mini-game's demo sends gratitude for the board's most recently sealed sticker.
   const newest = onBoard.reduce<BoardSticker | null>(
     (latest, s) => (!latest || s.createdAt > latest.createdAt ? s : latest),
     null,
@@ -734,8 +719,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     if (id) setChipsDone(true);
     if (!id || !stickers) return;
     const sticker = stickers.find((s) => s.id === id);
-    if (by === "tap" && sticker?.kyotoSeikaSubjects)
-      setPeek((was) => ({ id, n: (was?.n ?? 0) + 1 }));
+    if (by === "tap" && sticker?.kyotoSeikaSubjects) subjectsPeek.start(id);
     const z = zOnTop(stickers, id);
     if (sticker && z !== sticker.placement.z) setPlacement(id, { ...sticker.placement, z });
   };
@@ -787,8 +771,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     onRemove: removeFromBoard,
     onStepsSettled: tellSteps,
   });
-  const stickerEl = (id: string) =>
-    stage.current?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`) ?? null;
+  const stickerEl = (id: string) => stickerElIn(stage.current, id);
   /**
    * The spot of a sticker given, or in a gift, on the sticker tray's front sheet or the sheet pulled
    * out.
@@ -820,14 +803,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             layout,
             size ?? PHONE_BOARD_SIZE,
           );
-      const placement: Placement = {
-        on: true,
-        x: round4(spot.x),
-        y: round4(spot.y),
-        s: spot.s,
-        r: spot.r,
-        z: zOnTop(stickers, id),
-      };
+      const placement: Placement = roundSpot({ on: true, ...spot, z: zOnTop(stickers, id) });
       // Drawn at once, so the tray can hand the sticker over where it lands.
       flushSync(() => setPlacement(id, placement));
       save(sticker, spotsIn(layout, placement));
@@ -876,9 +852,14 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     openYours: (id) => trayNow.current.board.openYours(id),
   }));
   const onTraySeen = useCallback((ids: readonly string[]) => trayNow.current.markSeen(ids), []);
-  const stack = stackOf(onBoard);
+  // Stacked by rank rather than by the stored order, which only grows, so stickers always stay under
+  // the header and the toolbar.
+  const bottomUp = onBoard.toSorted(
+    (a, b) => a.placement.z - b.placement.z || a.createdAt - b.createdAt,
+  );
+  const stack = new Map(bottomUp.map((s, i) => [s.id, i]));
   const creases = useCreases({
-    stickers: onBoard.toSorted((a, b) => (stack.get(a.id) ?? 0) - (stack.get(b.id) ?? 0)),
+    stickers: bottomUp,
     field,
     unit: size?.U ?? null,
     foilOf: (s) =>
@@ -886,9 +867,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     held: hold?.id,
   });
   // Screen readers and the arrow keys take the stickers in reading order, which is the DOM's too.
-  const order = field
-    ? readingOrder(onBoard.map((s) => ({ id: s.id, ...toPx(field, s.placement) })))
-    : [];
+  const order = field ? orderOn(onBoard, field) : [];
   const onBoardById = new Map(onBoard.map((s) => [s.id, s]));
   const inOrder = order.flatMap((id) => onBoardById.get(id) ?? []);
   // Privy's SDK waits for the first-load chips too (whenBoardSettled), so its wallet frame doesn't
@@ -906,7 +885,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     chosen && chosenBox && name && knobHidden({ ...chosenBox, r: chosen.placement.r }, name),
   );
   // A peek ends at once on a drag or a handle, letting go, another selection, the detail or a turn.
-  if (peek && (peek.id !== selected || hold || open || turned)) setPeek(null);
+  const peek = subjectsPeek.shown(selected, hold !== null || open !== null || turned);
   const peeked = peek && chosen?.id === peek.id ? chosen.kyotoSeikaSubjects : null;
   // The empty board's dashed spot, where the first sticker lands; a load error shows in it too.
   const blankAt = field && toPx(field, FIRST_SPOT);
@@ -938,7 +917,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
 
       {waiting.length > 0 && (
         <div className="board-gifts">
-          {/* Gifts for you: they ask to be opened. */}
           <GiftsForYouBadge gifts={waiting} onOpen={onOpenGift} nudging={idle} />
         </div>
       )}
@@ -1029,7 +1007,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                     stack={stack.get(s.id) ?? 0}
                     selected={s.id === selected}
                     knobBelow={s.id === selected && knobBelow}
-                    held={hold?.id === s.id ? hold.kind : undefined}
+                    inHand={hold?.id === s.id ? hold.kind : undefined}
                     landing={s.id === landingId}
                     onLanded={landedNow}
                     reduced={reduced}
@@ -1058,11 +1036,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                         onStep: (step) => arrange(s.id, step),
                       }}
                       {...(byOther(s) && { artist: s.artist })}
-                      onEscape={() =>
-                        stage.current
-                          ?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(s.id)}"]`)
-                          ?.focus()
-                      }
+                      onEscape={() => stickerEl(s.id)?.focus()}
                       reduced={reduced}
                     />
                   )}
@@ -1083,7 +1057,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             knobBelow={knobBelow}
             trayEdge={TRAY_EDGE}
             reduced={reduced}
-            onDone={() => setPeek(null)}
+            onDone={subjectsPeek.end}
           />
         </Suspense>
       )}
@@ -1111,7 +1085,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         </Suspense>
       )}
 
-      {board.state === "failed" && (
+      {failed && (
         <div className="board-blank board-problem" style={blankStyle}>
           <span className="board-blank-cut" aria-hidden />
           <ErrorLine detail={errorDetail(board.error)} onRetry={board.retry}>

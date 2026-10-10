@@ -25,7 +25,8 @@ interface Kept {
   board: KeptBoard;
 }
 
-const KEY = "draw.lastBoard";
+/** Where the board kept on this device is stored. */
+export const KEPT_BOARD_KEY = "draw.lastBoard";
 /** This build: the address of its own code, which changes with every deploy. */
 const BUILD = import.meta.url;
 /** The longest a kept board waits for an idle moment to be written. */
@@ -51,7 +52,7 @@ const isKept = (value: unknown): value is Kept =>
 
 /** The kept board as storage has it; another build's, or one that can't be read, is forgotten. */
 function read(): Kept | null {
-  const { text } = readStored(KEY, "The board kept on this phone couldn't be read");
+  const { text } = readStored(KEPT_BOARD_KEY, "The board kept on this phone couldn't be read");
   if (text === null) return null;
   const value = parseStored(text);
   if (isKept(value)) return value;
@@ -63,7 +64,7 @@ function read(): Kept | null {
 }
 
 const removeKept = () =>
-  writeStored(KEY, null, "The board kept on this phone couldn't be forgotten");
+  writeStored(KEPT_BOARD_KEY, null, "The board kept on this phone couldn't be forgotten");
 
 /**
  * Forgets the kept board, whoever's it is: its images are the other kind once the NSFW opt-in
@@ -98,7 +99,7 @@ function writeKept() {
   dropWrite();
   if (due)
     writeStored(
-      KEY,
+      KEPT_BOARD_KEY,
       JSON.stringify(due),
       "The board couldn't be kept on this phone for its next open",
     );

@@ -1,7 +1,8 @@
-import type { BoardStickerView } from "./boardSticker";
+import type { BoardSticker, BoardStickerView } from "./boardSticker";
+import { toPx, type Field } from "./placement";
 
 /** A sticker's center on the board, in board pixels. */
-export interface StickerPoint {
+interface StickerPoint {
   id: string;
   x: number;
   y: number;
@@ -25,6 +26,18 @@ function rowsOf(points: readonly StickerPoint[]): StickerPoint[][] {
 /** The stickers in reading order: rows from the top, each row from the left. */
 export const readingOrder = (points: readonly StickerPoint[]) =>
   rowsOf(points).flatMap((row) => row.map((p) => p.id));
+
+/** The stickers' centers on `field`, in board pixels. */
+export const pointsOn = (
+  stickers: readonly Pick<BoardSticker, "id" | "placement">[],
+  field: Field,
+): StickerPoint[] => stickers.map((s) => ({ id: s.id, ...toPx(field, s.placement) }));
+
+/** The stickers on `field` in reading order, as the arrow keys and screen readers take them. */
+export const orderOn = (
+  stickers: readonly Pick<BoardSticker, "id" | "placement">[],
+  field: Field,
+) => readingOrder(pointsOn(stickers, field));
 
 /**
  * Where focus goes from the sticker `id` as it leaves the board: the next sticker along in reading

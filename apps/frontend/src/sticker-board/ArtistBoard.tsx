@@ -29,7 +29,6 @@ import { StickerFigure } from "../stickers/StickerFigure";
 import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { useLargeScreen } from "../ui/largeScreen";
-import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { QuietLink } from "../ui/QuietLink";
 import { TabsLead } from "../ui/TabsLead";
@@ -40,24 +39,21 @@ import { ArtistChipLayer } from "./ArtistChipLayer";
 import { markGreeted, owesGreeting } from "./artistChipGreeting";
 import { onTheBoard, shownIn, toBoardSticker, type BoardStickerView } from "./boardSticker";
 import { laidOutForVisitor } from "./largeLayout";
-import { boxOf, fieldOf, kept, stickerBox, toPx, type Box, type Field } from "./placement";
+import { boxOf, fieldOf, kept, stickerBox, type Box, type Field } from "./placement";
 import { PlacedSticker } from "./PlacedSticker";
+import { stickerElIn } from "./placedStickerEl";
 import { AddressDialog } from "./stat-board/AddressDialog";
 import { AddressPapers } from "./stat-board/AddressPapers";
 import type { ChainAddress } from "./stat-board/addresses";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./stat-board/StatCork";
 import { statFigures } from "./stat-board/statFigures";
-import { focusStep, readingOrder } from "./stickerOrder";
+import { focusStep, orderOn, pointsOn } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
+import { ThoughtLayer, useSubjectsPeek } from "./subjectsPeek";
 import { useBoardLayout, useBoardSize } from "./useBoardSize";
 import { CreasesContext, useCreases } from "./useCreases";
 import "./ArtistBoard.css";
-
-// A tap on a sticker drawn in Kyoto Seika Practice Mode peeks at its subjects.
-const ThoughtLayer = lazyWithPreload("the subjects' peek", () =>
-  import("./ThoughtLayer").then((m) => m.ThoughtLayer),
-);
 
 interface Props {
   /** Whose board it is, as Explore found them. */
@@ -78,7 +74,8 @@ const visitField = (w: number, h: number): Field => {
   return { ...f, w: w - 2 * f.left };
 };
 
-function StickerView({
+/** View on someone else's board: the sticker held up, with who drew it and how long it took. */
+function VisitStickerDialog({
   sticker,
   owner,
   onClose,
@@ -164,18 +161,17 @@ export function ArtistBoard({ person, onBack }: Props) {
   /** Their Sui address held up in the address dialog. */
   const [holdingAddress, setHoldingAddress] = useState(false);
   const size = useBoardSize(face, layout);
-  /** On a large screen Give stands at the tab strip's left end (ui/TabsLead.tsx). */
+  /** A large screen, where Give stands in the tabs' row. */
   const large = useLargeScreen();
   /** Give's box on the board, which a sticker's toolbar keeps clear of. */
   const [give, setGive] = useState<Box | null>(null);
   const [turned, setTurned] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
-  /** The sticker drawn in Kyoto Seika Practice Mode a tap just selected, peeking at its subjects; each peek its own. */
-  const [peek, setPeek] = useState<{ id: string; n: number } | null>(null);
   /** The sticker last focused, which Tab comes back to. */
   const [tabStop, setTabStop] = useState<string | null>(null);
   const [viewing, setViewing] = useState<BoardStickerView | null>(null);
   const [giving, setGiving] = useState(false);
+  const subjectsPeek = useSubjectsPeek();
   /** Their foil stickers' artist chips have played on this app open, or a sticker was selected. */
   const [chipsDone, setChipsDone] = useState(() => !owesGreeting(person.id));
   useLight(!turned);
@@ -209,9 +205,7 @@ export function ArtistBoard({ person, onBack }: Props) {
   // The same field from render to render, so their stickers' memo holds.
   const field = useMemo(() => size && visitField(size.W, size.H), [size]);
   // Screen readers and the arrow keys take the stickers in reading order, which is the DOM's too.
-  const order = field
-    ? readingOrder(stickers.map((s) => ({ id: s.id, ...toPx(field, s.placement) })))
-    : [];
+  const order = field ? orderOn(stickers, field) : [];
   const byId = new Map(stickers.map((s, i) => [s.id, { sticker: s, stack: i }]));
   const inOrder = order.flatMap((id) => byId.get(id) ?? []);
   const tabbable = [tabStop, selected].find((id) => id && order.includes(id)) ?? order[0];
@@ -257,8 +251,7 @@ export function ArtistBoard({ person, onBack }: Props) {
   // Back turns the stat board to its front, as on your own board.
   useBackToClose(turned, () => turn(false));
 
-  const stickerEl = (id: string) =>
-    stage.current?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`) ?? null;
+  const stickerEl = (id: string) => stickerElIn(stage.current, id);
   const stickerAt = (target: EventTarget) => {
     const el = target instanceof Element ? target.closest<HTMLElement>(".placed-sticker") : null;
     return el?.dataset.stickerId === undefined ? null : { id: el.dataset.stickerId, el };
@@ -268,8 +261,7 @@ export function ArtistBoard({ person, onBack }: Props) {
   const select = (id: string) => {
     setSelected(id);
     setChipsDone(true);
-    if (stickers.find((s) => s.id === id)?.kyotoSeikaSubjects)
-      setPeek((was) => ({ id, n: (was?.n ?? 0) + 1 }));
+    if (stickers.find((s) => s.id === id)?.kyotoSeikaSubjects) subjectsPeek.start(id);
   };
   // A tap selects a sticker and shows its toolbar, or lets go of it; so does a tap on bare board.
   const onStageClick = (e: MouseEvent<HTMLDivElement>) => {
@@ -292,8 +284,7 @@ export function ArtistBoard({ person, onBack }: Props) {
     } else if (e.key === "Escape") {
       if (selected) setSelected(null);
     } else {
-      const points = stickers.map((s) => ({ id: s.id, ...toPx(field, s.placement) }));
-      const next = focusStep(points, from.id, e.key);
+      const next = focusStep(pointsOn(stickers, field), from.id, e.key);
       if (next === undefined) return;
       e.preventDefault();
       stickerEl(next)?.focus();
@@ -305,7 +296,7 @@ export function ArtistBoard({ person, onBack }: Props) {
   };
 
   // A peek ends at once on letting go, another selection, the sticker's view or a turn.
-  if (peek && (peek.id !== selected || viewing || turned)) setPeek(null);
+  const peek = subjectsPeek.shown(selected, viewing !== null || turned);
   const peeked = peek ? stickers.find((s) => s.id === peek.id) : undefined;
   const hasKyotoSeika = stickers.some((s) => s.kyotoSeikaSubjects);
   useEffect(() => {
@@ -481,7 +472,7 @@ export function ArtistBoard({ person, onBack }: Props) {
             knobBelow={false}
             trayEdge={0}
             reduced={reduced}
-            onDone={() => setPeek(null)}
+            onDone={subjectsPeek.end}
           />
         </Suspense>
       )}
@@ -539,7 +530,7 @@ export function ArtistBoard({ person, onBack }: Props) {
       )}
 
       {viewing && (
-        <StickerView
+        <VisitStickerDialog
           sticker={viewing}
           owner={owner}
           onClose={() => setViewing(null)}

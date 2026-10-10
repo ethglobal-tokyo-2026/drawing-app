@@ -33,10 +33,7 @@ interface Props {
   knobBelow: boolean;
   /** Draw's box on the board, which the toolbar keeps clear of so a press meant for it can't land on Draw. */
   clearOf: Box | null;
-  /**
-   * Give, where LINE's picker can send the sticker; without it there's no Give. A gift left packed
-   * (the app closed mid-send) doesn't block it: packing again sets the stale one aside.
-   */
+  /** Give, where LINE's picker can send the sticker; without it there's no Give. */
   onGive?: () => void;
   onView: () => void;
   /** Back into its used sticker silhouette in the sticker tray; someone else's board has none. */
@@ -148,68 +145,66 @@ export function StickerToolbar({
   }, [open, reduced]);
 
   return (
-    <>
-      <div
-        ref={ref}
-        className="sticker-toolbar"
-        role="toolbar"
-        aria-label={label}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onEscape();
-        }}
-      >
-        {artist && (
-          <div className="sticker-toolbar__by">
-            <ArtistChip artist={artist} bare />
-          </div>
-        )}
-        <div className="sticker-toolbar__acts">
-          {onGive && (
-            <LabelButton tone="aqua" size="sm" icon={<GiveIcon size={18} />} onClick={onGive}>
-              {t(($) => $.stickerBoard.toolbar.give)}
-            </LabelButton>
-          )}
-          <LabelButton size="sm" icon={<ViewIcon size={18} />} onClick={onView}>
-            {t(($) => $.stickerBoard.toolbar.view)}
-          </LabelButton>
-          {onRemove && (
-            <LabelButton size="sm" icon={<RemoveIcon size={18} />} onClick={onRemove}>
-              {t(($) => $.stickerBoard.toolbar.remove)}
-            </LabelButton>
-          )}
-          {arrange && (
-            <button
-              type="button"
-              className="sticker-toolbar__arrange-toggle"
-              aria-label={t(($) => $.stickerBoard.toolbar.arrange.label)}
-              aria-expanded={arrange.open}
-              aria-controls={arrange.open ? tilesId : undefined}
-              onClick={() => arrange.onOpen(!arrange.open)}
-            >
-              <ArrangeIcon size={18} weight={arrange.open ? "fill" : "bold"} />
-            </button>
-          )}
+    <div
+      ref={ref}
+      className="sticker-toolbar"
+      role="toolbar"
+      aria-label={label}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onEscape();
+      }}
+    >
+      {artist && (
+        <div>
+          <ArtistChip artist={artist} bare />
         </div>
-        {arrange?.open && (
-          <div
-            ref={tiles}
-            id={tilesId}
-            className="sticker-toolbar__arrange"
-            role="group"
+      )}
+      <div className="sticker-toolbar__acts">
+        {onGive && (
+          <LabelButton tone="aqua" size="sm" icon={<GiveIcon size={18} />} onClick={onGive}>
+            {t(($) => $.stickerBoard.toolbar.give)}
+          </LabelButton>
+        )}
+        <LabelButton size="sm" icon={<ViewIcon size={18} />} onClick={onView}>
+          {t(($) => $.stickerBoard.toolbar.view)}
+        </LabelButton>
+        {onRemove && (
+          <LabelButton size="sm" icon={<RemoveIcon size={18} />} onClick={onRemove}>
+            {t(($) => $.stickerBoard.toolbar.remove)}
+          </LabelButton>
+        )}
+        {arrange && (
+          <button
+            type="button"
+            className="sticker-toolbar__arrange-toggle"
             aria-label={t(($) => $.stickerBoard.toolbar.arrange.label)}
+            aria-expanded={arrange.open}
+            aria-controls={arrange.open ? tilesId : undefined}
+            onClick={() => arrange.onOpen(!arrange.open)}
           >
-            {ARRANGE.map(({ step, Glyph }) => (
-              <StepTile
-                key={step}
-                label={t(($) => $.stickerBoard.toolbar.arrange[step])}
-                Glyph={Glyph}
-                onStep={() => arrange.onStep(step)}
-              />
-            ))}
-          </div>
+            <ArrangeIcon size={18} weight={arrange.open ? "fill" : "bold"} />
+          </button>
         )}
       </div>
-    </>
+      {arrange?.open && (
+        <div
+          ref={tiles}
+          id={tilesId}
+          className="sticker-toolbar__arrange"
+          role="group"
+          aria-label={t(($) => $.stickerBoard.toolbar.arrange.label)}
+        >
+          {ARRANGE.map(({ step, Glyph }) => (
+            <StepTile
+              key={step}
+              label={t(($) => $.stickerBoard.toolbar.arrange[step])}
+              Glyph={Glyph}
+              onStep={() => arrange.onStep(step)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

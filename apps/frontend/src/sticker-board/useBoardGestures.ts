@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObje
 import { formatNo } from "../stickers/format";
 import { sheenIn, sweepSheen } from "../stickers/resinSheen";
 import { playStick } from "../stickers/stick";
-import { EASE_PEEL } from "../ui/easing";
+import { clamp, EASE_PEEL } from "../ui/easing";
 import {
   dragBounds,
   keptOnField,
@@ -16,7 +16,9 @@ import {
   type Step,
 } from "./boardGesture";
 import type { BoardSticker } from "./boardSticker";
+import { stickerElIn } from "./placedStickerEl";
 import {
+  roundSpot,
   sRangeOf,
   sizeOf,
   toFrac,
@@ -27,7 +29,7 @@ import {
   type Field,
   type Placement,
 } from "./placement";
-import { focusAfterLeaving, focusStep, readingOrder } from "./stickerOrder";
+import { focusAfterLeaving, focusStep, orderOn, pointsOn } from "./stickerOrder";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 
 interface Options {
@@ -57,7 +59,7 @@ interface Options {
 }
 
 /** A sticker in hand: `drag` rides under the finger (or two), `handle` is resized or turned in place. */
-export type Hold = { id: string; kind: "drag" | "handle" };
+export type InHand = { id: string; kind: "drag" | "handle" };
 
 /** A sticker's spot while it's moving, in board pixels: its center, size and turn. */
 type Live = { x: number; y: number; s: number; r: number };
@@ -110,12 +112,6 @@ const KEY_STEPS: Record<string, Step> = {
 /** Steps apply as they come, and save once they've been quiet this long. */
 export const STEP_SAVE_IDLE_MS = 400;
 
-const round = (v: number, places: number) => Number(v.toFixed(places));
-
-/** The stickers on `field` in reading order, as the arrow keys and screen readers take them. */
-const orderOn = (stickers: readonly BoardSticker[], field: Field) =>
-  readingOrder(stickers.map((s) => ({ id: s.id, ...toPx(field, s.placement) })));
-
 /**
  * Focus on a sticker leaving the board goes to the next one along that stays, else the one before it,
  * else the Zipper, rather than falling to the page.
@@ -128,7 +124,7 @@ function handFocusOn(
   stays: (other: string) => boolean,
 ) {
   const next = focusAfterLeaving(order, id, stays);
-  if (next) stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(next)}"]`)?.focus();
+  if (next) stickerElIn(stage, next)?.focus();
   else tray?.focusZipper();
 }
 
@@ -147,7 +143,7 @@ export function useBoardGestures(options: Options) {
     latest.current = options;
   });
   const gesture = useRef<Gesture | null>(null);
-  const [hold, setHold] = useState<Hold | null>(null);
+  const [hold, setHold] = useState<InHand | null>(null);
   const [tabStop, setTabStop] = useState<string | null>(null);
   const stowing = useRef<(id: string) => void>(() => {});
   const arranging = useRef<(id: string, step: Step) => void>(() => {});
@@ -205,23 +201,20 @@ export function useBoardGestures(options: Options) {
     const commit = (el: HTMLElement, sticker: BoardSticker, live: Live): Placement | null => {
       const { field } = latest.current;
       if (!field) return null;
-      const at = toFrac(field, live);
-      const placement: Placement = {
+      const placement: Placement = roundSpot({
         on: true,
-        x: round(at.x, 4),
-        y: round(at.y, 4),
-        s: round(live.s, 4),
-        r: round(normalizeTurn(live.r), 2),
+        ...toFrac(field, live),
+        s: live.s,
+        r: normalizeTurn(live.r),
         z: sticker.placement.z,
-      };
+      });
       // Let go past the field's edge, it settles on the field; React draws the same when it catches up.
       draw(el, sticker, liveOf(placement, field));
       latest.current.onCommit(sticker.id, placement);
       return placement;
     };
 
-    const focusSticker = (id: string) =>
-      stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`)?.focus();
+    const focusSticker = (id: string) => stickerElIn(stage, id)?.focus();
 
     /** Steps on one sticker, drawn as they come and saved once, when they've been quiet. */
     let stepped: {
@@ -250,7 +243,7 @@ export function useBoardGestures(options: Options) {
     const step = (id: string, by: Step) => {
       const { field } = latest.current;
       const sticker = stickerOf(id);
-      const el = stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`);
+      const el = stickerElIn(stage, id);
       if (!field || !sticker || !el || leaving.has(id)) return;
       if (stepped && stepped.id !== id) saveSteps();
       const from = stepped?.live ?? liveOf(sticker.placement, field);
@@ -334,7 +327,7 @@ export function useBoardGestures(options: Options) {
     const rideIn = async (id: string, steppedTo?: Placement) => {
       const { field, size, reduced } = latest.current;
       const sticker = stickerOf(id);
-      const el = stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`);
+      const el = stickerElIn(stage, id);
       if (!sticker || !field || !size || !el || !latest.current.tray.current) {
         leaving.delete(id);
         if (sticker) latest.current.onRemove(id, steppedTo);
@@ -440,11 +433,7 @@ export function useBoardGestures(options: Options) {
       const inHand = gesture.current?.mode === "bg" ? null : gesture.current;
       const pinchId = inHand?.id ?? (selected && !leaving.has(selected) ? selected : null);
       const pinched = pinchId ? stickerOf(pinchId) : undefined;
-      const pinchEl =
-        inHand?.el ??
-        (pinchId
-          ? stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(pinchId)}"]`)
-          : null);
+      const pinchEl = inHand?.el ?? (pinchId ? stickerElIn(stage, pinchId) : null);
       if (pointers.size === 2 && pinched && pinchEl) {
         // Pinched, a dragged sticker is no longer on its way to the tray.
         if (inHand?.mode === "drag") latest.current.tray.current?.boardDragEnd(inHand.id);
@@ -497,8 +486,8 @@ export function useBoardGestures(options: Options) {
       if (g.mode === "drag") {
         // The finger may carry it over the header and the tray's edge; it settles on the field.
         const bounds = dragBounds(field, size.W, size.H);
-        const x = Math.min(bounds.maxX, Math.max(bounds.minX, g.b0.x + pt.x - g.p0.x));
-        const y = Math.min(bounds.maxY, Math.max(bounds.minY, g.b0.y + pt.y - g.p0.y));
+        const x = clamp(g.b0.x + pt.x - g.p0.x, bounds.minX, bounds.maxX);
+        const y = clamp(g.b0.y + pt.y - g.p0.y, bounds.minY, bounds.maxY);
         g.live = { ...g.b0, x, y };
         // Near its used sticker silhouette in the open tray, the tray draws it in.
         const snap = latest.current.tray.current?.boardDrag(g.id, g.live)?.snap;
@@ -602,11 +591,7 @@ export function useBoardGestures(options: Options) {
         return;
       }
       if (selected !== sticker.id) {
-        const points = latest.current.stickers.map((s) => ({
-          id: s.id,
-          ...toPx(field, s.placement),
-        }));
-        const next = focusStep(points, sticker.id, e.key);
+        const next = focusStep(pointsOn(latest.current.stickers, field), sticker.id, e.key);
         if (next === undefined) return;
         e.preventDefault();
         focusSticker(next);

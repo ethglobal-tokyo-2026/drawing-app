@@ -37,8 +37,8 @@ export interface Box {
 export type BoardLayout = "phone" | "large";
 
 /**
- * The phone's board: DESIGN.md's 390 × 844 iPhone inside LINE, less the status bar, LINE's header
- * and the tab strip. The large layout sizes stickers by its width, and is first derived from it.
+ * The phone's board: DESIGN.md's iPhone frame inside LINE, less the status bar, LINE's header and the
+ * tab strip. The large layout sizes stickers by its width, and is first derived from it.
  */
 export const PHONE_BOARD = { W: 390, H: 651 } as const;
 
@@ -165,7 +165,7 @@ export function sRangeOf(art: Art, layout: BoardLayout, field: Field, unit: numb
 }
 
 /** `s` kept in `range`; where the field leaves less than its least, the field wins. */
-export const clampS = (s: number, range: SRange) => Math.min(range.max, Math.max(range.min, s));
+export const clampS = (s: number, range: SRange) => clamp(s, range.min, range.max);
 
 export const toPx = (f: Field, p: { x: number; y: number }) => ({
   x: f.left + p.x * f.w,
@@ -201,28 +201,21 @@ export function stickerBox(
   return { x, y, w, h, transform: transformAt(x, y, w, h, p.r) };
 }
 
+/** Whether two boxes come within `by` px of each other. */
+export const meets = (a: Box, b: Box, by = 0) =>
+  a.left < b.right + by && a.right > b.left - by && a.top < b.bottom + by && a.bottom > b.top - by;
+
+/** Half the width and height of the box a `w` by `h` box turned by `r` degrees takes up. */
+export function extentsOf(w: number, h: number, r: number) {
+  const turn = (r * Math.PI) / 180;
+  const [cos, sin] = [Math.abs(Math.cos(turn)), Math.abs(Math.sin(turn))];
+  return { ex: (cos * w + sin * h) / 2, ey: (sin * w + cos * h) / 2 };
+}
+
 /** The rotate knob's center stands this far past the sticker's edge, turned with it (see the CSS). */
 const KNOB_REACH = 42.5;
 /** The knob's touch area reaches this far from its center. */
 const KNOB_TOUCH = 22;
-
-/**
- * Whether the rotate knob, which stands past the sticker's top edge and turns with it, would sit off
- * the board's top or under the name button, where it can't be reached.
- */
-export function knobHidden(sticker: { x: number; y: number; h: number; r: number }, name: Box) {
-  const turn = (sticker.r * Math.PI) / 180;
-  const reach = sticker.h / 2 + KNOB_REACH;
-  const x = sticker.x + Math.sin(turn) * reach;
-  const y = sticker.y - Math.cos(turn) * reach;
-  if (y - KNOB_TOUCH < 0) return true;
-  return (
-    x + KNOB_TOUCH > name.left &&
-    x - KNOB_TOUCH < name.right &&
-    y + KNOB_TOUCH > name.top &&
-    y - KNOB_TOUCH < name.bottom
-  );
-}
 
 /** The rotate knob's touch area, above the sticker's top edge or hanging below it, turned with it. */
 export function knobBox(
@@ -241,10 +234,19 @@ export function knobBox(
   };
 }
 
+/**
+ * Whether the rotate knob, which stands past the sticker's top edge and turns with it, would sit off
+ * the board's top or under the name button, where it can't be reached.
+ */
+export function knobHidden(sticker: { x: number; y: number; h: number; r: number }, name: Box) {
+  const knob = knobBox(sticker, false);
+  return knob.top < 0 || meets(knob, name);
+}
+
 /** How far the toolbar keeps from what it must stay clear of. */
 const CLEARANCE = 8;
 /** A second tap that opens the sticker lands near its middle, so a toolbar over the sticker keeps a fingertip clear of it. */
-const MIDDLE_CLEAR = 22;
+export const MIDDLE_CLEAR = 22;
 
 /**
  * Where the selected sticker's toolbar goes, in board pixels: under the sticker, clear of its turned
@@ -258,33 +260,28 @@ export function toolbarSpot(
   toolbar: { w: number; h: number },
   { knobBelow = false, clearOf }: { knobBelow?: boolean; clearOf?: Box | null } = {},
 ) {
-  const turn = (sticker.r * Math.PI) / 180;
-  const reach =
-    (Math.abs(Math.sin(turn)) * sticker.w + Math.abs(Math.cos(turn)) * sticker.h) / 2 + 12;
+  const reach = extentsOf(sticker.w, sticker.h, sticker.r).ey + 12;
   const [below, above] = knobBelow ? [50, 14] : [14, 50];
   const left = clamp(sticker.x - toolbar.w / 2, 10, board.W - toolbar.w - TRAY_EDGE - 4);
-  const meets = (top: number) =>
+  const meetsDraw = (top: number) =>
     Boolean(
       clearOf &&
-      left < clearOf.right + CLEARANCE &&
-      left + toolbar.w > clearOf.left - CLEARANCE &&
-      top < clearOf.bottom + CLEARANCE &&
-      top + toolbar.h > clearOf.top - CLEARANCE,
+      meets({ left, top, right: left + toolbar.w, bottom: top + toolbar.h }, clearOf, CLEARANCE),
     );
   const highest = HEADER - 6;
   const lowest = board.H - toolbar.h - 12;
   /** Moved up off Draw when it would meet it. */
   const offDraw = (top: number) =>
-    clearOf && meets(top) ? Math.min(top, clearOf.top - CLEARANCE - toolbar.h) : top;
+    clearOf && meetsDraw(top) ? Math.min(top, clearOf.top - CLEARANCE - toolbar.h) : top;
   let top = sticker.y + reach + below;
-  if (top + toolbar.h > board.H - 12 || meets(top)) top = sticker.y - reach - above - toolbar.h;
+  if (top > lowest || meetsDraw(top)) top = sticker.y - reach - above - toolbar.h;
   if (top < highest) {
     const under = offDraw(Math.min(sticker.y + reach + below, lowest));
     const over = Math.max(sticker.y - reach - above - toolbar.h, highest);
     const freesMiddle = (t: number) =>
       t >= highest &&
       (t > sticker.y + MIDDLE_CLEAR || t + toolbar.h < sticker.y - MIDDLE_CLEAR) &&
-      !meets(t);
+      !meetsDraw(t);
     // A sticker too big to leave its middle free still gets its toolbar clear of Draw.
     top =
       (knobBelow ? [over, under] : [under, over]).find(freesMiddle) ??
@@ -340,9 +337,6 @@ function seededSpots(count: number): Spot[] {
   return Array.from({ length: SEEDED_TRIES }, () => [within(x, 4), within(y, 4), within(r, 0)]);
 }
 
-/** A sticker's size as it lands in the large layout, from its size on a phone. */
-export const largeLandingSize = (s: number) => Number((s * LARGE_LANDING_GROWTH).toFixed(3));
-
 /** The phone board, measured: where a layout that isn't on screen lands its stickers. */
 export const PHONE_BOARD_SIZE: BoardSize = { ...PHONE_BOARD, U: unitOf("phone", PHONE_BOARD.W) };
 
@@ -368,17 +362,15 @@ export function footprintOf(
 ): Footprint {
   const { x, y } = toPx(field, p);
   const { w, h } = sizeOf(unit, p.s, art);
-  const turn = (p.r * Math.PI) / 180;
-  const [cos, sin] = [Math.abs(Math.cos(turn)), Math.abs(Math.sin(turn))];
-  return { x, y, ex: (cos * w + sin * h) / 2, ey: (sin * w + cos * h) / 2 };
+  return { x, y, ...extentsOf(w, h, p.r) };
 }
 
 /** How far apart two footprints are, in px, on the axis they're furthest apart on; below zero, they overlap. */
-const gapOf = (a: Footprint, b: Footprint) =>
+export const gapOf = (a: Footprint, b: Footprint) =>
   Math.max(Math.abs(a.x - b.x) - a.ex - b.ex, Math.abs(a.y - b.y) - a.ey - b.ey);
 
-/** A center moved in as far as a footprint this big needs to stay on the field; too big, it centers. */
-const fitIn = (c: number, lo: number, span: number, e: number) =>
+/** A center moved in as far as a box reaching `e` from it needs to stay on the field; too big, it centers. */
+export const fitIn = (c: number, lo: number, span: number, e: number) =>
   2 * e >= span ? lo + span / 2 : Math.min(lo + span - e, Math.max(lo + e, c));
 
 /**
@@ -401,23 +393,30 @@ export function freeSpot(
     const at = footprintOf(field, board.U, { x: x0, y: y0, s, r }, art);
     at.x = fitIn(at.x, field.left, field.w, at.ex);
     at.y = fitIn(at.y, field.top, field.h, at.ey);
-    const room = others.length ? Math.min(...others.map((o) => gapOf(at, o))) : Infinity;
+    const room = Math.min(...others.map((o) => gapOf(at, o)));
     return { spot: { ...toFrac(field, at), s, r }, room };
   };
   /** The roomiest spot; the first wins a tie. */
   const roomiest = (spots: readonly Spot[]) =>
     spots.map(scored).reduce((best, next) => (next.room > best.room ? next : best));
   const laidOut = roomiest(SPOTS);
-  if (laidOut.room >= 0) return round4Spot(laidOut.spot);
+  if (laidOut.room >= 0) return roundSpot(laidOut.spot);
   const seeded = roomiest(seededSpots(taken.length));
-  return round4Spot(seeded.room > laidOut.room ? seeded.spot : laidOut.spot);
+  return roundSpot(seeded.room > laidOut.room ? seeded.spot : laidOut.spot);
 }
 
-const round4Spot = (p: Pick<Placement, "x" | "y" | "s" | "r">) => ({
-  x: Number(p.x.toFixed(4)),
-  y: Number(p.y.toFixed(4)),
-  s: Number(p.s.toFixed(4)),
-  r: p.r,
+const round = (v: number, places: number) => Number(v.toFixed(places));
+
+/**
+ * A spot at the precision it's saved at: its center and size to 4 places, finer than a pixel on any
+ * board, and its turn to 2.
+ */
+export const roundSpot = <P extends Pick<Placement, "x" | "y" | "s" | "r">>(p: P): P => ({
+  ...p,
+  x: round(p.x, 4),
+  y: round(p.y, 4),
+  s: round(p.s, 4),
+  r: round(p.r, 2),
 });
 
 /** The stacking order that puts a sticker above all the others. */

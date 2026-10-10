@@ -66,8 +66,8 @@ export interface BoardStickerView extends BoardSticker {
   /** Set when `held` is false. */
   givenTo: GivenTo | null;
   /**
-   * Its gift while packed or on its way. `to` is the handle of who it waits for: the artist picked in
-   * the app, or whoever first opened its link, since LINE's friend picker never says who was picked.
+   * Its gift while packed or on its way. `to` is the handle of who it waits for: the person the giver
+   * picked in the app, or whoever first opened its link, since LINE's friend picker never says who.
    */
   openGift: { id: string; status: "packed" | "sent"; to?: string } | null;
   /** When the open sticker tray showed it, in milliseconds; null shows NEW. */
@@ -82,7 +82,7 @@ export interface BoardStickerView extends BoardSticker {
 }
 
 /** A sticker's spot in each layout; null until that layout first places it. */
-export interface Placements {
+interface Placements {
   phone: Placement | null;
   large: Placement | null;
 }
@@ -107,8 +107,8 @@ export const movedIn = (
 ): PlacedBoardSticker["placements"] =>
   layout === "large" ? { ...placements, large: placement } : { ...placements, phone: placement };
 
-/** The spots the board gave a sticker, by layout, for saving. */
-export interface GivenSpots {
+/** The spots the board found for a sticker it had never placed, by layout, for saving. */
+export interface NewSpots {
   sticker: PlacedBoardSticker;
   spots: Spots;
 }
@@ -221,13 +221,13 @@ function landIn(
  * spot the board moved a sticker to (`moved`) wins over the load's in its layout, since the board's
  * moves are newer than any load. One never placed lands on top in each layout, clear of the stickers
  * on the board for its size on `boards`; one you hold that the large layout is missing goes there on
- * the board or in the tray, as on the phone. Each spot given is listed for saving.
+ * the board or in the tray, as on the phone. Each spot found is listed for saving.
  */
 export function placeUnplaced(
   loaded: readonly UnplacedBoardSticker[],
   moved: ReadonlyMap<string, Spots> = new Map(),
   boards: Partial<Record<BoardLayout, BoardSize>> = {},
-): { stickers: PlacedBoardSticker[]; placed: GivenSpots[] } {
+): { stickers: PlacedBoardSticker[]; placed: NewSpots[] } {
   const list = loaded.map((s) => {
     const spots = moved.get(s.id);
     if (!spots) return s;
@@ -242,7 +242,7 @@ export function placeUnplaced(
     });
   const listed = { phone: listedIn("phone"), large: listedIn("large") };
   const boardFor = (layout: BoardLayout) => boards[layout] ?? PHONE_BOARD_SIZE;
-  const placed: GivenSpots[] = [];
+  const placed: NewSpots[] = [];
   const stickers = list.map((s): PlacedBoardSticker => {
     const spots: Spots = {};
     const phone =

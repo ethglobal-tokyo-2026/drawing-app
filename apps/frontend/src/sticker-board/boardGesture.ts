@@ -1,4 +1,4 @@
-import { clampS, type Field, type SRange } from "./placement";
+import { clampS, extentsOf, fitIn, type Field, type SRange } from "./placement";
 
 export type Pt = { x: number; y: number };
 
@@ -62,15 +62,8 @@ export function keptOnField(
   size: { w: number; h: number },
   field: Field,
 ): Pt {
-  const turn = (at.r * Math.PI) / 180;
-  const [cos, sin] = [Math.abs(Math.cos(turn)), Math.abs(Math.sin(turn))];
-  const reach = { x: (cos * size.w + sin * size.h) / 2, y: (sin * size.w + cos * size.h) / 2 };
-  const fit = (c: number, lo: number, span: number, e: number) =>
-    2 * e >= span ? lo + span / 2 : Math.min(lo + span - e, Math.max(lo + e, c));
-  return {
-    x: fit(at.x, field.left, field.w, reach.x),
-    y: fit(at.y, field.top, field.h, reach.y),
-  };
+  const { ex, ey } = extentsOf(size.w, size.h, at.r);
+  return { x: fitIn(at.x, field.left, field.w, ex), y: fitIn(at.y, field.top, field.h, ey) };
 }
 
 /** Degrees, in [0, 360). */

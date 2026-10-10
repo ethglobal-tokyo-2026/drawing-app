@@ -13,7 +13,7 @@ import { onTheBoard, type BoardStickerView } from "./boardSticker";
 /** Once the board is complete, how long it stays quiet before what waited for it starts. */
 export const QUIET_MS = 1000;
 /** A board still assembling this long after it first showed counts as complete, so nothing waits for ever. */
-const GIVE_UP_MS = 10_000;
+export const GIVE_UP_MS = 10_000;
 /** How much of the board's first motion the performance report sums up. */
 const FRAMES_AFTER_MS = 5000;
 
@@ -27,7 +27,11 @@ export function markBoardComplete(): void {
   completeAt = performance.now();
   clearTimeout(givingUp);
   noteBootMilestone("board complete", undefined, completeAt);
-  watchFrames("the 5s after the board was complete", completeAt, FRAMES_AFTER_MS);
+  watchFrames(
+    `the ${FRAMES_AFTER_MS / 1000}s after the board was complete`,
+    completeAt,
+    FRAMES_AFTER_MS,
+  );
   for (const done of waiting) done();
   waiting.clear();
   // The board holds its images now.
@@ -67,7 +71,7 @@ export function decodeImage(url: string): Promise<void> {
 }
 
 /** A sticker as the board's assembly waits for it: its images' URLs. */
-export interface AssemblingSticker {
+interface AssemblingSticker {
   urls: readonly string[];
 }
 
