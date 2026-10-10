@@ -3,7 +3,7 @@
 /* Over someone else's board: main's give sheet parts, as one layer, over a scrim lighter than a
    card's. */
 .board-sheet-layer {
-  --sheet-scrim: rgba(28, 24, 36, 0.36);
+  --sheet-scrim: var(--scrim-light);
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);

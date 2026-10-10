@@ -1,7 +1,7 @@
 /* Giving: the gift bag under the given sticker's silhouette, from packing to "Closed and sent". */
 
 .giving {
-  --sheet-scrim: rgba(28, 24, 36, 0.36);
+  --sheet-scrim: var(--scrim-light);
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);

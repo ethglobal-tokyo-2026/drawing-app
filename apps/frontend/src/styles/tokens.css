@@ -48,6 +48,7 @@
   --rule-strong: rgba(28, 24, 36, 0.26);
   --ink-soft: rgba(28, 24, 36, 0.62);
   --scrim: rgba(28, 24, 36, 0.46); /* the Ink veil behind a card or dialog */
+  --scrim-light: rgba(28, 24, 36, 0.36); /* the light veil, where what's behind stays in view */
   /* Graphite for fine text on Liner Deep, where Graphite itself reads only 4.2:1; this reads 5.0:1. */
   --graphite-on-deep: #635d6d;
   --grid-peek: rgba(

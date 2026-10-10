@@ -342,7 +342,7 @@ Liner and Ink, plus candy-bright coded fields, each with one meaning and always 
 - **Graphite** (graphite): secondary text, fine print, placeholders and quiet links. On Liner Deep, or anything as dark, fine text takes the darker `--graphite-on-deep` (5.0:1).
 - **Canvas** (canvas): drawing surfaces, a sticker's white border, and white label stock.
 
-Hairlines are Ink alpha: 14% for a rule, 26% for a strong one. Soft text is Ink at 62%. Soft fields mix a coded hue into Liner at 30–42%, keeping its meaning at rest volume.
+Hairlines are Ink alpha: 14% for a rule, 26% for a strong one. Soft text is Ink at 62%. A veil is Ink at 46% behind a card or dialog, and at 36% where what's behind stays in view, such as a board under a sheet or the pile under a lifted sticker. Soft fields mix a coded hue into Liner at 30–42%, keeping its meaning at rest volume.
 
 ### Named Rules
 

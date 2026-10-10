@@ -2,7 +2,7 @@
    than a card's, as your gratitude events' layer is; it stays mounted, so it lets taps through while
    closed. */
 .kyoto-seika-help-layer {
-  --sheet-scrim: rgba(28, 24, 36, 0.36);
+  --sheet-scrim: var(--scrim-light);
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);
