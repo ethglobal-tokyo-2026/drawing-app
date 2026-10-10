@@ -683,10 +683,10 @@ export const stickerBoard = {
       confirm: { en: "Mark 18+", ja: "18+にする" },
       /** Sticker detail, Mark 18+'s confirm: the red button's words while the mark is on its way to the server */
       sending: { en: "Marking…", ja: "18+にしています…" },
-      /** Sticker detail, Mark 18+'s confirm: the alert under it when the mark failed or was refused, before the reason */
+      /** Sticker detail, Mark 18+'s confirm: the alert under it when the mark failed or was refused, kept on that sticker as it pages; {{no}} is the sticker's number, before the reason */
       failed: {
-        en: "Couldn’t mark it 18+: {{reason}}",
-        ja: "18+にできませんでした：{{reason}}",
+        en: "Couldn’t mark {{no}} 18+: {{reason}}",
+        ja: "{{no}}を18+にできませんでした：{{reason}}",
       },
       /** Sticker detail: the status line at its foot once the mark lands, for someone with Show 18+ stickers on; {{no}} is the sticker's number */
       done: { en: "{{no}} is marked 18+.", ja: "{{no}}を18+にしました。" },
@@ -713,10 +713,10 @@ export const stickerBoard = {
       confirm: { en: "Remove 18+", ja: "18+を外す" },
       /** Sticker detail, Remove 18+'s confirm: the red button's words while the removal is on its way to the server */
       sending: { en: "Removing…", ja: "18+を外しています…" },
-      /** Sticker detail, Remove 18+'s confirm: the alert under it when the removal failed or was refused, before the reason and Try again */
+      /** Sticker detail, Remove 18+'s confirm: the alert under it when the removal failed or was refused, kept on that sticker as it pages; {{no}} is the sticker's number, before the reason and Try again */
       failed: {
-        en: "Couldn’t remove 18+: {{reason}}",
-        ja: "18+を外せませんでした：{{reason}}",
+        en: "Couldn’t remove 18+ from {{no}}: {{reason}}",
+        ja: "{{no}}の18+を外せませんでした：{{reason}}",
       },
       /** Sticker detail: the status line at its foot once the 18+ mark is off; {{no}} is the sticker's number */
       done: { en: "{{no}} is no longer 18+.", ja: "{{no}}の18+を外しました。" },

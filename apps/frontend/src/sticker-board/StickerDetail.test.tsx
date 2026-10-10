@@ -84,6 +84,7 @@ let root: Root;
 const onClose = vi.fn();
 const onGive = vi.fn();
 
+/** Opens the detail; again on the same sticker, it renders the open one with the props given. */
 const open = (
   props: Partial<ComponentProps<typeof StickerDetail>> = {},
   client: ApiClient = emptyApi(),
@@ -94,6 +95,7 @@ const open = (
       <ApiProvider client={client}>
         <MeContext value={me}>
           <StickerDetail
+            key={props.startId ?? "s-133"}
             stickers={stickers}
             startId="s-133"
             mode="yours"
@@ -245,6 +247,17 @@ describe("StickerDetail", () => {
     press("No.0133");
     press("Give");
     expect(onGive).toHaveBeenCalledExactlyOnceWith(stickers[1]);
+  });
+
+  it("keeps showing its sticker when a reload drops it from the list, until it's paged", () => {
+    open();
+    // The board reloads once a friend received No.0133, which leaves your stickers.
+    open({ stickers: [stickers[0], stickers[2]] });
+    expect(heading()).toBe("No.0133");
+    press("Next sticker");
+    expect(heading()).toBe("No.0117");
+    press("Previous sticker");
+    expect(heading()).toBe("No.0147");
   });
 
   it("says who received a given sticker, and when, and offers no Give", () => {
@@ -826,6 +839,40 @@ describe("StickerDetail", () => {
       expect(focusInDetail()).toBe(true);
     });
 
+    it("plays on, with focus where it was, when another sticker's mark lands", async () => {
+      let land: () => void = () => {};
+      const marked = {
+        sticker: apiSticker({ id: "s-147", number: 147, nsfw: true, artist: TEST_OWNER }),
+        cdnPurged: true,
+      };
+      const client = {
+        ...withTimelapse(),
+        markStickerNsfw: () =>
+          new Promise<typeof marked>((resolve) => {
+            land = () => resolve(marked);
+          }),
+      };
+      open({ stickers: timelapsed, startId: "s-147", ownerId: TEST_OWNER.id }, client);
+      const words = strings.stickerBoard.detail.markNsfw;
+      press(words.open.en);
+      press(words.confirm.en);
+      press("Next sticker");
+      await settle();
+      act(() => timelapseButton()?.click());
+      await settle();
+      const player = players.last();
+      player.prepared.resolve();
+      await settle();
+      const previous = button("Previous sticker");
+      act(() => previous?.focus());
+
+      land();
+      await settle();
+      expect(player.calls).not.toContain("stop");
+      expect(layer()).not.toBeNull();
+      expect(document.activeElement).toBe(previous);
+    });
+
     it("stops when Back closes the detail", async () => {
       const player = await playing();
       await act(async () => {
@@ -981,6 +1028,45 @@ describe("StickerDetail", () => {
       expect(figure()?.classList).not.toContain("is-nsfw");
       expect(boardChanged).not.toHaveBeenCalled();
       expect(button(words.confirm.en)).toBeDefined();
+    });
+
+    it("keeps a mark that failed after a page turn on its sticker, naming it, until tried again", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      let refuse: (error: unknown) => void = () => {};
+      const markStickerNsfw = vi.fn<ApiClient["markStickerNsfw"]>(
+        () =>
+          new Promise((_, reject) => {
+            refuse = reject;
+          }),
+      );
+      open({ ownerId: TEST_OWNER.id }, emptyApi({ markStickerNsfw }));
+      press(words.open.en);
+      press(words.confirm.en);
+      press("Next sticker");
+      const refusal = new ApiError(503, { error: "unavailable", detail: "database is busy" });
+      refuse(refusal);
+      await settle();
+      const failed = () => document.querySelector(".sticker-detail__mark-failed")?.textContent;
+      expect(failed()).toBeUndefined();
+
+      // Paging back finds it on its sticker, and paging on and back again leaves it there.
+      press("Previous sticker");
+      expect(failed()).toContain("No.0133");
+      expect(failed()).toContain(errorMessage(refusal));
+      press("Next sticker");
+      press("Previous sticker");
+      expect(failed()).toContain("No.0133");
+    });
+
+    it("closes on Escape while another sticker's mark is on its way", async () => {
+      const markStickerNsfw = vi.fn<ApiClient["markStickerNsfw"]>(() => new Promise(() => {}));
+      open({ ownerId: TEST_OWNER.id }, emptyApi({ markStickerNsfw }));
+      press(words.open.en);
+      press(words.confirm.en);
+      press("Next sticker");
+      key("Escape");
+      await settle();
+      expect(onClose).toHaveBeenCalledOnce();
     });
 
     it.each([
