@@ -26,6 +26,11 @@ const offscreenCanvas: MakeCanvas = (width, height) => {
   return {
     g,
     png: () => canvas.convertToBlob({ type: "image/png" }).finally(() => releaseCanvas(canvas)),
+    bitmap: () => {
+      const bitmap = canvas.transferToImageBitmap();
+      releaseCanvas(canvas);
+      return Promise.resolve(bitmap);
+    },
   };
 };
 
@@ -40,7 +45,10 @@ function pixelsOf(ink: ImageBitmap): ImageData {
 async function answer({ ink, density }: SealRequest) {
   try {
     const cut = await cutSticker({ pixels: pixelsOf(ink), image: ink, density }, offscreenCanvas);
-    self.postMessage({ ok: true, cut }, cut ? [cut.maskPixels.buffer] : []);
+    self.postMessage(
+      { ok: true, cut },
+      cut ? [cut.maskPixels.buffer, ...Object.values(cut.passes)] : [],
+    );
   } catch (error) {
     self.postMessage(
       { ok: false, error: error instanceof Error ? error.message : String(error) },

@@ -15,6 +15,8 @@ import { lineShownAt, sealFrame, T, TOTAL } from "./sealTimeline";
 
 const NOW = new Date(2026, 8, 26, 21, 4);
 
+/** A pass as the cut hands it over, ready to draw. */
+const pass = await createImageBitmap(document.createElement("canvas"));
 const KEEP_DRAWING = i18next.t(($) => $.stickerCreation.sealedCard.keepDrawing);
 const BACK_TO_BOARD = i18next.t(($) => $.ui.backToBoard);
 const BUY_RESERVE_TICKETS = i18next.t(($) => $.stickerCreation.sealedCard.buyReserveTickets);
@@ -44,12 +46,8 @@ const sticker: SealedSticker = {
     [550, 570],
     [130, 570],
   ],
-  passes: {
-    plain: "blob:plain",
-    gloss: "blob:gloss",
-    shadow: "blob:shadow",
-    mask: "blob:mask",
-  },
+  passes: { plain: pass, gloss: pass, shadow: pass },
+  maskUrl: "blob:mask",
   maskImage: document.createElement("canvas"),
   dispose: () => {},
 };

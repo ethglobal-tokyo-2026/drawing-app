@@ -53,12 +53,27 @@
   }
 }
 
-.seal-ceremony__dim,
-.seal-ceremony__cut {
+/* Everything but the die-cut: the cut's mask, at the sticker's place, is XOR'd out of a full layer. */
+.seal-ceremony__dim {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  pointer-events: none;
+  background: rgba(28, 24, 36, 0.52);
+  -webkit-mask:
+    linear-gradient(#000 0 0),
+    var(--m) var(--x) var(--y) / var(--w) var(--h) no-repeat;
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0),
+    var(--m) var(--x) var(--y) / var(--w) var(--h) no-repeat;
+  mask-composite: exclude;
+}
+
+/* The cut line and its blade, each placed over the sticker's box as it's sized. */
+.seal-ceremony__cut,
+.seal-ceremony__cutter {
+  position: absolute;
+  display: block;
   pointer-events: none;
 }
 
@@ -97,7 +112,8 @@
   will-change: transform;
 }
 
-.seal-ceremony__sticker img {
+.seal-ceremony__plain,
+.seal-ceremony__gloss {
   position: absolute;
   inset: 0;
   display: block;

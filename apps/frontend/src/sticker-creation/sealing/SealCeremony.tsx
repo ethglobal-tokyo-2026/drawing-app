@@ -14,7 +14,8 @@ import { sweepSheen } from "../../stickers/resinSheen";
 import type { Sticker } from "@drawing-app/api/client";
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { useReducedMotion } from "../../ui/useReducedMotion";
-import { makeCutLine, paintDim, paintUsedStickerSilhouette, type Cutter } from "./ceremonyPaint";
+import { makeCutLine, paintPass, paintUsedStickerSilhouette, type Cutter } from "./ceremonyPaint";
+import { OUTLINE_STEP, thinned } from "./cutSticker";
 import type { SealedSticker } from "./makeSticker";
 import { SealedCard } from "./SealedCard";
 import {
@@ -93,7 +94,10 @@ function stage(sticker: SealedSticker, sheet: Rect) {
   const x = box.w * 0.5;
   const y = box.h * 0.42;
   const r = 1.04 * Math.hypot(Math.max(x, box.w - x), Math.max(y, box.h - y));
-  const contour = sticker.contour.map(([cx, cy]) => [sheet.x + cx * k, sheet.y + cy * k]);
+  // Thinned as the stored outline is: its step in image pixels, turned into ink pixels.
+  const contour = thinned(sticker.contour, (OUTLINE_STEP * sticker.place.w) / sticker.width).map(
+    ([cx, cy]) => [sheet.x + cx * k, sheet.y + cy * k],
+  );
   return { box, body, contour, pour: { x: x - r, y: y - r, w: r * 2, h: r * 2 } };
 }
 
@@ -139,7 +143,6 @@ export function SealCeremony({
   const slot = useRef<HTMLDivElement>(null);
 
   const { box, pour } = stage(sticker, sheet);
-  const { passes } = sticker;
 
   useLayoutEffect(() => {
     const { box, body, contour } = stage(sticker, sheet);
@@ -147,14 +150,15 @@ export function SealCeremony({
     const el = <E extends Element>(selector: string) =>
       need(host.querySelector<E>(selector), selector);
     const parts = {
-      dim: el<HTMLCanvasElement>(".seal-ceremony__dim"),
+      dim: el<HTMLElement>(".seal-ceremony__dim"),
       usedStickerSilhouette: el<HTMLCanvasElement>(".seal-ceremony__used-sticker-silhouette"),
       veil: el<HTMLElement>(".seal-ceremony__veil"),
       cut: el<HTMLCanvasElement>(".seal-ceremony__cut"),
-      shadow: el<HTMLElement>(".seal-ceremony__shadow"),
+      cutter: el<HTMLCanvasElement>(".seal-ceremony__cutter"),
+      shadow: el<HTMLCanvasElement>(".seal-ceremony__shadow"),
       sticker: el<HTMLElement>(".seal-ceremony__sticker"),
-      plain: el<HTMLElement>(".seal-ceremony__plain"),
-      gloss: el<HTMLElement>(".seal-ceremony__gloss"),
+      plain: el<HTMLCanvasElement>(".seal-ceremony__plain"),
+      gloss: el<HTMLCanvasElement>(".seal-ceremony__gloss"),
       pour: el<HTMLElement>(".seal-ceremony__pour"),
       front: el<HTMLElement>(".seal-ceremony__pour > b"),
       spec: el<HTMLElement>(".live-resin__spec"),
@@ -162,11 +166,13 @@ export function SealCeremony({
       sheen: el<HTMLElement>(".live-resin__sheen > b"),
     };
 
-    const size = { w: host.offsetWidth, h: host.offsetHeight };
     const r = Math.min(devicePixelRatio || 1, 2);
-    paintDim(parts.dim, size, box, sticker.maskImage, r);
+    // Drawn again on each run of this effect, which StrictMode runs twice: the passes live until dispose.
+    paintPass(parts.shadow, sticker.passes.shadow, "shadow");
+    paintPass(parts.plain, sticker.passes.plain, "print");
+    paintPass(parts.gloss, sticker.passes.gloss, "gloss");
     paintUsedStickerSilhouette(parts.usedStickerSilhouette, box, sticker.maskImage, r);
-    const cutLine = makeCutLine(parts.cut, size, contour, r);
+    const cutLine = makeCutLine(parts.cut, parts.cutter, box, contour, r);
 
     // The card comes with the sealed sticker, so its slot is measured once the card is there, and
     // again whenever the card or the ceremony changes size: the card grows upward from its foot, and
@@ -311,7 +317,14 @@ export function SealCeremony({
       stopKeys();
       slotAt?.stop();
       host.removeAttribute("data-lifted");
-      [parts.dim, parts.usedStickerSilhouette, parts.cut].forEach(releaseCanvas);
+      [
+        parts.shadow,
+        parts.plain,
+        parts.gloss,
+        parts.usedStickerSilhouette,
+        parts.cut,
+        parts.cutter,
+      ].forEach(releaseCanvas);
     };
   }, [sticker, sheet]);
 
@@ -320,9 +333,15 @@ export function SealCeremony({
     if (sealed || !reduced) wake.current();
   }, [sealed, reduced]);
 
-  const resin: CSSProperties = {
-    ...boxStyle(box),
-    "--m": `url("${passes.mask}")`,
+  const mask = `url("${sticker.maskUrl}")`;
+  const resin: CSSProperties = { ...boxStyle(box), "--m": mask };
+  // The dim is everything but the cut: the mask, at the sticker's place, takes the cut out of it.
+  const dim: CSSProperties = {
+    "--m": mask,
+    "--x": px(box.x),
+    "--y": px(box.y),
+    "--w": px(box.w),
+    "--h": px(box.h),
   };
 
   // Pink on an 18+ sticker, else the Kyoto Seika Practice Mode foil on one drawn in that mode: the
@@ -347,7 +366,7 @@ export function SealCeremony({
         skippingTouch.current = false;
       }}
     >
-      <canvas className="seal-ceremony__dim" aria-hidden="true" />
+      <span className="seal-ceremony__dim" style={dim} aria-hidden="true" />
       <canvas
         className="seal-ceremony__used-sticker-silhouette"
         style={boxStyle(box)}
@@ -355,6 +374,7 @@ export function SealCeremony({
       />
       <span className="seal-ceremony__veil" aria-hidden="true" />
       <canvas className="seal-ceremony__cut" aria-hidden="true" />
+      <canvas className="seal-ceremony__cutter" aria-hidden="true" />
       {/* The card and the sticker on it leave together, as one piece. */}
       <div
         className="seal-ceremony__carrier"
@@ -374,17 +394,11 @@ export function SealCeremony({
             onShop={onShop}
           />
         )}
-        <img
-          className="seal-ceremony__shadow"
-          style={boxStyle(box)}
-          src={passes.shadow}
-          alt=""
-          decoding="sync"
-        />
+        <canvas className="seal-ceremony__shadow" style={boxStyle(box)} aria-hidden="true" />
         <div className="seal-ceremony__sticker" style={resin} aria-hidden="true">
           {foil && sealed && <StickerFoil size="board" tone={foil} turn={LANDED_TURN_DEG} />}
-          <img className="seal-ceremony__plain" src={passes.plain} alt="" decoding="sync" />
-          <img className="seal-ceremony__gloss" src={passes.gloss} alt="" decoding="sync" />
+          <canvas className="seal-ceremony__plain" />
+          <canvas className="seal-ceremony__gloss" />
           <span className="seal-ceremony__pour">
             <b style={boxStyle(pour)} />
           </span>

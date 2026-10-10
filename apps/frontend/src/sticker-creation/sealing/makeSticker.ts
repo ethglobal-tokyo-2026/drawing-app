@@ -1,17 +1,15 @@
 import { blankCanvas, context2d } from "../canvas/context2d";
 import { releaseCanvas } from "../../ui/releaseCanvas";
-import { cutSticker, type CutSticker, type MakeCanvas, type PassName } from "./cutSticker";
+import { cutSticker, type CutSticker, type MakeCanvas } from "./cutSticker";
 import type { SealReply, SealRequest } from "./sealWorker";
 
 /** A sealed sticker: the cut sticker as it's stored, and as the ceremony plays with it. */
-export type SealedSticker = Omit<CutSticker, "passes" | "maskPixels"> & {
-  /** The cut's shape (white, with the cut as alpha), the same size and place as `png`. */
-  mask: Blob;
-  /** The ceremony's passes, as object URLs. */
-  passes: Record<PassName, string>;
-  /** The mask, for painting the dim and the used sticker silhouette. */
+export type SealedSticker = Omit<CutSticker, "maskPixels"> & {
+  /** The mask's object URL, for the ceremony's CSS masks. */
+  maskUrl: string;
+  /** The mask, for painting the used sticker silhouette. */
   maskImage: HTMLCanvasElement;
-  /** Lets the passes' URLs and the mask's canvas go. */
+  /** Lets the passes, the mask's URL and its canvas go. */
   dispose: () => void;
 };
 
@@ -31,7 +29,11 @@ const encode = (canvas: HTMLCanvasElement) =>
 
 const elementCanvas: MakeCanvas = (width, height) => {
   const { canvas, g } = blankCanvas(width, height);
-  return { g, png: () => encode(canvas).finally(() => releaseCanvas(canvas)) };
+  return {
+    g,
+    png: () => encode(canvas).finally(() => releaseCanvas(canvas)),
+    bitmap: () => createImageBitmap(canvas).finally(() => releaseCanvas(canvas)),
+  };
 };
 
 /** The sealing worker paints on OffscreenCanvas, which older iOS lacks: there the cut runs here. */
@@ -122,24 +124,18 @@ export async function makeSticker(
 ): Promise<SealedSticker | null> {
   const cut = workerCanCut() ? await cutInWorkerOrHere(ink, density) : await cutHere(ink, density);
   if (!cut) return null;
-  const { passes, maskPixels, ...rest } = cut;
+  const { maskPixels, ...rest } = cut;
   const { width, height } = rest;
   const { canvas: maskImage, g } = blankCanvas(width, height);
   g.putImageData(new ImageData(maskPixels, width, height), 0, 0);
-
-  const urls: Record<PassName, string> = {
-    plain: URL.createObjectURL(passes.plain),
-    gloss: URL.createObjectURL(passes.gloss),
-    shadow: URL.createObjectURL(passes.shadow),
-    mask: URL.createObjectURL(passes.mask),
-  };
+  const maskUrl = URL.createObjectURL(cut.mask);
   return {
     ...rest,
-    mask: passes.mask,
-    passes: urls,
+    maskUrl,
     maskImage,
     dispose: () => {
-      Object.values(urls).forEach((u) => URL.revokeObjectURL(u));
+      Object.values(cut.passes).forEach((pass) => pass.close());
+      URL.revokeObjectURL(maskUrl);
       releaseCanvas(maskImage);
     },
   };

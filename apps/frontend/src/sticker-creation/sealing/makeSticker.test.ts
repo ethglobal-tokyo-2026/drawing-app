@@ -68,16 +68,14 @@ async function sealInWorker() {
 }
 
 const png = () => new Blob([], { type: "image/png" });
+/** A pass as the cut hands it over, ready to draw. */
+const pass = () => createImageBitmap(document.createElement("canvas"));
 const CUT: CutSticker = {
   png: png(),
   sharp: null,
   flat: png(),
-  passes: {
-    plain: png(),
-    gloss: png(),
-    shadow: png(),
-    mask: png(),
-  },
+  mask: png(),
+  passes: { plain: await pass(), gloss: await pass(), shadow: await pass() },
   maskPixels: new Uint8ClampedArray(3 * 2 * 4),
   outline: "M0 0L3 0L3 2Z",
   width: 3,
@@ -133,9 +131,10 @@ describe("makeSticker", () => {
     expect(sticker?.maskImage).toMatchObject({ width: CUT.width, height: CUT.height });
 
     const revoke = vi.spyOn(URL, "revokeObjectURL");
+    const closes = Object.values(CUT.passes).map((bitmap) => vi.spyOn(bitmap, "close"));
     sticker?.dispose();
-    const revoked = revoke.mock.calls.map(([url]) => url);
-    expect(revoked.toSorted()).toEqual(Object.values(sticker?.passes ?? {}).toSorted());
+    expect(revoke.mock.calls).toEqual([[sticker?.maskUrl]]);
+    closes.forEach((close) => expect(close).toHaveBeenCalledOnce());
     expect(sticker?.maskImage).toMatchObject({ width: 0, height: 0 });
   });
 

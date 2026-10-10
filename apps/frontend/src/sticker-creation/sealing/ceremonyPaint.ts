@@ -11,8 +11,6 @@ const INK = "#1C1824";
 /** Seal Yellow: the blade is the seal check's own "now". */
 const SEAL = "#FFD93B";
 
-type Size = { w: number; h: number };
-
 /** What `make` gives, or null after saying why: the ceremony plays on without that canvas. */
 function paintable<T>(make: () => T, what: string): T | null {
   try {
@@ -23,29 +21,13 @@ function paintable<T>(make: () => T, what: string): T | null {
   }
 }
 
-/** Sizes a canvas that covers the ceremony, at `r` device pixels per pixel. */
-function cover(canvas: HTMLCanvasElement, { w, h }: Size, r: number) {
-  canvas.width = Math.round(w * r);
-  canvas.height = Math.round(h * r);
-}
-
-/** The dim over the sheet: everything but the die-cut, at the sticker's place. */
-export function paintDim(
-  canvas: HTMLCanvasElement,
-  size: Size,
-  box: Rect,
-  mask: CanvasImageSource,
-  r: number,
-) {
-  cover(canvas, size, r);
-  const g = paintable(() => context2d(canvas), "dim");
+/** One of the sticker's passes, on a canvas of its own size that CSS lays over the sticker's box. */
+export function paintPass(canvas: HTMLCanvasElement, pass: ImageBitmap, what: string) {
+  const g = paintable(() => context2d(canvas), what);
   if (!g) return;
-  g.setTransform(r, 0, 0, r, 0, 0);
-  g.fillStyle = "rgba(28, 24, 36, 0.52)";
-  g.fillRect(0, 0, size.w, size.h);
-  g.globalCompositeOperation = "destination-out";
-  g.drawImage(mask, box.x, box.y, box.w, box.h);
-  g.globalCompositeOperation = "source-over";
+  canvas.width = pass.width;
+  canvas.height = pass.height;
+  g.drawImage(pass, 0, 0);
 }
 
 /** The used sticker silhouette: the backing liner, its maker's print, and the cut wall. */
@@ -121,16 +103,55 @@ const FRESH_MAX = 170;
 const FRESH_STEPS = 10;
 /** The blade's radius, in px. */
 const BLADE = 5.4;
+/** How far past the sticker's box the blade, its outline and its shadow can reach, in px. */
+const BLADE_REACH = 12;
+
+/**
+ * Sizes `canvas` to the sticker's box with room for the blade, on whole canvas pixels so its own lie
+ * on the same grid as a canvas over the whole ceremony would, and returns its 2D context drawing in
+ * the ceremony's pixels.
+ */
+function overBox(canvas: HTMLCanvasElement, box: Rect, r: number, what: string) {
+  const x0 = Math.floor((box.x - BLADE_REACH) * r);
+  const y0 = Math.floor((box.y - BLADE_REACH) * r);
+  const x1 = Math.ceil((box.x + box.w + BLADE_REACH) * r);
+  const y1 = Math.ceil((box.y + box.h + BLADE_REACH) * r);
+  canvas.width = x1 - x0;
+  canvas.height = y1 - y0;
+  Object.assign(canvas.style, {
+    left: `${x0 / r}px`,
+    top: `${y0 / r}px`,
+    width: `${(x1 - x0) / r}px`,
+    height: `${(y1 - y0) / r}px`,
+  });
+  const g = paintable(() => context2d(canvas), what);
+  g?.setTransform(r, 0, 0, r, -x0, -y0);
+  const clear = () => {
+    if (!g) return;
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, canvas.width, canvas.height);
+    g.restore();
+  };
+  return g && { g, clear };
+}
 
 /**
  * The cut line, as a function that draws it as far round as the ceremony has got: an Ink hairline
  * led by a Seal Yellow dot, the blade, lifted off the paper by its shadow. Once the cut is made, the
- * blade can keep running round it, pass after pass, trailing a heavier stroke of fresh cut. It
- * redraws only when what it shows would change.
+ * blade can keep running round it, pass after pass, trailing a heavier stroke of fresh cut. The
+ * hairline and the blade each have a canvas over the sticker's box, so while the blade runs round
+ * the finished cut, only the blade and its fresh cut are drawn again.
  */
-export function makeCutLine(canvas: HTMLCanvasElement, size: Size, line: number[][], r: number) {
-  cover(canvas, size, r);
-  const g = paintable(() => context2d(canvas), "cut line");
+export function makeCutLine(
+  hairline: HTMLCanvasElement,
+  blade: HTMLCanvasElement,
+  box: Rect,
+  line: number[][],
+  r: number,
+) {
+  const lineCanvas = overBox(hairline, box, r, "cut line");
+  const bladeCanvas = overBox(blade, box, r, "cutter");
   const lengths = [0];
   for (let i = 1; i < line.length; i++)
     lengths.push(
@@ -154,18 +175,28 @@ export function makeCutLine(canvas: HTMLCanvasElement, size: Size, line: number[
     return [lo, lerp(ax, bx, u), lerp(ay, by, u)];
   };
 
-  /** Adds the line from `a` to `b` px along it to the current path, `a` before `b`. */
-  const trace = (a: number, b: number) => {
+  /** Adds the line from `a` to `b` px along it to `g`'s path, `a` before `b`. */
+  const trace = (g: CanvasRenderingContext2D, a: number, b: number) => {
     const [from, ax, ay] = pointAt(a);
     const [to, bx, by] = pointAt(b);
-    g?.moveTo(ax, ay);
-    for (let i = from; i < to; i++) g?.lineTo(line[i][0], line[i][1]);
-    g?.lineTo(bx, by);
+    g.moveTo(ax, ay);
+    for (let i = from; i < to; i++) g.lineTo(line[i][0], line[i][1]);
+    g.lineTo(bx, by);
   };
 
-  const blade = (x: number, y: number) => {
-    if (!g) return;
+  /** The whole hairline, made once the cut is: from then on it's stroked as it is. */
+  let whole: Path2D | null = null;
+  const wholeLine = () => {
+    if (whole) return whole;
+    whole = new Path2D();
+    whole.moveTo(line[0][0], line[0][1]);
+    for (let i = 1; i < line.length; i++) whole.lineTo(line[i][0], line[i][1]);
+    return whole;
+  };
+
+  const drawBlade = (g: CanvasRenderingContext2D, x: number, y: number) => {
     g.fillStyle = SEAL;
+    g.strokeStyle = INK;
     g.lineWidth = 1.5;
     g.beginPath();
     g.arc(x, y, BLADE, 0, Math.PI * 2);
@@ -179,40 +210,55 @@ export function makeCutLine(canvas: HTMLCanvasElement, size: Size, line: number[
     g.stroke();
   };
 
-  let shown = "";
-  const draw = (progress: number, alpha: number, cutter: Cutter | null = null) => {
-    const key = `${Math.round(progress * 400)} ${alpha} ${cutter ? `${Math.round(cutter.at * 4000)} ${cutter.trail} ${cutter.alpha}` : ""}`;
-    if (!g || key === shown) return;
-    shown = key;
-    g.setTransform(r, 0, 0, r, 0, 0);
-    g.clearRect(0, 0, size.w, size.h);
-    if (progress <= 0 || alpha <= 0 || line.length < 2) return;
+  const stroking = (g: CanvasRenderingContext2D, alpha: number) => {
     g.globalAlpha = alpha;
-    const reach = progress * total;
-    g.lineWidth = LINE_WIDTH;
     g.lineCap = "round";
     g.lineJoin = "round";
     g.strokeStyle = INK;
-    g.beginPath();
-    g.moveTo(line[0][0], line[0][1]);
-    let [hx, hy] = line[0];
-    for (let i = 1; i < line.length; i++) {
-      if (lengths[i] <= reach) {
-        g.lineTo(line[i][0], line[i][1]);
-        [hx, hy] = line[i];
-        continue;
+  };
+
+  let lineShown = "";
+  let bladeShown = "";
+  const draw = (progress: number, alpha: number, cutter: Cutter | null = null) => {
+    const drawn = progress > 0 && alpha > 0 && line.length >= 2;
+    const reach = progress * total;
+    // The hairline changes only while the cut runs, or as it fades.
+    const lineKey = drawn ? `${Math.round(progress * 400)} ${alpha}` : "";
+    if (lineCanvas && lineKey !== lineShown) {
+      lineShown = lineKey;
+      const { g, clear } = lineCanvas;
+      clear();
+      if (drawn) {
+        stroking(g, alpha);
+        g.lineWidth = LINE_WIDTH;
+        if (progress < 1) {
+          g.beginPath();
+          trace(g, 0, reach);
+          g.stroke();
+        } else g.stroke(wholeLine());
+        g.globalAlpha = 1;
       }
-      const u = (reach - lengths[i - 1]) / (lengths[i] - lengths[i - 1] || 1);
-      hx = lerp(line[i - 1][0], line[i][0], u);
-      hy = lerp(line[i - 1][1], line[i][1], u);
-      g.lineTo(hx, hy);
-      break;
     }
-    g.stroke();
-    if (progress < 1) blade(hx, hy);
-    else if (cutter && cutter.alpha > 0) {
+    const running = progress >= 1 && cutter !== null && cutter.alpha > 0;
+    const bladeKey = !drawn
+      ? ""
+      : progress < 1
+        ? lineKey
+        : running
+          ? `${Math.round(cutter.at * 4000)} ${cutter.trail} ${cutter.alpha} ${alpha}`
+          : "";
+    if (!bladeCanvas || bladeKey === bladeShown) return;
+    bladeShown = bladeKey;
+    const { g, clear } = bladeCanvas;
+    clear();
+    if (!bladeKey) return;
+    if (progress < 1) {
+      stroking(g, alpha);
+      const [, hx, hy] = pointAt(reach);
+      drawBlade(g, hx, hy);
+    } else if (running) {
       // Another pass: the fresh cut thickens toward the blade, wrapping past the line's start.
-      g.globalAlpha = alpha * cutter.alpha;
+      stroking(g, alpha * cutter.alpha);
       const head = cutter.at * total;
       const trail = fresh * cutter.trail;
       const step = trail / FRESH_STEPS;
@@ -221,16 +267,16 @@ export function makeCutLine(canvas: HTMLCanvasElement, size: Size, line: number[
         const b = a + step;
         g.lineWidth = LINE_WIDTH + ((FRESH_WIDTH - LINE_WIDTH) * (k + 1)) / FRESH_STEPS;
         g.beginPath();
-        if (a >= 0) trace(a, b);
-        else if (b <= 0) trace(total + a, total + b);
+        if (a >= 0) trace(g, a, b);
+        else if (b <= 0) trace(g, total + a, total + b);
         else {
-          trace(total + a, total);
-          trace(0, b);
+          trace(g, total + a, total);
+          trace(g, 0, b);
         }
         g.stroke();
       }
       const [, bx, by] = pointAt(head);
-      blade(bx, by);
+      drawBlade(g, bx, by);
     }
     g.globalAlpha = 1;
   };

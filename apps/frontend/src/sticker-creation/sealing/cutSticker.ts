@@ -7,13 +7,16 @@ import { BORDER_UNITS, dieCut, type Point } from "./dieCut";
 import type { Pixels } from "./pixels";
 import { bakedGloss, sharpSticker, stickerPasses, type Rect } from "./stickerPasses";
 
-export type PassName = "plain" | "gloss" | "shadow" | "mask";
+/** The passes only the ceremony shows. */
+type PassName = "plain" | "gloss" | "shadow";
 
-/** A blank canvas, on either thread, to paint and encode as a PNG. */
+/** A blank canvas, on either thread, to paint, then encode as a PNG or hand over as a bitmap. */
 interface PngCanvas {
   g: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
   /** Encodes what's painted, then frees the canvas. */
   png: () => Promise<Blob>;
+  /** What's painted, as a bitmap to draw, then frees the canvas. */
+  bitmap: () => Promise<ImageBitmap>;
 }
 
 export type MakeCanvas = (width: number, height: number) => PngCanvas;
@@ -25,7 +28,7 @@ interface Ink {
   density: number;
 }
 
-/** The cut sticker: a SealedSticker once its passes are object URLs. */
+/** The cut sticker: a SealedSticker once its mask has an object URL. */
 export interface CutSticker {
   /** The finished sticker, cast shadow and all. */
   png: Blob;
@@ -33,8 +36,10 @@ export interface CutSticker {
   sharp: Blob | null;
   /** The sheet as it was drawn, on white. */
   flat: Blob;
-  /** The ceremony's passes, as PNGs. */
-  passes: Record<PassName, Blob>;
+  /** The cut's shape (white, with the cut as alpha), the same size and place as `png`. */
+  mask: Blob;
+  /** The ceremony's passes, ready to draw: only the ceremony shows them, so they're never encoded. */
+  passes: Record<PassName, ImageBitmap>;
   /** The mask as pixels, for the ceremony to paint with. */
   maskPixels: Uint8ClampedArray<ArrayBuffer>;
   /** The cut line as an SVG path, in image pixels. */
@@ -54,7 +59,7 @@ export interface CutSticker {
 /** The long side of the flat sheet, at most. */
 const FLAT_SIDE = 1100;
 /** Image pixels between the stored outline's points: finer than a ticket stub or a sheet can show. */
-const OUTLINE_STEP = 2;
+export const OUTLINE_STEP = 2;
 
 /** The sheet as drawn, on white paper. */
 function flatten({ pixels, image }: Ink, make: MakeCanvas): Promise<Blob> {
@@ -69,12 +74,18 @@ function flatten({ pixels, image }: Ink, make: MakeCanvas): Promise<Blob> {
   return png();
 }
 
-function outlinePath(points: Point[]): string {
+/** A line's points at least `step` apart, from its first. */
+export function thinned(points: Point[], step: number): Point[] {
   const kept: Point[] = [];
   for (const p of points) {
     const last = kept.at(-1);
-    if (!last || Math.hypot(p[0] - last[0], p[1] - last[1]) >= OUTLINE_STEP) kept.push(p);
+    if (!last || Math.hypot(p[0] - last[0], p[1] - last[1]) >= step) kept.push(p);
   }
+  return kept;
+}
+
+function outlinePath(points: Point[]): string {
+  const kept = thinned(points, OUTLINE_STEP);
   return `M${kept.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join("L")}Z`;
 }
 
@@ -107,27 +118,29 @@ export async function cutSticker(ink: Ink, make: MakeCanvas): Promise<CutSticker
     ((y - place.y) * height) / place.h,
   ]);
 
-  const encoded = (pass: Uint8ClampedArray<ArrayBuffer>, w = width, h = height) => {
-    const { g, png } = make(w, h);
-    g.putImageData(new ImageData(pass, w, h), 0, 0);
-    return png();
+  /** A pass, on a canvas of its own size. */
+  const painted = (pass: Uint8ClampedArray<ArrayBuffer>, w = width, h = height) => {
+    const canvas = make(w, h);
+    canvas.g.putImageData(new ImageData(pass, w, h), 0, 0);
+    return canvas;
   };
-  const [png, flat, plain, gloss, shadow, mask] = await Promise.all([
-    encoded(passes.sticker),
+  const [png, flat, mask, plain, gloss, shadow] = await Promise.all([
+    painted(passes.sticker).png(),
     flatten(ink, make),
-    encoded(passes.plain),
-    encoded(passes.gloss),
-    encoded(passes.shadow),
-    encoded(passes.mask),
+    painted(passes.mask).png(),
+    painted(passes.plain).bitmap(),
+    painted(passes.gloss).bitmap(),
+    painted(passes.shadow).bitmap(),
   ]);
   // Once the passes are encoded, so its canvas is never held beside theirs.
   const sharp = sharpSticker(pixels, cut, glossGrid);
-  const sharpPng = sharp && (await encoded(sharp.sticker, sharp.width, sharp.height));
+  const sharpPng = sharp && (await painted(sharp.sticker, sharp.width, sharp.height).png());
   return {
     png,
     sharp: sharpPng,
     flat,
-    passes: { plain, gloss, shadow, mask },
+    mask,
+    passes: { plain, gloss, shadow },
     maskPixels: passes.mask,
     outline: outlinePath(inImage),
     width,
