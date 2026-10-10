@@ -9,15 +9,18 @@ import { sheenIn, sweepSheen } from "./resinSheen";
 /**
  * The app's one light: `--lx` and `--ly` (-1 to 1) follow the phone's tilt where the browser shares it,
  * or a mouse or pen. A finger never moves it: a finger drags stickers, and the light sweeping with it
- * would change the gloss on every other sticker. They're set on each live resin, foil and crease rather
- * than the root, so a move restyles only what reads them; without them each rests at its own default.
+ * would change the gloss on every other sticker. They're set on each highlight that moves with them
+ * rather than the root, so a move restyles only those; without them each rests at its own default.
  * The light listens only while a screen with stickers holds it, so the pointer and the motion sensor
  * rest everywhere else.
  */
 
 const REDUCED = "(prefers-reduced-motion: reduce)";
-/** The elements that read the light: each live resin, each foil's glint, and each crease. */
-const LIT = ".live-resin, .sticker-foil, .sticker-crease";
+/**
+ * What reads the light: the resin's specular, each foil's bands and glint, and each crease. Set on them
+ * rather than the resin or foil they're in, a move restyles only them, not the masked layers around them.
+ */
+const LIT = ".live-resin__spec > b, .sticker-foil__sheen, .sticker-foil__glint, .sticker-crease";
 /** The light is written at most this often; the highlights' transitions glide between writes. */
 const BEAT_MS = 45;
 /** A move shorter than this, on the -1 to 1 scale, isn't written, so the hand's tremor keeps still. */
@@ -69,11 +72,13 @@ let holders = 0;
 /** Where the light last was, or null before it first moves: what a newly shown sticker starts at. */
 let lightNow: { lx: string; ly: string } | null = null;
 
-/** Sets the light where it is now on one newly shown lit element, so it matches the rest at once. */
+/** Sets the light where it is now on what reads it in `el`, newly shown, so it matches the rest at once. */
 export function lightUp(el: HTMLElement) {
   if (!lightNow) return;
-  el.style.setProperty("--lx", lightNow.lx);
-  el.style.setProperty("--ly", lightNow.ly);
+  for (const lit of el.matches(LIT) ? [el] : el.querySelectorAll<HTMLElement>(LIT)) {
+    lit.style.setProperty("--lx", lightNow.lx);
+    lit.style.setProperty("--ly", lightNow.ly);
+  }
 }
 
 /** Sweeps a sheen across each live resin big enough to see on screen; returns how many it measured. */
@@ -121,7 +126,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   /** Lights the resins from `lit` as our work, and marks how many it lit while recording. */
   const lightResins = (why: string) => {
     const count = timeOurWork("light", lightFromLit);
-    if (isPerformanceRecorderOn()) notePerformance("light", `${why} ${count} resins`);
+    if (isPerformanceRecorderOn()) notePerformance("light", `${why} ${count} highlights`);
   };
 
   const write = (now: number) => {

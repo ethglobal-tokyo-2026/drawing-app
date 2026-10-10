@@ -8,14 +8,32 @@ let uninstall = () => {};
 const tiltListeners = new Set<EventListenerOrEventListenerObject>();
 /** The light's holds a test hasn't released, released after it. */
 const held = new Set<() => void>();
-/** A sticker's live resin, which reads the light. */
+/** A sticker's live resin's specular, which reads the light. */
 let resin: HTMLElement;
 
+/** A sticker's live resin; returns its specular. */
 const addResin = () => {
   const el = document.createElement("span");
   el.className = "live-resin";
+  const band = document.createElement("i");
+  band.className = "live-resin__spec";
+  const spec = document.createElement("b");
+  band.append(spec);
+  el.append(band);
   document.body.append(el);
-  return el;
+  return spec;
+};
+/** A sticker's foil, whose bands and glint read the light. */
+const makeFoil = () => {
+  const foil = document.createElement("span");
+  foil.className = "sticker-foil";
+  const parts = ["sticker-foil__sheen", "sticker-foil__glint"].map((className) => {
+    const part = document.createElement("i");
+    part.className = className;
+    foil.append(part);
+    return part;
+  });
+  return { foil, parts };
 };
 const lightOn = (el: HTMLElement) => [
   el.style.getPropertyValue("--lx"),
@@ -196,22 +214,21 @@ describe("the shared light", () => {
     expect(lightAt()).toEqual(["1.000", "0.000"]);
   });
 
-  it("lights every foil's glint with the resins, and one shown later where the light already is", () => {
-    const foil = document.createElement("span");
-    foil.className = "sticker-foil";
+  it("lights each foil's bands and glint, not the foil around them, and one shown later where the light already is", () => {
+    const { foil, parts } = makeFoil();
     document.body.append(foil);
     uninstall = installLight(root);
     showScreen();
     tiltTo(32, 40);
     vi.advanceTimersByTime(16);
-    expect(lightOn(foil)).toEqual(["1.000", "0.000"]);
-    expect(lightOn(foil)).toEqual(lightAt());
+    expect(lightAt()).toEqual(["1.000", "0.000"]);
+    expect(parts.map(lightOn)).toEqual([lightAt(), lightAt()]);
+    expect(lightOn(foil)).toEqual(["", ""]);
 
     // Shown while the phone is still: no move comes to light it, so it starts from the light.
-    const later = document.createElement("span");
-    later.className = "sticker-foil";
-    lightUp(later);
-    expect(lightOn(later)).toEqual(lightAt());
+    const later = makeFoil();
+    lightUp(later.foil);
+    expect(later.parts.map(lightOn)).toEqual([lightAt(), lightAt()]);
   });
 
   it("stays in the middle under reduced motion", () => {
