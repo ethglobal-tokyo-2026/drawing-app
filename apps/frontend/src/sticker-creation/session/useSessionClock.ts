@@ -5,11 +5,11 @@ import { useReducedMotion } from "../../ui/useReducedMotion";
 import { sessionMs } from "./session";
 
 /** A frame can count at most this much, so a stalled or throttled page never eats the session. */
-const MAX_FRAME_MS = 5_000;
+export const MAX_FRAME_MS = 5_000;
 /** After a hidden page returns, the clock waits this long, while the dot's lifted corner settles. */
-const HIDDEN_RESUME_MS = 420;
+export const HIDDEN_RESUME_MS = 420;
 /** The timer turns Tomato for this last stretch. */
-const LATE_MS = 10_000;
+export const LATE_MS = 10_000;
 /**
  * The clock warns, once each, as it counts down through these many seconds left: first the proctor's
  * time calls, in whole minutes, which only Kyoto Seika Manga Expression Practice Mode's clock is long

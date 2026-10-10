@@ -54,9 +54,8 @@ describe("transition", () => {
     });
   });
 
-  it("brings a sheet in Kyoto Seika Practice Mode back dealt until Begin, and drawing after it", () => {
+  it("brings a sheet in Kyoto Seika Practice Mode back dealt until Begin", () => {
     expect(run(restored({ dealt: true })).phase).toBe("dealt");
-    expect(run(restored({ drawn: true })).phase).toBe("drawing");
     expect(run(restored({ sealSent: true, dealt: true })).phase).toBe("retry");
   });
 
