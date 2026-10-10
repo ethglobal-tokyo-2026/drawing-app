@@ -98,7 +98,7 @@ test.describe("On an iPad", () => {
       name: say(giving.giveSheet.title, language, { name: handle }),
     });
     await expectCardInTheMiddle(page, card);
-    expect(await atTheLead(page)).toContain("giving__scrim");
+    expect(await atTheLead(page)).toContain("sheet-scrim");
   });
 
   test("the sticker detail splits sideways, and is one phone-width column upright", async ({

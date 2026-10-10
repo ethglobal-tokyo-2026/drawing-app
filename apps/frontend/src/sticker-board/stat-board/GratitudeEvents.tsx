@@ -1,5 +1,5 @@
 import type { GratitudeEvents } from "@drawing-app/api/client";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { apiError } from "../../api/apiClient";
 import { useApi } from "../../api/useApi";
 import { useApiQuery } from "../../api/useApiQuery";
@@ -57,7 +57,6 @@ export function GratitudeEventsSheet({ onClose }: { onClose: () => void }) {
   const first = useApiQuery("gratitude-events", (client) => client.gratitudeEvents());
   const [older, setOlder] = useState<GratitudeEvents[]>([]);
   const [olderStatus, setOlderStatus] = useState<Older>({ step: "idle" });
-  const layer = useRef<HTMLDivElement>(null);
   const title = t(($) => $.stickerBoard.statBoard.gratitude.title);
   const pages = first.state === "ready" ? [first.data, ...older] : [];
   const next = pages.at(-1)?.next ?? null;
@@ -86,14 +85,13 @@ export function GratitudeEventsSheet({ onClose }: { onClose: () => void }) {
   };
 
   const sheet = (
-    <div className="gratitude-events-layer" ref={layer}>
-      <div className="gratitude-events__scrim" onClick={onClose} />
+    <div className="gratitude-events-layer">
       <Sheet
         label={title}
-        layer={layer}
         onClose={onClose}
         className="gratitude-events"
         card
+        scrim="always"
         head={
           <h2 className="gratitude-events__title">
             <GratitudeIcon className="gratitude-events__heart" size={18} />

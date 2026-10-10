@@ -341,7 +341,6 @@ export function Giving({
 
   const giving = (
     <div className="giving" ref={layer}>
-      <div className="giving__scrim" onClick={close} />
       <div className="giving__sticker" aria-hidden="true">
         <span
           className="giving__given-sticker-silhouette"
@@ -367,6 +366,7 @@ export function Giving({
         returnFocus={returnFocus}
         head={head ?? undefined}
         card
+        scrim="always"
       >
         <div
           key={view}

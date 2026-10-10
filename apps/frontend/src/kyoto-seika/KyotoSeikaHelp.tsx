@@ -2,7 +2,7 @@ import {
   KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
   KYOTO_SEIKA_TIME_USED_S,
 } from "@drawing-app/api/client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "../i18n/react";
 import { openLinkInLine } from "../line/openLink";
 import { sessionMs } from "../sticker-creation/session/session";
@@ -168,12 +168,10 @@ function HelpBody() {
  */
 export function KyotoSeikaHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
-  const layer = useRef<HTMLDivElement>(null);
   const sheet = (
     // Its taps and Escape stop here: from inside the stat board's cork, React would pass them on to
     // the cork's own, which flip the board back, and Escape would never reach the sheet's.
     <div
-      ref={layer}
       className={`kyoto-seika-help-layer${open ? " is-open" : ""}`}
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => {
@@ -182,13 +180,12 @@ export function KyotoSeikaHelp({ open, onClose }: { open: boolean; onClose: () =
         onClose();
       }}
     >
-      <div className="kyoto-seika-help__scrim" onClick={onClose} />
       <Sheet
         label={t(($) => $.stickerBoard.settings.kyotoSeika.spokenName)}
         open={open}
         onClose={onClose}
-        layer={layer}
         card
+        scrim="always"
         className="kyoto-seika-help"
         head={
           <h2 className="kyoto-seika-help__title">

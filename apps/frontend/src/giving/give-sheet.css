@@ -1,7 +1,9 @@
 /* ---------- Sheets over a board ---------- */
 
-/* Over someone else's board: main's give sheet parts, as one layer. */
+/* Over someone else's board: main's give sheet parts, as one layer, over a scrim lighter than a
+   card's. */
 .board-sheet-layer {
+  --sheet-scrim: rgba(28, 24, 36, 0.36);
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);

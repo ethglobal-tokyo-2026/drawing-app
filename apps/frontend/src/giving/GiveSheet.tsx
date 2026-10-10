@@ -1,5 +1,5 @@
 import { GiveIcon } from "../icons";
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useState } from "react";
 import { useMe } from "../api/meContext";
 import { Trans, useTranslation } from "../i18n/react";
 import { LIFF_ID } from "../line/liff";
@@ -50,7 +50,6 @@ export function GiveSheet({ to, toId, toNsfwOptIn, onClose, returnFocus }: Props
   const pickedSticker = stickers?.find((s) => s.id === picked);
   const me = useMe();
   const sender = useGiftSender();
-  const layer = useRef<HTMLDivElement>(null);
   const large = useLargeScreen();
 
   if (giving && sender) {
@@ -73,15 +72,14 @@ export function GiveSheet({ to, toId, toNsfwOptIn, onClose, returnFocus }: Props
   const name = formatHandle(to);
   const title = t(($) => $.giving.giveSheet.title, { name });
   const sheet = (
-    <div className="board-sheet-layer" ref={layer}>
-      <div className="giving__scrim" onClick={onClose} />
+    <div className="board-sheet-layer">
       <Sheet
         label={title}
-        layer={layer}
         onClose={onClose}
         returnFocus={returnFocus}
         className="giving__sheet giving__sheet--give"
         card
+        scrim="always"
         head={
           <header className="giving__head">
             <h2 className="giving__title">{keepNameWhole(title, name)}</h2>

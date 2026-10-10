@@ -1,6 +1,8 @@
-/* Kyoto Seika Practice Mode's help (KyotoSeikaHelp.tsx). Over the whole phone with a scrim that closes
-   it, as your gratitude events' layer is; it stays mounted, so it lets taps through while closed. */
+/* Kyoto Seika Practice Mode's help (KyotoSeikaHelp.tsx). Over the whole phone, over a scrim lighter
+   than a card's, as your gratitude events' layer is; it stays mounted, so it lets taps through while
+   closed. */
 .kyoto-seika-help-layer {
+  --sheet-scrim: rgba(28, 24, 36, 0.36);
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);
@@ -8,18 +10,6 @@
 
 .kyoto-seika-help-layer:not(.is-open) {
   pointer-events: none;
-}
-
-.kyoto-seika-help__scrim {
-  position: absolute;
-  inset: 0;
-  background: rgba(28, 24, 36, 0.36);
-  opacity: 0;
-  transition: opacity var(--t-peel) var(--ease-out);
-}
-
-.kyoto-seika-help-layer.is-open .kyoto-seika-help__scrim {
-  opacity: 1;
 }
 
 .kyoto-seika-help__title {

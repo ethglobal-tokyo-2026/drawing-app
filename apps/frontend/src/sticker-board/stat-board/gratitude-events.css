@@ -1,23 +1,11 @@
 /* ---------- Your gratitude events: a sheet of rows, each combo that gave you gratitude ---------- */
 
-/* Over the whole phone, with a scrim that closes it, as the give sheet's layer is. */
+/* Over the whole phone, over a scrim lighter than a card's, as the give sheet's layer is. */
 .gratitude-events-layer {
+  --sheet-scrim: rgba(28, 24, 36, 0.36);
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);
-}
-
-.gratitude-events__scrim {
-  position: absolute;
-  inset: 0;
-  background: rgba(28, 24, 36, 0.36);
-  animation: gratitude-events-fade-in var(--t-peel) var(--ease-out);
-}
-
-@keyframes gratitude-events-fade-in {
-  from {
-    opacity: 0;
-  }
 }
 
 /* The rows scroll inside the sheet, under its title, so a long list never pushes it off the phone. */
@@ -113,11 +101,5 @@
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
   .gratitude-events.bottom-sheet {
     --card-w: 480px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gratitude-events__scrim {
-    animation-duration: 1ms;
   }
 }

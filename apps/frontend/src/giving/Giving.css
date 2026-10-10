@@ -1,12 +1,18 @@
 /* Giving: the gift bag under the given sticker's silhouette, from packing to "Closed and sent". */
 
 .giving {
+  --sheet-scrim: rgba(28, 24, 36, 0.36);
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);
   overflow: hidden;
   background: var(--liner);
   color: var(--ink);
+}
+
+/* Under the sticker's silhouette, which comes before it on the page, and over its fine print. */
+.giving .sheet-scrim {
+  z-index: auto;
 }
 
 /* The sticker being given, above the sheet: it's in the bag from the start, so only its silhouette
@@ -54,14 +60,6 @@
 
 .giving__meta {
   margin: 12px 0 0;
-}
-
-.giving__scrim {
-  position: absolute;
-  inset: 0;
-  z-index: var(--z-sheet);
-  background: rgba(28, 24, 36, 0.36);
-  animation: giving-fade-in var(--t-peel) var(--ease-out);
 }
 
 .giving .bottom-sheet,
