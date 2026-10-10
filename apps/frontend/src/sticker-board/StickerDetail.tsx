@@ -170,9 +170,20 @@ export function StickerDetail({
   const optedIn = useMyNsfwOptIn();
   useLight();
   const [shownId, setShownId] = useState(startId);
+  // The shown sticker as last listed, and where: one a reload drops from the list, as when a friend
+  // receives it, stays in view among the rest until the person pages or closes.
+  const [lastListed, setLastListed] = useState<{ sticker: BoardStickerView; at: number } | null>(
+    null,
+  );
+  const listedAt = stickers.findIndex((s) => s.id === shownId);
+  const listedNow = stickers[listedAt];
+  if (listedNow && (lastListed?.sticker !== listedNow || lastListed.at !== listedAt))
+    setLastListed({ sticker: listedNow, at: listedAt });
+  const gone = listedAt < 0 && lastListed?.sticker.id === shownId ? lastListed : null;
+  const list = gone ? stickers.toSpliced(gone.at, 0, gone.sticker) : stickers;
   const index = Math.max(
     0,
-    stickers.findIndex((s) => s.id === shownId),
+    list.findIndex((s) => s.id === shownId),
   );
   // Each sticker marked 18+ or unmarked here, as the server shows it to you, until the board's reload
   // lists it so.
@@ -181,10 +192,11 @@ export function StickerDetail({
     const answer = marked.get(s.id);
     return answer && answer.nsfw !== s.nsfw ? { ...s, urls: answer.urls, nsfw: answer.nsfw } : s;
   };
-  const listed: BoardStickerView | undefined = stickers[index];
+  const listed: BoardStickerView | undefined = list[index];
   const sticker = listed && withMark(listed);
-  const last = stickers.length - 1;
-  const [marking, setMarking] = useState<Marking | null>(null);
+  const last = list.length - 1;
+  // Each sticker's mark in the making, so one on its way or failed stays with its sticker as it pages.
+  const [marks, setMarks] = useState<ReadonlyMap<string, Marking>>(() => new Map());
   // What the status line at the foot says about a mark that landed, under that sticker only.
   const [markedSaid, setMarkedSaid] = useState<{ stickerId: string; words: string } | null>(null);
   // A gift in flight: the stickers whose take-out landed, until the board's reload drops their
@@ -210,7 +222,7 @@ export function StickerDetail({
   // Its Transfer Trail, and whether you owe gratitude for a sticker you hold, come with its detail,
   // often read ahead by the board.
   const shownStickerId = sticker?.id ?? null;
-  const detail = useStickerDetail(shownStickerId);
+  const detail = useStickerDetail(sticker ?? null);
   const read = detail.state === "ready" ? detail.data : null;
   const loaded = read?.stickerDetail ?? null;
   const readAgain = detail.state === "ready" ? detail.refresh : null;
@@ -253,7 +265,7 @@ export function StickerDetail({
     shownId: sticker?.id,
     originOf: (id) => {
       const el = originOf?.(id);
-      const s = stickers.find((x) => x.id === id);
+      const s = list.find((x) => x.id === id);
       if (!el || !s) return null;
       // A given sticker, or one in a gift, fades in out of its spot in the sticker tray, which stays.
       return { el, turn: s.placement.r, given: !s.held || s.openGift !== null };
@@ -282,7 +294,7 @@ export function StickerDetail({
   const cancelMark = useRef<HTMLButtonElement>(null);
   const markActions = useRef<HTMLDivElement>(null);
   const canChangeMark = Boolean(ownerId && sticker && sticker.artist.id === ownerId);
-  const mark = marking && marking.stickerId === sticker?.id ? marking : null;
+  const mark = (sticker && marks.get(sticker.id)) ?? null;
   const asking = mark !== null;
   const backToMark = useRef(false);
   useEffect(() => {
@@ -298,13 +310,23 @@ export function StickerDetail({
         behavior: reduced ? "auto" : "smooth",
       });
   }, [asking, reduced]);
+  const settleMark = (stickerId: string, next: Marking | null) =>
+    setMarks((m) => {
+      const marks = new Map(m);
+      if (next) marks.set(stickerId, next);
+      else marks.delete(stickerId);
+      return marks;
+    });
   const stopAsking = () => {
     backToMark.current = true;
-    setMarking(null);
+    if (sticker) settleMark(sticker.id, null);
   };
-  // Only the mark that's still this sticker's: another may have been asked for since.
-  const settleMark = (stickerId: string, next: Marking | null) =>
-    setMarking((m) => (m?.stickerId === stickerId ? next : m));
+  // A mark can land after a page turn, on a sticker no longer shown: the one shown keeps its
+  // timelapse and focus.
+  const shownNow = useRef(shownStickerId);
+  useLayoutEffect(() => {
+    shownNow.current = shownStickerId;
+  });
   /** A sticker the server already has marked, as it shows it to you; unread, marked as listed. */
   const readBackMarked = async (target: BoardStickerView): Promise<MarkedView> => {
     try {
@@ -328,10 +350,10 @@ export function StickerDetail({
     settleMark(target.id, null);
     setMarkedSaid({ stickerId: target.id, words });
     // Its button goes with its confirm; the dialog holds the keys that page and close.
-    root.current?.focus({ preventScroll: true });
+    if (shownNow.current === target.id) root.current?.focus({ preventScroll: true });
   };
   const markNsfw = async (target: BoardStickerView) => {
-    setMarking({ stickerId: target.id, step: "sending" });
+    settleMark(target.id, { stickerId: target.id, step: "sending" });
     let answer: MarkedView;
     try {
       const { sticker: markedSticker, cdnPurged } = await api.markStickerNsfw(target.id);
@@ -349,7 +371,7 @@ export function StickerDetail({
       console.warn(`Sticker ${target.id} was already marked 18+`, failure);
       answer = await readBackMarked(target);
     }
-    timelapse.stop();
+    if (shownNow.current === target.id) timelapse.stop();
     // Without the opt-in your own sticker goes blurred too: the line says what shows it.
     const no = formatNo(target.no);
     markChanged(
@@ -362,7 +384,7 @@ export function StickerDetail({
   };
   // One without the mark answers as it is, so a removal another window made first lands here too.
   const unmarkNsfw = async (target: BoardStickerView) => {
-    setMarking({ stickerId: target.id, step: "sending" });
+    settleMark(target.id, { stickerId: target.id, step: "sending" });
     let answer: MarkedView;
     try {
       answer = toSticker((await api.unmarkStickerNsfw(target.id)).sticker);
@@ -408,7 +430,7 @@ export function StickerDetail({
   useEffect(
     () =>
       onTakenOut((id) => {
-        const s = stickers.find((x) => x.id === id);
+        const s = list.find((x) => x.id === id);
         if (!s) return;
         setTakenOut((ids) => new Set(ids).add(id));
         const no = formatNo(s.no);
@@ -420,7 +442,7 @@ export function StickerDetail({
           shown: id === shownStickerId,
         });
       }),
-    [stickers, t, shownStickerId],
+    [list, t, shownStickerId],
   );
   // Take it out goes with the gift shown, so focus goes to the key back in its place. Decided as it
   // lands: paging back to that sticker later moves no focus.
@@ -439,8 +461,8 @@ export function StickerDetail({
     // on its way.
     onEscape: () => {
       if (askingTakeOut) stopAskingTakeOut();
-      else if (marking?.step === "sending") return;
-      else if (marking) stopAsking();
+      else if (mark?.step === "sending") return;
+      else if (mark) stopAsking();
       else close();
     },
     returnFocus,
@@ -463,12 +485,13 @@ export function StickerDetail({
     stage,
   } = useSwipePaging({
     index,
-    count: stickers.length,
+    count: list.length,
     reduced,
     onPage: (next) => {
-      const target = stickers[next];
+      const target = list[next];
       if (target) setShownId(target.id);
-      setMarking((m) => (m?.step === "sending" ? m : null));
+      // A confirm left open goes; a mark on its way, or its failure, stays with its sticker.
+      setMarks((m) => new Map([...m].filter(([, made]) => made.step !== "asking")));
       setTakeOutAsk(null);
     },
   });
@@ -482,6 +505,28 @@ export function StickerDetail({
     const dialog = root.current;
     if (dialog && !dialog.contains(document.activeElement)) dialog.focus({ preventScroll: true });
   }, [shownId]);
+
+  // What the column holds from under the sticker's stage down to Give, or to its last line before the
+  // trail, which an upright large screen leaves room for under the sticker (sticker-detail.css).
+  // Measured by layout alone, so the column's entrance doesn't count.
+  const hasSticker = sticker !== undefined;
+  useLayoutEffect(() => {
+    const detail = root.current;
+    const column = detail?.querySelector(".sticker-detail__column");
+    if (!detail || !column) return;
+    const observer = new ResizeObserver(() => {
+      const stage = detail.querySelector<HTMLElement>(".sticker-detail__stage");
+      const ends = column.querySelectorAll<HTMLElement>(
+        ".sticker-detail__meta, .sticker-detail__in-flight, .sticker-detail__acts",
+      );
+      const end = ends[ends.length - 1];
+      if (!stage || !end) return;
+      const fold = end.offsetTop + end.offsetHeight - (stage.offsetTop + stage.offsetHeight);
+      detail.style.setProperty("--column-fold", `${Math.ceil(fold)}px`);
+    });
+    observer.observe(column);
+    return () => observer.disconnect();
+  }, [hasSticker]);
 
   // The shown sticker's thumb scrolls to the strip's middle, again when its place in the list moves,
   // as a sticker taken out of its gift goes back among the rest.
@@ -526,7 +571,7 @@ export function StickerDetail({
             : t(($) => $.stickerBoard.detail.yourStickers)
         }
       >
-        {stickers.map((s, i) => (
+        {list.map((s, i) => (
           <button
             key={s.id}
             type="button"
@@ -569,7 +614,6 @@ export function StickerDetail({
                     <span
                       className="sticker-detail__dot-layer"
                       style={{
-                        "--ar": (sticker.width / sticker.height).toFixed(4),
                         "--spot-x": giftDot.spot.x.toFixed(4),
                         "--spot-y": giftDot.spot.y.toFixed(4),
                       }}
@@ -602,14 +646,14 @@ export function StickerDetail({
                   <span aria-hidden="true">
                     {t(($) => $.stickerBoard.detail.count, {
                       position: index + 1,
-                      setSize: stickers.length,
+                      setSize: list.length,
                     })}
                   </span>
                   <span className="visually-hidden">
                     {t(($) => $.stickerBoard.detail.countSpoken, {
                       no: formatNo(sticker.no),
                       position: index + 1,
-                      setSize: stickers.length,
+                      setSize: list.length,
                     })}
                   </span>
                 </span>
@@ -862,10 +906,8 @@ export function StickerDetail({
               )}
               {trailHeld && <TransferTrailSkeleton trail={sticker.trail} />}
 
-              {/* A section of its own at the very foot, past a rule, so it never reads as Give's
-                  alternative: plain label stock across the column, its confirm opening in its place,
-                  and the status line there once the mark lands. Its confirm is plain label stock too,
-                  since a mark can be taken off again. */}
+              {/* At the foot past a rule, so it never reads as Give's alternative. Its confirm is plain
+                  label stock too, since a mark can come off again. */}
               {(canChangeMark || markedSaid?.stickerId === sticker.id) && (
                 <section className="sticker-detail__mark">
                   <hr className="sticker-detail__mark-rule" />
@@ -934,9 +976,11 @@ export function StickerDetail({
                           >
                             {sticker.nsfw
                               ? t(($) => $.stickerBoard.detail.unmarkNsfw.failed, {
+                                  no: formatNo(sticker.no),
                                   reason: errorMessage(mark.error),
                                 })
                               : t(($) => $.stickerBoard.detail.markNsfw.failed, {
+                                  no: formatNo(sticker.no),
                                   reason: errorMessage(mark.error),
                                 })}
                           </ErrorLine>
@@ -946,7 +990,9 @@ export function StickerDetail({
                       <LabelButton
                         ref={markButton}
                         block
-                        onClick={() => setMarking({ stickerId: sticker.id, step: "asking" })}
+                        onClick={() =>
+                          settleMark(sticker.id, { stickerId: sticker.id, step: "asking" })
+                        }
                       >
                         {sticker.nsfw
                           ? t(($) => $.stickerBoard.detail.unmarkNsfw.open)

@@ -34,7 +34,8 @@ describe("sticker details read ahead", () => {
   it("are the topmost stickers on the board, up to the cap, read one at a time", async () => {
     const onBoard = Array.from({ length: MAX_DETAILS_AHEAD + 4 }, (_, z) => boardSticker(z));
     const inTray = boardSticker(MAX_DETAILS_AHEAD + 10, false);
-    const ids = detailsAhead([...onBoard, inTray]);
+    const ahead = detailsAhead([...onBoard, inTray]);
+    const ids = ahead.map((s) => s.id);
     expect(ids).toEqual(
       onBoard
         .toReversed()
@@ -51,7 +52,7 @@ describe("sticker details read ahead", () => {
           ),
         ),
     );
-    preloadStickerDetails(emptyApi({ stickerDetail }), ids);
+    preloadStickerDetails(emptyApi({ stickerDetail }), ahead);
     for (let read = 1; read <= ids.length; read += 1) {
       await Promise.resolve();
       expect(stickerDetail).toHaveBeenCalledTimes(read);

@@ -499,11 +499,19 @@
 }
 
 /* Upright: one centered column under the sticker, which takes most of the width. In a short window
-   it grows only as far as leaves room under it for the top bar, pager, fine print with a line to
-   spare, and Give, so Give shows without a scroll. */
+   it grows only as far as leaves room under its stage for what the column holds down to Give, which
+   the detail measures (--column-fold), and the main's foot under that, so Give shows without a
+   scroll; never smaller than a phone's. */
 @media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) and (orientation: portrait) {
   .sticker-detail {
-    --figure: min(70vw, 100dvh - env(safe-area-inset-top) - 360px);
+    --figure: max(
+      var(--figure-phone),
+      min(
+        70vw,
+        100dvh - env(safe-area-inset-top) - var(--top-h) - 24px - var(--column-fold, 238px) - 44px -
+          env(safe-area-inset-bottom)
+      )
+    );
   }
 
   .sticker-detail__column {

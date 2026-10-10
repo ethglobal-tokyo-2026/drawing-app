@@ -23,11 +23,17 @@ const NO_DRAWING = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALA
 
 /**
  * Stickers whose images were picked for the other NSFW opt-in, as they may show: each NSFW one
- * without its drawing, since the browser keeps a drawing it has shown and the blur is the server's.
+ * without its drawing or its sharp copy, since the browser keeps a drawing it has shown and the blur
+ * is the server's.
  */
 export const withoutNsfwDrawings = <S extends { nsfw: boolean; urls: StickerUrls }>(
   stickers: readonly S[],
-): S[] => stickers.map((s) => (s.nsfw ? { ...s, urls: { ...s.urls, png: NO_DRAWING } } : s));
+): S[] =>
+  stickers.map((s) => {
+    if (!s.nsfw) return s;
+    const { sharp: _sharp, ...urls } = s.urls;
+    return { ...s, urls: { ...urls, png: NO_DRAWING } };
+  });
 
 /** A query's key, for an answer the server shapes by your NSFW opt-in: a change loads it again, and the other's answer never shows. */
 export const useNsfwOptInKey = (key: string): string =>
