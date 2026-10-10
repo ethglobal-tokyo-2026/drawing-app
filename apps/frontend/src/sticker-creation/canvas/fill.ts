@@ -40,9 +40,9 @@ const EMPTY_ALPHA = 128;
 /** A colored region takes in pixels whose summed |ΔRGB| from the tapped pixel is under this. */
 const REGION_TOLERANCE = 72;
 /** A tap on a color this close to the fill color changes nothing. */
-const SAME_COLOR = 8;
+export const SAME_COLOR = 8;
 /** The fill reaches this many pixels under neighboring edges, so no white halo shows between color and line. */
-const TUCK = 2;
+export const TUCK = 2;
 /** A region this close to a cut side may go on past it, or tuck under pixels beyond it. */
 const CLEAR = Math.max(TUCK, 1);
 /** Chamfer steps, in thirds of a pixel: to the pixel beside, and to the pixel across a corner. */
@@ -68,6 +68,8 @@ const SEARCHED = 4;
 const FLOODING = 5;
 /** Other open paper too shallow to be a region, which goes to the nearest: */
 const POCKET = 6;
+/** Pixels outside the region the fill tucked under: */
+const TUCKED = 7;
 
 const rgbDistance = (data: Uint8ClampedArray, i: number, [r, g, b]: Rgb) =>
   Math.abs(data[i] - r) + Math.abs(data[i + 1] - g) + Math.abs(data[i + 2] - b);
@@ -132,26 +134,71 @@ export function floodFill(
       : closeGaps(region, lines.far, lines.near, reach, w, h, sx, sy, open, nearCut);
   if (box === "past") return "past";
 
-  const bx0 = Math.max(0, box.x0 - TUCK);
-  const bx1 = Math.min(w - 1, box.x1 + TUCK);
-  const by0 = Math.max(0, box.y0 - TUCK);
-  const by1 = Math.min(h - 1, box.y1 + TUCK);
-  const tucked = dilate(region, w, bx0, bx1, by0, by1);
   const [fr, fg, fb] = fill;
-  for (let y = by0; y <= by1; y++) {
-    for (let x = bx0; x <= bx1; x++) {
+  // The pixels the tuck grows from: the region's, beside a pixel outside it.
+  let edge: number[] = [];
+  const { x0, y0, x1, y1 } = box;
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
       const p = y * w + x;
-      if (!tucked[p]) continue;
+      if (region[p] !== IN) continue;
       const i = p * 4;
-      // The region takes the fill; its surroundings keep their color over it, by their own alpha.
-      const a = region[p] === IN ? 0 : data[i + 3] / 255;
-      data[i] = data[i] * a + fr * (1 - a);
-      data[i + 1] = data[i + 1] * a + fg * (1 - a);
-      data[i + 2] = data[i + 2] * a + fb * (1 - a);
-      data[i + 3] = 255;
+      data[i] = fr;
+      data[i + 1] = fg;
+      data[i + 2] = fb;
+      // A recolor keeps each pixel's alpha, so the stroke keeps its shape and its soft edge.
+      if (empty) data[i + 3] = 255;
+      if (
+        (x > 0 && region[p - 1] !== IN) ||
+        (x < w - 1 && region[p + 1] !== IN) ||
+        (y > 0 && region[p - w] !== IN) ||
+        (y < h - 1 && region[p + w] !== IN)
+      )
+        edge.push(p);
     }
   }
-  return { x: bx0, y: by0, w: bx1 - bx0 + 1, h: by1 - by0 + 1 };
+  // The tuck writes no paper outside the region: a paper fill goes under the ink beside it, up to
+  // its opaque core, and a recolor gives the stroke's faint fringe the fill's color.
+  const tucks = empty
+    ? (a: number) => a >= EMPTY_ALPHA && a < 255
+    : (a: number) => a > 0 && a < EMPTY_ALPHA;
+  const changed: Box = { ...box };
+  for (let step = 0; step < TUCK && edge.length > 0; step++) {
+    const next: number[] = [];
+    for (const p of edge) {
+      const x = p % w;
+      const y = (p - x) / w;
+      for (let ny = Math.max(0, y - 1); ny <= Math.min(h - 1, y + 1); ny++) {
+        for (let nx = Math.max(0, x - 1); nx <= Math.min(w - 1, x + 1); nx++) {
+          const q = ny * w + nx;
+          const i = q * 4;
+          if (region[q] === IN || region[q] === TUCKED || !tucks(data[i + 3])) continue;
+          region[q] = TUCKED;
+          extend(changed, q, w);
+          next.push(q);
+          if (!empty) {
+            data[i] = fr;
+            data[i + 1] = fg;
+            data[i + 2] = fb;
+            continue;
+          }
+          // The ink keeps its color over the fill, by its own alpha.
+          const a = data[i + 3] / 255;
+          data[i] = data[i] * a + fr * (1 - a);
+          data[i + 1] = data[i + 1] * a + fg * (1 - a);
+          data[i + 2] = data[i + 2] * a + fb * (1 - a);
+          data[i + 3] = 255;
+        }
+      }
+    }
+    edge = next;
+  }
+  return {
+    x: changed.x0,
+    y: changed.y0,
+    w: changed.x1 - changed.x0 + 1,
+    h: changed.y1 - changed.y0 + 1,
+  };
 }
 
 /**
@@ -213,12 +260,9 @@ function scanFill(
 }
 
 /**
- * The flood on paper with openings up to twice `reach` closed. Open paper, farther than `reach`
- * from every line, floods from the tap, or from the open paper nearest a tap near a line, and none
- * fits through a closed opening. Each pixel of paper near a line then goes to the region of open
- * paper nearest it, in steps through paper, and to the fill's own when it's as near as any, so the
- * fill stops about midway across an opening and still fills its corners. A tap on paper with no
- * open paper takes that paper whole.
+ * The flood on paper with openings up to twice `reach` closed: open paper, farther than `reach` from
+ * every line, floods from the tap, then paper nearer a line goes to the open paper nearest it, so
+ * the fill stops midway across an opening yet fills its corners.
  */
 function closeGaps(
   region: Uint8Array,
@@ -499,11 +543,14 @@ interface SheetFlood<P extends Pixels> {
   changed: Rect;
 }
 
+/** How many squares a sheet flood reads, each twice as wide as the last, before the whole sheet. */
+const SQUARE_READS = 3;
+
 /**
  * Floods a sheet from (sx, sy), closing openings up to `gap` across, reading its pixels through
- * `read`: first a square about `near` px on a side around the seed, then the whole sheet only when
- * the region reaches past that square, so a small shape's fill reads a small box. Null when nothing
- * changed.
+ * `read`: a square about `near` px on a side around the seed, then squares twice as wide while the
+ * region reaches past each, then the whole sheet, so a fill reads and floods not much more than its
+ * region. Null when nothing changed.
  */
 export function floodSheet<P extends Pixels>(
   sheet: { width: number; height: number },
@@ -516,63 +563,30 @@ export function floodSheet<P extends Pixels>(
 ): SheetFlood<P> | null {
   const { width, height } = sheet;
   if (sx < 0 || sy < 0 || sx >= width || sy >= height) return null;
-  const half = Math.floor(near / 2);
-  const x = Math.max(0, sx - half);
-  const y = Math.max(0, sy - half);
-  const around = {
-    x,
-    y,
-    w: Math.min(width, sx + half + 1) - x,
-    h: Math.min(height, sy + half + 1) - y,
-  };
-  const pixels = read(around);
-  const cut = {
-    left: around.x > 0,
-    top: around.y > 0,
-    right: around.x + around.w < width,
-    bottom: around.y + around.h < height,
-  };
-  const changed = floodFill(pixels, sx - around.x, sy - around.y, fill, gap, cut);
-  if (changed !== "past") return changed && { pixels, at: around, changed };
+  for (let n = 0, side = near; n < SQUARE_READS; n++, side *= 2) {
+    const half = Math.floor(side / 2);
+    const x = Math.max(0, sx - half);
+    const y = Math.max(0, sy - half);
+    const around = {
+      x,
+      y,
+      w: Math.min(width, sx + half + 1) - x,
+      h: Math.min(height, sy + half + 1) - y,
+    };
+    const cut = {
+      left: around.x > 0,
+      top: around.y > 0,
+      right: around.x + around.w < width,
+      bottom: around.y + around.h < height,
+    };
+    // A wider square holding half the sheet costs about what the whole does, and may still fall short.
+    if (n > 0 && around.w * around.h * 2 >= width * height) break;
+    const pixels = read(around);
+    const changed = floodFill(pixels, sx - around.x, sy - around.y, fill, gap, cut);
+    if (changed !== "past") return changed && { pixels, at: around, changed };
+  }
   const whole = { x: 0, y: 0, w: width, h: height };
   const all = read(whole);
   const changedAll = floodFill(all, sx, sy, fill, gap);
   return changedAll && { pixels: all, at: whole, changed: changedAll };
-}
-
-/** The region grown by `TUCK` pixels in every direction (a square), within the given box. */
-function dilate(
-  region: Uint8Array,
-  w: number,
-  x0: number,
-  x1: number,
-  y0: number,
-  y1: number,
-): Uint8Array {
-  // Two one-dimensional passes grow the same square as checking every neighbor, for far less work.
-  const rows = new Uint8Array(region.length);
-  for (let y = y0; y <= y1; y++) {
-    for (let x = x0; x <= x1; x++) {
-      for (let dx = -TUCK; dx <= TUCK; dx++) {
-        const nx = x + dx;
-        if (nx >= x0 && nx <= x1 && region[y * w + nx] === IN) {
-          rows[y * w + x] = 1;
-          break;
-        }
-      }
-    }
-  }
-  const grown = new Uint8Array(region.length);
-  for (let y = y0; y <= y1; y++) {
-    for (let x = x0; x <= x1; x++) {
-      for (let dy = -TUCK; dy <= TUCK; dy++) {
-        const ny = y + dy;
-        if (ny >= y0 && ny <= y1 && rows[ny * w + x]) {
-          grown[y * w + x] = 1;
-          break;
-        }
-      }
-    }
-  }
-  return grown;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { seededRandom } from "../../ui/seededRandom";
 import type { Rect } from "../sealing/stickerPasses";
-import { floodFill, floodSheet, type Pixels } from "./fill";
+import { floodFill, floodSheet, SAME_COLOR, TUCK, type Pixels } from "./fill";
 
 type Rgba = [number, number, number, number];
 
@@ -184,26 +185,53 @@ describe("floodFill", () => {
     expect(at(img, 4, 0)).toEqual(KEY.q);
   });
 
-  it("does nothing on a color already within 8 of the fill color", () => {
+  it("does nothing on a color closer to the fill color than SAME_COLOR, and fills one that far", () => {
+    const [r, g, b] = KEY.o;
     const img = image(["ooo"]);
     const before = [...img.data];
-    expect(floodFill(img, 1, 0, [255, 93, 55], 0)).toBeNull();
+    expect(floodFill(img, 1, 0, [r, g + SAME_COLOR - 1, b], 0)).toBeNull();
     expect([...img.data]).toEqual(before);
+    expect(floodFill(img, 1, 0, [r, g + SAME_COLOR, b], 0)).not.toBeNull();
   });
 
-  it("tucks the fill 2px under a line's soft edge", () => {
-    const img = image(["....eeee...."]);
+  it("tucks the fill TUCK px under a line's soft edge", () => {
+    const paper = 4;
+    const img = image([`${".".repeat(paper)}${"e".repeat(TUCK + 2)}....`]);
     floodFill(img, 0, 0, RED, 0);
-    for (const x of [4, 5]) {
-      const [r, g, b, a] = at(img, x, 0);
-      expect(a).toBe(255);
+    for (let x = paper; x < paper + TUCK; x++) {
       // The fill shows through under the edge, so the pixel sits between the ink and the fill.
-      expect(r).toBeGreaterThan(INK[0]);
-      expect(r).toBeLessThan(RED[0]);
-      expect([g, b]).toEqual([18, 27]);
+      expect(at(img, x, 0)).toSatisfy(
+        ([r, g, b, a]: number[]) =>
+          a === 255 &&
+          [r, g, b].every((c, k) => c > Math.min(INK[k], RED[k]) && c < Math.max(INK[k], RED[k])),
+      );
     }
-    expect(at(img, 6, 0)).toEqual(KEY.e);
-    expect(at(img, 11, 0)).toEqual(KEY["."]);
+    expect(at(img, paper + TUCK, 0)).toEqual(KEY.e);
+    expect(at(img, img.width - 1, 0)).toEqual(KEY["."]);
+  });
+
+  it.each([
+    ["no fringe", "....#...."],
+    ["faint fringes", "...f#f..."],
+  ])("leaves what lies past a line thinner than the tuck as it was, with %s", (_, row) => {
+    const img = image(Array.from({ length: 7 }, () => row));
+    const before = copyOf(img);
+    floodFill(img, 0, 3, RED, GAP);
+    expect(at(img, 0, 3)).toEqual([...RED, 255]);
+    for (let y = 0; y < img.height; y++) {
+      for (let x = row.indexOf("#") + 1; x < img.width; x++) {
+        expect(at(img, x, y), `${x}, ${y}`).toEqual(at(before, x, y));
+      }
+    }
+  });
+
+  it("recolors a stroke without growing it: every pixel keeps its alpha, and the fringe takes the color", () => {
+    const img = image(["...........", "...fe#ef...", "...........", "...fe#ef...", "..........."]);
+    const alphas = () => [...img.data].filter((_, i) => i % 4 === 3);
+    const before = alphas();
+    for (const color of [RED, [0, 0, 255] as const, RED]) floodFill(img, 5, 1, color, GAP);
+    expect(alphas()).toEqual(before);
+    for (const x of [3, 4, 5, 6, 7]) expect(at(img, x, 1)).toEqual([...RED, at(img, x, 1)[3]]);
   });
 });
 
@@ -269,4 +297,38 @@ describe("floodSheet", () => {
       expect(reads[0].w * reads[0].h).toBeLessThan(SHEET.width * SHEET.height);
     },
   );
+
+  describe("on a sheet of scattered strokes", () => {
+    /** A closed frame round the middle, with ink, soft edges and faint specks strewn inside and out. */
+    const scattered = (() => {
+      const [w, h] = [120, 90];
+      const random = seededRandom(7);
+      const rows = Array.from({ length: h }, () => Array.from({ length: w }, () => "."));
+      for (let k = 0; k < 600; k++) {
+        rows[Math.floor(random() * h)][Math.floor(random() * w)] = "#eef"[Math.floor(random() * 3)];
+      }
+      for (let x = 35; x <= 85; x++) rows[25][x] = rows[65][x] = "#";
+      for (let y = 25; y <= 65; y++) rows[y][35] = rows[y][85] = "#";
+      return image(rows.map((row) => row.join("")));
+    })();
+    /** Too narrow for the frame, so a fill inside it reads wider squares before it fits. */
+    const NEAR = 16;
+
+    it.each([
+      ["inside the frame", 60, 45],
+      ["outside it, reaching the whole sheet", 5, 5],
+    ])("gives the whole-image fill's pixels %s, closing gaps or not", (_, x, y) => {
+      for (const gap of [0, GAP]) {
+        const { out, reads } = sheetFill(scattered, x, y, gap, NEAR);
+        expect(out.data, `gap ${gap}`).toEqual(wholeImageFill(scattered, x, y, gap).data);
+        expect(reads.length).toBeGreaterThan(1);
+      }
+    });
+
+    it("never reads the whole sheet for a region inside the frame", () => {
+      const { reads } = sheetFill(scattered, 60, 45, GAP, NEAR);
+      for (const box of reads)
+        expect(box.w * box.h).toBeLessThan(scattered.width * scattered.height);
+    });
+  });
 });
