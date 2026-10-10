@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { act, createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { i18next } from "../../i18n/i18n";
 import { buttonNamed, renderInHost, type HostView } from "../../ui/testing";
 import { AddressPapers } from "./AddressPapers";
 import type { ChainAddress } from "./addresses";
@@ -9,6 +10,7 @@ const SUI: ChainAddress = {
   state: "ready",
   address: "0x7a1e00000000000000000000000000000000000000000000000000000000b04d",
 };
+const TRY_AGAIN = i18next.t(($) => $.stickerBoard.addresses.tryAgain);
 
 let view: HostView;
 const onOpen = vi.fn();
@@ -19,7 +21,7 @@ const render = (sui: ChainAddress, lifted = false) =>
 
 const paper = () =>
   view.host.querySelector<HTMLButtonElement>(
-    'button[aria-label="Show your Sui address as a QR code"]',
+    `button[aria-label="${i18next.t(($) => $.stickerBoard.addresses.sui.open)}"]`,
   );
 const button = (label: string) => buttonNamed(view.host, label);
 
@@ -54,17 +56,19 @@ describe("AddressPapers", () => {
   it("has no paper to open while the address is on its way", () => {
     render({ state: "loading" });
     expect(paper()).toBeNull();
-    expect(view.host.textContent).toContain("Getting your Sui address…");
+    expect(view.host.textContent).toContain(i18next.t(($) => $.stickerBoard.addresses.sui.loading));
   });
 
   it("offers Try again only where asking again can bring the address", () => {
     render({ state: "failed" });
-    expect(view.host.textContent).toContain("Sui address didn’t load");
-    expect(() => button("Try again")).toThrow();
+    expect(view.host.textContent).toContain(
+      i18next.t(($) => $.stickerBoard.addresses.sui.didntLoad),
+    );
+    expect(() => button(TRY_AGAIN)).toThrow();
 
     const retry = vi.fn();
     render({ state: "failed", retry });
-    act(() => button("Try again").click());
+    act(() => button(TRY_AGAIN).click());
     expect(retry).toHaveBeenCalledOnce();
   });
 

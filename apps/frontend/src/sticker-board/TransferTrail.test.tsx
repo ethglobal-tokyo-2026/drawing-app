@@ -17,6 +17,7 @@ import {
 } from "../gratitude/replay/testReplayEngine";
 import { LANDED_HOLD_MS } from "../gratitude/replay/useGratitudeReplay";
 import { errorMessage } from "../i18n/errorMessage";
+import { i18next } from "../i18n/i18n";
 import { ReducedMotion } from "../ui/testing";
 import { toTrailRows, TRAIL_SHOWN } from "./trailRows";
 import { TransferTrail } from "./TransferTrail";
@@ -28,7 +29,12 @@ vi.mock("../gratitude/replay/mountGratitudeReplay", () => ({
 }));
 
 const SEEN_AT = "2026-09-27T00:00:00.000Z";
-const PLAY_LABEL = "Play the replay of @bob’s 2,946 gratitude";
+/** REPLAYED_TOTAL as the open card writes it. */
+const AMOUNT = "2,946";
+const PLAY_LABEL = i18next.t(($) => $.stickerBoard.transferTrail.replayTheirs, {
+  name: "@bob",
+  amount: AMOUNT,
+});
 const read = vi.fn<ApiClient["gratitude"]>();
 const markSeen = vi.fn<ApiClient["markGratitudeSeen"]>();
 let engine: ReturnType<typeof fakeReplayEngine>;
@@ -173,8 +179,15 @@ describe("TransferTrail's replay", () => {
     expect(read).not.toHaveBeenCalled();
     await press(pill());
     expect(read).toHaveBeenCalledExactlyOnceWith("g-2");
-    expect(pill().getAttribute("aria-label")).toBe("Stop the replay");
-    expect(liveLine()).toBe("Replaying @bob’s 2,946 gratitude");
+    expect(pill().getAttribute("aria-label")).toBe(
+      i18next.t(($) => $.stickerBoard.transferTrail.replaying.stopLabel),
+    );
+    expect(liveLine()).toBe(
+      i18next.t(($) => $.stickerBoard.transferTrail.replaying.theirs, {
+        name: "@bob",
+        amount: AMOUNT,
+      }),
+    );
 
     const { host, options } = engine.last();
     expect(stage()?.contains(host)).toBe(true);
@@ -217,7 +230,7 @@ describe("TransferTrail's replay", () => {
     animate.mockClear();
     await land();
     expect(animate.mock.contexts).toContain(find(".transfer-trail__total"));
-    expect(liveLine()).toBe("Replay ended");
+    expect(liveLine()).toBe(i18next.t(($) => $.stickerBoard.transferTrail.replaying.ended));
     await wait(LANDED_HOLD_MS);
     expect(pill().getAttribute("aria-label")).toBe(PLAY_LABEL);
     // The stage shuts with the landed heart and its total in it, not empty.
@@ -230,7 +243,9 @@ describe("TransferTrail's replay", () => {
   it("says whose gratitude replays: yours, when you sent it", async () => {
     show([given("g-4", people.ken, TEST_OWNER)]);
     await press(pill());
-    expect(liveLine()).toBe("Replaying your 2,946 gratitude");
+    expect(liveLine()).toBe(
+      i18next.t(($) => $.stickerBoard.transferTrail.replaying.yours, { amount: AMOUNT }),
+    );
   });
 
   it("stops when another row opens in its place", async () => {
@@ -259,7 +274,10 @@ describe("TransferTrail's replay", () => {
     show();
     await press(pill());
     expect(pill().getAttribute("aria-label")).toBe(PLAY_LABEL);
-    expect(note()).toBe(`Couldn’t load the replay: ${errorMessage(missing)} Try again`);
+    const didntLoad = i18next.t(($) => $.stickerBoard.transferTrail.replaying.didntLoad, {
+      reason: errorMessage(missing),
+    });
+    expect(note()).toBe(`${didntLoad} ${i18next.t(($) => $.ui.errorLine.tryAgain)}`);
     expect(noteWithDetail()).toContain("No gratitude for gift g-2");
     await wait(STAGE_EASE_MS);
     expect(stage()).toBeNull();
@@ -278,7 +296,7 @@ describe("TransferTrail's replay", () => {
     await press(pill());
     act(() => engine.last().fail(new Error("the stage's canvas was lost")));
     await wait();
-    expect(note()).toBe("The replay stopped.");
+    expect(note()).toBe(i18next.t(($) => $.stickerBoard.transferTrail.replaying.stopped));
     expect(noteWithDetail()).toContain("the stage's canvas was lost");
     expect(pill().getAttribute("aria-label")).toBe(PLAY_LABEL);
   });
@@ -289,7 +307,11 @@ describe("TransferTrail's replay", () => {
     markSeen.mockRejectedValueOnce(failure);
     show();
     await playThrough();
-    expect(note()).toBe(`Couldn’t mark this gratitude watched: ${errorMessage(failure)}`);
+    expect(note()).toBe(
+      i18next.t(($) => $.stickerBoard.transferTrail.replaying.notMarkedSeen, {
+        reason: errorMessage(failure),
+      }),
+    );
     expect(noteWithDetail()).toContain("database is locked");
   });
 

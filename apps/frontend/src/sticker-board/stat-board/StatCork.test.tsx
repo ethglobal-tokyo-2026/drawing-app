@@ -4,6 +4,7 @@ import { act, createRef, useState, type Ref } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { ApiError } from "../../api/apiClient";
 import { errorDetail } from "../../i18n/errorMessage";
+import { i18next } from "../../i18n/i18n";
 import { errors } from "../../i18n/strings/errors";
 import { formatDay } from "../../stickers/format";
 import { buttonNamed, renderInHost, type HostView } from "../../ui/testing";
@@ -25,6 +26,9 @@ const FAILURE = {
   error: new ApiError(0, { error: "network", detail: "GET /api/stats got no answer" }),
   retry: () => {},
 };
+
+const NOT_KNOWN = i18next.t(($) => $.stickerBoard.statBoard.notKnown.spoken);
+const TRY_AGAIN = i18next.t(($) => $.ui.errorLine.tryAgain);
 
 let view: HostView;
 
@@ -90,7 +94,9 @@ describe("StatCork's receipt", () => {
   it("says there's no gratitude yet in place of a total of 0", () => {
     render(NEW_ARTIST);
     expect(view.host.querySelector(".stat-board__receipt-total")).toBeNull();
-    expect(receipt()?.textContent).toContain("No gratitude yet.");
+    expect(receipt()?.textContent).toContain(
+      i18next.t(($) => $.stickerBoard.statBoard.gratitude.noneYet),
+    );
   });
 
   it("is dated the day the cork shows, not the day it mounted, unseen, behind the board", () => {
@@ -122,10 +128,14 @@ describe("StatCork's receipt", () => {
 describe("StatCork while the stats load", () => {
   it("draws outlines and one status line, not the dashes a failure leaves", () => {
     render(null, { loading: true });
-    expect(view.host.textContent).not.toContain("not known");
-    expect(view.host.textContent).not.toContain("–");
+    expect(view.host.textContent).not.toContain(NOT_KNOWN);
+    expect(view.host.textContent).not.toContain(
+      i18next.t(($) => $.stickerBoard.statBoard.notKnown.mark),
+    );
     expect(view.host.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
-    expect(view.host.querySelector('[role="status"]')?.textContent).toBe("Loading Mika’s stats");
+    expect(view.host.querySelector('[role="status"]')?.textContent).toBe(
+      i18next.t(($) => $.stickerBoard.statBoard.loadingTheirs, { name: "Mika" }),
+    );
   });
 
   it("says nothing more once they've loaded", () => {
@@ -159,7 +169,7 @@ describe("StatCork's Try again", () => {
   it("keeps focus on the stat board as the failure goes, so Escape still turns it back", () => {
     const onFlipBack = vi.fn();
     view.rerender(<Reloading onFlipBack={onFlipBack} />);
-    const tryAgain = buttonNamed(view.host, "Try again");
+    const tryAgain = buttonNamed(view.host, TRY_AGAIN);
     act(() => tryAgain.focus());
     act(() => tryAgain.click());
 
@@ -176,14 +186,17 @@ describe("StatCork's Try again", () => {
 
 describe("StatCork's Bests", () => {
   const bests = () => rows(".stat-board__scrap-rows > div");
+  /** The Bests scrap's rows as they read out, each label with its figure. */
+  const readOut = (longestStreak: string, bestCombo: string, bestDay: string) => ({
+    [i18next.t(($) => $.stickerBoard.statBoard.bests.longestStreak)]: longestStreak,
+    [i18next.t(($) => $.stickerBoard.statBoard.bests.bestCombo)]: bestCombo,
+    [i18next.t(($) => $.stickerBoard.statBoard.bests.bestDay)]: bestDay,
+  });
 
   it("says None yet for every best a new artist hasn't set", () => {
     render(NEW_ARTIST);
-    expect(bests()).toEqual({
-      "Longest streak": "None yet",
-      "Best combo": "None yet",
-      "Best day": "None yet",
-    });
+    const noneYet = i18next.t(($) => $.stickerBoard.statBoard.bests.noneYet);
+    expect(bests()).toEqual(readOut(noneYet, noneYet, noneYet));
   });
 
   it("shows the bests someone has set, Best combo in hits", () => {
@@ -191,20 +204,18 @@ describe("StatCork's Bests", () => {
       ...NEW_ARTIST,
       bests: { bestCombo: 64, mostGratitudeInADay: 1210, longestStreak: 9 },
     });
-    expect(bests()).toEqual({
-      "Longest streak": "9 days",
-      "Best combo": "64 hits",
-      "Best day": "1,210",
-    });
+    expect(bests()).toEqual(
+      readOut(
+        i18next.t(($) => $.stickerBoard.statBoard.bests.days, { count: 9, days: "9" }),
+        i18next.t(($) => $.ui.hitCounter.spoken, { count: 64, hits: "64" }),
+        "1,210",
+      ),
+    );
   });
 
   it("marks every best as not known when the stats didn't load", () => {
     render(null);
-    expect(bests()).toEqual({
-      "Longest streak": "not known",
-      "Best combo": "not known",
-      "Best day": "not known",
-    });
+    expect(bests()).toEqual(readOut(NOT_KNOWN, NOT_KNOWN, NOT_KNOWN));
   });
 });
 
@@ -215,8 +226,8 @@ describe("StatCork's Flip back", () => {
     const buttons = [...view.host.querySelectorAll(".stat-board__cork button")].map(
       (b) => b.textContent,
     );
-    expect(buttons).toContain("Try again");
-    expect(buttons[0]).toBe("Flip back");
+    expect(buttons).toContain(TRY_AGAIN);
+    expect(buttons[0]).toBe(i18next.t(($) => $.stickerBoard.statBoard.flipBack));
   });
 });
 

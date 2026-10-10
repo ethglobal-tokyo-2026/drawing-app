@@ -6,12 +6,17 @@ import { ApiError, type ApiClient } from "../../api/apiClient";
 import { emptyApi, renderWithApi } from "../../api/testing";
 import { people, sticker } from "../../api/testFixtures";
 import { problemOf } from "../../i18n/errorMessage";
+import { i18next } from "../../i18n/i18n";
 import { formatHandle } from "../../stickers/format";
 import { buttonNamed, dragBy, onLargeScreen } from "../../ui/testing";
 import { DISMISS_PX } from "../../ui/useSheetDrag";
 import { GratitudeEventsSheet } from "./GratitudeEvents";
 import { StatCork } from "./StatCork";
 import { statFigures } from "./statFigures";
+
+/** The link under your receipt's total that opens your gratitude events. */
+const SEE_WHERE = i18next.t(($) => $.stickerBoard.statBoard.gratitude.events.open);
+const TRY_AGAIN = i18next.t(($) => $.ui.errorLine.tryAgain);
 
 const STATS: UserStats = {
   since: "2026-09-26T09:00:00.000Z",
@@ -80,7 +85,7 @@ afterEach(() => {
 async function openEvents(gratitudeEvents: ApiClient["gratitudeEvents"]) {
   const view = renderWithApi(<YourReceipt />, emptyApi({ gratitudeEvents }));
   unmount = view.unmount;
-  await act(async () => buttonNamed(view.host, "See where it came from").click());
+  await act(async () => buttonNamed(view.host, SEE_WHERE).click());
   return view.host;
 }
 
@@ -90,12 +95,13 @@ const rowsIn = (host: Element) =>
 it("opens your gratitude events from the receipt: who sent each, newest first, Residual on your share", async () => {
   const host = await openEvents(() => Promise.resolve(EVENTS));
   const rows = rowsIn(host);
+  const residual = i18next.t(($) => $.stickerBoard.statBoard.gratitude.events.residual);
   expect(rows).toHaveLength(2);
   expect(rows[0]).toContain(formatHandle(people.mika.handle ?? ""));
-  expect(rows[0]).toContain("Residual");
+  expect(rows[0]).toContain(residual);
   expect(rows[0]).toContain("120");
   expect(rows[1]).toContain(formatHandle(people.ken.handle ?? ""));
-  expect(rows[1]).not.toContain("Residual");
+  expect(rows[1]).not.toContain(residual);
   expect(rows[1]).toContain("480");
 });
 
@@ -113,7 +119,7 @@ it("says why your gratitude events didn't load, with Try again, which loads them
   expect(alert?.textContent).toContain(problemOf(failure).message);
   expect(rowsIn(host)).toEqual([]);
 
-  await act(async () => buttonNamed(host, "Try again").click());
+  await act(async () => buttonNamed(host, TRY_AGAIN).click());
   expect(gratitudeEvents).toHaveBeenCalledTimes(2);
   expect(host.querySelector('.gratitude-events [role="alert"]')).toBeNull();
   expect(rowsIn(host)).toHaveLength(EVENTS.events.length);

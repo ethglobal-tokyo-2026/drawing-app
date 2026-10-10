@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { act, useRef, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { i18next } from "../../i18n/i18n";
 import { buttonNamed, renderInHost, type HostView } from "../../ui/testing";
 import { ToastProvider } from "../../ui/ToastProvider";
 import { AddressDialog } from "./AddressDialog";
@@ -10,6 +11,9 @@ vi.mock("@line/liff", () => ({ default: liff }));
 
 const ADDRESS = "0x7a1e5b0c9d1e4f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192ab04d";
 const SUISCAN_PAGE = `https://suiscan.xyz/testnet/account/${ADDRESS}`;
+const COPY = i18next.t(($) => $.stickerBoard.addresses.copy);
+const CLOSE = i18next.t(($) => $.stickerBoard.addresses.close);
+const COPIED = i18next.t(($) => $.stickerBoard.addresses.sui.copied);
 
 let view: HostView;
 const onClose = vi.fn();
@@ -79,26 +83,26 @@ describe("AddressDialog", () => {
   it("copies the Sui address and says so", async () => {
     writeText.mockResolvedValue();
     await open();
-    expect(find("h2")?.textContent).toBe("Your Sui address");
-    await act(async () => button("Copy address").click());
+    expect(find("h2")?.textContent).toBe(i18next.t(($) => $.stickerBoard.addresses.sui.title));
+    await act(async () => button(COPY).click());
     expect(writeText).toHaveBeenCalledWith(ADDRESS);
-    expect(toastText()).toBe("Sui address copied");
+    expect(toastText()).toBe(COPIED);
   });
 
   it("keeps a copy the clipboard refused on the card, under Copy, until the next try", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     writeText.mockRejectedValueOnce(new DOMException("Not allowed here", "NotAllowedError"));
     await open();
-    await act(async () => button("Copy address").click());
+    await act(async () => button(COPY).click());
     const problem = () => find('[role="alert"]')?.textContent;
-    expect(problem()).toContain("Couldn’t copy the Sui address");
+    expect(problem()).toBe(i18next.t(($) => $.stickerBoard.addresses.sui.notCopied));
     expect(toastText()).toBe("");
     expect(error).toHaveBeenCalledWith("Couldn't copy the Sui address", expect.any(DOMException));
 
     writeText.mockResolvedValueOnce();
-    await act(async () => button("Copy address").click());
+    await act(async () => button(COPY).click());
     expect(problem()).toBeUndefined();
-    expect(toastText()).toBe("Sui address copied");
+    expect(toastText()).toBe(COPIED);
   });
 
   it("links to the Sui address's page on Suiscan", async () => {
@@ -119,7 +123,7 @@ describe("AddressDialog", () => {
   });
 
   it.each([
-    ["the X", () => button("Close").click()],
+    ["the X", () => button(CLOSE).click()],
     [
       "Escape",
       () =>
@@ -144,7 +148,7 @@ describe("AddressDialog", () => {
     view.rerender(<Board />);
     await act(async () => button("Sui address paper").click());
     const opening = [...flights];
-    act(() => button("Close").click());
+    act(() => button(CLOSE).click());
     expect(opening.every((a) => a.playbackRate < 0)).toBe(true);
     expect(flights).toHaveLength(opening.length);
     await land();
@@ -154,7 +158,7 @@ describe("AddressDialog", () => {
   it("takes focus in, and gives it back to the paper once the paper is back", async () => {
     await open();
     expect(dialog()?.contains(document.activeElement)).toBe(true);
-    act(() => button("Close").click());
+    act(() => button(CLOSE).click());
     await land();
     expect(document.activeElement).toBe(button("Sui address paper"));
   });

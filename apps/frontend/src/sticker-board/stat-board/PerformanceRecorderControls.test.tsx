@@ -2,6 +2,7 @@
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../api/apiClient";
+import { i18next } from "../../i18n/i18n";
 import {
   clearPerformanceRecording,
   stopPerformanceRecorder,
@@ -12,6 +13,8 @@ import {
 } from "../../performance/performanceUpload";
 import { buttonNamed, renderInHost, type HostView } from "../../ui/testing";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
+
+const COPY_REPORT = i18next.t(($) => $.stickerBoard.developer.performance.copy);
 
 let view: HostView;
 const writeText = vi.fn<(text: string) => Promise<void>>();
@@ -29,7 +32,7 @@ const record = () => {
     vi.advanceTimersByTime(100);
   });
 };
-const copyReport = () => act(async () => button("Copy report").click());
+const copyReport = () => act(async () => button(COPY_REPORT).click());
 
 let stopUploading: (() => void) | undefined;
 
@@ -56,12 +59,14 @@ afterEach(() => {
 
 describe("PerformanceRecorderControls", () => {
   it("copies the report once there's a recording", async () => {
-    expect(button("Copy report").disabled).toBe(true);
+    expect(button(COPY_REPORT).disabled).toBe(true);
     record();
     writeText.mockResolvedValue();
     await copyReport();
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Typical frame"));
-    expect(control('[role="status"]').textContent).toBe("Copied. Paste it into the chat.");
+    expect(control('[role="status"]').textContent).toBe(
+      i18next.t(($) => $.stickerBoard.developer.performance.copied),
+    );
   });
 
   it("says why the clipboard refused the report, and shows it to copy by hand", async () => {
@@ -70,7 +75,9 @@ describe("PerformanceRecorderControls", () => {
     writeText.mockRejectedValue(new DOMException("Not allowed here", "NotAllowedError"));
     await copyReport();
     expect(control('[role="alert"]').textContent).toBe(
-      "The report couldn’t be copied: Not allowed here. It’s below to copy by hand.",
+      i18next.t(($) => $.stickerBoard.developer.performance.notCopied, {
+        reason: "Not allowed here",
+      }),
     );
     expect(control<HTMLTextAreaElement>("textarea").value).toContain("Typical frame");
   });
@@ -88,7 +95,9 @@ describe("PerformanceRecorderControls", () => {
 
     await act(() => vi.advanceTimersByTimeAsync(REPORT_UPLOAD_EVERY_MS));
     expect(control('[role="alert"]').textContent).toBe(
-      "The report wasn’t uploaded: HTTP 400 invalid_request: report: Too big. The next send tries again.",
+      i18next.t(($) => $.stickerBoard.developer.performance.notUploaded, {
+        reason: "HTTP 400 invalid_request: report: Too big",
+      }),
     );
 
     await act(() => vi.advanceTimersByTimeAsync(REPORT_UPLOAD_EVERY_MS));
@@ -119,6 +128,10 @@ describe("PerformanceRecorderControls", () => {
     const toggle = control<HTMLInputElement>("input[type=checkbox]");
     act(() => toggle.click());
     expect(toggle.checked).toBe(false);
-    expect(control('[role="alert"]').textContent).toBe("Recording couldn’t start: observe failed");
+    expect(control('[role="alert"]').textContent).toBe(
+      i18next.t(($) => $.stickerBoard.developer.performance.couldntStart, {
+        reason: "observe failed",
+      }),
+    );
   });
 });

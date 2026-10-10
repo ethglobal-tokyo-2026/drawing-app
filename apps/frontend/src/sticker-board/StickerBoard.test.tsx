@@ -14,12 +14,13 @@ import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
 import { forgetNoticedHere, markNoticed, noticeReceivesFromNow } from "../giving/noticedGifts";
-import { withBreakHints } from "../i18n/i18n";
+import { errorMessage } from "../i18n/errorMessage";
+import { i18next, withBreakHints } from "../i18n/i18n";
 import { api as apiStrings } from "../i18n/strings/api";
 import { errors } from "../i18n/strings/errors";
 import { stickerBoard } from "../i18n/strings/stickerBoard";
 import { SessionKeeper } from "../sticker-creation/session/keptSession";
-import { formatNo } from "../stickers/format";
+import { formatMonthDay, formatNo, spokenDuration } from "../stickers/format";
 import type { Sheet } from "../tickets/ticketsContext";
 import { useTickets } from "../tickets/useTickets";
 import { TabsLeadSlot } from "../ui/TabsLead";
@@ -71,6 +72,9 @@ vi.mock("../line/liff", () => ({
   // The developer slip asks it who's signed in once a .env names demo people (VITE_DEMO_PEOPLE).
   mockPerson: () => ({ sub: "U1", name: "You" }),
 }));
+
+/** Why a request that got no answer failed, as the board's alerts give it. */
+const NETWORK_ERROR = i18next.t(($) => $.errors.network);
 
 let unmount = () => {};
 afterEach(async () => {
@@ -288,15 +292,16 @@ describe("StickerBoard's check for gratitude to send", () => {
   it("says so when the check for the sticker that just arrived fails, and Try again asks again", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const a = boardSticker({ placement: placedAt(0.3) });
+    const busy = new ApiError(503, { error: "unavailable", detail: "database is busy" });
     const stickerDetail = vi
       .fn<ApiClient["stickerDetail"]>()
-      .mockRejectedValueOnce(
-        new ApiError(503, { error: "unavailable", detail: "database is busy" }),
-      )
+      .mockRejectedValueOnce(busy)
       .mockRejectedValue(new ApiError(404, { error: "sticker_not_found", detail: "gone" }));
     const view = await openBoard(boardApi([a], { stickerDetail }), { freshId: a.stickerId });
     const alert = () => view.host.querySelector(".board-alerts")?.textContent;
-    expect(alert()).toContain("Couldn’t check whether gratitude is waiting");
+    expect(alert()).toContain(
+      i18next.t(($) => $.stickerBoard.board.gratitudeCheckFailed, { reason: errorMessage(busy) }),
+    );
     expect(alert()).toContain("database is busy");
 
     const again = view.host.querySelector<HTMLElement>(".board-alerts .label-btn--quiet");
@@ -319,8 +324,16 @@ describe("StickerBoard's check for gratitude to send", () => {
     );
     const alerts = view.host.querySelectorAll(".board-alerts [role='alert']");
     expect([...alerts].map((alert) => alert.textContent)).toEqual([
-      expect.stringContaining("Couldn’t save where"),
-      expect.stringContaining("Couldn’t check whether gratitude is waiting"),
+      expect.stringContaining(
+        i18next.t(($) => $.stickerBoard.board.unsaved, {
+          count: 1,
+          stickers: formatNo(a.sticker.number),
+          reasons: NETWORK_ERROR,
+        }),
+      ),
+      expect.stringContaining(
+        i18next.t(($) => $.stickerBoard.board.gratitudeCheckFailed, { reason: NETWORK_ERROR }),
+      ),
     ]);
   });
 });
@@ -334,7 +347,9 @@ describe("StickerBoard's tickets", () => {
       .mockResolvedValue(FRESH_TICKETS);
     const view = await openBoard(boardApi([], { tickets }));
     const alert = () => view.host.querySelector('.board-alerts [role="alert"]')?.textContent;
-    expect(alert()).toContain("Couldn’t load your tickets");
+    expect(alert()).toContain(
+      i18next.t(($) => $.stickerBoard.board.ticketsDidntLoad, { reason: NETWORK_ERROR }),
+    );
     expect(view.host.textContent).toContain("Failed to fetch");
 
     const again = view.host.querySelector<HTMLElement>(".board-alerts .label-btn--quiet");
@@ -588,11 +603,13 @@ describe("StickerBoard's sticker detail", () => {
 });
 
 describe("StickerBoard after a gift", () => {
+  /** When @bob received the sticker you gave him. */
+  const RECEIVED_AT = "2026-09-23T11:52:00.000Z";
   const given = () =>
     boardSticker({
       placement: placedAt(0.3),
       held: false,
-      givenTo: { receiver: people.bob, receivedAt: "2026-09-23T11:52:00.000Z" },
+      givenTo: { receiver: people.bob, receivedAt: RECEIVED_AT },
     });
   /** Your board's stage, once your board with `boardStickers` has loaded. */
   const stageWith = async (...boardStickers: ApiBoardSticker[]) => {
@@ -619,7 +636,15 @@ describe("StickerBoard after a gift", () => {
     const kept = boardSticker({ placement: placedAt(0.7) });
     const stage = await stageWith(gone, kept);
     expect(shownIds(stage)).toEqual([kept.stickerId]);
-    expect(stage.querySelector(".placed-sticker")?.getAttribute("aria-label")).toMatch(/1 of 1$/);
+    expect(stage.querySelector(".placed-sticker")?.getAttribute("aria-label")).toBe(
+      i18next.t(($) => $.stickerBoard.placedSticker.labelBy, {
+        no: formatNo(kept.sticker.number),
+        duration: spokenDuration(kept.sticker.timeUsed),
+        artist: "@mika",
+        position: 1,
+        setSize: 1,
+      }),
+    );
     expect(stage.querySelector(".board-blank")).toBeNull();
   });
 
@@ -632,24 +657,33 @@ describe("StickerBoard after a gift", () => {
   it("opens a given sticker among the stickers you gave from its spot in the tray", async () => {
     const gone = given();
     // Noticed already, so no notice covers the board.
-    markNoticed([
-      { stickerId: gone.stickerId, receivedAt: Date.parse("2026-09-23T11:52:00.000Z") },
-    ]);
+    markNoticed([{ stickerId: gone.stickerId, receivedAt: Date.parse(RECEIVED_AT) }]);
     const stage = await stageWith(gone, boardSticker({ placement: placedAt(0.7) }));
     // The sticker tray loads with the board.
     await act(() => vi.dynamicImportSettled());
     const spot = stage
       .closest(".board")
       ?.querySelector<HTMLElement>(`.tray__slot[data-id="${gone.stickerId}"]`);
-    expect(spot?.getAttribute("aria-label")).toMatch(/^No\.\d{4}, given to @bob\. Open it$/);
+    expect(spot?.getAttribute("aria-label")).toBe(
+      i18next.t(($) => $.stickerBoard.tray.slot.given, {
+        no: formatNo(gone.sticker.number),
+        recipient: "@bob",
+      }),
+    );
 
     act(() => spot?.click());
     await act(() => vi.dynamicImportSettled());
     const detail = document.querySelector(".sticker-detail");
-    expect(detail?.querySelector("nav")?.getAttribute("aria-label")).toBe("Stickers you gave");
+    expect(detail?.querySelector("nav")?.getAttribute("aria-label")).toBe(
+      i18next.t(($) => $.stickerBoard.detail.stickersYouGave),
+    );
     // Only the stickers you gave page past, and it says who has this one.
     expect(detail?.querySelectorAll(".sticker-detail__thumb")).toHaveLength(1);
-    expect(detail?.textContent).toContain("You gave it to @bob");
+    // The receiver's handle stands where the line's <receiver/> tag is.
+    const youGaveIt = i18next.t(($) => $.stickerBoard.detail.youGaveIt, {
+      day: formatMonthDay(Date.parse(RECEIVED_AT)),
+    });
+    expect(detail?.textContent).toContain(youGaveIt.replace("<receiver/>", "@bob"));
   });
 
   const gave = (receiver: Person, receivedAt: string) =>
@@ -673,9 +707,9 @@ describe("StickerBoard after a gift", () => {
     );
     const close = () =>
       act(() => document.querySelector<HTMLElement>(".gift-received-notice .label-btn")?.click());
-    expect(noticeTitle()).toBe("@bob received your sticker");
+    expect(noticeTitle()).toBe(i18next.t(($) => $.giving.receivedNotice.title, { name: "@bob" }));
     close();
-    expect(noticeTitle()).toBe("@mika received your sticker");
+    expect(noticeTitle()).toBe(i18next.t(($) => $.giving.receivedNotice.title, { name: "@mika" }));
     close();
     expect(document.querySelector(".gift-received-notice")).toBeNull();
   });
@@ -687,7 +721,9 @@ describe("StickerBoard's sticker tray", () => {
     const view = await openBoard(boardApi([a]));
     await act(() => vi.dynamicImportSettled());
     const hole = view.host.querySelector<HTMLElement>(`.tray__slot[data-id="${a.stickerId}"]`);
-    expect(hole?.getAttribute("aria-label")).toMatch(/on your board\. Show it$/);
+    expect(hole?.getAttribute("aria-label")).toBe(
+      i18next.t(($) => $.stickerBoard.tray.slot.used, { no: formatNo(a.sticker.number) }),
+    );
 
     act(() => {
       hole?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
@@ -802,7 +838,7 @@ describe("StickerBoard after Giving", () => {
   const openGiving = async (host: HTMLElement, stickerId: string) => {
     selectByKeys(host, stickerId);
     const give = [...host.querySelectorAll<HTMLElement>(".sticker-toolbar button")].find(
-      (button) => button.textContent === "Give",
+      (button) => button.textContent === i18next.t(($) => $.stickerBoard.toolbar.give),
     );
     act(() => give?.click());
     await act(() => vi.dynamicImportSettled());
@@ -863,7 +899,9 @@ describe("StickerBoard while it loads", () => {
     );
     const shapes = () => view.host.querySelectorAll(".board-loading-sticker").length;
     expect(shapes()).toBeGreaterThan(0);
-    expect(view.host.querySelector('[role="status"]')?.textContent).toBe("Loading your stickers");
+    expect(view.host.querySelector('[role="status"]')?.textContent).toBe(
+      i18next.t(($) => $.stickerBoard.board.loading),
+    );
 
     await act(async () => answer({ owner: TEST_OWNER, boardStickers: [] }));
     expect(shapes()).toBe(0);

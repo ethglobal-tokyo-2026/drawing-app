@@ -4,9 +4,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { people } from "../api/testFixtures";
 import { renderWithApi } from "../api/testing";
 import { toPerson } from "../api/views";
+import { i18next } from "../i18n/i18n";
 import { ArtistChip } from "./ArtistChip";
 
 const ken = toPerson(people.ken);
+/** The chip's name for screen readers, naming the artist as `name`. */
+const labelFor = (name: string) => i18next.t(($) => $.stickers.artistChip.label, { name });
+const CAPTION = i18next.t(($) => $.stickers.artistChip.artist);
 
 let rendered: ReturnType<typeof renderWithApi> | undefined;
 afterEach(() => rendered?.unmount());
@@ -22,20 +26,20 @@ function noteOf(ui: ReactNode) {
 describe("ArtistChip", () => {
   it("names the artist over their handle", () => {
     const note = noteOf(<ArtistChip artist={ken} />);
-    expect(note.getAttribute("aria-label")).toBe("Artist: @ken");
-    expect(note.textContent).toBe("Artist @ken");
+    expect(note.getAttribute("aria-label")).toBe(labelFor("@ken"));
+    expect(note.textContent).toBe(`${CAPTION} @ken`);
   });
 
   it("reads By and the handle in the by variant", () => {
     const note = noteOf(<ArtistChip artist={ken} variant="by" />);
-    expect(note.getAttribute("aria-label")).toBe("Artist: @ken");
-    expect(note.textContent).toBe("By @ken");
+    expect(note.getAttribute("aria-label")).toBe(labelFor("@ken"));
+    expect(note.textContent).toBe(`${i18next.t(($) => $.stickers.artistChip.by)} @ken`);
   });
 
   it("names an artist without a handle by their LINE name", () => {
     const note = noteOf(<ArtistChip artist={{ ...ken, handle: null }} />);
-    expect(note.getAttribute("aria-label")).toBe(`Artist: ${ken.name}`);
-    expect(note.textContent).toBe(`Artist ${ken.name}`);
+    expect(note.getAttribute("aria-label")).toBe(labelFor(ken.name));
+    expect(note.textContent).toBe(`${CAPTION} ${ken.name}`);
   });
 
   it("shows the artist's first letter where they have no picture", () => {
@@ -55,6 +59,6 @@ describe("ArtistChip", () => {
     expect(plain.querySelector("img.artist-chip__face")?.getAttribute("src")).toBe(
       withPicture.pictureUrl,
     );
-    expect(plain.getAttribute("aria-label")).toBe("Artist: @ken");
+    expect(plain.getAttribute("aria-label")).toBe(labelFor("@ken"));
   });
 });

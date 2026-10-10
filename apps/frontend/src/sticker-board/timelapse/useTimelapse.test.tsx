@@ -8,6 +8,7 @@ import { ApiProvider } from "../../api/ApiProvider";
 import { emptyApi } from "../../api/testing";
 import { StickerFigure } from "../../stickers/StickerFigure";
 import { errorMessage } from "../../i18n/errorMessage";
+import { i18next } from "../../i18n/i18n";
 import { deferred, fakeTimelapsePlayers, handFrames, TEST_TIMELAPSE } from "./testTimelapse";
 import { testStickerUrls } from "../../stickers/testStickerUrls";
 import { TimelapseButton, TimelapseFailure } from "./TimelapseButton";
@@ -36,6 +37,8 @@ const STICKER: TimelapseSticker = {
   height: 200,
   urls: testStickerUrls("blob:s-147"),
 };
+/** The Timelapse button's label when it's idle. */
+const WATCH = i18next.t(($) => $.stickerBoard.timelapse.watch);
 
 let host: HTMLDivElement;
 let root: Root;
@@ -400,33 +403,39 @@ describe("useTimelapse", () => {
   it("names each state on the one button, keeping its focus, and says when it plays and ends", async () => {
     render();
     const pressed = button();
-    expect(label()).toBe("Timelapse");
-    expect(pressed.getAttribute("aria-label")).toBe("Timelapse: watch No.0147 being drawn");
+    expect(label()).toBe(WATCH);
+    expect(pressed.getAttribute("aria-label")).toBe(
+      i18next.t(($) => $.stickerBoard.timelapse.watchLabel, { no: "No.0147" }),
+    );
     pressed.focus();
 
     press();
-    expect(label()).toBe("Loading…");
+    expect(label()).toBe(i18next.t(($) => $.stickerBoard.timelapse.loading));
     expect(pressed.getAttribute("aria-disabled")).toBe("true");
     expect(pressed.hasAttribute("aria-label")).toBe(false);
     press();
     await settle();
-    expect(label()).toBe("Preparing…");
+    expect(label()).toBe(i18next.t(($) => $.stickerBoard.timelapse.preparing));
     expect(pressed.getAttribute("aria-disabled")).toBe("true");
 
     players.last().prepared.resolve();
     await settle();
-    expect(label()).toBe("Skip");
-    expect(pressed.getAttribute("aria-label")).toBe("Skip to the end");
+    expect(label()).toBe(i18next.t(($) => $.stickerBoard.timelapse.skip));
+    expect(pressed.getAttribute("aria-label")).toBe(
+      i18next.t(($) => $.stickerBoard.timelapse.skipLabel),
+    );
     expect(pressed.hasAttribute("aria-disabled")).toBe(false);
     expect(document.querySelector('[role="status"]')?.textContent).toBe(
-      "Playing how No.0147 was drawn",
+      i18next.t(($) => $.stickerBoard.timelapse.playing, { no: "No.0147" }),
     );
 
     await tookOff();
     await finish();
     advance(HOLD_MS + FADE_MS);
-    expect(label()).toBe("Timelapse");
-    expect(document.querySelector('[role="status"]')?.textContent).toBe("Done");
+    expect(label()).toBe(WATCH);
+    expect(document.querySelector('[role="status"]')?.textContent).toBe(
+      i18next.t(($) => $.stickerBoard.timelapse.done),
+    );
     expect(button()).toBe(pressed);
     expect(document.activeElement).toBe(pressed);
     expect(players.made).toHaveLength(1);
@@ -441,7 +450,7 @@ describe("useTimelapse", () => {
     const notFound = new ApiError(404, { error: "timelapse_not_found", detail: STICKER.id });
     expect(alert()).toContain(errorMessage(notFound));
     expect(document.body.textContent).toContain(STICKER.id);
-    expect(label()).toBe("Timelapse");
+    expect(label()).toBe(WATCH);
     expect(logged).toHaveBeenCalled();
     expect(players.made).toHaveLength(0);
 
@@ -450,7 +459,7 @@ describe("useTimelapse", () => {
     act(() => tryAgain?.focus());
     expect(document.activeElement).toBe(tryAgain);
     act(() => tryAgain?.click());
-    expect(label()).toBe("Loading…");
+    expect(label()).toBe(i18next.t(($) => $.stickerBoard.timelapse.loading));
     expect(document.activeElement).toBe(button());
     expect(alert()).toBeUndefined();
   });
@@ -463,9 +472,12 @@ describe("useTimelapse", () => {
     const player = players.last();
     player.prepared.reject(new Error("no 2D context"));
     await settle();
-    expect(alert()).toContain("It couldn’t play here");
+    const failed = i18next.t(($) => $.stickerBoard.timelapse.failed, {
+      reason: i18next.t(($) => $.stickerBoard.timelapse.notPlayed),
+    });
+    expect(alert()).toBe(`${failed} ${i18next.t(($) => $.ui.errorLine.tryAgain)}`);
     expect(document.body.textContent).toContain("no 2D context");
-    expect(label()).toBe("Timelapse");
+    expect(label()).toBe(WATCH);
     expect(logged).toHaveBeenCalled();
     expect(player.calls).toContain("stop");
     expect(layer()).toBeNull();

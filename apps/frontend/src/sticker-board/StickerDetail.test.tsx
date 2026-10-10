@@ -6,6 +6,7 @@ import { ApiError, type ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
 import type {
   Gratitude,
+  KyotoSeikaSubject,
   Me,
   RecordGratitude,
   StickerDetail as StickerDetailResponse,
@@ -47,6 +48,16 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 /** Midday in Tokyo, where the app's days turn over, so the day reads the same in any machine's time zone. */
 const day = (d: number) => Date.UTC(2026, 8, d, 3);
+
+const NEXT_STICKER = i18next.t(($) => $.stickerBoard.detail.next);
+const PREVIOUS_STICKER = i18next.t(($) => $.stickerBoard.detail.previous);
+const GIVE = i18next.t(($) => $.stickerBoard.detail.give);
+const SEND_GRATITUDE = i18next.t(($) => $.stickerBoard.detail.sendGratitude);
+const TRY_AGAIN = i18next.t(($) => $.ui.errorLine.tryAgain);
+/** The fine print of a sticker @bob received from you on 9.23, his handle where the string marks it. */
+const YOU_GAVE_IT_TO_BOB = i18next
+  .t(($) => $.stickerBoard.detail.youGaveIt, { day: "9.23" })
+  .replace("<receiver/>", "@bob");
 
 const you = toPerson(TEST_OWNER);
 const sticker = (
@@ -121,7 +132,7 @@ const detailOf = (gratitude: Gratitude | null): StickerDetailResponse => ({
 /** A server that reads No.0133's detail as `detailOf(gratitude)`. */
 const received = (gratitude: Gratitude | null) =>
   emptyApi({ stickerDetail: () => Promise.resolve(detailOf(gratitude)) });
-const giveIsTheKey = () => button("Give")?.classList.contains("key");
+const giveIsTheKey = () => button(GIVE)?.classList.contains("key");
 
 /**
  * A server whose sticker detail reads answer only when told, each with `detail()` as that read went
@@ -245,16 +256,16 @@ afterEach(() => {
 describe("StickerDetail", () => {
   it("gives the sticker it shows, after paging by the pager, arrow keys and strip", () => {
     open();
-    press("Next sticker");
+    press(NEXT_STICKER);
     expect(heading()).toBe("No.0117");
-    press("Next sticker");
+    press(NEXT_STICKER);
     expect(heading()).toBe("No.0117");
 
     key("ArrowLeft");
     key("ArrowLeft");
     expect(heading()).toBe("No.0147");
     press("No.0133");
-    press("Give");
+    press(GIVE);
     expect(onGive).toHaveBeenCalledExactlyOnceWith(stickers[1]);
   });
 
@@ -263,9 +274,9 @@ describe("StickerDetail", () => {
     // The board reloads once a friend received No.0133, which leaves your stickers.
     open({ stickers: [stickers[0], stickers[2]] });
     expect(heading()).toBe("No.0133");
-    press("Next sticker");
+    press(NEXT_STICKER);
     expect(heading()).toBe("No.0117");
-    press("Previous sticker");
+    press(PREVIOUS_STICKER);
     expect(heading()).toBe("No.0147");
   });
 
@@ -282,9 +293,9 @@ describe("StickerDetail", () => {
     });
     open({ mode: "given", stickers: [given] });
     expect(document.querySelector(".sticker-detail__meta")?.textContent).toContain(
-      "You gave it to @bob · 9.23",
+      YOU_GAVE_IT_TO_BOB,
     );
-    expect(button("Give")).toBeUndefined();
+    expect(button(GIVE)).toBeUndefined();
   });
 
   describe("a gift in flight", () => {
@@ -332,7 +343,7 @@ describe("StickerDetail", () => {
     it("says its state only, Take it out under it, and keeps Give the key while it's in the bag", () => {
       openInFlight(inFlight(133, "sent", "bob"));
       expect(note()).toBe(i18next.t(($) => $.stickerBoard.detail.onItsWayTo, { receiver: "@bob" }));
-      expect(button("Give")).toBeUndefined();
+      expect(button(GIVE)).toBeUndefined();
       expect(button(takeOut())).toBeDefined();
       openInFlight(inFlight(133, "sent"));
       expect(note()).toBe(i18next.t(($) => $.stickerBoard.detail.onItsWay));
@@ -341,7 +352,7 @@ describe("StickerDetail", () => {
       expect(note()).toBe(i18next.t(($) => $.giving.inTheBag.title));
       expect(button(takeOut())).toBeDefined();
       expect(giveIsTheKey()).toBe(true);
-      press("Give");
+      press(GIVE);
       expect(onGive).toHaveBeenCalledExactlyOnceWith(packed);
     });
 
@@ -390,7 +401,7 @@ describe("StickerDetail", () => {
           reason: errorMessage(refusal),
         }),
       );
-      press("Try again");
+      press(TRY_AGAIN);
       await settle();
       expect(startTakeOut).toHaveBeenCalledTimes(2);
       expect(alert()).toBeUndefined();
@@ -403,7 +414,7 @@ describe("StickerDetail", () => {
       expect(giftDot()).toBe("packed");
       await settle();
       expect(giftDot()).toBeUndefined();
-      expect(document.activeElement?.textContent).toBe("Give");
+      expect(document.activeElement?.textContent).toBe(GIVE);
       expect(document.querySelector(".sticker-detail__taken-out")?.textContent).toBe(
         i18next.t(($) => $.stickerBoard.detail.takeOut.backOnBoard, { no: "No.0133" }),
       );
@@ -415,7 +426,7 @@ describe("StickerDetail", () => {
     open({ onSendGratitude }, received(null));
     await settle();
     expect(giveIsTheKey()).toBe(false);
-    press("Send gratitude");
+    press(SEND_GRATITUDE);
     expect(onSendGratitude).toHaveBeenCalledExactlyOnceWith(
       { id: "gift-133" },
       toSticker(byKen),
@@ -432,15 +443,15 @@ describe("StickerDetail", () => {
 
     open({ onSendGratitude: vi.fn() }, reads.client);
     await reads.answer(0);
-    expect(button("Send gratitude")).toBeUndefined();
+    expect(button(SEND_GRATITUDE)).toBeUndefined();
 
     // Back online, the server records it, and the trail is read again. What was read before, which
     // has no gratitude, never brings Send gratitude back while it is.
     await act(() => resendPendingGratitude(server, TEST_OWNER.id));
     expect(reads.client.stickerDetail).toHaveBeenCalledTimes(2);
-    expect(button("Send gratitude")).toBeUndefined();
+    expect(button(SEND_GRATITUDE)).toBeUndefined();
     await reads.answer(1);
-    expect(button("Send gratitude")).toBeUndefined();
+    expect(button(SEND_GRATITUDE)).toBeUndefined();
   });
 
   it("reads the trail again once its first read lands, when gratitude was recorded while that read was going out", async () => {
@@ -451,10 +462,10 @@ describe("StickerDetail", () => {
     await act(() => sendGratitude(server, TEST_OWNER.id, body));
     // That read went out before the record, so it holds no gratitude, and can't bring Send gratitude back.
     await reads.answer(0);
-    expect(button("Send gratitude")).toBeUndefined();
+    expect(button(SEND_GRATITUDE)).toBeUndefined();
     expect(reads.client.stickerDetail).toHaveBeenCalledTimes(2);
     await reads.answer(1);
-    expect(button("Send gratitude")).toBeUndefined();
+    expect(button(SEND_GRATITUDE)).toBeUndefined();
     expect(giveIsTheKey()).toBe(true);
   });
 
@@ -484,13 +495,15 @@ describe("StickerDetail", () => {
       resendPendingGratitude({ recordGratitude: () => Promise.reject(refusal) }, TEST_OWNER.id),
     );
     await settle();
-    expect(refused()?.querySelector('[role="alert"]')?.textContent).toContain("already with @mika");
+    expect(refused()?.querySelector('[role="alert"]')?.textContent).toContain(
+      i18next.t(($) => $.gratitude.refusals.alreadyRecorded, { handle: "@mika" }),
+    );
     expect(refused()?.textContent).toContain(errorDetail(refusal));
 
     // It stays until dismissed, across opens.
     await reopen();
     expect(refused()).not.toBeNull();
-    press("Dismiss");
+    press(i18next.t(($) => $.stickerBoard.detail.dismiss));
     expect(refused()).toBeNull();
     await reopen();
     expect(refused()).toBeNull();
@@ -498,14 +511,13 @@ describe("StickerDetail", () => {
 
   it("says the check failed where the key would be, and Try again asks again", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const stickerDetail = vi.fn<ApiClient["stickerDetail"]>(() =>
-      Promise.reject(new ApiError(503, { error: "unavailable", detail: "database is busy" })),
-    );
+    const refusal = new ApiError(503, { error: "unavailable", detail: "database is busy" });
+    const stickerDetail = vi.fn<ApiClient["stickerDetail"]>(() => Promise.reject(refusal));
     open({ onSendGratitude: vi.fn() }, emptyApi({ stickerDetail }));
     await settle();
     const note = document.querySelector(".sticker-detail__check-failed");
     expect(note?.querySelector('[role="alert"]')?.textContent).toContain(
-      "Couldn’t load where it’s been",
+      i18next.t(($) => $.stickerBoard.detail.checkFailed, { reason: errorMessage(refusal) }),
     );
     // The server's own words are fine print, apart from the sentence.
     expect(note?.textContent).toContain("database is busy");
@@ -514,7 +526,7 @@ describe("StickerDetail", () => {
     if (!note || !acts) throw new Error("The detail shows no failure line or no Give");
     expect(note.compareDocumentPosition(acts)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     const calls = stickerDetail.mock.calls.length;
-    press("Try again");
+    press(TRY_AGAIN);
     expect(stickerDetail.mock.calls.length).toBeGreaterThan(calls);
   });
 
@@ -535,7 +547,7 @@ describe("StickerDetail", () => {
     const sent = gratitudeFixture({ giftId: "gift-133", total: 320 });
     open({ onSendGratitude: vi.fn() }, received(sent));
     await settle();
-    expect(button("Send gratitude")).toBeUndefined();
+    expect(button(SEND_GRATITUDE)).toBeUndefined();
     expect(giveIsTheKey()).toBe(true);
   });
 
@@ -549,7 +561,14 @@ describe("StickerDetail", () => {
       expect(thought()).not.toBeNull();
       // In English, screen readers hear each word's English too.
       const spoken = () => thought()?.nextElementSibling?.textContent;
-      expect(spoken()).toContain(`${first.ja}, ${first.en}, and ${second.ja}, ${second.en}`);
+      const withEnglish = ({ ja, en }: KyotoSeikaSubject) =>
+        i18next.t(($) => $.kyotoSeika.pair.subject, { word: ja, english: en });
+      expect(spoken()).toBe(
+        i18next.t(($) => $.kyotoSeika.thought.spoken, {
+          first: withEnglish(first),
+          second: withEnglish(second),
+        }),
+      );
       await act(async () => {
         await i18next.changeLanguage("ja");
       });
@@ -686,13 +705,13 @@ describe("StickerDetail", () => {
       expect(skeletons(".transfer-trail")).toBeGreaterThan(0);
       // The line that says who has it is the trail's, so it doesn't show and go as the trail lands.
       const meta = () => document.querySelector(".sticker-detail__meta")?.textContent;
-      expect(meta()).not.toContain("You gave it to");
+      expect(meta()).not.toContain(YOU_GAVE_IT_TO_BOB);
 
       await read.answer();
       expect(skeletons(".transfer-trail")).toBe(0);
       expect(shapes()).toEqual(held);
       expect(openRow()).toContain("300");
-      expect(meta()).not.toContain("You gave it to");
+      expect(meta()).not.toContain(YOU_GAVE_IT_TO_BOB);
     });
 
     it("lays Give out beside Send gratitude's place while it reads whether gratitude is owed, and keeps it there", async () => {
@@ -706,14 +725,14 @@ describe("StickerDetail", () => {
         { stickers: [fromMika], startId: fromMika.id, ownerId: TEST_OWNER.id, onSendGratitude },
         read.client,
       );
-      const give = button("Give");
+      const give = button(GIVE);
       expect(give?.classList.contains("key")).toBe(false);
       expect(skeletons(".sticker-detail__acts")).toBe(1);
       const held = shapes();
 
       await read.answer();
-      expect(button("Give")).toBe(give);
-      expect(button("Send gratitude")?.classList.contains("key")).toBe(true);
+      expect(button(GIVE)).toBe(give);
+      expect(button(SEND_GRATITUDE)?.classList.contains("key")).toBe(true);
       expect(skeletons(".sticker-detail__acts")).toBe(0);
       expect(shapes()).toEqual(held);
     });
@@ -768,7 +787,7 @@ describe("StickerDetail", () => {
         open({ mode, stickers: timelapsed }, withTimelapse());
         await settle();
         expect(timelapseButton()).not.toBeNull();
-        press("Next sticker");
+        press(NEXT_STICKER);
         await settle();
         expect(heading()).toBe("No.0117");
         expect(timelapseButton()).toBeNull();
@@ -776,8 +795,8 @@ describe("StickerDetail", () => {
     );
 
     it.each([
-      ["paging", () => press("Next sticker")],
-      ["the back button", () => press("Back to My board")],
+      ["paging", () => press(NEXT_STICKER)],
+      ["the back button", () => press(i18next.t(($) => $.ui.backToBoard))],
       ["Escape", () => key("Escape")],
     ])("stops on %s, lets go of its canvas, and leaves no layer behind", async (_, leave) => {
       const player = await playing();
@@ -824,14 +843,14 @@ describe("StickerDetail", () => {
       const words = strings.stickerBoard.detail.markNsfw;
       press(words.open.en);
       press(words.confirm.en);
-      press("Next sticker");
+      press(NEXT_STICKER);
       await settle();
       act(() => timelapseButton()?.click());
       await settle();
       const player = players.last();
       player.prepared.resolve();
       await settle();
-      const previous = button("Previous sticker");
+      const previous = button(PREVIOUS_STICKER);
       act(() => previous?.focus());
 
       land();
@@ -880,7 +899,7 @@ describe("StickerDetail", () => {
       const opener = button(words.open.en);
       // Past a rule that follows Give and the Transfer Trail, so it never reads as Give's alternative.
       expect(rows()).toHaveLength(1);
-      for (const earlier of [button("Give"), ...rows()]) expect(before(earlier, rule())).toBe(true);
+      for (const earlier of [button(GIVE), ...rows()]) expect(before(earlier, rule())).toBe(true);
       expect(before(rule(), opener)).toBe(true);
       const controls = [...document.querySelectorAll(".sticker-detail__main button")];
       expect(controls.at(-1)).toBe(opener);
@@ -993,7 +1012,7 @@ describe("StickerDetail", () => {
       open({ ownerId: TEST_OWNER.id }, emptyApi({ markStickerNsfw }));
       press(words.open.en);
       press(words.confirm.en);
-      press("Next sticker");
+      press(NEXT_STICKER);
       const refusal = new ApiError(503, { error: "unavailable", detail: "database is busy" });
       refuse(refusal);
       await settle();
@@ -1001,11 +1020,11 @@ describe("StickerDetail", () => {
       expect(failed()).toBeUndefined();
 
       // Paging back finds it on its sticker, and paging on and back again leaves it there.
-      press("Previous sticker");
+      press(PREVIOUS_STICKER);
       expect(failed()).toContain("No.0133");
       expect(failed()).toContain(errorMessage(refusal));
-      press("Next sticker");
-      press("Previous sticker");
+      press(NEXT_STICKER);
+      press(PREVIOUS_STICKER);
       expect(failed()).toContain("No.0133");
     });
 
@@ -1014,7 +1033,7 @@ describe("StickerDetail", () => {
       open({ ownerId: TEST_OWNER.id }, emptyApi({ markStickerNsfw }));
       press(words.open.en);
       press(words.confirm.en);
-      press("Next sticker");
+      press(NEXT_STICKER);
       key("Escape");
       await settle();
       expect(onClose).toHaveBeenCalledOnce();
@@ -1148,7 +1167,7 @@ describe("StickerDetail", () => {
 
       unmarkStickerNsfw.mockResolvedValueOnce(answer);
       const tryAgain = failed?.querySelector<HTMLButtonElement>('[role="alert"] button');
-      expect(tryAgain?.textContent).toBe(strings.ui.errorLine.tryAgain.en);
+      expect(tryAgain?.textContent).toBe(TRY_AGAIN);
       act(() => tryAgain?.click());
       await settle();
       expect(unmarkStickerNsfw).toHaveBeenCalledTimes(2);
@@ -1161,7 +1180,7 @@ describe("StickerDetail", () => {
     document.title = "Your sticker board";
     open();
     expect(document.title).toBe("No.0133");
-    press("Previous sticker");
+    press(PREVIOUS_STICKER);
     expect(document.title).toBe("No.0147");
     act(() => root.render(null));
     expect(document.title).toBe("Your sticker board");

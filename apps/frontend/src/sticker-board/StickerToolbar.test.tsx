@@ -2,6 +2,7 @@
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { emptyApi, renderWithApi } from "../api/testing";
+import { i18next } from "../i18n/i18n";
 import { stickerBoard } from "../i18n/strings/stickerBoard";
 import { FAST_AFTER_MS, HOLD_DELAY_MS } from "../ui/useHeldRepeat";
 import type { Step } from "./boardGesture";
@@ -162,6 +163,8 @@ describe("StickerToolbar's Arrange", () => {
     const host = show();
     expect(arrangeTile(host)).toBeNull();
     expect(tiles(host)).toEqual([]);
-    expect(host.querySelector('[role="toolbar"]')?.textContent).toContain("View");
+    expect(host.querySelector('[role="toolbar"]')?.textContent).toContain(
+      i18next.t(($) => $.stickerBoard.toolbar.view),
+    );
   });
 });

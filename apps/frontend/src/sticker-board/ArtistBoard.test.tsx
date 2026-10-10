@@ -8,6 +8,8 @@ import { emptyApi, renderWithApi, TEST_OWNER } from "../api/testing";
 import { toPerson } from "../api/views";
 import type { GiftSender } from "../giving/giftSender";
 import { PREPARING_SLOW_MS } from "../giving/giveFlow";
+import { i18next } from "../i18n/i18n";
+import { formatNo, spokenDuration } from "../stickers/format";
 import { onLargeScreen } from "../ui/testing";
 import { forgetGreetings } from "./artistChipGreeting";
 import { ArtistBoard } from "./ArtistBoard";
@@ -84,14 +86,29 @@ describe("ArtistBoard's greeting", () => {
 
 describe("ArtistBoard's keys", () => {
   it("starts on their name, and has the stickers one Tab stop, in reading order", async () => {
-    const host = await visit(three());
+    const board = three();
+    const host = await visit(board);
     expect(document.activeElement).toBe(host.querySelector(".board-who"));
     const [first, second, third] = stickersIn(host);
+    /** A sticker's name for screen readers, at `position` in the board's reading order. */
+    const named = ({ sticker: s }: BoardSticker, position: number) => ({
+      no: formatNo(s.number),
+      duration: spokenDuration(s.timeUsed),
+      position,
+      setSize: board.length,
+    });
+    const [mikaRight, kensOwn, mikaLeft] = board;
     // The top row left to right, then the row below, whatever order the board lists them in.
     expect(stickersIn(host).map((el) => el.getAttribute("aria-label"))).toEqual([
-      expect.stringContaining("1 of 3"),
-      expect.stringContaining("2 of 3"),
-      expect.stringContaining("3 of 3"),
+      i18next.t(($) => $.stickerBoard.placedSticker.labelBy, {
+        ...named(mikaLeft, 1),
+        artist: "@mika",
+      }),
+      i18next.t(($) => $.stickerBoard.placedSticker.labelBy, {
+        ...named(mikaRight, 2),
+        artist: "@mika",
+      }),
+      i18next.t(($) => $.stickerBoard.placedSticker.label, named(kensOwn, 3)),
     ]);
     expect(stickersIn(host).map((el) => el.tabIndex)).toEqual([0, -1, -1]);
 
@@ -114,8 +131,8 @@ describe("ArtistBoard's keys", () => {
     expect(toolbar?.getAttribute("aria-label")).toMatch(/^No\./);
     // Foil marks a sticker someone else drew, and its toolbar names them above View.
     expect(toolbar?.querySelector(".artist-chip")).not.toBeNull();
-    expect(toolbar?.textContent).toContain("View");
-    expect(toolbar?.textContent).not.toContain("Remove");
+    expect(toolbar?.textContent).toContain(i18next.t(($) => $.stickerBoard.toolbar.view));
+    expect(toolbar?.textContent).not.toContain(i18next.t(($) => $.stickerBoard.toolbar.remove));
 
     const view = toolbar?.querySelector("button");
     if (!view) throw new Error("The toolbar has no View");

@@ -1,8 +1,34 @@
 import { TOKYO_UTC_OFFSET_MS } from "@drawing-app/api/client";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { i18next } from "../i18n/i18n";
+import type { Language } from "../i18n/language";
 import { formatDay, formatDuration, formatHandle, formatMonthDay, spokenDuration } from "./format";
 
 const MINUTE = 60;
+
+/** A drawing time as the catalog prints it, in `lng`. */
+const printed = {
+  both: (minutes: number, seconds: number, lng: Language = "en") =>
+    i18next.t(($) => $.stickers.duration.minutesAndSeconds, { minutes, seconds, lng }),
+  minutes: (minutes: number, lng: Language = "en") =>
+    i18next.t(($) => $.stickers.duration.minutes, { minutes, lng }),
+  seconds: (seconds: number, lng: Language = "en") =>
+    i18next.t(($) => $.stickers.duration.seconds, { seconds, lng }),
+};
+
+/** A drawing time as the catalog reads it aloud, in `lng`. */
+const spoken = {
+  minutes: (count: number, lng: Language = "en") =>
+    i18next.t(($) => $.stickers.spokenDuration.minutes, { count, lng }),
+  seconds: (count: number, lng: Language = "en") =>
+    i18next.t(($) => $.stickers.spokenDuration.seconds, { count, lng }),
+  both: (minutes: number, seconds: number, lng: Language = "en") =>
+    i18next.t(($) => $.stickers.spokenDuration.minutesAndSeconds, {
+      minutes: spoken.minutes(minutes, lng),
+      seconds: spoken.seconds(seconds, lng),
+      lng,
+    }),
+};
 
 describe("dates", () => {
   // A phone that isn't on Tokyo time.
@@ -27,24 +53,24 @@ describe("formatHandle", () => {
 
 describe("formatDuration", () => {
   it("prints minutes and seconds with units, leaving out a part that's zero", () => {
-    expect(formatDuration(4 * MINUTE + 52)).toBe("4m 52s");
-    expect(formatDuration(5 * MINUTE)).toBe("5m");
-    expect(formatDuration(54)).toBe("54s");
-    expect(formatDuration(0)).toBe("0s");
+    expect(formatDuration(4 * MINUTE + 52)).toBe(printed.both(4, 52));
+    expect(formatDuration(5 * MINUTE)).toBe(printed.minutes(5));
+    expect(formatDuration(54)).toBe(printed.seconds(54));
+    expect(formatDuration(0)).toBe(printed.seconds(0));
   });
 
   it("reads the same time aloud in words, singular where it's one", () => {
-    expect(spokenDuration(4 * MINUTE + 52)).toBe("4 minutes 52 seconds");
-    expect(spokenDuration(MINUTE + 1)).toBe("1 minute 1 second");
-    expect(spokenDuration(5 * MINUTE)).toBe("5 minutes");
-    expect(spokenDuration(54)).toBe("54 seconds");
+    expect(spokenDuration(4 * MINUTE + 52)).toBe(spoken.both(4, 52));
+    expect(spokenDuration(MINUTE + 1)).toBe(spoken.both(1, 1));
+    expect(spokenDuration(5 * MINUTE)).toBe(spoken.minutes(5));
+    expect(spokenDuration(54)).toBe(spoken.seconds(54));
   });
 });
 
 describe("durations in Japanese", () => {
   it("print Japanese units", () => {
-    expect(formatDuration(4 * MINUTE + 52, "ja")).toBe("4分52秒");
-    expect(formatDuration(5 * MINUTE, "ja")).toBe("5分");
-    expect(spokenDuration(MINUTE + 1, "ja")).toBe("1分1秒");
+    expect(formatDuration(4 * MINUTE + 52, "ja")).toBe(printed.both(4, 52, "ja"));
+    expect(formatDuration(5 * MINUTE, "ja")).toBe(printed.minutes(5, "ja"));
+    expect(spokenDuration(MINUTE + 1, "ja")).toBe(spoken.both(1, 1, "ja"));
   });
 });

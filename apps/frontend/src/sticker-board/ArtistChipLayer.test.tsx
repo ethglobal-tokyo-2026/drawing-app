@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { people } from "../api/testFixtures";
 import { renderWithApi } from "../api/testing";
 import { toPerson, type PersonView } from "../api/views";
+import { i18next } from "../i18n/i18n";
 import { ArtistChipLayer } from "./ArtistChipLayer";
 import { CHIP_ROOM, DROP, OVERHANG } from "./chipPlacement";
 
@@ -30,8 +31,9 @@ function layer(chips: Chip[], onDone = () => {}) {
 
 /** The chip naming `artist`, as the layer places it. */
 function chipOf(host: HTMLElement, artist: PersonView) {
+  const label = i18next.t(($) => $.stickers.artistChip.label, { name: `@${artist.handle}` });
   return host
-    .querySelector(`[aria-label="Artist: @${artist.handle}"]`)
+    .querySelector(`[aria-label="${label}"]`)
     ?.closest<HTMLElement>(".artist-chip-layer__chip");
 }
 

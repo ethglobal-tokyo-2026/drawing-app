@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { gratitude, people, trailEntry } from "../api/testFixtures";
 import type { PersonView } from "../api/views";
+import { i18next } from "../i18n/i18n";
 import { artistShareLine, defaultOpenRow, toTrailRows, type TrailRow } from "./trailRows";
 
 const who = (id: string): PersonView => ({ id, handle: id, name: id, nsfwOptIn: false });
@@ -26,14 +27,18 @@ describe("the Transfer Trail", () => {
 
   it("splits the artist's share out of the giver's part, in plain words", () => {
     const gratitude = { total: 2946, artistShare: 589, seenByGiverAt: null };
+    const split = { kept: "2,357", share: "589", artist: "@mika" };
     expect(artistShareLine(row("g", ken, me, gratitude), mika, "me")).toBe(
-      "2,357 to @ken · 589 to @mika, its artist",
+      i18next.t(($) => $.stickerBoard.transferTrail.artistShare.between, {
+        ...split,
+        giver: "@ken",
+      }),
     );
     expect(artistShareLine(row("g", me, ken, gratitude), mika, "me")).toBe(
-      "2,357 came to you · 589 to @mika, its artist",
+      i18next.t(($) => $.stickerBoard.transferTrail.artistShare.youGaveIt, split),
     );
     expect(artistShareLine(row("g", ken, mika, gratitude), me, "me")).toBe(
-      "589 of it came to you, its artist",
+      i18next.t(($) => $.stickerBoard.transferTrail.artistShare.youDrewIt, { share: "589" }),
     );
   });
 

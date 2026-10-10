@@ -13,8 +13,10 @@ import {
 } from "vitest";
 import { TEST_KYOTO_SEIKA_SUBJECTS } from "../../api/testFixtures";
 import { forgetBoardComplete, markBoardComplete, QUIET_MS } from "../boardComplete";
+import { i18next } from "../../i18n/i18n";
 import { errors } from "../../i18n/strings/errors";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
+import { formatMonthDay } from "../../stickers/format";
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
 import { ICONS, TUG_VISITS, type TrayBoard } from "./trayEngine";
@@ -99,6 +101,11 @@ const press = (el: Element | null | undefined, key: string) =>
   });
 const stackEl = () => board.querySelector<HTMLElement>(".tray__stack");
 const frontSheet = () => board.querySelector(".tray__stack .tray__sheet.is-top");
+/** What a sheet's name gives of it: its number, and the dates printed on its foot. */
+const sheetNaming = (sheet: Element | null | undefined) => ({
+  number: Number(sheet?.getAttribute("data-f")) + 1,
+  dates: sheet?.querySelector(".tray__foot .fine")?.textContent ?? "",
+});
 /** A sticker still in its spot on `sheet`. */
 const hereOn = (sheet: Element | null | undefined = frontSheet()) =>
   sheet?.querySelector<HTMLElement>('.tray__slot[data-state="here"]') ?? null;
@@ -357,7 +364,9 @@ describe("StickerTray", () => {
     render([givenSticker("given", 1)], { openGiven });
     await openTray();
     const spot = board.querySelector<HTMLElement>('.tray__slot[data-id="given"]');
-    expect(spot?.getAttribute("aria-label")).toBe("No.0001, given to @bob. Open it");
+    expect(spot?.getAttribute("aria-label")).toBe(
+      i18next.t(($) => $.stickerBoard.tray.slot.given, { no: "No.0001", recipient: "@bob" }),
+    );
     // Nothing of the sticker shows, and it takes the shared press.
     expect(spot?.querySelector(".tray__fit, .tray__img")).toBeNull();
     expect(spot?.getAttribute("data-press")).toBe("");
@@ -388,11 +397,11 @@ describe("StickerTray", () => {
   });
 
   it.each([
-    ["in the bag", "packed", "inTheBag", "No.0001, in the bag. Open it"],
-    ["on its way", "sent", "onItsWay", "No.0001, on its way. Open it"],
+    ["in the bag", "packed", "inTheBag"],
+    ["on its way", "sent", "onItsWay"],
   ] as const)(
     "shows a sticker %s under frost in its spot, with its dot, which a tap opens among your stickers and nothing peels",
-    async (_, status, state, name) => {
+    async (_, status, state) => {
       const openYours = vi.fn();
       const place = vi.fn((_id: string) => Promise.resolve(null));
       // Stuck on before it was packed, it still waits in its spot.
@@ -402,7 +411,9 @@ describe("StickerTray", () => {
       );
       await openTray();
       const spot = board.querySelector<HTMLElement>('.tray__slot[data-id="gift"]');
-      expect(spot?.getAttribute("aria-label")).toBe(name);
+      expect(spot?.getAttribute("aria-label")).toBe(
+        i18next.t(($) => $.stickerBoard.tray.slot[state], { no: "No.0001" }),
+      );
       expect(spot?.querySelector(".tray__frost")).not.toBeNull();
       expect(spot?.querySelector(".tray__given-outline")).not.toBeNull();
       const dot = dotOf("gift");
@@ -652,12 +663,14 @@ describe("StickerTray", () => {
     endAnimationsAtOnce();
     render([]);
     expect(board.querySelector(".tray__empty")?.textContent).toBeTruthy();
-    expect(frontSheet()?.getAttribute("aria-label")).toBe("Sheet 1, in front");
+    expect(frontSheet()?.getAttribute("aria-label")).toBe(
+      i18next.t(($) => $.stickerBoard.tray.frontSheet, { number: 1, context: "noDates" }),
+    );
     expect(frontSheet()?.hasAttribute("aria-describedby")).toBe(false);
     await openTray();
     const pulled = await pullOut();
     expect(pulled?.querySelector(".tray__sheet")?.getAttribute("aria-label")).toBe(
-      "Sheet 1, pulled out",
+      i18next.t(($) => $.stickerBoard.tray.pulledSheet, { number: 1, context: "noDates" }),
     );
     expect(pulled?.querySelector(".tray__sheet")?.hasAttribute("aria-describedby")).toBe(false);
 
@@ -667,7 +680,9 @@ describe("StickerTray", () => {
     // Shut, the sheets catch up as the tray shows.
     await openTray();
     expect(board.querySelector(".tray__empty")).toBeNull();
-    expect(frontSheet()?.getAttribute("aria-label")).toMatch(/^Sheet 1, \S.*, in front$/);
+    expect(frontSheet()?.getAttribute("aria-label")).toBe(
+      i18next.t(($) => $.stickerBoard.tray.frontSheet, { number: 1, dates: formatMonthDay(1) }),
+    );
     expect(frontSheet()?.hasAttribute("aria-describedby")).toBe(true);
   });
 
@@ -912,7 +927,14 @@ describe("StickerTray", () => {
       await openTray();
       expect(statusText()).toBe("");
       chooseTab("gifts");
-      expect(statusText()).toMatch(/^Gifts: \d+ sheets?$/);
+      // However many sheets the gifts fill, the line names the tab and counts them.
+      const count = Number(/\d+/.exec(statusText() ?? "")?.[0]);
+      expect(statusText()).toBe(
+        i18next.t(($) => $.stickerBoard.tray.status.filtered, {
+          filter: i18next.t(($) => $.stickerBoard.tray.filters.gifts),
+          count,
+        }),
+      );
     });
 
     it("which sheet is in front after paging", async () => {
@@ -921,9 +943,7 @@ describe("StickerTray", () => {
       pageDown();
       await act(async () => {});
       expect(statusText()).toBe(
-        `Sheet ${Number(frontSheet()?.getAttribute("data-f")) + 1}, ${
-          frontSheet()?.querySelector(".tray__foot .fine")?.textContent
-        }, in front`,
+        i18next.t(($) => $.stickerBoard.tray.frontSheet, sheetNaming(frontSheet())),
       );
     });
 
@@ -931,17 +951,19 @@ describe("StickerTray", () => {
       // The board answers with the sticker's element once it has drawn it.
       render(manyStickers(8), { place: () => Promise.resolve(document.createElement("div")) });
       await openTray();
-      const slot = hereOn();
-      const no = slot?.getAttribute("aria-label");
-      press(slot, "Enter");
+      press(hereOn(), "Enter");
       await act(async () => {});
-      expect(statusText()).toBe(`${no} is on your board`);
+      expect(statusText()).toBe(
+        i18next.t(($) => $.stickerBoard.tray.status.stuckOn, { no: "No.0001" }),
+      );
     });
 
     it("that a sticker is back in the tray once it's put back", async () => {
       render([sticker("a", 1, true)]);
       await act(async () => void (await tray.current?.boardDrop("a", { x: 380, y: 300 })));
-      expect(statusText()).toBe("No.0001 is back in your tray");
+      expect(statusText()).toBe(
+        i18next.t(($) => $.stickerBoard.tray.status.returned, { no: "No.0001" }),
+      );
     });
   });
 
@@ -1052,7 +1074,11 @@ describe("StickerTray", () => {
     expect(feet.map((e) => e.closest<HTMLElement>(".tray__sheet")?.dataset.depth)).toEqual(
       feet.map((_, i) => String(i + 1)),
     );
-    for (const foot of feet) expect(foot.getAttribute("aria-label")).toMatch(/^Sheet \d+, /);
+    for (const foot of feet) {
+      expect(foot.getAttribute("aria-label")).toBe(
+        i18next.t(($) => $.stickerBoard.tray.sheet, sheetNaming(foot.closest(".tray__sheet"))),
+      );
+    }
   });
 
   it("names the sheet in front and says once what its stickers do", async () => {
@@ -1060,12 +1086,18 @@ describe("StickerTray", () => {
     await openTray();
     const front = frontSheet();
     expect(front?.getAttribute("role")).toBe("group");
-    expect(front?.getAttribute("aria-label")).toMatch(/^Sheet \d+, .*in front$/);
+    expect(front?.getAttribute("aria-label")).toBe(
+      i18next.t(($) => $.stickerBoard.tray.frontSheet, sheetNaming(front)),
+    );
     const described = front?.getAttribute("aria-describedby");
-    expect(document.getElementById(described ?? "")?.textContent).toMatch(/stick it on/);
+    expect(document.getElementById(described ?? "")?.textContent).toBe(
+      i18next.t(($) => $.stickerBoard.tray.slotHint),
+    );
     // A sticker's own name is its number, without the instruction.
     const slot = front?.querySelector(".tray__slot");
-    expect(slot?.getAttribute("aria-label")).toMatch(/^No\.\d+$/);
+    expect(slot?.getAttribute("aria-label")).toBe(
+      i18next.t(($) => $.stickerBoard.tray.slot.onSheet, { no: "No.0001" }),
+    );
   });
 
   describe("on a board of this height", () => {
@@ -1281,7 +1313,9 @@ describe("StickerTray", () => {
   it("marks a sticker that just landed on the board as new on its hole, until the tray shows it", async () => {
     render([sticker("fresh", Date.now(), true)]);
     expect(dotOf("fresh")?.className).toBe("tray__new");
-    expect(slotOf("fresh")?.getAttribute("aria-label")).toMatch(/, new, on your board\. Show it$/);
+    expect(slotOf("fresh")?.getAttribute("aria-label")).toBe(
+      i18next.t(($) => $.stickerBoard.tray.slot.usedNew, { no: "No.0001" }),
+    );
 
     await openAndShut();
     expect(dotOf("fresh")).toBeNull();
