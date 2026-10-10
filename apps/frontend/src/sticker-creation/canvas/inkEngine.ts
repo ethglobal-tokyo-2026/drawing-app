@@ -19,12 +19,16 @@ export const CANCEL_KEEPS = 4;
 export const INPUT_MODES = ["pencilOnly", "pencilAndFinger"] as const;
 export type InputMode = (typeof INPUT_MODES)[number];
 
-/** The ink's work as the performance recorder's report names it, so a slow Pencil stroke can be told. */
+/**
+ * The ink's work as the performance recorder's report names it, so a slow Pencil stroke can be told:
+ * a commit takes an undo checkpoint now and then, apart from a pen's snapshot at every landing.
+ */
 export const INK_WORK = {
   paint: "ink paint",
   fill: "ink fill",
   replay: "ink replay",
   snapshot: "ink snapshot",
+  commit: "ink commit",
 } as const;
 
 /** What the engine paints on: the ink canvas in the app, a record of calls in tests. */
@@ -120,8 +124,9 @@ interface LiveStroke {
   pointerType: string;
   builder: StrokeBuilder;
   stabilizer: Stabilizer;
-  /** Samples since the last frame, flat: x, y, pressure, t. */
+  /** Samples since the last frame, flat: x, y, pressure, t; its first `queued` numbers, written in place. */
   queue: number[];
+  queued: number;
   /** Points already on the ink. */
   painted: number;
   /** When and where it landed. */
@@ -392,17 +397,30 @@ export class InkEngine {
     }
     const live = this.live;
     if (role.kind !== "stroke" || !live) return;
-    const coalesced = e.getCoalescedEvents?.() ?? [];
-    for (const sample of coalesced.length ? coalesced : [e]) {
-      const [x, y] = this.toSheet(sample);
-      live.queue.push(x, y, sample.pressure, sample.timeStamp);
-      live.moved = Math.max(live.moved, Math.hypot(x - live.x0, y - live.y0));
-      live.x = x;
-      live.y = y;
-      live.pressure = sample.pressure;
-      live.t = sample.timeStamp;
-    }
+    const coalesced = e.getCoalescedEvents?.();
+    if (coalesced?.length)
+      for (let i = 0; i < coalesced.length; i++) this.queue(live, coalesced[i]);
+    else this.queue(live, e);
     if (!this.cancelFrame) this.cancelFrame = this.frames.request(this.paintFrame);
+  }
+
+  /** Queues a sample for the next frame, in sheet units; a pen sends hundreds a second, so it makes no garbage. */
+  private queue(live: LiveStroke, sample: PointerInput): void {
+    const { left, top, scale } = this.origin;
+    const x = (sample.clientX - left) / scale;
+    const y = (sample.clientY - top) / scale;
+    const { queue } = live;
+    let at = live.queued;
+    queue[at++] = x;
+    queue[at++] = y;
+    queue[at++] = sample.pressure;
+    queue[at++] = sample.timeStamp;
+    live.queued = at;
+    live.moved = Math.max(live.moved, Math.hypot(x - live.x0, y - live.y0));
+    live.x = x;
+    live.y = y;
+    live.pressure = sample.pressure;
+    live.t = sample.timeStamp;
   }
 
   up(e: PointerInput): void {
@@ -652,6 +670,7 @@ export class InkEngine {
       builder,
       stabilizer: new Stabilizer(x, y, e.timeStamp, s.smoothing),
       queue: [],
+      queued: 0,
       painted: 1,
       t0: e.timeStamp,
       x0: x,
@@ -673,7 +692,7 @@ export class InkEngine {
     const live = this.live;
     if (!live) return;
     timeOurWork(INK_WORK.paint, () => {
-      if (live.queue.length > 0) this.feed(live);
+      if (live.queued > 0) this.feed(live);
       else this.catchUp(live, time);
       this.paintNew(live);
     });
@@ -684,14 +703,14 @@ export class InkEngine {
 
   /** Feeds the queued samples through the stabilizer to the stroke. */
   private feed(live: LiveStroke): void {
-    const { queue, stabilizer, builder } = live;
-    if (queue.length === 0) return;
-    for (let i = 0; i < queue.length; i += 4) {
+    const { queue, queued, stabilizer, builder } = live;
+    for (let i = 0; i < queued; i += 4) {
+      // The builder keeps the nib it's given, to measure the next one's speed from.
       const nib = { x: queue[i], y: queue[i + 1], t: queue[i + 3] };
       const [x, y] = stabilizer.add(nib.x, nib.y, nib.t);
       builder.add(x, y, queue[i + 2], stabilizer.time, nib);
     }
-    queue.length = 0;
+    live.queued = 0;
   }
 
   /**
@@ -756,7 +775,7 @@ export class InkEngine {
         });
       this.layer.discard(before.ink);
     }
-    timeOurWork(INK_WORK.snapshot, () => this.history.commit(live.builder.op));
+    timeOurWork(INK_WORK.commit, () => this.history.commit(live.builder.op));
     this.events.onCommit(live.builder.op);
     this.notifyHistory();
   }
@@ -772,7 +791,7 @@ export class InkEngine {
     };
     if (!timeOurWork(INK_WORK.fill, () => this.layer.fill(op))) return;
     this.frameRule = "fixed";
-    timeOurWork(INK_WORK.snapshot, () => this.history.commit(op));
+    timeOurWork(INK_WORK.commit, () => this.history.commit(op));
     this.events.onCommit(op);
     this.notifyHistory();
   }

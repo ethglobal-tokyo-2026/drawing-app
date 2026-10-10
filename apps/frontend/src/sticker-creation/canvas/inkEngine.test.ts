@@ -414,12 +414,12 @@ describe("InkEngine", () => {
     detach();
   });
 
-  it("names its painting, fills, replays and snapshots for the performance recorder", () => {
+  it("names its painting, fills, replays, snapshots and commits for the performance recorder", () => {
     const { engine, stroke } = setup({ tool: "fill" });
     timed.length = 0;
     stroke("touch", 1, [40, 40], [42, 40]);
     engine.settings = { ...engine.settings, tool: "brush" };
-    stroke("mouse", 2, [0, 0], [100, 0], 1000);
+    stroke("pen", 2, [0, 0], [100, 0], 1000);
     engine.undo();
     expect(new Set(timed)).toEqual(new Set(Object.values(INK_WORK)));
   });
