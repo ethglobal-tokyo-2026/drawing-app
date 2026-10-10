@@ -258,7 +258,8 @@ export class InkEngine {
     // The screen's own count of fingers, heard wherever they lift, outlasts a lift the sheet missed.
     const onTouchEnd = (e: TouchEvent) => {
       if (e.touches.length === 0) this.screenClear();
-      if (Array.from(e.changedTouches).some(isStylus)) this.pencilLifted();
+      const pencil = Array.from(e.changedTouches).find(isStylus);
+      if (pencil) this.pencilLifted(pencil);
     };
     document.addEventListener("touchend", onTouchEnd);
     document.addEventListener("touchcancel", onTouchEnd);
@@ -297,11 +298,15 @@ export class InkEngine {
     this.fingersGone = true;
   }
 
-  /** The Pencil's touch ended: a pen stroke still live lifted where the sheet couldn't hear. */
-  private pencilLifted(): void {
+  /**
+   * The Pencil's touch ended with its pen stroke still live: its pointerup is late or lost, so the
+   * stroke ends where the touch lifted, whichever of the two the browser sends first.
+   */
+  private pencilLifted(touch: Touch): void {
     const live = this.live;
     if (live?.pointerType !== "pen") return;
     this.pointers.delete(live.id);
+    [live.x, live.y] = this.toSheet(touch);
     this.endStroke(false);
   }
 
@@ -581,7 +586,7 @@ export class InkEngine {
     };
   }
 
-  private toSheet(e: PointerInput): [number, number] {
+  private toSheet(e: Pick<PointerInput, "clientX" | "clientY">): [number, number] {
     const { left, top, scale } = this.origin;
     return [(e.clientX - left) / scale, (e.clientY - top) / scale];
   }

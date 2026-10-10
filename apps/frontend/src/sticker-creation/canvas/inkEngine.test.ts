@@ -659,26 +659,33 @@ describe("InkEngine", () => {
     }
   });
 
-  it("ends a pen stroke where it stands once the Pencil's touch ends unheard by the sheet, and not when only a finger's does", () => {
+  it("ends a pen stroke where the Pencil lifted once its touch ends before or without its pointerup, and not when only a finger's does", () => {
     const { engine, at, runFrame, stroke, committed } = setup({ inputMode: "pencilAndFinger" });
+    // Paper at the screen's corner, one CSS px to the unit, so the screen's points are the sheet's.
     const detach = engine.attach(paperAt(framed(engine), 0, 0, 1));
-    /** The screen's touchend for a touch of this type, with no touch left down. */
-    const touchEnds = (touchType: string) =>
+    /** The screen's touchend for a touch of this type lifting at x, with no touch left down. */
+    const touchEnds = (touchType: string, x: number) =>
       document.dispatchEvent(
         new TouchEvent("touchend", {
           touches: [],
           changedTouches: [
-            Object.assign(new Touch({ identifier: 1, target: document.body }), { touchType }),
+            Object.assign(
+              new Touch({ identifier: 1, target: document.body, clientX: x, clientY: 0 }),
+              { touchType },
+            ),
           ],
         }),
       );
     engine.down(at("pen", 1, 0, 0, 0));
     engine.move(at("pen", 1, 50, 0, 16));
     runFrame();
-    touchEnds("direct");
+    touchEnds("direct", 70);
     expect(committed()).toEqual([]);
-    touchEnds("stylus");
-    expect(committed().map(lastPoint)).toEqual([[50, 0]]);
+    touchEnds("stylus", 70);
+    expect(committed().map(lastPoint)).toEqual([[70, 0]]);
+    // The Pencil's pointerup, coming after its touchend, ends nothing more.
+    engine.up(at("pen", 1, 70, 0, 32));
+    expect(committed()).toHaveLength(1);
     // Fingers draw again.
     stroke("touch", 2, [0, 50], [100, 50], 1000);
     expect(committed()).toHaveLength(2);
