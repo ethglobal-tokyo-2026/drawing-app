@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  PEN_PRESSURE_SAMPLES,
-  PEN_TAPER,
-  PRESSURE_CAP,
-  previewWidth,
-  StrokeBuilder,
-  type PenPressure,
-} from "./brush";
+import { PEN_TAPER, PRESSURE_CAP, previewWidth, StrokeBuilder, type PenPressure } from "./brush";
 import { STRIDE } from "./ops";
 import { CURVE_FLATNESS } from "./strokeCurve";
 
@@ -220,10 +213,10 @@ describe("StrokeBuilder", () => {
     );
   });
 
-  it("shows a pen's change of pressure in full within its few samples, once past its taper in", () => {
+  it("shows a pen's change of pressure in full by its second sample, once past its taper in", () => {
     const STEP = 20;
     const stepped = widths(40, { pointer: "pen", pressure: (i) => (i < STEP ? 0.2 : 0.9) });
-    expect(stepped[STEP + PEN_PRESSURE_SAMPLES - 1]).toBeCloseTo(penWidth(0.9));
+    expect(stepped[STEP + 1]).toBeCloseTo(penWidth(0.9));
   });
 
   it("draws wider at one pressure under Light than Normal, and Normal than Firm, and the brush's own size under Off", () => {

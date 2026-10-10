@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { seededRandom } from "../../ui/seededRandom";
 import { FIRST_SMOOTHING, filterTuning, Stabilizer } from "./stabilizer";
 
 /** ms between an Apple Pencil's samples, and between a display's frames. */
@@ -22,20 +23,9 @@ const STEADY_SAMPLES = 480;
 
 type Point = [number, number];
 
-/** Numbers from 0 to 1, the same ones every run (mulberry32). */
-function seeded(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(a ^ (a >>> 15), a | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 /** `count` samples along the row y = 0, `step` units apart, each strayed up to `JITTER` off it. */
 function jitteryRow(count: number, step: number, seed: number): Point[] {
-  const random = seeded(seed);
+  const random = seededRandom(seed);
   return Array.from({ length: count }, (_, i) => [i * step, (random() * 2 - 1) * JITTER]);
 }
 

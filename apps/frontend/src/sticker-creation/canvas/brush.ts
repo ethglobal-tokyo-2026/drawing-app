@@ -40,8 +40,6 @@ const MID_PRESSURE = 0.5;
 export const PRESSURE_CAP = 1.2;
 /** A pen's pressure moving less than this within a stroke is a pen that senses none. */
 const PRESSURE_STEP = 0.01;
-/** A pressing pen's width is the mean of its last this-many samples' widths: steady, and a step lands in full by then. */
-export const PEN_PRESSURE_SAMPLES = 2;
 /** Touch, mouse and a pen with no pressure draw between these fractions of the size: thin when quick. */
 const SPEED_WIDTHS = { fast: 0.68, slow: 1.1 } as const;
 
@@ -125,8 +123,11 @@ export class StrokeBuilder {
   /** Pressure sets the width: this pen has shown its pressure moving, in this stroke or before. */
   private pressed: boolean;
   private smoothed: number;
-  /** A pressing pen's latest widths, newest last, that its width is the mean of. */
-  private readonly pressedWidths: number[] = [];
+  /**
+   * A pressing pen's last width from its pressure: its width is the mean of that and the next, steady,
+   * and a step lands in full by its second sample. Null until it presses.
+   */
+  private pressedWidth: number | null = null;
   /** The curve through the points, which adds the points the stroke paints along it. */
   private readonly curve: StrokeCurve;
   /** Points added so far, the first included: the taper counts these, not the curve's pieces between them. */
@@ -182,18 +183,15 @@ export class StrokeBuilder {
       // Off, a pen draws the brush's size, whatever it reports.
       const off = this.pen && this.response === "off";
       if (off || !this.pressed) {
-        this.pressedWidths.length = 0;
+        this.pressedWidth = null;
         if (nib)
           this.smoothed = 0.7 * this.smoothed + 0.3 * (off ? 1 : speedWidth(this.speedTo(nib)));
       } else if (pressure > 0) {
         // Pressure shows at the nib at once; speed, under a finger, eases in so it never jumps. A
         // pressing pen that reads no pressure, as it can while lifting, keeps its width.
-        const widths = this.pressedWidths;
-        if (widths.length === 0) widths.push(this.smoothed);
-        widths.push(pressureWidth(pressure, this.response));
-        if (widths.length > PEN_PRESSURE_SAMPLES)
-          widths.splice(0, widths.length - PEN_PRESSURE_SAMPLES);
-        this.smoothed = widths.reduce((sum, w) => sum + w, 0) / widths.length;
+        const now = pressureWidth(pressure, this.response);
+        this.smoothed = ((this.pressedWidth ?? this.smoothed) + now) / 2;
+        this.pressedWidth = now;
       }
       const { pts } = this.op;
       if (this.pen) this.reach = Math.max(this.reach, Math.hypot(x - pts[0], y - pts[1]));
