@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { PALM_CONTACT_PX, YOUNG_MS } from "./gestures";
 import {
+  CANCEL_KEEPS,
   INK_WORK,
   InkEngine,
   type HoverRing,
@@ -114,9 +115,12 @@ function setup(settings: Partial<InkSettings> = {}) {
   let frame: ((time: number) => void) | null = null;
   /** The latest time an input was stamped with: a frame runs at it unless told otherwise. */
   let latest = 0;
-  const engine = new InkEngine(layer, { ...SETTINGS, ...settings }, events, (cb) => {
-    frame = cb;
-    return () => (frame = null);
+  const engine = new InkEngine(layer, { ...SETTINGS, ...settings }, events, {
+    now: () => latest,
+    request(cb) {
+      frame = cb;
+      return () => (frame = null);
+    },
   });
   engine.fit(AREA, 1);
   const at = (
@@ -436,6 +440,32 @@ describe("InkEngine", () => {
     expect(committed()).toEqual([expect.objectContaining({ tool: "fill", x: 40, y: 40 })]);
   });
 
+  it("keeps a stroke the browser takes once it has gone far enough, where it was last seen, and fills or undoes nothing for a touch it takes", () => {
+    const { engine, at, runFrame, committed, events } = setup();
+    /** A finger going `units` right of where it lands, which the browser then takes. */
+    const taken = (id: number, units: number, t: number) => {
+      engine.down(at("touch", id, 0, 50, t));
+      engine.move(at("touch", id, units, 50, t + 16));
+      runFrame();
+      engine.cancel(at("touch", id, 0, 0, t + 32));
+    };
+    taken(1, CANCEL_KEEPS, 0);
+    taken(2, CANCEL_KEEPS - 1, 1000);
+    expect(committed().map(lastPoint)).toEqual([[CANCEL_KEEPS, 50]]);
+
+    engine.settings = { ...engine.settings, tool: "fill" };
+    engine.down(at("touch", 3, 40, 40, 2000));
+    engine.cancel(at("touch", 3, 40, 40, 2050));
+    expect(committed()).toHaveLength(1);
+
+    // Two fingers tap, and the browser takes one of them.
+    engine.down(at("touch", 4, 0, 300, 3000));
+    engine.down(at("touch", 5, 60, 300, 3010));
+    engine.cancel(at("touch", 4, 0, 300, 3100));
+    engine.up(at("touch", 5, 60, 300, 3110));
+    expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false));
+  });
+
   it("lets fingers draw again after a tap finger's lift goes missing", () => {
     const { engine, at, stroke, committed } = setup();
     /** Two fingers land for a tap, and the second one's lift never reaches the sheet. */
@@ -555,6 +585,16 @@ describe("InkEngine", () => {
     engine.load([KEPT], null);
     // What the drawing screen's next save keeps with the steps.
     expect(engine.frame).toBeNull();
+  });
+
+  it("picks a drawing back up with its clears, so undo walks back through them", () => {
+    const { engine, events } = setup();
+    const other: StrokeOp = { ...KEPT, pts: [20, 20, 7, 0] };
+    engine.load([KEPT, { tool: "clear" }, other], framed(engine));
+    expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false));
+    engine.undo();
+    engine.undo();
+    expect(engine.ops).toEqual([KEPT]);
   });
 
   it("ends a stroke in progress where it stands as the sheet locks, and drops a fill tap still down", () => {

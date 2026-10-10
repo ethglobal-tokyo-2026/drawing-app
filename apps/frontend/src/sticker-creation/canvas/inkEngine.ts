@@ -1,7 +1,8 @@
 import { timeOurWork } from "../../performance/performanceRecorder";
+import { browserFrames, type FrameSource } from "../../ui/frameSource";
 import { previewWidth, StrokeBuilder, type PenPressure } from "./brush";
 import { FILL_GAP } from "./fill";
-import { isPalm, TapRecognizer } from "./gestures";
+import { isPalm, TapRecognizer, type TapGesture } from "./gestures";
 import { History, type Surface } from "./history";
 import type { FillOp, Op, Step, StrokeOp, Tool } from "./ops";
 import { areaFrame, frameFor, type SheetArea, type SheetFrame } from "./sheetFrame";
@@ -12,7 +13,7 @@ const TAP_SLOP = 10;
 /** A touch on a paused sheet that drags this many CSS px gets the paused hint before it lifts. */
 const BLOCKED_DRAG = 8;
 /** When the browser takes a pointer mid-stroke, the stroke stays if it had gone this many units. */
-const CANCEL_KEEPS = 4;
+export const CANCEL_KEEPS = 4;
 
 /** How the sheet takes input: Pencil only, where fingers only tap, or Pencil and finger. */
 export const INPUT_MODES = ["pencilOnly", "pencilAndFinger"] as const;
@@ -114,14 +115,6 @@ interface PaperRect {
   width: number;
 }
 
-/** Asks for one animation frame, which hears its time; returns a function that withdraws the request. */
-export type RequestFrame = (frame: (time: number) => void) => () => void;
-
-const browserFrame: RequestFrame = (frame) => {
-  const id = requestAnimationFrame(frame);
-  return () => cancelAnimationFrame(id);
-};
-
 interface LiveStroke {
   id: number;
   pointerType: string;
@@ -146,6 +139,23 @@ interface LiveStroke {
   before: { ink: unknown } | null;
 }
 
+/** What a pointer down on the sheet does until it lifts, decided as it lands. */
+type PointerRole = { pointerType: string } &
+  /** It draws the stroke in progress. */
+  (
+    | { kind: "stroke" }
+    /** It fills where it landed, in sheet units, if it lifts close by. */
+    | { kind: "fill"; x: number; y: number }
+    /** A touch on a paused sheet: the paused hint waits a beat in case a second finger makes a tap. */
+    | { kind: "blocked"; cx: number; cy: number }
+    /** A touch held for the tap recognizer alone. */
+    | { kind: "tap" }
+    /** It closed a panel, met a paused sheet, spread into a palm, or lost its stroke or fill: it draws, fills and hints nothing more. */
+    | { kind: "swallowed" }
+  );
+
+const swallowed = (pointerType: string): PointerRole => ({ pointerType, kind: "swallowed" });
+
 /**
  * Turns pointer input into ink. Pointer events only queue samples; one animation frame at a time
  * feeds them through Smoothing's stabilizer and the width model and paints just the new segments.
@@ -154,24 +164,20 @@ interface LiveStroke {
  *
  * Ink is in sheet units: a pointer's offset on the paper over the CSS px a unit spans there. The
  * sheet's frame follows its area while the sheet is blank, and is fixed from the first mark.
- *
- * Touch: two fingers tap to undo, three to redo, and a second finger landing early takes back the
- * first one's stroke. In Pencil only, fingers only tap; in either mode, a finger stroke a pen
- * interrupts was a resting palm.
  */
 export class InkEngine {
   private current: InkSettings;
   private readonly layer: InkLayer;
   private readonly history: History<unknown>;
   private readonly events: InkEvents;
-  private readonly requestFrame: RequestFrame;
+  private readonly frames: FrameSource;
   private readonly taps = new TapRecognizer();
   private live: LiveStroke | null = null;
-  private fillTap: { id: number; x: number; y: number } | null = null;
-  /** Pointers that closed a panel or met a paused sheet: they do nothing more until they lift. */
-  private readonly swallowed = new Set<number>();
-  /** A touch on a paused sheet, waiting a beat before the hint in case a second finger makes a tap. */
-  private blocked: { id: number; cx: number; cy: number } | null = null;
+  /**
+   * Each pointer down on the sheet, by id; every one is captured, so its lift reaches the sheet.
+   * Every touch is the tap recognizer's too, whatever its role, until a pen lands.
+   */
+  private readonly pointers = new Map<number, PointerRole>();
   /** Every finger left the screen: the next touch to land is the only one down. */
   private fingersGone = false;
   /** This page's pen has shown its pressure moving: its strokes start at their first sample's width. */
@@ -194,12 +200,12 @@ export class InkEngine {
     layer: InkLayer,
     settings: InkSettings,
     events: InkEvents,
-    requestFrame: RequestFrame = browserFrame,
+    frames: FrameSource = browserFrames,
   ) {
     this.layer = layer;
     this.current = settings;
     this.events = events;
-    this.requestFrame = requestFrame;
+    this.frames = frames;
     this.history = new History(layer);
   }
 
@@ -213,7 +219,7 @@ export class InkEngine {
     this.current = next;
     if (!locking) return;
     this.endStroke(false);
-    this.fillTap = null;
+    this.swallowWhere((role) => role.kind === "fill");
   }
 
   /** Listens for pointers on the sheet; returns the detach. */
@@ -221,7 +227,7 @@ export class InkEngine {
     this.locate = () => sheet.getBoundingClientRect();
     const onDown = (e: PointerEvent) => {
       this.down(e);
-      if (!this.tracks(e.pointerId)) return;
+      if (!this.pointers.has(e.pointerId)) return;
       try {
         sheet.setPointerCapture(e.pointerId);
       } catch {
@@ -234,7 +240,7 @@ export class InkEngine {
     const onLeave = () => this.leave();
     // Capture ends with every lift; losing it without one means the pointer is gone for good.
     const onLostCapture = (e: PointerEvent) => {
-      if (this.tracks(e.pointerId)) this.cancel(e);
+      if (this.pointers.has(e.pointerId)) this.cancel(e);
     };
     const prevent = (e: Event) => e.preventDefault();
     const touch = { passive: false };
@@ -284,8 +290,9 @@ export class InkEngine {
     const s = this.settings;
     const { pointerId: id, pointerType } = e;
     if (s.locked || !this.sheet || (pointerType === "mouse" && e.button !== 0)) return;
-    // Pointer ids come back; one that lifted where we couldn't see it starts over.
-    this.swallowed.delete(id);
+    // Pointer ids come back: one still here lifted where the sheet couldn't hear, its stroke where it stood.
+    if (this.pointers.get(id)?.kind === "stroke") this.endStroke(false);
+    this.pointers.delete(id);
     if (pointerType === "touch") {
       if (this.fingersGone) this.forgetTouches();
       if (this.live?.pointerType === "pen") return;
@@ -301,69 +308,74 @@ export class InkEngine {
           : undefined,
         this.palmContact(e),
       );
+      this.pointers.set(id, { pointerType, kind: "tap" });
       if (result === "cancel-stroke") this.endStroke(true);
-      if (result === "cancel-stroke" || result === "gesture") {
-        this.fillTap = null;
-        this.blocked = null;
-      }
+      // Fingers down as a tap begins neither fill nor hint.
+      if (result === "cancel-stroke" || result === "gesture")
+        this.swallowWhere((role) => role.kind === "fill" || role.kind === "blocked");
       if (result !== "draw") return;
     } else if (pointerType === "pen") {
       this.events.onPen();
-      // Fingers down as a pen lands are the hand resting: no tap or fill of theirs counts.
-      this.taps.clear();
-      this.fillTap = null;
       // A pen is one contact, so landing while its stroke is live, it lifted where the sheet couldn't hear.
       if (this.live?.pointerType === "pen") this.endStroke(false);
       else if (this.live) this.endStroke(true);
+      // Fingers down as a pen lands are the hand resting: no tap, fill or hint of theirs counts.
+      this.taps.clear();
+      for (const [other, role] of this.pointers) {
+        if (role.pointerType === "pen") this.pointers.delete(other);
+        else this.pointers.set(other, swallowed(role.pointerType));
+      }
     }
-    if (this.live || this.fillTap) return;
+    if (this.live || this.filling()) return;
     if (s.panelOpen) {
-      this.swallowed.add(id);
+      this.pointers.set(id, swallowed(pointerType));
       this.events.onDismissPanel();
       return;
     }
     if (pointerType === "touch" && s.inputMode === "pencilOnly") return;
     e.preventDefault();
     if (s.paused) {
-      this.swallowed.add(id);
-      if (pointerType === "touch") this.blocked = { id, cx: e.clientX, cy: e.clientY };
-      else this.events.onBlocked();
+      if (pointerType === "touch")
+        this.pointers.set(id, { pointerType, kind: "blocked", cx: e.clientX, cy: e.clientY });
+      else {
+        this.pointers.set(id, swallowed(pointerType));
+        this.events.onBlocked();
+      }
       return;
     }
     this.origin = this.place();
     const [x, y] = this.toSheet(e);
-    if (s.tool === "fill") this.fillTap = { id, x, y };
+    if (s.tool === "fill") this.pointers.set(id, { pointerType, kind: "fill", x, y });
     else this.beginStroke(e, x, y);
   }
 
   move(e: PointerInput): void {
     const id = e.pointerId;
+    const role = this.pointers.get(id);
     // A pen with nothing pressed hovers: a ring shows where it would land, and it never draws.
-    if (e.pointerType === "pen" && e.buttons === 0 && this.live?.id !== id) {
+    if (e.pointerType === "pen" && e.buttons === 0 && role?.kind !== "stroke") {
       this.hover(e);
       return;
     }
+    if (!role) return;
     if (e.pointerType === "touch") {
       const palm = this.palmContact(e);
       this.taps.move(id, e.clientX, e.clientY, palm);
       // A fingertip that spreads into a palm as it settles never meant its stroke or its fill.
-      if (palm && (this.live?.id === id || this.fillTap?.id === id)) {
-        if (this.live?.id === id) this.endStroke(true);
-        else this.fillTap = null;
-        this.swallowed.add(id);
+      if (palm && (role.kind === "stroke" || role.kind === "fill")) {
+        if (role.kind === "stroke") this.endStroke(true);
+        this.pointers.set(id, swallowed(role.pointerType));
         return;
       }
     }
-    const blocked = this.blocked;
-    if (
-      blocked?.id === id &&
-      Math.hypot(e.clientX - blocked.cx, e.clientY - blocked.cy) > BLOCKED_DRAG
-    ) {
-      this.blocked = null;
+    if (role.kind === "blocked") {
+      if (Math.hypot(e.clientX - role.cx, e.clientY - role.cy) <= BLOCKED_DRAG) return;
+      this.pointers.set(id, swallowed(role.pointerType));
       this.events.onBlocked();
+      return;
     }
     const live = this.live;
-    if (live?.id !== id) return;
+    if (role.kind !== "stroke" || !live) return;
     const coalesced = e.getCoalescedEvents?.() ?? [];
     for (const sample of coalesced.length ? coalesced : [e]) {
       const [x, y] = this.toSheet(sample);
@@ -374,7 +386,7 @@ export class InkEngine {
       live.pressure = sample.pressure;
       live.t = sample.timeStamp;
     }
-    if (!this.cancelFrame) this.cancelFrame = this.requestFrame(this.paintFrame);
+    if (!this.cancelFrame) this.cancelFrame = this.frames.request(this.paintFrame);
   }
 
   up(e: PointerInput): void {
@@ -406,7 +418,7 @@ export class InkEngine {
   clear(): void {
     if (this.settings.locked) return;
     this.endStroke(false);
-    this.fillTap = null;
+    this.swallowWhere((role) => role.kind === "fill");
     if (!this.history.hasInk) return;
     this.history.clear();
     this.notifyHistory();
@@ -475,9 +487,7 @@ export class InkEngine {
    */
   load(steps: readonly Step[], frame: SheetFrame | null): void {
     this.endStroke(true);
-    this.fillTap = null;
-    this.blocked = null;
-    this.swallowed.clear();
+    this.pointers.clear();
     this.taps.clear();
     if (steps.length === 0) this.frameRule = "follows";
     else if (frame) {
@@ -496,26 +506,25 @@ export class InkEngine {
     this.history.release();
   }
 
-  /** Every touch pointer is taken as lifted: a finger's stroke stays, and a tap or fill in progress goes. */
+  /** Every touch is taken as lifted: a finger's stroke stays, and a tap, fill or hint in progress goes. */
   private forgetTouches(): void {
     this.fingersGone = false;
-    for (const id of this.taps.clear()) {
-      this.swallowed.delete(id);
-      if (this.fillTap?.id === id) this.fillTap = null;
-    }
-    this.blocked = null;
+    this.taps.clear();
     if (this.live?.pointerType === "touch") this.endStroke(false);
+    for (const [id, role] of this.pointers)
+      if (role.pointerType === "touch") this.pointers.delete(id);
   }
 
-  // Every finger the tap recognizer holds is captured too, so its lift or lost capture comes here.
-  private tracks(id: number): boolean {
-    return (
-      this.live?.id === id ||
-      this.fillTap?.id === id ||
-      this.blocked?.id === id ||
-      this.swallowed.has(id) ||
-      this.taps.holds(id)
-    );
+  /** The pointers whose roles `which` picks draw, fill and hint nothing more until they lift. */
+  private swallowWhere(which: (role: PointerRole) => boolean): void {
+    for (const [id, role] of this.pointers)
+      if (which(role)) this.pointers.set(id, swallowed(role.pointerType));
+  }
+
+  /** A fill tap is down. */
+  private filling(): boolean {
+    for (const role of this.pointers.values()) if (role.kind === "fill") return true;
+    return false;
   }
 
   /** Sizes the ink to a new frame; sized afresh, it clears, so what was on it goes back on. */
@@ -573,35 +582,27 @@ export class InkEngine {
 
   private lift(e: PointerInput, cancelled: boolean): void {
     const id = e.pointerId;
-    if (e.pointerType === "touch") {
-      const tapping = this.taps.inGesture(id);
-      let gesture = null;
+    const role = this.pointers.get(id);
+    if (!role) return;
+    this.pointers.delete(id);
+    if (role.pointerType === "touch") {
+      let gesture: TapGesture | null = null;
       if (cancelled) this.taps.cancel(id);
       else gesture = this.taps.up(id, e.timeStamp);
-      if (this.blocked?.id === id) {
-        this.blocked = null;
-        if (!tapping && !cancelled) this.events.onBlocked();
-      }
       if (gesture === "undo") this.undo();
       else if (gesture === "redo") this.redo();
-      // A finger of a tap is never a stroke or a fill.
-      if (tapping) {
-        this.swallowed.delete(id);
-        return;
-      }
     }
-    if (this.swallowed.delete(id)) return;
-    const tap = this.fillTap;
-    if (tap?.id === id) {
-      this.fillTap = null;
+    if (role.kind === "blocked") {
+      if (!cancelled) this.events.onBlocked();
+    } else if (role.kind === "fill") {
       const [x, y] = this.toSheet(e);
-      if (!cancelled && Math.hypot(x - tap.x, y - tap.y) < TAP_SLOP) this.applyFill(tap.x, tap.y);
-      return;
+      if (!cancelled && Math.hypot(x - role.x, y - role.y) < TAP_SLOP)
+        this.applyFill(role.x, role.y);
+    } else if (role.kind === "stroke" && this.live) {
+      const { live } = this;
+      if (!cancelled) [live.x, live.y] = this.toSheet(e);
+      this.endStroke(cancelled && live.moved < CANCEL_KEEPS);
     }
-    const live = this.live;
-    if (live?.id !== id) return;
-    if (!cancelled) [live.x, live.y] = this.toSheet(e);
-    this.endStroke(cancelled && live.moved < CANCEL_KEEPS);
   }
 
   private beginStroke(e: PointerInput, x: number, y: number): void {
@@ -626,6 +627,7 @@ export class InkEngine {
       e.pointerType === "pen" && s.tool !== "eraser"
         ? { ink: timeOurWork(INK_WORK.snapshot, () => this.layer.snapshot()) }
         : null;
+    this.pointers.set(e.pointerId, { pointerType: e.pointerType, kind: "stroke" });
     this.live = {
       id: e.pointerId,
       pointerType: e.pointerType,
@@ -659,7 +661,7 @@ export class InkEngine {
     });
     // Until the line is on the nib, each frame brings it closer.
     if (!live.stabilizer.settled || !live.builder.settled)
-      this.cancelFrame ??= this.requestFrame(this.paintFrame);
+      this.cancelFrame ??= this.frames.request(this.paintFrame);
   };
 
   /** Feeds the queued samples through the stabilizer to the stroke. */
@@ -702,6 +704,9 @@ export class InkEngine {
     const live = this.live;
     if (!live) return;
     this.live = null;
+    // Its pointer, still down, draws nothing more.
+    if (this.pointers.get(live.id)?.kind === "stroke")
+      this.pointers.set(live.id, swallowed(live.pointerType));
     this.cancelFrame?.();
     this.cancelFrame = null;
     // A pen whose pressure moved senses it: its next strokes start at their first sample's width.

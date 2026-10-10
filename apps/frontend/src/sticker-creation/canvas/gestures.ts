@@ -79,23 +79,10 @@ export class TapRecognizer {
     this.gesture.moved = Math.max(this.gesture.moved, Math.hypot(x - touch.x0, y - touch.y0));
   }
 
-  /** Whether this finger belongs to a tap in progress, rather than a stroke. */
-  inGesture(id: number): boolean {
-    const touch = this.touches.get(id);
-    return this.gesture !== null && touch !== undefined && !touch.resting;
-  }
-
-  /** Whether this finger is down, as far as the recognizer has heard. */
-  holds(id: number): boolean {
-    return this.touches.has(id);
-  }
-
-  /** Forgets every finger and any tap in progress; returns the fingers it held. */
-  clear(): number[] {
-    const ids = [...this.touches.keys()];
+  /** Forgets every finger and any tap in progress. */
+  clear(): void {
     this.touches.clear();
     this.gesture = null;
-    return ids;
   }
 
   /** The gesture the last counted finger's lift completes, if any. */
