@@ -116,8 +116,25 @@ export function BoardFlip({
   }, [turned, reduced]);
 
   useLayoutEffect(() => {
-    landingFocus.current?.current?.focus({ preventScroll: true });
+    const target = landingFocus.current;
     landingFocus.current = undefined;
+    const board = flip.current;
+    if (!target || !board) return;
+    if (target.current) {
+      target.current.focus({ preventScroll: true });
+      return;
+    }
+    // The face may still be loading its code, as the stat board does on its first turn: what it
+    // focuses takes focus as it mounts, unless focus has gone somewhere else meanwhile.
+    const mounted = new MutationObserver(() => {
+      if (!target.current) return;
+      mounted.disconnect();
+      const active = document.activeElement;
+      if (!active || active === document.body || board.contains(active))
+        target.current.focus({ preventScroll: true });
+    });
+    mounted.observe(board, { childList: true, subtree: true });
+    return () => mounted.disconnect();
   }, [landed]);
 
   useEffect(
