@@ -73,6 +73,8 @@ export const suiTransactions = sqliteTable(
     index("sui_transactions_open")
       .on(t.createdAt)
       .where(sql`${t.outcome} is null`),
+    // The giving limit counts a person's sponsored gift transactions over a recent window.
+    index("sui_transactions_user").on(t.userId, t.createdAt),
     index("sui_transactions_gift").on(t.giftId),
     index("sui_transactions_sticker").on(t.stickerId),
     check("sui_transactions_kind", oneOf(t.kind, suiTransactionKinds)),

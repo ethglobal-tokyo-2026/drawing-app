@@ -78,6 +78,13 @@
       "when": 1791601975395,
       "tag": "0010_whole_placements",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1791619085871,
+      "tag": "0011_sui_transactions_user",
+      "breakpoints": true
     }
   ]
 }

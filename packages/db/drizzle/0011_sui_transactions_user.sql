@@ -1,0 +1,1 @@
+CREATE INDEX `sui_transactions_user` ON `sui_transactions` (`user_id`,`created_at`);
