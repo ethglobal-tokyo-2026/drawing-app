@@ -224,6 +224,11 @@ const SLACK = { px: 5, share: 0.3, takeUp: 3.5 };
 const SOFT_END = { give: 0.03, stiffness: 6 };
 /** How much each move counts toward the finger's speed. */
 const FINGER_SMOOTHING = 0.35;
+/** A finger held still this long before it lets go has stopped, as Android's and Flutter's velocity
+ * trackers assume. */
+const STOPPED_MS = 40;
+/** A drag's speed as it's let go `stillMs` after its last move: none once the finger has stopped. */
+export const releaseSpeed = (speed: number, stillMs: number) => (stillMs > STOPPED_MS ? 0 : speed);
 /** The fastest a release sends the slider, in travels per second. */
 const RELEASE_MAX = 6;
 /** A press that moves less than this and lets go sooner than this is a tap. */
@@ -1170,7 +1175,8 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     return f;
   };
   const onDown = (e: PointerEvent) => {
-    if (e.button > 0) return;
+    // One hand on the pull at a time: a second finger or a palm beside it is ignored.
+    if (e.button > 0 || st.grab) return;
     e.preventDefault();
     try {
       slider.setPointerCapture(e.pointerId);
@@ -1179,7 +1185,9 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     }
     const frame = frameOf();
     const y = localY(e, frame);
-    const t = win.performance.now();
+    // When each event happened, not when it's handled: moves handled together after a stall were
+    // made a frame or more apart.
+    const t = e.timeStamp;
     st.grab = {
       id: e.pointerId,
       frame,
@@ -1206,7 +1214,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     const g = st.grab;
     if (!g || g.id !== e.pointerId) return;
     const y = localY(e, g.frame);
-    const t = win.performance.now();
+    const t = e.timeStamp;
     const D = y - g.y0;
     g.moved = Math.max(g.moved, Math.abs(D));
     // The pull turns toward the hand once the hand has gone a little way back the other way.
@@ -1232,13 +1240,14 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     if (!g || g.id !== e.pointerId) return;
     st.grab = null;
     root.classList.remove("is-dragging");
-    const tap = !cancelled && g.moved < TAP.px && win.performance.now() - g.t0 < TAP.ms;
+    const tap = !cancelled && g.moved < TAP.px && e.timeStamp - g.t0 < TAP.ms;
+    const speed = releaseSpeed(st.fingerV, e.timeStamp - g.lt);
     const open = cancelled
       ? g.startOpen
       : tap
         ? !g.startOpen
-        : releaseOpens(st.p, st.fingerV, g.startOpen);
-    if (!cancelled) st.pv = clamp(st.fingerV, -RELEASE_MAX, RELEASE_MAX);
+        : releaseOpens(st.p, speed, g.startOpen);
+    if (!cancelled) st.pv = clamp(speed, -RELEASE_MAX, RELEASE_MAX);
     void run(open);
   };
   const onUp = (e: PointerEvent) => letGo(e, false);

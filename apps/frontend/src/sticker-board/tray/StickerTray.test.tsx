@@ -537,6 +537,24 @@ describe("StickerTray", () => {
     expect(frontSheet()?.getAttribute("data-f")).toBe(chosen);
   });
 
+  it("turns no page for a quick lift held still before it's let go", async () => {
+    vi.useFakeTimers({ toFake: ["performance"] });
+    onTestFinished(() => void vi.useRealTimers());
+    render(manyStickers(30));
+    await openTray();
+    const front = frontSheet()?.getAttribute("data-f");
+    // Lifted quickly a frame at a time, short of a turn's lift, then held still.
+    pointer(frontSheet()?.querySelector(".tray__paper") ?? null, "pointerdown", 100, 300);
+    for (let y = 290; y >= 270; y -= 10) {
+      vi.advanceTimersByTime(16);
+      pointer(stackEl(), "pointermove", 100, y);
+    }
+    vi.advanceTimersByTime(1000);
+    pointer(stackEl(), "pointerup", 100, 270);
+    await act(async () => {});
+    expect(frontSheet()?.getAttribute("data-f")).toBe(front);
+  });
+
   it("keeps the newest match in front when a folder tab is chosen mid-turn", async () => {
     const motion = holdAnimations();
     render(manyStickers(30).map((s) => ({ ...s, artist: friend })));

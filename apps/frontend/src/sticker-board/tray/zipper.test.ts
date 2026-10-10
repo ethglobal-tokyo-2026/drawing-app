@@ -28,8 +28,14 @@ async function highestTurn(ms: number) {
   }
   return most;
 }
-const pointer = (type: string, clientY: number, on: Element = zip.slider) =>
-  on.dispatchEvent(new PointerEvent(type, { pointerId: 1, clientY, bubbles: true }));
+const pointer = (type: string, clientY: number, on: Element = zip.slider, pointerId = 1) =>
+  on.dispatchEvent(new PointerEvent(type, { pointerId, clientY, bubbles: true }));
+/** A pointer event stamped with when it happened, which can be before it's handled. */
+const stamped = (type: string, clientY: number, timeStamp: number) => {
+  const e = new PointerEvent(type, { pointerId: 1, clientY, bubbles: true });
+  Object.defineProperty(e, "timeStamp", { value: timeStamp });
+  return e;
+};
 
 beforeEach(() => {
   vi.useFakeTimers({
@@ -117,6 +123,62 @@ describe("the Zipper", () => {
     pointer("pointermove", 400);
     pointer("pointerup", 400);
     expect(zip.isOpen).toBe(true);
+  });
+
+  it("ignores a second finger on the pull while one holds it", async () => {
+    pointer("pointerdown", 20);
+    await vi.advanceTimersByTimeAsync(100);
+    pointer("pointermove", 120);
+    // A second finger taps the pull.
+    pointer("pointerdown", 100, zip.slider, 2);
+    await vi.advanceTimersByTimeAsync(80);
+    pointer("pointerup", 100, zip.slider, 2);
+    expect(zip.isOpen).toBe(false);
+
+    // The first finger still holds it: pushed slowly back up and let go, it springs back shut.
+    await vi.advanceTimersByTimeAsync(300);
+    pointer("pointermove", 20);
+    await vi.advanceTimersByTimeAsync(300);
+    pointer("pointerup", 20);
+    await vi.advanceTimersByTimeAsync(SETTLE_MS);
+    expect(zip.isOpen).toBe(false);
+    expect(zip.progress).toBeCloseTo(0, 1);
+  });
+
+  it("reads a release's speed from when each move was made, not when it was handled", async () => {
+    // A slow pull, short of the threshold.
+    pointer("pointerdown", 20);
+    for (let y = 40; y <= 80; y += 20) {
+      await vi.advanceTimersByTimeAsync(100);
+      pointer("pointermove", y);
+    }
+    // Two small moves a frame apart and the release arrive together after a stall.
+    const at = performance.now();
+    const late = [
+      stamped("pointermove", 83, at + 16),
+      stamped("pointermove", 86, at + 32),
+      stamped("pointerup", 86, at + 32),
+    ];
+    await vi.advanceTimersByTimeAsync(200);
+    for (const e of late) zip.slider.dispatchEvent(e);
+    await vi.advanceTimersByTimeAsync(SETTLE_MS);
+    expect(zip.isOpen).toBe(false);
+  });
+
+  it.each([
+    ["at once, runs open as flicked", 0, true],
+    ["after a pause, springs back shut", 1000, false],
+  ])("lets a quick tug short of the threshold go %s", async (_, pauseMs, opens) => {
+    // Pulled down 20px a frame.
+    pointer("pointerdown", 20);
+    for (let y = 40; y <= 120; y += 20) {
+      await vi.advanceTimersByTimeAsync(16);
+      pointer("pointermove", y);
+    }
+    await vi.advanceTimersByTimeAsync(pauseMs);
+    pointer("pointerup", 120);
+    await vi.advanceTimersByTimeAsync(SETTLE_MS);
+    expect(zip.isOpen).toBe(opens);
   });
 
   it("swings its pull out of the tape when the phone jolts and lets it fall back, not under reduced motion", async () => {

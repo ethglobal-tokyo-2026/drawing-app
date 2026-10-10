@@ -22,6 +22,7 @@ import {
 import type { TrayPaging } from "./trayPaging";
 import type { TrayPeel } from "./trayPeel";
 import type { TraySheets } from "./traySheets";
+import { releaseSpeed } from "./zipper";
 
 /** The first move of a press on the stack decides what it does. */
 const DECIDE = 10;
@@ -46,7 +47,7 @@ export function createTrayPresses(
     cancelTugs,
   }: { openSpread: (options: { focus: boolean }) => void; cancelTugs: () => void },
 ) {
-  const { win, reduced, listen, make, icon, words, zip, api, fly, stack, ui } = tray;
+  const { reduced, listen, make, icon, words, zip, api, fly, stack, ui } = tray;
   const { Wb, Hb, colLeft, trayTop, boardView } = tray;
   const { topF } = trayModel;
   const { restAt, sheetEl, renderStack, holdsFocus, keepFocus, catchUp, sheetOf } = traySheets;
@@ -81,7 +82,7 @@ export function createTrayPresses(
       slotEl,
       depth,
       last: p0,
-      lt: win.performance.now(),
+      lt: e.timeStamp,
       vx: 0,
       vy: 0,
       dy: 0,
@@ -106,6 +107,9 @@ export function createTrayPresses(
     if (!g) return;
     ui.g = null;
     freePress(g.slotEl);
+    const still = e.timeStamp - g.lt;
+    g.vx = releaseSpeed(g.vx, still);
+    g.vy = releaseSpeed(g.vy, still);
     void letGo(g, local(e, g.view)).then(catchUp);
   };
   /** Its pointer cancelled, or the capture it took lost: the press is called off. */
@@ -178,7 +182,8 @@ export function createTrayPresses(
     const g = pressOf(e, null);
     if (!g) return;
     const pt = local(e, g.view);
-    const t = win.performance.now();
+    // When the move was made, not when it's handled, as the Zipper reads its pull.
+    const t = e.timeStamp;
     const dt = Math.max(1, t - g.lt);
     g.vx = lerp(g.vx, (pt.x - g.last.x) / dt, 0.4);
     g.vy = lerp(g.vy, (pt.y - g.last.y) / dt, 0.4);
