@@ -101,6 +101,8 @@ export interface PointerKindSummary {
   hovers: number;
   /** In contact: the pressure, and the contact's width and height in CSS px; null before any contact. */
   pressure: Span | null;
+  /** The pressure each contact began with, which a Pencil's browser may report unlike its strokes'. */
+  landing: Span | null;
   width: Span | null;
   height: Span | null;
   /** Each move in contact's coalesced and predicted samples; null where the browser has no such list. */
@@ -178,6 +180,7 @@ const NO_POINTER: PointerKindSummary = {
   moves: 0,
   hovers: 0,
   pressure: null,
+  landing: null,
   width: null,
   height: null,
   coalesced: null,
@@ -310,6 +313,7 @@ export function createPerformanceLog(now: number): PerformanceLog {
         downs: was.downs + (down ? 1 : 0),
         moves: was.moves + (down ? 0 : 1),
         pressure: widen(was.pressure, sample.pressure),
+        landing: down ? widen(was.landing, sample.pressure) : was.landing,
         width: widen(was.width, sample.width),
         height: widen(was.height, sample.height),
         coalesced: down ? was.coalesced : tally(was.coalesced, sample.coalesced),

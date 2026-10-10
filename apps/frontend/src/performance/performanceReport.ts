@@ -42,11 +42,12 @@ const perMove = (samples: SampleCount | null, moves: number, name: string) =>
 /** One kind of pointer: its contacts and hovering, how hard and how big, and the samples a move carried. */
 function pointerLine(type: string, kind: PointerKindSummary): string {
   const head = `${type}: ${count(kind.downs)} down, ${count(kind.moves)} moves, ${count(kind.hovers)} hovering`;
-  const { pressure, width, height } = kind;
+  const { pressure, landing, width, height } = kind;
   if (!pressure || !width || !height) return `${head} · no contact`;
   return [
     head,
     `pressure ${range(pressure, 2)}`,
+    ...(landing ? [`landing ${range(landing, 2)}`] : []),
     `contact ${range(width, 1)} × ${range(height, 1)}px`,
     perMove(kind.coalesced, kind.moves, "coalesced"),
     perMove(kind.predicted, kind.moves, "predicted"),

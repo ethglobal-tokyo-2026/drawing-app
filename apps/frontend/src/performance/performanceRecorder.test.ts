@@ -301,7 +301,7 @@ describe("the recorder on the page", () => {
     expect(types(unlistens.mock.calls)).toEqual(types(listens.mock.calls));
   });
 
-  it("sums up each kind of pointer: contacts, hovering, pressure, contact size and samples a move", () => {
+  it("sums up each kind of pointer: contacts, hovering, pressure and its landing, contact size and samples a move", () => {
     startPerformanceRecorder();
     const sample = new PointerEvent("pointermove");
     const pen = (type: string, init: PointerEventInit) =>
@@ -326,6 +326,7 @@ describe("the recorder on the page", () => {
       moves: 2,
       hovers: 1,
       pressure: { min: 0.1, max: 0.9 },
+      landing: { min: 0.1, max: 0.1 },
       width: { min: 0.5, max: 0.5 },
       height: { min: 0.5, max: 0.5 },
       coalesced: { total: 4, most: 3 },

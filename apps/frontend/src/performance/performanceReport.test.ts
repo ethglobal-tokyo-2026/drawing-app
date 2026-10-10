@@ -166,18 +166,27 @@ describe("the performance report", () => {
     expect(report({}, [slowFrame], [])).not.toContain("after the board was complete");
   });
 
-  it("lists each kind of pointer: contacts and hovering, pressure, contact size and samples a move", () => {
+  it("lists each kind of pointer: contacts and hovering, pressure and its landing, contact size and samples a move", () => {
     const pen: PointerKindSummary = {
       downs: 2,
       moves: 400,
       hovers: 57,
       pressure: { min: 0.03, max: 0.97 },
+      landing: { min: 0, max: 0.4 },
       width: { min: 0.5, max: 0.5 },
       height: { min: 0.5, max: 0.5 },
       coalesced: { total: 1560, most: 6 },
       predicted: null,
     };
-    const hovering = { ...pen, downs: 0, moves: 0, pressure: null, width: null, height: null };
+    const hovering = {
+      ...pen,
+      downs: 0,
+      moves: 0,
+      pressure: null,
+      landing: null,
+      width: null,
+      height: null,
+    };
     const text = report({
       pointers: new Map([
         ["pen", pen],
@@ -187,7 +196,7 @@ describe("the performance report", () => {
     expect(text).toContain(
       [
         "Pointers",
-        "  pen: 2 down, 400 moves, 57 hovering · pressure 0.03–0.97 · contact 0.5–0.5 × 0.5–0.5px · 3.9 coalesced a move (most 6) · no predicted events",
+        "  pen: 2 down, 400 moves, 57 hovering · pressure 0.03–0.97 · landing 0.00–0.40 · contact 0.5–0.5 × 0.5–0.5px · 3.9 coalesced a move (most 6) · no predicted events",
         "  mouse: 0 down, 0 moves, 57 hovering · no contact",
       ].join("\n"),
     );
