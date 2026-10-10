@@ -4,9 +4,11 @@ import {
   fieldOf,
   footprintOf,
   freeSpot,
+  knobBox,
   knobHidden,
   LAID_OUT_SPOTS,
   LARGE_LANDING_GROWTH,
+  meets,
   MIDDLE_CLEAR,
   NATURAL_SCALE,
   nextZ,
@@ -182,9 +184,24 @@ describe("placement", () => {
     expect(low.top + bar.h).toBeLessThan(560 - sticker.h / 2);
     const right = toolbarSpot({ ...sticker, x: 370 }, board, bar);
     expect(right.left + bar.w).toBeLessThanOrEqual(board.W - TRAY_EDGE);
-    // With the knob hanging below, the toolbar clears the knob's far edge.
-    const knobEdge = sticker.y + sticker.h / 2 + 42.5 + 14;
-    expect(toolbarSpot(sticker, board, bar, { knobBelow: true }).top).toBeGreaterThan(knobEdge);
+  });
+
+  it("keeps the toolbar off the knob's touch area on either side, turned or near the board's edges", () => {
+    const board = { W: PHONE_BOARD.W, H: PHONE_BOARD.H };
+    // One row, and with Arrange's step tiles out.
+    for (const bar of [
+      { w: 180, h: 46 },
+      { w: 296, h: 94 },
+    ])
+      for (const knobBelow of [false, true])
+        for (const r of [0, 25, 90, 160, 180, 300])
+          for (const x of [40, board.W / 2, 330])
+            for (const y of [110, board.H / 2, 590]) {
+              const sticker = { x, y, w: 120, h: 90, r };
+              const { left, top } = toolbarSpot(sticker, board, bar, { knobBelow });
+              const toolbar = { left, top, right: left + bar.w, bottom: top + bar.h };
+              expect(meets(toolbar, knobBox(sticker, knobBelow))).toBe(false);
+            }
   });
 
   it("keeps the toolbar clear of Draw wherever the sticker sits, however big it is", () => {

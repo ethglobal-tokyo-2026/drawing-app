@@ -154,7 +154,8 @@
 }
 
 /* Selection: a clear frame, four corner handles to resize, and a knob on a short stem to turn. The
-   frame is the focus ring too. Each handle takes a fingertip. */
+   frame is the focus ring too. Each handle takes a fingertip. placement.ts measures the frame's inset
+   and border, the handles' size and the knob's place and size, so the toolbar keeps clear of them. */
 .placed-sticker__frame {
   position: absolute;
   inset: -10px;

@@ -212,10 +212,17 @@ export function extentsOf(w: number, h: number, r: number) {
   return { ex: (cos * w + sin * h) / 2, ey: (sin * w + cos * h) / 2 };
 }
 
-/** The rotate knob's center stands this far past the sticker's edge, turned with it (see the CSS). */
-const KNOB_REACH = 42.5;
-/** The knob's touch area reaches this far from its center. */
-const KNOB_TOUCH = 22;
+/**
+ * The selection as StickerBoard.css draws it, turned with the sticker. Its handles and knob stand on
+ * the frame's corners and edges, inside its border: `.placed-sticker__frame`'s `inset: -10px`, less 1.5px.
+ */
+const FRAME_OUT = 10 - 1.5;
+/** `.placed-sticker__handle`: 20px squares centered on the frame's corners, reaching this far past the sticker's edges. */
+const HANDLE_REACH = FRAME_OUT + 20 / 2;
+/** `.placed-sticker__knob`: a 28px disc whose top stands 48px out from the frame's edge; its center, past the sticker's. */
+const KNOB_REACH = FRAME_OUT + 48 - 28 / 2;
+/** The knob's touch area reaches this far from its center: its radius, and its `::before`'s `inset: -8px`. */
+const KNOB_TOUCH = 28 / 2 + 8;
 
 /** The rotate knob's touch area, above the sticker's top edge or hanging below it, turned with it. */
 export function knobBox(
@@ -245,14 +252,19 @@ export function knobHidden(sticker: { x: number; y: number; h: number; r: number
 
 /** How far the toolbar keeps from what it must stay clear of. */
 const CLEARANCE = 8;
+/** How far the toolbar keeps inside the board's left edge and its foot, and off the sticker tray's edge. */
+const TOOLBAR_INSET = { left: 10, foot: 12, tray: 4 };
+/** How far the toolbar may rise into the header band, still under your name and the gifts badge. */
+const INTO_HEADER = 6;
 /** A second tap that opens the sticker lands near its middle, so a toolbar over the sticker keeps a fingertip clear of it. */
 export const MIDDLE_CLEAR = 22;
 
 /**
  * Where the selected sticker's toolbar goes, in board pixels: under the sticker, clear of its turned
- * corners; on the other side when there's no room or it would meet `clearOf` (Draw); clear of the
- * knob on whichever side it stands; never over the header or the sticker tray's edge. With room on
- * neither side, it slides over the sticker's edge away from the knob, keeping the sticker's middle free.
+ * corners' handles; on the other side when there's no room or it would meet `clearOf` (Draw); clear
+ * of the knob's touch area wherever it stands; never over the header or the sticker tray's edge. With
+ * room on neither side, it slides over the sticker's edge away from the knob, keeping the sticker's
+ * middle free.
  */
 export function toolbarSpot(
   sticker: { x: number; y: number; w: number; h: number; r: number },
@@ -260,31 +272,43 @@ export function toolbarSpot(
   toolbar: { w: number; h: number },
   { knobBelow = false, clearOf }: { knobBelow?: boolean; clearOf?: Box | null } = {},
 ) {
-  const reach = extentsOf(sticker.w, sticker.h, sticker.r).ey + 12;
-  const [below, above] = knobBelow ? [50, 14] : [14, 50];
-  const left = clamp(sticker.x - toolbar.w / 2, 10, board.W - toolbar.w - TRAY_EDGE - 4);
+  const handles = extentsOf(
+    sticker.w + 2 * HANDLE_REACH,
+    sticker.h + 2 * HANDLE_REACH,
+    sticker.r,
+  ).ey;
+  const knob = knobBox(sticker, knobBelow);
+  const under = Math.max(sticker.y + handles, knob.bottom) + CLEARANCE;
+  const over = Math.min(sticker.y - handles, knob.top) - CLEARANCE - toolbar.h;
+  // Turned, the knob can stand under the sticker without hanging below it.
+  const knobUnder = knob.top + knob.bottom > 2 * sticker.y;
+  const left = clamp(
+    sticker.x - toolbar.w / 2,
+    TOOLBAR_INSET.left,
+    board.W - TRAY_EDGE - TOOLBAR_INSET.tray - toolbar.w,
+  );
   const meetsDraw = (top: number) =>
     Boolean(
       clearOf &&
       meets({ left, top, right: left + toolbar.w, bottom: top + toolbar.h }, clearOf, CLEARANCE),
     );
-  const highest = HEADER - 6;
-  const lowest = board.H - toolbar.h - 12;
+  const highest = HEADER - INTO_HEADER;
+  const lowest = board.H - TOOLBAR_INSET.foot - toolbar.h;
   /** Moved up off Draw when it would meet it. */
   const offDraw = (top: number) =>
     clearOf && meetsDraw(top) ? Math.min(top, clearOf.top - CLEARANCE - toolbar.h) : top;
-  let top = sticker.y + reach + below;
-  if (top > lowest || meetsDraw(top)) top = sticker.y - reach - above - toolbar.h;
+  let top = under;
+  if (top > lowest || meetsDraw(top)) top = over;
   if (top < highest) {
-    const under = offDraw(Math.min(sticker.y + reach + below, lowest));
-    const over = Math.max(sticker.y - reach - above - toolbar.h, highest);
+    const below = offDraw(Math.min(under, lowest));
+    const above = Math.max(over, highest);
     const freesMiddle = (t: number) =>
       t >= highest &&
       (t > sticker.y + MIDDLE_CLEAR || t + toolbar.h < sticker.y - MIDDLE_CLEAR) &&
       !meetsDraw(t);
     // A sticker too big to leave its middle free still gets its toolbar clear of Draw.
     top =
-      (knobBelow ? [over, under] : [under, over]).find(freesMiddle) ??
+      (knobUnder ? [above, below] : [below, above]).find(freesMiddle) ??
       Math.max(highest, offDraw(clamp(sticker.y - toolbar.h / 2, highest, lowest)));
   }
   return { left, top };
