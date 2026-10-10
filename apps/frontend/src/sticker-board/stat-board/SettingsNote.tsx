@@ -12,7 +12,7 @@ import { ErrorLine } from "../../ui/ErrorLine";
 import { lazyWithPreload } from "../../ui/lazyWithPreload";
 import { Switch } from "../../ui/Switch";
 import { useReducedMotion } from "../../ui/useReducedMotion";
-import { forget as forgetKeptBoard } from "../lastBoard";
+import { forgetKeptBoard } from "../lastBoard";
 import { ChoiceRow } from "./ChoiceRow";
 import { DrawingSettings } from "./DrawingSettings";
 import { useSettingSaves, type Failure, type Setting, type Shown } from "./settingSaves";

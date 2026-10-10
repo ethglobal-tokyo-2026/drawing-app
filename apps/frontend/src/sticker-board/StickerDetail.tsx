@@ -54,7 +54,7 @@ import { useReducedMotion } from "../ui/useReducedMotion";
 import { handleOf, type BoardStickerView } from "./boardSticker";
 import { useDetailLift, type LiftView } from "./detailLift";
 import { useSwipePaging } from "./detailPaging";
-import { forget as forgetKeptBoard } from "./lastBoard";
+import { forgetKeptBoard } from "./lastBoard";
 import { combosLeftNow, useStickerDetail } from "./stickerDetailQuery";
 import { myStickerBoardChanged } from "./useMyStickerBoard";
 import { TimelapseButton, TimelapseFailure } from "./timelapse/TimelapseButton";

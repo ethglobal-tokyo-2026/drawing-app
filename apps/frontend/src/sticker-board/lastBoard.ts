@@ -58,7 +58,7 @@ function read(): Kept | null {
   if (isKept(value)) return value;
   if (value === undefined)
     console.error("The board kept on this phone isn't JSON, so it's forgotten:", text);
-  // Not forget(): this runs as `kept` is first set, before it can be written.
+  // Not forgetKeptBoard(): this runs as `kept` is first set, before it can be written.
   removeKept();
   return null;
 }
@@ -70,7 +70,7 @@ const removeKept = () =>
  * Forgets the kept board, whoever's it is: its images are the other kind once the NSFW opt-in
  * changes, so the next open waits for the board from the server.
  */
-export function forget() {
+export function forgetKeptBoard() {
   forgets += 1;
   kept = null;
   dropWrite();
@@ -125,7 +125,7 @@ document.addEventListener("visibilitychange", () => {
 
 /** Forgets the kept board unless it's `userId`'s. */
 export function forgetBoardUnlessFor(userId: string): void {
-  if (kept && kept.userId !== userId) forget();
+  if (kept && kept.userId !== userId) forgetKeptBoard();
 }
 
 /** The last board this phone showed `userId`, or null. Someone else's is forgotten. */

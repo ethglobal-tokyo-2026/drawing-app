@@ -29,7 +29,7 @@ import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
 import { deriveLargeLayout } from "./largeLayout";
 import {
-  forget,
+  forgetKeptBoard,
   forgetsSoFar,
   KEPT_BOARD_KEY,
   keepBoard,
@@ -963,7 +963,7 @@ describe("StickerBoard when your NSFW opt-in changes", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const { view } = await optedInBoard(() => new Promise(() => {}));
     optOut(view);
-    forget();
+    forgetKeptBoard();
     selectByKeys(view.host, "nsfw")("ArrowLeft");
     act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
     expect(keptBoardFor(TEST_ME.id)).toBeNull();
@@ -1019,7 +1019,7 @@ describe("StickerBoard after the board kept on this phone is forgotten", () => {
     const view = await openBoard(emptyApi({ stickerBoard }));
     // As an 18+ mark or a gift taken out does.
     await act(async () => {
-      forget();
+      forgetKeptBoard();
       myStickerBoardChanged();
     });
     selectByKeys(view.host, a.stickerId)("ArrowLeft");

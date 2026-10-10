@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { apiError, type ApiClient, type ApiError } from "../api/apiClient";
-import { forget as forgetKeptBoard } from "../sticker-board/lastBoard";
+import { forgetKeptBoard } from "../sticker-board/lastBoard";
 import { myStickerBoardChanged } from "../sticker-board/useMyStickerBoard";
 import { takeOutGift } from "./giftBackend";
 
