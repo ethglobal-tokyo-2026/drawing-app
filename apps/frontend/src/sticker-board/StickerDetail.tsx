@@ -8,7 +8,6 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { createPortal } from "react-dom";
 import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
 import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
@@ -46,6 +45,7 @@ import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
+import { PhonePortal } from "../ui/PhonePortal";
 import { QuietLink } from "../ui/QuietLink";
 import { Skeleton } from "../ui/Skeleton";
 import { useBackToClose } from "../ui/useBackToClose";
@@ -1013,7 +1013,5 @@ export function StickerDetail({
       </div>
     </div>
   );
-  // Over the whole phone, tabs included, as the Giving flow is.
-  const phone = document.querySelector<HTMLElement>(".phone");
-  return phone ? createPortal(page, phone) : page;
+  return <PhonePortal eachRender>{page}</PhonePortal>;
 }
