@@ -8,7 +8,6 @@ import { ticketPurchases, ticketUses } from "./tickets.ts";
 import { users } from "./users.ts";
 
 export { escrowStatuses, giftStatuses } from "./gifts.ts";
-export type { KyotoSeikaSubject } from "./stickers.ts";
 export { suiTransactionKinds, suiTransactionOutcomes } from "./suiTransactions.ts";
 export { ticketKinds } from "./tickets.ts";
 export {

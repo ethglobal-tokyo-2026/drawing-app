@@ -10,7 +10,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { migrationsFolder } from "./migrate.ts";
 import * as schema from "./schema/index.ts";
-import type { KyotoSeikaSubject } from "./schema/index.ts";
+import type { KyotoSeikaSubject } from "./schema/kyotoSeikaSubject.ts";
 import { DAILY_TICKETS_PER_DAY, GIFT_EXPIRY_MS } from "./schema/limits.ts";
 import { updatedAtTriggerStatements } from "./schema/updatedAtTriggers.ts";
 

@@ -1,18 +1,10 @@
 import { sql } from "drizzle-orm";
 import { blob, check, index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { isBytes32, literal, timestamps } from "./columns.ts";
+// Type-only, so loading the schema never loads zod.
+import type { KyotoSeikaSubject } from "./kyotoSeikaSubject.ts";
 import { KYOTO_SEIKA_TIME_USED_S } from "./limits.ts";
 import { users } from "./users.ts";
-
-/**
- * One of the two Kyoto Seika Subjects a sticker drawn in Kyoto Seika Manga Expression Practice Mode
- * keeps: the word as the test prints it, its reading (empty when it has no kanji), and its English.
- */
-export interface KyotoSeikaSubject {
-  ja: string;
-  reading: string;
-  en: string;
-}
 
 /**
  * A sealed sticker. Everything but owner_id, the mint and its 18+ mark after seal is fixed at seal;
