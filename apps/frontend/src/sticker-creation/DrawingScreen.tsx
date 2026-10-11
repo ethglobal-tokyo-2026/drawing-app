@@ -1235,7 +1235,6 @@ export function DrawingScreen({
               clipped={currentLayer.clipped}
               clipBase={clipBase}
               opacity={currentLayer.opacity}
-              inked={layers.inked.has(currentLayer.id)}
               count={chips.length}
               canMoveBack={currentIndex > 0}
               canMoveForward={currentIndex < chips.length - 1}

@@ -433,15 +433,10 @@ export const stickerCreation = {
       en: "Keeps new marks inside this layer’s ink.",
       ja: "このレイヤーの描画内だけにかけます。",
     },
-    /** Layer options bar: explains why locking transparent pixels is unavailable on a blank layer */
-    lockUnavailable: {
-      en: "Draw on this layer before locking transparent pixels.",
-      ja: "このレイヤーにかいてから、透明ピクセルをロックできます。",
-    },
-    /** Layer options bar: recovery when clearing left a locked layer blank */
-    unlockEmpty: {
-      en: "This layer is empty. Turn off the lock to draw.",
-      ja: "このレイヤーは空です。ロックを解除するとかけます。",
+    /** Layer options bar: the effect of active transparent-pixel Lock and how to draw outside existing ink */
+    lockedHelp: {
+      en: "Keeps new marks inside this layer’s ink. Turn off to draw outside it.",
+      ja: "このレイヤーの描画内だけにかけます。外にもかくには、ロックを解除してください。",
     },
     /** Layer options bar: the toggle tile that shows the layer only where the layer below has ink, named for screen readers; dimmed on the bottom layer */
     clip: { en: "Clip to layer below", ja: "下のレイヤーでクリッピング" },

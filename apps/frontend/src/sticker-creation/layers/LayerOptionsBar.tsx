@@ -19,7 +19,6 @@ interface Props {
   /** The nearest unclipped layer below, even before clipping is enabled. */
   clipBase: LayerId | null;
   opacity: number;
-  inked: boolean;
   count: number;
   canMoveBack: boolean;
   canMoveForward: boolean;
@@ -63,7 +62,6 @@ export function LayerOptionsBar({
   clipped,
   clipBase,
   opacity,
-  inked,
   count,
   canMoveBack,
   canMoveForward,
@@ -81,15 +79,11 @@ export function LayerOptionsBar({
     {
       label: t(($) => $.stickerCreation.layers.lock),
       icon: <LockTransparentPixelsIcon size={22} weight={locked ? "fill" : "bold"} />,
-      enabled: inked || locked,
+      enabled: true,
       run: () => onLock(!locked),
       pressed: locked,
       help: t(($) =>
-        inked
-          ? $.stickerCreation.layers.lockHelp
-          : locked
-            ? $.stickerCreation.layers.unlockEmpty
-            : $.stickerCreation.layers.lockUnavailable,
+        locked ? $.stickerCreation.layers.lockedHelp : $.stickerCreation.layers.lockHelp,
       ),
     },
     {

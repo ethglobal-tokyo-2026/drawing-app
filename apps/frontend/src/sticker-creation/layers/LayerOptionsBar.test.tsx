@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { ComponentProps } from "react";
+import { act, type ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { i18next } from "../../i18n/i18n";
 import { LayerOptionsBar } from "./LayerOptionsBar";
@@ -30,7 +30,6 @@ const renderBar = (props: Partial<ComponentProps<typeof LayerOptionsBar>> = {}) 
       clipped={false}
       clipBase={1}
       opacity={100}
-      inked
       count={2}
       canMoveBack
       canMoveForward
@@ -100,21 +99,36 @@ describe("LayerOptionsBar", () => {
     expect(tile(labels.lock).tabIndex).toBe(-1);
   });
 
-  it("prevents locking a blank layer but always lets an existing lock be removed", () => {
-    renderBar({ inked: false });
-    expect(tile(labels.lock).getAttribute("aria-disabled")).toBe("true");
-    expect(tile(labels.lock).textContent).toContain(
-      "Draw on this layer before locking transparent pixels.",
+  it.each([false, true])("allows Lock with locked=%s and explains that state", (locked) => {
+    renderBar({ locked, clipped: true, clipBase: 1, opacity: 0 });
+    const lock = tile(labels.lock);
+    expect(lock.getAttribute("aria-disabled")).toBeNull();
+    expect(lock.getAttribute("aria-pressed")).toBe(String(locked));
+    const description = lock.getAttribute("aria-describedby");
+    expect(description).toBeTruthy();
+    expect(find(`[id="${description}"]`).textContent).toBe(
+      locked
+        ? "Keeps new marks inside this layer’s ink. Turn off to draw outside it."
+        : "Keeps new marks inside this layer’s ink.",
     );
-    click(tile(labels.lock));
-    expect(handlers.onLock).not.toHaveBeenCalled();
-    renderBar({ inked: false, locked: true });
-    expect(tile(labels.lock).getAttribute("aria-disabled")).toBeNull();
-    expect(tile(labels.lock).textContent).toContain(
-      "This layer is empty. Turn off the lock to draw.",
-    );
-    click(tile(labels.lock));
-    expect(handlers.onLock).toHaveBeenCalledExactlyOnceWith(false);
+    click(lock);
+    expect(handlers.onLock).toHaveBeenCalledExactlyOnceWith(!locked);
+  });
+
+  it("explains active Lock in Japanese without claiming the layer is empty", async () => {
+    await act(async () => {
+      await i18next.changeLanguage("ja");
+    });
+    try {
+      renderBar({ locked: true });
+      expect(find(".layer-option-toggle").textContent).toContain(
+        "このレイヤーの描画内だけにかけます。外にもかくには、ロックを解除してください。",
+      );
+    } finally {
+      await act(async () => {
+        await i18next.changeLanguage("en");
+      });
+    }
   });
 
   it("keeps the maximum-layer explanation readable while options cover the Add label", () => {

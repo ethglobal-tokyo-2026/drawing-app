@@ -17,6 +17,7 @@ import {
   FINGERTIP,
   hand,
   inkAt,
+  inkedPixels,
   inkShows,
   middle,
   pencil,
@@ -55,6 +56,14 @@ async function line(page: Page, down: number, from = 0.3, to = 0.7) {
   await penStroke(page, await pencil(page), points, () => 0.5, 8);
   await page.evaluate(() => new Promise(requestAnimationFrame));
   return middle(points);
+}
+
+/** Erase the narrow test mark using the largest eraser size. */
+async function eraseTestLine(page: Page): Promise<void> {
+  await button(page, creation.tools.eraser).click();
+  const size = page.getByRole("slider", { name: say(creation.sizeRail.eraser, language) });
+  for (let press = 0; press < 25; press++) await size.press("ArrowUp");
+  await line(page, 0.5, 0.2, 0.8);
 }
 
 async function color(page: Page, name: "blue" | "red") {
@@ -209,7 +218,9 @@ test("layer setup survives a reload before the first mark, with the clock still 
   await openSheet(page);
   await add(page).click();
   await options(page, 2);
-  await expect(button(page, copy.lock)).toHaveAttribute("aria-disabled", "true");
+  await expect(button(page, copy.lock)).not.toHaveAttribute("aria-disabled", "true");
+  await button(page, copy.lock).click();
+  await expect(button(page, copy.lock)).toHaveAttribute("aria-pressed", "true");
   await button(page, copy.moveBack).click();
   await chip(page, 2).click();
   await slider(page).press("ArrowDown");
@@ -232,11 +243,43 @@ test("layer setup survives a reload before the first mark, with the clock still 
   await expect(slider(page)).toHaveAttribute("aria-valuenow", "95");
   await expect(timer).toHaveAccessibleDescription(description);
   await options(page, 2);
-  await expect(button(page, copy.lock)).toHaveAttribute("aria-disabled", "true");
+  await expect(button(page, copy.lock)).toHaveAttribute("aria-pressed", "true");
   await chip(page, 2).click();
   await chip(page, 1).click();
   await line(page, 0.5);
   await expect(button(page, creation.timer.pause)).toBeVisible();
+});
+
+test("Lock stays available before drawing and after full erasure", async ({ page }) => {
+  await openSheet(page);
+  await options(page, 1);
+  const lock = button(page, copy.lock);
+  await expect(lock).not.toHaveAttribute("aria-disabled", "true");
+  await lock.press("Enter");
+  await expect(lock).toHaveAttribute("aria-pressed", "true");
+  await expect(lock).toHaveAccessibleDescription(
+    "Keeps new marks inside this layer’s ink. Turn off to draw outside it.",
+  );
+  await lock.press("Enter");
+  await expect(lock).toHaveAttribute("aria-pressed", "false");
+  await chip(page, 1).click();
+  await line(page, 0.5, 0.4, 0.6);
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
+  await eraseTestLine(page);
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
+  await options(page, 1);
+  await lock.click();
+  await expect(lock).toHaveAttribute("aria-pressed", "true");
+  await chip(page, 1).click();
+  await button(page, creation.tools.brush).click();
+  await line(page, 0.5);
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
+  await options(page, 1);
+  await lock.click();
+  await expect(lock).toHaveAttribute("aria-pressed", "false");
+  await chip(page, 1).click();
+  await line(page, 0.5);
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
 });
 
 test("opacity hides only its layer, hidden ink is blocked, and a double tap restores opacity", async ({
