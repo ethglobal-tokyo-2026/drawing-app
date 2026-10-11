@@ -10,6 +10,7 @@ import {
   SelectionBackground,
   Spinner,
   Sticker,
+  StackPlusIcon,
   Ticket,
   ToteSimple,
   type IconProps,
@@ -78,6 +79,11 @@ export const LockTransparentPixelsIcon = (props: IconProps) => (
  */
 export const ClipToLayerBelowIcon = (props: IconProps) => (
   <SelectionBackground aria-hidden focusable="false" {...props} />
+);
+
+/** New layer: the drawing screen’s add-layer control. */
+export const NewLayerIcon = (props: IconProps) => (
+  <StackPlusIcon aria-hidden focusable="false" {...props} />
 );
 
 // Icons with no meaning of their own in the app.

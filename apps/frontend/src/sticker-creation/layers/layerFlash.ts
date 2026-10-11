@@ -1,30 +1,22 @@
 import { GLINT_SVG, svgDataUrl } from "../../gratitude/heartArt";
-import { SHEEN_LEAN_DEG } from "../../stickers/resinSheen";
-import { clamp, clamp01, EASE_OUT, EASE_PEEL, EASE_PEEL_POINTS } from "../../ui/easing";
+import { clamp, EASE_OUT } from "../../ui/easing";
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { blankCanvas } from "../canvas/context2d";
 import type { Rect } from "../sealing/stickerPasses";
 import "./layerFlash.css";
 
-/** How long the band takes to cross the sheet, and how long the outline shows: an unverified guess. */
-export const FLASH_MS = 240;
-/** How long a glint pops and fades once the band has passed it: an unverified guess. */
-export const GLINT_TAIL_MS = 500;
+/** The stationary ink cue, including its readable peak. */
+export const FLASH_MS = 280;
+/** The glints finish falling within half a second of selection. */
+export const GLINT_TAIL_MS = 480;
 
-/** Sheet px per flash px: the flash is built at quarter scale. */
+/** Sheet px per sampled px: color and edge sampling stay at quarter scale. */
 const SHRINK = 4;
-/** The band's width, of the sheet's. */
-const BAND = 0.36;
-/** How brightly the band lights the ink. */
-const SHEEN = 0.5;
-/** The most glints a flash sparks. */
 const MAX_GLINTS = 7;
-/** How close two glints may be, of the sheet's short side, so a small drawing sparks fewer. */
+/** Distance between glints, of the sheet's short side. */
 const GLINT_GAP = 0.12;
-/** CSS px a glint drifts off its edge as it fades. */
-const GLINT_TRAVEL = 5;
-/** Flash px the outline stands off the ink. */
-const OUTLINE_PX = 1;
+/** CSS px a glint falls after it has popped. */
+const GLINT_TRAVEL = 14;
 /** The alpha at which a flash px counts as ink, for finding its edge. */
 const EDGE_ALPHA = 48;
 /** The edge pixels glints are picked among, at most, so a long edge costs no more than a short one. */
@@ -35,53 +27,18 @@ const REDUCED = "(prefers-reduced-motion: reduce)";
 const INK = "#1C1824";
 const LIGHT = "#FFFFFF";
 const GLINT_IMAGE = `url("${svgDataUrl(GLINT_SVG)}")`;
-const LEAN = Math.tan((SHEEN_LEAN_DEG * Math.PI) / 180);
 
 /** At quarter scale a bilinear draw reads two of each four sheet px; four draws offset by a quarter flash px read them all, so a hairline isn't lost. */
 const SAMPLES = [-0.25, 0.25].flatMap((dx) => [-0.25, 0.25].map((dy) => [dx, dy] as const));
-/** The eight neighbors: the ink drawn at each grows it a flash px all round. */
+/** The eight neighbors used to grow the covered ink contour. */
 const AROUND = [-1, 0, 1].flatMap((dx) =>
   [-1, 0, 1].filter((dy) => dx !== 0 || dy !== 0).map((dy) => [dx, dy] as const),
 );
 
-type Bezier = readonly [number, number, number, number];
-
-/** The time, 0 to 1, at which a cubic-bezier easing reaches `progress`. */
-function timeAt([x1, y1, x2, y2]: Bezier, progress: number): number {
-  const along = (a: number, b: number, u: number) =>
-    3 * a * u * (1 - u) ** 2 + 3 * b * u * u * (1 - u) + u ** 3;
-  let lo = 0;
-  let hi = 1;
-  for (let i = 0; i < 24; i++) {
-    const mid = (lo + hi) / 2;
-    if (along(y1, y2, mid) < progress) lo = mid;
-    else hi = mid;
-  }
-  return along(x1, x2, (lo + hi) / 2);
-}
-
-/**
- * The band leans about the sheet's middle row and travels across it, of the sheet's width: from wholly
- * off its left to wholly off its right, on every row. `aspect` is the sheet's height over its width.
- */
-function sweepFor(aspect: number) {
-  const reach = (LEAN * aspect) / 2;
-  const from = -BAND - reach;
-  const to = 1 + reach;
-  /** When the band's middle passes a point given as fractions of the sheet, in ms. */
-  const litAt = (fx: number, fy: number) => {
-    const at = fx - BAND / 2 + LEAN * aspect * (fy - 0.5);
-    return timeAt(EASE_PEEL_POINTS, clamp01((at - from) / (to - from))) * FLASH_MS;
-  };
-  return { from, to, litAt };
-}
-
-/** Where a glint sparks, flash px, and the way off the ink there. */
+/** Where a glint sparks, in flash px. */
 interface Spark {
   x: number;
   y: number;
-  dx: number;
-  dy: number;
 }
 
 /**
@@ -129,31 +86,38 @@ function sparksOn(image: ImageData, ox: number, oy: number, gap: number): Spark[
       }
     }
   }
-  return picked.map((i) => {
-    const [x, y] = [xs[i], ys[i]];
-    // Down the alpha's slope is off the ink; a lone pixel has none, so it drifts away from the light.
-    const dx = alpha(x - 1, y) - alpha(x + 1, y);
-    const dy = alpha(x, y - 1) - alpha(x, y + 1);
-    const length = Math.hypot(dx, dy);
-    return length > 0
-      ? { x: x + ox, y: y + oy, dx: dx / length, dy: dy / length }
-      : { x: x + ox, y: y + oy, dx: Math.SQRT1_2, dy: Math.SQRT1_2 };
-  });
+  return picked.map((i) => ({ x: xs[i] + ox, y: ys[i] + oy }));
 }
 
-/** The ink's outline where `above` covers it, in Ink: the ink grown a flash px all round, less itself, cut to above's alpha. */
-function coveredOutline(ink: HTMLCanvasElement, above: HTMLCanvasElement) {
-  const made = blankCanvas(ink.width, ink.height);
+/** Two contrasting edges keep covered selected ink identifiable over either light or dark ink. */
+function coveredOutline(
+  ink: HTMLCanvasElement,
+  above: HTMLCanvasElement,
+  edge: number,
+  allocate: typeof blankCanvas,
+) {
+  const made = allocate(ink.width, ink.height);
+  const inner = allocate(ink.width, ink.height);
+  for (const [dx, dy] of AROUND) {
+    made.g.drawImage(ink, dx * edge * 2, dy * edge * 2);
+    inner.g.drawImage(ink, dx * edge, dy * edge);
+  }
+  for (const [part, color] of [
+    [made, INK],
+    [inner, LIGHT],
+  ] as const) {
+    part.g.globalCompositeOperation = "source-in";
+    part.g.fillStyle = color;
+    part.g.fillRect(0, 0, ink.width, ink.height);
+  }
   const { g } = made;
-  for (const [dx, dy] of AROUND) g.drawImage(ink, dx * OUTLINE_PX, dy * OUTLINE_PX);
+  g.globalCompositeOperation = "source-over";
+  g.drawImage(inner.canvas, 0, 0);
+  releaseCanvas(inner.canvas);
   g.globalCompositeOperation = "destination-out";
   g.drawImage(ink, 0, 0);
   g.globalCompositeOperation = "destination-in";
-  const { width, height } = above;
-  g.drawImage(above, 0, 0, width, height, 0, 0, width / SHRINK, height / SHRINK);
-  g.globalCompositeOperation = "source-in";
-  g.fillStyle = INK;
-  g.fillRect(0, 0, ink.width, ink.height);
+  g.drawImage(above, 0, 0);
   return made;
 }
 
@@ -169,22 +133,19 @@ export interface FlashParts {
   readonly inked: Rect;
   /** The layers above it composited, sheet-sized; 0 × 0 while none shows ink. */
   readonly above: HTMLCanvasElement;
-  /** Takes the band: over the layer's canvas, so the layer's opacity fades the light with its ink. */
+  /** Takes the pulse: over the layer's canvas, so the layer's opacity fades the light with its ink. */
   readonly current: HTMLElement;
-  /** Takes the outline and the glints, after `above`, so both show over what covers the ink. */
+  /** Takes the covered outline and glints, after `above`, so both show over what covers the ink. */
   readonly sheet: HTMLElement;
   /** Told once the flash has played out; never after `cancel`. */
   readonly onEnd: () => void;
 }
 
-/**
- * Flashes a layer's ink in the one light: a band sweeps it from the top left, under the layers above,
- * a dashed Ink outline traces the ink they cover, and glints spark off its edges as the band passes,
- * covered ones too. Built at quarter scale from the layer's own canvas. Null when nothing plays: under
- * reduced motion, or when the layer shows no ink.
- */
+/** A stationary contrast pulse and a few falling glints, sampled once from effective selected ink. */
 export function flashLayer(parts: FlashParts): LayerFlash | null {
-  if (window.matchMedia(REDUCED).matches) return null;
+  const media = window.matchMedia(REDUCED);
+  if (document.hidden) return null;
+  const reduced = media.matches;
   const { layer, inked, above } = parts;
   const { width, height } = layer;
   const w = Math.ceil(width / SHRINK);
@@ -195,118 +156,135 @@ export function flashLayer(parts: FlashParts): LayerFlash | null {
   const y1 = clamp(Math.ceil((inked.y + inked.h) / SHRINK) + 1, 0, h);
   if (x1 <= x0 || y1 <= y0) return null;
 
-  const sheen = blankCanvas(w, h);
-  for (const [dx, dy] of SAMPLES) {
-    sheen.g.drawImage(layer, 0, 0, width, height, dx, dy, width / SHRINK, height / SHRINK);
-  }
-  const sparks = sparksOn(
-    sheen.g.getImageData(x0, y0, x1 - x0, y1 - y0),
-    x0,
-    y0,
-    GLINT_GAP * Math.min(w, h),
-  );
-  if (sparks.length === 0) {
-    releaseCanvas(sheen.canvas);
-    return null;
-  }
-  // Drawing from a 0 × 0 canvas throws; with nothing above, nothing covers the ink.
-  const outline = above.width > 0 && above.height > 0 ? coveredOutline(sheen.canvas, above) : null;
-  sheen.g.globalCompositeOperation = "source-in";
-  sheen.g.fillStyle = LIGHT;
-  sheen.g.fillRect(0, 0, w, h);
-
-  const aspect = height / width;
-  const sweep = sweepFor(aspect);
-  const travel: KeyframeAnimationOptions = { duration: FLASH_MS, easing: EASE_PEEL };
+  const canvases: HTMLCanvasElement[] = [];
   const animations: Animation[] = [];
-
-  // The band is a strip of the sheet; the sheen inside it moves against it, so the light crosses the
-  // ink while the ink holds still. Its translate is of its own width, the sheen's of the sheet's.
-  const band = document.createElement("div");
-  band.className = "layer-flash__band";
-  band.setAttribute("aria-hidden", "true");
-  band.style.width = `${BAND * 100}%`;
-  sheen.canvas.className = "layer-flash__sheen";
-  sheen.canvas.style.width = `${100 / BAND}%`;
-  band.append(sheen.canvas);
-  parts.current.append(band);
-  const lean = `skewX(${-SHEEN_LEAN_DEG}deg)`;
-  const unlean = `skewX(${SHEEN_LEAN_DEG}deg)`;
-  animations.push(
-    band.animate(
-      [
-        { transform: `translateX(${(sweep.from / BAND) * 100}%) ${lean}`, opacity: SHEEN },
-        { transform: `translateX(${(sweep.to / BAND) * 100}%) ${lean}`, opacity: SHEEN },
-      ],
-      travel,
-    ),
-    sheen.canvas.animate(
-      [
-        { transform: `${unlean} translateX(${-sweep.from * 100}%)` },
-        { transform: `${unlean} translateX(${-sweep.to * 100}%)` },
-      ],
-      travel,
-    ),
-  );
-
-  if (outline) {
-    outline.canvas.className = "ink-canvas layer-flash__outline";
-    outline.canvas.setAttribute("aria-hidden", "true");
-    parts.sheet.append(outline.canvas);
-    animations.push(
-      outline.canvas.animate(
-        [{ opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }],
-        { duration: FLASH_MS },
-      ),
-    );
-  }
-
-  const glints = document.createElement("div");
-  glints.className = "layer-flash__glints";
-  glints.setAttribute("aria-hidden", "true");
-  for (const spark of sparks) {
-    const glint = document.createElement("span");
-    glint.className = "layer-flash__glint";
-    const fx = ((spark.x + 0.5) * SHRINK) / width;
-    const fy = ((spark.y + 0.5) * SHRINK) / height;
-    glint.style.left = `${fx * 100}%`;
-    glint.style.top = `${fy * 100}%`;
-    glint.style.backgroundImage = GLINT_IMAGE;
-    glints.append(glint);
-    const [tx, ty] = [spark.dx * GLINT_TRAVEL, spark.dy * GLINT_TRAVEL];
-    animations.push(
-      glint.animate(
-        [
-          { transform: "translate(0, 0) scale(0) rotate(-40deg)", opacity: 1, easing: EASE_OUT },
-          {
-            transform: `translate(${tx * 0.4}px, ${ty * 0.4}px) scale(1) rotate(0deg)`,
-            opacity: 1,
-            offset: 0.3,
-            easing: EASE_OUT,
-          },
-          { transform: `translate(${tx}px, ${ty}px) scale(0.4) rotate(30deg)`, opacity: 0 },
-        ],
-        { duration: GLINT_TAIL_MS, delay: sweep.litAt(fx, fy) },
-      ),
-    );
-  }
-  parts.sheet.append(glints);
-
-  const letGo = () => {
-    window.clearTimeout(end);
-    for (const animation of animations) animation.cancel();
-    band.remove();
-    glints.remove();
-    releaseCanvas(sheen.canvas);
-    if (outline) {
-      outline.canvas.remove();
-      releaseCanvas(outline.canvas);
-    }
+  let glints: HTMLDivElement | null = null;
+  let end = 0;
+  let ended = false;
+  // Ownership starts at allocation, including temporaries used while constructing the contour.
+  const allocate: typeof blankCanvas = (...args) => {
+    const made = blankCanvas(...args);
+    canvases.push(made.canvas);
+    return made;
   };
-  // A glint starts as the band passes it, by FLASH_MS at the latest.
-  const end = window.setTimeout(() => {
+  const letGo = () => {
+    if (ended) return;
+    ended = true;
+    window.clearTimeout(end);
+    media.removeEventListener("change", letGo);
+    document.removeEventListener("visibilitychange", onVisibility);
+    for (const animation of animations) animation.cancel();
+    animations.length = 0;
+    glints?.remove();
+    glints = null;
+    for (const canvas of canvases) {
+      canvas.remove();
+      releaseCanvas(canvas);
+    }
+    canvases.length = 0;
+  };
+  const onVisibility = () => {
+    if (document.hidden) letGo();
+  };
+
+  try {
+    const sampled = allocate(w, h);
+    for (const [dx, dy] of SAMPLES) {
+      sampled.g.drawImage(layer, 0, 0, width, height, dx, dy, width / SHRINK, height / SHRINK);
+    }
+    const image = sampled.g.getImageData(x0, y0, x1 - x0, y1 - y0);
+    const sparks = sparksOn(image, x0, y0, GLINT_GAP * Math.min(w, h));
+    if (sparks.length === 0) {
+      letGo();
+      return null;
+    }
+    // Drawing from a 0 × 0 canvas throws; with nothing above, nothing covers the ink.
+    const shownWidth = parts.sheet.getBoundingClientRect().width;
+    const edge = shownWidth > 0 ? width / shownWidth : SHRINK;
+    const outline =
+      above.width > 0 && above.height > 0 ? coveredOutline(layer, above, edge, allocate) : null;
+    // Contrast is chosen once per sampled pixel; alpha still follows the selected ink.
+    for (let i = 0; i < image.data.length; i += 4) {
+      const alpha = image.data[i + 3] / 255;
+      const luminance =
+        0.2126 * image.data[i] + 0.7152 * image.data[i + 1] + 0.0722 * image.data[i + 2];
+      const light = luminance * alpha + 255 * (1 - alpha) < 150;
+      image.data[i] = light ? 255 : 28;
+      image.data[i + 1] = light ? 255 : 24;
+      image.data[i + 2] = light ? 255 : 36;
+      image.data[i + 3] = 255;
+    }
+    sampled.g.clearRect(0, 0, w, h);
+    sampled.g.putImageData(image, x0, y0);
+    // Only color choice is sampled. The full-resolution ink supplies the exact edge and alpha.
+    const pulse = allocate(width, height);
+    pulse.g.drawImage(sampled.canvas, 0, 0, w, h, 0, 0, width, height);
+    pulse.g.globalCompositeOperation = "destination-in";
+    pulse.g.drawImage(layer, 0, 0);
+    releaseCanvas(sampled.canvas);
+    const cue = (canvas: HTMLCanvasElement, host: HTMLElement, name: string) => {
+      canvas.className = `ink-canvas layer-flash__${name}`;
+      canvas.setAttribute("aria-hidden", "true");
+      host.append(canvas);
+      if (reduced) canvas.style.opacity = "0.8";
+      else
+        animations.push(
+          canvas.animate(
+            [
+              { opacity: 0 },
+              { opacity: 0.8, offset: 0.2 },
+              { opacity: 0.8, offset: 0.6 },
+              { opacity: 0 },
+            ],
+            { duration: FLASH_MS },
+          ),
+        );
+    };
+    cue(pulse.canvas, parts.current, "pulse");
+    if (outline) cue(outline.canvas, parts.sheet, "outline");
+
+    glints = reduced ? null : document.createElement("div");
+    if (glints) {
+      glints.className = "layer-flash__glints";
+      glints.setAttribute("aria-hidden", "true");
+      for (const spark of sparks) {
+        const glint = document.createElement("span");
+        glint.className = "layer-flash__glint";
+        glint.style.left = `${(((spark.x + 0.5) * SHRINK) / width) * 100}%`;
+        glint.style.top = `${(((spark.y + 0.5) * SHRINK) / height) * 100}%`;
+        glint.style.backgroundImage = GLINT_IMAGE;
+        glints.append(glint);
+        animations.push(
+          glint.animate(
+            [
+              { transform: "translateY(0) scale(0)", opacity: 0, easing: EASE_OUT },
+              { transform: "translateY(0) scale(1)", opacity: 1, offset: 0.22 },
+              {
+                transform: `translateY(${GLINT_TRAVEL * 0.65}px) scale(0.9)`,
+                opacity: 1,
+                offset: 0.78,
+              },
+              { transform: `translateY(${GLINT_TRAVEL}px) scale(0.65)`, opacity: 0 },
+            ],
+            { duration: GLINT_TAIL_MS },
+          ),
+        );
+      }
+      parts.sheet.append(glints);
+    }
+
+    end = window.setTimeout(
+      () => {
+        letGo();
+        parts.onEnd();
+      },
+      reduced ? 300 : GLINT_TAIL_MS,
+    );
+    media.addEventListener("change", letGo);
+    document.addEventListener("visibilitychange", onVisibility);
+    return { cancel: letGo };
+  } catch (error) {
     letGo();
-    parts.onEnd();
-  }, FLASH_MS + GLINT_TAIL_MS);
-  return { cancel: letGo };
+    throw error;
+  }
 }

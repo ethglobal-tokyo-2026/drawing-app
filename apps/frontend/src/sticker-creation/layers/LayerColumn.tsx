@@ -9,7 +9,7 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import { Plus, X } from "../../icons";
+import { NewLayerIcon, X } from "../../icons";
 import { useTranslation } from "../../i18n/react";
 import { deviceSetting } from "../../ui/deviceSetting";
 import type { LayerId } from "../canvas/ops";
@@ -183,7 +183,7 @@ export function LayerColumn({
         disabled={!canAdd}
         onClick={onAdd}
       >
-        <Plus size={18} weight="bold" />
+        <NewLayerIcon size={18} weight="bold" />
       </button>
       {!canAdd && (
         <span id={maximumId} className="layer-maximum">

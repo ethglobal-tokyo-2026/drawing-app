@@ -2,7 +2,7 @@
 export const sheenIn = (host: ParentNode) => host.querySelector(".live-resin__sheen > b");
 
 /** How far a band of the light leans from upright as it sweeps, its top ahead: the top left lights first. */
-export const SHEEN_LEAN_DEG = 16;
+const SHEEN_LEAN_DEG = 16;
 
 /** A sheen sweeps across a sticker's live resin: as it lands, as it's picked up, as the phone tilts. */
 export function sweepSheen(sheen: Element, duration = 760) {

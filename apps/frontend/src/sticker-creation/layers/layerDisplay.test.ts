@@ -20,12 +20,13 @@ import {
 import { ReducedMotion } from "../../ui/testing";
 import { hexToRgb } from "../canvas/color";
 import { blankCanvas } from "../canvas/context2d";
+import * as canvas2d from "../canvas/context2d";
 import { STRIDE, type LayerId, type StrokeOp } from "../canvas/ops";
 import { paintStroke } from "../canvas/paintStroke";
 import type { SheetFrame } from "../canvas/sheetFrame";
 import type { Rect } from "../sealing/stickerPasses";
 import { LayerDisplay } from "./layerDisplay";
-import { FLASH_MS, GLINT_TAIL_MS } from "./layerFlash";
+import { FLASH_MS, GLINT_TAIL_MS, flashLayer } from "./layerFlash";
 import { LayerInk } from "./layerInk";
 import { FULL_OPACITY, type Layer, type LayerState } from "./layerState";
 import { brush, clearLayer, eraser } from "./testLayerSteps";
@@ -483,13 +484,144 @@ describe("the sheet's display", () => {
     /** Every element the flash shows in the sheet. */
     const flashParts = (host: HTMLElement) => host.querySelectorAll("[class*='layer-flash']");
 
-    it("builds nothing under reduced motion, where the chip's ring shows the current layer", () => {
+    it("shows stationary ink identification without particles under reduced motion", () => {
       vi.spyOn(window, "matchMedia").mockReturnValue(new ReducedMotion(true));
+      const { display, host } = coveredSheet(RIGHT);
+      display.flash();
+      expect(animate).not.toHaveBeenCalled();
+      expect(host.querySelector(".layer-flash__pulse")).not.toBeNull();
+      expect(host.querySelector(".layer-flash__glints")).toBeNull();
+      vi.advanceTimersByTime(300);
+      expect(flashParts(host)).toHaveLength(0);
+    });
+
+    it.each(["preference", "hidden"])("cancels and releases feedback when %s changes", (reason) => {
+      const media = new ReducedMotion(false);
+      vi.spyOn(window, "matchMedia").mockReturnValue(media);
+      const removedMedia = vi.spyOn(media, "removeEventListener");
+      const removedDocument = vi.spyOn(document, "removeEventListener");
       const { display, host, before } = coveredSheet(RIGHT);
       display.flash();
-      expect(madeContexts()).toHaveLength(before);
-      expect(animate).not.toHaveBeenCalled();
+      const made = madeContexts()
+        .slice(before)
+        .map(({ canvas }) => canvas);
+      if (reason === "preference") media.change(true);
+      else {
+        vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+        document.dispatchEvent(new Event("visibilitychange"));
+      }
       expect(flashParts(host)).toHaveLength(0);
+      expect(made.map(sizeOf)).toEqual(made.map(() => [0, 0]));
+      expect(removedMedia).toHaveBeenCalledWith("change", expect.any(Function));
+      expect(removedDocument).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
+    });
+
+    it.each(["inner contour", "pulse", "sampling", "animation", "listener"])(
+      "releases partial feedback and preserves borrowed ink when %s construction fails",
+      (failure) => {
+        const { ink, above, host, group, before } = coveredSheet(RIGHT);
+        const selected = ink.layerCanvas(1);
+        if (!selected) throw new Error("No selected ink");
+        const borrowed = [pixelsOf(selected), pixelsOf(above)];
+        const originalError = new Error(`Failed ${failure}`);
+        const allocate = canvas2d.blankCanvas;
+        let allocations = 0;
+        vi.spyOn(canvas2d, "blankCanvas").mockImplementation((...args) => {
+          allocations++;
+          if (
+            (failure === "inner contour" && allocations === 3) ||
+            (failure === "pulse" && allocations === 4)
+          )
+            throw originalError;
+          const made = allocate(...args);
+          if (failure === "sampling" && allocations === 1) {
+            vi.spyOn(made.g, "getImageData").mockImplementation(() => {
+              throw originalError;
+            });
+          }
+          return made;
+        });
+        const started: MockInstance<Animation["cancel"]>[] = [];
+        animate.mockImplementation(() => {
+          if (failure === "animation" && started.length === 1) throw originalError;
+          const animation = new Animation();
+          started.push(vi.spyOn(animation, "cancel"));
+          return animation;
+        });
+        const media = new ReducedMotion(false);
+        vi.spyOn(window, "matchMedia").mockReturnValue(media);
+        if (failure === "listener") {
+          vi.spyOn(document, "addEventListener").mockImplementationOnce(() => {
+            throw originalError;
+          });
+        }
+        const removedMedia = vi.spyOn(media, "removeEventListener");
+        const onEnd = vi.fn();
+        let thrown: unknown;
+        try {
+          flashLayer({ layer: selected, above, inked: WHOLE, current: group, sheet: host, onEnd });
+        } catch (error) {
+          thrown = error;
+        }
+        expect(thrown).toBe(originalError);
+        const made = madeContexts()
+          .slice(before)
+          .map(({ canvas }) => canvas);
+        expect(made.length).toBeGreaterThan(0);
+        expect(made.map(sizeOf)).toEqual(made.map(() => [0, 0]));
+        expect(flashParts(host)).toHaveLength(0);
+        for (const canceled of started) expect(canceled).toHaveBeenCalledOnce();
+        if (failure === "listener")
+          expect(removedMedia).toHaveBeenCalledWith("change", expect.any(Function));
+        expect(vi.getTimerCount()).toBe(0);
+        vi.advanceTimersByTime(2000);
+        expect(onEnd).not.toHaveBeenCalled();
+        expect([pixelsOf(selected), pixelsOf(above)]).toEqual(borrowed);
+      },
+    );
+
+    it.each([false, true])("finishes once and never after explicit cancellation (%s)", (cancel) => {
+      const { display, ink, above, host, group } = coveredSheet(RIGHT);
+      const selected = ink.layerCanvas(1);
+      if (!selected) throw new Error("No selected ink");
+      const before = [pixelsOf(selected), pixelsOf(above)];
+      const onEnd = vi.fn();
+      const flash = flashLayer({
+        layer: selected,
+        above,
+        inked: WHOLE,
+        current: group,
+        sheet: host,
+        onEnd,
+      });
+      expect(flash).not.toBeNull();
+      if (!flash) throw new Error("No feedback");
+      if (cancel) {
+        flash.cancel();
+        flash.cancel();
+      }
+      vi.advanceTimersByTime(2000);
+      expect(onEnd).toHaveBeenCalledTimes(cancel ? 0 : 1);
+      expect([pixelsOf(selected), pixelsOf(above)]).toEqual(before);
+      display.release();
+    });
+
+    it.each(["#ffffff", "#000000"])("contrasts against %s ink without changing it", (color) => {
+      const { ink, display, group } = sheet();
+      ink.apply(across({ ...brush(), color }), ONE);
+      display.show(ONE, 1);
+      const selected = ink.layerCanvas(1);
+      if (!selected) throw new Error("No selected ink");
+      const before = pixelsOf(selected);
+      display.flash();
+      const cue = group.querySelector<HTMLCanvasElement>(".layer-flash__pulse");
+      if (!cue) throw new Error("No pulse");
+      expect(cue).not.toBeNull();
+      const center = pixel(cue, { x: 20, y: 20 });
+      expect(center[3]).toBeGreaterThan(0);
+      expect(color === "#ffffff" ? center[0] < 60 : center[0] > 240).toBe(true);
+      expect(pixelsOf(selected)).toEqual(before);
+      display.release();
     });
 
     it("builds nothing for a layer with a canvas but no ink", () => {
@@ -573,14 +705,14 @@ describe("the sheet's display", () => {
       inkRegion(ink, 2, WHOLE, BLUE);
       display.show(clipped, 2);
       display.flash();
-      const sheen = group.querySelector(".layer-flash__sheen");
-      if (!(sheen instanceof HTMLCanvasElement)) throw new Error("The flash has no sheen");
+      const pulse = group.querySelector(".layer-flash__pulse");
+      if (!(pulse instanceof HTMLCanvasElement)) throw new Error("The flash has no pulse");
       const [left, right] = [
-        { x: 2, y: 5 },
-        { x: 8, y: 5 },
+        { x: 8, y: 20 },
+        { x: 32, y: 20 },
       ];
-      expect(pixel(sheen, left)[3]).toBeGreaterThan(0);
-      expect(pixel(sheen, right)[3]).toBe(0);
+      expect(pixel(pulse, left)[3]).toBeGreaterThan(0);
+      expect(pixel(pulse, right)[3]).toBe(0);
     });
 
     it("flashes a layer nothing covers without drawing from the empty side above, and outlines nothing", () => {
@@ -594,7 +726,7 @@ describe("the sheet's display", () => {
       );
       expect(drewAbove).toBe(false);
       expect(host.querySelector(".layer-flash__outline")).toBeNull();
-      expect(group.querySelector(".layer-flash__band")).not.toBeNull();
+      expect(group.querySelector(".layer-flash__pulse")).not.toBeNull();
       expect(host.querySelectorAll(".layer-flash__glint").length).toBeGreaterThan(0);
     });
   });
