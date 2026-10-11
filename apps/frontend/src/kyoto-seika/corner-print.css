@@ -8,7 +8,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--non-repro-blue);
+  /* Small subject reminders need readable contrast while retaining their reserved blue. */
+  color: color-mix(in srgb, var(--non-repro-blue) 50%, var(--ink) 50%);
   font-family: var(--font-ui);
   font-size: 13px;
   font-weight: 650;
