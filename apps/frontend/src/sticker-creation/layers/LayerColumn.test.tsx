@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
-import { act } from "react";
+import { act, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { i18next } from "../../i18n/i18n";
 import type { LayerId } from "../canvas/ops";
 import { LayerColumn, type LayerColumnProps } from "./LayerColumn";
 import type { LayerChipView } from "./layerView";
 import { testHost } from "./testHost";
+import { layOut } from "./layerListTesting";
 
 const { render, find, findAll, click, press } = testHost();
 const onAdd = vi.fn<() => void>();
@@ -40,6 +41,7 @@ const renderColumn = (props: Partial<LayerColumnProps> = {}) =>
       onAdd={onAdd}
       onSelect={onSelect}
       onToggleOptions={onToggleOptions}
+      onCloseOptions={() => {}}
       {...props}
     />,
   );
@@ -104,4 +106,53 @@ describe("LayerColumn", () => {
     expect(document.activeElement).toBe(chip(3));
     expect(tabStops()).toEqual([chip(3)]);
   });
+
+  it.each([
+    { position: "one pixel above", current: 3, initial: 0, scroll: 37, open: true },
+    { position: "at the top boundary", current: 3, initial: 0, scroll: 38, open: false },
+    { position: "past the top", current: 3, initial: 0, scroll: 42, open: false },
+    { position: "one pixel below", current: 1, initial: 42, scroll: 5, open: true },
+    { position: "at the bottom boundary", current: 1, initial: 42, scroll: 4, open: false },
+    { position: "past the bottom", current: 1, initial: 42, scroll: 0, open: false },
+  ])(
+    "keeps options only while their chip is visible: $position",
+    ({ current, initial, scroll, open }) => {
+      function Column() {
+        const [optionsOpen, setOptionsOpen] = useState(false);
+        return (
+          <LayerColumn
+            chips={chipsOf([1, 2, 3])}
+            current={current}
+            canAdd
+            thumbnails={() => null}
+            optionsOpen={optionsOpen}
+            edge="left"
+            onAdd={onAdd}
+            onSelect={onSelect}
+            onToggleOptions={() => setOptionsOpen((shown) => !shown)}
+            onCloseOptions={() => setOptionsOpen(false)}
+            options={<button type="button">Layer action</button>}
+          />
+        );
+      }
+      render(<Column />);
+      const list = find('[role="listbox"]');
+      layOut(list, 80);
+      list.scrollTop = initial;
+      click(chip(current));
+      expect(findAll(".layer-options")).toHaveLength(1);
+
+      act(() => {
+        list.scrollTop = scroll;
+        // Two events before the close commits must not toggle the options back open.
+        list.dispatchEvent(new Event("scroll"));
+        list.dispatchEvent(new Event("scroll"));
+      });
+
+      expect(findAll(".layer-options")).toHaveLength(open ? 1 : 0);
+      expect(chip(current).getAttribute("aria-expanded")).toBe(String(open));
+      expect(chip(current).getAttribute("aria-selected")).toBe("true");
+      expect(onSelect).not.toHaveBeenCalled();
+    },
+  );
 });

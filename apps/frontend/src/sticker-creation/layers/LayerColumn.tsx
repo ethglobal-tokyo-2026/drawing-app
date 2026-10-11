@@ -28,6 +28,8 @@ export interface LayerColumnProps {
   onSelect: (id: LayerId) => void;
   /** A tap on the current chip: opens or closes its options bar. */
   onToggleOptions: () => void;
+  /** Closes options when their chip scrolls out of view. */
+  onCloseOptions: () => void;
   /** The options bar, shown beside the current chip while optionsOpen. */
   options?: ReactNode;
   /** The opacity slider, laid beside the chips. */
@@ -59,6 +61,7 @@ export function LayerColumn({
   onAdd,
   onSelect,
   onToggleOptions,
+  onCloseOptions,
   options,
   slider,
   listRef,
@@ -129,8 +132,16 @@ export function LayerColumn({
           aria-label={t(($) => $.stickerCreation.layers.label)}
           aria-orientation="vertical"
           onKeyDown={moveFocus}
-          onScroll={() => {
-            if (showOptions) placeOptions();
+          onScroll={(e) => {
+            if (!showOptions) return;
+            const list = e.currentTarget;
+            const chip = chipAt(list, current);
+            if (!chip) return;
+            const chipBox = chip.getBoundingClientRect();
+            const top = list.getBoundingClientRect().top + list.clientTop;
+            const bottom = top + list.clientHeight;
+            if (chipBox.bottom <= top || chipBox.top >= bottom) onCloseOptions();
+            else placeOptions();
           }}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget)) setFocused(null);

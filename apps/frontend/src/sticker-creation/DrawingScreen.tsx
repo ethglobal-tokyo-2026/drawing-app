@@ -1150,6 +1150,7 @@ export function DrawingScreen({
             canvas.current?.selectLayer(id);
           }}
           onToggleOptions={() => setPanel((open) => (open === "layer" ? null : "layer"))}
+          onCloseOptions={() => setPanel((open) => (open === "layer" ? null : open))}
           listRef={layerList}
           options={
             <LayerOptionsBar
