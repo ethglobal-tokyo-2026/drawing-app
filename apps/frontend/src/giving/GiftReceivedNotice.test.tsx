@@ -13,16 +13,24 @@ let root: Root;
 const onClose = vi.fn();
 
 beforeEach(() => {
+  vi.useFakeTimers();
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
   onClose.mockReset();
 });
 
-afterEach(() => {
-  act(() => root.unmount());
-  host.remove();
-  vi.restoreAllMocks();
+afterEach(async () => {
+  try {
+    act(() => root.unmount());
+    // Closing releases its history entry after a short hold, while this window must still exist.
+    await act(() => vi.runAllTimersAsync());
+    expect(vi.getTimerCount()).toBe(0);
+  } finally {
+    host.remove();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  }
 });
 
 const showNotice = () =>
