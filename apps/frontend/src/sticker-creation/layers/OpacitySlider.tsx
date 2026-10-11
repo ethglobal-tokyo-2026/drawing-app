@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+} from "react";
 import { useTranslation } from "../../i18n/react";
 import { clamp, EASE_OUT } from "../../ui/easing";
 import { useReducedMotion } from "../../ui/useReducedMotion";
@@ -71,7 +78,8 @@ export interface OpacitySliderProps {
  * The opacity slider: a thin line beside the layer chips, full at the top, with a thumb that is the
  * only part to take a finger, so a stroke starting beside the track draws. The thumb moves with the
  * finger from where it was grabbed, a double-tap on it resets to full, and the value shows beside it
- * while it's held. A drag only redraws the slider and previews; the value lands once, on release.
+ * while it's held or focused by keyboard. A drag only redraws the slider and previews; the value lands
+ * once, on release.
  */
 export function OpacitySlider({
   value,
@@ -88,6 +96,13 @@ export function OpacitySlider({
   const thumb = useRef<HTMLSpanElement>(null);
   const readout = useRef<HTMLSpanElement>(null);
   const [held, setHeld] = useState(false);
+  const committedReadout = t(($) => $.stickerCreation.opacitySlider.readout, { value });
+
+  // A preview changes the text directly. Restore the committed value when it ends, even if that
+  // value stayed the same and React has no new text to render.
+  useLayoutEffect(() => {
+    if (!held && readout.current) readout.current.textContent = committedReadout;
+  }, [committedReadout, held]);
 
   // The press in progress: where and at what opacity it began, what the thumb shows now, how far it
   // has moved, and whether it came soon enough after a tap to be a double-tap's second.
@@ -97,7 +112,7 @@ export function OpacitySlider({
   const show = (percent: number) => {
     slider.current?.style.setProperty("--v", String(percent / FULL));
     if (readout.current)
-      readout.current.textContent = t(($) => $.stickerCreation.opacitySlider.value, {
+      readout.current.textContent = t(($) => $.stickerCreation.opacitySlider.readout, {
         value: percent,
       });
   };
@@ -113,6 +128,7 @@ export function OpacitySlider({
         travelled: 0,
         doubleTap: sinceTap <= DOUBLE_TAP_MS,
       };
+      show(value);
       setHeld(true);
       onHold(true);
     },
@@ -193,7 +209,9 @@ export function OpacitySlider({
         <span className="opacity-track" />
         <span className="opacity-fill" />
         <span ref={thumb} className="opacity-thumb" {...drag} />
-        <span ref={readout} className="opacity-readout" aria-hidden="true" />
+        <span ref={readout} className="opacity-readout" aria-hidden="true">
+          {committedReadout}
+        </span>
         <span className={`opacity-hint ${hinted && !held ? "is-on" : ""}`} aria-hidden="true">
           {hint}
         </span>

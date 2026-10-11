@@ -1,4 +1,4 @@
-import { Fragment, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import {
   CaretDown,
   CaretUp,
@@ -8,7 +8,7 @@ import {
 } from "../../icons";
 import { useTranslation } from "../../i18n/react";
 import type { LayerId } from "../canvas/ops";
-import "../tools/ToolStrip.css";
+import { MAX_LAYERS } from "./layerState";
 import "./LayerOptionsBar.css";
 
 interface Props {
@@ -16,8 +16,11 @@ interface Props {
   id: LayerId;
   locked: boolean;
   clipped: boolean;
-  /** False on the bottom layer, which has nothing below it to clip to. */
-  canClip: boolean;
+  /** The nearest unclipped layer below, even before clipping is enabled. */
+  clipBase: LayerId | null;
+  opacity: number;
+  inked: boolean;
+  count: number;
   canMoveBack: boolean;
   canMoveForward: boolean;
   /** False on the last layer, which can't be deleted. */
@@ -36,13 +39,12 @@ interface Tile {
   run: () => void;
   /** A toggle's state; undefined on an action. */
   pressed?: boolean;
-  /** Set apart from the tiles before it by a hairline. */
-  apart?: boolean;
+  help?: string;
 }
 
 /** Arrow keys move between the tiles, as in any toolbar. */
 function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
-  const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+  const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 1, ArrowUp: -1 }[e.key];
   if (!step) return;
   const tiles = [...e.currentTarget.querySelectorAll("button")];
   const at = tiles.findIndex((tile) => tile === document.activeElement);
@@ -52,16 +54,17 @@ function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
 }
 
 /**
- * The current layer's options, out beside its chip: Lock transparent pixels and Clip to layer below,
- * then Move back and Move forward, then Delete layer, each group set apart by a hairline. The tool
- * strip's flat tiles: a pressed toggle is reversed out of Ink with its icon's fill weight, and an
- * action the layer can't take now is dimmed. One Tab stop, on the tile focused last.
+ * The current layer's options beside its chip. Each toggle explains its effect; labeled actions
+ * stay together below. One Tab stop, on the button focused last; arrow keys reach every action.
  */
 export function LayerOptionsBar({
   id,
   locked,
   clipped,
-  canClip,
+  clipBase,
+  opacity,
+  inked,
+  count,
   canMoveBack,
   canMoveForward,
   canDelete,
@@ -73,27 +76,38 @@ export function LayerOptionsBar({
 }: Props) {
   const { t } = useTranslation();
   const [stop, setStop] = useState(0);
+  const descriptionId = useId();
   const tiles: Tile[] = [
     {
       label: t(($) => $.stickerCreation.layers.lock),
       icon: <LockTransparentPixelsIcon size={22} weight={locked ? "fill" : "bold"} />,
-      enabled: true,
+      enabled: inked || locked,
       run: () => onLock(!locked),
       pressed: locked,
+      help: t(($) =>
+        inked
+          ? $.stickerCreation.layers.lockHelp
+          : locked
+            ? $.stickerCreation.layers.unlockEmpty
+            : $.stickerCreation.layers.lockUnavailable,
+      ),
     },
     {
       label: t(($) => $.stickerCreation.layers.clip),
       icon: <ClipToLayerBelowIcon size={22} weight={clipped ? "fill" : "bold"} />,
-      enabled: canClip,
+      enabled: clipBase !== null,
       run: () => onClip(!clipped),
       pressed: clipped,
+      help:
+        clipBase === null
+          ? t(($) => $.stickerCreation.layers.clipUnavailable)
+          : t(($) => $.stickerCreation.layers.clipHelp, { base: clipBase }),
     },
     {
       label: t(($) => $.stickerCreation.layers.moveBack),
       icon: <CaretDown size={22} weight="bold" />,
       enabled: canMoveBack,
       run: onMoveBack,
-      apart: true,
     },
     {
       label: t(($) => $.stickerCreation.layers.moveForward),
@@ -106,7 +120,6 @@ export function LayerOptionsBar({
       icon: <Trash size={22} weight="bold" />,
       enabled: canDelete,
       run: onDelete,
-      apart: true,
     },
   ];
   return (
@@ -116,26 +129,51 @@ export function LayerOptionsBar({
       aria-label={t(($) => $.stickerCreation.layers.options, { number: id })}
       onKeyDown={moveFocus}
     >
-      {tiles.map(({ label, icon, enabled, run, pressed, apart }, i) => (
-        <Fragment key={label}>
-          {apart && <span className="tool-rule" aria-hidden="true" />}
-          <button
-            type="button"
-            className="tool-tile"
-            tabIndex={i === stop ? 0 : -1}
-            aria-label={label}
-            aria-pressed={pressed}
-            // Dimmed rather than disabled, so it keeps its place among the arrow keys' stops.
-            aria-disabled={!enabled || undefined}
-            onFocus={() => setStop(i)}
-            onClick={() => {
-              if (enabled) run();
-            }}
-          >
-            {icon}
-          </button>
-        </Fragment>
+      <div className="layer-options-heading" aria-hidden="true">
+        <strong>{t(($) => $.stickerCreation.layers.chip, { number: id })}</strong>
+        <span>{t(($) => $.stickerCreation.opacitySlider.readout, { value: opacity })}</span>
+      </div>
+      {count >= MAX_LAYERS && (
+        <p className="layer-options-maximum">
+          {t(($) => $.stickerCreation.layers.maximum, { count })}
+        </p>
+      )}
+      {tiles.map(({ label, icon, enabled, run, pressed, help }, i) => (
+        <button
+          key={label}
+          type="button"
+          className={help ? "layer-option-toggle" : "layer-option-action"}
+          tabIndex={i === stop ? 0 : -1}
+          aria-label={label}
+          aria-pressed={pressed}
+          aria-describedby={
+            help ? `${descriptionId}-${i}` : i === 4 ? `${descriptionId}-delete` : undefined
+          }
+          // Dimmed rather than disabled, so it keeps its place among the arrow keys' stops.
+          aria-disabled={!enabled || undefined}
+          onFocus={() => setStop(i)}
+          onClick={() => {
+            if (enabled) run();
+          }}
+        >
+          {icon}
+          <span className="layer-option-copy">
+            <span className="layer-option-name">{label}</span>
+            {help && (
+              <span className="layer-option-explanation" id={`${descriptionId}-${i}`}>
+                {help}
+              </span>
+            )}
+          </span>
+        </button>
       ))}
+      <p className="layer-options-help" id={`${descriptionId}-delete`}>
+        {t(($) =>
+          canDelete
+            ? $.stickerCreation.layers.deleteHelp
+            : $.stickerCreation.layers.deleteUnavailable,
+        )}
+      </p>
     </div>
   );
 }

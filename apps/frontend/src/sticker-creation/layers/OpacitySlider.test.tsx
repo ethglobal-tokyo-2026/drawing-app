@@ -157,18 +157,57 @@ describe("OpacitySlider", () => {
     expect(onCommit).not.toHaveBeenCalled();
   });
 
-  it("shows the value beside the thumb while it's held", () => {
+  it("shows the opacity as soon as the thumb is held, before it moves", () => {
+    point(thumb(), "pointerdown", GRAB);
+    expect(find('[role="slider"]').classList.contains("is-held")).toBe(true);
+    expect(find(".opacity-readout").textContent).toBe("Opacity 64%");
+    expect(onPreview).not.toHaveBeenCalled();
+    expect(onHold).toHaveBeenLastCalledWith(true);
+  });
+
+  it("keeps the readout current when the layer's opacity changes before any drag", () => {
+    expect(find(".opacity-readout").textContent).toBe("Opacity 64%");
+    render({ value: 31 });
+    expect(find(".opacity-readout").textContent).toBe("Opacity 31%");
+    render({ value: 0 });
+    expect(find(".opacity-readout").textContent).toBe("Opacity 0%");
+    render({ value: 100 });
+    expect(find(".opacity-readout").textContent).toBe("Opacity 100%");
+    render({ value: VALUE });
+    expect(find(".opacity-readout").textContent).toBe("Opacity 64%");
+  });
+
+  it("shows the opacity beside the thumb throughout a drag", () => {
     const readout = () => find(".opacity-readout").textContent;
     const isHeld = () => find('[role="slider"]').classList.contains("is-held");
     point(thumb(), "pointerdown", GRAB);
     point(thumb(), "pointermove", GRAB - 20);
     const [[previewed]] = onPreview.mock.calls;
     expect(isHeld()).toBe(true);
-    expect(readout()).toBe(
-      strings.stickerCreation.opacitySlider.value.en.replace("{{value}}", String(previewed)),
-    );
+    expect(readout()).toBe(`Opacity ${previewed}%`);
     point(thumb(), "pointerup", GRAB - 20);
     expect(isHeld()).toBe(false);
+  });
+
+  it("replaces the drag's readout when a layer change or undo supplies another opacity", () => {
+    dragThumb(GRAB - 20);
+    render({ value: 78 });
+    expect(find(".opacity-readout").textContent).toBe("Opacity 78%");
+    render({ value: 25 });
+    expect(find(".opacity-readout").textContent).toBe("Opacity 25%");
+    render({ value: VALUE });
+    expect(find(".opacity-readout").textContent).toBe("Opacity 64%");
+    point(thumb(), "pointerdown", GRAB);
+    expect(find(".opacity-readout").textContent).toBe("Opacity 64%");
+  });
+
+  it("keeps the committed value available for keyboard focus after a preview ends", () => {
+    dragThumb(GRAB - 20);
+    const slider = find('[role="slider"]');
+    if (!(slider instanceof HTMLElement)) throw new Error("The opacity slider must be focusable");
+    act(() => slider.focus());
+    expect(document.activeElement).toBe(find('[role="slider"]'));
+    expect(find(".opacity-readout").textContent).toBe("Opacity 64%");
   });
 
   it("resets to full with a double-tap, though each finger rocks a little", () => {

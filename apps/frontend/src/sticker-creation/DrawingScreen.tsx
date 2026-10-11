@@ -258,6 +258,8 @@ export function DrawingScreen({
   const currentLayer =
     layers.state.layers.find((layer) => layer.id === layers.current) ?? layers.state.layers[0];
   const currentIndex = layers.state.layers.indexOf(currentLayer);
+  const layerBelow = layers.state.layers[currentIndex - 1];
+  const clipBase = layerBelow ? (baseOf(layers.state, layerBelow.id) ?? layerBelow).id : null;
   const chips = layers.state.layers.map((layer) => ({
     id: layer.id,
     opacity: layer.opacity,
@@ -1157,7 +1159,10 @@ export function DrawingScreen({
               id={layers.current}
               locked={currentLayer.locked}
               clipped={currentLayer.clipped}
-              canClip={currentIndex > 0}
+              clipBase={clipBase}
+              opacity={currentLayer.opacity}
+              inked={layers.inked.has(currentLayer.id)}
+              count={chips.length}
               canMoveBack={currentIndex > 0}
               canMoveForward={currentIndex < chips.length - 1}
               canDelete={chips.length > 1}
@@ -1166,6 +1171,7 @@ export function DrawingScreen({
               onMoveBack={() => moveLayer(layers.current, currentIndex - 1)}
               onMoveForward={() => moveLayer(layers.current, currentIndex + 1)}
               onDelete={() => {
+                undoTile.current?.focus({ preventScroll: true });
                 canvas.current?.deleteLayer();
                 setPanel(null);
               }}

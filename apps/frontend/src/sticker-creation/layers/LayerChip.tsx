@@ -1,5 +1,5 @@
 import { useEffectEvent, useLayoutEffect, useRef } from "react";
-import { EyeSlash } from "../../icons";
+import { CaretRight, EyeSlash } from "../../icons";
 import { useTranslation } from "../../i18n/react";
 import type { LayerId } from "../canvas/ops";
 import { drawThumbnail } from "./layerThumbnails";
@@ -23,6 +23,8 @@ interface Props {
   expanded: boolean | undefined;
   /** The options bar's id while it's shown beside this chip. */
   controls: string | undefined;
+  /** The visible introduction beside the current chip, until its options have been discovered. */
+  describedBy?: string;
   onPress: (id: LayerId) => void;
   onFocus: (id: LayerId) => void;
 }
@@ -39,6 +41,7 @@ export function LayerChip({
   tabStop,
   expanded,
   controls,
+  describedBy,
   onPress,
   onFocus,
 }: Props) {
@@ -79,6 +82,7 @@ export function LayerChip({
       aria-label={name}
       aria-expanded={expanded}
       aria-controls={controls}
+      aria-describedby={describedBy}
       tabIndex={tabStop ? 0 : -1}
       onClick={() => onPress(chip.id)}
       onFocus={() => onFocus(chip.id)}
@@ -91,6 +95,9 @@ export function LayerChip({
         />
       )}
       <span className="layer-number">{chip.id}</span>
+      {current && (
+        <CaretRight className="layer-options-caret" size={12} weight="bold" aria-hidden="true" />
+      )}
       {hidden && <EyeSlash className="layer-hidden-mark" size={12} weight="bold" />}
     </button>
   );

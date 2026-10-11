@@ -333,6 +333,8 @@ export const stickerCreation = {
     label: { en: "Opacity", ja: "不透明度" },
     /** Drawing screen, beside the layer chips: read by screen readers as the opacity slider moves, and shown beside its thumb while a finger is on it; {{value}} is 0 to 100 */
     value: { en: "{{value}}%", ja: "{{value}}%" },
+    /** Drawing screen, opacity slider: the label beside its thumb while held or keyboard focused */
+    readout: { en: "Opacity {{value}}%", ja: "不透明度{{value}}%" },
     /** Drawing screen, beside the layer chips: the white label that sticks out from the opacity slider for a few seconds when a stroke meets a hidden layer (opacity 0), also announced; the label never wraps by itself, so the line break is where it wraps */
     hiddenHint: {
       en: "Hidden. Raise its\nopacity to draw.",
@@ -355,18 +357,56 @@ export const stickerCreation = {
     clippedTo: { en: "clipped to layer {{base}}", ja: "レイヤー{{base}}でクリッピング" },
     /** Drawing screen, layer column: the + tile above the chips, which adds a layer over the current one, named for screen readers; dimmed at ten layers */
     add: { en: "New layer", ja: "新規レイヤー" },
+    /** Drawing screen, beside the disabled new-layer button when the sheet has its maximum layer count */
+    maximum: { en: "{{count}} layers · maximum", ja: "レイヤーは{{count}}枚まで" },
+    /** Drawing screen, beside a new blank layer until its options have been discovered */
+    optionsHint: {
+      en: "Tap the selected layer again for options.",
+      ja: "選択中のレイヤーをもう一度タップすると、設定が開きます。",
+    },
+    /** Drawing screen, the close button on the first-use layer-options hint */
+    dismissOptionsHint: { en: "Dismiss layer hint", ja: "レイヤーのヒントを閉じる" },
     /** Drawing screen, layer options bar, opened by tapping the current chip: its name for screen readers; {{number}} is the layer's */
     options: { en: "Layer {{number}} options", ja: "レイヤー{{number}}の設定" },
     /** Layer options bar: the toggle tile that keeps the brush and the fill to pixels already on the layer, named for screen readers */
     lock: { en: "Lock transparent pixels", ja: "透明ピクセルをロック" },
+    /** Layer options bar: the effect of locking transparent pixels, below its toggle name */
+    lockHelp: {
+      en: "Keeps new marks inside this layer’s ink.",
+      ja: "このレイヤーの描画内だけにかけます。",
+    },
+    /** Layer options bar: explains why locking transparent pixels is unavailable on a blank layer */
+    lockUnavailable: {
+      en: "Draw on this layer before locking transparent pixels.",
+      ja: "このレイヤーにかいてから、透明ピクセルをロックできます。",
+    },
+    /** Layer options bar: recovery when clearing left a locked layer blank */
+    unlockEmpty: {
+      en: "This layer is empty. Turn off the lock to draw.",
+      ja: "このレイヤーは空です。ロックを解除するとかけます。",
+    },
     /** Layer options bar: the toggle tile that shows the layer only where the layer below has ink, named for screen readers; dimmed on the bottom layer */
     clip: { en: "Clip to layer below", ja: "下のレイヤーでクリッピング" },
+    /** Layer options bar: the effect of clipping, naming the nearest unclipped layer below */
+    clipHelp: {
+      en: "Shows this layer only inside layer {{base}}’s ink.",
+      ja: "レイヤー{{base}}の描画内だけに表示します。",
+    },
+    /** Layer options bar: explains why clipping is unavailable on the bottom layer */
+    clipUnavailable: { en: "No layer below to clip to.", ja: "下にレイヤーがありません。" },
     /** Layer options bar: the tile that moves the layer one place back, under the one below it, named for screen readers; dimmed at the back */
     moveBack: { en: "Move back", ja: "背面へ" },
     /** Layer options bar: the tile that moves the layer one place forward, over the one above it, named for screen readers; dimmed at the front */
     moveForward: { en: "Move forward", ja: "前面へ" },
     /** Layer options bar: the tile that deletes the layer at once, which undo brings back, named for screen readers; dimmed on the last layer */
     delete: { en: "Delete layer", ja: "レイヤーを削除" },
+    /** Layer options bar: explains how to recover a deleted layer */
+    deleteHelp: {
+      en: "Undo brings a deleted layer back.",
+      ja: "削除したレイヤーは「元に戻す」で戻せます。",
+    },
+    /** Layer options bar: explains why the sheet's last layer cannot be deleted */
+    deleteUnavailable: { en: "Keep at least one layer.", ja: "レイヤーは最低1枚必要です。" },
     /** Drawing screen, layer column: announced to screen readers when Move back or a drop puts a layer behind another; {{other}} is that layer's number */
     movedBehind: {
       en: "Layer {{number}} moved behind layer {{other}}",

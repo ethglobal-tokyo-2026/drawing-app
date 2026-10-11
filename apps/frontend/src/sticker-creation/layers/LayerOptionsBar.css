@@ -1,11 +1,108 @@
-/* Label stock held over the sheet, like the Smoothing bar, carrying the tool strip's flat tiles. */
+/* A temporary paper label: readable instructions stay beside the action they explain. */
 .layer-options-bar {
-  display: flex;
-  gap: 2px;
-  padding: 3px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  width: 236px;
+  padding: 7px;
   background: var(--liner-lift);
+  color: var(--ink);
   border-radius: var(--r-label);
   box-shadow:
     inset 0 0 0 1px var(--rule),
     var(--shadow-lift);
+}
+
+.layer-options-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 4px 7px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.layer-option-toggle,
+.layer-option-action {
+  min-width: 0;
+  border: 0;
+  border-radius: var(--r-label);
+  background: transparent;
+  color: inherit;
+}
+
+.layer-option-toggle {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 62px;
+  padding: 8px 6px;
+  text-align: start;
+}
+
+.layer-option-toggle svg {
+  flex-shrink: 0;
+}
+.layer-option-copy {
+  display: grid;
+  gap: 3px;
+}
+.layer-option-name {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.layer-option-explanation,
+.layer-options-help {
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.layer-options-maximum {
+  grid-column: 1 / -1;
+  margin: -3px 0 3px;
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.layer-option-toggle[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--liner-lift);
+}
+
+.layer-option-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  min-height: 62px;
+  padding: 8px 2px 4px;
+  border-top: 1px solid var(--rule);
+  border-radius: 0;
+}
+.layer-option-action .layer-option-name {
+  font-size: 11px;
+  font-weight: 400;
+}
+.layer-option-action[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.layer-option-toggle[aria-disabled="true"] {
+  cursor: default;
+}
+
+.layer-option-toggle[aria-disabled="true"] :is(.layer-option-name, svg) {
+  opacity: 0.5;
+}
+.layer-options-help {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 3px 4px;
 }

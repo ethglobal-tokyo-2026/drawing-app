@@ -5,7 +5,7 @@ import { i18next } from "../../i18n/i18n";
 import { LayerOptionsBar } from "./LayerOptionsBar";
 import { testHost } from "./testHost";
 
-const { render, find, click } = testHost();
+const { render, find, click, press } = testHost();
 const handlers = {
   onLock: vi.fn<(on: boolean) => void>(),
   onClip: vi.fn<(on: boolean) => void>(),
@@ -28,7 +28,10 @@ const renderBar = (props: Partial<ComponentProps<typeof LayerOptionsBar>> = {}) 
       id={2}
       locked={false}
       clipped={false}
-      canClip
+      clipBase={1}
+      opacity={100}
+      inked
+      count={2}
       canMoveBack
       canMoveForward
       canDelete
@@ -54,7 +57,7 @@ describe("LayerOptionsBar", () => {
   });
 
   it("dims an action the layer can't take, and doesn't fire it", () => {
-    renderBar({ canClip: false, canMoveBack: false, canMoveForward: false, canDelete: false });
+    renderBar({ clipBase: null, canMoveBack: false, canMoveForward: false, canDelete: false });
     for (const label of [labels.clip, labels.moveBack, labels.moveForward, labels.delete]) {
       expect(tile(label).getAttribute("aria-disabled")).toBe("true");
       click(tile(label));
@@ -63,5 +66,59 @@ describe("LayerOptionsBar", () => {
     expect(handlers.onMoveBack).not.toHaveBeenCalled();
     expect(handlers.onMoveForward).not.toHaveBeenCalled();
     expect(handlers.onDelete).not.toHaveBeenCalled();
+  });
+
+  it("names every action visibly and explains the actual clipping base", () => {
+    renderBar({ id: 7, clipBase: 3, opacity: 48 });
+    for (const label of Object.values(labels)) expect(tile(label).textContent).toContain(label);
+    expect(find(".layer-options-heading").textContent).toContain("Layer 7");
+    expect(find(".layer-options-heading").textContent).toContain("Opacity 48%");
+    const description = tile(labels.clip).getAttribute("aria-describedby");
+    expect(description).toBeTruthy();
+    expect(find(`[id="${description}"]`).textContent).toBe(
+      "Shows this layer only inside layer 3’s ink.",
+    );
+  });
+
+  it("explains unavailable clipping and deletion on the last layer", () => {
+    renderBar({ clipBase: null, canDelete: false });
+    expect(tile(labels.clip).textContent).toContain("No layer below to clip to.");
+    expect(find(".layer-options-help").textContent).toBe("Keep at least one layer.");
+    renderBar();
+    expect(find(".layer-options-help").textContent).toBe("Undo brings a deleted layer back.");
+  });
+
+  it("lets arrow keys reach all actions while retaining one Tab stop", () => {
+    renderBar();
+    click(tile(labels.lock));
+    tile(labels.lock).focus();
+    press(tile(labels.lock), "ArrowDown");
+    expect(document.activeElement).toBe(tile(labels.clip));
+    press(tile(labels.clip), "ArrowRight");
+    expect(document.activeElement).toBe(tile(labels.moveBack));
+    expect(tile(labels.moveBack).tabIndex).toBe(0);
+    expect(tile(labels.lock).tabIndex).toBe(-1);
+  });
+
+  it("prevents locking a blank layer but always lets an existing lock be removed", () => {
+    renderBar({ inked: false });
+    expect(tile(labels.lock).getAttribute("aria-disabled")).toBe("true");
+    expect(tile(labels.lock).textContent).toContain(
+      "Draw on this layer before locking transparent pixels.",
+    );
+    click(tile(labels.lock));
+    expect(handlers.onLock).not.toHaveBeenCalled();
+    renderBar({ inked: false, locked: true });
+    expect(tile(labels.lock).getAttribute("aria-disabled")).toBeNull();
+    expect(tile(labels.lock).textContent).toContain(
+      "This layer is empty. Turn off the lock to draw.",
+    );
+    click(tile(labels.lock));
+    expect(handlers.onLock).toHaveBeenCalledExactlyOnceWith(false);
+  });
+
+  it("keeps the maximum-layer explanation readable while options cover the Add label", () => {
+    renderBar({ count: 10 });
+    expect(find(".layer-options-maximum").textContent).toBe("10 layers · maximum");
   });
 });

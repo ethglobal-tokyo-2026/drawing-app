@@ -8,6 +8,9 @@ import type { LayerChipView } from "./layerView";
 import { testHost } from "./testHost";
 import { layOut } from "./layerListTesting";
 
+// happy-dom has no painted canvas; help still follows the real chip's ink state.
+vi.mock("./layerThumbnails", () => ({ drawThumbnail: vi.fn() }));
+
 const { render, find, findAll, click, press } = testHost();
 const onAdd = vi.fn<() => void>();
 const onSelect = vi.fn<(id: LayerId) => void>();
@@ -51,12 +54,139 @@ const addTile = () =>
   find<HTMLButtonElement>(`[aria-label="${i18next.t(($) => $.stickerCreation.layers.add)}"]`);
 
 beforeEach(() => {
+  localStorage.clear();
   onAdd.mockReset();
   onSelect.mockReset();
   onToggleOptions.mockReset();
 });
 
 describe("LayerColumn", () => {
+  it("offers options help only for a blank current layer in a stack", () => {
+    renderColumn({ chips: chipsOf([1]), current: 1 });
+    expect(findAll(".layer-options-hint")).toHaveLength(0);
+    renderColumn();
+    const hint = find(".layer-options-hint");
+    expect(chip(2).getAttribute("aria-describedby")).toBe(hint.id);
+    renderColumn({ chips: chipsOf([1, 2, 3], { 2: { inked: true } }) });
+    expect(findAll(".layer-options-hint")).toHaveLength(0);
+  });
+
+  it("remembers an options opening across a new column and never overlaps help with options", () => {
+    renderColumn();
+    expect(findAll(".layer-options-hint")).toHaveLength(1);
+    renderColumn({ optionsOpen: true, options: <button type="button">Layer action</button> });
+    expect(findAll(".layer-options-hint")).toHaveLength(0);
+    expect(findAll(".layer-options")).toHaveLength(1);
+    render(null);
+    renderColumn();
+    expect(findAll(".layer-options-hint")).toHaveLength(0);
+  });
+
+  it("dismisses help with a named button, keeps focus on the current chip, and remembers dismissal", () => {
+    renderColumn();
+    const dismiss = find<HTMLButtonElement>(".layer-options-hint button");
+    expect(dismiss.getAttribute("aria-label")).toBeTruthy();
+    click(dismiss);
+    expect(findAll(".layer-options-hint")).toHaveLength(0);
+    expect(document.activeElement).toBe(chip(2));
+    render(null);
+    renderColumn();
+    expect(findAll(".layer-options-hint")).toHaveLength(0);
+  });
+
+  it("Escape closes options and restores the current chip without reaching the screen's handler", () => {
+    const outsideEscape = vi.fn();
+    function Column() {
+      const [optionsOpen, setOptionsOpen] = useState(true);
+      return (
+        <div
+          onKeyDown={(event) => {
+            if (event.key === "Escape") outsideEscape();
+          }}
+        >
+          <LayerColumn
+            chips={chipsOf([1, 2, 3])}
+            current={2}
+            canAdd
+            thumbnails={() => null}
+            optionsOpen={optionsOpen}
+            edge="left"
+            onAdd={onAdd}
+            onSelect={onSelect}
+            onToggleOptions={onToggleOptions}
+            onCloseOptions={() => setOptionsOpen(false)}
+            options={<button type="button">Layer action</button>}
+          />
+        </div>
+      );
+    }
+    render(<Column />);
+    const action = find<HTMLButtonElement>(".layer-options button");
+    act(() => action.focus());
+    act(() => {
+      // Repeated Escape before React commits must close, never toggle options back open.
+      action.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      action.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(findAll(".layer-options")).toHaveLength(0);
+    expect(document.activeElement).toBe(chip(2));
+    expect(chip(2).tabIndex).toBe(0);
+    expect(chip(2).getAttribute("aria-expanded")).toBe("false");
+    expect(outsideEscape).not.toHaveBeenCalled();
+    expect(onToggleOptions).not.toHaveBeenCalled();
+  });
+
+  it("explains the layer limit beside the unavailable Add control until a layer is removed", () => {
+    renderColumn({ chips: chipsOf([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]), canAdd: false });
+    const maximum = find(".layer-maximum");
+    expect(maximum.textContent).toContain("10");
+    expect(addTile().getAttribute("aria-describedby")).toBe(maximum.id);
+    renderColumn();
+    expect(findAll(".layer-maximum")).toHaveLength(0);
+    expect(addTile().hasAttribute("aria-describedby")).toBe(false);
+  });
+
+  it.each([
+    { edge: "left" as const, chipTop: 85, expectedTop: -12 },
+    { edge: "left" as const, chipTop: 340, expectedTop: 144 },
+    { edge: "right" as const, chipTop: 635, expectedTop: 330 },
+  ])(
+    "keeps a tall options panel inside the screen and above the column foot: $edge/$chipTop",
+    ({ edge, chipTop, expectedTop }) => {
+      const ui = (
+        <div className="drawing-screen">
+          <LayerColumn
+            chips={chipsOf([1, 2, 3])}
+            current={2}
+            canAdd
+            thumbnails={() => null}
+            optionsOpen
+            edge={edge}
+            onAdd={onAdd}
+            onSelect={onSelect}
+            onToggleOptions={onToggleOptions}
+            onCloseOptions={() => {}}
+            options={<button type="button">Layer action</button>}
+          />
+        </div>
+      );
+      render(ui);
+      find(".drawing-screen").getBoundingClientRect = () => new DOMRect(0, 80, 390, 600);
+      find(".layer-column").getBoundingClientRect = () =>
+        new DOMRect(edge === "left" ? 0 : 324, 100, 66, 560);
+      chip(2).getBoundingClientRect = () => new DOMRect(0, chipTop, 30, 38);
+      const panel = find(".layer-options");
+      panel.getBoundingClientRect = () => new DOMRect(0, 0, 236, 230);
+      const list = find(".layer-list");
+      list.getBoundingClientRect = () => new DOMRect(0, 80, 50, 580);
+      Object.defineProperty(list, "clientHeight", { value: 580 });
+      act(() => {
+        list.dispatchEvent(new Event("scroll"));
+      });
+      expect(panel.style.top).toBe(`${expectedTop}px`);
+    },
+  );
+
   it("selects a chip that isn't current, and opens the current chip's options instead of selecting it", () => {
     renderColumn();
     click(chip(3));
