@@ -109,6 +109,10 @@ export const sessionRoutes = (deps: AppDeps) =>
           ? apiError(c, 401, "line_token_expired", "LINE access token expired")
           : apiError(c, 401, "line_token_invalid", "LINE refused the access token");
       }
+      const expected = c.req.header("x-croquis-user-id");
+      if (expected !== undefined && liveUser(deps.db, expected)?.lineUserId !== profile.sub) {
+        return apiError(c, 409, "session_account_changed");
+      }
       const lineProfile = {
         lineDisplayName: profile.name,
         linePictureUrl: profile.picture ?? null,
@@ -140,7 +144,8 @@ export const sessionRoutes = (deps: AppDeps) =>
         },
         { behavior: "immediate" },
       );
-      await setSessionCookie(c, deps, user.id);
+      // A background refresh can finish after another tab signs in. It must never replace that cookie.
+      if (expected === undefined) await setSessionCookie(c, deps, user.id);
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
     // Logging out of LINE ends the session too, so a browser handed to someone else holds none.

@@ -9,7 +9,7 @@
     "lint": "oxlint --type-check",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "env -u NO_COLOR playwright test",
     "chat-menus": "tsx --tsconfig tsconfig.scripts.json scripts/renderChatMenus.tsx",
     "croquis-sans": "uv run --script scripts/buildCroquisSans.py",
     "test:ipad-safari": "tsx --tsconfig tsconfig.scripts.json scripts/ipadSafari.ts",

@@ -27,7 +27,7 @@ const urlOf = (input: RequestInfo | URL) =>
  * The typed client over the REST API on this origin, so the session cookie goes along. A request
  * that gets no answer, or none in time, is an ApiError with status 0.
  */
-export function createServerClient(fetchImpl: typeof fetch = fetch) {
+export function createServerClient(fetchImpl: typeof fetch = fetch, expectedUserId?: string) {
   return hc<AppType>("/", {
     fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
       const diagnostic = startNftRequest(
@@ -35,12 +35,29 @@ export function createServerClient(fetchImpl: typeof fetch = fetch) {
         init?.method ?? (input instanceof Request ? input.method : "GET"),
       );
       try {
+        const headers = new Headers(input instanceof Request ? input.headers : undefined);
+        new Headers(init?.headers).forEach((value, key) => headers.set(key, value));
+        if (expectedUserId !== undefined) headers.set("x-croquis-user-id", expectedUserId);
         const response = await fetchImpl(input, {
           ...init,
+          headers,
           credentials: "same-origin",
           signal: init?.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });
         diagnostic?.completed(response);
+        const account = headers.get("x-croquis-user-id");
+        if (account && (response.status === 401 || response.status === 409)) {
+          const body: unknown = await response
+            .clone()
+            .json()
+            .catch(() => null);
+          if (
+            isErrorBody(body) &&
+            (body.error === "signed_out" || body.error === "session_account_changed")
+          ) {
+            reportSessionLost(new ApiError(response.status, body), account);
+          }
+        }
         return response;
       } catch (error) {
         diagnostic?.networkFailed();
@@ -76,7 +93,6 @@ async function refusal(response: Response, what: string): Promise<ApiError> {
           detail: `${what} answered ${response.status}: ${text}`,
         },
   );
-  if (error.status === 401 && error.code === "signed_out") reportSessionLost(error);
   return error;
 }
 
@@ -105,36 +121,50 @@ export interface SessionApi {
   /** POST /api/session: LINE's ID token, and LINE's language, which a new account starts in. */
   signIn: (
     request: InferRequestType<ServerClient["session"]["$post"]>["json"],
+    expectedUserId?: string,
   ) => Promise<{ me: Me }>;
   /** GET /api/me; only resume a session belonging to this LINE user when supplied. */
-  me: (lineUserId?: string) => Promise<{ me: Me }>;
+  me: (lineUserId?: string, expectedUserId?: string) => Promise<{ me: Me }>;
   /** POST /api/me/handle */
-  setHandle: (handle: string) => Promise<{ me: Me }>;
+  setHandle: (handle: string, expectedUserId: string) => Promise<{ me: Me }>;
   /** DELETE /api/session: ends the session, so the cookie is gone. */
-  signOut: () => Promise<void>;
+  signOut: (expectedUserId: string) => Promise<void>;
 }
 
 export function createSessionApi(api: ServerClient = createServerClient()): SessionApi {
   return {
-    signIn: async (request) => {
-      const response = await api.session.$post({ json: request });
+    signIn: async (request, expectedUserId) => {
+      const response = await api.session.$post(
+        { json: request },
+        {
+          headers: expectedUserId === undefined ? {} : { "x-croquis-user-id": expectedUserId },
+        },
+      );
       if (!response.ok) throw await refusal(response, "POST /api/session");
       return response.json();
     },
-    signOut: async () => {
-      const response = await api.session.$delete();
+    signOut: async (expectedUserId) => {
+      const response = await api.session.$delete(undefined, {
+        headers: { "x-croquis-user-id": expectedUserId },
+      });
       if (!response.ok) throw await refusal(response, "DELETE /api/session");
     },
-    me: async (lineUserId) => {
+    me: async (lineUserId, expectedUserId) => {
       const response = await api.me.$get(
         { header: lineUserId ? { "x-line-user-id": lineUserId } : {} },
-        { init: { cache: "no-store" } },
+        {
+          init: { cache: "no-store" },
+          headers: expectedUserId === undefined ? {} : { "x-croquis-user-id": expectedUserId },
+        },
       );
       if (!response.ok) throw await refusal(response, "GET /api/me");
       return response.json();
     },
-    setHandle: async (handle) => {
-      const response = await api.me.handle.$post({ json: { handle } });
+    setHandle: async (handle, expectedUserId) => {
+      const response = await api.me.handle.$post(
+        { json: { handle } },
+        { headers: { "x-croquis-user-id": expectedUserId } },
+      );
       if (!response.ok) throw await refusal(response, "POST /api/me/handle");
       return response.json();
     },
@@ -312,10 +342,18 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/deposit`);
       return (await response.json()).gift;
     },
-    reportShared: async (giftId, outcome) => {
+    beginMessageAttempt: async (giftId, attemptId) => {
+      const response = await api.gifts[":giftId"]["message-attempt"].$post({
+        ...gift(giftId),
+        json: { attemptId },
+      });
+      if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/message-attempt`);
+      return (await response.json()).gift;
+    },
+    reportShared: async (giftId, attemptId, outcome) => {
       const response = await api.gifts[":giftId"].shared.$post({
         ...gift(giftId),
-        json: { outcome },
+        json: { attemptId, outcome },
       });
       if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/shared`);
       return (await response.json()).gift;
@@ -364,8 +402,13 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       return response.json();
     },
 
-    recordGratitude: async (combo) => {
-      const response = await api.gratitude.$post({ json: combo }, { init: { keepalive: true } });
+    recordGratitude: async (combo, options) => {
+      const deadline = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+      const signal = options?.signal ? AbortSignal.any([options.signal, deadline]) : deadline;
+      const response = await api.gratitude.$post(
+        { json: combo },
+        { init: { keepalive: true, signal } },
+      );
       if (!response.ok) throw await refusal(response, "POST /api/gratitude");
       return (await response.json()).gratitude;
     },

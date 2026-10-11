@@ -349,8 +349,10 @@ describe("useTimelapse", () => {
 
   it("skips to the finished ink when the sticker is tapped", async () => {
     const player = await playing();
-    act(() => overlay()?.click());
-    expect(player.calls).toContain("skip");
+    await act(async () => {
+      overlay()?.click();
+      expect(player.calls).toContain("skip");
+    });
   });
 
   it("skips to the finished ink while it plays, and the ending still plays", async () => {
@@ -363,6 +365,21 @@ describe("useTimelapse", () => {
     advance(HOLD_MS + FADE_MS);
     expect(phase()).toBe("idle");
     expect(swept).toHaveBeenCalledOnce();
+  });
+
+  it("keeps playing after Skip until streamed fills have actually finished", async () => {
+    const player = await playing();
+    vi.spyOn(player, "skip").mockImplementation(() => {
+      player.calls.push("skip");
+    });
+    press();
+    await settle();
+    expect(player.calls).toContain("skip");
+    expect(phase()).toBe("playing");
+    expect(player.calls).not.toContain("takeInk");
+    player.finish();
+    await settle();
+    expect(phase()).toBe("ending");
   });
 
   it("shows the sticker at once when skipped during the ending, with no sheen", async () => {

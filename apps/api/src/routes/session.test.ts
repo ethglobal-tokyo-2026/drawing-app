@@ -71,13 +71,13 @@ const signIn = (profile: LineProfile, language = "en") =>
 const getMe = (headers: Record<string, string>) => test.send("GET", "/api/me", { headers });
 
 /** The Cookie header that sends back the session a response set. */
-function sessionCookie(response: Response) {
+async function sessionCookie(response: Response) {
   const [cookie = ""] = (response.headers.get("set-cookie") ?? "").split(";");
-  return { Cookie: cookie };
+  return { Cookie: cookie, "x-croquis-user-id": (await meIn(response.clone())).id };
 }
 
 /** `me` from a 200 answer. */
-const meIn = async (response: Response) => (await bodyOf(response, meBodySchema)).me;
+const meIn = async (response: Response) => (await bodyOf(response.clone(), meBodySchema)).me;
 
 const setHandle = (headers: Record<string, string>, handle: unknown) =>
   test.send("POST", "/api/me/handle", { headers, body: { handle } });
@@ -97,7 +97,7 @@ describe("signing in", () => {
       lineUserId: ALICE.sub,
       needsHandle: false,
     });
-    expect(await meIn(await getMe(sessionCookie(response)))).toEqual(me);
+    expect(await meIn(await getMe(await sessionCookie(response)))).toEqual(me);
   });
 
   it("makes a LINE name a handle without its hidden characters, keeping an emoji's", async () => {
@@ -121,7 +121,7 @@ describe("signing in", () => {
   });
 
   it("ends the session SESSION_MAX_AGE_S after signing in, for a copy of its cookie too", async () => {
-    const headers = sessionCookie(await signIn(ALICE));
+    const headers = await sessionCookie(await signIn(ALICE));
     test.clock.advance(SESSION_MAX_AGE_S * 1000 - 1);
     expect((await getMe(headers)).status).toBe(200);
     test.clock.advance(1);
@@ -280,7 +280,7 @@ describe("signing in", () => {
 describe("me", () => {
   it("reuses a signed session only for the requested LINE account", async () => {
     const signedIn = await signIn(ALICE);
-    const headers = sessionCookie(signedIn);
+    const headers = await sessionCookie(signedIn);
     const me = await meIn(signedIn);
     const matching = await getMe({ ...headers, "x-line-user-id": ALICE.sub });
     expect(matching.headers.get("cache-control")).toBe("no-store");
@@ -299,7 +299,7 @@ describe("me", () => {
   });
 
   it("rejects an empty or oversized LINE account header", async () => {
-    const headers = sessionCookie(await signIn(ALICE));
+    const headers = await sessionCookie(await signIn(ALICE));
     for (const lineUserId of ["", "x".repeat(LINE_USER_ID_MAX_LENGTH + 1)]) {
       expect(
         await refusalOf(await getMe({ ...headers, "x-line-user-id": lineUserId })),
@@ -474,7 +474,7 @@ describe("deleting your account", () => {
   it("forgets LINE, the handle, the NSFW opt-in and Kyoto Seika Manga Expression Practice Mode, keeps the rest, ends the session, and a new sign-in makes a new person", async () => {
     const signedIn = await signIn(ALICE);
     const { id } = await meIn(signedIn);
-    const headers = sessionCookie(signedIn);
+    const headers = await sessionCookie(signedIn);
     const wallet = fakeSuiAddress(id);
     const now = test.clock.now();
     test.db
@@ -519,14 +519,15 @@ describe("deleting your account", () => {
 });
 
 describe("signing out", () => {
-  it("clears the cookie, with a session or without one", async () => {
-    const headers = sessionCookie(await signIn(ALICE));
-    for (const sent of [headers, {}]) {
-      const response = await test.send("DELETE", "/api/session", { headers: sent });
-      expect(response.status).toBe(204);
-      const cleared = response.headers.get("set-cookie") ?? "";
-      expect(cleared.startsWith(`${SESSION_COOKIE}=;`)).toBe(true);
-      expect(cleared).toContain("Max-Age=0");
-    }
+  it("clears only the authenticated matching account's cookie", async () => {
+    const headers = await sessionCookie(await signIn(ALICE));
+    const response = await test.send("DELETE", "/api/session", { headers });
+    expect(response.status).toBe(204);
+    const cleared = response.headers.get("set-cookie") ?? "";
+    expect(cleared.startsWith(`${SESSION_COOKIE}=;`)).toBe(true);
+    expect(cleared).toContain("Max-Age=0");
+    const anonymous = await test.send("DELETE", "/api/session");
+    expect(anonymous.status).toBe(401);
+    expect(anonymous.headers.get("set-cookie")).toBeNull();
   });
 });

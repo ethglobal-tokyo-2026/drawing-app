@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { BoardSticker } from "@drawing-app/api/client";
+import type { BoardSticker, UserStats } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "../api/apiClient";
@@ -46,9 +46,21 @@ const three = () => [
   boardSticker({ placement: placedAt(0.2, 0.2), sticker: sticker({ artist: people.mika }) }),
 ];
 
+const stats: UserStats = {
+  since: "2026-09-01T00:00:00.000Z",
+  made: 0,
+  received: 0,
+  given: 0,
+  gratitude: { direct: 0, residual: 0, total: 0 },
+  bests: { bestCombo: 0, mostGratitudeInADay: 0, longestStreak: 0 },
+  streak: 0,
+};
+
 async function visit(boardStickers: BoardSticker[], overrides: Partial<ApiClient> = {}) {
   const api = emptyApi({
     stickerBoard: () => Promise.resolve({ owner: people.ken, boardStickers }),
+    userStats: () => Promise.resolve(stats),
+    suiAddress: () => Promise.resolve(null),
     ...overrides,
   });
   const view = renderWithApi(<ArtistBoard person={people.ken} onBack={() => {}} />, api);
@@ -193,12 +205,16 @@ describe("ArtistBoard's Give key", () => {
           ? { owner: people.ken, boardStickers: three() }
           : { owner: TEST_OWNER, boardStickers: [boardSticker()] },
       ),
-    packageGift: (stickerId: string) =>
+    packageGift: (stickerId: string, forUserId?: string) =>
       Promise.resolve({
         gift: gift({ stickerId, status: "packed" }),
+        forUserId: forUserId ?? null,
         giftClaimToken: `0x${"ab".repeat(32)}`,
+        messageAttempt: null,
         deposit: null,
       }),
+    beginMessageAttempt: (giftId: string) =>
+      Promise.resolve(gift({ id: giftId, status: "packed" })),
     reportShared: (giftId: string) => Promise.resolve(gift({ id: giftId, status: "sent" })),
   });
 

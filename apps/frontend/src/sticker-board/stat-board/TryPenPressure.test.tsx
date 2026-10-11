@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderWithApi } from "../../api/testing";
+import { renderInHost } from "../../ui/testing";
 import type { PenPressure } from "../../sticker-creation/canvas/brush";
 import { contextOf, forgetContexts } from "../timelapse/testCanvas";
 import { TryPenPressure } from "./TryPenPressure";
@@ -34,7 +34,7 @@ afterEach(() => {
 function strip(response: PenPressure, fingersDraw = true): HTMLElement {
   vi.stubGlobal("requestAnimationFrame", (frame: (time: number) => void) => frames.push(frame));
   vi.stubGlobal("cancelAnimationFrame", () => {});
-  const view = renderWithApi(<TryPenPressure response={response} fingersDraw={fingersDraw} />);
+  const view = renderInHost(<TryPenPressure response={response} fingersDraw={fingersDraw} />);
   unmount = view.unmount;
   const paper = view.host.querySelector<HTMLElement>(".try-pen-pressure__ink");
   if (!paper) throw new Error("No Try it strip");

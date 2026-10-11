@@ -4,6 +4,7 @@ import { renderInHost } from "../ui/testing";
 import { ApiError, type ApiClient } from "./apiClient";
 import { ApiProvider } from "./ApiProvider";
 import { TicketsProvider } from "../tickets/TicketsProvider";
+import { BoardPlacementSavesProvider } from "../sticker-board/BoardPlacementSavesProvider";
 import { MeHolder } from "./MeHolder";
 
 /** The board's owner in tests: you. */
@@ -130,6 +131,7 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
     buyTickets: unanswered("buyTickets"),
     packageGift: unanswered("packageGift"),
     reportDeposit: unanswered("reportDeposit"),
+    beginMessageAttempt: unanswered("beginMessageAttempt"),
     reportShared: unanswered("reportShared"),
     startTakeOut: unanswered("startTakeOut"),
     takeOutGift: unanswered("takeOutGift"),
@@ -164,7 +166,9 @@ export function renderWithApi(ui: ReactNode, client: ApiClient = emptyApi(), me:
   const wrap = (node: ReactNode) => (
     <MeHolder me={me} replace={replace}>
       <ApiProvider client={client}>
-        <TicketsProvider>{node}</TicketsProvider>
+        <BoardPlacementSavesProvider>
+          <TicketsProvider>{node}</TicketsProvider>
+        </BoardPlacementSavesProvider>
       </ApiProvider>
     </MeHolder>
   );

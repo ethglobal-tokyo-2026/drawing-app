@@ -76,6 +76,11 @@ type StartedPurchase =
   | { purchase: StartedTicketPurchase; payment: SponsoredTransaction }
   | { purchase: StartedTicketPurchase; payment: null; tickets: Tickets };
 
+/** Cancellation owned by the screen or background work making the request. */
+interface ApiRequestOptions {
+  signal?: AbortSignal;
+}
+
 /** The REST API, one method per route the app calls. */
 export interface ApiClient {
   /** POST /api/me/language-choice: the language picked in Settings, the account's from then on. */
@@ -139,8 +144,10 @@ export interface ApiClient {
   packageGift: (stickerId: string, forUserId?: string) => Promise<PackagedGift>;
   /** POST /api/gifts/:giftId/deposit: the signed deposit, which the server runs. */
   reportDeposit: (giftId: string, signed: SignedTransaction) => Promise<Gift>;
+  /** POST /api/gifts/:giftId/message-attempt */
+  beginMessageAttempt: (giftId: string, attemptId: string) => Promise<Gift>;
   /** POST /api/gifts/:giftId/shared */
-  reportShared: (giftId: string, outcome: "sent" | "cancelled") => Promise<Gift>;
+  reportShared: (giftId: string, attemptId: string, outcome: "sent" | "cancelled") => Promise<Gift>;
   /** POST /api/gifts/:giftId/take-out/start */
   startTakeOut: (giftId: string) => Promise<TakeOutStart>;
   /** POST /api/gifts/:giftId/take-out: the signed take-out, which the server runs. */
@@ -157,7 +164,7 @@ export interface ApiClient {
   receiveGiftForYou: (giftId: string) => Promise<ReceivedGift>;
 
   /** POST /api/gratitude, sent with keepalive so it lands as the page closes. */
-  recordGratitude: (combo: RecordGratitude) => Promise<Gratitude>;
+  recordGratitude: (combo: RecordGratitude, options?: ApiRequestOptions) => Promise<Gratitude>;
   /** GET /api/gratitude/unseen */
   unseenGratitude: () => Promise<UnseenGratitude>;
   /** GET /api/gratitude/:giftId */

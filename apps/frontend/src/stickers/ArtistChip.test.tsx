@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { people } from "../api/testFixtures";
-import { renderWithApi } from "../api/testing";
+import { renderInHost } from "../ui/testing";
 import { toPerson } from "../api/views";
 import { i18next } from "../i18n/i18n";
 import { ArtistChip } from "./ArtistChip";
@@ -12,12 +12,12 @@ const ken = toPerson(people.ken);
 const labelFor = (name: string) => i18next.t(($) => $.stickers.artistChip.label, { name });
 const CAPTION = i18next.t(($) => $.stickers.artistChip.artist);
 
-let rendered: ReturnType<typeof renderWithApi> | undefined;
+let rendered: ReturnType<typeof renderInHost> | undefined;
 afterEach(() => rendered?.unmount());
 
 /** The chip `ui` renders, found by its role. */
 function noteOf(ui: ReactNode) {
-  rendered = renderWithApi(ui);
+  rendered = renderInHost(ui);
   const note = rendered.host.querySelector('[role="note"]');
   if (!note) throw new Error("no note rendered");
   return note;

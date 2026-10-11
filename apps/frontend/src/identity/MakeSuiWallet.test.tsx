@@ -16,12 +16,13 @@ let host: HTMLDivElement;
 let root: Root;
 let setStatus: (status: PrivyStatus) => void;
 let suiWallet: typeof import("./suiWallet");
+let MakeSuiWallet: (typeof import("./MakeSuiWallet"))["MakeSuiWallet"];
 
 // Each test starts with nothing asked yet, so each gets its own copy of the modules.
 beforeEach(async () => {
   vi.resetModules();
   const privy = await import("./privy");
-  const { MakeSuiWallet } = await import("./MakeSuiWallet");
+  ({ MakeSuiWallet } = await import("./MakeSuiWallet"));
   suiWallet = await import("./suiWallet");
   setStatus = (status) => act(() => privy.setPrivyStatus(status));
   createWallet.mockResolvedValue({});
@@ -56,6 +57,22 @@ describe("making the person's Sui wallet", () => {
 
     signedIn();
     expect(createWallet).toHaveBeenCalledExactlyOnceWith({ chainType: "sui" });
+  });
+
+  it("keeps one wallet creation in flight across repeated renders", async () => {
+    let finish: ((wallet: object) => void) | undefined;
+    createWallet.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    signedIn();
+    for (let render = 0; render < 3; render++) {
+      act(() => root.render(<MakeSuiWallet />));
+      signedIn();
+    }
+    expect(createWallet).toHaveBeenCalledExactlyOnceWith({ chainType: "sui" });
+    await act(async () => finish?.({}));
   });
 
   it("leaves someone who has one alone", () => {

@@ -56,6 +56,8 @@ export interface InkSettings {
   locked: boolean;
   /** The person paused the clock: the sheet takes no marks. */
   paused: boolean;
+  /** A tool panel is open: accepted ink finishes before its controls take input. */
+  panelOpen: boolean;
   /**
    * Pencil only: fingers tap, to undo and redo, and never draw. Pencil and finger: both draw. Null on
    * a device no pen has drawn on: fingers draw, and no contact is judged a palm by its size.
@@ -259,17 +261,19 @@ export class InkEngine implements LayerControls {
     return this.latest;
   }
 
-  /**
-   * A sheet that locks ends the stroke in progress where it stands, drops a fill tap still down, and
-   * shows the current layer at its own opacity, since a seal is cut at that.
-   */
+  /** A sheet that stops taking ink ends accepted strokes and drops held contacts. */
   set settings(next: InkSettings) {
+    const wasAvailable = !this.latest.locked && !this.latest.paused && !this.latest.panelOpen;
+    const unavailable = next.locked || next.paused || next.panelOpen;
     const locking = next.locked && !this.latest.locked;
     this.latest = next;
-    if (!locking || this.suspended || this.needsReplay) return;
-    this.endStroke(false);
-    this.swallowWhere((role) => role.kind === "fill");
-    this.withRoom("restoring layer opacity", () => this.display.previewOpacity(null));
+    if (wasAvailable && unavailable) {
+      this.endStroke(false);
+      this.taps.clear();
+      this.swallowWhere(() => true);
+    }
+    if (locking && !this.suspended && !this.needsReplay)
+      this.withRoom("restoring layer opacity", () => this.display.previewOpacity(null));
   }
 
   /** Listens for pointers on the sheet; returns the detach. */

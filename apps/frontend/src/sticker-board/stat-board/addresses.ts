@@ -8,7 +8,7 @@ const ARRIVE_MS = 15_000;
 export type ChainAddress =
   | { state: "loading" }
   /** `retry` is there when asking Privy again can bring the address. */
-  | { state: "failed"; retry?: () => void }
+  | { state: "failed"; retry?: () => void; reloadRequired?: boolean }
   | { state: "ready"; address: string };
 
 /** True once `waiting` has held for ARRIVE_MS, which it logs, since nothing else would. */
@@ -38,6 +38,7 @@ export function useSuiAddress(): ChainAddress {
   const address = privy.state === "signed-in" ? privy.suiWallet : undefined;
   const late = useLate(privy.state === "signed-in" && !address && !refused, "The Sui address");
   const privyFailed = privy.state === "failed";
+  const reloadRequired = privyFailed && privy.reloadRequired === true;
   // Under LIFF Mock (the dev server, the demo build) Privy never signs in, so no address is coming.
   const privyOff = privy.state === "off";
   useEffect(() => {
@@ -45,14 +46,14 @@ export function useSuiAddress(): ChainAddress {
   }, [privyOff]);
   // One object while nothing changes, so the papers showing it skip the renders of a board's turns.
   return useMemo((): ChainAddress => {
-    if (privyFailed) return { state: "failed", retry: () => retryPrivySignIn() };
+    if (privyFailed) return { state: "failed", retry: () => retryPrivySignIn(), reloadRequired };
     if (privyOff) return { state: "failed" };
     if (address) return { state: "ready", address };
     if (refused) return { state: "failed", retry: askForSuiWalletAgain };
     // Privy may still answer, and asking it twice at once could make two wallets.
     if (late) return { state: "failed" };
     return { state: "loading" };
-  }, [privyFailed, privyOff, address, refused, late]);
+  }, [privyFailed, reloadRequired, privyOff, address, refused, late]);
 }
 
 /** 0x3F2a…9c1B: enough of each end to tell two addresses apart. */

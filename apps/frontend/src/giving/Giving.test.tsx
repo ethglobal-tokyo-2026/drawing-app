@@ -2,13 +2,18 @@
 import type { Gift } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { emptyApi, renderWithApi, shownText } from "../api/testing";
-import { gift, MARKUP_LIKE_NAME } from "../api/testFixtures";
+import { emptyApi, renderWithApi, shownText, TEST_ME } from "../api/testing";
+import { boardSticker, gift, MARKUP_LIKE_NAME } from "../api/testFixtures";
 import { giving } from "../i18n/strings/giving";
+import { refusingStorage } from "../ui/testing";
 import { formatDay, formatDuration, formatNo } from "../stickers/format";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
 import { PICKER_OPENING_MS, PREPARING_SLOW_MS } from "./giveFlow";
 import { Giving } from "./Giving";
+import { GiveSheet } from "./GiveSheet";
+
+const stalePickerSend = vi.hoisted(() => vi.fn());
+vi.mock("./useGiftSender", () => ({ useGiftSender: () => ({ send: stalePickerSend }) }));
 
 const liff = vi.hoisted(() => ({ openWindow: vi.fn() }));
 vi.mock("@line/liff", () => ({ default: liff }));
@@ -38,13 +43,21 @@ function giftsApi() {
     return Promise.resolve(gift({ id: giftId, stickerId, status }));
   };
   return emptyApi({
-    packageGift: (stickerId) => {
+    packageGift: (stickerId, forUserId) => {
       const packed = gift({ stickerId, status: "packed" });
       byGift.set(packed.id, stickerId);
       giftStatus.set(stickerId, "packed");
-      return Promise.resolve({ gift: packed, giftClaimToken: token, deposit: null });
+      return Promise.resolve({
+        gift: packed,
+        forUserId: forUserId ?? null,
+        giftClaimToken: token,
+        messageAttempt: null,
+        deposit: null,
+      });
     },
-    reportShared: (giftId, outcome) => settle(giftId, outcome === "sent" ? "sent" : "packed"),
+    beginMessageAttempt: (giftId) => settle(giftId, "packed"),
+    reportShared: (giftId, _attemptId, outcome) =>
+      settle(giftId, outcome === "sent" ? "sent" : "packed"),
     startTakeOut: (giftId) => settle(giftId, "taken_out").then((gift) => ({ gift })),
   });
 }
@@ -76,7 +89,7 @@ const open = (
       sender={sender}
       liffId="2011732197-P98cxGpu"
       onClose={onClose}
-      {...(toHandle && { toHandle })}
+      {...(toHandle && { toHandle, forUserId: `user-${toHandle}` })}
     />,
     api,
   );
@@ -144,6 +157,71 @@ describe("Giving", () => {
     expect(onClose).toHaveBeenCalledWith(true);
   });
 
+  it("keeps a storage failure visible after LINE cancels and the server records it", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("localStorage", refusingStorage);
+    open("s-storage-failed");
+    await cancelPicker();
+    expect(document.body.textContent).toContain(giving.transferProblem.storage_failed.en);
+    vi.unstubAllGlobals();
+    log.mockRestore();
+  });
+
+  it("shows a persistent storage warning when recovery cannot read kept outcomes", async () => {
+    const api = giftsApi();
+    const original = await api.packageGift("s-read-blocked");
+    const attemptId = `0x${"89".repeat(32)}`;
+    vi.spyOn(api, "packageGift").mockResolvedValue({
+      ...original,
+      giftClaimToken: null,
+      messageAttempt: { id: attemptId, state: "pending" },
+    });
+    const storage = localStorage;
+    const failure = new Error("Gift outcome reads blocked");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const setItem = vi.fn(storage.setItem.bind(storage));
+    const removeItem = vi.fn(storage.removeItem.bind(storage));
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => {
+        if (key === "draw.gifts.kept.me") throw failure;
+        return storage.getItem(key);
+      },
+      setItem,
+      removeItem,
+    });
+    try {
+      open("s-read-blocked", { api });
+      await wait(1150);
+      expect(title()).toBe("Did it go out?");
+      expect(document.body.textContent).toContain(giving.transferProblem.storage_failed.en);
+      await wait(5000);
+      expect(document.body.textContent).toContain(giving.transferProblem.storage_failed.en);
+      expect(setItem).not.toHaveBeenCalled();
+      expect(removeItem).not.toHaveBeenCalled();
+      expect(log).toHaveBeenCalledExactlyOnceWith(
+        "Giving's kept gifts can't be read on this device",
+        failure,
+      );
+    } finally {
+      vi.unstubAllGlobals();
+      log.mockRestore();
+    }
+  });
+
+  it("keeps a missing-token gift in the bag when Giving closes", async () => {
+    const api = giftsApi();
+    const original = await api.packageGift("s-no-token");
+    vi.spyOn(api, "packageGift").mockResolvedValue({ ...original, giftClaimToken: null });
+    const takeOut = vi.spyOn(api, "startTakeOut");
+    open("s-no-token", { api });
+    await wait(1150);
+    expect(document.body.textContent).toContain(giving.transferProblem.no_link.en);
+    expect(takeOut).not.toHaveBeenCalled();
+    pressEscape();
+    expect(onClose).toHaveBeenCalledExactlyOnceWith(false);
+    expect(takeOut).not.toHaveBeenCalled();
+  });
+
   /** A server whose packing waits until `finishPacking` runs. */
   async function slowPacking(stickerId: string) {
     const api = giftsApi();
@@ -205,8 +283,9 @@ describe("Giving", () => {
     send.mockRestore();
   });
 
-  it("tells the giver who can open an NSFW sticker's gift while it's being prepared", () => {
+  it("tells the giver who can open an NSFW sticker's gift while it's being prepared", async () => {
     open("s-nsfw", { nsfw: true });
+    await act(async () => {});
     expect(title()).toBe("Preparing your gift");
     expect(shownText(".giving__nsfw-note")).toBe(giving.nsfw.whoCanOpen.en);
   });
@@ -246,12 +325,14 @@ describe("Giving", () => {
     expect(document.querySelector('[role="status"]')?.textContent).toContain("Not sent yet");
   });
 
-  it("tags the bag for the person chosen on their board, and from the giver otherwise", () => {
+  it("tags first packaging and cancellation for the chosen person, and from the giver for a nullable recipient", async () => {
     open("s-for", { toHandle: "bob" });
+    await cancelPicker();
     expect(document.querySelector(".gift-tag__label")?.textContent).toBe("For");
     expect(document.querySelector(".gift-tag__name")?.textContent).toBe("@bob");
     view.unmount();
     open("s-from");
+    await cancelPicker();
     expect(document.querySelector(".gift-tag__label")?.textContent).toBe("From");
   });
 
@@ -275,8 +356,9 @@ describe("Giving", () => {
     expect(takeOutGift).not.toHaveBeenCalled();
     expect(title()).toBe("Closed and sent");
   });
-  it("prints a handle that reads as markup as it is, in the sticker's fine print", () => {
+  it("prints a handle that reads as markup as it is, in the sticker's fine print", async () => {
     const given = open("s-markup", { fromHandle: MARKUP_LIKE_NAME });
+    await act(async () => {});
     expect(shownText(".giving__meta")).toBe(
       `${formatNo(given.no)} · ${formatDuration(given.timeUsed)} · ${formatDay(given.createdAt)} · @${MARKUP_LIKE_NAME}`,
     );
@@ -316,3 +398,93 @@ describe("Giving", () => {
     });
   });
 });
+
+it.each([
+  { recipient: "user-carol", attempt: null, status: "packed" as const },
+  {
+    recipient: "user-carol",
+    attempt: { id: "attempt-carol", state: "pending" as const },
+    status: "packed" as const,
+  },
+  {
+    recipient: "user-carol",
+    attempt: { id: "attempt-carol", state: "sent" as const },
+    status: "sent" as const,
+  },
+  { recipient: "user-bob", attempt: null, status: "packed" as const },
+  { recipient: null, attempt: null, status: "packed" as const },
+  {
+    recipient: "user-bob",
+    attempt: { id: "attempt-bob", state: "pending" as const },
+    status: "packed" as const,
+  },
+  {
+    recipient: "user-bob",
+    attempt: { id: "attempt-bob", state: "sent" as const },
+    status: "sent" as const,
+  },
+])(
+  "presents the existing gift accurately after a stale Carol picker: $recipient/$status/$attempt",
+  async ({ recipient, attempt, status }) => {
+    const sticker = boardSticker();
+    const originalGift = gift({ stickerId: sticker.stickerId, status });
+    const packageGift = vi.fn(async () => ({
+      gift: originalGift,
+      forUserId: recipient,
+      giftClaimToken: null,
+      messageAttempt: attempt,
+      deposit: null,
+    }));
+    const startTakeOut = vi.fn(async () => ({
+      gift: { ...originalGift, status: "taken_out" as const },
+    }));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    stalePickerSend.mockReset();
+    view = renderWithApi(
+      <GiveSheet
+        to="carol"
+        toId="user-carol"
+        toNsfwOptIn={false}
+        onClose={() => {}}
+        returnFocus={() => null}
+      />,
+      emptyApi({
+        stickerBoard: async () => ({ owner: TEST_ME, boardStickers: [sticker] }),
+        packageGift,
+        startTakeOut,
+      }),
+    );
+    try {
+      await act(async () => {});
+      const select = document.querySelector<HTMLButtonElement>(".sticker-picker button");
+      expect(select).not.toBeNull();
+      act(() => select?.click());
+      act(() => document.querySelector<HTMLButtonElement>(".giving__acts .key")?.click());
+      await act(() => vi.dynamicImportSettled());
+      await wait(1200);
+      expect(packageGift).toHaveBeenCalledWith(sticker.stickerId, "user-carol");
+      const mismatch = recipient !== "user-carol";
+      expect(document.querySelector(".gift-tag__name")?.textContent === "@carol").toBe(!mismatch);
+      expect(
+        document
+          .querySelector(".giving")
+          ?.textContent?.includes(
+            "This sticker is already in a gift with a different recipient. Its original recipient is unchanged.",
+          ),
+      ).toBe(mismatch);
+      expect(stalePickerSend).not.toHaveBeenCalled();
+      expect(startTakeOut).not.toHaveBeenCalled();
+      if (attempt === null) {
+        expect(error).toHaveBeenCalledWith(
+          expect.stringContaining("couldn’t be packed"),
+          expect.any(Error),
+        );
+        tap("Take it out");
+        await wait(1000);
+        expect(startTakeOut).toHaveBeenCalledWith(originalGift.id);
+      } else expect(error).not.toHaveBeenCalled();
+    } finally {
+      error.mockRestore();
+    }
+  },
+);

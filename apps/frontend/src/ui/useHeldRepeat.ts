@@ -27,33 +27,51 @@ export function useHeldRepeat(act: () => void) {
   });
   const timer = useRef<number | undefined>(undefined);
   const repeated = useRef(false);
+  const generation = useRef(0);
   /** Until when a click is the release of a hold that repeated. */
   const swallowUntil = useRef(0);
 
-  const stopRepeating = () => {
+  const cancel = (interrupted: boolean) => {
+    const swallowRelease = repeated.current || (interrupted && timer.current !== undefined);
     clearTimeout(timer.current);
     timer.current = undefined;
+    generation.current++;
+    repeated.current = false;
+    if (swallowRelease) swallowUntil.current = performance.now() + SWALLOW_MS;
   };
-  const release = () => {
-    stopRepeating();
-    if (repeated.current) swallowUntil.current = performance.now() + SWALLOW_MS;
-  };
-  useEffect(() => () => clearTimeout(timer.current), []);
+  useEffect(() => {
+    const interrupt = () => cancel(true);
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") interrupt();
+    };
+    window.addEventListener("blur", interrupt);
+    window.addEventListener("pagehide", interrupt);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      cancel(true);
+      window.removeEventListener("blur", interrupt);
+      window.removeEventListener("pagehide", interrupt);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
 
-  const repeat = (held: number) => {
+  const repeat = (held: number, press: number) => {
+    if (press !== generation.current) return;
     repeated.current = true;
     latest.current();
+    if (press !== generation.current) return;
     const next = held < FAST_AFTER_MS ? REPEAT_MS : FAST_REPEAT_MS;
-    timer.current = window.setTimeout(() => repeat(held + next), next);
+    timer.current = window.setTimeout(() => repeat(held + next, press), next);
   };
 
   return {
     onPointerDown: (e: ReactPointerEvent<HTMLElement>) => {
       if (!e.isPrimary || e.button !== 0) return;
-      stopRepeating();
+      cancel(false);
       repeated.current = false;
       swallowUntil.current = 0;
-      timer.current = window.setTimeout(() => repeat(HOLD_DELAY_MS), HOLD_DELAY_MS);
+      const press = generation.current;
+      timer.current = window.setTimeout(() => repeat(HOLD_DELAY_MS, press), HOLD_DELAY_MS);
     },
     // A finger stays on the tile it pressed until it lifts, so sliding off is measured here.
     onPointerMove: (e: ReactPointerEvent<HTMLElement>) => {
@@ -64,11 +82,12 @@ export function useHeldRepeat(act: () => void) {
         e.clientX > r.right + SLOP_OUT ||
         e.clientY < r.top - SLOP_OUT ||
         e.clientY > r.bottom + SLOP_OUT;
-      if (off) stopRepeating();
+      if (off) cancel(true);
     },
-    onPointerLeave: stopRepeating,
-    onPointerUp: release,
-    onPointerCancel: release,
+    onPointerLeave: () => cancel(true),
+    onPointerUp: () => cancel(false),
+    onPointerCancel: () => cancel(true),
+    onLostPointerCapture: () => cancel(true),
     // A hold is the point here, so no long-press menu.
     onContextMenu: (e: ReactMouseEvent) => e.preventDefault(),
     onClick: () => {

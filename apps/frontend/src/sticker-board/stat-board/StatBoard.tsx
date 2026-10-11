@@ -104,12 +104,12 @@ export const StatBoard = memo(function StatBoard({
           size="sm"
           icon={<SignOut />}
           className="stat-board__logout"
-          onClick={() => void logOut()}
+          onClick={() => void logOut(account.id)}
         >
           {t(($) => $.stickerBoard.statBoard.logOut)}
         </LabelButton>
       ),
-    [me.inClient, t],
+    [me.inClient, account.id, t],
   );
   const papers = useMemo(
     () => (
@@ -169,7 +169,7 @@ function privyText(t: Translate, privy: PrivyStatus): string {
   }
 }
 
-/** The Privy sign-in. After a failure it waits for Try again, since Privy's SDK would retry in a loop. */
+/** The Privy sign-in waits for the person's recovery action after a failure. */
 function PrivyLine() {
   const { t } = useTranslation();
   const privy = usePrivyStatus();
@@ -178,7 +178,9 @@ function PrivyLine() {
       <p className="stat-board__privy-status">{privyText(t, privy)}</p>
       {privy.state === "failed" && (
         <QuietLink onClick={() => retryPrivySignIn()}>
-          {t(($) => $.stickerBoard.developer.privy.tryAgain)}
+          {privy.reloadRequired
+            ? t(($) => $.stickerBoard.developer.privy.reload)
+            : t(($) => $.stickerBoard.developer.privy.tryAgain)}
         </QuietLink>
       )}
     </div>

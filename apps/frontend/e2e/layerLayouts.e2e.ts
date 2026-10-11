@@ -4,7 +4,7 @@ import {
 } from "@drawing-app/api/client";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
-import { drawKeyName, openSettings, say, signIn, tapKey } from "./helpers.ts";
+import { drawKeyName, openSettings, say, signIn, signedInUserId, tapKey } from "./helpers.ts";
 
 const { kyotoSeika, stickerBoard, stickerCreation } = strings;
 const language = "en";
@@ -115,6 +115,7 @@ test("a begun Kyoto Seika clock continues through layer options, opacity and reo
   test.setTimeout(90_000);
   await signIn(page, "kyoto-layers", language);
   const on = await page.request.post("/api/me/kyoto-seika-practice", {
+    headers: { "x-croquis-user-id": await signedInUserId(page) },
     data: { kyotoSeikaPractice: true },
   });
   expect(on.ok()).toBe(true);
@@ -173,6 +174,7 @@ test("the left-hand layer column scrolls above the Kyoto Seika corner print", as
   await page.setViewportSize({ width: 390, height: 753 });
   await signIn(page, "left-kyoto-layers", language);
   const on = await page.request.post("/api/me/kyoto-seika-practice", {
+    headers: { "x-croquis-user-id": await signedInUserId(page) },
     data: { kyotoSeikaPractice: true },
   });
   expect(on.ok()).toBe(true);

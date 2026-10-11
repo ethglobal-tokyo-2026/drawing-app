@@ -36,7 +36,22 @@ async function openPage({ loggedIn }: { loggedIn: boolean }) {
 /** What each of LIFF's logins asked LINE Login for. */
 const logins = () => line.login.mock.calls.map(([config]) => config);
 
+/** A storage refusal with the other marker operations still available. */
+function refuseStorage(operation: "getItem" | "setItem" | "removeItem", error: Error) {
+  const stored = localStorage;
+  vi.stubGlobal("localStorage", {
+    getItem: stored.getItem.bind(stored),
+    setItem: stored.setItem.bind(stored),
+    removeItem: stored.removeItem.bind(stored),
+    [operation]: () => {
+      throw error;
+    },
+  });
+}
+
 afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   sessionStorage.clear();
   localStorage.clear();
   line.login.mockReset();
@@ -45,6 +60,54 @@ afterEach(() => {
 });
 
 describe("LINE Login outside LINE", () => {
+  it("keeps the requested redirect and disables auto login when the marker cannot be read", async () => {
+    const page = await openPage({ loggedIn: false });
+    const error = new Error("read refused");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    refuseStorage("getItem", error);
+
+    page.lineLogin("https://example.com/board");
+
+    expect(logins()).toStrictEqual([
+      { redirectUri: "https://example.com/board", disableAutoLogin: true },
+    ]);
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining("LINE"), error);
+  });
+
+  it("keeps the requested redirect when the marker cannot be saved", async () => {
+    const page = await openPage({ loggedIn: false });
+    const error = new Error("write refused");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    refuseStorage("setItem", error);
+
+    page.lineLogin("https://example.com/board");
+
+    expect(logins()).toStrictEqual([{ redirectUri: "https://example.com/board" }]);
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining("LINE"), error);
+  });
+
+  it("reaches ready when a returned login's marker cannot be removed", async () => {
+    localStorage.setItem("draw.lineAutoLogin", "started");
+    const error = new Error("remove refused");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    refuseStorage("removeItem", error);
+
+    const page = await openPage({ loggedIn: true });
+
+    expect(page.lineUserId()).toBe("U1");
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining("LINE"), error);
+  });
+
+  it("still surfaces a LIFF login failure", async () => {
+    const page = await openPage({ loggedIn: false });
+    const error = new Error("LIFF login refused");
+    line.login.mockImplementationOnce(() => {
+      throw error;
+    });
+
+    expect(() => page.lineLogin("https://example.com/board")).toThrow(error);
+  });
+
   it("uses auto login first, and stays in this browser once a login from it never came back", async () => {
     (await openPage({ loggedIn: false })).lineLogin();
     (await openPage({ loggedIn: false })).lineLogin();
@@ -71,6 +134,13 @@ describe("LINE Login outside LINE", () => {
 });
 
 describe("LIFF Mock's person", () => {
+  it("reports a completed mock initialization before page language can reach LIFF", async () => {
+    vi.stubEnv("VITE_LIFF_MOCK", "");
+    vi.resetModules();
+    const { initLine } = await import("./liff");
+    expect(await initLine()).toBe(true);
+  });
+
   it("is LIFF Mock's own Brown until ?as= names someone", () => {
     expect(mockPerson("", newTab()).name).toBe("Brown");
   });
@@ -105,5 +175,20 @@ describe("LIFF Mock's person", () => {
     const signedIn = await createDevLineVerifier().verifyAccessToken(liff.getAccessToken() ?? "");
     expect(signedIn).toEqual({ sub: profile.userId, name: profile.displayName });
     expect(signedIn).toEqual(mockPerson("?as=alice", newTab()));
+  });
+});
+
+describe("LIFF initialization", () => {
+  it("reports a failed real initialization and keeps its error visible", async () => {
+    vi.stubEnv("VITE_LIFF_MOCK", "off");
+    vi.resetModules();
+    vi.doMock("@line/liff", () => ({ default: line }));
+    const error = new Error("LINE refused to start");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(line, "init").mockRejectedValueOnce(error);
+    const { initLine } = await import("./liff");
+
+    expect(await initLine()).toBe(false);
+    expect(logged).toHaveBeenCalledWith("LINE didn't start", error);
   });
 });

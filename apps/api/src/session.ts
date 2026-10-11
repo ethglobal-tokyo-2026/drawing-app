@@ -8,8 +8,7 @@ import type { AppDeps } from "./deps.ts";
 import { apiError } from "./errors.ts";
 
 /**
- * What every route's context carries. requireSession sets userId on every route but signing in and
- * out (POST and DELETE /api/session).
+ * What every route's context carries. requireSession sets userId except on anonymous sign-in.
  */
 export type AppEnv = {
   Variables: { userId: string };
@@ -82,6 +81,11 @@ export const requireSession = (deps: Pick<AppDeps, "db" | "sessionSecret" | "clo
   createMiddleware<AppEnv>(async (c, next) => {
     const user = await sessionUser(c, deps);
     if (!user) return apiError(c, 401, "signed_out");
+    const expected = c.req.header("x-croquis-user-id");
+    const mutation = !["GET", "HEAD", "OPTIONS"].includes(c.req.method);
+    if ((expected !== undefined || mutation) && expected !== user.id) {
+      return apiError(c, 409, "session_account_changed");
+    }
     c.set("userId", user.id);
     await next();
   });

@@ -20,9 +20,9 @@ export interface EarlySession {
 
 export interface EarlyOpening extends EarlySession {
   /** Your board as the cookie's session saw it, once, while it's accepted and fresh. */
-  takeBoard: () => Promise<StickerBoard> | undefined;
+  takeBoard: (expectedUserId: string) => Promise<StickerBoard> | undefined;
   /** Your tickets, likewise. */
-  takeTickets: () => Promise<Tickets> | undefined;
+  takeTickets: (expectedUserId: string) => Promise<Tickets> | undefined;
 }
 
 /** A failure noted, so an early answer nobody takes doesn't log an unhandled rejection. */
@@ -39,12 +39,16 @@ const quiet = <T>(answer: Promise<T>) => {
  */
 export function openEarly(
   session: SessionApi,
-  api: ApiClient,
+  apiFor: (expectedUserId: string) => ApiClient,
   { board: withBoard, now = Date.now }: { board: boolean; now?: () => number },
 ): EarlyOpening {
+  let sourceUserId: string | undefined;
   const me = quiet(
     session.me().then(
-      (answer) => answer.me,
+      (answer) => {
+        sourceUserId = answer.me.id;
+        return answer.me;
+      },
       (error: unknown) => {
         if (error instanceof ApiError && error.status === 401 && error.code === "signed_out") {
           return null;
@@ -54,17 +58,31 @@ export function openEarly(
       },
     ),
   );
-  let board = withBoard ? quiet(api.stickerBoard()) : undefined;
-  let tickets: Promise<Tickets> | undefined = quiet(api.tickets());
+  const account = me.then((you) => (you ? apiFor(you.id) : null));
+  let board = withBoard
+    ? quiet(
+        account.then((api) => {
+          if (!api) throw new Error("The early session has no account");
+          return api.stickerBoard();
+        }),
+      )
+    : undefined;
+  let tickets: Promise<Tickets> | undefined = quiet(
+    account.then((api) => {
+      if (!api) throw new Error("The early session has no account");
+      return api.tickets();
+    }),
+  );
   let accepted: { id: string; at: number } | null = null;
   let dropped = false;
 
-  const fresh = () => accepted !== null && now() - accepted.at < FRESH_MS;
+  const fresh = (expectedUserId: string) =>
+    accepted?.id === expectedUserId && now() - accepted.at < FRESH_MS;
 
   return {
     me,
     accept: (you) => {
-      if (!dropped) accepted ??= { id: you.id, at: now() };
+      if (!dropped && sourceUserId === you.id) accepted ??= { id: you.id, at: now() };
     },
     drop: () => {
       dropped = true;
@@ -72,8 +90,9 @@ export function openEarly(
       board = undefined;
       tickets = undefined;
     },
-    takeBoard: () => {
-      const answer = fresh() ? board : undefined;
+    takeBoard: (expectedUserId) => {
+      if (!fresh(expectedUserId)) return undefined;
+      const answer = board;
       board = undefined;
       const ownerId = accepted?.id;
       // Checked again against the person the app opened as.
@@ -81,8 +100,9 @@ export function openEarly(
         b.owner.id === ownerId ? b : Promise.reject(new Error("The early board is someone else's")),
       );
     },
-    takeTickets: () => {
-      const answer = fresh() ? tickets : undefined;
+    takeTickets: (expectedUserId) => {
+      if (!fresh(expectedUserId)) return undefined;
+      const answer = tickets;
       tickets = undefined;
       return answer;
     },
@@ -97,11 +117,11 @@ let opening: EarlyOpening | null = null;
  */
 export function startEarlySession(
   session: SessionApi,
-  api: ApiClient,
+  apiFor: (expectedUserId: string) => ApiClient,
   { opensOnBoard, search }: { opensOnBoard: boolean; search: string },
 ) {
   if (opening || new URLSearchParams(search).has("liff.state")) return;
-  opening = openEarly(session, api, { board: opensOnBoard });
+  opening = openEarly(session, apiFor, { board: opensOnBoard });
 }
 
 /** The early session, for SessionGate; null when the app didn't start one. */
@@ -113,16 +133,17 @@ export const earlySession = (): EarlySession | null => opening;
  */
 export function withEarlyAnswers(
   api: ApiClient,
+  expectedUserId: string,
   early: () => EarlyOpening | null = () => opening,
 ): ApiClient {
   return {
     ...api,
     stickerBoard: (userId = "me") => {
-      const answer = userId === "me" ? early()?.takeBoard() : undefined;
+      const answer = userId === "me" ? early()?.takeBoard(expectedUserId) : undefined;
       return answer ? answer.catch(() => api.stickerBoard(userId)) : api.stickerBoard(userId);
     },
     tickets: () => {
-      const answer = early()?.takeTickets();
+      const answer = early()?.takeTickets(expectedUserId);
       return answer ? answer.catch(() => api.tickets()) : api.tickets();
     },
   };

@@ -11,6 +11,25 @@ import type { Sheet } from "./ticketsContext";
 import { useDrawFromBoard } from "./useDrawFromBoard";
 import { useTickets } from "./useTickets";
 
+const backEntries = vi.hoisted(() => [] as Array<{ close: () => boolean | void }>);
+vi.mock("../ui/useBackToClose", async () => {
+  const { useEffect, useRef } = await import("react");
+  return {
+    useBackToClose(open: boolean, close: () => boolean | void) {
+      const latest = useRef(close);
+      latest.current = close;
+      useEffect(() => {
+        if (!open) return;
+        const entry = { close: () => latest.current() };
+        backEntries.push(entry);
+        return () => {
+          backEntries.splice(backEntries.indexOf(entry), 1);
+        };
+      }, [open]);
+    },
+  };
+});
+
 const onDraw = vi.fn();
 const spendTicket = vi.fn();
 
@@ -128,6 +147,43 @@ describe("Draw on the sticker board", () => {
     );
     act(() => back?.click());
     expect(document.querySelector("[role=dialog]")).toBeNull();
+    expect(onDraw).not.toHaveBeenCalled();
+  });
+
+  it("Back closes the out-of-tickets card over the board once", async () => {
+    await open(tickets(0, 0));
+    tapDraw();
+    expect(backEntries).toHaveLength(1);
+    act(() => {
+      backEntries[0]?.close();
+    });
+    expect(document.querySelector("[role=dialog]")).toBeNull();
+    expect(backEntries).toHaveLength(0);
+    expect(onDraw).not.toHaveBeenCalled();
+  });
+
+  it("Back from checkout returns to the out-of-tickets card with one entry", async () => {
+    await open(tickets(0, 0));
+    tapDraw();
+    const buy = [...document.querySelectorAll<HTMLButtonElement>("button")].find((button) =>
+      button.textContent?.includes("Buy reserve tickets"),
+    );
+    act(() => buy?.click());
+    expect(backEntries).toHaveLength(1);
+    expect(document.querySelector(".reserve-checkout")).not.toBeNull();
+    act(() => {
+      backEntries[0]?.close();
+    });
+    expect(document.querySelector(".reserve-checkout")).toBeNull();
+    expect(document.querySelector(".out-of-tickets__title")?.textContent).toBe(
+      "Out of tickets for today",
+    );
+    expect(backEntries).toHaveLength(1);
+    act(() => {
+      backEntries[0]?.close();
+    });
+    expect(document.querySelector("[role=dialog]")).toBeNull();
+    expect(backEntries).toHaveLength(0);
     expect(onDraw).not.toHaveBeenCalled();
   });
 

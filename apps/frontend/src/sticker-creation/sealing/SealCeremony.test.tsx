@@ -305,16 +305,19 @@ describe("SealCeremony", () => {
   it("keeps drawing at once, since the card's exit carries the change, but lets the press show before the board", async () => {
     await seal(1);
     playThrough();
+    await act(async () => {});
     act(() => button(KEEP_DRAWING).click());
     expect(onKeepDrawing).toHaveBeenCalledOnce();
     view?.unmount();
 
     await seal(1);
     playThrough();
+    await act(async () => {});
     act(() => button(BACK_TO_BOARD).click());
     expect(onBoard).not.toHaveBeenCalled();
     // Once the press has shown.
     act(() => void vi.runOnlyPendingTimers());
+    await act(async () => {});
     expect(onBoard).toHaveBeenCalledOnce();
   });
 
@@ -326,6 +329,7 @@ describe("SealCeremony", () => {
     expect(root()?.classList.contains("is-leaving")).toBe(true);
     expect(host.querySelector(".ticket-stub.is-peeling")).not.toBeNull();
     playThrough();
+    await act(async () => {});
     expect(stillFading()).toBe(false);
     // It takes no more presses on its way out, and no taps meant for the sheet under it.
     expect(card()?.hasAttribute("inert")).toBe(true);

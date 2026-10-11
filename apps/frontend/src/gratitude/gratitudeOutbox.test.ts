@@ -59,6 +59,86 @@ afterEach(() => {
 });
 
 describe("the gratitude outbox", () => {
+  it("stops between queued combos when disposal follows the first recorded answer", async () => {
+    vi.useFakeTimers();
+    const first = recordGratitudeBody({ idempotencyKey: crypto.randomUUID() });
+    const second = recordGratitudeBody({ idempotencyKey: crypto.randomUUID(), giftId: "second" });
+    await sendGratitude(server(new Error("offline")), ME, first);
+    await sendGratitude(server(new Error("offline")), ME, second);
+    let stop = () => {};
+    const unsubscribe = onGratitudeLeftOutbox(() => stop());
+    const api = server("records");
+    stop = resendGratitudeWhenReachable(api, ME);
+    await vi.runAllTimersAsync();
+    unsubscribe();
+    stop();
+    expect(api.recordGratitude.mock.calls.map(([sent]) => sent)).toEqual([first]);
+    expect(storedEntries()).toEqual([{ body: second }]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("coalesces repeated reachability events while an in-play combo waits", async () => {
+    vi.useFakeTimers();
+    keepGratitudeInPlay(ME, body);
+    const api = server("records");
+    const stop = resendGratitudeWhenReachable(api, ME);
+    for (let count = 0; count < 3; count++) {
+      window.dispatchEvent(new Event("online"));
+      document.dispatchEvent(new Event("visibilitychange"));
+    }
+    expect(vi.getTimerCount()).toBe(1);
+    await vi.runAllTimersAsync();
+    expect(api.recordGratitude).toHaveBeenCalledTimes(1);
+    stop();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it("disposes an in-play wait without sending or leaving a timer", async () => {
+    vi.useFakeTimers();
+    keepGratitudeInPlay(ME, body);
+    const original = stored();
+    const api = server("records");
+    const stop = resendGratitudeWhenReachable(api, ME);
+    stop();
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.runAllTimersAsync();
+    expect(api.recordGratitude).not.toHaveBeenCalled();
+    expect(stored()).toBe(original);
+  });
+
+  it.each(["records", "refuses"])(
+    "disposes during a request that later %s without editing saved combos",
+    async (answer) => {
+      await sendGratitude(server(new TypeError("offline")), ME, body);
+      const second = { ...body, idempotencyKey: crypto.randomUUID(), giftId: "second" };
+      await sendGratitude(server(new TypeError("offline")), ME, second);
+      const original = stored();
+      let resolve = (_value: Awaited<ReturnType<ApiClient["recordGratitude"]>>) => {};
+      let reject = (_error: Error) => {};
+      const promise = new Promise<Awaited<ReturnType<ApiClient["recordGratitude"]>>>(
+        (done, fail) => {
+          resolve = done;
+          reject = fail;
+        },
+      );
+      const completion = { promise, resolve, reject };
+      const api = {
+        recordGratitude: vi.fn<ApiClient["recordGratitude"]>(() => completion.promise),
+      };
+      const stop = resendGratitudeWhenReachable(api, ME);
+      const signal = api.recordGratitude.mock.calls[0]?.[1]?.signal;
+      window.dispatchEvent(new Event("online"));
+      document.dispatchEvent(new Event("visibilitychange"));
+      expect(api.recordGratitude).toHaveBeenCalledTimes(1);
+      stop();
+      expect(signal?.aborted).toBe(true);
+      if (answer === "records") completion.resolve(gratitudeOf(body));
+      else completion.reject(new ApiError(403, { error: "not_receiver" }));
+      await vi.waitFor(() => expect(api.recordGratitude).toHaveBeenCalledTimes(1));
+      expect(stored()).toBe(original);
+      expect(readGratitudeRefusals(ME)).toEqual([]);
+    },
+  );
+
   it("sends a combo and forgets it once the server records it", async () => {
     const api = server("records");
     await expect(sendGratitude(api, ME, body)).resolves.toEqual({ state: "recorded" });

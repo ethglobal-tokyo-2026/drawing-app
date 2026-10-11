@@ -9,6 +9,12 @@ import { endOf, session, strokeStartedCombo, strokeUpAndDown } from "./testCombo
 /** The server's MAX_COMBO_MS, and the most a keepalive request carries. */
 const MAX_COMBO_MS = 8000;
 const MAX_BODY_BYTES = 64 * 1024;
+const FRAME_MS = 16;
+const endFrameDeadline = (
+  firstHitAt: number,
+  config: GameConfig = GAME_CONFIG,
+  maxFrameMs = FRAME_MS,
+) => firstHitAt + config.maxDurationMs + maxFrameMs;
 /** Every way a combo ends, as its replay records it. */
 const END_REASONS: readonly ReplayV1["endReason"][] = ["empty", "cap", "hidden", "closed"];
 
@@ -135,7 +141,11 @@ function tapCombo(rate: number, { config, stopAfter, stopBy = "hidden", seed = 1
   const random = seededRandom(seed);
   const s = session(config);
   let nextTap = 1000;
-  for (let t = 1000; t < 30_000 && !s.ended; t += 16 * (0.8 + 0.4 * random())) {
+  for (
+    let t = 1000;
+    t <= endFrameDeadline(1000, config, FRAME_MS * 1.2) && !s.ended;
+    t += FRAME_MS * (0.8 + 0.4 * random())
+  ) {
     const late = random() < 0.5;
     if (late) s.frame(t);
     for (; nextTap <= t && !s.ended; nextTap += (1000 / rate) * (0.7 + 0.6 * random())) {
@@ -144,6 +154,10 @@ function tapCombo(rate: number, { config, stopAfter, stopBy = "hidden", seed = 1
     if (!late) s.frame(t);
     if (stopAfter !== undefined && t >= 1000 + stopAfter && !s.ended) s.end(t, stopBy);
   }
+  expect(
+    s.ended,
+    `Tap combo did not end by ${endFrameDeadline(1000, config, FRAME_MS * 1.2)} ms`,
+  ).toBeDefined();
   return s.finish();
 }
 
@@ -320,7 +334,8 @@ describe("a replay has all the data to play its combo back", () => {
     // Up and down for 3 s; then the thumb lifts, and the bar runs out.
     const down = 1450;
     strokeUpAndDown(s, { from: down, until: down + 3000 });
-    for (let t = down + 3000; !s.ended; t += 16) s.frame(t);
+    for (let t = down + 3000; t <= endFrameDeadline(1000) && !s.ended; t += FRAME_MS) s.frame(t);
+    expect(s.ended, `Stroke combo did not end by ${endFrameDeadline(1000)} ms`).toBeDefined();
 
     const { ended, replay } = s.finish();
     const { record } = ended;
@@ -340,15 +355,20 @@ describe("a replay has all the data to play its combo back", () => {
     for (let i = 0; i < taps; i++) s.tap(1000 + i * 150);
     // Reversals every 55 ms, faster than the limit, from t = 1200 to 5000, with a frame every
     // 16 ms. The engine's shake unlocks on the 16th in a row, and every one after goes to the combo.
+    const shakeFrom = 1200;
+    const shakeGap = 55;
+    const firstHitAt = taps === 0 ? shakeFrom + shakeGap * FEEL_CONFIG.shake.unlockAt : 1000;
+    const deadline = endFrameDeadline(firstHitAt);
     let reversal = 0;
-    for (let t = 1200; !s.ended; t += 16) {
-      const due = 1200 + 55 * (reversal + 1);
+    for (let t = shakeFrom; t <= deadline && !s.ended; t += FRAME_MS) {
+      const due = shakeFrom + shakeGap * (reversal + 1);
       if (t >= due && due <= 5000) {
         reversal++;
         if (reversal >= FEEL_CONFIG.shake.unlockAt) s.reverse(due, reversal % 2 === 0 ? 1 : -1);
       }
       s.frame(t);
     }
+    expect(s.ended, `Shake combo did not end by ${deadline} ms`).toBeDefined();
 
     const { ended, replay } = s.finish();
     const { record } = ended;
@@ -365,7 +385,7 @@ describe("a replay has all the data to play its combo back", () => {
     s.tap(1000);
     // A reversal every 100 ms from t = 1100 to 3000, slower than the limit, so each one counts.
     let reversals = 0;
-    for (let t = 1100; !s.ended; t += 16) {
+    for (let t = 1100; t <= endFrameDeadline(1000) && !s.ended; t += FRAME_MS) {
       const due = 1100 + 100 * reversals;
       if (t >= due && due <= 3000) {
         s.reverse(due, reversals % 2 === 0 ? 1 : -1);
@@ -373,6 +393,7 @@ describe("a replay has all the data to play its combo back", () => {
       }
       s.frame(t);
     }
+    expect(s.ended, `Shake combo did not end by ${endFrameDeadline(1000)} ms`).toBeDefined();
 
     const { ended, replay } = s.finish();
     const { shakes } = readReplay(replay, ended.record);

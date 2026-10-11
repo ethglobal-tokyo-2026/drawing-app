@@ -22,18 +22,44 @@ afterEach(() => {
 });
 
 describe("linking the chat menu", () => {
+  it("keeps one request and late status answers separate for each account", async () => {
+    const { linkChatMenu, chatMenuStatus } = await freshChatMenu();
+    let answer = (_response: Response) => {};
+    const aliceFetch = vi.fn<typeof fetch>(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const pending = linkChatMenu("alice", createServerClient(aliceFetch, "alice"));
+    const bobFetch = server(200, { chatMenu: { status: "linked", menu: "bob" } });
+    await linkChatMenu("bob", createServerClient(bobFetch, "bob"));
+    await linkChatMenu("bob", createServerClient(bobFetch, "bob"));
+    expect(bobFetch).toHaveBeenCalledTimes(1);
+    expect(new Headers(bobFetch.mock.calls[0]?.[1]?.headers).get("x-croquis-user-id")).toBe("bob");
+    answer(new Response(JSON.stringify({ chatMenu: { status: "linked", menu: "alice" } })));
+    await pending;
+    expect(chatMenuStatus("bob")).toEqual({
+      state: "answered",
+      link: { status: "linked", menu: "bob" },
+    });
+    expect(chatMenuStatus("alice")).toEqual({
+      state: "answered",
+      link: { status: "linked", menu: "alice" },
+    });
+  });
   it("asks the app's server once per page load, and records what LINE shows", async () => {
     const { linkChatMenu, chatMenuStatus } = await freshChatMenu();
     const fetch = server(200, { chatMenu: { status: "linked", menu: "2" } });
-    expect(chatMenuStatus()).toEqual({ state: "waiting" });
-    await linkChatMenu(createServerClient(fetch));
-    await linkChatMenu(createServerClient(fetch));
+    expect(chatMenuStatus("alice")).toEqual({ state: "waiting" });
+    await linkChatMenu("alice", createServerClient(fetch));
+    await linkChatMenu("alice", createServerClient(fetch));
 
     expect(fetch).toHaveBeenCalledTimes(1);
     const [input, init] = fetch.mock.calls[0] ?? [];
     expect(urlOf(input)).toMatch(/\/api\/line-menu$/);
     expect(init?.method).toBe("POST");
-    expect(chatMenuStatus()).toEqual({
+    expect(chatMenuStatus("alice")).toEqual({
       state: "answered",
       link: { status: "linked", menu: "2" },
     });
@@ -42,19 +68,24 @@ describe("linking the chat menu", () => {
   it("records a menu that's off, with the server's reason", async () => {
     const { linkChatMenu, chatMenuStatus } = await freshChatMenu();
     const off = { status: "off", reason: "dev_sign_in" };
-    await linkChatMenu(createServerClient(server(200, { chatMenu: off })));
-    expect(chatMenuStatus()).toEqual({ state: "answered", link: off });
+    await linkChatMenu("alice", createServerClient(server(200, { chatMenu: off })));
+    expect(chatMenuStatus("alice")).toEqual({ state: "answered", link: off });
   });
 
   it("records a refusal or an unreachable server as a failure, without throwing", async () => {
     const refused = await freshChatMenu();
-    await refused.linkChatMenu(createServerClient(server(502, { error: "line_unavailable" })));
-    const status = refused.chatMenuStatus();
+    await refused.linkChatMenu(
+      "alice",
+      createServerClient(server(502, { error: "line_unavailable" })),
+    );
+    const status = refused.chatMenuStatus("alice");
     expect(status.state === "failed" && status.reason).toContain("502 line_unavailable");
 
     const unreachable = await freshChatMenu();
     const noAnswer = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("Failed to fetch"));
-    await expect(unreachable.linkChatMenu(createServerClient(noAnswer))).resolves.toBeUndefined();
-    expect(unreachable.chatMenuStatus()).toMatchObject({ state: "failed" });
+    await expect(
+      unreachable.linkChatMenu("alice", createServerClient(noAnswer)),
+    ).resolves.toBeUndefined();
+    expect(unreachable.chatMenuStatus("alice")).toMatchObject({ state: "failed" });
   });
 });

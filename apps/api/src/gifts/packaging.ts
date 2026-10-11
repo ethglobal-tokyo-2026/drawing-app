@@ -85,6 +85,12 @@ type PackageBody = z.infer<typeof packageBodySchema>;
 
 export const packagedGiftSchema = z.object({
   gift: giftSchema,
+  /** Only the giver may recover the last Gift Message attempt. */
+  messageAttempt: z
+    .object({ id: bytes32Schema, state: z.enum(["pending", "cancelled", "sent"]) })
+    .nullable(),
+  /** The original recipient, visible only to the giver resuming Packaging. */
+  forUserId: z.string().nullable(),
   /** Only in the 201: the gift link carries it, and the server keeps only its commitment. */
   giftClaimToken: bytes32Schema.nullable(),
   /** The deposit for the giver's wallet to sign; null on the mock chain, and once it has landed. */
@@ -101,7 +107,10 @@ export const takeOutStartSchema = z.object({
 });
 export type TakeOutStart = z.infer<typeof takeOutStartSchema>;
 
-export const sharedBodySchema = z.object({ outcome: z.enum(["sent", "cancelled"]) });
+export const messageAttemptBodySchema = z.object({ attemptId: bytes32Schema });
+export const sharedBodySchema = messageAttemptBodySchema.extend({
+  outcome: z.enum(["sent", "cancelled"]),
+});
 type SharedOutcome = z.infer<typeof sharedBodySchema>["outcome"];
 
 export type Packaging =
@@ -134,7 +143,7 @@ export function nsfwRefusal(
 }
 
 /**
- * The checks every Packaging makes: the sticker is the giver's, and the person it's for can have it.
+ * Packaging resumes the giver's open gift, or checks a new gift's recipient.
  * Answers the sticker, and the gift still in the bag for it, which the giver can package again.
  */
 function checkPackaging(
@@ -150,6 +159,15 @@ function checkPackaging(
   if (sticker.ownerId !== userId) {
     return refuse("not_yours", `Sticker ${stickerId} is held by someone else`);
   }
+  // An existing gift keeps its destination; only a new gift uses the requested recipient.
+  const open = giftHoldingSticker(db, stickerId) ?? null;
+  if (open && !((open.status === "packed" || open.status === "sent") && open.giverId === userId)) {
+    return refuse(
+      "gift_in_transit",
+      `Sticker ${stickerId} is still in gift ${open.id}: ${open.status}, escrow ${open.escrowStatus}`,
+    );
+  }
+  if (open) return { refusal: null, sticker, bagged: open };
   // The table refuses these too; checking here answers with a refusal the app can show.
   if (forUserId === userId) return refuse("own_gift", "A gift can't be for its own giver");
   if (forUserId !== null) {
@@ -158,21 +176,13 @@ function checkPackaging(
     const nsfw = nsfwRefusal(sticker, recipient);
     if (nsfw) return nsfw;
   }
-  const open = giftHoldingSticker(db, stickerId) ?? null;
-  if (open && !(open.status === "packed" && open.giverId === userId)) {
-    return refuse(
-      "gift_in_transit",
-      `Sticker ${stickerId} is still in gift ${open.id}: ${open.status}, escrow ${open.escrowStatus}`,
-    );
-  }
-  return { refusal: null, sticker, bagged: open };
+  return { refusal: null, sticker, bagged: null };
 }
 
-/** A gift still in the bag is for whoever the giver picked this time. */
-function packFor(db: Pick<Db, "update">, gift: GiftRow, forUserId: string | null): GiftRow {
-  if (gift.forUserId === forUserId) return gift;
-  return db.update(gifts).set({ forUserId }).where(eq(gifts.id, gift.id)).returning().get();
-}
+const messageAttemptOf = (gift: GiftRow): PackagedGift["messageAttempt"] =>
+  gift.messageAttemptId !== null && gift.messageAttemptState !== "not_started"
+    ? { id: gift.messageAttemptId, state: gift.messageAttemptState }
+    : null;
 
 /** A gift packaged again: no token, since only the first answer carries it. */
 const packagedAgain = (gift: GiftRow, deposit: SuiTransaction | null): Packaged => ({
@@ -180,6 +190,8 @@ const packagedAgain = (gift: GiftRow, deposit: SuiTransaction | null): Packaged 
   created: false,
   packaged: {
     gift: toGift(gift),
+    messageAttempt: messageAttemptOf(gift),
+    forUserId: gift.forUserId,
     giftClaimToken: null,
     deposit: deposit && toSponsoredTransaction(deposit),
   },
@@ -213,7 +225,7 @@ function packageOnMockChain(
     (tx): Packaging => {
       const checked = checkPackaging(tx, userId, stickerId, forUserId);
       if (checked.refusal !== null) return checked;
-      if (checked.bagged) return packagedAgain(packFor(tx, checked.bagged, forUserId), null);
+      if (checked.bagged) return packagedAgain(checked.bagged, null);
       const claim = newGiftClaim();
       const gift = tx
         .insert(gifts)
@@ -228,7 +240,13 @@ function packageOnMockChain(
         })
         .returning()
         .get();
-      const packaged = { gift: toGift(gift), giftClaimToken: claim.giftClaimToken, deposit: null };
+      const packaged = {
+        gift: toGift(gift),
+        messageAttempt: messageAttemptOf(gift),
+        forUserId: gift.forUserId,
+        giftClaimToken: claim.giftClaimToken,
+        deposit: null,
+      };
       return { refusal: null, created: true, packaged };
     },
     { behavior: "immediate" },
@@ -261,9 +279,8 @@ async function packageOnSui(
   const terms = { sender, userId, stickerId, stickerObjectId };
   const { bagged } = checked;
   if (bagged) {
-    const again = await oneAtATime(`gift:${bagged.id}`, () =>
-      packageAgain(sui, bagged, forUserId, terms),
-    );
+    if (bagged.status === "sent") return packagedAgain(bagged, null);
+    const again = await oneAtATime(`gift:${bagged.id}`, () => packageAgain(sui, bagged, terms));
     if (again) return again;
     // The gift left the bag meanwhile: sent, received or closed, so the checks run again.
     const rechecked = checkPackaging(deps.db, userId, stickerId, forUserId);
@@ -280,14 +297,14 @@ async function packageOnSui(
 async function packageAgain(
   sui: SuiTransactionDeps,
   bagged: GiftRow,
-  forUserId: string | null,
   terms: DepositTerms,
 ): Promise<Packaging | null> {
   const { db } = sui;
   const now = sui.clock.now();
+  if (bagged.status === "sent") return packagedAgain(bagged, null);
   const open = openGiftTransaction(db, bagged.id);
   if (open?.kind === "deposit" && isLive(open, now)) {
-    return packagedAgain(packFor(db, bagged, forUserId), open);
+    return packagedAgain(bagged, open);
   }
   const settled = await settleOpenGiftTransaction(sui, bagged);
   if (settled?.outcome === null) {
@@ -297,8 +314,9 @@ async function packageAgain(
     );
   }
   const gift = currentGift(db, bagged.id);
+  if (gift.status === "sent") return packagedAgain(gift, null);
   if (gift.status !== "packed") return null;
-  if (gift.escrowStatus === "pending") return packagedAgain(packFor(db, gift, forUserId), null);
+  if (gift.escrowStatus === "pending") return packagedAgain(gift, null);
   if (gift.expiresAt.getTime() - now.getTime() <= SPONSORSHIP_MARGIN_MS) {
     closeUndeposited(db, gift, now);
     return null;
@@ -323,7 +341,7 @@ async function packageAgain(
     },
     kind,
   );
-  return packagedAgain(packFor(db, gift, forUserId), deposit);
+  return packagedAgain(gift, deposit);
 }
 
 /**
@@ -375,6 +393,8 @@ async function packageNew(
     created: true,
     packaged: {
       gift: toGift(currentGift(sui.db, claim.giftId)),
+      messageAttempt: null,
+      forUserId,
       giftClaimToken: claim.giftClaimToken,
       deposit: toSponsoredTransaction(deposit),
     },
@@ -384,15 +404,62 @@ async function packageNew(
 const closed = (gift: GiftRow) =>
   refuse("gift_closed", `Gift ${gift.id} is already ${gift.status}`);
 
-/** LINE's friend picker's result. A cancelled picker leaves the gift in the bag. */
+type MessageStep = GiftStep<
+  | "gift_not_found"
+  | "not_yours"
+  | "gift_closed"
+  | "not_deposited"
+  | "gift_message_unresolved"
+  | "gift_message_attempt_changed"
+>;
+
+/** Records the attempt before the giver opens LINE; pending never expires. */
+export function beginMessageAttempt(
+  { db }: AppDeps,
+  userId: string,
+  giftId: string,
+  attemptId: string,
+): MessageStep {
+  return db.transaction(
+    (tx): MessageStep => {
+      const owned = ownGift(
+        tx.select().from(gifts).where(eq(gifts.id, giftId)).get(),
+        userId,
+        giftId,
+      );
+      if (owned.refusal !== null) return owned;
+      const { gift } = owned;
+      if (gift.status !== "packed") return closed(gift);
+      if (gift.escrowStatus !== "pending")
+        return refuse("not_deposited", `Gift ${giftId}'s deposit hasn't landed in the escrow`);
+      if (gift.messageAttemptId === attemptId) return owned;
+      if (gift.messageAttemptState === "pending")
+        return refuse(
+          "gift_message_unresolved",
+          `Gift ${giftId}'s earlier message attempt is unresolved`,
+        );
+      const pending = tx
+        .update(gifts)
+        .set({ messageAttemptId: attemptId, messageAttemptState: "pending" })
+        .where(eq(gifts.id, giftId))
+        .returning()
+        .get();
+      return { refusal: null, gift: pending };
+    },
+    { behavior: "immediate" },
+  );
+}
+
+/** LINE's definitive outcome resolves only the matching attempt. Sent cannot be downgraded. */
 export function reportShared(
   { db, clock }: AppDeps,
   userId: string,
   giftId: string,
+  attemptId: string,
   outcome: SharedOutcome,
-): GiftStep<"gift_not_found" | "not_yours" | "gift_closed" | "not_deposited"> {
+): MessageStep {
   return db.transaction(
-    (tx) => {
+    (tx): MessageStep => {
       const owned = ownGift(
         tx.select().from(gifts).where(eq(gifts.id, giftId)).get(),
         userId,
@@ -401,17 +468,27 @@ export function reportShared(
       if (owned.refusal !== null) return owned;
       const { gift } = owned;
       if (gift.status !== "packed" && gift.status !== "sent") return closed(gift);
-      if (outcome === "cancelled" || gift.status === "sent") return owned;
-      if (gift.escrowStatus !== "pending") {
+      if (gift.messageAttemptId !== attemptId)
+        return refuse(
+          "gift_message_attempt_changed",
+          `Gift ${giftId}'s message attempt no longer matches`,
+        );
+      if (gift.messageAttemptState === "sent" || gift.messageAttemptState === outcome) return owned;
+      if (gift.escrowStatus !== "pending")
         return refuse("not_deposited", `Gift ${giftId}'s deposit hasn't landed in the escrow`);
-      }
-      const sent = tx
+      const reported = tx
         .update(gifts)
-        .set({ status: "sent", sentAt: clock.now() })
+        .set({
+          messageAttemptState: outcome,
+          ...(outcome === "sent" && {
+            status: "sent" as const,
+            sentAt: gift.sentAt ?? clock.now(),
+          }),
+        })
         .where(eq(gifts.id, giftId))
         .returning()
         .get();
-      return { refusal: null, gift: sent };
+      return { refusal: null, gift: reported };
     },
     { behavior: "immediate" },
   );

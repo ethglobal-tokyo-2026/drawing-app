@@ -16,6 +16,7 @@ import type { GiftSendOutcome } from "./giftSender";
 import { createGiveFlow } from "./giveFlow";
 import { reportKeptSends } from "./sentReports";
 
+const attemptId = `0x${"12".repeat(32)}`;
 const token = `0x${"cd".repeat(32)}`;
 const userId = "user-giver";
 /** A transaction the server built for the giver's wallet to sign. */
@@ -32,9 +33,21 @@ const noAnswer = () => new ApiError(0, { error: "network", detail: "POST got no 
 function setup() {
   const packed = gift({ status: "packed", escrowStatus: "missing" });
   const packageGift = vi
-    .fn()
-    .mockResolvedValueOnce({ gift: packed, giftClaimToken: token, deposit: firstDeposit })
-    .mockResolvedValue({ gift: packed, giftClaimToken: null, deposit: null });
+    .fn<ApiClient["packageGift"]>()
+    .mockResolvedValueOnce({
+      gift: packed,
+      forUserId: "user-bob",
+      giftClaimToken: token,
+      messageAttempt: null,
+      deposit: firstDeposit,
+    })
+    .mockResolvedValue({
+      gift: packed,
+      forUserId: "user-bob",
+      giftClaimToken: null,
+      messageAttempt: null,
+      deposit: null,
+    });
   const reportDeposit = vi.fn<ApiClient["reportDeposit"]>(async () => ({
     ...packed,
     escrowStatus: "pending",
@@ -49,8 +62,22 @@ function setup() {
     digest: tx.digest,
     signature: `signed-${tx.digest}`,
   }));
-  const api = emptyApi({ packageGift, reportDeposit, reportShared, startTakeOut, takeOutGift });
-  const options = { api, sign, userId, fromHandle: "alice", liffId: "123-abc" };
+  const api = emptyApi({
+    packageGift,
+    reportDeposit,
+    reportShared,
+    startTakeOut,
+    takeOutGift,
+    beginMessageAttempt: async () => packed,
+  });
+  const options = {
+    api,
+    sign,
+    userId,
+    forUserId: "user-bob",
+    fromHandle: "alice",
+    liffId: "123-abc",
+  };
   const backend = createApiGiftBackend(options);
   const sticker = { id: packed.stickerId, no: 147, timeUsed: 12 };
   return {
@@ -150,9 +177,13 @@ describe("Giving through the Sui wallet", () => {
 
   it("gives a gift with nothing to sign when the server answers no deposit", async () => {
     const t = setup();
-    t.packageGift
-      .mockReset()
-      .mockResolvedValue({ gift: t.packed, giftClaimToken: token, deposit: null });
+    t.packageGift.mockReset().mockResolvedValue({
+      gift: t.packed,
+      forUserId: "user-bob",
+      giftClaimToken: token,
+      messageAttempt: null,
+      deposit: null,
+    });
     await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: t.packed.id });
     expect(t.sign).not.toHaveBeenCalled();
     expect(t.reportDeposit).not.toHaveBeenCalled();
@@ -199,7 +230,9 @@ describe("Giving through the Sui wallet", () => {
     });
     t.packageGift.mockResolvedValue({
       gift: t.packed,
+      forUserId: "user-bob",
       giftClaimToken: null,
+      messageAttempt: null,
       deposit: firstDeposit,
     });
     await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: t.packed.id });
@@ -213,7 +246,13 @@ describe("Giving through the Sui wallet", () => {
     t.reportDeposit.mockRejectedValueOnce(
       new ApiError(409, { error: "sponsorship_expired", detail: "The sponsorship lapsed" }),
     );
-    t.packageGift.mockResolvedValue({ gift: t.packed, giftClaimToken: null, deposit: fresh });
+    t.packageGift.mockResolvedValue({
+      gift: t.packed,
+      forUserId: "user-bob",
+      giftClaimToken: null,
+      messageAttempt: null,
+      deposit: fresh,
+    });
     await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: t.packed.id });
     expect(t.reportDeposit).toHaveBeenLastCalledWith(t.packed.id, {
       digest: fresh.digest,
@@ -231,7 +270,9 @@ describe("Giving through the Sui wallet", () => {
     t.reportDeposit.mockRejectedValue(lapsed);
     t.packageGift.mockResolvedValue({
       gift: t.packed,
+      forUserId: "user-bob",
       giftClaimToken: null,
+      messageAttempt: null,
       deposit: sponsored("deposit-2"),
     });
     await expect(t.backend.pack(t.sticker)).rejects.toMatchObject({
@@ -241,36 +282,34 @@ describe("Giving through the Sui wallet", () => {
     expect(t.reportDeposit).toHaveBeenCalledTimes(2);
   });
 
-  it("reuses the gift and token after closing and reopening Giving on the same page", async () => {
+  it("reuses the gift and token after reopening Giving from another board on the same page", async () => {
     const t = setup();
     const firstGift = await t.backend.pack(t.sticker);
-    const reopened = createApiGiftBackend(t.options);
+    const reopened = createApiGiftBackend({ ...t.options, forUserId: "user-carol" });
     await expect(reopened.pack(t.sticker)).resolves.toEqual(firstGift);
     expect(t.sign).toHaveBeenCalledOnce();
     expect(t.startTakeOut).not.toHaveBeenCalled();
   });
 
-  it("replaces a Gift Claim Token an earlier page took with it: takes the gift out, then packs it again", async () => {
-    const t = setup();
-    const replacement = gift({ status: "packed", escrowStatus: "missing" });
-    const replacementDeposit = sponsored("deposit-2");
-    t.packageGift
-      .mockReset()
-      .mockResolvedValueOnce({ gift: t.packed, giftClaimToken: null, deposit: null })
-      .mockResolvedValueOnce({
-        gift: replacement,
-        giftClaimToken: token,
-        deposit: replacementDeposit,
+  it.each(["user-bob", null])(
+    "preserves a missing-token gift for its original recipient %s until explicit Take out",
+    async (originalRecipient) => {
+      const t = setup();
+      t.packageGift.mockReset().mockResolvedValue({
+        gift: t.packed,
+        forUserId: originalRecipient,
+        giftClaimToken: null,
+        deposit: null,
+        messageAttempt: null,
       });
-    const heard: PackWait[] = [];
-    await expect(t.backend.pack(t.sticker, (wait) => heard.push(wait))).resolves.toMatchObject({
-      giftId: replacement.id,
-    });
-    expect(t.startTakeOut).toHaveBeenCalledExactlyOnceWith(t.packed.id);
-    expect(t.takeOutGift).toHaveBeenCalledWith(t.packed.id, expect.anything());
-    expect(t.reportDeposit).toHaveBeenCalledExactlyOnceWith(replacement.id, expect.anything());
-    expect(heard).toEqual(["asking", "earlier", "asking", "moving", "asking"]);
-  });
+      const { createApiGiftBackend: fresh } = await reload();
+      await expect(
+        fresh({ ...t.options, forUserId: "user-carol" }).pack(t.sticker),
+      ).rejects.toMatchObject({ giftId: t.packed.id, cause: { problem: "no_link" } });
+      expect(t.startTakeOut).not.toHaveBeenCalled();
+      expect(t.packageGift).toHaveBeenCalledOnce();
+    },
+  );
 
   it("shares an in-progress pack across Giving instances instead of replacing its token", async () => {
     const t = setup();
@@ -295,7 +334,7 @@ describe("Giving through the Sui wallet", () => {
     const t = setup();
     await t.backend.pack(t.sticker);
     t.reportShared.mockRejectedValueOnce(noAnswer());
-    expect(await failureOf(t.backend.markSent(t.packed.id))).toBeNull();
+    expect(await failureOf(t.backend.markSent(t.packed.id, attemptId))).toBeNull();
     expect(t.reportShared).toHaveBeenCalledTimes(2);
   });
 
@@ -305,7 +344,9 @@ describe("Giving through the Sui wallet", () => {
       "sent",
       async (t: ReturnType<typeof setup>) => {
         t.reportShared.mockRejectedValue(noAnswer());
-        expect(await failureOf(t.backend.markSent(t.packed.id))).toBeInstanceOf(ApiError);
+        expect(await failureOf(t.backend.markSent(t.packed.id, attemptId))).toBeInstanceOf(
+          ApiError,
+        );
         t.reportShared.mockResolvedValue({ ...t.packed, status: "sent" });
       },
     ],
@@ -314,13 +355,15 @@ describe("Giving through the Sui wallet", () => {
       "sent",
       async (t: ReturnType<typeof setup>) => {
         t.reportShared.mockRejectedValueOnce(new ApiError(401, { error: "signed_out" }));
-        expect(await failureOf(t.backend.markSent(t.packed.id))).toBeInstanceOf(ApiError);
+        expect(await failureOf(t.backend.markSent(t.packed.id, attemptId))).toBeInstanceOf(
+          ApiError,
+        );
       },
     ],
     [
       "may have gone out",
       "maybeSent",
-      async (t: ReturnType<typeof setup>) => t.backend.markMaybeSent(t.packed.id),
+      async (t: ReturnType<typeof setup>) => t.backend.beginMessageAttempt(t.packed.id, attemptId),
     ],
     [
       "was in LINE's picker when the page went",
@@ -339,14 +382,25 @@ describe("Giving through the Sui wallet", () => {
       const t = setup();
       await t.backend.pack(t.sticker);
       await mark(t);
+      t.packageGift.mockClear();
       const { createApiGiftBackend: afterReload } = await reload();
-      t.packageGift.mockResolvedValue({ gift: t.packed, giftClaimToken: null, deposit: null });
-      expect(await failureOf(afterReload(t.options).pack(t.sticker))).toMatchObject({
+      t.packageGift.mockResolvedValue({
+        gift: t.packed,
+        forUserId: "user-bob",
+        giftClaimToken: null,
+        messageAttempt: null,
+        deposit: null,
+      });
+      expect(
+        await failureOf(afterReload({ ...t.options, forUserId: "user-carol" }).pack(t.sticker)),
+      ).toMatchObject({
         giftId: t.packed.id,
         outcome,
       });
       expect(t.startTakeOut).not.toHaveBeenCalled();
-      if (outcome === "sent") expect(t.reportShared).toHaveBeenLastCalledWith(t.packed.id, "sent");
+      expect(t.packageGift).toHaveBeenCalledOnce();
+      if (outcome === "sent")
+        expect(t.reportShared).toHaveBeenLastCalledWith(t.packed.id, attemptId, "sent");
     },
   );
 
@@ -355,7 +409,7 @@ describe("Giving through the Sui wallet", () => {
     const t = setup();
     await t.backend.pack(t.sticker);
     t.reportShared.mockRejectedValue(new ApiError(401, { error: "signed_out" }));
-    expect(await failureOf(t.backend.markSent(t.packed.id))).toBeInstanceOf(ApiError);
+    expect(await failureOf(t.backend.markSent(t.packed.id, attemptId))).toBeInstanceOf(ApiError);
     const reports = () => t.reportShared.mock.calls.length;
     // The board on screen loads again only once the server has heard.
     const boardChanged = vi.fn();
@@ -368,7 +422,7 @@ describe("Giving through the Sui wallet", () => {
     t.reportShared.mockResolvedValue({ ...t.packed, status: "sent" });
     await reportKeptSends(t.api, userId);
     expect(reports()).toBe(unheard + 1);
-    expect(t.reportShared).toHaveBeenLastCalledWith(t.packed.id, "sent");
+    expect(t.reportShared).toHaveBeenLastCalledWith(t.packed.id, attemptId, "sent");
     expect(boardChanged).toHaveBeenCalledOnce();
     await reportKeptSends(t.api, userId);
     expect(reports()).toBe(unheard + 1);

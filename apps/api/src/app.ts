@@ -33,9 +33,11 @@ export const MAX_BODY_BYTES = 64 * 1024;
 
 /** Sealing sends a sticker's images, over MAX_BODY_BYTES, and sets its own limit. */
 const isSealing = (c: Context) => c.req.method === "POST" && c.req.path === "/api/stickers";
-/** Signing in, and signing out, which clears whatever cookie is there, live or not. */
-const isSignInOrOut = (c: Context) =>
-  (c.req.method === "POST" || c.req.method === "DELETE") && c.req.path === "/api/session";
+/** Interactive sign-in may establish a session; an automatic profile refresh must match one. */
+const isAnonymousSignIn = (c: Context) =>
+  c.req.method === "POST" &&
+  c.req.path === "/api/session" &&
+  c.req.header("x-croquis-user-id") === undefined;
 
 /**
  * The REST API. Every call chains, here and inside each route group, so each route's request and
@@ -47,7 +49,7 @@ export function createApp(deps: AppDeps) {
       .basePath("/api")
       .use(requestDiagnostics)
       .use(except(isSealing, limitBody(MAX_BODY_BYTES)))
-      .use(except(isSignInOrOut, requireSession(deps)))
+      .use(except(isAnonymousSignIn, requireSession(deps)))
       // /session and /me
       .route("/", sessionRoutes(deps))
       // /line-menu

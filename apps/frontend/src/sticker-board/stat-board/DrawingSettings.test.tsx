@@ -1,10 +1,9 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderWithApi } from "../../api/testing";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import { keepDrawingHand, type DrawingHand } from "../../sticker-creation/drawingSettings";
-import { refusingStorage } from "../../ui/testing";
+import { refusingStorage, renderInHost } from "../../ui/testing";
 import { DrawingSettings } from "./DrawingSettings";
 
 const words = stickerBoard.settings.drawing;
@@ -21,7 +20,7 @@ afterEach(() => {
 
 /** The Drawing group as Settings shows it. */
 function render() {
-  const view = renderWithApi(<DrawingSettings />);
+  const view = renderInHost(<DrawingSettings />);
   unmount = view.unmount;
   return view.host;
 }

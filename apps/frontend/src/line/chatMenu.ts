@@ -1,6 +1,7 @@
 import type { ChatMenuLink } from "@drawing-app/api/client";
 import { useEffect, useSyncExternalStore } from "react";
 import { createServerClient } from "../api/httpApi";
+import { useMe } from "../api/meContext";
 import { messageOf } from "../i18n/errorMessage";
 import { jsonField } from "../identity/privy";
 
@@ -14,15 +15,16 @@ export type ChatMenuStatus =
   | { state: "answered"; link: ChatMenuLink }
   | { state: "failed"; reason: string };
 
-let status: ChatMenuStatus = { state: "waiting" };
+const waiting: ChatMenuStatus = { state: "waiting" };
+const statuses = new Map<string, ChatMenuStatus>();
 const listeners = new Set<() => void>();
 
-function set(next: ChatMenuStatus) {
-  status = next;
+function set(userId: string, next: ChatMenuStatus) {
+  statuses.set(userId, next);
   listeners.forEach((l) => l());
 }
 
-export const chatMenuStatus = () => status;
+export const chatMenuStatus = (userId: string) => statuses.get(userId) ?? waiting;
 
 const subscribe = (l: () => void) => {
   listeners.add(l);
@@ -30,14 +32,15 @@ const subscribe = (l: () => void) => {
 };
 
 export function useChatMenuStatus(): ChatMenuStatus {
-  return useSyncExternalStore(subscribe, chatMenuStatus);
+  const { id } = useMe();
+  return useSyncExternalStore(subscribe, () => chatMenuStatus(id));
 }
 
-let asked = false;
+const asked = new Set<string>();
 
-function fail(reason: string) {
+function fail(userId: string, reason: string) {
   console.error(`The chat menu didn't link: ${reason}`);
-  set({ state: "failed", reason });
+  set(userId, { state: "failed", reason });
 }
 
 /**
@@ -45,27 +48,31 @@ function fail(reason: string) {
  * left, once per page load. The server asks LINE itself; the answer goes to the status, and this
  * never throws.
  */
-export async function linkChatMenu(api = createServerClient()): Promise<void> {
-  if (asked) return;
-  asked = true;
-  set({ state: "linking" });
+export async function linkChatMenu(
+  userId: string,
+  api = createServerClient(fetch, userId),
+): Promise<void> {
+  if (asked.has(userId)) return;
+  asked.add(userId);
+  set(userId, { state: "linking" });
   try {
     const response = await api["line-menu"].$post();
     if (response.ok) {
-      set({ state: "answered", link: (await response.json()).chatMenu });
+      set(userId, { state: "answered", link: (await response.json()).chatMenu });
       return;
     }
     const error = jsonField(await response.json().catch(() => null), "error");
-    fail(`HTTP ${response.status}${typeof error === "string" ? ` ${error}` : ""}`);
+    fail(userId, `HTTP ${response.status}${typeof error === "string" ? ` ${error}` : ""}`);
   } catch (error) {
-    fail(`couldn’t reach the server: ${messageOf(error)}`);
+    fail(userId, `couldn’t reach the server: ${messageOf(error)}`);
   }
 }
 
 /** Links your chat menu once you're signed in to the app's server. It shows nothing. */
 export function ChatMenuLink() {
+  const { id } = useMe();
   useEffect(() => {
-    void linkChatMenu();
-  }, []);
+    void linkChatMenu(id);
+  }, [id]);
   return null;
 }

@@ -16,6 +16,7 @@ import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { useLargeScreen } from "../ui/largeScreen";
 import { useFocusTrap } from "../ui/useFocusTrap";
+import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { useSheetDrag } from "../ui/useSheetDrag";
 import { PhonePortal } from "../ui/PhonePortal";
@@ -290,9 +291,11 @@ export function GratitudeMiniGame({
   };
   // A combo in play ends and shows its receipt, so it's never sent unseen; anything else closes.
   const close = () => {
-    if (engine.current?.close()) return;
+    if (engine.current?.close()) return false;
     leave();
+    return true;
   };
+  useBackToClose(true, close);
   // On a large screen the receipt is a card in the middle, and a swipe down its head closes it.
   const large = useLargeScreen();
   const drag = useSheetDrag(close);

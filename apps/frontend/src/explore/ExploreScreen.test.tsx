@@ -471,6 +471,156 @@ describe("ExploreScreen while it loads", () => {
 });
 
 describe("ExploreScreen's search", () => {
+  it("keeps a phone pile's older pages, cursor, day, and latest scroll through search", async () => {
+    const today = sticker({ sealedAt: minutesAgo(5) });
+    const yesterday = sticker({ sealedAt: minutesAgo(25 * 60) });
+    const older = sticker({ sealedAt: minutesAgo(50 * 60) });
+    const next = sticker({ sealedAt: minutesAgo(75 * 60) });
+    const nextCursor = "older-after-search";
+    const explorePile = vi.fn<ApiClient["explorePile"]>((before) =>
+      Promise.resolve(
+        before === CURSOR
+          ? { stickers: unGiven(older), before: nextCursor }
+          : { stickers: unGiven(next), before: null },
+      ),
+    );
+    const host = await openExplore(exploreWith(unGiven(today, yesterday), {}, CURSOR), {
+      explorePile,
+    });
+    await reachEnd();
+    const scroller = host.querySelector<HTMLElement>(".explore");
+    const pile = host.querySelector<HTMLElement>(".explore-view");
+    if (!scroller || !pile) throw new Error("Explore pile missing");
+    const ids = () =>
+      [...pile.querySelectorAll<HTMLElement>("[data-pile-id]")].map((el) => el.dataset.pileId);
+    const beforeSearch = ids();
+    const days = layersOf(host);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(700);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const top = this.matches(".pile-sticker")
+        ? 100 + beforeSearch.indexOf(this.dataset.pileId) * 200 - scroller.scrollTop
+        : 0;
+      return new DOMRect(0, top, 0, 150);
+    });
+    scroller.scrollTop = 350;
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"));
+    });
+
+    await searchFor(host, "mi");
+    expect(pile.hidden).toBe(true);
+    expect(
+      pile.querySelector<HTMLButtonElement>(".pile-sticker__button")?.closest("[hidden]"),
+    ).toBe(pile);
+    scroller.scrollTop = 20;
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"));
+    });
+    await wait(200);
+    await searchFor(host, "");
+
+    expect(pile.hidden).toBe(false);
+    expect(host.querySelector(".explore-view")).toBe(pile);
+    expect(ids()).toEqual(beforeSearch);
+    expect(layersOf(host)).toEqual(days);
+    expect(scroller.scrollTop).toBe(350);
+    expect(explorePile.mock.calls).toEqual([[CURSOR]]);
+    await reachEnd();
+    expect(explorePile.mock.calls).toEqual([[CURSOR], [nextCursor]]);
+    vi.restoreAllMocks();
+  });
+
+  it("keeps This week selected through typing, deleting, and Clear", async () => {
+    reduceMotion();
+    const host = await openExplore(
+      exploreWith([], { bestCombo: [{ person: people.ken, value: 64 }] }),
+    );
+    act(() => tab(host, "This week").click());
+    act(() => tab(host, "Best combo").click());
+
+    await searchFor(host, "mik");
+    expect(host.querySelector<HTMLElement>(".explore-view")?.hidden).toBe(true);
+    await searchFor(host, "mi");
+    const clear = host.querySelector<HTMLButtonElement>(".search-clear");
+    act(() => clear?.click());
+
+    expect(tab(host, "This week").getAttribute("aria-selected")).toBe("true");
+    expect(tab(host, "Best combo").getAttribute("aria-selected")).toBe("true");
+    expect(host.querySelector(".explore-view .leaderboard")?.textContent).toContain("@ken");
+    expect(host.querySelector<HTMLElement>(".explore-view")?.hidden).toBe(false);
+  });
+
+  it("still starts the pile from its first page after switching to This week and back", async () => {
+    const today = sticker({ sealedAt: minutesAgo(5) });
+    const older = sticker({ sealedAt: minutesAgo(50 * 60) });
+    const explorePile = vi.fn<ApiClient["explorePile"]>(() =>
+      Promise.resolve({ stickers: unGiven(older), before: null }),
+    );
+    const host = await openExplore(exploreWith(unGiven(today), {}, CURSOR), { explorePile });
+    await reachEnd();
+    expect(layersOf(host).map(([day]) => day)).toEqual(["Today", "September 24"]);
+
+    act(() => tab(host, "This week").click());
+    act(() => tab(host, "Stickers").click());
+    expect(layersOf(host)).toEqual([["Today", 1]]);
+    expect(explorePile.mock.calls).toEqual([[CURSOR]]);
+  });
+
+  it("does not ask for an older page from hidden geometry, and keeps an older-page error for retry", async () => {
+    const old = sticker({ sealedAt: minutesAgo(5) });
+    const older = sticker({ sealedAt: minutesAgo(50 * 60) });
+    const explorePile = vi
+      .fn<ApiClient["explorePile"]>()
+      .mockRejectedValueOnce(new ApiError(500, { error: "internal_error" }))
+      .mockResolvedValueOnce({ stickers: unGiven(older), before: null });
+    const host = await openExplore(exploreWith(unGiven(old), {}, CURSOR), { explorePile });
+    await reachEnd();
+    expect(host.querySelector('.explore-view [role="alert"]')).not.toBeNull();
+    await searchFor(host, "mi");
+    await reachEnd();
+    expect(explorePile.mock.calls).toEqual([[CURSOR]]);
+    await searchFor(host, "");
+    expect(host.querySelector('.explore-view [role="alert"]')).not.toBeNull();
+    const retry = host.querySelector<HTMLButtonElement>('.explore-view [role="alert"] button');
+    act(() => retry?.click());
+    await wait(0);
+    expect(explorePile.mock.calls).toEqual([[CURSOR], [CURSOR]]);
+    expect(layersOf(host).map(([day]) => day)).toEqual(["Today", "September 24"]);
+  });
+
+  it("replaces hidden pages when the NSFW opt-in turns off during search", async () => {
+    const old = sticker({ sealedAt: minutesAgo(5), nsfw: true });
+    const older = sticker({ sealedAt: minutesAgo(50 * 60), nsfw: true });
+    const replacement = sticker({ sealedAt: minutesAgo(3) });
+    const explore = vi
+      .fn<ApiClient["explore"]>()
+      .mockResolvedValueOnce(exploreWith(unGiven(old), {}, CURSOR))
+      .mockResolvedValueOnce(exploreWith(unGiven(replacement)));
+    view = renderWithApi(
+      <ExploreScreen onOpenArtist={() => {}} onOpenMyBoard={() => {}} />,
+      emptyApi({
+        explore,
+        explorePile: () => Promise.resolve({ stickers: unGiven(older), before: null }),
+      }),
+      { ...TEST_ME, nsfwOptIn: true },
+    );
+    await wait(0);
+    const host = view.host;
+    await reachEnd();
+    expect(layersOf(host)).toHaveLength(2);
+    await searchFor(host, "mi");
+    view.setMe({ ...TEST_ME, nsfwOptIn: false });
+    await wait(0);
+    await searchFor(host, "");
+
+    expect(explore).toHaveBeenCalledTimes(2);
+    expect(
+      [...host.querySelectorAll<HTMLElement>("[data-pile-id]")].map((el) => el.dataset.pileId),
+    ).toEqual([replacement.id]);
+    expect(layersOf(host)).toEqual([["Today", 1]]);
+  });
   it("says it's searching, then what it found, on a line that was in the page before", async () => {
     const search = inFlight<Person[]>();
     const host = show(
@@ -590,6 +740,42 @@ describe("ExploreScreen on an iPad", () => {
 
     await searchFor(host, "");
     expect(host.querySelector<HTMLElement>(".explore-view")?.hidden).toBe(false);
+    expect(layersOf(host)).toEqual(layers);
+    expect(explorePile).toHaveBeenCalledTimes(1);
+  });
+
+  it("restores a two-column pile's position after results scroll in its place", async () => {
+    onIpad(SIDEWAYS);
+    const { host, explorePile, layers } = await withOlderPage();
+    const pile = host.querySelector<HTMLElement>(".explore-view");
+    if (!pile) throw new Error("pile column missing");
+    const ids = [...pile.querySelectorAll<HTMLElement>("[data-pile-id]")].map(
+      (el) => el.dataset.pileId,
+    );
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const top = this.matches(".pile-sticker")
+        ? 100 + ids.indexOf(this.dataset.pileId) * 200 - pile.scrollTop
+        : 0;
+      return new DOMRect(0, top, 0, 150);
+    });
+    pile.scrollTop = 350;
+    act(() => {
+      pile.dispatchEvent(new Event("scroll"));
+    });
+    await searchFor(host, "mi");
+    expect(pile.hidden).toBe(true);
+    const results = host.querySelector<HTMLElement>(".explore-results");
+    if (!results) throw new Error("search results missing");
+    results.scrollTop = 220;
+    act(() => {
+      results.dispatchEvent(new Event("scroll"));
+    });
+    pile.scrollTop = 0;
+    await searchFor(host, "");
+
+    expect(pile.scrollTop).toBe(350);
     expect(layersOf(host)).toEqual(layers);
     expect(explorePile).toHaveBeenCalledTimes(1);
   });

@@ -21,6 +21,13 @@ async function flipBackToDraw(page: Page, language: Language) {
 test("Language: 日本語 in Settings switches Croquis in place, the account keeps it through a reload, and English switches back", async ({
   page,
 }) => {
+  const liffLanguageRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.hostname === "liffsdk.line-scdn.net" && url.pathname.startsWith("/xlt/")) {
+      liffLanguageRequests.push(request.url());
+    }
+  });
   await signIn(page, "lang", "en");
   await openSettings(page, "en");
   await markPage(page);
@@ -45,4 +52,5 @@ test("Language: 日本語 in Settings switches Croquis in place, the account kee
   expect(await stillMarked(page)).toBe(true);
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await flipBackToDraw(page, "en");
+  expect(liffLanguageRequests, "LIFF Mock must not fetch LIFF's language files").toEqual([]);
 });

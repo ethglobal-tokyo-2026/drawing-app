@@ -25,7 +25,12 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...phone, browserName: "chromium" } },
-    { name: "webkit", use: { ...phone, browserName: "webkit" } },
+    // Blink's forced darkening is a Chromium capability; WebKit does not collect that case.
+    {
+      name: "webkit",
+      testIgnore: "**/forcedDark.e2e.ts",
+      use: { ...phone, browserName: "webkit" },
+    },
   ],
   // Each server is exec'd rather than run through pnpm, whose children leave Playwright's process
   // group and outlive the run.

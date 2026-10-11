@@ -4,7 +4,7 @@
  * doesn't join hang together by narrow bridges of border. Pure functions over pixel arrays; the ink is
  * measured scaled down to at most GRID pixels on its long side.
  */
-import { boxResample, type Pixels } from "./pixels";
+import type { Pixels } from "./pixels";
 
 export type Point = [x: number, y: number];
 
@@ -44,7 +44,7 @@ interface Parts {
 }
 
 const GRID = 512;
-/** Alpha above which a cell counts as ink. */
+/** Source alpha above which a pixel counts as ink for the cut. */
 const INK_ALPHA = 18;
 /** The white border's width, in sheet units: what a 390 px phone's sticker has. */
 export const BORDER_UNITS = 23;
@@ -62,6 +62,28 @@ const SOFT = 2;
 const FULL_BLEED = 0.6;
 /** The square cut's corner radius, in borders. */
 const SQUARE_CORNER = 1.8;
+
+/** Every grid cell touched by a source pixel whose alpha counts as ink. */
+function inkMask(
+  ink: Pixels,
+  scale: number,
+  pad: number,
+  width: number,
+  height: number,
+): Uint8Array {
+  const mask = new Uint8Array(width * height);
+  for (let y = 0; y < ink.height; y++) {
+    for (let x = 0; x < ink.width; x++) {
+      if (ink.data[(y * ink.width + x) * 4 + 3] <= INK_ALPHA) continue;
+      const x0 = Math.floor(x * scale) + pad;
+      const x1 = Math.ceil((x + 1) * scale) - 1 + pad;
+      const y0 = Math.floor(y * scale) + pad;
+      const y1 = Math.ceil((y + 1) * scale) - 1 + pad;
+      for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) mask[cy * width + cx] = 1;
+    }
+  }
+  return mask;
+}
 
 /** Felzenszwalb–Huttenlocher squared distance transform along one line; `at` gets each argmin. */
 function distanceLine(
@@ -380,17 +402,11 @@ export function dieCut(ink: Pixels, borderPx: number): DieCut | null {
   const height = ih + 2 * pad;
   const n = width * height;
 
-  const alpha = boxResample(
-    ink,
-    { x: -pad / scale, y: -pad / scale, step: 1 / scale, width, height },
-    1,
-  );
-  const inked = new Uint8Array(n);
+  const inked = inkMask(ink, scale, pad, width, height);
   let count = 0;
   const ink0: Bounds = { x0: width, y0: height, x1: -1, y1: -1 };
   for (let i = 0; i < n; i++) {
-    if (alpha[i] <= INK_ALPHA) continue;
-    inked[i] = 1;
+    if (!inked[i]) continue;
     count++;
     const x = i % width;
     const y = Math.floor(i / width);

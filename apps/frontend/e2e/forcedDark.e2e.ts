@@ -29,10 +29,7 @@ async function paintedAt(page: Page, { x, y }: { x: number; y: number }) {
   return [red, green, blue];
 }
 
-test("the board keeps its Liner ground where the browser forces pages dark", async ({
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "Forced darkening is Chromium's");
+test("the board keeps its Liner ground where the browser forces pages dark", async () => {
   // Chromium's own forced darkening, as Chrome's Auto Dark Theme and Android's WebView apply it.
   const browser = await chromium.launch({ args: ["--blink-settings=forceDarkModeEnabled=true"] });
   try {

@@ -5,15 +5,20 @@ import type {
   Me,
   Person,
   StickerPlacement,
+  UserStats,
 } from "@drawing-app/api/client";
 import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
-import { act, useEffect, type ComponentProps } from "react";
+import { act, StrictMode, useEffect, type ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
-import { boardSticker, people, sticker, trailEntry } from "../api/testFixtures";
+import { boardSticker, gift, people, sticker, trailEntry } from "../api/testFixtures";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
+import { ApiProvider } from "../api/ApiProvider";
+import { MeContext } from "../api/meContext";
+import { TicketsProvider } from "../tickets/TicketsProvider";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
 import { forgetNoticedHere, markNoticed, noticeReceivesFromNow } from "../giving/noticedGifts";
+import type { GiftForYou } from "../receiving/GiftsForYouBadge";
 import { errorMessage } from "../i18n/errorMessage";
 import { i18next, withBreakHints } from "../i18n/i18n";
 import { api as apiStrings } from "../i18n/strings/api";
@@ -24,7 +29,9 @@ import { formatMonthDay, formatNo, spokenDuration } from "../stickers/format";
 import type { Sheet } from "../tickets/ticketsContext";
 import { useTickets } from "../tickets/useTickets";
 import { TabsLeadSlot } from "../ui/TabsLead";
-import { inLanguage, onLargeScreen } from "../ui/testing";
+import { inLanguage, onLargeScreen, renderInHost, stubResizeObservers } from "../ui/testing";
+import { BoardPlacementSavesProvider, useBoardPlacementSaves } from "./BoardPlacementSavesProvider";
+import type { BoardPlacementSaves } from "./boardPlacementSaves";
 import { forgetGreetings } from "./artistChipGreeting";
 import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
@@ -95,6 +102,16 @@ beforeEach(() => {
 
 const shownIds = (host: HTMLElement) =>
   [...host.querySelectorAll<HTMLElement>(".placed-sticker")].map((el) => el.dataset.stickerId);
+const keptPhone = () => {
+  const spot = keptBoardFor(TEST_ME.id)?.stickers[0].placements.phone;
+  if (!spot) throw new Error("No phone placement was kept");
+  return spot;
+};
+const keptLarge = () => {
+  const spot = keptBoardFor(TEST_ME.id)?.stickers[0].placements.large;
+  if (!spot) throw new Error("No large placement was kept");
+  return spot;
+};
 const keep = (userId: string, ...stickers: ApiBoardSticker[]) =>
   keepBoard(
     userId,
@@ -160,6 +177,16 @@ const boardApi = (boardStickers: ApiBoardSticker[] = [], overrides: Partial<ApiC
 /** A client whose board never finishes loading, over `overrides`. */
 const stillLoading = (overrides: Partial<ApiClient> = {}) =>
   emptyApi({ stickerBoard: () => new Promise<LoadedBoard>(() => {}), ...overrides });
+
+const settledStats: UserStats = {
+  since: "2026-09-01T00:00:00.000Z",
+  made: 0,
+  received: 0,
+  given: 0,
+  gratitude: { direct: 0, residual: 0, total: 0 },
+  bests: { bestCombo: 0, mostGratitudeInADay: 0, longestStreak: 0 },
+  streak: 0,
+};
 
 /** Your board on `api`, as `me`, rendered and not yet loaded; it goes when the test ends. */
 function renderBoard(
@@ -279,12 +306,13 @@ describe("StickerBoard with the board kept on this phone", () => {
     expect(keptSpots(a)?.phone.x).toBeLessThan(0.3);
   });
 
-  it("never draws a board kept for someone else, and forgets it", () => {
+  it("never draws a board kept for someone else, and forgets it", async () => {
     keep("someone-else", boardSticker({ placement: placedAt(0.3) }));
     const view = renderBoard(stillLoading());
     expect(shownIds(view.host)).toEqual([]);
     expect(view.host.querySelectorAll(".board-loading-sticker").length).toBeGreaterThan(0);
     expect(localStorage.getItem(KEPT_BOARD_KEY)).toBeNull();
+    await act(async () => {});
   });
 });
 
@@ -359,6 +387,114 @@ describe("StickerBoard's tickets", () => {
   });
 });
 
+describe("StickerBoard's gifts for you", () => {
+  const offline = () => new ApiError(0, { error: "network", detail: "Incoming gifts unavailable" });
+  const incoming = (): GiftForYou => {
+    const arriving = sticker();
+    return {
+      gift: gift({ stickerId: arriving.id, giverId: people.mika.id }),
+      giver: people.mika,
+      sticker: arriving,
+    };
+  };
+  const giftAlert = (host: HTMLElement) =>
+    [...host.querySelectorAll<HTMLElement>(".board-alerts .error-line")].find((line) =>
+      line.textContent?.includes("Incoming gifts unavailable"),
+    );
+
+  it("keeps the failed incoming-gift alert and its details through another failed retry", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const giftsForYou = vi.fn<ApiClient["giftsForYou"]>().mockRejectedValue(offline());
+    const stickerBoard = vi.fn<ApiClient["stickerBoard"]>().mockResolvedValue({
+      owner: TEST_OWNER,
+      boardStickers: [],
+    });
+    const tickets = vi.fn<ApiClient["tickets"]>().mockResolvedValue(FRESH_TICKETS);
+    const view = await openBoard(boardApi([], { giftsForYou, stickerBoard, tickets }));
+    const alert = giftAlert(view.host);
+    expect(alert?.querySelector('[role="alert"]')?.textContent).toContain(NETWORK_ERROR);
+    expect(alert?.textContent).toContain("Incoming gifts unavailable");
+    expect(view.host.querySelector(".gifts-for-you-badge")).toBeNull();
+    expect(log).toHaveBeenCalledWith("Loading gifts-for-you:0 failed", expect.any(ApiError));
+
+    await act(async () => alert?.querySelector<HTMLElement>(".label-btn--quiet")?.click());
+    expect(giftsForYou).toHaveBeenCalledTimes(2);
+    expect(stickerBoard).toHaveBeenCalledTimes(1);
+    expect(tickets).toHaveBeenCalledTimes(1);
+    expect(giftAlert(view.host)?.querySelector('[role="alert"]')?.textContent).toContain(
+      NETWORK_ERROR,
+    );
+    expect(view.host.querySelector(".gifts-for-you-badge")).toBeNull();
+  });
+
+  it("clears the failed alert after retry and refreshes gifts when Receiving closes", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const waiting = incoming();
+    const giftsForYou = vi
+      .fn<ApiClient["giftsForYou"]>()
+      .mockRejectedValueOnce(offline())
+      .mockResolvedValueOnce({ gifts: [waiting] })
+      .mockResolvedValueOnce({ gifts: [] });
+    const onOpenGift = vi.fn();
+    const view = await openBoard(boardApi([], { giftsForYou }), { onOpenGift });
+    expect(giftAlert(view.host)).toBeDefined();
+
+    await act(async () =>
+      giftAlert(view.host)?.querySelector<HTMLElement>(".label-btn--quiet")?.click(),
+    );
+    expect(giftAlert(view.host)).toBeUndefined();
+    const badge = view.host.querySelector<HTMLElement>(".gifts-for-you-badge");
+    expect(badge).not.toBeNull();
+    act(() => badge?.click());
+    expect(onOpenGift).toHaveBeenCalledWith(waiting);
+
+    view.rerender(<StickerBoard onDraw={() => {}} onOpenGift={onOpenGift} giftClosures={1} />);
+    await act(async () => {});
+    expect(giftsForYou).toHaveBeenCalledTimes(3);
+    expect(view.host.querySelector(".gifts-for-you-badge")).toBeNull();
+  });
+
+  it("translates a failed incoming-gift request when the app's language changes", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const view = await openBoard(boardApi([], { giftsForYou: () => Promise.reject(offline()) }));
+    expect(giftAlert(view.host)?.textContent).toContain(
+      stickerBoard.board.giftsDidntLoad.en.split(":")[0],
+    );
+    expect(giftAlert(view.host)?.textContent).toContain(withBreakHints(errors.network.en));
+
+    await inLanguage("ja");
+    expect(giftAlert(view.host)?.textContent).toContain(
+      stickerBoard.board.giftsDidntLoad.ja.split("：")[0],
+    );
+    expect(giftAlert(view.host)?.textContent).toContain(withBreakHints(errors.network.ja));
+    expect(giftAlert(view.host)?.textContent).toContain("Incoming gifts unavailable");
+  });
+
+  it("shows incoming-gift, ticket, and placement failures together", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const tickets = vi.fn<ApiClient["tickets"]>().mockRejectedValue(offline());
+    const giftsForYou = vi.fn<ApiClient["giftsForYou"]>().mockRejectedValue(offline());
+    const view = await openBoard(
+      boardApi([boardSticker({ placement: null })], {
+        tickets,
+        giftsForYou,
+        saveStickerPlacement: () => Promise.reject(offline()),
+      }),
+    );
+    const alerts = [...view.host.querySelectorAll('.board-alerts [role="alert"]')].map(
+      (line) => line.textContent,
+    );
+    expect(alerts).toHaveLength(3);
+    expect(
+      alerts.some((line) => line?.includes(stickerBoard.board.giftsDidntLoad.en.split(":")[0])),
+    ).toBe(true);
+    expect(
+      alerts.some((line) => line?.includes(stickerBoard.board.ticketsDidntLoad.en.split(":")[0])),
+    ).toBe(true);
+    expect(alerts.some((line) => line?.includes("Couldn’t save where"))).toBe(true);
+  });
+});
+
 describe("StickerBoard while a drawing waits", () => {
   /** The drawing screen under the board, saying what its sheet needs from Draw. */
   function DrawingScreenSays({ sheet }: { sheet: Sheet }) {
@@ -430,6 +566,17 @@ describe("StickerBoard's artist chips", () => {
   });
 
   it("name a received sticker's artist alone as it lands, after the greeting has played too", async () => {
+    // Sharp image resizing is unrelated to the artist chip this test checks.
+    stubResizeObservers();
+    const finish: (() => void)[] = [];
+    // Finish the landing inside act, where its callbacks can update the board.
+    vi.spyOn(Element.prototype, "animate").mockImplementation(() => {
+      const animation = new Animation();
+      Object.defineProperty(animation, "finished", {
+        value: new Promise<void>((resolve) => finish.push(resolve)),
+      });
+      return animation;
+    });
     const [a, b] = [
       byMika(),
       boardSticker({ placement: placedAt(0.7), sticker: sticker({ artist: people.ken }) }),
@@ -440,6 +587,7 @@ describe("StickerBoard's artist chips", () => {
 
     const first = mounted(stillLoading());
     expect(chipped(first.host)).toEqual(["@ken", "@mika"]);
+    await act(async () => {});
     first.unmount();
 
     // Receiving mounts the board again, with the sticker on it.
@@ -456,24 +604,21 @@ describe("StickerBoard's artist chips", () => {
     // Its chip plays on once the sticker has stuck.
     const landing = () => view.host.querySelector(".is-landing");
     expect(landing()).not.toBeNull();
-    await vi.waitFor(
-      async () => {
-        await act(async () => {});
-        expect(landing()).toBeNull();
-      },
-      { timeout: 4000 },
-    );
+    await act(async () => finish.forEach((end) => end()));
+    expect(landing()).toBeNull();
     expect(chipped(view.host)).toEqual(["@bob"]);
+    await act(async () => {});
   });
 
-  it("end with a turn of the board while they play, and don't start over when it turns back", () => {
+  it("end with a turn of the board while they play, and don't start over when it turns back", async () => {
     keep(TEST_ME.id, byMika());
-    const view = renderBoard(stillLoading());
+    const view = renderBoard(stillLoading({ userStats: () => Promise.resolve(settledStats) }));
     expect(chipped(view.host)).toEqual(["@mika"]);
 
     flip(view.host);
     flip(view.host);
     expect(chipped(view.host)).toEqual([]);
+    await act(async () => {});
   });
 });
 
@@ -572,10 +717,28 @@ describe("StickerBoard's sticker detail", () => {
     const inTheBag = boardSticker({
       placement: placedAt(0.2),
       openGift: { id: "g-packed", status: "packed", for: null },
+      sticker: sticker({ ownerId: TEST_OWNER.id }),
     });
-    const viewed = boardSticker({ placement: placedAt(0.5) });
-    const after = boardSticker({ placement: placedAt(0.8) });
-    const view = await visitBoard(inTheBag, viewed, after);
+    const viewed = boardSticker({
+      placement: placedAt(0.5),
+      sticker: sticker({ ownerId: TEST_OWNER.id }),
+    });
+    const after = boardSticker({
+      placement: placedAt(0.8),
+      sticker: sticker({ ownerId: TEST_OWNER.id }),
+    });
+    const listed = new Map([inTheBag, viewed, after].map((item) => [item.stickerId, item]));
+    onAPhone();
+    const view = await openBoard(
+      boardApi([inTheBag, viewed, after], {
+        userStats: () => Promise.resolve(settledStats),
+        stickerDetail: async (id) => {
+          const item = listed.get(id);
+          if (!item) throw new Error(`Unexpected sticker detail ${id}`);
+          return { sticker: item.sticker, owner: TEST_OWNER, transferTrail: [] };
+        },
+      }),
+    );
     selectByKeys(view.host, viewed.stickerId);
     const viewKey = [...view.host.querySelectorAll<HTMLElement>(".sticker-toolbar button")].find(
       (b) => b.textContent === stickerBoard.toolbar.view.en,
@@ -599,6 +762,7 @@ describe("StickerBoard's sticker detail", () => {
     expect(shown()).toBe(no(inTheBag));
     page("previous");
     expect(shown()).toBe(no(after));
+    await act(async () => {});
   });
 });
 
@@ -655,10 +819,33 @@ describe("StickerBoard after a gift", () => {
   });
 
   it("opens a given sticker among the stickers you gave from its spot in the tray", async () => {
-    const gone = given();
+    const gone = boardSticker({
+      placement: placedAt(0.3),
+      held: false,
+      givenTo: { receiver: people.bob, receivedAt: RECEIVED_AT },
+      sticker: sticker({ ownerId: people.bob.id }),
+    });
+    const kept = boardSticker({
+      placement: placedAt(0.7),
+      sticker: sticker({ ownerId: TEST_OWNER.id }),
+    });
+    const details = new Map([
+      [gone.stickerId, { sticker: gone.sticker, owner: people.bob, transferTrail: [] }],
+      [kept.stickerId, { sticker: kept.sticker, owner: TEST_OWNER, transferTrail: [] }],
+    ]);
     // Noticed already, so no notice covers the board.
     markNoticed([{ stickerId: gone.stickerId, receivedAt: Date.parse(RECEIVED_AT) }]);
-    const stage = await stageWith(gone, boardSticker({ placement: placedAt(0.7) }));
+    const view = await openBoard(
+      boardApi([gone, kept], {
+        stickerDetail: async (id) => {
+          const detail = details.get(id);
+          if (!detail) throw new Error(`Unexpected sticker detail ${id}`);
+          return detail;
+        },
+      }),
+    );
+    const stage = view.host.querySelector<HTMLElement>(".board-stage");
+    if (!stage) throw new Error("The board has no stage");
     // The sticker tray loads with the board.
     await act(() => vi.dynamicImportSettled());
     const spot = stage
@@ -674,6 +861,7 @@ describe("StickerBoard after a gift", () => {
     act(() => spot?.click());
     await act(() => vi.dynamicImportSettled());
     const detail = document.querySelector(".sticker-detail");
+    expect(detail?.querySelector(".sticker-detail__check-failed")).toBeNull();
     expect(detail?.querySelector("nav")?.getAttribute("aria-label")).toBe(
       i18next.t(($) => $.stickerBoard.detail.stickersYouGave),
     );
@@ -738,6 +926,211 @@ describe("StickerBoard's sticker tray", () => {
 });
 
 describe("StickerBoard saving where a sticker sits", () => {
+  it("keeps a failure received while the board is absent and retries it on the next visit", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    onAPhone();
+    const a = boardSticker({ placement: placedAt(0.5) });
+    const server = boardServer(a);
+    let reject = (_: unknown) => {};
+    const save = vi.fn(server.api.saveStickerPlacement).mockImplementationOnce(
+      () =>
+        new Promise((_, no) => {
+          reject = no;
+        }),
+    );
+    const view = await openBoard(emptyApi({ ...server.api, saveStickerPlacement: save }));
+    selectByKeys(view.host, a.stickerId)("ArrowLeft");
+    act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    const moved = keptPhone();
+    view.rerender(null);
+    await act(async () => reject(new Error("offline")));
+    view.rerender(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />);
+    await act(async () => {});
+    expect(view.host.querySelector(".board-alerts")).not.toBeNull();
+    await act(async () =>
+      view.host.querySelector<HTMLButtonElement>(".board-alerts button")?.click(),
+    );
+    expect(view.host.querySelector(".board-alerts")).toBeNull();
+    expect(server.onServer.get(a.stickerId)?.placement).toEqual(toApiPlacement(moved));
+  });
+
+  it("accepts another device's placement after a saved local move has been read back", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    onAPhone();
+    const a = boardSticker({ placement: placedAt(0.5) });
+    const server = boardServer(a);
+    const view = await openBoard(server.api);
+    selectByKeys(view.host, a.stickerId)("ArrowLeft");
+    act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    await act(async () => {});
+    await act(async () => myStickerBoardChanged());
+    server.onServer.set(a.stickerId, { ...a, placement: placedAt(0.8) });
+    await act(async () => myStickerBoardChanged());
+    expect(keptPhone().x).toBe(0.8);
+  });
+
+  it("keeps uncommitted key steps over a read, then accepts an external placement after the steps settle", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    onAPhone();
+    const a = boardSticker({ placement: placedAt(0.5) });
+    const server = boardServer(a);
+    const view = await openBoard(server.api);
+    selectByKeys(view.host, a.stickerId)("ArrowLeft");
+    const transform = () =>
+      view.host.querySelector<HTMLElement>(`[data-sticker-id="${a.stickerId}"]`)?.style.transform;
+    const live = transform();
+    server.onServer.set(a.stickerId, { ...a, placement: placedAt(0.8) });
+    await act(async () => myStickerBoardChanged());
+    expect(transform()).toBe(live);
+    act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    await act(async () => {});
+    expect(server.onServer.get(a.stickerId)?.placement?.x).toBeLessThan(0.5);
+    await act(async () => myStickerBoardChanged());
+    server.onServer.set(a.stickerId, { ...a, placement: placedAt(0.7) });
+    await act(async () => myStickerBoardChanged());
+    expect(keptPhone().x).toBe(0.7);
+  });
+
+  it("survives StrictMode effect cleanup while deriving and saving", async () => {
+    onAnIpad();
+    const a = boardSticker({ placement: placedAt(0.5) });
+    const server = boardServer(a);
+    const view = renderInHost(
+      <StrictMode>
+        <MeContext value={TEST_ME}>
+          <ApiProvider client={server.api}>
+            <BoardPlacementSavesProvider>
+              <TicketsProvider>
+                <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />
+              </TicketsProvider>
+            </BoardPlacementSavesProvider>
+          </ApiProvider>
+        </MeContext>
+      </StrictMode>,
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    expect(server.saveLargeLayout).toHaveBeenCalledOnce();
+    expect(server.onServer.get(a.stickerId)?.largePlacement).not.toBeNull();
+  });
+
+  it("abandons unsent placements when the account provider changes", async () => {
+    let current!: BoardPlacementSaves;
+    function Probe() {
+      const { saves } = useBoardPlacementSaves();
+      useEffect(() => {
+        current = saves;
+      }, [saves]);
+      return null;
+    }
+    let release = () => {};
+    const api = emptyApi();
+    const save = vi.spyOn(api, "saveStickerPlacement").mockImplementationOnce(async (id, spots) => {
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return emptyApi().saveStickerPlacement(id, spots);
+    });
+    const view = renderWithApi(<Probe />, api);
+    unmount = view.unmount;
+    const before = current;
+    act(() => {
+      before.save({ id: "a", no: 1 }, { phone: toRecordPlacement(placedAt(0.2)) });
+      before.save({ id: "a", no: 1 }, { phone: toRecordPlacement(placedAt(0.3)) });
+    });
+    view.setMe({ ...TEST_ME, id: "other-account" });
+    expect(current).not.toBe(before);
+    expect(current.pendingSpots().size).toBe(0);
+    await act(async () => release());
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(current.read().unsaved.size).toBe(0);
+  });
+
+  it("serializes A, queued B, and remounted C across visits under one account", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    onAPhone();
+    const a = boardSticker({ placement: placedAt(0.5) });
+    const server = boardServer(a);
+    let release = () => {};
+    let active = 0;
+    let peak = 0;
+    const sent: number[] = [];
+    const api = emptyApi({
+      ...server.api,
+      saveStickerPlacement: async (id, spots) => {
+        peak = Math.max(peak, ++active);
+        sent.push(spots.placement?.x ?? -1);
+        if (sent.length === 1)
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+        const saved = await server.api.saveStickerPlacement(id, spots);
+        active--;
+        return saved;
+      },
+    });
+    const view = await openBoard(api);
+    const press = selectByKeys(view.host, a.stickerId);
+    for (let i = 0; i < 2; i++) {
+      press("ArrowLeft");
+      act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    }
+    view.rerender(null);
+    view.rerender(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />);
+    await act(async () => {});
+    selectByKeys(view.host, a.stickerId)("ArrowLeft");
+    act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    const newest = keptPhone();
+    await act(async () => release());
+    expect(peak).toBe(1);
+    expect(sent).toHaveLength(2);
+    expect(server.onServer.get(a.stickerId)?.placement).toEqual(toApiPlacement(newest));
+    expect(keptPhone()).toEqual(newest);
+  });
+
+  it.each(["before", "after"])(
+    "keeps a pending move when a remount's stale read arrives %s its acknowledgement",
+    async (order) => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      onAPhone();
+      const a = boardSticker({ placement: placedAt(0.5) });
+      const server = boardServer(a);
+      let releaseSave = () => {};
+      let releaseRead = () => {};
+      let reads = 0;
+      const api = emptyApi({
+        ...server.api,
+        stickerBoard: () =>
+          ++reads === 1
+            ? server.api.stickerBoard()
+            : new Promise((resolve) => {
+                releaseRead = () => resolve({ owner: TEST_OWNER, boardStickers: [a] });
+              }),
+        saveStickerPlacement: async (id, spots) => {
+          await new Promise<void>((resolve) => {
+            releaseSave = resolve;
+          });
+          return server.api.saveStickerPlacement(id, spots);
+        },
+      });
+      const view = await openBoard(api);
+      selectByKeys(view.host, a.stickerId)("ArrowLeft");
+      act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+      const moved = keptPhone();
+      view.rerender(null);
+      view.rerender(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />);
+      await act(async () => {});
+      if (order === "before") {
+        await act(async () => releaseRead());
+        await act(async () => releaseSave());
+      } else {
+        await act(async () => releaseSave());
+        await act(async () => releaseRead());
+      }
+      expect(keptPhone()).toEqual(moved);
+    },
+  );
+
   it("keeps one save of a sticker in flight, then sends only its latest spot, whose failure stays", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     onAPhone();
@@ -1000,9 +1393,48 @@ describe("StickerBoard when your NSFW opt-in changes", () => {
     selectByKeys(view.host, "nsfw")("ArrowLeft");
     act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
     expect(keptBoardFor(TEST_ME.id)).toBeNull();
+    await act(async () => {});
   });
 
-  it("hides them in the board kept on this phone when the setting changed after it was kept", () => {
+  it("does not restore images or a forgotten cache when a pending placement settles after opting out and remounting", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    onAPhone();
+    let releaseSave = () => {};
+    let releaseRead = () => {};
+    const api = emptyApi({
+      stickerBoard: vi
+        .fn<ApiClient["stickerBoard"]>()
+        .mockResolvedValueOnce(boardFor(true))
+        .mockImplementation(
+          () =>
+            new Promise((resolve) => {
+              releaseRead = () => resolve(boardFor(false));
+            }),
+        ),
+      saveStickerPlacement: async (id, spots) => {
+        await new Promise<void>((resolve) => {
+          releaseSave = resolve;
+        });
+        return emptyApi().saveStickerPlacement(id, spots);
+      },
+    });
+    const view = await openBoard(api, {}, { ...TEST_ME, nsfwOptIn: true });
+    selectByKeys(view.host, "nsfw")("ArrowLeft");
+    act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    optOut(view);
+    forgetKeptBoard();
+    view.rerender(null);
+    view.rerender(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />);
+    await act(async () => releaseSave());
+    expect(view.host.innerHTML).not.toContain(DRAWING);
+    expect(keptBoardFor(TEST_ME.id)).toBeNull();
+    await act(async () => releaseRead());
+    expect(view.host.innerHTML).not.toContain(DRAWING);
+    expect(view.host.innerHTML).toContain(VEILED);
+    expect(JSON.stringify(keptBoardFor(TEST_ME.id))).not.toContain(DRAWING);
+  });
+
+  it("hides them in the board kept on this phone when the setting changed after it was kept", async () => {
     keepBoard(
       TEST_ME.id,
       {
@@ -1014,9 +1446,10 @@ describe("StickerBoard when your NSFW opt-in changes", () => {
     onAPhone();
     const view = renderBoard(stillLoading());
     expect(view.host.innerHTML).not.toContain(DRAWING);
+    await act(async () => {});
   });
 
-  it("shows no NSFW drawing in a received gift's notice from a board kept under the other setting", () => {
+  it("shows no NSFW drawing in a received gift's notice from a board kept under the other setting", async () => {
     // This device has shown a notice before, so a gift received since gets one.
     noticeReceivesFromNow([]);
     const given = boardSticker({
@@ -1035,6 +1468,7 @@ describe("StickerBoard when your NSFW opt-in changes", () => {
     renderBoard(stillLoading());
     expect(document.querySelector(".gift-received-notice")).not.toBeNull();
     expect(document.body.innerHTML).not.toContain(DRAWING);
+    await act(async () => {});
   });
 });
 
@@ -1077,6 +1511,69 @@ describe("StickerBoard's Draw on a large screen", () => {
 });
 
 describe("StickerBoard's two layouts", () => {
+  it("keeps the live key-step position when a derived acknowledgement arrives before the step is committed", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    onAnIpad();
+    const a = boardSticker({ placement: placedAt(0.5) });
+    const server = boardServer(a);
+    let release = () => {};
+    const api = emptyApi({
+      ...server.api,
+      saveLargeLayout: async (entries) => {
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        server.onServer.set(a.stickerId, { ...a, largePlacement: placedAt(0.8) });
+        return server.api.saveLargeLayout(entries);
+      },
+    });
+    const view = await openBoard(api);
+    selectByKeys(view.host, a.stickerId)("ArrowLeft");
+    const shown = () =>
+      view.host.querySelector<HTMLElement>(`[data-sticker-id="${a.stickerId}"]`)?.style.transform;
+    const live = shown();
+    await act(async () => release());
+    expect(shown()).toBe(live);
+    act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    await act(async () => {});
+    expect(server.onServer.get(a.stickerId)?.largePlacement?.x).toBeLessThan(0.5);
+  });
+
+  it.each([false, true])(
+    "settles a derived save across remount with a later manual edit: %s",
+    async (edit) => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      onAnIpad();
+      const a = boardSticker({ placement: placedAt(0.5) });
+      const server = boardServer(a);
+      let release = () => {};
+      const api = emptyApi({
+        ...server.api,
+        saveLargeLayout: async (entries) => {
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          // Another device initialized the layout first; conditional initialization keeps its spot.
+          server.onServer.set(a.stickerId, { ...a, largePlacement: placedAt(0.8) });
+          return server.api.saveLargeLayout(entries);
+        },
+      });
+      const view = await openBoard(api);
+      view.rerender(null);
+      view.rerender(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />);
+      await act(async () => {});
+      if (edit) {
+        selectByKeys(view.host, a.stickerId)("ArrowLeft");
+        act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+        expect(server.saveStickerPlacement).not.toHaveBeenCalled();
+      }
+      const expected = edit ? keptLarge().x : 0.8;
+      await act(async () => release());
+      expect(keptLarge().x).toBe(expected);
+      expect(server.onServer.get(a.stickerId)?.largePlacement?.x).toBe(expected);
+    },
+  );
+
   it("saves a move on a large screen to the large layout alone, leaving the phone's arrangement", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     onAnIpad();
@@ -1179,11 +1676,12 @@ describe("StickerBoard's two layouts", () => {
       expect(server.onServer.get(id)?.largePlacement).toEqual(toApiPlacement(placement));
   });
 
-  it("draws a board kept on this device on a large screen only once it has a large layout", () => {
+  it("draws a board kept on this device on a large screen only once it has a large layout", async () => {
     keep(TEST_ME.id, boardSticker({ placement: placedAt(0.3) }));
     onAnIpad();
     const view = renderBoard(stillLoading());
     expect(shownIds(view.host)).toEqual([]);
     expect(view.host.querySelectorAll(".board-loading-sticker").length).toBeGreaterThan(0);
+    await act(async () => {});
   });
 });

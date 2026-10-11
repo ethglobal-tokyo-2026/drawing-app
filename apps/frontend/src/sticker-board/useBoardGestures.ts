@@ -29,6 +29,7 @@ import {
   type BoardSize,
   type Field,
   type Placement,
+  type Spots,
 } from "./placement";
 import { focusAfterLeaving, focusStep, orderOn, pointsOn } from "./stickerOrder";
 import type { StickerTrayHandle } from "./tray/StickerTray";
@@ -57,6 +58,24 @@ interface Options {
   onRemove: (id: string, placement?: Placement) => void;
   /** A run of steps, from keys or Arrange's tiles, gone quiet and saved: the last of them. */
   onStepsSettled?: (last: SettledStep) => void;
+  /** Reads only positions still in a gesture, so incoming board reads cannot move them back. */
+  uncommittedSpots?: UncommittedBoardSpots;
+}
+
+/** A read-only view of positions still owned by the board's gesture effect. */
+export class UncommittedBoardSpots {
+  private reader: () => ReadonlyMap<string, Spots> = () => new Map();
+
+  read(): ReadonlyMap<string, Spots> {
+    return this.reader();
+  }
+
+  follow(reader: () => ReadonlyMap<string, Spots>): () => void {
+    this.reader = reader;
+    return () => {
+      if (this.reader === reader) this.reader = () => new Map();
+    };
+  }
 }
 
 /** A sticker in hand: `drag` rides under the finger (or two), `handle` is resized or turned in place. */
@@ -159,6 +178,7 @@ export function useBoardGestures(options: Options) {
      * put down meanwhile is undone when they land.
      */
     const leaving = new Set<string>();
+    const dropping = new Map<string, Live>();
 
     const stickerOf = (id: string) => latest.current.stickers.find((s) => s.id === id);
     const liveOf = (p: Placement, field: Field): Live => ({ ...toPx(field, p), s: p.s, r: p.r });
@@ -235,6 +255,29 @@ export function useBoardGestures(options: Options) {
       last: SettledStep;
       timer: number;
     } | null = null;
+    const stopReadingUncommitted = options.uncommittedSpots?.follow(() => {
+      const { field, layout } = latest.current;
+      const spots = new Map<string, Spots>();
+      if (!field) return spots;
+      const add = (id: string, live: Live) => {
+        const sticker = stickerOf(id);
+        if (sticker)
+          spots.set(id, {
+            [layout]: {
+              on: true,
+              ...toFrac(field, live),
+              s: live.s,
+              r: normalizeTurn(live.r),
+              z: sticker.placement.z,
+            },
+          });
+      };
+      for (const [id, live] of dropping) add(id, live);
+      if (stepped) add(stepped.id, stepped.live);
+      const held = gesture.current;
+      if (held && held.mode !== "maybe" && held.mode !== "bg") add(held.id, held.live);
+      return spots;
+    });
     /** Saves the steps waiting, and returns where they left their sticker. */
     const saveSteps = () => {
       const s = stepped;
@@ -321,8 +364,10 @@ export function useBoardGestures(options: Options) {
     /** A dragged sticker let go: still in hand, above the tray, until the tray says whether it's taking it. */
     const dropHeld = async (g: Extract<Gesture, { mode: "drag" }>) => {
       leaving.add(g.id);
+      dropping.set(g.id, g.live);
       const into = await intoTray(g.id, g.live);
       leaving.delete(g.id);
+      dropping.delete(g.id);
       release(g.id);
       if (into) return;
       const sticker = stickerOf(g.id);
@@ -646,8 +691,9 @@ export function useBoardGestures(options: Options) {
       stage.removeEventListener("focusin", onFocus);
       stowing.current = () => {};
       arranging.current = () => {};
+      stopReadingUncommitted?.();
     };
-  }, [options.stage]);
+  }, [options.stage, options.uncommittedSpots]);
 
   // A sticker that leaves the board another way, as a gift does, drops focus to the page: it moves
   // on from the sticker last focused, as on Remove.

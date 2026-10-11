@@ -41,6 +41,11 @@ export function usePickUpKeptSession({
 }: Options) {
   // Until a session kept across a reload is back, or known lost, Draw doesn't ask for a ticket.
   const [restoring, setRestoring] = useState(true);
+  const [recovery, setRecovery] = useState<Extract<KeptSession, { status: "unverified" }> | null>(
+    null,
+  );
+  const [readAttempt, setReadAttempt] = useState(0);
+  const readVersion = useRef(0);
   const [pickedUp, setPickedUp] = useState<PickedUp | null>(null);
 
   // A drawing not read whose seal went out: the server may hold the seal, so a new drawing on its
@@ -93,6 +98,14 @@ export function usePickUpKeptSession({
   // A session kept across a reload comes back without asking for another ticket, a drawing on it
   // paused; one that can't be read gives its ticket back.
   const pickUp = useEffectEvent((kept: KeptSession) => {
+    if (kept.status === "unverified") {
+      clearTimeout(lateReadDeadline.current);
+      unsettle(null);
+      setRecovery(kept);
+      setRestoring(false);
+      return;
+    }
+    setRecovery(null);
     const notRead = kept.status === "unread" || kept.status === "lost";
     if (notRead && kept.ticket !== null && sealWentOut(userId, kept.ticket)) {
       console.error(
@@ -151,6 +164,13 @@ export function usePickUpKeptSession({
   // has nothing drawn on it, or while its sent seal waits on it.
   const pickUpLate = useEffectEvent((late: KeptDrawing) => {
     const waiting = unsettled.current;
+    if (
+      late.status === "unverified" &&
+      (waiting?.ticket === late.ticket || primedOn(late.ticket))
+    ) {
+      pickUp(late);
+      return;
+    }
     if (waiting && late.ticket === waiting.ticket) {
       if (late.status === "found") {
         unsettle(null);
@@ -179,18 +199,56 @@ export function usePickUpKeptSession({
   });
   useEffect(() => {
     let cancelled = false;
+    const version = ++readVersion.current;
     void loadKeptSession(userId).then((kept) => {
-      if (cancelled) return;
+      if (cancelled || version !== readVersion.current) return;
       pickUp(kept);
       if (kept.status === "unread")
         void kept.later?.then((late) => {
-          if (!cancelled) pickUpLate(late);
+          if (!cancelled && version === readVersion.current) pickUpLate(late);
         });
     });
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, readAttempt]);
 
-  return { restoring, pickedUp, setPickedUp, sealUnsettled };
+  const discardRecovery = () => {
+    if (!recovery) return;
+    // A retry may still be reading the data this explicit action replaces.
+    readVersion.current++;
+    if (recovery.ticket === null) {
+      keeper.wipe();
+      forgetSentSeal(userId);
+      setRecovery(null);
+      return;
+    }
+    if (sealWentOut(userId, recovery.ticket)) {
+      // Only a successful ticket read permits explicitly abandoning an absent old ticket.
+      if (!tickets) return;
+      const outcome = sentSealOutcome(recovery.ticket, tickets);
+      forgetSentSeal(userId);
+      if (outcome !== "unsealed") {
+        keeper.wipe();
+        setRecovery(null);
+        setPickedUp(outcome === "sealed" ? "sealed" : null);
+        return;
+      }
+    }
+    carryOver(recovery.ticket, true, recovery.kyotoSeika);
+    setRecovery(null);
+  };
+
+  return {
+    restoring: restoring || recovery !== null,
+    pickedUp,
+    setPickedUp,
+    sealUnsettled,
+    recovery,
+    discardRecovery,
+    retryRecovery: () => {
+      readVersion.current++;
+      setReadAttempt((attempt) => attempt + 1);
+    },
+  };
 }

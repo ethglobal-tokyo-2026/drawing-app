@@ -1,4 +1,6 @@
-import { expect, type Locator } from "@playwright/test";
+import type { LiffMockApi } from "@line/liff-mock";
+import { packagedGiftSchema, messageAttemptBodySchema } from "../../api/src/gifts/packaging.ts";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import {
   backToBoardOnceSent,
@@ -197,4 +199,114 @@ test("Bob's detail of Alice's gift holds the Transfer Trail's place and Send gra
     trail: await span(trail),
     rows: await trail.locator("li").count(),
   }).toEqual(before);
+});
+
+/** Only the LINE boundary is simulated; gift attempts use the running API and migrated database. */
+async function pickerAnswers(page: Page, outcome: "sent" | "cancelled" | "unknown") {
+  await page.evaluate((answer) => {
+    const testWindow: Window & { liffMock?: LiffMockApi } = window;
+    const mock = testWindow.liffMock;
+    if (!mock) throw new Error("LIFF Mock was not installed");
+    mock.set((data) => ({
+      ...data,
+      shareTargetPicker: answer === "sent" ? { status: "success" } : undefined,
+      getLineVersion: answer === "unknown" ? "10.10.0" : "14.0.0",
+    }));
+  }, outcome);
+}
+
+test("A definitive cancellation permits one new attempt using the original gift and token", async ({
+  page,
+}) => {
+  await signIn(page, "cancel-giver", language);
+  const no = await sealFromBoard(page, language);
+  await pickerAnswers(page, "cancelled");
+  const attempts: { giftId: string; attemptId: string }[] = [];
+  page.on("request", (request) => {
+    if (request.url().endsWith("/message-attempt"))
+      attempts.push({
+        giftId: request.url().split("/").at(-2) ?? "",
+        attemptId: messageAttemptBodySchema.parse(request.postDataJSON()).attemptId,
+      });
+  });
+  const token = giftClaimTokenFrom(page);
+  await giveFromBoard(page, language, no);
+  const unsent = page.getByRole("dialog", { name: say(giving.inTheBag.notSent, language) });
+  await expect(unsent).toBeVisible();
+  await pickerAnswers(page, "sent");
+  await unsent
+    .getByRole("button", { name: say(giving.inTheBag.send, language), exact: true })
+    .click();
+  await expect(page.getByRole("dialog", { name: say(giving.sent.title, language) })).toBeVisible();
+  expect(attempts).toHaveLength(2);
+  expect(attempts[0]?.giftId).toMatch(/^0x[0-9a-f]{64}$/);
+  expect(attempts[1]?.giftId).toBe(attempts[0]?.giftId);
+  expect(attempts[1]?.attemptId).not.toBe(attempts[0]?.attemptId);
+  expect(await token).toMatch(/^0x[0-9a-f]{64}$/);
+});
+
+test("An uncertain attempt survives reload, keeps its recipient, and waits for explicit Take out", async ({
+  page: alice,
+  friend: bob,
+}) => {
+  await signIn(alice, "uncertain-giver", language);
+  const bobHandle = handleOf(await signIn(bob, "original-recipient", language));
+  const no = await sealFromBoard(alice, language);
+  await pickerAnswers(alice, "unknown");
+  let begins = 0;
+  let takeOuts = 0;
+  alice.on("request", (request) => {
+    if (request.url().endsWith("/message-attempt")) begins++;
+    if (request.url().endsWith("/take-out/start")) takeOuts++;
+  });
+  const packaged = alice.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/gifts" && response.request().method() === "POST",
+  );
+  await openTheirBoard(alice, language, bobHandle);
+  await alice
+    .getByRole("button", { name: say(stickerBoard.artistBoard.give, language), exact: true })
+    .click();
+  const giveSheet = alice.getByRole("dialog", {
+    name: say(giving.giveSheet.title, language, { name: bobHandle }),
+  });
+  await giveSheet.getByRole("radio", { name: no }).click();
+  await giveSheet.getByRole("button", { name: say(giving.give, language, { no }) }).click();
+  const original = packagedGiftSchema.parse(await (await packaged).json());
+  await expect(
+    alice.getByRole("dialog", { name: say(giving.maybeSent.title, language) }),
+  ).toBeVisible();
+  // A fresh page has no in-memory Gift Claim Token; the API's pending attempt controls recovery.
+  await alice.goto("/");
+  const other = await sealFromBoard(alice, language);
+  const detail = await openDetail(alice, language, other);
+  await detail
+    .getByRole("navigation", { name: say(stickerBoard.detail.yourStickers, language) })
+    .getByRole("button", { name: no, exact: true })
+    .click();
+  const resumed = alice.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/gifts" && response.request().method() === "POST",
+  );
+  await alice
+    .getByRole("dialog", { name: no, exact: true })
+    .getByRole("button", { name: say(stickerBoard.detail.give, language), exact: true })
+    .click();
+  const recovery = alice.getByRole("dialog", { name: say(giving.maybeSent.title, language) });
+  await expect(recovery).toBeVisible();
+  const recovered = packagedGiftSchema.parse(await (await resumed).json());
+  expect(recovered.gift.id).toBe(original.gift.id);
+  expect(recovered.forUserId).toBe(original.forUserId);
+  expect(recovered.forUserId).not.toBeNull();
+  expect(recovered.giftClaimToken).toBeNull();
+  expect(recovered.messageAttempt?.state).toBe("pending");
+  expect(begins).toBe(1);
+  expect(takeOuts).toBe(0);
+  await expect(
+    recovery.getByRole("button", { name: say(giving.inTheBag.send, language), exact: true }),
+  ).toHaveCount(0);
+  await recovery.getByRole("button", { name: say(giving.inTheBag.takeOut, language) }).click();
+  await expect(recovery).toBeHidden();
+  expect(takeOuts).toBe(1);
+  await expect(boardSticker(alice, language, no)).toBeVisible();
 });

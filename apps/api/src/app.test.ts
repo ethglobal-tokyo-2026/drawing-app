@@ -47,8 +47,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** The routes anyone can call: signing in and out. */
-const PUBLIC_ROUTES = new Set(["POST /api/session", "DELETE /api/session"]);
+/** The route anyone can call to establish a session. */
+const PUBLIC_ROUTES = new Set(["POST /api/session"]);
 
 describe("sessions", () => {
   it("guard every route but the public ones", async () => {
@@ -80,7 +80,7 @@ describe("sessions", () => {
     const setCookie = (await signIn.request("/", { method: "POST" })).headers.get("set-cookie");
     expect(setCookie).toMatch(/; HttpOnly(;|$)/);
     const [cookie = ""] = (setCookie ?? "").split(";");
-    const headers = { Cookie: cookie };
+    const headers = { Cookie: cookie, "x-croquis-user-id": userId };
     expect((await test.send("POST", "/api/probe", { headers, body: probeBody })).status).toBe(200);
   });
 

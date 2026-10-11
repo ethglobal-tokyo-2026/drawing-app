@@ -2,9 +2,10 @@
 import type { Person } from "@drawing-app/api/client";
 import { act, useState, type ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { MeContext } from "../api/meContext";
 import { people, sticker } from "../api/testFixtures";
-import { renderWithApi, shownText, TEST_OWNER } from "../api/testing";
-import { dragBy, onLargeScreen } from "../ui/testing";
+import { shownText, TEST_ME, TEST_OWNER } from "../api/testing";
+import { dragBy, onLargeScreen, renderInHost } from "../ui/testing";
 import { DISMISS_PX } from "../ui/useSheetDrag";
 import { LiftedSticker } from "./LiftedSticker";
 
@@ -51,7 +52,7 @@ function Pile({ start, onGoToBoard }: { start: number; onGoToBoard: (artist: Per
   );
 }
 
-let rendered: ReturnType<typeof renderWithApi> | undefined;
+let rendered: ReturnType<typeof renderInHost> | undefined;
 afterEach(() => {
   rendered?.unmount();
   vi.restoreAllMocks();
@@ -61,7 +62,11 @@ const onGoToBoard = vi.fn<(artist: Person) => void>();
 /** Lifts the pile's sticker at `start`, with focus on its button as a tap or a key press leaves it. */
 function lift(start: number) {
   onGoToBoard.mockReset();
-  rendered = renderWithApi(<Pile start={start} onGoToBoard={onGoToBoard} />);
+  rendered = renderInHost(
+    <MeContext value={TEST_ME}>
+      <Pile start={start} onGoToBoard={onGoToBoard} />
+    </MeContext>,
+  );
 }
 
 const sheet = () => document.querySelector<HTMLElement>('[role="dialog"]');

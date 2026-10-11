@@ -4,6 +4,7 @@ import { createHttpApi, createServerClient, createSessionApi } from "./httpApi";
 import { startNftRequest } from "./httpDiagnostics";
 import { onSessionLost } from "./sessionLoss";
 import { sticker } from "./testFixtures";
+import { recordGratitudeBody } from "./testing";
 
 const me = {
   id: "u1",
@@ -36,6 +37,65 @@ const refusalOf = (promise: Promise<unknown>) =>
   );
 
 describe("the session client", () => {
+  it("keeps its immutable account header and preserves route headers", async () => {
+    const fetch = answering(200, { me });
+    const client = createServerClient(fetch, "alice");
+    await client.me.$get(
+      { header: { "x-line-user-id": "line-alice" } },
+      { headers: { "x-croquis-user-id": "bob" } },
+    );
+    const headers = new Headers(fetch.mock.calls[0]?.[1]?.headers);
+    expect(headers.get("x-croquis-user-id")).toBe("alice");
+    expect(headers.get("x-line-user-id")).toBe("line-alice");
+    await client.tickets.$get();
+    expect(new Headers(fetch.mock.calls[1]?.[1]?.headers).get("x-croquis-user-id")).toBe("alice");
+  });
+
+  it("adds the expected account to authenticated session operations and background refresh", async () => {
+    const fetch = answering(200, { me });
+    const session = createSessionApi(createServerClient(fetch));
+    await session.signIn({ accessToken: "token", language: "en" }, "alice");
+    await session.setHandle("Alice", "alice");
+    await session.signOut("alice");
+    expect(
+      fetch.mock.calls.map(([, init]) => new Headers(init?.headers).get("x-croquis-user-id")),
+    ).toEqual(["alice", "alice", "alice"]);
+  });
+
+  it.each(["deadline", "external"])(
+    "cancels gratitude through the %s signal while preserving its timeout",
+    async (cause) => {
+      vi.useFakeTimers();
+      const external = new AbortController();
+      const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation((ms) => {
+        const deadline = new AbortController();
+        setTimeout(() => deadline.abort(), ms);
+        return deadline.signal;
+      });
+      onTestFinished(() => {
+        vi.useRealTimers();
+        timeout.mockRestore();
+      });
+      const fetch = vi.fn<typeof globalThis.fetch>(
+        (_input, init) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () => reject(new Error("request aborted")), {
+              once: true,
+            });
+          }),
+      );
+      const api = createHttpApi(createServerClient(fetch, "alice"));
+      const result = refusalOf(
+        api.recordGratitude(recordGratitudeBody(), { signal: external.signal }),
+      );
+      expect(timeout).toHaveBeenCalledWith(15_000);
+      expect(fetch.mock.calls[0]?.[1]?.keepalive).toBe(true);
+      if (cause === "external") external.abort();
+      else await vi.advanceTimersByTimeAsync(15_000);
+      await expect(result).resolves.toMatchObject({ status: 0, code: "network" });
+      if (cause === "deadline") expect(external.signal.aborted).toBe(false);
+    },
+  );
   it("matches the resumed session to the current LINE user without putting their ID in the URL", async () => {
     const fetch = answering(200, { me });
     const session = createSessionApi(createServerClient(fetch));
@@ -66,7 +126,7 @@ describe("the session client", () => {
     const session = createSessionApi(
       createServerClient(answering(409, { error: "handle_taken", detail: "alice" })),
     );
-    const error = await refusalOf(session.setHandle("alice"));
+    const error = await refusalOf(session.setHandle("alice", me.id));
     expect(error).toMatchObject({ status: 409, code: "handle_taken", detail: "alice" });
   });
 
@@ -122,14 +182,28 @@ describe("the app's client over the server", () => {
 });
 
 describe("a session found gone", () => {
+  it("scopes account-changed notifications and leaves bootstrap failures to the gate", async () => {
+    const lost = vi.fn();
+    onTestFinished(onSessionLost(lost));
+    const fetch = answering(409, { error: "session_account_changed" });
+    await refusalOf(createHttpApi(createServerClient(fetch, "alice")).tickets());
+    expect(lost).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ code: "session_account_changed" }),
+      "alice",
+    );
+    await refusalOf(
+      createSessionApi(createServerClient(answering(401, { error: "signed_out" }))).me(),
+    );
+    expect(lost).toHaveBeenCalledTimes(1);
+  });
   it("reaches whoever listens from any request, and only for a signed_out refusal", async () => {
     const lost = vi.fn();
     onTestFinished(onSessionLost(lost));
-    const gone = createHttpApi(createServerClient(answering(401, { error: "signed_out" })));
+    const gone = createHttpApi(createServerClient(answering(401, { error: "signed_out" }), me.id));
     await refusalOf(gone.tickets());
     await refusalOf(gone.explore());
     expect(lost).toHaveBeenCalledTimes(2);
-    expect(lost).toHaveBeenLastCalledWith(expect.objectContaining({ code: "signed_out" }));
+    expect(lost).toHaveBeenLastCalledWith(expect.objectContaining({ code: "signed_out" }), me.id);
 
     const otherRefusals = [
       answering(401, { error: "line_token_expired" }),

@@ -18,7 +18,7 @@ import type { Rect } from "../../sticker-creation/sealing/stickerPasses";
 import { easeInOutSine } from "../../ui/easing";
 import { browserFrames, type FrameSource } from "../../ui/frameSource";
 import { releaseCanvas } from "../../ui/releaseCanvas";
-import { prepareFillSnapshots, type FillSnapshot } from "./fillSnapshots";
+import { prepareFillSnapshots, type FillSnapshot, type PreparedFills } from "./fillSnapshots";
 import {
   displayBox,
   displayPoint,
@@ -58,11 +58,11 @@ export interface TimelapsePlayerOptions {
 }
 
 export interface TimelapsePlayer {
-  /** Prepares the fills' snapshots; resolves at once when there are none, rejects saying what failed. */
+  /** Measures fill bounds and prepares streamed fills; rejects saying what failed. */
   prepare: () => Promise<void>;
   /** Plays the ink from blank to finished: "done" when the last step is played, "stopped" if stopped. */
   play: () => Promise<"done" | "stopped">;
-  /** Paints the finished ink at once; a pending `play` resolves "done". */
+  /** Prepares and paints the remaining ink; a pending `play` resolves "done" after the last fill. */
   skip: () => void;
   /** Stops and releases every canvas it made; a pending `play` resolves "stopped". */
   stop: () => void;
@@ -136,7 +136,14 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
   /** The last layer step played whole: under reduced motion one plays at once, then sits out its beat. */
   let shifted = -1;
   const cursor = startOfPlayback();
-  let snapshots = new Map<number, FillSnapshot>();
+  let fills: PreparedFills | null = null;
+  let snapshot: FillSnapshot | null = null;
+  let snapshotIndex = -1;
+  let revealed = -1;
+  let consuming = false;
+  let batch: readonly PaintStep[] = [];
+  let consumed = 0;
+  let paintingIndex = 0;
   let preparing: Promise<void> | null = null;
   let playing: Promise<"done" | "stopped"> | null = null;
   let outcome: Outcome | null = null;
@@ -148,6 +155,14 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
   let last: number | null = null;
   /** Playback time, ms. */
   let t = 0;
+  let hiddenAt: number | null = document.visibilityState === "hidden" ? frames.now() : null;
+  let hiddenMs = 0;
+  let preparationMs = 0;
+  let measuredFills = 0;
+  const preparationNow = () => {
+    const now = frames.now();
+    return now - hiddenMs - (hiddenAt === null ? 0 : now - hiddenAt);
+  };
 
   const layerIn = (id: LayerId): Layer => {
     const at = indexOf(state, id);
@@ -188,7 +203,6 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
 
   /** A fill's snapshot on its layer inside a circle grown from its tap; whole at 1, when the snapshot goes. */
   const reveal = (index: number, op: FillOp, progress: number) => {
-    const snapshot = snapshots.get(index);
     if (!snapshot) return;
     const onLayer = inkOf(op.layer);
     const { box: changed, reach, canvas: pixels } = snapshot;
@@ -204,8 +218,9 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
     onLayer.drawImage(pixels, changed.x, changed.y);
     onLayer.restore();
     if (progress < 1) return;
-    snapshots.delete(index);
-    releaseCanvas(pixels);
+    fills?.release();
+    snapshot = null;
+    revealed = index;
   };
 
   /** A layer step: under way, it marks this frame's beat; whole, it changes the layers. */
@@ -220,12 +235,6 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
     shifted = index;
     if (step.tool === "delete" || step.tool === "clear") letGoOfLayer(step.layer);
     state = after;
-  };
-
-  const paint = (step: PaintStep) => {
-    if (step.kind === "stroke") stroke(step.op, step.from, step.to);
-    else if (step.kind === "reveal") reveal(step.index, step.op, reduced ? 1 : step.progress);
-    else shift(step.index, step.step, step.progress);
   };
 
   /** The layers as this frame shows them: mid-beat, one fading out or easing to its new opacity. */
@@ -287,17 +296,10 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
     if (beat?.step.tool === "add") sheen(beat.progress);
   };
 
-  /** Plays what's due, then shows it; a frame with nothing due keeps showing what it showed. */
-  const play = (due: readonly PaintStep[]) => {
-    if (due.length === 0) return;
-    beat = null;
-    due.forEach(paint);
-    composite();
-  };
-
   const letGoOfSnapshots = () => {
-    snapshots.forEach((snapshot) => releaseCanvas(snapshot.canvas));
-    snapshots.clear();
+    fills?.dispose();
+    fills = null;
+    snapshot = null;
   };
 
   const letGoOfLayers = () => {
@@ -309,13 +311,15 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
 
   const failure = (error: unknown) =>
     new Error(
-      `The timelapse stopped at step ${cursor.step + 1} of ${schedule.steps.length}: ${messageOf(error)}`,
+      `The timelapse stopped at step ${paintingIndex + 1} of ${schedule.steps.length}: ${messageOf(error)}`,
       { cause: error },
     );
 
   const conclude = (next: Outcome) => {
     if (outcome) return;
     outcome = next;
+    if (measuredFills > 0)
+      notePerformance("timelapse", `fill preparation took ${Math.round(preparationMs)} ms total`);
     looping = false;
     cancelFrame?.();
     cancelFrame = null;
@@ -326,46 +330,108 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
     settle?.(next);
   };
 
-  /** Plays everything still to come, at once. */
-  const finishNow = () => {
-    try {
-      play(stepsDue(schedule, cursor, Infinity));
-      conclude({ result: "done" });
-    } catch (error) {
-      conclude({ error: failure(error) });
-    }
+  const visible = () => document.visibilityState !== "hidden";
+  const requestFrame = () => {
+    if (!outcome && looping && !consuming && !cancelFrame && visible())
+      cancelFrame = frames.request(frame);
   };
 
-  const advance = (now: number) => {
-    t += last === null ? 0 : Math.min(MAX_FRAME_MS, Math.max(0, now - last));
-    last = now;
-    play(stepsDue(schedule, cursor, t));
-    if (playbackDone(schedule, cursor)) conclude({ result: "done" });
+  /** One consumer owns the batch, including across a fill wait or a hidden page. */
+  const consume = async (now?: number) => {
+    if (consuming || outcome) return;
+    consuming = true;
+    try {
+      if (consumed === batch.length) {
+        if (now !== undefined && !skipped) {
+          t += last === null ? 0 : Math.min(MAX_FRAME_MS, Math.max(0, now - last));
+          last = now;
+        }
+        batch = stepsDue(schedule, cursor, skipped ? Infinity : t);
+        consumed = 0;
+        if (batch.length) beat = null;
+      }
+      do {
+        while (consumed < batch.length) {
+          if (outcome || (!skipped && !visible())) return;
+          const step = batch[consumed];
+          paintingIndex = step.index;
+          if (step.kind === "reveal" && step.index > revealed && snapshotIndex !== step.index) {
+            if (!fills) throw new Error("The timelapse's fills were not prepared");
+            const began = preparationNow();
+            try {
+              snapshot = await fills.next(step.index);
+            } finally {
+              preparationMs += preparationNow() - began;
+            }
+            snapshotIndex = step.index;
+            // Preparing pixels is not playback time; visibility also starts a fresh interval.
+            last = visible() ? frames.now() : null;
+            if (outcome) {
+              snapshot = null;
+              return;
+            }
+            if (!skipped && !visible()) return;
+          }
+          timeOurWork("timelapse", () => {
+            if (step.kind === "stroke") stroke(step.op, step.from, step.to);
+            else if (step.kind === "layer")
+              shift(step.index, step.step, skipped ? 1 : step.progress);
+            else if (step.index > revealed) {
+              const progress = skipped || reduced ? 1 : step.progress;
+              reveal(step.index, step.op, progress);
+              // No-change fills also finish once; reduced motion can finish before the beat ends.
+              if (progress === 1) {
+                fills?.release();
+                snapshot = null;
+                revealed = step.index;
+              }
+            }
+          });
+          consumed++;
+        }
+        if (batch.length) composite();
+        if (playbackDone(schedule, cursor)) {
+          conclude({ result: "done" });
+          return;
+        }
+        if (!skipped) return;
+        batch = stepsDue(schedule, cursor, Infinity);
+        consumed = 0;
+        beat = null;
+      } while (!outcome);
+    } catch (error) {
+      conclude({ error: failure(error) });
+    } finally {
+      consuming = false;
+      requestFrame();
+    }
   };
 
   const frame = (now: number) => {
-    cancelFrame = frames.request(frame);
-    try {
-      timeOurWork("timelapse", () => advance(now));
-    } catch (error) {
-      conclude({ error: failure(error) });
-    }
+    cancelFrame = null;
+    void consume(now);
   };
 
-  // Hidden, the loop sleeps; shown again, it plays on from where it was rather than jumping ahead.
+  // Hidden, the current batch waits too; no pending fill can paint behind the hidden page.
   const onVisibility = () => {
+    if (!visible() && hiddenAt === null) hiddenAt = frames.now();
+    else if (visible() && hiddenAt !== null) {
+      hiddenMs += frames.now() - hiddenAt;
+      hiddenAt = null;
+    }
     if (!looping) return;
-    if (document.visibilityState === "hidden") {
+    last = null;
+    if (!visible()) {
       cancelFrame?.();
       cancelFrame = null;
-      last = null;
-    } else if (!cancelFrame) cancelFrame = frames.request(frame);
+    } else requestFrame();
   };
 
   const prepareFills = async () => {
-    const fills = steps.filter((step) => step.tool === "fill").length;
-    if (fills === 0) return;
-    const began = performance.now();
+    const count = steps.filter((step) => step.tool === "fill").length;
+    if (count === 0 || outcome) return;
+    document.addEventListener("visibilitychange", onVisibility);
+    const began = preparationNow();
     const prepared = await prepareFillSnapshots(
       {
         steps,
@@ -375,40 +441,46 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
         frame: layout.frame,
         viewOf,
       },
-      { now: () => frames.now(), stopped: () => outcome !== null },
+      { now: preparationNow, stopped: () => outcome !== null },
     );
     // The layers' canvases are made as they play, after this, so they take the final view.
     if (prepared) {
-      snapshots = prepared.snapshots;
+      fills = prepared;
       layout = layoutOf(prepared.frame);
       view = viewOf(prepared.frame);
     }
     // Stopped after the pass's last check: nothing will play them.
     if (outcome) letGoOfSnapshots();
     if (prepared) {
-      const ms = Math.round(performance.now() - began);
-      const twice = prepared.passes > 1 ? ", twice: a fill reached past the strokes" : "";
-      notePerformance(
-        "timelapse",
-        `prepared ${fills} fill${fills === 1 ? "" : "s"} in ${ms} ms${twice}`,
-      );
+      preparationMs += preparationNow() - began;
+      measuredFills = count;
+      const ms = Math.round(preparationMs);
+      notePerformance("timelapse", `measured ${count} fill${count === 1 ? "" : "s"} in ${ms} ms`);
     }
   };
 
-  const prepare = () => (preparing ??= prepareFills());
+  const prepare = () =>
+    (preparing ??= prepareFills().catch((error: unknown) => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      throw error;
+    }));
 
-  const run = async (): Promise<Outcome> => {
-    await prepare();
-    if (outcome) return outcome;
+  const run = (): Promise<Outcome> => {
+    if (outcome) return Promise.resolve(outcome);
     const finished = new Promise<Outcome>((resolve) => {
       settle = resolve;
     });
-    if (skipped) finishNow();
-    else {
-      looping = true;
-      document.addEventListener("visibilitychange", onVisibility);
-      if (document.visibilityState !== "hidden") cancelFrame = frames.request(frame);
-    }
+    void prepare()
+      .then(() => {
+        if (outcome) return;
+        looping = true;
+        document.addEventListener("visibilitychange", onVisibility);
+        if (skipped) void consume();
+        else requestFrame();
+      })
+      .catch((error: unknown) =>
+        conclude({ error: error instanceof Error ? error : new Error(messageOf(error)) }),
+      );
     return finished;
   };
 
@@ -418,7 +490,9 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
       (playing ??= run().then((o) => ("error" in o ? Promise.reject(o.error) : o.result))),
     skip: () => {
       skipped = true;
-      if (looping) finishNow();
+      cancelFrame?.();
+      cancelFrame = null;
+      if (looping) void consume();
     },
     stop: () => conclude({ result: "stopped" }),
     setReduced: (next) => {

@@ -1,12 +1,11 @@
 import type { TicketPurchasePayment } from "@drawing-app/api/client";
-import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ApiError } from "../api/apiClient";
-import { errorDetail, errorMessage, problemOf } from "../i18n/errorMessage";
+import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { ArrowClockwise, BuyTicketsIcon, DrawIcon } from "../icons";
 import { usePrivyStatus } from "../identity/privy";
 import { useSuiWalletFailure } from "../identity/suiWallet";
-import type { JpycPayment } from "../payments/jpyc";
 import { ErrorDetail, ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
@@ -14,7 +13,6 @@ import { QuietLink } from "../ui/QuietLink";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { TearLine } from "../ui/TearLine";
-import { useBackToClose } from "../ui/useBackToClose";
 import { paymentFailureOf, type PaymentFailure } from "./paymentFailure";
 import { formatYen, yenForJpyc } from "./prices";
 import { singleTicketPrice, useReservePacks, type ReservePack } from "./reservePacks";
@@ -25,6 +23,7 @@ import { TicketPurchases } from "./TicketPurchases";
 import { describeTickets, ticketView } from "./tickets";
 import { TicketStubs } from "./TicketStubs";
 import { useTickets } from "./useTickets";
+import { useJpycBalance } from "./useJpycBalance";
 import "./tickets.css";
 import "./ReserveTicketCheckout.css";
 
@@ -100,36 +99,6 @@ function useSuiAccount(): { address?: string; problem?: AccountProblem } {
     return { problem: { line: t(($) => $.tickets.checkout.walletNeedsLine), detail: "" } };
   }
   return { address: privy.state === "signed-in" ? privy.suiWallet : undefined };
-}
-
-function useJpycBalance(owner: string | undefined, payment: JpycPayment | undefined) {
-  const [balance, setBalance] = useState<bigint | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    if (!owner || !payment) return;
-    let live = true;
-    // Sui's SDK loads with the checkout, not with the app.
-    import("../payments/jpyc")
-      .then(({ getJpycBalance }) => getJpycBalance(owner, payment))
-      .then(
-        (b) => {
-          if (!live) return;
-          setBalance(b);
-          setError(null);
-        },
-        (e: unknown) => {
-          console.error(`Couldn't read the JPYC balance of ${owner}`, e);
-          if (live) setError(problemOf(e).detail);
-        },
-      );
-    return () => {
-      live = false;
-    };
-  }, [owner, payment, attempt]);
-
-  return { balance, error, refresh: () => setAttempt((a) => a + 1) };
 }
 
 /**
@@ -259,7 +228,6 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
     onClose();
     return true;
   };
-  useBackToClose(true, leave);
 
   const close = (
     <QuietLink className="out-of-tickets__quiet-link" disabled={busy} onClick={onClose}>
@@ -408,10 +376,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
             {sui.problem ? (
               <span role="alert">{sui.problem.line}</span>
             ) : jpyc.error ? (
-              <span role="alert">
-                {t(($) => $.tickets.checkout.balanceProblem)}{" "}
-                <QuietLink onClick={jpyc.refresh}>{t(($) => $.tickets.tryAgain)}</QuietLink>
-              </span>
+              <span role="alert">{t(($) => $.tickets.checkout.balanceProblem)}</span>
             ) : jpyc.balance === null || !shop ? (
               <span className="reserve-checkout__loading">
                 <span className="visually-hidden" role="status">
@@ -425,6 +390,15 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
               </strong>
             )}
           </div>
+          {sui.address && shop && (
+            <QuietLink
+              className="out-of-tickets__quiet-link"
+              disabled={jpyc.refreshing}
+              onClick={jpyc.refresh}
+            >
+              {t(($) => $.tickets.checkout.refreshBalance)}
+            </QuietLink>
+          )}
           {balanceDetail && <ErrorDetail text={balanceDetail} />}
           {packs.state === "failed" ? (
             <ErrorLine
@@ -463,6 +437,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
                   className="reserve-checkout__pack"
                   aria-checked={p.tickets === chosen}
                   aria-disabled={paying}
+                  data-autofocus={p.tickets === chosen ? "" : undefined}
                   tabIndex={p.tickets === chosen ? 0 : -1}
                   onClick={() => {
                     if (!paying) setChosen(p.tickets);
@@ -567,7 +542,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
       cardClassName={`reserve-checkout__card${packsCard ? " reserve-checkout__card--split" : ""}`}
       labelledBy={`${id}-title`}
       busy={busy}
-      onEscape={() => void leave()}
+      onEscape={leave}
       onScrimClick={() => void leave()}
       refocus={view}
     >

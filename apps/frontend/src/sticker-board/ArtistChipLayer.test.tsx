@@ -2,7 +2,7 @@
 import { act, type ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { people } from "../api/testFixtures";
-import { renderWithApi } from "../api/testing";
+import { renderInHost } from "../ui/testing";
 import { toPerson, type PersonView } from "../api/views";
 import { i18next } from "../i18n/i18n";
 import { ArtistChipLayer } from "./ArtistChipLayer";
@@ -19,11 +19,11 @@ const chip = (artist: PersonView, box: Chip["box"]): Chip => ({
   box,
 });
 
-let rendered: ReturnType<typeof renderWithApi> | undefined;
+let rendered: ReturnType<typeof renderInHost> | undefined;
 afterEach(() => rendered?.unmount());
 
 function layer(chips: Chip[], onDone = () => {}) {
-  rendered = renderWithApi(
+  rendered = renderInHost(
     <ArtistChipLayer chips={chips} board={BOARD} onDone={onDone} reduced={false} />,
   );
   return rendered.host;

@@ -21,6 +21,12 @@ const PROGRESS = "progress";
 /** The progress store's records: how many steps are kept, and the frame they were drawn in. */
 const PROGRESS_KEY = 0;
 const FRAME_KEY = 1;
+const IDENTITY_KEY = 2;
+
+export interface KeptIdentity {
+  ticket: number;
+  generation: string;
+}
 const recordKey = (userId: string) => personKey("draw.session", userId);
 /** A kept drawing whose steps haven't loaded by then carries its ticket over, so Draw never waits on it for good. */
 export const LOAD_TIMEOUT_MS = 5_000;
@@ -34,6 +40,7 @@ export const SAVE_WORK = "kept drawing save";
 
 /** What a write makes the stores hold. */
 interface PendingWrite {
+  identity: KeptIdentity | null;
   /** Start or wipe: the stores are emptied first. */
   clear: boolean;
   /** The latest save's steps, read as the write starts; null when it only empties the stores. */
@@ -70,8 +77,7 @@ export interface KeptKyotoSeika {
 export const UNDEALT: KeptKyotoSeika = { subjects: null, picked: [], rolls: 0, begun: false };
 
 /** The ticket use the session spent (the server's id), the time drawn, 18+, the layer, and the tools' settings. */
-interface SessionRecord {
-  ticket: number;
+interface SessionRecord extends KeptIdentity {
   elapsedMs: number;
   /** The seal sheet's 18+ switch was left on: it seals as an NSFW sticker. */
   nsfw: boolean;
@@ -83,10 +89,21 @@ interface SessionRecord {
   kyotoSeika: KeptKyotoSeika | null;
 }
 
+/** Old records remain readable without assigning their ink to a generation. */
+type LegacySessionRecord = Omit<SessionRecord, "generation"> & { generation: null };
+
 /** What's kept of a drawing that was in progress. */
 export type KeptDrawing =
   /** `frame` is null for a drawing kept without one: it was drawn on this device's own sheet. */
   | ({ status: "found"; steps: Step[]; frame: SheetFrame | null } & SessionRecord)
+  | {
+      status: "unverified";
+      ticket: number | null;
+      kyotoSeika: KeptKyotoSeika | null;
+      reason: "legacy" | "identity-mismatch" | "metadata-unavailable";
+      recovery: { steps: Step[]; frame: SheetFrame | null } | null;
+      error: unknown;
+    }
   /** What's kept of it can't be read back. */
   | { status: "lost"; ticket: number | null; kyotoSeika: KeptKyotoSeika | null; error: unknown }
   /**
@@ -205,6 +222,8 @@ export class SessionKeeper {
   private readonly userId: string;
   private readonly onKept: (kept: boolean) => void;
   private ticket: number | null = null;
+  private generation: string | null = null;
+  private writtenIdentity: KeptIdentity | null = null;
   private nsfw = false;
   private currentLayer: LayerId = FIRST_LAYER;
   private kyotoSeika: KeptKyotoSeika | null = null;
@@ -248,13 +267,14 @@ export class SessionKeeper {
   start(ticket: number | null, kyotoSeika: KeptKyotoSeika | null = null): boolean {
     this.takeLock();
     this.ticket = ticket;
+    this.generation = crypto.randomUUID();
     this.nsfw = false;
     this.currentLayer = FIRST_LAYER;
     this.kyotoSeika = kyotoSeika;
     this.elapsedMs = 0;
     this.carried = false;
     this.keepRecord();
-    this.queue({ clear: true, steps: [], frame: null });
+    this.queue({ clear: true, steps: [], frame: null, identity: this.identity() });
     return this.recordKept;
   }
 
@@ -266,9 +286,12 @@ export class SessionKeeper {
     nsfw: boolean,
     tools: KeptTools | undefined,
     kyotoSeika: KeptKyotoSeika | null,
+    generation: string,
   ): void {
     this.takeLock();
     this.ticket = ticket;
+    this.generation = generation;
+    this.writtenIdentity = this.identity();
     this.elapsedMs = elapsedMs;
     this.nsfw = nsfw;
     this.kyotoSeika = kyotoSeika;
@@ -290,6 +313,7 @@ export class SessionKeeper {
     this.elapsedMs = 0;
     // The steps kept are the unread drawing's, so the first save writes every step.
     this.written = null;
+    this.generation = null;
     this.carried = true;
   }
 
@@ -324,16 +348,23 @@ export class SessionKeeper {
   /** Keeps the time drawn, the steps changed since the last save, and the frame they're in. */
   save(steps: readonly Step[], elapsedMs: number, frame: SheetFrame | null): void {
     this.elapsedMs = elapsedMs;
+    if (this.carried) this.generation = crypto.randomUUID();
     this.carried = false;
     this.keepRecord();
     const pending = this.pending;
-    this.queue({ clear: pending?.clear ?? false, steps, frame: frame ?? pending?.frame ?? null });
+    this.queue({
+      clear: pending?.clear ?? false,
+      steps,
+      frame: frame ?? pending?.frame ?? null,
+      identity: this.identity(),
+    });
   }
 
   /** Nothing is in progress any more. */
   wipe(): void {
     this.carried = false;
     this.ticket = null;
+    this.generation = null;
     this.nsfw = false;
     this.currentLayer = FIRST_LAYER;
     this.kyotoSeika = null;
@@ -342,7 +373,7 @@ export class SessionKeeper {
     if (this.takenOver) return;
     removeRecord(this.userId);
     this.recordKept = true;
-    this.queue({ clear: true, steps: null, frame: null });
+    this.queue({ clear: true, steps: null, frame: null, identity: null });
   }
 
   /** Takes the lock from any other tab, unless this keeper holds it. */
@@ -402,13 +433,20 @@ export class SessionKeeper {
     this.stopReload = () => document.removeEventListener("visibilitychange", onShown);
   }
 
+  private identity(): KeptIdentity | null {
+    return this.ticket !== null && this.generation !== null
+      ? { ticket: this.ticket, generation: this.generation }
+      : null;
+  }
+
   private keepRecord(): void {
     if (this.takenOver) return;
     // A session with no ticket can't be sealed, so none is kept.
-    if (this.ticket === null) removeRecord(this.userId);
+    if (this.ticket === null || this.generation === null) removeRecord(this.userId);
     else
       this.recordKept = writeRecord(this.userId, {
         ticket: this.ticket,
+        generation: this.generation,
         elapsedMs: this.elapsedMs,
         nsfw: this.nsfw,
         currentLayer: this.currentLayer,
@@ -433,9 +471,17 @@ export class SessionKeeper {
     // History hands over its live steps, so the write takes them as they are now.
     const steps = next.steps && [...next.steps];
     const from = steps && before ? firstChanged(before, steps) : 0;
-    if (steps && before && !next.clear && from === steps.length && steps.length === before.length)
+    if (
+      steps &&
+      before &&
+      !next.clear &&
+      sameIdentity(next.identity, this.writtenIdentity) &&
+      from === steps.length &&
+      steps.length === before.length
+    )
       return;
     this.written = steps ?? [];
+    this.writtenIdentity = next.identity;
     this.writing = true;
     const fill = (stepStore: IDBObjectStore, progress: IDBObjectStore) => {
       // A takeover while this write waited leaves the stores to the other tab.
@@ -453,7 +499,10 @@ export class SessionKeeper {
         // The steps an undo took back since the last write.
         for (let i = steps.length; i < (before?.length ?? 0); i++) stepStore.delete(i);
         progress.put(steps.length, PROGRESS_KEY);
+        if (next.identity) progress.put(next.identity, IDENTITY_KEY);
+        else progress.delete(IDENTITY_KEY);
         if (next.frame) progress.put(next.frame, FRAME_KEY);
+        else progress.delete(FRAME_KEY);
       });
     };
     let deadline: ReturnType<typeof setTimeout> | undefined;
@@ -482,6 +531,7 @@ export class SessionKeeper {
   /** A write failed, or is past its deadline though it may still land: the next writes every step. */
   private failed(error: unknown): void {
     this.written = null;
+    this.writtenIdentity = null;
     this.stepsKept = false;
     this.changed();
     if (this.reported) return;
@@ -510,26 +560,90 @@ export class SessionKeeper {
  * board can make at once, before the drawing screen has loaded the drawing.
  */
 export function keepsSession(userId: string): boolean {
-  const { text } = readStored(
+  const { text, blocked } = readStored(
     recordKey(userId),
     "Can't tell whether a drawing was in progress on this device",
   );
-  return text !== null;
+  return blocked || text !== null;
 }
 
 /** The session kept for `userId` from before a reload, if a drawing was in progress. */
 export async function loadKeptSession(userId: string): Promise<KeptSession> {
   const record = readRecord(userId);
-  if (record === null) return { status: "none" };
-  if (record === "unreadable")
-    return {
-      status: "lost",
-      ticket: null,
-      kyotoSeika: null,
-      error: new Error("Its record is unreadable"),
+  if (record === null || record === "unreadable") {
+    const unresolved = (
+      error: unknown,
+      recovery: Extract<KeptSession, { status: "unverified" }>["recovery"] = null,
+    ): KeptSession => {
+      console.error(
+        "The saved drawing needs explicit recovery because its metadata cannot be verified",
+        error,
+      );
+      return {
+        status: "unverified",
+        ticket: null,
+        kyotoSeika: null,
+        reason: "metadata-unavailable",
+        recovery,
+        error,
+      };
     };
+    const read = readDrawing(userId).then(
+      (drawing): KeptSession => {
+        // Both successful reads must still describe empty storage; another tab may have started meanwhile.
+        if (drawing === null && record === null && readRecord(userId) === null)
+          return { status: "none" };
+        return unresolved(
+          new Error("The saved drawing's metadata is missing or unreadable; its ticket is unknown"),
+          drawing && { steps: drawing.steps, frame: drawing.frame },
+        );
+      },
+      (error: unknown) => unresolved(error),
+    );
+    return within(read, LOAD_TIMEOUT_MS, () =>
+      unresolved(
+        new Error(
+          `Its steps didn't load within ${LOAD_TIMEOUT_MS / 1000}s; retry to read the saved drawing`,
+        ),
+      ),
+    );
+  }
   const read = readDrawing(userId).then(
-    ({ steps, frame }): KeptDrawing => ({ status: "found", steps, frame, ...record }),
+    (drawing): KeptDrawing => {
+      if (drawing === null)
+        return {
+          status: "lost",
+          ticket: record.ticket,
+          kyotoSeika: record.kyotoSeika,
+          error: new UnreadableDrawing("No steps were kept"),
+        };
+      const { steps, frame, identity } = drawing;
+      const { text } = readStored(recordKey(userId), "Cannot recheck the saved drawing identity");
+      const current = text === null ? null : parseStored(text);
+      const originalIdentity = record.generation === null ? null : record;
+      const currentIdentity = readIdentity(current);
+      if (
+        record.generation !== null &&
+        sameIdentity(originalIdentity, identity) &&
+        sameIdentity(originalIdentity, currentIdentity)
+      )
+        return { status: "found", steps, frame, ...record };
+      const error = new Error(
+        `Saved drawing identity does not match: record ticket ${record.ticket}, generation ${record.generation}; steps ticket ${identity?.ticket ?? "missing"}, generation ${identity?.generation ?? "missing"}; current ticket ${currentIdentity?.ticket ?? "missing"}, generation ${currentIdentity?.generation ?? "missing"}`,
+      );
+      console.error(
+        "The saved drawing needs explicit recovery before its ticket can be reused",
+        error,
+      );
+      return {
+        status: "unverified",
+        ticket: record.ticket,
+        kyotoSeika: record.kyotoSeika,
+        reason: record.generation === null ? "legacy" : "identity-mismatch",
+        recovery: { steps, frame },
+        error,
+      };
+    },
     (error: unknown): KeptDrawing =>
       error instanceof UnreadableDrawing
         ? { status: "lost", ticket: record.ticket, kyotoSeika: record.kyotoSeika, error }
@@ -550,11 +664,14 @@ export async function loadKeptSession(userId: string): Promise<KeptSession> {
   }));
 }
 
-async function readDrawing(userId: string): Promise<{ steps: Step[]; frame: SheetFrame | null }> {
+async function readDrawing(
+  userId: string,
+): Promise<{ steps: Step[]; frame: SheetFrame | null; identity: KeptIdentity | null } | null> {
   let places: IDBValidKey[] = [];
   let stored: unknown[] = [];
   let count: unknown;
   let frame: unknown;
+  let identity: unknown;
   await transact(userId, "readonly", (stepStore, progressStore) => {
     const keys = stepStore.getAllKeys();
     keys.onsuccess = () => {
@@ -568,11 +685,17 @@ async function readDrawing(userId: string): Promise<{ steps: Step[]; frame: Shee
     one.onsuccess = () => {
       count = one.result;
     };
+    const savedIdentity = progressStore.get(IDENTITY_KEY);
+    savedIdentity.onsuccess = () => {
+      identity = savedIdentity.result;
+    };
     const drawnIn = progressStore.get(FRAME_KEY);
     drawnIn.onsuccess = () => {
       frame = drawnIn.result;
     };
   });
+  if (stored.length === 0 && count === undefined && frame === undefined && identity === undefined)
+    return null;
   if (!isCount(count))
     throw new UnreadableDrawing(
       count === undefined ? "No steps were kept" : "Its step count is unreadable",
@@ -592,7 +715,7 @@ async function readDrawing(userId: string): Promise<{ steps: Step[]; frame: Shee
   }
   if (missing > 0) throw new UnreadableDrawing(`${missing} of its ${count} steps are missing`);
   checkLayers(steps);
-  return { steps, frame: readFrame(frame) };
+  return { steps, frame: readFrame(frame), identity: readIdentity(identity) };
 }
 
 /** Every step must fit the layers before it: the engine replays them without checking. */
@@ -693,12 +816,33 @@ function readFrame(v: unknown): SheetFrame | null {
 const isTicketUseId = (v: unknown): v is number =>
   Number.isInteger(v) && typeof v === "number" && v > 0;
 
+function sameIdentity(a: KeptIdentity | null, b: KeptIdentity | null): boolean {
+  return a !== null && b !== null && a.ticket === b.ticket && a.generation === b.generation;
+}
+
+function readIdentity(value: unknown): KeptIdentity | null {
+  if (value === undefined) return null;
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "ticket" in value &&
+    isTicketUseId(value.ticket) &&
+    "generation" in value &&
+    typeof value.generation === "string" &&
+    value.generation.length > 0
+  )
+    return { ticket: value.ticket, generation: value.generation };
+  console.error("The saved drawing identity is invalid; its readable steps need explicit recovery");
+  return null;
+}
+
 /** Null when no drawing is in progress. */
-function readRecord(userId: string): SessionRecord | "unreadable" | null {
-  const { text: raw } = readStored(
+function readRecord(userId: string): SessionRecord | LegacySessionRecord | "unreadable" | null {
+  const { text: raw, blocked } = readStored(
     recordKey(userId),
     "Can't tell whether a drawing was in progress on this device",
   );
+  if (blocked) return "unreadable";
   if (raw === null) return null;
   const value = parseStored(raw);
   if (
@@ -714,6 +858,10 @@ function readRecord(userId: string): SessionRecord | "unreadable" | null {
     const tools = "tools" in value ? readTools(value.tools) : undefined;
     return {
       ticket: value.ticket,
+      generation:
+        "generation" in value && typeof value.generation === "string" && value.generation.length > 0
+          ? value.generation
+          : null,
       elapsedMs: value.elapsedMs,
       nsfw: value.nsfw,
       currentLayer: "currentLayer" in value ? readCurrentLayer(value.currentLayer) : FIRST_LAYER,

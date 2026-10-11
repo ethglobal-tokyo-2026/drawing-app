@@ -1,26 +1,30 @@
 /**
  * Tests Croquis in real iPadOS Safari, on the iPad Air 11-inch simulator through safaridriver (W3C
  * WebDriver over fetch), for what Safari's own UI can get wrong and Playwright's WebKit can't show:
- * Safari's toolbars and the home indicator over controls, overflow, turning the iPad, iOS's motion
- * prompt, its native pickers, touch ink, and the session cookie surviving a reload. It makes no Apple
+ * Safari's toolbars and the home indicator over controls, overflow, turning the iPad, Croquis's
+ * motion-permission card, native pickers, touch ink, and the session cookie surviving a reload. It makes no Apple
  * Pencil input: Simulator has none, and safaridriver turns a pen action into a finger's touch. Run it
  * after changing large-screen layouts, sheets, the tab bar, or touch input:
  *
  *   pnpm --filter frontend test:ipad-safari
  *
- * It needs Xcode with an iOS simulator runtime, and Accessibility access for the terminal, which opens
- * and turns the iPad's window through Simulator's menus. IPAD names another simulator. It starts its own
+ * It needs Xcode 27 with an iOS simulator runtime; devicectl sets the selected iPad's orientation.
+ * IPAD selects another simulator by name or UDID. It starts its own
  * API, HTTPS Vite (Safari drops the Secure session cookie over http://localhost, so the iPad is told to
  * trust a cert for localhost) and safaridriver, logs PASS or FAIL per check with what it measured, keeps
  * screenshots of failures only, in data/ipad-safari/failures/, and exits non-zero on any FAIL.
  */
 import { type ChildProcess, execFile, spawn, type SpawnOptions } from "node:child_process";
+import { once } from "node:events";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { request } from "node:https";
 import { createServer } from "node:net";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { describeIpadServerCleanupFailure, stopIpadServers } from "./ipadServers";
+import { IpadSimulator } from "./ipadSimulator";
 import { strings } from "../src/i18n/strings";
+import { assertSessionPersisted } from "../e2e/sessionPersistence.ts";
 
 const run = promisify(execFile);
 const root = fileURLToPath(new URL("../../../", import.meta.url));
@@ -71,23 +75,6 @@ const freePort = () =>
 const simctl = (...args: string[]) =>
   run("xcrun", ["simctl", ...args], { maxBuffer: 64 << 20, timeout: 180_000 });
 
-/** Runs AppleScript in Simulator's process through System Events. */
-const inSimulator = (script: string) =>
-  run(
-    "osascript",
-    [
-      "-e",
-      'tell application "Simulator" to activate',
-      "-e",
-      `tell application "System Events" to tell process "Simulator"\n${script}\nend tell`,
-    ],
-    { timeout: 30_000 },
-  );
-
-const rotate = (direction: "Left" | "Right") =>
-  inSimulator(`perform action "AXRaise" of (first window whose name contains "${IPAD}")
-  click menu item "Rotate ${direction}" of menu "Device" of menu bar 1`);
-
 /** The simulator IPAD names, on the newest iOS runtime that has it. */
 async function pickIpad() {
   const listed: unknown = JSON.parse((await simctl("list", "devices", "available", "-j")).stdout);
@@ -95,15 +82,20 @@ async function pickIpad() {
   const runtimes = Object.entries(listed.devices)
     .filter(([runtime]) => runtime.includes("iOS"))
     .toSorted(([a], [b]) => b.localeCompare(a, "en", { numeric: true }));
-  for (const [, devices] of runtimes) {
+  for (const [runtime, devices] of runtimes) {
     const found = (Array.isArray(devices) ? (devices as unknown[]) : []).find(
-      (device) => isRecord(device) && device.name === IPAD,
+      (device) => isRecord(device) && (device.name === IPAD || device.udid === IPAD),
     );
     if (isRecord(found) && typeof found.udid === "string") {
-      return { udid: found.udid, booted: found.state === "Booted" };
+      return {
+        udid: found.udid,
+        name: String(found.name),
+        runtime,
+        booted: found.state === "Booted",
+      };
     }
   }
-  throw new Error(`No simulator named "${IPAD}": make one with \`xcrun simctl create\``);
+  throw new Error(`No simulator matching "${IPAD}": make one with \`xcrun simctl create\``);
 }
 
 async function localhostCert() {
@@ -113,28 +105,33 @@ async function localhostCert() {
   if (!existsSync(cert)) {
     mkdirSync(dir, { recursive: true });
     log("making a self-signed cert for localhost");
-    await run("openssl", [
-      ...[
-        "req",
-        "-x509",
-        "-newkey",
-        "rsa:2048",
-        "-nodes",
-        "-days",
-        "800",
-        "-subj",
-        "/CN=localhost",
+    await run(
+      "openssl",
+      [
+        ...[
+          "req",
+          "-x509",
+          "-newkey",
+          "rsa:2048",
+          "-nodes",
+          "-days",
+          "800",
+          "-subj",
+          "/CN=localhost",
+        ],
+        ...["-keyout", key, "-out", cert],
+        ...["-addext", "subjectAltName=DNS:localhost,IP:127.0.0.1"],
+        ...["-addext", "extendedKeyUsage=serverAuth"],
       ],
-      ...["-keyout", key, "-out", cert],
-      ...["-addext", "subjectAltName=DNS:localhost,IP:127.0.0.1"],
-      ...["-addext", "extendedKeyUsage=serverAuth"],
-    ]);
+      { timeout: 30_000 },
+    );
   }
   return { key, cert };
 }
 
 const children: ChildProcess[] = [];
-function start(name: string, command: string, args: string[], options: SpawnOptions = {}) {
+let simulator: IpadSimulator | undefined;
+async function start(name: string, command: string, args: string[], options: SpawnOptions = {}) {
   const child = spawn(command, args, { ...options, stdio: ["ignore", "pipe", "pipe"] });
   const file = `${out}/${name}.log`;
   writeFileSync(file, "");
@@ -142,6 +139,7 @@ function start(name: string, command: string, args: string[], options: SpawnOpti
   child.stdout?.on("data", append);
   child.stderr?.on("data", append);
   children.push(child);
+  await once(child, "spawn");
 }
 
 const httpsUp = (url: string, ca: Buffer) =>
@@ -155,17 +153,18 @@ const httpsUp = (url: string, ca: Buffer) =>
     req.end();
   });
 
-/** Boots the iPad with its window open, and starts the API, HTTPS Vite and safaridriver. */
+/** Boots the iPad in portrait, and starts the API, HTTPS Vite and safaridriver. */
 async function bringUp() {
   mkdirSync(out, { recursive: true });
   const ipad = await pickIpad();
-  if (!ipad.booted) await simctl("boot", ipad.udid);
-  await simctl("bootstatus", ipad.udid);
-  // Simulator opens no window for a device booted from the command line, and turning needs one.
-  await inSimulator(`if (count of (windows whose name contains "${IPAD}")) is 0 then
-    click menu item "${IPAD}" of menu 1 of menu item "Open Simulator" of menu "File" of menu bar 1
-    delay 3
-  end if`);
+  simulator = new IpadSimulator(ipad.udid, ipad.booted, (tool, args) =>
+    run("xcrun", [tool, ...args], { maxBuffer: 64 << 20, timeout: 180_000 }),
+  );
+  log(
+    `preparing ${ipad.name} (${ipad.udid}, ${ipad.runtime}); ${ipad.booted ? "already booted" : "booting for this run"}`,
+  );
+  await simulator.boot();
+  await simulator.orient("portrait");
   const tls = await localhostCert();
   await simctl("keychain", ipad.udid, "add-root-cert", tls.cert);
 
@@ -175,7 +174,7 @@ async function bringUp() {
   mkdirSync(`${data}/images`, { recursive: true });
   const appOrigin = `https://localhost:${appPort}`;
   // As the end-to-end suite starts them (playwright.config.ts), but the app over HTTPS.
-  start("api", process.execPath, ["--env-file=.env.example", "src/server.ts"], {
+  await start("api", process.execPath, ["--env-file=.env.example", "src/server.ts"], {
     cwd: `${root}apps/api`,
     env: {
       ...process.env,
@@ -187,16 +186,16 @@ async function bringUp() {
       STICKER_CHAIN_MODE: "mock",
     },
   });
-  const viteConfig = `${out}/vite.config.ts`;
+  const viteConfig = `${out}/vite.config.mts`;
   writeFileSync(
     viteConfig,
     `import { readFileSync } from "node:fs";
-import e2e from ${JSON.stringify(`${root}apps/frontend/e2e/vite.config.ts`)};
+import { createIpadSafariServerConfig } from ${JSON.stringify(`${root}apps/frontend/scripts/ipadSessionProbe.ts`)};
 const https = { key: readFileSync(${JSON.stringify(tls.key)}), cert: readFileSync(${JSON.stringify(tls.cert)}) };
-export default { ...e2e, server: { ...e2e.server, https } };
+export default createIpadSafariServerConfig({ https });
 `,
   );
-  start("vite", `${root}apps/frontend/node_modules/.bin/vite`, ["--config", viteConfig], {
+  await start("vite", `${root}apps/frontend/node_modules/.bin/vite`, ["--config", viteConfig], {
     cwd: `${root}apps/frontend`,
     env: {
       ...process.env,
@@ -205,17 +204,22 @@ export default { ...e2e, server: { ...e2e.server, https } };
       VITE_LIFF_MOCK: "on",
     },
   });
-  start("safaridriver", "safaridriver", ["-p", String(driverPort)]);
+  await start("safaridriver", "safaridriver", ["-p", String(driverPort)]);
+  log("waiting for API, HTTPS Vite, and safaridriver");
   const driver = `http://127.0.0.1:${driverPort}`;
-  const api = async () => (await fetch(`http://127.0.0.1:${apiPort}/api/me`)).status > 0;
+  const api = async () =>
+    (await fetch(`http://127.0.0.1:${apiPort}/api/me`, { signal: AbortSignal.timeout(5_000) }))
+      .status > 0;
   await until("the API", api, 60_000);
   await until("Vite over HTTPS", () => httpsUp(appOrigin, readFileSync(tls.cert)), 60_000);
   await until("safaridriver", async () => {
-    const body: unknown = await (await fetch(`${driver}/status`)).json();
+    const body: unknown = await (
+      await fetch(`${driver}/status`, { signal: AbortSignal.timeout(5_000) })
+    ).json();
     return isRecord(body) && isRecord(body.value) && body.value.ready === true;
   });
   log(`${IPAD}: API :${apiPort}, app ${appOrigin}, safaridriver :${driverPort}`);
-  return { ...ipad, appOrigin, driver };
+  return { ...ipad, simulator, appOrigin, driver };
 }
 
 // In the page: controls found by role and accessible name, waits that poll the DOM, and where Safari
@@ -333,10 +337,16 @@ const SCREENS: {
 const isPoint = (value: unknown): value is Point =>
   isRecord(value) && typeof value.x === "number" && typeof value.y === "number";
 
-async function test({ udid, appOrigin, driver }: Awaited<ReturnType<typeof bringUp>>) {
+async function test({
+  udid,
+  simulator: device,
+  appOrigin,
+  driver,
+}: Awaited<ReturnType<typeof bringUp>>) {
   let session = "";
   let failures = 0;
   let passes = 0;
+  let probeStarted = false;
   const wd = async (method: string, path: string, body?: unknown): Promise<unknown> => {
     const res = await fetch(`${driver}/session${session ? `/${session}` : ""}${path}`, {
       method,
@@ -480,7 +490,7 @@ ${LIB}
     return summary;
   };
   const turn = async (direction: "Left" | "Right") => {
-    await rotate(direction);
+    await device.orient(direction === "Left" ? "landscapeLeft" : "portrait");
     const landscape = direction === "Left";
     await until(
       landscape ? "a landscape viewport" : "a portrait viewport",
@@ -507,20 +517,44 @@ ${LIB}
       throw new Error("No session id");
     session = created.sessionId;
     await wd("POST", "/timeouts", { script: 60_000 });
-    return session;
+    await until(
+      "the initial portrait viewport",
+      async () => (await page("return innerWidth < innerHeight")) === true,
+    );
+    return "started in portrait";
   });
   if (!session) return failures;
+  const sessionCookie = async () => {
+    const observed = await page(`const response = await fetch("/api/__e2e/ipad-session");
+      if (!response.ok) throw new Error("The session cookie probe could not be read");
+      return response.json();`);
+    if (!isRecord(observed) || typeof observed.cookie !== "string" || !observed.cookie)
+      throw new Error("The browser sent no session cookie to the API path");
+    if (observed.httpOnly !== true || observed.secure !== true)
+      throw new Error("The session cookie was not issued with HttpOnly and Secure");
+    return observed.cookie;
+  };
+  const sessionRequests = async () => {
+    const count = await page(`const response = await fetch("/__e2e/session-requests");
+      if (!response.ok) throw new Error("The session probe could not be read");
+      return (await response.json()).created;`);
+    if (typeof count !== "number") throw new Error("The session probe returned no count");
+    return count;
+  };
   try {
     // A first visit, whatever an earlier run left in this Safari, such as the motion card declined.
     await wd("POST", "/url", { url: `${appOrigin}/api/me` });
     await page("localStorage.clear(); sessionStorage.clear();");
+    await page(`const response = await fetch("/__e2e/session-probe", { method: "POST" });
+      if (!response.ok) throw new Error("The session probe could not start");`);
+    probeStarted = true;
     const who = `sim-ipad-${Math.random().toString(36).slice(2, 8)}`;
     await check("signing in shows the board", async () => {
       await wd("POST", "/url", { url: `${appOrigin}/?as=${who}` });
       await page(`await waitFor("the board", () => named("named", args[0]), 30000);`, board);
       return who;
     });
-    await check("iOS's motion prompt is asked for once, and Don't allow closes it", async () => {
+    await check("Croquis's motion-permission card appears, and Don't allow closes it", async () => {
       const asked = await page(
         `if (!named("dialog", args[0])) return false;
          await click("button", args[1]);
@@ -534,15 +568,17 @@ ${LIB}
       return "asked; declined";
     });
     await check("the session survives a reload", async () => {
+      const before = { cookie: await sessionCookie(), created: await sessionRequests() };
       await wd("POST", "/refresh", {});
-      const status = await page(
+      const meStatus = await page(
         `await waitFor("the board", () => named("named", args[0]), 30000);
          return (await fetch("/api/me")).status;`,
         board,
       );
-      if (status !== 200)
-        throw new Error(`GET /api/me answered ${String(status)} after the reload`);
-      return "GET /api/me 200";
+      if (typeof meStatus !== "number") throw new Error("GET /api/me returned no status");
+      const after = { cookie: await sessionCookie(), created: await sessionRequests(), meStatus };
+      assertSessionPersisted(before, after);
+      return "same HttpOnly cookie, no new session, GET /api/me 200";
     });
 
     for (const screen of SCREENS) {
@@ -599,6 +635,12 @@ ${LIB}
       });
     }
   } finally {
+    if (probeStarted) {
+      await page(`const response = await fetch("/__e2e/session-probe", { method: "DELETE" });
+        if (!response.ok) throw new Error("The session probe could not be released");`).catch(
+        (error: unknown) => log(`releasing the session probe failed: ${messageOf(error)}`),
+      );
+    }
     await wd("DELETE", "").catch((error: unknown) =>
       log(`ending the session failed: ${messageOf(error)}`),
     );
@@ -616,11 +658,15 @@ try {
   log(`FAIL bringing up the iPad and servers: ${messageOf(error)}`);
   process.exitCode = 1;
 } finally {
-  for (const child of children) child.kill();
-  if (up && !up.booted) {
-    log(`shutting ${IPAD} down`);
-    await simctl("shutdown", up.udid).catch((error: unknown) =>
-      log(`shutdown failed: ${messageOf(error)}`),
-    );
+  await stopIpadServers(children).catch((error: unknown) => {
+    log(`server cleanup failed: ${describeIpadServerCleanupFailure(error)}`);
+    process.exitCode = 1;
+  });
+  if (simulator) {
+    log(`releasing ${IPAD}; only a device booted by this run is shut down`);
+    await simulator.shutdown().catch((error: unknown) => {
+      log(`shutdown failed: ${messageOf(error)}`);
+      process.exitCode = 1;
+    });
   }
 }

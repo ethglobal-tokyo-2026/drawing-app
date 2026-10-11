@@ -1,17 +1,12 @@
 import { MAX_LARGE_LAYOUT_BATCH, MAX_SCALE } from "@drawing-app/api/client";
 import { describe, expect, it, vi } from "vitest";
 import { boardSticker, sticker } from "../api/testFixtures";
-import { emptyApi } from "../api/testing";
+import { emptyApi, TEST_OWNER } from "../api/testing";
 import { toApiPlacement } from "../api/views";
 import { placeUnplaced, toBoardSticker, type PlacedBoardSticker } from "./boardSticker";
+import { BoardPlacementSaves } from "./boardPlacementSaves";
 import { placedAt } from "./testBoardSticker";
-import {
-  deriveLargeLayout,
-  LARGE_SPREAD,
-  largeSpotFrom,
-  saveDerivedLayout,
-  type LargeSpot,
-} from "./largeLayout";
+import { deriveLargeLayout, LARGE_SPREAD, largeSpotFrom, type LargeSpot } from "./largeLayout";
 import {
   fieldOf,
   LARGE_LANDING_GROWTH,
@@ -135,7 +130,9 @@ describe("saving a derived large layout", () => {
     }));
     const api = emptyApi();
     const sent = vi.spyOn(api, "saveLargeLayout");
-    await saveDerivedLayout(api, derived);
+    const saves = new BoardPlacementSaves(api, TEST_OWNER.id);
+    saves.activate();
+    await saves.saveDerived(derived);
     expect(sent.mock.calls.map(([batch]) => batch.length)).toEqual([MAX_LARGE_LAYOUT_BATCH, 1]);
     expect(new Set(sent.mock.calls.flatMap(([batch]) => batch.map((e) => e.stickerId))).size).toBe(
       derived.length,

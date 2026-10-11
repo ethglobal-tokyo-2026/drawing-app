@@ -21,13 +21,42 @@ import { addLayer, deleteLayer } from "../../sticker-creation/layers/testLayerSt
 import { decodeTimelapse, encodeTimelapse } from "../../sticker-creation/sealing/timelapse";
 import { notePerformance } from "../../performance/performanceRecorder";
 import { contextOf, forgetContexts, madeContexts, type FakeContext } from "./testCanvas";
-import { handFrames } from "./testTimelapse";
+import { deferred, handFrames } from "./testTimelapse";
 import { MAX_FRAME_MS, createTimelapsePlayer } from "./timelapsePlayer";
 import {
   scheduleTimelapse,
   type ScheduledStroke,
   type TimelapseSchedule,
 } from "./timelapseSchedule";
+
+const stream = vi.hoisted(() => ({
+  wait: null as (() => Promise<void>) | null,
+  yield: null as (() => Promise<void>) | null,
+  requested: [] as number[],
+  reach: 0,
+}));
+vi.mock("./fillSnapshots", async (importOriginal) => {
+  const real = await importOriginal<typeof import("./fillSnapshots")>();
+  return {
+    ...real,
+    prepareFillSnapshots: async (...args: Parameters<typeof real.prepareFillSnapshots>) => {
+      const provider = await real.prepareFillSnapshots(args[0], {
+        ...args[1],
+        yieldToPage: () => stream.yield?.() ?? Promise.resolve(),
+      });
+      if (!provider) return null;
+      const next = provider.next;
+      provider.next = async (index) => {
+        stream.requested.push(index);
+        const snapshot = await next(index);
+        stream.reach = snapshot?.reach ?? 0;
+        await stream.wait?.();
+        return snapshot;
+      };
+      return provider;
+    },
+  };
+});
 
 vi.mock(
   "../../sticker-creation/canvas/context2d",
@@ -76,6 +105,14 @@ function setup(
   const timelapse = encodeTimelapse({ steps, start: layers, frame: SHEET, place: PLACE });
   const canvas = document.createElement("canvas");
   const clock = handFrames();
+  const advance = async (ms: number, step = 16) => {
+    if (ms < 0 || step <= 0 || Math.ceil(ms / step) > 2000)
+      throw new Error("Invalid frame advance");
+    for (let elapsed = 0; elapsed < ms; elapsed += step) {
+      clock.advance(Math.min(step, ms - elapsed), step);
+      for (let i = 0; i < 20; i++) await Promise.resolve();
+    }
+  };
   const player = createTimelapsePlayer({
     timelapse,
     canvas,
@@ -104,15 +141,30 @@ function setup(
   /** Plays it a frame at a time to the end. */
   const playToEnd = async () => {
     const { playing } = await start();
-    clock.advance(schedule.length + 32);
+    await advance(schedule.length + 32);
     await expect(playing).resolves.toBe("done");
   };
-  return { canvas, player, display, steps: decoded, schedule, painted, start, playToEnd, ...clock };
+  return {
+    canvas,
+    player,
+    display,
+    steps: decoded,
+    schedule,
+    painted,
+    start,
+    playToEnd,
+    ...clock,
+    advance,
+  };
 }
 
 /** The canvas the player plays layer `id` on: where the last stroke on that layer was painted. */
 function layerShown(id: LayerId): FakeContext {
-  const call = vi.mocked(paintStroke).mock.calls.findLast(([, op]) => op.layer === id);
+  const call = vi
+    .mocked(paintStroke)
+    .mock.calls.findLast(
+      ([g, op]) => op.layer === id && contextOf(g.canvas)?.calls.some(([name]) => name === "clip"),
+    );
   const shown = call && contextOf(call[0].canvas);
   if (!shown) throw new Error(`No stroke was painted on layer ${id}`);
   return shown;
@@ -139,6 +191,9 @@ function setVisibility(state: DocumentVisibilityState) {
 }
 
 afterEach(() => {
+  stream.wait = null;
+  stream.yield = null;
+  stream.requested.length = 0;
   Reflect.deleteProperty(document, "visibilityState");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -176,20 +231,34 @@ describe("the timelapse player", () => {
 
   it("paints each point once, in order, as it comes due, and finishes as the last is painted", async () => {
     const ops = [stroke(0, steady(900)), stroke(1_500, steady(400, 30))];
-    const { schedule, painted, start, advance } = setup(ops);
+    const { steps, schedule, painted, start, advance } = setup(ops);
     const { playing } = await start();
     let finished = false;
     void playing.then(() => (finished = true));
     // The first frame starts the clock at 0, so after `ms` of frames it has played `ms - 16`.
-    advance(schedule.length - 16);
+    await advance(schedule.length - 16);
     await Promise.resolve();
     expect(finished).toBe(false);
-    advance(32);
+    await advance(32);
     await expect(playing).resolves.toBe("done");
 
     const ranges = painted();
     expect(ranges.length).toBeGreaterThan(ops.length);
-    for (const op of ops) {
+    const decoded = steps.filter(
+      (step): step is StrokeOp => step.tool === "brush" || step.tool === "eraser",
+    );
+    for (const dispatch of ranges) {
+      const recorded = decoded.find((step) => step.T === dispatch.op.T);
+      expect(recorded).toBeDefined();
+      expect(dispatch.op).toMatchObject({
+        tool: recorded?.tool,
+        layer: recorded?.layer,
+        color: recorded?.color,
+        pts: recorded?.pts,
+        T: recorded?.T,
+      });
+    }
+    for (const op of decoded) {
       const own = ranges.filter((r) => r.op.T === op.T);
       expect(own.map((r) => r.from)).toEqual([0, ...own.slice(0, -1).map((r) => r.to)]);
       expect(own.at(-1)?.to).toBe(pointCount(op));
@@ -200,24 +269,24 @@ describe("the timelapse player", () => {
   it("counts a stalled frame as MAX_FRAME_MS", async () => {
     const { schedule, painted, start, advance } = setup([stroke(0, steady(2_000))]);
     await start();
-    advance(16);
-    advance(2_000, 2_000);
+    await advance(16);
+    await advance(2_000, 2_000);
     expect(painted().at(-1)?.to).toBe(dueBy(strokeAt(schedule, 0), MAX_FRAME_MS));
   });
 
   it("asks for no frames while the page is hidden, and plays on from where it was", async () => {
     const { schedule, painted, start, advance, waiting } = setup([stroke(0, steady(2_000))]);
     await start();
-    advance(16 * 5);
+    await advance(16 * 5);
     setVisibility("hidden");
     expect(waiting()).toBe(false);
-    advance(10_000);
+    await advance(10_000);
     const before = painted().length;
     setVisibility("visible");
     expect(waiting()).toBe(true);
-    advance(16);
+    await advance(16);
     expect(painted().length).toBe(before);
-    advance(16);
+    await advance(16);
     expect(painted().at(-1)?.to).toBe(dueBy(strokeAt(schedule, 0), 16 * 5));
   });
 
@@ -225,7 +294,7 @@ describe("the timelapse player", () => {
     const ops = [stroke(0, steady(900)), stroke(1_500, steady(400, 30))];
     const { painted, start, advance, waiting, player } = setup(ops);
     const { playing } = await start();
-    advance(160);
+    await advance(160);
     const before = painted().length;
     player.skip();
     const rest = painted().slice(before);
@@ -245,7 +314,7 @@ describe("the timelapse player", () => {
   it("finishes stopped on stop, and asks for no more frames", async () => {
     const { start, advance, waiting, player } = setup([stroke(0, steady(900))]);
     const { playing } = await start();
-    advance(160);
+    await advance(160);
     player.stop();
     await expect(playing).resolves.toBe("stopped");
     expect(waiting()).toBe(false);
@@ -257,7 +326,7 @@ describe("the timelapse player", () => {
     vi.mocked(paintStroke).mockImplementationOnce(() => {
       throw new Error("the canvas is lost");
     });
-    advance(16);
+    await advance(16);
     await expect(playing).rejects.toThrow(
       "The timelapse stopped at step 1 of 2: the canvas is lost",
     );
@@ -373,11 +442,11 @@ describe("the timelapse player's layers", () => {
     const beat = beatAt(schedule, 2);
     const { playing } = await start();
     // The first frame starts the clock at 0, so after `ms` of frames it has played `ms - 16`.
-    advance((beat.start + beat.end) / 2 + 16);
+    await advance((beat.start + beat.end) / 2 + 16);
     const fading = shownMiddle(display);
     expect(fading).not.toEqual(opaque(BLUE));
     expect(fading).not.toEqual(opaque(RED));
-    advance(schedule.length);
+    await advance(schedule.length);
     await expect(playing).resolves.toBe("done");
     expect(shownMiddle(display)).toEqual(opaque(RED));
   });
@@ -402,6 +471,118 @@ describe("the timelapse player's fills", () => {
     madeContexts()
       .map((context) => context.canvas)
       .filter((canvas) => canvas.width > 0 || canvas.height > 0);
+
+  it("does not advance playback time while a fill is pending", async () => {
+    const gate = deferred<void>();
+    stream.wait = () => gate.promise;
+    const { player, start, advance, waiting, schedule, painted } = setup(sticker());
+    const { playing } = await start();
+    const reveal = beatAt(schedule, 1);
+    await advance(reveal.start + 32);
+    expect(stream.requested).toEqual([1]);
+    expect(waiting()).toBe(false);
+    await advance(10_000);
+    gate.resolve();
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    const firstRadius = Number(clips(layerShown(1)).at(-1)?.[3]);
+    const firstProgress = 1 - Math.cbrt(1 - firstRadius / stream.reach);
+    await advance(16);
+    const expectedProgress = firstProgress + 16 / (reveal.end - reveal.start);
+    expect(Number(clips(layerShown(1)).at(-1)?.[3])).toBeCloseTo(
+      stream.reach * (1 - (1 - expectedProgress) ** 3),
+      8,
+    );
+    expect(painted().filter((range) => range.op.T === 800)).toEqual([]);
+    player.skip();
+    await expect(playing).resolves.toBe("done");
+  });
+
+  it("stop during fill preparation prevents late painting and releases canvases", async () => {
+    const gate = deferred<void>();
+    stream.wait = () => gate.promise;
+    const { player, canvas, display, start, advance, schedule } = setup(sticker());
+    const { playing } = await start();
+    await advance(beatAt(schedule, 1).start + 32);
+    expect(stream.requested).toEqual([1]);
+    player.stop();
+    await expect(playing).resolves.toBe("stopped");
+    const before = display.calls.length;
+    expect(heldCanvases()).toEqual([canvas]);
+    gate.resolve();
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    expect(display.calls).toHaveLength(before);
+    expect(heldCanvases()).toEqual([canvas]);
+  });
+
+  it("Skip waits for every remaining fill before completing", async () => {
+    const gates = [deferred<void>(), deferred<void>()];
+    let requested = 0;
+    stream.wait = () => gates[requested++].promise;
+    const first: FillOp = { tool: "fill", layer: 1, color: "#ff0000", ...TAP, gap: 0, T: 0 };
+    const { player, display, start } = setup([first, { ...first, color: "#0000ff", T: 500 }]);
+    const { playing } = await start();
+    let finished = false;
+    void playing.then(() => {
+      finished = true;
+    });
+    player.skip();
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    expect(stream.requested).toEqual([0]);
+    expect(finished).toBe(false);
+    gates[0].resolve();
+    for (let i = 0; i < 30; i++) await Promise.resolve();
+    expect(stream.requested).toEqual([0, 1]);
+    expect(finished).toBe(false);
+    gates[1].resolve();
+    await expect(playing).resolves.toBe("done");
+    expect([...display.getImageData(80, 80, 1, 1).data]).toEqual([0, 0, 255, 255]);
+  });
+
+  it("hidden page resumes without a burst after pending preparation", async () => {
+    const gate = deferred<void>();
+    stream.wait = () => gate.promise;
+    const { player, display, start, advance, waiting, schedule, painted } = setup(sticker());
+    const { playing } = await start();
+    await advance(beatAt(schedule, 1).start + 32);
+    setVisibility("hidden");
+    const before = display.calls.length;
+    await advance(40_000, 1000);
+    gate.resolve();
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    expect(display.calls).toHaveLength(before);
+    expect(waiting()).toBe(false);
+    setVisibility("visible");
+    await advance(16);
+    expect(painted().filter((range) => range.op.T === 800)).toEqual([]);
+    expect(stream.requested).toEqual([1]);
+    player.skip();
+    await expect(playing).resolves.toBe("done");
+  });
+
+  it("excludes hidden time from a pending fill's preparation deadline", async () => {
+    const gate = deferred<void>();
+    const { player, start, advance, schedule } = setup(sticker());
+    await player.prepare();
+    stream.yield = () => gate.promise;
+    const { playing } = await start();
+    await advance(beatAt(schedule, 1).start + 32);
+    setVisibility("hidden");
+    await advance(40_000, 1000);
+    setVisibility("visible");
+    gate.resolve();
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    player.skip();
+    await expect(playing).resolves.toBe("done");
+  });
+
+  it("reports the failing streamed step after Skip has advanced the schedule", async () => {
+    stream.wait = () => Promise.reject(new Error("lost fill pixels"));
+    const { player } = setup(sticker());
+    player.skip();
+    await expect(player.play()).rejects.toThrow(
+      "The timelapse stopped at step 2 of 3: lost fill pixels",
+    );
+  });
 
   it("reveals a fill on its layer inside a circle growing from its tap, then whole", async () => {
     const { player, playToEnd } = setup(sticker());
@@ -428,7 +609,7 @@ describe("the timelapse player's fills", () => {
     await player.prepare();
     expect(notePerformance).toHaveBeenCalledWith(
       "timelapse",
-      expect.stringMatching(/^prepared 1 fill in \d+ ms/),
+      expect.stringMatching(/^measured 1 fill in \d+ ms/),
     );
   });
 
@@ -442,9 +623,9 @@ describe("the timelapse player's fills", () => {
     await player.prepare();
     const { playing } = await start();
     // The first frame starts the clock at 0, so after `ms` of frames it has played `ms - 16`.
-    advance((after.at[0] + withBeat) / 2 + 16);
+    await advance((after.at[0] + withBeat) / 2 + 16);
     expect(painted().some((range) => range.op.T === after.op.T)).toBe(true);
-    advance(schedule.length);
+    await advance(schedule.length);
     await expect(playing).resolves.toBe("done");
     expect(clips(layerShown(1))).toEqual([]);
     expect(draws(layerShown(1))).toHaveLength(1);
@@ -454,9 +635,9 @@ describe("the timelapse player's fills", () => {
     const { player, start, advance, schedule } = setup(sticker());
     await player.prepare();
     const { playing } = await start();
-    advance(32);
+    await advance(32);
     player.setReduced(true);
-    advance(schedule.length + 32);
+    await advance(schedule.length + 32);
     await expect(playing).resolves.toBe("done");
     expect(clips(layerShown(1))).toEqual([]);
     expect(draws(layerShown(1))).toHaveLength(1);
@@ -466,7 +647,7 @@ describe("the timelapse player's fills", () => {
     const { player, start, advance } = setup(sticker());
     await player.prepare();
     const { playing } = await start();
-    advance(32);
+    await advance(32);
     player.skip();
     await expect(playing).resolves.toBe("done");
     expect(clips(layerShown(1))).toEqual([]);
@@ -486,7 +667,7 @@ describe("the timelapse player's fills", () => {
     await start();
     const reveal = beatAt(schedule, 1);
     // The first frame starts the clock at 0, so after `ms` of frames it has played `ms - 16`.
-    advance((reveal.start + reveal.end) / 2 + 16);
+    await advance((reveal.start + reveal.end) / 2 + 16);
     expect(clips(layerShown(1)).length).toBeGreaterThan(0);
     player.stop();
     expect(heldCanvases()).toEqual([canvas]);

@@ -1,14 +1,14 @@
 // @vitest-environment happy-dom
 import { act, createRef } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { renderWithApi } from "../api/testing";
+import { renderInHost } from "../ui/testing";
 import { strings } from "../i18n/strings";
 import { sessionMs } from "./session/session";
 import { clockOnFrames } from "./session/testClock";
 import { WARN_AT_SECONDS } from "./session/useSessionClock";
 import { TimerDot, WIDE_FROM_SECONDS, type TimerDotHandle } from "./TimerDot";
 
-let view: ReturnType<typeof renderWithApi> | undefined;
+let view: ReturnType<typeof renderInHost> | undefined;
 afterEach(() => {
   view?.unmount();
   view = undefined;
@@ -28,7 +28,7 @@ function renderDot({
 }) {
   const { clock, advance } = clockOnFrames({ length, started });
   const timer = createRef<TimerDotHandle>();
-  view = renderWithApi(
+  view = renderInHost(
     <TimerDot
       ref={timer}
       clock={clock}

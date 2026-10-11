@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithApi } from "../../api/testing";
+import { renderInHost } from "../../ui/testing";
 import { i18next } from "../../i18n/i18n";
 import {
   SealingStatusLabel,
@@ -14,7 +14,7 @@ const SEALING = i18next.t(($) => $.stickerCreation.sealCeremony.sealing);
 const TAKES_A_WHILE = i18next.t(($) => $.stickerCreation.sealCeremony.takesAWhile);
 const TAKING_LONGER = i18next.t(($) => $.stickerCreation.sealCeremony.takingLonger);
 
-let view: ReturnType<typeof renderWithApi> | undefined;
+let view: ReturnType<typeof renderInHost> | undefined;
 /** The clock moves on only in act, so each step's timers render before the test looks. */
 let now = 0;
 const until = (ms: number) => {
@@ -39,7 +39,7 @@ afterEach(() => {
 
 describe("SealingStatusLabel", () => {
   it("sticks on once sealing takes a moment, and says more as the wait goes on", () => {
-    view = renderWithApi(<SealingStatusLabel waiting />);
+    view = renderInHost(<SealingStatusLabel waiting />);
     until(SHOW_AFTER_MS - 1);
     expect(label()).toBeNull();
     expect(heard()).toBe("");
@@ -56,7 +56,7 @@ describe("SealingStatusLabel", () => {
   });
 
   it("never shows for a quick seal", () => {
-    view = renderWithApi(<SealingStatusLabel waiting />);
+    view = renderInHost(<SealingStatusLabel waiting />);
     until(SHOW_AFTER_MS - 1);
     view.rerender(<SealingStatusLabel waiting={false} />);
     until(TAKING_LONGER_MS);
@@ -64,7 +64,7 @@ describe("SealingStatusLabel", () => {
   });
 
   it("peels off when the wait ends, and starts afresh for the next seal", () => {
-    view = renderWithApi(<SealingStatusLabel waiting />);
+    view = renderInHost(<SealingStatusLabel waiting />);
     until(TAKES_A_WHILE_MS);
     view.rerender(<SealingStatusLabel waiting={false} />);
     expect(label()?.classList.contains("is-peeling")).toBe(true);

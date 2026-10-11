@@ -1,14 +1,14 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithApi } from "../../api/testing";
+import { renderInHost } from "../../ui/testing";
 import { sizePx } from "../canvas/brush";
 import { SizeRail } from "./SizeRail";
 
 const VALUE = 0.5;
 /** CSS px per sheet unit, as on an iPad. */
 const SCALE = 2;
-let view: ReturnType<typeof renderWithApi>;
+let view: ReturnType<typeof renderInHost>;
 const onChange = vi.fn<(value: number) => void>();
 const onHold = vi.fn<(holding: boolean) => void>();
 
@@ -54,7 +54,7 @@ const dragThumb = (from: number, ...path: number[]) => {
 beforeEach(() => {
   onChange.mockReset();
   onHold.mockReset();
-  view = renderWithApi(railAt(VALUE));
+  view = renderInHost(railAt(VALUE));
   rail().getBoundingClientRect = () => new DOMRect(0, 104, 40, 222);
 });
 

@@ -13,7 +13,7 @@ import type { Me } from "@drawing-app/api/client";
 import { openEarly, type EarlySession } from "./earlySession";
 import type { SessionApi } from "./httpApi";
 import { useMe, useSetMe } from "./meContext";
-import { RECOVERY_HOLD_MS, SessionGate } from "./SessionGate";
+import { SessionGate } from "./SessionGate";
 import { reportSessionLost } from "./sessionLoss";
 import { inLanguage } from "../ui/testing";
 import { emptyApi } from "./testing";
@@ -59,7 +59,24 @@ function OptInSwitch({ answered = Promise.resolve() }: { answered?: Promise<void
 const settle = () => act(() => Promise.resolve());
 let cleanup = () => {};
 afterEach(() => cleanup());
+const diagnosticOutput = { warn: console.warn.bind(console), error: console.error.bind(console) };
 vi.spyOn(console, "error").mockImplementation(() => {});
+
+function expectDiagnostics(expected: { warn: unknown[][]; error?: unknown[][] }) {
+  for (const level of ["warn", "error"] as const) {
+    const calls = expected[level] ?? [];
+    const previous = console[level];
+    const captured = vi.fn((...args: unknown[]) => {
+      if (!calls.some((call) => call.length === args.length && call.every((v, i) => v === args[i])))
+        diagnosticOutput[level](...args);
+    });
+    console[level] = captured;
+    onTestFinished(() => {
+      console[level] = previous;
+      expect(captured.mock.calls).toEqual(calls);
+    });
+  }
+}
 
 /** Who LINE's ID token names: Alice, as the server last heard of her. */
 const ALICE_CLAIMS: LineClaims = { sub: "line-alice", name: "Alice" };
@@ -137,6 +154,38 @@ const submit = (host: HTMLElement) =>
   });
 
 describe("SessionGate", () => {
+  it("closes an account mismatch with Reload and never automatically signs in", async () => {
+    const accountChanged = new ApiError(409, { error: "session_account_changed" });
+    expectDiagnostics({
+      warn: [["The account changed; reload to open the current session", accountChanged]],
+    });
+    const signIn = vi.fn<SessionApi["signIn"]>();
+    const host = render(session({ me: () => Promise.resolve({ me }), signIn }));
+    await settle();
+    act(() => reportSessionLost(accountChanged, me.id));
+    await settle();
+    expect(host.textContent).not.toContain("Board of");
+    expect(host.querySelector("button")?.textContent).toBe("Reload");
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
+  it("ignores Alice's late session errors after mounting Bob", async () => {
+    expectDiagnostics({ warn: [] });
+    const bob = { ...me, id: "bob", handle: "bob", lineUserId: "line-bob" };
+    const host = render(session({ me: () => Promise.resolve({ me: bob }) }), undefined, undefined, {
+      claims: { sub: "line-bob", name: "Alice" },
+    });
+    await settle();
+    for (const error of [
+      new ApiError(401, { error: "signed_out" }),
+      new ApiError(409, { error: "session_account_changed" }),
+    ]) {
+      act(() => reportSessionLost(error, me.id));
+      await settle();
+    }
+    expect(host.textContent).toContain("Board of @bob");
+  });
+
   it("resumes the matching server session without reading or exchanging an old LINE token", async () => {
     const resume = vi.fn<SessionApi["me"]>().mockResolvedValue({ me });
     const signIn = vi.fn<SessionApi["signIn"]>();
@@ -209,7 +258,7 @@ describe("SessionGate", () => {
     expect(reconnect).not.toHaveBeenCalled();
   });
 
-  it.each(["line_token_invalid", "line_token_expired"])(
+  it.each(["line_token_invalid", "line_token_expired", "signed_out"])(
     "reconnects LINE on %s instead of resubmitting the rejected token",
     async (code) => {
       const signIn = vi
@@ -310,7 +359,7 @@ describe("SessionGate", () => {
     type(input, "@alice");
     submit(host);
     await settle();
-    expect(setHandle).toHaveBeenLastCalledWith("alice");
+    expect(setHandle).toHaveBeenLastCalledWith("alice", me.id);
     expect(host.textContent).toContain("@alice is taken");
     expect(host.textContent).not.toContain("Board");
 
@@ -378,7 +427,7 @@ describe("SessionGate with the cookie from the last visit", () => {
     const accessToken = vi.fn(() => "expired-token");
     const reconnect = vi.fn<() => Promise<void>>().mockResolvedValue();
     const client = session({ me: resume, signIn });
-    const early = openEarly(client, emptyApi(), { board: true });
+    const early = openEarly(client, () => emptyApi(), { board: true });
     const host = render(client, accessToken, reconnect, { early });
     await settle();
     expect(host.textContent).toContain("Check your connection");
@@ -493,110 +542,62 @@ describe("SessionGate with the cookie from the last visit", () => {
 });
 
 describe("SessionGate when a request finds the session gone", () => {
-  const gone = () => new ApiError(401, { error: "signed_out" });
-
-  /** The gate open on Alice, whose session then ends: every check of the cookie after the first says so. */
-  function openThenLose(signIn: SessionApi["signIn"], app?: ReactNode) {
-    const resume = vi
-      .fn<SessionApi["me"]>()
-      .mockResolvedValueOnce({ me })
-      .mockRejectedValue(gone());
-    const reconnect = vi.fn<() => Promise<void>>().mockResolvedValue();
-    const host = render(session({ me: resume, signIn }), () => "token", reconnect, { app });
-    return { host, reconnect };
-  }
-  const lose = async () => {
-    act(() => reportSessionLost(gone()));
-    await settle();
-  };
-
-  it("signs in again with LINE and reopens the app, once however many requests found it", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("keeps Reload visible after duplicate expiry notifications without checking Me or reconnecting", async () => {
+    const gone = new ApiError(401, { error: "signed_out" });
+    expectDiagnostics({ warn: [["The session ended; reload to continue", gone]] });
+    const resume = vi.fn<SessionApi["me"]>().mockResolvedValue({ me });
     const signIn = vi.fn<SessionApi["signIn"]>().mockResolvedValue({ me });
-    const { host } = openThenLose(signIn);
+    const reconnect = vi.fn<() => Promise<void>>().mockResolvedValue();
+    const host = render(session({ me: resume, signIn }), undefined, reconnect);
     await settle();
     expect(host.textContent).toContain("Board of @alice");
-    expect(signIn).not.toHaveBeenCalled();
-
     act(() => {
-      reportSessionLost(gone());
-      reportSessionLost(gone());
+      reportSessionLost(gone, me.id);
+      reportSessionLost(gone, me.id);
     });
-    expect(host.textContent).not.toContain("Board");
     await settle();
-    expect(signIn).toHaveBeenCalledExactlyOnceWith({ accessToken: "token", language: "en" });
-    expect(host.textContent).toContain("Board of @alice");
+    act(() => reportSessionLost(gone, me.id));
+    await settle();
+    expect(host.textContent).not.toContain("Board of");
+    expect(host.querySelector("h1")?.textContent).toBe("Your session ended");
+    expect(host.textContent).toContain("Reload to continue");
+    expect(host.querySelector("button")?.textContent).toBe("Reload");
+    expect(resume).toHaveBeenCalledExactlyOnceWith("line-alice");
+    expect(signIn).not.toHaveBeenCalled();
+    expect(reconnect).not.toHaveBeenCalled();
+    const reload = vi.spyOn(location, "reload").mockImplementation(() => {});
+    onTestFinished(() => reload.mockRestore());
+    act(() => host.querySelector("button")?.click());
+    expect(reload).toHaveBeenCalledOnce();
+    expect(reconnect).not.toHaveBeenCalled();
   });
 
-  it("opens only on the new session when a setting saved before the loss answers while it signs in again", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { signIn, finish } = pendingSignIn({ ...me, handle: "alice-again" });
+  it("keeps the account closed when profile and settings responses arrive after expiry", async () => {
+    const gone = new ApiError(401, { error: "signed_out" });
+    expectDiagnostics({ warn: [["The session ended; reload to continue", gone]] });
+    const { signIn, finish } = pendingSignIn({ ...me, lineDisplayName: "Alice B" });
     let answerSave = () => {};
     const saveAnswered = new Promise<void>((resolve) => (answerSave = resolve));
-    const { host } = openThenLose(
-      signIn,
-      <>
-        <Board />
-        <OptInSwitch answered={saveAnswered} />
-      </>,
-    );
-    await settle();
-    act(() => host.querySelector("button")?.click());
-    await lose();
-    expect(signIn).toHaveBeenCalledOnce();
-
-    await act(async () => answerSave());
-    expect(host.textContent).not.toContain("Board");
-    finish();
-    await settle();
-    expect(host.textContent).toContain("Board of @alice-again");
-  });
-
-  it("asks to reconnect LINE when LINE's access token has expired too, and doesn't resubmit it", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    const signIn = vi
-      .fn<SessionApi["signIn"]>()
-      .mockRejectedValue(new ApiError(401, { error: "line_token_expired" }));
-    const { host, reconnect } = openThenLose(signIn);
-    await settle();
-    await lose();
-    expect(host.querySelector("h1")?.textContent).toBe("Couldn’t sign you in");
-    expect(host.querySelector("button")?.textContent).toBe("Reconnect with LINE");
-    expect(signIn).toHaveBeenCalledOnce();
-    expect(reconnect).not.toHaveBeenCalled();
-    act(() => host.querySelector("button")?.click());
-    await settle();
-    expect(reconnect).toHaveBeenCalledOnce();
-    expect(signIn).toHaveBeenCalledOnce();
-  });
-
-  it("stops at the failure screen, and doesn't loop, when the session is lost again right after", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    const signIn = vi.fn<SessionApi["signIn"]>().mockResolvedValue({ me });
-    const { host } = openThenLose(signIn);
-    await settle();
-    await lose();
-    expect(host.textContent).toContain("Board of @alice");
-    await lose();
-    expect(signIn).toHaveBeenCalledOnce();
-    expect(host.textContent).toContain(errorMessage(gone()));
-    expect(host.querySelector("button")?.textContent).toBe("Reconnect with LINE");
-  });
-
-  it("signs in again for a loss long after the last recovery", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.useFakeTimers({ toFake: ["Date"] });
-    onTestFinished(() => {
-      vi.useRealTimers();
+    const host = render(session({ signIn }), undefined, undefined, {
+      early: earlyAs(me),
+      claims: { ...ALICE_CLAIMS, name: "Alice B" },
+      app: (
+        <>
+          <Board />
+          <OptInSwitch answered={saveAnswered} />
+        </>
+      ),
     });
-    const signIn = vi.fn<SessionApi["signIn"]>().mockResolvedValue({ me });
-    const { host } = openThenLose(signIn);
     await settle();
-    await lose();
-    vi.setSystemTime(Date.now() + RECOVERY_HOLD_MS);
-    await lose();
-    expect(signIn).toHaveBeenCalledTimes(2);
-    expect(host.textContent).toContain("Board of @alice");
+    expect(signIn).toHaveBeenCalledExactlyOnceWith({ accessToken: "token", language: "en" }, me.id);
+    act(() => host.querySelector("button")?.click());
+    act(() => reportSessionLost(gone, me.id));
+    await settle();
+    finish();
+    await act(async () => answerSave());
+    expect(host.textContent).not.toContain("Board of");
+    expect(host.querySelector("button")?.textContent).toBe("Reload");
+    expect(signIn).toHaveBeenCalledOnce();
   });
 });
 

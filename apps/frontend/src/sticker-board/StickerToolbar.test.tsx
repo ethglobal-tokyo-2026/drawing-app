@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
-import { emptyApi, renderWithApi } from "../api/testing";
+import { renderInHost } from "../ui/testing";
 import { i18next } from "../i18n/i18n";
 import { stickerBoard } from "../i18n/strings/stickerBoard";
 import { FAST_AFTER_MS, HOLD_DELAY_MS } from "../ui/useHeldRepeat";
@@ -31,7 +31,7 @@ const toolbar = (extra: Partial<Parameters<typeof StickerToolbar>[0]> = {}) => (
 );
 
 const show = (extra: Partial<Parameters<typeof StickerToolbar>[0]> = {}) => {
-  const view = renderWithApi(toolbar(extra), emptyApi());
+  const view = renderInHost(toolbar(extra));
   unmount = view.unmount;
   return view.host;
 };
@@ -55,7 +55,7 @@ describe("StickerToolbar's spot", () => {
     const measured = vi
       .spyOn(HTMLElement.prototype, "offsetWidth", "get")
       .mockImplementation(() => width);
-    const view = renderWithApi(toolbar(), emptyApi());
+    const view = renderInHost(toolbar());
     unmount = view.unmount;
     const bar = view.host.querySelector<HTMLElement>(".sticker-toolbar");
     const spot = bar?.style.transform;
@@ -156,6 +156,26 @@ describe("StickerToolbar's Arrange", () => {
       pointer(tile, "pointermove", { clientX: 200, clientY: 200 });
       wait(FAST_AFTER_MS);
       expect(onStep).toHaveBeenCalledTimes(before);
+    });
+
+    it("stops changing scale when the window blurs during a hold", () => {
+      let scale = 80;
+      const host = show(
+        arranging(true, (step) => {
+          if (step === "bigger") scale += 1;
+        }),
+      );
+      const bigger = tiles(host).find(
+        (tile) => tile.getAttribute("aria-label") === arrangeStrings.bigger.en,
+      );
+      if (!bigger) throw new Error("No bigger step tile");
+      pointer(bigger, "pointerdown");
+      wait(HOLD_DELAY_MS);
+      expect(scale).toBe(81);
+
+      act(() => void window.dispatchEvent(new Event("blur")));
+      wait(FAST_AFTER_MS);
+      expect(scale).toBe(81);
     });
   });
 

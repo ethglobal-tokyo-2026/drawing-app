@@ -8,8 +8,7 @@ import { SubjectThought } from "./SubjectThought";
 import { DETAIL_TOWARD } from "./thoughtLayout";
 import { REUNION, SPORTS, WIND } from "./testSubjects";
 
-let cleanup = () => {};
-afterEach(() => cleanup());
+const cleanups: Array<() => void> = [];
 
 /** The pair's clouds at `size`, in `language`. */
 async function thought(size: PairSize, language: "en" | "ja", pair = [WIND, REUNION] as const) {
@@ -17,13 +16,13 @@ async function thought(size: PairSize, language: "en" | "ja", pair = [WIND, REUN
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
+  cleanups.push(() => {
+    root.unmount();
+    host.remove();
+  });
   act(() =>
     root.render(<SubjectThought subjects={pair} size={size} toward={DETAIL_TOWARD} reduced />),
   );
-  cleanup = () => {
-    act(() => root.unmount());
-    host.remove();
-  };
   const clouds = host.querySelector(".subject-thought");
   if (!clouds) throw new Error("No thought clouds");
   return clouds;
@@ -35,6 +34,11 @@ const words = (clouds: Element) =>
   [...clouds.querySelectorAll(".subject-thought__words")].map((w) => w.textContent);
 
 describe("a sticker's subjects in thought clouds", () => {
+  afterEach(() => {
+    act(() => cleanups.splice(0).forEach((cleanup) => cleanup()));
+    expect(document.querySelectorAll(".subject-thought")).toHaveLength(0);
+  });
+
   it("is hidden from screen readers, which hear the pair with the sticker instead", async () => {
     expect((await thought("peek", "en")).getAttribute("aria-hidden")).toBe("true");
     expect((await thought("detail", "ja")).getAttribute("aria-hidden")).toBe("true");

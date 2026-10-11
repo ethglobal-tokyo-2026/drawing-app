@@ -2,7 +2,9 @@
 import type { TicketShop } from "@drawing-app/api/client";
 import { act, useLayoutEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { emptyApi, renderWithApi } from "../api/testing";
+import { ApiProvider } from "../api/ApiProvider";
+import { emptyApi } from "../api/testing";
+import { renderInHost } from "../ui/testing";
 import type { Query } from "../api/useApiQuery";
 import {
   preloadReservePacks,
@@ -55,19 +57,32 @@ describe("reserve packs", () => {
   it("the Shop shows packs loaded ahead at once, asks for nothing while they're fresh, and loads again once they're stale", async () => {
     const { api, ticketShop } = await loadedAhead();
     void preloadReservePacks(api);
-    ({ unmount } = renderWithApi(<Shop />, api));
+    ({ unmount } = renderInHost(
+      <ApiProvider client={api}>
+        <Shop />
+      </ApiProvider>,
+    ));
     expect(seen.query).toMatchObject({ state: "ready", data: SHOP });
     expect(ticketShop).toHaveBeenCalledTimes(1);
     unmount();
     vi.setSystemTime(Date.now() + RESERVE_PACKS_FRESH_MS);
-    ({ unmount } = renderWithApi(<Shop />, api));
+    ({ unmount } = renderInHost(
+      <ApiProvider client={api}>
+        <Shop />
+      </ApiProvider>,
+    ));
+    await act(async () => {});
     expect(seen.query).toMatchObject({ state: "ready", data: SHOP });
     expect(ticketShop).toHaveBeenCalledTimes(2);
   });
 
   it("the checkout, which pays with them, never shows packs kept from before: it waits for its own load", async () => {
     const { api, ticketShop } = await loadedAhead();
-    ({ unmount } = renderWithApi(<Checkout />, api));
+    ({ unmount } = renderInHost(
+      <ApiProvider client={api}>
+        <Checkout />
+      </ApiProvider>,
+    ));
     expect(seen.query.state).toBe("loading");
     expect(ticketShop).toHaveBeenCalledTimes(2);
     await act(() => Promise.resolve());

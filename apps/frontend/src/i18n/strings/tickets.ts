@@ -123,9 +123,11 @@ export const tickets = {
     lead: { en: "Reserve tickets never expire.", ja: "有償チケットに有効期限はありません。" },
     /** Reserve ticket checkout: the small label on the wallet row, beside your balance in yen (the JPYC in your Sui account, never named here) */
     balance: { en: "Balance", ja: "残高" },
+    /** Reserve ticket checkout, beside the JPYC balance: reads the current Sui balance again without starting a purchase */
+    refreshBalance: { en: "Refresh balance", ja: "残高を更新" },
     /** Reserve ticket checkout: the wallet row while the balance loads */
     readingBalance: { en: "Reading your balance…", ja: "残高を確認しています…" },
-    /** Reserve ticket checkout: the balance row when the balance couldn't be read, before a Try again link; Sui's own words follow as fine print beside Copy */
+    /** Reserve ticket checkout: the balance row when the balance couldn't be read; Sui's own words follow as fine print beside Copy */
     balanceProblem: {
       en: "Couldn’t read your balance.",
       ja: "残高を確認できませんでした。",

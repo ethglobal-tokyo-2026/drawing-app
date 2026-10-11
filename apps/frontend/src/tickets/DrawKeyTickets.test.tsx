@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import type { Tickets } from "@drawing-app/api/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { FRESH_TICKETS, renderWithApi } from "../api/testing";
+import { FRESH_TICKETS } from "../api/testing";
+import { renderInHost } from "../ui/testing";
 import { DrawKeyTickets } from "./DrawKeyTickets";
 import { formatRefillTime } from "./refill";
 
@@ -21,11 +22,11 @@ const tickets = (daily: number, reserve: number): Tickets => ({
   })),
 });
 
-let view: ReturnType<typeof renderWithApi> | undefined;
+let view: ReturnType<typeof renderInHost> | undefined;
 /** Opens the board's key on `state`, as a return to the board does. */
 const open = (state: Tickets) => {
   view?.unmount();
-  view = renderWithApi(<DrawKeyTickets tickets={state} />);
+  view = renderInHost(<DrawKeyTickets tickets={state} />);
 };
 /** The tickets change while the key is up. */
 const change = (state: Tickets) => view?.rerender(<DrawKeyTickets tickets={state} />);

@@ -928,12 +928,58 @@ describe("StickerTray", () => {
       await openTray();
       expect(statusText()).toBe("");
       chooseTab("gifts");
-      // However many sheets the gifts fill, the line names the tab and counts them.
-      const count = Number(/\d+/.exec(statusText() ?? "")?.[0]);
       expect(statusText()).toBe(
         i18next.t(($) => $.stickerBoard.tray.status.filtered, {
           filter: i18next.t(($) => $.stickerBoard.tray.filters.gifts),
-          count,
+          count: 3,
+        }),
+      );
+    });
+
+    it("counts a folder tab with one sheet", async () => {
+      render([sticker("gift", 1, false, { artist: friend })]);
+      await openTray();
+      chooseTab("gifts");
+      expect(statusText()).toBe(
+        i18next.t(($) => $.stickerBoard.tray.status.filtered, {
+          filter: i18next.t(($) => $.stickerBoard.tray.filters.gifts),
+          count: 1,
+        }),
+      );
+    });
+
+    it("counts every sheet in a folder tab with a hidden +N depth", async () => {
+      // Sixty stickers pack into five sheets; the stack hides the fifth behind +N.
+      render(manyStickers(60).map((s) => ({ ...s, artist: friend })));
+      await openTray();
+      chooseTab("gifts");
+      expect(board.querySelector(".tray__depth")).not.toBeNull();
+      expect(statusText()).toBe(
+        i18next.t(($) => $.stickerBoard.tray.status.filtered, {
+          filter: i18next.t(($) => $.stickerBoard.tray.filters.gifts),
+          count: 5,
+        }),
+      );
+    });
+
+    it("counts zero when a folder tab has no sheets to show", async () => {
+      render([
+        sticker("given-gift", 1, false, {
+          artist: friend,
+          held: false,
+          givenTo: { receiver: bob, receivedAt: 2 },
+        }),
+        sticker("mine", 2, false),
+      ]);
+      await openTray();
+      expect(tab("gifts")?.closest("[hidden]")).toBeNull();
+      chooseTab("gifts");
+      // An unmatched filter keeps one fallback sheet in the stack.
+      expect(stackEl()?.querySelectorAll(".tray__sheet")).toHaveLength(1);
+      expect(statusText()).toBe(
+        i18next.t(($) => $.stickerBoard.tray.status.filtered, {
+          filter: i18next.t(($) => $.stickerBoard.tray.filters.gifts),
+          count: 0,
         }),
       );
     });

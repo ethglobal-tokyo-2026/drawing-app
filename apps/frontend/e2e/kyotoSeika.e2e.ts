@@ -14,6 +14,7 @@ import {
   openSettings,
   say,
   signIn,
+  signedInUserId,
 } from "./helpers.ts";
 
 const { kyotoSeika, stickerBoard, stickerCreation, ui } = strings;
@@ -231,6 +232,7 @@ test("Kyoto Seika Practice Mode: switched on in Settings, dealt, picked, timed a
 /** A sticker drawn in Kyoto Seika Practice Mode, sealed from a fresh deal's first two subjects. */
 async function sealKyotoSeikaSticker(page: Page) {
   const on = await page.request.post("/api/me/kyoto-seika-practice", {
+    headers: { "x-croquis-user-id": await signedInUserId(page) },
     data: { kyotoSeikaPractice: true },
   });
   expect(on.ok()).toBe(true);

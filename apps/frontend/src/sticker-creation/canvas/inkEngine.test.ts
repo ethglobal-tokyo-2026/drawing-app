@@ -133,6 +133,7 @@ const SETTINGS: InkSettings = {
   smoothing: 0,
   locked: false,
   paused: false,
+  panelOpen: false,
   inputMode: null,
   penPressure: "normal",
   sessionMs: () => 0,
@@ -233,7 +234,20 @@ function setup(settings: Partial<InkSettings> = {}) {
     for (let id = 1; id <= fingers; id++) engine.up(at("touch", 100 + id, id * 60, 300, t + 100));
   };
   const committed = () => events.onCommit.mock.calls.map(([op]) => op);
-  return { engine, ink, display, events, at, runFrame, trace, stroke, tap, committed };
+  const hasPendingFrame = () => frame !== null;
+  return {
+    engine,
+    ink,
+    display,
+    events,
+    at,
+    runFrame,
+    trace,
+    stroke,
+    tap,
+    committed,
+    hasPendingFrame,
+  };
 }
 
 /** The engine's frame, which every sheet here has from the start. */
@@ -805,6 +819,80 @@ describe("InkEngine", () => {
     engine.settings = { ...engine.settings, locked: true };
     engine.up(at("touch", 2, 40, 40, 1050));
     expect(committed()).toHaveLength(1);
+  });
+
+  for (const flag of ["locked", "paused", "panelOpen"] as const) {
+    for (const pointerType of ["mouse", "pen", "touch"] as const) {
+      it(`finishes the held ${pointerType} stroke before ${flag} input takes effect`, () => {
+        const { engine, ink, at, runFrame, committed, hasPendingFrame } = setup({
+          smoothing: SMOOTH,
+        });
+        engine.down(at(pointerType, 1, 10, 20, 0));
+        engine.move(at(pointerType, 1, 30, 20, 16));
+        expect(hasPendingFrame()).toBe(true);
+
+        engine.settings = { ...engine.settings, [flag]: true };
+        expect(committed()).toHaveLength(1);
+        expect(committed().map(lastPoint)).toEqual([[30, 20]]);
+        expect(layerCalls(ink).length).toBeGreaterThan(0);
+        expect(hasPendingFrame()).toBe(false);
+        const paints = layerCalls(ink);
+
+        engine.settings = { ...engine.settings, [flag]: true };
+        engine.move(at(pointerType, 1, 220, 20, 32));
+        runFrame();
+        engine.up(at(pointerType, 1, 220, 20, 48));
+        expect(committed().map(lastPoint)).toEqual([[30, 20]]);
+        expect(layerCalls(ink)).toEqual(paints);
+        expect(hasPendingFrame()).toBe(false);
+      });
+    }
+  }
+
+  it("drops a fill tap held when input becomes unavailable", () => {
+    for (const flag of ["locked", "paused", "panelOpen"] as const) {
+      const { engine, at, committed, events } = setup({ tool: "fill" });
+      events.onHistory.mockClear();
+      engine.down(at("touch", 1, 40, 40, 0));
+      engine.settings = { ...engine.settings, [flag]: true };
+      engine.up(at("touch", 1, 40, 40, 100));
+      expect(committed()).toEqual([]);
+      expect(engine.steps).toEqual([]);
+      expect(events.onHistory).not.toHaveBeenCalled();
+    }
+  });
+
+  it("does not undo from touch contacts begun before pause", () => {
+    const { engine, at, stroke, committed } = setup();
+    stroke("mouse", 1, [10, 20], [30, 20]);
+    engine.down(at("touch", 2, 40, 40, 1000));
+    engine.down(at("touch", 3, 100, 40, 1010));
+    engine.settings = { ...engine.settings, paused: true };
+    engine.up(at("touch", 2, 40, 40, 1100));
+    engine.up(at("touch", 3, 100, 40, 1100));
+    expect(committed()).toHaveLength(1);
+    expect(engine.steps).toHaveLength(1);
+  });
+
+  it("a held pointer does not draw after resuming until it lands again", () => {
+    const { engine, ink, at, committed } = setup();
+    engine.down(at("mouse", 1, 10, 20, 0));
+    engine.move(at("mouse", 1, 30, 20, 16));
+    engine.settings = { ...engine.settings, paused: true };
+    engine.settings = { ...engine.settings, paused: false };
+    const paints = layerCalls(ink);
+    engine.move(at("mouse", 1, 220, 20, 32));
+    engine.up(at("mouse", 1, 220, 20, 48));
+    expect(committed().map(lastPoint)).toEqual([[30, 20]]);
+    expect(layerCalls(ink)).toEqual(paints);
+
+    engine.down(at("mouse", 1, 40, 20, 64));
+    engine.move(at("mouse", 1, 60, 20, 80));
+    engine.up(at("mouse", 1, 60, 20, 96));
+    expect(committed().map(lastPoint)).toEqual([
+      [30, 20],
+      [60, 20],
+    ]);
   });
 
   it("ends a pen stroke whose lift went missing where it stood once the pen lands again, and draws the new one", () => {

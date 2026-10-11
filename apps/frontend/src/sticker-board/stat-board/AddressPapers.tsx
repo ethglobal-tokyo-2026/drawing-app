@@ -122,7 +122,9 @@ export function AddressPapers({ sui, whose, lifted, paperRef, onOpen }: Props) {
             </span>
             {sui.state === "failed" && sui.retry && (
               <QuietLink className="address-papers__retry" onClick={sui.retry}>
-                {t(($) => $.stickerBoard.addresses.tryAgain)}
+                {sui.reloadRequired
+                  ? t(($) => $.stickerBoard.addresses.reload)
+                  : t(($) => $.stickerBoard.addresses.tryAgain)}
               </QuietLink>
             )}
           </div>

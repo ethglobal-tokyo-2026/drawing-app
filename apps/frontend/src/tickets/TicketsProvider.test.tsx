@@ -6,6 +6,7 @@ import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import type { TicketsValue } from "./ticketsContext";
 import { REFILL_RETRY_MAX_MS, REFILL_RETRY_MS } from "./TicketsProvider";
+import { keptSpend } from "./spendKey";
 import { useTickets } from "./useTickets";
 
 type Spender = Pick<TicketsValue, "spend" | "forgetKeptSpend">;
@@ -154,6 +155,7 @@ async function openWith(
   load: ApiClient["tickets"],
   api: Partial<ApiClient> = {},
   alongside?: ReactNode,
+  me: Me = TEST_ME,
 ) {
   view?.unmount();
   let latest: TicketsValue | undefined;
@@ -163,6 +165,7 @@ async function openWith(
       {alongside}
     </>,
     emptyApi({ tickets: load, spendTicket, ...api }),
+    me,
   );
   await act(async () => {});
   const shown = () => {
@@ -194,6 +197,144 @@ describe("answers that carry your tickets", () => {
     await act(() => shown().spend("daily"));
     await act(async () => answerLoad(FRESH_TICKETS));
     expect(shown().tickets?.dailyLeft).toBe(2);
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(spendTicket).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads authoritative tickets after a newer load overtakes a spend", async () => {
+    const spentOne = { ...SPENT, tickets: { ...FRESH_TICKETS, dailyLeft: 2 } };
+    let finishSpend: (answer: typeof spentOne) => void = () => {
+      throw new Error("The spend did not start");
+    };
+    spendTicket.mockImplementationOnce(() => new Promise((resolve) => (finishSpend = resolve)));
+    const load = vi
+      .fn<ApiClient["tickets"]>()
+      .mockResolvedValueOnce(FRESH_TICKETS)
+      .mockResolvedValueOnce(FRESH_TICKETS)
+      .mockResolvedValueOnce(spentOne.tickets);
+    const shown = await openWith(load);
+
+    let spending!: ReturnType<TicketsValue["spend"]>;
+    act(() => {
+      spending = shown().spend("daily");
+      shown().refresh();
+    });
+    await act(async () => {});
+    expect(shown().tickets?.dailyLeft).toBe(3);
+    expect(load).toHaveBeenCalledTimes(2);
+    const [key] = keys();
+    expect(keptSpend(TEST_ME.id)?.key).toBe(key);
+
+    let returned = 0;
+    const observed = spending.then((ticketUse) => {
+      returned += 1;
+      return ticketUse;
+    });
+    await act(async () => {
+      finishSpend(spentOne);
+      expect(await observed).toBe(spentOne.ticketUse);
+    });
+    expect(returned).toBe(1);
+    expect(shown().tickets?.dailyLeft).toBe(2);
+    expect(load).toHaveBeenCalledTimes(3);
+    expect(spendTicket).toHaveBeenCalledTimes(1);
+    expect(keptSpend(TEST_ME.id)?.key).toBe(key);
+  });
+
+  it("returns the spent ticket use and shows an error when reconciliation fails", async () => {
+    const report = vi.spyOn(console, "error").mockImplementation(() => {});
+    const spentOne = { ...SPENT, tickets: { ...FRESH_TICKETS, dailyLeft: 2 } };
+    let finishSpend: (answer: typeof spentOne) => void = () => {
+      throw new Error("The spend did not start");
+    };
+    spendTicket.mockImplementationOnce(() => new Promise((resolve) => (finishSpend = resolve)));
+    const load = vi
+      .fn<ApiClient["tickets"]>()
+      .mockResolvedValueOnce(FRESH_TICKETS)
+      .mockResolvedValueOnce(FRESH_TICKETS)
+      .mockRejectedValueOnce(NO_ANSWER);
+    const shown = await openWith(load);
+    let spending!: ReturnType<TicketsValue["spend"]>;
+    act(() => {
+      spending = shown().spend("daily");
+      shown().refresh();
+    });
+    await act(async () => {});
+    await act(async () => {
+      finishSpend(spentOne);
+      expect(await spending).toBe(spentOne.ticketUse);
+    });
+    expect(shown().tickets?.dailyLeft).toBe(3);
+    expect(shown().error).toBe(NO_ANSWER);
+    expect(load).toHaveBeenCalledTimes(3);
+    expect(spendTicket).toHaveBeenCalledTimes(1);
+    expect(report).toHaveBeenCalledWith("Loading your tickets failed", NO_ANSWER);
+    report.mockRestore();
+  });
+
+  it("does not replace a later spend with an older reconciliation read", async () => {
+    const spentOne = { ...SPENT, tickets: { ...FRESH_TICKETS, dailyLeft: 2 } };
+    const spentTwo = { ...SPENT, tickets: { ...FRESH_TICKETS, dailyLeft: 1 } };
+    let finishFirst: (answer: typeof spentOne) => void = () => {
+      throw new Error("The first spend did not start");
+    };
+    let finishRead: (answer: Tickets) => void = () => {
+      throw new Error("The reconciliation read did not start");
+    };
+    spendTicket
+      .mockImplementationOnce(() => new Promise((resolve) => (finishFirst = resolve)))
+      .mockResolvedValueOnce(spentTwo);
+    const load = vi
+      .fn<ApiClient["tickets"]>()
+      .mockResolvedValueOnce(FRESH_TICKETS)
+      .mockResolvedValueOnce(FRESH_TICKETS)
+      .mockReturnValueOnce(new Promise((resolve) => (finishRead = resolve)));
+    const shown = await openWith(load);
+    let first!: ReturnType<TicketsValue["spend"]>;
+    act(() => {
+      first = shown().spend("daily");
+      shown().refresh();
+    });
+    await act(async () => {});
+    await act(async () => finishFirst(spentOne));
+    expect(await first).toBe(spentOne.ticketUse);
+    expect(load).toHaveBeenCalledTimes(3);
+    shown().forgetKeptSpend();
+    await act(() => shown().spend("daily"));
+    expect(shown().tickets?.dailyLeft).toBe(1);
+    await act(async () => finishRead(spentOne.tickets));
+    expect(shown().tickets?.dailyLeft).toBe(1);
+    expect(spendTicket).toHaveBeenCalledTimes(2);
+    expect(keys()[1]).not.toBe(keys()[0]);
+  });
+
+  it("does not update another account's provider after the first is removed", async () => {
+    const spentOne = { ...SPENT, tickets: { ...FRESH_TICKETS, dailyLeft: 2 } };
+    const theirTickets = { ...FRESH_TICKETS, dailyLeft: 1, reserveLeft: 4 };
+    let finishSpend: (answer: typeof spentOne) => void = () => {
+      throw new Error("The spend did not start");
+    };
+    spendTicket.mockImplementationOnce(() => new Promise((resolve) => (finishSpend = resolve)));
+    const firstLoad = vi.fn<ApiClient["tickets"]>().mockResolvedValue(FRESH_TICKETS);
+    const first = await openWith(firstLoad);
+    let spending!: ReturnType<TicketsValue["spend"]>;
+    act(() => {
+      spending = first().spend("daily");
+      first().refresh();
+    });
+    await act(async () => {});
+    const firstKey = keys()[0];
+    const otherLoad = vi.fn<ApiClient["tickets"]>().mockResolvedValue(theirTickets);
+    const other = await openWith(otherLoad, {}, undefined, SOMEONE_ELSE);
+    await act(async () => {
+      finishSpend(spentOne);
+      expect(await spending).toBe(spentOne.ticketUse);
+    });
+    expect(other().tickets).toEqual(theirTickets);
+    expect(otherLoad).toHaveBeenCalledTimes(1);
+    expect(spendTicket).toHaveBeenCalledTimes(1);
+    expect(keptSpend(TEST_ME.id)?.key).toBe(firstKey);
+    expect(keptSpend(SOMEONE_ELSE.id)).toBeNull();
   });
 
   /** A pack the checkout paid for, whose signed payment it sends as it opens. */

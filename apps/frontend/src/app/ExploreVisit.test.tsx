@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { Person } from "@drawing-app/api/client";
+import type { Person, TicketShop } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { people } from "../api/testFixtures";
@@ -40,6 +40,18 @@ vi.mock("../explore/ExploreScreen", () => ({
 Object.defineProperty(document, "fonts", { value: { ready: Promise.resolve() } });
 
 let unmount = () => {};
+const ticketShop = (): Promise<TicketShop> =>
+  Promise.resolve({
+    packs: [],
+    payment: {
+      network: "testnet",
+      coinType: `0x${"a".repeat(64)}::jpy_coin::JPY_COIN`,
+      decimals: 6,
+      paymentPackage: `0x${"b".repeat(64)}`,
+      originalPackage: `0x${"b".repeat(64)}`,
+      vault: `0x${"c".repeat(64)}`,
+    },
+  });
 
 beforeEach(() => {
   localStorage.clear();
@@ -65,6 +77,8 @@ const element = (selector: string) => {
 async function visitKen() {
   const api = emptyApi({
     userStats: () => Promise.reject(new ApiError(503, { error: "unavailable", detail: "test" })),
+    suiAddress: () => Promise.resolve(null),
+    ticketShop,
   });
   const view = renderWithApi(<App />, api);
   unmount = view.unmount;

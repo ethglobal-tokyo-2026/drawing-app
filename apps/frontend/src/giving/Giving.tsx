@@ -107,6 +107,8 @@ export function Giving({
     pickerDelayMs: PICKER_DELAY[motion],
     takeOutMs: TAKE_OUT[motion],
   }));
+  const recipientMismatch =
+    state.packedForUserId !== undefined && state.packedForUserId !== (forUserId ?? null);
   const screen = screenOf(state);
   const unsent = state.step === "notSent" || state.step === "failed";
   const [cantFind, setCantFind] = useState(false);
@@ -183,7 +185,7 @@ export function Giving({
     <GiftBag
       stickerUrl={sticker.url}
       fromHandle={fromHandle}
-      {...(toHandle && { toHandle })}
+      {...(toHandle && !recipientMismatch && { toHandle })}
       state={bagState}
       motion={state.step === "packed" ? "drop" : takingOut ? "takeOut" : undefined}
       closedAt={closedAt}
@@ -373,6 +375,21 @@ export function Giving({
           ref={body}
           className={`giving__body giving__pinned ${slideIn ? "is-in" : ""}`}
         >
+          {recipientMismatch && (
+            <ErrorLine className="giving__problem">
+              {t(($) => $.giving.recipientMismatch)}
+            </ErrorLine>
+          )}
+          {state.storageError && (
+            <ErrorLine className="giving__problem" detail={state.storageError.detail}>
+              {state.storageError.message}
+            </ErrorLine>
+          )}
+          {state.step === "maybeSent" && state.recordError && (
+            <ErrorLine className="giving__problem" detail={state.recordError.detail}>
+              {t(($) => $.giving.inTheBag.couldntRecord, { reason: state.recordError.message })}
+            </ErrorLine>
+          )}
           {content}
         </div>
       </Sheet>

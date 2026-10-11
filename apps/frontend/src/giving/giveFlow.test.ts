@@ -62,7 +62,7 @@ function fakeBackend() {
     markCancelled: async (giftId) => {
       gifts.set(giftId, "packed");
     },
-    markMaybeSent: (giftId) => {
+    beginMessageAttempt: async (giftId) => {
       gifts.set(giftId, "maybeSent");
     },
     takeOut: async (giftId) => {
@@ -547,7 +547,8 @@ describe("giving through a LINE chat", () => {
       const t = setup({
         backend: {
           ...fakeBackend().backend,
-          pack: () => Promise.reject(new GiftMessageOutError("gift-1", outcome)),
+          pack: () =>
+            Promise.reject(new GiftMessageOutError("gift-1", outcome, `0x${"12".repeat(32)}`)),
         },
       });
       t.flow.give();
@@ -572,7 +573,7 @@ describe("giving through a LINE chat", () => {
       t.flow.takeOut();
       expect(t.step()).toBe("takingOut");
 
-      packing.reject(new GiftMessageOutError("gift-1", outcome));
+      packing.reject(new GiftMessageOutError("gift-1", outcome, `0x${"12".repeat(32)}`));
       await wait(TAKE_OUT);
       expect(t.step()).toBe(outcome);
       expect(takeOut).not.toHaveBeenCalled();
@@ -586,7 +587,8 @@ describe("giving through a LINE chat", () => {
     const t = setup({
       backend: {
         ...server.backend,
-        pack: () => Promise.reject(new GiftMessageOutError("gift-1", "maybeSent")),
+        pack: () =>
+          Promise.reject(new GiftMessageOutError("gift-1", "maybeSent", `0x${"12".repeat(32)}`)),
         takeOut,
       },
     });
@@ -617,5 +619,45 @@ describe("giving through a LINE chat", () => {
     await wait(TAKE_OUT);
     expect(takeOut).toHaveBeenCalledTimes(1);
     expect(server.states()).toEqual(["taken_out"]);
+  });
+});
+
+describe("acknowledging a durable message attempt before LINE", () => {
+  it("opens no picker on a lost begin acknowledgement, and retries the same ID only before opening", async () => {
+    const server = fakeBackend();
+    const ids: string[] = [];
+    let fail = true;
+    const backend = {
+      ...server.backend,
+      beginMessageAttempt: async (_giftId: string, id: string) => {
+        ids.push(id);
+        if (fail) throw new Error("acknowledgement lost");
+      },
+    };
+    const t = setup({ backend });
+    t.flow.give();
+    await wait(PICKER_DELAY);
+    expect(t.messages).toHaveLength(0);
+    expect(t.step()).toBe("failed");
+    fail = false;
+    t.flow.sendInLine();
+    await wait();
+    expect(t.messages).toHaveLength(1);
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(ids[1]).toBe(ids[0]);
+  });
+
+  it("prevents duplicate picker entry while begin is waiting", async () => {
+    const server = fakeBackend();
+    const pending = new Deferred<void>();
+    const t = setup({ backend: { ...server.backend, beginMessageAttempt: () => pending.promise } });
+    t.flow.give();
+    await wait(PICKER_DELAY);
+    t.flow.sendInLine();
+    expect(t.messages).toHaveLength(0);
+    pending.resolve();
+    await wait();
+    expect(t.messages).toHaveLength(1);
   });
 });

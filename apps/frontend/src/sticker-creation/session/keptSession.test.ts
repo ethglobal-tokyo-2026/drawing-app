@@ -26,6 +26,7 @@ import {
 import {
   firstChanged,
   keptColor,
+  keepsSession,
   loadKeptSession,
   LOAD_TIMEOUT_MS,
   SAVE_WORK,
@@ -606,11 +607,19 @@ describe("the drawing kept on this device", () => {
   it("brings a sheet in Kyoto Seika Practice Mode back in the mode, whatever of its part a later build can read", async () => {
     const userId = someone();
     new SessionKeeper(userId).start(7, UNDEALT);
+    const saved = await loadKept(userId);
+    if (saved.status !== "found") throw new Error("Drawing missing");
     /** The record as a build that wrote `kyotoSeika` differently would have kept it. */
     const keptAs = (kyotoSeika: unknown) =>
       localStorage.setItem(
         personKey("draw.session", userId),
-        JSON.stringify({ ticket: 7, elapsedMs: 0, nsfw: false, kyotoSeika }),
+        JSON.stringify({
+          ticket: 7,
+          generation: saved.generation,
+          elapsedMs: 0,
+          nsfw: false,
+          kyotoSeika,
+        }),
       );
     const sent = ({ ja, reading, en }: KyotoSeikaSubject) => ({ ja, reading, en });
 
@@ -661,14 +670,15 @@ describe("the drawing kept on this device", () => {
 });
 
 /**
- * Web Locks for the rest of the test, as the keeper asks for them: each request steals the name's
- * lock, so its holder's request rejects with AbortError. Returns the names held.
+ * Takeover-only Web Locks substitute: each request must steal the name's lock, so its holder's
+ * request rejects with AbortError. Returns the names held.
  */
 function fakeLocks() {
   const holders = new Map<string, (error: DOMException) => void>();
   const locks = {
-    request: (name: string, _options: { steal: boolean }, granted: () => Promise<void>) =>
+    request: (name: string, options: { steal: boolean }, granted: () => Promise<void>) =>
       new Promise<void>((resolve, reject) => {
+        expect(options).toEqual({ steal: true });
         holders.get(name)?.(new DOMException("The lock was stolen", "AbortError"));
         holders.set(name, reject);
         void granted().then(() => {
@@ -687,6 +697,7 @@ function fakeLocks() {
 describe("a drawing kept open in two tabs", () => {
   it("is kept by the tab that picked it up last: the other writes nothing more, says so once, and reloads once shown", async () => {
     const held = fakeLocks();
+    const request = vi.spyOn(navigator.locks, "request");
     const userId = someone();
     const [a, b, c] = ["a", "b", "c"].map(stroke);
     const onKept = vi.fn();
@@ -697,8 +708,20 @@ describe("a drawing kept open in two tabs", () => {
     const kept = await loadKept(userId);
     if (kept.status !== "found") throw new Error(`The drawing came back ${kept.status}`);
     const inUse = new SessionKeeper(userId);
-    inUse.resume(kept.ticket, kept.steps, kept.elapsedMs, kept.nsfw, kept.tools, kept.kyotoSeika);
+    inUse.resume(
+      kept.ticket,
+      kept.steps,
+      kept.elapsedMs,
+      kept.nsfw,
+      kept.tools,
+      kept.kyotoSeika,
+      kept.generation,
+    );
     await vi.waitFor(() => expect(onKept).toHaveBeenLastCalledWith(false));
+    expect(request.mock.calls.map(([name]) => name)).toEqual([
+      `drawing-session.${userId}`,
+      `drawing-session.${userId}`,
+    ]);
     inUse.save([a, b], 2000, FRAME);
 
     // The stale tab saves as it's hidden, draws on, and seals.
@@ -722,4 +745,283 @@ describe("a drawing kept open in two tabs", () => {
     inUse.wipe();
     await vi.waitFor(() => expect(held.size).toBe(0));
   });
+});
+
+/** Reads the actual stored transaction, without the session loader joining it to localStorage. */
+async function storedDrawing() {
+  const db = await openKept();
+  const values: { steps?: unknown[]; progress?: unknown[] } = {};
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(["ops", "progress"], "readonly");
+    const steps = tx.objectStore("ops").getAll();
+    const progress = tx.objectStore("progress").getAll();
+    steps.onsuccess = () => {
+      values.steps = steps.result;
+    };
+    progress.onsuccess = () => {
+      values.progress = progress.result;
+    };
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error);
+  });
+  db.close();
+  return values;
+}
+
+/** Fails only writes; the loader must still read the previous committed drawing. */
+function abortWrites() {
+  return vi.spyOn(FakeStore.prototype, "put").mockImplementation(() => {
+    throw new DOMException("The write was refused", "QuotaExceededError");
+  });
+}
+
+describe("a kept drawing's generation", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("does not attach ticket 7 ink to ticket 8 after a failed reset", async () => {
+    const user = someone();
+    const keeper = draw(user, [stroke("red")]);
+    await loadKept(user);
+    const before = await storedDrawing();
+    const failures = abortWrites();
+    keeper.start(8);
+    expect(await loadKept(user)).toMatchObject({
+      status: "unverified",
+      ticket: 8,
+      reason: "identity-mismatch",
+      recovery: { steps: [stroke("red")], frame: FRAME },
+    });
+    expect(await storedDrawing()).toEqual(before);
+    failures.mockRestore();
+    keeper.start(8);
+    const blank = await loadKept(user);
+    expect(blank).toMatchObject({ status: "found", ticket: 8, steps: [] });
+    if (blank.status !== "found") throw new Error("Blank drawing missing");
+    expect(blank.generation).toEqual(expect.any(String));
+    expect(await storedDrawing()).toEqual({
+      steps: [],
+      progress: [0, { ticket: 8, generation: blank.generation }],
+    });
+  });
+
+  it("does not restore an older generation under the same carried ticket", async () => {
+    const user = someone();
+    draw(user, [stroke("red")]);
+    const old = await loadKept(user);
+    const before = await storedDrawing();
+    const key = personKey("draw.session", user);
+    const oldRecord = localStorage.getItem(key);
+    const keeper = new SessionKeeper(user);
+    keeper.carry(7, null);
+    expect(localStorage.getItem(key)).toBe(oldRecord);
+    const failures = abortWrites();
+    keeper.save([stroke("blue")], 2000, FRAME);
+    expect(await loadKept(user)).toMatchObject({
+      status: "unverified",
+      reason: "identity-mismatch",
+      recovery: { steps: [stroke("red")] },
+    });
+    expect(await storedDrawing()).toEqual(before);
+    failures.mockRestore();
+    keeper.save([stroke("blue")], 2000, FRAME);
+    const next = await loadKept(user);
+    expect(next).toMatchObject({ status: "found", steps: [stroke("blue")] });
+    if (old.status !== "found" || next.status !== "found") throw new Error("Drawing missing");
+    expect(next.generation).not.toBe(old.generation);
+  });
+
+  it("queued writes retain the identity captured when queued", async () => {
+    const user = someone();
+    const keeper = draw(user, [stroke("red")]);
+    const old = await loadKept(user);
+    if (old.status !== "found") throw new Error("Drawing missing");
+    const release = await holdStores();
+    keeper.save([stroke("red"), stroke("blue")], 2000, FRAME);
+    keeper.start(8);
+    const put = vi.spyOn(FakeStore.prototype, "put");
+    release();
+    await untilKept(user, []);
+    const next = await loadKept(user);
+    if (next.status !== "found") throw new Error("Blank drawing missing");
+    const identities = put.mock.calls
+      .filter(
+        ([value, key]: unknown[]) =>
+          key === 2 && typeof value === "object" && value !== null && "generation" in value,
+      )
+      .map(([value]: unknown[]) => value);
+    expect(identities).toEqual([
+      { ticket: 7, generation: old.generation },
+      { ticket: 8, generation: next.generation },
+    ]);
+    expect(await storedDrawing()).toEqual({
+      steps: [],
+      progress: [0, { ticket: 8, generation: next.generation }],
+    });
+  });
+
+  it("returns unverified legacy ink without changing either store", async () => {
+    const user = someone();
+    draw(user, [stroke("red")]);
+    await loadKept(user);
+    const key = personKey("draw.session", user);
+    const legacy = JSON.stringify({ ticket: 7, elapsedMs: 1000, nsfw: false });
+    localStorage.setItem(key, legacy);
+    const db = await openKept();
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction("progress", "readwrite");
+      tx.objectStore("progress").delete(2);
+      tx.oncomplete = () => resolve();
+    });
+    db.close();
+    const before = await storedDrawing();
+    expect(await loadKept(user)).toMatchObject({
+      status: "unverified",
+      reason: "legacy",
+      recovery: { steps: [stroke("red")], frame: FRAME },
+    });
+    expect(localStorage.getItem(key)).toBe(legacy);
+    expect(await storedDrawing()).toEqual(before);
+  });
+
+  it("late read cannot restore after a new generation starts", async () => {
+    const user = someone();
+    const keeper = draw(user, [stroke("red")]);
+    await loadKept(user);
+    const release = await holdStores();
+    const loading = loadKeptSession(user);
+    await tick();
+    keeper.start(7);
+    release();
+    expect(await loading).toMatchObject({ status: "unverified", reason: "identity-mismatch" });
+    expect(await loadKept(user)).toMatchObject({ status: "found", steps: [] });
+  });
+
+  it("preserves a verified generation when resumed", async () => {
+    const user = someone();
+    draw(user, [stroke("red")]);
+    const old = await loadKept(user);
+    if (old.status !== "found") throw new Error("Drawing missing");
+    const keeper = new SessionKeeper(user);
+    keeper.resume(
+      old.ticket,
+      old.steps,
+      old.elapsedMs,
+      old.nsfw,
+      old.tools,
+      old.kyotoSeika,
+      old.generation,
+    );
+    keeper.save([...old.steps, stroke("blue")], 2000, FRAME);
+    expect(await loadKept(user)).toMatchObject({
+      status: "found",
+      generation: old.generation,
+      steps: [stroke("red"), stroke("blue")],
+    });
+  });
+});
+
+describe("saved ink without readable metadata", () => {
+  it.each(["missing", "malformed", "blocked"])(
+    "preserves readable layers when metadata is %s",
+    async (metadata) => {
+      const userId = someone();
+      const steps = [brush(), addLayer(2, 1), setOpacity(2, 50), brush(2)];
+      draw(userId, steps);
+      await loadKept(userId);
+      const key = personKey("draw.session", userId);
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      if (metadata === "missing") localStorage.removeItem(key);
+      if (metadata === "malformed") localStorage.setItem(key, "{broken");
+      if (metadata === "blocked")
+        vi.stubGlobal("localStorage", {
+          getItem: () => {
+            throw new Error("Blocked metadata read");
+          },
+        });
+      const result = await loadKeptSession(userId);
+      expect(result).toMatchObject({
+        status: "unverified",
+        ticket: null,
+        reason: "metadata-unavailable",
+        recovery: { steps, frame: FRAME },
+      });
+      expect(await keptPlaces()).toEqual([0, 1, 2, 3]);
+      expect(error).toHaveBeenCalled();
+    },
+  );
+
+  it("does not call an unavailable step store empty when metadata is missing", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(indexedDB, "open").mockImplementation(() => {
+      throw new Error("Step store unavailable");
+    });
+    expect(await loadKeptSession(someone())).toMatchObject({
+      status: "unverified",
+      ticket: null,
+      recovery: null,
+    });
+    expect(error).toHaveBeenCalledWith(
+      "The saved drawing needs explicit recovery because its metadata cannot be verified",
+      expect.any(Error),
+    );
+  });
+
+  it("permits a blank start only after reading both stores as empty", async () => {
+    expect(await loadKeptSession(someone())).toEqual({ status: "none" });
+  });
+});
+
+it("keeps unknown metadata unresolved after the read deadline and recovers only data actually read on retry", async () => {
+  const userId = someone();
+  const steps = [stroke("red")];
+  draw(userId, steps);
+  expect(await keptSteps(userId)).toEqual(steps);
+  localStorage.removeItem(personKey("draw.session", userId));
+  const error = vi.spyOn(console, "error").mockImplementation(() => {});
+  const release = await holdStores();
+  try {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const loading = loadKeptSession(userId);
+    await vi.advanceTimersByTimeAsync(LOAD_TIMEOUT_MS);
+    const timedOut = await loading;
+    expect(timedOut).toMatchObject({ status: "unverified", ticket: null, recovery: null });
+    if (timedOut.status !== "unverified" || !(timedOut.error instanceof Error))
+      throw new Error("Expected the storage deadline error");
+    expect(timedOut.error.message).toContain("didn't load within 5s");
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("metadata cannot be verified"),
+      expect.any(Error),
+    );
+  } finally {
+    release();
+    vi.useRealTimers();
+  }
+  expect(await loadKeptSession(userId)).toMatchObject({
+    status: "unverified",
+    ticket: null,
+    recovery: { steps, frame: FRAME },
+  });
+  expect(await keptPlaces()).toEqual([0]);
+});
+
+it("does not treat blocked metadata and an empty step store as confirmed empty", async () => {
+  const error = vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.stubGlobal("localStorage", {
+    getItem: () => {
+      throw new Error("Blocked metadata read");
+    },
+  });
+  const userId = someone();
+  expect(keepsSession(userId)).toBe(true);
+  expect(await loadKeptSession(userId)).toMatchObject({
+    status: "unverified",
+    ticket: null,
+    recovery: null,
+  });
+  expect(error).toHaveBeenCalledWith(
+    expect.stringContaining("metadata cannot be verified"),
+    expect.any(Error),
+  );
 });

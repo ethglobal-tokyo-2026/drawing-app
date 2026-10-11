@@ -33,6 +33,7 @@ const settingsFor = (response: PenPressure, fingersDraw: boolean): InkSettings =
   smoothing: FIRST_SMOOTHING,
   locked: false,
   paused: false,
+  panelOpen: false,
   inputMode: fingersDraw ? "pencilAndFinger" : "pencilOnly",
   penPressure: response,
   sessionMs: () => 0,

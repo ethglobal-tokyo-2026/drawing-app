@@ -1,6 +1,3 @@
-import { MAX_LARGE_LAYOUT_BATCH } from "@drawing-app/api/client";
-import type { ApiClient } from "../api/apiClient";
-import { toApiPlacement } from "../api/views";
 import {
   hasLargeLayout,
   placeUnplaced,
@@ -155,25 +152,4 @@ export function laidOutForVisitor(
   const { stickers } = placeUnplaced(loaded);
   if (layout === "phone" || !board || hasLargeLayout(stickers)) return stickers;
   return deriveLargeLayout(stickers, board).stickers;
-}
-
-/** Saves a derived large layout where none is saved, in requests the API takes. */
-export async function saveDerivedLayout(
-  api: Pick<ApiClient, "saveLargeLayout">,
-  derived: readonly LargeSpot[],
-) {
-  const batches: LargeSpot[][] = [];
-  for (let i = 0; i < derived.length; i += MAX_LARGE_LAYOUT_BATCH)
-    batches.push(derived.slice(i, i + MAX_LARGE_LAYOUT_BATCH));
-  const saved = await Promise.all(
-    batches.map((batch) =>
-      api.saveLargeLayout(
-        batch.map(({ id, placement }) => ({
-          stickerId: id,
-          largePlacement: toApiPlacement(placement),
-        })),
-      ),
-    ),
-  );
-  return saved.flat();
 }

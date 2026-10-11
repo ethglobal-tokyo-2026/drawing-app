@@ -143,11 +143,21 @@ describe("createHeartMotion", () => {
       );
       void heart.flyToGiver();
       const stretches: number[] = [];
-      for (let landed = false; !landed;) {
+      let landed = false;
+      let lastOpacity: number | undefined;
+      for (let frameIndex = 0; frameIndex < Math.ceil(2 * hz); frameIndex++) {
         const frame = heart.step(1 / hz, 1 / hz, RUNNING);
         stretches.push(stretch(frame));
-        landed = frame.opacity === 0;
+        lastOpacity = frame.opacity;
+        if (frame.opacity === 0) {
+          landed = true;
+          break;
+        }
       }
+      expect(
+        landed,
+        `Heart did not land: hz=${hz}, scale=${scale}, last opacity=${lastOpacity}, elapsed simulated time=${stretches.length / hz}s`,
+      ).toBe(true);
       return {
         peak: Math.max(...stretches),
         mean: stretches.reduce((sum, s) => sum + s, 0) / stretches.length,

@@ -221,6 +221,28 @@ describe("the layer ink's holds", () => {
 });
 
 describe("the layer ink's fills", () => {
+  it("releases one cached fill without changing its layer pixels or other cached fills", () => {
+    const ink = sheet();
+    drawOutline(ink);
+    const blank = ink.hold(1);
+    const first = fillAt(1, { x: 4, y: 4 });
+    const second = fillAt(1, { x: 4, y: 4 }, "#0000ff");
+    ink.apply(first, TWO);
+    ink.apply(second, TWO);
+    const filled = pixelsOf(ink, 1);
+    ink.releaseFill(first);
+    ink.releaseFill(first);
+    expect(pixelsOf(ink, 1)).toEqual(filled);
+    ink.restore(1, blank);
+    const flood = vi.spyOn(ink, "flood");
+    ink.apply(second, TWO);
+    expect(flood).not.toHaveBeenCalled();
+    ink.apply(first, TWO);
+    expect(flood).toHaveBeenCalledWith(first, TWO);
+    ink.release(blank);
+    ink.releaseAll();
+  });
+
   it("find the region on what's shown and write it on their own layer alone", () => {
     const ink = sheet();
     drawOutline(ink);

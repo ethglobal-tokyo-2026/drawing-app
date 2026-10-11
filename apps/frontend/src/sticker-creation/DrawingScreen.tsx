@@ -72,7 +72,8 @@ import {
   type KeptDrawing,
   type KeptKyotoSeika,
 } from "./session/keptSession";
-import { forgetSentSeal, keepSentSeal, sealWentOut } from "./session/sentSeal";
+import { KeptDrawingRecovery, type RecoveryReconciliation } from "./session/KeptDrawingRecovery";
+import { forgetSentSeal, keepSentSeal, sealWentOut, sentSealOutcome } from "./session/sentSeal";
 import {
   FRESH_SESSION,
   sessionMs,
@@ -248,12 +249,15 @@ export function DrawingScreen({
   // while it's on its way, and comes up only if it fails.
   const [rightAway, setRightAway] = useState(false);
   const [startProblem, setStartProblem] = useState<string | null>(null);
+  const [askAfterRecovery, setAskAfterRecovery] = useState(false);
   // The session's ticket use, as the server numbers it, and whether it was spent in Kyoto Seika
   // Practice Mode: spent at Start, or before a reload.
   const ticket = useRef<{ id: number; kyotoSeika: boolean } | null>(null);
   // Whether this device keeps the drawing in progress; the timer's note says so while it can't.
   const [kept, setKept] = useState(true);
   const [keeper] = useState(() => new SessionKeeper(me.id, setKept));
+  // Imperative screen actions also respect recovery after the modal is closed.
+  const recoveryLocked = useRef(false);
   const edge = hand === "left" ? "right" : "left";
   const currentLayer =
     layers.state.layers.find((layer) => layer.id === layers.current) ?? layers.state.layers[0];
@@ -611,20 +615,22 @@ export function DrawingScreen({
     }
   }
 
-  const startNewSticker = () => {
+  function startNewSticker() {
+    if (recoveryLocked.current) return;
     send({ type: "reset" });
     onNewSticker();
-  };
+  }
 
   /**
    * Spends a ticket of `kind` on this sheet, unless Draw on the board already spent one for it: that
    * spend is this sheet's whatever kind was asked for, so the sheet never spends a second ticket.
    */
-  const start = (kind: TicketKind | null, { asked = true }: { asked?: boolean } = {}) => {
-    if (spending) return;
+  function start(kind: TicketKind | null, { asked = true }: { asked?: boolean } = {}) {
+    if (spending || recoveryLocked.current) return;
     const spent = tickets.takeSheetSpend();
     const spend = spent ?? (kind && tickets.spend(kind));
     if (!spend) return;
+    setAskAfterRecovery(false);
     setSpending(true);
     setRightAway(!asked);
     setStartProblem(null);
@@ -648,7 +654,7 @@ export function DrawingScreen({
         if (refused) tickets.refresh();
       },
     );
-  };
+  }
 
   /**
    * A daily ticket is never asked for: Draw and Keep drawing spend it at once. A reserve ticket is
@@ -662,11 +668,12 @@ export function DrawingScreen({
   useImperativeHandle(ref, () => ({ startNewSticker, closePanels: () => setPanel(null) }));
 
   /** Keeps the session on this device while it's in progress, so a reload doesn't lose it. */
-  const keepProgress = () => {
+  function keepProgress() {
+    if (recoveryLocked.current) return;
     const { phase } = latest.current;
     if (phase === "primed" || phase === "drawing" || phase === "seal-sheet" || phase === "time-up")
       keeper.save(canvas.current?.steps() ?? [], clock.elapsed, canvas.current?.frame() ?? null);
-  };
+  }
   // 0:00 puts the pencils down: a stroke being drawn ends where it stands, the time's-up sheet rises,
   // and the drawing is kept at its full time, so a reload brings the sheet back. A sheet with nothing
   // on it has nothing to seal: it's spent, and the fresh one says so.
@@ -721,6 +728,7 @@ export function DrawingScreen({
       found.nsfw,
       found.tools,
       found.kyotoSeika,
+      found.generation,
     );
     keeper.keepCurrentLayer(lastCurrentLayer.current);
     keepNsfw(found.nsfw);
@@ -764,15 +772,40 @@ export function DrawingScreen({
     setPickedUp("carried");
   }
 
-  const { restoring, pickedUp, setPickedUp, sealUnsettled } = usePickUpKeptSession({
+  const [recoveryClosed, setRecoveryClosed] = useState(false);
+  const {
+    restoring,
+    pickedUp,
+    setPickedUp,
+    sealUnsettled,
+    recovery,
+    discardRecovery,
+    retryRecovery,
+  } = usePickUpKeptSession({
     userId: me.id,
     tickets: tickets.tickets,
     keeper,
     putBack,
     carryOver,
     primedOn: (ticketUseId) =>
-      latest.current.phase === "primed" && ticketUseId === (ticket.current?.id ?? null),
+      (latest.current.phase === "primed" || latest.current.phase === "dealt") &&
+      ticketUseId === (ticket.current?.id ?? null),
   });
+  useEffect(() => {
+    recoveryLocked.current = recovery !== null;
+  }, [recovery]);
+  let recoveryReconciliation: RecoveryReconciliation = { status: "resolved", outcome: "unsealed" };
+  if (recovery?.ticket === null) recoveryReconciliation = { status: "unknown" };
+  else if (recovery && sealWentOut(me.id, recovery.ticket)) {
+    const outcome = tickets.tickets && sentSealOutcome(recovery.ticket, tickets.tickets);
+    recoveryReconciliation = tickets.error
+      ? { status: "failed", error: tickets.error, onRetry: tickets.refresh }
+      : !tickets.tickets
+        ? { status: "checking" }
+        : outcome
+          ? { status: "resolved", outcome }
+          : { status: "unknown" };
+  }
   // Shown again with no drawing of its own after another tab started one, the sheet takes that
   // drawing up as a reload does, so this tab can't replace it with a new ticket's.
   const pickUpOnShow = useEffectEvent(() => {
@@ -881,11 +914,11 @@ export function DrawingScreen({
   // A fresh sheet takes no ink until its ticket is spent.
   const asking = active && fresh && !paywall;
   // A daily ticket is spent at once, with no card: the one Draw spent on the board, or one spent now.
-  // The card asks only before a reserve ticket is spent, or says why a spend failed and tries again.
+  // The card asks before a reserve ticket or after abandoning recovery, and retries failed spends.
   const next = loaded && nextKind(loaded);
   const spendAtOnce = useEffectEvent(() => {
     if (tickets.hasSheetSpend()) start(null, { asked: false });
-    else if (startProblem) return;
+    else if (startProblem || askAfterRecovery) return;
     // With none left, sending a kept key again can only get back the ticket use it spent.
     else if (next === "daily" || (next === null && keptSpend)) start("daily", { asked: false });
   });
@@ -899,8 +932,9 @@ export function DrawingScreen({
     return () => {
       cancelled = true;
     };
-  }, [asking, loaded, spending, startProblem]);
+  }, [asking, loaded, spending, startProblem, askAfterRecovery]);
   const asks =
+    askAfterRecovery ||
     (next === "reserve" && !tickets.hasSheetSpend()) ||
     startProblem !== null ||
     (spending && !rightAway);
@@ -916,7 +950,16 @@ export function DrawingScreen({
   const timeUp = session.phase === "time-up";
   // Until Start, and while a kept session loads, the sheet takes no ink; nor under the seal sheet, nor
   // once it's sealing.
-  const locked = !active || session.phase === "blank" || sealSheet || timeUp || sealing || retrying;
+  const locked =
+    restoring ||
+    recovery !== null ||
+    sealUnsettled ||
+    !active ||
+    session.phase === "blank" ||
+    sealSheet ||
+    timeUp ||
+    sealing ||
+    retrying;
   // A sheet that takes no ink takes no tool either, as at 0:00 on a begun sheet, whose tools never
   // hold its clock.
   if (panel !== null && locked) setPanel(null);
@@ -1009,6 +1052,36 @@ export function DrawingScreen({
       inert={!active}
       onPointerDownCapture={closePanelOutside}
     >
+      {active &&
+        recovery &&
+        (recoveryClosed ? (
+          <QuietLink className="drawing-start-over" onClick={() => setRecoveryClosed(false)}>
+            {t(($) => $.stickerCreation.recovery.reopen)}
+          </QuietLink>
+        ) : (
+          <KeptDrawingRecovery
+            recovery={recovery}
+            reconciliation={recoveryReconciliation}
+            onRetry={retryRecovery}
+            onDiscard={() => {
+              if (
+                recoveryReconciliation.status === "checking" ||
+                recoveryReconciliation.status === "failed"
+              )
+                return;
+              discardRecovery();
+              const abandoned = recoveryReconciliation.status === "unknown";
+              if (abandoned) setAskAfterRecovery(true);
+              // A late read may have already carried this ticket onto a blank sheet.
+              if (
+                recoveryReconciliation.status === "unknown" ||
+                recoveryReconciliation.outcome === "sealed"
+              )
+                send({ type: "reset" });
+            }}
+            onClose={() => setRecoveryClosed(true)}
+          />
+        ))}
       <DrawingCanvas
         ref={canvas}
         active={active}
@@ -1022,6 +1095,7 @@ export function DrawingScreen({
           locked,
           // The dealt sheet takes the paused sheet's path, so a touch nudges Begin.
           paused: paused || dealt,
+          panelOpen: panel !== null,
           inputMode,
           penPressure,
           sessionMs: () => clock.elapsed,
@@ -1088,7 +1162,7 @@ export function DrawingScreen({
         />
       </div>
       {/* A deal on its way out finishes leaving even under the board, so it never plays again. */}
-      {((active && dealt) || dealLeaving) && (
+      {((active && dealt && !recovery) || dealLeaving) && (
         <KyotoSeikaDeal
           screen={root}
           list={kyotoSeikaSheet.list}
@@ -1203,33 +1277,35 @@ export function DrawingScreen({
         onRedo={() => canvas.current?.redo()}
       />
       <MyBoardTile onOpen={onMyBoardTile} />
-      <SealKey
-        // The seal sheet's Seal is the screen's one key while it's up.
-        shown={retrying || (history.hasInk && !sealing && !sealSheet && !timeUp)}
-        problem={
-          inkProblem ??
-          sealProblem?.message ??
-          (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)
-        }
-        detail={inkProblem ? null : sealProblem?.detail}
-        onTap={() => {
-          setSealProblem(null);
-          if (sealProblem && reconnectOnTap.current) {
-            // The drawing is kept on this device, and the drawing screen picks it back up.
-            // Still here after a failed reconnect: the chip says why, and the check tries it again.
-            retryPrivySignIn(new URL("/draw", location.href).href, (failure) =>
-              setSealProblem({
-                message: t(($) => $.stickerCreation.seal.refused, {
-                  reason: errorMessage(failure),
-                }),
-                detail: errorDetail(failure),
-              }),
-            );
-            return;
+      {!recovery && (
+        <SealKey
+          // The seal sheet's Seal is the screen's one key while it's up.
+          shown={retrying || (history.hasInk && !sealing && !sealSheet && !timeUp)}
+          problem={
+            inkProblem ??
+            sealProblem?.message ??
+            (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)
           }
-          send({ type: "seal-tap", hasInk: history.hasInk });
-        }}
-      />
+          detail={inkProblem ? null : sealProblem?.detail}
+          onTap={() => {
+            setSealProblem(null);
+            if (sealProblem && reconnectOnTap.current) {
+              // The drawing is kept on this device, and the drawing screen picks it back up.
+              // Still here after a failed reconnect: the chip says why, and the check tries it again.
+              retryPrivySignIn(new URL("/draw", location.href).href, (failure) =>
+                setSealProblem({
+                  message: t(($) => $.stickerCreation.seal.refused, {
+                    reason: errorMessage(failure),
+                  }),
+                  detail: errorDetail(failure),
+                }),
+              );
+              return;
+            }
+            send({ type: "seal-tap", hasInk: history.hasInk });
+          }}
+        />
+      )}
       <SealSheet
         open={active && (sealSheet || timeUp)}
         timeUp={timeUp}

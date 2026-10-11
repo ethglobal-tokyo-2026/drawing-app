@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
 import { act, type ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderWithApi } from "../api/testing";
-import { dragBy, onLargeScreen } from "../ui/testing";
+import { dragBy, onLargeScreen, renderInHost } from "../ui/testing";
 import { DISMISS_PX } from "../ui/useSheetDrag";
 import { BORDER_UNITS } from "./sealing/dieCut";
 import { SealSheet } from "./SealSheet";
@@ -24,7 +23,7 @@ vi.mock("./canvas/context2d", () => ({
   }),
 }));
 
-let view: ReturnType<typeof renderWithApi> | undefined;
+let view: ReturnType<typeof renderInHost> | undefined;
 
 afterEach(() => {
   view?.unmount();
@@ -51,7 +50,7 @@ function show(props: Partial<Props> = {}) {
     />
   );
   if (view) view.rerender(sheet);
-  else view = renderWithApi(sheet);
+  else view = renderInHost(sheet);
 }
 
 describe("SealSheet", () => {

@@ -144,7 +144,7 @@ describe("TransferTrail's rows", () => {
     expect(engine.last().stop).toHaveBeenCalledTimes(1);
   });
 
-  it("folds the rows past the newest, and opens a tapped row in place of the open one", () => {
+  it("folds the rows past the newest, and opens a tapped row in place of the open one", async () => {
     show([5, 4, 3, 2, 1].map((n) => given(`g-${n}`, people.ken, people.bob)));
     const rows = () => container.querySelectorAll(".transfer-trail__row");
     const open = () =>
@@ -157,6 +157,7 @@ describe("TransferTrail's rows", () => {
     expect(rows()).toHaveLength(5);
     act(() => find(".transfer-trail__row:not(.is-open) button").click());
     expect(open()).toEqual(["g-4"]);
+    await wait();
   });
 
   it.each([
@@ -255,6 +256,7 @@ describe("TransferTrail's replay", () => {
     act(() => find(".transfer-trail__row:not(.is-open) button").click());
     expect(engine.last().stop).toHaveBeenCalledTimes(1);
     expect(stage()).toBeNull();
+    await wait();
   });
 
   it("stops when the trail goes, as paging to another sticker remounts it", async () => {

@@ -1,6 +1,6 @@
 import type { ApiError } from "./apiClient";
 
-type Listener = (error: ApiError) => void;
+type Listener = (error: ApiError, expectedUserId?: string) => void;
 
 const listeners = new Set<Listener>();
 let endsOnPurpose = false;
@@ -12,15 +12,15 @@ export function onSessionLost(listener: Listener): () => void {
 }
 
 /**
- * A request came back 401 signed_out. SessionGate listens while the app is open and signs in again,
- * so no screen has to handle it; before the app opens nobody listens, and boot handles its own.
+ * An account-bound request found its session absent or changed. SessionGate closes that account
+ * and asks for Reload; before the app opens nobody listens, and bootstrap handles its own errors.
  */
-export function reportSessionLost(error: ApiError): void {
+export function reportSessionLost(error: ApiError, expectedUserId?: string): void {
   if (endsOnPurpose) return;
-  for (const listener of [...listeners]) listener(error);
+  for (const listener of [...listeners]) listener(error, expectedUserId);
 }
 
-/** Logging out ends the session on purpose, so the answers still in flight don't sign in again. */
+/** Logging out ends the session on purpose, so late answers do not interrupt the logout flow. */
 export function sessionEndsOnPurpose(): void {
   endsOnPurpose = true;
 }

@@ -71,6 +71,8 @@ const sheetCalls = vi.hoisted(() => ({
   live: false,
   settings: null as {
     paused: boolean;
+    locked: boolean;
+    panelOpen: boolean;
     sessionMs: () => number;
     inputMode: InputMode | null;
   } | null,
@@ -103,7 +105,13 @@ vi.mock("./canvas/DrawingCanvas", () => ({
       onHistory: (state: HistoryState) => void;
       onCommit: (op: Op) => void;
       onBlocked: () => void;
-      settings: { paused: boolean; sessionMs: () => number; inputMode: InputMode | null };
+      settings: {
+        paused: boolean;
+        locked: boolean;
+        panelOpen: boolean;
+        sessionMs: () => number;
+        inputMode: InputMode | null;
+      };
       label?: string;
       onLayers?: (view: LayerView) => void;
       onInkFailed?: (error: unknown) => void;
@@ -412,6 +420,7 @@ const startOver = () =>
 /** A sticker in progress kept at 0:00, with nothing drawn that matters here. */
 const keptAtTimeUp: KeptSession = {
   status: "found",
+  generation: "saved-generation",
   ticket: 7,
   elapsedMs: sessionMs(false),
   nsfw: false,
@@ -435,6 +444,7 @@ const sealOnSheet = () =>
 describe("the drawing screen after a reload", () => {
   it("stops waiting on a sticker in progress whose seal went out once a read that never answers has had a second wait", async () => {
     keepSentSeal(TEST_ME.id, 7);
+    const spendTicket = vi.fn<ApiClient["spendTicket"]>(() => Promise.resolve(spentDaily(false)));
     reopen(
       {
         status: "unread",
@@ -444,17 +454,22 @@ describe("the drawing screen after a reload", () => {
         later: new Promise(() => {}),
       },
       { usedToday: [] },
+      TEST_ME,
+      { spendTicket },
     );
     await settle();
     expect(sheet).toBeNull();
 
     await settle(LOAD_TIMEOUT_MS);
     expect(sealWentOut(TEST_ME.id, 7)).toBe(false);
-    expect(sheet).toBe("fresh");
+    expect(spendTicket).toHaveBeenCalledOnce();
+    expect(keptRecord()).toMatchObject({ ticket: 9 });
+    expect(sheet).toBe("held");
   });
 
   it("lets a sticker in progress the phone can't cut at 0:00 go for a fresh sheet", async () => {
-    reopen(keptAtTimeUp);
+    const spendTicket = vi.fn<ApiClient["spendTicket"]>(() => Promise.resolve(spentDaily(false)));
+    reopen(keptAtTimeUp, {}, TEST_ME, { spendTicket });
     await settle();
     expect(sheet).toBe("held");
 
@@ -467,7 +482,9 @@ describe("the drawing screen after a reload", () => {
 
     act(() => link?.click());
     await settle();
-    expect(sheet).toBe("fresh");
+    expect(spendTicket).toHaveBeenCalledOnce();
+    expect(keptRecord()).toMatchObject({ ticket: 9 });
+    expect(sheet).toBe("held");
     expect(startOver()).toBeUndefined();
   });
 
@@ -528,6 +545,7 @@ const KEPT_MS = sessionMs(false) / 2;
 /** A sticker in progress kept halfway through its time, with one stroke on it. */
 const keptHalfway: KeptSession = {
   status: "found",
+  generation: "saved-generation",
   ticket: 7,
   elapsedMs: KEPT_MS,
   nsfw: false,
@@ -766,9 +784,11 @@ describe("the drawing screen's clock", () => {
     await settle();
     // A reload brings the drawing back paused; a tap on the timer runs it again.
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
-    for (const takeTool of TOOLS_IN_HAND) {
+    for (const [index, takeTool] of TOOLS_IN_HAND.entries()) {
       expect(await countedAfter(takeTool)).toBe(0);
+      expect(sheetCalls.settings?.panelOpen).toBe(index < 3);
       expect(await countedAfter(putToolsDown)).toBeGreaterThan(0);
+      expect(sheetCalls.settings?.panelOpen).toBe(false);
     }
     expect(await countedAfter(tapTimer)).toBe(0);
   });
@@ -1093,6 +1113,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     const five = TEST_SUBJECTS.filter((s, i, all) => all.findIndex((o) => o.kind === s.kind) === i);
     await openKyotoSeikaSheet({
       status: "found",
+      generation: "saved-generation",
       ticket: 9,
       elapsedMs: 0,
       nsfw: false,
@@ -1201,16 +1222,15 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     // Halfway through a begun sheet, kept by a build whose subjects this one can't read.
     vi.useFakeTimers();
     const halfway = sessionMs(true) / 2;
-    new SessionKeeper(me.id).save(
-      [{ tool: "brush", layer: 1, color: "#1C1824", pts: [], T: 0 }],
-      halfway,
-      FRAME,
-    );
+    const keeper = new SessionKeeper(me.id);
+    keeper.start(9);
+    keeper.save([{ tool: "brush", layer: 1, color: "#1C1824", pts: [], T: 0 }], halfway, FRAME);
     await settle(1000);
     const pair = [{ word: WIND.ja }, { word: REUNION.ja }];
     localStorage.setItem(
       personKey("draw.session", me.id),
       JSON.stringify({
+        ...JSON.parse(localStorage.getItem(personKey("draw.session", me.id)) ?? "{}"),
         ticket: 9,
         elapsedMs: halfway,
         nsfw: false,
@@ -1240,7 +1260,12 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: BEGUN });
     // A reload's pause still lets go at a tap.
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
-    for (const takeTool of TOOLS_IN_HAND) expect(await countedAfter(takeTool)).toBeGreaterThan(0);
+    for (const [index, takeTool] of TOOLS_IN_HAND.entries()) {
+      expect(await countedAfter(takeTool)).toBeGreaterThan(0);
+      expect(sheetCalls.settings?.panelOpen).toBe(index < 3);
+      await countedAfter(putToolsDown);
+      expect(sheetCalls.settings?.panelOpen).toBe(false);
+    }
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
     expect(timerCalls.clockRuns).toBe(1);
   });
@@ -1503,5 +1528,347 @@ describe("a drawing another tab starts", () => {
     await settle();
     shownAfterAnotherTabKeeps();
     expect(reload).not.toHaveBeenCalled();
+    await settle();
   });
 });
+
+const unverified: KeptSession = {
+  status: "unverified",
+  ticket: 7,
+  kyotoSeika: null,
+  reason: "legacy",
+  recovery: { steps: [{ tool: "brush", layer: 1, color: "red", pts: [], T: 0 }], frame: FRAME },
+  error: new Error("Saved drawing identity is missing"),
+};
+
+describe("recovering an unverified saved drawing", () => {
+  it.each(["Escape", "Back"])(
+    "closing recovery with %s preserves the saved drawing and spends no ticket",
+    async (closeWith) => {
+      const record = JSON.stringify({ ticket: 7, elapsedMs: 1000, nsfw: false });
+      localStorage.setItem(personKey("draw.session", TEST_ME.id), record);
+      const spendTicket = vi.fn<ApiClient["spendTicket"]>();
+      reopen(unverified, {}, TEST_ME, { spendTicket });
+      await settle();
+      expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+      expect(sheetCalls.settings?.locked).toBe(true);
+      act(() => {
+        if (closeWith === "Back")
+          window.dispatchEvent(new PopStateEvent("popstate", { state: null }));
+        else
+          document.activeElement?.dispatchEvent(
+            new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+          );
+      });
+      await settle();
+      expect(buttonSaying("Download saved drawing")).toBeUndefined();
+      expect(buttonSaying("Review saved drawing")).toBeDefined();
+      act(() => drawingScreen.current?.startNewSticker());
+      await settle();
+      expect(localStorage.getItem(personKey("draw.session", TEST_ME.id))).toBe(record);
+      expect(sheetCalls.settings?.locked).toBe(true);
+      expect(spendTicket).not.toHaveBeenCalled();
+      expect(document.querySelector(".seal-key")).toBeNull();
+    },
+  );
+
+  it("explicit discard starts a fresh generation on the current unsealed ticket", async () => {
+    const spendTicket = vi.fn<ApiClient["spendTicket"]>();
+    reopen(unverified, {}, TEST_ME, { spendTicket });
+    await settle();
+    const discard = buttonSaying("Discard saved drawing and start blank");
+    expect(discard).toBeDefined();
+    act(() => discard?.click());
+    await settle();
+    expect(keptRecord()).toMatchObject({ ticket: 7, elapsedMs: 0 });
+    expect(keptRecord()).toHaveProperty("generation", expect.any(String));
+    expect(sheetCalls.settings?.locked).toBe(false);
+    expect(spendTicket).not.toHaveBeenCalled();
+  });
+
+  it("an absent ticket remains saved until explicit abandonment", async () => {
+    keepSentSeal(TEST_ME.id, 7);
+    const record = JSON.stringify({ ticket: 7, elapsedMs: 1000, nsfw: false });
+    localStorage.setItem(personKey("draw.session", TEST_ME.id), record);
+    const spendTicket = vi.fn<ApiClient["spendTicket"]>();
+    reopen(unverified, { usedToday: [] }, TEST_ME, { spendTicket });
+    await settle();
+    expect(buttonSaying("Discard saved drawing and start blank")).toBeUndefined();
+    expect(buttonSaying("Discard drawing and abandon old ticket")).toBeDefined();
+    expect(sheetCalls.settings?.locked).toBe(true);
+    expect(localStorage.getItem(personKey("draw.session", TEST_ME.id))).toBe(record);
+    expect(sealWentOut(TEST_ME.id, 7)).toBe(true);
+    expect(spendTicket).not.toHaveBeenCalled();
+  });
+});
+
+it.each(["initial", "late"])(
+  "after JST rollover, %s recovery exports then abandons the old ticket before a new explicit start",
+  async (read) => {
+    const me = { ...TEST_ME, id: `rollover-${read}` };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let downloaded: Blob | undefined;
+    vi.spyOn(URL, "createObjectURL").mockImplementation((blob) => {
+      if (blob instanceof Blob) downloaded = blob;
+      return "blob:recovery";
+    });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const record = JSON.stringify({ ticket: 7, elapsedMs: 1000, nsfw: false });
+    localStorage.setItem(personKey("draw.session", me.id), record);
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(`drawing-session.${me.id}`, 1);
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore("ops");
+        request.result.createObjectStore("progress");
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    onTestFinished(() => db.close());
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(["ops", "progress"], "readwrite");
+      tx.objectStore("ops").put({ tool: "brush", layer: 1, color: "red", pts: [], T: 0 }, 0);
+      tx.objectStore("progress").put(1, 0);
+      tx.objectStore("progress").put(FRAME, 1);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    const savedSteps = () =>
+      new Promise<unknown[]>((resolve, reject) => {
+        const request = db.transaction("ops").objectStore("ops").getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    let finishRead!: (value: KeptSession) => void;
+    const later = new Promise<Exclude<KeptSession, { status: "none" }>>((resolve) => {
+      finishRead = (value) => {
+        if (value.status !== "none") resolve(value);
+      };
+    });
+    const spendTicket = vi.fn<ApiClient["spendTicket"]>(() => Promise.resolve(spentDaily(false)));
+    const seal = vi.fn<ApiClient["seal"]>(() => new Promise(() => {}));
+    sealing.cut.mockResolvedValue(cutSticker());
+    if (read === "initial") keepSentSeal(me.id, 7);
+    reopen(
+      read === "initial"
+        ? unverified
+        : { status: "unread", ticket: 7, kyotoSeika: null, error: new Error("slow read"), later },
+      { ticketDay: "2026-09-27", usedToday: [] },
+      me,
+      { spendTicket, seal },
+    );
+    await settle();
+    if (read === "late") {
+      expect(sheetCalls.settings?.locked).toBe(false);
+      keepSentSeal(me.id, 7);
+      await act(async () => {
+        finishRead(unverified);
+        await later;
+      });
+      await settle();
+    }
+    const savedBeforeDownload = localStorage.getItem(personKey("draw.session", me.id));
+    act(() => buttonSaying("Download saved drawing")?.click());
+    if (!downloaded) throw new Error("The saved drawing was not exported");
+    if (unverified.status !== "unverified" || !unverified.recovery)
+      throw new Error("Expected recovery data");
+    expect(JSON.parse(await downloaded.text())).toEqual(unverified.recovery);
+    expect(localStorage.getItem(personKey("draw.session", me.id))).toBe(savedBeforeDownload);
+    expect(sheetCalls.settings?.locked).toBe(true);
+    expect(spendTicket).not.toHaveBeenCalled();
+    expect(sealWentOut(me.id, 7)).toBe(true);
+    const beforeAbandon = savedSteps();
+    await settle(25);
+    expect(await beforeAbandon).toEqual(unverified.recovery.steps);
+    const abandon = buttonSaying("Discard drawing and abandon old ticket");
+    expect(abandon).toBeDefined();
+    expect(abandon?.disabled).toBe(false);
+    act(() => abandon?.click());
+    await settle();
+    expect(localStorage.getItem(personKey("draw.session", me.id))).toBeNull();
+    expect(sealWentOut(me.id, 7)).toBe(false);
+    const afterAbandon = savedSteps();
+    await settle(25);
+    expect(await afterAbandon).toEqual([]);
+    expect(sheet).toBe("fresh");
+    expect(sheetCalls.settings?.locked).toBe(true);
+    expect(spendTicket).not.toHaveBeenCalled();
+    tapSealKey();
+    sealOnSheet();
+    await settle();
+    expect(seal).not.toHaveBeenCalled();
+    const start = buttonSaying(strings.tickets.startDrawing.daily.start.en);
+    expect(start).toBeDefined();
+    act(() => start?.click());
+    await settle();
+    expect(spendTicket).toHaveBeenCalledOnce();
+    expect(
+      JSON.parse(localStorage.getItem(personKey("draw.session", me.id)) ?? "null"),
+    ).toMatchObject({ ticket: 9 });
+    expect(sheetCalls.settings?.locked).toBe(false);
+    act(() => sheetCalls.stroke());
+    tapSealKey();
+    await settle(1000);
+    sealOnSheet();
+    await settle(1000);
+    expect(seal).toHaveBeenCalledOnce();
+    expect(seal.mock.calls[0]?.[0]).toMatchObject({ ticketUseId: 9 });
+  },
+);
+
+it("failed Seal reconciliation retries without discarding, then permits explicit replacement", async () => {
+  keepSentSeal(TEST_ME.id, 7);
+  const record = JSON.stringify({ ticket: 7, elapsedMs: 1000, nsfw: false });
+  localStorage.setItem(personKey("draw.session", TEST_ME.id), record);
+  const tickets = vi
+    .fn<ApiClient["tickets"]>()
+    .mockRejectedValueOnce(
+      new ApiError(503, { error: "unavailable", detail: "Ticket check unavailable" }),
+    )
+    .mockResolvedValue({
+      ...FRESH_TICKETS,
+      usedToday: [{ id: 7, dayIndex: 0, kind: "daily", sticker: null }],
+    });
+  const spendTicket = vi.fn<ApiClient["spendTicket"]>();
+  reopen(unverified, {}, TEST_ME, { tickets, spendTicket });
+  await settle();
+  expect(document.querySelector('[role="alert"]')?.textContent).toBeTruthy();
+  expect(buttonSaying("Discard saved drawing and start blank")?.disabled).toBe(true);
+  const retry = buttonSaying(strings.ui.errorLine.tryAgain.en);
+  expect(retry).toBeDefined();
+  act(() => retry?.click());
+  await settle();
+  expect(localStorage.getItem(personKey("draw.session", TEST_ME.id))).toBe(record);
+  expect(sheetCalls.settings?.locked).toBe(true);
+  expect(spendTicket).not.toHaveBeenCalled();
+  expect(buttonSaying("Discard saved drawing and start blank")?.disabled).toBe(false);
+  act(() => buttonSaying("Discard saved drawing and start blank")?.click());
+  await settle();
+  expect(keptRecord()).toMatchObject({ ticket: 7 });
+  expect(keptRecord()).toHaveProperty("generation", expect.any(String));
+  expect(sheetCalls.settings?.locked).toBe(false);
+  expect(sealWentOut(TEST_ME.id, 7)).toBe(false);
+});
+
+it("recovery cannot reuse a ticket with a completed Seal", async () => {
+  keepSentSeal(TEST_ME.id, 7);
+  const record = JSON.stringify({ ticket: 7, elapsedMs: 1000, nsfw: false });
+  localStorage.setItem(personKey("draw.session", TEST_ME.id), record);
+  const spendTicket = vi.fn<ApiClient["spendTicket"]>(() => Promise.resolve(spentDaily(false)));
+  reopen(
+    unverified,
+    {
+      usedToday: [
+        {
+          id: 7,
+          dayIndex: 0,
+          kind: "daily",
+          sticker: { id: "sealed", outline: "M0 0Z", width: 10, height: 10 },
+        },
+      ],
+    },
+    TEST_ME,
+    { spendTicket },
+  );
+  await settle();
+  expect(localStorage.getItem(personKey("draw.session", TEST_ME.id))).toBe(record);
+  expect(sheetCalls.settings?.locked).toBe(true);
+  expect(spendTicket).not.toHaveBeenCalled();
+  act(() => buttonSaying("Discard saved drawing and start blank")?.click());
+  await settle();
+  expect(keptRecord()).toMatchObject({ ticket: 9 });
+  expect(sealWentOut(TEST_ME.id, 7)).toBe(false);
+});
+
+it("late recovery discards a completed Seal without leaving its carried ticket on the sheet", async () => {
+  const error = vi.spyOn(console, "error").mockImplementation(() => {});
+  let finishRead!: (value: Extract<KeptSession, { status: "unverified" }>) => void;
+  const later = new Promise<Extract<KeptSession, { status: "unverified" }>>((resolve) => {
+    finishRead = resolve;
+  });
+  const spendTicket = vi.fn<ApiClient["spendTicket"]>(() => Promise.resolve(spentDaily(false)));
+  reopen(
+    { status: "unread", ticket: 7, kyotoSeika: null, error: new Error("slow read"), later },
+    {
+      usedToday: [
+        {
+          id: 7,
+          dayIndex: 0,
+          kind: "daily",
+          sticker: { id: "sealed", outline: "M0 0Z", width: 10, height: 10 },
+        },
+      ],
+    },
+    TEST_ME,
+    { spendTicket },
+  );
+  await settle();
+  expect(sheetCalls.settings?.locked).toBe(false);
+  keepSentSeal(TEST_ME.id, 7);
+  if (unverified.status !== "unverified" || !unverified.recovery)
+    throw new Error("Expected recovery data");
+  await act(async () => {
+    finishRead(unverified);
+    await later;
+  });
+  await settle();
+  expect(sheetCalls.settings?.locked).toBe(true);
+  act(() => buttonSaying("Discard saved drawing and start blank")?.click());
+  await settle();
+  expect(keptRecord()).toMatchObject({ ticket: 9 });
+  expect(error).toHaveBeenCalledOnce();
+});
+
+it("late recovery locks a carried Kyoto Seika sheet before Begin", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  subjectList.load.mockResolvedValue({ subjects: TEST_SUBJECTS, notices: "" });
+  const kyotoSeika: KeptKyotoSeika = { subjects: null, picked: [], rolls: 0, begun: false };
+  let finishRead!: (value: Extract<KeptSession, { status: "unverified" }>) => void;
+  const later = new Promise<Extract<KeptSession, { status: "unverified" }>>((resolve) => {
+    finishRead = resolve;
+  });
+  reopen({ status: "unread", ticket: 7, kyotoSeika, error: new Error("slow read"), later });
+  await settle();
+  if (unverified.status !== "unverified" || !unverified.recovery)
+    throw new Error("Expected recovery data");
+  await act(async () => {
+    finishRead({ ...unverified, kyotoSeika });
+    await later;
+  });
+  await settle();
+  expect(buttonSaying("Download saved drawing")).toBeDefined();
+  expect(sheetCalls.settings?.locked).toBe(true);
+  expect(document.querySelector(".kyoto-seika-deal")).toBeNull();
+});
+
+it.each([true, false])(
+  "unknown metadata keeps the sheet locked until explicit discard, with readable ink=%s",
+  async (readable) => {
+    if (unverified.status !== "unverified") throw new Error("Expected recovery data");
+    const spendTicket = vi.fn<ApiClient["spendTicket"]>();
+    reopen(
+      {
+        ...unverified,
+        ticket: null,
+        reason: "metadata-unavailable",
+        recovery: readable ? unverified.recovery : null,
+      },
+      {},
+      TEST_ME,
+      { spendTicket },
+    );
+    await settle();
+    expect(sheetCalls.settings?.locked).toBe(true);
+    expect(Boolean(buttonSaying("Download saved drawing"))).toBe(readable);
+    expect(buttonSaying("Try again")).toBeDefined();
+    act(() => drawingScreen.current?.startNewSticker());
+    await settle();
+    expect(spendTicket).not.toHaveBeenCalled();
+    expect(document.querySelector(".seal-key")).toBeNull();
+    act(() => buttonSaying("Discard saved drawing")?.click());
+    await settle();
+    expect(spendTicket).not.toHaveBeenCalled();
+    expect(localStorage.getItem(personKey("draw.session", TEST_ME.id))).toBeNull();
+    expect(buttonSaying("Download saved drawing")).toBeUndefined();
+  },
+);

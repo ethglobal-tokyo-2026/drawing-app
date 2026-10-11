@@ -1,11 +1,16 @@
+import { bytes32, insertUser } from "@drawing-app/db/testing";
 import { hc, parseResponse, type ClientResponse } from "hono/client";
 import { describe, expect, it } from "vitest";
 import type { AppType } from "./app.ts";
 import type { LineProfile } from "./deps.ts";
-import { giftClaimTokenSchema } from "./gifts/packaging.ts";
+import { claimCommitmentOf, giftClaimTokenSchema, packagedGiftSchema } from "./gifts/packaging.ts";
+import { giftsForYouSchema, giftPreviewSchema } from "./gifts/receiving.ts";
+import { createGiftsTestApp, giftOf, takeOutStartOf } from "./gifts/testGifts.ts";
 import { recordBody } from "./gratitude/testReplays.ts";
 import { devAccessToken } from "./services/devSignIn.ts";
 import { ME } from "./stickerBoards/board.ts";
+import { SPONSORSHIP_MARGIN_MS } from "./sui/transactions.ts";
+import { bodyOf } from "./testing/responses.ts";
 import { sealUpload } from "./stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
 import { spendBody } from "./tickets/testSpends.ts";
@@ -29,11 +34,12 @@ const ONE_COMBO = 1;
  * One person's typed client on the test app. Like their phone, it keeps the session cookie the API
  * sets, and sends it with every call after.
  */
-function clientFor(test: TestApp) {
-  let sessionCookie: string | undefined;
+function clientFor(test: TestApp, cookie?: string, expectedUserId?: string) {
+  let sessionCookie = cookie;
   const fetch = async (input: string | URL | Request, init?: RequestInit) => {
     const headers = new Headers(init?.headers);
     if (sessionCookie !== undefined) headers.set("Cookie", sessionCookie);
+    if (expectedUserId !== undefined) headers.set("x-croquis-user-id", expectedUserId);
     const response = await test.app.request(input, { ...init, headers });
     const setCookie = response.headers.get("set-cookie");
     // A Cookie header sends back only the name=value that starts Set-Cookie.
@@ -58,11 +64,12 @@ async function answered<Answer extends ClientResponse<unknown>>(
 /** Signs in with the LINE account's access token: their client, now carrying their session, and `me`. */
 async function signIn(test: TestApp, profile: LineProfile) {
   const api = clientFor(test);
-  const { me } = await answered(
-    api.session.$post({ json: { accessToken: devAccessToken(profile), language: "en" } }),
-    OK,
-  );
-  return { api, me };
+  const response = await api.session.$post({
+    json: { accessToken: devAccessToken(profile), language: "en" },
+  });
+  const { me } = await answered(Promise.resolve(response), OK);
+  const cookie = response.headers.get("set-cookie")?.split(";")[0];
+  return { api: clientFor(test, cookie, me.id), me };
 }
 
 /** The stickers on your own Sticker Board and in your sticker tray. */
@@ -111,8 +118,19 @@ describe("the REST API, through the typed client", () => {
     expect(packaged.deposit).toBeNull();
     const giftId = packaged.gift.id;
     const giftClaimToken = giftClaimTokenSchema.parse(packaged.giftClaimToken);
+    const attemptId = bytes32("message attempt");
+    await answered(
+      alice.api.gifts[":giftId"]["message-attempt"].$post({
+        param: { giftId },
+        json: { attemptId },
+      }),
+      OK,
+    );
     const shared = await answered(
-      alice.api.gifts[":giftId"].shared.$post({ param: { giftId }, json: { outcome: "sent" } }),
+      alice.api.gifts[":giftId"].shared.$post({
+        param: { giftId },
+        json: { attemptId, outcome: "sent" },
+      }),
       OK,
     );
     expect(shared.gift.status).toBe("sent");
@@ -168,4 +186,91 @@ describe("the REST API, through the typed client", () => {
       { sticker: { id: sticker.id }, givenTo: { id: bob.me.id } },
     ]);
   });
+});
+
+describe("resuming a packaged gift through the REST API", () => {
+  it.each([false, true])(
+    "keeps Bob as the recipient across board changes (Sui: %s)",
+    async (onSui) => {
+      const test = await createGiftsTestApp({ onSui });
+      const aliceId = insertUser(test.db);
+      const bobId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
+      const carolId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
+      const optedOutId = insertUser(test.db);
+      const stickerId = test.sealSticker(aliceId, { nsfw: true });
+      const first = await bodyOf(
+        await test.post(aliceId, "", { stickerId, forUserId: bobId }),
+        packagedGiftSchema,
+        CREATED,
+      );
+      const giftId = first.gift.id;
+      const giftClaimToken = giftClaimTokenSchema.parse(first.giftClaimToken);
+      const commitment = claimCommitmentOf(giftClaimToken);
+      // Reopening from your board, another board, or an ineligible person's board only resumes it.
+      const destinations = [undefined, carolId, null, optedOutId, aliceId, "unknown-person"];
+      const resume = async () => {
+        for (const forUserId of destinations) {
+          const response = await test.post(aliceId, "", { stickerId, forUserId });
+          expect(response.status, await response.clone().text()).toBe(OK);
+          expect(test.giftRow(giftId)).toMatchObject({
+            forUserId: bobId,
+            claimCommitment: commitment,
+          });
+          const again = await bodyOf(response, packagedGiftSchema);
+          expect(again).toMatchObject({
+            gift: { id: giftId },
+            forUserId: bobId,
+            giftClaimToken: null,
+          });
+        }
+      };
+      await resume();
+      if (onSui) {
+        if (!first.deposit) throw new Error("Sui Packaging must return a deposit");
+        test.clock.set(new Date(Date.parse(first.deposit.expiresAt) - SPONSORSHIP_MARGIN_MS));
+        const renewed = await bodyOf(
+          await test.post(aliceId, "", { stickerId, forUserId: optedOutId }),
+          packagedGiftSchema,
+        );
+        expect(renewed).toMatchObject({
+          gift: { id: giftId },
+          forUserId: bobId,
+          giftClaimToken: null,
+        });
+        if (!renewed.deposit) throw new Error("An expired sponsorship must be renewed");
+        expect(renewed.deposit.digest).not.toBe(first.deposit.digest);
+        await giftOf(
+          await test.deposit(aliceId, giftId, await test.signed(aliceId, renewed.deposit)),
+        );
+        await resume();
+      }
+      await giftOf(await test.share(aliceId, giftId, "sent"));
+      const waiting = await bodyOf(await test.get(bobId, "/for-you"), giftsForYouSchema);
+      expect(waiting.gifts).toMatchObject([{ gift: { id: giftId } }]);
+      expect((await bodyOf(await test.get(carolId, "/for-you"), giftsForYouSchema)).gifts).toEqual(
+        [],
+      );
+      const preview = await bodyOf(
+        await test.post(bobId, "/preview", { giftClaimToken, liffContextType: ONE_TO_ONE }),
+        giftPreviewSchema,
+      );
+      expect(preview).toMatchObject({ receivable: true, sticker: { id: stickerId } });
+      expect(test.giftRow(giftId)).toMatchObject({ forUserId: bobId, claimCommitment: commitment });
+
+      const { takeOut } = await takeOutStartOf(await test.takeOut(aliceId, giftId));
+      if (takeOut) {
+        await giftOf(
+          await test.submitTakeOut(aliceId, giftId, await test.signed(aliceId, takeOut)),
+        );
+      }
+      const changed = await bodyOf(
+        await test.post(aliceId, "", { stickerId, forUserId: carolId }),
+        packagedGiftSchema,
+        CREATED,
+      );
+      expect(changed.forUserId).toBe(carolId);
+      expect(changed.gift.id).not.toBe(giftId);
+      expect(changed.giftClaimToken).not.toBe(giftClaimToken);
+    },
+  );
 });

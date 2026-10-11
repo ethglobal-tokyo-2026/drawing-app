@@ -338,6 +338,11 @@ export class LayerInk implements LayerSurface<Hold> {
     return { ...written.box };
   }
 
+  /** Drops only this fill's cached replay data; its layer's pixels remain unchanged. */
+  releaseFill(op: FillOp): void {
+    this.fills.delete(op);
+  }
+
   /** A new canvas holding every layer `state` shows, for the seal; the caller releases it. */
   composite(state: LayerState): HTMLCanvasElement {
     // A fill can leave full-sheet reader and clipper canvases. Let them go before making the seal's

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderWithApi } from "../../api/testing";
+import { renderInHost } from "../../ui/testing";
 import { ChoiceRow } from "./ChoiceRow";
 
 const SIZES = ["small", "medium", "large"] as const;
@@ -30,7 +30,7 @@ function render({ busy = false } = {}) {
       />
     );
   }
-  const view = renderWithApi(<Row />);
+  const view = renderInHost(<Row />);
   unmount = view.unmount;
   return { host: view.host, chosen };
 }

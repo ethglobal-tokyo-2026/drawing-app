@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { errorDetail, errorMessage, messageOf } from "../i18n/errorMessage";
 import { followAccountLanguage, lineLanguage } from "../i18n/pageLanguage";
 import { useTranslation } from "../i18n/react";
@@ -17,16 +17,10 @@ import { onSessionLost } from "./sessionLoss";
 type Session =
   | { step: "signing-in" }
   | { step: "reconnecting" }
-  | { step: "failed"; error: ApiError }
+  | { step: "failed"; error: ApiError; expired?: boolean }
   | { step: "ready"; me: Me };
 
-/**
- * A session lost this soon after signing in again to recover it isn't being kept, as when the
- * browser drops the cookie, and signing in once more would only loop.
- */
-export const RECOVERY_HOLD_MS = 30_000;
-
-// `signed_out` gets here only when signing in again didn't hold, which LINE's own login can fix.
+// Initial sign-in failures can require a fresh LINE login. Post-ready expiry requires Reload.
 const needsLine = (error: ApiError) =>
   error.code === "line_token_invalid" ||
   error.code === "line_token_expired" ||
@@ -45,8 +39,8 @@ const outOfDate = (me: Me, claims: LineClaims | null) =>
  * account's language and, when needed, you've chosen a handle. The session cookie from your last visit,
  * asked about as the app started, opens the app when it's the LINE user LIFF logged in; without that
  * early answer, GET /api/me resumes the session the server matches to LINE's user. Otherwise LINE's access
- * token signs you in. A request that later finds the session gone, on any screen, sends the app back
- * through the same sign-in, so no screen dead-ends on being signed out.
+ * token signs you in. A request that later finds the session gone closes the account and asks for
+ * Reload, so a background sign-in cannot replace another tab's newer session.
  */
 export function SessionGate({
   session,
@@ -71,18 +65,19 @@ export function SessionGate({
   const { t } = useTranslation();
   const [state, setState] = useState<Session>({ step: "signing-in" });
   const [attempt, setAttempt] = useState(0);
-  /** A sign-in that answers a lost session is under way, and when the last one opened the app. */
-  const recovering = useRef(false);
-  const recoveredAt = useRef<number | null>(null);
-  // Only an open app takes a newer you: a save that answers while signing in again never reopens it.
+  // Only an open account takes a newer profile: late saves never reopen a closed account.
   const setReadyMe = useCallback(
-    (me: Me) => setState((state) => (state.step === "ready" ? { step: "ready", me } : state)),
+    (me: Me) =>
+      setState((state) =>
+        state.step === "ready" && state.me.id === me.id ? { step: "ready", me } : state,
+      ),
     [],
   );
 
   useEffect(() => {
     let current = true;
-    const signIn = async () => {
+    let refreshFailure: ApiError | undefined;
+    const signIn = async (expectedUserId?: string) => {
       let token: string | null;
       try {
         token = accessToken();
@@ -96,24 +91,37 @@ export function SessionGate({
         });
       }
       // LINE's language, never one this phone kept: a new account starts in it.
-      return session.signIn({ accessToken: token, language: lineLanguage() });
+      const request = { accessToken: token, language: lineLanguage() };
+      return expectedUserId === undefined
+        ? session.signIn(request)
+        : session.signIn(request, expectedUserId);
     };
     /** A session resumed without LINE's token; signing in again, behind it, brings LINE's news. */
     const resumed = async (me: Me) => {
       await followAccountLanguage(me.language);
       if (current && outOfDate(me, claims())) {
-        signIn().then(
+        signIn(me.id).then(
           (signedIn) => {
             if (!current) return;
             // A handle chosen while the profile request was in flight is newer than its answer.
             setState((state) =>
-              state.step === "ready" && state.me === me
+              state.step === "ready" && state.me === me && signedIn.me.id === me.id
                 ? { step: "ready", me: signedIn.me }
                 : state,
             );
           },
-          (error: unknown) =>
-            console.warn("Bringing LINE's profile to your account failed", apiError(error)),
+          (error: unknown) => {
+            const failure = apiError(error);
+            console.warn("Bringing LINE's profile to your account failed", failure);
+            if (current && failure.code === "session_account_changed") {
+              refreshFailure = failure;
+              setState((state) =>
+                state.step === "ready" && state.me.id === me.id
+                  ? { step: "failed", error: failure }
+                  : state,
+              );
+            }
+          },
         );
       }
       return me;
@@ -139,7 +147,8 @@ export function SessionGate({
         try {
           // Retries check the cookie again; the early answer may predate a completed sign-in.
           // The server matches the session to LINE's user.
-          return await resumed((await session.me(lineUser)).me);
+          const answer = await session.me(lineUser);
+          return await resumed(answer.me);
         } catch (error) {
           // An outage isn't a reason to discard a session or start another LINE login.
           if (!(error instanceof ApiError) || error.status !== 401 || error.code !== "signed_out") {
@@ -156,16 +165,15 @@ export function SessionGate({
     signingIn.then(
       (me) => {
         if (!current || !me) return;
-        if (recovering.current) {
-          recovering.current = false;
-          recoveredAt.current = Date.now();
+        if (refreshFailure) {
+          setState({ step: "failed", error: refreshFailure });
+          return;
         }
         setState({ step: "ready", me });
       },
       (error: unknown) => {
         const failure = apiError(error);
         console.error("Signing in to the app's server failed", failure);
-        recovering.current = false;
         if (current) setState({ step: "failed", error: failure });
       },
     );
@@ -174,29 +182,29 @@ export function SessionGate({
     };
   }, [session, accessToken, claims, currentLineUserId, early, attempt]);
 
-  // A request that finds the session gone, on any screen, signs in again the way the app opened.
+  // Once ready, session loss closes this account until the user explicitly reloads the page.
   useEffect(() => {
     if (state.step !== "ready") return;
     let handled = false;
-    return onSessionLost((error) => {
-      if (handled) return;
+    return onSessionLost((error, expectedUserId) => {
+      if (handled || expectedUserId !== state.me.id) return;
       handled = true;
-      const recoveredRecently =
-        recoveredAt.current !== null && Date.now() - recoveredAt.current < RECOVERY_HOLD_MS;
-      if (recoveredRecently) {
-        console.error("The session was lost again right after signing in again", error);
+      if (error.code === "session_account_changed") {
+        console.warn("The account changed; reload to open the current session", error);
         setState({ step: "failed", error });
         return;
       }
-      console.warn("The session ended, so the app signs in again", error);
-      recovering.current = true;
-      setState({ step: "signing-in" });
-      setAttempt((n) => n + 1);
+      console.warn("The session ended; reload to continue", error);
+      setState({ step: "failed", error, expired: true });
     });
-  }, [state.step]);
+  }, [state]);
 
   const retry = async () => {
     if (state.step !== "failed") return;
+    if (state.expired || state.error.code === "session_account_changed") {
+      location.reload();
+      return;
+    }
     if (!needsLine(state.error)) {
       setState({ step: "signing-in" });
       setAttempt((n) => n + 1);
@@ -219,9 +227,13 @@ export function SessionGate({
 
   if (state.step === "ready") {
     return state.me.needsHandle ? (
-      <HandlePrompt me={state.me} setHandle={session.setHandle} onChosen={setReadyMe} />
+      <HandlePrompt
+        me={state.me}
+        setHandle={(handle) => session.setHandle(handle, state.me.id)}
+        onChosen={setReadyMe}
+      />
     ) : (
-      <MeContext value={state.me}>
+      <MeContext key={state.me.id} value={state.me}>
         <SetMeContext value={setReadyMe}>{children}</SetMeContext>
       </MeContext>
     );
@@ -237,14 +249,16 @@ export function SessionGate({
         <GateOpening label={t(($) => $.api.signIn.reconnecting)} />
       ) : (
         <GateNotice
-          title={t(($) => $.api.signIn.failed)}
-          lead={errorMessage(state.error)}
+          title={t(($) => (state.expired ? $.api.signIn.sessionEnded : $.api.signIn.failed))}
+          lead={state.expired ? t(($) => $.api.signIn.sessionExpired) : errorMessage(state.error)}
           detail={errorDetail(state.error)}
         >
           <Key onClick={() => void retry()}>
-            {needsLine(state.error)
-              ? t(($) => $.api.signIn.reconnect)
-              : t(($) => $.api.signIn.tryAgain)}
+            {state.expired || state.error.code === "session_account_changed"
+              ? t(($) => $.api.signIn.reload)
+              : needsLine(state.error)
+                ? t(($) => $.api.signIn.reconnect)
+                : t(($) => $.api.signIn.tryAgain)}
           </Key>
         </GateNotice>
       )}

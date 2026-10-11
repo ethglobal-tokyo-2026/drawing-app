@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from "react";
 import { useFocusTrap } from "../ui/useFocusTrap";
+import { useBackToClose } from "../ui/useBackToClose";
 import "./tickets.css";
 
 interface Props {
@@ -7,7 +8,7 @@ interface Props {
   labelledBy: string;
   describedBy?: string;
   busy?: boolean;
-  onEscape: () => void;
+  onEscape: () => boolean | void;
   /** The card's view: a new one puts focus on its first control. */
   refocus?: unknown;
   onScrimClick?: () => void;
@@ -37,6 +38,8 @@ export function TicketCard({
 }: Props) {
   const card = useRef<HTMLElement>(null);
   useFocusTrap(card, { active: !leaving, onEscape, refocus });
+  // The Back entry stays until the drop unmounts the card; a Back during the drop cannot close twice.
+  useBackToClose(true, () => (leaving ? false : onEscape()));
   const classes = ["out-of-tickets", className, leaving && "is-leaving"];
 
   return (

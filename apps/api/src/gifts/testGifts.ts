@@ -1,5 +1,5 @@
 import { gifts, stickers } from "@drawing-app/db";
-import { insertUser } from "@drawing-app/db/testing";
+import { bytes32, insertUser } from "@drawing-app/db/testing";
 import { fromBase64 } from "@mysten/sui/utils";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
@@ -109,8 +109,19 @@ export async function createGiftsTestApp({
 
     deposit,
     /** LINE's friend picker answered `outcome` for the gift's message. */
-    share: (userId: string, giftId: string, outcome: z.infer<typeof sharedBodySchema>["outcome"]) =>
-      post(userId, `/${giftId}/shared`, { outcome }),
+    share: async (
+      userId: string,
+      giftId: string,
+      outcome: z.infer<typeof sharedBodySchema>["outcome"],
+    ) => {
+      const row = test.db.select().from(gifts).where(eq(gifts.id, giftId)).get();
+      const attemptId = row?.messageAttemptId ?? bytes32(`message-${giftId}`);
+      if (!row?.messageAttemptId) {
+        const begun = await post(userId, `/${giftId}/message-attempt`, { attemptId });
+        if (!begun.ok) return begun;
+      }
+      return post(userId, `/${giftId}/shared`, { attemptId, outcome });
+    },
     /** Take-out's start: on the mock chain, or for a gift the escrow doesn't hold, it closes at once. */
     takeOut: (userId: string, giftId: string) => post(userId, `/${giftId}/take-out/start`),
     submitTakeOut: (userId: string, giftId: string, body: SignedTransaction) =>

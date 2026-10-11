@@ -52,6 +52,8 @@ const REFUSAL_STATUS = {
   deposit_not_landed: 503,
   not_deposited: 409,
   gift_closed: 409,
+  gift_message_unresolved: 409,
+  gift_message_attempt_changed: 409,
   already_received: 409,
   group_chat: 403,
   own_gift: 403,

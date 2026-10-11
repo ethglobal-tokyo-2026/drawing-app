@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { GiftPreview } from "@drawing-app/api/client";
+import type { GiftPreview, TicketShop } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { gift, people, sticker } from "../api/testFixtures";
@@ -51,6 +51,18 @@ class StillResizeObserver implements ResizeObserver {
 globalThis.ResizeObserver ??= StillResizeObserver;
 
 let unmount = () => {};
+const ticketShop = (): Promise<TicketShop> =>
+  Promise.resolve({
+    packs: [],
+    payment: {
+      network: "testnet",
+      coinType: `0x${"a".repeat(64)}::jpy_coin::JPY_COIN`,
+      decimals: 6,
+      paymentPackage: `0x${"b".repeat(64)}`,
+      originalPackage: `0x${"b".repeat(64)}`,
+      vault: `0x${"c".repeat(64)}`,
+    },
+  });
 const settle = (ms = 0) => act(() => vi.advanceTimersByTimeAsync(ms));
 const tapTab = (host: HTMLElement, name: "board" | "explore") =>
   act(() => host.querySelector<HTMLElement>(`.tab-${name}`)?.click());
@@ -75,13 +87,14 @@ afterEach(async () => {
 
 it("reports a Gift Message's send the server missed as the app starts", async () => {
   history.replaceState(null, "", "/");
-  keepGift(TEST_ME.id, "gift-missed", { message: "sent" });
+  const attemptId = `0x${"12".repeat(32)}`;
+  keepGift(TEST_ME.id, "gift-missed", { message: "sent", attemptId });
   const reportShared = vi.fn(async () => gift({ id: "gift-missed", status: "sent" }));
   const view = renderWithApi(<App />, emptyApi({ reportShared }));
   unmount = view.unmount;
   await act(() => vi.dynamicImportSettled());
   await settle();
-  expect(reportShared).toHaveBeenCalledWith("gift-missed", "sent");
+  expect(reportShared).toHaveBeenCalledWith("gift-missed", attemptId, "sent");
 });
 
 it("shows no tab strip over the drawing screen, whose My board tile opens the board as the tab does", async () => {
@@ -108,7 +121,10 @@ it("refreshes waiting gifts after Not now without reloading the sticker board", 
   const previewGift = vi.fn(() => new Promise<GiftPreview>((resolve) => (finishPreview = resolve)));
   const giftsForYou = vi.fn(async () => ({ gifts: previewFinished ? [waiting] : [] }));
   const stickerBoard = vi.fn(async () => ({ owner: TEST_OWNER, boardStickers: [] }));
-  const view = renderWithApi(<App />, emptyApi({ previewGift, giftsForYou, stickerBoard }));
+  const view = renderWithApi(
+    <App />,
+    emptyApi({ previewGift, giftsForYou, stickerBoard, ticketShop }),
+  );
   unmount = view.unmount;
   await act(() => vi.dynamicImportSettled());
   await settle();
@@ -153,7 +169,7 @@ it("keeps Explore's search while another tab shows, asks nothing for it then, an
     },
   }));
   const searchUsers = vi.fn(async () => [people.mika]);
-  const view = renderWithApi(<App />, emptyApi({ explore, searchUsers }));
+  const view = renderWithApi(<App />, emptyApi({ explore, searchUsers, ticketShop }));
   unmount = view.unmount;
   await act(() => vi.dynamicImportSettled());
   await settle();

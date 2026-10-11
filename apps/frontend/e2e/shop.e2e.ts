@@ -101,7 +101,7 @@ test("the free first pack: the checkout gives it with no Sui account, and it's a
   await expect(added).toBeVisible();
 
   await added.getByRole("button", { name: say(tickets.checkout.buyMore, language) }).click();
-  await expect.poll(() => yenShown(pack.locator("strong"))).toBe(freePack.priceYen);
+  await expect(pack.locator("strong")).toHaveText(`¥${freePack.priceYen.toLocaleString("en-US")}`);
   await card.getByRole("button", { name: say(tickets.notNow, language) }).click();
   await expect(
     page.getByText(sayCount(shop.reserve, "heldSpoken", language, freePack.tickets)),

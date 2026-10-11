@@ -6,8 +6,8 @@ import { sessionEndsOnPurpose } from "./sessionLoss";
  * Logs out of LINE, ending the app's lasting session. A drawing in progress stays kept for its person
  * alone, so it's there again, with its ticket, when they sign back in.
  */
-export const logOut = () =>
+export const logOut = (expectedUserId: string) =>
   lineLogout(async () => {
     sessionEndsOnPurpose();
-    await serverSession.signOut();
+    await serverSession.signOut(expectedUserId);
   });

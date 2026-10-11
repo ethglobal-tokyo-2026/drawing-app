@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderWithApi } from "../../api/testing";
 import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import {
   keepInputMode,
@@ -10,7 +9,7 @@ import {
   readInputMode,
   readPenPressure,
 } from "../../sticker-creation/drawingSettings";
-import { refusingStorage } from "../../ui/testing";
+import { refusingStorage, renderInHost } from "../../ui/testing";
 import { DrawingSettings } from "./DrawingSettings";
 
 // Try it draws on a canvas, which happy-dom gives no 2D context.
@@ -34,7 +33,7 @@ afterEach(() => {
 
 /** The Drawing group as Settings shows it, the Pencil rows under the drawing hand. */
 function render() {
-  const view = renderWithApi(<DrawingSettings />);
+  const view = renderInHost(<DrawingSettings />);
   unmount = view.unmount;
   return view.host;
 }

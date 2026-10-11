@@ -1,6 +1,11 @@
 import type { Section } from "../catalog";
 
 export const giving = {
+  /** Giving recovery: a stale selection returned an existing gift addressed to someone else */
+  recipientMismatch: {
+    en: "This sticker is already in a gift with a different recipient. Its original recipient is unchanged. To choose someone new, take it out, then give it again.",
+    ja: "このシールはすでに別の贈り先へのギフトになっています。元の贈り先は変わっていません。別の人に贈るには、取り出してからもう一度贈ってください。",
+  },
   tag: {
     /** The gift tag's small label over the giver's handle, on the gift bag in Giving and in the gift a recipient opens, and before the handle in the Gift Message sent through LINE ("From @alice") */
     from: { en: "From", ja: "贈り主" },
@@ -9,6 +14,11 @@ export const giving = {
   },
   /** Why a packed gift can't go out, by cause: the reason in “couldn’t be packed” on Giving's “Not sent yet” screen, with the developer's English detail after it in brackets */
   transferProblem: {
+    /** Giving, throughout recovery: persistent warning when device storage cannot read or save LINE's outcome. */
+    storage_failed: {
+      en: "This device couldn’t read or save LINE’s answer. Your gift is protected on the server; keep this page open until its outcome is recorded.",
+      ja: "この端末でLINEの結果を読み込むか保存することができませんでした。ギフトはサーバーで保護されています。結果が記録されるまで、この画面を開いたままにしてください。",
+    },
     /** Giving's “Not sent yet” screen, in “couldn’t be packed”: the gift has no link to send; taking the sticker out and giving it again makes a new one */
     no_link: {
       en: "This gift came without a link to send. Take the sticker out, then give it again.",
@@ -107,11 +117,6 @@ export const giving = {
       asking: {
         en: "This is taking longer than usual. Still waiting for Croquis to answer.",
         ja: "いつもより<wbr/>時間が<wbr/>かかっています。<wbr/>クロッキーからの<wbr/>応答を<wbr/>待っています。",
-      },
-      /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the sticker comes out of an earlier gift bag first */
-      earlier: {
-        en: "This is taking longer than usual. Your sticker is still coming out of an earlier gift bag, then goes into this one.",
-        ja: "いつもより<wbr/>時間が<wbr/>かかっています。<wbr/>シールを<wbr/>前の<wbr/>ギフト袋から<wbr/>取り出しているところで、<wbr/>そのあと<wbr/>この袋に<wbr/>入れます。",
       },
       /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the sticker goes into the gift bag */
       moving: {

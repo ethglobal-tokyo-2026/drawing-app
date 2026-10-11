@@ -110,7 +110,7 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
       const request = ++sent.current;
       try {
         const spent = await api.spendTicket({ kind, idempotencyKey: key });
-        show(request, spent.tickets);
+        if (!show(request, spent.tickets)) refresh();
         return spent.ticketUse;
       } catch (failure) {
         const refused = SPEND_REFUSALS.some((code) => code === apiError(failure).code);
@@ -118,7 +118,7 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
         throw failure;
       }
     },
-    [api, userId, show, keepSpendKey],
+    [api, userId, show, keepSpendKey, refresh],
   );
   const hasKeptSpend = useCallback(() => {
     const kept = spendKey.current ?? keptSpend(userId);

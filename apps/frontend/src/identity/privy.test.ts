@@ -12,7 +12,8 @@ vi.mock("../line/reconnectLine", () => ({ reconnectLine }));
 // As in a build: with LIFF Mock on, as on the dev server by default, Privy stays off.
 vi.stubEnv("VITE_LIFF_MOCK", "off");
 
-const { fetchPrivyJwt, privyStatus, retryPrivySignIn, setPrivyStatus } = await import("./privy");
+const { fetchPrivyJwt, privyStatus, resetPrivySignIn, retryPrivySignIn, setPrivyStatus } =
+  await import("./privy");
 
 const nowS = () => Math.floor(Date.now() / 1000);
 /** LIFF logged in, holding an access token, and an ID token that lapses in `idTokenExpiresInS`. */
@@ -121,6 +122,21 @@ describe("trading LIFF's access token for a Privy JWT", () => {
     expect(reconnectLine).not.toHaveBeenCalled();
   });
 
+  it("does not reload for an ordinary JWT failure, and retries the exchange", async () => {
+    const reload = vi.fn();
+    vi.stubGlobal("location", { reload });
+    lineToken();
+    const fetch = server(503, { error: "auth_unavailable" });
+    vi.stubGlobal("fetch", fetch);
+    await fetchPrivyJwt();
+    expect(privyStatus()).toMatchObject({ state: "failed", reconnectLine: false });
+    resetPrivySignIn();
+    expect(privyStatus()).toEqual({ state: "signing-in" });
+    await fetchPrivyJwt();
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(reload).not.toHaveBeenCalled();
+  });
+
   it.each([
     { status: 502, error: "line_unavailable" },
     { status: 500, error: "auth_unavailable" },
@@ -156,6 +172,42 @@ describe("trading LIFF's access token for a Privy JWT", () => {
     expect(await fetchPrivyJwt()).toBeUndefined();
     expect(reconnectLine).toHaveBeenCalledOnce();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("reloads a failed provider even while an earlier LINE reconnect is pending", async () => {
+    const reload = vi.fn();
+    vi.stubGlobal("location", { reload });
+    let finishReconnect: (() => void) | undefined;
+    reconnectLine.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishReconnect = resolve;
+      }),
+    );
+    liff.getAccessToken.mockReturnValue(null);
+    await fetchPrivyJwt();
+    retryPrivySignIn();
+    setPrivyStatus({ state: "failed", reason: "Provider stopped", reloadRequired: true });
+
+    retryPrivySignIn();
+    expect(reload).toHaveBeenCalledOnce();
+    finishReconnect?.();
+  });
+
+  it("keeps the provider recovery visible if an earlier LINE reconnect later fails", async () => {
+    let rejectReconnect: ((error: Error) => void) | undefined;
+    reconnectLine.mockReturnValueOnce(
+      new Promise((_, reject) => {
+        rejectReconnect = reject;
+      }),
+    );
+    liff.getAccessToken.mockReturnValue(null);
+    await fetchPrivyJwt();
+    retryPrivySignIn();
+    setPrivyStatus({ state: "failed", reason: "Provider stopped", reloadRequired: true });
+
+    rejectReconnect?.(new Error("LINE stopped"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(privyStatus()).toMatchObject({ state: "failed", reloadRequired: true });
   });
 
   it("reconnects LINE after an auth rejection without repeating the exchange", async () => {

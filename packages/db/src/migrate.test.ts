@@ -236,3 +236,62 @@ describe("the veiled images migration", () => {
     ]);
   });
 });
+
+describe("the Gift Message attempts migration", () => {
+  it("conservatively backfills populated gifts without changing ownership, dates, recipients or commitments", () => {
+    const { path, sqlite } = databaseBefore("0015_gift_message_attempts");
+    signUpU(sqlite);
+    sqlite.exec(
+      "insert into users (id, line_user_id, line_display_name, language) values ('v', 'line-v', 'V', 'en')",
+    );
+    const statuses = ["packed", "sent", "received", "taken_out", "returned"];
+    for (const status of statuses) {
+      insertStickerRow(sqlite, status);
+      sqlite
+        .prepare(
+          "insert into gifts (id, sticker_id, giver_id, for_user_id, claim_commitment, status, escrow_status, expires_at, sent_at, received_at, receiver_id, taken_out_at, returned_at) values (?, ?, 'u', 'v', ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .run(
+          bytes32(status),
+          status,
+          bytes32(`claim-${status}`),
+          status,
+          status === "received"
+            ? "claimed"
+            : status === "taken_out"
+              ? "taken_out"
+              : status === "returned"
+                ? "expired_returned"
+                : "pending",
+          Date.now() + 86400000,
+          status === "sent" ? SEALED_AT : null,
+          status === "received" ? SEALED_AT : null,
+          status === "received" ? "v" : null,
+          status === "taken_out" ? SEALED_AT : null,
+          status === "returned" ? SEALED_AT : null,
+        );
+    }
+    const before = rowsBy(sqlite, "gifts", "sticker_id");
+    sqlite.close();
+    migrateDatabase(path);
+    const migrated = new Database(path);
+    const after = rowsBy(migrated, "gifts", "sticker_id");
+    const ids = new Set();
+    for (const status of statuses) {
+      const row = after(status);
+      const { message_attempt_id, message_attempt_state, ...preserved } = row;
+      expect(preserved).toEqual(before(status));
+      if (status === "packed" || status === "sent") {
+        expect(message_attempt_id).toMatch(/^0x[0-9a-f]{64}$/);
+        ids.add(message_attempt_id);
+        expect(message_attempt_state).toBe(status === "packed" ? "pending" : "sent");
+      } else {
+        expect(message_attempt_id).toBeNull();
+        expect(message_attempt_state).toBe("not_started");
+      }
+    }
+    expect(ids.size).toBe(2);
+    expect(migrated.pragma("foreign_key_check")).toEqual([]);
+    migrated.close();
+  });
+});

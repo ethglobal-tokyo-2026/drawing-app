@@ -58,6 +58,16 @@ export const errors = {
     en: "Sui hasn’t answered about your sticker yet. Tap Send in LINE to check again; it won’t move twice.",
     ja: "シールについてSuiからの応答がまだありません。「LINEで送る」をタップして、もう一度確認してください。二重に動くことはありません。",
   },
+  /** Giving, while starting a Gift Message: another attempt needs the giver's confirmation. */
+  gift_message_unresolved: {
+    en: "This gift may already have been sent. Close and reopen Giving to check its outcome.",
+    ja: "このギフトは送信済みの可能性があります。贈る画面を閉じて開き直し、結果を確認してください。",
+  },
+  /** Giving, while recording LINE's outcome: another message attempt has replaced this one. */
+  gift_message_attempt_changed: {
+    en: "This gift’s message attempt changed. Close and reopen Giving to recover its current state.",
+    ja: "このギフトの送信状況が変わりました。贈る画面を閉じて開き直し、現在の状況を確認してください。",
+  },
   /** Giving, In the bag: recording LINE's picker outcome (POST /api/gifts/:giftId/shared) for a gift that's no longer packed or sent, or taking out a gift already returned, in “couldn’t record” or “couldn’t be taken out” through problemOf */
   gift_closed: {
     en: "This gift is already closed. Go back to your board, and if your sticker is there, give it again.",
@@ -203,10 +213,15 @@ export const errors = {
     en: "The gratitude replay couldn’t be read.",
     ja: "感謝のリプレイを読み取れませんでした。",
   },
-  /** Sign-in screen, under “Couldn’t sign you in”: a request found the session gone (the cookie expired, or the account was deleted) and signing in again didn't hold; the app signs in again by itself the first time, so this shows only on that second failure, through errorMessage */
+  /** Initial sign-in screen or a request's local error: the session is absent; established-session expiry has its own Reload explanation */
   signed_out: {
     en: "You’re signed out. Reopen Croquis from LINE to sign in again.",
     ja: "ログアウトされました。<wbr/>LINEから<wbr/>クロッキーを<wbr/>ひらき直して、<wbr/>もう一度<wbr/>ログインしてください。",
+  },
+  /** Sign-in screen, when a request belongs to a different account: explains why Reload is required */
+  session_account_changed: {
+    en: "The signed-in account changed. Reload to continue. Your saved gratitude stays with its account.",
+    ja: "ログイン中のアカウントが変わりました。再読み込みして続けてください。保存された感謝は、元のアカウントに残ります。",
   },
   /** Sticker detail: loading where it's been (GET /api/stickers/:stickerId), in “Couldn’t load where it’s been…”, or Giving: packing it (POST /api/gifts), in “couldn’t be packed”, through problemOf */
   sticker_not_found: {

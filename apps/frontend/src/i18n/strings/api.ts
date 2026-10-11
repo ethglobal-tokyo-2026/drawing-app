@@ -14,6 +14,15 @@ export const api = {
     failed: { en: "Couldn’t sign you in", ja: "ログインできませんでした" },
     /** Sign-in screen, after signing in to the app's server failed for a reason other than LINE's sign-in: the button that retries it */
     tryAgain: { en: "Try again", ja: "もう一度" },
+    /** Session-expiry screen, after a ready account loses its session: the heading above Reload */
+    sessionEnded: { en: "Your session ended", ja: "ログインの有効期限が切れました" },
+    /** Session-expiry screen, after a ready account loses its session: explains the explicit Reload action */
+    sessionExpired: {
+      en: "Reload to continue. Your saved gratitude stays with its account.",
+      ja: "再読み込みして続けてください。保存された感謝は、元のアカウントに残ります。",
+    },
+    /** Sign-in screen, after an established session ends or another tab changes accounts: explicitly reloads the page */
+    reload: { en: "Reload", ja: "再読み込み" },
     /** Sign-in screen, when LINE's sign-in token was missing, refused or expired: the button that restarts LINE Login */
     reconnect: { en: "Reconnect with LINE", ja: "LINEで再ログイン" },
     /** Sign-in screen, after tapping Reconnect with LINE: the status line while LINE Login restarts */

@@ -51,17 +51,37 @@ export async function followAccountLanguage(language: Language): Promise<void> {
  * Keeps `<html lang>`, the page's title and LIFF's own text in the app's language, and asks for the
  * Japanese face while it's Japanese.
  */
-export function followLanguageOnPage(setLiffLanguage: (language: Language) => Promise<void>): void {
+export function followLanguageOnPage(
+  setLiffLanguage: (language: Language) => Promise<void>,
+  lineReady: Promise<boolean>,
+): () => void {
+  let active = true;
+  let liffReady = false;
+  const sendToLiff = (language: Language) => {
+    setLiffLanguage(language).catch((error: unknown) =>
+      console.error(`LIFF's own text didn't switch to ${language}`, error),
+    );
+  };
   const apply = () => {
     const language = currentLanguage();
     document.documentElement.lang = language;
     document.title = i18next.t(($) => $.app.title);
     if (language === "ja") requestJapaneseFont();
     else releaseJapaneseFont();
-    setLiffLanguage(language).catch((error: unknown) =>
-      console.error(`LIFF's own text didn't switch to ${language}`, error),
-    );
+    if (liffReady) sendToLiff(language);
   };
   apply();
   i18next.on("languageChanged", apply);
+  void lineReady.then(
+    (started) => {
+      if (!active || !started) return;
+      liffReady = true;
+      sendToLiff(currentLanguage());
+    },
+    (error: unknown) => console.error("LIFF's own text couldn't wait for LINE", error),
+  );
+  return () => {
+    active = false;
+    i18next.off("languageChanged", apply);
+  };
 }

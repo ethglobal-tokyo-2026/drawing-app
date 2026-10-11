@@ -20,6 +20,8 @@ export interface GiftSticker {
 
 export interface PackedGift {
   giftId: string;
+  /** The server’s recipient, including a gift addressed through LINE alone. */
+  forUserId?: string | null;
   /** What LINE's picker sends. */
   message: GiftMessage;
 }
@@ -28,9 +30,12 @@ export interface PackedGift {
 export class GiftPackagingError extends Error {
   readonly giftId: string;
 
-  constructor(giftId: string, cause: unknown) {
+  readonly forUserId: string | null | undefined;
+
+  constructor(giftId: string, cause: unknown, forUserId?: string | null) {
     super(messageOf(cause), { cause });
     this.giftId = giftId;
+    this.forUserId = forUserId;
   }
 }
 
@@ -41,16 +46,28 @@ export class GiftPackagingError extends Error {
 export class GiftMessageOutError extends GiftPackagingError {
   readonly outcome: "sent" | "maybeSent";
   readonly recordError: unknown;
+  readonly attemptId: string;
 
-  constructor(giftId: string, outcome: "sent" | "maybeSent", recordError?: unknown) {
-    super(giftId, `Gift ${giftId}'s message ${outcome === "sent" ? "went" : "may have gone"} out`);
+  constructor(
+    giftId: string,
+    outcome: "sent" | "maybeSent",
+    attemptId: string,
+    recordError?: unknown,
+    forUserId?: string | null,
+  ) {
+    super(
+      giftId,
+      `Gift ${giftId}'s message ${outcome === "sent" ? "went" : "may have gone"} out`,
+      forUserId,
+    );
     this.outcome = outcome;
     this.recordError = recordError;
+    this.attemptId = attemptId;
   }
 }
 
 /** Why a packed gift can't go out; the catalog's `giving.transferProblem` says each in plain words. */
-export type GiftTransferProblem = "no_link";
+export type GiftTransferProblem = "no_link" | "storage_failed";
 
 /**
  * A packed gift can't go out. `problem` is what the screen says; the message is the developer's
@@ -67,10 +84,9 @@ export class GiftTransferError extends Error {
 }
 
 /**
- * What packing waits on, for a long wait to say: the app's server, an earlier gift bag that still
- * holds the sticker, or the sticker going into the bag.
+ * What packing waits on, for a long wait to say: the app's server or the sticker going into the bag.
  */
-export type PackWait = "asking" | "earlier" | "moving";
+export type PackWait = "asking" | "moving";
 
 /** Signs a transaction the server built, as its sender. */
 export type SignSponsored = (tx: SponsoredTransaction) => Promise<SignedTransaction>;
@@ -87,17 +103,19 @@ export interface GiftBackend {
    */
   pack: (sticker: GiftSticker, onWait?: (wait: PackWait) => void) => Promise<PackedGift>;
   /** LINE, or the giver, said the gift message went out. */
-  markSent: (giftId: string) => Promise<void>;
+  markSent: (giftId: string, attemptId: string) => Promise<void>;
   /**
    * The picker closed, or failed before it opened, without sending: the gift stays in the bag for
    * another try, and its maybe-sent mark goes.
    */
-  markCancelled: (giftId: string) => Promise<void>;
+  markCancelled: (giftId: string, attemptId: string) => Promise<void>;
   /**
    * LINE's picker may send the gift message from now on. Kept, so until a cancel clears it the gift
    * message is never sent again, even after a reload.
    */
-  markMaybeSent: (giftId: string) => void;
+  beginMessageAttempt: (giftId: string, attemptId: string) => Promise<void>;
+  /** A persistent warning when this device refused to keep an outcome. */
+  storageError?: () => GiftTransferError | undefined;
   /** The sticker came back out of the bag. */
   takeOut: (giftId: string) => Promise<void>;
 }
@@ -180,6 +198,16 @@ export function createApiGiftBackend({
   const packing = packaging.get(api) ?? new Map<string, Promise<PackedGift>>();
   packaging.set(api, packing);
 
+  let storageFailure: GiftTransferError | undefined;
+  const keep = (giftId: string, attemptId: string, message: "sent" | "cancelled" | "maybeSent") => {
+    if (!keepGift(userId, giftId, { message, attemptId })) {
+      storageFailure = new GiftTransferError(
+        "storage_failed",
+        `Gift ${giftId}'s outcome is kept only on this page until the server acknowledges it`,
+      );
+    }
+  };
+
   const settle = (giftId: string) => {
     tokens.delete(giftId);
     forgetKeptGift(userId, giftId);
@@ -201,17 +229,24 @@ export function createApiGiftBackend({
     }
   };
 
-  const markSent = async (giftId: string) => {
+  const markSent = async (giftId: string, attemptId: string) => {
     // Kept until the server hears it, so giving the sticker again reports it, not takes it out.
-    keepGift(userId, giftId, { message: "sent" });
+    keep(giftId, attemptId, "sent");
     try {
-      await retrying(() => api.reportShared(giftId, "sent"), unanswered);
+      await retrying(() => api.reportShared(giftId, attemptId, "sent"), unanswered);
     } catch (error) {
       // Any other refusal, signed out included, leaves the mark for the report to go again.
       if (refusedForGood(error)) settle(giftId);
       throw error;
     }
     settle(giftId);
+  };
+
+  const markCancelled = async (giftId: string, attemptId: string) => {
+    // Retain the matching outcome until cancellation is acknowledged; a reload can retry it.
+    keep(giftId, attemptId, "cancelled");
+    await api.reportShared(giftId, attemptId, "cancelled");
+    forgetKeptGift(userId, giftId);
   };
 
   const takeOut = (giftId: string) => takeOutGift({ api, userId, sign }, giftId);
@@ -223,31 +258,77 @@ export function createApiGiftBackend({
     again: boolean,
   ): Promise<PackedGift> => {
     onWait?.("asking");
-    let packaged = await api.packageGift(sticker.id, forUserId);
+    const packaged = await api.packageGift(sticker.id, forUserId);
     forgetMyStickerBoard();
     try {
-      const sent = keptGift(userId, packaged.gift.id)?.message;
-      if (sent) {
-        const recordError =
-          sent === "sent"
-            ? await markSent(packaged.gift.id).then(
-                () => undefined,
-                (error: unknown) => error,
-              )
-            : undefined;
-        throw new GiftMessageOutError(packaged.gift.id, sent, recordError);
+      const local = keptGift(userId, packaged.gift.id, () => {
+        storageFailure = new GiftTransferError(
+          "storage_failed",
+          `Gift ${packaged.gift.id}'s kept outcome can't be read on this device; the server still keeps its attempt`,
+        );
+      });
+      const server = packaged.messageAttempt;
+      const attemptId = server?.id ?? local?.attemptId;
+      if (packaged.gift.status === "sent" || server?.state === "sent") {
+        settle(packaged.gift.id);
+        if (!attemptId)
+          throw new Error(`Gift ${packaged.gift.id} is sent without its message attempt`);
+        throw new GiftMessageOutError(
+          packaged.gift.id,
+          "sent",
+          attemptId,
+          undefined,
+          packaged.forUserId,
+        );
       }
-      // Already in the bag from an earlier page: its Gift Claim Token left with that page, so the
-      // gift comes out and goes back in with a new one.
-      if (packaged.giftClaimToken === null && !tokens.has(packaged.gift.id)) {
-        console.info("Gift packaging recovery started", {
-          giftId: packaged.gift.id,
-          stickerId: sticker.id,
-        });
-        onWait?.("earlier");
-        await takeOut(packaged.gift.id);
-        onWait?.("asking");
-        packaged = await api.packageGift(sticker.id, forUserId);
+      // A local report may resolve only the server's matching attempt. An older tab cannot cancel a newer send.
+      if (attemptId && local && (!server || !local.attemptId || local.attemptId === server.id)) {
+        if (local.message === "sent") {
+          const error = await markSent(packaged.gift.id, attemptId).then(
+            () => undefined,
+            (error: unknown) => error,
+          );
+          throw new GiftMessageOutError(
+            packaged.gift.id,
+            "sent",
+            attemptId,
+            error,
+            packaged.forUserId,
+          );
+        }
+        if (local.message === "cancelled") {
+          try {
+            await markCancelled(packaged.gift.id, attemptId);
+          } catch (error) {
+            throw new GiftMessageOutError(
+              packaged.gift.id,
+              "maybeSent",
+              attemptId,
+              error,
+              packaged.forUserId,
+            );
+          }
+        } else if (local.message === "maybeSent" && server?.state !== "cancelled") {
+          throw new GiftMessageOutError(
+            packaged.gift.id,
+            "maybeSent",
+            attemptId,
+            undefined,
+            packaged.forUserId,
+          );
+        }
+      }
+      if (
+        server?.state === "pending" &&
+        !(local?.message === "cancelled" && local.attemptId === server.id)
+      ) {
+        throw new GiftMessageOutError(
+          packaged.gift.id,
+          "maybeSent",
+          server.id,
+          undefined,
+          packaged.forUserId,
+        );
       }
       const { gift } = packaged;
       const token = packaged.giftClaimToken ?? tokens.get(gift.id);
@@ -276,11 +357,11 @@ export function createApiGiftBackend({
         heroUrl,
         language: currentLanguage(),
       });
-      return { giftId: gift.id, message };
+      return { giftId: gift.id, forUserId: packaged.forUserId, message };
     } catch (error) {
       throw error instanceof GiftPackagingError
         ? error
-        : new GiftPackagingError(packaged.gift.id, error);
+        : new GiftPackagingError(packaged.gift.id, error, packaged.forUserId);
     }
   };
   return {
@@ -292,12 +373,12 @@ export function createApiGiftBackend({
       return operation;
     },
     markSent,
-    markCancelled: async (giftId) => {
-      // Nothing went out, so the same gift message can go into LINE again.
-      if (keptGift(userId, giftId)?.message === "maybeSent") forgetKeptGift(userId, giftId);
-      await api.reportShared(giftId, "cancelled");
+    markCancelled,
+    beginMessageAttempt: async (giftId, attemptId) => {
+      await api.beginMessageAttempt(giftId, attemptId);
+      keep(giftId, attemptId, "maybeSent");
     },
-    markMaybeSent: (giftId) => keepGift(userId, giftId, { message: "maybeSent" }),
+    storageError: () => storageFailure,
     takeOut,
   };
 }

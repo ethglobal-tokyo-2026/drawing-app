@@ -72,6 +72,15 @@ describe("AddressPapers", () => {
     expect(retry).toHaveBeenCalledOnce();
   });
 
+  it("labels the provider recovery action Reload", () => {
+    const retry = vi.fn();
+    render({ state: "failed", retry, reloadRequired: true });
+    const reload = button("Reload");
+    expect(() => button(TRY_AGAIN)).toThrow();
+    act(() => reload.click());
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
   it("sticks the paper back on the cork only when it comes back from the dialog", () => {
     const animate = vi
       .spyOn(Element.prototype, "animate")

@@ -18,12 +18,13 @@ describe("the app's API client", () => {
   ])(
     "%s",
     async (_, liffMock, waits) => {
-      // The app picks its client as serverClients loads.
+      // Each account gets its own client with the same wallet requirement.
       vi.stubEnv("VITE_LIFF_MOCK", liffMock);
       vi.resetModules();
       const { withSuiWallet } = await import("./suiWalletApi");
       vi.mocked(withSuiWallet).mockClear();
-      await import("./serverClients");
+      const { createAccountApi } = await import("./serverClients");
+      createAccountApi("alice");
       expect(vi.mocked(withSuiWallet).mock.calls.length > 0).toBe(waits);
     },
     FRESH_IMPORT_TIMEOUT_MS,

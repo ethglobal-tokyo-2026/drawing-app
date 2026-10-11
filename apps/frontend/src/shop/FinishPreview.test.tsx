@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithApi } from "../api/testing";
+import { renderInHost } from "../ui/testing";
 import { FinishPreview, type Laminate } from "./FinishPreview";
 import type { ShopSticker } from "./shopSticker";
 
@@ -29,7 +29,7 @@ function load(src: string) {
   act(() => img.onload?.());
 }
 
-let rendered: ReturnType<typeof renderWithApi> | undefined;
+let rendered: ReturnType<typeof renderInHost> | undefined;
 beforeEach(() => {
   asked = [];
   vi.stubGlobal("Image", FakeImage);
@@ -41,7 +41,7 @@ afterEach(() => {
 });
 
 const preview = (laminate: Laminate) => {
-  rendered = renderWithApi(<FinishPreview sticker={sticker} side={96} finish={{ laminate }} />);
+  rendered = renderInHost(<FinishPreview sticker={sticker} side={96} finish={{ laminate }} />);
   return rendered.host;
 };
 

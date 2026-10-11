@@ -26,7 +26,7 @@ export type PrivyStatus =
       /** The Sui address, which MakeSuiWallet asks Privy for once the person is signed in. */
       suiWallet?: string;
     }
-  | { state: "failed"; reason: string; reconnectLine?: boolean }
+  | { state: "failed"; reason: string; reconnectLine?: boolean; reloadRequired?: boolean }
   /** On the dev server under LIFF Mock, whose sign-in isn't LINE's, so the auth server would refuse it. */
   | { state: "off" };
 
@@ -66,12 +66,17 @@ let reconnecting = false;
  * `onFailed`, so the screen that asked can say so where the person tapped.
  */
 export function retryPrivySignIn(returnTo?: string, onFailed?: (failure: ApiError) => void): void {
+  if (status.state === "failed" && status.reloadRequired) {
+    location.reload();
+    return;
+  }
   if (reconnecting) return;
   if (status.state === "failed" && status.reconnectLine) {
     reconnecting = true;
     // Keep the exchange disabled while LINE navigates, so Privy cannot resend the stale token.
     void reconnectLine(returnTo)
       .catch(() => {
+        if (status.state === "failed" && status.reloadRequired) return;
         fail("LINE could not reconnect; try again", true);
         // LINE's SDK errors can carry credentials, so none of it goes on screen.
         onFailed?.(new ApiError(0, { error: "line_reconnect_failed" }));
@@ -84,10 +89,10 @@ export function retryPrivySignIn(returnTo?: string, onFailed?: (failure: ApiErro
   resetPrivySignIn();
 }
 
-/** Signs in to Privy again, without ever leaving the page: a failure that needs LINE stays failed. */
+/** Signs in to Privy again, unless recovery needs LINE or a fresh page. */
 export function resetPrivySignIn() {
-  // A delayed wallet-frame retry must preserve a newer LINE authentication failure.
-  if (status.state === "failed" && status.reconnectLine) return;
+  // A delayed wallet-frame retry must preserve a newer failure that needs navigation.
+  if (status.state === "failed" && (status.reconnectLine || status.reloadRequired)) return;
   kept = undefined;
   setPrivyStatus({ state: "signing-in" });
 }
@@ -101,7 +106,7 @@ let retriedRace = false;
 
 /** Privy's error after it took the JWT: one retry for the wallet-frame race, otherwise the failure. */
 export function onPrivyError(error: Error) {
-  if (status.state === "failed" && status.reconnectLine) return;
+  if (status.state === "failed" && (status.reconnectLine || status.reloadRequired)) return;
   if (error.message.includes(WALLET_FRAME_RACE) && !retriedRace) {
     retriedRace = true;
     console.warn("Privy signed out while making the wallet; signing in again");

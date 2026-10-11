@@ -101,12 +101,3 @@ export function boxRows(src: Pixels, win: Window, channels: 1 | 4) {
     }
   };
 }
-
-/** The whole window of `src`, scaled down as boxRows does it. */
-export function boxResample(src: Pixels, win: Window, channels: 1 | 4): Float32Array {
-  const rowLength = win.width * channels;
-  const out = new Float32Array(win.height * rowLength);
-  const row = boxRows(src, win, channels);
-  for (let j = 0; j < win.height; j++) row(j, out, j * rowLength);
-  return out;
-}

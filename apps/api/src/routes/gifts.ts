@@ -4,6 +4,8 @@ import { diagnosticStep, logInfo } from "../diagnostics.ts";
 import { refused, validate } from "../errors.ts";
 import { submitDeposit } from "../gifts/deposit.ts";
 import {
+  beginMessageAttempt,
+  messageAttemptBodySchema,
   packageBodySchema,
   packageGift,
   reportShared,
@@ -91,12 +93,33 @@ export const giftRoutes = (deps: AppDeps) =>
       },
     )
     .post(
+      "/:giftId/message-attempt",
+      validate("param", giftIdParam),
+      validate("json", messageAttemptBodySchema),
+      (c) => {
+        const started = beginMessageAttempt(
+          deps,
+          c.var.userId,
+          c.req.valid("param").giftId,
+          c.req.valid("json").attemptId,
+        );
+        if (started.refusal !== null) return refused(c, started);
+        return c.json({ gift: toGift(started.gift) }, 200);
+      },
+    )
+    .post(
       "/:giftId/shared",
       validate("param", giftIdParam),
       validate("json", sharedBodySchema),
       (c) => {
         const { giftId } = c.req.valid("param");
-        const shared = reportShared(deps, c.var.userId, giftId, c.req.valid("json").outcome);
+        const shared = reportShared(
+          deps,
+          c.var.userId,
+          giftId,
+          c.req.valid("json").attemptId,
+          c.req.valid("json").outcome,
+        );
         if (shared.refusal !== null) return refused(c, shared);
         return c.json({ gift: toGift(shared.gift) }, 200);
       },

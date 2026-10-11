@@ -90,6 +90,23 @@ const sticker = (
 });
 const stickers = [sticker(147, day(20)), sticker(133, day(14)), sticker(117, day(9))];
 
+/** A server that answers a detail read when the test has no reason for it to fail. */
+const detailApi = (overrides: Partial<ApiClient> = {}) =>
+  emptyApi({
+    stickerDetail: (id) =>
+      Promise.resolve({
+        sticker: apiSticker({
+          id,
+          number: Number(id.slice(2)),
+          artist: TEST_OWNER,
+          ownerId: TEST_OWNER.id,
+        }),
+        owner: TEST_OWNER,
+        transferTrail: [],
+      }),
+    ...overrides,
+  });
+
 let host: HTMLDivElement;
 let root: Root;
 const onClose = vi.fn();
@@ -98,7 +115,7 @@ const onGive = vi.fn();
 /** Opens the detail; again on the same sticker, it renders the open one with the props given. */
 const open = (
   props: Partial<ComponentProps<typeof StickerDetail>> = {},
-  client: ApiClient = emptyApi(),
+  client: ApiClient = detailApi(),
   me: Me | null = null,
 ) =>
   act(() =>
@@ -221,6 +238,39 @@ const confirm = () => document.querySelector(".sticker-detail__confirm");
 const figure = () => document.querySelector(".sticker-detail__slide .sticker-figure");
 const status = () => document.querySelector('[role="status"]')?.textContent;
 
+/** Holds Web Animations until the test finishes them. */
+function holdAnimations() {
+  const animations: {
+    finished: Promise<void>;
+    finish: () => void;
+    reversed: boolean;
+  }[] = [];
+  vi.spyOn(Element.prototype, "animate").mockImplementation(() => {
+    let finish!: () => void;
+    const animation = {
+      finished: new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+      finish: () => finish(),
+      reversed: false,
+    };
+    animations.push(animation);
+    const browserAnimation = new Animation();
+    Object.defineProperties(browserAnimation, {
+      finished: { value: animation.finished },
+      cancel: { value: vi.fn() },
+      reverse: {
+        value: () => {
+          animation.reversed = true;
+        },
+      },
+      updatePlaybackRate: { value: vi.fn() },
+    });
+    return browserAnimation;
+  });
+  return animations;
+}
+
 /**
  * Hears your board change, with `kept` as the board kept on this device; `expectReloaded` checks the
  * board was told to load again, without the kept one.
@@ -254,7 +304,7 @@ afterEach(() => {
 });
 
 describe("StickerDetail", () => {
-  it("gives the sticker it shows, after paging by the pager, arrow keys and strip", () => {
+  it("gives the sticker it shows, after paging by the pager, arrow keys and strip", async () => {
     open();
     press(NEXT_STICKER);
     expect(heading()).toBe("No.0117");
@@ -267,9 +317,11 @@ describe("StickerDetail", () => {
     press("No.0133");
     press(GIVE);
     expect(onGive).toHaveBeenCalledExactlyOnceWith(stickers[1]);
+    await settle();
+    expect(document.querySelector(".sticker-detail__check-failed")).toBeNull();
   });
 
-  it("keeps showing its sticker when a reload drops it from the list, until it's paged", () => {
+  it("keeps showing its sticker when a reload drops it from the list, until it's paged", async () => {
     open();
     // The board reloads once a friend received No.0133, which leaves your stickers.
     open({ stickers: [stickers[0], stickers[2]] });
@@ -278,9 +330,10 @@ describe("StickerDetail", () => {
     expect(heading()).toBe("No.0117");
     press(PREVIOUS_STICKER);
     expect(heading()).toBe("No.0147");
+    await settle();
   });
 
-  it("says who received a given sticker, and when, and offers no Give", () => {
+  it("says who received a given sticker, and when, and offers no Give", async () => {
     const receiver = {
       id: "artist-bob",
       handle: "bob",
@@ -296,6 +349,7 @@ describe("StickerDetail", () => {
       YOU_GAVE_IT_TO_BOB,
     );
     expect(button(GIVE)).toBeUndefined();
+    await settle();
   });
 
   describe("a gift in flight", () => {
@@ -305,7 +359,7 @@ describe("StickerDetail", () => {
     const openInFlight = (s: BoardStickerView, startTakeOut?: ApiClient["startTakeOut"]) =>
       open(
         { stickers: [s], startId: s.id, ownerId: you.id },
-        emptyApi(startTakeOut && { startTakeOut }),
+        detailApi(startTakeOut && { startTakeOut }),
       );
     const takeOut = () => i18next.t(($) => $.giving.inTheBag.takeOut);
     const note = () => document.querySelector(".sticker-detail__on-its-way")?.textContent;
@@ -316,7 +370,7 @@ describe("StickerDetail", () => {
     const giftDot = () =>
       document.querySelector<HTMLElement>(".sticker-detail__slide [data-gift]")?.dataset.gift;
 
-    it("sticks a dot badge on the big sticker that says whether its gift is in the bag or on its way", () => {
+    it("sticks a dot badge on the big sticker that says whether its gift is in the bag or on its way", async () => {
       for (const status of ["packed", "sent"] as const) {
         openInFlight(inFlight(133, status));
         expect(giftDot()).toBe(status);
@@ -326,9 +380,10 @@ describe("StickerDetail", () => {
       // A sticker you gave shows only where it went.
       open({ mode: "given", stickers: [inFlight(133, "packed")], startId: "s-133" });
       expect(giftDot()).toBeUndefined();
+      await settle();
     });
 
-    it("sticks the dot where the sticker's cut line comes nearest its top-right corner", () => {
+    it("sticks the dot where the sticker's cut line comes nearest its top-right corner", async () => {
       const layer = () => document.querySelector<HTMLElement>(".sticker-detail__dot-layer");
       // A diamond leaves its box's corner empty: the nearest point is halfway along its top-right side.
       const diamond = { width: 100, height: 100, outline: "M50 0L100 50L50 100L0 50Z" };
@@ -338,9 +393,10 @@ describe("StickerDetail", () => {
       expect(
         ["--spot-x", "--spot-y"].map((p) => Number(layer()?.style.getPropertyValue(p))),
       ).toEqual([0.75, 0.25]);
+      await settle();
     });
 
-    it("says its state only, Take it out under it, and keeps Give the key while it's in the bag", () => {
+    it("says its state only, Take it out under it, and keeps Give the key while it's in the bag", async () => {
       openInFlight(inFlight(133, "sent", "bob"));
       expect(note()).toBe(i18next.t(($) => $.stickerBoard.detail.onItsWayTo, { receiver: "@bob" }));
       expect(button(GIVE)).toBeUndefined();
@@ -354,6 +410,7 @@ describe("StickerDetail", () => {
       expect(giveIsTheKey()).toBe(true);
       press(GIVE);
       expect(onGive).toHaveBeenCalledExactlyOnceWith(packed);
+      await settle();
     });
 
     it("takes a gift in the bag out at once, and a sent one only once its confirm says so", async () => {
@@ -530,7 +587,7 @@ describe("StickerDetail", () => {
     expect(stickerDetail.mock.calls.length).toBeGreaterThan(calls);
   });
 
-  it("names someone else's artist on a line of its own, outside the fine print", () => {
+  it("names someone else's artist on a line of its own, outside the fine print", async () => {
     const artist = {
       id: "artist-mika",
       handle: "Mika_draws_every_day_in_tokyo_32",
@@ -541,6 +598,7 @@ describe("StickerDetail", () => {
     const chip = document.querySelector(".sticker-detail__artist .artist-chip");
     expect(chip?.textContent).toContain("@Mika_draws_every_day_in_tokyo_32");
     expect(chip?.closest(".fine")).toBeNull();
+    await settle();
   });
 
   it("keeps Give as the key once gratitude is sent", async () => {
@@ -582,9 +640,10 @@ describe("StickerDetail", () => {
       );
     });
 
-    it("thinks of nothing on any other sticker", () => {
+    it("thinks of nothing on any other sticker", async () => {
       openOn(sticker(151, day(20)));
       expect(thought()).toBeNull();
+      await settle();
     });
   });
 
@@ -739,7 +798,7 @@ describe("StickerDetail", () => {
   });
 
   it("keeps focus in the detail when Try again goes as it checks the sticker again", async () => {
-    open();
+    open({}, emptyApi());
     await settle();
     const tryAgain = document.querySelector<HTMLButtonElement>(
       ".sticker-detail__check-failed button",
@@ -749,6 +808,7 @@ describe("StickerDetail", () => {
     act(() => tryAgain?.click());
     expect(document.querySelector(".sticker-detail__check-failed")).toBeNull();
     expect(focusInDetail()).toBe(true);
+    await settle();
   });
 
   describe("its timelapse", () => {
@@ -805,6 +865,7 @@ describe("StickerDetail", () => {
       const { canvas } = player.options;
       expect([canvas.width, canvas.height]).toEqual([0, 0]);
       expect(overlay()).toBeNull();
+      await settle();
     });
 
     it("shows Timelapse from the board's sticker before its detail is read", () => {
@@ -824,6 +885,7 @@ describe("StickerDetail", () => {
       expect(heading()).toBe("No.0117");
       expect(timelapseButton()).toBeNull();
       expect(focusInDetail()).toBe(true);
+      await settle();
     });
 
     it("plays on, with focus where it was, when another sticker's mark lands", async () => {
@@ -883,7 +945,7 @@ describe("StickerDetail", () => {
       markStickerNsfw: ApiClient["markStickerNsfw"],
       shown: BoardStickerView = sticker(133, day(14)),
       me?: Me,
-    ) => openAsArtist(shown, emptyApi({ markStickerNsfw }), me);
+    ) => openAsArtist(shown, detailApi({ markStickerNsfw }), me);
     const markIt = () => changeMarkThrough(words);
     const showSwitch = strings.stickerBoard.settings.nsfw.show.en;
 
@@ -914,9 +976,10 @@ describe("StickerDetail", () => {
       // An 18+ sticker offers Remove 18+ in its place.
       openOn(vi.fn(), sticker(133, day(14), { nsfw: true }));
       expect(button(words.open.en)).toBeUndefined();
+      await settle();
     });
 
-    it("brings its confirm's buttons into view as it opens, with focus on Cancel", () => {
+    it("brings its confirm's buttons into view as it opens, with focus on Cancel", async () => {
       const scroll = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
       openOn(vi.fn());
       press(words.open.en);
@@ -928,9 +991,10 @@ describe("StickerDetail", () => {
       for (const held of [cancel, button(words.confirm.en)])
         expect(held && shown.contains(held)).toBe(true);
       expect(document.activeElement).toBe(cancel);
+      await settle();
     });
 
-    it("asks first, saying that a copy may have been kept, and Cancel marks nothing", () => {
+    it("asks first, saying that a copy may have been kept, and Cancel marks nothing", async () => {
       const markStickerNsfw = vi.fn<ApiClient["markStickerNsfw"]>();
       openOn(markStickerNsfw);
       press(words.open.en);
@@ -952,6 +1016,7 @@ describe("StickerDetail", () => {
       expect(document.activeElement).toBe(button(words.open.en));
       expect(onClose).not.toHaveBeenCalled();
       expect(markStickerNsfw).not.toHaveBeenCalled();
+      await settle();
     });
 
     it("marks it on confirm, shows it as the answer has it, and has the board load again without the kept one", async () => {
@@ -1009,7 +1074,7 @@ describe("StickerDetail", () => {
             refuse = reject;
           }),
       );
-      open({ ownerId: TEST_OWNER.id }, emptyApi({ markStickerNsfw }));
+      open({ ownerId: TEST_OWNER.id }, detailApi({ markStickerNsfw }));
       press(words.open.en);
       press(words.confirm.en);
       press(NEXT_STICKER);
@@ -1030,14 +1095,62 @@ describe("StickerDetail", () => {
 
     it("closes on Escape while another sticker's mark is on its way", async () => {
       const markStickerNsfw = vi.fn<ApiClient["markStickerNsfw"]>(() => new Promise(() => {}));
-      open({ ownerId: TEST_OWNER.id }, emptyApi({ markStickerNsfw }));
+      const animations = holdAnimations();
+      open(
+        { ownerId: TEST_OWNER.id },
+        emptyApi({
+          markStickerNsfw,
+          stickerDetail: () => new Promise(() => {}),
+        }),
+      );
       press(words.open.en);
       press(words.confirm.en);
       press(NEXT_STICKER);
       key("Escape");
-      await settle();
-      // The close reaches its caller after the sticker's return animation finishes.
-      await expect.poll(() => onClose.mock.calls.length).toBe(1);
+
+      const closing = document.querySelector<HTMLElement>('[role="dialog"]');
+      if (!closing)
+        throw new Error("Escape removed the sticker detail before its animation finished");
+      expect(closing.style.pointerEvents).toBe("none");
+      const reverseAnimations = animations.filter((animation) => animation.reversed);
+      expect(reverseAnimations.length).toBeGreaterThan(0);
+      expect(onClose).not.toHaveBeenCalled();
+
+      for (const animation of reverseAnimations.slice(1)) animation.finish();
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(onClose).not.toHaveBeenCalled();
+
+      reverseAnimations[0]?.finish();
+      await vi.waitFor(() => expect(onClose).toHaveBeenCalledOnce(), { timeout: 1000 });
+    });
+
+    it("reverses its opening on Escape before it has finished opening", async () => {
+      const animations = holdAnimations();
+      open({}, emptyApi({ stickerDetail: () => new Promise(() => {}) }));
+      const openingAnimationCount = animations.length;
+      expect(openingAnimationCount).toBeGreaterThan(0);
+
+      key("Escape");
+
+      const closing = document.querySelector<HTMLElement>('[role="dialog"]');
+      if (!closing)
+        throw new Error("Escape removed the sticker detail before its animation finished");
+      expect(closing.style.pointerEvents).toBe("none");
+      expect(animations).toHaveLength(openingAnimationCount);
+      const reverseAnimations = animations.filter((animation) => animation.reversed);
+      expect(reverseAnimations).toHaveLength(openingAnimationCount);
+      expect(onClose).not.toHaveBeenCalled();
+
+      for (const animation of reverseAnimations.slice(1)) animation.finish();
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(onClose).not.toHaveBeenCalled();
+
+      reverseAnimations[0]?.finish();
+      await vi.waitFor(() => expect(onClose).toHaveBeenCalledOnce(), { timeout: 1000 });
     });
 
     it.each([
@@ -1103,10 +1216,10 @@ describe("StickerDetail", () => {
     const openOn = (
       unmarkStickerNsfw: ApiClient["unmarkStickerNsfw"],
       shown: BoardStickerView = marked(),
-    ) => openAsArtist(shown, emptyApi({ unmarkStickerNsfw }));
+    ) => openAsArtist(shown, detailApi({ unmarkStickerNsfw }));
     const unmarkIt = () => changeMarkThrough(words);
 
-    it("is offered in Mark 18+'s place to its Original Artist only, on a sticker marked 18+", () => {
+    it("is offered in Mark 18+'s place to its Original Artist only, on a sticker marked 18+", async () => {
       openOn(vi.fn());
       expect(button(words.open.en)).toBeDefined();
       expect(button(strings.stickerBoard.detail.markNsfw.open.en)).toBeUndefined();
@@ -1114,9 +1227,10 @@ describe("StickerDetail", () => {
       expect(button(words.open.en)).toBeUndefined();
       openOn(vi.fn(), sticker(133, day(14)));
       expect(button(words.open.en)).toBeUndefined();
+      await settle();
     });
 
-    it("asks first, saying what taking it off does, and Cancel leaves the mark on", () => {
+    it("asks first, saying what taking it off does, and Cancel leaves the mark on", async () => {
       const unmarkStickerNsfw = vi.fn<ApiClient["unmarkStickerNsfw"]>();
       openOn(unmarkStickerNsfw);
       press(words.open.en);
@@ -1126,6 +1240,7 @@ describe("StickerDetail", () => {
       expect(confirm()).toBeNull();
       expect(document.activeElement).toBe(button(words.open.en));
       expect(unmarkStickerNsfw).not.toHaveBeenCalled();
+      await settle();
     });
 
     it("takes the mark off on confirm, shows it unblurred without pink foil, and has the board load again without the kept one", async () => {

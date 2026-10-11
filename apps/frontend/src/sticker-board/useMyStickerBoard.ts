@@ -3,6 +3,7 @@ import { QueryAnswers, useApiQuery, type Query } from "../api/useApiQuery";
 import { onGratitudeLeftOutbox } from "../gratitude/gratitudeOutbox";
 import { noteBootMilestone } from "../performance/bootMilestones";
 import { useNsfwOptInKey } from "../stickers/nsfw";
+import type { BoardPlacementSaves } from "./boardPlacementSaves";
 
 const answers = new QueryAnswers<StickerBoard>();
 const changes = new Set<() => void>();
@@ -35,11 +36,14 @@ export function onMyStickerBoardChanged(changed: () => void): () => void {
  * one answer, so each shows the last one at once while it loads again, but for the board with
  * `ownLoadOnly`, which draws the phone's board until a load of its own lands.
  */
-export const useMyStickerBoard = ({ ownLoadOnly = false } = {}): Query<StickerBoard> =>
+export const useMyStickerBoard = ({
+  ownLoadOnly = false,
+  placements,
+}: { ownLoadOnly?: boolean; placements?: BoardPlacementSaves } = {}): Query<StickerBoard> =>
   useApiQuery(
     useNsfwOptInKey("sticker-board/me"),
     async (api) => {
-      const board = await api.stickerBoard();
+      const board = await (placements ? placements.readBoard() : api.stickerBoard());
       noteBootMilestone("board JSON", `${board.boardStickers.length} stickers`);
       return board;
     },

@@ -93,6 +93,77 @@ function holdsAllInk(cut: DieCut, ink: Pixels) {
 }
 
 describe("dieCut", () => {
+  it("keeps an opaque one-pixel island across cut-grid boundaries", () => {
+    for (const [width, height, x, y] of [
+      [2048, 1024, 127, 219],
+      [2048, 1024, 128, 220],
+      [1024, 2048, 1, 2047],
+      [374, 748, 58, 58],
+    ]) {
+      const ink = sheet(width, height, (px, py) => px === x && py === y);
+      const cut = cutOf(ink);
+      const cx = Math.floor((x + 0.5) * cut.scale) + cut.pad;
+      const cy = Math.floor((y + 0.5) * cut.scale) + cut.pad;
+      expect(cut.mask[cy * cut.width + cx]).toBe(1);
+      expect(piecesOf((i) => cut.mask[i] === 1, cut.width, cut.height)).toBe(1);
+      expect(cut.bounds.x0).toBeGreaterThan(0);
+      expect(cut.bounds.y0).toBeGreaterThan(0);
+      expect(cut.bounds.x1).toBeLessThan(cut.width - 1);
+      expect(cut.bounds.y1).toBeLessThan(cut.height - 1);
+    }
+  });
+
+  it("keeps detached fine ink beside a larger shape", () => {
+    for (const [width, height, x, y] of [
+      [2048, 1024, 13, 17],
+      [1024, 2048, 1018, 2042],
+    ]) {
+      const ink = sheet(
+        width,
+        height,
+        union(
+          rect(
+            Math.floor(width / 3),
+            Math.floor(height / 3),
+            Math.floor(width / 2),
+            Math.floor(height / 2),
+          ),
+          (px, py) => px === x && py === y,
+        ),
+      );
+      const cut = cutOf(ink);
+      const cx = Math.floor((x + 0.5) * cut.scale) + cut.pad;
+      const cy = Math.floor((y + 0.5) * cut.scale) + cut.pad;
+      expect(cut.mask[cy * cut.width + cx]).toBe(1);
+      expect(onePiece(cut)).toBe(true);
+      expect(cut.bounds.x0).toBeGreaterThan(0);
+      expect(cut.bounds.y0).toBeGreaterThan(0);
+      expect(cut.bounds.x1).toBeLessThan(cut.width - 1);
+      expect(cut.bounds.y1).toBeLessThan(cut.height - 1);
+    }
+  });
+
+  it("ignores source alpha at or below the existing threshold", () => {
+    expect(
+      dieCut(
+        sheet(2048, 1024, (x, y) => x === 11 && y === 17, 18),
+        BORDER,
+      ),
+    ).toBeNull();
+    const ink = sheet(2048, 1024, (x, y) => x === 11 && y === 17, 19);
+    const cut = cutOf(ink);
+    const cx = Math.floor(11.5 * cut.scale) + cut.pad;
+    const cy = Math.floor(17.5 * cut.scale) + cut.pad;
+    expect(cut.mask[cy * cut.width + cx]).toBe(1);
+  });
+
+  it("keeps a cut below the full-bleed threshold shaped to its ink", () => {
+    const ink = sheet(100, 100, rect(20, 0, 78, 99));
+    const cut = cutOf(ink);
+    expect(cut.square).toBe(false);
+    expect(holdsAllInk(cut, ink)).toBe(true);
+  });
+
   it("finds nothing to cut on a blank sheet, or one with only ink too faint to show", () => {
     const blank = sheet(80, 60, () => false);
     const faint = sheet(80, 60, disk(40, 30, 10), 12);

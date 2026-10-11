@@ -13,6 +13,7 @@ const LOGGED_ROUTES = new Set([
   "/api/gifts/:giftId/receive",
   "/api/gifts/:giftId/deposit",
   "/api/gifts/:giftId/shared",
+  "/api/gifts/:giftId/message-attempt",
   "/api/gifts/:giftId/take-out",
 ]);
 

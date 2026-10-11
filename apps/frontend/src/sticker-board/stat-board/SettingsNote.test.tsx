@@ -147,6 +147,7 @@ describe("the Settings note's language", () => {
   it("reads in Japanese, naming each language in its own language", async () => {
     await i18next.changeLanguage("ja");
     const host = render(saving());
+    await act(async () => {});
     expect(host.querySelector("h3")?.textContent).toBe(
       i18next.t(($) => $.stickerBoard.settings.title, { lng: "ja" }),
     );
@@ -167,8 +168,9 @@ describe("the Settings note's 18+ switch", () => {
   const keepABoard = () =>
     keepBoard(TEST_ME.id, { owner: toPerson(TEST_OWNER), stickers: [] }, forgetsSoFar());
 
-  it("is off until turned on", () => {
+  it("is off until turned on", async () => {
     const host = renderNote({});
+    await act(async () => {});
     expect(switchOf(host).checked).toBe(false);
     expect(switchOf(host).closest("label")?.textContent).toBe(
       i18next.t(($) => $.stickerBoard.settings.nsfw.show),
@@ -229,6 +231,7 @@ describe("the Settings note's 18+ switch", () => {
   it("reads in Japanese", async () => {
     await i18next.changeLanguage("ja");
     const host = renderNote({});
+    await act(async () => {});
     expect(host.querySelector("label:has(input[role='switch'])")?.textContent).toBe(
       i18next.t(($) => $.stickerBoard.settings.nsfw.show, { lng: "ja" }),
     );
@@ -264,8 +267,9 @@ describe("the Settings note's Kyoto Seika Practice Mode", () => {
     expect(host.querySelector('[role="status"]')).toBeNull();
   });
 
-  it("names its switch for screen readers without its censor bar", () => {
+  it("names its switch for screen readers without its censor bar", async () => {
     const host = renderNote({});
+    await act(async () => {});
     expect(switchIn(host).getAttribute("aria-label")).toBe(
       stickerBoard.settings.kyotoSeika.spokenName.en,
     );

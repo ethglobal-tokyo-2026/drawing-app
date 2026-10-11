@@ -13,7 +13,7 @@ import {
   type Placement,
 } from "./placement";
 import type { StickerTrayHandle } from "./tray/StickerTray";
-import { STEP_SAVE_IDLE_MS, useBoardGestures } from "./useBoardGestures";
+import { STEP_SAVE_IDLE_MS, UncommittedBoardSpots, useBoardGestures } from "./useBoardGestures";
 import { testBoardSticker } from "./testBoardSticker";
 
 type Options = Parameters<typeof useBoardGestures>[0];
@@ -137,6 +137,23 @@ afterEach(() => {
 });
 
 describe("useBoardGestures", () => {
+  it("exposes only uncommitted positions, clearing settled steps and canceled drags", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const uncommittedSpots = new UncommittedBoardSpots();
+    show({ uncommittedSpots });
+    press("ArrowLeft", stickerEl());
+    expect(uncommittedSpots.read().get("a")?.phone?.x).toBeLessThan(sticker.placement.x);
+    act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    expect(uncommittedSpots.read().size).toBe(0);
+    act(() => {
+      point(stickerEl(), "pointerdown", 1, 150, 300);
+      point(stickerEl(), "pointermove", 1, 200, 300);
+    });
+    expect(uncommittedSpots.read().get("a")?.phone?.x).toBeGreaterThan(sticker.placement.x);
+    act(() => void point(stickerEl(), "pointercancel", 1, 200, 300));
+    expect(uncommittedSpots.read().size).toBe(0);
+  });
+
   it("hands a pinch to the fingers still down when one of its pair lifts, from where the sticker is", () => {
     const onCommit = vi.fn<Options["onCommit"]>();
     show({ onCommit });
@@ -519,11 +536,13 @@ describe("useBoardGestures' focus on a sticker that leaves the board", () => {
     elsewhere.remove();
   });
 
-  it("moves on at once on Remove, to the Zipper when it was the last sticker", () => {
+  it("moves on at once on Remove, to the Zipper when it was the last sticker", async () => {
     const focusZipper = vi.fn();
     showRow([a], trayWith({ focusZipper }), "a");
     act(() => stickerEl("a").focus());
-    press("Delete", stickerEl("a"));
-    expect(focusZipper).toHaveBeenCalledOnce();
+    await act(async () => {
+      keyDown("Delete", stickerEl("a"));
+      expect(focusZipper).toHaveBeenCalledOnce();
+    });
   });
 });

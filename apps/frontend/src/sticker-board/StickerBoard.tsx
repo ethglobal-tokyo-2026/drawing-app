@@ -15,13 +15,7 @@ import { flushSync } from "react-dom";
 import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
-import {
-  toApiSpots,
-  toPerson,
-  toRecordPlacement,
-  type PersonView,
-  type StickerView,
-} from "../api/views";
+import { toPerson, type PersonView, type StickerView } from "../api/views";
 import { GiftReceivedNotice } from "../giving/GiftReceivedNotice";
 import {
   markNoticed,
@@ -83,7 +77,6 @@ import {
   freeSpot,
   kept,
   knobHidden,
-  layoutsIn,
   nextZ,
   roundSpot,
   sizeOf,
@@ -107,7 +100,7 @@ import {
 } from "./boardComplete";
 import { markGreeted, owesGreeting } from "./artistChipGreeting";
 import { markChipsPlayed } from "./boardSettled";
-import { deriveLargeLayout, saveDerivedLayout, type LargeSpot } from "./largeLayout";
+import { deriveLargeLayout, type LargeSpot } from "./largeLayout";
 import { forgetsSoFar, keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
@@ -121,11 +114,12 @@ import { ThoughtLayer, useSubjectsPeek } from "./subjectsPeek";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
 import { trayProblemKey, trayProblemWords, type TrayProblem } from "./tray/trayProblem";
-import { useBoardGestures, type SettledStep } from "./useBoardGestures";
+import { UncommittedBoardSpots, useBoardGestures, type SettledStep } from "./useBoardGestures";
 import { useBoardLayout, useBoardSize } from "./useBoardSize";
 import { CreasesContext, useCreases } from "./useCreases";
 import { detailReadsKey, detailsAhead, preloadStickerDetails } from "./stickerDetailQuery";
 import { onMyStickerBoardChanged, useMyStickerBoard } from "./useMyStickerBoard";
+import { useBoardPlacementSaves } from "./BoardPlacementSavesProvider";
 import "./StickerBoard.css";
 
 // The Zipper shows on the board at rest, so the sticker tray's code starts loading with the board's.
@@ -177,35 +171,6 @@ function zOnTop(stickers: readonly BoardSticker[], id: string) {
   const own = stickers.find((s) => s.id === id)?.placement.z ?? 0;
   const top = nextZ(stickers.filter((s) => s.id !== id).map((s) => s.placement));
   return own >= top ? own : top;
-}
-
-/** A sticker's spots that didn't save, the layouts they're in, and why. */
-interface Unsaved {
-  error: ApiError;
-  layouts: ReadonlySet<BoardLayout>;
-}
-
-/** `was` after a save of `layouts` for `ids`: failed with `error`, or saved when there's none. */
-function unsavedAfter(
-  was: ReadonlyMap<string, Unsaved>,
-  ids: readonly string[],
-  layouts: readonly BoardLayout[],
-  error: ApiError | null,
-): ReadonlyMap<string, Unsaved> {
-  if (!error && !ids.some((id) => was.has(id))) return was;
-  const next = new Map(was);
-  for (const id of ids) {
-    const before = next.get(id);
-    const left = new Set(before?.layouts);
-    for (const layout of layouts) {
-      if (error) left.add(layout);
-      else left.delete(layout);
-    }
-    const reason = error ?? before?.error;
-    if (left.size > 0 && reason) next.set(id, { error: reason, layouts: left });
-    else next.delete(id);
-  }
-  return next;
 }
 
 /** A sticker's spots now, in `layouts`, to save again. */
@@ -268,6 +233,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const { t, i18n } = useTranslation();
   const layout = useBoardLayout();
   const stage = useRef<HTMLDivElement>(null);
+  const [uncommittedSpots] = useState(() => new UncommittedBoardSpots());
   /** The board's face, which the sticker tray runs down the right edge of. */
   const [face, setFace] = useState<HTMLDivElement | null>(null);
   const tray = useRef<StickerTrayHandle>(null);
@@ -277,6 +243,14 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const statBoard = useRef<StatBoardHandle>(null);
   const api = useApi();
   const account = useMe();
+  const {
+    saves,
+    state: { unsaved, version },
+  } = useBoardPlacementSaves();
+  const save = useCallback(
+    (sticker: Pick<BoardSticker, "id" | "no">, spots: Spots) => saves.save(sticker, spots),
+    [saves],
+  );
   // Arrange's step tiles stay out for every selection once opened, on every visit from this device.
   const [arrangeOpen, setArrangeOpen] = useState(() => arrangeLeftOpen(account.id));
   const openArrange = (open: boolean) => {
@@ -302,7 +276,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
    * spots in this screen's layout.
    */
   const [fromPhone] = useState(() => {
-    const stored = keptBoardFor(account.id);
+    const kept = keptBoardFor(account.id);
+    const stored = kept && {
+      ...kept,
+      stickers: placeUnplaced(kept.stickers, saves.pendingSpots()).stickers,
+    };
     return stored && (layout === "phone" || hasLargeLayout(stored.stickers)) ? stored : null;
   });
   /** The board's stickers as loaded and moved, with their spots in both layouts; `stickers` shows them. */
@@ -318,6 +296,41 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
    * moved from these wins over a load's.
    */
   const [drawnFrom, setDrawnFrom] = useState(() => spotsById(fromPhone?.stickers ?? []));
+  const [saveVersion, setSaveVersion] = useState(version);
+  const [drawnPending, setDrawnPending] = useState(() => saves.pendingSpots());
+  if (saveVersion !== version) {
+    setSaveVersion(version);
+    const pending = saves.pendingSpots();
+    setDrawnPending(pending);
+    // Conditional large-layout initialization can return another device's spot after a tab remount.
+    // Adopt it only while the displayed spot is still the one that request started from.
+    const changed = new Map<string, Spots>();
+    const uncommitted = uncommittedSpots.read();
+    const next = loaded?.map((s) => {
+      const spots: Spots = {};
+      for (const layout of ["phone", "large"] as const) {
+        const before = drawnPending.get(s.id)?.[layout];
+        const after = pending.get(s.id)?.[layout];
+        if (
+          before &&
+          after &&
+          !uncommitted.get(s.id)?.[layout] &&
+          samePlace(s.placements[layout], before) &&
+          !samePlace(before, after)
+        )
+          spots[layout] = after;
+      }
+      if (!spots.phone && !spots.large) return s;
+      changed.set(s.id, spots);
+      return { ...s, placements: { ...s.placements, ...spots } };
+    });
+    if (next && changed.size > 0) {
+      setStickers(next);
+      setDrawnFrom(
+        (was) => new Map([...was].map(([id, spots]) => [id, { ...spots, ...changed.get(id) }])),
+      );
+    }
+  }
   const owner = adopted?.owner ?? null;
   // A load's owner is you, with the opt-in its images were picked for: the browser keeps a drawing
   // it has shown, so until a load under your opt-in now is adopted, NSFW stickers show none, and the
@@ -327,8 +340,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     () => loaded && shownIn(layout, imagesCurrent ? loaded : withoutNsfwDrawings(loaded)),
     [loaded, imagesCurrent, layout],
   );
-  /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
-  const [unsaved, setUnsaved] = useState<ReadonlyMap<string, Unsaved>>(() => new Map());
   /** What the sticker tray couldn't do, said in an alert until it's dismissed. */
   const [trayProblems, setTrayProblems] = useState<readonly TrayProblem[]>([]);
   const addTrayProblem = useCallback(
@@ -402,47 +413,9 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // The gratitude mini-game covers the board, so the tilt and its sheen sweeps rest while it plays.
   useLight(!turned && !gratitudeFor);
 
-  /**
-   * Stickers whose spots are saving, each with the spots waiting to go once that save settles. One
-   * save of a sticker at a time, so an older spot can't land on the server last; spots that wait
-   * merge, the latest in each layout winning.
-   */
-  const saving = useRef(new Map<string, Spots | null>());
-  const save = useCallback(
-    (sticker: Pick<BoardSticker, "id" | "no">, spots: Spots) => {
-      const inFlight = saving.current;
-      if (inFlight.has(sticker.id)) {
-        inFlight.set(sticker.id, { ...inFlight.get(sticker.id), ...spots });
-        return;
-      }
-      const send = (body: Spots) => {
-        inFlight.set(sticker.id, null);
-        const after = (failure: ApiError | null) => {
-          const next = inFlight.get(sticker.id);
-          if (next) {
-            // A failed save's spots go again with the ones that waited, the waiting ones winning.
-            send(failure ? { ...body, ...next } : next);
-            if (failure) return;
-          } else inFlight.delete(sticker.id);
-          setUnsaved((was) => unsavedAfter(was, [sticker.id], layoutsIn(body), failure));
-        };
-        api.saveStickerPlacement(sticker.id, toApiSpots(body)).then(
-          () => after(null),
-          (error: unknown) => {
-            const failure = apiError(error);
-            console.error(`Saving where ${formatNo(sticker.no)} sits failed`, failure);
-            after(failure);
-          },
-        );
-      };
-      send(spots);
-    },
-    [api],
-  );
-
   // The board mounts anew on every visit, so its load is its refresh. An answer kept from an earlier
   // visit predates that visit's moves, which the phone's board holds, so it waits for its own.
-  const board = useMyStickerBoard({ ownLoadOnly: true });
+  const board = useMyStickerBoard({ ownLoadOnly: true, placements: saves });
   const answer = board.state === "ready" ? board.data : null;
   /** The server's answer the stickers were last adopted from. */
   const [adoptedAnswer, setAdoptedAnswer] = useState<typeof answer>(null);
@@ -462,12 +435,20 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     setNamedIn(i18n.language);
     const fresh = answer.boardStickers.map(toBoardSticker);
     // Moves made since the last load, or while this one loaded, stay; a language change keeps every spot.
+    const overrides = new Map(saves.overridesFor(answer));
+    for (const [id, spots] of movedSince(
+      loaded ?? [],
+      answer === adoptedAnswer ? new Map() : drawnFrom,
+    ))
+      overrides.set(id, { ...overrides.get(id), ...spots });
+    for (const [id, spots] of uncommittedSpots.read())
+      overrides.set(id, { ...overrides.get(id), ...spots });
     const { stickers: next, placed } = placeUnplaced(
       fresh,
-      movedSince(loaded ?? [], answer === adoptedAnswer ? new Map() : drawnFrom),
+      overrides,
       measured ? { [layout]: measured } : {},
     );
-    setDrawnFrom(spotsById(fresh));
+    setDrawnFrom(spotsById(next));
     setAdopted({
       owner: toPerson(answer.owner),
       stickers: next,
@@ -497,6 +478,9 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       setDerivedLayout(derived);
     }
   }
+  useEffect(() => {
+    if (adoptedAnswer) saves.adopted(adoptedAnswer);
+  }, [saves, adoptedAnswer]);
   // Each spot the board found is saved, so the sticker stays there.
   useEffect(() => {
     for (const { sticker, spots } of newlyPlaced) save(sticker, spots);
@@ -506,45 +490,9 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // so, and its retry saves each sticker's large spot.
   useEffect(() => {
     if (derivedLayout.length === 0) return;
-    saveDerivedLayout(api, derivedLayout).then(
-      (saved) => {
-        const ours = new Map(derivedLayout.map((d) => [d.id, d.placement]));
-        const theirs = new Map(
-          saved.flatMap(({ stickerId, largePlacement }) => {
-            const spot = largePlacement && toRecordPlacement(largePlacement);
-            return spot && !samePlace(spot, ours.get(stickerId))
-              ? [[stickerId, spot] as const]
-              : [];
-          }),
-        );
-        if (theirs.size === 0) return;
-        setStickers(
-          (list) =>
-            list?.map((s) => {
-              const spot = theirs.get(s.id);
-              return spot && samePlace(s.placements.large, ours.get(s.id))
-                ? { ...s, placements: { ...s.placements, large: spot } }
-                : s;
-            }) ?? null,
-        );
-      },
-      (error: unknown) => {
-        const failure = apiError(error);
-        console.error(
-          `Saving the large layout derived from your phone's failed for ${derivedLayout.length} stickers`,
-          failure,
-        );
-        setUnsaved((was) =>
-          unsavedAfter(
-            was,
-            derivedLayout.map((d) => d.id),
-            ["large"],
-            failure,
-          ),
-        );
-      },
-    );
-  }, [api, derivedLayout]);
+    // The account store logs and retains failures for the retry alert, including while this tab is absent.
+    void saves.saveDerived(derivedLayout).catch(() => {});
+  }, [saves, derivedLayout]);
   // The first open's board completes once the fresh board's stickers have all decoded; one from the
   // phone's storage starts them decoding. A board that didn't load has nothing more coming, so what
   // waited for it goes ahead.
@@ -758,6 +706,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   useBackToClose(turned, () => turn(false));
 
   const { hold, stow, arrange, tabStop } = useBoardGestures({
+    uncommittedSpots,
     stage,
     stickers: onBoard,
     field,
@@ -1102,8 +1051,19 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         </div>
       )}
 
-      {(unsavedStickers.length > 0 || trayProblems.length > 0 || checkFailure || ticketsError) && (
+      {(unsavedStickers.length > 0 ||
+        trayProblems.length > 0 ||
+        checkFailure ||
+        ticketsError ||
+        forYou.state === "failed") && (
         <div className="board-alerts">
+          {forYou.state === "failed" && (
+            <ErrorLine detail={errorDetail(forYou.error)} onRetry={forYou.retry}>
+              {t(($) => $.stickerBoard.board.giftsDidntLoad, {
+                reason: errorMessage(forYou.error),
+              })}
+            </ErrorLine>
+          )}
           {ticketsError && (
             <ErrorLine detail={errorDetail(ticketsError)} onRetry={refreshTickets}>
               {t(($) => $.stickerBoard.board.ticketsDidntLoad, {

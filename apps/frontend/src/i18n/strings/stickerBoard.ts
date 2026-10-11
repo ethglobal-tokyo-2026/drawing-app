@@ -167,6 +167,8 @@ export const stickerBoard = {
     },
     /** Stat board, yours or someone else's: the link on the Sui address paper when its address didn't load */
     tryAgain: { en: "Try again", ja: "もう一度" },
+    /** Your stat board: the link on the Sui address paper after the wallet provider failed, which reloads Croquis */
+    reload: { en: "Reload", ja: "再読み込み" },
     /** Address dialog: screen readers' name for the X button that puts the paper back on the cork */
     close: { en: "Close", ja: "閉じる" },
     /** Address dialog: the Copy address button under the card */
@@ -284,6 +286,7 @@ export const stickerBoard = {
       failed: { en: "Privy sign-in failed: {{reason}}" },
       off: { en: "Privy is off on the dev server, where LIFF Mock signs you in" },
       tryAgain: { en: "Try again" },
+      reload: { en: "Reload" },
     },
     creases: {
       title: { en: "Creases" },
@@ -454,6 +457,11 @@ export const stickerBoard = {
     didntLoad: {
       en: "Your stickers didn’t load: {{reason}}",
       ja: "シールを読み込めませんでした：{{reason}}",
+    },
+    /** Your sticker board: the alert when gifts waiting for you couldn't load, before Try again; {{reason}} is why */
+    giftsDidntLoad: {
+      en: "Couldn’t load gifts waiting for you: {{reason}}",
+      ja: "あなたへのギフトを読み込めませんでした：{{reason}}",
     },
     /** Your sticker board: the alert, over Try again, when checking whether gratitude is waiting to be sent for the sticker that just arrived failed; {{reason}} why */
     gratitudeCheckFailed: {

@@ -6,6 +6,7 @@ import { users } from "./users.ts";
 
 /** The app's gift states, Receiving's, and the escrow's return after GIFT_EXPIRY_MS. */
 export const giftStatuses = ["packed", "sent", "received", "taken_out", "returned"] as const;
+const messageAttemptStates = ["not_started", "pending", "cancelled", "sent"] as const;
 /** The escrow's GiftStatus, and `missing` while the gift's derived ID holds no object. */
 export const escrowStatuses = [
   "missing",
@@ -36,6 +37,11 @@ export const gifts = sqliteTable(
      * it; the escrow holds the same value but can't be searched by it.
      */
     claimCommitment: text("claim_commitment").notNull().unique(),
+    /** The last attempt is durable before LINE may open; pending has no time limit. */
+    messageAttemptId: text("message_attempt_id"),
+    messageAttemptState: text("message_attempt_state", { enum: messageAttemptStates })
+      .notNull()
+      .default("not_started"),
     status: text("status", { enum: giftStatuses }).notNull().default("packed"),
     /**
      * The gift's Sui object's status: `pending` once the deposit lands, `claimed` once Receiving's
@@ -88,6 +94,15 @@ export const gifts = sqliteTable(
     index("gifts_push_due")
       .on(t.receivedAt)
       .where(sql`${t.status} = 'received' and ${t.pushedToGiverAt} is null`),
+    check("gifts_message_attempt_state", oneOf(t.messageAttemptState, messageAttemptStates)),
+    check(
+      "gifts_message_attempt_id",
+      sql`${t.messageAttemptId} is null or (${isBytes32(t.messageAttemptId)} and substr(${t.messageAttemptId}, 3) not glob '*[^0-9a-f]*')`,
+    ),
+    check(
+      "gifts_message_attempt",
+      sql`(${t.messageAttemptId} is null) = (${t.messageAttemptState} = 'not_started')`,
+    ),
     check("gifts_id", isBytes32(t.id)),
     check("gifts_claim_commitment", isBytes32(t.claimCommitment)),
     check("gifts_status", oneOf(t.status, giftStatuses)),

@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  bytes32,
   createTestDb,
   insertSticker,
   insertUser,
@@ -93,4 +94,24 @@ describe("gifts", () => {
     const id = packGift(db, sticker, giver, deposited);
     expect(refusal(() => update(id, received(giver)))).toMatch(/gifts_not_to_self/);
   });
+});
+
+it("keeps a bytes32 attempt ID exactly when a Gift Message attempt has started", () => {
+  const id = packGift(db, sticker, giver, deposited);
+  expect(db.select().from(gifts).where(eq(gifts.id, id)).get()).toMatchObject({
+    messageAttemptId: null,
+    messageAttemptState: "not_started",
+  });
+  expect(refusal(() => update(id, { messageAttemptState: "pending" }))).toMatch(
+    /gifts_message_attempt/,
+  );
+  expect(refusal(() => update(id, { messageAttemptId: bytes32("attempt") }))).toMatch(
+    /gifts_message_attempt/,
+  );
+  expect(
+    refusal(() => update(id, { messageAttemptId: "bad", messageAttemptState: "pending" })),
+  ).toMatch(/gifts_message_attempt/);
+  expect(() =>
+    update(id, { messageAttemptId: bytes32("attempt"), messageAttemptState: "pending" }),
+  ).not.toThrow();
 });

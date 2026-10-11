@@ -71,6 +71,9 @@ const closeButton = () => {
   if (!el) throw new Error("No X on screen");
   return el;
 };
+/** A browser Back lands on the entry beneath the Mini-game. */
+const back = () =>
+  act(() => void window.dispatchEvent(new PopStateEvent("popstate", { state: null })));
 /** Taps `times` times, `gapMs` apart. */
 const tapFor = async (times: number, gapMs = 150) => {
   for (let i = 0; i < times; i++) {
@@ -130,6 +133,42 @@ afterEach(() => {
 const ONE_TAP_ENDS_MS = 8000;
 
 describe("GratitudeMiniGame", () => {
+  it("Back closes a ready Mini-game without recording gratitude", () => {
+    open({ giftId: "g1" });
+    back();
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(recordGratitude).not.toHaveBeenCalled();
+  });
+
+  it("the first Back during a combo records it and keeps its receipt; the next Back closes", async () => {
+    open({ giftId: "g1" });
+    await tapFor(3, 100);
+    back();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(recordGratitude).toHaveBeenCalledOnce();
+    expect(recordGratitude.mock.calls[0]?.[0]).toMatchObject({
+      giftId: "g1",
+      hits: 3,
+      replay: { endReason: "closed" },
+    });
+    await play(ONE_TAP_ENDS_MS);
+    expect(receiptText(".hit-counter")).toContain("3 hits");
+    back();
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("a second Back during the ending closes after the combo was recorded", async () => {
+    open({ giftId: "g1" });
+    tapOnce();
+    back();
+    expect(document.querySelector(".gr")?.getAttribute("data-phase")).toBe("ending");
+    back();
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(recordGratitude).toHaveBeenCalledOnce();
+    expect(recordGratitude.mock.calls[0]?.[0].replay.endReason).toBe("closed");
+    await act(async () => {});
+  });
+
   it("sends one tap's gratitude once its bar runs out, and the receipt says so", async () => {
     open();
     tapOnce();

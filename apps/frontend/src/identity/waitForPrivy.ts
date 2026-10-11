@@ -62,6 +62,10 @@ export function waitForPrivy<T>(made: PrivyMade<T>): Promise<T> {
         fail(new ApiError(0, { error: "line_token_expired" }));
         return;
       }
+      if (privy.state === "failed" && privy.reloadRequired) {
+        fail(notReady(privy.reason));
+        return;
+      }
       const failed = privy.state === "failed" ? privy.reason : made.failure();
       if (failed === null) return;
       if (retried || (privy.state !== "failed" && !made.askAgain)) {

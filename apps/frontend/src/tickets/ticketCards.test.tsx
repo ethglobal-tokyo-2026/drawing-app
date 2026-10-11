@@ -17,7 +17,27 @@ import { OutOfTickets } from "./OutOfTickets";
 import { formatRefillTime } from "./refill";
 import { ReserveTicketCheckout } from "./ReserveTicketCheckout";
 import { StartDrawing } from "./StartDrawing";
+import { TicketsNotLoaded } from "./TicketsNotLoaded";
 import { useTickets } from "./useTickets";
+
+const backEntries = vi.hoisted(() => [] as Array<{ close: () => boolean | void }>);
+vi.mock("../ui/useBackToClose", async () => {
+  const { useEffect, useRef } = await import("react");
+  return {
+    useBackToClose(open: boolean, close: () => boolean | void) {
+      const latest = useRef(close);
+      latest.current = close;
+      useEffect(() => {
+        if (!open) return;
+        const entry = { close: () => latest.current() };
+        backEntries.push(entry);
+        return () => {
+          backEntries.splice(backEntries.indexOf(entry), 1);
+        };
+      }, [open]);
+    },
+  };
+});
 
 vi.mock("../payments/jpyc", () => ({
   getJpycBalance: vi.fn(),
@@ -130,6 +150,16 @@ describe("OutOfTickets", () => {
     expect(onBoard).toHaveBeenCalledOnce();
   });
 
+  it("gives Back one entry that uses the same board exit as Escape", async () => {
+    await render(<Host />, serving(tickets(3, 0)).api);
+    expect(backEntries).toHaveLength(1);
+    act(() => {
+      backEntries[0]?.close();
+    });
+    expect(onBoard).toHaveBeenCalledOnce();
+    expect(onShop).not.toHaveBeenCalled();
+  });
+
   describe("lays out the day's stubs", () => {
     const card = (state: Tickets) => (
       <OutOfTickets tickets={state} onShop={onShop} onStartDrawing={onDraw} onBoard={onBoard} />
@@ -171,6 +201,27 @@ describe("StartDrawing", () => {
     const ids = document.querySelector("[role=dialog]")?.getAttribute("aria-describedby") ?? "";
     return ids.split(" ").map((id) => document.getElementById(id)?.textContent);
   };
+
+  it("gives Back one entry for the same board exit as Escape", async () => {
+    await start(tickets(1, 0));
+    expect(backEntries).toHaveLength(1);
+    act(() => {
+      backEntries[0]?.close();
+    });
+    expect(onBoard).toHaveBeenCalledOnce();
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it("keeps a Back guard while leaving after a ticket is spent", async () => {
+    await start(tickets(1, 0));
+    expect(backEntries).toHaveLength(1);
+    view?.rerender(card(tickets(1, 0), { leaving: true }));
+    expect(backEntries).toHaveLength(1);
+    expect(backEntries[0]?.close()).toBe(false);
+    expect(onBoard).not.toHaveBeenCalled();
+    view?.unmount();
+    expect(backEntries).toHaveLength(0);
+  });
 
   it("spends a daily ticket while there are any", async () => {
     await start(tickets(1, 4));
@@ -267,6 +318,22 @@ describe("StartDrawing", () => {
   });
 });
 
+describe("TicketsNotLoaded", () => {
+  it("gives Back one entry while tickets are loading and after an error", async () => {
+    const card = (error: ApiError | null) => (
+      <TicketsNotLoaded error={error} onRetry={vi.fn()} onBoard={onBoard} />
+    );
+    await render(card(null));
+    expect(backEntries).toHaveLength(1);
+    view?.rerender(card(new ApiError(0, { error: "network" })));
+    expect(backEntries).toHaveLength(1);
+    act(() => {
+      backEntries[0]?.close();
+    });
+    expect(onBoard).toHaveBeenCalledOnce();
+  });
+});
+
 const SUI_WALLET = `0x${"1".repeat(64)}`;
 const TX_DIGEST = "D".repeat(44);
 /** 1 JPYC in base units. */
@@ -340,6 +407,32 @@ describe("ReserveTicketCheckout", () => {
     setPrivyStatus({ state: "signed-in", userId: "privy-me", suiWallet: SUI_WALLET });
     vi.mocked(getJpycBalance).mockResolvedValue(1000n * JPYC);
     vi.mocked(signSponsored).mockResolvedValue({ digest: TX_DIGEST, signature: SIGNATURE });
+  });
+
+  it("gives checkout one Back entry and the same close action as Escape", async () => {
+    await open();
+    expect(backEntries).toHaveLength(1);
+    act(() => {
+      backEntries[0]?.close();
+    });
+    expect(onBoard).toHaveBeenCalledOnce();
+  });
+
+  it("keeps its Back entry during payment and closes on a later Back", async () => {
+    let answer = (_: Tickets) => {};
+    await open(
+      checkoutApi({ buyTickets: () => new Promise<Tickets>((resolve) => (answer = resolve)) }),
+    );
+    click("Pay");
+    await settle(0);
+    expect(backEntries).toHaveLength(1);
+    expect(backEntries[0]?.close()).toBe(false);
+    expect(onBoard).not.toHaveBeenCalled();
+    expect(backEntries).toHaveLength(1);
+    answer(tickets(3, 1));
+    await settle(500);
+    expect(backEntries[0]?.close()).toBe(true);
+    expect(onBoard).toHaveBeenCalledOnce();
   });
 
   it("starts a purchase of the chosen pack, signs the payment the server built, and shows the tickets the server added", async () => {

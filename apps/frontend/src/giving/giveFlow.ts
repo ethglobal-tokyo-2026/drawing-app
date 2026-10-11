@@ -40,7 +40,7 @@ interface PackingWait {
  * Giving through a LINE chat, from packing to "Closed and sent" or back out of the bag. `recordError`
  * means the step happened but the server couldn't record it; the gift may still read as packed.
  */
-export type GiveFlowState =
+type GiveFlowStep =
   /** The bag animation has started while the sticker is prepared. Giving opens on it. */
   | ({ step: "packed" } & PackingWait)
   /** Waiting for the sticker to be ready before opening LINE's picker. */
@@ -54,12 +54,17 @@ export type GiveFlowState =
   /** The picker closed without sending. */
   | { step: "notSent"; recordError?: Problem }
   /** LINE didn't say whether the gift message went out, so it isn't offered again. */
-  | { step: "maybeSent"; confirming?: boolean }
+  | { step: "maybeSent"; confirming?: boolean; recordError?: Problem }
   | { step: "failed"; error: Problem; recordError?: Problem }
   /** The sticker lifts back out of the bag. */
   | { step: "takingOut" }
   /** The sticker is back out of the bag, and Giving closes. */
   | { step: "takenOut" };
+
+export type GiveFlowState = GiveFlowStep & {
+  storageError?: Problem;
+  packedForUserId?: string | null;
+};
 
 export interface GiveFlowOptions {
   sticker: GiftSticker;
@@ -98,6 +103,13 @@ export interface GiveFlow {
 interface Attempt {
   gift: Promise<PackedGift>;
   open: boolean;
+  messageAttemptId?: string;
+}
+
+/** A picker or recovery report always names the attempt that was acknowledged before it. */
+function messageAttemptId(a: Attempt): string {
+  if (!a.messageAttemptId) throw new Error("The Gift Message attempt was not recorded");
+  return a.messageAttemptId;
 }
 
 /**
@@ -142,6 +154,7 @@ export function createGiveFlow({
   const listeners = new Set<() => void>();
   let state: GiveFlowState = { step: "packed" };
   let attempt: Attempt | null = null;
+  let packedForUserId: string | null | undefined;
   /** The picker the flow waits on, until LINE answers or the flow stops waiting. */
   let waiting: { a: Attempt; giftId: string } | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -169,7 +182,12 @@ export function createGiveFlow({
       packing = {};
     }
     if (next.step !== "picking") clearLateTimer();
-    state = next;
+    const storageError = backend.storageError?.();
+    state = {
+      ...next,
+      ...(packedForUserId !== undefined && { packedForUserId }),
+      ...(storageError && { storageError: describe(storageError) }),
+    };
     listeners.forEach((l) => l());
   };
   const packingState = (step: "packed" | "preparing"): GiveFlowState => ({ step, ...packing });
@@ -227,6 +245,7 @@ export function createGiveFlow({
   /** The attempt's gift message went out, or may have: the screen says so, and it isn't sent again. */
   const showMessageOut = (a: Attempt, error: GiftMessageOutError) => {
     if (attempt !== a) return;
+    a.messageAttemptId = error.attemptId;
     clearTimer();
     set(
       error.outcome === "sent"
@@ -235,15 +254,21 @@ export function createGiveFlow({
             sentAt: now(),
             ...(error.recordError !== undefined && { recordError: describe(error.recordError) }),
           }
-        : { step: "maybeSent" },
+        : {
+            step: "maybeSent",
+            ...(error.recordError !== undefined && { recordError: describe(error.recordError) }),
+          },
     );
   };
 
   /** The attempt's gift, or null when it couldn’t be packed; that failure shows once. */
   const packedGift = async (a: Attempt): Promise<PackedGift | null> => {
     try {
-      return await a.gift;
+      const packed = await a.gift;
+      if (attempt === a) packedForUserId = packed.forUserId;
+      return packed;
     } catch (error) {
+      if (attempt === a && error instanceof GiftPackagingError) packedForUserId = error.forUserId;
       if (a.open) {
         a.open = false;
         if (error instanceof GiftMessageOutError) {
@@ -298,20 +323,30 @@ export function createGiveFlow({
     const shown = () => attempt === a && state.step === (awaited ? "picking" : "maybeSent");
     if (outcome === "sent") {
       a.open = false;
-      const recordError = await record("the send", () => backend.markSent(giftId));
+      const recordError = await record("the send", () =>
+        backend.markSent(giftId, messageAttemptId(a)),
+      );
       if (shown()) set({ step: "sent", sentAt: now(), recordError });
       return;
     }
     if (!awaited) return;
     if (outcome === "cancelled") {
-      const recordError = await record("the cancel", () => backend.markCancelled(giftId));
+      const recordError = await record("the cancel", () =>
+        backend.markCancelled(giftId, messageAttemptId(a)),
+      );
+      if (recordError) a.open = false;
+      else a.messageAttemptId = undefined;
       if (shown()) set({ step: "notSent", recordError });
     } else if (outcome === "unknown") {
       a.open = false;
       if (shown()) set({ step: "maybeSent" });
     } else {
       report(`${which} wasn’t sent`, outcome.failed);
-      const recordError = await record("the failure", () => backend.markCancelled(giftId));
+      const recordError = await record("the failure", () =>
+        backend.markCancelled(giftId, messageAttemptId(a)),
+      );
+      if (recordError) a.open = false;
+      else a.messageAttemptId = undefined;
       if (shown()) {
         const cause = describe(outcome.failed);
         set({
@@ -337,13 +372,21 @@ export function createGiveFlow({
     const packed = await packedGift(a);
     if (!packed || disposed || !a.open) return;
 
+    // Retrying an unanswered begin reuses its ID only while no picker has opened.
+    a.messageAttemptId ??= `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+    try {
+      await backend.beginMessageAttempt(packed.giftId, a.messageAttemptId);
+    } catch (error) {
+      report(`${which}: the message attempt couldn’t be recorded`, error);
+      if (!disposed && a.open && attempt === a) set({ step: "failed", error: describe(error) });
+      return;
+    }
+    if (disposed || !a.open || attempt !== a) return;
     set({ step: "picking" });
     waiting = { a, giftId: packed.giftId };
     after(PICKER_ANSWER_MS, stopWaiting);
     // Due from now too, since LINE's picker may open over the page without hiding it.
     answerDue(PICKER_OPENING_MS);
-    // The picker may send from here on: a page that goes before LINE answers must ask, not send again.
-    backend.markMaybeSent(packed.giftId);
     let outcome: GiftSendOutcome | { failed: unknown };
     try {
       outcome = await sender.send(packed.message);
@@ -376,7 +419,7 @@ export function createGiveFlow({
       void (async () => {
         const { giftId } = await packingOf(a);
         const recordError = giftId
-          ? await record("the send", () => backend.markSent(giftId))
+          ? await record("the send", () => backend.markSent(giftId, messageAttemptId(a)))
           : undefined;
         if (attempt === a && state.step === "maybeSent") {
           set({ step: "sent", sentAt: now(), recordError });

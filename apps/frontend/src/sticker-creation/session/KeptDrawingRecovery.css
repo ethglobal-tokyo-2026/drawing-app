@@ -1,0 +1,17 @@
+.kept-drawing-recovery {
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.kept-drawing-recovery p,
+.kept-drawing-recovery .error-detail,
+.kept-drawing-recovery .error-line {
+  margin-block: 12px;
+}
+
+.kept-drawing-recovery > .key,
+.kept-drawing-recovery > .label-btn {
+  max-width: 100%;
+  white-space: normal;
+}

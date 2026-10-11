@@ -1,80 +1,102 @@
 import { personKey, parseStored, readStored, writeStored } from "../ui/deviceStorage";
 
-/**
- * Whether a gift's message went out, kept on this device until the server hears it, so a reload or a
- * closed webview never sends its Gift Claim Token twice. One per person, so someone else signing in
- * here never acts on another's gifts. The token itself is never kept: it lives only in the gift
- * message.
- */
+/** Per-person recovery without the Gift Claim Token or message contents. */
 export interface KeptGift {
-  /** Its gift message went out and the server hasn't heard yet, or LINE's picker may have sent it. */
-  message?: "sent" | "maybeSent";
+  message?: "sent" | "maybeSent" | "cancelled";
+  /** Absent only on entries kept by an older client; the server supplies their attempt. */
+  attemptId?: string;
 }
 
 const keyFor = (userId: string) => personKey("draw.gifts.kept", userId);
+/** Failed writes stay on this page. Null overrides a stale entry after a failed removal. */
+const fallback = new Map<string, Map<string, KeptGift | null>>();
+/** Last readable state, available when this device later refuses reads. */
+const remembered = new Map<string, Map<string, KeptGift>>();
 
-const isMessage = (value: unknown): value is KeptGift["message"] =>
-  value === "sent" || value === "maybeSent";
-
-/** One gift's entry as stored, or null when it's unreadable. */
 function keptOf(value: unknown): KeptGift | null {
   if (typeof value !== "object" || value === null) return null;
   if (!("message" in value)) return {};
-  return isMessage(value.message) ? { message: value.message } : null;
+  if (value.message !== "sent" && value.message !== "maybeSent" && value.message !== "cancelled")
+    return null;
+  const attemptId = "attemptId" in value ? value.attemptId : undefined;
+  if (
+    attemptId !== undefined &&
+    (typeof attemptId !== "string" || !/^0x[0-9a-f]{64}$/.test(attemptId))
+  )
+    return null;
+  return { message: value.message, ...(typeof attemptId === "string" && { attemptId }) };
 }
 
-/** `userId`'s kept gifts; none when storage is blocked. An unreadable entry is dropped, and said. */
-function readKept(userId: string): Map<string, KeptGift> {
-  const kept = new Map<string, KeptGift>();
-  const { text: raw } = readStored(
+function readKept(userId: string) {
+  const { text: raw, blocked } = readStored(
     keyFor(userId),
     "Giving's kept gifts can't be read on this device",
   );
-  if (raw === null) return kept;
-  const value = parseStored(raw);
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    console.error("Giving's kept gifts are unreadable, so none is picked up again:", raw);
-    return kept;
-  }
-  for (const [giftId, entry] of Object.entries(value)) {
-    const gift = keptOf(entry);
-    if (gift) kept.set(giftId, gift);
-    else
+  const kept = new Map<string, KeptGift>(blocked ? remembered.get(userId) : undefined);
+  if (raw !== null) {
+    const value = parseStored(raw);
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
       console.error(
-        `Gift ${giftId}'s kept entry is unreadable, so it isn't picked up again:`,
-        entry,
+        "Giving's kept gifts are unreadable; the server's message attempts still protect them",
       );
+    } else {
+      for (const [giftId, entry] of Object.entries(value)) {
+        const gift = keptOf(entry);
+        if (gift) kept.set(giftId, gift);
+        else
+          console.error(
+            `Gift ${giftId}'s kept entry is unreadable; recover its attempt from the server`,
+          );
+      }
+    }
   }
-  return kept;
+  for (const [giftId, gift] of fallback.get(userId) ?? []) {
+    if (gift === null) kept.delete(giftId);
+    else kept.set(giftId, gift);
+  }
+  remembered.set(userId, new Map(kept));
+  return { kept, blocked };
 }
 
-const writeKept = (userId: string, kept: ReadonlyMap<string, KeptGift>, giftId: string) =>
-  writeStored(
-    keyFor(userId),
-    kept.size === 0 ? null : JSON.stringify(Object.fromEntries(kept)),
-    `Whether gift ${giftId}'s message went out can't be kept on this device; a reload before the server hears it loses it`,
+/** What this page or device kept for this person. The server remains the safety authority. */
+export function keptGift(
+  userId: string,
+  giftId: string,
+  onReadFailure?: () => void,
+): KeptGift | null {
+  const { kept, blocked } = readKept(userId);
+  if (blocked) onReadFailure?.();
+  return kept.get(giftId) ?? null;
+}
+
+/** Definitive LINE outcomes awaiting acknowledgement, including cancellations. */
+export function keptReports(userId: string): [string, KeptGift][] {
+  return [...readKept(userId).kept].filter(
+    ([, gift]) => gift.message === "sent" || gift.message === "cancelled",
   );
-
-/** What this device kept of `userId`'s gift, or null. */
-export function keptGift(userId: string, giftId: string): KeptGift | null {
-  return readKept(userId).get(giftId) ?? null;
 }
 
-/** `userId`'s gifts whose message went out before the server heard it. */
-export function keptSends(userId: string): string[] {
-  return [...readKept(userId)].filter(([, gift]) => gift.message === "sent").map(([id]) => id);
-}
-
-/** Keeps `gift` for `giftId` in place of what was kept; one with nothing set is dropped. */
-export function keepGift(userId: string, giftId: string, gift: KeptGift): void {
-  const kept = readKept(userId);
+/** Keeps recovery in memory even when persistence fails, and reports whether the device saved it. */
+export function keepGift(userId: string, giftId: string, gift: KeptGift): boolean {
+  const { kept, blocked } = readKept(userId);
   if (gift.message !== undefined) kept.set(giftId, gift);
   else kept.delete(giftId);
-  writeKept(userId, kept, giftId);
+  remembered.set(userId, new Map(kept));
+  const pending = fallback.get(userId) ?? new Map<string, KeptGift | null>();
+  pending.set(giftId, gift.message === undefined ? null : gift);
+  fallback.set(userId, pending);
+  // A failed read leaves other gifts unknown. Keep changes in memory until a readable map can be merged.
+  if (blocked) return false;
+  const saved = writeStored(
+    keyFor(userId),
+    kept.size === 0 ? null : JSON.stringify(Object.fromEntries(kept)),
+    `Gift ${giftId}'s message outcome can't be saved on this device; the server still keeps its attempt`,
+  );
+  if (saved) fallback.delete(userId);
+  return saved;
 }
 
-/** Drops `giftId` once it has settled. */
+/** Drops local recovery only after a server acknowledgement or a terminal refusal. */
 export function forgetKeptGift(userId: string, giftId: string): void {
-  const kept = readKept(userId);
-  if (kept.delete(giftId)) writeKept(userId, kept, giftId);
+  keepGift(userId, giftId, {});
 }

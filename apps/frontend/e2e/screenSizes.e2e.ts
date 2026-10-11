@@ -3,6 +3,7 @@ import { DAILY_TICKETS_PER_DAY } from "@drawing-app/api/client";
 import { expect, type Locator, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { LARGE_SCREEN } from "../src/ui/largeScreen.ts";
+import { E2E_APP_PORT } from "./ports.ts";
 import {
   canvas,
   checkout,
@@ -13,6 +14,7 @@ import {
   openShop,
   say,
   signIn,
+  signedInUserId,
   test,
 } from "./helpers.ts";
 
@@ -43,12 +45,11 @@ const SHORT_SCREEN = 700;
 /**
  * What on screen breaks the layout's rules: text or a control runs past the screen's sides (the page
  * clips rather than scrolls sideways); a key or tab is cut off where no scroller reaches it; on a large
- * screen, a key wider than a card (`--card-w`, a phone's width). Keys named in `known` are left out:
- * each is a `test.fixme` below.
+ * screen, a key wider than a card (`--card-w`, a phone's width).
  */
-function screenProblems(page: Page, large: boolean, known: readonly string[] = []) {
+function screenProblems(page: Page, large: boolean) {
   return page.evaluate(
-    ({ large, known }) => {
+    ({ large }) => {
       const problems: string[] = [];
       const cardWidth = parseFloat(
         getComputedStyle(document.documentElement).getPropertyValue("--card-w"),
@@ -74,7 +75,6 @@ function screenProblems(page: Page, large: boolean, known: readonly string[] = [
         if (getComputedStyle(el).visibility === "hidden" || el.closest(".visually-hidden"))
           continue;
         const name = (el.getAttribute("aria-label") ?? el.textContent ?? "").trim().slice(0, 40);
-        if (known.includes(name)) continue;
         if (!scrolls(el, "x") && (r.left < -1 || r.right > innerWidth + 1))
           problems.push(`"${name}" runs past the side`);
         if (!el.matches(".key, nav button")) continue;
@@ -85,7 +85,7 @@ function screenProblems(page: Page, large: boolean, known: readonly string[] = [
       }
       return problems;
     },
-    { large, known },
+    { large },
   );
 }
 
@@ -124,8 +124,8 @@ function cardProblems(dialog: Locator, large: boolean) {
 }
 
 /** Soft, so one run names every broken rule on every surface. */
-async function expectFits(page: Page, size: Size, surface: string, known: readonly string[] = []) {
-  expect.soft(await screenProblems(page, size.large, known), surface).toEqual([]);
+async function expectFits(page: Page, size: Size, surface: string) {
+  expect.soft(await screenProblems(page, size.large), surface).toEqual([]);
 }
 
 async function expectCardFits(dialog: Locator, size: Size, surface: string) {
@@ -144,17 +144,18 @@ async function expectCardFits(dialog: Locator, size: Size, surface: string) {
 
 /** Spends the signed-in person's daily tickets through the API, as Draw would. */
 async function spendDailyTickets(page: Page) {
+  const expectedUserId = await signedInUserId(page);
   for (let spent = 0; spent < DAILY_TICKETS_PER_DAY; spent++) {
     const status = await page.evaluate(
-      async (idempotencyKey) =>
+      async ({ idempotencyKey, expectedUserId }) =>
         (
           await fetch("/api/tickets/spend", {
             method: "POST",
-            headers: { "content-type": "application/json" },
+            headers: { "content-type": "application/json", "x-croquis-user-id": expectedUserId },
             body: JSON.stringify({ kind: "daily", idempotencyKey }),
           })
         ).status,
-      randomUUID(),
+      { idempotencyKey: randomUUID(), expectedUserId },
     );
     expect(status, "POST /api/tickets/spend").toBe(201);
   }
@@ -162,13 +163,74 @@ async function spendDailyTickets(page: Page) {
 
 const isLarge = (page: Page) => page.evaluate((query) => matchMedia(query).matches, LARGE_SCREEN);
 
+/** Keeps the request and page lifecycle around a browser error for the test report. */
+const screenLoadDiagnostics = new WeakMap<Page, { events: object[]; hasError: boolean }>();
+const observedLoad = (url: string) =>
+  /\/api\/|\/explore\/ExploreScreen|\/sticker-creation\/DrawingScreen/.test(url);
+
 for (const size of SIZES) {
   test.describe(`On ${size.name}, ${size.width}×${size.height}`, () => {
     test.use(touchScreen(size));
-    // The motion card asks only on a first visit; its own check is a fixme below.
-    test.beforeEach(({ page }) =>
-      page.addInitScript(() => localStorage.setItem("draw.motion", "denied")),
-    );
+    // The motion card asks only on a first visit; its check uses a separate context below.
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript(() => localStorage.setItem("draw.motion", "denied"));
+      if (process.env.E2E_SCREEN_LOAD_DIAGNOSTICS !== "1") return;
+      const started = Date.now();
+      const diagnostics = { events: [] as object[], hasError: false };
+      screenLoadDiagnostics.set(page, diagnostics);
+      const requestIds = new WeakMap<object, number>();
+      let nextRequestId = 0;
+      const note = (event: string, details: object = {}) =>
+        diagnostics.events.push({
+          elapsedMs: Date.now() - started,
+          event,
+          pageUrl: page.url(),
+          pageClosed: page.isClosed(),
+          ...details,
+        });
+      page.on("request", (request) => {
+        if (!observedLoad(request.url()) && !request.isNavigationRequest()) return;
+        const id = ++nextRequestId;
+        requestIds.set(request, id);
+        note("request", { id, url: request.url(), type: request.resourceType() });
+      });
+      page.on("response", (response) => {
+        if (!observedLoad(response.url())) return;
+        note("response", {
+          id: requestIds.get(response.request()),
+          url: response.url(),
+          status: response.status(),
+        });
+      });
+      page.on("requestfailed", (request) => {
+        diagnostics.hasError = true;
+        note("requestfailed", {
+          id: requestIds.get(request),
+          url: request.url(),
+          reason: request.failure()?.errorText,
+        });
+      });
+      page.on("framenavigated", (frame) => {
+        if (frame === page.mainFrame()) note("navigated", { url: frame.url() });
+      });
+      page.on("console", (message) => {
+        if (message.type() !== "error") return;
+        diagnostics.hasError = true;
+        note("console-error", { text: message.text(), source: message.location() });
+      });
+      page.on("pageerror", (error) => {
+        diagnostics.hasError = true;
+        note("pageerror", { message: error.message });
+      });
+    });
+    test.afterEach(async ({ page }, testInfo) => {
+      const diagnostics = screenLoadDiagnostics.get(page);
+      if (!diagnostics?.hasError) return;
+      await testInfo.attach("screen-load-diagnostics", {
+        body: JSON.stringify(diagnostics.events, null, 2),
+        contentType: "application/json",
+      });
+    });
     const upright = size.large && size.height > size.width;
 
     test("the board, stat board, Shop, checkout, Explore and out-of-tickets card fit", async ({
@@ -181,11 +243,10 @@ for (const size of SIZES) {
       await flipToStatBoard(page, language);
       await expectFits(page, size, "the stat board");
 
-      // The Shop's Buy key upright is a fixme below.
       const buy = say(shop.reserve.buy, language);
       const reserve = await openShop(page, language);
       await expect(reserve.getByRole("button", { name: buy })).toBeVisible();
-      await expectFits(page, size, "the Shop", upright ? [buy] : []);
+      await expectFits(page, size, "the Shop");
       await reserve.getByRole("button", { name: buy }).click();
       await expectCardFits(checkout(page, language), size, "the checkout");
 
@@ -252,26 +313,41 @@ for (const size of SIZES) {
         await expectFits(page, size, "the Shop");
       });
 
-      test.fixme("the motion card is a card in the middle", async ({ browser }) => {
-        // It asks on iOS only, which Safari's user agent says.
+      test("the motion card is a card in the middle", async ({ browser }) => {
+        // iOS requires both its user agent and its permission API to show the first-visit card.
         const context = await browser.newContext({
           ...touchScreen(size),
+          baseURL: `http://localhost:${E2E_APP_PORT}`,
           userAgent:
             "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
         });
-        const page = await context.newPage();
-        await signIn(page, "sizes", language);
-        await expectCardFits(
-          page.getByRole("dialog", { name: say(app.motionPermission.label, language) }),
-          size,
-          "the motion card",
-        );
-        await context.close();
+        try {
+          await context.addInitScript(() => {
+            const motion = window.DeviceMotionEvent ?? class {};
+            Object.defineProperty(motion, "requestPermission", {
+              configurable: true,
+              value: async () => "granted",
+            });
+            Object.defineProperty(window, "DeviceMotionEvent", {
+              configurable: true,
+              value: motion,
+            });
+          });
+          const page = await context.newPage();
+          await signIn(page, "sizes", language);
+          await expectCardFits(
+            page.getByRole("dialog", { name: say(app.motionPermission.label, language) }),
+            size,
+            "the motion card",
+          );
+        } finally {
+          await context.close();
+        }
       });
     }
 
     if (!size.large) {
-      test.fixme("the seal key shows without a spring under reduced motion", async ({ page }) => {
+      test("the seal key shows without a spring under reduced motion", async ({ page }) => {
         await signIn(page, "sizes", language);
         await drawKey(page, language).click();
         await drawStroke(page, language);

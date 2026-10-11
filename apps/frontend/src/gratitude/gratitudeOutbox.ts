@@ -163,16 +163,20 @@ async function send(
   userId: string,
   body: RecordGratitude,
   onDevice = true,
+  signal?: AbortSignal,
 ): Promise<GratitudeSendResult> {
   const key = body.idempotencyKey;
-  if (sending.has(key)) return { state: "kept" };
+  if (signal?.aborted || sending.has(key)) return { state: "kept" };
   sending.add(key);
   try {
-    await api.recordGratitude(body);
+    if (signal) await api.recordGratitude(body, { signal });
+    else await api.recordGratitude(body);
+    if (signal?.aborted) return { state: "kept" };
     forgetGratitudeRefusal(userId, body.giftId);
     forget(userId, { idempotencyKey: key, result: { state: "recorded" } });
     return { state: "recorded" };
   } catch (caught) {
+    if (signal?.aborted) return { state: "kept" };
     const error = apiError(caught);
     if (isRefusal(error)) {
       // Kept for the sticker detail: the receipt that shows it may be gone by the time a resend is refused.
@@ -240,15 +244,22 @@ export function sendGratitude(
  * A combo kept in play was left by a page torn down mid-combo, unless another tab is still playing
  * it and sends it as it ends; so it goes once that tab would have ended it, as it's kept then.
  */
-export async function resendPendingGratitude(api: Recorder, userId: string): Promise<void> {
+export async function resendPendingGratitude(
+  api: Recorder,
+  userId: string,
+  signal?: AbortSignal,
+): Promise<void> {
   const inPlay: { key: string; at: number }[] = [];
   for (const { body, inPlayAt } of readPending(userId)?.combos.values() ?? []) {
-    if (inPlayAt === undefined) await send(api, userId, body);
+    if (signal?.aborted) return;
+    if (inPlayAt === undefined) await send(api, userId, body, true, signal);
     else inPlay.push({ key: body.idempotencyKey, at: inPlayAt });
   }
   for (const { key, at } of inPlay) {
+    if (signal?.aborted) return;
     const wait = Math.min(IN_PLAY_MAX_MS, at + IN_PLAY_MAX_MS - Date.now());
-    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    if (wait > 0) await waitToResend(wait, signal);
+    if (signal?.aborted) return;
     const kept = readPending(userId)?.combos.get(key);
     if (!kept) continue;
     if (kept.inPlayAt !== undefined) {
@@ -256,8 +267,22 @@ export async function resendPendingGratitude(api: Recorder, userId: string): Pro
         `The gratitude for gift ${kept.body.giftId} was still in play when its page went; it's sent as it was last kept`,
       );
     }
-    await send(api, userId, kept.body);
+    await send(api, userId, kept.body, true, signal);
   }
+}
+
+/** Disposal clears the timer as well as waking the loop to observe cancellation. */
+function waitToResend(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const finish = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", finish);
+      resolve();
+    };
+    const timer = setTimeout(finish, ms);
+    signal?.addEventListener("abort", finish, { once: true });
+    if (signal?.aborted) finish();
+  });
 }
 
 /**
@@ -266,7 +291,24 @@ export async function resendPendingGratitude(api: Recorder, userId: string): Pro
  * Returns what stops it.
  */
 export function resendGratitudeWhenReachable(api: Recorder, userId: string): () => void {
-  const resend = () => void resendPendingGratitude(api, userId);
+  const controller = new AbortController();
+  let running = false;
+  let requested = false;
+  const resend = () => {
+    if (controller.signal.aborted) return;
+    if (running) {
+      requested = true;
+      return;
+    }
+    running = true;
+    void resendPendingGratitude(api, userId, controller.signal).finally(() => {
+      running = false;
+      if (requested) {
+        requested = false;
+        resend();
+      }
+    });
+  };
   const onVisibility = () => {
     if (document.visibilityState === "visible") resend();
   };
@@ -274,6 +316,7 @@ export function resendGratitudeWhenReachable(api: Recorder, userId: string): () 
   window.addEventListener("online", resend);
   document.addEventListener("visibilitychange", onVisibility);
   return () => {
+    controller.abort();
     window.removeEventListener("online", resend);
     document.removeEventListener("visibilitychange", onVisibility);
   };

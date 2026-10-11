@@ -42,7 +42,7 @@ describe("Packaging", () => {
     });
   });
 
-  it("refuses a sticker you don't hold, an unknown one, and one in a sent gift", async () => {
+  it("refuses a sticker you don't hold or an unknown one, and recovers your sent gift", async () => {
     const test = await createGiftsTestApp();
     const me = insertUser(test.db);
     const friendsSticker = test.sealSticker(insertUser(test.db));
@@ -55,9 +55,13 @@ describe("Packaging", () => {
     ).toMatchObject({ status: 404, error: "sticker_not_found" });
     const { giverId, gift } = await test.packagedGift();
     await giftOf(await test.share(giverId, gift.id, "sent"));
-    expect(
-      await refusalOf(await test.post(giverId, "", { stickerId: gift.stickerId })),
-    ).toMatchObject({ status: 409, error: "gift_in_transit" });
+    expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({
+      status: 200,
+      gift: { id: gift.id, status: "sent" },
+      giftClaimToken: null,
+      deposit: null,
+      messageAttempt: { state: "sent" },
+    });
   });
 
   it("on the mock chain, packs a taken-out sticker again, and lets its receiver give it on", async () => {
@@ -133,7 +137,7 @@ describe("Packaging on Sui", () => {
     expect(test.chain.sponsorships).toHaveLength(1);
   });
 
-  it("answers a gift sent while it was packaged again as in transit, sponsoring nothing", async () => {
+  it("recovers a gift sent while it was packaged again, sponsoring nothing", async () => {
     const test = await createGiftsTestApp({ onSui: true });
     const { giverId, gift } = await test.depositedGift();
     const lookUp = test.wallets.addressFor;
@@ -142,9 +146,13 @@ describe("Packaging on Sui", () => {
       return lookUp(userId);
     });
     const sponsored = test.chain.sponsorships.length;
-    expect(
-      await refusalOf(await test.post(giverId, "", { stickerId: gift.stickerId })),
-    ).toMatchObject({ status: 409, error: "gift_in_transit" });
+    expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({
+      status: 200,
+      gift: { id: gift.id, status: "sent" },
+      giftClaimToken: null,
+      deposit: null,
+      messageAttempt: { state: "sent" },
+    });
     expect(test.chain.sponsorships).toHaveLength(sponsored);
   });
 

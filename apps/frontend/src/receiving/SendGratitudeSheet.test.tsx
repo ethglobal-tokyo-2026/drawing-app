@@ -3,10 +3,10 @@ import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Person } from "@drawing-app/api/client";
 import { gift, MARKUP_LIKE_NAME, markupLikePerson, people, sticker } from "../api/testFixtures";
-import { renderWithApi, shownText } from "../api/testing";
+import { shownText } from "../api/testing";
 import { toPerson, toSticker } from "../api/views";
 import { formatDuration } from "../stickers/format";
-import { onLargeScreen } from "../ui/testing";
+import { onLargeScreen, renderInHost } from "../ui/testing";
 import { SendGratitudeSheet } from "./SendGratitudeSheet";
 
 const onSend = vi.fn();
@@ -23,7 +23,7 @@ afterEach(() => {
 /** The sheet for a sticker `artist` drew, just received from `giver`. */
 function open(giver: Person, artist: Person) {
   const drawn = toSticker(sticker({ artist }));
-  const view = renderWithApi(
+  const view = renderInHost(
     <SendGratitudeSheet
       gift={gift()}
       sticker={drawn}

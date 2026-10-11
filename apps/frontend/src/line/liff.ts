@@ -1,6 +1,7 @@
 import liff from "@line/liff";
 import type { LiffMockApi, LiffMockConfig } from "@line/liff-mock";
 import { useSyncExternalStore } from "react";
+import { readStored, writeStored } from "../ui/deviceStorage";
 
 // The LIFF app on the Login channel. It isn't secret: every LIFF link carries it. `.env` can point the dev
 // server at another LIFF app, one whose endpoint is that server; builds ignore it, so a local .env never ships.
@@ -37,7 +38,7 @@ const set = (next: LineState) => {
   listeners.forEach((l) => l());
 };
 
-let started = false;
+let initialization: Promise<boolean> | null = null;
 
 // A start that hasn't settled by then ends on the error screen, with Try again, rather than a blank page.
 export const START_TIMEOUT_MS = 15_000;
@@ -50,11 +51,14 @@ class StartTimedOut extends Error {}
  * LINE Login redirect. Inside LINE the person is already logged in; in a browser they stay
  * logged out until `lineLogin()`.
  */
-export async function initLine(): Promise<void> {
-  if (started) return;
-  started = true;
+export function initLine(): Promise<boolean> {
+  return (initialization ??= startLineOnce());
+}
+
+async function startLineOnce(): Promise<boolean> {
   try {
     set(await withTimeout(startLine(), START_TIMEOUT_MS));
+    return true;
   } catch (error) {
     console.error("LINE didn't start", error);
     set({
@@ -64,6 +68,7 @@ export async function initLine(): Promise<void> {
           ? { kind: "no-answer" }
           : { kind: "refused", message: describeLiffError(error) },
     });
+    return false;
   }
 }
 
@@ -82,7 +87,13 @@ async function startLine(): Promise<LineState> {
   else await liff.init({ liffId: LIFF_ID });
   // An answer LIFF couldn't finish: the login's PKCE verifier is in the browser that started it.
   if (!liff.isLoggedIn()) return { status: "logged-out", strayAnswer: answered };
-  if (localStorage.getItem(AUTO_LOGIN_KEY) === "started") localStorage.removeItem(AUTO_LOGIN_KEY);
+  const { text: autoLogin } = readStored(
+    AUTO_LOGIN_KEY,
+    "The LINE auto login marker can't be read on this device",
+  );
+  if (autoLogin === "started") {
+    writeStored(AUTO_LOGIN_KEY, null, "The LINE auto login marker can't be removed on this device");
+  }
   const inClient = liff.isInClient();
   // The ID token already names the person, so the app opens without waiting on another call to LINE;
   // the profile follows, for a name or picture changed since the token was issued.
@@ -225,8 +236,16 @@ async function initMock() {
  * login from this browser never came back, the next stays on LINE's page here, without auto login.
  */
 export function lineLogin(to = location.href) {
-  const retry = localStorage.getItem(AUTO_LOGIN_KEY) !== null;
-  localStorage.setItem(AUTO_LOGIN_KEY, retry ? "off" : "started");
+  const { text, blocked } = readStored(
+    AUTO_LOGIN_KEY,
+    "The LINE auto login marker can't be read on this device",
+  );
+  const retry = blocked || text !== null;
+  writeStored(
+    AUTO_LOGIN_KEY,
+    retry ? "off" : "started",
+    "The LINE auto login marker can't be saved on this device",
+  );
   liff.login({ redirectUri: to, ...(retry && { disableAutoLogin: true }) });
 }
 

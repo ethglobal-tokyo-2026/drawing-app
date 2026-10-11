@@ -21,6 +21,7 @@ class PrivyBoundary extends Component<{ children: ReactNode }, { failed: boolean
     setPrivyStatus({
       state: "failed",
       reason: `Privy stopped: ${messageOf(error)}`,
+      reloadRequired: true,
     });
   }
 

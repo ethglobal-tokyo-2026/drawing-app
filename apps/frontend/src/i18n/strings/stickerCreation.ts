@@ -3,6 +3,64 @@ import type { Section } from "../catalog";
 export const stickerCreation = {
   /** Drawing screen: the white sheet you draw on, named for screen readers */
   canvas: { en: "Canvas", ja: "キャンバス" },
+  /** Readable saved ink whose sheet identity cannot be verified. */
+  recovery: {
+    /** Drawing recovery sheet: heading for readable ink whose ticket cannot be verified */
+    title: { en: "Recover your saved drawing", ja: "保存した絵を取り出す" },
+    /** Drawing recovery sheet: explains why the saved ink cannot safely resume */
+    explanation: {
+      en: "Your drawing is still saved, but we can’t verify which sheet it belongs to. Download a copy before replacing it.",
+      ja: "絵は保存されていますが、どのキャンバスの絵か確認できません。消去する前にコピーをダウンロードできます。",
+    },
+    /** Drawing recovery sheet: storage could not return readable ink, so no download is offered */
+    unread: {
+      en: "We couldn’t read your saved drawing. It may still be on this device. Try again before discarding it.",
+      ja: "保存した絵を読み込めませんでした。この端末に残っている可能性があります。消去する前に、もう一度お試しください。",
+    },
+    /** Drawing recovery sheet: missing or unreadable metadata keeps drawing locked and offers Retry */
+    metadataUnknown: {
+      en: "We can’t verify the saved drawing’s ticket. Try reading it again, or explicitly discard it. No old ticket will be reused; a new ticket is spent only when you choose to start drawing.",
+      ja: "保存した絵のチケットを確認できません。もう一度読み込むか、絵を消去してください。以前のチケットは再使用しません。新しいチケットは「かき始める」を選ぶまで使いません。",
+    },
+    /** Drawing recovery sheet: explicit discard when no ticket ownership can be established */
+    discardUnknown: { en: "Discard saved drawing", ja: "保存した絵を消去" },
+    /** Drawing recovery sheet: explicitly downloads all saved steps and the sheet size */
+    download: { en: "Download saved drawing", ja: "保存した絵をダウンロード" },
+    /** Drawing recovery sheet: persistent download failure with a retry action */
+    downloadFailed: {
+      en: "The drawing couldn’t be downloaded. Your saved copy is unchanged.",
+      ja: "絵をダウンロードできませんでした。保存した絵はそのまま残っています。",
+    },
+    /** Drawing recovery sheet: destructive action that replaces the saved drawing */
+    discard: { en: "Discard saved drawing and start blank", ja: "保存した絵を消去してかき直す" },
+    /** Drawing recovery sheet: explains the irreversible replacement and safe close action */
+    discardExplanation: {
+      en: "Discarding removes this saved drawing from this device. Closing keeps it saved and leaves drawing locked.",
+      ja: "消去すると、この端末に保存した絵は元に戻せません。閉じると絵は残り、かく操作はロックされたままになります。",
+    },
+    /** Drawing recovery sheet: waits for the server to confirm a previously sent Seal */
+    checkingSeal: {
+      en: "Checking whether this drawing was already sealed…",
+      ja: "この絵が仕上がっているか確認しています…",
+    },
+    /** Drawing recovery sheet: persistent unresolved Seal error beside Retry */
+    sealUnresolved: {
+      en: "We can’t confirm whether this drawing was sealed. Your saved drawing stays here until the check succeeds. Try again.",
+      ja: "この絵が仕上がっているか確認できません。確認できるまで絵は保存されたままです。もう一度お試しください。",
+    },
+    /** Drawing recovery sheet: successful ticket check cannot identify an older ticket after midnight JST */
+    oldTicketUnknown: {
+      en: "Today’s tickets don’t tell us whether this drawing was sealed. You can download it, then discard it and abandon its old ticket. The old ticket will not be reused. A new ticket is spent only when you choose to start drawing.",
+      ja: "今日のチケットでは、この絵が仕上がっているか確認できません。絵をダウンロードしてから、保存した絵と以前のチケットを手放せます。以前のチケットは再使用しません。新しいチケットは「かき始める」を選ぶまで使いません。",
+    },
+    /** Drawing recovery sheet: explicitly discards ink and retires an old ticket whose Seal is unknown */
+    abandon: {
+      en: "Discard drawing and abandon old ticket",
+      ja: "絵を消去して以前のチケットを手放す",
+    },
+    /** Drawing screen: reopens recovery after it was closed without discarding */
+    reopen: { en: "Review saved drawing", ja: "保存した絵を確認" },
+  },
   /** The timer dot, and the white label under it. */
   timer: {
     /** Drawing screen, top left: the timer dot's name for screen readers before the first stroke starts the clock, and on a begun sheet in Kyoto Seika Practice Mode, whose clock never pauses */

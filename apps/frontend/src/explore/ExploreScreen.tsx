@@ -647,7 +647,17 @@ function SearchResults({
 }
 
 /** The pile, once Explore has arrived; a tapped sticker lifts off it into a sheet. */
-function Stickers({ explore, meId, open }: { explore: Explore; meId: string; open: Open }) {
+function Stickers({
+  explore,
+  meId,
+  open,
+  visible,
+}: {
+  explore: Explore;
+  meId: string;
+  open: Open;
+  visible: boolean;
+}) {
   const { loaded, end, reachEnd } = usePilePages(explore.pile);
   const [now] = useState(() => Date.now());
   const newest = loaded.stickers[0];
@@ -668,7 +678,9 @@ function Stickers({ explore, meId, open }: { explore: Explore; meId: string; ope
         days={days}
         today={today}
         end={end}
-        onReachEnd={reachEnd}
+        onReachEnd={() => {
+          if (visible) reachEnd();
+        }}
         meId={meId}
         onLift={(pile) => setLiftedId(pile.sticker.id)}
       />
@@ -706,16 +718,20 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
   const [view, setView] = useState<View>("stickers");
   // The pile's images are picked by your NSFW opt-in: a change loads it from its first page again,
   // and the old pages go with <Stickers>, which the loading state unmounts.
-  const explore = useApiQuery(useNsfwOptInKey("explore"), (api) => api.explore());
+  const resetKey = useNsfwOptInKey("explore");
+  const explore = useApiQuery(resetKey, (api) => api.explore());
   const open: Open = (person) => (person.id === me.id ? onOpenMyBoard() : onOpenArtist(person));
 
   const scroller = useRef<HTMLDivElement>(null);
   const columns = useExploreColumns(scroller);
-  useKeptPlace(scroller, columns);
+  const showsPile = columns === 2 || view === "stickers";
+  const { keepPlace } = useKeptPlace(scroller, columns, {
+    visible: showsPile && q === "",
+    resetKey,
+  });
   const large = useLargeScreen();
 
   // Beside each other both show; otherwise the switch picks one.
-  const showsPile = columns === 2 || view === "stickers";
   const showsWeek = columns === 2 || view === "thisWeek";
   const week = !showsWeek ? null : explore.state === "ready" ? (
     large ? (
@@ -732,7 +748,7 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
     <ThisWeekLoading all={large} />
   ) : null;
   const pile = !showsPile ? null : explore.state === "ready" ? (
-    <Stickers explore={explore.data} meId={me.id} open={open} />
+    <Stickers explore={explore.data} meId={me.id} open={open} visible={q === ""} />
   ) : explore.state === "loading" ? (
     <PileLoading />
   ) : null;
@@ -755,7 +771,10 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
             placeholder={t(($) => $.explore.search.placeholder)}
             aria-label={t(($) => $.explore.search.label)}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              if (!q && e.target.value.trim().replace(/^@/, "")) keepPlace();
+              setQuery(e.target.value);
+            }}
             autoCapitalize="off"
             autoCorrect="off"
             spellCheck={false}
@@ -799,25 +818,22 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
           ) : null}
         </div>
       ) : null}
-      {/* The pile keeps its place here in either layout, so a turn or a search never remounts it or
-          the pages it has loaded; in two columns a search only hides it. */}
-      {!(q && columns === 1) && (
-        <div className="explore-view" hidden={columns === 2 && q !== ""} {...panel}>
-          {/* One loading line for the view, however many columns it shows. */}
-          {explore.state === "loading" && <LoadingStatus />}
-          {explore.state === "failed" ? (
-            <Failed
-              said={(reason) => t(($) => $.explore.failed.explore, { reason })}
-              query={explore}
-            />
-          ) : (
-            <>
-              {columns === 1 && week}
-              {pile}
-            </>
-          )}
-        </div>
-      )}
+      {/* Search hides the pile without unmounting its pages or resetting its cursor. */}
+      <div className="explore-view" hidden={q !== ""} {...panel}>
+        {/* One loading line for the view, however many columns it shows. */}
+        {explore.state === "loading" && <LoadingStatus />}
+        {explore.state === "failed" ? (
+          <Failed
+            said={(reason) => t(($) => $.explore.failed.explore, { reason })}
+            query={explore}
+          />
+        ) : (
+          <>
+            {columns === 1 && week}
+            {pile}
+          </>
+        )}
+      </div>
       {columns === 2 && <div className="explore-week">{week}</div>}
     </div>
   );
