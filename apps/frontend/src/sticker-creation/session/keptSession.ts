@@ -4,6 +4,8 @@ import { pickedPair, PICKS } from "../../kyoto-seika/deal";
 import { KINDS, readDealtSubject, type DealtSubject } from "../../kyoto-seika/subjectList";
 import { STRIDE, type FillReference, type LayerId, type Op, type Step } from "../canvas/ops";
 import type { SheetFrame } from "../canvas/sheetFrame";
+import type { PostCorrectionSettings } from "../canvas/post-correction/settings";
+import type { SmoothingMode } from "../canvas/stabilizer";
 import { FIRST_LAYER, LayerStepError, stateAt } from "../layers/layerState";
 
 /*
@@ -54,6 +56,10 @@ export interface KeptTools {
   brushSize: number;
   eraserSize: number;
   smoothing: number;
+  /** Absent in sessions saved before pen speed choices were available. */
+  smoothingMode?: SmoothingMode;
+  /** Absent in a session saved before pen-lift correction was available. */
+  postCorrection?: PostCorrectionSettings;
 }
 
 /**
@@ -1023,10 +1029,46 @@ function readTools(v: unknown): KeptTools | undefined {
   if (typeof v !== "object" || v === null) return undefined;
   if (!("brushSize" in v) || !("eraserSize" in v) || !("smoothing" in v)) return undefined;
   const { brushSize, eraserSize, smoothing } = v;
+  const smoothingMode = "smoothingMode" in v ? v.smoothingMode : undefined;
+  if (
+    smoothingMode !== undefined &&
+    smoothingMode !== "fixed" &&
+    smoothingMode !== "slow" &&
+    smoothingMode !== "fast"
+  )
+    return undefined;
   const fillReference = "fillReference" in v ? v.fillReference : "layer";
   if (fillReference !== "layer" && fillReference !== "visible") return undefined;
+  let postCorrection: PostCorrectionSettings | undefined;
+  if ("postCorrection" in v) {
+    const post = v.postCorrection;
+    if (
+      typeof post !== "object" ||
+      post === null ||
+      !("strength" in post) ||
+      !("adjustBySpeed" in post) ||
+      !("adjustByScale" in post) ||
+      !isBetween(post.strength, 0, 40) ||
+      !Number.isInteger(post.strength) ||
+      typeof post.adjustBySpeed !== "boolean" ||
+      typeof post.adjustByScale !== "boolean"
+    )
+      return undefined;
+    postCorrection = {
+      strength: post.strength,
+      adjustBySpeed: post.adjustBySpeed,
+      adjustByScale: post.adjustByScale,
+    };
+  }
   return isBetween(brushSize, 0, 1) && isBetween(eraserSize, 0, 1) && isBetween(smoothing, 0, 100)
-    ? { brushSize, eraserSize, smoothing, fillReference }
+    ? {
+        brushSize,
+        eraserSize,
+        smoothing,
+        ...(smoothingMode ? { smoothingMode } : {}),
+        fillReference,
+        ...(postCorrection ? { postCorrection } : {}),
+      }
     : undefined;
 }
 

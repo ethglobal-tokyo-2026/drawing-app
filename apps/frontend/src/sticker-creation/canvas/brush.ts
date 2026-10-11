@@ -90,6 +90,8 @@ export const previewWidth = (response: PenPressure, pressureVaries: boolean) =>
 export interface Nib {
   x: number;
   y: number;
+  /** Raw contact pressure, before stabilization changes the rendered pressure. */
+  pressure: number;
   t: number;
 }
 
@@ -166,7 +168,7 @@ export class StrokeBuilder {
     } = start;
     this.size = size;
     this.t0 = t;
-    this.nib = { x, y, t };
+    this.nib = { x, y, pressure, t };
     this.pen = pointerType === "pen";
     this.response = response;
     // A pen landing at no pressure hasn't reported any yet, as Safari can for a Pencil. Its dot
@@ -198,18 +200,26 @@ export class StrokeBuilder {
   /**
    * Adds a point unless it's within half a unit of the last one; says whether it did. `nib` is the
    * pointer's own sample, whose motion since the last point sets a speed-drawn width, as the line
-   * lags it under Smoothing; null for a point the line glides to with no new sample, which keeps
-   * the width.
+   * lags it under Smoothing; null for a queue output with no new contact sample. Such an output
+   * retains the speed width, while a pressure-sensitive pen still uses its filtered pressure.
    */
-  add(x: number, y: number, pressure: number, t: number, nib: Nib | null = { x, y, t }): boolean {
+  add(
+    x: number,
+    y: number,
+    pressure: number,
+    t: number,
+    nib: Nib | null = { x, y, pressure, t },
+  ): boolean {
     const { tool } = this.op;
     const dist = Math.hypot(x - this.curve.x, y - this.curve.y);
     if (dist < MIN_STEP) return false;
     let width = this.size;
     if (tool === "brush") {
-      if (this.pen && pressure > 0) {
-        this.firstPressure ??= pressure;
-        if (Math.abs(pressure - this.firstPressure) > PRESSURE_STEP) this.pressed = true;
+      if (this.pen && nib && nib.pressure > 0) {
+        // Only the device's contact readings establish pressure capability. Filtered and
+        // terminal pressures can vary even when the device reports one constant value.
+        this.firstPressure ??= nib.pressure;
+        if (Math.abs(nib.pressure - this.firstPressure) > PRESSURE_STEP) this.pressed = true;
       }
       // Off, a pen draws the brush's size, whatever it reports.
       const off = this.pen && this.response === "off";
@@ -239,6 +249,7 @@ export class StrokeBuilder {
     if (nib) {
       this.nib.x = nib.x;
       this.nib.y = nib.y;
+      this.nib.pressure = nib.pressure;
       this.nib.t = nib.t;
     }
     this.curve.add(x, y, width, Math.round(t - this.t0));

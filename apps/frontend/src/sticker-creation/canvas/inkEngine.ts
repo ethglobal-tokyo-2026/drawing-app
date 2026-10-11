@@ -26,10 +26,19 @@ import {
   type LayerId,
   type Op,
   type Step,
+  type StrokeOp,
   type Tool,
 } from "./ops";
+import { PostCorrectionError } from "./post-correction/errors";
+import { PostCorrectionService, type PostCorrectionInput } from "./post-correction/service";
+import type { PostCorrectionSettings } from "./post-correction/settings";
 import { areaFrame, boundedFrame, frameFor, type SheetArea, type SheetFrame } from "./sheetFrame";
-import { PAUSE_MS, Stabilizer } from "./stabilizer";
+import {
+  StabilizationError,
+  Stabilizer,
+  type StabilizerOutput,
+  type SmoothingMode,
+} from "./stabilizer";
 
 /** A fill takes a tap: a pointer that lifts within this many CSS px of where it landed. */
 export const FILL_TAP_SLOP = 10;
@@ -62,6 +71,10 @@ export interface InkSettings {
   size: number;
   /** Smoothing, from 0 (Raw) to 100 (Smooth). */
   smoothing: number;
+  /** Speed adjustment for pen input; mouse and touch retain fixed stabilization. */
+  smoothingMode: SmoothingMode;
+  /** Curve correction after lift; strength zero keeps the completed preview unchanged. */
+  postCorrection: PostCorrectionSettings;
   /** No input at all: sealing, sealed, or the ticket card is up. */
   locked: boolean;
   /** The person paused the clock: the sheet takes no marks. */
@@ -136,7 +149,13 @@ interface LiveStroke {
   pointerType: string;
   builder: StrokeBuilder;
   stabilizer: Stabilizer;
-  /** Samples since the last frame, flat: x, y, pressure, t; its first `queued` numbers, written in place. */
+  /** Stroke-start settings and every emitted sample, before brush spacing or width smoothing. */
+  correction:
+    | (Omit<PostCorrectionInput, "renderedPoints" | "packets"> & {
+        packets: PostCorrectionInput["packets"][number][];
+      })
+    | null;
+  /** Local CSS samples since the last frame, flat: x, y, pressure, t. */
   queue: number[];
   queued: number;
   /** Points already on the wet canvas. */
@@ -150,8 +169,18 @@ interface LiveStroke {
   /** The latest sample: where the stroke ends if the pointer lifts now. */
   x: number;
   y: number;
+  /** The same latest position in local CSS pixels, before conversion to sheet coordinates. */
+  cssX: number;
+  cssY: number;
+  /** CSS pixels per sheet unit when this stroke began; queue history always uses this basis. */
+  scale: number;
   pressure: number;
   t: number;
+}
+
+interface PendingCorrection {
+  original: StrokeOp;
+  abort: AbortController;
 }
 
 /** What stops a pointer marking the sheet, which its hint names: the clock paused, or the current layer hidden. */
@@ -216,6 +245,8 @@ export class InkEngine implements LayerControls {
   private readonly display: SheetDisplay;
   private readonly events: InkEvents;
   private readonly frames: FrameSource;
+  private readonly correction: Pick<PostCorrectionService, "correct" | "dispose">;
+  private pendingCorrection: PendingCorrection | null = null;
   private readonly taps = new TapRecognizer();
   /** The layer strokes and fills land on. */
   private current: LayerId = FIRST_LAYER;
@@ -250,6 +281,7 @@ export class InkEngine implements LayerControls {
   private locate: () => PaperRect = () => ({ left: 0, top: 0, width: this.sheet?.w ?? 1 });
   /** Where the paper was and how many CSS px a unit spanned there, as the pointer landed. */
   private origin = { left: 0, top: 0, scale: 1 };
+  private captureTarget: HTMLElement | null = null;
 
   /** The engine owns `ink` and `display` from here on, and lets them go on `dispose`. */
   constructor(
@@ -258,12 +290,14 @@ export class InkEngine implements LayerControls {
     settings: InkSettings,
     events: InkEvents,
     frames: FrameSource = browserFrames,
+    correction: Pick<PostCorrectionService, "correct" | "dispose"> = new PostCorrectionService(),
   ) {
     this.ink = ink;
     this.display = display;
     this.latest = settings;
     this.events = events;
     this.frames = frames;
+    this.correction = correction;
     this.history = new LayerHistory(ink);
   }
 
@@ -288,6 +322,7 @@ export class InkEngine implements LayerControls {
 
   /** Listens for pointers on the sheet; returns the detach. */
   attach(sheet: HTMLElement): () => void {
+    this.captureTarget = sheet;
     this.locate = () => sheet.getBoundingClientRect();
     const onDown = (e: PointerEvent) => {
       this.down(e);
@@ -307,7 +342,7 @@ export class InkEngine implements LayerControls {
     const onTouchEnd = (e: TouchEvent) => {
       if (e.touches.length === 0) this.screenClear();
       const pencil = Array.from(e.changedTouches).find(isStylus);
-      if (pencil) this.pencilLifted(pencil);
+      if (pencil) this.pencilLifted(pencil, e.timeStamp, e.type !== "touchcancel");
     };
     document.addEventListener("touchend", onTouchEnd);
     document.addEventListener("touchcancel", onTouchEnd);
@@ -324,6 +359,7 @@ export class InkEngine implements LayerControls {
     // Safari's own pinch zoom.
     document.addEventListener("gesturestart", prevent);
     return () => {
+      if (this.captureTarget === sheet) this.captureTarget = null;
       sheet.removeEventListener("pointerdown", onDown);
       sheet.removeEventListener("pointermove", onMove);
       sheet.removeEventListener("pointerup", onUp);
@@ -358,12 +394,14 @@ export class InkEngine implements LayerControls {
    * The Pencil's touch ended with its pen stroke still live: its pointerup is late or lost, so the
    * stroke ends where the touch lifted, whichever of the two the browser sends first.
    */
-  private pencilLifted(touch: Touch): void {
+  private pencilLifted(touch: Touch, time: number, correct: boolean): void {
     const live = this.live;
     if (live?.pointerType !== "pen") return;
     this.pointers.delete(live.id);
     [live.x, live.y] = this.toSheet(touch);
-    this.endStroke(false);
+    [live.cssX, live.cssY] = this.toStrokeCss(touch, live.scale);
+    live.t = Math.max(live.t, time);
+    this.endStroke(false, 0, correct);
   }
 
   down(e: PointerInput): void {
@@ -430,6 +468,7 @@ export class InkEngine implements LayerControls {
       return;
     }
     this.origin = this.place();
+    this.finishPendingCorrection();
     const [x, y] = this.toSheet(e);
     if (s.tool === "fill")
       this.pointers.set(id, { pointerType, kind: "fill", x, y, cx: e.clientX, cy: e.clientY });
@@ -470,11 +509,10 @@ export class InkEngine implements LayerControls {
     if (!this.cancelFrame) this.cancelFrame = this.frames.request(this.paintFrame);
   }
 
-  /** Queues a sample for the next frame, in sheet units; a pen sends hundreds a second, so it makes no garbage. */
+  /** Queues CSS-pixel samples; queue arithmetic runs before conversion to sheet coordinates. */
   private queue(live: LiveStroke, sample: PointerInput): void {
-    const { left, top, scale } = this.origin;
-    const x = (sample.clientX - left) / scale;
-    const y = (sample.clientY - top) / scale;
+    const { scale } = live;
+    const [x, y] = this.toStrokeCss(sample, scale);
     const { queue } = live;
     let at = live.queued;
     queue[at++] = x;
@@ -482,9 +520,11 @@ export class InkEngine implements LayerControls {
     queue[at++] = sample.pressure;
     queue[at++] = sample.timeStamp;
     live.queued = at;
-    live.moved = Math.max(live.moved, Math.hypot(x - live.x0, y - live.y0));
-    live.x = x;
-    live.y = y;
+    live.moved = Math.max(live.moved, Math.hypot(x / scale - live.x0, y / scale - live.y0));
+    live.x = x / scale;
+    live.y = y / scale;
+    live.cssX = x;
+    live.cssY = y;
     live.pressure = sample.pressure;
     live.t = sample.timeStamp;
   }
@@ -678,16 +718,19 @@ export class InkEngine implements LayerControls {
 
   /** Every step, oldest first, layer changes included: what the drawing kept on the device holds. */
   get steps(): readonly Step[] {
+    this.finishPendingCorrection();
     return this.history.steps;
   }
 
   /** The steps the timelapse plays, from the last time no layer had ink, and the layers then. */
   timelapse(): { steps: readonly Step[]; start: LayerState } {
+    this.finishPendingCorrection();
     return this.history.timelapse();
   }
 
   /** A new visible-ink canvas for sealing; a memory failure throws so the saved drawing is retained. */
   composite(): HTMLCanvasElement {
+    this.endStroke(false);
     const covered = this.suspended;
     try {
       // Kyoto Seika's clock can expire with the drawing covered. Restore only long enough to cut
@@ -774,6 +817,7 @@ export class InkEngine implements LayerControls {
   /** The sheet is going: its canvases and undo checkpoints are freed now rather than when they're collected. */
   dispose(): void {
     this.endStroke(true);
+    this.correction.dispose();
     this.releaseSurfaces();
   }
 
@@ -970,6 +1014,16 @@ export class InkEngine implements LayerControls {
     return [(e.clientX - left) / scale, (e.clientY - top) / scale];
   }
 
+  /** Rebase current screen input into the stroke's original CSS-pixel scale. */
+  private toStrokeCss(
+    e: Pick<PointerInput, "clientX" | "clientY">,
+    strokeScale: number,
+  ): [number, number] {
+    const { left, top, scale } = this.origin;
+    const ratio = strokeScale / scale;
+    return [(e.clientX - left) * ratio, (e.clientY - top) * ratio];
+  }
+
   /** A palm-sized contact, judged only on a device a pen has drawn on: before that, size rules nothing. */
   private palmContact(e: PointerInput): boolean {
     return this.settings.inputMode !== null && isPalm(e.width, e.height);
@@ -1026,9 +1080,15 @@ export class InkEngine implements LayerControls {
       const { live } = this;
       if (!cancelled) {
         [live.x, live.y] = this.toSheet(e);
-        live.t = e.timeStamp;
+        [live.cssX, live.cssY] = this.toStrokeCss(e, live.scale);
+        live.pressure = e.pressure;
       }
-      this.endStroke(cancelled && live.moved < CANCEL_KEEPS);
+      live.t = e.timeStamp;
+      this.endStroke(
+        cancelled && live.moved < CANCEL_KEEPS,
+        cancelled ? 0 : e.pressure,
+        !cancelled,
+      );
     }
   }
 
@@ -1036,6 +1096,22 @@ export class InkEngine implements LayerControls {
     const s = this.settings;
     if (s.tool === "eraser" && this.ink.layerCanvas(this.current) === null) {
       this.pointers.set(e.pointerId, swallowed(e.pointerType));
+      return;
+    }
+    const cssX = e.clientX - this.origin.left;
+    const cssY = e.clientY - this.origin.top;
+    let stabilizer: Stabilizer;
+    try {
+      stabilizer = new Stabilizer(
+        { x: cssX, y: cssY, pressure: e.pressure, t: e.timeStamp },
+        s.smoothing,
+        e.pointerType === "pen",
+        0n,
+        s.smoothingMode,
+      );
+    } catch (error) {
+      if (!(error instanceof StabilizationError)) throw error;
+      this.stabilizationFailed(error, e.pointerId);
       return;
     }
     // The first mark fixes the frame for the life of the drawing.
@@ -1049,7 +1125,7 @@ export class InkEngine implements LayerControls {
       y,
       t: e.timeStamp,
       T: s.sessionMs(),
-      pressure: e.pressure,
+      pressure: stabilizer.initial.pressure,
       pointerType: e.pointerType,
       pressureVaries: this.pressurePen,
       response: s.penPressure,
@@ -1059,7 +1135,18 @@ export class InkEngine implements LayerControls {
       id: e.pointerId,
       pointerType: e.pointerType,
       builder,
-      stabilizer: new Stabilizer(x, y, e.timeStamp, s.smoothing),
+      stabilizer,
+      correction:
+        s.postCorrection.strength > 0
+          ? {
+              packets: [{ ...stabilizer.initial, x, y }],
+              settings: { ...s.postCorrection },
+              stabilization: s.smoothing,
+              magnificationFraction: this.origin.scale,
+              brushSize: s.size,
+              pointerType: e.pointerType,
+            }
+          : null,
       queue: [],
       queued: 0,
       painted: 1,
@@ -1069,6 +1156,9 @@ export class InkEngine implements LayerControls {
       moved: 0,
       x,
       y,
+      cssX,
+      cssY,
+      scale: this.origin.scale,
       pressure: e.pressure,
       t: e.timeStamp,
     };
@@ -1083,47 +1173,45 @@ export class InkEngine implements LayerControls {
   }
 
   /** `time` is the frame's, on the clock pointer samples are stamped with. */
-  private readonly paintFrame = (time: number): void => {
+  private readonly paintFrame = (_time: number): void => {
     this.cancelFrame = null;
     const live = this.live;
     if (!live) return;
-    timeOurWork(INK_WORK.paint, () => {
-      if (live.queued > 0) this.feed(live);
-      else this.catchUp(live, time);
-      this.paintNew(live);
-      // The span the curve holds back for the next point, so the ink reaches the line; empty once
-      // settled, which takes the last frame's off.
-      this.display.paintTail(live.builder.provisional());
-    });
-    // Until the line is on the nib, each frame brings it closer.
-    if (!live.stabilizer.settled || !live.builder.settled)
-      this.cancelFrame ??= this.frames.request(this.paintFrame);
+    try {
+      timeOurWork(INK_WORK.paint, () => {
+        this.feed(live);
+        this.paintNew(live);
+        this.display.paintTail(live.builder.provisional());
+      });
+    } catch (error) {
+      if (!(error instanceof StabilizationError)) throw error;
+      this.stabilizationFailed(error, live.id);
+    }
   };
 
   /** Feeds the queued samples through the stabilizer to the stroke. */
   private feed(live: LiveStroke): void {
     const { queue, queued, stabilizer, builder } = live;
+    const { scale } = live;
     for (let i = 0; i < queued; i += 4) {
       // The builder keeps the nib it's given, to measure the next one's speed from.
-      const nib = { x: queue[i], y: queue[i + 1], t: queue[i + 3] };
-      const [x, y] = stabilizer.add(nib.x, nib.y, nib.t);
-      builder.add(x, y, queue[i + 2], stabilizer.time, nib);
+      const nib = {
+        x: queue[i] / scale,
+        y: queue[i + 1] / scale,
+        pressure: queue[i + 2],
+        t: queue[i + 3],
+      };
+      for (const output of stabilizer.add({
+        x: queue[i],
+        y: queue[i + 1],
+        pressure: queue[i + 2],
+        t: queue[i + 3],
+      })) {
+        this.retainCorrectionPacket(live, output);
+        builder.add(output.x / scale, output.y / scale, output.pressure, output.t, nib);
+      }
     }
     live.queued = 0;
-  }
-
-  /**
-   * A frame at `time` with no new sample. Frames come between a moving nib's samples too, so only a
-   * nib silent for `PAUSE_MS` has stopped: its line glides to it, and once there, curves all the way.
-   */
-  private catchUp(live: LiveStroke, time: number): void {
-    if (time - live.t < PAUSE_MS) return;
-    const { stabilizer, builder } = live;
-    if (!stabilizer.settled) {
-      const [x, y] = stabilizer.hold(time);
-      builder.add(x, y, live.pressure, stabilizer.time, null);
-    }
-    if (stabilizer.settled) builder.settle(live.x, live.y);
   }
 
   /** Paints the segments the stroke has added since the last paint on the wet canvas. */
@@ -1139,7 +1227,8 @@ export class InkEngine implements LayerControls {
    * Commits the stroke in progress, painting it whole on its layer, or takes it back: the layer
    * never had it, so the wet canvas only clears.
    */
-  private endStroke(takeBack: boolean): void {
+  private endStroke(takeBack: boolean, releasePressure = 0, correct = false): void {
+    this.finishPendingCorrection();
     const live = this.live;
     if (!live) return;
     this.live = null;
@@ -1156,18 +1245,120 @@ export class InkEngine implements LayerControls {
       return;
     }
     const { builder } = live;
-    timeOurWork(INK_WORK.paint, () => {
-      this.feed(live);
-      // The way to the lift point is the line catching up, not the pointer moving: it keeps the width,
-      // and shows at once, so it's recorded at the lift's time.
-      const lifted = Math.max(live.t, live.stabilizer.time);
-      for (const [x, y] of live.stabilizer.finish(live.x, live.y))
-        builder.add(x, y, live.pressure, lifted, null);
-      builder.settle(live.x, live.y);
-      // A pen's tail narrows once it's known where the stroke ends.
-      builder.taperEnd();
-    });
+    try {
+      timeOurWork(INK_WORK.paint, () => {
+        this.feed(live);
+        if (builder.pressured) this.pressurePen = true;
+        const { scale } = live;
+        for (const output of live.stabilizer.finish({
+          x: live.cssX,
+          y: live.cssY,
+          pressure: releasePressure,
+          t: live.t,
+        })) {
+          this.retainCorrectionPacket(live, output);
+          builder.add(output.x / scale, output.y / scale, output.pressure, output.t, null);
+        }
+        const last = live.stabilizer.position;
+        builder.settle(last.x / scale, last.y / scale);
+        // A pen's tail narrows once the queue's terminal endpoint is known.
+        builder.taperEnd();
+      });
+    } catch (error) {
+      if (!(error instanceof StabilizationError)) throw error;
+      this.stabilizationFailed(error, live.id);
+      return;
+    }
     const { op } = builder;
+    if (correct && live.correction) {
+      this.startCorrection(op, live.correction);
+      return;
+    }
+    this.commitStroke(op);
+  }
+
+  private retainCorrectionPacket(live: LiveStroke, output: StabilizerOutput): void {
+    if (!live.correction) return;
+    live.correction.packets.push({ ...output, x: output.x / live.scale, y: output.y / live.scale });
+  }
+
+  /** The completed preview stays visible until correction finishes or another command needs it. */
+  private startCorrection(
+    original: StrokeOp,
+    input: Omit<PostCorrectionInput, "renderedPoints">,
+  ): void {
+    try {
+      this.withRoom(
+        "showing the stroke awaiting correction",
+        () => {
+          this.display.beginStroke(original);
+          this.display.paintStroke(0, original.pts.length / 4);
+        },
+        true,
+      );
+    } catch (error) {
+      if (!(error instanceof CanvasUnavailableError)) throw error;
+      // No pending preview can be shown. Preserve original ink synchronously and keep the
+      // allocation notice after any successful commit/history notifications have run.
+      if (this.commitStroke(original)) this.events.onInkFailed(error);
+      return;
+    }
+    const pending = { original, abort: new AbortController() };
+    this.pendingCorrection = pending;
+    let result: Promise<number[]>;
+    try {
+      result = this.correction.correct(
+        { ...input, renderedPoints: original.pts },
+        pending.abort.signal,
+      );
+    } catch (error) {
+      this.correctionFailed(pending, error);
+      return;
+    }
+    void result.then(
+      (points) => {
+        if (this.pendingCorrection !== pending) return;
+        this.pendingCorrection = null;
+        // The returned spline samples are already the final geometry, with transferred width/time.
+        this.commitStroke({ ...original, pts: points });
+      },
+      (error: unknown) => this.correctionFailed(pending, error),
+    );
+  }
+
+  /** Commands remain synchronous: retain original ink before changing layers, history, or exports. */
+  private finishPendingCorrection(): void {
+    const pending = this.pendingCorrection;
+    if (!pending) return;
+    this.pendingCorrection = null;
+    pending.abort.abort();
+    this.commitStroke(pending.original);
+  }
+
+  private correctionFailed(pending: PendingCorrection, cause: unknown): void {
+    if (this.pendingCorrection !== pending) return;
+    this.pendingCorrection = null;
+    const restored = this.commitStroke(pending.original);
+    if (!restored) {
+      console.error(
+        "Stroke correction failed, and original ink could not be committed or shown",
+        cause,
+      );
+      return;
+    }
+    const error =
+      cause instanceof PostCorrectionError
+        ? cause
+        : new PostCorrectionError(
+            `Stroke correction failed: ${cause instanceof Error ? cause.message : String(cause)}`,
+          );
+    console.error("Stroke correction failed; the original ink was retained", error);
+    // Successful commit/history notifications may clear earlier notices, so publish this last.
+    this.events.onInkFailed(error);
+  }
+
+  /** False preserves an already reported failure to commit or display this stroke. */
+  private commitStroke(op: StrokeOp): boolean {
     const painted = timeOurWork(INK_WORK.commit, () => {
       // The whole stroke at once, as a replay paints it, so its edges match the replay's.
       const done = this.withRoom(op, () => this.ink.apply(op, this.history.state));
@@ -1177,10 +1368,32 @@ export class InkEngine implements LayerControls {
     });
     if (painted) this.landed(op);
     else this.followIfBlank();
-    this.withRoom("showing the completed stroke", () => {
+    const shown = this.withRoom("showing the completed stroke", () => {
       this.display.endStroke();
       if (painted) this.display.showCurrent();
     });
+    return painted && shown !== null;
+  }
+
+  /** Drop only the uncommitted preview and persist the existing drawing-error notice. */
+  private stabilizationFailed(error: StabilizationError, pointerId: number): void {
+    this.live = null;
+    this.cancelFrame?.();
+    this.cancelFrame = null;
+    this.pointers.delete(pointerId);
+    this.taps.cancel(pointerId);
+    const target = this.captureTarget;
+    if (target?.hasPointerCapture(pointerId)) {
+      try {
+        target.releasePointerCapture(pointerId);
+      } catch (releaseError) {
+        console.error("Could not release pointer capture after stabilization failed", releaseError);
+      }
+    }
+    this.withRoom("clearing the failed stroke preview", () => this.display.endStroke());
+    this.followIfBlank();
+    console.error("The uncommitted stroke was dropped because stabilization failed", error);
+    this.events.onInkFailed(error);
   }
 
   private applyFill(x: number, y: number): void {

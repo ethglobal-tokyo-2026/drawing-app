@@ -27,7 +27,11 @@ import {
   type SheetArea,
   type SheetFrame,
 } from "./sheetFrame";
-import { FIRST_SMOOTHING, PAUSE_MS, Stabilizer } from "./stabilizer";
+import { FIRST_SMOOTHING, StabilizationError, Stabilizer, type SmoothingMode } from "./stabilizer";
+import { StrokeBuilder } from "./brush";
+import { PostCorrectionError } from "./post-correction/errors";
+import { FIRST_POST_CORRECTION } from "./post-correction/settings";
+import type { PostCorrectionInput, PostCorrectionService } from "./post-correction/service";
 
 vi.mock("./context2d", () => import("./testContext2d"));
 
@@ -132,6 +136,8 @@ const SETTINGS: InkSettings = {
   color: "#1C1824",
   size: 7,
   smoothing: 0,
+  smoothingMode: "fixed",
+  postCorrection: FIRST_POST_CORRECTION,
   locked: false,
   paused: false,
   panelOpen: false,
@@ -140,7 +146,10 @@ const SETTINGS: InkSettings = {
   sessionMs: () => 0,
 };
 
-function setup(settings: Partial<InkSettings> = {}) {
+function setup(
+  settings: Partial<InkSettings> = {},
+  correction?: Pick<PostCorrectionService, "correct" | "dispose">,
+) {
   const ink = new LayerInk();
   const display = new RecordingDisplay();
   const events = {
@@ -156,13 +165,20 @@ function setup(settings: Partial<InkSettings> = {}) {
   let frame: ((time: number) => void) | null = null;
   /** The latest time an input was stamped with: a frame runs at it unless told otherwise. */
   let latest = 0;
-  const engine = new InkEngine(ink, display, { ...SETTINGS, ...settings }, events, {
-    now: () => latest,
-    request(cb) {
-      frame = cb;
-      return () => (frame = null);
+  const engine = new InkEngine(
+    ink,
+    display,
+    { ...SETTINGS, ...settings },
+    events,
+    {
+      now: () => latest,
+      request(cb) {
+        frame = cb;
+        return () => (frame = null);
+      },
     },
-  });
+    correction,
+  );
   engine.fit(AREA, 1);
   const at = (
     pointerType: string,
@@ -274,6 +290,339 @@ const lastPoint = (op: Op) => {
 /** What the timelapse would play: the ops since the sheet was last blank. */
 const drawn = (engine: InkEngine) => engine.timelapse().steps;
 
+/** An external correction request that finishes only when the test releases it. */
+function heldCorrection() {
+  const requests: {
+    input: PostCorrectionInput;
+    signal: AbortSignal | undefined;
+    resolve: (points: number[]) => void;
+    reject: (reason: Error) => void;
+  }[] = [];
+  const service = {
+    correct(input: PostCorrectionInput, signal?: AbortSignal): Promise<number[]> {
+      return new Promise((resolve, reject) => requests.push({ input, signal, resolve, reject }));
+    },
+    dispose: vi.fn(),
+  };
+  return { service, requests };
+}
+
+describe("InkEngine post-correction", () => {
+  const enabled = { strength: 10, adjustBySpeed: false, adjustByScale: true };
+  const corrected = [10, 40, 7, 0, 35, 12, 5, 16, 60, 40, 2, 32];
+
+  it("keeps the preview pending, then commits returned points directly as one undo step", async () => {
+    const { service, requests } = heldCorrection();
+    const { engine, stroke, committed, ink } = setup({ postCorrection: enabled }, service);
+    stroke("mouse", 1, [10, 40], [60, 40]);
+    expect(committed()).toHaveLength(0);
+    expect(layerCalls(ink)).toHaveLength(0);
+    expect(requests).toHaveLength(1);
+    requests[0].resolve(corrected);
+    await Promise.resolve();
+    expect(committed()).toEqual([
+      { tool: "brush", layer: 1, color: SETTINGS.color, pts: corrected, T: 0 },
+    ]);
+    expect(layerCalls(ink).length).toBeGreaterThan(0);
+    engine.undo();
+    expect(engine.steps).toEqual([]);
+    engine.redo();
+    expect(engine.steps).toEqual(committed());
+  });
+
+  it("retains sub-spacing stabilized packets in sheet coordinates and captures start settings", () => {
+    const { service, requests } = heldCorrection();
+    const { engine, at } = setup({ postCorrection: enabled, size: 12 }, service);
+    const detach = engine.attach(paperAt(framed(engine), 20, 30, 2));
+    engine.down(at("mouse", 1, 40, 50, 100));
+    engine.move(at("mouse", 1, 40.2, 50, 101));
+    engine.move(at("mouse", 1, 40.4, 50, 102));
+    engine.settings = {
+      ...engine.settings,
+      smoothing: 40,
+      size: 50,
+      postCorrection: { strength: 2, adjustBySpeed: true, adjustByScale: false },
+    };
+    engine.up(at("mouse", 1, 40.4, 50, 103));
+    expect(requests).toHaveLength(1);
+    const { input } = requests[0];
+    expect(input).toMatchObject({
+      magnificationFraction: 2,
+      brushSize: 12,
+      stabilization: 0,
+      pointerType: "mouse",
+      settings: enabled,
+    });
+    expect(input.packets.slice(0, 3)).toEqual([
+      { x: 10, y: 10, pressure: 1, t: 100, phase: 2 },
+      { x: 10.100000000000001, y: 10, pressure: 1, t: 101, phase: 1 },
+      { x: 10.2, y: 10, pressure: 1, t: 102, phase: 1 },
+    ]);
+    expect(input.packets.at(-1)).toMatchObject({ x: 10.2, y: 10, t: 103 });
+    expect(input.packets.length).toBeGreaterThan(input.renderedPoints.length / STRIDE);
+    detach();
+    engine.dispose();
+  });
+
+  it("commits original ink before a new stroke and ignores the canceled result", async () => {
+    const { service, requests } = heldCorrection();
+    const { engine, at, stroke, committed, display, events } = setup(
+      { postCorrection: enabled },
+      service,
+    );
+    stroke("mouse", 1, [10, 40], [60, 40]);
+    const original = requests[0]?.input.renderedPoints;
+    engine.down(at("mouse", 2, 80, 40, 200));
+    expect(committed()).toHaveLength(1);
+    expect(committed()[0]).toMatchObject({ pts: original });
+    expect(requests[0].signal?.aborted).toBe(true);
+    const activePreview = display.stroke;
+    requests[0].resolve(corrected);
+    await Promise.resolve();
+    expect(committed()).toHaveLength(1);
+    expect(display.stroke).toBe(activePreview);
+    expect(events.onInkFailed).not.toHaveBeenCalled();
+    engine.dispose();
+  });
+
+  it("keeps filtered pen pressure and terminal outputs independent of frame batching", () => {
+    const inputs: PostCorrectionInput[] = [];
+    for (const batch of [false, true]) {
+      const { service, requests } = heldCorrection();
+      const { engine, at, runFrame } = setup({ postCorrection: enabled, smoothing: 20 }, service);
+      engine.down(at("pen", 1, 10, 40, 100, 0.2));
+      const moves = [at("pen", 1, 30, 40, 110, 0.8), at("pen", 1, 50, 50, 120, 0.6)];
+      if (batch) engine.move({ ...moves[1], getCoalescedEvents: () => moves });
+      else
+        for (const move of moves) {
+          engine.move(move);
+          runFrame();
+        }
+      engine.up(at("pen", 1, 70, 50, 130, 0));
+      expect(requests).toHaveLength(1);
+      inputs.push(requests[0].input);
+      engine.dispose();
+    }
+    expect(inputs[0]).toEqual(inputs[1]);
+    const packets = inputs[0].packets;
+    expect(packets[0]).toEqual({ x: 10, y: 40, pressure: 0.2, t: 100, phase: 2 });
+    expect(packets[1].pressure).toBeGreaterThan(0.2);
+    expect(packets[1].pressure).toBeLessThan(0.8);
+    expect(packets[1].x).toBeLessThan(30);
+    expect(packets.filter((packet) => packet.t === 130).length).toBeGreaterThan(1);
+    expect(packets.at(-1)?.pressure).toBe(0);
+    expect(packets.at(-1)?.phase).toBe(3);
+    expect(packets.slice(1, -1).every((packet) => packet.phase === 1)).toBe(true);
+  });
+
+  it("settles pending correction when sealing locks the sheet", async () => {
+    const { service, requests } = heldCorrection();
+    const { engine, stroke, committed, events } = setup({ postCorrection: enabled }, service);
+    stroke("mouse", 1, [10, 40], [60, 40]);
+    engine.settings = { ...engine.settings, locked: true };
+    expect(committed()).toHaveLength(1);
+    expect(requests[0].signal?.aborted).toBe(true);
+    requests[0].resolve(corrected);
+    await Promise.resolve();
+    expect(committed()).toHaveLength(1);
+    expect(events.onInkFailed).not.toHaveBeenCalled();
+  });
+
+  it("keeps the completed preview if starting the worker throws synchronously", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { service } = heldCorrection();
+    service.correct = () => {
+      throw new Error("Worker creation is unavailable");
+    };
+    const { stroke, committed, events } = setup({ postCorrection: enabled }, service);
+    stroke("mouse", 1, [10, 40], [60, 40]);
+    expect(committed()).toHaveLength(1);
+    expect(lastPoint(committed()[0])).toEqual([60, 40]);
+    expect(events.onInkFailed.mock.calls[0][0]).toBeInstanceOf(PostCorrectionError);
+  });
+
+  it.each(["touchend", "touchcancel"])(
+    "Pencil %s starts correction only for a natural lift",
+    (type) => {
+      const { service, requests } = heldCorrection();
+      const { engine, at, committed } = setup({ postCorrection: enabled }, service);
+      const detach = engine.attach(paperAt(framed(engine), 0, 0, 1));
+      try {
+        engine.down(at("pen", 1, 10, 40, 0));
+        engine.move(at("pen", 1, 60, 40, 16));
+        document.dispatchEvent(
+          new TouchEvent(type, {
+            touches: [],
+            changedTouches: [
+              Object.assign(
+                new Touch({ identifier: 1, target: document.body, clientX: 60, clientY: 40 }),
+                { touchType: "stylus" },
+              ),
+            ],
+          }),
+        );
+        expect(requests).toHaveLength(type === "touchend" ? 1 : 0);
+        expect(committed()).toHaveLength(type === "touchend" ? 0 : 1);
+        engine.cancel(at("pen", 1, 60, 40, 32));
+        expect(requests).toHaveLength(type === "touchend" ? 1 : 0);
+        expect(committed()).toHaveLength(type === "touchend" ? 0 : 1);
+      } finally {
+        detach();
+        engine.dispose();
+      }
+    },
+  );
+
+  it.each([
+    "layer",
+    "undo",
+    "finish",
+    "steps",
+    "timelapse",
+    "composite",
+    "suspend",
+    "dispose",
+  ] as const)("%s synchronously settles pending ink before its operation", async (action) => {
+    const { service, requests } = heldCorrection();
+    const { engine, stroke, committed, events } = setup({ postCorrection: enabled }, service);
+    stroke("mouse", 1, [10, 40], [60, 40]);
+    const original = requests[0]?.input.renderedPoints;
+    if (action === "layer") engine.addLayer();
+    else if (action === "undo") engine.undo();
+    else if (action === "finish") engine.finishStroke();
+    else if (action === "steps") expect(engine.steps).toHaveLength(1);
+    else if (action === "timelapse") expect(engine.timelapse().steps).toHaveLength(1);
+    else if (action === "composite") engine.composite();
+    else if (action === "suspend") engine.suspend();
+    else engine.dispose();
+    expect(committed()).toHaveLength(1);
+    expect(committed()[0]).toMatchObject({ layer: 1, pts: original });
+    expect(requests[0].signal?.aborted).toBe(true);
+    if (action === "undo") expect(engine.steps).toHaveLength(0);
+    if (action === "layer") expect(engine.steps.map((step) => step.tool)).toEqual(["brush", "add"]);
+    requests[0].reject(new PostCorrectionError("late worker failure"));
+    await Promise.resolve();
+    expect(committed()).toHaveLength(1);
+    expect(events.onInkFailed).not.toHaveBeenCalled();
+    if (action === "dispose") expect(service.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it("merges pending ink once and ignores a correction that arrives after the layer is gone", async () => {
+    const { service, requests } = heldCorrection();
+    const { engine, stroke, committed, events } = setup({ postCorrection: enabled }, service);
+    engine.addLayer();
+    stroke("mouse", 1, [10, 40], [60, 40]);
+    expect(requests).toHaveLength(1);
+    expect(committed()).toHaveLength(0);
+    const original = requests[0].input.renderedPoints;
+
+    engine.mergeDown();
+    expect(requests[0].signal?.aborted).toBe(true);
+    expect(committed()).toEqual([
+      { tool: "brush", layer: 2, color: SETTINGS.color, pts: original, T: 0 },
+    ]);
+    expect(engine.steps.map((step) => step.tool)).toEqual(["add", "brush", "merge"]);
+    expect(engine.steps.at(-1)).toMatchObject({ tool: "merge", layer: 2, into: 1 });
+    expect(events.onLayers.mock.lastCall?.[0].current).toBe(1);
+    const merged = [...engine.steps];
+
+    requests[0].resolve(corrected);
+    await Promise.resolve();
+    expect(engine.steps).toEqual(merged);
+    expect(committed()).toHaveLength(1);
+    expect(events.onInkFailed).not.toHaveBeenCalled();
+    engine.undo();
+    expect(engine.steps).toEqual(merged.slice(0, -1));
+    expect(events.onLayers.mock.lastCall?.[0].current).toBe(2);
+    engine.redo();
+    expect(engine.steps).toEqual(merged);
+    expect(events.onLayers.mock.lastCall?.[0].current).toBe(1);
+    engine.dispose();
+  });
+
+  it("retains original ink on failure and publishes the error after commit and history callbacks", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { service, requests } = heldCorrection();
+    const { stroke, committed, events } = setup({ postCorrection: enabled }, service);
+    stroke("mouse", 1, [10, 40], [60, 40]);
+    expect(requests).toHaveLength(1);
+    const original = requests[0]?.input.renderedPoints;
+    requests[0].reject(new Error("worker exceeded its deadline"));
+    await Promise.resolve();
+    expect(committed()).toHaveLength(1);
+    expect(committed()[0]).toMatchObject({ pts: original });
+    expect(events.onInkFailed.mock.calls[0][0]).toBeInstanceOf(PostCorrectionError);
+    expect(events.onInkFailed.mock.invocationCallOrder[0]).toBeGreaterThan(
+      events.onCommit.mock.invocationCallOrder[0],
+    );
+    expect(events.onInkFailed.mock.invocationCallOrder[0]).toBeGreaterThan(
+      events.onHistory.mock.invocationCallOrder.at(-1) ?? 0,
+    );
+    expect(log).toHaveBeenCalled();
+  });
+
+  it("keeps strength zero synchronous without invoking correction", () => {
+    const { service, requests } = heldCorrection();
+    const { stroke, committed } = setup({}, service);
+    stroke("mouse", 1, [10, 40], [60, 40]);
+    expect(committed()).toHaveLength(1);
+    expect(requests).toHaveLength(0);
+  });
+
+  it.each(["apply", "show"] as const)(
+    "keeps the canvas error when original ink cannot %s after correction fails",
+    async (failure) => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+      const { service, requests } = heldCorrection();
+      const { engine, stroke, ink, display, events, committed } = setup(
+        { postCorrection: enabled },
+        service,
+      );
+      stroke("mouse", 1, [10, 40], [60, 40]);
+      const memoryError = new CanvasUnavailableError();
+      if (failure === "apply")
+        vi.spyOn(ink, "apply").mockImplementation(() => {
+          throw memoryError;
+        });
+      else
+        vi.spyOn(display, "showCurrent").mockImplementation(() => {
+          throw memoryError;
+        });
+      requests[0].reject(new PostCorrectionError("worker exceeded its deadline"));
+      await Promise.resolve();
+      expect(committed()).toHaveLength(failure === "apply" ? 0 : 1);
+      expect(events.onInkFailed.mock.lastCall?.[0]).toBe(memoryError);
+      expect(
+        logged.mock.calls.some(([message]) =>
+          String(message).includes("original ink was retained"),
+        ),
+      ).toBe(false);
+      expect(engine.steps).toHaveLength(failure === "apply" ? 0 : 1);
+    },
+  );
+
+  it("skips correction and preserves the canvas error if the completed preview cannot be shown", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { service, requests } = heldCorrection();
+    const { engine, at, display, committed, events } = setup({ postCorrection: enabled }, service);
+    engine.down(at("mouse", 1, 10, 40, 0));
+    engine.move(at("mouse", 1, 60, 40, 16));
+    const memoryError = new CanvasUnavailableError();
+    vi.spyOn(display, "beginStroke").mockImplementation(() => {
+      throw memoryError;
+    });
+    engine.up(at("mouse", 1, 60, 40, 32));
+    expect(requests).toHaveLength(0);
+    expect(committed()).toHaveLength(1);
+    expect(events.onInkFailed.mock.lastCall?.[0]).toBe(memoryError);
+    expect(events.onInkFailed.mock.invocationCallOrder.at(-1) ?? 0).toBeGreaterThan(
+      events.onHistory.mock.invocationCallOrder.at(-1) ?? 0,
+    );
+  });
+});
+
 /** Every call painted on the layer's own canvas so far; none while it has no canvas. */
 const layerCalls = (ink: LayerInk, layer: LayerId = FIRST_LAYER) => {
   const canvas = ink.layerCanvas(layer);
@@ -375,42 +724,209 @@ describe("InkEngine", () => {
     expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false, true));
   });
 
-  it("commits a stroke on lift, ending where the pointer lifted", () => {
+  it("commits the queue's pressure-zero endpoint rather than snapping to the lifted pointer", () => {
     const { stroke, committed, events } = setup({ smoothing: SMOOTH });
     stroke("mouse", 1, [0, 0], [200, 0]);
     expect(committed()).toHaveLength(1);
-    expect(lastPoint(committed()[0])).toEqual([200, 0]);
+    const [x, y] = lastPoint(committed()[0]);
+    expect(x).toBeGreaterThan(190);
+    expect(x).toBeLessThan(200);
+    expect(y).toBe(0);
     expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false));
   });
 
-  it("at Smooth, inks nothing past the stabilized line while the pointer moves, and glides the line to it once it stops, pen and finger alike", () => {
+  it("at Smooth, display frames never advance the stabilized line beyond its emitted points", () => {
     for (const pointerType of ["pen", "touch"]) {
       const { engine, at, runFrame, display, committed } = setup({ smoothing: SMOOTH });
-      const stabilized = new Stabilizer(0, 0, 0, SMOOTH);
       engine.down(at(pointerType, 1, 0, 0, 0));
       let t = 0;
       for (let i = 1; i <= 20; i++) {
         t = i * 16;
         engine.move(at(pointerType, 1, i * 10, 0, t));
         runFrame();
-        const [line] = stabilized.add(i * 10, 0, t);
-        expect(display.reach).toBeLessThanOrEqual(line);
-        expect(line).toBeLessThan(i * 10);
+        expect(display.reach).toBeLessThan(i * 10);
       }
-      // A frame before the nib has been silent long enough leaves the line where its samples put it.
+      // Rendering must not add synthetic packets to a packet-count filter.
       const trailing = display.reach;
       runFrame(t + FRAME_MS);
       expect(display.reach).toBe(trailing);
-      // Stopped, it glides there with no new sample, and lands on the nib.
-      runFrame(t + PAUSE_MS);
-      expect(display.reach).toBeGreaterThan(trailing);
-      for (let time = t + PAUSE_MS; display.reach < 200 && time < t + 10_000; time += FRAME_MS)
-        runFrame(time);
-      expect(display.stroke && lastPoint(display.stroke)).toEqual([200, 0]);
+      runFrame(t + 100);
+      runFrame(t + 1000);
+      expect(display.reach).toBe(trailing);
       engine.up(at(pointerType, 1, 200, 0, t + 10_000));
       const op = committed()[0];
       expect(op.tool === "fill" ? [] : op.pts.slice(0, 2)).toEqual([0, 0]);
     }
+  });
+
+  it("applies the selected pen speed mode for the whole stroke and leaves other pointers fixed", () => {
+    const draw = (
+      pointerType: string,
+      smoothingMode: "fixed" | "slow" | "fast",
+      change = false,
+    ) => {
+      const { engine, at, runFrame, committed, events } = setup({ smoothing: 4, smoothingMode });
+      engine.down(at(pointerType, 1, 10, 20, 100, 0.5));
+      if (change) engine.settings = { ...engine.settings, smoothingMode: "fixed" };
+      for (const [index, x] of [118, 150, 240, 245].entries()) {
+        engine.move(at(pointerType, 1, x, 20 + index * 3, 108 + index * 8, 0.5));
+        runFrame();
+      }
+      engine.up(at(pointerType, 1, 250, 35, 148, 0));
+      expect(events.onInkFailed).not.toHaveBeenCalled();
+      expect(committed()).toHaveLength(1);
+      return committed();
+    };
+    const fixed = draw("pen", "fixed");
+    for (const mode of ["slow", "fast"] as const) {
+      expect(draw("pen", mode)).not.toEqual(fixed);
+      expect(draw("pen", mode, true)).toEqual(draw("pen", mode));
+      for (const pointer of ["mouse", "touch"])
+        expect(draw(pointer, mode)).toEqual(draw(pointer, "fixed"));
+    }
+  });
+
+  it("feeds averaged pressure and every release output to the builder at the reported lift time", () => {
+    const add = vi.spyOn(StrokeBuilder.prototype, "add");
+    const { engine, at, committed } = setup({ smoothing: 4 });
+    engine.down(at("pen", 1, 0, 0, 0, 1));
+    engine.move(at("pen", 1, 10, 0, 5, 0.5));
+    engine.move(at("pen", 1, 20, 0, 10, 0.25));
+    engine.up(at("pen", 1, 30, 0, 15.875, 0));
+    expect(add.mock.calls.slice(0, 2).map((call) => call.slice(0, 4))).toEqual([
+      [4, 0, 0.8, 5],
+      [10, 0, 0.5833333333333333, 10],
+    ]);
+    // H grows 3 -> 3.5 -> 3.875 -> 4; zero inputs extrapolate to -.2 before the zero crossing.
+    expect(add.mock.calls.length).toBe(5);
+    expect(add.mock.calls.slice(2).every((call) => call[3] === 15.875)).toBe(true);
+    expect(add.mock.calls.at(-1)?.slice(0, 4)).toEqual([26.444444444444443, 0, 0, 15.875]);
+    expect(committed().map(lastPoint)).toEqual([[26.444444444444443, 0]]);
+  });
+
+  it("does not carry synthetic release pressure variation into the next pen's starting width", () => {
+    for (const firstPressure of [0, 0.5]) {
+      const { engine, at, committed } = setup({ smoothing: 4 });
+      engine.down(at("pen", 1, 0, 0, 0, firstPressure));
+      engine.move(at("pen", 1, 20, 0, 10, 0.5));
+      engine.move(at("pen", 1, 40, 0, 20, 0.5));
+      engine.up(at("pen", 1, 60, 0, 30, 0));
+      engine.down(at("pen", 2, 0, 40, 1000, 0.1));
+      engine.up(at("pen", 2, 0, 40, 1010, 0));
+      const next = committed()[1];
+      expect(next.tool).toBe("brush");
+      if (next.tool === "fill") throw new Error("Expected a brush stroke");
+      expect(next.pts[2]).toBe(7 * 0.35);
+    }
+  });
+
+  it("keeps coalesced packet order and produces the same stroke across display frame partitions", () => {
+    const draw = (partition: "individual" | "coalesced" | "idle") => {
+      const { engine, at, runFrame, committed } = setup({ smoothing: 20 });
+      engine.down(at("pen", 1, 0, 0, 0, 0.8));
+      const packets = Array.from({ length: 20 }, (_, index) =>
+        at("pen", 1, (index + 1) * 10, (index % 3) * 7, (index + 1) * 100, 0.2 + (index % 5) * 0.1),
+      );
+      if (partition === "coalesced") {
+        const last = packets.at(-1);
+        if (!last) throw new Error("Expected contact packets");
+        engine.move({ ...last, getCoalescedEvents: () => packets });
+        runFrame();
+      } else {
+        for (const packet of packets) {
+          engine.move(packet);
+          runFrame(packet.timeStamp);
+          if (partition === "idle") runFrame(packet.timeStamp + 50);
+        }
+      }
+      engine.up(at("pen", 1, 210, 0, 2100, 0));
+      return committed();
+    };
+    expect(draw("coalesced")).toEqual(draw("individual"));
+    expect(draw("idle")).toEqual(draw("individual"));
+  });
+
+  it("reports an invalid packet, drops only its uncommitted stroke, and accepts the next stroke", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { engine, at, runFrame, stroke, committed, events, hasPendingFrame } = setup({
+      smoothing: 20,
+    });
+    stroke("pen", 1, [0, 0], [100, 0]);
+    const kept = committed()[0];
+    engine.down(at("pen", 2, 0, 20, 1000));
+    engine.move(at("pen", 2, NaN, 20, 1010));
+    expect(() => runFrame()).not.toThrow();
+    expect(events.onInkFailed).toHaveBeenCalledOnce();
+    expect(logged).toHaveBeenCalled();
+    expect(hasPendingFrame()).toBe(false);
+    expect(committed()).toEqual([kept]);
+    stroke("pen", 3, [0, 40], [100, 40], 2000);
+    expect(committed()).toHaveLength(2);
+  });
+
+  it("runs queue geometry in CSS pixels before converting to the fixed sheet", () => {
+    for (const scale of [0.5, 2]) {
+      const { engine, at, committed } = setup({ smoothing: 4 });
+      const detach = engine.attach(paperAt(framed(engine), 100, 40, scale));
+      engine.down(at("pen", 1, 100, 40, 0, 1));
+      engine.move(at("pen", 1, 110, 40, 5, 0.5));
+      engine.move(at("pen", 1, 120, 40, 10, 0.25));
+      engine.up(at("pen", 1, 130, 40, 15.875, 0));
+      expect(lastPoint(committed()[0])).toEqual([26.444444444444443 / scale, 0]);
+      detach();
+    }
+  });
+
+  it("keeps pending samples and stabilization history in one coordinate basis during resize", () => {
+    const draw = (smoothing: number, smoothingMode: SmoothingMode, resize: boolean) => {
+      const { engine, at, runFrame, committed } = setup({ smoothing, smoothingMode });
+      const frame = framed(engine);
+      const paper = paperAt(frame, 0, 0, 1);
+      const detach = engine.attach(paper);
+      engine.down(at("pen", 1, 20, 50, 0, 0.8));
+      engine.move(at("pen", 1, 40, 50, 16, 0.6));
+      const left = resize ? 30 : 0,
+        top = resize ? 10 : 0,
+        scale = resize ? 2 : 1;
+      paper.getBoundingClientRect = () => new DOMRect(left, top, frame.w * scale, frame.h * scale);
+      engine.measurePaper();
+      // Both the queued old-scale sample and this new-scale sample drain together.
+      engine.move(at("pen", 1, left + 60 * scale, top + 50 * scale, 32, 0.4));
+      runFrame();
+      engine.up(at("pen", 1, left + 80 * scale, top + 50 * scale, 48, 0));
+      detach();
+      return committed();
+    };
+    for (const smoothing of [0, 4, 35])
+      for (const mode of ["fixed", "slow", "fast"] as const)
+        expect(draw(smoothing, mode, true)).toEqual(draw(smoothing, mode, false));
+  });
+
+  it("cleans up a failed terminal flush, releases capture, and preserves earlier committed ink", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { engine, at, stroke, committed, events, hasPendingFrame } = setup({ smoothing: 20 });
+    stroke("pen", 1, [0, 0], [100, 0]);
+    const kept = committed()[0];
+    const paper = paperAt(framed(engine), 0, 0, 1);
+    paper.hasPointerCapture = vi.fn(() => true);
+    const releasePointerCapture = vi.fn();
+    paper.releasePointerCapture = releasePointerCapture;
+    const detach = engine.attach(paper);
+    const failure = new StabilizationError("Release limit exceeded");
+    const finish = vi.spyOn(Stabilizer.prototype, "finish").mockImplementation(() => {
+      throw failure;
+    });
+    engine.down(at("pen", 2, 0, 40, 1000));
+    engine.move(at("pen", 2, 100, 40, 1010));
+    expect(() => engine.up(at("pen", 2, 100, 40, 1020, 0))).not.toThrow();
+    expect(events.onInkFailed).toHaveBeenCalledWith(failure);
+    expect(releasePointerCapture).toHaveBeenCalledWith(2);
+    expect(hasPendingFrame()).toBe(false);
+    expect(committed()).toEqual([kept]);
+    finish.mockRestore();
+    stroke("pen", 3, [0, 80], [100, 80], 2000);
+    expect(committed()).toHaveLength(2);
+    detach();
   });
 
   it("draws a quick finger stroke thinner than a slow one at any Smoothing, and keeps the width it lifted with as the line catches up", () => {
@@ -444,7 +960,7 @@ describe("InkEngine", () => {
     }
   });
 
-  it("records the line's catch-up to where a quick pen lifted at the lift's time, as it shows at once", () => {
+  it("records every terminal point at the lift time without forcing the raw pointer endpoint", () => {
     const { engine, at, runFrame, committed } = setup({ smoothing: SMOOTH });
     engine.down(at("pen", 1, 0, 0, 0));
     for (let i = 1; i <= ROW_STEPS; i++) {
@@ -457,7 +973,9 @@ describe("InkEngine", () => {
     if (op.tool === "fill") throw new Error("Expected a stroke, got a fill");
     const times = Array.from({ length: op.pts.length / STRIDE }, (_, i) => op.pts[i * STRIDE + 3]);
     expect(Math.max(...times)).toBe(lifted);
-    expect(lastPoint(op)).toEqual([ROW_STEPS * ROW_STEP, 0]);
+    expect(lastPoint(op)[0]).toBeLessThan(ROW_STEPS * ROW_STEP);
+    expect(lastPoint(op)[0]).toBeGreaterThan((ROW_STEPS - 1) * ROW_STEP);
+    expect(lastPoint(op)[1]).toBe(0);
   });
 
   it("at Raw, hands the display the span the curve holds back each frame, out to the newest sample even between samples, and ends the stroke where it lifted", () => {

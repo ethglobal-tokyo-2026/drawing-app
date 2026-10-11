@@ -429,6 +429,43 @@ describe("the drawing kept on this device", () => {
     });
   });
 
+  it("restores post correction choices and rejects a malformed stored setting", async () => {
+    const userId = someone();
+    const tools = {
+      fillReference: "layer" as const,
+      brushSize: 0.5,
+      eraserSize: 0.2,
+      smoothing: 20,
+      postCorrection: { strength: 40, adjustBySpeed: true, adjustByScale: false },
+    };
+    draw(userId, [stroke("a")]).keepTools(tools);
+    expect(await loadKept(userId)).toMatchObject({ status: "found", tools });
+    keepRecordAs(userId, {
+      tools: { ...tools, postCorrection: { ...tools.postCorrection, strength: 41 } },
+    });
+    const invalid = await loadKept(userId);
+    expect(invalid.status).toBe("found");
+    expect(invalid).not.toHaveProperty("tools");
+  });
+
+  it.each(["fixed", "slow", "fast"] as const)(
+    "restores the %s pen speed choice",
+    async (smoothingMode) => {
+      const userId = someone();
+      const tools = {
+        fillReference: "layer" as const,
+        brushSize: 0.5,
+        eraserSize: 0.2,
+        smoothing: 20,
+        smoothingMode,
+      };
+      draw(userId, [stroke("a")]).keepTools(tools);
+      expect(await loadKept(userId)).toMatchObject({ status: "found", tools });
+      keepRecordAs(userId, { tools: { ...tools, smoothingMode: "unknown" } });
+      expect(await loadKept(userId)).not.toHaveProperty("tools");
+    },
+  );
+
   it("keeps the layer being drawn on, and starts a new session on the first layer", async () => {
     const userId = someone();
     const keeper = draw(userId, [addLayer(2, 1), brush(2)]);

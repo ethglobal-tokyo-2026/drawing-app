@@ -7,7 +7,8 @@ import {
   type InkSettings,
 } from "../../sticker-creation/canvas/inkEngine";
 import type { Step } from "../../sticker-creation/canvas/ops";
-import { FIRST_SMOOTHING } from "../../sticker-creation/canvas/stabilizer";
+import { FIRST_SMOOTHING, FIRST_SMOOTHING_MODE } from "../../sticker-creation/canvas/stabilizer";
+import { FIRST_POST_CORRECTION } from "../../sticker-creation/canvas/post-correction/settings";
 import { LayerDisplay } from "../../sticker-creation/layers/layerDisplay";
 import { LayerInk } from "../../sticker-creation/layers/layerInk";
 import { FIRST_LAYER } from "../../sticker-creation/layers/layerState";
@@ -32,6 +33,8 @@ const settingsFor = (response: PenPressure, fingersDraw: boolean): InkSettings =
   color: INK,
   size: TRY_SIZE,
   smoothing: FIRST_SMOOTHING,
+  smoothingMode: FIRST_SMOOTHING_MODE,
+  postCorrection: FIRST_POST_CORRECTION,
   locked: false,
   paused: false,
   panelOpen: false,

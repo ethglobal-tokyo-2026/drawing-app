@@ -546,11 +546,54 @@ export const stickerCreation = {
       en: "Couldn’t update the drawing: this device is short on memory. Deleting a layer makes room.",
       ja: "端末の<wbr/>メモリ不足で<wbr/>絵を<wbr/>更新できませんでした。<wbr/>レイヤーを<wbr/>削除すると<wbr/>空きが<wbr/>できます。",
     },
+    /** Drawing screen, the chip over the seal key: announced when stabilization cannot finish a stroke; it stays until a drawing change succeeds */
+    stabilizationFailed: {
+      en: "This stroke couldn’t be saved because smoothing failed. Please draw it again.",
+      ja: "手ブレ補正に<wbr/>失敗したため、<wbr/>この線を<wbr/>保存できませんでした。<wbr/>もう一度<wbr/>描いてください。",
+    },
+    /** Drawing screen, the persistent error chip: correction failed after pen lift and the original stroke was kept */
+    postCorrectionFailed: {
+      en: "Post correction couldn’t finish. Your original line was saved. Lower the correction strength or turn it off.",
+      ja: "後補正を<wbr/>完了できなかったため、<wbr/>元の線を<wbr/>保存しました。<wbr/>後補正を<wbr/>弱くするか、<wbr/>オフにしてください。",
+    },
   },
   /** The bar under the tools, named like its tile. */
   smoothingBar: {
     /** Drawing screen, open Smoothing bar: the current strength beside the range */
     value: { en: "{{value}}%", ja: "{{value}}%" },
+    /** Smoothing bar, below live strength: label for pen-only speed adjustment */
+    penSpeed: { en: "Pen speed", ja: "ペン速度" },
+    /** Smoothing bar, pen speed choices: keep stabilization fixed */
+    fixed: { en: "Fixed", ja: "一定" },
+    /** Smoothing bar, pen speed choices: increase adjustment for slow pen motion */
+    slow: { en: "Adjust for slow drawing", ja: "ゆっくり描くときに補正" },
+    /** Smoothing bar, pen speed choices: change adjustment for fast pen motion */
+    fast: { en: "Adjust for fast drawing", ja: "速く描くときに補正" },
+    /** Smoothing bar, under pen speed choices: explains its pen-only scope */
+    penSpeedHelp: {
+      en: "Pen only. Adjusts while you draw.",
+      ja: "ペン入力のみ。描いている間に調整します。",
+    },
+    /** Smoothing bar, slow pen adjustment selected: explains the active strength range */
+    slowHelp: {
+      en: "Pen only. Applies at Smoothing 0–30; above 30 stays fixed.",
+      ja: "ペン入力のみ。手ぶれ補正0〜30で適用。30を超えると一定になります。",
+    },
+    /** Smoothing bar, fast pen adjustment selected: explains the active strength range */
+    fastHelp: {
+      en: "Pen only. Applies at Smoothing 3 or above; below 3 stays fixed.",
+      ja: "ペン入力のみ。手ぶれ補正3以上で適用。3未満は一定になります。",
+    },
+    /** Smoothing bar, under the tool strip: label for the strength applied after pen lift */
+    postCorrection: { en: "Post correction", ja: "後補正" },
+    /** Smoothing bar, below Post correction: explains when correction changes the line */
+    postHelp: { en: "Reshapes the line after you lift.", ja: "ペンを離した後に線を整えます。" },
+    /** Smoothing bar, Post correction slider: zero strength disables correction */
+    off: { en: "Off", ja: "オフ" },
+    /** Smoothing bar, Post correction options: changes correction with the stroke's movement */
+    adjustBySpeed: { en: "Adjust by speed", ja: "速度による調整" },
+    /** Smoothing bar, Post correction options: keeps correction related to the displayed scale */
+    adjustByScale: { en: "Adjust by scale", ja: "表示倍率による調整" },
   },
   /** The bar under the tools that asks before the current layer is cleared. */
   clearBar: {

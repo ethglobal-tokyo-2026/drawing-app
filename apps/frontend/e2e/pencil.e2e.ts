@@ -2,7 +2,7 @@ import { DAILY_TICKETS_PER_DAY } from "@drawing-app/api/client";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { PALM_CONTACT_PX } from "../src/sticker-creation/canvas/gestures.ts";
-import { canvas, drawKeyName, openSettings, say, signIn } from "./helpers.ts";
+import { canvas, chooseLanguage, drawKeyName, openSettings, say, signIn } from "./helpers.ts";
 import { ipad } from "./ipad.ts";
 import {
   along,
@@ -23,6 +23,12 @@ import {
 
 const { stickerBoard, stickerCreation } = strings;
 const language = "en";
+
+declare global {
+  interface Window {
+    recordCorrectionResponse: (response: unknown) => Promise<void>;
+  }
+}
 
 // An iPad in portrait, the Pencil's own device.
 test.use(ipad);
@@ -47,6 +53,26 @@ const undo = (page: Page) =>
   page.getByRole("button", { name: say(stickerCreation.history.undo, language) });
 const pencilOnlyTile = (page: Page) =>
   page.getByRole("button", { name: say(stickerCreation.tools.pencilOnly, language) });
+
+/** Exact committed pixel comparison, kept inside the browser to avoid transferring image data. */
+async function committedInkDigest(page: Page) {
+  return page.locator(".ink-layers canvas").evaluateAll(async (canvases) => {
+    return Promise.all(
+      canvases.map(async (element) => {
+        if (!(element instanceof HTMLCanvasElement)) throw new Error("The layer is not a canvas");
+        const canvas = element;
+        if (canvas.width === 0 || canvas.height === 0) return `${canvas.width}x${canvas.height}`;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("The committed layer has no drawing context");
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        const digest = await crypto.subtle.digest("SHA-256", pixels);
+        return Array.from(new Uint8Array(digest), (byte) =>
+          byte.toString(16).padStart(2, "0"),
+        ).join("");
+      }),
+    );
+  });
+}
 
 /** Two fingertips land together near the sheet's foot, and lift. */
 async function twoFingerTap(fingers: Hand, box: Box) {
@@ -143,7 +169,7 @@ test("pen pressure: a pen whose pressure never moves draws by speed; then stroke
   expect(await inkAt(page, light[2])).toBeLessThan(await inkAt(page, firm[2]));
 });
 
-test("at Smooth, a pen's line trails its nib with no ink ahead of it, catches up as it pauses, and ends where it lifts", async ({
+test("at Smooth, a pen's line trails its nib, stays still without new packets, and finishes on release", async ({
   page,
 }) => {
   const box = await openSheet(page, "smooth-pen");
@@ -151,7 +177,9 @@ test("at Smooth, a pen's line trails its nib with no ink ahead of it, catches up
     name: say(stickerCreation.tools.smoothing, language),
   });
   await smoothing.click();
-  await page.locator(".smoothing-range").fill("100");
+  await page
+    .getByRole("slider", { name: say(stickerCreation.tools.smoothing, language), exact: true })
+    .fill("100");
   await smoothing.click();
   await expect(smoothing).toHaveAttribute("aria-expanded", "false");
 
@@ -166,12 +194,208 @@ test("at Smooth, a pen's line trails its nib with no ink ahead of it, catches up
   }
   // Moving, the ink stops short of the nib: nothing is drawn ahead of the line.
   expect((await inkReach(page, nib.y)) ?? row[0].x).toBeLessThan(nib.x - 1);
-  // Paused, the line glides the rest of the way.
-  await expect
-    .poll(async () => nib.x - ((await inkReach(page, nib.y)) ?? row[0].x))
-    .toBeLessThanOrEqual(1);
+  // Frames alone do not feed a packet-count filter or move its provisional curve.
+  await page.waitForTimeout(100);
+  const paused = await inkReach(page, nib.y);
+  expect(paused).not.toBeNull();
+  if (paused === null) throw new Error("The stabilized stroke did not paint any ink");
+  await page.waitForTimeout(400);
+  expect(await inkReach(page, nib.y)).toBe(paused);
   await pen.up(nib, t0 + row.length * 16);
-  expect(await inkReach(page, nib.y)).toBeGreaterThanOrEqual(nib.x - 1);
+  // The queue's terminal outputs extend the stroke; they need not snap to the raw nib.
+  expect(await inkReach(page, nib.y)).toBeGreaterThan(paused);
+  await expect(undo(page)).toBeEnabled();
+});
+
+test("post correction runs after pen lift and commits one replayable stroke", async ({
+  page,
+}, testInfo) => {
+  const workerResponses: unknown[] = [];
+  await page.exposeFunction("recordCorrectionResponse", (response: unknown) => {
+    workerResponses.push(response);
+  });
+  await page.addInitScript(() => {
+    const OriginalWorker = window.Worker;
+    window.Worker = class extends OriginalWorker {
+      constructor(url: string | URL, options?: WorkerOptions) {
+        super(url, options);
+        if (String(url).includes("post-correction"))
+          this.addEventListener("message", (event) => {
+            void window.recordCorrectionResponse(event.data);
+          });
+      }
+    };
+  });
+  const box = await openSheet(page, "post-correction");
+  const smoothing = page.getByRole("button", {
+    name: say(stickerCreation.tools.smoothing, language),
+    exact: true,
+  });
+  await smoothing.click();
+  await page
+    .getByRole("slider", { name: say(stickerCreation.tools.smoothing, language), exact: true })
+    .fill("0");
+  const post = page.getByRole("slider", {
+    name: say(stickerCreation.smoothingBar.postCorrection, language),
+    exact: true,
+  });
+  await post.fill("40");
+  await page
+    .getByRole("switch", { name: say(stickerCreation.smoothingBar.adjustBySpeed, language) })
+    .check();
+  await page.screenshot({
+    path: testInfo.outputPath("controls-en-ipad.png"),
+  });
+  await smoothing.click();
+  const pen = await pencil(page);
+  const row = Array.from({ length: 60 }, (_, i) =>
+    at(box, 0.15 + (0.65 * i) / 59, 0.42 + 0.1 * Math.sin(i / 8) + 0.01 * Math.sin(i * 2)),
+  );
+  await penStroke(page, pen, row, (i) => 0.3 + (0.4 * i) / 59, 8);
+  await expect
+    .poll(() =>
+      workerResponses.some((response) => {
+        if (!response || typeof response !== "object") return false;
+        return "points" in response || "result" in response;
+      }),
+    )
+    .toBe(true);
+  await expect(undo(page)).toBeEnabled();
+  await expect(
+    page.getByText(say(stickerCreation.layers.postCorrectionFailed, language)),
+  ).toHaveCount(0);
+  const painted = await inkedPixels(page, ".ink-layers");
+  expect(painted).toBeGreaterThan(0);
+  const paintedDigest = await committedInkDigest(page);
+  await undo(page).click();
+  await expect.poll(() => inkedPixels(page, ".ink-layers")).toBe(0);
+  await page.getByRole("button", { name: say(stickerCreation.history.redo, language) }).click();
+  await expect.poll(() => inkedPixels(page, ".ink-layers")).toBe(painted);
+  expect(await committedInkDigest(page)).toEqual(paintedDigest);
+
+  // A corrected eraser must remove committed pixels and replay that exact removal.
+  await page
+    .getByRole("button", { name: say(stickerCreation.tools.eraser, language), exact: true })
+    .click();
+  await penStroke(page, pen, along(box, 0.44, 0.12, 0.84, 40), () => 0.8, 8);
+  await expect
+    .poll(
+      () =>
+        workerResponses.filter(
+          (response) =>
+            response &&
+            typeof response === "object" &&
+            "type" in response &&
+            response.type === "complete",
+        ).length,
+    )
+    .toBe(2);
+  await expect.poll(() => inkedPixels(page, ".ink-layers")).toBeLessThan(painted);
+  const erasedDigest = await committedInkDigest(page);
+  await undo(page).click();
+  await expect.poll(() => committedInkDigest(page)).toEqual(paintedDigest);
+  await page.getByRole("button", { name: say(stickerCreation.history.redo, language) }).click();
+  await expect.poll(() => committedInkDigest(page)).toEqual(erasedDigest);
+  await smoothing.click();
+  await expect(post).toHaveValue("40");
+  await expect(
+    page.getByRole("switch", { name: say(stickerCreation.smoothingBar.adjustBySpeed, language) }),
+  ).toBeChecked();
+});
+
+for (const language of ["en", "ja"] as const) {
+  test(`live pen speed choices work and fit the ${language} phone panel`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await signIn(page, `live-speed-${language}`, "en");
+    if (language === "ja") {
+      await openSettings(page, "en");
+      await chooseLanguage(page, "en", "ja");
+      await page.getByRole("button", { name: say(stickerBoard.statBoard.flipBack, "ja") }).click();
+    }
+    await page.getByRole("button", { name: drawKeyName(language, DAILY_TICKETS_PER_DAY) }).click();
+    await expect(
+      page.getByText(say(stickerCreation.timer.note.startsWhenYouDraw, language)).first(),
+    ).toBeVisible();
+    const smoothing = page.getByRole("button", {
+      name: say(stickerCreation.tools.smoothing, language),
+      exact: true,
+    });
+    await smoothing.click();
+    const choices = page.getByRole("combobox", {
+      name: say(stickerCreation.smoothingBar.penSpeed, language),
+    });
+    await expect(choices).toHaveValue("fixed");
+    const panel = page.locator(".smoothing-bar");
+    for (const mode of ["slow", "fast"] as const) {
+      await choices.selectOption(mode);
+      await expect(choices).toHaveValue(mode);
+      await expect(
+        page.getByText(say(stickerCreation.smoothingBar[`${mode}Help`], language)),
+      ).toBeVisible();
+      const box = await panel.boundingBox();
+      if (!box) throw new Error("The smoothing panel is not visible");
+      const choiceBox = await choices.boundingBox();
+      if (!choiceBox) throw new Error("The speed choices are not visible");
+      expect(choiceBox.height).toBeGreaterThanOrEqual(44);
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(390);
+      expect(box.y + box.height).toBeLessThanOrEqual(844);
+      expect(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+        true,
+      );
+      await page.screenshot({
+        path: testInfo.outputPath(`live-speed-${language}-${mode}.png`),
+      });
+    }
+    await page
+      .getByRole("slider", {
+        name: say(stickerCreation.tools.smoothing, language),
+        exact: true,
+      })
+      .fill("20");
+    await smoothing.click();
+    const sheet = canvas(page, language);
+    await sheet.hover();
+    const box = await sheet.boundingBox();
+    if (!box) throw new Error("The sheet is not visible");
+    await penStroke(page, await pencil(page), along(box, 0.5, 0.2, 0.8), () => 0.5);
+    await expect(
+      page.getByRole("button", { name: say(stickerCreation.history.undo, language) }),
+    ).toBeEnabled();
+    await smoothing.click();
+    await expect(choices).toHaveValue("fast");
+  });
+}
+
+test("Japanese post correction controls fit the phone panel", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page, "post-correction-ja", "en");
+  await openSettings(page, "en");
+  await chooseLanguage(page, "en", "ja");
+  await page.getByRole("button", { name: say(stickerBoard.statBoard.flipBack, "ja") }).click();
+  await page.getByRole("button", { name: drawKeyName("ja", DAILY_TICKETS_PER_DAY) }).click();
+  await expect(
+    page.getByText(say(stickerCreation.timer.note.startsWhenYouDraw, "ja")).first(),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: say(stickerCreation.tools.smoothing, "ja"), exact: true })
+    .click();
+  const post = page.getByRole("slider", { name: "後補正", exact: true });
+  await expect(post).toHaveValue("0");
+  await expect(page.getByRole("switch", { name: "速度による調整" })).toBeDisabled();
+  await post.fill("20");
+  await expect(page.getByRole("switch", { name: "速度による調整" })).toBeEnabled();
+  await expect(page.getByRole("switch", { name: "表示倍率による調整" })).toBeChecked();
+  const box = await page.locator(".smoothing-bar").boundingBox();
+  if (!box) throw new Error("Post correction panel is not visible");
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(390);
+  expect(box.y + box.height).toBeLessThanOrEqual(844);
+  await page.screenshot({
+    path: testInfo.outputPath("controls-ja-phone.png"),
+  });
 });
 
 test("once a pen has drawn here, a palm never draws, and a resting palm doesn't hold up two-finger undo", async ({

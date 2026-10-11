@@ -258,6 +258,23 @@ describe("StrokeBuilder", () => {
     );
   });
 
+  it("does not infer pen capability from synthetic terminal pressure changes", () => {
+    const stroke = builder({ pointerType: "pen", pressure: 0.5, pressureVaries: false });
+    stroke.add(20, 0, 0.5, 10);
+    stroke.add(40, 0, 0.3, 20, null);
+    stroke.add(60, 0, 0.1, 20, null);
+    expect(stroke.pressured).toBe(false);
+  });
+
+  it("uses raw contact pressure for capability while stabilized pressure can ramp from an unread landing", () => {
+    const stroke = builder({ pointerType: "pen", pressure: 0, pressureVaries: false });
+    stroke.add(20, 0, 0.2, 10, { x: 20, y: 0, t: 10, pressure: 0.5 });
+    stroke.add(40, 0, 1 / 3, 20, { x: 40, y: 0, t: 20, pressure: 0.5 });
+    expect(stroke.pressured).toBe(false);
+    stroke.add(60, 0, 0.4, 30, { x: 60, y: 0, t: 30, pressure: 0.7 });
+    expect(stroke.pressured).toBe(true);
+  });
+
   it("starts a pen known to sense pressure at its first reading's width when it lands reporting none", () => {
     // Safari can report no pressure for a Pencil's landing.
     const unread = widths(40, { pointer: "pen", pressure: (i) => (i === 0 ? 0 : 0.1) });

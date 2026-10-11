@@ -47,7 +47,7 @@ import { isFirstVisit } from "./drawVisits";
 import { isOp, type FillReference, type Op, type Tool } from "./canvas/ops";
 import type { LayerId } from "./canvas/ops";
 import type { SheetFrame } from "./canvas/sheetFrame";
-import { FIRST_SMOOTHING } from "./canvas/stabilizer";
+import { FIRST_SMOOTHING, FIRST_SMOOTHING_MODE, StabilizationError } from "./canvas/stabilizer";
 import { LayerColumn } from "./layers/LayerColumn";
 import { LayerOptionsBar } from "./layers/LayerOptionsBar";
 import { FIRST_LAYER, FIRST_LAYERS, baseOf, mergeDownTarget } from "./layers/layerState";
@@ -91,6 +91,8 @@ import { MyBoardTile } from "./tools/MyBoardTile";
 import { FIRST_RECENT, startingColor, withRecent } from "./tools/palette";
 import { SIZE_STEP, SizeRail } from "./tools/SizeRail";
 import { SmoothingBar } from "./tools/SmoothingBar";
+import { FIRST_POST_CORRECTION } from "./canvas/post-correction/settings";
+import { PostCorrectionError } from "./canvas/post-correction/errors";
 import { ToolStrip, type Panel } from "./tools/ToolStrip";
 import { useShortcuts } from "./useShortcuts";
 import "./DrawingScreen.css";
@@ -201,6 +203,8 @@ export function DrawingScreen({
   const [recent, setRecent] = useState(FIRST_RECENT);
   const [sizes, setSizes] = useState(FIRST_SIZES);
   const [smoothing, setSmoothing] = useState(FIRST_SMOOTHING);
+  const [smoothingMode, setSmoothingMode] = useState(FIRST_SMOOTHING_MODE);
+  const [postCorrection, setPostCorrection] = useState(FIRST_POST_CORRECTION);
   const [panel, setPanel] = useState<Panel>(null);
   const [layers, setLayers] = useState<LayerView>(() => ({
     state: FIRST_LAYERS,
@@ -306,8 +310,10 @@ export function DrawingScreen({
         brushSize: sizes.brush,
         eraserSize: sizes.eraser,
         smoothing,
+        smoothingMode,
+        postCorrection,
       }),
-    [keeper, fillReference, sizes, smoothing],
+    [keeper, fillReference, sizes, smoothing, smoothingMode, postCorrection],
   );
   // The sheet's 18+ mark, from the seal sheet's switch; the seal reads the ref, after an await.
   const [nsfwOn, setNsfwOn] = useState(false);
@@ -733,6 +739,8 @@ export function DrawingScreen({
     if (found.tools) {
       setSizes({ brush: found.tools.brushSize, eraser: found.tools.eraserSize });
       setSmoothing(found.tools.smoothing);
+      setSmoothingMode(found.tools.smoothingMode ?? FIRST_SMOOTHING_MODE);
+      setPostCorrection(found.tools.postCorrection ?? FIRST_POST_CORRECTION);
       setFillReference(found.tools.fillReference);
     }
     // Kept at 0:00, it comes back pencils down, its time's-up sheet up, with nothing to pause.
@@ -1091,6 +1099,8 @@ export function DrawingScreen({
           color,
           size: sizePx(sizes[sizeKey]),
           smoothing,
+          smoothingMode,
+          postCorrection,
           locked,
           // The dealt sheet takes the paused sheet's path, so a touch nudges Begin.
           paused: paused || dealt,
@@ -1118,11 +1128,14 @@ export function DrawingScreen({
         }}
         onBlockedHidden={() => setHiddenNudge((n) => n + 1)}
         onInkFailed={(error) => {
-          console.error(
-            "The drawing could not be updated because a canvas could not be made",
-            error,
+          console.error("The drawing could not be updated", error);
+          setInkProblem(
+            error instanceof StabilizationError
+              ? t(($) => $.stickerCreation.layers.stabilizationFailed)
+              : error instanceof PostCorrectionError
+                ? t(($) => $.stickerCreation.layers.postCorrectionFailed)
+                : t(($) => $.stickerCreation.layers.inkFailed),
           );
-          setInkProblem(t(($) => $.stickerCreation.layers.inkFailed));
         }}
         onCommit={(op: Op) => {
           if (sealProblem) setSealProblem(null);
@@ -1203,6 +1216,10 @@ export function DrawingScreen({
         open={panel === "smoothing"}
         value={smoothing}
         onChange={setSmoothing}
+        mode={smoothingMode}
+        onModeChange={setSmoothingMode}
+        postCorrection={postCorrection}
+        onPostChange={setPostCorrection}
       />
       <ClearBar
         id={clearBarId}

@@ -1,138 +1,159 @@
-import { clamp01 } from "../../ui/easing";
+import { terminalPrefeedCount, type Phase } from "./stabilization/arithmetic.ts";
+import { createLiveQueue, type LiveQueue } from "./stabilization/queue.ts";
 
-/**
- * The Smoothing a fresh sheet starts at, from 0 (Raw) to 100 (Smooth): a light touch, as artists keep
- * Clip Studio's Stabilization low.
- */
+/** The existing Smoothing control and saved sessions use integer strength 0 through 100. */
 export const FIRST_SMOOTHING = 35;
-/** How long the line trails a slow nib at Smooth, in ms. */
-const SLOW_LAG_MS = 170;
-/**
- * Smoothing's share of Smooth to this power scales the slow lag and the half-lag speed, so the low
- * end, where artists draw, steps finely.
- */
-const SMOOTHING_CURVE = 2;
-/**
- * The nib speed at Smooth, in sheet units per second, at which the line trails by half a slow nib's
- * lag, and less the quicker it goes: jitter shows on a slow stroke, and lag on a quick one. It
- * scales down with Smoothing, so a light one gives way to speed soonest, as Clip Studio's speed
- * options apply only at its low Stabilization.
- */
-const HALF_LAG_SPEED = 2000;
-/** The nib's speed is smoothed at this cutoff, in Hz, before it sets the line's: quick enough to follow a stroke that speeds up. */
-const SPEED_CUTOFF_HZ = 4;
-/** A nib that has sent no sample for this many ms has stopped, and its line glides the rest of the way to it. */
-export const PAUSE_MS = 40;
-/** A held nib's line moves at most this many ms a frame, so its glide starts where it stopped. */
-const HOLD_STEP_MS = 1000 / 60;
-/** A held nib's line is on it once this close, in sheet units. */
-const ON_NIB = 0.1;
-/** A lifted nib's line reaches it in steps this many ms apart. */
-const CATCH_UP_MS = 8;
-/** A lifted nib's line is put on it after this many steps, should it not have arrived. */
-const MAX_CATCH_UP_STEPS = 1000;
-/** The interval between samples, in ms, until two have come: a display frame's. */
-const FIRST_INTERVAL_MS = 1000 / 60;
+export const SMOOTHING_MODES = ["fixed", "slow", "fast"] as const;
+export type SmoothingMode = (typeof SMOOTHING_MODES)[number];
+export const FIRST_SMOOTHING_MODE: SmoothingMode = "fixed";
+/** Browser safety bound, not a recovered CSP constant. No endpoint is fabricated on failure. */
+const MAX_RELEASE_PACKETS = 2048;
 
-/** The filter at a Smoothing: its cutoff for a still nib, in Hz, and the Hz each unit per second of speed adds. */
-export interface FilterTuning {
-  minCutoff: number;
-  beta: number;
+/** Local CSS coordinates, reported pressure, and the original browser timestamp in milliseconds. */
+export interface StabilizerSample {
+  x: number;
+  y: number;
+  pressure: number;
+  t: number;
 }
 
-/** The filter's tuning at a Smoothing from 0 (Raw) to 100 (Smooth); null at Raw, which leaves the nib's samples as they are. */
-export function filterTuning(smoothing: number): FilterTuning | null {
-  const share = clamp01(smoothing / 100) ** SMOOTHING_CURVE;
-  if (share === 0) return null;
-  const minCutoff = 1000 / (2 * Math.PI * SLOW_LAG_MS * share);
-  return { minCutoff, beta: minCutoff / (HALF_LAG_SPEED * share) };
+/** The queue's emitted phase, distinct from the acquisition packet's phase. */
+export interface StabilizerOutput extends StabilizerSample {
+  phase: Phase;
 }
 
-/** A low-pass step's weight on the new value, for a cutoff in Hz over `dt` seconds. */
-const weight = (cutoff: number, dt: number) => 1 / (1 + 1 / (2 * Math.PI * cutoff * dt));
+export class StabilizationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StabilizationError";
+  }
+}
+
+function validate(sample: StabilizerSample): void {
+  if (
+    ![sample.x, sample.y, sample.pressure, sample.t].every(Number.isFinite) ||
+    sample.pressure < 0 ||
+    sample.pressure > 1 ||
+    !Number.isSafeInteger(Math.trunc(sample.t))
+  )
+    throw new StabilizationError(
+      "The pointer supplied an invalid position, pressure, or timestamp.",
+    );
+}
 
 /**
- * Smoothing, as a One Euro filter (Casiez, Roussel and Vogel, 2012) on the nib's samples, run on their
- * timestamps: a low-pass whose cutoff rises with the nib's speed, so a slow nib's jitter goes and a
- * quick nib's line keeps up. One cutoff from the speed in the plane serves both axes, so a stroke
- * smooths alike in every direction. The line starts where the nib lands; at Raw it is the nib.
+ * Browser adapter around the reconstructed native packet queue. Contact packets
+ * average position and pressure together; display frames never invent packets.
+ * Pen input can select the native fixed, slow, or fast window. Mouse and touch
+ * retain fixed mode; their native producer routes differ from the digitizer.
+ * Taper and the captured interval are zero. Browser acquisition and empty initial hover history are
+ * application choices, not a claim of identical CSP input or pen feel.
  */
 export class Stabilizer {
-  /** Where the line is. */
-  private x: number;
-  private y: number;
-  /** The nib's latest sample. */
-  private nibX: number;
-  private nibY: number;
-  /** The time the line stands at: the latest sample's, or a later frame's while the nib is held. */
-  private t: number;
-  /** The nib's velocity, smoothed, in sheet units per second. */
-  private vx = 0;
-  private vy = 0;
-  /** The latest interval between samples, in ms, which a sample stamped no later than the last takes. */
-  private interval = FIRST_INTERVAL_MS;
-  private readonly tuning: FilterTuning | null;
+  readonly initial: StabilizerOutput;
+  private readonly queue: LiveQueue;
+  private readonly pen: boolean;
+  private readonly interval: bigint;
+  private latest: StabilizerOutput;
+  private closed = false;
 
-  /** `smoothing` runs from 0 (Raw) to 100 (Smooth). */
-  constructor(x: number, y: number, t: number, smoothing: number) {
-    [this.x, this.y, this.nibX, this.nibY, this.t] = [x, y, x, y, t];
-    this.tuning = filterTuning(smoothing);
+  constructor(
+    first: StabilizerSample,
+    smoothing: number,
+    pen: boolean,
+    interval = 0n,
+    mode: SmoothingMode = FIRST_SMOOTHING_MODE,
+  ) {
+    validate(first);
+    if (!Number.isFinite(smoothing))
+      throw new StabilizationError("The stabilization strength is not finite.");
+    if (!SMOOTHING_MODES.includes(mode))
+      throw new StabilizationError("The stabilization speed mode is invalid.");
+    this.queue = createLiveQueue(
+      Math.round(Math.max(0, Math.min(100, smoothing))),
+      0,
+      pen && mode === "fast",
+      pen && mode === "slow",
+    );
+    this.queue.data.setInt32(0xd8, 1, true);
+    this.pen = pen;
+    this.interval = interval;
+    this.latest = { ...first, phase: 2 };
+    const initial = this.ingest({ ...first, pressure: pen ? first.pressure : 1 }, 2, true);
+    if (!initial) throw new StabilizationError("The initial stabilization packet was suppressed.");
+    this.initial = initial;
   }
 
-  /** The time the line stands at, in the samples' ms. */
-  get time(): number {
-    return this.t;
+  /** Latest emitted point; the curve must end here rather than at the unfiltered pointer. */
+  get position(): StabilizerOutput {
+    return this.latest;
   }
 
-  /** The line is on the nib. */
-  get settled(): boolean {
-    return this.x === this.nibX && this.y === this.nibY;
-  }
-
-  /** Takes the nib's next sample; returns where the line is now. */
-  add(x: number, y: number, t: number): [number, number] {
-    if (t > this.t) [this.interval, this.t] = [t - this.t, t];
-    this.step(x, y, this.interval / 1000);
-    return [this.x, this.y];
+  /** A native-style contact packet may be suppressed while still advancing queue state. */
+  add(sample: StabilizerSample): StabilizerOutput[] {
+    if (this.closed) return [];
+    validate(sample);
+    const output = this.ingest({ ...sample, pressure: this.pen ? sample.pressure : 1 }, 2, true);
+    return output ? [output] : [];
   }
 
   /**
-   * A frame at time `t` passed with no sample from a nib that has stopped: the line glides toward it,
-   * a frame's time at a time, and lands on it once close. Returns where the line is now.
+   * Recovered release prefeed, then an explicit zero-pressure flush when needed.
+   * All generated outputs retain the actual lift's time. Browser input ends at
+   * pointerup, so a pending native ending is completed synchronously here.
    */
-  hold(t: number): [number, number] {
-    if (t <= this.t || this.settled) return [this.x, this.y];
-    this.step(this.nibX, this.nibY, Math.min(t - this.t, HOLD_STEP_MS) / 1000);
-    this.t = t;
-    if (Math.hypot(this.nibX - this.x, this.nibY - this.y) < ON_NIB)
-      [this.x, this.y] = [this.nibX, this.nibY];
-    return [this.x, this.y];
-  }
-
-  /** The nib lifted at x, y: where the line goes on its way there, and when, ending on it. */
-  finish(x: number, y: number): [x: number, y: number, t: number][] {
-    const way: [number, number, number][] = [];
-    if (x !== this.nibX || y !== this.nibY) way.push([...this.add(x, y, this.t), this.t]);
-    for (let steps = 0; !this.settled && steps < MAX_CATCH_UP_STEPS; steps++)
-      way.push([...this.hold(this.t + CATCH_UP_MS), this.t]);
-    if (!this.settled) {
-      [this.x, this.y] = [x, y];
-      way.push([x, y, this.t]);
+  finish(sample: StabilizerSample): StabilizerOutput[] {
+    if (this.closed) return [];
+    validate(sample);
+    this.closed = true;
+    const raw = this.queue.data;
+    raw.setInt32(0xe0, 0, true);
+    const outputs: StabilizerOutput[] = [];
+    const count = terminalPrefeedCount(raw.getFloat64(0x58, true), raw.getInt32(0x68, true));
+    for (let index = 0; index < count; index++) {
+      const output = this.ingest(sample, 1, true);
+      if (output) outputs.push(output);
+      if (raw.getInt32(0x88, true) === 0) return outputs;
     }
-    return way;
+    const released = this.ingest(sample, 3, true);
+    if (released) outputs.push(released);
+    if (raw.getInt32(0x88, true) === 0) return outputs;
+    raw.setInt32(0x88, 2, true);
+    raw.setInt32(0xe0, 0, true);
+    for (let index = outputs.length; index < MAX_RELEASE_PACKETS; index++) {
+      const output = this.ingest({ ...sample, pressure: 0 }, 1, false);
+      if (output) outputs.push(output);
+      if (raw.getInt32(0x88, true) === 0) return outputs;
+    }
+    throw new StabilizationError(
+      "Stabilization could not complete this stroke within its release limit.",
+    );
   }
 
-  /** One step of the filter toward x, y over `dt` seconds. */
-  private step(x: number, y: number, dt: number): void {
-    const { tuning } = this;
-    if (tuning) {
-      const toward = weight(SPEED_CUTOFF_HZ, dt);
-      this.vx += toward * ((x - this.nibX) / dt - this.vx);
-      this.vy += toward * ((y - this.nibY) / dt - this.vy);
-      const share = weight(tuning.minCutoff + tuning.beta * Math.hypot(this.vx, this.vy), dt);
-      this.x += share * (x - this.x);
-      this.y += share * (y - this.y);
-    } else [this.x, this.y] = [x, y];
-    [this.nibX, this.nibY] = [x, y];
+  private ingest(sample: StabilizerSample, phase: Phase, gating: boolean): StabilizerOutput | null {
+    let result;
+    try {
+      result = this.queue.ingest({
+        x: sample.x,
+        y: sample.y,
+        pressure: sample.pressure,
+        timestamp: BigInt(Math.trunc(sample.t)),
+        phase,
+        catchUp: false,
+        gating,
+        interval: this.interval,
+        bypass: false,
+      });
+    } catch (error) {
+      throw new StabilizationError(
+        `Stabilization failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    if (!result.output) return null;
+    const output = { ...result.output, t: sample.t, phase: result.phase };
+    if (![output.x, output.y, output.pressure].every(Number.isFinite))
+      throw new StabilizationError("Stabilization produced a nonfinite point or pressure.");
+    this.latest = output;
+    return output;
   }
 }

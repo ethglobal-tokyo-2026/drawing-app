@@ -29,7 +29,9 @@ import { useTickets } from "../tickets/useTickets";
 import { personKey } from "../ui/deviceStorage";
 import { onLargeScreen, onTouchScreen, SWITCH } from "../ui/testing";
 import type { HistoryState, InputMode } from "./canvas/inkEngine";
+import type { SmoothingMode } from "./canvas/stabilizer";
 import { CanvasUnavailableError } from "./canvas/canvasUnavailable";
+import { StabilizationError } from "./canvas/stabilizer";
 import type { Op, Step } from "./canvas/ops";
 import { frameFor, SHEET_SHORT_UNITS } from "./canvas/sheetFrame";
 import { DrawingScreen, type DrawingScreenHandle } from "./DrawingScreen";
@@ -80,6 +82,7 @@ const sheetCalls = vi.hoisted(() => ({
     panelOpen: boolean;
     sessionMs: () => number;
     inputMode: InputMode | null;
+    smoothingMode: SmoothingMode;
   } | null,
   label: undefined as string | undefined,
   /** A touch met the sheet while it takes no ink. */
@@ -118,6 +121,7 @@ vi.mock("./canvas/DrawingCanvas", () => ({
         panelOpen: boolean;
         sessionMs: () => number;
         inputMode: InputMode | null;
+        smoothingMode: SmoothingMode;
       };
       label?: string;
       onLayers?: (view: LayerView) => void;
@@ -274,7 +278,6 @@ vi.mock("./tools/SizeRail", () => ({
     return null;
   },
 }));
-vi.mock("./tools/SmoothingBar", () => ({ SmoothingBar: () => null }));
 // The tool strip's panel tiles, and the Pencil only tile once a pen has drawn here; the clear tile
 // controls the clear bar as the real one does.
 vi.mock("./tools/ToolStrip", () => ({
@@ -559,6 +562,19 @@ describe("the drawing screen after a reload", () => {
     expect(chip()).toContain(strings.stickerCreation.seal.failed.onThisDevice.en);
     expect(chip()).not.toContain(strings.stickerCreation.seal.emptyAtTimeUp.en);
     expect(failure).toHaveBeenCalled();
+  });
+
+  it("keeps a stabilization failure visible without calling it a memory failure", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    onTestFinished(() => error.mockRestore());
+    reopen(keptAtTimeUp);
+    await settle();
+    const failure = new StabilizationError("Release limit exceeded");
+    act(() => sheetCalls.inkFailed(failure));
+    await settle(1000);
+    expect(chip()).toContain(strings.stickerCreation.layers.stabilizationFailed.en);
+    expect(chip()).not.toContain(strings.stickerCreation.layers.inkFailed.en);
+    expect(error).toHaveBeenCalledWith("The drawing could not be updated", failure);
   });
 
   it("doesn't show an earlier seal failure's detail under a later ink failure", async () => {
@@ -873,6 +889,39 @@ describe("the seal sheet", () => {
 });
 
 describe("the drawing screen's clock", () => {
+  it("uses fixed pen speed for a session saved before speed choices existed", async () => {
+    reopen({
+      ...keptHalfway,
+      tools: { fillReference: "layer", brushSize: 0.34, eraserSize: 0.52, smoothing: 20 },
+    });
+    await settle();
+    expect(sheetCalls.settings?.smoothingMode).toBe("fixed");
+  });
+  it("restores and saves pen speed choices through the real smoothing panel", async () => {
+    reopen({
+      ...keptHalfway,
+      tools: {
+        fillReference: "layer",
+        brushSize: 0.34,
+        eraserSize: 0.52,
+        smoothing: 20,
+        smoothingMode: "fast",
+      },
+    });
+    await settle();
+    act(openPanel("smoothing"));
+    const select = document.querySelector<HTMLSelectElement>(".smoothing-bar select");
+    expect(select).not.toBeNull();
+    expect(select?.value).toBe("fast");
+    expect(sheetCalls.settings?.smoothingMode).toBe("fast");
+    act(() => {
+      if (!select) return;
+      select.value = "slow";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(sheetCalls.settings?.smoothingMode).toBe("slow");
+    expect(keptRecord()).toMatchObject({ tools: { smoothingMode: "slow" } });
+  });
   it("keeps Fill reference visible while drawing, remembers the selected source, and leaves the clock running", async () => {
     reopen(keptHalfway);
     await settle();
