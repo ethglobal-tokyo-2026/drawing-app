@@ -192,6 +192,7 @@ test("the board releases drawing canvases, and returning restores layers and red
 
   await button(page, stickerBoard.board.continueDrawing).click();
   await expect(chip(page, 2)).toHaveAttribute("aria-selected", "true");
+  await button(page, copy.dismissOptionsHint).click();
   await canvas(page, language).hover();
   const box = await sheetBox(page);
   const restoredLower = middle(along(box, 0.35, 0.3, 0.7));
@@ -208,7 +209,7 @@ test("layer setup survives a reload before the first mark, with the clock still 
   await openSheet(page);
   await add(page).click();
   await options(page, 2);
-  await button(page, copy.lock).click();
+  await expect(button(page, copy.lock)).toHaveAttribute("aria-disabled", "true");
   await button(page, copy.moveBack).click();
   await chip(page, 2).click();
   await slider(page).press("ArrowDown");
@@ -224,13 +225,15 @@ test("layer setup survives a reload before the first mark, with the clock still 
   await page.reload();
   await button(page, stickerBoard.board.continueDrawing).click();
   await expect(chip(page, 2)).toHaveAttribute("aria-selected", "true");
-  await expect(chip(page, 2)).toHaveClass(/is-locked/);
   await expect(page.locator(".layer-list [data-layer-chip]").first()).toHaveAttribute(
     "data-layer-chip",
     "1",
   );
   await expect(slider(page)).toHaveAttribute("aria-valuenow", "95");
   await expect(timer).toHaveAccessibleDescription(description);
+  await options(page, 2);
+  await expect(button(page, copy.lock)).toHaveAttribute("aria-disabled", "true");
+  await chip(page, 2).click();
   await chip(page, 1).click();
   await line(page, 0.5);
   await expect(button(page, creation.timer.pause)).toBeVisible();
@@ -317,6 +320,15 @@ test("locking transparent pixels recolors existing ink without extending it", as
   await button(page, copy.lock).click();
   await expect(button(page, copy.lock)).toHaveAttribute("aria-pressed", "true");
   await chip(page, 1).click();
+  await page.reload();
+  await button(page, stickerBoard.board.continueDrawing).click();
+  await expect(chip(page, 1)).toHaveAttribute("aria-selected", "true");
+  await expect.poll(() => shownColor(page, center)).toEqual([47, 107, 255, 255]);
+  await options(page, 1);
+  await expect(button(page, copy.lock)).toHaveAttribute("aria-pressed", "true");
+  await chip(page, 1).click();
+  await button(page, creation.timer.resume).click();
+  await expect(button(page, creation.timer.pause)).toBeVisible();
   await color(page, "red");
   await line(page, 0.5, 0.2, 0.8);
   await expect.poll(() => shownColor(page, center)).toEqual([232, 72, 79, 255]);
@@ -333,17 +345,20 @@ test("clipping masks outside ink on screen and in the seal preview", async ({ pa
     await inkShows(page, await line(page, 0.5, 0.3, 0.7));
   }).toPass();
   await add(page).click();
+  await button(page, copy.dismissOptionsHint).click();
   await color(page, "red");
   await line(page, 0.5, 0.4, 0.6);
   const outside = await line(page, 0.7);
+  const box = await sheetBox(page);
+  const center = at(box, 0.5, 0.5);
+  await expect.poll(() => shownColor(page, center)).toEqual([232, 72, 79, 255]);
   await inkShows(page, outside);
   await options(page, 2);
   await button(page, copy.clip).click();
   await expect(button(page, copy.clip)).toHaveAttribute("aria-pressed", "true");
   await chip(page, 2).click();
   await expect.poll(() => inkAt(page, outside)).toBe(0);
-  const box = await sheetBox(page);
-  await expect.poll(() => shownColor(page, at(box, 0.5, 0.5))).toEqual([232, 72, 79, 255]);
+  await expect.poll(() => shownColor(page, center)).toEqual([232, 72, 79, 255]);
   await expect.poll(() => shownColor(page, at(box, 0.35, 0.5))).toEqual([47, 107, 255, 255]);
   await openSealSheet(page, language);
   const preview = page.locator(".seal-preview__ink");
