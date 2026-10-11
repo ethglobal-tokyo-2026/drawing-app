@@ -1,0 +1,254 @@
+October 11 verification follow-up — integrated source ed3e4fba
+==============================================================
+
+This section supersedes the previous completion record below where results differ.
+All 23 recorded findings and the follow-up source changes have independent spec and
+quality approval. Implementation remains in codex/functional-frontend-fixes.
+
+Fresh full-check stages (run separately to bound test workers and expose diagnostics):
+- pnpm --filter frontend exec vitest run --reporter=verbose --maxWorkers=1
+  exit 0; 247 files, 2350 tests passed; 182.22 seconds. Zero React act warnings.
+- pnpm exec turbo run test --filter='!frontend' --force -- --reporter=verbose --maxWorkers=2
+  exit 0; three fresh tasks. API 494, database 45, LINE 41 tests passed; 45.769 seconds.
+  Total package tests: 2930 passed. No missing API-method fixture messages observed.
+- pnpm exec turbo run lint typecheck --force
+  exit 0; eight fresh tasks; 7.141 seconds.
+- pnpm exec turbo run build --force
+  exit 0; two fresh builds; 6.49 seconds.
+- pnpm test:move
+  exit 0; 3 + 3 + 17 = 23 passed, zero failed.
+- pnpm format:check
+  exit 0; all 1171 files correctly formatted. Report link check: 832 links, zero errors.
+- E2E_SCREEN_LOAD_DIAGNOSTICS=1 E2E_WORKERS=2 pnpm test:e2e
+  exit 0; 189 passed (95 Chromium, 94 WebKit), zero failures or skips, 14.4 minutes.
+  All six disabled cases restored; Chromium-only forced-dark excluded from WebKit collection.
+  Final log has zero /xlt/ language-fetch or conflicting-color messages; deliberate
+  ticket/session refusals and mock-service notices remain visible.
+- pnpm exec knip --no-exit-code
+  exit 0, report-only. Lists 30 retained research/review/scratch files, existing
+  GiftStep, and createIpadSafariServerConfig. The new function is imported by the
+  runner-generated Vite configuration and exercised by actual Safari acceptance.
+  Knip cannot follow that generated import. This is not a clean unused-code result.
+
+Evidence locations and source scope:
+- Primary implementation worktree:
+  All fresh logs are in .superpowers/sdd/2026-10-10-functional-frontend-fixes/:
+  remaining-final-frontend-verbose.log, remaining-final-service-tests.log,
+  remaining-final-static.log, remaining-final-build.log, remaining-final-move.log,
+  remaining-final-format.log, remaining-final-e2e.log, remaining-final-knip.log.
+- iPad verification worktree:
+  Same scratch subdirectory: remaining-ipad-runner-report.md, remaining-ipad-review.md,
+  remaining-ipad-run-4.log, remaining-ipad-startup-failure.log.
+- Frontend/static/build verification used c5dde946. The browser run started at
+  5d93e283; only independent iPad-runner changes were integrated while it ran.
+  Its application source matches the final snapshot. ed3e4fba changes only the
+  runner comment/check label, with separate independent review and normal hooks;
+  no runtime assertion was changed and no unnecessary full suite was repeated.
+- The actual iPad run used runner a0269dbd; subsequent corrections b640e10f and
+  eca63481 affect cleanup-error diagnostics and the check label, respectively.
+  App runtime source and persistence/rotation/touch assertions match integration.
+
+Follow-up source:
+- d2cb1344: correct test lifecycle ownership across 29 files; original controls
+  reproduced React act warnings. The default reporter hid them; verbose exposed
+  them regardless of CI. Final verbose verification contains zero such warnings.
+- eeeb1de1: format the nine previously failing documents. All four JSON files,
+  embedded report data, and Markdown contents remain semantically unchanged.
+- b611fec1 (browser lane c9e85158): restore six disabled cases; motion capability
+  and geometry assertions use meaningful setup; LIFF language sync waits for
+  initialization; no /xlt/ requests in focused language checks; remove conflicting
+  child-process color settings; collect forced-dark only in Chromium.
+- fc6ee4c6, 12d75fd9, 5d93e283: supply successful incidental API fixtures and await
+  actual recovered ticket spends. Explicit refusal tests retain their failures.
+- b61098e1: optional observed screen-load diagnostics. Twelve affected cases passed
+  with Shop 22/22 and board 40/40 responses HTTP 200 and no failed requests.
+- 4630aeea + c5dde946 (browser lane a0269dbd + b640e10f): Xcode 27 orientation and
+  exact-device controls, cookie fingerprint observation, partial-startup ownership,
+  awaited child termination, and complete cleanup-error diagnostics.
+  Seven helper tests passed with demonstrated failures before the corrections.
+
+Preserved follow-up failures and their resolution:
+- An earlier full frontend run at fc6ee4c6 exited 1: 243 files passed, one failed;
+  2342 tests passed, one failed. The unchanged forty-fill memory regression timed
+  out at 62035ms during concurrent host work. A one-worker focused recheck passed
+  (24.34 seconds total); the final full-suite case passed in 5401ms. Its 60-second
+  timeout, forty-fill workload, and retained-memory assertions were not weakened.
+- Historical browser aggregate preload errors remain unclassified. A separate
+  deterministic navigation control held Shop/module requests, recorded pagehide,
+  navigated, then released them. The old page logged a Shop Failed-to-fetch error;
+  new-page requests returned 200. This proves that control's cancellation behavior,
+  not the cause of every historical error. The first probe lost an asynchronous
+  pagehide callback; the corrected synchronous lifecycle probe passed.
+- Diagnostic attachment scope: Playwright-observed in-test fixture-page requests,
+  API statuses, navigation, request failures, and console errors. It does not cover
+  the manually created motion-card page, fixture teardown, or every old-document
+  event forwarded by Vite. No exhaustive console-coverage claim is made.
+- Deliberate service/refusal tests and absent mock-wallet notices remain visible;
+  passing assertions are not a pristine-log claim. No global error filter was added.
+
+Actual iPad Safari acceptance:
+IPAD=FCD99B1F-F1D2-4B63-9D6A-9EC7F4C1E37C pnpm --filter frontend test:ipad-safari
+Exit 0: 16 passed, 0 failed, 2026-10-11T11:26:24Z–11:26:57Z.
+Device: iPad Air 11-inch (M4), iPadOS 26.5. Xcode 27.0 (27A266a), host Safari driver
+27.0.1 (22625.1.29.11.28). Explicit device selection; no runtime fallback.
+- Real Safari session starts in portrait and sign-in opens the Sticker Board.
+- Croquis's motion-permission card appears and Don't allow dismisses it. This does
+  not verify native iOS Allow or count operating-system prompts. The old log label
+  overstated that scope; wording-only correction ed3e4fba now names the app card.
+- Reload sends the same actual cookie fingerprint, whose Set-Cookie was observed
+  with HttpOnly and Secure. No new session is created; GET /api/me returns 200.
+  Cookie values are not returned or logged. Unreliable WebDriver cookie enumeration
+  was replaced with runner-only observation of actual requests at the HTTPS proxy.
+  Production auth/API code is unchanged.
+- Sticker Board, stat board, Shop, Explore, and drawing screen fit in portrait and
+  landscape: viewports 820x1094 / 1180x734, bottom safe area 20px, overflow 0px.
+- Settings use radio groups; actual touches select Left then Right.
+- Actual touch paints 53080 pixels from a blank canvas.
+- Normal completion leaves no owned listeners (55283/55284/55285) or booted devices.
+
+Deliberate partial-startup failure, 2026-10-11T11:28:17Z–11:28:29Z:
+The real runner started API/Vite, then the control substituted a nonexistent driver.
+FAIL bringing up the iPad and servers: spawn /nonexistent/croquis-test-safaridriver ENOENT
+Expected exit 1; cleanup awaited both children and shut down the owned simulator.
+Subsequent checks found no runner-owned servers or booted devices. Temporary control
+source was removed. The final logging-only correction preserves each failed process
+and nested reason; its focused negative control and all seven helper tests passed.
+
+Remaining limits:
+- iPadOS 27 exact target 5700DF46-78B7-4893-97AF-39108ECA380E failed discovery:
+  Could not find any session hosts that match the requested capabilities.
+  The same installed driver connects to the explicit 26.5 target. Apple's internal
+  cause is unproven; no iPadOS 27 page acceptance or version-incompatibility diagnosis.
+- The standard Xcode/SDK agreement prerequisite was resolved externally. The assistant
+  accepted no agreement, installed no software, and erased no device. Both diagnostic
+  simulator targets were restored to Shutdown.
+- No native iOS motion Allow, physical Apple Pencil verification, or live LINE/payment
+  execution occurred.
+- At this October 11 verification, no merge, push, deployment, or worktree removal had
+  occurred. The Gift Message migration/API/frontend required coordinated rollout; see
+  the release record for subsequent integration and deployment status. Historical
+  review coverage remains 659 reviewed files and 17 catalog
+  exclusions; these fixes do not establish that no undiscovered issues remain.
+
+Previous completion record (historical, superseded above)
+=======================================================
+
+Final completion at 25f1015b — user-authorized explicit Reload
+
+All 23 recorded findings now have implemented, independently reviewed fixes.
+The user delegated the last recovery choice. A matching post-ready 401 now closes
+the account and requires a real Reload click. No automatic Me/sign-in or LINE reconnect
+runs; late answers cannot reopen the closed account. Initial bootstrap remains intact.
+
+G1 evidence:
+- Unit RED: two failed regressions before the fix (automatic recovery / late reopening).
+- Native RED: new expiry case failed in Chromium and WebKit before the fix.
+- GREEN: 31 final SessionGate tests; owning run 109 tests before one additional bootstrap
+  control; 35 API tests; all 8 sessionPersistence browser cases passed.
+- Native checks compare actual HttpOnly cookies and authenticated Me identity without
+  exposing cookie values. Bob's newer login survives until an explicit Reload.
+- Independent spec and quality review: approved.
+- Type-aware lint, frontend types, browser-test types, formatting and ordinary hooks pass.
+
+Fresh combined verification at 25f1015b:
+pnpm check:full: exit 1, only the same nine unrelated formatting files listed below.
+All 12 lint/type/test tasks succeeded (9 cached, 3 fresh).
+Frontend: 244 files, 2338 tests passed. API: 494. Database: 45. LINE: 41.
+Total: 2918 passing package tests. Superseded automatic-recovery tests were replaced.
+pnpm exec turbo run build: exit 0; 2/2 successful, 1 cached and 1 fresh.
+pnpm test:e2e: 183 passes, seven skips, and zero failures (6.9 minutes), exit 0.
+The final full browser run includes the checkout assertion correction and G1 completion.
+Unchanged Move contracts retain the separately verified 23 passing tests below.
+Report-only unused-code findings remain as listed below; no new G1 finding.
+
+Output limitations: combined package output retains 200 React act warnings, the same
+count as the preceding baseline run. Session-specific unit/API tests have clean output.
+Browser output retains LIFF language-fetch errors and test-service/expected-refusal
+diagnostics. These are recorded, not suppressed; passing assertions are not a clean-log
+claim. The Xcode license prerequisite still prevents iPadOS Safari acceptance; no legal
+terms were accepted. Physical-device/live LINE/payment acceptance remains unperformed.
+
+Historical verification record (superseded where the fresh results above differ)
+=============================================================================
+
+Croquis functional frontend fixes — verified implementation results
+
+Production correction commit: 81c64128
+Final checkout test correction: f9c0cb3c370711c88fdc8beecf48e3f22079919b
+Comparison baseline: 84328523
+Historical review coverage revision: 0a46f059
+
+pnpm check:full (production source 81c64128): exit 1
+All 12 lint/type/test tasks succeeded (9 cached, 3 fresh).
+Frontend: 244 files, 2341 tests passed.
+API: 494 tests passed. Database: 45 tests passed. LINE: 41 tests passed.
+Total package tests: 2921 passed.
+Formatting stopped the chained Move/build/knip stages on these nine unrelated files:
+docs/research/clip-studio-paint-stabilization/evidence/correction-labels.json (0ms)
+docs/research/clip-studio-paint-stabilization/evidence/debugger-access/copy-verification.json (0ms)
+docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/csp-complete-capture-contract.md (81ms)
+docs/research/clip-studio-paint-stabilization/evidence/debugger-access/mouse-route/static/complete-capture-contract.md (67ms)
+docs/research/clip-studio-paint-stabilization/post-analysis.md (28ms)
+docs/research/clip-studio-paint-stabilization/spikes/post-contract/findings.md (48ms)
+docs/reviews/2026-10-09-copy-audit/coverage.json (0ms)
+docs/reviews/2026-10-09-copy-audit/report.html (593ms)
+docs/reviews/2026-10-09-copy-audit/supporting-findings.json (0ms)
+Format issues found in above 9 files. These unrelated documents were not edited.
+
+pnpm test:move (unchanged contract source): exit 0
+Test result: OK. Total tests: 3; passed: 3; failed: 0
+Test result: OK. Total tests: 3; passed: 3; failed: 0
+Test result: OK. Total tests: 17; passed: 17; failed: 0
+
+pnpm exec turbo run build (81c64128): exit 0
+Tasks: 2 successful, 2 total; both freshly built.
+
+pnpm exec knip --no-exit-code: exit 0, report-only
+29 research/review/scratch files and one existing exported API type GiftStep were reported.
+This is not a clean unused-code result and was not treated as a failing application gate.
+
+pnpm test:e2e (81c64128): exit 1
+180 passed, 7 skipped, 1 failed (9.1m).
+The lone failure was Chromium shop.e2e.ts:104:
+Error: "Free" isn't a price in yen
+The poll threw before its successful asynchronous price refresh. The preserved trace
+shows the correct ¥270 response and three reserve tickets; application behavior was correct.
+The subsequent test-only correction replaces that throwing poll with an auto-retrying
+exact-price locator assertion. Targeted Chromium and WebKit rerun: 2 passed, exit 0.
+The full 188-case suite was not repeated after this one-line test-only correction.
+
+Earlier full browser run: 177 passed, 7 skipped, 4 failed. All four were missing
+expected-account headers in two layerLayouts setup requests. Those requests were fixed;
+all 6 layerLayouts cases passed separately and again in the corrected full run.
+
+Seven skips remain explicit: six existing screenSizes fixme cases (three configurations
+in Chromium and WebKit), plus the intentionally Chromium-only forcedDark case in WebKit.
+
+pnpm --filter frontend test:ipad-safari: exit 1 before startup
+[ipad-safari 22:59:27] FAIL bringing up the iPad and servers: Command failed: xcrun simctl list devices available -j
+You have not agreed to the Xcode license agreements. Please run 'sudo xcodebuild -license' from within a Terminal window to review and agree to the Xcode and Apple SDKs license.
+No legal terms were accepted. No iPadOS Safari, physical Pencil, Android, live LINE,
+or live payment acceptance is claimed. Desktop WebKit is not iPadOS evidence.
+
+Focused final correction: 211 tests passed; real storage and stale-recipient regressions
+were first observed failing. Independent scoped review approved all final corrections.
+The checkout test-only correction separately passed independent review and scoped checks.
+Current tray-count and bounded-heart mutation runners were rerun successfully: the
+repaired tests pass normally and reject their deliberate regression mutations.
+
+Extra historical-evidence lint check: exit 1, 459 diagnostics across 17 files.
+These are archived audit-era probes, including obsolete pre-layer fixtures, imports
+outside current project type resolution, and original assertion style. They were not
+rewritten into current application tests. The documentation-only commit bypasses
+application commit hooks after separate formatting/link/current-runner checks.
+All production and maintained-test commits passed their ordinary hooks. No application
+source, lint configuration, or test configuration was exempted.
+
+Historical open issue, now resolved by 25f1015b: G1 automatic post-ready 401 recovery can replace a newer account cookie through
+a delayed anonymous sign-in response. Account-bound requests and outbox disposal are
+implemented and tested. Replacing automatic recovery with explicit Reload was rejected
+by automatic approval review as a behavior expansion. The user subsequently authorized
+the explicit Reload recommendation; the final results above supersede that pending status.
+
+The report and coverage preserve the original 659 reviewed files plus 17 translation
+catalog exclusions. They do not imply a fresh full audit of the incoming layers feature.

@@ -1,9 +1,7 @@
 {
   "installedAppUnchanged": true,
   "allNestedFilesUnchanged": true,
-  "changedCopyFiles": [
-    "Contents/MacOS/CLIP STUDIO PAINT"
-  ],
+  "changedCopyFiles": ["Contents/MacOS/CLIP STUDIO PAINT"],
   "entitlements": {
     "com.apple.security.cs.disable-library-validation": true,
     "com.apple.security.device.camera": true,

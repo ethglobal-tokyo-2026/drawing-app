@@ -13,11 +13,11 @@
 
 Objective-C metadata identifies:
 
-| Method | Entry | Event dispatch instruction |
-|---|---|---|
-| `-[PWLegacyContentView mouseDown:]` | `0x10205c7fc` | `blr x8` at `0x10205cb9c` |
-| `-[PWLegacyContentView mouseDragged:]` | `0x10205c2ec` | `blr x8` at `0x10205c4d4` |
-| `-[PWLegacyContentView mouseUp:]` | `0x10205cc64` | `blr x8` at `0x10205ce3c` |
+| Method                                 | Entry         | Event dispatch instruction |
+| -------------------------------------- | ------------- | -------------------------- |
+| `-[PWLegacyContentView mouseDown:]`    | `0x10205c7fc` | `blr x8` at `0x10205cb9c`  |
+| `-[PWLegacyContentView mouseDragged:]` | `0x10205c2ec` | `blr x8` at `0x10205c4d4`  |
+| `-[PWLegacyContentView mouseUp:]`      | `0x10205cc64` | `blr x8` at `0x10205ce3c`  |
 
 At all three dispatch instructions, x0 is the legacy window object, x1 points at the constructed event packet, and x8 is the downstream callback address loaded from legacy-window `+0x38`. Capturing the loaded x8 at mouseDown identifies the exact next function without a target expression or function call. Its runtime callback target is not statically established in this investigation.
 

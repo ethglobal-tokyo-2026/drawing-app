@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Croquis — implementation results</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+        line-height: 1.55;
+      }
+      body {
+        max-width: 960px;
+        margin: 48px auto;
+        padding: 0 24px 64px;
+      }
+      h1 {
+        font-size: 2rem;
+        line-height: 1.2;
+      }
+      h2 {
+        margin-top: 40px;
+        font-size: 1.4rem;
+      }
+      h3 {
+        font-size: 1.13rem;
+        line-height: 1.4;
+      }
+      article {
+        border-top: 1px solid #8886;
+        margin-top: 28px;
+        padding-top: 12px;
+      }
+      code,
+      pre {
+        font-family: ui-monospace, monospace;
+        font-size: 0.88em;
+      }
+      code {
+        overflow-wrap: anywhere;
+      }
+      pre {
+        overflow-x: auto;
+        padding: 16px;
+        background: #8881;
+        white-space: pre-wrap;
+      }
+      .note {
+        opacity: 0.8;
+      }
+      .priority {
+        font-weight: 750;
+        white-space: nowrap;
+      }
+      .p1 {
+        color: light-dark(#a51b21, #ff9c9c);
+      }
+      .p2 {
+        color: light-dark(#775000, #ffd087);
+      }
+      nav li {
+        margin: 6px 0;
+      }
+      a {
+        color: light-dark(#174e9b, #9dc6ff);
+      }
+      dt {
+        font-weight: 650;
+        margin-top: 12px;
+      }
+      dd {
+        margin-left: 0;
+      }
+      @media print {
+        body {
+          margin: 0;
+          max-width: none;
+        }
+        article {
+          break-inside: avoid;
+        }
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.9rem;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 12px 10px;
+        border-bottom: 1px solid #8886;
+      }
+      thead th {
+        white-space: nowrap;
+      }
+      tbody th {
+        min-width: 160px;
+      }
+      td {
+        min-width: 105px;
+      }
+      td:nth-child(4) {
+        min-width: 230px;
+      }
+      td:last-child {
+        min-width: 160px;
+      }
+      small {
+        opacity: 0.8;
+      }
+      .decisions li {
+        margin: 14px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Croquis: implementation results</h1>
+    <p>
+      Updated October 11, 2026. Results for the
+      <a href="report.html">functional frontend review</a>. The original report preserves historical
+      findings and reproductions; this page records the implemented fixes, independent reviews,
+      verification limits, and remaining work.
+    </p>
+    <p>
+      <strong>All 23 recorded findings have implemented, independently reviewed fixes.</strong>
+      Finding 13 is closed with the user-authorized Reload after an established session expires. The
+      old tab cannot silently replace a newer login. The follow-up also repairs the formatting
+      failures, asynchronous test ownership, incomplete fixtures, disabled browser cases, LIFF
+      language initialization, and iPad Simulator runner.
+    </p>
+    <p class="note">
+      Actual iPadOS 26.5 Safari passed all 16 checks. The full frontend suite passed 2,350 tests
+      with zero React act warnings; lint, types, builds, and contracts passed. Chromium and WebKit
+      passed all 189 cases, with no failures or skips. iPadOS 27 driver discovery remains
+      unverified; physical Apple Pencil input and live LINE/payment flows have not been accepted. No
+      legal agreement was accepted by the assistant.
+    </p>
+    <p class="note">
+      Source snapshot: <code>ed3e4fba</code> on <code>codex/functional-frontend-fixes</code>,
+      including the explicit-Reload correction at <code>25f1015b</code> and the October 11
+      follow-up. All planned task implementations received independent review, including the
+      runner's cleanup-diagnostic correction. Broad final review and scoped correction reviews are
+      complete. Historical audit coverage is unchanged; the incoming drawing-layers feature was
+      integrated and its affected contracts reviewed, not audited again in full.
+    </p>
+    <nav aria-label="Implementation progress">
+      <a href="#findings">Finding status</a> · <a href="#decisions">Decisions and corrections</a> ·
+      <a href="#verification">Verification results and remaining checks</a>
+    </nav>
+    <h2 id="findings">Finding status</h2>
+    <p>
+      Finding numbers stay stable. Finding 10 has separate ticket-card and Mini-game tasks.
+      <strong>Pending</strong> means no accepted implementation;
+      <strong>Implemented; awaiting review</strong> means code and reported tests exist;
+      <strong>Review approved</strong> records the task review; <strong>Open</strong> identifies a
+      known unresolved issue.
+    </p>
+    <div class="table-scroll">
+      <table>
+        <caption>
+          Review findings mapped to implementation tasks
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Finding</th>
+            <th scope="col">Task</th>
+            <th scope="col">Status</th>
+            <th scope="col">Progress / remaining work</th>
+            <th scope="col">Reported regressions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-finding="1" data-tasks="2">
+            <th scope="row">
+              <a href="report.html#board-saves"
+                >1. Preserve board save ordering across tab changes</a
+              >
+            </th>
+            <td>
+              <span>Task 2 · B1</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Placement save ordering and read reconciliation are integrated. The
+              expected-diagnostic follow-up is also corrected and independently reviewed.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/sticker-board/boardPlacementSaves.test.ts"
+                ><code>boardPlacementSaves.test.ts</code></a
+              ><br /><a href="../../../apps/frontend/src/sticker-board/StickerBoard.test.tsx"
+                ><code>StickerBoard.test.tsx</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="2" data-tasks="4">
+            <th scope="row">
+              <a href="report.html#saved-session">2. Associate saved strokes with their ticket</a>
+            </th>
+            <td>
+              <span>Task 4 · C2</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Saved steps retain their ticket/generation association. Final review correction
+              81c64128 also preserves readable ink when metadata is missing, corrupt or blocked;
+              unknown ownership stays locked with Retry, export of data actually read, and explicit
+              discard. A late retry cannot reopen a discarded drawing. Independent scoped review
+              passed.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/sticker-creation/session/keptSession.test.ts"
+                ><code>keptSession.test.ts</code></a
+              ><br /><a
+                href="../../../apps/frontend/src/sticker-creation/session/usePickUpKeptSession.test.tsx"
+                ><code>usePickUpKeptSession.test.tsx</code></a
+              ><br /><a
+                href="../../../apps/frontend/src/sticker-creation/session/KeptDrawingRecovery.test.tsx"
+                ><code>KeptDrawingRecovery.test.tsx</code></a
+              ><br /><a href="../../../apps/frontend/src/sticker-creation/DrawingScreen.test.tsx"
+                ><code>DrawingScreen.test.tsx</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="3" data-tasks="5">
+            <th scope="row">
+              <a href="report.html#gift-recipient"
+                >3. Preserve the recipient when recovering a gift</a
+              >
+            </th>
+            <td>
+              <span>Task 5 · G2</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Recovery preserves the original server recipient. Final correction 81c64128 also
+              discloses mismatches from a stale second tab, removes the incorrect selected-recipient
+              label, and preserves the original gift for explicit Take it out. No automatic
+              retargeting or LINE send; independent scoped review passed.
+            </td>
+            <td>
+              <a href="../../../apps/api/src/routes/giving.test.ts"><code>giving.test.ts</code></a
+              ><br /><a href="../../../apps/frontend/src/giving/giftBackend.test.ts"
+                ><code>giftBackend.test.ts</code></a
+              ><br /><a href="../../../apps/frontend/src/giving/Giving.test.tsx"
+                ><code>Giving.test.tsx</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="4" data-tasks="6">
+            <th scope="row">
+              <a href="report.html#gift-storage"
+                >4. Preserve gift send state when device storage fails</a
+              >
+            </th>
+            <td>
+              <span>Task 6 · G4</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Durable server attempts, explicit Take out, storage-read preservation and persistent
+              warnings are integrated. Initial review and scoped correction passed.
+            </td>
+            <td>
+              <a href="../../../apps/api/src/gifts/messageAttempts.test.ts"
+                ><code>messageAttempts.test.ts</code></a
+              ><br /><a href="../../../apps/frontend/src/giving/giftBackend.api.test.ts"
+                ><code>giftBackend.api.test.ts</code></a
+              ><br /><a href="../../../apps/frontend/e2e/giving.e2e.ts"
+                ><code>giving.e2e.ts</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="5" data-tasks="11">
+            <th scope="row">
+              <a href="report.html#wallet-retry"
+                >5. Recover the wallet provider after its error boundary trips</a
+              >
+            </th>
+            <td>
+              <span>Task 11 · I1</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Wallet recovery implemented and reviewed, including rendered Reload action;
+              integrated.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/identity/PrivySignIn.test.tsx"
+                ><code>PrivySignIn.test.tsx</code></a
+              ><br /><a
+                href="../../../apps/frontend/src/sticker-board/stat-board/AddressPapers.test.tsx"
+                ><code>AddressPapers.test.tsx</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="6" data-tasks="7">
+            <th scope="row">
+              <a href="report.html#paused-stroke"
+                >6. Stop captured strokes when drawing is paused</a
+              >
+            </th>
+            <td>
+              <span>Task 7 · C3</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Captured input ends at pause/panel boundaries; combined layers behavior reviewed.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/sticker-creation/canvas/inkEngine.test.ts"
+                ><code>inkEngine.test.ts</code></a
+              ><br /><a href="../../../apps/frontend/src/sticker-creation/DrawingScreen.test.tsx"
+                ><code>DrawingScreen.test.tsx</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="7" data-tasks="10">
+            <th scope="row">
+              <a href="report.html#replay-memory">7. Bound timelapse fill snapshot memory</a>
+            </th>
+            <td>
+              <span>Task 10 · C6</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Streamed fill preparation integrated as 8e308038. Forty-fill memory bound, 82 focused
+              tests, 8 native pixel cases and 14 timelapse cases pass; independent review approved.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/sticker-board/timelapse/fillSnapshots.test.ts"
+                ><code>fillSnapshots.test.ts</code></a
+              ><br /><a
+                href="../../../apps/frontend/src/sticker-board/timelapse/timelapsePlayer.test.ts"
+                ><code>timelapsePlayer.test.ts</code></a
+              ><br /><a href="../../../apps/frontend/e2e/canvasPixels.e2e.ts"
+                ><code>canvasPixels.e2e.ts</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="8" data-tasks="13">
+            <th scope="row">
+              <a href="report.html#checkout-balance"
+                >8. Refresh checkout balance after funding the wallet</a
+              >
+            </th>
+            <td>
+              <span>Task 13 · I3</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Checkout refresh integrated as 5734033e; unit/integration tests and independent review
+              approved. Final browser verification also exposed a throwing price poll; test-only
+              correction f9c0cb3c waits for the exact expected yen label and preserves the
+              held-ticket assertion. Both browser engines and independent review passed.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/tickets/useJpycBalance.test.tsx"
+                ><code>useJpycBalance.test.tsx</code></a
+              ><br /><a href="../../../apps/frontend/src/tickets/ReserveTicketCheckout.test.tsx"
+                ><code>ReserveTicketCheckout.test.tsx</code></a
+              ><br /><a href="../../../apps/frontend/e2e/shop.e2e.ts"><code>shop.e2e.ts</code></a>
+            </td>
+          </tr>
+          <tr data-finding="9" data-tasks="14">
+            <th scope="row">
+              <a href="report.html#ticket-order"
+                >9. Reconcile ticket counts when a read overtakes a spend</a
+              >
+            </th>
+            <td>
+              <span>Task 14 · I4</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Spend reconciliation integrated as 19163428; ordering, idempotency and account
+              teardown reviewed.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/tickets/TicketsProvider.test.tsx"
+                ><code>TicketsProvider.test.tsx</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="10" data-tasks="15,16">
+            <th scope="row">
+              <a href="report.html#gratitude-back"
+                >10. Handle Android and LINE Back in the Gratitude Mini-game and ticket cards</a
+              >
+            </th>
+            <td><span>Task 15 · I5</span><br /><span>Task 16 · G3</span></td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Ticket cards and the Mini-game now own their Back entries and preserve their existing
+              close rules. Both tasks passed independent review; 14 shared browser cases passed.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/tickets/ticketCards.test.tsx"
+                ><code>ticketCards.test.tsx</code></a
+              ><br /><a href="../../../apps/frontend/src/gratitude/GratitudeMiniGame.test.tsx"
+                ><code>GratitudeMiniGame.test.tsx</code></a
+              ><br /><a href="../../../apps/frontend/e2e/backNavigation.e2e.ts"
+                ><code>backNavigation.e2e.ts</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="11" data-tasks="17">
+            <th scope="row">
+              <a href="report.html#explore-pages"
+                >11. Keep Explore pages and position through phone searches</a
+              >
+            </th>
+            <td>
+              <span>Task 17 · B2</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Explore pages, cursor and scroll position now survive search. Query changes and NSFW
+              opt-out still reset correctly; 38 focused tests and independent review passed.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/explore/ExploreScreen.test.tsx"
+                ><code>ExploreScreen.test.tsx</code></a
+              ><br /><a href="../../../apps/frontend/src/explore/keptPlace.test.ts"
+                ><code>keptPlace.test.ts</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="12" data-tasks="21">
+            <th scope="row">
+              <a href="report.html#escape-test"
+                >12. Wait for sticker-detail closing in the Escape test</a
+              >
+            </th>
+            <td>
+              <span>Task 21 · B5</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              The close test verifies reversal during opening, with no early callback and exactly
+              one completion. The separate pending-page case remains covered. All 49 focused tests
+              and scoped review passed; integrated as 64527f65 and 19c82062.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/sticker-board/StickerDetail.test.tsx"
+                ><code>StickerDetail.test.tsx</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="13" data-tasks="1">
+            <th scope="row">
+              <a href="report.html#gratitude-account"
+                >13. Stop old-account Gratitude resends from deleting valid combos</a
+              >
+            </th>
+            <td>
+              <span>Task 1 · G1</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Account-bound requests and disposed outbox regressions preserve saved combos.
+              Established-session expiry now closes the old account and requires Reload. Real-cookie
+              regressions in Chromium and WebKit preserve a newer login before that explicit action;
+              initial bootstrap and LINE reconnect controls remain covered.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/gratitude/gratitudeOutbox.test.ts"
+                ><code>gratitudeOutbox.test.ts</code></a
+              ><br /><a href="../../../apps/frontend/src/gratitude/gratitudeAccount.test.ts"
+                ><code>gratitudeAccount.test.ts</code></a
+              ><br /><a href="../../../apps/api/src/sessionAccount.test.ts"
+                ><code>sessionAccount.test.ts</code></a
+              ><br /><a href="../../../apps/frontend/src/api/SessionGate.test.tsx"
+                ><code>SessionGate.test.tsx</code></a
+              ><br /><a href="../../../apps/frontend/e2e/sessionPersistence.e2e.ts"
+                ><code>sessionPersistence.e2e.ts</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="14" data-tasks="18">
+            <th scope="row">
+              <a href="report.html#gift-inbox-error"
+                >14. Show failed incoming-gift loads and allow retry</a
+              >
+            </th>
+            <td>
+              <span>Task 18 · B3</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Persistent incoming-gift errors, scoped Retry and bilingual copy are integrated and
+              review approved; 72 focused tests passed.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/sticker-board/StickerBoard.test.tsx"
+                ><code>StickerBoard.test.tsx</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="15" data-tasks="19">
+            <th scope="row">
+              <a href="report.html#held-resize"
+                >15. Stop held arrangement controls when the window loses focus</a
+              >
+            </th>
+            <td>
+              <span>Task 19 · B4</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Held controls stop on blur, hidden pages, pagehide and lost capture without resuming
+              on focus. Integrated as 69d723b2; 41 focused tests and independent review passed.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/ui/useHeldRepeat.test.tsx"
+                ><code>useHeldRepeat.test.tsx</code></a
+              ><br /><a href="../../../apps/frontend/src/sticker-board/StickerToolbar.test.tsx"
+                ><code>StickerToolbar.test.tsx</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="16" data-tasks="12">
+            <th scope="row">
+              <a href="report.html#line-storage"
+                >16. Keep optional storage failure from blocking LINE Login</a
+              >
+            </th>
+            <td>
+              <span>Task 12 · I2</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Optional LINE marker storage failures no longer block sign-in; integrated and
+              reviewed.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/line/liff.test.ts"><code>liff.test.ts</code></a>
+            </td>
+          </tr>
+          <tr data-finding="17" data-tasks="8">
+            <th scope="row">
+              <a href="report.html#small-ink">17. Preserve minimum-width ink in the sealed cut</a>
+            </th>
+            <td>
+              <span>Task 8 · C4</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Conservative source-ink occupancy integrated; 59% coverage fixture and native layers
+              adapter verified.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/sticker-creation/sealing/dieCut.test.ts"
+                ><code>dieCut.test.ts</code></a
+              ><br /><a href="../../../apps/frontend/e2e/canvasPixels.e2e.ts"
+                ><code>canvasPixels.e2e.ts</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="18" data-tasks="20">
+            <th scope="row">
+              <a href="report.html#session-persistence-test"
+                >18. Distinguish session persistence from signing in again</a
+              >
+            </th>
+            <td>
+              <span>Task 20 · I6</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Integrated as 231d1700, with later explicit-Reload regressions. The iPadOS 26.5
+              Simulator run now verifies the same actual HttpOnly/Secure cookie fingerprint after
+              reload, no new server session, and authenticated Me. All 16 Safari checks passed. The
+              iPadOS 27 driver could not discover its target; that runtime remains unverified.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/e2e/sessionPersistence.e2e.ts"
+                ><code>sessionPersistence.e2e.ts</code></a
+              ><br /><a href="../../../apps/frontend/e2e/serverConfig.test.ts"
+                ><code>serverConfig.test.ts</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="19" data-tasks="3">
+            <th scope="row">
+              <a href="report.html#web-lock-test"
+                >19. Make the Web Locks helper honor the requested options</a
+              >
+            </th>
+            <td>
+              <span>Task 3 · C1</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Native takeover and queued-lock controls integrated and adapted to layers; local wait
+              bound corrected in Task 4.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/sticker-creation/session/keptSession.test.ts"
+                ><code>keptSession.test.ts</code></a
+              ><br /><a href="../../../apps/frontend/e2e/keptSessionLocks.e2e.ts"
+                ><code>keptSessionLocks.e2e.ts</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="20" data-tasks="23">
+            <th scope="row">
+              <a href="report.html#heart-test-bound">20. Bound the heart-flight test simulation</a>
+            </th>
+            <td>
+              <span>Task 23 · G5</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Gratitude simulations have finite frame budgets and explicit termination assertions
+              based on their actual first-hit timing. All 27 focused tests and the opacity-floor
+              negative control passed; integrated as fa95f7c1 and 98ad3079 and independently
+              reviewed.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/gratitude/heartMotion.test.ts"
+                ><code>heartMotion.test.ts</code></a
+              ><br /><a href="../../../apps/frontend/src/gratitude/replayRecorder.test.ts"
+                ><code>replayRecorder.test.ts</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="21" data-tasks="22">
+            <th scope="row">
+              <a href="report.html#tray-count-test"
+                >21. Calculate the expected sheet count independently</a
+              >
+            </th>
+            <td>
+              <span>Task 22 · B6</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Independent fixture counts and the retained 999 mutation check passed. Integrated as
+              487c9f32 and independently reviewed.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/sticker-board/tray/StickerTray.test.tsx"
+                ><code>StickerTray.test.tsx</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="22" data-tasks="24">
+            <th scope="row">
+              <a href="report.html#test-root-cleanup"
+                >22. Unmount every root created by subject tests</a
+              >
+            </th>
+            <td>
+              <span>Task 24 · C7</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Every root is registered before rendering and drained under act. Focused tests and the
+              retained zero-root language-change probe passed; integrated as 8dae4264 and
+              independently reviewed.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/kyoto-seika/SubjectThought.test.tsx"
+                ><code>SubjectThought.test.tsx</code></a
+              ><br /><a href="../../../apps/frontend/src/kyoto-seika/SubjectWord.test.tsx"
+                ><code>SubjectWord.test.tsx</code></a
+              >
+            </td>
+          </tr>
+          <tr data-finding="23" data-tasks="9">
+            <th scope="row">
+              <a href="report.html#timelapse-ink-test"
+                >23. Verify that timelapse playback paints the recorded ink</a
+              >
+            </th>
+            <td>
+              <span>Task 9 · C5</span>
+            </td>
+            <td><strong>Review approved</strong></td>
+            <td>
+              Strict replay pixel tests integrated as dc1be2a3 and 0a101a26. Reference-only edge
+              comparison and interior-transparency negative control passed independent review.
+            </td>
+            <td>
+              <a href="../../../apps/frontend/src/sticker-board/timelapse/timelapsePlayer.test.ts"
+                ><code>timelapsePlayer.test.ts</code></a
+              ><br /><a href="../../../apps/frontend/e2e/canvasPixels.e2e.ts"
+                ><code>canvasPixels.e2e.ts</code></a
+              >
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <h2 id="decisions">Decisions and corrections</h2>
+    <p>
+      These summarize every recorded ruling, including the rejected proposal and later corrections.
+      They describe the current scope and its tradeoffs.
+    </p>
+    <ol class="decisions">
+      <li data-ruling="1">
+        <strong>Account scope.</strong> Protected logout, chat-menu state, late profile updates, and
+        background profile refresh were included so direct calls cannot bypass account checks.
+        Tradeoff: a larger authentication test surface; explicit anonymous sign-in remains
+        available.
+      </li>
+      <li data-ruling="2">
+        <strong>Background cookies.</strong> Account-bound profile refresh no longer issues a
+        session cookie, preventing its delayed response from overwriting another login. Tradeoff:
+        background updates no longer extend session expiry.
+      </li>
+      <li data-ruling="3">
+        <strong>401 recovery: initial rejection, subsequently authorized.</strong> Automatic
+        approval review initially rejected replacing silent post-ready recovery with explicit Reload
+        as broader than the authorized plan. The user subsequently delegated this choice; decision
+        24 records the accepted recommendation and its implementation. Tradeoff: one explicit action
+        after expiry; initial sign-in and ordinary wallet retries remain unchanged.
+      </li>
+      <li data-ruling="4">
+        <strong>Creation lane.</strong> Creation work runs in an isolated worktree with one
+        implementer. Tradeoff: commits and changed interfaces require integration and rechecking;
+        task reviews remain separate.
+      </li>
+      <li data-ruling="5">
+        <strong>Board work before the 401 decision.</strong> Board persistence continued against the
+        reviewed immutable-account client while the separate recovery decision was pending.
+        Tradeoff: account teardown required renewed checks after that decision changed; those checks
+        now pass. This does not establish release readiness on untested devices.
+      </li>
+      <li data-ruling="6">
+        <strong>Saved-drawing reconciliation.</strong> Recovery gained explicit checking, failure
+        with Retry, and resolved states so failed Seal-status reads stay visible without discarding
+        ink. Tradeoff: a larger component contract and retry tests. The initial rule that all
+        unknown outcomes stay locked was later narrowed by the historical-ticket correction below.
+      </li>
+      <li data-ruling="7">
+        <strong>Active board gestures.</strong> A read-only gesture-position accessor preserves
+        moves still held in the DOM when reads or acknowledgements arrive. Tradeoff: another hook
+        contract and stale-position tests; the save store does not own DOM state.
+      </li>
+      <li data-ruling="8">
+        <strong>Identity lane.</strong> Wallet and identity work runs in another isolated worktree
+        using the account-client contract. Tradeoff: another integration pass; heavy checks and
+        browser servers remain serialized.
+      </li>
+      <li data-ruling="9">
+        <strong>Historical-ticket correction.</strong> Review found that the initial reconciliation
+        gate could lock a drawing forever after the ticket day changed. A successful read that omits
+        an old sent-Seal ticket now permits explicit abandonment, without calling it unsealed or
+        reusing it. Tradeoff: abandonment forfeits further local use of that ticket. Ink export
+        remains available until discard; failed reads retain Retry, and a fresh ticket still
+        requires explicit Start.
+      </li>
+      <li data-ruling="10">
+        <strong>Wallet catalog ownership.</strong> Reload copy stays in the Sticker Board catalog
+        where its address/status control is rendered. The unrelated identity catalog was not edited
+        merely to match the planned file list. Tradeoff: a documented file-list correction, with no
+        behavior cost.
+      </li>
+      <li data-ruling="11">
+        <strong>G2 assignment.</strong> A completed planning agent received its first implementation
+        brief after the agent limit prevented a new seat. Tradeoff: retained planning context,
+        constrained by a new bounded brief and independent review; no second implementer shared a
+        checkout.
+      </li>
+      <li data-ruling="12">
+        <strong>Gift contract and G4 dependency.</strong> The giver-only PackagedGift change belongs
+        in packaging.ts, so public Gift metadata and shapes.ts were left alone. Sent/maybe-sent
+        recovery preserves identity; G4 owns durable sending and removal of automatic missing-token
+        Take out. Tradeoff: G2 alone is not safe against storage-loss or two-tab sending. Its
+        temporary fallback preserves the returned original recipient.
+      </li>
+      <li data-ruling="13">
+        <strong>Current drawing layers.</strong> The committed drawing-layers baseline was
+        integrated before further schema/replay work. Reviewed fixes were retained and integration
+        checked independently. Tradeoff: conflict resolution and renewed checks; the entire incoming
+        feature was not audited again.
+      </li>
+      <li data-ruling="14">
+        <strong>Conservative cut cleanup.</strong> Only the now-unused pixel averaging wrapper was
+        removed after its sole caller changed. The below-threshold fixture was corrected to 59%.
+        Tradeoff: one additional source file for deletion; final-image averaging is unchanged.
+      </li>
+      <li data-ruling="15">
+        <strong>Layered replay ownership.</strong> Replay preparation must account for original
+        layer/scratch canvases and cached per-fill data, as well as its single active snapshot. A
+        narrow releaseFill operation is approved for preparation. Tradeoff: another ownership
+        operation and layered memory tests; ordinary drawing/undo caching stays intact and no
+        absolute heap ceiling is claimed.
+      </li>
+      <li data-ruling="16">
+        <strong>Gift storage warning and attempt ID.</strong> A narrow storage-error getter keeps
+        read/save failures visible while server-acknowledged attempts can use memory fallback.
+        Attempt IDs use 32 random bytes without a general identifier abstraction. Tradeoff: one
+        small flow error contract; server state remains authoritative.
+      </li>
+      <li data-ruling="17">
+        <strong>Layer panel input boundary.</strong> Layer-aware capture dismissal was preserved
+        while panelOpen remains an input-boundary signal. Tradeoff: the combined behavior needs
+        unit/native coverage so held contacts cannot survive panel entry.
+      </li>
+      <li data-ruling="18">
+        <strong>Historical layer fixtures.</strong> Legacy fixtures remain legacy where they test
+        migration; current engine and saved-session inputs use valid layered steps. Tradeoff: those
+        roles must remain distinct to preserve migration coverage.
+      </li>
+      <li data-ruling="19">
+        <strong>Combined platform acceptance.</strong> Full browser and iPad checks belong to the
+        final combined branch. Task and integration tests establish their own scoped contracts.
+        Tradeoff: final platform acceptance remains open until that phase.
+      </li>
+      <li data-ruling="20">
+        <strong>Back during a visible exit.</strong> The requirement to keep Back inside Croquis
+        takes precedence over the plan detail that removed a ticket card registration as soon as
+        leaving began. A real browser regression and narrow correction passed independent review.
+        Tradeoff: the guard may live longer, while one-entry and one-callback behavior must remain
+        intact.
+      </li>
+      <li data-ruling="21">
+        <strong>Uncertain storage and authoritative gift recipients.</strong> Unknown or unreadable
+        saved-session metadata must enter non-destructive recovery, and resumed Giving must disclose
+        a recipient mismatch before recovery actions. Both follow the accepted preservation and
+        recipient requirements. Tradeoff: narrow recovery contracts, bilingual copy, and new tests;
+        ticket ownership must not be inferred and gifts must not be automatically retargeted.
+      </li>
+      <li data-ruling="22">
+        <strong>Historical probe preservation.</strong> Original reproduction snapshots retain their
+        audit-era code and failures. A direct lint check against current types fails on those
+        snapshots, including old layer fixtures and out-of-project imports. Application commits
+        passed their hooks and fresh package gates. The documentation-only commit uses separate
+        formatting, link, and current mutation-runner checks instead of application commit hooks.
+        Tradeoff: the archived probes are not current typed tests; run them at the documented audit
+        revision. No application source or configuration is exempted.
+      </li>
+      <li data-ruling="23">
+        <strong>Checkout test timing.</strong> Fresh browser verification exposed a separate
+        assertion that threw on the temporary Free label before the refreshed yen price arrived.
+        Repair that test with a retrying exact-price assertion, retaining the ticket-count check and
+        failed trace. Tradeoff: one additional test-only correction, affected browser rerun, and
+        independent review; the accepted production fixes and full audit are not reopened.
+      </li>
+      <li data-ruling="24">
+        <strong>Explicit Reload after session expiry.</strong> The user delegated the remaining
+        recovery choice and accepted the recommendation to stop silent post-ready sign-in. The
+        account subtree closes on expiry, late answers cannot reopen it, and Reload is explicit.
+        Initial bootstrap remains available. Tradeoff: one user action after expiry; in return, a
+        delayed recovery response cannot silently replace a newer login. Real-cookie browser
+        regressions and independent review passed.
+      </li>
+      <li data-ruling="25">
+        <strong>Verify Safari on the installed iPadOS 26.5 simulator.</strong> The host Safari
+        27.0.1 driver connects to that simulator but rejects the iPadOS 27 target. Use an explicit
+        device selection and report the observed runtime; do not silently fall back or infer the
+        internal cause. Cost: this run cannot establish iPadOS 27 behavior.
+      </li>
+    </ol>
+    <h2 id="verification">Verification results and remaining checks</h2>
+    <p>
+      <a href="evidence/implementation-verification.txt"
+        >Commands, exact results, failure output, and limitations</a
+      >
+    </p>
+    <ul>
+      <li>
+        <strong>Package checks:</strong> all eight lint/type tasks passed fresh. All four package
+        test suites passed fresh: 2,350 frontend, 494 API, 45 database, and 41 LINE tests (2,930
+        total). The frontend run used the verbose reporter and one worker; it reported zero React
+        act warnings. Tests retain deliberate failure diagnostics.
+      </li>
+      <li>
+        <strong>Formatting:</strong> the nine research/copy-audit files were repaired with the
+        user's authorization. Parsed JSON, embedded report data, and Markdown content were
+        preserved. Repository formatting passed for all 1,171 files.
+      </li>
+      <li>
+        <strong>Builds and contracts:</strong> both production builds passed fresh, along with all
+        23 contract tests. The full-check stages were run separately with bounded test workers;
+        exact commands and outputs are in the linked verification record.
+      </li>
+      <li>
+        <strong>Browser checks:</strong> the full run passed all 189 cases (95 Chromium, 94 WebKit),
+        with zero failures or skips, in 14.4 minutes. All six former screen-size exclusions are
+        restored. The forced-dark case is collected only in Chromium, whose capability it tests.
+        Final logs contain no LIFF language-fetch or conflicting-color diagnostics; deliberate
+        ticket/session refusals and mock-service notices remain visible.
+      </li>
+      <li>
+        <strong>iPadOS Safari:</strong> all 16 checks passed on the explicitly selected iPad Air
+        11-inch (M4), iPadOS 26.5, using Xcode 27 and the host Safari 27.0.1 driver. The checks use
+        real simulated Safari, actual device rotation, cookie persistence, settings touches, and
+        touch ink (0 to 53,080 painted pixels). Every screen fit in both orientations. An injected
+        driver startup failure also cleaned the already-started servers and owned simulator. Cleanup
+        errors now retain the affected process and cause; seven helper tests pass.
+      </li>
+      <li>
+        <strong>Remaining platform limits:</strong> the same host driver could not discover the
+        iPadOS 27 target; its internal cause is unproven. The runner never silently selects an older
+        runtime. The standard Xcode/SDK license prerequisite was resolved externally; the assistant
+        accepted no terms. The motion check covers Croquis’s permission card and its decline action,
+        not the native OS Allow prompt. Simulator does not establish physical Apple Pencil behavior.
+        Live LINE and payment flows were simulated, not exercised against live services.
+      </li>
+      <li>
+        <strong>Test diagnostics:</strong> LIFF language synchronization now waits for
+        initialization, and browser child processes no longer receive conflicting color settings.
+        Presentation tests mount only their required providers; stateful tests await real work.
+        Missing successful API fixtures were completed without suppressing failure output. A
+        deterministic navigation control reproduced a preload cancellation; historical aggregate
+        errors remain unclassified. Optional screen-load diagnostics capture observed in-test
+        fixture-page events, with limits documented in the verification record.
+      </li>
+      <li>
+        <strong>Regression controls:</strong> the earlier recovery/recipient wave passed 211 focused
+        tests after demonstrated failures. Current tray-count and bounded-heart mutation runners
+        pass their normal cases and reject deliberate regressions. The unchanged forty-fill memory
+        regression timed out during an earlier concurrent run, then passed its focused recheck and
+        final full suite with its original timeout and memory bounds. The archived audit-probe lint
+        failure remains historical evidence; see decision 22.
+      </li>
+      <li>
+        <strong>Unused-code report:</strong> report-only analysis lists 30 retained research,
+        review, and scratch files and the existing exported API type <code>GiftStep</code>. It also
+        flags <code>createIpadSafariServerConfig</code>, which is called by the generated Vite
+        configuration and was exercised by the Safari acceptance run. This is not a clean
+        unused-code result or an unreferenced production implementation.
+      </li>
+      <li>
+        <strong>Session recovery:</strong> finding 13 is closed. The regression failed before the
+        change in both browser engines, then all eight session-persistence cases passed. The 31
+        session-gate tests cover expiry, late answers, ignored stale-account notifications, and
+        initial bootstrap. Owning and API checks preserve saved Gratitude evidence. Independent spec
+        and quality review approved the correction.
+      </li>
+      <li>
+        <strong>Integration state at this October 11 review:</strong> Gift Message attempt changes
+        required the database migration, API, and frontend to be rolled out together. Deployment had
+        not occurred when this verification was recorded. See the release record for later
+        integration and deployment status.
+      </li>
+    </ul>
+    <p class="note">
+      All 23 recorded findings are addressed; that is not proof that no undiscovered issues remain.
+      Platform and verification limits above still apply. At the time of this October 11 review,
+      implementation was in isolated worktrees and had not been merged or deployed. See the release
+      record for later integration and deployment status.
+    </p>
+  </body>
+</html>

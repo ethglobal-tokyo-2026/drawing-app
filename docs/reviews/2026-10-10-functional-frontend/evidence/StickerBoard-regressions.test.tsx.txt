@@ -1,0 +1,72 @@
+ it("REVIEW pending save survives a board remount", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    onAPhone();
+    const a = boardSticker({ placement: placedAt(0.5) });
+    let land = () => {};
+    let serverSpot = a.placement;
+    const api = boardApi([a], {
+      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [{...a, placement: serverSpot}] }),
+      saveStickerPlacement: (stickerId, spots) => new Promise(resolve => {
+        land = () => { serverSpot = spots.placement ?? serverSpot; resolve({stickerId, placement: serverSpot, largePlacement: null, seenAt: null, arrivedAt: a.arrivedAt}); };
+      }),
+    });
+    const first = await openBoard(api);
+    selectByKeys(first.host, a.stickerId)("ArrowLeft");
+    act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    const moved = keptBoardFor(TEST_ME.id)?.stickers[0].placements.phone;
+    expect(moved?.x).not.toBe(0.5);
+    await act(() => vi.dynamicImportSettled());
+    first.unmount();
+    await openBoard(api);
+    await act(async () => land());
+    expect(keptBoardFor(TEST_ME.id)?.stickers[0].placements.phone).toEqual(moved);
+ });
+it("REVIEW old board queue cannot overwrite the next visit's move", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  onAPhone();
+  const a = boardSticker({ placement: placedAt(0.5) });
+  let serverSpot = a.placement;
+  let landFirst = () => {};
+  let calls = 0;
+  const saveStickerPlacement = vi.fn<ApiClient["saveStickerPlacement"]>((stickerId, spots) => {
+    const land = () => {
+      serverSpot = spots.placement ?? serverSpot;
+      return {stickerId, placement: serverSpot, largePlacement: null, seenAt: null, arrivedAt: a.arrivedAt};
+    };
+    if (++calls === 1) return new Promise(resolve => { landFirst = () => resolve(land()); });
+    return Promise.resolve(land());
+  });
+  const api = boardApi([a], {
+    stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [{...a, placement: serverSpot}] }),
+    saveStickerPlacement,
+  });
+  const first = await openBoard(api);
+  const pressFirst = selectByKeys(first.host, a.stickerId);
+  pressFirst("ArrowLeft");
+  act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+  pressFirst("ArrowLeft");
+  act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+  expect(saveStickerPlacement).toHaveBeenCalledTimes(1);
+  await act(() => vi.dynamicImportSettled());
+  first.unmount();
+  const second = await openBoard(api);
+  selectByKeys(second.host, a.stickerId)("ArrowRight");
+  act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+  await act(async () => {});
+  const newest = serverSpot;
+  expect(saveStickerPlacement).toHaveBeenCalledTimes(2);
+  await act(async () => landFirst());
+  expect(saveStickerPlacement).toHaveBeenCalledTimes(3);
+  expect(serverSpot).toEqual(newest);
+});
+
+it("REVIEW failed gift inbox shows a persistent error", async () => {
+  onAPhone();
+  const failure = new Error("Receiving gifts service unavailable");
+  const giftsForYou = vi.fn().mockRejectedValue(failure);
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const view = await openBoard(boardApi([], { giftsForYou }));
+  expect(giftsForYou).toHaveBeenCalledTimes(1);
+  expect(console.error).toHaveBeenCalled();
+  expect(view.host.querySelector('[role="alert"]')).not.toBeNull();
+});

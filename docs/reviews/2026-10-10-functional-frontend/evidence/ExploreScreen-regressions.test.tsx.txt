@@ -1,0 +1,12 @@
+ it("REVIEW phone keeps older pages after searching", async () => {
+    const older = { stickers: unGiven(sticker({ sealedAt: minutesAgo(50 * 60) })), before: null };
+    const explorePile = vi.fn<ApiClient["explorePile"]>(() => Promise.resolve(older));
+    const first = exploreWith(unGiven(sticker({ sealedAt: minutesAgo(5) })), {}, CURSOR);
+    const host = await openExplore(first, { explorePile });
+    await reachEnd();
+    const layers = layersOf(host);
+    expect(host.querySelector('.explore')?.getAttribute('data-columns')).toBe('1');
+    await searchFor(host, "mi");
+    await searchFor(host, "");
+    expect(layersOf(host)).toEqual(layers);
+ });
