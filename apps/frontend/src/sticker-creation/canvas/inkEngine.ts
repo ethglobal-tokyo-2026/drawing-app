@@ -990,6 +990,10 @@ export class InkEngine implements LayerControls {
 
   private beginStroke(e: PointerInput, x: number, y: number): void {
     const s = this.settings;
+    if (s.tool === "eraser" && this.ink.layerCanvas(this.current) === null) {
+      this.pointers.set(e.pointerId, swallowed(e.pointerType));
+      return;
+    }
     // The first mark fixes the frame for the life of the drawing.
     this.frameRule = "fixed";
     const builder = new StrokeBuilder({

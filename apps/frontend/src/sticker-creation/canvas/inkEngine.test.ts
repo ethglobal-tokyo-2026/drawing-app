@@ -287,6 +287,93 @@ const state = (canUndo: boolean, canRedo: boolean, hasInk = canUndo) => ({
 });
 
 describe("InkEngine", () => {
+  it.each([
+    ["mouse", "up"],
+    ["mouse", "cancel"],
+    ["touch", "up"],
+    ["touch", "cancel"],
+    ["pen", "up"],
+    ["pen", "cancel"],
+  ])("ignores a fresh %s eraser ending with %s", (pointerType, ending) => {
+    const { engine, ink, display, at, stroke, committed } = setup({ tool: "eraser" });
+    display.calls = [];
+    engine.down(at(pointerType, 1, 20, 20, 0));
+    engine.move(at(pointerType, 1, 80, 20, 96));
+    if (ending === "up") engine.up(at(pointerType, 1, 80, 20, 112));
+    else engine.cancel(at(pointerType, 1, 80, 20, 112));
+    expect(committed()).toEqual([]);
+    expect(engine.steps).toEqual([]);
+    expect(ink.layerCanvas(FIRST_LAYER)).toBeNull();
+    expect(display.calls).not.toContain("beginStroke");
+    expect(display.calls).not.toContain("paintStroke");
+    engine.fit(TURNED, 1);
+    expect(engine.frame).toEqual(frameFor(TURNED, 1));
+    engine.settings = { ...engine.settings, tool: "brush" };
+    stroke(pointerType, 1, [20, 20], [80, 20], 1000);
+    expect(committed()).toEqual([expect.objectContaining({ tool: "brush", layer: FIRST_LAYER })]);
+  });
+
+  it.each(["new", "cleared", "restored-new", "restored-cleared"])(
+    "ignores erasers on %s layers",
+    (kind) => {
+      const { engine, events, stroke } = setup();
+      if (kind === "new") engine.addLayer();
+      else if (kind === "cleared") {
+        stroke("pen", 1, [20, 20], [80, 20]);
+        engine.clearLayer();
+      } else if (kind === "restored-new") engine.load([addLayer(2, 1)], framed(engine), 2);
+      else engine.load([KEPT, { tool: "clear", layer: 1, T: 0 }], framed(engine), 1);
+      const before = [...engine.steps];
+      events.onCommit.mockClear();
+      events.onHistory.mockClear();
+      engine.settings = { ...engine.settings, tool: "eraser" };
+      stroke("pen", 1, [20, 20], [80, 20], 1000);
+      expect(engine.steps).toEqual(before);
+      expect(events.onCommit).not.toHaveBeenCalled();
+      expect(events.onHistory).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps redo and gesture undo after an ignored eraser", () => {
+    const { engine, events, stroke, tap } = setup();
+    stroke("pen", 1, [20, 20], [80, 20]);
+    const before = [...engine.steps];
+    engine.undo();
+    engine.settings = { ...engine.settings, tool: "eraser" };
+    events.onCommit.mockClear();
+    stroke("pen", 1, [20, 20], [80, 20], 1000);
+    expect(engine.steps).toEqual([]);
+    expect(events.onHistory).toHaveBeenLastCalledWith(state(false, true, false));
+    tap(3, 2000);
+    expect(engine.steps).toEqual(before);
+    expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false));
+    tap(2, 3000);
+    expect(engine.steps).toEqual([]);
+    expect(events.onHistory).toHaveBeenLastCalledWith(state(false, true, false));
+    expect(events.onCommit).not.toHaveBeenCalled();
+  });
+
+  it.each(["load", "suspend-resume"])("erases allocated ink after %s", (kind) => {
+    const { engine, ink, stroke, committed } = setup({ tool: "eraser" });
+    engine.load([KEPT], framed(engine), 1);
+    if (kind === "suspend-resume") {
+      engine.suspend();
+      engine.resume();
+    }
+    expect(ink.layerCanvas(1)).not.toBeNull();
+    stroke("pen", 1, [100, 100], [160, 100], 1000);
+    expect(engine.steps).toEqual([KEPT, expect.objectContaining({ tool: "eraser", layer: 1 })]);
+    expect(committed()).toEqual([expect.objectContaining({ tool: "eraser", layer: 1 })]);
+  });
+
+  it("keeps previously saved eraser-only history unchanged", () => {
+    const { engine, events } = setup();
+    const oldEraser: StrokeOp = { ...KEPT, tool: "eraser" };
+    engine.load([oldEraser], framed(engine), 1);
+    expect(engine.steps).toEqual([oldEraser]);
+    expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false, true));
+  });
+
   it("commits a stroke on lift, ending where the pointer lifted", () => {
     const { stroke, committed, events } = setup({ smoothing: SMOOTH });
     stroke("mouse", 1, [0, 0], [200, 0]);

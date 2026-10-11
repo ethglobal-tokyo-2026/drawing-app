@@ -10,6 +10,7 @@ import {
   say,
   sealOnSheet,
   signIn,
+  ticketSnapshot,
 } from "./helpers.ts";
 import {
   along,
@@ -249,6 +250,42 @@ test("layer setup survives a reload before the first mark, with the clock still 
   await line(page, 0.5);
   await expect(button(page, creation.timer.pause)).toBeVisible();
 });
+
+for (const firstTool of ["brush", "fill"] as const) {
+  test(`empty eraser preserves the waiting clock through reload before first ${firstTool}`, async ({
+    page,
+  }) => {
+    await openSheet(page);
+    const before = await ticketSnapshot(page);
+    const description = await button(page, creation.timer.label).evaluate((dot) => {
+      const id = dot.getAttribute("aria-describedby");
+      return id ? document.getElementById(id)?.textContent : null;
+    });
+    if (!description) throw new Error("The waiting clock has no description");
+    await button(page, creation.tools.eraser).click();
+    const point = await line(page, 0.5);
+    for (const reload of [false, true]) {
+      if (reload) {
+        await page.reload();
+        await button(page, stickerBoard.board.continueDrawing).click();
+        await canvas(page, language).hover();
+        await expect(chip(page, 1)).toHaveAttribute("aria-selected", "true");
+      }
+      await expect(button(page, creation.timer.label)).toHaveAccessibleDescription(description);
+      await expect(undo(page)).toBeDisabled();
+      await expect(button(page, creation.seal.label)).toBeHidden();
+      await expect.poll(() => inkAt(page, point)).toBe(0);
+      expect(await ticketSnapshot(page)).toEqual(before);
+    }
+    await button(page, creation.tools[firstTool]).click();
+    if (firstTool === "brush") await line(page, 0.5);
+    else await canvas(page, language).click();
+    await expect(button(page, creation.timer.pause)).toBeVisible();
+    await expect(undo(page)).toBeEnabled();
+    await expect(button(page, creation.seal.label)).toBeVisible();
+    expect(await ticketSnapshot(page)).toEqual(before);
+  });
+}
 
 test("Lock stays available before drawing and after full erasure", async ({ page }) => {
   await openSheet(page);

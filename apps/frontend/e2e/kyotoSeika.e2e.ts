@@ -15,7 +15,9 @@ import {
   say,
   signIn,
   signedInUserId,
+  ticketSnapshot,
 } from "./helpers.ts";
+import { along, inkAt, middle, pencil, penStroke } from "./pen.ts";
 
 const { kyotoSeika, stickerBoard, stickerCreation, ui } = strings;
 const language = "ja";
@@ -110,6 +112,47 @@ async function secondsLeft(page: Page) {
   const match = said.match(runningClock);
   return match ? Number(match[1]) * 60 + Number(match[2]) : null;
 }
+
+test("Kyoto Seika Begin keeps time running after an empty eraser", async ({ page }) => {
+  await signIn(page, "kyoto-empty-eraser", language);
+  const on = await page.request.post("/api/me/kyoto-seika-practice", {
+    headers: { "x-croquis-user-id": await signedInUserId(page) },
+    data: { kyotoSeikaPractice: true },
+  });
+  expect(on.ok()).toBe(true);
+  await page.reload();
+  await page
+    .getByRole("button", { name: drawKeyName(language, KYOTO_SEIKA_DAILY_TICKETS_PER_DAY) })
+    .click();
+  const [first, second] = await dealt(page);
+  await toggle(page, first.word).click();
+  await toggle(page, second.word).click();
+  await page
+    .getByRole("button", {
+      name: say(kyotoSeika.begin.label, language, { minutes: KYOTO_SEIKA_TIME_USED_S / 60 }),
+    })
+    .click();
+  await expect.poll(() => secondsLeft(page)).toBeGreaterThan(KYOTO_SEIKA_TIME_USED_S - 60);
+  const before = await ticketSnapshot(page);
+  const atBegin = await secondsLeft(page);
+  await page
+    .getByRole("button", { name: say(stickerCreation.tools.eraser, language), exact: true })
+    .click();
+  const box = await canvas(page, language).boundingBox();
+  if (!box) throw new Error("The drawing sheet is not visible");
+  const points = along(box, 0.5, 0.3, 0.7, 12);
+  await penStroke(page, await pencil(page), points, () => 0.5, 8);
+  expect(atBegin).toBeGreaterThan(KYOTO_SEIKA_TIME_USED_S - 60);
+  await expect.poll(() => secondsLeft(page)).toBeLessThan(atBegin ?? 0);
+  await expect(
+    page.getByRole("button", { name: say(stickerCreation.history.undo, language), exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: say(stickerCreation.seal.label, language), exact: true }),
+  ).toBeHidden();
+  await expect.poll(() => inkAt(page, middle(points))).toBe(0);
+  expect(await ticketSnapshot(page)).toEqual(before);
+});
 
 test("Kyoto Seika Practice Mode: switched on in Settings, dealt, picked, timed and sealed with its pair", async ({
   page,

@@ -90,6 +90,13 @@ export const drawKey = (page: Page, language: Language) =>
     name: startsWith(say(stickerBoard.board.drawLabelWithTickets, language)),
   });
 
+/** All ticket balances and used-ticket IDs while a sheet is open. */
+export async function ticketSnapshot(page: Page): Promise<unknown> {
+  const response = await page.request.get("/api/tickets");
+  expect(response.ok()).toBe(true);
+  return response.json();
+}
+
 /**
  * Taps a key at its middle once two looks in a row find it in one place, on top there. A key that
  * hops, such as Draw on a first visit, can fail Playwright's own frame-by-frame stability check for
