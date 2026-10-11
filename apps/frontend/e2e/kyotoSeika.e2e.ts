@@ -2,9 +2,12 @@ import {
   KYOTO_SEIKA_DAILY_TICKETS_PER_DAY,
   KYOTO_SEIKA_TIME_USED_S,
 } from "@drawing-app/api/client";
+import { mkdir } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { PEEK } from "../src/kyoto-seika/dealMotion.ts";
+import { eraseTestLine, readKeptHistory } from "./emptySeal.ts";
 import {
   boardSticker,
   canvas,
@@ -17,9 +20,12 @@ import {
   signedInUserId,
   ticketSnapshot,
 } from "./helpers.ts";
-import { along, inkAt, middle, pencil, penStroke } from "./pen.ts";
+import { along, inkAt, inkedPixels, middle, pencil, penStroke } from "./pen.ts";
 
 const { kyotoSeika, stickerBoard, stickerCreation, ui } = strings;
+const evidence = fileURLToPath(
+  new URL("../../../data/verification/empty-seal-preview-2026-10-11/", import.meta.url),
+);
 const language = "ja";
 test.use({ locale: "ja-JP" });
 
@@ -152,6 +158,102 @@ test("Kyoto Seika Begin keeps time running after an empty eraser", async ({ page
   ).toBeHidden();
   await expect.poll(() => inkAt(page, middle(points))).toBe(0);
   expect(await ticketSnapshot(page)).toEqual(before);
+});
+
+test("empty Kyoto Seika time-up retains its pair on reload", async ({ page }) => {
+  await page.clock.install();
+  const sealRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && new URL(request.url()).pathname === "/api/stickers")
+      sealRequests.push(request.url());
+  });
+  await signIn(page, "kyoto-empty-seal", language);
+  const settings = await openSettings(page, language);
+  await settings
+    .getByRole("switch", { name: say(stickerBoard.settings.kyotoSeika.spokenName, language) })
+    .click();
+  await page.getByRole("button", { name: say(stickerBoard.statBoard.flipBack, language) }).click();
+  await page
+    .getByRole("button", { name: drawKeyName(language, KYOTO_SEIKA_DAILY_TICKETS_PER_DAY) })
+    .click();
+  const [first, second] = await dealt(page);
+  await toggle(page, first.word).click();
+  await toggle(page, second.word).click();
+  await page
+    .getByRole("button", {
+      name: say(kyotoSeika.begin.label, language, { minutes: KYOTO_SEIKA_TIME_USED_S / 60 }),
+    })
+    .click();
+  const box = await canvas(page, language).boundingBox();
+  if (!box) throw new Error("The drawing sheet is not visible");
+  await expect(async () => {
+    await penStroke(page, await pencil(page), along(box, 0.5, 0.45, 0.55, 12), () => 0.5, 8);
+    await expect.poll(() => inkedPixels(page, ".ink-sheet"), { timeout: 2_000 }).toBeGreaterThan(0);
+  }).toPass();
+  await expect(
+    page.getByRole("button", { name: say(stickerCreation.history.undo, language) }),
+  ).toBeEnabled();
+  await eraseTestLine(page, language);
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
+  await expect.poll(() => secondsLeft(page)).toBeGreaterThan(0);
+  const before = await ticketSnapshot(page);
+  await expect
+    .poll(async () => (await readKeptHistory(page)).steps)
+    .toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          tool: "brush",
+          pts: expect.arrayContaining([expect.any(Number)]),
+        }),
+        expect.objectContaining({
+          tool: "eraser",
+          pts: expect.arrayContaining([expect.any(Number)]),
+        }),
+      ]),
+    );
+  const keptBefore = await readKeptHistory(page);
+  expect(keptBefore.count).toBe(keptBefore.steps.length);
+  expect(keptBefore.identity).toEqual(
+    expect.objectContaining({ ticket: expect.any(Number), generation: expect.any(String) }),
+  );
+  expect(keptBefore.frame).toEqual(
+    expect.objectContaining({
+      w: expect.any(Number),
+      h: expect.any(Number),
+      density: expect.any(Number),
+    }),
+  );
+  for (let ms = 0; ms < 1800000; ms += 5000) await page.clock.fastForward(5000);
+  for (const reload of [false, true]) {
+    if (reload) {
+      await page.reload();
+      await page
+        .getByRole("button", { name: say(stickerBoard.board.continueDrawing, language) })
+        .click();
+    }
+    await expect(
+      page.getByRole("heading", { name: say(stickerCreation.sealSheet.pencilsDown, language) }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(say(stickerCreation.sealSheet.empty, language), { exact: true }),
+    ).toBeVisible();
+    await expect(page.locator(".seal-sheet__pair")).toContainText(first.word);
+    await expect(page.locator(".seal-sheet__pair")).toContainText(second.word);
+    await expect(page.locator(".seal-sheet__preview-status")).toBeFocused();
+    expect(await ticketSnapshot(page)).toEqual(before);
+    expect(await readKeptHistory(page)).toEqual(keptBefore);
+    expect(sealRequests).toHaveLength(0);
+    if (reload) {
+      await mkdir(evidence, { recursive: true });
+      await page.screenshot({
+        path: `${evidence}/time-up-kyoto-seika-${test.info().project.name}.png`,
+        animations: "disabled",
+      });
+    }
+  }
+  await page.getByRole("button", { name: say(stickerCreation.seal.startOver, language) }).click();
+  await expect(page.locator(".seal-sheet:not(.is-leaving)")).toHaveCount(0);
+  await expect.poll(async () => (await readKeptHistory(page)).steps).toEqual([]);
 });
 
 test("Kyoto Seika Practice Mode: switched on in Settings, dealt, picked, timed and sealed with its pair", async ({

@@ -42,6 +42,7 @@ import { REUNION, TEST_SUBJECTS, WIND } from "../kyoto-seika/testSubjects";
 import {
   LOAD_TIMEOUT_MS,
   SessionKeeper,
+  loadKeptSession,
   type KeptKyotoSeika,
   type KeptSession,
 } from "./session/keptSession";
@@ -84,6 +85,7 @@ const sheetCalls = vi.hoisted(() => ({
 }));
 const subjectList = vi.hoisted(() => ({ load: vi.fn() }));
 const sealing = vi.hoisted(() => ({ cut: vi.fn() }));
+const preview = vi.hoisted(() => ({ prepare: vi.fn((): "ready" | "empty" => "ready") }));
 /** What the drawing screen asked the timer to say. */
 const timerCalls = vi.hoisted(() => ({ hints: 0, clockRuns: 0 }));
 /** The size rail's hold, as the drawing screen handed it over. */
@@ -216,8 +218,10 @@ vi.mock("../kyoto-seika/subjectList", async (original) => ({
 }));
 // Unless a test cuts one, the phone can't cut this sticker, however often it tries.
 vi.mock("./sealing/makeSticker", () => ({ makeSticker: sealing.cut }));
+vi.mock("./sealing/sealPreview", () => ({ prepareSealPreview: preview.prepare }));
 beforeEach(() => {
   sealing.cut.mockRejectedValue(new Error("The sealing worker stopped"));
+  preview.prepare.mockReset().mockReturnValue("ready");
   // The drawing in progress is kept in IndexedDB, which happy-dom has none of.
   vi.stubGlobal("indexedDB", new FakeIndexedDB());
 });
@@ -513,6 +517,7 @@ describe("the drawing screen after a reload", () => {
     reopen(keptAtTimeUp);
     await settle();
     sheetCalls.steps = keptAtTimeUp.steps.slice();
+    expect(sheetButton(strings.stickerCreation.sealSheet.seal.en)?.disabled).toBe(false);
     sheetCalls.compositeError = new CanvasUnavailableError();
     sealOnSheet();
     await settle(1000);
@@ -606,6 +611,62 @@ describe("the seal sheet", () => {
     await settle();
     return seal;
   }
+
+  it("keeps expired invisible ink until Start a new sticker after reload", async () => {
+    preview.prepare.mockReturnValue("empty");
+    const expired = { ...keptHalfway, elapsedMs: sessionMs(false) };
+    const me: Me = { ...TEST_ME, id: "empty-preview-retained-session" };
+    vi.useFakeTimers();
+    const keeper = new SessionKeeper(me.id);
+    keeper.start(expired.ticket, expired.kyotoSeika);
+    keeper.save(expired.steps, expired.elapsedMs, expired.frame);
+    await settle(1000);
+    kept.session = null;
+    const readKept = async () => {
+      const loading = loadKeptSession(me.id);
+      await settle(1000);
+      return loading;
+    };
+    expect(await readKept()).toMatchObject({ status: "found", steps: expired.steps });
+    sheetCalls.steps = expired.steps.slice();
+    const seal = vi.fn<ApiClient["seal"]>(() => new Promise(() => {}));
+    openScreen(null, emptyApi({ seal, spendTicket: () => Promise.resolve(spentDaily(false)) }), me);
+    await settle();
+    expect(await readKept()).toMatchObject({
+      status: "found",
+      ticket: 7,
+      elapsedMs: sessionMs(false),
+      steps: expired.steps,
+    });
+    expect(seal).not.toHaveBeenCalled();
+    act(() => startOver()?.click());
+    await settle();
+    expect(await readKept()).not.toMatchObject({
+      status: "found",
+      ticket: 7,
+      elapsedMs: sessionMs(false),
+    });
+    expect(sealSheet()).toBeNull();
+  });
+
+  it("persistent time-up preview failure offers explicit discard without resetting", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    preview.prepare.mockImplementation(() => {
+      throw new Error("read failed");
+    });
+    await openDrawing({ ...keptHalfway, elapsedMs: sessionMs(false) });
+    expect(keptRecord()).toMatchObject({ ticket: 7 });
+    expect(sheetButton(words.retryPreview.en)).toBeDefined();
+    expect(startOver()).toBeDefined();
+  });
+
+  it("empty preview holds the ordinary clock and Not yet resumes it", async () => {
+    preview.prepare.mockReturnValue("empty");
+    await openDrawing();
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    expect(await countedAfter(clickSealKey)).toBe(0);
+    expect(await countedAfter(() => sheetButton(words.notYet.en)?.click())).toBeGreaterThan(0);
+  });
 
   it.each([false, true])(
     "opens at one tap on the check, and seals 18+ only with the switch on: on %s",
@@ -1087,6 +1148,34 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     begun: true,
   };
   const pressed = () => subjects().map((toggle) => toggle.getAttribute("aria-pressed"));
+
+  it("empty preview leaves the begun Kyoto Seika clock running", async () => {
+    preview.prepare.mockReturnValue("empty");
+    await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: BEGUN });
+    await countedAfter(tapTimer);
+    expect(await countedAfter(clickSealKey)).toBeGreaterThan(0);
+  });
+
+  it("expired invisible Kyoto Seika ink retains the pair and ticket", async () => {
+    preview.prepare.mockReturnValue("empty");
+    const seal = vi.fn<ApiClient["seal"]>(() => new Promise(() => {}));
+    await openKyotoSeikaSheet(
+      { ...keptHalfway, ticket: 9, kyotoSeika: BEGUN, elapsedMs: sessionMs(true) },
+      { seal },
+    );
+    expect(keptRecord()).toMatchObject({
+      ticket: 9,
+      kyotoSeika: BEGUN,
+      elapsedMs: sessionMs(true),
+    });
+    expect(sealSheet()?.querySelector(".subject-pair")?.textContent).toContain(WIND.ja);
+    expect(sealSheet()?.querySelector(".subject-pair")?.textContent).toContain(REUNION.ja);
+    expect(sealSheet()?.querySelector("h2")?.textContent).toBe(
+      strings.stickerCreation.sealSheet.pencilsDown.en,
+    );
+    expect(seal).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(sealSheet()?.querySelector(".seal-sheet__preview-status"));
+  });
 
   it("deals five subjects for a ticket spent in Kyoto Seika Practice Mode, hides the tools and holds the sheet until Begin has two picked", async () => {
     loads();

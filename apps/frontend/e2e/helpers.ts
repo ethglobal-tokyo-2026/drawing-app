@@ -216,11 +216,9 @@ export const nsfwSwitch = (page: Page, language: Language) =>
   page.getByRole("switch", { name: say(stickerCreation.sealSheet.nsfwLabel, language) });
 
 /**
- * The seal sheet, in its regular or time's-up state: found by its 18+ switch, since its title's
- * Japanese carries phrase breaks.
+ * The active seal sheet, including states without the 18+ switch.
  */
-const sealSheet = (page: Page, language: Language) =>
-  page.getByRole("dialog").filter({ has: nsfwSwitch(page, language) });
+const sealSheet = (page: Page) => page.locator('.seal-sheet[role="dialog"]:not(.is-leaving)');
 
 /**
  * Taps the seal key, which opens the seal sheet, and resolves with the sheet once it has risen. The
@@ -235,7 +233,7 @@ export async function openSealSheet(page: Page, language: Language) {
     });
   });
   await page.getByRole("button", { name: say(stickerCreation.seal.label, language) }).click();
-  const sheet = sealSheet(page, language);
+  const sheet = sealSheet(page);
   await expect(sheet).toBeVisible();
   await sheet.evaluate(async (el) => {
     await Promise.all(el.getAnimations().map((rise) => rise.finished));
@@ -248,7 +246,7 @@ export async function openSealSheet(page: Page, language: Language) {
 
 /** The seal sheet's Seal, which seals. Resolves with the sealed card and the sticker's number. */
 export async function sealOnSheet(page: Page, language: Language) {
-  await sealSheet(page, language)
+  await sealSheet(page)
     .getByRole("button", { name: say(stickerCreation.sealSheet.seal, language), exact: true })
     .click();
   const card = page.getByRole("dialog", {

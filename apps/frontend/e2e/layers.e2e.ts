@@ -1,7 +1,10 @@
 import { DAILY_TICKETS_PER_DAY, MAX_LAYERS } from "@drawing-app/api/client";
+import { mkdir, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { LIFT_HOLD_MS } from "../src/sticker-creation/layers/useLayerDrag.ts";
+import { eraseTestLine, readKeptHistory } from "./emptySeal.ts";
 import {
   canvas,
   drawKeyName,
@@ -27,6 +30,23 @@ import {
 } from "./pen.ts";
 
 const language = "en";
+const evidence = fileURLToPath(
+  new URL("../../../data/verification/empty-seal-preview-2026-10-11/", import.meta.url),
+);
+interface CanvasNumbers {
+  created: number;
+  explicitReleases: number;
+  allocationFailures: { nullContexts: number; thrownContexts: number };
+  nominalActiveRgbaBytes: number;
+  nominalPeakRgbaBytes: number;
+  dimensions: { width: number; height: number; released: boolean }[];
+}
+declare global {
+  interface Window {
+    __sealCanvasNumbers?: () => CanvasNumbers;
+    __resetSealCanvasPeak?: () => void;
+  }
+}
 const { stickerCreation: creation, stickerBoard, ui } = strings;
 const copy = creation.layers;
 const chip = (page: Page, id: number) => page.locator(`[data-layer-chip="${id}"]`);
@@ -57,14 +77,6 @@ async function line(page: Page, down: number, from = 0.3, to = 0.7) {
   await penStroke(page, await pencil(page), points, () => 0.5, 8);
   await page.evaluate(() => new Promise(requestAnimationFrame));
   return middle(points);
-}
-
-/** Erase the narrow test mark using the largest eraser size. */
-async function eraseTestLine(page: Page): Promise<void> {
-  await button(page, creation.tools.eraser).click();
-  const size = page.getByRole("slider", { name: say(creation.sizeRail.eraser, language) });
-  for (let press = 0; press < 25; press++) await size.press("ArrowUp");
-  await line(page, 0.5, 0.2, 0.8);
 }
 
 async function color(page: Page, name: "blue" | "red") {
@@ -317,6 +329,322 @@ test("Lock stays available before drawing and after full erasure", async ({ page
   await chip(page, 1).click();
   await line(page, 0.5);
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
+});
+
+test("fully erased ink offers recovery, and Undo restores a ready preview", async ({ page }) => {
+  await openSheet(page);
+  await line(page, 0.5, 0.45, 0.55);
+  await eraseTestLine(page, language);
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
+  const sheet = await openSealSheet(page, language);
+  await expect(sheet.getByText(creation.sealSheet.empty.en, { exact: true })).toBeVisible();
+  await expect(sheet.getByRole("switch")).toHaveCount(0);
+  await expect(button(page, creation.sealSheet.seal)).toBeDisabled();
+  await button(page, creation.sealSheet.notYet).click();
+  await page.reload();
+  await button(page, stickerBoard.board.continueDrawing).click();
+  await expect(page.locator(".ink-sheet")).toBeVisible();
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
+  await undo(page).click();
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
+  await openSealSheet(page, language);
+  await expect(page.locator(".seal-preview__ink")).toBeVisible();
+  await expect(page.getByRole("switch", { name: creation.sealSheet.nsfwLabel.en })).toBeVisible();
+});
+
+/** Makes the visible sheet empty while keeping a spent, recoverable drawing session. */
+async function invisibleSheet(page: Page, kind: "erased" | "hidden" | "clipped") {
+  await openSheet(page);
+  if (kind === "clipped" || kind === "hidden") {
+    await add(page).click();
+    await button(page, copy.dismissOptionsHint).click();
+  }
+  await line(page, 0.5, 0.45, 0.55);
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
+  if (kind === "erased") await eraseTestLine(page, language);
+  if (kind === "hidden") {
+    for (let i = 0; i < 20; i++) await slider(page).press("ArrowDown");
+    await expect(slider(page)).toHaveAttribute("aria-valuenow", "0");
+  }
+  if (kind === "clipped") {
+    await options(page, 2);
+    await button(page, copy.clip).click();
+    await chip(page, 2).click();
+  }
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
+}
+
+test("restoring opacity replaces an empty preview with ready ink", async ({ page }) => {
+  const sealRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && new URL(request.url()).pathname === "/api/stickers")
+      sealRequests.push(request.url());
+  });
+  await invisibleSheet(page, "hidden");
+  await openSealSheet(page, language);
+  await expect(page.getByText(creation.sealSheet.empty.en, { exact: true })).toBeVisible();
+  await expect(page.locator(".seal-sheet").getByRole("switch")).toHaveCount(0);
+  await expect(button(page, creation.sealSheet.seal)).toBeDisabled();
+  await expect(page.locator(".seal-preview__ink")).toBeHidden();
+  await button(page, creation.sealSheet.notYet).click();
+  await page.reload();
+  await button(page, stickerBoard.board.continueDrawing).click();
+  await expect(page.locator(".ink-sheet")).toBeVisible();
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
+  for (let i = 0; i < 20; i++) await slider(page).press("ArrowUp");
+  await expect(slider(page)).toHaveAttribute("aria-valuenow", "100");
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
+  await openSealSheet(page, language);
+  await expect(page.locator(".seal-preview__ink")).toBeVisible();
+  await expect(page.getByRole("switch", { name: creation.sealSheet.nsfwLabel.en })).toBeVisible();
+  expect(sealRequests).toHaveLength(0);
+});
+
+test("clipping to an empty base preserves recoverable ink", async ({ page }) => {
+  const sealRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && new URL(request.url()).pathname === "/api/stickers")
+      sealRequests.push(request.url());
+  });
+  await invisibleSheet(page, "clipped");
+  await openSealSheet(page, language);
+  await expect(page.getByText(creation.sealSheet.empty.en, { exact: true })).toBeVisible();
+  await expect(page.locator(".seal-sheet").getByRole("switch")).toHaveCount(0);
+  await expect(button(page, creation.sealSheet.seal)).toBeDisabled();
+  await expect(page.locator(".seal-preview__ink")).toBeHidden();
+  await button(page, creation.sealSheet.notYet).click();
+  await page.reload();
+  await button(page, stickerBoard.board.continueDrawing).click();
+  await expect(page.locator(".ink-sheet")).toBeVisible();
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
+  await options(page, 2);
+  await button(page, copy.clip).click();
+  await chip(page, 2).click();
+  await openSealSheet(page, language);
+  await expect(page.locator(".seal-preview__ink")).toBeVisible();
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
+  expect(sealRequests).toHaveLength(0);
+});
+
+for (const invisible of ["erased", "hidden", "clipped"] as const) {
+  test(`empty ordinary time-up preserves ${invisible} ink through reload until explicit discard`, async ({
+    page,
+  }) => {
+    await page.clock.install();
+    const sealRequests: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "POST" && new URL(request.url()).pathname === "/api/stickers")
+        sealRequests.push(request.url());
+    });
+    await invisibleSheet(page, invisible);
+    const before = await ticketSnapshot(page);
+    const expectedSteps = [
+      expect.objectContaining({
+        tool: "brush",
+        pts: expect.arrayContaining([expect.any(Number)]),
+      }),
+      expect.objectContaining(
+        invisible === "erased"
+          ? { tool: "eraser", pts: expect.arrayContaining([expect.any(Number)]) }
+          : invisible === "hidden"
+            ? { tool: "opacity", opacity: 0 }
+            : { tool: "clip", on: true },
+      ),
+    ];
+    await expect
+      .poll(async () => (await readKeptHistory(page)).steps)
+      .toEqual(expect.arrayContaining(expectedSteps));
+    const keptBefore = await readKeptHistory(page);
+    expect(keptBefore.count).toBe(keptBefore.steps.length);
+    expect(keptBefore.identity).toEqual(
+      expect.objectContaining({ ticket: expect.any(Number), generation: expect.any(String) }),
+    );
+    expect(keptBefore.frame).toEqual(
+      expect.objectContaining({
+        w: expect.any(Number),
+        h: expect.any(Number),
+        density: expect.any(Number),
+      }),
+    );
+    await expect(button(page, creation.timer.pause)).toBeVisible();
+    for (let ms = 0; ms < 180000; ms += 5000) await page.clock.fastForward(5000);
+    for (const reload of [false, true]) {
+      if (reload) {
+        await page.reload();
+        await button(page, stickerBoard.board.continueDrawing).click();
+      }
+      await expect(page.getByRole("heading", { name: creation.sealSheet.timeUp.en })).toBeVisible();
+      await expect(page.getByText(creation.sealSheet.empty.en, { exact: true })).toBeVisible();
+      await expect(page.locator(".seal-sheet__preview-status")).toBeFocused();
+      expect(await ticketSnapshot(page)).toEqual(before);
+      expect(await readKeptHistory(page)).toEqual(keptBefore);
+      expect(sealRequests).toHaveLength(0);
+      if (reload && invisible === "erased") {
+        await mkdir(evidence, { recursive: true });
+        await page.screenshot({
+          path: `${evidence}/time-up-ordinary-erased-${test.info().project.name}.png`,
+          animations: "disabled",
+        });
+      }
+    }
+    await button(page, creation.seal.startOver).click();
+    await expect(page.locator(".seal-sheet:not(.is-leaving)")).toHaveCount(0);
+    await expect.poll(async () => (await readKeptHistory(page)).steps).toEqual([]);
+  });
+}
+
+test("measures repeated empty previews with retained layer history", async ({
+  page,
+  browserName,
+}) => {
+  test.setTimeout(180_000);
+  await page.addInitScript(() => {
+    const records = new Map<number, { width: number; height: number; released: boolean }>();
+    const ids = new WeakMap<HTMLCanvasElement, number>();
+    let nextId = 1;
+    let releaseCount = 0;
+    let nullContexts = 0;
+    let thrownContexts = 0;
+    let nominalActiveRgbaBytes = 0;
+    let nominalPeakRgbaBytes = 0;
+    const track = (canvas: HTMLCanvasElement) => {
+      let id = ids.get(canvas);
+      if (!id) {
+        id = nextId++;
+        ids.set(canvas, id);
+      }
+      const width = canvas.width;
+      const height = canvas.height;
+      const prior = records.get(id);
+      if (prior && prior.width * prior.height > 0 && width * height === 0) releaseCount++;
+      nominalActiveRgbaBytes += (width * height - (prior?.width ?? 0) * (prior?.height ?? 0)) * 4;
+      nominalPeakRgbaBytes = Math.max(nominalPeakRgbaBytes, nominalActiveRgbaBytes);
+      records.set(id, { width, height, released: width * height === 0 });
+    };
+    const originalGetContext: unknown = Reflect.get(HTMLCanvasElement.prototype, "getContext");
+    if (typeof originalGetContext !== "function")
+      throw new Error("Canvas getContext is unavailable");
+    Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+      configurable: true,
+      writable: true,
+      value: function (this: HTMLCanvasElement, ...args: unknown[]) {
+        track(this);
+        try {
+          const context: unknown = Reflect.apply(originalGetContext, this, args);
+          if (args[0] === "2d" && context === null) nullContexts++;
+          return context;
+        } catch (error) {
+          if (args[0] === "2d") thrownContexts++;
+          throw error;
+        }
+      },
+    });
+    for (const key of ["width", "height"] as const) {
+      const descriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, key);
+      if (!descriptor?.get || !descriptor.set)
+        throw new Error(`Canvas ${key} descriptor unavailable`);
+      Object.defineProperty(HTMLCanvasElement.prototype, key, {
+        ...descriptor,
+        set(this: HTMLCanvasElement, value: number) {
+          descriptor.set?.call(this, value);
+          track(this);
+        },
+      });
+    }
+    window.__resetSealCanvasPeak = () => {
+      nominalPeakRgbaBytes = nominalActiveRgbaBytes;
+    };
+    window.__sealCanvasNumbers = () => ({
+      created: nextId - 1,
+      explicitReleases: releaseCount,
+      allocationFailures: { nullContexts, thrownContexts },
+      nominalActiveRgbaBytes,
+      nominalPeakRgbaBytes,
+      dimensions: [...records.values()].filter(
+        (record) => !record.released && record.width * record.height >= 1_000_000,
+      ),
+    });
+  });
+  const numbers = () =>
+    page.evaluate(() => {
+      if (!window.__sealCanvasNumbers) throw new Error("Canvas measurement was not installed");
+      return window.__sealCanvasNumbers();
+    });
+  await openSheet(page);
+  for (let id = 1; id <= MAX_LAYERS; id++) {
+    if (id > 1) {
+      await add(page).click();
+      if (id === 2) await button(page, copy.dismissOptionsHint).click();
+    }
+    await line(page, 0.5, 0.45, 0.55);
+  }
+  for (let stroke = 0; stroke < 14; stroke++) await line(page, 0.5, 0.45, 0.55);
+  await options(page, MAX_LAYERS);
+  await button(page, copy.clip).click();
+  await chip(page, MAX_LAYERS).click();
+  const beforeErasure = await numbers();
+  for (let id = MAX_LAYERS; id >= 1; id--) {
+    if (id !== MAX_LAYERS) await chip(page, id).click();
+    await eraseTestLine(page, language);
+  }
+  await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
+  const openings: {
+    endToEndDialogReadyMs: number;
+    before: CanvasNumbers;
+    ready: CanvasNumbers;
+    after: CanvasNumbers;
+  }[] = [];
+  for (let i = 0; i < 3; i++) {
+    await page.evaluate(() => {
+      if (!window.__resetSealCanvasPeak) throw new Error("Canvas measurement was not installed");
+      window.__resetSealCanvasPeak();
+    });
+    const before = await numbers();
+    const started = Date.now();
+    const sheet = await openSealSheet(page, language);
+    await expect(sheet.getByText(creation.sealSheet.empty.en, { exact: true })).toBeVisible();
+    const endToEndDialogReadyMs = Date.now() - started;
+    const ready = await numbers();
+    await button(page, creation.sealSheet.notYet).click();
+    openings.push({ endToEndDialogReadyMs, before, ready, after: await numbers() });
+  }
+  const result = {
+    browserName,
+    layers: MAX_LAYERS,
+    brushStrokes: 24,
+    sourceCanvasDimensions: await page
+      .locator(".ink-sheet canvas")
+      .evaluateAll((nodes) =>
+        nodes.map((node) => [
+          node instanceof HTMLCanvasElement ? node.width : 0,
+          node instanceof HTMLCanvasElement ? node.height : 0,
+        ]),
+      ),
+    beforeErasure,
+    openings,
+    limits:
+      "Canvas IDs are weak but numeric records can overcount canvases collected without explicit release. Nominal RGBA bytes are not measured GPU memory. End-to-end dialog readiness includes clicks, preparation and animation waits; helper-only samples are in preparation JSON.",
+  };
+  await mkdir(evidence, { recursive: true });
+  const bytes = Buffer.from(JSON.stringify(result, null, 2));
+  await writeFile(`${evidence}/retained-layers-${browserName}.json`, bytes);
+  await test
+    .info()
+    .attach("retained-layers.json", { body: bytes, contentType: "application/json" });
+  expect(openings).toHaveLength(3);
+  expect(
+    openings.every(({ endToEndDialogReadyMs }) => Number.isFinite(endToEndDialogReadyMs)),
+  ).toBe(true);
+  expect(
+    openings.every(
+      ({ ready }) =>
+        ready.allocationFailures.nullContexts === 0 &&
+        ready.allocationFailures.thrownContexts === 0,
+    ),
+  ).toBe(true);
+  expect(
+    openings.every(({ before, after }) => after.explicitReleases > before.explicitReleases),
+  ).toBe(true);
 });
 
 test("opacity hides only its layer, hidden ink is blocked, and a double tap restores opacity", async ({

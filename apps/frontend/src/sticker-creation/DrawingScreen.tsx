@@ -1318,6 +1318,7 @@ export function DrawingScreen({
         }}
         onSeal={() => send({ type: "seal" })}
         onNotYet={() => send({ type: "not-yet" })}
+        onStartOver={startNewSticker}
       />
       {retrying && canStartOver && (
         <QuietLink

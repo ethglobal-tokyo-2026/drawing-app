@@ -11,12 +11,33 @@
   column-gap: 18px;
 }
 
+.seal-sheet__body.is-without-preview {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 /* The sticker sits on the sheet at a small turn, as stickers do on a board. */
 .seal-preview {
   display: grid;
   place-items: center;
   width: 136px;
   height: 136px;
+}
+
+.seal-preview[hidden] {
+  display: none;
+}
+
+.seal-sheet__preview-status {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.seal-sheet__preview-status p {
+  margin: 0;
+}
+
+.seal-sheet__preview-status p + p {
+  margin-top: 8px;
 }
 
 /* A rectangle's silhouette, for the foil to grow its band from: a mask reads only its opacity. */
