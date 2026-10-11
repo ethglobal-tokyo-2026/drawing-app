@@ -295,7 +295,12 @@ export async function sealSticker(
   if (checked && "problem" in checked) {
     logFailure("sticker.timelapse.dropped", new Error(checked.problem), { stickerId, userId });
   }
-  if (timelapse?.fromV1) logInfo("sticker.timelapse.v1_converted", { stickerId, userId });
+  if (timelapse && timelapse.originalVersion !== 3)
+    logInfo("sticker.timelapse.legacy_converted", {
+      stickerId,
+      userId,
+      originalVersion: timelapse.originalVersion,
+    });
   const mintRefusal = await mintOrRefuse(deps, userId, stickerId);
   if (mintRefusal) return { refused: mintRefusal };
   return { sealed: sealedSticker(deps, userId, stickerId), created: true };

@@ -1,4 +1,4 @@
-import type { TimelapseV2 } from "@drawing-app/api/client";
+import type { TimelapseV3 } from "@drawing-app/api/client";
 import { messageOf } from "../../i18n/errorMessage";
 import { notePerformance, timeOurWork } from "../../performance/performanceRecorder";
 import { blankCanvas, context2d } from "../../sticker-creation/canvas/context2d";
@@ -42,7 +42,7 @@ const SHEEN_BAND = 0.25;
 const SHEEN_ALPHA = 0.35;
 
 export interface TimelapsePlayerOptions {
-  timelapse: TimelapseV2;
+  timelapse: TimelapseV3;
   /** The canvas the ink plays on, covering the stage: the player sizes its backing store to it. */
   canvas: HTMLCanvasElement;
   /** The detail's stage, CSS px. */

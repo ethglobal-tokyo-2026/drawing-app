@@ -163,6 +163,7 @@ async function replayPixels(page: Page, mode: ReplayMode) {
     );
     const blueFill: Step = {
       tool: "fill",
+      reference: "visible",
       layer: 1,
       color: "#0000ff",
       x: 60.5,

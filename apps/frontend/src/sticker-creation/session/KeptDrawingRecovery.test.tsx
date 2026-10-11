@@ -69,3 +69,32 @@ it("offers complete recovery download before explicit replacement", async () => 
   act(() => replace?.click());
   expect(discard).toHaveBeenCalledOnce();
 });
+
+it("keeps an upgrade failure visible with recovery instructions and retry", () => {
+  const retry = vi.fn();
+  const view = renderInHost(
+    <KeptDrawingRecovery
+      recovery={{
+        status: "unverified",
+        ticket: 7,
+        kyotoSeika: null,
+        reason: "upgrade-failed",
+        recovery: null,
+        error: new Error("Upgrade blocked"),
+      }}
+      reconciliation={{ status: "resolved", outcome: "unsealed" }}
+      onDiscard={() => {}}
+      onClose={() => {}}
+      onRetry={retry}
+    />,
+  );
+  onTestFinished(view.unmount);
+  expect(view.host.textContent).toContain("Close other Croquis tabs");
+  expect(view.host.textContent).toContain("Upgrade blocked");
+  const button = [...view.host.querySelectorAll("button")].find(
+    (button) => button.textContent === "Try again",
+  );
+  expect(button).toBeDefined();
+  act(() => button?.click());
+  expect(retry).toHaveBeenCalledOnce();
+});

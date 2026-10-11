@@ -457,7 +457,15 @@ describe("the timelapse player's fills", () => {
   const TAP = { x: 40.5, y: 50.5 };
   /** A line, a fill, and a line over it. */
   const sticker = (): Op[] => {
-    const fill: FillOp = { tool: "fill", layer: 1, color: "#ff0000", ...TAP, gap: 0, T: 500 };
+    const fill: FillOp = {
+      tool: "fill",
+      reference: "visible",
+      layer: 1,
+      color: "#ff0000",
+      ...TAP,
+      gap: 0,
+      T: 500,
+    };
     return [stroke(0, steady(300)), fill, stroke(800, steady(300))];
   };
   /** The circles a reveal clipped the layer to, in order: the arc just before each such clip. */
@@ -518,7 +526,15 @@ describe("the timelapse player's fills", () => {
     const gates = [deferred<void>(), deferred<void>()];
     let requested = 0;
     stream.wait = () => gates[requested++].promise;
-    const first: FillOp = { tool: "fill", layer: 1, color: "#ff0000", ...TAP, gap: 0, T: 0 };
+    const first: FillOp = {
+      tool: "fill",
+      reference: "visible",
+      layer: 1,
+      color: "#ff0000",
+      ...TAP,
+      gap: 0,
+      T: 0,
+    };
     const { player, display, start } = setup([first, { ...first, color: "#0000ff", T: 500 }]);
     const { playing } = await start();
     let finished = false;

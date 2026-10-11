@@ -17,6 +17,11 @@ export const stickerCreation = {
       en: "We couldn’t read your saved drawing. It may still be on this device. Try again before discarding it.",
       ja: "保存した絵を読み込めませんでした。この端末に残っている可能性があります。消去する前に、もう一度お試しください。",
     },
+    /** Drawing recovery sheet: a blocked or aborted storage upgrade keeps saved ink intact and offers Retry. */
+    upgradeFailed: {
+      en: "Your saved drawing couldn’t be updated. Close other Croquis tabs, then retry or reload Croquis. Your saved copy is unchanged.",
+      ja: "保存した絵を更新できませんでした。ほかのクロッキーのタブを閉じて、もう一度試すか再読み込みしてください。保存した絵はそのまま残っています。",
+    },
     /** Drawing recovery sheet: missing or unreadable metadata keeps drawing locked and offers Retry */
     metadataUnknown: {
       en: "We can’t verify the saved drawing’s ticket. Try reading it again, or explicitly discard it. No old ticket will be reused; a new ticket is spent only when you choose to start drawing.",
@@ -305,6 +310,19 @@ export const stickerCreation = {
     /** Drawing screen, tool strip: the Pencil only tile at its start, shown once a pen has drawn on this device, named for screen readers; pressed, only the pen draws on this sheet and fingers tap to undo and redo */
     pencilOnly: { en: "Pencil only", ja: "ペンのみ" },
   },
+  fillReference: {
+    /** Drawing screen, below the tool strip while Fill is selected: the reference choices' group name */
+    label: { en: "Fill reference", ja: "塗りつぶしの参照" },
+    /** Drawing screen, Fill reference: Fill samples only the selected layer's own pixels */
+    layer: { en: "This layer", ja: "このレイヤー" },
+    /** Drawing screen, Fill reference: Fill samples the visible composite of all layers */
+    visible: { en: "Visible layers", ja: "表示中のレイヤー" },
+    /** Drawing screen, Fill reference: the visible source supplies boundaries, while paint goes only on the current layer */
+    visibleHelp: {
+      en: "Visible ink sets the boundary. Paint stays on this layer.",
+      ja: "表示中のインクを境界にします。塗るのはこのレイヤーだけです。",
+    },
+  },
   colorSheet: {
     /** Color sheet, which slides up over the drawing screen from the color tile, or opens under the tool strip on a large screen: its heading, and its name for screen readers */
     title: { en: "Color", ja: "カラー" },
@@ -421,7 +439,7 @@ export const stickerCreation = {
     label: { en: "Opacity", ja: "不透明度" },
     /** Drawing screen, beside the layer chips: read by screen readers as the opacity slider moves, and shown beside its thumb while a finger is on it; {{value}} is 0 to 100 */
     value: { en: "{{value}}%", ja: "{{value}}%" },
-    /** Drawing screen, opacity slider: the label beside its thumb while held or keyboard focused */
+    /** Drawing screen, opacity slider: the persistent label beside its thumb, including while held or keyboard focused */
     readout: { en: "Opacity {{value}}%", ja: "不透明度{{value}}%" },
     /** Drawing screen, beside the layer chips: the white label that sticks out from the opacity slider for a few seconds when a stroke meets a hidden layer (opacity 0), also announced; the label never wraps by itself, so the line break is where it wraps */
     hiddenHint: {
@@ -433,6 +451,14 @@ export const stickerCreation = {
   layers: {
     /** Drawing screen, the layer column under the size rail: the list of layer chips, named for screen readers */
     label: { en: "Layers", ja: "レイヤー" },
+    /** Drawing screen, overflowing layer list: the persistent position indicator's accessible name */
+    scrollPosition: { en: "Layer list position", ja: "レイヤー一覧の位置" },
+    /** Drawing screen, overflowing layer list at its top: the position indicator's description */
+    moreBelow: { en: "More layers below", ja: "下にレイヤーがあります" },
+    /** Drawing screen, overflowing layer list between its ends: the position indicator's description */
+    moreAboveAndBelow: { en: "More layers above and below", ja: "上下にレイヤーがあります" },
+    /** Drawing screen, overflowing layer list at its bottom: the position indicator's description */
+    moreAbove: { en: "More layers above", ja: "上にレイヤーがあります" },
     /** Drawing screen, layer column: a chip's name for screen readers, by the number printed on it, which stays the layer's for life */
     chip: { en: "Layer {{number}}", ja: "レイヤー{{number}}" },
     /** Drawing screen, layer column: a chip's name for screen readers with one of its states after it, such as "Layer 2, hidden"; a chip with several states takes each in turn */
@@ -472,8 +498,8 @@ export const stickerCreation = {
     clip: { en: "Clip to layer below", ja: "下のレイヤーでクリッピング" },
     /** Layer options bar: the effect of clipping, naming the nearest unclipped layer below */
     clipHelp: {
-      en: "Shows this layer only inside layer {{base}}’s ink.",
-      ja: "レイヤー{{base}}の描画内だけに表示します。",
+      en: "Shows this layer only inside layer {{base}}’s ink. If no marks show, add ink to layer {{base}} or turn Clip off.",
+      ja: "レイヤー{{base}}の描画内だけに表示します。何も表示されないときは、レイヤー{{base}}にかくか、クリッピングを解除してください。",
     },
     /** Layer options bar: explains why clipping is unavailable on the bottom layer */
     clipUnavailable: { en: "No layer below to clip to.", ja: "下にレイヤーがありません。" },

@@ -7,8 +7,8 @@ import "./SizeRail.css";
 
 /** The thumb's center runs from this far below the rail's top… */
 const THUMB_TOP = 18;
-/** …to `--thumb-foot` above its foot, room for the px label; this when no CSS lays the rail out. */
-const THUMB_FOOT = 44;
+/** …to `--thumb-foot` above its foot, clear of the next control; this when no CSS lays the rail out. */
+const THUMB_FOOT = 18;
 /** How far one arrow key, or [ and ] on the drawing screen, moves the size. */
 export const SIZE_STEP = 0.04;
 /** The rail's ends as it reads them out, rounded as its value is. */
@@ -60,7 +60,7 @@ interface Props {
 
 /**
  * The size rail: a groove down the left edge, a thumb that is the brush tip itself, and the size
- * in sheet units, shown as px, at its foot. While a finger is on it, a ghost of the tip shows
+ * in sheet units, shown as px, beside its thumb. While a finger is on it, a ghost of the tip shows
  * mid-sheet at the size it draws. Only the thumb takes a finger, so a stroke beside it is a stroke.
  */
 export function SizeRail({ value, eraser, active, scale, onChange, onHold }: Props) {

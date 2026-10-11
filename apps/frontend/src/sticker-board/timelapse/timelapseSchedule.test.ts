@@ -51,6 +51,7 @@ const steady = (ms: number, step = 16) =>
   Array.from({ length: Math.floor(ms / step) + 1 }, (_, i) => i * step);
 const fill = (T: number): FillOp => ({
   tool: "fill",
+  reference: "visible",
   layer: 1,
   color: "#ff7eb6",
   x: 5,

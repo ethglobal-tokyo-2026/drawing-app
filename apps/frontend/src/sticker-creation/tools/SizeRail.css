@@ -1,6 +1,6 @@
 .size-rail {
-  /* How far above the rail's foot the thumb stops: room for the px label. SizeRail's drag reads it. */
-  --thumb-foot: 44px;
+  /* How far above the rail's foot the thumb stops, clear of the next control. SizeRail's drag reads it. */
+  --thumb-foot: 18px;
   position: absolute;
   left: var(--far-left) 0;
   right: var(--far-right) 0;
@@ -8,7 +8,7 @@
   z-index: 3;
   width: 40px;
   /* Ends a gap above undo however short the screen, leaving room for undo's tiles and foot. */
-  height: clamp(120px, calc(100% - 196px), 222px);
+  height: var(--phone-rail-h, clamp(94px, calc(100% - 222px), 196px));
   /* The rail's box is paper: only the thumb takes a finger, so a stroke starting beside it draws. */
   pointer-events: none;
   transition: opacity var(--t-pop) var(--ease-out);
@@ -30,14 +30,13 @@
   box-shadow: inset 0 0 0 1px var(--rule);
 }
 
-/* Flush with the thumb's left edge and as wide as it, growing right for two digits. The number is a
-   CSS counter, so a drag redraws it with the thumb, in tabular figures, so it only moves the label when
-   the digits go from one to two. */
+/* The px readout follows the thumb toward the sheet. Its counter updates during a drag without
+   rendering the drawing screen, and its flat paper remains readable over ink. */
 .size-num {
   position: absolute;
-  left: var(--far-left) 7px;
-  right: var(--far-right) 7px;
-  bottom: 4px;
+  left: var(--far-left) 42px;
+  right: var(--far-right) 42px;
+  top: calc(18px + (1 - var(--v)) * (100% - 18px - var(--thumb-foot)) - 9px);
   min-width: 28px;
   height: 18px;
   padding: 0 4px;
@@ -52,8 +51,6 @@
   font-variant-numeric: tabular-nums;
   color: var(--ink);
   counter-reset: size var(--px);
-  transform-origin: 0 100%;
-  transition: transform 120ms var(--ease-out);
   pointer-events: none;
 }
 
@@ -67,10 +64,6 @@
   font-size: var(--fs-fine);
   font-weight: 650;
   color: var(--graphite);
-}
-
-.size-rail.is-active .size-num {
-  transform: scale(1.1);
 }
 
 .size-thumb {

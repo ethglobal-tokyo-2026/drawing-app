@@ -127,6 +127,7 @@ const palmSized = (input: PointerInput): PointerInput => ({
 });
 
 const SETTINGS: InkSettings = {
+  fillReference: "layer",
   tool: "brush",
   color: "#1C1824",
   size: 7,
@@ -671,6 +672,23 @@ describe("InkEngine", () => {
     stroke("pen", 2, [0, 0], [100, 0], 2000);
     expect(committed()).toHaveLength(1);
   });
+
+  it.each(["layer", "visible"] as const)(
+    "records %s reference when committing a Fill",
+    (reference) => {
+      const { engine, at, committed } = setup({ tool: "fill", fillReference: reference });
+      const detach = engine.attach(paperAt(framed(engine), 0, 0, 1));
+      engine.down(at("touch", 1, 40, 40, 0));
+      engine.up(at("touch", 1, 40, 40, 50));
+      detach();
+      expect(committed()).toMatchObject([{ tool: "fill", reference }]);
+      engine.settings = {
+        ...engine.settings,
+        fillReference: reference === "layer" ? "visible" : "layer",
+      };
+      expect(committed()).toMatchObject([{ reference }]);
+    },
+  );
 
   it("fills on a tap, not on a drag, by how far the finger went on screen whatever the sheet's scale", () => {
     for (const scale of [1, 2.5]) {

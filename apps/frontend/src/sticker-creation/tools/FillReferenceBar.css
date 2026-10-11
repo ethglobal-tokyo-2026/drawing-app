@@ -1,0 +1,90 @@
+.fill-reference-bar {
+  position: absolute;
+  z-index: 3;
+  width: max-content;
+  max-width: calc(100% - 28px);
+  padding: 7px;
+  background: var(--liner-lift);
+  border-radius: var(--r-label);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    var(--shadow-label);
+  /* The timer note fades after the first mark. Keep its room until that peel completes. */
+  transition: top 0s linear 300ms;
+}
+
+.fill-reference-title {
+  display: block;
+  margin: 0 5px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--graphite);
+}
+
+.fill-reference-choices {
+  display: flex;
+  gap: 2px;
+}
+
+.fill-reference-help {
+  max-width: 236px;
+  margin: 5px 5px 1px;
+  color: var(--graphite);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.fill-reference-choice {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 116px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: var(--r-label);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform var(--t-press) linear;
+}
+
+.fill-reference-choice input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.fill-reference-choice:has(input:checked) {
+  background: var(--ink);
+  color: var(--liner-lift);
+}
+
+.fill-reference-choice:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.fill-reference-choice:active {
+  transform: translateY(1px);
+}
+
+/* A picked-up drawing can show the timer's note below the top row. Give both labels room. */
+.drawing-screen:has(.timer-hint.is-on) > .fill-reference-bar {
+  top: 138px;
+  transition-delay: 0s;
+}
+
+@media (max-width: 380px) {
+  .fill-reference-choice {
+    min-width: 104px;
+    padding-inline: 7px;
+  }
+}

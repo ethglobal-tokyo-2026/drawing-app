@@ -14,54 +14,24 @@
   align-items: flex-end;
 }
 
-/* A flat tile, as small as a chip is wide; its invisible margin brings the touch target to 44px. */
-.layer-add {
-  position: relative;
+/* A full label-stock face separates the Add action from the size readout and layer chips. */
+.layer-add.label-btn {
   flex: none;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  margin-inline: 7px;
+  width: 44px;
+  margin-inline: 3px;
   padding: 0;
-  border: 0;
-  border-radius: var(--r-label);
-  background: var(--liner-lift);
-  box-shadow: inset 0 0 0 1px var(--rule);
-  color: var(--ink);
   pointer-events: auto;
-  transition: transform var(--t-press) linear;
-}
-
-.layer-add::after {
-  content: "";
-  position: absolute;
-  inset: -7px;
-}
-
-.layer-add svg {
-  display: block;
-}
-
-.layer-add:active {
-  transform: translateY(1px);
-}
-
-/* Ten layers: sunk like the tool strip's clear tile with nothing to clear. */
-.layer-add:disabled {
-  opacity: 0.38;
-  cursor: default;
-}
-
-.layer-add:disabled:active {
-  transform: none;
 }
 
 .layer-maximum {
   position: absolute;
   top: 7px;
   left: calc(100% + 8px);
-  color: var(--graphite);
+  padding: 5px 8px 6px;
+  border-radius: var(--r-label);
+  background: var(--canvas);
+  box-shadow: var(--shadow-label);
+  color: var(--ink);
   font-size: var(--fs-fine);
   font-weight: 650;
   font-stretch: var(--w-fine);
@@ -81,6 +51,72 @@
 
 .layer-column[data-edge="right"] .layer-body {
   flex-direction: row-reverse;
+}
+
+/* The paper and position mark appear only when the list has somewhere to scroll. */
+.layer-scroll-well {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: none;
+  border-radius: var(--r-label);
+}
+
+.layer-scroll-well[data-overflow] {
+  background: var(--liner-lift);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+.layer-scroll-well::before,
+.layer-scroll-well::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  right: 3px;
+  height: 10px;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.layer-scroll-well::before {
+  top: 0;
+  background: linear-gradient(var(--liner-lift), transparent);
+}
+
+.layer-scroll-well::after {
+  bottom: 0;
+  background: linear-gradient(transparent, var(--liner-lift));
+}
+
+.layer-scroll-well[data-more-above]::before,
+.layer-scroll-well[data-more-below]::after {
+  opacity: 1;
+}
+
+.layer-scroll-position {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 1px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--rule);
+  pointer-events: none;
+}
+
+.layer-scroll-position > span {
+  position: absolute;
+  top: calc(var(--position) * (1 - var(--portion)) * 100%);
+  height: calc(var(--portion) * 100%);
+  width: 100%;
+  border-radius: inherit;
+  background: var(--graphite);
+}
+
+.layer-column[data-edge="right"] .layer-scroll-position {
+  left: auto;
+  right: 1px;
 }
 
 /* The padding keeps rings, shadows and 44px touch targets inside the scroll box, which clips them. The

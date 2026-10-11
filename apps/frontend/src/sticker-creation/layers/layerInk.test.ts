@@ -6,6 +6,7 @@ import type { SheetFrame } from "../canvas/sheetFrame";
 import type { Rect } from "../sealing/stickerPasses";
 import { compositeLayers } from "./composite";
 import { LayerInk } from "./layerInk";
+import { LayerHistory } from "./layerHistory";
 import { FULL_OPACITY, type Layer, type LayerState } from "./layerState";
 import { brush, clearLayer, deleteLayer, fill } from "./testLayerSteps";
 
@@ -221,6 +222,82 @@ describe("the layer ink's holds", () => {
 });
 
 describe("the layer ink's fills", () => {
+  it.each(["layer", "visible"] as const)(
+    "rebuilds %s fills using their recorded reference",
+    (reference) => {
+      const ink = sheet();
+      const op = { ...fillAt(1, { x: 4, y: 4 }), reference };
+      for (let rebuild = 0; rebuild < 2; rebuild++) {
+        drawOutline(ink);
+        const lines = pixelsOf(ink, 2);
+        ink.apply(op, TWO);
+        expect(pixel(ink, 1, 0, 0)).toEqual(reference === "layer" ? RED : CLEAR);
+        expect(pixel(ink, 1, 8, 8)).toEqual(RED);
+        expect(pixelsOf(ink, 2)).toEqual(lines);
+        ink.releaseAll();
+      }
+    },
+  );
+  it.each(["layer", "visible"] as const)(
+    "fills a blank upper layer using %s reference without altering the lower outline",
+    (reference) => {
+      const ink = sheet();
+      const { x, y, w, h } = OUTLINE;
+      for (const side of [
+        { x, y, w, h: 1 },
+        { x, y: y + h - 1, w, h: 1 },
+        { x, y, w: 1, h },
+        { x: x + w - 1, y, w: 1, h },
+      ])
+        paint(ink, TWO, 1, side, INK);
+      const lower = pixelsOf(ink, 1);
+      ink.flood({ ...fillAt(2, { x: 4, y: 4 }), reference }, TWO);
+      expect(pixel(ink, 2, 0, 0)).toEqual(reference === "layer" ? RED : CLEAR);
+      expect(pixel(ink, 2, 8, 8)).toEqual(RED);
+      expect(pixelsOf(ink, 1)).toEqual(lower);
+    },
+  );
+  it.each(["layer", "visible"] as const)(
+    "undoes and rebuilds a %s Fill from recorded history",
+    (reference) => {
+      const ink = sheet();
+      const history = new LayerHistory(ink);
+      const first = { ...fillAt(1, { x: 4, y: 4 }, "#0000ff"), reference: "layer" as const };
+      ink.apply(first, history.state);
+      history.commit(first);
+      history.perform({ tool: "add", layer: 2, at: 1, T: 1 });
+      const op = { ...fillAt(2, { x: 4, y: 4 }), reference };
+      ink.apply(op, history.state);
+      history.commit(op);
+      expect(pixel(ink, 2, 0, 0)).toEqual(RED);
+      history.undo();
+      expect(pixel(ink, 2, 0, 0)).toEqual(CLEAR);
+      ink.releaseFill(op);
+      history.redo();
+      expect(pixel(ink, 2, 0, 0)).toEqual(RED);
+      history.load(history.steps);
+      expect(pixel(ink, 2, 0, 0)).toEqual(RED);
+      expect(pixel(ink, 1, 0, 0)).toEqual(BLUE);
+    },
+  );
+  it("preserves own alpha when a layer-reference Fill recolors locked raw ink", () => {
+    const ink = sheet();
+    paint(ink, ONE, 1, LEFT, FAINT_BLUE);
+    ink.flood(
+      { ...fillAt(1, { x: 4, y: 4 }), reference: "layer" },
+      stateOf(layer(1, { locked: true, opacity: 0 })),
+    );
+    expect(pixel(ink, 1, 0, 0)).toEqual(FAINT_RED);
+    expect(pixel(ink, 1, 15, 0)).toEqual(CLEAR);
+  });
+  it("samples raw layer ink even when opacity and clipping hide its outline", () => {
+    const ink = sheet();
+    drawOutline(ink);
+    const hidden = stateOf(layer(1), layer(2, { opacity: 0, clipped: true }));
+    ink.flood({ ...fillAt(2, { x: 4, y: 4 }), reference: "layer" }, hidden);
+    expect(pixel(ink, 2, 0, 0)).toEqual(CLEAR);
+    expect(pixel(ink, 2, 8, 8)).toEqual(RED);
+  });
   it("releases one cached fill without changing its layer pixels or other cached fills", () => {
     const ink = sheet();
     drawOutline(ink);

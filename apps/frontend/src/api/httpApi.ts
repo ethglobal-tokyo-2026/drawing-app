@@ -282,7 +282,7 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
     timelapse: async (stickerId) => {
       const response = await api.stickers[":stickerId"].timelapse.$get({
         param: { stickerId },
-        query: { format: "2" },
+        query: { format: "3" },
       });
       if (!response.ok) throw await refusal(response, `GET /api/stickers/${stickerId}/timelapse`);
       return response.json();

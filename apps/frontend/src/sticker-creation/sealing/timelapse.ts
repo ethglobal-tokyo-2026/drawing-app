@@ -1,4 +1,4 @@
-import { MAX_TIMELAPSE_BYTES, type TimelapseV2 } from "@drawing-app/api/client";
+import { MAX_TIMELAPSE_BYTES, type TimelapseV3 } from "@drawing-app/api/client";
 import { STRIDE, type Step } from "../canvas/ops";
 import { fromTenths, tenths, toTenth, toThousandth, type SheetFrame } from "../canvas/sheetFrame";
 import type { Layer, LayerState } from "../layers/layerState";
@@ -15,7 +15,7 @@ interface TimelapseInput {
   place: Rect;
 }
 
-type TimelapseStep = TimelapseV2["ops"][number];
+type TimelapseStep = TimelapseV3["ops"][number];
 
 /**
  * A fill's tap as the middle of the device pixel it seeded, to the hundredth of a sheet unit: the
@@ -58,7 +58,7 @@ function encodeStep(step: Step, density: number): TimelapseStep {
       return [step.tool, step.layer, step.color, T, pointChanges(step.pts)];
     case "fill": {
       const [x, y] = [seededPixel(step.x, density), seededPixel(step.y, density)];
-      return ["fill", step.layer, step.color, T, x, y, step.gap];
+      return ["fill", step.layer, step.color, T, x, y, step.gap, step.reference];
     }
     case "clear":
       return ["clear", step.layer, T];
@@ -77,11 +77,11 @@ function encodeStep(step: Step, density: number): TimelapseStep {
   }
 }
 
-export function encodeTimelapse({ steps, start, frame, place }: TimelapseInput): TimelapseV2 {
+export function encodeTimelapse({ steps, start, frame, place }: TimelapseInput): TimelapseV3 {
   const { density } = frame;
   const sheet = (n: number) => inUnits(n, density);
   return {
-    v: 2,
+    v: 3,
     ink: [toTenth(frame.w), toTenth(frame.h)],
     place: [sheet(place.x), sheet(place.y), sheet(place.w), sheet(place.h)],
     density: toThousandth(density),
@@ -122,8 +122,8 @@ function decodeStep(step: TimelapseStep): Step {
       return { tool, layer, color, T, pts: pointsFrom(changes) };
     }
     case "fill": {
-      const [tool, layer, color, T, x, y, gap] = step;
-      return { tool, layer, color, T, x, y, gap };
+      const [tool, layer, color, T, x, y, gap, reference] = step;
+      return { tool, layer, color, T, x, y, gap, reference };
     }
     case "clear":
       return { tool: "clear", layer: step[1], T: step[2] };
@@ -142,7 +142,7 @@ function decodeStep(step: TimelapseStep): Step {
   }
 }
 
-export function decodeTimelapse(timelapse: TimelapseV2): DecodedTimelapse {
+export function decodeTimelapse(timelapse: TimelapseV3): DecodedTimelapse {
   const [x, y, w, h] = timelapse.place;
   const layers = timelapse.layers.map(([id, opacity, locked, clipped]): Layer => ({
     id,
@@ -208,7 +208,7 @@ function storedGzip(data: Uint8Array): Blob {
  * sticker then seals without one, rather than not at all.
  */
 export async function gzipTimelapse(
-  timelapse: TimelapseV2,
+  timelapse: TimelapseV3,
   report: (message: string) => void = console.error,
 ): Promise<Blob | null> {
   const json = JSON.stringify(timelapse);

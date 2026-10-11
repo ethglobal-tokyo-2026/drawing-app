@@ -9,6 +9,16 @@
   pointer-events: none;
 }
 
+/* Opaque paper keeps the full rail readable over ink without taking canvas input. */
+.opacity-slider::before {
+  content: "";
+  position: absolute;
+  inset: -5px -4px;
+  border-radius: var(--r-label);
+  background: var(--canvas);
+  box-shadow: var(--shadow-label);
+}
+
 .opacity-slider:focus-visible {
   outline: none;
 }
@@ -24,7 +34,7 @@
 .opacity-track {
   top: 0;
   bottom: 0;
-  background: color-mix(in srgb, var(--ink) 20%, transparent);
+  background: var(--graphite);
 }
 
 /* Ink from the thumb's center down to the foot: 100% is at the top. */
@@ -75,7 +85,7 @@
   outline-offset: 2px;
 }
 
-/* A paper label beside the thumb while held or focused by keyboard. */
+/* The current opacity stays named beside the thumb, even before it is held. */
 .opacity-readout {
   position: absolute;
   top: calc((1 - var(--v)) * (100% - var(--thumb)) + var(--thumb) / 2);
@@ -94,18 +104,11 @@
   color: var(--ink);
   white-space: nowrap;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 120ms var(--ease-out);
 }
 
 .opacity-slider[data-edge="right"] .opacity-readout {
   left: auto;
   right: calc(var(--thumb) + 6px);
-}
-
-.opacity-slider.is-held .opacity-readout,
-.opacity-slider:focus-visible .opacity-readout {
-  opacity: 1;
 }
 
 /* The hint: a white label stuck on beside the slider, level with the thumb's foot, as the paused hint is.
@@ -146,8 +149,8 @@
   transform-origin: 100% 100%;
 }
 
-/* Keep the hidden-layer hint above the readout when keyboard focus shows both labels. */
-.opacity-slider:focus-visible .opacity-hint {
+/* Keep the hidden-layer hint above the persistent readout. */
+.opacity-slider .opacity-hint {
   bottom: calc(var(--v) * (100% - var(--thumb)) + 1.3em + 20px);
 }
 

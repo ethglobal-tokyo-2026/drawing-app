@@ -43,3 +43,6 @@ export const KYOTO_SEIKA_TIME_USED_S = 30 * 60;
 export const MAX_SCALE = 1.4;
 /** The same in the large layout, as a share of the phone board's width. Held by the same CHECK. */
 export const MAX_LARGE_SCALE = 2;
+
+/** The most layers a sheet holds, and so a timelapse records. */
+export const MAX_LAYERS = 10;

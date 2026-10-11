@@ -55,6 +55,7 @@ const line: StrokeOp = {
 };
 const fill = (color: string, T: number): FillOp => ({
   tool: "fill",
+  reference: "visible",
   layer: 1,
   color,
   x: 40,

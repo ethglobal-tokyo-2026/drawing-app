@@ -67,17 +67,20 @@ describe("LayerOptionsBar", () => {
     expect(handlers.onDelete).not.toHaveBeenCalled();
   });
 
-  it("names every action visibly and explains the actual clipping base", () => {
-    renderBar({ id: 7, clipBase: 3, opacity: 48 });
-    for (const label of Object.values(labels)) expect(tile(label).textContent).toContain(label);
-    expect(find(".layer-options-heading").textContent).toContain("Layer 7");
-    expect(find(".layer-options-heading").textContent).toContain("Opacity 48%");
-    const description = tile(labels.clip).getAttribute("aria-describedby");
-    expect(description).toBeTruthy();
-    expect(find(`[id="${description}"]`).textContent).toBe(
-      "Shows this layer only inside layer 3’s ink.",
-    );
-  });
+  it.each([false, true])(
+    "names actions and explains the clipping base and recovery with clipped=%s",
+    (clipped) => {
+      renderBar({ id: 7, clipBase: 3, opacity: 48, clipped });
+      for (const label of Object.values(labels)) expect(tile(label).textContent).toContain(label);
+      expect(find(".layer-options-heading").textContent).toContain("Layer 7");
+      expect(find(".layer-options-heading").textContent).toContain("Opacity 48%");
+      const description = tile(labels.clip).getAttribute("aria-describedby");
+      expect(description).toBeTruthy();
+      expect(find(`[id="${description}"]`).textContent).toBe(
+        "Shows this layer only inside layer 3’s ink. If no marks show, add ink to layer 3 or turn Clip off.",
+      );
+    },
+  );
 
   it("explains unavailable clipping and deletion on the last layer", () => {
     renderBar({ clipBase: null, canDelete: false });

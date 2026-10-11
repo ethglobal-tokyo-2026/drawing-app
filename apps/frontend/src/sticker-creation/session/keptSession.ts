@@ -2,7 +2,7 @@ import { timeOurWork } from "../../performance/performanceRecorder";
 import { personKey, parseStored, readStored, writeStored } from "../../ui/deviceStorage";
 import { pickedPair, PICKS } from "../../kyoto-seika/deal";
 import { KINDS, readDealtSubject, type DealtSubject } from "../../kyoto-seika/subjectList";
-import { STRIDE, type LayerId, type Op, type Step } from "../canvas/ops";
+import { STRIDE, type FillReference, type LayerId, type Op, type Step } from "../canvas/ops";
 import type { SheetFrame } from "../canvas/sheetFrame";
 import { FIRST_LAYER, LayerStepError, stateAt } from "../layers/layerState";
 
@@ -48,8 +48,9 @@ interface PendingWrite {
   frame: SheetFrame | null;
 }
 
-/** How the artist set the size rail, for the brush and for the eraser (0 to 1 along it), and Smoothing (0 to 100). */
+/** The remembered Fill reference, brush and eraser sizes (0 to 1), and Smoothing (0 to 100). */
 export interface KeptTools {
+  fillReference: FillReference;
   brushSize: number;
   eraserSize: number;
   smoothing: number;
@@ -100,7 +101,7 @@ export type KeptDrawing =
       status: "unverified";
       ticket: number | null;
       kyotoSeika: KeptKyotoSeika | null;
-      reason: "legacy" | "identity-mismatch" | "metadata-unavailable";
+      reason: "legacy" | "identity-mismatch" | "metadata-unavailable" | "upgrade-failed";
       recovery: { steps: Step[]; frame: SheetFrame | null } | null;
       error: unknown;
     }
@@ -123,6 +124,9 @@ export type KeptSession = { status: "none" } | KeptDrawing;
 /** What's kept can't be a drawing: the read itself worked. */
 class UnreadableDrawing extends Error {}
 
+/** An upgrade failure requires explicit recovery; never carry its ticket to a blank replacement. */
+class DrawingUpgradeFailed extends Error {}
+
 /** Open connections by database. One the browser closes is dropped, so the next write opens another. */
 const connections = new Map<string, Promise<IDBDatabase>>();
 
@@ -134,23 +138,90 @@ function openDb(name: string): Promise<IDBDatabase> {
   const open = connections.get(name);
   if (open) return open;
   const opening = new Promise<IDBDatabase>((resolve, reject) => {
-    const req = indexedDB.open(name, 1);
-    req.onupgradeneeded = () => {
-      req.result.createObjectStore(OPS);
-      req.result.createObjectStore(PROGRESS);
+    const req = indexedDB.open(name, 2);
+    let expired = false;
+    let upgradeError: unknown;
+    let upgrading = false;
+    const deadline = setTimeout(() => {
+      expired = true;
+      req.transaction?.abort();
+      reject(
+        new DrawingUpgradeFailed(
+          "The saved drawing upgrade timed out. Close other Croquis tabs and reload to recover it; its saved data was kept.",
+        ),
+      );
+      // Resolve before the outer read deadline so the persistent recovery reason reaches the screen.
+    }, LOAD_TIMEOUT_MS - 100);
+    req.onblocked = () => {
+      console.error(
+        "The saved drawing upgrade is blocked by another Croquis tab. Close other tabs and reload; saved data is kept.",
+      );
+    };
+    req.onupgradeneeded = (event) => {
+      upgrading = true;
+      const tx = req.transaction;
+      if (!tx) return;
+      if (expired) {
+        tx.abort();
+        return;
+      }
+      if (event.oldVersion === 0) {
+        req.result.createObjectStore(OPS);
+        req.result.createObjectStore(PROGRESS);
+        return;
+      }
+      const cursor = tx.objectStore(OPS).openCursor();
+      cursor.onsuccess = () => {
+        const row = cursor.result;
+        if (!row) return;
+        try {
+          const value: unknown = row.value;
+          if (
+            typeof value === "object" &&
+            value !== null &&
+            "tool" in value &&
+            value.tool === "fill"
+          ) {
+            const upgraded = "reference" in value ? value : { ...value, reference: "visible" };
+            if (!readStep(upgraded))
+              throw new Error(
+                `Saved Fill at step ${JSON.stringify(row.key)} is invalid. Its original data was kept; reload Croquis to retry recovery.`,
+              );
+            row.update(upgraded);
+          }
+          row.continue();
+        } catch (error) {
+          upgradeError = error;
+          tx.abort();
+        }
+      };
     };
     req.onsuccess = () => {
+      clearTimeout(deadline);
       const db = req.result;
-      // WebKit closes it when its IndexedDB server goes, as it can while LINE is in the background.
+      if (expired) {
+        db.close();
+        return;
+      }
       db.onclose = () => dropConnection(name, opening);
-      // Another tab upgrading or deleting the database waits on every connection to it.
       db.onversionchange = () => {
         db.close();
         dropConnection(name, opening);
       };
       resolve(db);
     };
-    req.onerror = () => reject(req.error);
+    req.onerror = () => {
+      clearTimeout(deadline);
+      const cause = upgradeError ?? req.error;
+      reject(
+        upgrading
+          ? new DrawingUpgradeFailed(
+              `The saved drawing upgrade failed: ${cause instanceof Error ? cause.message : JSON.stringify(cause)}. Its original data was kept. Close other Croquis tabs and retry or reload Croquis.`,
+              { cause },
+            )
+          : req.error,
+      );
+    };
   });
   connections.set(name, opening);
   // Whether the open threw or failed, the next call tries again.
@@ -583,7 +654,7 @@ export async function loadKeptSession(userId: string): Promise<KeptSession> {
         status: "unverified",
         ticket: null,
         kyotoSeika: null,
-        reason: "metadata-unavailable",
+        reason: error instanceof DrawingUpgradeFailed ? "upgrade-failed" : "metadata-unavailable",
         recovery,
         error,
       };
@@ -645,15 +716,24 @@ export async function loadKeptSession(userId: string): Promise<KeptSession> {
       };
     },
     (error: unknown): KeptDrawing =>
-      error instanceof UnreadableDrawing
-        ? { status: "lost", ticket: record.ticket, kyotoSeika: record.kyotoSeika, error }
-        : {
-            status: "unread",
+      error instanceof DrawingUpgradeFailed
+        ? {
+            status: "unverified",
             ticket: record.ticket,
             kyotoSeika: record.kyotoSeika,
+            reason: "upgrade-failed",
+            recovery: null,
             error,
-            later: null,
-          },
+          }
+        : error instanceof UnreadableDrawing
+          ? { status: "lost", ticket: record.ticket, kyotoSeika: record.kyotoSeika, error }
+          : {
+              status: "unread",
+              ticket: record.ticket,
+              kyotoSeika: record.kyotoSeika,
+              error,
+              later: null,
+            },
   );
   return within(read, LOAD_TIMEOUT_MS, () => ({
     status: "unread",
@@ -789,7 +869,9 @@ function readOp(v: object, tool: Op["tool"], layer: LayerId, T: number): Op | un
     if (!("x" in v) || !isFiniteNumber(v.x) || !("y" in v) || !isFiniteNumber(v.y))
       return undefined;
     if (!("gap" in v) || !isFiniteNumber(v.gap) || v.gap < 0) return undefined;
-    return { tool, layer, x: v.x, y: v.y, color, gap: v.gap, T };
+    if (!("reference" in v) || (v.reference !== "layer" && v.reference !== "visible"))
+      return undefined;
+    return { tool, layer, x: v.x, y: v.y, color, gap: v.gap, reference: v.reference, T };
   }
   if (!("pts" in v) || !Array.isArray(v.pts)) return undefined;
   const pts: unknown[] = v.pts;
@@ -936,8 +1018,10 @@ function readTools(v: unknown): KeptTools | undefined {
   if (typeof v !== "object" || v === null) return undefined;
   if (!("brushSize" in v) || !("eraserSize" in v) || !("smoothing" in v)) return undefined;
   const { brushSize, eraserSize, smoothing } = v;
+  const fillReference = "fillReference" in v ? v.fillReference : "layer";
+  if (fillReference !== "layer" && fillReference !== "visible") return undefined;
   return isBetween(brushSize, 0, 1) && isBetween(eraserSize, 0, 1) && isBetween(smoothing, 0, 100)
-    ? { brushSize, eraserSize, smoothing }
+    ? { brushSize, eraserSize, smoothing, fillReference }
     : undefined;
 }
 

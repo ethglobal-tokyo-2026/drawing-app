@@ -210,6 +210,19 @@ describe("OpacitySlider", () => {
     expect(find(".opacity-readout").textContent).toBe("Opacity 64%");
   });
 
+  it("keeps its name and value after the browser cancels a preview", () => {
+    expect(find(".opacity-readout").textContent).toBe("Opacity 64%");
+    point(thumb(), "pointerdown", GRAB);
+    point(thumb(), "pointermove", GRAB - 20);
+    expect(find(".opacity-readout").textContent).toBe("Opacity 78%");
+    point(thumb(), "pointercancel", GRAB - 20);
+    expect(committed()).toEqual([78]);
+    render({ value: 78 });
+    expect(find(".opacity-readout").textContent).toBe("Opacity 78%");
+    expect(find('[role="slider"]').getAttribute("aria-valuenow")).toBe("78");
+    expect(onHold).toHaveBeenLastCalledWith(false);
+  });
+
   it("resets to full with a double-tap, though each finger rocks a little", () => {
     tap(TAP_SLOP / 2);
     wait(DOUBLE_TAP_MS - 1);

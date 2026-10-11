@@ -18,7 +18,15 @@ import { previewWidth, StrokeBuilder, type PenPressure } from "./brush";
 import { CanvasUnavailableError } from "./canvasUnavailable";
 import { FILL_GAP } from "./fill";
 import { isPalm, TapRecognizer, type TapGesture } from "./gestures";
-import { isOp, type FillOp, type LayerId, type Op, type Step, type Tool } from "./ops";
+import {
+  isOp,
+  type FillOp,
+  type FillReference,
+  type LayerId,
+  type Op,
+  type Step,
+  type Tool,
+} from "./ops";
 import { areaFrame, boundedFrame, frameFor, type SheetArea, type SheetFrame } from "./sheetFrame";
 import { PAUSE_MS, Stabilizer } from "./stabilizer";
 
@@ -46,6 +54,7 @@ export const INK_WORK = {
 
 /** What the drawing screen has set; the engine reads it as each pointer lands. */
 export interface InkSettings {
+  fillReference: FillReference;
   tool: Tool;
   color: string;
   /** Brush or eraser width, in sheet units. */
@@ -1142,6 +1151,7 @@ export class InkEngine implements LayerControls {
   private applyFill(x: number, y: number): void {
     const op: FillOp = {
       tool: "fill",
+      reference: this.settings.fillReference,
       layer: this.current,
       x,
       y,

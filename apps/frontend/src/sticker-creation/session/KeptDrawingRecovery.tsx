@@ -71,7 +71,11 @@ export function KeptDrawingRecovery({
           ? t(($) => $.stickerCreation.recovery.explanation)
           : t(($) => $.stickerCreation.recovery.unread)}
       </p>
-      {recovery.reason === "metadata-unavailable" ? (
+      {recovery.reason === "upgrade-failed" ? (
+        <ErrorLine detail={problemOf(recovery.error).detail} onRetry={onRetry}>
+          {t(($) => $.stickerCreation.recovery.upgradeFailed)}
+        </ErrorLine>
+      ) : recovery.reason === "metadata-unavailable" ? (
         <ErrorLine detail={problemOf(recovery.error).detail} onRetry={onRetry}>
           {t(($) => $.stickerCreation.recovery.metadataUnknown)}
         </ErrorLine>

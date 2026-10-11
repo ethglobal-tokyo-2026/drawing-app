@@ -7,6 +7,8 @@ interface RequestContext {
 }
 
 export interface DiagnosticFields {
+  /** The uploaded timelapse version before normalization. */
+  originalVersion?: number;
   stickerId?: string;
   giftId?: string;
   userId?: string;
@@ -168,6 +170,7 @@ export function failureCause(error: unknown): string {
  * there can't be left out.
  */
 const loggedFields = {
+  originalVersion: true,
   stickerId: true,
   giftId: true,
   userId: true,

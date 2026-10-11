@@ -44,7 +44,7 @@ import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas"
 import type { HistoryState, InputMode } from "./canvas/inkEngine";
 import { penDrew, useDrawingHand, useInputMode, usePenPressure } from "./drawingSettings";
 import { isFirstVisit } from "./drawVisits";
-import { isOp, type Op, type Tool } from "./canvas/ops";
+import { isOp, type FillReference, type Op, type Tool } from "./canvas/ops";
 import type { LayerId } from "./canvas/ops";
 import type { SheetFrame } from "./canvas/sheetFrame";
 import { FIRST_SMOOTHING } from "./canvas/stabilizer";
@@ -85,6 +85,7 @@ import { usePickUpKeptSession, type PickedUp } from "./session/usePickUpKeptSess
 import { useSessionClock } from "./session/useSessionClock";
 import { TimerDot, type TimerDotHandle } from "./TimerDot";
 import { ClearBar } from "./tools/ClearBar";
+import { FillReferenceBar } from "./tools/FillReferenceBar";
 import { ColorSheet } from "./tools/ColorSheet";
 import { HistoryButtons } from "./tools/HistoryButtons";
 import { MyBoardTile } from "./tools/MyBoardTile";
@@ -195,6 +196,7 @@ export function DrawingScreen({
   const penPressure = usePenPressure();
 
   const [tool, setTool] = useState<Tool>("brush");
+  const [fillReference, setFillReference] = useState<FillReference>("layer");
   const [color, setColor] = useState(() => startingColor());
   // The color this drawing started in. The next drawing starts in another.
   const startedIn = useRef(color);
@@ -309,8 +311,14 @@ export function DrawingScreen({
   const [dealLeaving, setDealLeaving] = useState(false);
   // The rail's sizes and Smoothing are kept with the drawing, so a reload brings them back too.
   useEffect(
-    () => keeper.keepTools({ brushSize: sizes.brush, eraserSize: sizes.eraser, smoothing }),
-    [keeper, sizes, smoothing],
+    () =>
+      keeper.keepTools({
+        fillReference,
+        brushSize: sizes.brush,
+        eraserSize: sizes.eraser,
+        smoothing,
+      }),
+    [keeper, fillReference, sizes, smoothing],
   );
   // The sheet's 18+ mark, from the seal sheet's switch; the seal reads the ref, after an await.
   const [nsfwOn, setNsfwOn] = useState(false);
@@ -384,6 +392,7 @@ export function DrawingScreen({
         setPickedUp(null);
         setPaused(false);
         setPanel(null);
+        setFillReference("layer");
         setSheetInputMode(null);
         lastCeremony.current?.sticker.dispose();
         lastCeremony.current = null;
@@ -735,6 +744,7 @@ export function DrawingScreen({
     if (found.tools) {
       setSizes({ brush: found.tools.brushSize, eraser: found.tools.eraserSize });
       setSmoothing(found.tools.smoothing);
+      setFillReference(found.tools.fillReference);
     }
     // Kept at 0:00, it comes back pencils down, its time's-up sheet up, with nothing to pause.
     const timeUp = drawn && found.elapsedMs >= sessionMs(part !== null);
@@ -1088,6 +1098,7 @@ export function DrawingScreen({
         under={lockedPair && <CornerPrint subjects={lockedPair} />}
         label={canvasName}
         settings={{
+          fillReference,
           tool,
           color,
           size: sizePx(sizes[sizeKey]),
@@ -1161,6 +1172,13 @@ export function DrawingScreen({
           onInputMode={setSheetInputMode}
         />
       </div>
+      {active &&
+        tool === "fill" &&
+        panel === null &&
+        (session.phase === "primed" || session.phase === "drawing") &&
+        !ceremony &&
+        !dealLeaving &&
+        !recovery && <FillReferenceBar value={fillReference} onChange={setFillReference} />}
       {/* A deal on its way out finishes leaving even under the board, so it never plays again. */}
       {((active && dealt && !recovery) || dealLeaving) && (
         <KyotoSeikaDeal

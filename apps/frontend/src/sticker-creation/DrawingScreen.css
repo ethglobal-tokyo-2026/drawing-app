@@ -21,7 +21,8 @@
   --foot-inset: 18px;
   --history-gap: 6px;
   --board-gap: 16px;
-  --phone-rail-h: clamp(120px, calc(100% - 196px), 222px);
+  /* Reclaim the old 26px size footer while preserving the thumb's original travel. */
+  --phone-rail-h: clamp(94px, calc(100% - 222px), 196px);
 }
 
 /* The layer column continues down the edge after the size rail. Its list scrolls before the foot
@@ -221,11 +222,6 @@
   translate: -4px 4px;
 }
 
-/* The rail's number grows left for two digits, away from the screen's edge. */
-.drawing-screen[data-hand="left"] .size-num {
-  transform-origin: 100% 100%;
-}
-
 .drawing-screen[data-hand="left"] > .drawing-start-over {
   justify-content: flex-end;
   text-align: right;
@@ -282,7 +278,7 @@
     inset: var(--top-h) var(--edge-w) var(--foot) 8px;
   }
 
-  /* The thumb's tip shows the size, and a held thumb its ghost mid-sheet, so the rail drops the px label. */
+  /* The px readout stays beside the thumb on tablets too. */
   .drawing-screen > .size-rail {
     --thumb-foot: 18px;
     left: var(--far-left) calc((var(--edge-w) - 40px) / 2);
@@ -297,10 +293,6 @@
     height: var(--layer-h);
     left: var(--far-left) calc((var(--edge-w) - 50px) / 2);
     right: var(--far-right) calc((var(--edge-w) - 50px) / 2);
-  }
-
-  .drawing-screen > .size-rail .size-num {
-    display: none;
   }
 
   .drawing-screen > .history-buttons {

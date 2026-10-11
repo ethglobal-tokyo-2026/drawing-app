@@ -63,6 +63,9 @@ async function openSheet(page: Page) {
   await button(page, { en: drawKeyName(language, DAILY_TICKETS_PER_DAY) }).click();
   await canvas(page, language).hover();
   await expect(chip(page, 1)).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".drawing-screen")).not.toHaveClass(
+    /is-dealt|is-deal-leaving|is-retrying/,
+  );
 }
 
 async function sheetBox(page: Page) {
@@ -79,9 +82,32 @@ async function line(page: Page, down: number, from = 0.3, to = 0.7) {
   return middle(points);
 }
 
+/** A closed blue boundary with a clear inside and outside for independent Fill probes. */
+async function boundary(page: Page) {
+  const box = await sheetBox(page);
+  const points = [
+    ...along(box, 0.3, 0.3, 0.7, 12),
+    ...Array.from({ length: 13 }, (_, i) => at(box, 0.7, 0.3 + (0.4 * i) / 12)),
+    ...along(box, 0.7, 0.7, 0.3, 12),
+    ...Array.from({ length: 13 }, (_, i) => at(box, 0.3, 0.7 - (0.4 * i) / 12)),
+  ];
+  await penStroke(page, await pencil(page), points, () => 0.5, 8);
+  await inkShows(page, at(box, 0.5, 0.3));
+  return box;
+}
+
+async function fillAt(page: Page, point: At) {
+  const pen = await pencil(page);
+  await pen.down(point, 0.5);
+  await pen.up(point);
+}
+
 async function color(page: Page, name: "blue" | "red") {
-  await button(page, creation.tools.color).click();
+  const colorButton = button(page, creation.tools.color);
+  await colorButton.click();
+  await expect(colorButton).toHaveAttribute("aria-expanded", "true");
   const sheet = page.getByRole("dialog", { name: say(creation.colorSheet.title, language) });
+  await expect(sheet).toBeVisible();
   await sheet
     .getByRole("radiogroup", { name: say(creation.colorSheet.swatches, language) })
     .getByRole("radio", { name: say(creation.colorSheet.swatchNames[name], language), exact: true })
@@ -744,6 +770,142 @@ test("locking transparent pixels recolors existing ink without extending it", as
   await expect.poll(() => inkAt(page, at(box, 0.7, 0.5))).toBe(0);
   await undo(page).click();
   await expect.poll(() => shownColor(page, center)).toEqual([47, 107, 255, 255]);
+});
+
+test("Fill defaults to this layer, and visible reference respects a lower boundary through reload and replay", async ({
+  page,
+}) => {
+  await openSheet(page);
+  await color(page, "blue");
+  const box = await boundary(page);
+  const inside = at(box, 0.5, 0.5);
+  const outside = at(box, 0.15, 0.5);
+  await add(page).click();
+  await button(page, copy.dismissOptionsHint).click();
+  await color(page, "red");
+  await button(page, creation.tools.fill).click();
+  const choices = page.getByRole("radiogroup", {
+    name: say(creation.fillReference.label, language),
+  });
+  const own = choices.getByRole("radio", { name: say(creation.fillReference.layer, language) });
+  const visible = choices.getByRole("radio", {
+    name: say(creation.fillReference.visible, language),
+  });
+  await expect(own).toBeChecked();
+  await own.focus();
+  await own.press("ArrowRight");
+  await expect(visible).toBeChecked();
+  await visible.press("ArrowLeft");
+  await expect(own).toBeChecked();
+  await expect(button(page, creation.timer.pause)).toBeVisible();
+  await fillAt(page, inside);
+  await expect.poll(() => shownColor(page, outside)).toEqual([232, 72, 79, 255]);
+  await expect.poll(() => shownColor(page, inside)).toEqual([232, 72, 79, 255]);
+  await undo(page).click();
+  await expect.poll(() => inkAt(page, outside)).toBe(0);
+  await expect.poll(() => inkAt(page, inside)).toBe(0);
+  await visible.click();
+  await expect(visible).toBeChecked();
+  await button(page, creation.tools.brush).click();
+  await expect(choices).toBeHidden();
+  await button(page, creation.tools.fill).click();
+  await expect(visible).toBeChecked();
+  await fillAt(page, inside);
+  await expect.poll(() => shownColor(page, inside)).toEqual([232, 72, 79, 255]);
+  await expect.poll(() => inkAt(page, outside)).toBe(0);
+  await undo(page).click();
+  await expect.poll(() => inkAt(page, inside)).toBe(0);
+  await button(page, creation.history.redo).click();
+  await expect.poll(() => shownColor(page, inside)).toEqual([232, 72, 79, 255]);
+  await page.reload();
+  await button(page, stickerBoard.board.continueDrawing).click();
+  await button(page, creation.tools.fill).click();
+  await expect(visible).toBeChecked();
+  await expect.poll(() => shownColor(page, inside)).toEqual([232, 72, 79, 255]);
+  await expect.poll(() => inkAt(page, outside)).toBe(0);
+  await button(page, creation.timer.resume).click();
+  await color(page, "blue");
+  await own.click();
+  await fillAt(page, outside);
+  await expect.poll(() => shownColor(page, inside)).toEqual([232, 72, 79, 255]);
+  await expect.poll(() => shownColor(page, outside)).toEqual([47, 107, 255, 255]);
+  await undo(page).click();
+  await expect.poll(() => inkAt(page, outside)).toBe(0);
+  await button(page, creation.history.redo).click();
+  await expect.poll(() => shownColor(page, outside)).toEqual([47, 107, 255, 255]);
+  await openSealSheet(page, language);
+  const { card, no } = await sealOnSheet(page, language);
+  await card.getByRole("button", { name: say(ui.backToBoard, language) }).click();
+  const detail = await openDetail(page, language, no);
+  await detail
+    .getByRole("button", { name: say(stickerBoard.timelapse.watchLabel, language, { no }) })
+    .click();
+  const replay = detail.locator(".timelapse-overlay");
+  await expect(replay).toHaveAttribute("data-phase", "ending", { timeout: 30_000 });
+  const pixels = await replay.locator("canvas").evaluate((canvas) => {
+    if (!(canvas instanceof HTMLCanvasElement)) throw new Error("Replay has no ink canvas");
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Replay canvas has no 2D context");
+    const paper = canvas.parentElement?.querySelector(".timelapse-overlay__paper");
+    if (!paper) throw new Error("Replay has no paper");
+    const sheet = paper.getBoundingClientRect();
+    const stage = canvas.getBoundingClientRect();
+    const rgba = (x: number, y: number) => {
+      const pixelX = Math.round(
+        ((sheet.left - stage.left + sheet.width * x) * canvas.width) / stage.width,
+      );
+      const pixelY = Math.round(
+        ((sheet.top - stage.top + sheet.height * y) * canvas.height) / stage.height,
+      );
+      return [...context.getImageData(pixelX, pixelY, 1, 1).data];
+    };
+    return { inside: rgba(0.5, 0.5), outside: rgba(0.15, 0.5) };
+  });
+  expect(pixels.inside).toEqual([232, 72, 79, 255]);
+  expect(pixels.outside).toEqual([47, 107, 255, 255]);
+});
+
+test("Clip enabled before painting masks a broad base and reveals retained outside ink when disabled", async ({
+  page,
+}) => {
+  await openSheet(page);
+  await color(page, "blue");
+  const box = await boundary(page);
+  const inside = at(box, 0.5, 0.5);
+  const outside = at(box, 0.8, 0.5);
+  await button(page, creation.tools.fill).click();
+  await fillAt(page, inside);
+  await expect.poll(() => shownColor(page, inside)).toEqual([47, 107, 255, 255]);
+  await add(page).click();
+  await button(page, copy.dismissOptionsHint).click();
+  await options(page, 2);
+  await button(page, copy.clip).click();
+  await expect(button(page, copy.clip)).toHaveAttribute("aria-pressed", "true");
+  await chip(page, 2).click();
+  await color(page, "red");
+  await button(page, creation.tools.brush).click();
+  await line(page, 0.5, 0.4, 0.9);
+  await expect.poll(() => shownColor(page, inside)).toEqual([232, 72, 79, 255]);
+  await expect.poll(() => inkAt(page, outside)).toBe(0);
+  await options(page, 2);
+  await button(page, copy.clip).click();
+  await chip(page, 2).click();
+  await expect.poll(() => shownColor(page, outside)).toEqual([232, 72, 79, 255]);
+});
+
+test("Clip enabled over an empty base keeps new ink recoverable", async ({ page }) => {
+  await openSheet(page);
+  await add(page).click();
+  await button(page, copy.dismissOptionsHint).click();
+  await options(page, 2);
+  await button(page, copy.clip).click();
+  await chip(page, 2).click();
+  const point = await line(page, 0.5);
+  await expect.poll(() => inkAt(page, point)).toBe(0);
+  await options(page, 2);
+  await button(page, copy.clip).click();
+  await chip(page, 2).click();
+  await inkShows(page, point);
 });
 
 test("clipping masks outside ink on screen and in the seal preview", async ({ page }) => {

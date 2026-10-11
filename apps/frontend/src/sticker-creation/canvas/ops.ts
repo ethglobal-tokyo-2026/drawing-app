@@ -1,6 +1,9 @@
 /** The drawing tools. Brush and eraser make strokes; fill makes fills. */
 export type Tool = "brush" | "eraser" | "fill";
 
+/** Which pixels define a Fill region. */
+export type FillReference = "layer" | "visible";
+
 /** Numbers per point in `StrokeOp.pts`: x, y, width, t. */
 export const STRIDE = 4;
 
@@ -21,6 +24,7 @@ export interface StrokeOp {
 
 /** A fill seeded at a point in sheet units, `T` ms into the session, painted on `layer`. */
 export interface FillOp {
+  reference: FillReference;
   tool: "fill";
   layer: LayerId;
   x: number;

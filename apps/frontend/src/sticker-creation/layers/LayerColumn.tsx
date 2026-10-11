@@ -1,16 +1,19 @@
 import {
+  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
   type Ref,
 } from "react";
 import { NewLayerIcon, X } from "../../icons";
 import { useTranslation } from "../../i18n/react";
+import { LabelButton } from "../../ui/LabelButton";
 import { deviceSetting } from "../../ui/deviceSetting";
 import type { LayerId } from "../canvas/ops";
 import { LayerChip } from "./LayerChip";
@@ -84,6 +87,20 @@ export function LayerColumn({
   const optionsBox = useRef<HTMLDivElement>(null);
   const hintBox = useRef<HTMLDivElement>(null);
   const learned = useSyncExternalStore(optionsLearned.subscribe, optionsLearned.get);
+  const [scroll, setScroll] = useState({ position: 0, portion: 1 });
+  const measureScroll = useCallback(() => {
+    const list = root.current?.querySelector<HTMLElement>(".layer-list");
+    if (!list) return;
+    const distance = list.scrollHeight - list.clientHeight;
+    const position = distance > 0 ? Math.max(0, Math.min(1, list.scrollTop / distance)) : 0;
+    const portion = distance > 0 ? list.clientHeight / list.scrollHeight : 1;
+    setScroll((before) =>
+      before.position === position && before.portion === portion ? before : { position, portion },
+    );
+  }, []);
+  const overflowing = scroll.portion < 1;
+  const moreAbove = overflowing && scroll.position > 0;
+  const moreBelow = overflowing && scroll.position < 1;
   const [hiddenCurrent, setHiddenCurrent] = useState<LayerId | null>(null);
   // The chip focused by the arrow keys holds the Tab stop until focus leaves the list.
   const [focused, setFocused] = useState<LayerId | null>(null);
@@ -130,7 +147,23 @@ export function LayerColumn({
     const chipBox = chip.getBoundingClientRect();
     const height = paper.getBoundingClientRect().height;
     const desired = chipBox.top + chipBox.height / 2 - height / 2;
-    const top = Math.max(upper, Math.min(desired, lower - height));
+    let top = Math.max(upper, Math.min(desired, lower - height));
+    if (paper === hintBox.current) {
+      const readout = root.current.querySelector(".opacity-readout")?.getBoundingClientRect();
+      const hint = paper.getBoundingClientRect();
+      if (
+        readout &&
+        hint.left < readout.right + 8 &&
+        hint.right > readout.left - 8 &&
+        top < readout.bottom + 8 &&
+        top + height > readout.top - 8
+      ) {
+        const below = Math.max(upper, readout.bottom + 8);
+        const above = Math.min(lower - height, readout.top - height - 8);
+        if (below + height <= lower) top = below;
+        else if (above >= upper) top = above;
+      }
+    }
     paper.style.top = `${top - columnBox.top}px`;
   };
 
@@ -162,6 +195,16 @@ export function LayerColumn({
     else if (list.scrollTop < below) list.scrollTop = below;
   }, [current]);
 
+  // Recheck content changes and automatic selection scrolling before paint, then follow resizes.
+  useLayoutEffect(measureScroll);
+  useLayoutEffect(() => {
+    const list = root.current?.querySelector<HTMLElement>(".layer-list");
+    if (!list || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measureScroll);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [measureScroll]);
+
   const press = (id: LayerId) => (id === current ? onToggleOptions() : onSelect(id));
 
   const moveFocus = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -175,8 +218,7 @@ export function LayerColumn({
 
   return (
     <div ref={root} className="layer-column" data-edge={edge}>
-      <button
-        type="button"
+      <LabelButton
         className="layer-add"
         aria-label={t(($) => $.stickerCreation.layers.add)}
         aria-describedby={!canAdd ? maximumId : undefined}
@@ -184,7 +226,7 @@ export function LayerColumn({
         onClick={onAdd}
       >
         <NewLayerIcon size={18} weight="bold" />
-      </button>
+      </LabelButton>
       {!canAdd && (
         <span id={maximumId} className="layer-maximum">
           {t(($) => $.stickerCreation.layers.maximum, { count: chips.length })}
@@ -192,45 +234,75 @@ export function LayerColumn({
       )}
       <div className="layer-body">
         <div
-          ref={listRef}
-          className="layer-list"
-          role="listbox"
-          aria-label={t(($) => $.stickerCreation.layers.label)}
-          aria-orientation="vertical"
-          onKeyDown={moveFocus}
-          onScroll={(e) => {
-            const list = e.currentTarget;
-            const chip = chipAt(list, current);
-            if (!chip) return;
-            const chipBox = chip.getBoundingClientRect();
-            const top = list.getBoundingClientRect().top + list.clientTop;
-            const bottom = top + list.clientHeight;
-            const visible = chipBox.bottom > top && chipBox.top < bottom;
-            setHiddenCurrent(visible ? null : current);
-            if (!visible && showOptions) onCloseOptions();
-            else if (visible) placePaper();
-          }}
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget)) setFocused(null);
-          }}
+          className="layer-scroll-well"
+          data-overflow={overflowing || undefined}
+          data-more-above={moreAbove || undefined}
+          data-more-below={moreBelow || undefined}
         >
-          {chips.toReversed().map((chip) => {
-            const isCurrent = chip.id === current;
-            return (
-              <LayerChip
-                key={chip.id}
-                chip={chip}
-                current={isCurrent}
-                thumbnails={thumbnails}
-                tabStop={chip.id === stop}
-                expanded={isCurrent ? showOptions : undefined}
-                controls={isCurrent && showOptions ? optionsId : undefined}
-                describedBy={isCurrent && showHint ? hintId : undefined}
-                onPress={press}
-                onFocus={setFocused}
-              />
-            );
-          })}
+          <div
+            ref={listRef}
+            className="layer-list"
+            role="listbox"
+            aria-label={t(($) => $.stickerCreation.layers.label)}
+            aria-orientation="vertical"
+            onKeyDown={moveFocus}
+            onScroll={(e) => {
+              measureScroll();
+              const list = e.currentTarget;
+              const chip = chipAt(list, current);
+              if (!chip) return;
+              const chipBox = chip.getBoundingClientRect();
+              const top = list.getBoundingClientRect().top + list.clientTop;
+              const bottom = top + list.clientHeight;
+              const visible = chipBox.bottom > top && chipBox.top < bottom;
+              setHiddenCurrent(visible ? null : current);
+              if (!visible && showOptions) onCloseOptions();
+              else if (visible) placePaper();
+            }}
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) setFocused(null);
+            }}
+          >
+            {chips.toReversed().map((chip) => {
+              const isCurrent = chip.id === current;
+              return (
+                <LayerChip
+                  key={chip.id}
+                  chip={chip}
+                  current={isCurrent}
+                  thumbnails={thumbnails}
+                  tabStop={chip.id === stop}
+                  expanded={isCurrent ? showOptions : undefined}
+                  controls={isCurrent && showOptions ? optionsId : undefined}
+                  describedBy={isCurrent && showHint ? hintId : undefined}
+                  onPress={press}
+                  onFocus={setFocused}
+                />
+              );
+            })}
+          </div>
+          {overflowing && (
+            <div
+              className="layer-scroll-position"
+              role="meter"
+              aria-label={t(($) => $.stickerCreation.layers.scrollPosition)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(scroll.position * 100)}
+              aria-valuetext={t(($) =>
+                moreAbove
+                  ? moreBelow
+                    ? $.stickerCreation.layers.moreAboveAndBelow
+                    : $.stickerCreation.layers.moreAbove
+                  : $.stickerCreation.layers.moreBelow,
+              )}
+              style={
+                { "--position": scroll.position, "--portion": scroll.portion } as CSSProperties
+              }
+            >
+              <span />
+            </div>
+          )}
         </div>
         {/* Next after the chips in the Tab order, though it's laid out over the sheet. */}
         {showOptions && (

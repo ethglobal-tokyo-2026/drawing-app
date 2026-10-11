@@ -54,6 +54,15 @@ export const stickerRoutes = (deps: AppDeps) =>
       validate("query", timelapseQuery),
       (c) => {
         const { stickerId } = c.req.valid("param");
+        if (c.req.valid("query").format !== "3") {
+          c.header("Cache-Control", "no-store");
+          return apiError(
+            c,
+            409,
+            "timelapse_format_unsupported",
+            "Please reload Croquis to play this timelapse.",
+          );
+        }
         const timelapse = readTimelapse(deps.db, stickerId, stickerViewer(deps, c.var.userId));
         if (timelapse === "sticker_not_found") {
           return apiError(c, 404, "sticker_not_found", `No sticker ${stickerId}`);

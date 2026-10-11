@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { act, useState } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18next } from "../../i18n/i18n";
 import type { LayerId } from "../canvas/ops";
 import { LayerColumn, type LayerColumnProps } from "./LayerColumn";
@@ -60,7 +60,63 @@ beforeEach(() => {
   onToggleOptions.mockReset();
 });
 
+afterEach(() => vi.unstubAllGlobals());
+
 describe("LayerColumn", () => {
+  it("reports the position and continuing ends only while layers overflow", () => {
+    renderColumn();
+    const list = find('[role="listbox"]');
+    layOut(list, 42);
+    const scroll = (top: number) =>
+      act(() => {
+        list.scrollTop = top;
+        list.dispatchEvent(new Event("scroll"));
+      });
+    scroll(0);
+    const position = () => find('[role="meter"]');
+    expect(position().getAttribute("aria-label")).toBe("Layer list position");
+    expect(position().getAttribute("aria-valuenow")).toBe("0");
+    expect(position().getAttribute("aria-valuetext")).toBe("More layers below");
+    scroll(42);
+    expect(position().getAttribute("aria-valuenow")).toBe("50");
+    expect(position().getAttribute("aria-valuetext")).toBe("More layers above and below");
+    scroll(84);
+    expect(position().getAttribute("aria-valuenow")).toBe("100");
+    expect(position().getAttribute("aria-valuetext")).toBe("More layers above");
+    layOut(list);
+    scroll(0);
+    expect(findAll('[role="meter"]')).toHaveLength(0);
+  });
+
+  it("rechecks overflow after a resize and after layers are removed", () => {
+    const resized: (() => void)[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class implements ResizeObserver {
+        constructor(callback: ResizeObserverCallback) {
+          resized.push(() => callback([], this));
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    renderColumn({ current: 3 });
+    const list = find('[role="listbox"]');
+    layOut(list, 42);
+    act(() => resized.forEach((resize) => resize()));
+    expect(findAll('[role="meter"]')).toHaveLength(1);
+    layOut(list);
+    act(() => resized.forEach((resize) => resize()));
+    expect(findAll('[role="meter"]')).toHaveLength(0);
+    layOut(list, 42);
+    act(() => resized.forEach((resize) => resize()));
+    expect(findAll('[role="meter"]')).toHaveLength(1);
+    Object.defineProperty(list, "scrollHeight", { configurable: true, value: 42 });
+    renderColumn({ chips: chipsOf([3]), current: 3 });
+    expect(findAll('[role="meter"]')).toHaveLength(0);
+  });
+
   it("offers options help only for a blank current layer in a stack", () => {
     renderColumn({ chips: chipsOf([1]), current: 1 });
     expect(findAll(".layer-options-hint")).toHaveLength(0);

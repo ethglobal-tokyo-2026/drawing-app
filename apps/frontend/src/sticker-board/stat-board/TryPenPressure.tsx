@@ -28,6 +28,7 @@ const BLANK: readonly Step[] = [{ tool: "clear", layer: FIRST_LAYER, T: 0 }];
 /** The strip draws as a fresh sheet does, with the brush at its size and the chosen curve. */
 const settingsFor = (response: PenPressure, fingersDraw: boolean): InkSettings => ({
   tool: "brush",
+  fillReference: "layer",
   color: INK,
   size: TRY_SIZE,
   smoothing: FIRST_SMOOTHING,

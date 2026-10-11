@@ -20,6 +20,7 @@ export const eraser = (layer: LayerId = FIRST_LAYER): StrokeOp => ({
 
 export const fill = (layer: LayerId = FIRST_LAYER): FillOp => ({
   tool: "fill",
+  reference: "visible",
   layer,
   x: 0,
   y: 0,

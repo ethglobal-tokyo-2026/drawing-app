@@ -71,6 +71,7 @@ const sheetCalls = vi.hoisted(() => ({
   /** A stroke is being drawn: the sheet's finishStroke lands it. */
   live: false,
   settings: null as {
+    fillReference: "layer" | "visible";
     paused: boolean;
     locked: boolean;
     panelOpen: boolean;
@@ -108,6 +109,7 @@ vi.mock("./canvas/DrawingCanvas", () => ({
       onCommit: (op: Op) => void;
       onBlocked: () => void;
       settings: {
+        fillReference: "layer" | "visible";
         paused: boolean;
         locked: boolean;
         panelOpen: boolean;
@@ -261,19 +263,29 @@ vi.mock("./tools/SmoothingBar", () => ({ SmoothingBar: () => null }));
 // controls the clear bar as the real one does.
 vi.mock("./tools/ToolStrip", () => ({
   ToolStrip: ({
+    tool,
     clearBarId,
     canClear,
+    onTool,
     onPanel,
     inputMode,
     onInputMode,
   }: {
+    tool: "brush" | "eraser" | "fill";
     clearBarId: string;
     canClear: boolean;
+    onTool: (tool: "brush" | "eraser" | "fill") => void;
     onPanel: (panel: Exclude<Panel, null>) => void;
     inputMode: InputMode | null;
     onInputMode: (mode: InputMode) => void;
   }) => (
     <>
+      <button type="button" aria-pressed={tool === "brush"} onClick={() => onTool("brush")}>
+        Brush
+      </button>
+      <button type="button" aria-pressed={tool === "fill"} onClick={() => onTool("fill")}>
+        Fill
+      </button>
       <button type="button" className="color-tile" onClick={() => onPanel("color")} />
       <button type="button" className="smoothing-tile" onClick={() => onPanel("smoothing")} />
       <button
@@ -842,6 +854,58 @@ describe("the seal sheet", () => {
 });
 
 describe("the drawing screen's clock", () => {
+  it("keeps Fill reference visible while drawing, remembers the selected source, and leaves the clock running", async () => {
+    reopen(keptHalfway);
+    await settle();
+    expect(document.querySelector('[role="radiogroup"][aria-label="Fill reference"]')).toBeNull();
+    act(() => buttonSaying("Fill")?.click());
+    const choices = document.querySelector('[role="radiogroup"][aria-label="Fill reference"]');
+    expect(choices).not.toBeNull();
+    expect(sheetCalls.settings?.fillReference).toBe("layer");
+    expect(choices?.querySelector<HTMLInputElement>('input[value="layer"]')?.checked).toBe(true);
+    expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
+    const visible = choices?.querySelector<HTMLInputElement>('input[value="visible"]');
+    expect(visible).not.toBeNull();
+    expect(await countedAfter(() => visible?.click())).toBeGreaterThan(0);
+    expect(sheetCalls.settings?.fillReference).toBe("visible");
+    expect(keptRecord()).toMatchObject({ tools: { fillReference: "visible" } });
+    act(() => buttonSaying("Brush")?.click());
+    expect(document.querySelector('[role="radiogroup"][aria-label="Fill reference"]')).toBeNull();
+    act(() => buttonSaying("Fill")?.click());
+    expect(document.querySelector<HTMLInputElement>('input[value="visible"]')?.checked).toBe(true);
+    expect(sheetCalls.settings?.panelOpen).toBe(false);
+  });
+
+  it("restores a remembered Fill reference and hides its choices behind a panel or the board", async () => {
+    reopen({
+      ...keptHalfway,
+      tools: { fillReference: "visible", brushSize: 0.34, eraserSize: 0.52, smoothing: 0 },
+    });
+    await settle();
+    act(() => buttonSaying("Fill")?.click());
+    expect(sheetCalls.settings?.fillReference).toBe("visible");
+    expect(document.querySelector<HTMLInputElement>('input[value="visible"]')?.checked).toBe(true);
+    act(openPanel("color"));
+    expect(document.querySelector('[role="radiogroup"][aria-label="Fill reference"]')).toBeNull();
+    act(putToolsDown);
+    expect(
+      document.querySelector('[role="radiogroup"][aria-label="Fill reference"]'),
+    ).not.toBeNull();
+    view?.rerender(screenAsApp(false));
+    expect(document.querySelector('[role="radiogroup"][aria-label="Fill reference"]')).toBeNull();
+  });
+
+  it("starts a fresh sticker with this layer after a kept sticker used visible reference", async () => {
+    reopen({
+      ...keptHalfway,
+      tools: { fillReference: "visible", brushSize: 0.34, eraserSize: 0.52, smoothing: 0 },
+    });
+    await settle();
+    expect(sheetCalls.settings?.fillReference).toBe("visible");
+    act(() => drawingScreen.current?.startNewSticker());
+    expect(sheetCalls.settings?.fillReference).toBe("layer");
+  });
+
   it("holds while a tool is in hand, and pauses at a tap on the timer", async () => {
     reopen(keptHalfway);
     await settle();
@@ -1707,7 +1771,7 @@ it.each(["initial", "late"])(
     const record = JSON.stringify({ ticket: 7, elapsedMs: 1000, nsfw: false });
     localStorage.setItem(personKey("draw.session", me.id), record);
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(`drawing-session.${me.id}`, 1);
+      const request = indexedDB.open(`drawing-session.${me.id}`, 2);
       request.onupgradeneeded = () => {
         request.result.createObjectStore("ops");
         request.result.createObjectStore("progress");

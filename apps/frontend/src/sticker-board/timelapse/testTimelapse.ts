@@ -1,11 +1,11 @@
-import type { TimelapseV2 } from "@drawing-app/api/client";
+import type { TimelapseV3 } from "@drawing-app/api/client";
 import type { FrameSource } from "../../ui/frameSource";
 import { layoutFor, type TimelapseLayout } from "./timelapseFrame";
 import type { TimelapsePlayer, TimelapsePlayerOptions } from "./timelapsePlayer";
 
 /** For tests: a timelapse of nothing, which the fake players never read. */
-export const TEST_TIMELAPSE: TimelapseV2 = {
-  v: 2,
+export const TEST_TIMELAPSE: TimelapseV3 = {
+  v: 3,
   ink: [300, 400],
   place: [0, 0, 300, 400],
   density: 1,

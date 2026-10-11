@@ -265,6 +265,11 @@ export const errors = {
     en: "That ticket isn’t yours.",
     ja: "そのチケットは、あなたのものではありません。",
   },
+  /** Sticker replay: an older app must reload before reading the recording. */
+  timelapse_format_unsupported: {
+    en: "Reload Croquis to play this timelapse.",
+    ja: "タイムラプスを見るには、クロッキーを再読み込みしてください。",
+  },
   /** Sticker detail: loading a sticker's timelapse (GET /api/stickers/:stickerId/timelapse) when it was sealed without one, in “Couldn’t load the timelapse” through problemOf; Timelapse shows only for stickers that have one */
   timelapse_not_found: {
     en: "This sticker was sealed without its timelapse.",

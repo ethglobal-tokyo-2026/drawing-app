@@ -1,4 +1,4 @@
-import { MAX_TIMELAPSE_BYTES, type TimelapseV2 } from "@drawing-app/api/client";
+import { MAX_TIMELAPSE_BYTES, type TimelapseV3 } from "@drawing-app/api/client";
 import { storedFromV1 } from "@drawing-app/api/testing/timelapses";
 import { describe, expect, it, vi } from "vitest";
 import { seededRandom } from "../../ui/seededRandom";
@@ -17,6 +17,7 @@ const stroke: Op = {
 const eraser: Op = { tool: "eraser", layer: 1, color: "#ffffff", T: 5000, pts: [3, 4, 12, 0] };
 const fill: Op = {
   tool: "fill",
+  reference: "visible",
   layer: 1,
   color: "#00ff00",
   T: 9000.4,
@@ -38,6 +39,21 @@ const gunzip = async (blob: Blob): Promise<unknown> =>
   JSON.parse(await new Response(blob.stream().pipeThrough(new DecompressionStream("gzip"))).text());
 
 describe("the timelapse", () => {
+  it("round trips each fill reference explicitly in format 3", () => {
+    const encoded = encodeTimelapse({
+      ...input,
+      steps: [
+        { ...fill, reference: "layer" },
+        { ...fill, reference: "visible" },
+      ],
+    });
+    expect(encoded.v).toBe(3);
+    expect(encoded.ops.map((op) => op.at(-1))).toEqual(["layer", "visible"]);
+    expect(decodeTimelapse(encoded).steps).toMatchObject([
+      { reference: "layer" },
+      { reference: "visible" },
+    ]);
+  });
   it("puts the sheet and the sticker's place in sheet units, the ops' own space", () => {
     const timelapse = encodeTimelapse(input);
     expect(timelapse.ink).toEqual([input.frame.w, input.frame.h]);
@@ -67,6 +83,7 @@ describe("the timelapse", () => {
       const taps = [10.334, 30.26, 40, 99.999];
       const steps = taps.map((x): Op => ({
         tool: "fill",
+        reference: "visible",
         layer: 1,
         color: "#00ff00",
         T: 0,
@@ -106,7 +123,16 @@ describe("the timelapse", () => {
         pts: [10, 20, 4, 0, 10.5, 21.3, 4, 16],
       },
       { tool: "eraser", layer: 1, color: "#ffffff", T: 5000, pts: [3, 4, 12, 0] },
-      { tool: "fill", layer: 1, color: "#00ff00", T: 9000, x: 30.25, y: 40.25, gap: FILL_GAP },
+      {
+        tool: "fill",
+        reference: "visible",
+        layer: 1,
+        color: "#00ff00",
+        T: 9000,
+        x: 30.25,
+        y: 40.25,
+        gap: FILL_GAP,
+      },
     ]);
   });
 
@@ -123,7 +149,16 @@ describe("the timelapse", () => {
     const steps: Step[] = [
       { tool: "brush", layer: 2, color: "#ff0000", T: 100, pts: [10, 20, 4, 0, 10.5, 21.3, 4, 16] },
       { tool: "add", layer: 3, at: 2, T: 200 },
-      { tool: "fill", layer: 3, color: "#00ff00", T: 300, x: 30.25, y: 40.25, gap: FILL_GAP },
+      {
+        tool: "fill",
+        reference: "visible",
+        layer: 3,
+        color: "#00ff00",
+        T: 300,
+        x: 30.25,
+        y: 40.25,
+        gap: FILL_GAP,
+      },
       { tool: "opacity", layer: 3, opacity: 75, T: 400 },
       { tool: "lock", layer: 1, on: true, T: 500 },
       { tool: "clip", layer: 2, on: false, T: 600 },
@@ -161,8 +196,26 @@ describe("the timelapse", () => {
         T: 1200,
         pts: [10, 20, 4, 0, 10.5, 21.3, 4, 16],
       },
-      { tool: "fill", layer: 1, color: "#00ff00", T: 9000, x: 30.25, y: 40.25, gap: 0 },
-      { tool: "fill", layer: 1, color: "#0000ff", T: 9500, x: 30.25, y: 40.25, gap: FILL_GAP },
+      {
+        tool: "fill",
+        reference: "visible",
+        layer: 1,
+        color: "#00ff00",
+        T: 9000,
+        x: 30.25,
+        y: 40.25,
+        gap: 0,
+      },
+      {
+        tool: "fill",
+        reference: "visible",
+        layer: 1,
+        color: "#0000ff",
+        T: 9500,
+        x: 30.25,
+        y: 40.25,
+        gap: FILL_GAP,
+      },
     ]);
   });
 
@@ -184,7 +237,7 @@ describe("the timelapse", () => {
   it("goes without one over the server's limit, and says so", async () => {
     const report = vi.fn();
     const random = seededRandom(1);
-    const huge: TimelapseV2 = {
+    const huge: TimelapseV3 = {
       ...encodeTimelapse(input),
       // Random colors don't compress, so this stays over the limit once gzipped.
       ops: Array.from({ length: MAX_TIMELAPSE_BYTES / 8 }, () => [
@@ -195,6 +248,7 @@ describe("the timelapse", () => {
         0,
         0,
         0,
+        "visible",
       ]),
     };
     expect(await gzipTimelapse(huge, report)).toBeNull();

@@ -309,7 +309,7 @@ export class LayerInk implements LayerSurface<Hold> {
   }
 
   /**
-   * Fills from the op's point on what `state` shows, writing on the op's layer alone, and keeps what
+   * Fills from the op's point using its recorded reference, writes on its layer alone, and keeps what
    * it wrote for a replay. The box it changed, in device px, or null when nothing changed.
    */
   flood(op: FillOp, state: LayerState): Rect | null {
@@ -319,7 +319,11 @@ export class LayerInk implements LayerSurface<Hold> {
     const ids = state.layers.map((layer) => layer.id);
     const sheetFind = findOnSheet(
       { width: this.sheetWidth, height: this.sheetHeight },
-      (box) => this.readShown(state, ids, box),
+      (box) => {
+        if (op.reference === "visible") return this.readShown(state, ids, box);
+        const own = this.inks.get(op.layer);
+        return own ? this.readLayer(own, box) : new ImageData(box.w, box.h);
+      },
       Math.floor(op.x * d),
       Math.floor(op.y * d),
       color,

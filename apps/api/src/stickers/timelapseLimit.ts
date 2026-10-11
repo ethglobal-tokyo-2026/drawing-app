@@ -5,4 +5,4 @@
 export const MAX_TIMELAPSE_BYTES = 2 * 1024 * 1024;
 
 /** The most layers a sheet holds, and so a timelapse records. */
-export const MAX_LAYERS = 10;
+export { MAX_LAYERS } from "@drawing-app/db/limits";

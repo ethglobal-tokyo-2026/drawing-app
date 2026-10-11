@@ -212,6 +212,7 @@ describe("keptColor", () => {
   it("picks a drawing back up in the color it was last drawn in", () => {
     const fill: Op = {
       tool: "fill",
+      reference: "visible",
       layer: FIRST_LAYER,
       x: 0,
       y: 0,
@@ -279,6 +280,7 @@ describe("the drawing kept on this device", () => {
     const userId = someone();
     const fill: FillOp = {
       tool: "fill",
+      reference: "visible",
       layer: FIRST_LAYER,
       x: 4,
       y: 5,
@@ -314,7 +316,7 @@ describe("the drawing kept on this device", () => {
     const before = [
       { tool: "brush", color: "#1478C8", pts: [1, 2, 3, 4], T: 10 },
       { tool: "eraser", color: "#E8484F", pts: [], T: 20 },
-      { tool: "fill", x: 4, y: 5, color: "#00868B", gap: 3, T: 30 },
+      { tool: "fill", reference: "visible", x: 4, y: 5, color: "#00868B", gap: 3, T: 30 },
       { tool: "clear", T: 40 },
     ];
     await keepRaw(userId, before);
@@ -343,7 +345,15 @@ describe("the drawing kept on this device", () => {
     ["a stroke with no time", { ...stroked, T: undefined }],
     [
       "a fill with no gap",
-      { tool: "fill", layer: FIRST_LAYER, x: 4, y: 5, color: "#00868B", T: 0 },
+      {
+        tool: "fill",
+        reference: "visible",
+        layer: FIRST_LAYER,
+        x: 4,
+        y: 5,
+        color: "#00868B",
+        T: 0,
+      },
     ],
     ["a stroke with no layer and no time", { tool: "brush", color: "#1478C8", pts: [] }],
     ["a clear that names a layer but has no time", { tool: "clear", layer: FIRST_LAYER }],
@@ -378,10 +388,20 @@ describe("the drawing kept on this device", () => {
 
   it("keeps how the tools were set, and a screen's first render clears nothing kept", async () => {
     const userId = someone();
-    const tools = { brushSize: 0.7, eraserSize: 0.2, smoothing: 55 };
+    const tools = {
+      fillReference: "visible" as const,
+      brushSize: 0.7,
+      eraserSize: 0.2,
+      smoothing: 55,
+    };
     draw(userId, [stroke("a")]).keepTools(tools);
     // A screen with no session yet only reports its tools, which mustn't wipe the session kept.
-    new SessionKeeper(userId).keepTools({ brushSize: 0.34, eraserSize: 0.52, smoothing: 30 });
+    new SessionKeeper(userId).keepTools({
+      fillReference: "layer",
+      brushSize: 0.34,
+      eraserSize: 0.52,
+      smoothing: 30,
+    });
     expect(await loadKept(userId)).toMatchObject({ status: "found", tools });
   });
 
@@ -394,7 +414,7 @@ describe("the drawing kept on this device", () => {
     // After a reload whose read was too slow, the screen carries the ticket and sets its tools.
     const after = new SessionKeeper(userId);
     after.carry(7, null);
-    after.keepTools({ brushSize: 0.7, eraserSize: 0.2, smoothing: 55 });
+    after.keepTools({ fillReference: "layer", brushSize: 0.7, eraserSize: 0.2, smoothing: 55 });
     after.keepNsfw(false);
     after.keepCurrentLayer(FIRST_LAYER);
     expect(await loadKept(userId)).toMatchObject({
@@ -442,7 +462,12 @@ describe("the drawing kept on this device", () => {
 
   it("brings the drawing back without tools when what's kept has none it can read", async () => {
     const userId = someone();
-    draw(userId, [stroke("a")]).keepTools({ brushSize: 0.7, eraserSize: 0.2, smoothing: 55 });
+    draw(userId, [stroke("a")]).keepTools({
+      fillReference: "layer",
+      brushSize: 0.7,
+      eraserSize: 0.2,
+      smoothing: 55,
+    });
     for (const tools of [undefined, { brushSize: 9, eraserSize: 0.2, smoothing: 55 }, "wide"]) {
       keepRecordAs(userId, { tools });
       const kept = await loadKept(userId);
@@ -1024,4 +1049,133 @@ it("does not treat blocked metadata and an empty step store as confirmed empty",
     expect.stringContaining("metadata cannot be verified"),
     expect.any(Error),
   );
+});
+
+async function historicalSession(userId: string, reference?: string) {
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+    const req = indexedDB.open(`drawing-session.${userId}`, 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore("ops");
+      req.result.createObjectStore("progress");
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  const identity = { ticket: 7, generation: "historical" };
+  const steps = [
+    stroke("#000000"),
+    {
+      tool: "fill",
+      layer: 1,
+      x: 2,
+      y: 3,
+      color: "#ff0000",
+      gap: 0,
+      T: 123,
+      ...(reference && { reference }),
+    },
+  ];
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(["ops", "progress"], "readwrite");
+    steps.forEach((step, i) => tx.objectStore("ops").put(step, i));
+    tx.objectStore("progress").put(2, 0);
+    tx.objectStore("progress").put(FRAME, 1);
+    tx.objectStore("progress").put(identity, 2);
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error);
+  });
+  localStorage.setItem(
+    personKey("draw.session", userId),
+    JSON.stringify({
+      ...identity,
+      elapsedMs: 1234,
+      nsfw: false,
+      tools: { brushSize: 0.2, eraserSize: 0.3, smoothing: 40 },
+    }),
+  );
+  return { db, steps };
+}
+
+describe("saved Fill reference upgrade", () => {
+  it("preserves the session while upgrading historical fills and prevents old-schema reopen", async () => {
+    const userId = someone();
+    const { db, steps } = await historicalSession(userId);
+    db.onversionchange = () => db.close();
+    const kept = await loadKeptSession(userId);
+    expect(kept).toMatchObject({
+      status: "found",
+      ticket: 7,
+      generation: "historical",
+      elapsedMs: 1234,
+      frame: FRAME,
+      tools: { fillReference: "layer" },
+      steps: [steps[0], { ...steps[1], reference: "visible" }],
+    });
+    const reopen = await new Promise<string>((resolve) => {
+      const req = indexedDB.open(`drawing-session.${userId}`, 1);
+      req.onerror = () => resolve(req.error?.name ?? "error");
+      req.onsuccess = () => {
+        req.result.close();
+        resolve("opened");
+      };
+    });
+    expect(reopen).toBe("VersionError");
+    expect(() => db.transaction("ops", "readwrite")).toThrow();
+  });
+  it.each([undefined, "other"])(
+    "refuses corrupt upgraded fills instead of assigning a reference: %s",
+    async (reference) => {
+      const userId = someone();
+      await keepRaw(userId, [
+        { tool: "fill", layer: 1, x: 2, y: 3, color: "#ff0000", gap: 0, T: 0, reference },
+      ]);
+      expect(await loadKeptSession(userId)).toMatchObject({ status: "lost" });
+    },
+  );
+  it("bounds blocked upgrades and leaves original data available after the blocker closes", async () => {
+    const userId = someone();
+    const { db, steps } = await historicalSession(userId);
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const kept = await loadKeptSession(userId);
+    expect(kept).toMatchObject({
+      status: "unverified",
+      reason: "upgrade-failed",
+    });
+    if (kept.status !== "unverified") throw new Error("Expected persistent recovery");
+    expect(String(kept.error)).toContain("Close other Croquis tabs");
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("blocked"));
+    db.close();
+    await tick();
+    await tick();
+    const check = await openKept();
+    expect(check.version).toBe(1);
+    const rows = await new Promise((resolve) => {
+      const req = check.transaction("ops").objectStore("ops").getAll();
+      req.onsuccess = () => resolve(req.result);
+    });
+    expect(rows).toEqual(steps);
+    check.close();
+    expect(await loadKeptSession(userId)).toMatchObject({
+      status: "found",
+      steps: [steps[0], { ...steps[1], reference: "visible" }],
+    });
+  }, 10000);
+  it("aborts invalid historical upgrades without changing their version or records", async () => {
+    const userId = someone();
+    const { db, steps } = await historicalSession(userId, "other");
+    db.close();
+    const failed = await loadKeptSession(userId);
+    expect(failed).toMatchObject({ status: "unverified", reason: "upgrade-failed" });
+    if (failed.status !== "unverified") throw new Error("Expected persistent recovery");
+    expect(String(failed.error)).toContain("step 1");
+    const check = await openKept();
+    expect(check.version).toBe(1);
+    const tx = check.transaction("ops");
+    const rows = await new Promise((resolve) => {
+      const req = tx.objectStore("ops").getAll();
+      req.onsuccess = () => resolve(req.result);
+    });
+    expect(rows).toEqual(steps);
+    check.close();
+  });
 });
