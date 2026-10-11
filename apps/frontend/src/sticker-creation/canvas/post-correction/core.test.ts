@@ -200,6 +200,28 @@ describe("post-correction core", () => {
 });
 
 describe("Croquis width and time transfer", () => {
+  it.each([1e200, 1e-200])("retains distance proportions at coordinate scale %s", (scale) => {
+    const geometry = [
+      { x: 0, y: 0 },
+      { x: scale, y: scale },
+      { x: 2 * scale, y: 2 * scale },
+    ];
+    expect(transferStrokeAttributes(geometry, [0, 0, 2, 0, 2 * scale, 2 * scale, 6, 20])).toEqual([
+      0,
+      0,
+      2,
+      0,
+      scale,
+      scale,
+      4,
+      10,
+      2 * scale,
+      2 * scale,
+      6,
+      20,
+    ]);
+  });
+
   it("interpolates existing widths and elapsed times by normalized distance while preserving endpoints exactly", () => {
     expect(
       transferStrokeAttributes(

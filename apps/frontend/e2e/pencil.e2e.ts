@@ -2,6 +2,12 @@ import { DAILY_TICKETS_PER_DAY } from "@drawing-app/api/client";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
 import { PALM_CONTACT_PX } from "../src/sticker-creation/canvas/gestures.ts";
+import {
+  correctPostStroke,
+  transferStrokeAttributes,
+  type PostCorrectionInput,
+} from "../src/sticker-creation/canvas/post-correction/core.ts";
+import { FIRST_POST_CORRECTION } from "../src/sticker-creation/canvas/post-correction/settings.ts";
 import { canvas, chooseLanguage, drawKeyName, openSettings, say, signIn } from "./helpers.ts";
 import { ipad } from "./ipad.ts";
 import {
@@ -84,6 +90,100 @@ async function twoFingerTap(fingers: Hand, box: Box) {
   await fingers.down(tap);
   await fingers.up();
 }
+
+test("post correction preserves every output bit across browser engines", async ({
+  page,
+}, testInfo) => {
+  const bits = (values: readonly number[]) =>
+    values.map((value) => {
+      const bytes = Buffer.alloc(8);
+      bytes.writeDoubleBE(value);
+      return bytes.toString("hex");
+    });
+  const cases = [0.1, 1].map((pressure) => {
+    const positions = [
+      [0, 0],
+      [1, 0.3],
+      [2, 1],
+      [3, -0.2],
+      [4, 0],
+      [5, 2],
+    ];
+    const packets = positions.map(([x, y], index) => ({
+      x: x * 0.2,
+      y: y * 0.2,
+      pressure,
+      t: 100 + index * 10,
+      phase: (index === 0 ? 2 : index === positions.length - 1 ? 3 : 1) as 1 | 2 | 3,
+    }));
+    const input: PostCorrectionInput = {
+      packets,
+      renderedPoints: packets.flatMap((packet, index) => [
+        packet.x,
+        packet.y,
+        index + 1,
+        index * 10,
+      ]),
+      settings: { ...FIRST_POST_CORRECTION, strength: 1 },
+      magnificationFraction: 1,
+      brushSize: 29.5,
+      pointerType: "pen",
+      stabilization: 20,
+    };
+    const expected = correctPostStroke(input).points;
+    const geometry = Array.from({ length: expected.length / 4 }, (_, index) => ({
+      x: expected[index * 4],
+      y: expected[index * 4 + 1],
+    }));
+    return {
+      pressure,
+      input,
+      geometry,
+      expected,
+      expectedBits: bits(expected),
+      expectedTransferBits: bits(transferStrokeAttributes(geometry, input.renderedPoints)),
+    };
+  });
+  expect(cases[0].expected.slice(0, 4)).toEqual([0, 0, 1, 0]);
+  expect(cases[1].expected[0]).toBeGreaterThan(0);
+  expect(cases[0].expected).not.toEqual(cases[1].expected);
+  for (const c of cases) expect(c.expected.slice(-4)).toEqual([1, 0.4, 6, 50]);
+
+  await page.goto("/");
+  const observed = await page.evaluate(
+    async (inputs) => {
+      // Vite serves the production module. Only test inputs and bit encoding are repeated here.
+      const modulePath = "/src/sticker-creation/canvas/post-correction/core.ts";
+      // This URL is the same module imported above, resolved by Vite inside the browser.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+      const correction = (await import(modulePath)) as {
+        correctPostStroke: typeof correctPostStroke;
+        transferStrokeAttributes: typeof transferStrokeAttributes;
+      };
+      const bits = (values: readonly number[]) =>
+        values.map((value) => {
+          const bytes = new DataView(new ArrayBuffer(8));
+          bytes.setFloat64(0, value);
+          return Array.from(new Uint8Array(bytes.buffer), (byte) =>
+            byte.toString(16).padStart(2, "0"),
+          ).join("");
+        });
+      return inputs.map(({ input, geometry }) => ({
+        points: bits(correction.correctPostStroke(input).points),
+        transferred: bits(correction.transferStrokeAttributes(geometry, input.renderedPoints)),
+      }));
+    },
+    cases.map(({ input, geometry }) => ({ input, geometry })),
+  );
+  await testInfo.attach("cross-engine-correction.json", {
+    body: JSON.stringify({ cases, observed }, null, 2),
+    contentType: "application/json",
+  });
+  // This checks cross-engine consistency, separately from the native arithmetic comparisons.
+  expect(observed).toEqual(
+    cases.map((c) => ({ points: c.expectedBits, transferred: c.expectedTransferBits })),
+  );
+});
 
 test("a pen's first stroke brings the Pencil only tile; fingers then only tap, until the tile lets them draw", async ({
   page,

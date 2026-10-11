@@ -44,6 +44,17 @@ function ensure(condition: unknown, message: string): asserts condition {
   if (!condition) throw new PostCorrectionError(message);
 }
 
+/** Fixed operations keep Croquis width/time transfer consistent across browser engines. */
+function attributeDistance(dx: number, dy: number): number {
+  const scale = Math.max(Math.abs(dx), Math.abs(dy));
+  // Nonfinite differences reach the accumulated-distance check below; zero avoids 0/0.
+  if (scale === 0 || !Number.isFinite(scale)) return scale;
+  const x = dx / scale,
+    y = dy / scale;
+  // Scaling avoids overflow or underflow from squaring the original coordinates.
+  return scale * Math.sqrt(x * x + y * y);
+}
+
 /** Croquis attribute transfer, separate from recovered native scalar/curve arithmetic. */
 export function transferStrokeAttributes(
   geometry: readonly Point[],
@@ -64,7 +75,7 @@ export function transferStrokeAttributes(
   for (let index = 4; index < renderedPoints.length; index += 4)
     sourceDistance.push(
       sourceDistance[sourceDistance.length - 1] +
-        Math.hypot(
+        attributeDistance(
           renderedPoints[index] - renderedPoints[index - 4],
           renderedPoints[index + 1] - renderedPoints[index - 3],
         ),
@@ -72,7 +83,10 @@ export function transferStrokeAttributes(
   for (let index = 1; index < points.length; index++)
     outputDistance.push(
       outputDistance[outputDistance.length - 1] +
-        Math.hypot(points[index].x - points[index - 1].x, points[index].y - points[index - 1].y),
+        attributeDistance(
+          points[index].x - points[index - 1].x,
+          points[index].y - points[index - 1].y,
+        ),
     );
   const sourceLength = sourceDistance[sourceDistance.length - 1],
     outputLength = outputDistance[outputDistance.length - 1];
