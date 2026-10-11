@@ -1,4 +1,0 @@
-{"browser":"chromium","withLargeShape":false,"brushWidth":0.5249999999999999,"peakDotAlpha":255,"nonzeroAlphaPixels":8,"cutFound":false,"dotIncluded":false}
-{"browser":"chromium","withLargeShape":true,"brushWidth":0.5249999999999999,"peakDotAlpha":255,"nonzeroAlphaPixels":10008,"cutFound":true,"dotIncluded":false}
-{"browser":"webkit","withLargeShape":false,"brushWidth":0.5249999999999999,"peakDotAlpha":255,"nonzeroAlphaPixels":9,"cutFound":false,"dotIncluded":false}
-{"browser":"webkit","withLargeShape":true,"brushWidth":0.5249999999999999,"peakDotAlpha":255,"nonzeroAlphaPixels":10009,"cutFound":true,"dotIncluded":false}

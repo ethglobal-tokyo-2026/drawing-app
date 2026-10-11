@@ -1,4 +1,0 @@
-{"browser":"chromium","steal":true,"oldRejected":"AbortError","newGranted":true}
-{"browser":"chromium","steal":false,"oldRejected":"","newGranted":false}
-{"browser":"webkit","steal":true,"oldRejected":"AbortError","newGranted":true}
-{"browser":"webkit","steal":false,"oldRejected":"","newGranted":false}

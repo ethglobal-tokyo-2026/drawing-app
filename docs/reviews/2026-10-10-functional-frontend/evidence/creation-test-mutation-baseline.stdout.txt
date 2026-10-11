@@ -1,8 +1,0 @@
-
- RUN  v5.0.1 REPO_ROOT/apps/frontend
-
-
- Test Files  2 passed (2)
-      Tests  43 passed (43)
-   Start at  15:00:04
-   Duration  1.26s (tests 56%, environment 26%, transform 14%, import 4%)

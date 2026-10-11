@@ -1,9 +1,0 @@
-
- RUN  v5.0.1 REPO_ROOT/apps/frontend
-
-Applied transparent mutation to src/sticker-board/timelapse/timelapsePlayer.ts
-
- Test Files  2 passed (2)
-      Tests  43 passed (43)
-   Start at  15:00:11
-   Duration  1.18s (tests 61%, environment 17%, transform 17%, import 4%)
