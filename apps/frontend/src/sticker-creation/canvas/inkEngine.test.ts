@@ -1401,6 +1401,47 @@ describe("InkEngine", () => {
     expect(engine.steps).toEqual(before);
   });
 
+  it("merges as one step, selects the restored source on Undo and the destination on Redo", () => {
+    const { engine, stroke, events } = setup();
+    stroke("mouse", 1, [10, 10], [50, 10]);
+    engine.addLayer();
+    stroke("mouse", 2, [10, 30], [50, 30]);
+    const before = [...engine.steps];
+    engine.mergeDown();
+    expect(engine.steps).toHaveLength(before.length + 1);
+    expect(engine.steps.at(-1)).toMatchObject({ tool: "merge", layer: 2, into: 1 });
+    expect(events.onLayers.mock.lastCall?.[0].current).toBe(1);
+    engine.undo();
+    expect(engine.steps).toEqual(before);
+    expect(events.onLayers.mock.lastCall?.[0].current).toBe(2);
+    engine.redo();
+    expect(events.onLayers.mock.lastCall?.[0].current).toBe(1);
+  });
+
+  it("preserves merge selection and redo after both allocation attempts fail", () => {
+    const { engine, ink, stroke, events } = setup();
+    stroke("mouse", 1, [10, 10], [50, 10]);
+    engine.addLayer();
+    stroke("mouse", 2, [10, 30], [50, 30]);
+    engine.setLocked(true);
+    engine.undo();
+    const before = [...engine.steps];
+    const apply = ink.apply.bind(ink);
+    const spy = vi.spyOn(ink, "apply").mockImplementation((step, state) => {
+      if (step.tool === "merge") throw new CanvasUnavailableError();
+      apply(step, state);
+    });
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    engine.mergeDown();
+    expect(engine.steps).toEqual(before);
+    expect(events.onLayers.mock.lastCall?.[0].current).toBe(2);
+    expect(events.onInkFailed).toHaveBeenCalledOnce();
+    spy.mockRestore();
+    engine.redo();
+    expect(engine.steps.at(-1)?.tool).toBe("lock");
+  });
+
   it("releases covered ink and restores its history, current layer and redo on return", () => {
     const { engine, ink, display, stroke, events } = setup();
     stroke("mouse", 1, [10, 10], [50, 10]);

@@ -1,4 +1,4 @@
-import type { TimelapseV3 } from "@drawing-app/api/client";
+import type { TimelapseV4 } from "@drawing-app/api/client";
 import { messageOf } from "../../i18n/errorMessage";
 import { notePerformance, timeOurWork } from "../../performance/performanceRecorder";
 import { blankCanvas, context2d } from "../../sticker-creation/canvas/context2d";
@@ -42,7 +42,7 @@ const SHEEN_BAND = 0.25;
 const SHEEN_ALPHA = 0.35;
 
 export interface TimelapsePlayerOptions {
-  timelapse: TimelapseV3;
+  timelapse: TimelapseV4;
   /** The canvas the ink plays on, covering the stage: the player sizes its backing store to it. */
   canvas: HTMLCanvasElement;
   /** The detail's stage, CSS px. */
@@ -231,6 +231,31 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
     if (progress < 1 && !reduced) {
       beat = { step, progress };
       return;
+    }
+    if (step.tool === "merge") {
+      if (inks.has(step.layer) || inks.has(step.into)) {
+        const { canvas: merged, g } = blankCanvas(view.width, view.height);
+        try {
+          compositeLayers(
+            g,
+            state,
+            (id) => inks.get(id)?.canvas ?? null,
+            [step.into, step.layer],
+            { x: 0, y: 0, w: view.width, h: view.height },
+            scratchFor(state),
+          );
+          inSheetUnits(g);
+          g.beginPath();
+          g.rect(0, 0, sheet.width, sheet.height);
+          g.clip();
+        } catch (error) {
+          releaseCanvas(merged);
+          throw error;
+        }
+        letGoOfLayer(step.into);
+        letGoOfLayer(step.layer);
+        inks.set(step.into, g);
+      }
     }
     shifted = index;
     if (step.tool === "delete" || step.tool === "clear") letGoOfLayer(step.layer);

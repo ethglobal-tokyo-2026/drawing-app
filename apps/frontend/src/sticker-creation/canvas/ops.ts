@@ -43,6 +43,8 @@ export type LayerStep =
   /** `at`: the new layer's index from the back. */
   | { tool: "add"; layer: LayerId; at: number; T: number }
   | { tool: "delete"; layer: LayerId; T: number }
+  /** Flattens the source and its immediate lower destination in their before-state. */
+  | { tool: "merge"; layer: LayerId; into: LayerId; T: number }
   /** `to`: the layer's index from the back once moved. */
   | { tool: "move"; layer: LayerId; to: number; T: number }
   /** `opacity`: 0 to 100, whole numbers. */

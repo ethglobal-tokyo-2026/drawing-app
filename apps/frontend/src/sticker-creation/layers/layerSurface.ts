@@ -12,8 +12,12 @@ export interface LayerSurface<Hold> {
   apply(step: Step, before: LayerState): void;
   /** The layers to show; set once after an undo, a redo, a load or a reset. */
   show(state: LayerState): void;
-  /** Rebuilds one layer in isolation, preserving its original pixels if any write fails. */
-  rebuild(layer: LayerId, write: () => void): void;
+  /** Stages layers atomically; on success retains only `retain`, restoring the other originals. */
+  rebuild(
+    layer: LayerId | readonly LayerId[],
+    write: () => void,
+    retain?: readonly LayerId[],
+  ): void;
   /** Roughly what replaying the step costs, counted in strokes. */
   cost(step: Step): number;
   /** A hold on the layer's pixels as they are now: shared with the live layer until it's next written, copied then. */

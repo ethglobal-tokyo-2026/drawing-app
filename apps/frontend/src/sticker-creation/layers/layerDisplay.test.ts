@@ -484,6 +484,39 @@ describe("the sheet's display", () => {
     /** Every element the flash shows in the sheet. */
     const flashParts = (host: HTMLElement) => host.querySelectorAll("[class*='layer-flash']");
 
+    it("keeps the exposed selection cue readable when the artwork is nearly transparent", () => {
+      const { ink, display, host, group } = sheet();
+      ink.apply(across({ ...brush(), color: "#000000" }), ONE);
+      display.show(stateOf(layer(1, { opacity: 1 })), 1);
+      display.flash();
+      const cue = host.querySelector<HTMLCanvasElement>(".layer-flash__pulse");
+      if (!cue) throw new Error("No pulse for visible ink");
+      expect(cue.parentElement).toBe(host);
+      expect(group.style.opacity).toBe("0.01");
+      // The visible black at 1% is almost white on paper, so the cue must be dark.
+      const center = pixel(cue, { x: 20, y: 20 });
+      expect(center[0]).toBeLessThan(60);
+      expect(center[3]).toBeGreaterThan(200);
+    });
+
+    it("changes sparkle origins on repeated selection without changing the artwork", () => {
+      const { ink, display, host } = sheet();
+      ink.apply(across(brush()), ONE);
+      display.show(ONE, 1);
+      const origins = () =>
+        [...host.querySelectorAll<HTMLElement>(".layer-flash__glint")].map((glint) => [
+          glint.style.left,
+          glint.style.top,
+        ]);
+      const random = vi.spyOn(Math, "random").mockReturnValue(0.1);
+      display.flash();
+      const first = origins();
+      random.mockReturnValue(0.9);
+      display.flash();
+      expect(first.length).toBeGreaterThan(0);
+      expect(origins()).not.toEqual(first);
+    });
+
     it("shows stationary ink identification without particles under reduced motion", () => {
       vi.spyOn(window, "matchMedia").mockReturnValue(new ReducedMotion(true));
       const { display, host } = coveredSheet(RIGHT);
@@ -519,7 +552,7 @@ describe("the sheet's display", () => {
     it.each(["inner contour", "pulse", "sampling", "animation", "listener"])(
       "releases partial feedback and preserves borrowed ink when %s construction fails",
       (failure) => {
-        const { ink, above, host, group, before } = coveredSheet(RIGHT);
+        const { ink, above, host, before } = coveredSheet(RIGHT);
         const selected = ink.layerCanvas(1);
         if (!selected) throw new Error("No selected ink");
         const borrowed = [pixelsOf(selected), pixelsOf(above)];
@@ -529,8 +562,8 @@ describe("the sheet's display", () => {
         vi.spyOn(canvas2d, "blankCanvas").mockImplementation((...args) => {
           allocations++;
           if (
-            (failure === "inner contour" && allocations === 3) ||
-            (failure === "pulse" && allocations === 4)
+            (failure === "inner contour" && allocations === 4) ||
+            (failure === "pulse" && allocations === 6)
           )
             throw originalError;
           const made = allocate(...args);
@@ -559,7 +592,15 @@ describe("the sheet's display", () => {
         const onEnd = vi.fn();
         let thrown: unknown;
         try {
-          flashLayer({ layer: selected, above, inked: WHOLE, current: group, sheet: host, onEnd });
+          flashLayer({
+            layer: selected,
+            above,
+            below: document.createElement("canvas"),
+            opacity: 100,
+            inked: WHOLE,
+            sheet: host,
+            onEnd,
+          });
         } catch (error) {
           thrown = error;
         }
@@ -581,7 +622,7 @@ describe("the sheet's display", () => {
     );
 
     it.each([false, true])("finishes once and never after explicit cancellation (%s)", (cancel) => {
-      const { display, ink, above, host, group } = coveredSheet(RIGHT);
+      const { display, ink, above, host } = coveredSheet(RIGHT);
       const selected = ink.layerCanvas(1);
       if (!selected) throw new Error("No selected ink");
       const before = [pixelsOf(selected), pixelsOf(above)];
@@ -590,7 +631,8 @@ describe("the sheet's display", () => {
         layer: selected,
         above,
         inked: WHOLE,
-        current: group,
+        below: document.createElement("canvas"),
+        opacity: 100,
         sheet: host,
         onEnd,
       });
@@ -607,14 +649,14 @@ describe("the sheet's display", () => {
     });
 
     it.each(["#ffffff", "#000000"])("contrasts against %s ink without changing it", (color) => {
-      const { ink, display, group } = sheet();
+      const { ink, display, host } = sheet();
       ink.apply(across({ ...brush(), color }), ONE);
       display.show(ONE, 1);
       const selected = ink.layerCanvas(1);
       if (!selected) throw new Error("No selected ink");
       const before = pixelsOf(selected);
       display.flash();
-      const cue = group.querySelector<HTMLCanvasElement>(".layer-flash__pulse");
+      const cue = host.querySelector<HTMLCanvasElement>(".layer-flash__pulse");
       if (!cue) throw new Error("No pulse");
       expect(cue).not.toBeNull();
       const center = pixel(cue, { x: 20, y: 20 });
@@ -698,14 +740,14 @@ describe("the sheet's display", () => {
     });
 
     it("lights only the visible ink of a clipped current layer", () => {
-      const { ink, display, group } = sheet();
+      const { ink, display, host } = sheet();
       const clipped = stateOf(layer(1), layer(2, { clipped: true }));
       inkRegion(ink, 1, LEFT, RED);
       ink.apply(across(brush(2)), clipped);
       inkRegion(ink, 2, WHOLE, BLUE);
       display.show(clipped, 2);
       display.flash();
-      const pulse = group.querySelector(".layer-flash__pulse");
+      const pulse = host.querySelector(".layer-flash__pulse");
       if (!(pulse instanceof HTMLCanvasElement)) throw new Error("The flash has no pulse");
       const [left, right] = [
         { x: 8, y: 20 },
@@ -716,7 +758,7 @@ describe("the sheet's display", () => {
     });
 
     it("flashes a layer nothing covers without drawing from the empty side above, and outlines nothing", () => {
-      const { ink, host, display, group, above } = sheet();
+      const { ink, host, display, above } = sheet();
       ink.apply(across(brush()), ONE);
       display.show(ONE, 1);
       expect(sizeOf(above)).toEqual([0, 0]);
@@ -726,7 +768,7 @@ describe("the sheet's display", () => {
       );
       expect(drewAbove).toBe(false);
       expect(host.querySelector(".layer-flash__outline")).toBeNull();
-      expect(group.querySelector(".layer-flash__pulse")).not.toBeNull();
+      expect(host.querySelector(".layer-flash__pulse")).not.toBeNull();
       expect(host.querySelectorAll(".layer-flash__glint").length).toBeGreaterThan(0);
     });
   });

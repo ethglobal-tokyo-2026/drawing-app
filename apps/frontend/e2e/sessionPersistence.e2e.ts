@@ -106,7 +106,16 @@ test("post-ready expiry waits for Reload and preserves another tab's newer sessi
   await startProbe(page);
   const otherTab = await page.context().newPage();
   try {
+    // Both deferred reads must finish before expiry, or their 401 removes Draw before the tap.
+    const boardReady = Promise.all(
+      ["/api/ticket-shop", "/api/sticker-boards/me/user-stats"].map((path) =>
+        page.waitForResponse(
+          (response) => new URL(response.url()).pathname === path && response.status() === 200,
+        ),
+      ),
+    );
     await signIn(page, "expired-alice", "en");
+    await boardReady;
     const before = await snapshot(page);
     const requests: string[] = [];
     page.on("request", (request) => {

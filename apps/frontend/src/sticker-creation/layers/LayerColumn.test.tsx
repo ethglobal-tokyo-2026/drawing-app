@@ -63,7 +63,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("LayerColumn", () => {
-  it("reports the position and continuing ends only while layers overflow", () => {
+  it("describes the continuing ends and fades only edges with more layers", () => {
     renderColumn();
     const list = find('[role="listbox"]');
     layOut(list, 42);
@@ -73,19 +73,18 @@ describe("LayerColumn", () => {
         list.dispatchEvent(new Event("scroll"));
       });
     scroll(0);
-    const position = () => find('[role="meter"]');
-    expect(position().getAttribute("aria-label")).toBe("Layer list position");
-    expect(position().getAttribute("aria-valuenow")).toBe("0");
-    expect(position().getAttribute("aria-valuetext")).toBe("More layers below");
+    const position = () => find(".layer-overflow-description");
+    expect(position().textContent).toBe("More layers below");
+    expect(find(".layer-scroll-well").getAttribute("data-more-below")).toBe("true");
     scroll(42);
-    expect(position().getAttribute("aria-valuenow")).toBe("50");
-    expect(position().getAttribute("aria-valuetext")).toBe("More layers above and below");
+    expect(position().textContent).toBe("More layers above and below");
+    expect(find(".layer-scroll-well").getAttribute("data-more-above")).toBe("true");
     scroll(84);
-    expect(position().getAttribute("aria-valuenow")).toBe("100");
-    expect(position().getAttribute("aria-valuetext")).toBe("More layers above");
+    expect(position().textContent).toBe("More layers above");
+    expect(find(".layer-scroll-well").hasAttribute("data-more-below")).toBe(false);
     layOut(list);
     scroll(0);
-    expect(findAll('[role="meter"]')).toHaveLength(0);
+    expect(findAll(".layer-overflow-description")).toHaveLength(0);
   });
 
   it("rechecks overflow after a resize and after layers are removed", () => {
@@ -105,16 +104,16 @@ describe("LayerColumn", () => {
     const list = find('[role="listbox"]');
     layOut(list, 42);
     act(() => resized.forEach((resize) => resize()));
-    expect(findAll('[role="meter"]')).toHaveLength(1);
+    expect(findAll(".layer-overflow-description")).toHaveLength(1);
     layOut(list);
     act(() => resized.forEach((resize) => resize()));
-    expect(findAll('[role="meter"]')).toHaveLength(0);
+    expect(findAll(".layer-overflow-description")).toHaveLength(0);
     layOut(list, 42);
     act(() => resized.forEach((resize) => resize()));
-    expect(findAll('[role="meter"]')).toHaveLength(1);
+    expect(findAll(".layer-overflow-description")).toHaveLength(1);
     Object.defineProperty(list, "scrollHeight", { configurable: true, value: 42 });
     renderColumn({ chips: chipsOf([3]), current: 3 });
-    expect(findAll('[role="meter"]')).toHaveLength(0);
+    expect(findAll(".layer-overflow-description")).toHaveLength(0);
   });
 
   it("offers options help only for a blank current layer in a stack", () => {

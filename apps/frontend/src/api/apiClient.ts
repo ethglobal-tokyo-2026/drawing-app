@@ -34,7 +34,7 @@ import type {
   TicketShop,
   Tickets,
   TicketUse,
-  TimelapseV3,
+  TimelapseV4,
   UnseenGratitude,
   UserStats,
 } from "@drawing-app/api/client";
@@ -54,7 +54,7 @@ interface SealRequest {
   sharp?: Blob;
   mask: Blob;
   flat: Blob;
-  /** The gzipped TimelapseV3; a seal without one still seals. */
+  /** The gzipped TimelapseV4; a seal without one still seals. */
   timelapse?: Blob;
   /** Seals an NSFW sticker. */
   nsfw: boolean;
@@ -110,7 +110,7 @@ export interface ApiClient {
   /** GET /api/stickers/:stickerId */
   stickerDetail: (stickerId: string) => Promise<StickerDetail>;
   /** GET /api/stickers/:stickerId/timelapse: how it was drawn; 404 timelapse_not_found without one. */
-  timelapse: (stickerId: string) => Promise<TimelapseV3>;
+  timelapse: (stickerId: string) => Promise<TimelapseV4>;
   /**
    * POST /api/stickers/:stickerId/nsfw: marks a sealed sticker 18+, which only its Original Artist
    * can. `sticker` as GET /api/stickers/:stickerId answers it for you; `cdnPurged` is false when the

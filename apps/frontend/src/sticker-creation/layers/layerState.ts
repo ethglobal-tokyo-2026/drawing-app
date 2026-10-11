@@ -98,6 +98,20 @@ function applyStep(state: LayerState, step: LayerStep, stepIndex: number | null)
   }
   if (at < 0) throw refuse(NO_SUCH_LAYER);
   switch (step.tool) {
+    case "merge": {
+      const target = mergeDownTarget(state, step.layer);
+      if ("reason" in target) throw refuse(target.reason);
+      if (target.into !== step.into)
+        throw refuse("the destination must be immediately below the source");
+      return {
+        ...state,
+        layers: layers
+          .filter((layer) => layer.id !== step.layer)
+          .map((layer) =>
+            layer.id === step.into ? { ...layer, opacity: FULL_OPACITY, clipped: false } : layer,
+          ),
+      };
+    }
     case "delete":
       if (layers.length === 1) throw refuse("the last layer can't be deleted");
       return { ...state, layers: layers.filter((layer) => layer.id !== step.layer) };
@@ -143,8 +157,24 @@ export function indexOf(state: LayerState, id: LayerId): number {
   return state.layers.findIndex((layer) => layer.id === id);
 }
 
+/** A pair can flatten unless an immediately upper clipped layer still depends on its shape. */
+export function mergeDownTarget(
+  state: LayerState,
+  source: LayerId,
+): { into: LayerId } | { reason: "no-lower-layer" | "clipped-above" } {
+  const at = indexOf(state, source);
+  if (at <= 0) return { reason: "no-lower-layer" };
+  if (state.layers[at + 1]?.clipped) return { reason: "clipped-above" };
+  return { into: state.layers[at - 1].id };
+}
+
 /** Updates `inked` for `step`. It doesn't check that the step fits the layers; `stateAt` does. */
 function inkAfter(inked: Set<LayerId>, step: Step): void {
+  if (step.tool === "merge") {
+    if (inked.has(step.layer)) inked.add(step.into);
+    inked.delete(step.layer);
+    return;
+  }
   if (isOp(step)) inked.add(step.layer);
   else if (step.tool === "clear" || step.tool === "delete" || step.tool === "add")
     inked.delete(step.layer);

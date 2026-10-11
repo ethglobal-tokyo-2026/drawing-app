@@ -48,7 +48,7 @@ async function clockContinues(page: Page) {
 async function expectCornerPrintClearOfLayers(page: Page) {
   const print = await page.locator(".corner-print").boundingBox();
   if (!print) throw new Error("The Kyoto Seika Subjects have no corner print");
-  for (const selector of [".drawing-layer-column", ".opacity-slider"]) {
+  for (const selector of [".drawing-layer-column"]) {
     const control = await page.locator(selector).boundingBox();
     if (!control) throw new Error(`${selector} has no box`);
     expect(control.y + control.height, `${selector} reaches the corner print`).toBeLessThanOrEqual(
@@ -86,6 +86,7 @@ test("a left drawing hand mirrors the layer column, slider and options toward th
 
   await page.getByRole("button", { name: say(stickerCreation.layers.add, language) }).click();
   await expect(chip(page, 2)).toBeVisible();
+  await chip(page, 2).click();
   const slider = page.getByRole("slider", {
     name: say(stickerCreation.opacitySlider.label, language),
   });
@@ -96,8 +97,7 @@ test("a left drawing hand mirrors the layer column, slider and options toward th
   if (!chipBox || !sliderBox) throw new Error("The left-hand chip or slider has no box");
   expect(sliderBox.x + sliderBox.width).toBeLessThanOrEqual(chipBox.x + 1);
 
-  await chip(page, 2).click();
-  const options = page.getByRole("toolbar", {
+  const options = page.getByRole("dialog", {
     name: say(stickerCreation.layers.options, language, { number: 2 }),
   });
   await expect(options).toBeVisible();
@@ -136,21 +136,21 @@ test("a begun Kyoto Seika clock continues through layer options, opacity and reo
   await page.getByRole("button", { name: say(stickerCreation.layers.add, language) }).click();
   await chip(page, 2).click();
   await expect(
-    page.getByRole("toolbar", {
+    page.getByRole("dialog", {
       name: say(stickerCreation.layers.options, language, { number: 2 }),
     }),
   ).toBeVisible();
   await clockContinues(page);
-  await chip(page, 2).click();
 
-  const thumb = page.locator(".opacity-thumb");
+  const thumb = page.locator(".opacity-slider");
   const thumbBox = await thumb.boundingBox();
   if (!thumbBox) throw new Error("The opacity thumb has no box");
   await page.mouse.move(thumbBox.x + thumbBox.width / 2, thumbBox.y + thumbBox.height / 2);
   await page.mouse.down();
-  await expect(page.locator(".opacity-slider")).toHaveClass(/is-held/);
+  await expect(page.locator(".opacity-slider")).toBeFocused();
   await clockContinues(page);
   await page.mouse.up();
+  await chip(page, 2).click();
 
   const top = await chip(page, 2).boundingBox();
   const bottom = await chip(page, 1).boundingBox();

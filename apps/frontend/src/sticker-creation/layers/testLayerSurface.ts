@@ -96,17 +96,28 @@ export class TestLayerSurface implements LayerSurface<TestHold> {
       return;
     }
     if (step.tool === "clear" || step.tool === "add") this.pixels.set(step.layer, []);
-    else if (step.tool === "delete") this.pixels.delete(step.layer);
+    else if (step.tool === "merge") {
+      this.pixels.set(step.into, [...this.pixelsOf(step.into), ...this.pixelsOf(step.layer)]);
+      this.pixels.delete(step.layer);
+    } else if (step.tool === "delete") this.pixels.delete(step.layer);
     this.shown = applyLayerStep(before, step);
   }
 
-  rebuild(layer: LayerId, write: () => void): void {
-    const pixels = this.pixelsOf(layer);
+  rebuild(
+    layer: LayerId | readonly LayerId[],
+    write: () => void,
+    retain?: readonly LayerId[],
+  ): void {
+    const ids = typeof layer === "number" ? [layer] : layer;
+    const originals = new Map(ids.map((id) => [id, this.pixelsOf(id)]));
+    const kept = new Set(retain ?? ids);
+    let succeeded = false;
     try {
       write();
-    } catch (error) {
-      this.pixels.set(layer, pixels);
-      throw error;
+      succeeded = true;
+    } finally {
+      for (const [id, pixels] of originals)
+        if (!succeeded || !kept.has(id)) this.pixels.set(id, pixels);
     }
   }
 

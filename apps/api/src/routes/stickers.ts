@@ -54,7 +54,7 @@ export const stickerRoutes = (deps: AppDeps) =>
       validate("query", timelapseQuery),
       (c) => {
         const { stickerId } = c.req.valid("param");
-        if (c.req.valid("query").format !== "3") {
+        if (c.req.valid("query").format !== "4") {
           c.header("Cache-Control", "no-store");
           return apiError(
             c,

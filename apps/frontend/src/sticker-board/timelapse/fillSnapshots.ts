@@ -227,7 +227,8 @@ export async function prepareFillSnapshots(
               if (step.tool !== "fill") {
                 sheet.apply(step, state);
                 if (!isOp(step)) state = applyLayerStep(state, step);
-                if (step.layer === current) current = null;
+                if (step.layer === current || (step.tool === "merge" && step.into === current))
+                  current = null;
               } else {
                 if (i === index && current !== step.layer) cropInto(readBefore, step.layer);
                 const box = flood(step, state);

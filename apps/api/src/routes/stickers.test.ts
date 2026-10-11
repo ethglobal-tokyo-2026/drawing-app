@@ -48,7 +48,7 @@ import {
   testTimelapse,
   type SealParts,
 } from "../stickers/testPngs.ts";
-import { timelapseToStore, timelapseV3Schema } from "../stickers/timelapse.ts";
+import { timelapseToStore, timelapseV4Schema } from "../stickers/timelapse.ts";
 import { MAX_LAYERS } from "../stickers/timelapseLimit.ts";
 import { createChainTestApp, createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeCdnPurge } from "../testing/fakes.ts";
@@ -192,6 +192,20 @@ describe("POST /api/stickers", () => {
     ["not a timelapse", gzipSync(JSON.stringify({ v: 1, ink: [1, 1] }))],
     ["not gzipped", new TextEncoder().encode(JSON.stringify(TEST_TIMELAPSE))],
     [
+      "a Merge with a missing source",
+      gzipSync(JSON.stringify({ ...TEST_TIMELAPSE, ops: [["merge", 2, 10, 1]] })),
+    ],
+    [
+      "a v3 step naming a missing layer",
+      gzipSync(
+        JSON.stringify({
+          ...TEST_TIMELAPSE,
+          v: 3,
+          ops: [["brush", 99, "#000000", 1, [1, 2, 3, 4]]],
+        }),
+      ),
+    ],
+    [
       "on more layers than a sheet holds",
       gzipSync(
         JSON.stringify({
@@ -212,7 +226,7 @@ describe("POST /api/stickers", () => {
     expect(dropped).toMatchObject({ causes: [{ message: checked.problem }] });
   });
 
-  it("stores a v1 timelapse, from a page loaded before timelapses recorded layers, as v3, and logs it", async () => {
+  it("stores a v1 timelapse, from a page loaded before timelapses recorded layers, as v4, and logs it", async () => {
     const logs = captureLogLines();
     const userId = insertUser(test.db);
     const v1 = new File([gzipSync(JSON.stringify(TEST_TIMELAPSE_V1))], "t.json.gz");
@@ -220,7 +234,7 @@ describe("POST /api/stickers", () => {
     const stored = timelapseOf(sticker.id);
     if (!stored) throw new Error(`Sticker ${sticker.id} was sealed without its timelapse`);
     const json: unknown = JSON.parse(gunzipSync(stored.ops).toString());
-    expect(timelapseV3Schema.parse(json)).toEqual(normalizeTimelapse(TEST_TIMELAPSE_V1));
+    expect(timelapseV4Schema.parse(json)).toEqual(normalizeTimelapse(TEST_TIMELAPSE_V1));
     logs.expectLogged("sticker.timelapse.legacy_converted", {
       stickerId: sticker.id,
       userId,
@@ -246,6 +260,41 @@ describe("POST /api/stickers", () => {
       stickerId: sticker.id,
       userId,
       originalVersion: 2,
+    });
+  });
+
+  it("stores a valid Merge unchanged and upgrades a v3 upload without changing its steps", async () => {
+    const userId = insertUser(test.db);
+    const merged = {
+      ...TEST_TIMELAPSE,
+      ops: [
+        ["add", 2, 1, 1],
+        ["brush", 2, "#000000", 2, [10, 20, 30, 0]],
+        ["merge", 2, 3, 1],
+      ],
+    };
+    const mergeBytes = gzipSync(JSON.stringify(merged));
+    const first = await seal(userId, {
+      timelapse: new File([mergeBytes], "merge.json.gz"),
+    });
+    expect(timelapseOf(first.sticker.id)?.ops).toEqual(mergeBytes);
+    const replay = await test.send("GET", `/api/stickers/${first.sticker.id}/timelapse?format=4`, {
+      as: userId,
+    });
+    expect(await bodyOf(replay, timelapseV4Schema)).toEqual(merged);
+
+    const v3 = { ...TEST_TIMELAPSE, v: 3 };
+    const logs = captureLogLines();
+    const second = await seal(userId, {
+      timelapse: new File([gzipSync(JSON.stringify(v3))], "v3.json.gz"),
+    });
+    const stored = timelapseOf(second.sticker.id);
+    if (!stored) throw new Error("The valid historical replay was dropped");
+    expect(JSON.parse(gunzipSync(stored.ops).toString())).toEqual(TEST_TIMELAPSE);
+    logs.expectLogged("sticker.timelapse.legacy_converted", {
+      stickerId: second.sticker.id,
+      userId,
+      originalVersion: 3,
     });
   });
 
@@ -697,14 +746,27 @@ describe("DELETE /api/stickers/:stickerId/nsfw", () => {
 });
 
 describe("GET /api/stickers/:stickerId/timelapse", () => {
-  const getTimelapse = (userId: string, stickerId: string, format = "3") =>
+  const getTimelapse = (userId: string, stickerId: string, format = "4") =>
     test.send("GET", `/api/stickers/${stickerId}/timelapse?format=${format}`, { as: userId });
+
+  it("serves format 4 with immutable caching and asks old format 3 clients to reload", async () => {
+    const { sticker } = await seal(insertUser(test.db));
+    const current = await getTimelapse(sticker.artist.id, sticker.id, "4");
+    expect(current.status).toBe(200);
+    expect(current.headers.get("Cache-Control")).toContain("immutable");
+    const old = await getTimelapse(sticker.artist.id, sticker.id, "3");
+    expect(old.headers.get("Cache-Control")).toBe("no-store");
+    expect(await refusalOf(old)).toMatchObject({
+      status: 409,
+      error: "timelapse_format_unsupported",
+    });
+  });
 
   it("answers how the sticker was drawn, as it was sealed, to anyone signed in", async () => {
     const { sticker } = await seal(insertUser(test.db));
     const response = await getTimelapse(insertUser(test.db), sticker.id);
     expect(response.headers.get("Cache-Control")).toContain("immutable");
-    expect(await bodyOf(response, timelapseV3Schema)).toEqual(TEST_TIMELAPSE);
+    expect(await bodyOf(response, timelapseV4Schema)).toEqual(TEST_TIMELAPSE);
   });
 
   it("refuses a sticker sealed without one with timelapse_not_found", async () => {
@@ -721,19 +783,22 @@ describe("GET /api/stickers/:stickerId/timelapse", () => {
     expect(await refusalOf(response)).toMatchObject({ status: 404, error: "sticker_not_found" });
   });
 
-  it.each(["", "garbage", "4"])("rejects invalid format %s with 400", async (format) => {
+  it.each(["", "garbage", "5"])("rejects invalid format %s with 400", async (format) => {
     const { sticker } = await seal(insertUser(test.db));
     expect(
       await refusalOf(await getTimelapse(sticker.artist.id, sticker.id, format)),
     ).toMatchObject({ status: 400, error: "invalid_request" });
   });
 
-  it.each(["1", "2"])("refuses old format %s with an actionable refresh error", async (format) => {
-    const { sticker } = await seal(insertUser(test.db));
-    const response = await getTimelapse(sticker.artist.id, sticker.id, format);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    const refusal = await refusalOf(response);
-    expect(refusal).toMatchObject({ status: 409, error: "timelapse_format_unsupported" });
-    expect(refusal.detail).toContain("reload Croquis");
-  });
+  it.each(["1", "2", "3"])(
+    "refuses old format %s with an actionable refresh error",
+    async (format) => {
+      const { sticker } = await seal(insertUser(test.db));
+      const response = await getTimelapse(sticker.artist.id, sticker.id, format);
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      const refusal = await refusalOf(response);
+      expect(refusal).toMatchObject({ status: 409, error: "timelapse_format_unsupported" });
+      expect(refusal.detail).toContain("reload Croquis");
+    },
+  );
 });

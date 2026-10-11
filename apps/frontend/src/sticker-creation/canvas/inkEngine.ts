@@ -7,6 +7,7 @@ import type { InkHold, LayerInk } from "../layers/layerInk";
 import {
   FIRST_LAYER,
   indexOf,
+  mergeDownTarget,
   isHidden,
   MAX_LAYERS,
   type Layer,
@@ -189,7 +190,7 @@ function successorOf(state: LayerState, id: LayerId): LayerId {
 
 /** A step that changes its layer's pixels, as its undo and redo do. */
 const changesInk = (step: Step): boolean =>
-  isOp(step) || step.tool === "clear" || step.tool === "delete";
+  isOp(step) || step.tool === "clear" || step.tool === "delete" || step.tool === "merge";
 
 /** An op as a console line names it. */
 const opName = (op: Op): string => (op.tool === "fill" ? "fill" : `${op.tool} stroke`);
@@ -512,8 +513,14 @@ export class InkEngine implements LayerControls {
     const { state } = this.history;
     if (step.tool === "add" && step.layer === this.current)
       this.current = (state.layers[step.at - 1] ?? frontOf(state)).id;
-    else if (step.tool === "delete") this.current = step.layer;
-    this.bump(new Set([...this.history.inked, ...(changesInk(step) ? [step.layer] : [])]));
+    else if (step.tool === "delete" || step.tool === "merge") this.current = step.layer;
+    this.bump(
+      new Set([
+        ...this.history.inked,
+        ...(changesInk(step) ? [step.layer] : []),
+        ...(step.tool === "merge" ? [step.into] : []),
+      ]),
+    );
     this.changed();
   }
 
@@ -527,9 +534,16 @@ export class InkEngine implements LayerControls {
     )?.[0];
     if (!step) return;
     if (step.tool === "add") this.current = step.layer;
+    else if (step.tool === "merge") this.current = step.into;
     else if (step.tool === "delete" && step.layer === this.current)
       this.current = successorOf(before, step.layer);
-    this.bump(new Set([...this.history.inked, ...(changesInk(step) ? [step.layer] : [])]));
+    this.bump(
+      new Set([
+        ...this.history.inked,
+        ...(changesInk(step) ? [step.layer] : []),
+        ...(step.tool === "merge" ? [step.into] : []),
+      ]),
+    );
     this.changed();
   }
 
@@ -565,6 +579,27 @@ export class InkEngine implements LayerControls {
     )
       return;
     this.current = next;
+    this.changed();
+  }
+
+  mergeDown(): void {
+    if (!this.beginChange()) return;
+    const target = mergeDownTarget(this.history.state, this.current);
+    if ("reason" in target) return;
+    const source = this.current;
+    if (
+      !this.withRoom("merging layers", () =>
+        this.history.perform({
+          tool: "merge",
+          layer: source,
+          into: target.into,
+          T: this.settings.sessionMs(),
+        }),
+      )
+    )
+      return;
+    this.current = target.into;
+    this.bump([source, target.into]);
     this.changed();
   }
 

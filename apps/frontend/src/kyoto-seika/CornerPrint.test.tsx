@@ -1,30 +1,62 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { i18next } from "../i18n/i18n";
+import { testHost } from "../sticker-creation/layers/testHost";
 import { CornerPrint } from "./CornerPrint";
-import { SPORTS, WIND } from "./testSubjects";
+import subjects from "./subjects/subjects.json";
 
-let cleanup = () => {};
-afterEach(() => cleanup());
-
-function render(node: React.ReactNode) {
-  const host = document.createElement("div");
-  document.body.append(host);
-  const root = createRoot(host);
-  act(() => root.render(node));
-  cleanup = () => {
-    act(() => root.unmount());
-    host.remove();
-  };
-  return host;
-}
-
-describe("the corner print", () => {
-  it("prints only the two words, with no heading, furigana or English, hidden from screen readers", () => {
-    const print = render(<CornerPrint subjects={[WIND, SPORTS]} />).querySelector(".corner-print");
-    if (!print) throw new Error("No corner print");
-    expect(print.getAttribute("aria-hidden")).toBe("true");
-    expect([...print.children].map((column) => column.textContent)).toEqual([WIND.ja, SPORTS.ja]);
+const { render, find } = testHost();
+const subject = (ja: string) => {
+  const found = subjects.find((item) => item.ja === ja);
+  if (!found) throw new Error(ja);
+  return found;
+};
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+describe("localized full Kyoto Seika Subjects", () => {
+  it.each([
+    ["en", "見合い", "高校生", "meeting with a view to marriage × senior high school student"],
+    ["ja", "アーティスト", "宇宙飛行士", "アーティスト × 宇宙飛行士"],
+    ["en", "入院", "管理人", "hospitalization × administrator"],
+  ])("keeps the complete %s pair %s and %s", async (language, first, second, expected) => {
+    await act(async () => {
+      await i18next.changeLanguage(language);
+    });
+    try {
+      render(<CornerPrint subjects={[subject(first), subject(second)]} />);
+      expect(find(".corner-print").textContent).toBe(expected);
+      expect(find(".corner-print").getAttribute("aria-hidden")).toBe("true");
+    } finally {
+      await act(async () => {
+        await i18next.changeLanguage("en");
+      });
+    }
+  });
+  it("moves overflowing words above the footer and rechecks when the container changes", () => {
+    let height = 60;
+    const callbacks: (() => void)[] = [];
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return new DOMRect(0, 0, 100, this.classList.contains("corner-print__pair") ? height : 46);
+    });
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: () => void) {
+          callbacks.push(callback);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    render(<CornerPrint subjects={[subject("見合い"), subject("高校生")]} />);
+    expect(find(".corner-print").classList.contains("is-long")).toBe(true);
+    height = 34;
+    act(() => callbacks.forEach((callback) => callback()));
+    expect(find(".corner-print").classList.contains("is-long")).toBe(false);
   });
 });

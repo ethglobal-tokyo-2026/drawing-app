@@ -7,21 +7,17 @@ import { testHost } from "./testHost";
 
 const { render, find, click, press } = testHost();
 const handlers = {
-  onLock: vi.fn<(on: boolean) => void>(),
-  onClip: vi.fn<(on: boolean) => void>(),
-  onMoveBack: vi.fn<() => void>(),
-  onMoveForward: vi.fn<() => void>(),
-  onDelete: vi.fn<() => void>(),
+  onLock: vi.fn(),
+  onClip: vi.fn(),
+  onMoveBack: vi.fn(),
+  onMoveForward: vi.fn(),
+  onDelete: vi.fn(),
+  onMerge: vi.fn(),
+  onClose: vi.fn(),
+  onPreviewOpacity: vi.fn(),
+  onCommitOpacity: vi.fn(),
+  onHoldOpacity: vi.fn(),
 };
-const labels = {
-  lock: i18next.t(($) => $.stickerCreation.layers.lock),
-  clip: i18next.t(($) => $.stickerCreation.layers.clip),
-  moveBack: i18next.t(($) => $.stickerCreation.layers.moveBack),
-  moveForward: i18next.t(($) => $.stickerCreation.layers.moveForward),
-  delete: i18next.t(($) => $.stickerCreation.layers.delete),
-};
-
-/** Layer 2's bar, with every action open to it unless `props` says otherwise. */
 const renderBar = (props: Partial<ComponentProps<typeof LayerOptionsBar>> = {}) =>
   render(
     <LayerOptionsBar
@@ -29,113 +25,95 @@ const renderBar = (props: Partial<ComponentProps<typeof LayerOptionsBar>> = {}) 
       locked={false}
       clipped={false}
       clipBase={1}
-      opacity={100}
+      opacity={74}
       count={2}
       canMoveBack
       canMoveForward
       canDelete
+      mergeTarget={{ into: 1 }}
       {...handlers}
       {...props}
     />,
   );
-
-const tile = (label: string) => find(`[aria-label="${label}"]`);
-
+const named = (name: string) => find(`[aria-label="${name}"]`);
 beforeEach(() => {
-  for (const handler of Object.values(handlers)) handler.mockReset();
+  vi.clearAllMocks();
 });
 
-describe("LayerOptionsBar", () => {
-  it("has each toggle report the state it turns to, the opposite of the one it shows", () => {
-    renderBar({ locked: true, clipped: false });
-    expect(tile(labels.lock).getAttribute("aria-pressed")).toBe("true");
-    click(tile(labels.lock));
-    click(tile(labels.clip));
+describe("compact layer options", () => {
+  it("focuses opacity on opening, then keeps keyboard changes on that control", () => {
+    renderBar();
+    const slider = find("input");
+    expect(document.activeElement).toBe(slider);
+    press(slider, "ArrowRight");
+    expect(handlers.onCommitOpacity).toHaveBeenCalledExactlyOnceWith(79);
+    expect(document.activeElement).toBe(slider);
+  });
+  it("reveals contextual help without losing the Help button's focus", () => {
+    renderBar();
+    const help = named("Layer help");
+    act(() => help.focus());
+    click(help);
+    expect(help.getAttribute("aria-expanded")).toBe("true");
+    expect(find(".layer-options-help").hidden).toBe(false);
+    expect(find(".layer-options-help").textContent).toContain("inside layer 1");
+    expect(document.activeElement).toBe(help);
+    click(help);
+    expect(find(".layer-options-help").hidden).toBe(true);
+  });
+  it("retains localized toggle labels and changes only the requested state", () => {
+    renderBar({ locked: true });
+    click(named("Lock transparent pixels"));
+    click(named("Clip to layer below"));
     expect(handlers.onLock).toHaveBeenCalledExactlyOnceWith(false);
     expect(handlers.onClip).toHaveBeenCalledExactlyOnceWith(true);
+    expect(named("Lock transparent pixels").getAttribute("aria-pressed")).toBe("true");
   });
-
-  it("dims an action the layer can't take, and doesn't fire it", () => {
-    renderBar({ clipBase: null, canMoveBack: false, canMoveForward: false, canDelete: false });
-    for (const label of [labels.clip, labels.moveBack, labels.moveForward, labels.delete]) {
-      expect(tile(label).getAttribute("aria-disabled")).toBe("true");
-      click(tile(label));
-    }
-    expect(handlers.onClip).not.toHaveBeenCalled();
-    expect(handlers.onMoveBack).not.toHaveBeenCalled();
-    expect(handlers.onMoveForward).not.toHaveBeenCalled();
-    expect(handlers.onDelete).not.toHaveBeenCalled();
+  it("names the destination and activates available Merge", () => {
+    renderBar({ mergeTarget: { into: 7 } });
+    click(named("Merge down into layer 7"));
+    expect(handlers.onMerge).toHaveBeenCalledOnce();
   });
-
-  it.each([false, true])(
-    "names actions and explains the clipping base and recovery with clipped=%s",
-    (clipped) => {
-      renderBar({ id: 7, clipBase: 3, opacity: 48, clipped });
-      for (const label of Object.values(labels)) expect(tile(label).textContent).toContain(label);
-      expect(find(".layer-options-heading").textContent).toContain("Layer 7");
-      expect(find(".layer-options-heading").textContent).toContain("Opacity 48%");
-      const description = tile(labels.clip).getAttribute("aria-describedby");
-      expect(description).toBeTruthy();
-      expect(find(`[id="${description}"]`).textContent).toBe(
-        "Shows this layer only inside layer 3’s ink. If no marks show, add ink to layer 3 or turn Clip off.",
+  it.each(["no-lower-layer", "clipped-above"] as const)(
+    "explains unavailable Merge %s without dispatch",
+    (reason) => {
+      renderBar({ mergeTarget: { reason } });
+      const merge = named("Merge down");
+      expect(merge.getAttribute("aria-disabled")).toBe("true");
+      click(merge);
+      expect(handlers.onMerge).not.toHaveBeenCalled();
+      expect(named("Layer help").getAttribute("aria-expanded")).toBe("true");
+      expect(find(".layer-options-help").textContent).toContain(
+        reason === "no-lower-layer" ? "No layer below" : "Layers above",
       );
     },
   );
-
-  it("explains unavailable clipping and deletion on the last layer", () => {
-    renderBar({ clipBase: null, canDelete: false });
-    expect(tile(labels.clip).textContent).toContain("No layer below to clip to.");
-    expect(find(".layer-options-help").textContent).toBe("Keep at least one layer.");
+  it("keeps unavailable clipping and deletion reasons in reachable Help", () => {
+    renderBar({ clipBase: null, canDelete: false, canMoveForward: false });
+    for (const label of ["Clip to layer below", "Delete layer", "Move forward"])
+      click(named(label));
+    expect(handlers.onClip).not.toHaveBeenCalled();
+    expect(handlers.onDelete).not.toHaveBeenCalled();
+    expect(handlers.onMoveForward).not.toHaveBeenCalled();
+    expect(find(".layer-options-help").textContent).toContain("Keep at least one layer");
+  });
+  it("closes by its named button", () => {
     renderBar();
-    expect(find(".layer-options-help").textContent).toBe("Undo brings a deleted layer back.");
+    click(named("Close layer options"));
+    expect(handlers.onClose).toHaveBeenCalledOnce();
   });
-
-  it("lets arrow keys reach all actions while retaining one Tab stop", () => {
-    renderBar();
-    click(tile(labels.lock));
-    tile(labels.lock).focus();
-    press(tile(labels.lock), "ArrowDown");
-    expect(document.activeElement).toBe(tile(labels.clip));
-    press(tile(labels.clip), "ArrowRight");
-    expect(document.activeElement).toBe(tile(labels.moveBack));
-    expect(tile(labels.moveBack).tabIndex).toBe(0);
-    expect(tile(labels.lock).tabIndex).toBe(-1);
-  });
-
-  it.each([false, true])("allows Lock with locked=%s and explains that state", (locked) => {
-    renderBar({ locked, clipped: true, clipBase: 1, opacity: 0 });
-    const lock = tile(labels.lock);
-    expect(lock.getAttribute("aria-disabled")).toBeNull();
-    expect(lock.getAttribute("aria-pressed")).toBe(String(locked));
-    const description = lock.getAttribute("aria-describedby");
-    expect(description).toBeTruthy();
-    expect(find(`[id="${description}"]`).textContent).toBe(
-      locked
-        ? "Keeps new marks inside this layer’s ink. Turn off to draw outside it."
-        : "Keeps new marks inside this layer’s ink.",
-    );
-    click(lock);
-    expect(handlers.onLock).toHaveBeenCalledExactlyOnceWith(!locked);
-  });
-
-  it("explains active Lock in Japanese without claiming the layer is empty", async () => {
+  it("shows Japanese help on demand", async () => {
     await act(async () => {
       await i18next.changeLanguage("ja");
     });
     try {
       renderBar({ locked: true });
-      expect(find(".layer-option-toggle").textContent).toContain(
-        "このレイヤーの描画内だけにかけます。外にもかくには、ロックを解除してください。",
-      );
+      click(named("レイヤーのヘルプ"));
+      expect(find(".layer-options-help").textContent).toContain("ロックを解除してください");
     } finally {
       await act(async () => {
         await i18next.changeLanguage("en");
       });
     }
-  });
-
-  it("keeps the maximum-layer explanation readable while options cover the Add label", () => {
-    renderBar({ count: 10 });
-    expect(find(".layer-options-maximum").textContent).toBe("10 layers · maximum");
   });
 });

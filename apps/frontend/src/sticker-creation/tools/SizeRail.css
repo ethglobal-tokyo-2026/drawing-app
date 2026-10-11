@@ -4,7 +4,7 @@
   position: absolute;
   left: var(--far-left) 0;
   right: var(--far-right) 0;
-  top: 104px;
+  top: 80px;
   z-index: 3;
   width: 40px;
   /* Ends a gap above undo however short the screen, leaving room for undo's tiles and foot. */
@@ -30,13 +30,12 @@
   box-shadow: inset 0 0 0 1px var(--rule);
 }
 
-/* The px readout follows the thumb toward the sheet. Its counter updates during a drag without
-   rendering the drawing screen, and its flat paper remains readable over ink. */
+/* The readout sits immediately below the rail and updates without rendering the screen. */
 .size-num {
   position: absolute;
-  left: var(--far-left) 42px;
-  right: var(--far-right) 42px;
-  top: calc(18px + (1 - var(--v)) * (100% - 18px - var(--thumb-foot)) - 9px);
+  left: 50%;
+  top: calc(100% + 4px);
+  transform: translateX(-50%);
   min-width: 28px;
   height: 18px;
   padding: 0 4px;

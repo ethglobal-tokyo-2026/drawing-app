@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
   type Ref,
@@ -38,8 +37,6 @@ export interface LayerColumnProps {
   onCloseOptions: () => void;
   /** The options bar, shown beside the current chip while optionsOpen. */
   options?: ReactNode;
-  /** The opacity slider, laid beside the chips. */
-  slider?: ReactNode;
   /** The chips' list element, for the drag and pen-hover hooks. */
   listRef?: Ref<HTMLDivElement>;
 }
@@ -76,13 +73,13 @@ export function LayerColumn({
   onToggleOptions,
   onCloseOptions,
   options,
-  slider,
   listRef,
 }: LayerColumnProps) {
   const { t } = useTranslation();
   const optionsId = useId();
   const hintId = useId();
   const maximumId = useId();
+  const overflowId = useId();
   const root = useRef<HTMLDivElement>(null);
   const optionsBox = useRef<HTMLDivElement>(null);
   const hintBox = useRef<HTMLDivElement>(null);
@@ -147,23 +144,7 @@ export function LayerColumn({
     const chipBox = chip.getBoundingClientRect();
     const height = paper.getBoundingClientRect().height;
     const desired = chipBox.top + chipBox.height / 2 - height / 2;
-    let top = Math.max(upper, Math.min(desired, lower - height));
-    if (paper === hintBox.current) {
-      const readout = root.current.querySelector(".opacity-readout")?.getBoundingClientRect();
-      const hint = paper.getBoundingClientRect();
-      if (
-        readout &&
-        hint.left < readout.right + 8 &&
-        hint.right > readout.left - 8 &&
-        top < readout.bottom + 8 &&
-        top + height > readout.top - 8
-      ) {
-        const below = Math.max(upper, readout.bottom + 8);
-        const above = Math.min(lower - height, readout.top - height - 8);
-        if (below + height <= lower) top = below;
-        else if (above >= upper) top = above;
-      }
-    }
+    const top = Math.max(upper, Math.min(desired, lower - height));
     paper.style.top = `${top - columnBox.top}px`;
   };
 
@@ -225,7 +206,7 @@ export function LayerColumn({
         disabled={!canAdd}
         onClick={onAdd}
       >
-        <NewLayerIcon size={18} weight="bold" />
+        <NewLayerIcon size={34} weight="bold" />
       </LabelButton>
       {!canAdd && (
         <span id={maximumId} className="layer-maximum">
@@ -245,6 +226,7 @@ export function LayerColumn({
             role="listbox"
             aria-label={t(($) => $.stickerCreation.layers.label)}
             aria-orientation="vertical"
+            aria-describedby={overflowing ? overflowId : undefined}
             onKeyDown={moveFocus}
             onScroll={(e) => {
               measureScroll();
@@ -282,26 +264,15 @@ export function LayerColumn({
             })}
           </div>
           {overflowing && (
-            <div
-              className="layer-scroll-position"
-              role="meter"
-              aria-label={t(($) => $.stickerCreation.layers.scrollPosition)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(scroll.position * 100)}
-              aria-valuetext={t(($) =>
+            <span id={overflowId} className="visually-hidden layer-overflow-description">
+              {t(($) =>
                 moreAbove
                   ? moreBelow
                     ? $.stickerCreation.layers.moreAboveAndBelow
                     : $.stickerCreation.layers.moreAbove
                   : $.stickerCreation.layers.moreBelow,
               )}
-              style={
-                { "--position": scroll.position, "--portion": scroll.portion } as CSSProperties
-              }
-            >
-              <span />
-            </div>
+            </span>
           )}
         </div>
         {/* Next after the chips in the Tab order, though it's laid out over the sheet. */}
@@ -336,7 +307,6 @@ export function LayerColumn({
             </button>
           </div>
         )}
-        {slider && <div className="layer-slider">{slider}</div>}
       </div>
     </div>
   );

@@ -40,6 +40,10 @@ function replayFromBlank(steps: readonly Step[]): Map<LayerId, readonly string[]
       continue;
     }
     if (step.tool === "clear" || step.tool === "delete") pixels.delete(step.layer);
+    if (step.tool === "merge") {
+      pixels.set(step.into, [...pixelsOf(step.into), ...pixelsOf(step.layer)]);
+      pixels.delete(step.layer);
+    }
     state = applyLayerStep(state, step);
   }
   return pixels;
@@ -98,6 +102,59 @@ function setup(budget: (inkedLayers: number) => number) {
 }
 
 type Run = ReturnType<typeof setup>;
+
+describe("durable Merge down", () => {
+  it("reconstructs repeated merges and later fills after checkpoint eviction, then branches", () => {
+    const run = setup(() => 0);
+    const { history, surface } = run;
+    dealt(run, 3, 80);
+    history.perform(moveLayer(3, 1));
+    history.perform({ tool: "merge", layer: 2, into: 3, T: 0 });
+    history.perform({ tool: "merge", layer: 3, into: 1, T: 0 });
+    run.draw(fill(1));
+    run.stroke(1);
+    history.dropCheckpoints();
+    const saved = [...history.steps];
+    for (let i = 0; i < 4; i++) {
+      history.undo();
+      expectConsistent(run);
+    }
+    for (let i = 0; i < 4; i++) {
+      history.redo();
+      expectConsistent(run);
+    }
+    history.perform(clearLayer(1));
+    history.undo();
+    expectConsistent(run);
+    history.perform(addLayer(4, 1));
+    history.perform(deleteLayer(1));
+    history.dropCheckpoints();
+    history.undo();
+    expectConsistent(run);
+    surface.wipe();
+    history.invalidate();
+    expectConsistent(run);
+    history.load(saved);
+    expectConsistent(run);
+    history.undo();
+    run.stroke(1);
+    expect(history.canRedo).toBe(false);
+    expectConsistent(run);
+  });
+
+  it("moves source-only ink into the destination and frees a slot", () => {
+    const run = setup(() => 0);
+    dealt(run, 10, 0);
+    run.stroke(10);
+    run.history.perform({ tool: "merge", layer: 10, into: 9, T: 0 });
+    expect(run.history.state.layers).toHaveLength(9);
+    expect(run.history.state.nextId).toBe(11);
+    expect([...run.history.inked]).toEqual([9]);
+    run.history.undo();
+    expectConsistent(run);
+    expect(run.history.state.layers).toHaveLength(10);
+  });
+});
 
 /** A sheet of `layers` layers with `strokes` strokes dealt across them in turn. */
 function dealt(run: Run, layers: number, strokes: number): void {

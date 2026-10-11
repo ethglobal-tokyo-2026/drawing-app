@@ -6,6 +6,9 @@
     "lib": ["ES2023", "DOM"],
     "types": ["node", "vite/client"],
     "skipLibCheck": true,
+    /* Browser layout fixtures render the production React controls. */
+    "jsx": "react-jsx",
+    "allowArbitraryExtensions": true,
 
     /* The specs read the catalog, which imports without extensions */
     "module": "esnext",

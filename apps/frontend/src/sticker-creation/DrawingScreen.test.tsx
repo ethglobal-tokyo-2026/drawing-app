@@ -58,6 +58,9 @@ const sheetCalls = vi.hoisted(() => ({
   cleared: 0,
   selected: [] as number[],
   moved: [] as { id: number; to: number }[],
+  merged: 0,
+  mergeFails: false,
+  opacities: [] as number[],
   layers: (_view: LayerView) => {},
   view: null as LayerView | null,
   loadedCurrent: null as number | null,
@@ -158,11 +161,24 @@ vi.mock("./canvas/DrawingCanvas", () => ({
         sheetCalls.selected.push(id);
       },
       deleteLayer() {},
+      mergeDown() {
+        sheetCalls.merged++;
+        if (sheetCalls.mergeFails) return;
+        onLayers?.({
+          state: FIRST_LAYERS,
+          current: 1,
+          inked: new Set([1]),
+          currentInked: true,
+          versions: new Map(),
+        });
+      },
       moveLayer(id: number, to: number) {
         sheetCalls.moved.push({ id, to });
       },
       previewOpacity() {},
-      setOpacity() {},
+      setOpacity(value: number) {
+        sheetCalls.opacities.push(value);
+      },
       setLocked() {},
       setClipped() {},
       thumbnail: () => null,
@@ -325,6 +341,9 @@ afterEach(() => {
   sheetCalls.cleared = 0;
   sheetCalls.selected = [];
   sheetCalls.moved = [];
+  sheetCalls.merged = 0;
+  sheetCalls.mergeFails = false;
+  sheetCalls.opacities = [];
   sheetCalls.view = null;
   sheetCalls.loadedCurrent = null;
   sheetCalls.steps = [];
@@ -1049,12 +1068,13 @@ describe("the drawing screen's layers", () => {
     expect(document.querySelector<HTMLButtonElement>(".layer-add")?.disabled).toBe(true);
   });
 
-  it("shows opacity for two layers or a partly transparent only layer", async () => {
+  it("opens opacity in settings for either one or multiple layers", async () => {
     reopen(keptHalfway);
     await settle();
-    expect(document.querySelector(".opacity-slider")).toBeNull();
-    show(twoLayers);
+    act(() => document.querySelector<HTMLButtonElement>('[data-layer-chip="1"]')?.click());
     expect(document.querySelector(".opacity-slider")).not.toBeNull();
+    expect(document.activeElement).toBe(document.querySelector(".opacity-slider"));
+    show(twoLayers);
     show({
       ...twoLayers,
       state: { ...FIRST_LAYERS, layers: [{ ...FIRST_LAYERS.layers[0], opacity: 50 }] },
@@ -1067,6 +1087,59 @@ describe("the drawing screen's layers", () => {
     await settle();
     show({ ...twoLayers, current: 2, currentInked: false });
     expect(document.querySelector<HTMLButtonElement>(".clear-tile")?.disabled).toBe(true);
+  });
+
+  it("merges into the destination and returns focus to its selected chip", async () => {
+    reopen(keptHalfway);
+    await settle();
+    show({ ...twoLayers, current: 2 });
+    act(() => document.querySelector<HTMLButtonElement>('[data-layer-chip="2"]')?.click());
+    act(() =>
+      document.querySelector<HTMLButtonElement>('[aria-label="Merge down into layer 1"]')?.click(),
+    );
+    expect(sheetCalls.merged).toBe(1);
+    const destination = document.querySelector('[data-layer-chip="1"]');
+    expect(destination?.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(destination);
+  });
+
+  it("keeps the source settings and focused Merge control when the engine cannot merge", async () => {
+    reopen(keptHalfway);
+    await settle();
+    show({ ...twoLayers, current: 2 });
+    sheetCalls.mergeFails = true;
+    act(() => document.querySelector<HTMLButtonElement>('[data-layer-chip="2"]')?.click());
+    const merge = document.querySelector<HTMLButtonElement>(
+      '[aria-label="Merge down into layer 1"]',
+    );
+    if (!merge) throw new Error("Merge should be available before allocation fails");
+    act(() => {
+      merge.focus();
+      merge.click();
+    });
+    expect(sheetCalls.merged).toBe(1);
+    expect(document.querySelector('[data-layer-chip="2"]')?.getAttribute("aria-selected")).toBe(
+      "true",
+    );
+    expect(document.querySelector('[data-layer-chip="1"]')?.getAttribute("aria-selected")).toBe(
+      "false",
+    );
+    expect(document.querySelector(".layer-options-bar")).not.toBeNull();
+    expect(document.activeElement).toBe(merge);
+  });
+
+  it("offers direct settings and full-opacity recovery for a hidden current layer", async () => {
+    reopen(keptHalfway);
+    await settle();
+    show({
+      ...twoLayers,
+      state: { ...FIRST_LAYERS, layers: [{ ...FIRST_LAYERS.layers[0], opacity: 0 }] },
+    });
+    expect(document.querySelector(".layer-hidden-recovery")?.textContent).toContain("0% opacity");
+    act(() => buttonSaying("Show at 100%")?.click());
+    expect(sheetCalls.opacities).toEqual([100]);
+    act(() => buttonSaying("Layer settings")?.click());
+    expect(document.activeElement).toBe(document.querySelector(".opacity-slider"));
   });
 
   it("moves the current layer forward and announces where it went", async () => {
@@ -1086,7 +1159,9 @@ describe("the drawing screen's layers", () => {
     await settle();
     show(twoLayers);
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
-    const thumb = document.querySelector(".opacity-thumb");
+    act(() => document.querySelector<HTMLButtonElement>('[data-layer-chip="1"]')?.click());
+    const thumb = document.querySelector(".opacity-slider");
+    expect(thumb).not.toBeNull();
     const point = (type: string) =>
       thumb?.dispatchEvent(
         new PointerEvent(type, {
@@ -1104,6 +1179,7 @@ describe("the drawing screen's layers", () => {
     expect(
       await countedAfter(() => {
         point("pointerup");
+        document.querySelector<HTMLButtonElement>('[aria-label="Close layer options"]')?.click();
       }),
     ).toBeGreaterThan(0);
   });
@@ -1440,7 +1516,9 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
       }),
     );
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
-    const thumb = document.querySelector(".opacity-thumb");
+    act(() => document.querySelector<HTMLButtonElement>('[data-layer-chip="1"]')?.click());
+    const thumb = document.querySelector(".opacity-slider");
+    expect(thumb).not.toBeNull();
     expect(
       await countedAfter(() => {
         thumb?.dispatchEvent(
@@ -1771,7 +1849,7 @@ it.each(["initial", "late"])(
     const record = JSON.stringify({ ticket: 7, elapsedMs: 1000, nsfw: false });
     localStorage.setItem(personKey("draw.session", me.id), record);
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(`drawing-session.${me.id}`, 2);
+      const request = indexedDB.open(`drawing-session.${me.id}`, 3);
       request.onupgradeneeded = () => {
         request.result.createObjectStore("ops");
         request.result.createObjectStore("progress");

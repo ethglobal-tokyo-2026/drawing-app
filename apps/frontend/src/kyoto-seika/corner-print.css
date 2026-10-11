@@ -1,43 +1,71 @@
-/* The pair as a vertical margin note (縦書き) in the sheet's lower left, over the foot row's tiles:
-   each word alone in its own column, right to left. Non-repro blue, a pencil note that won't print,
-   under the ink drawn over it. A drawing hand covers the lower corner on its own side, so the print
-   takes the other one: a left hand mirrors it with the tiles (DrawingScreen.css). */
+/* The pair shares the footer's reserved gap. Words that need more room move above the controls. */
 .corner-print {
   position: absolute;
-  /* Its outer edge in line with undo's, and its foot just clear of the tiles, which a phone's sheet
-     reaches down under. */
-  left: 10px;
-  bottom: 70px;
+  left: 194px;
+  right: 88px;
+  bottom: 22px;
+  height: 46px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  writing-mode: vertical-rl;
-  /* Latin letters stand upright too, as in a handwritten note: BGM, Tシャツ. */
-  text-orientation: upright;
-  /* Strong enough to read at arm's length while drawing, and still paler than any ink. */
-  color: color-mix(in srgb, var(--non-repro-blue) 70%, transparent);
-  font-family: var(--font-jp);
+  align-items: center;
+  justify-content: center;
+  color: var(--non-repro-blue);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.3;
+  text-align: center;
+  z-index: 3;
   pointer-events: none;
   user-select: none;
-  /* It prints as the balloons tuck away. */
   animation: corner-print-in 200ms var(--ease-out) both;
 }
-
+.corner-print__pair {
+  display: block;
+  width: 100%;
+}
+.corner-print__word {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
+}
+.corner-print.is-long {
+  left: 58px;
+  right: 20px;
+  bottom: 90px;
+  height: auto;
+}
+.corner-print.is-long .corner-print__word {
+  display: block;
+}
+.drawing-screen[data-hand="left"] .corner-print {
+  left: 88px;
+  right: 194px;
+}
+.drawing-screen[data-hand="left"] .corner-print.is-long {
+  left: 20px;
+  right: 58px;
+}
+@media (min-width: 600px) and (min-height: 600px) and (any-pointer: coarse) {
+  .corner-print,
+  .corner-print.is-long {
+    left: 90px;
+    right: 24px;
+    bottom: 22px;
+    height: 46px;
+  }
+  .drawing-screen[data-hand="left"] .corner-print,
+  .drawing-screen[data-hand="left"] .corner-print.is-long {
+    left: 24px;
+    right: 90px;
+  }
+}
 @keyframes corner-print-in {
   from {
     opacity: 0;
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
   .corner-print {
     animation: none;
   }
-}
-
-.corner-print__word {
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1.1;
 }

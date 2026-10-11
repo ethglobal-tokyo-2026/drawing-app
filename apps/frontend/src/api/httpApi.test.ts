@@ -459,7 +459,7 @@ describe("marking a sticker 18+", () => {
 
 describe("a sticker's timelapse", () => {
   const timelapse = {
-    v: 3,
+    v: 4,
     ink: [390, 550],
     place: [20, 30, 150, 112.5],
     density: 2,
@@ -474,7 +474,7 @@ describe("a sticker's timelapse", () => {
     );
     const [input] = fetch.mock.calls[0] ?? [];
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input?.url;
-    expect(url).toMatch(/\/api\/stickers\/s1\/timelapse\?format=3$/);
+    expect(url).toMatch(/\/api\/stickers\/s1\/timelapse\?format=4$/);
   });
 
   it("says when the sticker has none", async () => {

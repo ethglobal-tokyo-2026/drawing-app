@@ -70,7 +70,7 @@ const pointMs = (op: StrokeOp, p: number) => op.pts[p * STRIDE + 3] ?? 0;
 /** How long the step took as drawn: a stroke's last point's time, nothing for anything else. */
 const drawnMs = (step: Step) => (isStroke(step) ? pointMs(step, pointCount(step) - 1) : 0);
 
-/** A move, a lock or a clip shows at once; the other layer steps change what shows over a beat. */
+/** Move, lock, clip and merge show at once; add, delete, clear and opacity have a beat. */
 const takesBeat = (step: Step) =>
   step.tool === "add" || step.tool === "delete" || step.tool === "clear" || step.tool === "opacity";
 

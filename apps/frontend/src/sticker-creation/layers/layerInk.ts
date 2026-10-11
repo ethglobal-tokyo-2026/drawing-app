@@ -184,19 +184,32 @@ export class LayerInk implements LayerSurface<Hold> {
   }
 
   /** Replays into a replacement canvas; an allocation failure keeps the original canvas intact. */
-  rebuild(layer: LayerId, write: () => void): void {
-    const original = this.inks.get(layer);
-    this.inks.delete(layer);
+  rebuild(
+    layer: LayerId | readonly LayerId[],
+    write: () => void,
+    retain?: readonly LayerId[],
+  ): void {
+    const ids = typeof layer === "number" ? [layer] : [...new Set(layer)];
+    const kept = new Set(retain ?? ids);
+    const originals = new Map(ids.map((id) => [id, this.inks.get(id)]));
+    for (const id of ids) this.inks.delete(id);
+    let succeeded = false;
     try {
       write();
-    } catch (error) {
-      const partial = this.inks.get(layer);
-      if (partial) releaseCanvas(partial.canvas);
-      this.inks.delete(layer);
-      if (original) this.inks.set(layer, original);
-      throw error;
+      succeeded = true;
+    } finally {
+      for (const [id, original] of originals) {
+        if (succeeded && kept.has(id)) {
+          if (original) this.retire(original);
+        } else {
+          const partial = this.inks.get(id);
+          if (partial) this.retire(partial);
+          this.inks.delete(id);
+          if (original) this.inks.set(id, original);
+        }
+      }
+      if (!succeeded) this.releaseScratch();
     }
-    if (original) this.retire(original);
   }
 
   show(state: LayerState): void {
@@ -205,6 +218,9 @@ export class LayerInk implements LayerSurface<Hold> {
 
   apply(step: Step, before: LayerState): void {
     switch (step.tool) {
+      case "merge":
+        this.merge(step.layer, step.into, before);
+        return;
       case "brush":
       case "eraser":
         this.stroke(step, before);
@@ -230,6 +246,9 @@ export class LayerInk implements LayerSurface<Hold> {
 
   cost(step: Step): number {
     switch (step.tool) {
+      // Unverified guess in stroke units: a pair uses at most six full-sheet draws, plus clears.
+      case "merge":
+        return 6;
       case "fill":
         return FILL_COST;
       case "brush":
@@ -420,6 +439,41 @@ export class LayerInk implements LayerSurface<Hold> {
     const ink = this.writable(op.layer);
     paintStroke(ink.g, op, 0, op.pts.length / STRIDE, locked ? "source-atop" : "source-over");
     if (inks) ink.box = unionOf(ink.box, strokeBox(op));
+  }
+
+  /** Prepares the visible pair before retiring either original, so allocation failure changes nothing. */
+  private merge(source: LayerId, into: LayerId, before: LayerState): void {
+    this.releaseScratch();
+    const visibleBox = (id: LayerId): Rect | null => {
+      if (layerOf(before, id).opacity === 0) return null;
+      const base = baseOf(before, id);
+      if (base && (base.opacity === 0 || !this.inks.has(base.id))) return null;
+      return this.inks.get(id)?.box ?? null;
+    };
+    const box = unionOf(visibleBox(into), visibleBox(source));
+    if (!box) {
+      this.blank(source);
+      this.blank(into);
+      return;
+    }
+    const { canvas, g } = blankCanvas(this.sheetWidth, this.sheetHeight);
+    try {
+      this.compositeInto(g, before, [into, source], {
+        x: 0,
+        y: 0,
+        w: this.sheetWidth,
+        h: this.sheetHeight,
+      });
+      g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    } catch (error) {
+      releaseCanvas(canvas);
+      throw error;
+    } finally {
+      this.releaseScratch();
+    }
+    this.blank(source);
+    this.blank(into);
+    this.inks.set(into, { canvas, g, box, sharers: new Set() });
   }
 
   /** Writes a kept fill again on its layer, reading that layer alone. */

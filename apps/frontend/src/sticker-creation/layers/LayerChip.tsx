@@ -99,6 +99,7 @@ export function LayerChip({
         <CaretRight className="layer-options-caret" size={12} weight="bold" aria-hidden="true" />
       )}
       {hidden && <EyeSlash className="layer-hidden-mark" size={12} weight="bold" />}
+      {chip.clipBase !== null && <span className="layer-clip-mark" aria-hidden="true" />}
     </button>
   );
 }

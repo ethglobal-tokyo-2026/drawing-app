@@ -1,0 +1,261 @@
+<!doctype html>
+<!-- Local review fixture for layer selection feedback. Kept under e2e for repeatable browser performance comparisons; never included by the app entry. -->
+<html lang="en">
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Layer feedback review</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #f2f1f6;
+      color: #1c1824;
+      font: 14px system-ui;
+    }
+    header {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    button,
+    select {
+      min-height: 44px;
+    }
+    #sheet {
+      position: relative;
+      background: white;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #sheet > canvas,
+    #current,
+    #current > canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    #results {
+      white-space: pre-wrap;
+      max-height: 180px;
+      overflow: auto;
+    }
+    #status {
+      min-height: 24px;
+    }
+  </style>
+  <header>
+    <label
+      >Size
+      <select id="size">
+        <option value="phone">Phone</option>
+        <option value="tablet">Tablet</option>
+      </select></label
+    ><label
+      >Ink
+      <select id="ink">
+        <option value="mixed">Mixed line art</option>
+        <option value="black">Black fill</option>
+        <option value="pink">Pink fill</option>
+        <option value="white">White fill</option>
+      </select></label
+    ><label
+      >Opacity
+      <select id="opacity">
+        <option value="100">100%</option>
+        <option value="74">74%</option>
+        <option value="1">1%</option>
+      </select></label
+    ><button id="replay">Replay selection</button><button id="pop">Freeze pop</button
+    ><button id="fall">Freeze falling</button><button id="measure">Measure five selections</button
+    ><button id="cancel">Cancel feedback</button>
+  </header>
+  <p id="status" role="status">Ready</p>
+  <pre id="results"></pre>
+  <div id="sheet" aria-label="Painted feedback test sheet">
+    <canvas id="below"></canvas>
+    <div id="current"><canvas id="layer"></canvas></div>
+    <canvas id="above"></canvas>
+  </div>
+  <script type="module">
+    import { flashLayer } from "/src/sticker-creation/layers/layerFlash.ts";
+    import "/src/sticker-creation/layers/layerDisplay.css";
+    const $ = (id) => document.getElementById(id);
+    const sheet = $("sheet"),
+      current = $("current"),
+      layer = $("layer"),
+      above = $("above"),
+      below = $("below");
+    let live = null,
+      measuring = false;
+    function stop() {
+      live?.cancel();
+      live = null;
+      sheet.querySelectorAll("[data-review-freeze]").forEach((node) => node.remove());
+    }
+    function render() {
+      stop();
+      const [w, h] = $("size").value === "tablet" ? [736, 1110] : [374, 828];
+      sheet.style.width = w + "px";
+      sheet.style.height = h + "px";
+      const d = 2;
+      for (const c of [layer, above, below]) {
+        c.width = w * d;
+        c.height = h * d;
+      }
+      const g = layer.getContext("2d");
+      g.scale(d, d);
+      const mode = $("ink").value;
+      if (mode === "mixed") {
+        const colors = ["#fff", "#000", "#ff4f9a", "#6e6878", "rgba(41,141,255,0.35)"];
+        for (let i = 0; i < 96; i++) {
+          g.strokeStyle = colors[i % colors.length];
+          g.lineWidth = i % 5 === 4 ? 1.2 : 4;
+          const y = 60 + (i * (h - 120)) / 96;
+          g.beginPath();
+          g.moveTo(48, y);
+          g.bezierCurveTo(w * 0.3, y - 25, w * 0.66, y + 25, w - 40, y);
+          g.stroke();
+        }
+      } else {
+        g.fillStyle = mode === "black" ? "#000" : mode === "white" ? "#fff" : "#ff4f9a";
+        g.beginPath();
+        g.ellipse(w / 2, h / 2, w * 0.35, h * 0.27, 0, 0, Math.PI * 2);
+        g.fill();
+      }
+      const ag = above.getContext("2d");
+      ag.scale(d, d);
+      ag.fillStyle = "#1c1824";
+      ag.fillRect(w * 0.66, h * 0.22, w * 0.22, h * 0.2);
+      ag.fillStyle = "#fff";
+      ag.fillRect(w * 0.66, h * 0.5, w * 0.22, h * 0.2);
+      current.style.opacity = Number($("opacity").value) / 100;
+      $("status").textContent = "Ready";
+    }
+    function play() {
+      stop();
+      live = flashLayer({
+        layer,
+        inked: { x: 0, y: 0, w: layer.width, h: layer.height },
+        above,
+        below,
+        opacity: Number($("opacity").value),
+        sheet,
+        onEnd() {
+          live = null;
+        },
+      });
+    }
+    for (const id of ["size", "ink", "opacity"]) $(id).addEventListener("change", render);
+    $("replay").onclick = () => {
+      play();
+      $("status").textContent = "Playing";
+    };
+    for (const [id, time] of [
+      ["pop", 180],
+      ["fall", 610],
+    ])
+      $(id).onclick = () => {
+        play();
+        for (const a of sheet.getAnimations({ subtree: true })) {
+          a.pause();
+          a.currentTime = time;
+        }
+        const copies = [...sheet.children]
+          .filter((node) => node.className?.includes("layer-flash"))
+          .map((node) => {
+            const copy = node.cloneNode(true);
+            copy.dataset.reviewFreeze = "true";
+            if (node instanceof HTMLCanvasElement) {
+              copy.getContext("2d").drawImage(node, 0, 0);
+              copy.style.opacity = getComputedStyle(node).opacity;
+            } else
+              [...node.children].forEach((star, i) => {
+                copy.children[i].style.transform = getComputedStyle(star).transform;
+                copy.children[i].style.opacity = getComputedStyle(star).opacity;
+              });
+            return copy;
+          });
+        stop();
+        sheet.append(...copies);
+        $("status").textContent = "Frozen at " + time + " ms";
+      };
+    $("cancel").onclick = () => {
+      stop();
+      $("status").textContent = "Canceled";
+    };
+    sheet.onpointerdown = $("cancel").onclick;
+    $("measure").onclick = async () => {
+      if (measuring) return;
+      measuring = true;
+      $("measure").disabled = true;
+      $("results").textContent = "";
+      const rows = [];
+      try {
+        for (let run = 0; run < 5; run++) {
+          $("status").textContent = `Measuring ${run + 1}/5`;
+          stop();
+          const started = performance.now();
+          play();
+          const setupMs = performance.now() - started;
+          const animationCount = sheet.getAnimations({ subtree: true }).length;
+          const canvasPixels = [...sheet.querySelectorAll('canvas[class*="layer-flash"]')].reduce(
+            (sum, c) => sum + c.width * c.height,
+            0,
+          );
+          const frames = [];
+          let previous = null,
+            first = null;
+          await new Promise((resolve, reject) => {
+            let handle;
+            const timeout = setTimeout(() => {
+              cancelAnimationFrame(handle);
+              reject(new Error("Frame collection exceeded 3 seconds"));
+            }, 3000);
+            function frame(t) {
+              if (first === null) first = performance.now() - started;
+              if (previous !== null) frames.push(t - previous);
+              previous = t;
+              if (performance.now() - started >= 1000) {
+                clearTimeout(timeout);
+                resolve();
+              } else handle = requestAnimationFrame(frame);
+            }
+            handle = requestAnimationFrame(frame);
+          });
+          const sorted = [...frames].sort((a, b) => a - b);
+          rows.push({
+            run: run + 1,
+            setupMs,
+            firstRafMs: first,
+            p95FrameMs: sorted[Math.floor(sorted.length * 0.95)] ?? null,
+            maxFrameMs: Math.max(...frames),
+            frameSamples: frames.length,
+            animationCount,
+            canvasPixels,
+          });
+          $("results").textContent = JSON.stringify(
+            {
+              size: $("size").value,
+              ink: $("ink").value,
+              opacity: $("opacity").value,
+              density: 2,
+              rows,
+            },
+            null,
+            2,
+          );
+        }
+        $("status").textContent = "Measurement complete";
+      } catch (error) {
+        $("status").textContent = "Measurement failed: " + error.message;
+        throw error;
+      } finally {
+        stop();
+        measuring = false;
+        $("measure").disabled = false;
+      }
+    };
+    render();
+  </script>
+</html>

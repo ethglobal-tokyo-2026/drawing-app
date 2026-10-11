@@ -435,24 +435,15 @@ export const stickerCreation = {
   },
   /** The thin line beside the layer chips that sets the current layer's opacity. */
   opacitySlider: {
-    /** Drawing screen, beside the layer chips: the opacity slider's name for screen readers */
+    /** Drawing screen, selected layer menu: the opacity slider's visible and accessible label */
     label: { en: "Opacity", ja: "不透明度" },
-    /** Drawing screen, beside the layer chips: read by screen readers as the opacity slider moves, and shown beside its thumb while a finger is on it; {{value}} is 0 to 100 */
+    /** Drawing screen, selected layer menu: opacity percentage shown and read while the range changes */
     value: { en: "{{value}}%", ja: "{{value}}%" },
-    /** Drawing screen, opacity slider: the persistent label beside its thumb, including while held or keyboard focused */
-    readout: { en: "Opacity {{value}}%", ja: "不透明度{{value}}%" },
-    /** Drawing screen, beside the layer chips: the white label that sticks out from the opacity slider for a few seconds when a stroke meets a hidden layer (opacity 0), also announced; the label never wraps by itself, so the line break is where it wraps */
-    hiddenHint: {
-      en: "Hidden. Raise its\nopacity to draw.",
-      ja: "非表示中です。不透明度を\n上げるとかけます。",
-    },
   },
   /** The layer column under the size rail, and the options bar the current chip opens. */
   layers: {
     /** Drawing screen, the layer column under the size rail: the list of layer chips, named for screen readers */
     label: { en: "Layers", ja: "レイヤー" },
-    /** Drawing screen, overflowing layer list: the persistent position indicator's accessible name */
-    scrollPosition: { en: "Layer list position", ja: "レイヤー一覧の位置" },
     /** Drawing screen, overflowing layer list at its top: the position indicator's description */
     moreBelow: { en: "More layers below", ja: "下にレイヤーがあります" },
     /** Drawing screen, overflowing layer list between its ends: the position indicator's description */
@@ -482,6 +473,30 @@ export const stickerCreation = {
     dismissOptionsHint: { en: "Dismiss layer hint", ja: "レイヤーのヒントを閉じる" },
     /** Drawing screen, layer options bar, opened by tapping the current chip: its name for screen readers; {{number}} is the layer's */
     options: { en: "Layer {{number}} options", ja: "レイヤー{{number}}の設定" },
+    /** Layer options, heading: reveals explanations and unavailable-action reasons */
+    help: { en: "Layer help", ja: "レイヤーのヘルプ" },
+    /** Layer options, heading: closes settings and returns focus to the selected layer */
+    close: { en: "Close layer options", ja: "レイヤー設定を閉じる" },
+    /** Layer options, move row: combines this layer with the layer immediately below */
+    merge: { en: "Merge down", ja: "下へ結合" },
+    /** Layer options, Merge accessible name: identifies the retained destination */
+    mergeInto: { en: "Merge down into layer {{number}}", ja: "下のレイヤー{{number}}へ結合" },
+    /** Layer options, Help: no merge destination beneath the bottom layer */
+    mergeNoLower: { en: "No layer below to merge into.", ja: "結合する下のレイヤーがありません。" },
+    /** Layer options, Help: merging would change the clipping shape used by layers above */
+    mergeClippedAbove: {
+      en: "Layers above clip to this pair. Turn off their clipping before merging.",
+      ja: "上のレイヤーがこの2枚でクリッピングされています。上のクリッピングを解除してから結合してください。",
+    },
+    /** Drawing screen, hidden selected layer: explains why drawing is blocked */
+    hiddenRecovery: {
+      en: "This layer is hidden at 0% opacity. Raise its opacity to draw.",
+      ja: "このレイヤーは不透明度0%で非表示中です。不透明度を上げるとかけます。",
+    },
+    /** Drawing screen, hidden-layer recovery: opens selected layer settings */
+    openOptions: { en: "Layer settings", ja: "レイヤー設定" },
+    /** Drawing screen, hidden-layer recovery: restores the layer to full opacity */
+    showLayer: { en: "Show at 100%", ja: "100%で表示" },
     /** Layer options bar: the toggle tile that keeps the brush and the fill to pixels already on the layer, named for screen readers */
     lock: { en: "Lock transparent pixels", ja: "透明ピクセルをロック" },
     /** Layer options bar: the effect of locking transparent pixels, below its toggle name */
@@ -534,10 +549,8 @@ export const stickerCreation = {
   },
   /** The bar under the tools, named like its tile. */
   smoothingBar: {
-    /** Smoothing bar, under the tool strip: the small label at the slider's left end, no smoothing; hidden from screen readers */
-    raw: { en: "Raw", ja: "弱" },
-    /** Smoothing bar, under the tool strip: the small label at the slider's right end, the most smoothing; hidden from screen readers */
-    smooth: { en: "Smooth", ja: "強" },
+    /** Drawing screen, open Smoothing bar: the current strength beside the range */
+    value: { en: "{{value}}%", ja: "{{value}}%" },
   },
   /** The bar under the tools that asks before the current layer is cleared. */
   clearBar: {

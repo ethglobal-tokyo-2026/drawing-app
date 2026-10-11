@@ -2,6 +2,7 @@ import { isOp, type LayerId, type LayerStep, type Op, type Step } from "../canva
 import { CHECKPOINT_COST, checkpointToDrop, planCheckpoints } from "./checkpoints";
 import {
   applyLayerStep,
+  baseOf,
   FIRST_LAYER,
   FIRST_LAYERS,
   indexOf,
@@ -18,6 +19,12 @@ type OpacityStep = Extract<LayerStep, { tool: "opacity" }>;
 
 /** The inked layers after `step`, from those before it, counted as `inkedAfter` counts them. */
 function inkedAfterStep(before: ReadonlySet<LayerId>, step: Step): ReadonlySet<LayerId> {
+  if (step.tool === "merge") {
+    const after = new Set(before);
+    if (after.has(step.layer)) after.add(step.into);
+    after.delete(step.layer);
+    return after;
+  }
   if (isOp(step)) return before.has(step.layer) ? before : new Set(before).add(step.layer);
   const empties = step.tool === "clear" || step.tool === "delete" || step.tool === "add";
   if (!empties || !before.has(step.layer)) return before;
@@ -28,7 +35,7 @@ function inkedAfterStep(before: ReadonlySet<LayerId>, step: Step): ReadonlySet<L
 
 /**
  * Undo and redo over every step, ops and layer changes alike. Undo rebuilds only the layer the
- * undone step changed, from its nearest checkpoint, replaying that layer's own ops since; a
+ * undone step changed, from its nearest checkpoint, reconstructing historical merge dependencies as needed; a
  * checkpoint holds every inked layer copy-on-write, and checkpoints thin out to fit the surface's
  * copy budget.
  */
@@ -136,6 +143,11 @@ export class LayerHistory<Hold> {
     // Only commit the history movement after the replacement layer is complete.
     if (isOp(step) || step.tool === "clear" || step.tool === "delete")
       this.surface.rebuild(step.layer, () => this.rebuild(step.layer, this.done.length - 1));
+    else if (step.tool === "merge")
+      this.surface.rebuild([step.layer, step.into], () => {
+        this.rebuild(step.layer, this.done.length - 1);
+        this.rebuild(step.into, this.done.length - 1);
+      });
     this.popHead();
     this.undone.push(step);
     this.surface.show(this.state);
@@ -289,7 +301,7 @@ export class LayerHistory<Hold> {
 
   /**
    * Rebuilds `layer` at the head from its nearest checkpoint, or from blank after its last clear,
-   * replaying its own ops since, each as drawn in the layers then.
+   * replaying its own ops and merges since, each as drawn in the layers then.
    */
   private rebuild(layer: LayerId, head: number): void {
     let from = this.nearestCheckpoint(head);
@@ -306,6 +318,23 @@ export class LayerHistory<Hold> {
     for (let i = from; i < head; i++) {
       const step = this.done[i];
       if (isOp(step) && step.layer === layer) this.surface.apply(step, this.states[i]);
+      else if (step.tool === "merge" && step.into === layer) {
+        const before = this.states[i];
+        const dependencies = new Set([step.layer]);
+        for (const id of [step.layer, step.into]) {
+          const base = baseOf(before, id);
+          if (base && base.id !== layer) dependencies.add(base.id);
+        }
+        // Dependency canvases exist only while this historic merge runs. Preserve live versions.
+        this.surface.rebuild(
+          [...dependencies],
+          () => {
+            for (const id of dependencies) this.rebuild(id, i);
+            this.surface.apply(step, before);
+          },
+          [],
+        );
+      }
     }
   }
 

@@ -99,7 +99,7 @@ describe("the timelapse v3 staging", () => {
     const stored = storedTimelapses(path);
     expect(unzipped(stored.get(ids[0]))).toEqual({
       ...V1,
-      v: 3,
+      v: 4,
       layers: [[1, 100, false, false]],
       ops: [
         ["brush", 1, "#ff3366", 0, [100, 200, 60, 0, 50, 25, 0, 16]],
@@ -107,7 +107,7 @@ describe("the timelapse v3 staging", () => {
         ["fill", 1, "#ffcc00", 2100, 80.5, 30, 2, "visible"],
       ],
     });
-    expect(unzipped(stored.get(ids[1]))).toEqual({ ...V2, v: 3 });
+    expect(unzipped(stored.get(ids[1]))).toEqual({ ...V2, v: 4 });
     expect(backupsBeside(path)).toEqual([
       [
         { stickerId: ids[0], gzipBase64: v1.toString("base64") },
@@ -156,7 +156,7 @@ describe("the timelapse v3 staging", () => {
 });
 
 describe("atomic timelapse migration", () => {
-  it("preserves ids and timestamps, enforces format 3, checks foreign keys, and performs no repeat conversion", () => {
+  it("preserves ids and timestamps through v4, checks foreign keys, and performs no repeat conversion", () => {
     const { path, sqlite } = databaseBefore("0016_timelapse_v3");
     const [id] = insertTimelapses(sqlite, [
       gzipped({ ...V2, ops: [["fill", 1, "#ff0000", 42, 5, 6, 2]] }),
@@ -173,9 +173,9 @@ describe("atomic timelapse migration", () => {
       after
         .prepare("select sticker_id, created_at, updated_at, format from sticker_timelapses")
         .get(),
-    ).toEqual({ sticker_id: id, created_at: 100, updated_at: 200, format: 3 });
+    ).toEqual({ sticker_id: id, created_at: 100, updated_at: 200, format: 4 });
     expect(unzipped(storedTimelapses(path).get(id))).toMatchObject({
-      v: 3,
+      v: 4,
       ops: [["fill", 1, "#ff0000", 42, 5, 6, 2, "visible"]],
     });
     expect(() => after.prepare("update sticker_timelapses set format = 2").run()).toThrow(

@@ -7,7 +7,7 @@ import { testHost } from "./testHost";
 
 vi.mock("./layerThumbnails", () => ({ drawThumbnail: vi.fn() }));
 
-const { render } = testHost();
+const { render, find } = testHost();
 const INKED: LayerChipView = {
   id: 1,
   opacity: 100,
@@ -33,6 +33,16 @@ const renderChip = (changes: Partial<LayerChipView>, current = false) =>
   );
 
 describe("LayerChip", () => {
+  it.each([0, 100])(
+    "keeps a separate clipping mark and complete accessible state at %s%%",
+    (opacity) => {
+      renderChip({ clipBase: 3, opacity });
+      expect(find(".layer-clip-mark").getAttribute("aria-hidden")).toBe("true");
+      expect(find('[role="option"]').getAttribute("aria-label")).toContain("clipped to layer 3");
+      if (opacity === 0)
+        expect(find('[role="option"]').getAttribute("aria-label")).toContain("hidden");
+    },
+  );
   it("redraws its thumbnail when its version bumps, and on no other change", () => {
     renderChip({});
     expect(drawThumbnail).toHaveBeenCalledOnce();

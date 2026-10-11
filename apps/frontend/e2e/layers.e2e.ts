@@ -261,9 +261,9 @@ test("layer setup survives a reload before the first mark, with the clock still 
   await button(page, copy.lock).click();
   await expect(button(page, copy.lock)).toHaveAttribute("aria-pressed", "true");
   await button(page, copy.moveBack).click();
-  await chip(page, 2).click();
   await slider(page).press("ArrowDown");
   await expect(slider(page)).toHaveAttribute("aria-valuenow", "95");
+  await chip(page, 2).click();
   const timer = button(page, creation.timer.label);
   await expect(timer).toBeVisible();
   const description = await timer.evaluate((dot) => {
@@ -279,7 +279,9 @@ test("layer setup survives a reload before the first mark, with the clock still 
     "data-layer-chip",
     "1",
   );
+  await options(page, 2);
   await expect(slider(page)).toHaveAttribute("aria-valuenow", "95");
+  await chip(page, 2).click();
   await expect(timer).toHaveAccessibleDescription(description);
   await options(page, 2);
   await expect(button(page, copy.lock)).toHaveAttribute("aria-pressed", "true");
@@ -389,8 +391,10 @@ async function invisibleSheet(page: Page, kind: "erased" | "hidden" | "clipped")
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
   if (kind === "erased") await eraseTestLine(page, language);
   if (kind === "hidden") {
+    await options(page, 2);
     for (let i = 0; i < 20; i++) await slider(page).press("ArrowDown");
     await expect(slider(page)).toHaveAttribute("aria-valuenow", "0");
+    await chip(page, 2).click();
   }
   if (kind === "clipped") {
     await options(page, 2);
@@ -417,8 +421,7 @@ test("restoring opacity replaces an empty preview with ready ink", async ({ page
   await button(page, stickerBoard.board.continueDrawing).click();
   await expect(page.locator(".ink-sheet")).toBeVisible();
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
-  for (let i = 0; i < 20; i++) await slider(page).press("ArrowUp");
-  await expect(slider(page)).toHaveAttribute("aria-valuenow", "100");
+  await button(page, copy.showLayer).click();
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
   await openSealSheet(page, language);
   await expect(page.locator(".seal-preview__ink")).toBeVisible();
@@ -673,29 +676,92 @@ test("measures repeated empty previews with retained layer history", async ({
   ).toBe(true);
 });
 
-test("opacity hides only its layer, hidden ink is blocked, and a double tap restores opacity", async ({
+test("opacity hides only its layer and direct recovery restores it without drawing", async ({
   page,
 }) => {
   const { lower, upper } = await twoLayers(page);
-  const thumb = slider(page).locator(".opacity-thumb");
-  const box = await thumb.boundingBox();
-  const track = await slider(page).boundingBox();
-  if (!box || !track) throw new Error("The layer opacity slider is not visible");
-  const fingers = await hand(page);
-  const contact = { id: 1, radius: FINGERTIP, x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  await fingers.down([contact]);
-  await fingers.move([{ ...contact, y: track.y + track.height + box.height }]);
-  await fingers.up();
+  await options(page, 2);
+  await slider(page).press("Home");
   await expect(slider(page)).toHaveAttribute("aria-valuenow", "0");
+  await chip(page, 2).click();
   await expect.poll(() => inkAt(page, upper)).toBe(0);
   await inkShows(page, lower);
+  const before = await readKeptHistory(page);
   const blocked = await line(page, 0.8);
-  await expect(page.locator(".opacity-hint")).toHaveClass(/is-on/);
+  await expect(page.locator(".layer-hidden-recovery")).toBeVisible();
   await expect.poll(() => inkAt(page, blocked)).toBe(0);
-  await thumb.dblclick();
-  await expect(slider(page)).toHaveAttribute("aria-valuenow", "100");
+  expect(await readKeptHistory(page)).toEqual(before);
+  await button(page, copy.showLayer).click();
   await inkShows(page, lower, upper);
   await expect.poll(() => inkAt(page, blocked)).toBe(0);
+});
+
+test("pointer opacity previews remain one undoable change on release", async ({ page }) => {
+  await openSheet(page);
+  await line(page, 0.5);
+  await expect.poll(async () => (await readKeptHistory(page)).steps.length).toBe(1);
+  await options(page, 1);
+  const range = slider(page);
+  const box = await range.boundingBox();
+  if (!box) throw new Error("The opacity range has no box");
+  await expect(range).toBeFocused();
+  await page.mouse.move(box.x + box.width - 13, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect(range).toHaveValue("100");
+  await page.mouse.up();
+  expect((await readKeptHistory(page)).steps).toHaveLength(1);
+  await page.mouse.move(box.x + box.width - 8, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.65, box.y + box.height / 2, { steps: 4 });
+  await page.mouse.move(box.x + box.width * 0.25, box.y + box.height / 2, { steps: 4 });
+  await expect(range).toBeFocused();
+  const preview = Number(await range.inputValue());
+  expect(preview).toBeGreaterThan(0);
+  expect(preview).toBeLessThan(50);
+  expect((await readKeptHistory(page)).steps).toHaveLength(1);
+  await page.mouse.up();
+  await expect.poll(async () => (await readKeptHistory(page)).steps).toHaveLength(2);
+  expect((await readKeptHistory(page)).steps.at(-1)).toMatchObject({
+    tool: "opacity",
+    opacity: preview,
+  });
+  await undo(page).click();
+  await options(page, 1);
+  await expect(range).toHaveValue("100");
+});
+
+test("Merge down retains both marks, selects its destination, and Undo restores the pair", async ({
+  page,
+}) => {
+  const { lower, upper } = await twoLayers(page);
+  await options(page, 2);
+  await page.getByRole("button", { name: say(copy.mergeInto, language, { number: 1 }) }).click();
+  await expect(chip(page, 2)).toHaveCount(0);
+  await expect(chip(page, 1)).toHaveAttribute("aria-selected", "true");
+  await expect(chip(page, 1)).toBeFocused();
+  await inkShows(page, lower, upper);
+  await undo(page).click();
+  await expect(chip(page, 2)).toHaveAttribute("aria-selected", "true");
+  await inkShows(page, lower, upper);
+  await options(page, 1);
+  const unavailableMerge = button(page, copy.merge);
+  await expect(unavailableMerge).toHaveAttribute("aria-disabled", "true");
+  await unavailableMerge.focus();
+  await unavailableMerge.press("Enter");
+  await expect(page.locator(".layer-options-help")).toContainText(copy.mergeNoLower.en);
+  await expect(chip(page, 2)).toBeVisible();
+});
+
+test("Help works from the keyboard and Escape returns to the selected layer", async ({ page }) => {
+  await openSheet(page);
+  await options(page, 1);
+  await expect(slider(page)).toBeFocused();
+  await button(page, copy.help).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".layer-options-help")).toBeVisible();
+  await expect(button(page, copy.help)).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(chip(page, 1)).toBeFocused();
 });
 
 test("a touch hold reorders once, and undo restores the original order", async ({ page }) => {

@@ -96,17 +96,17 @@ async function expectTimerNoteClearOfSelector(page: Page) {
   }
 }
 
-async function expectLayerHintClearOfOpacity(page: Page) {
+async function expectLayerHintClearOfControls(page: Page) {
   const [hint, readout, add, viewport] = await Promise.all([
     page.locator(".layer-options-hint").boundingBox(),
-    page.locator(".opacity-readout").boundingBox(),
+    page.locator(".size-num").boundingBox(),
     page.locator(".layer-add").boundingBox(),
     page.evaluate(() => ({ width: innerWidth, height: innerHeight })),
   ]);
   if (!hint || !readout || !add)
     throw new Error("The layer hint or its neighboring controls has no box");
   for (const [name, box] of [
-    ["opacity readout", readout],
+    ["brush size readout", readout],
     ["New layer", add],
   ] as const) {
     const apart =
@@ -145,7 +145,7 @@ for (const variant of [
     await draw(page, variant.language);
     await page.getByRole("button", { name: say(creation.layers.add, variant.language) }).click();
     await expect(page.locator(".layer-options-hint")).toBeVisible();
-    await expectLayerHintClearOfOpacity(page);
+    await expectLayerHintClearOfControls(page);
     await capture(page, `first-layer-hint-${variant.hand}-${variant.language}-${variant.height}`);
     await page.getByRole("button", { name: say(creation.tools.fill, variant.language) }).click();
     const bar = page.getByRole("radiogroup", {
@@ -158,7 +158,7 @@ for (const variant of [
       bar.getByText(say(creation.fillReference.visibleHelp, variant.language)),
     ).toBeVisible();
     await selectorFits(page, variant.language);
-    await expectLayerHintClearOfOpacity(page);
+    await expectLayerHintClearOfControls(page);
     await capture(page, `visible-help-${variant.hand}-${variant.language}-${variant.height}`);
   });
 }
@@ -184,10 +184,11 @@ test("first-use timer help remains readable while Fill appears and after the fir
   await capture(page, "first-fill-hint-peel");
 });
 
-test("phone controls stay readable over black ink at one and ten layers and every scroll position", async ({
+test("short phone controls stay readable over black ink at one and ten layers and every scroll position", async ({
   page,
 }) => {
   test.setTimeout(90_000);
+  await page.setViewportSize({ width: 390, height: 667 });
   const language = "en";
   await signIn(page, "layer-visual-phone", language);
   await draw(page, language);
@@ -222,6 +223,7 @@ test("phone controls stay readable over black ink at one and ten layers and ever
   await expect(well).toHaveAttribute("data-more-above", "true");
   await expect(well).not.toHaveAttribute("data-more-below");
   await capture(page, "phone-black-ten-end");
+  await page.locator('.layer-chip[aria-selected="true"]').click();
   const slider = page.getByRole("slider", { name: say(creation.opacitySlider.label, language) });
   await slider.focus();
   await expect(page.locator(".opacity-slider")).toBeVisible();
@@ -304,6 +306,7 @@ test("touch tablet keeps Fill choices and focused opacity clear with reduced mot
     .getByRole("button", { name: say(creation.layers.dismissOptionsHint, language) })
     .click();
   await selectorFits(page, language);
+  await page.locator('.layer-chip[aria-selected="true"]').click();
   const slider = page.getByRole("slider", { name: say(creation.opacitySlider.label, language) });
   await slider.focus();
   await capture(page, "tablet-reduced-focus");

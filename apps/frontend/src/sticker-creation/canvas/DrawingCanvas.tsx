@@ -179,6 +179,7 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
       addLayer: () => ink.current?.engine.addLayer(),
       selectLayer: (id) => ink.current?.engine.selectLayer(id),
       deleteLayer: () => ink.current?.engine.deleteLayer(),
+      mergeDown: () => ink.current?.engine.mergeDown(),
       moveLayer: (id, to) => ink.current?.engine.moveLayer(id, to),
       clearLayer: () => ink.current?.engine.clearLayer(),
       previewOpacity: (opacity) => ink.current?.engine.previewOpacity(opacity),

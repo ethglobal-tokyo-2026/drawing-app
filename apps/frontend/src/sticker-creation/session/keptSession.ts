@@ -138,7 +138,8 @@ function openDb(name: string): Promise<IDBDatabase> {
   const open = connections.get(name);
   if (open) return open;
   const opening = new Promise<IDBDatabase>((resolve, reject) => {
-    const req = indexedDB.open(name, 2);
+    // Merge steps require a version boundary so older tabs cannot reopen and replace their ink.
+    const req = indexedDB.open(name, 3);
     let expired = false;
     let upgradeError: unknown;
     let upgrading = false;
@@ -170,6 +171,8 @@ function openDb(name: string): Promise<IDBDatabase> {
         req.result.createObjectStore(PROGRESS);
         return;
       }
+      // Version 2 already records Fill references; its rows and progress need no conversion.
+      if (event.oldVersion >= 2) return;
       const cursor = tx.objectStore(OPS).openCursor();
       cursor.onsuccess = () => {
         const row = cursor.result;
@@ -844,6 +847,8 @@ function readStep(v: unknown): Step | undefined {
       return readOp(v, tool, layer, T);
     case "add":
       return "at" in v && isFiniteNumber(v.at) ? { tool, layer, at: v.at, T } : undefined;
+    case "merge":
+      return "into" in v && isLayerId(v.into) ? { tool, layer, into: v.into, T } : undefined;
     case "delete":
     case "clear":
       return { tool, layer, T };

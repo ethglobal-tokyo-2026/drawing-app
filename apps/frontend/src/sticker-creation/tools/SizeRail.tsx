@@ -60,7 +60,7 @@ interface Props {
 
 /**
  * The size rail: a groove down the left edge, a thumb that is the brush tip itself, and the size
- * in sheet units, shown as px, beside its thumb. While a finger is on it, a ghost of the tip shows
+ * in sheet units, shown as px below the rail. While a finger is on it, a ghost of the tip shows
  * mid-sheet at the size it draws. Only the thumb takes a finger, so a stroke beside it is a stroke.
  */
 export function SizeRail({ value, eraser, active, scale, onChange, onHold }: Props) {

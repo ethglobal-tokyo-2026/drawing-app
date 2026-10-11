@@ -79,7 +79,8 @@ for (const device of ["phone", "tablet"] as const) {
             layer,
             above,
             inked: { x: 30, y: 30, w: 500, h: 390 },
-            current,
+            below: document.createElement("canvas"),
+            opacity: 100,
             sheet,
             onEnd: () => completed++,
           });
@@ -133,14 +134,14 @@ for (const device of ["phone", "tablet"] as const) {
         expect(initial.lightPixels).toBeGreaterThan(0);
         expect(initial.darkEdge).toBeGreaterThan(0);
         expect(initial.lightEdge).toBeGreaterThan(0);
-        expect(initial.glints).toBe(reduced ? 0 : 7);
+        expect(initial.glints).toBe(reduced ? 0 : 12);
         if (reduced) expect(initial.animations).toBe(0);
         await mkdir(evidence, { recursive: true });
         const name = `${info.project.name}-${device}-${scheme}-${reduced ? "reduced" : "normal"}`;
         await page.screenshot({ path: `${evidence}/${name}-pop.png` });
         if (!reduced) {
           const fall = await page.evaluate(() => {
-            for (const animation of document.getAnimations()) animation.currentTime = 330;
+            for (const animation of document.getAnimations()) animation.currentTime = 610;
             const glint = document.querySelector(".layer-flash__glint");
             const pulse = document.querySelector(".layer-flash__pulse");
             if (!glint || !pulse) throw new Error("Missing feedback");
@@ -153,11 +154,11 @@ for (const device of ["phone", "tablet"] as const) {
           });
           expect(fall.y).toBeGreaterThan(5);
           expect(fall.opacity).toBeGreaterThan(0);
-          expect(fall.opacity).toBe(1);
+          expect(fall.opacity).toBeLessThan(1);
           expect(fall.pulseOpacity).toBe(0);
           await page.screenshot({ path: `${evidence}/${name}-fall.png` });
         }
-        await page.clock.runFor(600);
+        await page.clock.runFor(1000);
         expect(await page.locator("[class*='layer-flash']").count()).toBe(0);
         expect(await page.evaluate(() => window.layerFeedback.pixelsUnchanged())).toBe(true);
         expect(await page.evaluate(() => window.layerFeedback.completed())).toBe(1);
@@ -270,6 +271,84 @@ test("effective clipped ink and every display interruption release real browser 
   }
 });
 
+test("every device-pixel hairline phase keeps visible selection feedback", async ({ page }) => {
+  await page.goto("/");
+  const missing = await page.evaluate(async () => {
+    const { flashLayer } = await import("../src/sticker-creation/layers/layerFlash.ts");
+    const sheet = document.createElement("div");
+    sheet.style.cssText = "position:relative;width:100px;height:100px";
+    document.body.append(sheet);
+    const layer = document.createElement("canvas");
+    layer.width = layer.height = 300;
+    const g = layer.getContext("2d");
+    if (!g) throw new Error("No hairline canvas");
+    const empty = document.createElement("canvas");
+    empty.width = empty.height = 0;
+    const failures: string[] = [];
+    for (const alpha of [1, 0.1])
+      for (let phase = 0; phase < 3; phase++) {
+        g.clearRect(0, 0, 300, 300);
+        g.fillStyle = `rgba(0,0,0,${alpha})`;
+        g.fillRect(90 + phase, 60, 1, 180);
+        const feedback = flashLayer({
+          layer,
+          above: empty,
+          below: empty,
+          opacity: 100,
+          inked: { x: 90 + phase, y: 60, w: 1, h: 180 },
+          sheet,
+          onEnd() {},
+        });
+        if (!feedback || !sheet.querySelector(".layer-flash__pulse"))
+          failures.push(`${alpha}:${phase}`);
+        feedback?.cancel();
+      }
+    sheet.remove();
+    return failures;
+  });
+  expect(missing).toEqual([]);
+});
+
+test("a nearly full layer never marks clear holes as selected ink", async ({ page }) => {
+  await page.goto("/");
+  const alpha = await page.evaluate(async () => {
+    const { flashLayer } = await import("../src/sticker-creation/layers/layerFlash.ts");
+    const sheet = document.createElement("div");
+    sheet.style.cssText = "position:relative;width:374px;height:828px";
+    document.body.append(sheet);
+    const layer = document.createElement("canvas"),
+      above = document.createElement("canvas");
+    for (const canvas of [layer, above]) {
+      canvas.width = 374;
+      canvas.height = 828;
+    }
+    const g = layer.getContext("2d"),
+      ag = above.getContext("2d");
+    if (!g || !ag) throw new Error("No covered-ink fixture context");
+    g.fillRect(0, 0, 374, 828);
+    g.clearRect(40, 0, 20, 20);
+    ag.fillRect(40, 0, 20, 20);
+    const empty = document.createElement("canvas");
+    empty.width = empty.height = 0;
+    const feedback = flashLayer({
+      layer,
+      above,
+      below: empty,
+      opacity: 100,
+      inked: { x: 0, y: 0, w: 374, h: 828 },
+      sheet,
+      onEnd() {},
+    });
+    const outline = sheet.querySelector<HTMLCanvasElement>(".layer-flash__outline");
+    if (!outline) throw new Error("No covered outline");
+    const alpha = outline.getContext("2d")?.getImageData(50, 6, 1, 1).data[3];
+    feedback?.cancel();
+    sheet.remove();
+    return alpha;
+  });
+  expect(alpha).toBe(0);
+});
+
 test("changing reduced motion cancels browser playback immediately", async ({ page }) => {
   await page.route("**/e2e-layer-feedback", (route) =>
     route.fulfill({
@@ -293,7 +372,8 @@ test("changing reduced motion cancels browser playback immediately", async ({ pa
       layer,
       above,
       inked: { x: 20, y: 20, w: 100, h: 100 },
-      current: document.body,
+      below: document.createElement("canvas"),
+      opacity: 100,
       sheet: document.body,
       onEnd: () => {
         throw new Error("Canceled feedback completed");

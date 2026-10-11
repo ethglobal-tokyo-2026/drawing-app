@@ -9,6 +9,8 @@ import { and, count, eq, max } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { migrationsFolder } from "./migrate.ts";
+import { stageTimelapsesV3 } from "./timelapseV3.ts";
+import { stageTimelapsesV4 } from "./timelapseV4.ts";
 import * as schema from "./schema/index.ts";
 import type { KyotoSeikaSubject } from "./schema/kyotoSeikaSubject.ts";
 import { DAILY_TICKETS_PER_DAY, GIFT_EXPIRY_MS } from "./schema/limits.ts";
@@ -75,6 +77,11 @@ export function databaseBefore(tag: string) {
   writeFileSync(journalPath(folder), JSON.stringify({ entries: entries.slice(0, at) }));
   const path = join(dir, "test.db");
   const sqlite = new Database(path);
+  // The blank fixture still needs the preparatory temporary tables for included rebuilds.
+  if (entries.slice(0, at).some((entry) => entry.tag === "0016_timelapse_v3"))
+    stageTimelapsesV3(sqlite, { write: true }, () => undefined);
+  if (entries.slice(0, at).some((entry) => entry.tag === "0017_timelapse_v4"))
+    stageTimelapsesV4(sqlite, { write: true }, () => undefined);
   migrate(drizzle({ client: sqlite }), { migrationsFolder: folder });
   return { path, sqlite };
 }

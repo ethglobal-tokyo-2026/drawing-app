@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { databasePath } from "./client.ts";
 import { needsTimelapsesV3, stageTimelapsesV3 } from "./timelapseV3.ts";
+import { needsTimelapsesV4, stageTimelapsesV4 } from "./timelapseV4.ts";
 
 export const migrationsFolder = fileURLToPath(new URL("../drizzle", import.meta.url));
 
@@ -32,7 +33,12 @@ export function migrateDatabase(path = databasePath): void {
   const sqlite = new Database(path);
   try {
     sqlite.pragma("foreign_keys = OFF");
-    if (needsTimelapsesV3(sqlite, migrationsFolder)) stageTimelapsesV3(sqlite, { write: true });
+    const v3Pending = needsTimelapsesV3(sqlite, migrationsFolder);
+    const v4Pending = needsTimelapsesV4(sqlite, migrationsFolder);
+    // Validate v4 as well before the older migration writes its backup or staging table.
+    if (v4Pending) stageTimelapsesV4(sqlite, { write: false });
+    if (v3Pending) stageTimelapsesV3(sqlite, { write: true });
+    if (v4Pending) stageTimelapsesV4(sqlite, { write: true });
     const applied = appliedMigrations(sqlite);
     migrate(drizzle({ client: sqlite }), { migrationsFolder });
     if (appliedMigrations(sqlite) === applied) return;

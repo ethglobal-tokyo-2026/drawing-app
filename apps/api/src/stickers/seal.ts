@@ -295,7 +295,7 @@ export async function sealSticker(
   if (checked && "problem" in checked) {
     logFailure("sticker.timelapse.dropped", new Error(checked.problem), { stickerId, userId });
   }
-  if (timelapse && timelapse.originalVersion !== 3)
+  if (timelapse && timelapse.originalVersion !== 4)
     logInfo("sticker.timelapse.legacy_converted", {
       stickerId,
       userId,

@@ -94,6 +94,7 @@ export {
   ArrowRight,
   ArrowSquareOut,
   ArrowUUpLeft,
+  ArrowsMerge,
   At,
   CaretDown,
   CaretLeft,

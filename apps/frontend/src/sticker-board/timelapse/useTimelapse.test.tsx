@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { TimelapseV3 } from "@drawing-app/api/client";
+import type { TimelapseV4 } from "@drawing-app/api/client";
 import { act, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -193,7 +193,7 @@ afterEach(() => {
 
 describe("useTimelapse", () => {
   it("loads, prepares and plays, then holds the ink, fades to the sticker and sweeps its sheen once", async () => {
-    const loaded = deferred<TimelapseV3>();
+    const loaded = deferred<TimelapseV4>();
     client = emptyApi({ timelapse: () => loaded.promise });
     render();
     const swept = vi.spyOn(sheen(), "animate");
@@ -502,7 +502,7 @@ describe("useTimelapse", () => {
 
   it("logs a failure that comes after stop, naming the sticker, and shows no failure line", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    const loaded = deferred<TimelapseV3>();
+    const loaded = deferred<TimelapseV4>();
     client = emptyApi({ timelapse: () => loaded.promise });
     render();
     press();

@@ -63,7 +63,7 @@ const jsonField = <Schema extends z.ZodType>(schema: Schema) =>
 const png = z.file().mime("image/png").max(MAX_IMAGE_BYTES);
 
 /**
- * POST /api/stickers's multipart parts. The timelapse is optional, and a v2 one is stored as sent. Parts
+ * POST /api/stickers's multipart parts. The timelapse is optional; valid v4 is stored as sent. Parts
  * it doesn't name are dropped, not refused, so a page open since an older build still seals.
  */
 export const sealForm = z.object({

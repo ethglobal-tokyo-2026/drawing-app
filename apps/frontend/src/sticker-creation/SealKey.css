@@ -1,5 +1,10 @@
 /* The key's own press moves `translate`; the spring-in here uses opacity, transform and scale. */
 .key.seal-key {
+  --lip: 4px;
+  --press-travel: 2px;
+  --cast: 0 1px 0 rgba(28, 24, 36, 0.1), 1px 4px 6px rgba(28, 24, 36, 0.15);
+  /* Keep the incumbent face and anchor while only shortening its base. */
+  height: calc(var(--size, 58px) + var(--key-lip));
   position: absolute;
   left: var(--near-left) 18px;
   right: var(--near-right) 18px;

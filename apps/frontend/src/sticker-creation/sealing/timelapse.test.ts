@@ -1,4 +1,4 @@
-import { MAX_TIMELAPSE_BYTES, type TimelapseV3 } from "@drawing-app/api/client";
+import { MAX_TIMELAPSE_BYTES, type TimelapseV4 } from "@drawing-app/api/client";
 import { storedFromV1 } from "@drawing-app/api/testing/timelapses";
 import { describe, expect, it, vi } from "vitest";
 import { seededRandom } from "../../ui/seededRandom";
@@ -39,7 +39,18 @@ const gunzip = async (blob: Blob): Promise<unknown> =>
   JSON.parse(await new Response(blob.stream().pipeThrough(new DecompressionStream("gzip"))).text());
 
 describe("the timelapse", () => {
-  it("round trips each fill reference explicitly in format 3", () => {
+  it("round trips Merge down as source, time and destination in format 4", () => {
+    const merged: Step[] = [
+      { tool: "add", layer: 2, at: 1, T: 100 },
+      { tool: "brush", layer: 2, color: "#ff0000", T: 200, pts: [10, 20, 4, 0] },
+      { tool: "merge", layer: 2, into: 1, T: 300 },
+    ];
+    const encoded = encodeTimelapse({ ...input, steps: merged });
+    expect(encoded.v).toBe(4);
+    expect(encoded.ops.at(-1)).toEqual(["merge", 2, 300, 1]);
+    expect(decodeTimelapse(encoded).steps).toEqual(merged);
+  });
+  it("round trips each fill reference explicitly in format 4", () => {
     const encoded = encodeTimelapse({
       ...input,
       steps: [
@@ -47,7 +58,7 @@ describe("the timelapse", () => {
         { ...fill, reference: "visible" },
       ],
     });
-    expect(encoded.v).toBe(3);
+    expect(encoded.v).toBe(4);
     expect(encoded.ops.map((op) => op.at(-1))).toEqual(["layer", "visible"]);
     expect(decodeTimelapse(encoded).steps).toMatchObject([
       { reference: "layer" },
@@ -237,7 +248,7 @@ describe("the timelapse", () => {
   it("goes without one over the server's limit, and says so", async () => {
     const report = vi.fn();
     const random = seededRandom(1);
-    const huge: TimelapseV3 = {
+    const huge: TimelapseV4 = {
       ...encodeTimelapse(input),
       // Random colors don't compress, so this stays over the limit once gzipped.
       ops: Array.from({ length: MAX_TIMELAPSE_BYTES / 8 }, () => [

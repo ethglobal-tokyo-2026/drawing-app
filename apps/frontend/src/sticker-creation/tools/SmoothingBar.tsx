@@ -12,7 +12,7 @@ interface Props {
 }
 
 /**
- * Smoothing: a compact bar under the tools, Raw to Smooth. Smoothing has no standard icon, so its name
+ * Smoothing: a compact bar under the tools, from zero to full strength. It has no standard icon, so its name
  * shows here, and only while the bar is open. The track redraws as the thumb moves; the value lands
  * once the thumb is let go.
  */
@@ -20,6 +20,7 @@ export function SmoothingBar({ id, open, value, onChange }: Props) {
   const { t } = useTranslation();
   const titleId = useId();
   const range = useRef<HTMLInputElement>(null);
+  const readout = useRef<HTMLOutputElement>(null);
   const commit = useEffectEvent(onChange);
 
   useEffect(() => {
@@ -36,7 +37,10 @@ export function SmoothingBar({ id, open, value, onChange }: Props) {
   useEffect(() => {
     const input = range.current;
     if (input && input.valueAsNumber !== value) input.value = String(value);
-  }, [value]);
+    input?.style.setProperty("--p", `${value}%`);
+    if (readout.current)
+      readout.current.textContent = t(($) => $.stickerCreation.smoothingBar.value, { value });
+  }, [value, t]);
 
   return (
     <div
@@ -48,9 +52,6 @@ export function SmoothingBar({ id, open, value, onChange }: Props) {
       <span className="smoothing-title" id={titleId}>
         {t(($) => $.stickerCreation.tools.smoothing)}
       </span>
-      <span className="smoothing-end" aria-hidden="true">
-        {t(($) => $.stickerCreation.smoothingBar.raw)}
-      </span>
       <input
         ref={range}
         className="smoothing-range"
@@ -61,11 +62,17 @@ export function SmoothingBar({ id, open, value, onChange }: Props) {
         defaultValue={value}
         aria-label={t(($) => $.stickerCreation.tools.smoothing)}
         style={{ "--p": `${value}%` }}
-        onInput={(e) => e.currentTarget.style.setProperty("--p", `${e.currentTarget.value}%`)}
+        onInput={(e) => {
+          e.currentTarget.style.setProperty("--p", `${e.currentTarget.value}%`);
+          if (readout.current)
+            readout.current.textContent = t(($) => $.stickerCreation.smoothingBar.value, {
+              value: e.currentTarget.value,
+            });
+        }}
       />
-      <span className="smoothing-end" aria-hidden="true">
-        {t(($) => $.stickerCreation.smoothingBar.smooth)}
-      </span>
+      <output ref={readout} className="smoothing-readout" aria-hidden="true">
+        {t(($) => $.stickerCreation.smoothingBar.value, { value })}
+      </output>
     </div>
   );
 }

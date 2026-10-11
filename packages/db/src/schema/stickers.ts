@@ -122,11 +122,10 @@ export const stickerTimelapses = sqliteTable(
     ops: blob("ops", { mode: "buffer" }).notNull(),
     ...timestamps(),
     /** The timelapse JSON's version, its `v`. */
-    format: integer("format").notNull().default(3),
+    format: integer("format").notNull().default(4),
   },
   (t) => [
-    // v3, which records Fill reference, is the only version reading takes: a new one comes with a migration
-    // that converts the stored timelapses and moves this check.
-    check("sticker_timelapses_format", sql`${t.format} = 3`),
+    // v4 adds Merge down; migration 0017 converts every older stored recording before this check.
+    check("sticker_timelapses_format", sql`${t.format} = 4`),
   ],
 );

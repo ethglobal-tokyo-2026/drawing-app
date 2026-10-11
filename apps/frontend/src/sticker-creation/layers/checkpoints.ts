@@ -99,7 +99,10 @@ export function planCheckpoints(
     const head = i + 1;
     costTo.push(costTo[i] + cost(step));
     if (isOp(step)) live.set(step.layer, i);
-    else if (step.tool === "clear" || step.tool === "delete") live.delete(step.layer);
+    else if (step.tool === "merge") {
+      if (live.has(step.layer) || live.has(step.into)) live.set(step.into, i);
+      live.delete(step.layer);
+    } else if (step.tool === "clear" || step.tool === "delete") live.delete(step.layer);
     liveVersions = new Set(live.values());
     let justTaken: number | null = null;
     const latest = Math.max(0, ...kept.keys());

@@ -23,6 +23,11 @@
   pointer-events: auto;
 }
 
+.layer-add.label-btn svg {
+  width: 34px;
+  height: 34px;
+}
+
 .layer-maximum {
   position: absolute;
   top: 7px;
@@ -53,7 +58,7 @@
   flex-direction: row-reverse;
 }
 
-/* The paper and position mark appear only when the list has somewhere to scroll. */
+/* Only the overflowing thumbnail edges fade; the drawing remains visible beneath the column. */
 .layer-scroll-well {
   position: relative;
   display: flex;
@@ -62,61 +67,24 @@
   border-radius: var(--r-label);
 }
 
-.layer-scroll-well[data-overflow] {
-  background: var(--liner-lift);
-  box-shadow: inset 0 0 0 1px var(--rule);
+.layer-scroll-well {
+  --fade-top: 0px;
+  --fade-bottom: 0px;
 }
-
-.layer-scroll-well::before,
-.layer-scroll-well::after {
-  content: "";
-  position: absolute;
-  left: 5px;
-  right: 3px;
-  height: 10px;
-  z-index: 3;
-  pointer-events: none;
-  opacity: 0;
+.layer-scroll-well[data-more-above] {
+  --fade-top: 18px;
 }
-
-.layer-scroll-well::before {
-  top: 0;
-  background: linear-gradient(var(--liner-lift), transparent);
+.layer-scroll-well[data-more-below] {
+  --fade-bottom: 18px;
 }
-
-.layer-scroll-well::after {
-  bottom: 0;
-  background: linear-gradient(transparent, var(--liner-lift));
-}
-
-.layer-scroll-well[data-more-above]::before,
-.layer-scroll-well[data-more-below]::after {
-  opacity: 1;
-}
-
-.layer-scroll-position {
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 1px;
-  width: 2px;
-  border-radius: 2px;
-  background: var(--rule);
-  pointer-events: none;
-}
-
-.layer-scroll-position > span {
-  position: absolute;
-  top: calc(var(--position) * (1 - var(--portion)) * 100%);
-  height: calc(var(--portion) * 100%);
-  width: 100%;
-  border-radius: inherit;
-  background: var(--graphite);
-}
-
-.layer-column[data-edge="right"] .layer-scroll-position {
-  left: auto;
-  right: 1px;
+.layer-scroll-well[data-overflow] .layer-list {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 var(--fade-top),
+    #000 calc(100% - var(--fade-bottom)),
+    transparent
+  );
 }
 
 /* The padding keeps rings, shadows and 44px touch targets inside the scroll box, which clips them. The
@@ -188,15 +156,22 @@
   background: repeating-conic-gradient(#eceaf1 0 25%, #ffffff 0 50%) 0 0 / 10px 10px;
 }
 
-/* A clipped layer steps in toward the sheet and down onto the chip below, as ibisPaint indents one. */
-.layer-chip.is-clipped {
-  margin-bottom: -4px;
-  margin-left: 6px;
+/* Clipping has its own gutter mark, separate from selection and visible even at zero opacity. */
+.layer-clip-mark {
+  position: absolute;
+  left: 2px;
+  top: 3px;
+  bottom: 3px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--pink);
 }
-
-.layer-column[data-edge="right"] .layer-chip.is-clipped {
-  margin-left: 0;
-  margin-right: 6px;
+.layer-chip.is-clipped .layer-thumb {
+  left: 6px;
+  width: calc(100% - 6px);
+}
+.layer-chip.is-clipped .layer-number {
+  left: 7px;
 }
 
 .layer-thumb {
@@ -257,13 +232,6 @@
 
 .layer-column[data-edge="right"] .layer-options-caret {
   transform: scaleX(-1);
-}
-
-/* Starts level with the front chip, past the list's padding. Like the column's, its box passes touches
-   to the sheet: only the slider's own thumb takes them. */
-.layer-slider {
-  display: flex;
-  padding-block: 4px;
 }
 
 /* Out beside the current chip, toward the sheet; the column keeps either paper inside the screen. */

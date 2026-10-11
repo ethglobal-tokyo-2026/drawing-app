@@ -120,6 +120,13 @@
       "when": 1791736226587,
       "tag": "0016_timelapse_v3",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1791754255058,
+      "tag": "0017_timelapse_v4",
+      "breakpoints": true
     }
   ]
 }

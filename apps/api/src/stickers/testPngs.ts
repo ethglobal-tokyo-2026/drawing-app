@@ -2,7 +2,7 @@ import { MAX_TIME_USED_S } from "@drawing-app/db";
 import { crc32, deflateSync, gzipSync } from "node:zlib";
 import type { z } from "zod";
 import type { sealForm } from "./sealForm.ts";
-import type { TimelapseV3 } from "./timelapse.ts";
+import type { TimelapseV4 } from "./timelapse.ts";
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 const IHDR_BYTES = 13;
@@ -71,8 +71,8 @@ export const sharpImage = () => testPng(SHARP_SIZE.width, SHARP_SIZE.height, "sh
  * How the tests' sticker was drawn: a brush stroke of two points, a fill, then a second layer, a fill
  * on it and a turn of its opacity.
  */
-export const TEST_TIMELAPSE: TimelapseV3 = {
-  v: 3,
+export const TEST_TIMELAPSE: TimelapseV4 = {
+  v: 4,
   ink: [SHEET_SIZE.width, SHEET_SIZE.height],
   place: [10, 20, STICKER_DRAWN_SIZE.width, STICKER_DRAWN_SIZE.height],
   density: 2,

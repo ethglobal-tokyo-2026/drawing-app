@@ -1,28 +1,24 @@
 .smoothing-bar {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-rows: auto 44px;
   align-items: center;
-  column-gap: 10px;
-  row-gap: 3px;
-  padding: 9px 12px 6px;
+  gap: 8px;
+  padding: 0 8px;
 }
 
 .smoothing-title {
-  grid-column: 1 / -1;
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.005em;
 }
 
-.smoothing-end {
-  font-size: var(--fs-fine);
-  font-weight: 700;
-  font-stretch: var(--w-fine);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--graphite);
+.smoothing-readout {
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  min-width: 4ch;
+  text-align: right;
 }
 
 .smoothing-range {

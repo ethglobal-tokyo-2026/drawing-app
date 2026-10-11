@@ -434,6 +434,21 @@ describe("the timelapse player's layers", () => {
     expect(shownMiddle(display)).toEqual(opaque(BLUE));
   });
 
+  it("flattens the before-state pair without a delete fade, then plays on its destination", async () => {
+    const { display, schedule, playToEnd } = setup([
+      strokeOn(1, RED, 0),
+      { ...addLayer(2, 1), T: 500 },
+      strokeOn(2, BLUE, 600),
+      { tool: "opacity", layer: 2, opacity: 50, T: 950 },
+      { tool: "merge", layer: 2, into: 1, T: 1100 },
+    ]);
+    const merge = schedule.steps.at(-1);
+    expect(merge?.kind).toBe("layer");
+    if (merge?.kind === "layer") expect(merge.end).toBe(merge.start);
+    await playToEnd();
+    expect(shownMiddle(display)).toEqual([128, 0, 128, 255]);
+  });
+
   it("fades a deleted layer's ink out over its beat, and it's gone by the end", async () => {
     const { display, schedule, start, advance } = setup(
       [strokeOn(1, RED, 0), strokeOn(2, BLUE, 500), { ...deleteLayer(2), T: 1_000 }],

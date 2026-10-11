@@ -50,8 +50,7 @@ import type { SheetFrame } from "./canvas/sheetFrame";
 import { FIRST_SMOOTHING } from "./canvas/stabilizer";
 import { LayerColumn } from "./layers/LayerColumn";
 import { LayerOptionsBar } from "./layers/LayerOptionsBar";
-import { OpacitySlider } from "./layers/OpacitySlider";
-import { FIRST_LAYER, FIRST_LAYERS, baseOf } from "./layers/layerState";
+import { FIRST_LAYER, FIRST_LAYERS, baseOf, mergeDownTarget } from "./layers/layerState";
 import type { LayerView } from "./layers/layerView";
 import { useLayerDrag } from "./layers/useLayerDrag";
 import { usePenMagnify } from "./layers/usePenMagnify";
@@ -184,7 +183,6 @@ export function DrawingScreen({
   const smoothingBarId = useId();
   const clearBarId = useId();
   const layerList = useRef<HTMLDivElement>(null);
-  const [layerListHeight, setLayerListHeight] = useState(80);
   /** On a large screen the color sheet is a popover, which a tap outside closes. */
   const large = useLargeScreen();
   const hand = useDrawingHand();
@@ -295,15 +293,6 @@ export function DrawingScreen({
     onLift: setReordering,
   });
   const penHover = usePenMagnify(layerList, { enabled: active && drag.lifted === null, edge });
-  useEffect(() => {
-    const list = layerList.current;
-    if (!list) return;
-    if (typeof ResizeObserver === "undefined") return;
-    const observe = new ResizeObserver(() => setLayerListHeight(list.clientHeight));
-    observe.observe(list);
-    setLayerListHeight(list.clientHeight);
-    return () => observe.disconnect();
-  }, []);
   // The deal of a ticket spent in Kyoto Seika Manga Expression Practice Mode.
   const kyotoSeikaSheet = useKyotoSeikaSheet({ userId: me.id, keeper });
   const begin = useRef<BeginKeyHandle>(null);
@@ -833,7 +822,7 @@ export function DrawingScreen({
   // "Picked up" stays until the clock runs again; word of a lost drawing, or of a carried-over
   // ticket, until the first stroke.
   const dealt = session.phase === "dealt";
-  // Begin locked the pair in: it prints in the sheet's corner, under the ink.
+  // Begin locked the pair in: it stays in the lower margin beside the footer controls.
   const lockedPair = kyotoSeikaSheet.pair;
   useLayoutEffect(() => {
     if (!lockedPair) return;
@@ -843,9 +832,9 @@ export function DrawingScreen({
     const sheet = screen?.querySelector<HTMLElement>(".ink-sheet");
     if (!screen || !print || !column || !sheet) return;
     const measure = () => {
-      // The opacity thumb extends four pixels past the column's box.
-      const clearance = Math.ceil(
-        screen.getBoundingClientRect().bottom - print.getBoundingClientRect().top + 12,
+      const clearance = Math.max(
+        92,
+        Math.ceil(screen.getBoundingClientRect().bottom - print.getBoundingClientRect().top + 12),
       );
       column.style.setProperty("--corner-print-clearance", `${clearance}px`);
     };
@@ -1095,7 +1084,6 @@ export function DrawingScreen({
       <DrawingCanvas
         ref={canvas}
         active={active}
-        under={lockedPair && <CornerPrint subjects={lockedPair} />}
         label={canvasName}
         settings={{
           fillReference,
@@ -1257,6 +1245,28 @@ export function DrawingScreen({
               canMoveBack={currentIndex > 0}
               canMoveForward={currentIndex < chips.length - 1}
               canDelete={chips.length > 1}
+              mergeTarget={mergeDownTarget(layers.state, layers.current)}
+              onPreviewOpacity={(value) => canvas.current?.previewOpacity(value)}
+              onCommitOpacity={(value) => canvas.current?.setOpacity(value)}
+              onHoldOpacity={setOpacityHeld}
+              onClose={() => {
+                layerList.current
+                  ?.querySelector<HTMLElement>(`[data-layer-chip="${layers.current}"]`)
+                  ?.focus({ preventScroll: true });
+                setPanel(null);
+              }}
+              onMerge={() => {
+                const target = mergeDownTarget(layers.state, layers.current);
+                if (!("into" in target)) return;
+                canvas.current?.mergeDown();
+                // A failed allocation leaves the source selected. Only the engine's confirmed
+                // destination closes its menu; the ref follows onLayers before React renders.
+                if (lastCurrentLayer.current !== target.into) return;
+                layerList.current
+                  ?.querySelector<HTMLElement>(`[data-layer-chip="${target.into}"]`)
+                  ?.focus({ preventScroll: true });
+                setPanel(null);
+              }}
               onLock={(on) => canvas.current?.setLocked(on)}
               onClip={(on) => canvas.current?.setClipped(on)}
               onMoveBack={() => moveLayer(layers.current, currentIndex - 1)}
@@ -1268,21 +1278,23 @@ export function DrawingScreen({
               }}
             />
           }
-          slider={
-            (chips.length > 1 || currentLayer.opacity < 100) && (
-              <OpacitySlider
-                value={currentLayer.opacity}
-                length={layerListHeight}
-                edge={edge}
-                onPreview={(value) => canvas.current?.previewOpacity(value)}
-                onCommit={(value) => canvas.current?.setOpacity(value)}
-                onHold={setOpacityHeld}
-                nudge={hiddenNudge}
-              />
-            )
-          }
         />
       </div>
+      {currentLayer.opacity === 0 && panel !== "layer" && !locked && (
+        <div className="layer-hidden-recovery">
+          <p role="status" key={hiddenNudge}>
+            {t(($) => $.stickerCreation.layers.hiddenRecovery)}
+          </p>
+          <div>
+            <button type="button" onClick={() => setPanel("layer")}>
+              {t(($) => $.stickerCreation.layers.openOptions)}
+            </button>
+            <button type="button" onClick={() => canvas.current?.setOpacity(100)}>
+              {t(($) => $.stickerCreation.layers.showLayer)}
+            </button>
+          </div>
+        </div>
+      )}
       <span className="visually-hidden" role="status" aria-live="polite">
         {layerAnnouncement}
       </span>
@@ -1294,6 +1306,7 @@ export function DrawingScreen({
         onRedo={() => canvas.current?.redo()}
       />
       <MyBoardTile onOpen={onMyBoardTile} />
+      {lockedPair && <CornerPrint subjects={lockedPair} />}
       {!recovery && (
         <SealKey
           // The seal sheet's Seal is the screen's one key while it's up.

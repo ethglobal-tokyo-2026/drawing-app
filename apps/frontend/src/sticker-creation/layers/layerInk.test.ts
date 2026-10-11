@@ -3,11 +3,20 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { contextOf, forgetContexts, madeContexts } from "../../sticker-board/timelapse/testCanvas";
 import type { FillOp, LayerId, LayerStep } from "../canvas/ops";
 import type { SheetFrame } from "../canvas/sheetFrame";
+import { blankCanvas } from "../canvas/context2d";
+import * as contexts from "../canvas/context2d";
+import { CanvasUnavailableError } from "../canvas/canvasUnavailable";
 import type { Rect } from "../sealing/stickerPasses";
 import { compositeLayers } from "./composite";
 import { LayerInk } from "./layerInk";
 import { LayerHistory } from "./layerHistory";
-import { FULL_OPACITY, type Layer, type LayerState } from "./layerState";
+import {
+  applyLayerStep,
+  mergeDownTarget,
+  FULL_OPACITY,
+  type Layer,
+  type LayerState,
+} from "./layerState";
 import { brush, clearLayer, deleteLayer, fill } from "./testLayerSteps";
 
 vi.mock("../canvas/context2d", () => import("../canvas/testContext2d"));
@@ -32,6 +41,205 @@ const GREEN: Rgba = [0, 255, 0, 255];
 const BLUE: Rgba = [0, 0, 255, 255];
 const INK: Rgba = [28, 24, 36, 255];
 const CLEAR: Rgba = [0, 0, 0, 0];
+
+describe("Merge down", () => {
+  it("keeps both originals, history and redo when result or scratch allocation fails", () => {
+    for (const failAt of [1, 2]) {
+      const ink = sheet();
+      const history = new LayerHistory(ink);
+      history.load([
+        fill(1),
+        { tool: "add", layer: 2, at: 1, T: 0 },
+        fill(2),
+        { tool: "opacity", layer: 2, opacity: 40, T: 0 },
+      ]);
+      history.undo();
+      const originals = [ink.layerCanvas(1), ink.layerCanvas(2)];
+      const steps = [...history.steps];
+      const madeBefore = madeContexts().length;
+      const allocate = contexts.blankCanvas;
+      let calls = 0;
+      const spy = vi.spyOn(contexts, "blankCanvas").mockImplementation((...args) => {
+        if (++calls === failAt) throw new CanvasUnavailableError();
+        return allocate(...args);
+      });
+      expect(() => history.perform({ tool: "merge", layer: 2, into: 1, T: 0 })).toThrow(
+        CanvasUnavailableError,
+      );
+      expect([ink.layerCanvas(1), ink.layerCanvas(2)]).toEqual(originals);
+      expect(history.steps).toEqual(steps);
+      expect(history.canRedo).toBe(true);
+      expect(
+        madeContexts()
+          .slice(madeBefore)
+          .every(({ canvas }) => canvas.width === 0),
+      ).toBe(true);
+      spy.mockRestore();
+      history.redo();
+      expect(history.state.layers[1].opacity).toBe(40);
+    }
+  });
+
+  it("rolls back both restored layers when merge Undo fails after the source was reconstructed", () => {
+    const ink = sheet();
+    const history = new LayerHistory(ink);
+    history.load([
+      fill(1),
+      { tool: "add", layer: 2, at: 1, T: 0 },
+      fill(2),
+      { tool: "merge", layer: 2, into: 1, T: 0 },
+    ]);
+    history.dropCheckpoints();
+    const original = ink.layerCanvas(1);
+    const steps = [...history.steps];
+    const madeBefore = madeContexts().length;
+    const apply = ink.apply.bind(ink);
+    const spy = vi.spyOn(ink, "apply").mockImplementation((step, before) => {
+      if (step.layer === 1) throw new CanvasUnavailableError();
+      apply(step, before);
+    });
+    expect(() => history.undo()).toThrow(CanvasUnavailableError);
+    expect(ink.layerCanvas(1)).toBe(original);
+    expect(ink.layerCanvas(2)).toBeNull();
+    expect(history.steps).toEqual(steps);
+    expect(
+      madeContexts()
+        .slice(madeBefore)
+        .every(({ canvas }) => canvas.width === 0),
+    ).toBe(true);
+    spy.mockRestore();
+    history.undo();
+    expect(ink.layerCanvas(1)).not.toBeNull();
+    expect(ink.layerCanvas(2)).not.toBeNull();
+  });
+
+  it("replays cross-layer clipped merges, later Fill, clears and density changes from steps alone", () => {
+    const ink = sheet();
+    const history = new LayerHistory(ink);
+    const steps = [
+      { ...fill(1), color: "#FF0000" },
+      { tool: "add" as const, layer: 2, at: 1, T: 0 },
+      { ...fill(2), color: "#0000FF" },
+      { tool: "opacity" as const, layer: 1, opacity: 50, T: 0 },
+      { tool: "clip" as const, layer: 2, on: true, T: 0 },
+      { tool: "add" as const, layer: 3, at: 2, T: 0 },
+      { ...fill(3), color: "#00FF00" },
+      { tool: "clip" as const, layer: 3, on: true, T: 0 },
+      { tool: "merge" as const, layer: 3, into: 2, T: 0 },
+      { tool: "merge" as const, layer: 2, into: 1, T: 0 },
+      { ...fill(1), color: "#FFFFFF" },
+      { tool: "clear" as const, layer: 1, T: 0 },
+    ];
+    history.load(steps);
+    history.dropCheckpoints();
+    for (let i = 0; i < 4; i++) {
+      history.undo();
+      const expected = sheet();
+      new LayerHistory(expected).load(history.steps);
+      for (const { id } of history.state.layers)
+        expect(pixel(ink, id, 1, 1)).toEqual(pixel(expected, id, 1, 1));
+    }
+    for (let i = 0; i < 3; i++) history.redo();
+    const pixelBefore = pixel(ink, 1, 1, 1);
+    ink.setFrame({ ...FRAME, density: 1 });
+    history.invalidate();
+    expect(pixel(ink, 1, 1, 1)).toEqual(pixelBefore);
+    expect(history.canRedo).toBe(true);
+  });
+
+  it("keeps a hidden or empty pair canvas-free", () => {
+    const ink = sheet();
+    ink.apply({ tool: "merge", layer: 2, into: 1, T: 0 }, TWO);
+    expect(ink.layerCanvas(1)).toBeNull();
+    const before = stateOf(layer(1, { opacity: 0 }), layer(2, { opacity: 0 }));
+    paint(ink, before, 1, WHOLE, RED);
+    paint(ink, before, 2, WHOLE, BLUE);
+    ink.apply({ tool: "merge", layer: 2, into: 1, T: 0 }, before);
+    expect(ink.layerCanvas(1)).toBeNull();
+    expect(ink.layerCanvas(2)).toBeNull();
+  });
+
+  it("restores a merge's historical base for replay without overwriting that base's current ink", () => {
+    const ink = sheet();
+    const history = new LayerHistory(ink);
+    history.load([
+      { ...fill(1), color: "#FF0000" },
+      { tool: "opacity", layer: 1, opacity: 50, T: 0 },
+      { tool: "add", layer: 2, at: 1, T: 0 },
+      { ...fill(2), color: "#0000FF" },
+      { tool: "clip", layer: 2, on: true, T: 0 },
+      { tool: "add", layer: 3, at: 2, T: 0 },
+      { ...fill(3), color: "#00FF00" },
+      { tool: "clip", layer: 3, on: true, T: 0 },
+      { tool: "merge", layer: 3, into: 2, T: 0 },
+      { ...fill(1), color: "#FFFFFF", reference: "layer" },
+    ]);
+    const merged = pixel(ink, 2, 1, 1);
+    const base = ink.layerCanvas(1);
+    const basePixel = pixel(ink, 1, 1, 1);
+    const later = { ...fill(2), color: "#FFFFFF", reference: "layer" as const };
+    ink.apply(later, history.state);
+    history.commit(later);
+    history.dropCheckpoints();
+    history.undo();
+    expect(pixel(ink, 2, 1, 1)).toEqual(merged);
+    expect(ink.layerCanvas(1)).toBe(base);
+    expect(pixel(ink, 1, 1, 1)).toEqual(basePixel);
+    expect(ink.layerCanvas(3)).toBeNull();
+  });
+  it("keeps the destination lock and next ID, and refuses only an immediate clipped layer above", () => {
+    const before = stateOf(
+      layer(1, { opacity: 40, locked: true, clipped: true }),
+      layer(2),
+      layer(3),
+    );
+    expect(mergeDownTarget(before, 2)).toEqual({ into: 1 });
+    expect(applyLayerStep(before, { tool: "merge", layer: 2, into: 1, T: 0 })).toEqual({
+      layers: [layer(1, { locked: true }), layer(3)],
+      nextId: 4,
+    });
+    expect(mergeDownTarget(stateOf(layer(1), layer(2), layer(3, { clipped: true })), 2)).toEqual({
+      reason: "clipped-above",
+    });
+    expect(mergeDownTarget(before, 1)).toEqual({ reason: "no-lower-layer" });
+    expect(
+      mergeDownTarget(stateOf(layer(1), layer(2), layer(3), layer(4, { clipped: true })), 2),
+    ).toEqual({ into: 1 });
+    expect(() => applyLayerStep(before, { tool: "merge", layer: 2, into: 3, T: 0 })).toThrow(
+      "immediately below",
+    );
+    expect(() =>
+      applyLayerStep(stateOf(layer(1), layer(2), layer(3, { clipped: true })), {
+        tool: "merge",
+        layer: 2,
+        into: 1,
+        T: 0,
+      }),
+    ).toThrow("clipped-above");
+  });
+
+  it.each([
+    [false, false],
+    [false, true],
+    [true, false],
+    [true, true],
+  ])("flattens before-state opacity and clipping (%s, %s)", (destinationClip, sourceClip) => {
+    const ink = sheet();
+    const before = stateOf(
+      layer(1, { opacity: 50 }),
+      layer(2, { clipped: destinationClip, opacity: 50 }),
+      layer(3, { clipped: sourceClip, opacity: 50 }),
+    );
+    paint(ink, before, 1, LEFT, FAINT_RED);
+    paint(ink, before, 2, WHOLE, BLUE);
+    paint(ink, before, 3, RIGHT, GREEN);
+    const { g } = blankCanvas(SIDE, SIDE);
+    ink.compositeInto(g, before, [2, 3], WHOLE);
+    ink.apply({ tool: "merge", layer: 3, into: 2, T: 0 }, before);
+    expect(pixelsOf(ink, 2)).toEqual([...g.getImageData(0, 0, SIDE, SIDE).data]);
+    expect(ink.layerCanvas(3)).toBeNull();
+  });
+});
 
 const layer = (id: LayerId, overrides: Partial<Layer> = {}): Layer => ({
   id,
@@ -139,6 +347,7 @@ function heldVersions() {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.clearAllMocks();
   forgetContexts();
 });

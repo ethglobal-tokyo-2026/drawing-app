@@ -12,6 +12,8 @@ export interface LayerControls {
   selectLayer(id: LayerId): void;
   /** Deletes the current layer: the one below it becomes current, or the one above when it was at the back. Nothing on the last layer. */
   deleteLayer(): void;
+  /** Flattens the current layer into the one immediately below it, as one undo step. */
+  mergeDown(): void;
   /** Moves `id` to `to`, its place counted from the back, and makes it current. */
   moveLayer(id: LayerId, to: number): void;
   /** Empties the current layer, keeping its opacity. */

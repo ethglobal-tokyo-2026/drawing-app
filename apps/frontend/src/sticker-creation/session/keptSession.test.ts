@@ -305,6 +305,9 @@ describe("the drawing kept on this device", () => {
       moveLayer(2, 0),
       clearLayer(2),
       deleteLayer(2),
+      addLayer(3, 1),
+      brush(3),
+      { tool: "merge", layer: 3, into: 1, T: 500 },
     ];
     draw(userId, steps);
     expect(await keptSteps(userId)).toEqual(steps);
@@ -1051,9 +1054,9 @@ it("does not treat blocked metadata and an empty step store as confirmed empty",
   );
 });
 
-async function historicalSession(userId: string, reference?: string) {
+async function historicalSession(userId: string, reference?: string, version = 1) {
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
-    const req = indexedDB.open(`drawing-session.${userId}`, 1);
+    const req = indexedDB.open(`drawing-session.${userId}`, version);
     req.onupgradeneeded = () => {
       req.result.createObjectStore("ops");
       req.result.createObjectStore("progress");
@@ -1097,6 +1100,58 @@ async function historicalSession(userId: string, reference?: string) {
 }
 
 describe("saved Fill reference upgrade", () => {
+  it("preserves v2 steps and metadata and prevents stale v2 tabs from replacing merged ink", async () => {
+    const userId = someone();
+    const { db, steps } = await historicalSession(userId, "layer", 2);
+    db.onversionchange = () => db.close();
+    const metadata = localStorage.getItem(personKey("draw.session", userId));
+    const kept = await loadKeptSession(userId);
+    expect(kept).toMatchObject({
+      status: "found",
+      ticket: 7,
+      generation: "historical",
+      elapsedMs: 1234,
+      frame: FRAME,
+      steps,
+    });
+    expect(localStorage.getItem(personKey("draw.session", userId))).toBe(metadata);
+    if (kept.status !== "found") throw new Error("Expected the v2 drawing to survive");
+    const keeper = new SessionKeeper(userId);
+    keeper.resume(
+      kept.ticket,
+      kept.steps,
+      kept.elapsedMs,
+      kept.nsfw,
+      kept.tools,
+      kept.kyotoSeika,
+      kept.generation,
+    );
+    const merged: Step[] = [
+      ...kept.steps,
+      addLayer(2, 1),
+      { tool: "merge", layer: 2, into: 1, T: 500 },
+    ];
+    keeper.save(merged, 1500, FRAME);
+    await untilKept(userId, merged);
+    expect(() => db.transaction("ops", "readwrite")).toThrow();
+    const staleReopen = await new Promise<string>((resolve, reject) => {
+      const req = indexedDB.open(`drawing-session.${userId}`, 2);
+      req.onerror = () => resolve(req.error?.name ?? "error");
+      req.onsuccess = () => {
+        const stale = req.result;
+        const tx = stale.transaction(["ops", "progress"], "readwrite");
+        tx.objectStore("ops").clear();
+        tx.objectStore("progress").clear();
+        tx.oncomplete = () => {
+          stale.close();
+          resolve("replaced drawing");
+        };
+        tx.onabort = () => reject(tx.error);
+      };
+    });
+    expect(staleReopen).toBe("VersionError");
+    expect(await keptSteps(userId)).toEqual(merged);
+  });
   it("preserves the session while upgrading historical fills and prevents old-schema reopen", async () => {
     const userId = someone();
     const { db, steps } = await historicalSession(userId);

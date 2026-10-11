@@ -21,15 +21,15 @@
   --foot-inset: 18px;
   --history-gap: 6px;
   --board-gap: 16px;
-  /* Reclaim the old 26px size footer while preserving the thumb's original travel. */
-  --phone-rail-h: clamp(94px, calc(100% - 222px), 196px);
+  /* Compact rail and a reserved readout below it leave room for layer thumbnails. */
+  --phone-rail-h: clamp(94px, calc(100% - 300px), 164px);
 }
 
 /* The layer column continues down the edge after the size rail. Its list scrolls before the foot
    tiles, while the options bar reaches toward the sheet. */
 .drawing-screen > .drawing-layer-column {
   position: absolute;
-  top: calc(104px + var(--phone-rail-h) + 12px);
+  top: calc(80px + var(--phone-rail-h) + 32px);
   bottom: 92px;
   left: var(--far-left) 0;
   right: var(--far-right) 0;
@@ -47,11 +47,42 @@
 .drawing-layer-column .layer-list {
   max-height: 100%;
 }
-.drawing-layer-column.is-pen-hovered .layer-slider {
-  opacity: 0;
+
+.layer-hidden-recovery {
+  position: absolute;
+  z-index: 4;
+  left: var(--far-left) 58px;
+  right: var(--far-right) 58px;
+  bottom: 144px;
+  width: min(276px, calc(100% - 78px));
+  padding: 10px;
+  background: var(--liner-lift);
+  box-shadow: var(--shadow-lift);
+  border-radius: var(--r-label);
+  font-size: 13px;
+  line-height: 1.4;
 }
-.drawing-layer-column .layer-slider {
-  transition: opacity 120ms var(--ease-out);
+.layer-hidden-recovery p {
+  margin: 0 0 8px;
+}
+.layer-hidden-recovery > div {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.layer-hidden-recovery button {
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--r-label);
+  background: var(--ink);
+  color: var(--canvas);
+  font-size: 13px;
+  font-weight: 650;
+}
+.layer-hidden-recovery button + button {
+  background: var(--liner-deep);
+  color: var(--ink);
 }
 
 .drawing-screen :focus-visible {
@@ -227,17 +258,10 @@
   text-align: right;
 }
 
-/* The corner print of a sheet in Kyoto Seika Practice Mode goes over the tiles in the lower right,
-   clear of the left hand, which covers the lower left as it draws; the deal tucks toward it. */
-.drawing-screen[data-hand="left"] .corner-print {
-  left: auto;
-  right: 10px;
-}
-
 /* The note stays in its corner; the list scrolls above its actual height on a Kyoto Seika sheet. */
 @media (max-width: 599px) {
   .drawing-screen[data-kyoto-pair] > .drawing-layer-column {
-    bottom: var(--corner-print-clearance, 260px);
+    bottom: var(--corner-print-clearance, 92px);
   }
 }
 
@@ -260,7 +284,7 @@
     --layer-h: clamp(100px, calc(100% - 470px), 300px);
     --tiles-h: calc(3 * var(--foot-tile) + var(--history-gap) + var(--board-gap));
     --rail-top: clamp(72px, calc(50% - 390px), 230px);
-    --tiles-top: calc(var(--rail-top) + var(--rail-h) + var(--layer-h) + 32px);
+    --tiles-top: calc(var(--rail-top) + var(--rail-h) + var(--layer-h) + 48px);
     --timer-inset: 8px;
     --tools-inset: 8px;
   }
@@ -278,7 +302,7 @@
     inset: var(--top-h) var(--edge-w) var(--foot) 8px;
   }
 
-  /* The px readout stays beside the thumb on tablets too. */
+  /* The readout stays centered below the rail on tablets too. */
   .drawing-screen > .size-rail {
     --thumb-foot: 18px;
     left: var(--far-left) calc((var(--edge-w) - 40px) / 2);
@@ -288,7 +312,7 @@
   }
 
   .drawing-screen > .drawing-layer-column {
-    top: calc(var(--rail-top) + var(--rail-h) + 16px);
+    top: calc(var(--rail-top) + var(--rail-h) + 32px);
     bottom: auto;
     height: var(--layer-h);
     left: var(--far-left) calc((var(--edge-w) - 50px) / 2);

@@ -1,99 +1,36 @@
 import { GLINT_SVG, svgDataUrl } from "../../gratitude/heartArt";
-import { clamp, EASE_OUT } from "../../ui/easing";
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { blankCanvas } from "../canvas/context2d";
 import type { Rect } from "../sealing/stickerPasses";
+import { glintPath, pickInkEdges } from "./layerGlints";
 import "./layerFlash.css";
 
-/** The stationary ink cue, including its readable peak. */
 export const FLASH_MS = 280;
-/** The glints finish falling within half a second of selection. */
-export const GLINT_TAIL_MS = 480;
-
-/** Sheet px per sampled px: color and edge sampling stay at quarter scale. */
-const SHRINK = 4;
-const MAX_GLINTS = 7;
-/** Distance between glints, of the sheet's short side. */
-const GLINT_GAP = 0.12;
-/** CSS px a glint falls after it has popped. */
-const GLINT_TRAVEL = 14;
-/** The alpha at which a flash px counts as ink, for finding its edge. */
-const EDGE_ALPHA = 48;
-/** The edge pixels glints are picked among, at most, so a long edge costs no more than a short one. */
-const MAX_EDGE_PICKS = 2048;
-
+/** Includes the last satellite's delay and a cleanup allowance. */
+export const GLINT_TAIL_MS = 940;
 const REDUCED = "(prefers-reduced-motion: reduce)";
-/** DESIGN.md's Ink and the light, spelled out: a canvas can't read the tokens. */
 const INK = "#1C1824";
 const LIGHT = "#FFFFFF";
-const GLINT_IMAGE = `url("${svgDataUrl(GLINT_SVG)}")`;
-
-/** At quarter scale a bilinear draw reads two of each four sheet px; four draws offset by a quarter flash px read them all, so a hairline isn't lost. */
-const SAMPLES = [-0.25, 0.25].flatMap((dx) => [-0.25, 0.25].map((dy) => [dx, dy] as const));
-/** The eight neighbors used to grow the covered ink contour. */
 const AROUND = [-1, 0, 1].flatMap((dx) =>
-  [-1, 0, 1].filter((dy) => dx !== 0 || dy !== 0).map((dy) => [dx, dy] as const),
+  [-1, 0, 1].filter((dy) => dx || dy).map((dy) => [dx, dy] as const),
 );
+const glintImage = (pink: boolean) => {
+  const art = pink ? GLINT_SVG.replace('fill="#fff"', 'fill="#ff4f9a"') : GLINT_SVG;
+  const path = art.match(/<path[^>]+\/>/)?.[0];
+  if (!path) throw new Error("The layer sparkle has no path");
+  const undercut = path
+    .replace(/stroke="[^"]+"/, 'stroke="#fff"')
+    .replace('stroke-width="2.2"', 'stroke-width="5.2"');
+  return 'url("' + svgDataUrl(art.replace(path, undercut + path)) + '")';
+};
+const GLINT_IMAGES = [glintImage(true), glintImage(false)];
 
-/** Where a glint sparks, in flash px. */
-interface Spark {
-  x: number;
-  y: number;
-}
-
-/**
- * Up to MAX_GLINTS points on the ink's edge in `image`, read at (ox, oy), each at least `gap` flash px
- * from the rest: the first nearest the light, then each the farthest from those before it.
- */
-function sparksOn(image: ImageData, ox: number, oy: number, gap: number): Spark[] {
-  const { data, width, height } = image;
-  const alpha = (x: number, y: number) =>
-    x < 0 || y < 0 || x >= width || y >= height ? 0 : data[(y * width + x) * 4 + 3];
-  const edge: number[] = [];
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      if (alpha(x, y) < EDGE_ALPHA) continue;
-      const out =
-        alpha(x - 1, y) < EDGE_ALPHA ||
-        alpha(x + 1, y) < EDGE_ALPHA ||
-        alpha(x, y - 1) < EDGE_ALPHA ||
-        alpha(x, y + 1) < EDGE_ALPHA;
-      if (out) edge.push(x, y);
-    }
-  }
-  if (edge.length === 0) return [];
-  const step = 2 * Math.ceil(edge.length / 2 / MAX_EDGE_PICKS);
-  const xs: number[] = [];
-  const ys: number[] = [];
-  for (let i = 0; i < edge.length; i += step) {
-    xs.push(edge[i]);
-    ys.push(edge[i + 1]);
-  }
-  let next = 0;
-  for (let i = 1; i < xs.length; i++) if (xs[i] + ys[i] < xs[next] + ys[next]) next = i;
-  const nearest = new Float64Array(xs.length).fill(Infinity);
-  const picked: number[] = [];
-  while (next >= 0 && picked.length < MAX_GLINTS) {
-    picked.push(next);
-    const [px, py] = [xs[next], ys[next]];
-    next = -1;
-    let farthest = gap * gap;
-    for (let i = 0; i < xs.length; i++) {
-      nearest[i] = Math.min(nearest[i], (xs[i] - px) ** 2 + (ys[i] - py) ** 2);
-      if (nearest[i] >= farthest) {
-        farthest = nearest[i];
-        next = i;
-      }
-    }
-  }
-  return picked.map((i) => ({ x: xs[i] + ox, y: ys[i] + oy }));
-}
-
-/** Two contrasting edges keep covered selected ink identifiable over either light or dark ink. */
+/** Two edges outline selected ink only through the layers covering it. */
 function coveredOutline(
   ink: HTMLCanvasElement,
   above: HTMLCanvasElement,
   edge: number,
+  full: boolean,
   allocate: typeof blankCanvas,
 ) {
   const made = allocate(ink.width, ink.height);
@@ -103,8 +40,8 @@ function coveredOutline(
     inner.g.drawImage(ink, dx * edge, dy * edge);
   }
   for (const [part, color] of [
-    [made, INK],
-    [inner, LIGHT],
+    [made, LIGHT],
+    [inner, INK],
   ] as const) {
     part.g.globalCompositeOperation = "source-in";
     part.g.fillStyle = color;
@@ -116,52 +53,72 @@ function coveredOutline(
   releaseCanvas(inner.canvas);
   g.globalCompositeOperation = "destination-out";
   g.drawImage(ink, 0, 0);
+  if (full) {
+    // A filled sheet has no exterior contour inside its crop. An inset rule shows its extent.
+    g.globalCompositeOperation = "source-over";
+    const inset = edge * 5;
+    for (const [offset, color] of [
+      [0, LIGHT],
+      [edge, INK],
+    ] as const) {
+      const at = inset + offset;
+      g.fillStyle = color;
+      g.fillRect(at, at, ink.width - at * 2, edge);
+      g.fillRect(at, ink.height - at - edge, ink.width - at * 2, edge);
+      g.fillRect(at, at, edge, ink.height - at * 2);
+      g.fillRect(ink.width - at - edge, at, edge, ink.height - at * 2);
+    }
+  }
   g.globalCompositeOperation = "destination-in";
-  g.drawImage(above, 0, 0);
+  g.drawImage(above, 0, 0, above.width, above.height, 0, 0, ink.width, ink.height);
   return made;
 }
 
 export interface LayerFlash {
-  /** Stops it at once, and lets go of everything it made. */
   readonly cancel: () => void;
 }
-
 export interface FlashParts {
-  /** The layer's own canvas: sheet-sized, device px. */
+  /** Effective selected ink, already clipped to its base. Borrowed, never changed. */
   readonly layer: HTMLCanvasElement;
-  /** Where the layer's ink reaches, device px. */
   readonly inked: Rect;
-  /** The layers above it composited, sheet-sized; 0 × 0 while none shows ink. */
+  readonly below: HTMLCanvasElement;
   readonly above: HTMLCanvasElement;
-  /** Takes the pulse: over the layer's canvas, so the layer's opacity fades the light with its ink. */
-  readonly current: HTMLElement;
-  /** Takes the covered outline and glints, after `above`, so both show over what covers the ink. */
+  /** Selected opacity multiplied by the clipping base opacity, from 0 to 100. */
+  readonly opacity: number;
   readonly sheet: HTMLElement;
-  /** Told once the flash has played out; never after `cancel`. */
   readonly onEnd: () => void;
 }
 
-/** A stationary contrast pulse and a few falling glints, sampled once from effective selected ink. */
+/** One contrast cue and four varied sparkle groups, prepared once and animated by the browser. */
 export function flashLayer(parts: FlashParts): LayerFlash | null {
   const media = window.matchMedia(REDUCED);
-  if (document.hidden) return null;
+  const { layer, inked, above, below, opacity } = parts;
+  if (
+    document.hidden ||
+    opacity <= 0 ||
+    !layer.width ||
+    !layer.height ||
+    inked.w <= 0 ||
+    inked.h <= 0
+  )
+    return null;
   const reduced = media.matches;
-  const { layer, inked, above } = parts;
-  const { width, height } = layer;
-  const w = Math.ceil(width / SHRINK);
-  const h = Math.ceil(height / SHRINK);
-  const x0 = clamp(Math.floor(inked.x / SHRINK) - 1, 0, w);
-  const y0 = clamp(Math.floor(inked.y / SHRINK) - 1, 0, h);
-  const x1 = clamp(Math.ceil((inked.x + inked.w) / SHRINK) + 1, 0, w);
-  const y1 = clamp(Math.ceil((inked.y + inked.h) / SHRINK) + 1, 0, h);
-  if (x1 <= x0 || y1 <= y0) return null;
-
+  const bounds = parts.sheet.getBoundingClientRect();
+  const cssWidth = bounds.width || layer.width;
+  const cssHeight = bounds.height || layer.height;
+  // Feedback has its own bounded raster; the artwork always retains its original resolution.
+  const scale = Math.min(
+    1,
+    cssWidth / layer.width,
+    Math.sqrt(600_000 / (layer.width * layer.height)),
+  );
+  const width = Math.max(1, Math.ceil(layer.width * scale));
+  const height = Math.max(1, Math.ceil(layer.height * scale));
   const canvases: HTMLCanvasElement[] = [];
   const animations: Animation[] = [];
   let glints: HTMLDivElement | null = null;
   let end = 0;
   let ended = false;
-  // Ownership starts at allocation, including temporaries used while constructing the contour.
   const allocate: typeof blankCanvas = (...args) => {
     const made = blankCanvas(...args);
     canvases.push(made.canvas);
@@ -186,99 +143,146 @@ export function flashLayer(parts: FlashParts): LayerFlash | null {
   const onVisibility = () => {
     if (document.hidden) letGo();
   };
-
   try {
-    const sampled = allocate(w, h);
-    for (const [dx, dy] of SAMPLES) {
-      sampled.g.drawImage(layer, 0, 0, width, height, dx, dy, width / SHRINK, height / SHRINK);
+    const source = allocate(width, height, { willReadFrequently: true });
+    // Each bilinear pass reads every source pixel. A single 3:1 reduction can skip a hairline.
+    let reading = layer;
+    while (reading.width > width * 2 || reading.height > height * 2) {
+      const smaller = allocate(
+        Math.max(width, Math.ceil(reading.width / 2)),
+        Math.max(height, Math.ceil(reading.height / 2)),
+      );
+      smaller.g.drawImage(
+        reading,
+        0,
+        0,
+        reading.width,
+        reading.height,
+        0,
+        0,
+        smaller.canvas.width,
+        smaller.canvas.height,
+      );
+      if (reading !== layer) releaseCanvas(reading);
+      reading = smaller.canvas;
     }
-    const image = sampled.g.getImageData(x0, y0, x1 - x0, y1 - y0);
-    const sparks = sparksOn(image, x0, y0, GLINT_GAP * Math.min(w, h));
-    if (sparks.length === 0) {
+    source.g.drawImage(reading, 0, 0, reading.width, reading.height, 0, 0, width, height);
+    if (reading !== layer) releaseCanvas(reading);
+    const ink = source.g.getImageData(0, 0, width, height);
+    const sparks = pickInkEdges(ink.data, width, height, width / cssWidth, height / cssHeight);
+    if (!sparks.length) {
       letGo();
       return null;
     }
-    // Drawing from a 0 × 0 canvas throws; with nothing above, nothing covers the ink.
-    const shownWidth = parts.sheet.getBoundingClientRect().width;
-    const edge = shownWidth > 0 ? width / shownWidth : SHRINK;
+    // Opaque silhouette subtraction prevents a covered translucent fill from flashing throughout.
+    let inkPixels = 0;
+    for (let i = 3; i < ink.data.length; i += 4)
+      if (ink.data[i]) {
+        ink.data[i] = 255;
+        inkPixels++;
+      }
+    const silhouette = allocate(width, height);
+    silhouette.g.putImageData(ink, 0, 0);
     const outline =
-      above.width > 0 && above.height > 0 ? coveredOutline(layer, above, edge, allocate) : null;
-    // Contrast is chosen once per sampled pixel; alpha still follows the selected ink.
-    for (let i = 0; i < image.data.length; i += 4) {
-      const alpha = image.data[i + 3] / 255;
+      above.width && above.height
+        ? coveredOutline(
+            silhouette.canvas,
+            above,
+            (width / cssWidth) * 1.25,
+            inkPixels === width * height,
+            allocate,
+          )
+        : null;
+    releaseCanvas(silhouette.canvas);
+
+    // Choose contrast from what is actually visible, including the lower ink and effective opacity.
+    const sampled = allocate(Math.ceil(width / 4), Math.ceil(height / 4), {
+      willReadFrequently: true,
+    });
+    const sw = sampled.canvas.width,
+      sh = sampled.canvas.height;
+    if (below.width && below.height)
+      sampled.g.drawImage(below, 0, 0, below.width, below.height, 0, 0, sw, sh);
+    sampled.g.globalAlpha = opacity / 100;
+    sampled.g.drawImage(layer, 0, 0, layer.width, layer.height, 0, 0, sw, sh);
+    sampled.g.globalAlpha = 1;
+    if (above.width && above.height)
+      sampled.g.drawImage(above, 0, 0, above.width, above.height, 0, 0, sw, sh);
+    const visible = sampled.g.getImageData(0, 0, sw, sh);
+    for (let i = 0; i < visible.data.length; i += 4) {
+      const alpha = visible.data[i + 3] / 255;
       const luminance =
-        0.2126 * image.data[i] + 0.7152 * image.data[i + 1] + 0.0722 * image.data[i + 2];
+        visible.data[i] * 0.2126 + visible.data[i + 1] * 0.7152 + visible.data[i + 2] * 0.0722;
       const light = luminance * alpha + 255 * (1 - alpha) < 150;
-      image.data[i] = light ? 255 : 28;
-      image.data[i + 1] = light ? 255 : 24;
-      image.data[i + 2] = light ? 255 : 36;
-      image.data[i + 3] = 255;
+      visible.data[i] = light ? 255 : 28;
+      visible.data[i + 1] = light ? 255 : 24;
+      visible.data[i + 2] = light ? 255 : 36;
+      visible.data[i + 3] = 255;
     }
-    sampled.g.clearRect(0, 0, w, h);
-    sampled.g.putImageData(image, x0, y0);
-    // Only color choice is sampled. The full-resolution ink supplies the exact edge and alpha.
+    sampled.g.putImageData(visible, 0, 0);
     const pulse = allocate(width, height);
-    pulse.g.drawImage(sampled.canvas, 0, 0, w, h, 0, 0, width, height);
+    pulse.g.drawImage(sampled.canvas, 0, 0, sw, sh, 0, 0, width, height);
     pulse.g.globalCompositeOperation = "destination-in";
-    pulse.g.drawImage(layer, 0, 0);
+    pulse.g.drawImage(source.canvas, 0, 0);
+    if (above.width && above.height) {
+      pulse.g.globalCompositeOperation = "destination-out";
+      pulse.g.drawImage(above, 0, 0, above.width, above.height, 0, 0, width, height);
+    }
+    releaseCanvas(source.canvas);
     releaseCanvas(sampled.canvas);
-    const cue = (canvas: HTMLCanvasElement, host: HTMLElement, name: string) => {
+    const cue = (canvas: HTMLCanvasElement, name: string, peak: number) => {
       canvas.className = `ink-canvas layer-flash__${name}`;
       canvas.setAttribute("aria-hidden", "true");
-      host.append(canvas);
-      if (reduced) canvas.style.opacity = "0.8";
+      parts.sheet.append(canvas);
+      if (reduced) canvas.style.opacity = `${peak}`;
       else
         animations.push(
           canvas.animate(
             [
               { opacity: 0 },
-              { opacity: 0.8, offset: 0.2 },
-              { opacity: 0.8, offset: 0.6 },
+              { opacity: peak, offset: 0.2 },
+              { opacity: peak, offset: 0.55 },
               { opacity: 0 },
             ],
             { duration: FLASH_MS },
           ),
         );
     };
-    cue(pulse.canvas, parts.current, "pulse");
-    if (outline) cue(outline.canvas, parts.sheet, "outline");
-
-    glints = reduced ? null : document.createElement("div");
-    if (glints) {
+    cue(pulse.canvas, "pulse", 0.58);
+    if (outline) cue(outline.canvas, "outline", 0.95);
+    if (!reduced) {
+      glints = document.createElement("div");
       glints.className = "layer-flash__glints";
       glints.setAttribute("aria-hidden", "true");
-      for (const spark of sparks) {
-        const glint = document.createElement("span");
-        glint.className = "layer-flash__glint";
-        glint.style.left = `${(((spark.x + 0.5) * SHRINK) / width) * 100}%`;
-        glint.style.top = `${(((spark.y + 0.5) * SHRINK) / height) * 100}%`;
-        glint.style.backgroundImage = GLINT_IMAGE;
-        glints.append(glint);
-        animations.push(
-          glint.animate(
-            [
-              { transform: "translateY(0) scale(0)", opacity: 0, easing: EASE_OUT },
-              { transform: "translateY(0) scale(1)", opacity: 1, offset: 0.22 },
-              {
-                transform: `translateY(${GLINT_TRAVEL * 0.65}px) scale(0.9)`,
-                opacity: 1,
-                offset: 0.78,
-              },
-              { transform: `translateY(${GLINT_TRAVEL}px) scale(0.65)`, opacity: 0 },
-            ],
-            { duration: GLINT_TAIL_MS },
-          ),
-        );
-      }
+      const groupHost = glints;
+      sparks.forEach((spark, group) => {
+        for (let satellite = 0; satellite < 3; satellite++) {
+          const path = glintPath(spark, group, satellite, cssWidth, cssHeight);
+          const glint = document.createElement("span");
+          glint.className = "layer-flash__glint";
+          glint.style.left = `${(path.x / cssWidth) * 100}%`;
+          glint.style.top = `${(path.y / cssHeight) * 100}%`;
+          glint.style.width = glint.style.height = `${path.size}px`;
+          glint.style.margin = `${-path.size / 2}px 0 0 ${-path.size / 2}px`;
+          glint.style.backgroundImage = GLINT_IMAGES[satellite === 1 ? 1 : 0];
+          groupHost.append(glint);
+          animations.push(
+            glint.animate(path.frames, {
+              duration: path.duration,
+              delay: path.delay,
+              fill: "both",
+            }),
+          );
+        }
+      });
       parts.sheet.append(glints);
     }
-
     end = window.setTimeout(
       () => {
         letGo();
         parts.onEnd();
       },
-      reduced ? 300 : GLINT_TAIL_MS,
+      reduced ? FLASH_MS : GLINT_TAIL_MS,
     );
     media.addEventListener("change", letGo);
     document.addEventListener("visibilitychange", onVisibility);

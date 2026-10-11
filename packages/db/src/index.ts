@@ -6,6 +6,8 @@ export {
   normalizeTimelapse,
   uploadedTimelapseSchema,
   timelapseV3Schema,
+  timelapseV4Schema,
   MAX_TIMELAPSE_JSON_BYTES,
   type TimelapseV3,
+  type TimelapseV4,
 } from "./timelapseFormat.ts";

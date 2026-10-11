@@ -97,7 +97,7 @@ export type {
 export type { MarkNsfwResponse, UnmarkNsfwResponse } from "./stickers/markNsfw.ts";
 export type { SealResponse } from "./stickers/seal.ts";
 export type { StickerDetail, TransferTrailEntry } from "./stickers/stickerDetail.ts";
-export type { TimelapseV3 } from "./stickers/timelapse.ts";
+export type { TimelapseV4 } from "./stickers/timelapse.ts";
 export type {
   SpendTicket,
   StartedTicketPurchase,
