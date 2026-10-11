@@ -16,7 +16,10 @@ import {
 import { along, inkedPixels, pencil, penStroke } from "./pen.ts";
 
 const evidence = fileURLToPath(
-  new URL("../../../data/verification/empty-seal-preview-2026-10-11/", import.meta.url),
+  new URL(
+    "../../../data/verification/layer-selection-delight-2026-10-11/seal-recovery/",
+    import.meta.url,
+  ),
 );
 
 declare global {
@@ -235,6 +238,11 @@ for (const language of ["en", "ja"] as const) {
             ).toBeFocused();
           } else {
             await expect(
+              dialog.getByRole("heading", {
+                name: say(state === "empty" ? labels.emptyTitle : labels.failedTitle, language),
+              }),
+            ).toBeVisible();
+            await expect(
               dialog.getByText(
                 say(state === "empty" ? labels.empty : labels.previewFailed, language),
                 { exact: true },
@@ -245,8 +253,17 @@ for (const language of ["en", "ja"] as const) {
             await expect(
               dialog.getByRole("button", { name: say(labels.seal, language), exact: true }),
             ).toBeDisabled();
+            await expect(
+              dialog.getByRole("button", {
+                name: say(state === "empty" ? labels.backToDrawing : labels.retryPreview, language),
+              }),
+            ).toHaveClass(/\bkey\b/);
             const focused = await page.evaluate(() => document.activeElement?.outerHTML ?? "none");
-            if (!focused.includes(state === "empty" ? "seal-sheet__not-yet" : "seal-sheet__retry"))
+            if (
+              !focused.includes(
+                state === "empty" ? "seal-sheet__back-to-drawing" : "seal-sheet__retry",
+              )
+            )
               focusFindings.push(`${state}: ${focused}`);
           }
           const bounds = await dialog.boundingBox();
@@ -302,7 +319,11 @@ for (const language of ["en", "ja"] as const) {
               dialog.getByText(say(labels.empty, language), { exact: true }),
             ).toBeVisible();
           }
-          await dialog.getByRole("button", { name: say(labels.notYet, language) }).click();
+          await dialog
+            .getByRole("button", {
+              name: say(state === "ready" ? labels.notYet : labels.backToDrawing, language),
+            })
+            .click();
         }
         const focusPath = `${evidence}/visual-focus-${browserName}-${language}-${size.width}x${size.height}-${hand}.json`;
         await writeFile(

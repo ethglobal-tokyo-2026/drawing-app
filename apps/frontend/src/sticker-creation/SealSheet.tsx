@@ -39,8 +39,8 @@ interface Props {
 type PreviewStatus = "checking" | "ready" | "empty" | "failed";
 
 /**
- * The seal sheet: the sticker as it will be, the 18+ switch, and Seal, the screen's one key while
- * it's up. Not yet closes it back to the drawing, until time's up. A sheet in Kyoto Seika Practice
+ * The seal sheet: the sticker as it will be, the 18+ switch, and one key for the available safe act.
+ * Not yet closes a ready sheet back to the drawing, until time's up. A sheet in Kyoto Seika Practice
  * Mode shows its pair, and its time's up is the proctor's やめ, in the deal's hand lettering. On a
  * large screen it's a card in the middle, over a scrim and closed by a swipe down its head.
  */
@@ -58,11 +58,6 @@ export function SealSheet({
 }: Props) {
   const { t } = useTranslation();
   const lettered = timeUp && subjects !== null;
-  const words = !timeUp
-    ? t(($) => $.stickerCreation.sealSheet.title)
-    : lettered
-      ? t(($) => $.stickerCreation.sealSheet.pencilsDown)
-      : t(($) => $.stickerCreation.sealSheet.timeUp);
   // Time's up while the sheet is open turns it in place: Not yet's slot fades rather than closing up,
   // so the sheet keeps its height, and the new title takes a beat and is announced.
   const [offeredNotYet, setOfferedNotYet] = useState(false);
@@ -74,6 +69,15 @@ export function SealSheet({
   const previewMessage = useRef<HTMLDivElement>(null);
   const retry = useRef<HTMLButtonElement>(null);
   const [status, setStatus] = useState<PreviewStatus>("checking");
+  const words = timeUp
+    ? lettered
+      ? t(($) => $.stickerCreation.sealSheet.pencilsDown)
+      : t(($) => $.stickerCreation.sealSheet.timeUp)
+    : status === "empty"
+      ? t(($) => $.stickerCreation.sealSheet.emptyTitle)
+      : status === "failed"
+        ? t(($) => $.stickerCreation.sealSheet.failedTitle)
+        : t(($) => $.stickerCreation.sealSheet.title);
   const [attempt, setAttempt] = useState(0);
   const focusAfterPreparation = useRef(false);
   const previousStatus = useRef<PreviewStatus>(status);
@@ -224,24 +228,43 @@ export function SealSheet({
         {turned ? words : ""}
       </p>
       <div className="seal-sheet__foot">
-        <Key
-          className="seal-sheet__key"
-          icon={<CheckFat weight="fill" />}
-          disabled={status !== "ready"}
-          onClick={() => {
-            if (status === "ready") onSeal();
-          }}
-        >
-          {t(($) => $.stickerCreation.sealSheet.seal)}
-        </Key>
+        {status === "empty" && (!timeUp || turned) && (
+          <div className="seal-sheet__not-yet-slot is-recovery" inert={timeUp}>
+            <Key
+              ref={notYet}
+              className="seal-sheet__key seal-sheet__back-to-drawing"
+              data-autofocus={!timeUp || undefined}
+              onClick={onNotYet}
+            >
+              {t(($) => $.stickerCreation.sealSheet.backToDrawing)}
+            </Key>
+          </div>
+        )}
+        {(status === "ready" || status === "checking") && (
+          <Key
+            className="seal-sheet__key"
+            icon={<CheckFat weight="fill" />}
+            disabled={status !== "ready"}
+            onClick={() => {
+              if (status === "ready") onSeal();
+            }}
+          >
+            {t(($) => $.stickerCreation.sealSheet.seal)}
+          </Key>
+        )}
         {status === "failed" && (
-          <QuietLink
+          <Key
             ref={retry}
-            className="seal-sheet__retry"
+            className="seal-sheet__key seal-sheet__retry"
             data-autofocus={!timeUp || undefined}
             onClick={retryPreview}
           >
             {t(($) => $.stickerCreation.sealSheet.retryPreview)}
+          </Key>
+        )}
+        {(status === "empty" || status === "failed") && (
+          <QuietLink className="seal-sheet__disabled-seal" disabled>
+            {t(($) => $.stickerCreation.sealSheet.seal)}
           </QuietLink>
         )}
         {timeUp && (status === "empty" || status === "failed") && (
@@ -249,14 +272,9 @@ export function SealSheet({
             {t(($) => $.stickerCreation.seal.startOver)}
           </QuietLink>
         )}
-        {(!timeUp || turned) && (
+        {status !== "empty" && (!timeUp || turned) && (
           <div className="seal-sheet__not-yet-slot" inert={timeUp}>
-            <QuietLink
-              ref={notYet}
-              className="seal-sheet__not-yet"
-              data-autofocus={!timeUp && status === "empty" ? true : undefined}
-              onClick={onNotYet}
-            >
+            <QuietLink ref={notYet} className="seal-sheet__not-yet" onClick={onNotYet}>
               {t(($) => $.stickerCreation.sealSheet.notYet)}
             </QuietLink>
           </div>

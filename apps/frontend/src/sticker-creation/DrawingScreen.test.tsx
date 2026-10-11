@@ -660,12 +660,14 @@ describe("the seal sheet", () => {
     expect(startOver()).toBeDefined();
   });
 
-  it("empty preview holds the ordinary clock and Not yet resumes it", async () => {
+  it("empty preview holds the ordinary clock and Back to drawing resumes it", async () => {
     preview.prepare.mockReturnValue("empty");
     await openDrawing();
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
     expect(await countedAfter(clickSealKey)).toBe(0);
-    expect(await countedAfter(() => sheetButton(words.notYet.en)?.click())).toBeGreaterThan(0);
+    expect(await countedAfter(() => sheetButton(words.backToDrawing.en)?.click())).toBeGreaterThan(
+      0,
+    );
   });
 
   it.each([false, true])(

@@ -247,8 +247,8 @@ export const stickerCreation = {
     },
     /** Seal sheet, below the empty preview message before the clock reaches zero */
     emptyHelp: {
-      en: "Go back to draw, or check layer opacity and clipping.",
-      ja: "戻ってかくか、レイヤーの不透明度とクリッピングを確認してください。",
+      en: "Go back to draw, or check layer opacity and clipping. If Lock is on, turn it off to draw outside existing ink.",
+      ja: "かく画面に戻るか、レイヤーの不透明度とクリッピングを確認してください。透明ピクセルのロックがオンなら、解除すると描画の外にもかけます。",
     },
     /** Seal sheet, below an empty or failed preview at zero, before the explicit new sticker action */
     discardHelp: {
@@ -262,6 +262,10 @@ export const stickerCreation = {
     },
     /** Seal sheet, action to retry preparing a failed preview */
     retryPreview: { en: "Try again", ja: "もう一度試す" },
+    /** Seal sheet, heading before the clock reaches zero when the visible layers cannot become a sticker */
+    emptyTitle: { en: "No visible ink", ja: "表示中の描画がありません" },
+    /** Seal sheet, heading before the clock reaches zero when the preview could not be prepared */
+    failedTitle: { en: "Preview unavailable", ja: "プレビューを準備できません" },
     /** Seal sheet, over the drawing after a tap on the seal key: its title, and its name for screen readers */
     title: { en: "Seal this sticker?", ja: "このシールを<wbr/>仕上げますか？" },
     /** Seal sheet, raised by the clock reaching 0:00 (or brought back by a reload then): its title, and its name for screen readers, also announced when it turns in place; the drawing can only be sealed now */
@@ -279,6 +283,8 @@ export const stickerCreation = {
     seal: { en: "Seal", ja: "仕上げ" },
     /** Seal sheet: the quiet link under Seal that closes the sheet back to the drawing; not offered once time's up */
     notYet: { en: "Not yet", ja: "もう少しかく" },
+    /** Seal sheet, primary action when an early preview has no visible ink; returns to the drawing */
+    backToDrawing: { en: "Back to drawing", ja: "かく画面に戻る" },
   },
   /** The tool strip's tiles, named for assistive tech. */
   tools: {

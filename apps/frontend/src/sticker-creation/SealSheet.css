@@ -1,5 +1,5 @@
-/* The seal sheet: the sticker as it will be beside the title and the 18+ switch, then Seal centered
-   at the foot with Not yet under it. It stays short, so the drawing still shows above it. */
+/* The seal sheet: the sticker beside its state and the 18+ switch when ready. Its available safe act
+   sits at the foot. It stays short, so the drawing still shows above it. */
 .bottom-sheet.seal-sheet {
   padding-bottom: 18px;
 }
@@ -187,6 +187,12 @@
   min-width: 196px;
 }
 
+.seal-sheet__disabled-seal {
+  min-height: 24px;
+  font-size: 14px;
+  text-decoration: none;
+}
+
 .seal-sheet .seal-sheet__not-yet {
   min-height: 44px;
 }
@@ -207,6 +213,11 @@
   transition:
     opacity 220ms var(--ease-out),
     visibility 0s linear 220ms;
+}
+
+/* After an empty sheet expires, its inert return keeps the former space below the discard action. */
+.seal-sheet__not-yet-slot.is-recovery[inert] {
+  order: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

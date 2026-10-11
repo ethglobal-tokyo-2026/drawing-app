@@ -115,7 +115,7 @@ describe("SealSheet", () => {
     );
   });
 
-  it("offers Not yet for an empty preview without sealing or discarding it", () => {
+  it("offers Back to drawing as the focused primary action for an early empty preview", async () => {
     prepare.mockReturnValue("empty");
     const seal = vi.fn();
     const discard = vi.fn();
@@ -125,10 +125,15 @@ describe("SealSheet", () => {
     expect(document.querySelector(SWITCH)).toBeNull();
     expect(document.querySelector<HTMLElement>(".seal-preview")?.hidden).toBe(true);
     expect(key(words.seal.en).disabled).toBe(true);
+    expect(key(words.seal.en).classList.contains("key")).toBe(false);
+    expect(key(words.backToDrawing.en).classList.contains("key")).toBe(true);
+    expect(document.querySelector(".seal-sheet h2")?.textContent).toBe(words.emptyTitle.en);
+    await act(async () => {});
+    expect(document.activeElement).toBe(key(words.backToDrawing.en));
     act(() => key(words.seal.en).click());
     expect(seal).not.toHaveBeenCalled();
     expect(discard).not.toHaveBeenCalled();
-    act(() => key(words.notYet.en).click());
+    act(() => key(words.backToDrawing.en).click());
     expect(back).toHaveBeenCalledOnce();
   });
 
@@ -137,6 +142,9 @@ describe("SealSheet", () => {
     const discard = vi.fn();
     show({ timeUp: true, ink: freshInk, density: () => 3, onStartOver: discard });
     expect(status().textContent).toContain(words.discardHelp.en);
+    expect(document.querySelector(".seal-sheet h2")?.textContent).toBe(words.timeUp.en);
+    expect(document.querySelectorAll(".seal-sheet__not-yet-slot:not([inert])")).toHaveLength(0);
+    expect(key(words.seal.en).disabled).toBe(true);
     expect(discard).not.toHaveBeenCalled();
     act(() => key(strings.stickerCreation.seal.startOver.en).click());
     expect(discard).toHaveBeenCalledOnce();
@@ -157,6 +165,10 @@ describe("SealSheet", () => {
       .mockReturnValue("ready");
     show({ ink, density: () => 3 });
     expect(status().textContent).toContain(words.previewFailed.en);
+    expect(document.querySelector(".seal-sheet h2")?.textContent).toBe(words.failedTitle.en);
+    expect(key(words.retryPreview.en).classList.contains("key")).toBe(true);
+    expect(key(words.seal.en).classList.contains("key")).toBe(false);
+    expect(key(words.notYet.en).classList.contains("label-btn--quiet")).toBe(true);
     expect(copies[0].width).toBe(0);
     act(() => key(words.retryPreview.en).click());
     expect(prepare).toHaveBeenCalledTimes(2);
@@ -227,6 +239,12 @@ describe("SealSheet", () => {
     expect(discard).not.toHaveBeenCalled();
     expect(status().textContent).toContain(words.discardHelp.en);
     expect(key(strings.stickerCreation.seal.startOver.en).disabled).toBe(false);
+    expect(key(words.seal.en).classList.contains("key")).toBe(false);
+    expect(document.querySelector(".seal-sheet__not-yet-slot")?.hasAttribute("inert") ?? true).toBe(
+      true,
+    );
+    if (result === "failed")
+      expect(key(words.retryPreview.en).classList.contains("key")).toBe(true);
     if (result === "failed") expect(error).toHaveBeenCalled();
   });
 
@@ -270,7 +288,7 @@ describe("SealSheet", () => {
           throw new Error("read failed");
         });
       show();
-      key(words.notYet.en).focus();
+      key(result === "empty" ? words.backToDrawing.en : words.notYet.en).focus();
       show({ timeUp: true });
       await act(async () => {});
       expect(document.activeElement).toBe(
@@ -308,7 +326,7 @@ describe("SealSheet", () => {
         outcome === "ready"
           ? document.querySelector(SWITCH)
           : outcome === "empty-early"
-            ? key(words.notYet.en)
+            ? key(words.backToDrawing.en)
             : outcome === "empty-expired"
               ? status()
               : key(words.retryPreview.en);
@@ -347,7 +365,7 @@ describe("SealSheet", () => {
       show();
       await act(async () => {});
       expect(document.activeElement).toBe(
-        key(result === "empty" ? words.notYet.en : words.retryPreview.en),
+        key(result === "empty" ? words.backToDrawing.en : words.retryPreview.en),
       );
       const message = result === "empty" ? words.empty.en : words.previewFailed.en;
       expect(
@@ -376,7 +394,7 @@ describe("SealSheet", () => {
       show({ open: true, ink, density });
       await act(async () => {});
       expect(document.activeElement).toBe(
-        key(result === "empty" ? words.notYet.en : words.retryPreview.en),
+        key(result === "empty" ? words.backToDrawing.en : words.retryPreview.en),
       );
     },
   );
@@ -390,7 +408,7 @@ describe("SealSheet", () => {
     const density = () => 3;
     show({ ink, density });
     await act(async () => {});
-    expect(document.activeElement).toBe(key(words.notYet.en));
+    expect(document.activeElement).toBe(key(words.backToDrawing.en));
     show({ open: false, ink, density });
     await act(async () => {});
     show({ open: true, ink, density });

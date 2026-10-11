@@ -340,7 +340,7 @@ test("fully erased ink offers recovery, and Undo restores a ready preview", asyn
   await expect(sheet.getByText(creation.sealSheet.empty.en, { exact: true })).toBeVisible();
   await expect(sheet.getByRole("switch")).toHaveCount(0);
   await expect(button(page, creation.sealSheet.seal)).toBeDisabled();
-  await button(page, creation.sealSheet.notYet).click();
+  await button(page, creation.sealSheet.backToDrawing).click();
   await page.reload();
   await button(page, stickerBoard.board.continueDrawing).click();
   await expect(page.locator(".ink-sheet")).toBeVisible();
@@ -386,7 +386,7 @@ test("restoring opacity replaces an empty preview with ready ink", async ({ page
   await expect(page.locator(".seal-sheet").getByRole("switch")).toHaveCount(0);
   await expect(button(page, creation.sealSheet.seal)).toBeDisabled();
   await expect(page.locator(".seal-preview__ink")).toBeHidden();
-  await button(page, creation.sealSheet.notYet).click();
+  await button(page, creation.sealSheet.backToDrawing).click();
   await page.reload();
   await button(page, stickerBoard.board.continueDrawing).click();
   await expect(page.locator(".ink-sheet")).toBeVisible();
@@ -412,7 +412,7 @@ test("clipping to an empty base preserves recoverable ink", async ({ page }) => 
   await expect(page.locator(".seal-sheet").getByRole("switch")).toHaveCount(0);
   await expect(button(page, creation.sealSheet.seal)).toBeDisabled();
   await expect(page.locator(".seal-preview__ink")).toBeHidden();
-  await button(page, creation.sealSheet.notYet).click();
+  await button(page, creation.sealSheet.backToDrawing).click();
   await page.reload();
   await button(page, stickerBoard.board.continueDrawing).click();
   await expect(page.locator(".ink-sheet")).toBeVisible();
@@ -605,7 +605,7 @@ test("measures repeated empty previews with retained layer history", async ({
     await expect(sheet.getByText(creation.sealSheet.empty.en, { exact: true })).toBeVisible();
     const endToEndDialogReadyMs = Date.now() - started;
     const ready = await numbers();
-    await button(page, creation.sealSheet.notYet).click();
+    await button(page, creation.sealSheet.backToDrawing).click();
     openings.push({ endToEndDialogReadyMs, before, ready, after: await numbers() });
   }
   const result = {
