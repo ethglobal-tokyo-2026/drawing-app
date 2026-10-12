@@ -98,6 +98,7 @@ const sheetCalls = vi.hoisted(() => ({
   label: undefined as string | undefined,
   /** A touch met the sheet while it takes no ink. */
   blocked: () => {},
+  blockedHidden: () => {},
   /** A stroke landed on the sheet. */
   stroke: () => {},
 }));
@@ -117,6 +118,7 @@ vi.mock("./canvas/DrawingCanvas", () => ({
       onHistory,
       onCommit,
       onBlocked,
+      onBlockedHidden,
       settings,
       label,
       onLayers,
@@ -129,6 +131,7 @@ vi.mock("./canvas/DrawingCanvas", () => ({
       onHistory: (state: HistoryState) => void;
       onCommit: (op: Op) => void;
       onBlocked: () => void;
+      onBlockedHidden: () => void;
       settings: {
         fillReference: "layer" | "visible";
         color: string;
@@ -155,6 +158,7 @@ vi.mock("./canvas/DrawingCanvas", () => ({
       sheetCalls.inkFailed = (error) => onInkFailed?.(error);
       if (sheetCalls.view) onLayers?.(sheetCalls.view);
       sheetCalls.blocked = onBlocked;
+      sheetCalls.blockedHidden = onBlockedHidden;
       sheetCalls.stroke = () => {
         onHistory({ canUndo: true, canRedo: false, hasInk: true });
         onLayers?.({
@@ -1226,16 +1230,45 @@ describe("the drawing screen's layers", () => {
     expect(document.activeElement).toBe(merge);
   });
 
-  it("offers direct settings and full-opacity recovery for a hidden current layer", async () => {
+  it("offers hidden-layer recovery only after blocked input and keeps recovery in settings after expiry", async () => {
     reopen(keptHalfway);
     await settle();
     show({
       ...twoLayers,
       state: { ...FIRST_LAYERS, layers: [{ ...FIRST_LAYERS.layers[0], opacity: 0 }] },
     });
+    expect(document.querySelector(".layer-hidden-recovery")).toBeNull();
+    act(() => sheetCalls.blockedHidden());
     expect(document.querySelector(".layer-hidden-recovery")?.textContent).toContain("0% opacity");
-    act(() => buttonSaying("Show at 100%")?.click());
+    await settle(4000);
+    act(() => sheetCalls.blockedHidden());
+    await settle(1000);
+    expect(document.querySelector(".layer-recovery-paper")?.getAttribute("data-leaving")).toBe(
+      "true",
+    );
+    await settle(150);
+    expect(document.querySelector(".layer-hidden-recovery")).toBeNull();
+    act(() => sheetCalls.blockedHidden());
+    expect(document.querySelector(".layer-hidden-recovery")).toBeNull();
+    act(() => document.querySelector<HTMLButtonElement>('[data-layer-chip="1"]')?.click());
+    expect(document.querySelector(".layer-hidden-options")?.textContent).toContain("0% opacity");
+    const showLayer = buttonSaying("Show at 100%");
+    act(() => {
+      showLayer?.focus();
+      showLayer?.click();
+    });
     expect(sheetCalls.opacities).toEqual([100]);
+    expect(document.activeElement).toBe(document.querySelector('[data-layer-chip="1"]'));
+    act(() => document.querySelector<HTMLButtonElement>('[data-layer-chip="1"]')?.click());
+    show({
+      ...twoLayers,
+      state: { ...FIRST_LAYERS, layers: [{ ...FIRST_LAYERS.layers[0], opacity: 100 }] },
+    });
+    show({
+      ...twoLayers,
+      state: { ...FIRST_LAYERS, layers: [{ ...FIRST_LAYERS.layers[0], opacity: 0 }] },
+    });
+    act(() => sheetCalls.blockedHidden());
     act(() => buttonSaying("Layer settings")?.click());
     expect(document.activeElement).toBe(document.querySelector(".opacity-slider"));
   });

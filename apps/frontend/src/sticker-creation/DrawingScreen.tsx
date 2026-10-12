@@ -50,6 +50,8 @@ import type { SheetFrame } from "./canvas/sheetFrame";
 import { FIRST_SMOOTHING, FIRST_SMOOTHING_MODE, StabilizationError } from "./canvas/stabilizer";
 import { LayerColumn } from "./layers/LayerColumn";
 import { LayerOptionsBar } from "./layers/LayerOptionsBar";
+import { HiddenLayerRecovery } from "./layers/HiddenLayerRecovery";
+import { useHiddenLayerGuidance } from "./layers/useHiddenLayerGuidance";
 import { FIRST_LAYER, FIRST_LAYERS, baseOf, mergeDownTarget } from "./layers/layerState";
 import type { LayerView } from "./layers/layerView";
 import { useLayerDrag } from "./layers/useLayerDrag";
@@ -220,7 +222,6 @@ export function DrawingScreen({
   const lastCurrentLayer = useRef<LayerId>(FIRST_LAYER);
   const [opacityHeld, setOpacityHeld] = useState(false);
   const [reordering, setReordering] = useState(false);
-  const [hiddenNudge, setHiddenNudge] = useState(0);
   const [layerAnnouncement, setLayerAnnouncement] = useState("");
   const [inkProblem, setInkProblem] = useState<string | null>(null);
   const [fillProblem, setFillProblem] = useState(false);
@@ -237,6 +238,7 @@ export function DrawingScreen({
   const cutoff = useRef<number | null>(null);
   const timeUpWork = useRef<Promise<void> | null>(null);
   const drawingGeneration = useRef(0);
+  const [hiddenGuidanceGeneration, setHiddenGuidanceGeneration] = useState(0);
   const controlsPending = transitionPending || fillWork.transitionPending || timeUpPending;
   const [paused, setPaused] = useState(false);
   const [sizing, setSizing] = useState(false);
@@ -466,6 +468,7 @@ export function DrawingScreen({
         return;
       case "reset-sheet": {
         cancelTransitions();
+        setHiddenGuidanceGeneration((generation) => generation + 1);
         cutoff.current = null;
         setTimeUpPending(false);
         setFillProblem(false);
@@ -858,6 +861,7 @@ export function DrawingScreen({
     // Seika Practice Mode only Begin starts it: a sheet whose pair is dealt again waits at its deal,
     // drawing and all.
     cancelTransitions();
+    setHiddenGuidanceGeneration((generation) => generation + 1);
     const part = found.kyotoSeika;
     const drawn = part ? part.begun : found.steps.some(isOp) || found.elapsedMs > 0;
     takeTicket(found.ticket, part !== null);
@@ -1118,8 +1122,21 @@ export function DrawingScreen({
     timeUp ||
     sealing ||
     retrying;
-  // A sheet that takes no ink takes no tool either, as at 0:00 on a begun sheet, whose tools never
-  // hold its clock.
+  const hiddenGuidance = useHiddenLayerGuidance({
+    current: layers.current,
+    hidden: currentLayer.opacity === 0,
+    suppressed: locked || panel !== null,
+    generation: hiddenGuidanceGeneration,
+  });
+  const showHiddenLayer = (keyboard: boolean) => {
+    if (keyboard) {
+      layerList.current
+        ?.querySelector<HTMLElement>(`[data-layer-chip="${layers.current}"]`)
+        ?.focus({ preventScroll: true });
+    }
+    canvas.current?.setOpacity(100);
+  };
+  // A sheet that takes no ink takes no tool either, including at 0:00.
   if (panel !== null && locked) setPanel(null);
 
   // On the first few visits, a started sheet says the timer waits for the first stroke, which peels it off.
@@ -1297,7 +1314,7 @@ export function DrawingScreen({
             keeper.keepCurrentLayer(view.current);
           }
         }}
-        onBlockedHidden={() => setHiddenNudge((n) => n + 1)}
+        onBlockedHidden={hiddenGuidance.onBlocked}
         onInkFailed={(error) => {
           console.error("The drawing could not be updated", error);
           if (error instanceof FillError) {
@@ -1458,8 +1475,21 @@ export function DrawingScreen({
               if (panel === "layer") pickPanel(null);
             }}
             listRef={layerList}
+            recovery={
+              hiddenGuidance.phase ? (
+                <HiddenLayerRecovery
+                  onShow={showHiddenLayer}
+                  onOpenOptions={() => pickPanel("layer")}
+                />
+              ) : undefined
+            }
+            recoveryLeaving={hiddenGuidance.phase === "leaving"}
+            onRecoveryHidden={hiddenGuidance.dismiss}
+            onRecoveryHover={hiddenGuidance.onHover}
+            onRecoveryFocus={hiddenGuidance.onFocus}
             options={
               <LayerOptionsBar
+                pending={controlsPending}
                 id={layers.current}
                 locked={currentLayer.locked}
                 clipped={currentLayer.clipped}
@@ -1473,6 +1503,7 @@ export function DrawingScreen({
                 onPreviewOpacity={(value) => canvas.current?.previewOpacity(value)}
                 onCommitOpacity={(value) => canvas.current?.setOpacity(value)}
                 onHoldOpacity={setOpacityHeld}
+                onShow={showHiddenLayer}
                 onClose={() => {
                   layerList.current
                     ?.querySelector<HTMLElement>(`[data-layer-chip="${layers.current}"]`)
@@ -1504,23 +1535,11 @@ export function DrawingScreen({
             }
           />
         </div>
-        {currentLayer.opacity === 0 && panel !== "layer" && !locked && (
-          <div className="layer-hidden-recovery">
-            <p role="status" key={hiddenNudge}>
-              {t(($) => $.stickerCreation.layers.hiddenRecovery)}
-            </p>
-            <div>
-              <button type="button" onClick={() => setPanel("layer")}>
-                {t(($) => $.stickerCreation.layers.openOptions)}
-              </button>
-              <button type="button" onClick={() => canvas.current?.setOpacity(100)}>
-                {t(($) => $.stickerCreation.layers.showLayer)}
-              </button>
-            </div>
-          </div>
-        )}
         <span className="visually-hidden" role="status" aria-live="polite">
           {layerAnnouncement}
+        </span>
+        <span className="visually-hidden" role="status" aria-live="polite">
+          {hiddenGuidance.announced ? t(($) => $.stickerCreation.layers.hiddenRecovery) : ""}
         </span>
         <HistoryButtons
           canUndo={history.canUndo}

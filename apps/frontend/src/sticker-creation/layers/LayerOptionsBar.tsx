@@ -13,9 +13,12 @@ import { useTranslation } from "../../i18n/react";
 import type { LayerId } from "../canvas/ops";
 import { MAX_LAYERS, type mergeDownTarget } from "./layerState";
 import { OpacitySlider } from "./OpacitySlider";
+import { HiddenLayerRecovery } from "./HiddenLayerRecovery";
 import "./LayerOptionsBar.css";
 
 interface Props {
+  /** Parent drawing controls are disabled while accepted Fill finishes. */
+  pending?: boolean;
   id: LayerId;
   locked: boolean;
   clipped: boolean;
@@ -36,6 +39,7 @@ interface Props {
   onPreviewOpacity: (value: number) => void;
   onCommitOpacity: (value: number) => void;
   onHoldOpacity: (holding: boolean) => void;
+  onShow: (keyboard: boolean) => void;
 }
 
 /** Compact nonmodal settings. Every control is reachable by Tab; Help holds the explanations. */
@@ -65,8 +69,8 @@ export function LayerOptionsBar(props: Props) {
         )
       : null;
   useLayoutEffect(() => {
-    panel.current?.querySelector("input")?.focus({ preventScroll: true });
-  }, [id]);
+    if (!props.pending) panel.current?.querySelector("input")?.focus({ preventScroll: true });
+  }, [id, props.pending]);
   const unavailable = () => setHelp(true);
   return (
     <div
@@ -130,6 +134,7 @@ export function LayerOptionsBar(props: Props) {
         onCommit={props.onCommitOpacity}
         onHold={props.onHoldOpacity}
       />
+      {opacity === 0 && <HiddenLayerRecovery onShow={props.onShow} />}
       <button
         type="button"
         className="layer-option-toggle"

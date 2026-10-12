@@ -495,14 +495,14 @@ export const stickerCreation = {
       en: "Layers above clip to this pair. Turn off their clipping before merging.",
       ja: "上のレイヤーがこの2枚でクリッピングされています。上のクリッピングを解除してから結合してください。",
     },
-    /** Drawing screen, hidden selected layer: explains why drawing is blocked */
+    /** Drawing screen recovery hint and layer options at 0%: explains why drawing is blocked */
     hiddenRecovery: {
       en: "This layer is hidden at 0% opacity. Raise its opacity to draw.",
       ja: "このレイヤーは不透明度0%で非表示中です。不透明度を上げるとかけます。",
     },
     /** Drawing screen, hidden-layer recovery: opens selected layer settings */
     openOptions: { en: "Layer settings", ja: "レイヤー設定" },
-    /** Drawing screen, hidden-layer recovery: restores the layer to full opacity */
+    /** Drawing screen recovery hint and layer options at 0%: restores the layer to full opacity */
     showLayer: { en: "Show at 100%", ja: "100%で表示" },
     /** Layer options bar: the toggle tile that keeps the brush and the fill to pixels already on the layer, named for screen readers */
     lock: { en: "Lock transparent pixels", ja: "透明ピクセルをロック" },

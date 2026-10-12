@@ -17,6 +17,13 @@
   padding-left: 5px;
   min-height: 44px;
 }
+.layer-hidden-options {
+  margin: 4px 6px 8px;
+}
+.layer-options-bar .layer-hidden-options button {
+  background: var(--ink);
+  color: var(--canvas);
+}
 .layer-options-heading-actions {
   display: flex;
 }

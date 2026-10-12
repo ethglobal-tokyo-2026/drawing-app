@@ -66,7 +66,7 @@ describe("LayerColumn", () => {
   it("describes the continuing ends and fades only edges with more layers", () => {
     renderColumn();
     const list = find('[role="listbox"]');
-    layOut(list, 42);
+    layOut(list, 50);
     const scroll = (top: number) =>
       act(() => {
         list.scrollTop = top;
@@ -76,10 +76,10 @@ describe("LayerColumn", () => {
     const position = () => find(".layer-overflow-description");
     expect(position().textContent).toBe("More layers below");
     expect(find(".layer-scroll-well").getAttribute("data-more-below")).toBe("true");
-    scroll(42);
+    scroll(50);
     expect(position().textContent).toBe("More layers above and below");
     expect(find(".layer-scroll-well").getAttribute("data-more-above")).toBe("true");
-    scroll(84);
+    scroll(100);
     expect(position().textContent).toBe("More layers above");
     expect(find(".layer-scroll-well").hasAttribute("data-more-below")).toBe(false);
     layOut(list);
@@ -102,16 +102,16 @@ describe("LayerColumn", () => {
     );
     renderColumn({ current: 3 });
     const list = find('[role="listbox"]');
-    layOut(list, 42);
+    layOut(list, 50);
     act(() => resized.forEach((resize) => resize()));
     expect(findAll(".layer-overflow-description")).toHaveLength(1);
     layOut(list);
     act(() => resized.forEach((resize) => resize()));
     expect(findAll(".layer-overflow-description")).toHaveLength(0);
-    layOut(list, 42);
+    layOut(list, 50);
     act(() => resized.forEach((resize) => resize()));
     expect(findAll(".layer-overflow-description")).toHaveLength(1);
-    Object.defineProperty(list, "scrollHeight", { configurable: true, value: 42 });
+    Object.defineProperty(list, "scrollHeight", { configurable: true, value: 50 });
     renderColumn({ chips: chipsOf([3]), current: 3 });
     expect(findAll(".layer-overflow-description")).toHaveLength(0);
   });
@@ -136,6 +136,62 @@ describe("LayerColumn", () => {
     renderColumn();
     expect(findAll(".layer-options-hint")).toHaveLength(0);
   });
+
+  it("shows recovery instead of introductory help and dismisses it when its chip scrolls away", () => {
+    function Column() {
+      const [recovery, setRecovery] = useState(true);
+      return (
+        <LayerColumn
+          chips={chipsOf([1, 2, 3], { 3: { opacity: 0 } })}
+          current={3}
+          canAdd
+          thumbnails={() => null}
+          optionsOpen={false}
+          edge="left"
+          onAdd={onAdd}
+          onSelect={onSelect}
+          onToggleOptions={onToggleOptions}
+          onCloseOptions={() => {}}
+          recovery={recovery ? <button type="button">Restore layer</button> : undefined}
+          onRecoveryHidden={() => setRecovery(false)}
+        />
+      );
+    }
+    render(<Column />);
+    expect(findAll(".layer-recovery-paper")).toHaveLength(1);
+    expect(findAll(".layer-options-hint")).toHaveLength(0);
+    const list = find(".layer-list");
+    layOut(list, 80);
+    act(() => {
+      list.scrollTop = 50;
+      list.dispatchEvent(new Event("scroll"));
+    });
+    expect(findAll(".layer-recovery-paper")).toHaveLength(0);
+    act(() => {
+      list.scrollTop = 0;
+      list.dispatchEvent(new Event("scroll"));
+    });
+    expect(findAll(".layer-recovery-paper")).toHaveLength(0);
+  });
+
+  it.each(["left", "right"] as const)(
+    "clamps recovery above the column foot on the %s edge",
+    (edge) => {
+      renderColumn({ edge, recovery: <button type="button">Restore layer</button> });
+      find(".layer-column").getBoundingClientRect = () =>
+        new DOMRect(edge === "left" ? 0 : 346, 100, 44, 560);
+      chip(2).getBoundingClientRect = () => new DOMRect(0, 635, 36, 46);
+      const paper = find(".layer-recovery-paper");
+      paper.getBoundingClientRect = () => new DOMRect(0, 0, 276, 116);
+      const list = find(".layer-list");
+      list.getBoundingClientRect = () => new DOMRect(0, 80, 44, 580);
+      Object.defineProperty(list, "clientHeight", { value: 580 });
+      act(() => {
+        list.dispatchEvent(new Event("scroll"));
+      });
+      expect(paper.style.top).toBe("444px");
+    },
+  );
 
   it("dismisses help with a named button, keeps focus on the current chip, and remembers dismissal", () => {
     renderColumn();
@@ -293,12 +349,12 @@ describe("LayerColumn", () => {
   });
 
   it.each([
-    { position: "one pixel above", current: 3, initial: 0, scroll: 37, open: true },
-    { position: "at the top boundary", current: 3, initial: 0, scroll: 38, open: false },
-    { position: "past the top", current: 3, initial: 0, scroll: 42, open: false },
-    { position: "one pixel below", current: 1, initial: 42, scroll: 5, open: true },
-    { position: "at the bottom boundary", current: 1, initial: 42, scroll: 4, open: false },
-    { position: "past the bottom", current: 1, initial: 42, scroll: 0, open: false },
+    { position: "one pixel above", current: 3, initial: 0, scroll: 45, open: true },
+    { position: "at the top boundary", current: 3, initial: 0, scroll: 46, open: false },
+    { position: "past the top", current: 3, initial: 0, scroll: 50, open: false },
+    { position: "one pixel below", current: 1, initial: 50, scroll: 21, open: true },
+    { position: "at the bottom boundary", current: 1, initial: 50, scroll: 20, open: false },
+    { position: "past the bottom", current: 1, initial: 50, scroll: 0, open: false },
   ])(
     "keeps options only while their chip is visible: $position",
     ({ current, initial, scroll, open }) => {

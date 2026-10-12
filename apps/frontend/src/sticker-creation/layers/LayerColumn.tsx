@@ -37,6 +37,12 @@ export interface LayerColumnProps {
   onCloseOptions: () => void;
   /** The options bar, shown beside the current chip while optionsOpen. */
   options?: ReactNode;
+  /** Recovery after a blocked attempt, positioned beside the selected chip. */
+  recovery?: ReactNode;
+  recoveryLeaving?: boolean;
+  onRecoveryHidden?: () => void;
+  onRecoveryHover?: (hovered: boolean) => void;
+  onRecoveryFocus?: (focused: boolean) => void;
   /** The chips' list element, for the drag and pen-hover hooks. */
   listRef?: Ref<HTMLDivElement>;
 }
@@ -73,6 +79,11 @@ export function LayerColumn({
   onToggleOptions,
   onCloseOptions,
   options,
+  recovery,
+  recoveryLeaving,
+  onRecoveryHidden,
+  onRecoveryHover,
+  onRecoveryFocus,
   listRef,
 }: LayerColumnProps) {
   const { t } = useTranslation();
@@ -83,6 +94,7 @@ export function LayerColumn({
   const root = useRef<HTMLDivElement>(null);
   const optionsBox = useRef<HTMLDivElement>(null);
   const hintBox = useRef<HTMLDivElement>(null);
+  const recoveryBox = useRef<HTMLDivElement>(null);
   const learned = useSyncExternalStore(optionsLearned.subscribe, optionsLearned.get);
   const [scroll, setScroll] = useState({ position: 0, portion: 1 });
   const measureScroll = useCallback(() => {
@@ -99,13 +111,16 @@ export function LayerColumn({
   const moreAbove = overflowing && scroll.position > 0;
   const moreBelow = overflowing && scroll.position < 1;
   const [hiddenCurrent, setHiddenCurrent] = useState<LayerId | null>(null);
+  if (hiddenCurrent !== null && hiddenCurrent !== current) setHiddenCurrent(null);
   // The chip focused by the arrow keys holds the Tab stop until focus leaves the list.
   const [focused, setFocused] = useState<LayerId | null>(null);
   const stop = chips.some((chip) => chip.id === focused) ? focused : current;
   const showOptions = optionsOpen && options !== undefined;
+  const showRecovery = !optionsOpen && current !== hiddenCurrent && recovery !== undefined;
   const showHint =
     !learned &&
     !optionsOpen &&
+    !showRecovery &&
     current !== hiddenCurrent &&
     chips.length > 1 &&
     chips.some((chip) => chip.id === current && !chip.inked);
@@ -116,7 +131,7 @@ export function LayerColumn({
 
   /** Keeps the open paper beside its chip, within the screen and above the column's foot. */
   const placePaper = () => {
-    const paper = optionsBox.current ?? hintBox.current;
+    const paper = optionsBox.current ?? recoveryBox.current ?? hintBox.current;
     const chip = chipAt(root.current, current);
     if (!root.current || !paper || !chip) return;
     const columnBox = root.current.getBoundingClientRect();
@@ -149,10 +164,10 @@ export function LayerColumn({
   };
 
   useLayoutEffect(() => {
-    if (!showOptions && !showHint) return;
+    if (!showOptions && !showHint && !showRecovery) return;
     placePaper();
     if (typeof ResizeObserver === "undefined") return;
-    const paper = optionsBox.current ?? hintBox.current;
+    const paper = optionsBox.current ?? recoveryBox.current ?? hintBox.current;
     if (!paper || !root.current) return;
     const observer = new ResizeObserver(placePaper);
     observer.observe(root.current);
@@ -239,6 +254,7 @@ export function LayerColumn({
               const visible = chipBox.bottom > top && chipBox.top < bottom;
               setHiddenCurrent(visible ? null : current);
               if (!visible && showOptions) onCloseOptions();
+              if (!visible && showRecovery) onRecoveryHidden?.();
               else if (visible) placePaper();
             }}
             onBlur={(e) => {
@@ -305,6 +321,28 @@ export function LayerColumn({
             >
               <X size={16} weight="bold" aria-hidden="true" />
             </button>
+          </div>
+        )}
+        {showRecovery && (
+          <div
+            ref={recoveryBox}
+            className="layer-recovery-paper"
+            data-leaving={recoveryLeaving || undefined}
+            onMouseEnter={() => onRecoveryHover?.(true)}
+            onMouseLeave={() => onRecoveryHover?.(false)}
+            onFocus={() => onRecoveryFocus?.(true)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) onRecoveryFocus?.(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Escape") return;
+              event.preventDefault();
+              event.stopPropagation();
+              chipAt(root.current, current)?.focus({ preventScroll: true });
+              onRecoveryHidden?.();
+            }}
+          >
+            {recovery}
           </div>
         )}
       </div>
