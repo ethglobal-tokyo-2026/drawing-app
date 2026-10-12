@@ -14,7 +14,7 @@
   opacity: 0;
 }
 
-/* Pink hero stars and smaller satellites reuse the Gratitude sparkle art. */
+/* Both colors and all sizes reuse the Gratitude sparkle art. */
 .layer-flash__glint {
   position: absolute;
   background: center / contain no-repeat;

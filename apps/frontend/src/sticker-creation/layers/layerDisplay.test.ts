@@ -27,6 +27,7 @@ import type { SheetFrame } from "../canvas/sheetFrame";
 import type { Rect } from "../sealing/stickerPasses";
 import { LayerDisplay } from "./layerDisplay";
 import { FLASH_MS, GLINT_TAIL_MS, flashLayer } from "./layerFlash";
+import * as layerGlints from "./layerGlints";
 import { LayerInk } from "./layerInk";
 import { FULL_OPACITY, type Layer, type LayerState } from "./layerState";
 import { brush, clearLayer, eraser } from "./testLayerSteps";
@@ -519,11 +520,13 @@ describe("the sheet's display", () => {
 
     it("shows stationary ink identification without particles under reduced motion", () => {
       vi.spyOn(window, "matchMedia").mockReturnValue(new ReducedMotion(true));
+      const prepare = vi.spyOn(layerGlints, "pickInkEdges");
       const { display, host } = coveredSheet(RIGHT);
       display.flash();
       expect(animate).not.toHaveBeenCalled();
       expect(host.querySelector(".layer-flash__pulse")).not.toBeNull();
       expect(host.querySelector(".layer-flash__glints")).toBeNull();
+      expect(prepare).not.toHaveBeenCalled();
       vi.advanceTimersByTime(300);
       expect(flashParts(host)).toHaveLength(0);
     });

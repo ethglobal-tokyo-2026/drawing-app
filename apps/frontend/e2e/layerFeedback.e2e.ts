@@ -134,14 +134,18 @@ for (const device of ["phone", "tablet"] as const) {
         expect(initial.lightPixels).toBeGreaterThan(0);
         expect(initial.darkEdge).toBeGreaterThan(0);
         expect(initial.lightEdge).toBeGreaterThan(0);
-        expect(initial.glints).toBe(reduced ? 0 : 16);
+        if (reduced) expect(initial.glints).toBe(0);
+        else {
+          expect(initial.glints).toBeGreaterThanOrEqual(20);
+          expect(initial.glints).toBeLessThanOrEqual(30);
+        }
         if (reduced) expect(initial.animations).toBe(0);
         await mkdir(evidence, { recursive: true });
         const name = `${info.project.name}-${device}-${scheme}-${reduced ? "reduced" : "normal"}`;
         await page.screenshot({ path: `${evidence}/${name}-pop.png` });
         if (!reduced) {
           const fall = await page.evaluate(() => {
-            for (const animation of document.getAnimations()) animation.currentTime = 610;
+            for (const animation of document.getAnimations()) animation.currentTime = 330;
             const glint = document.querySelector(".layer-flash__glint");
             const pulse = document.querySelector(".layer-flash__pulse");
             if (!glint || !pulse) throw new Error("Missing feedback");
@@ -269,6 +273,66 @@ test("effective clipped ink and every display interruption release real browser 
     expect(row.remaining, row.reason).toBe(0);
     expect(row.released, row.reason).toBe(true);
   }
+});
+
+test("tiny real raster marks stay small beside a broad fill", async ({ page }) => {
+  await page.goto("/");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const results = await page.evaluate(async () => {
+    const { flashLayer } = await import("../src/sticker-creation/layers/layerFlash.ts");
+    const sheet = document.createElement("div");
+    sheet.style.cssText = "position:relative;width:400px;height:300px";
+    document.body.append(sheet);
+    const layer = document.createElement("canvas");
+    layer.width = 800;
+    layer.height = 600;
+    const g = layer.getContext("2d");
+    if (!g) throw new Error("No tiny-ink raster context");
+    const empty = document.createElement("canvas");
+    empty.width = empty.height = 0;
+    const results = [];
+    for (const broad of [false, true]) {
+      g.clearRect(0, 0, layer.width, layer.height);
+      g.fillRect(80, 80, 4, 4);
+      if (broad) g.fillRect(220, 80, 480, 400);
+      const before = layer.toDataURL();
+      const random = Math.random;
+      let flash: ReturnType<typeof flashLayer>;
+      try {
+        // Choose the dot first so this probe measures its sizing rather than origin lottery.
+        Math.random = () => 0;
+        flash = flashLayer({
+          layer,
+          above: empty,
+          below: empty,
+          opacity: 100,
+          inked: { x: 80, y: 80, w: broad ? 620 : 4, h: broad ? 400 : 4 },
+          sheet,
+          onEnd() {},
+        });
+      } finally {
+        Math.random = random;
+      }
+      if (!flash) throw new Error("No real-raster sparkle feedback");
+      const particles = [...sheet.querySelectorAll<HTMLElement>(".layer-flash__glint")];
+      const dot = particles.filter((p) => Number.parseFloat(p.style.left) * 4 < 65);
+      results.push({
+        count: particles.length,
+        dotSizes: dot.map((p) => Number.parseFloat(p.style.width)).sort((a, b) => b - a),
+        maxSize: Math.max(...particles.map((p) => Number.parseFloat(p.style.width))),
+        unchanged: before === layer.toDataURL(),
+      });
+      flash.cancel();
+    }
+    sheet.remove();
+    return results;
+  });
+  expect(results[0].dotSizes).toEqual([12, 8, 6]);
+  expect(results[1].dotSizes).toEqual(results[0].dotSizes);
+  expect(results[1].count).toBeGreaterThan(results[0].count);
+  expect(results[1].count).toBeLessThanOrEqual(30);
+  expect(results[1].maxSize).toBeGreaterThan(results[0].maxSize);
+  expect(results.every((r) => r.unchanged)).toBe(true);
 });
 
 test("every device-pixel hairline phase keeps visible selection feedback", async ({ page }) => {

@@ -2,7 +2,7 @@ import { GLINT_SVG, svgDataUrl } from "../../gratitude/heartArt";
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { blankCanvas } from "../canvas/context2d";
 import type { Rect } from "../sealing/stickerPasses";
-import { GLINTS_PER_GROUP, glintPath, pickInkEdges } from "./layerGlints";
+import { glintGroup, pickInkEdges } from "./layerGlints";
 import "./layerFlash.css";
 
 export const FLASH_MS = 280;
@@ -89,7 +89,7 @@ export interface FlashParts {
   readonly onEnd: () => void;
 }
 
-/** One contrast cue and four varied sparkle groups, prepared once and animated by the browser. */
+/** Contrast and local ink sparkle groups, prepared once and animated by the browser. */
 export function flashLayer(parts: FlashParts): LayerFlash | null {
   const media = window.matchMedia(REDUCED);
   const { layer, inked, above, below, opacity } = parts;
@@ -169,11 +169,12 @@ export function flashLayer(parts: FlashParts): LayerFlash | null {
     source.g.drawImage(reading, 0, 0, reading.width, reading.height, 0, 0, width, height);
     if (reading !== layer) releaseCanvas(reading);
     const ink = source.g.getImageData(0, 0, width, height);
-    const sparks = pickInkEdges(ink.data, width, height, width / cssWidth, height / cssHeight);
-    if (!sparks.length) {
-      letGo();
-      return null;
-    }
+    // Keep the original alpha raster until all particle sizing and motion are prepared.
+    const sparks = reduced
+      ? []
+      : pickInkEdges(ink.data, width, height, width / cssWidth, height / cssHeight).flatMap(
+          (spark, group) => glintGroup(spark, group, cssWidth, cssHeight),
+        );
     // Opaque silhouette subtraction prevents a covered translucent fill from flashing throughout.
     let inkPixels = 0;
     for (let i = 3; i < ink.data.length; i += 4)
@@ -181,6 +182,10 @@ export function flashLayer(parts: FlashParts): LayerFlash | null {
         ink.data[i] = 255;
         inkPixels++;
       }
+    if (!inkPixels) {
+      letGo();
+      return null;
+    }
     const silhouette = allocate(width, height);
     silhouette.g.putImageData(ink, 0, 0);
     const outline =
@@ -255,26 +260,23 @@ export function flashLayer(parts: FlashParts): LayerFlash | null {
       glints.className = "layer-flash__glints";
       glints.setAttribute("aria-hidden", "true");
       const groupHost = glints;
-      sparks.forEach((spark, group) => {
-        for (let satellite = 0; satellite < GLINTS_PER_GROUP; satellite++) {
-          const path = glintPath(spark, group, satellite, cssWidth, cssHeight);
-          const glint = document.createElement("span");
-          glint.className = "layer-flash__glint";
-          glint.style.left = `${(path.x / cssWidth) * 100}%`;
-          glint.style.top = `${(path.y / cssHeight) * 100}%`;
-          glint.style.width = glint.style.height = `${path.size}px`;
-          glint.style.margin = `${-path.size / 2}px 0 0 ${-path.size / 2}px`;
-          glint.style.backgroundImage = GLINT_IMAGES[satellite === 1 ? 1 : 0];
-          groupHost.append(glint);
-          animations.push(
-            glint.animate(path.frames, {
-              duration: path.duration,
-              delay: path.delay,
-              fill: "both",
-            }),
-          );
-        }
-      });
+      for (const path of sparks) {
+        const glint = document.createElement("span");
+        glint.className = "layer-flash__glint";
+        glint.style.left = `${(path.x / cssWidth) * 100}%`;
+        glint.style.top = `${(path.y / cssHeight) * 100}%`;
+        glint.style.width = glint.style.height = `${path.size}px`;
+        glint.style.margin = `${-path.size / 2}px 0 0 ${-path.size / 2}px`;
+        glint.style.backgroundImage = GLINT_IMAGES[path.pink ? 0 : 1];
+        groupHost.append(glint);
+        animations.push(
+          glint.animate(path.frames, {
+            duration: path.duration,
+            delay: path.delay,
+            fill: "both",
+          }),
+        );
+      }
       parts.sheet.append(glints);
     }
     end = window.setTimeout(
