@@ -702,6 +702,12 @@ test("pointer opacity previews remain one undoable change on release", async ({ 
   await expect.poll(async () => (await readKeptHistory(page)).steps.length).toBe(1);
   await options(page, 1);
   const range = slider(page);
+  // Raw mouse coordinates must come from the panel after its opening movement finishes.
+  await range.evaluate(async (el) => {
+    const panel = el.closest(".layer-options");
+    if (!panel) throw new Error("The opacity range has no options panel");
+    await Promise.all(panel.getAnimations().map((animation) => animation.finished));
+  });
   const box = await range.boundingBox();
   if (!box) throw new Error("The opacity range has no box");
   await expect(range).toBeFocused();
