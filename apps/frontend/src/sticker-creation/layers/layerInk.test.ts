@@ -1,12 +1,21 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { contextOf, forgetContexts, madeContexts } from "../../sticker-board/timelapse/testCanvas";
+import {
+  contextOf,
+  forgetContexts,
+  madeContexts,
+  paintPaths,
+} from "../../sticker-board/timelapse/testCanvas";
 import type { FillOp, LayerId, LayerStep } from "../canvas/ops";
 import type { SheetFrame } from "../canvas/sheetFrame";
 import { blankCanvas } from "../canvas/context2d";
 import * as contexts from "../canvas/context2d";
 import { CanvasUnavailableError } from "../canvas/canvasUnavailable";
+import { prepareFillPatch } from "../canvas/fill-worker/core";
+import { FillError } from "../canvas/fill-worker/errors";
+import { hexToRgb } from "../canvas/color";
 import type { Rect } from "../sealing/stickerPasses";
+import { CHECKPOINT_COST } from "./checkpoints";
 import { compositeLayers } from "./composite";
 import { LayerInk } from "./layerInk";
 import { LayerHistory } from "./layerHistory";
@@ -368,6 +377,34 @@ describe("the layer ink's holds", () => {
     expect(ink.copiesHeld).toBe(2);
   });
 
+  it("keeps the original pixels and shared holds when checkpoint materialization fails", () => {
+    const ink = sheet();
+    paint(ink, ONE, 1, WHOLE, RED);
+    const hold = ink.hold(1);
+    const shared = hold.shared;
+    const count = liveCanvases();
+    const allocate = contexts.blankCanvas;
+    let refused: HTMLCanvasElement | undefined;
+    vi.spyOn(contexts, "blankCanvas").mockImplementation((...args) => {
+      const made = allocate(...args);
+      refused = made.canvas;
+      vi.spyOn(made.g, "getImageData").mockImplementation(() => {
+        throw new Error("Checkpoint copy read failed");
+      });
+      return made;
+    });
+
+    expect(() => paint(ink, ONE, 1, WHOLE, BLUE)).toThrow("Checkpoint copy read failed");
+    expect(pixel(ink, 1, 5, 5)).toEqual(RED);
+    expect(hold.shared).toBe(shared);
+    expect(hold.copy).toBeNull();
+    expect(hold.released).toBe(false);
+    expect(ink.copiesHeld).toBe(0);
+    expect(liveCanvases()).toBe(count);
+    expect(refused?.width).toBe(0);
+    expect(refused?.height).toBe(0);
+  });
+
   it("count a copy as freed only when every hold sharing it lets go", () => {
     const { ink, red, blue, green } = heldVersions();
     expect(ink.copiesHeld).toBe(2);
@@ -431,6 +468,151 @@ describe("the layer ink's holds", () => {
 });
 
 describe("the layer ink's fills", () => {
+  it.each(["layer", "visible"] as const)(
+    "installs prepared %s fills with clipping, opacity, and locked alpha exactly as replay",
+    (reference) => {
+      for (const locked of [false, true]) {
+        const prepared = sheet();
+        const synchronous = sheet();
+        const state = stateOf(
+          layer(1, { locked, opacity: 50 }),
+          layer(2, { clipped: true, opacity: 70 }),
+        );
+        for (const ink of [prepared, synchronous]) {
+          paint(ink, ONE, 1, LEFT, FAINT_BLUE);
+          drawOutline(ink);
+        }
+        const op = { ...fillAt(1, { x: 4, y: 4 }), reference };
+        const patch = prepared.readFillPatch(op, state, WHOLE);
+        expect(patch.locked).toBe(locked);
+        if (reference === "layer") expect(patch.shown).toBe(patch.target);
+        const result = prepareFillPatch({
+          at: WHOLE,
+          ...patch,
+          sx: 8,
+          sy: 8,
+          color: hexToRgb(op.color),
+          gap: op.gap * FRAME.density,
+        });
+        if (result.kind !== "found") throw new Error("No region found");
+        const changed = prepared.applyPreparedFill(op, WHOLE, result);
+        expect(changed).toEqual(synchronous.flood(op, state));
+        expect(pixelsOf(prepared, 1)).toEqual(pixelsOf(synchronous, 1));
+        expect(prepared.inkBox(1)).toEqual(synchronous.inkBox(1));
+        const hold = synchronous.hold(1);
+        prepared.apply(clearLayer(2), state);
+        prepared.apply(clearLayer(1), state);
+        const flood = vi.spyOn(prepared, "flood");
+        prepared.apply(op, state);
+        expect(flood).not.toHaveBeenCalled();
+        expect(pixelsOf(prepared, 1)).toEqual(pixelsOf(synchronous, 1));
+        synchronous.release(hold);
+      }
+    },
+  );
+  it("releases reference scratch before making checkpoint copies and the accepted destination", () => {
+    const ink = sheet();
+    paint(ink, TWO, 1, LEFT, BLUE);
+    paint(ink, TWO, 2, RIGHT, GREEN);
+    ink.countView(true);
+    const withView = ink.copyBudgetFor(2);
+    ink.countView(false);
+    expect(ink.copyBudgetFor(2)).toBe(withView + 2);
+    ink.countView(true);
+    const hold = ink.hold(1);
+    const op = fillAt(1, { x: 0, y: 0 });
+    const patch = ink.readFillPatch(op, TWO, WHOLE);
+    const scratches = madeContexts().filter(
+      ({ canvas }) => canvas !== ink.layerCanvas(1) && canvas !== ink.layerCanvas(2),
+    );
+    const result = prepareFillPatch({
+      at: WHOLE,
+      ...patch,
+      sx: 0,
+      sy: 0,
+      color: [255, 0, 0],
+      gap: 0,
+    });
+    if (result.kind !== "found") throw new Error("No region found");
+    const allocate = contexts.blankCanvas;
+    const spy = vi.spyOn(contexts, "blankCanvas").mockImplementation((...args) => {
+      expect(scratches.every(({ canvas }) => canvas.width === 0)).toBe(true);
+      return allocate(...args);
+    });
+    ink.applyPreparedFill(op, WHOLE, result);
+    expect(ink.copiesHeld).toBe(1);
+    expect(liveCanvases()).toBe(3);
+    spy.mockRestore();
+    ink.release(hold);
+  });
+  it("keeps captured lock metadata through an allocation failure and retries the same prepared operation", () => {
+    const ink = sheet();
+    paint(ink, ONE, 1, LEFT, FAINT_BLUE);
+    const hold = ink.hold(1);
+    const op = { ...fillAt(1, { x: 0, y: 0 }), reference: "layer" as const };
+    const patch = ink.readFillPatch(op, stateOf(layer(1, { locked: true })), WHOLE);
+    const result = prepareFillPatch({
+      at: WHOLE,
+      ...patch,
+      sx: 0,
+      sy: 0,
+      color: [255, 0, 0],
+      gap: 0,
+    });
+    if (result.kind !== "found") throw new Error("No region found");
+    const box = ink.inkBox(1);
+    const spy = vi.spyOn(contexts, "blankCanvas").mockImplementation(() => {
+      throw new CanvasUnavailableError();
+    });
+    expect(() => ink.applyPreparedFill(op, WHOLE, result)).toThrow(CanvasUnavailableError);
+    expect(pixel(ink, 1, 0, 0)).toEqual(FAINT_BLUE);
+    spy.mockRestore();
+    ink.applyPreparedFill(op, WHOLE, result);
+    expect(pixel(ink, 1, 0, 0)).toEqual(FAINT_RED);
+    expect(ink.inkBox(1)).toEqual(box);
+    expect(() => ink.applyPreparedFill({ ...op }, WHOLE, result)).toThrow(FillError);
+    ink.release(hold);
+  });
+  it("keeps a no-write region's coverage while releasing scratch without allocating a destination", () => {
+    const ink = sheet();
+    drawOutline(ink);
+    const op = fillAt(1, { x: 4, y: 4 });
+    const patch = ink.readFillPatch(op, LOCKED_UNDER_LINES, WHOLE);
+    const result = prepareFillPatch({
+      at: WHOLE,
+      ...patch,
+      sx: 8,
+      sy: 8,
+      color: [255, 0, 0],
+      gap: 0,
+    });
+    if (result.kind !== "found") throw new Error("No region found");
+    expect(result.interiorSpans.length).toBeGreaterThan(0);
+    expect(result.written).toBeNull();
+    expect(ink.applyPreparedFill(op, WHOLE, result)).toBeNull();
+    expect(ink.layerCanvas(1)).toBeNull();
+    expect(liveCanvases()).toBe(1);
+  });
+  it("rejects malformed prepared output before changing canvas pixels or detaching holds", () => {
+    const ink = sheet();
+    paint(ink, ONE, 1, WHOLE, BLUE);
+    ink.hold(1);
+    const op = { ...fillAt(1, { x: 0, y: 0 }), reference: "layer" as const };
+    const patch = ink.readFillPatch(op, ONE, WHOLE);
+    const result = prepareFillPatch({
+      at: WHOLE,
+      ...patch,
+      sx: 0,
+      sy: 0,
+      color: [255, 0, 0],
+      gap: 0,
+    });
+    if (result.kind !== "found") throw new Error("No region found");
+    result.found.box.w++;
+    expect(() => ink.applyPreparedFill(op, WHOLE, result)).toThrow(FillError);
+    expect(pixel(ink, 1, 0, 0)).toEqual(BLUE);
+    expect(ink.copiesHeld).toBe(0);
+  });
   it.each(["layer", "visible"] as const)(
     "rebuilds %s fills using their recorded reference",
     (reference) => {
@@ -651,7 +833,7 @@ describe("the layer ink", () => {
     paint(ink, TWO, 1, LEFT, RED);
     paint(ink, TWO, 2, RIGHT, BLUE);
     ink.flood(fillAt(1, { x: 4, y: 4 }), TWO);
-    expect(liveCanvases()).toBeGreaterThan(2);
+    expect(liveCanvases()).toBe(2); // Fill preparation releases its scratch before installation.
     const clipped = stateOf(layer(1), layer(2, { clipped: true }));
     const out = ink.composite(clipped);
     expect(out.width).toBe(SIDE);
@@ -668,5 +850,95 @@ describe("the layer ink", () => {
     }
     ink.setFrame({ w: 800, h: 800, density: 3 });
     expect(ink.copyBudgetFor(0)).toBeLessThan(none);
+  });
+});
+
+describe("grouped Fill Redo on replacement canvases", () => {
+  it.each([false, true])(
+    "preserves existing brush ink outside both fills with checkpoint at head: %s",
+    (checkpointAtHead) => {
+      paintPaths(true);
+      try {
+        const ink = sheet();
+        const history = new LayerHistory(ink);
+        // A solid vertical brush line separates two fill regions and must survive both.
+        const line = { ...brush(), pts: [4, 0, 1, 0, 4, 8, 1, 10] };
+        for (let i = 0; i < (checkpointAtHead ? CHECKPOINT_COST : 1); i++) {
+          const op = { ...line, T: i };
+          ink.apply(op, history.state);
+          history.commit(op);
+        }
+        const beforeGroup = pixelsOf(ink, 1);
+        expect(pixel(ink, 1, 8, 8)).toEqual(INK);
+        const first = fillAt(1, { x: 1, y: 4 });
+        const second: FillOp = { ...fillAt(1, { x: 6, y: 4 }), undoWithPrevious: true };
+        for (const op of [first, second]) {
+          expect(ink.flood(op, history.state)).not.toBeNull();
+          history.commit(op);
+        }
+        const filled = pixelsOf(ink, 1);
+        expect(pixel(ink, 1, 2, 8)).toEqual(RED);
+        expect(pixel(ink, 1, 12, 8)).toEqual(RED);
+        expect(pixel(ink, 1, 8, 8)).toEqual(INK);
+        history.undo();
+        expect(pixelsOf(ink, 1)).toEqual(beforeGroup);
+        history.redo();
+        expect(pixel(ink, 1, 8, 8)).toEqual(INK);
+        expect(pixelsOf(ink, 1)).toEqual(filled);
+        ink.releaseAll();
+      } finally {
+        paintPaths(false);
+      }
+    },
+  );
+
+  it("keeps the original canvas and hold ownership when the second grouped Redo fill fails", () => {
+    paintPaths(true);
+    try {
+      const ink = sheet();
+      const history = new LayerHistory(ink);
+      const line = { ...brush(), pts: [4, 0, 1, 0, 4, 8, 1, 10] };
+      for (let i = 0; i < CHECKPOINT_COST; i++) {
+        const op = { ...line, T: i };
+        ink.apply(op, history.state);
+        history.commit(op);
+      }
+      const first = fillAt(1, { x: 1, y: 4 });
+      const second: FillOp = { ...fillAt(1, { x: 6, y: 4 }), undoWithPrevious: true };
+      for (const op of [first, second]) {
+        ink.flood(op, history.state);
+        history.commit(op);
+      }
+      const filled = pixelsOf(ink, 1);
+      history.undo();
+      const beforeSteps = [...history.steps];
+      const beforeCanvas = ink.layerCanvas(1);
+      const beforePixels = pixelsOf(ink, 1);
+      const beforeCopies = ink.copiesHeld;
+      const hold = ink.hold(1);
+      const shared = hold.shared;
+      const copy = hold.copy;
+      const apply = ink.apply.bind(ink);
+      const failure = vi.spyOn(ink, "apply").mockImplementation((op, state) => {
+        if (op === second) throw new CanvasUnavailableError();
+        apply(op, state);
+      });
+      expect(() => history.redo()).toThrow(CanvasUnavailableError);
+      expect(history.steps).toEqual(beforeSteps);
+      expect(history.canRedo).toBe(true);
+      expect(ink.layerCanvas(1)).toBe(beforeCanvas);
+      expect(pixelsOf(ink, 1)).toEqual(beforePixels);
+      expect(ink.copiesHeld).toBe(beforeCopies);
+      expect(hold.shared).toBe(shared);
+      expect(hold.copy).toBe(copy);
+      expect(hold.released).toBe(false);
+      failure.mockRestore();
+      history.redo();
+      expect(pixelsOf(ink, 1)).toEqual(filled);
+      ink.release(hold);
+      ink.releaseAll();
+    } finally {
+      paintPaths(false);
+    }
   });
 });

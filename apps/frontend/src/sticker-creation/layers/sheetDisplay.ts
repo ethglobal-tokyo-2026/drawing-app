@@ -1,3 +1,4 @@
+import type { Pixels } from "../canvas/fill";
 import type { LayerId, StrokeOp } from "../canvas/ops";
 import type { Rect } from "../sealing/stickerPasses";
 import type { LayerState } from "./layerState";
@@ -21,6 +22,10 @@ export interface SheetDisplay {
   previewOpacity(opacity: number | null): void;
   /** The current layer's ink changed within `box`, device px, as after a fill. */
   inkChanged(box: Rect): void;
+  /** Shows a prepared Fill patch over the complete raw current layer on wet, without changing ink. */
+  previewFill(layer: LayerId, at: Rect, pixels: Pixels): void;
+  /** Clears the Fill preview and restores the current layer, after cancellation or installation. */
+  clearFillPreview(): void;
   /** A stroke starts on the current layer. An eraser, or a brush on a locked layer, previews over a copy of the layer, which hides until `endStroke`. */
   beginStroke(op: StrokeOp): void;
   /** Paints the stroke's settled points [from, to) on the wet canvas. */

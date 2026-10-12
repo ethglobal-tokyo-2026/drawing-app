@@ -311,6 +311,13 @@ export const stickerCreation = {
     pencilOnly: { en: "Pencil only", ja: "ペンのみ" },
   },
   fillReference: {
+    /** Drawing screen, status above Seal while accepted Fill is finishing */
+    finishing: { en: "Finishing fill…", ja: "塗りつぶしを処理中…" },
+    /** Drawing screen, persistent notice after Fill fails, preserving completed areas */
+    failed: {
+      en: "Fill stopped before it finished. Completed areas are still here.",
+      ja: "塗りつぶしを完了できませんでした。塗り終わった部分は残っています。",
+    },
     /** Drawing screen, below the tool strip while Fill is selected: the reference choices' group name */
     label: { en: "Fill reference", ja: "塗りつぶしの参照" },
     /** Drawing screen, Fill reference: Fill samples only the selected layer's own pixels */

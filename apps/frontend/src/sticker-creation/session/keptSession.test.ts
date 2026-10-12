@@ -18,6 +18,7 @@ import {
   brush,
   clearLayer,
   deleteLayer,
+  fill,
   moveLayer,
   setClip,
   setLock,
@@ -1269,5 +1270,44 @@ describe("saved Fill reference upgrade", () => {
     });
     expect(rows).toEqual(steps);
     check.close();
+  });
+});
+
+describe("saved drag Fill groups", () => {
+  it("keeps continuation flags across save and reload while absent flags stay standalone", async () => {
+    const userId = someone();
+    const steps: Step[] = [fill(), { ...fill(), x: 1, undoWithPrevious: true }, fill()];
+    const keeper = new SessionKeeper(userId);
+    keeper.start(7);
+    keeper.save(steps, 1000, FRAME);
+    await untilKept(userId, steps);
+    expect(await loadKeptSession(userId)).toMatchObject({ status: "found", steps });
+  });
+
+  it.each([
+    [{ ...fill(), undoWithPrevious: true }],
+    [fill(), { ...fill(), undoWithPrevious: false }],
+    [fill(), { ...fill(), undoWithPrevious: "true" }],
+    [fill(), { ...fill(), undoWithPrevious: undefined }],
+    [fill(), { ...brush(), undoWithPrevious: true }],
+    [fill(), { ...setOpacity(1, 50), undoWithPrevious: true }],
+    [fill(), { ...fill(), color: "#ff0000", undoWithPrevious: true }],
+    [fill(), { ...fill(), reference: "layer", undoWithPrevious: true }],
+    [fill(), { ...fill(), gap: 1, undoWithPrevious: true }],
+    [fill(), addLayer(2, 1), { ...fill(2), undoWithPrevious: true }],
+  ])("rejects invalid saved continuation %# and leaves stored rows untouched", async (...steps) => {
+    const userId = someone();
+    await keepRaw(userId, steps);
+    const beforeMetadata = localStorage.getItem(personKey("draw.session", userId));
+    expect(await loadKeptSession(userId)).toMatchObject({ status: "lost" });
+    let rows: unknown[] = [];
+    await editKeptSteps((ops) => {
+      const request = ops.getAll();
+      request.onsuccess = () => {
+        rows = request.result;
+      };
+    });
+    expect(rows).toEqual(steps);
+    expect(localStorage.getItem(personKey("draw.session", userId))).toBe(beforeMetadata);
   });
 });

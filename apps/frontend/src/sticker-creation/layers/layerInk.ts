@@ -1,7 +1,10 @@
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { hexToRgb } from "../canvas/color";
 import { blankCanvas } from "../canvas/context2d";
-import { findOnSheet, recordFill, replayFill, writeFill, type WrittenFill } from "../canvas/fill";
+import { fillReadAreas, replayFill, type Pixels, type WrittenFill } from "../canvas/fill";
+import { prepareFillPatch } from "../canvas/fill-worker/core";
+import { FillError } from "../canvas/fill-worker/errors";
+import { isFillPatchResult, type FillPatchResult } from "../canvas/fill-worker/protocol";
 import { STRIDE, type FillOp, type LayerId, type Step, type StrokeOp } from "../canvas/ops";
 import { paintStroke } from "../canvas/paintStroke";
 import type { SheetFrame } from "../canvas/sheetFrame";
@@ -132,6 +135,8 @@ export class LayerInk implements LayerSurface<Hold> {
   private readonly copies = new Set<HeldCopy>();
   /** What each fill wrote on its layer, at this density. */
   private fills = new WeakMap<FillOp, WrittenFill>();
+  /** Only the lock flag captured when reading a patch; no pixel arrays are retained. */
+  private fillLocks = new WeakMap<FillOp, boolean>();
   /** Where a fill composites what's shown and reads a layer back: a plain canvas, read once a box. */
   private reader: Scratch | null = null;
   /** Where compositing cuts a clipped layer to its base. */
@@ -332,38 +337,123 @@ export class LayerInk implements LayerSurface<Hold> {
    * it wrote for a replay. The box it changed, in device px, or null when nothing changed.
    */
   flood(op: FillOp, state: LayerState): Rect | null {
-    const { locked } = layerOf(state, op.layer);
     const d = this.dpr;
     const color = hexToRgb(op.color);
-    const ids = state.layers.map((layer) => layer.id);
-    const sheetFind = findOnSheet(
+    const sx = Math.floor(op.x * d);
+    const sy = Math.floor(op.y * d);
+    for (const { at, cut } of fillReadAreas(
       { width: this.sheetWidth, height: this.sheetHeight },
-      (box) => {
-        if (op.reference === "visible") return this.readShown(state, ids, box);
-        const own = this.inks.get(op.layer);
-        return own ? this.readLayer(own, box) : new ImageData(box.w, box.h);
-      },
-      Math.floor(op.x * d),
-      Math.floor(op.y * d),
-      color,
-      op.gap * d,
+      sx,
+      sy,
       Math.round(FILL_NEAR * d),
-    );
-    if (!sheetFind) return null;
-    const { shown, at, found } = sheetFind;
-    const ink = this.inks.get(op.layer);
-    const pixels = ink ? this.readLayer(ink, at) : new ImageData(at.w, at.h);
-    // Only a locked layer can write nothing: the region holds none of its ink.
-    if (!writeFill(pixels, shown, found, color, locked)) return null;
-    const written = recordFill(pixels, at, found);
-    this.fills.set(op, written);
-    this.put(op.layer, pixels, at, found.box, locked);
-    return { ...written.box };
+    )) {
+      const result = prepareFillPatch({
+        at,
+        ...this.readFillPatch(op, state, at),
+        sx: sx - at.x,
+        sy: sy - at.y,
+        color,
+        gap: op.gap * d,
+        cut,
+      });
+      if (result.kind === "past") continue;
+      if (result.kind === "found") return this.applyPreparedFill(op, at, result);
+      this.fillLocks.delete(op);
+      return null;
+    }
+    this.fillLocks.delete(op);
+    return null;
+  }
+
+  /** Reads the recorded reference in backing pixels, releasing reference scratch before returning. */
+  readFillReference(op: Pick<FillOp, "layer" | "reference">, state: LayerState, at: Rect): Pixels {
+    layerOf(state, op.layer);
+    this.validateFillArea(at);
+    try {
+      return this.fillReference(op, state, at);
+    } finally {
+      this.releaseScratch();
+    }
+  }
+
+  /** Reads reference and destination once, aliasing raw layer reference with its destination. */
+  readFillPatch(
+    op: FillOp,
+    state: LayerState,
+    at: Rect,
+  ): { shown: Pixels; target: Pixels; locked: boolean } {
+    const { locked } = layerOf(state, op.layer);
+    this.validateFillArea(at);
+    try {
+      const shown = this.fillReference(op, state, at);
+      const ink = this.inks.get(op.layer);
+      const target =
+        op.reference === "layer"
+          ? shown
+          : ink
+            ? this.readLayer(ink, at)
+            : new ImageData(at.w, at.h);
+      this.fillLocks.set(op, locked);
+      return { shown, target, locked };
+    } finally {
+      this.releaseScratch();
+    }
+  }
+
+  /** Installs validated destination bytes and caches this exact operation's replay data. */
+  applyPreparedFill(
+    op: FillOp,
+    at: Rect,
+    result: Extract<FillPatchResult, { kind: "found" }>,
+  ): Rect | null {
+    this.validateFillArea(at);
+    if (!isFillPatchResult(result, at))
+      throw new FillError("Prepared fill has invalid pixels or recorded ranges");
+    const locked = this.fillLocks.get(op);
+    if (locked === undefined) throw new FillError("Prepared fill has no captured layer lock state");
+    this.releaseScratch();
+    if (result.written === null) {
+      this.fillLocks.delete(op);
+      return null;
+    }
+    this.put(op.layer, result.pixels, at, result.found.box, locked);
+    this.fills.set(op, result.written);
+    this.fillLocks.delete(op);
+    return { ...result.written.box };
+  }
+
+  private validateFillArea(at: Rect): void {
+    if (
+      ![at.x, at.y, at.w, at.h].every(Number.isSafeInteger) ||
+      at.x < 0 ||
+      at.y < 0 ||
+      at.w <= 0 ||
+      at.h <= 0 ||
+      at.x + at.w > this.sheetWidth ||
+      at.y + at.h > this.sheetHeight
+    )
+      throw new FillError("Fill read rectangle is outside the sheet");
+  }
+
+  private fillReference(
+    op: Pick<FillOp, "layer" | "reference">,
+    state: LayerState,
+    at: Rect,
+  ): Pixels {
+    if (op.reference === "visible")
+      return this.readShown(
+        state,
+        state.layers.map((layer) => layer.id),
+        at,
+      );
+    const own = this.inks.get(op.layer);
+    return own ? this.readLayer(own, at) : new ImageData(at.w, at.h);
   }
 
   /** Drops only this fill's cached replay data; its layer's pixels remain unchanged. */
   releaseFill(op: FillOp): void {
     this.fills.delete(op);
+    this.fillLocks.delete(op);
   }
 
   /** A new canvas holding every layer `state` shows, for the seal; the caller releases it. */
@@ -421,6 +511,7 @@ export class LayerInk implements LayerSurface<Hold> {
     // The full recording rebuilds these regions when the covered drawing returns; keeping them
     // here would retain every fill's pixel arrays while another screen prepares a timelapse.
     this.fills = new WeakMap();
+    this.fillLocks = new WeakMap();
     this.sizing++;
   }
 
@@ -489,9 +580,17 @@ export class LayerInk implements LayerSurface<Hold> {
    * Puts the `dirty` part of `pixels`, read from `at`, back on the layer, and grows its ink box by it
    * unless the layer is locked: a locked layer's ink reaches no further than it did.
    */
-  private put(layer: LayerId, pixels: ImageData, at: Rect, dirty: Rect, locked: boolean): void {
+  private put(layer: LayerId, pixels: Pixels, at: Rect, dirty: Rect, locked: boolean): void {
+    const { data } = pixels;
+    if (!(data.buffer instanceof ArrayBuffer))
+      throw new FillError("Fill destination has no transferable buffer");
+    const image = new ImageData(
+      new Uint8ClampedArray(data.buffer, data.byteOffset, data.length),
+      pixels.width,
+      pixels.height,
+    );
     const ink = this.writable(layer);
-    ink.g.putImageData(pixels, at.x, at.y, dirty.x, dirty.y, dirty.w, dirty.h);
+    ink.g.putImageData(image, at.x, at.y, dirty.x, dirty.y, dirty.w, dirty.h);
     if (locked) return;
     const changed = { x: at.x + dirty.x, y: at.y + dirty.y, w: dirty.w, h: dirty.h };
     ink.box = unionOf(ink.box, inUnits(changed, this.dpr));
@@ -540,7 +639,15 @@ export class LayerInk implements LayerSurface<Hold> {
   private detach(ink: Ink): void {
     if (ink.sharers.size === 0) return;
     const { canvas, g } = blankCanvas(this.sheetWidth, this.sheetHeight);
-    g.drawImage(ink.canvas, 0, 0);
+    try {
+      g.drawImage(ink.canvas, 0, 0);
+      // WebKit can let a later dirty putImageData change this drawImage copy. Reading one pixel
+      // materializes the checkpoint before the layer changes, without retaining a pixel buffer.
+      g.getImageData(0, 0, 1, 1);
+    } catch (error) {
+      releaseCanvas(canvas);
+      throw error;
+    }
     const copy: HeldCopy = { canvas, holds: ink.sharers.size };
     for (const hold of ink.sharers) {
       hold.shared = null;

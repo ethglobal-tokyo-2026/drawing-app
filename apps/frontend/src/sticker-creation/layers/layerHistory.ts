@@ -11,6 +11,7 @@ import {
   timelapseStart,
   type LayerState,
 } from "./layerState";
+import { fillUndoStart, validateFillUndo, validateFillUndoStep } from "./fillUndo";
 import type { LayerSurface } from "./layerSurface";
 
 const NO_INK: ReadonlySet<LayerId> = new Set();
@@ -92,6 +93,7 @@ export class LayerHistory<Hold> {
 
   /** Records an op the surface already shows: a stroke painted live, a fill already written. */
   commit(op: Op): void {
+    validateFillUndoStep(op, this.done.at(-1), this.done.length);
     if (indexOf(this.state, op.layer) < 0)
       throw new LayerStepError(
         `${op.tool} on layer ${op.layer}: the sheet has no such layer`,
@@ -104,6 +106,7 @@ export class LayerHistory<Hold> {
 
   /** Makes a layer change through the surface and records it. */
   perform(step: LayerStep): void {
+    validateFillUndoStep(step, this.done.at(-1), this.done.length);
     const before = this.state;
     const after = applyLayerStep(before, step);
     this.surface.apply(step, before);
@@ -140,16 +143,19 @@ export class LayerHistory<Hold> {
   undo(): Step | null {
     const step = this.done.at(-1);
     if (!step) return null;
+    const start = fillUndoStart(this.done, this.done.length);
     // Only commit the history movement after the replacement layer is complete.
     if (isOp(step) || step.tool === "clear" || step.tool === "delete")
-      this.surface.rebuild(step.layer, () => this.rebuild(step.layer, this.done.length - 1));
+      this.surface.rebuild(step.layer, () => this.rebuild(step.layer, start));
     else if (step.tool === "merge")
       this.surface.rebuild([step.layer, step.into], () => {
         this.rebuild(step.layer, this.done.length - 1);
         this.rebuild(step.into, this.done.length - 1);
       });
-    this.popHead();
-    this.undone.push(step);
+    for (const member of this.done.slice(start).toReversed()) {
+      this.popHead();
+      this.undone.push(member);
+    }
     this.surface.show(this.state);
     this.trim(null);
     return step;
@@ -160,16 +166,32 @@ export class LayerHistory<Hold> {
     const step = this.undone.at(-1);
     if (!step) return null;
     const before = this.state;
-    this.surface.apply(step, before);
-    this.undone.pop();
-    this.record(step, isOp(step) ? before : applyLayerStep(before, step));
+    const action: Step[] = [step];
+    if (step.tool === "fill") {
+      for (let i = this.undone.length - 2; i >= 0; i--) {
+        const next = this.undone[i];
+        if (next.tool !== "fill" || next.undoWithPrevious !== true) break;
+        action.push(next);
+      }
+    }
+    if (action.length > 1)
+      this.surface.rebuild(step.layer, () => {
+        this.rebuild(step.layer, this.done.length);
+        for (const fill of action) this.surface.apply(fill, before);
+      });
+    else this.surface.apply(step, before);
+    for (const member of action) {
+      this.undone.pop();
+      this.record(member, isOp(member) ? before : applyLayerStep(before, member));
+    }
     this.surface.show(this.state);
     this.trim(this.checkpointIfDue());
-    return step;
+    return action[action.length - 1];
   }
 
   /** Starts over with these steps, replayed in order from blank, with planned checkpoints. Throws a LayerStepError for steps that don't fit. */
   load(steps: readonly Step[], paint = true): void {
+    validateFillUndo(steps);
     stateAt(steps, steps.length);
     this.startOver();
     this.replay(steps, paint);
@@ -198,6 +220,11 @@ export class LayerHistory<Hold> {
    */
   dropCheckpoints(): void {
     for (const at of [...this.checkpoints.keys()]) this.drop(at);
+  }
+
+  /** Frees checkpoint copies for temporary reads or an ink allocation, without changing the sheet. */
+  reserveCanvases(count: number): void {
+    this.trim(null, count);
   }
 
   /** A new step: what was undone can't come back, nor can the checkpoints past the head. */
@@ -281,8 +308,8 @@ export class LayerHistory<Hold> {
   }
 
   /** Drops checkpoints by the eviction rule until their copies fit the budget. */
-  private trim(justTaken: number | null): void {
-    const budget = this.surface.copyBudgetFor(this.inked.size);
+  private trim(justTaken: number | null, reservedCanvases = 0): void {
+    const budget = Math.max(0, this.surface.copyBudgetFor(this.inked.size) - reservedCanvases);
     const holdsOf = (at: number) => [...(this.checkpoints.get(at)?.values() ?? [])];
     for (;;) {
       const at = checkpointToDrop({

@@ -77,7 +77,7 @@
 }
 
 /* A picked-up drawing can show the timer's note below the top row. Give both labels room. */
-.drawing-screen:has(.timer-hint.is-on) > .fill-reference-bar {
+.drawing-screen:has(.timer-hint.is-on) > .drawing-controls > .fill-reference-bar {
   top: 138px;
   transition-delay: 0s;
 }

@@ -12,6 +12,7 @@ import {
   forwardRef,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
   type Ref,
@@ -28,9 +29,10 @@ import { keptSpend } from "../tickets/spendKey";
 import { useTickets } from "../tickets/useTickets";
 import { personKey } from "../ui/deviceStorage";
 import { onLargeScreen, onTouchScreen, SWITCH } from "../ui/testing";
-import type { HistoryState, InputMode } from "./canvas/inkEngine";
+import type { FillWorkState, HistoryState, InputMode } from "./canvas/inkEngine";
 import type { SmoothingMode } from "./canvas/stabilizer";
 import { CanvasUnavailableError } from "./canvas/canvasUnavailable";
+import { FillError } from "./canvas/fill-worker/errors";
 import { StabilizationError } from "./canvas/stabilizer";
 import type { Op, Step } from "./canvas/ops";
 import { frameFor, SHEET_SHORT_UNITS } from "./canvas/sheetFrame";
@@ -73,10 +75,19 @@ const sheetCalls = vi.hoisted(() => ({
   compositeError: null as Error | null,
   /** The pointers swallowed, so they draw nothing on the sheet. */
   swallowed: [] as number[],
-  /** A stroke is being drawn: the sheet's finishStroke lands it. */
+  /** A stroke is being drawn: the sheet's finishInk lands it. */
   live: false,
+  finish: vi.fn(() => Promise.resolve()),
+  finalRead: vi.fn(),
+  color: (_hex: string) => {},
+  abort: vi.fn(),
+  closeInput: vi.fn(),
+  fillState: (_state: FillWorkState) => {},
+  history: (_state: HistoryState) => {},
   settings: null as {
     fillReference: "layer" | "visible";
+    color: string;
+    tool: "brush" | "eraser" | "fill";
     paused: boolean;
     locked: boolean;
     panelOpen: boolean;
@@ -110,12 +121,18 @@ vi.mock("./canvas/DrawingCanvas", () => ({
       label,
       onLayers,
       onInkFailed,
+      onFillState,
+      active,
     }: {
+      active: boolean;
+      onFillState: (state: FillWorkState) => void;
       onHistory: (state: HistoryState) => void;
       onCommit: (op: Op) => void;
       onBlocked: () => void;
       settings: {
         fillReference: "layer" | "visible";
+        color: string;
+        tool: "brush" | "eraser" | "fill";
         paused: boolean;
         locked: boolean;
         panelOpen: boolean;
@@ -130,6 +147,8 @@ vi.mock("./canvas/DrawingCanvas", () => ({
     ref,
   ) {
     useEffect(() => {
+      sheetCalls.fillState = (state) => onFillState?.(state);
+      sheetCalls.history = onHistory;
       sheetCalls.settings = settings;
       sheetCalls.label = label;
       sheetCalls.layers = (view) => onLayers?.(view);
@@ -148,6 +167,9 @@ vi.mock("./canvas/DrawingCanvas", () => ({
         onCommit({ tool: "brush", layer: 1, color: "#1C1824", pts: [], T: 0 });
       };
     });
+    useLayoutEffect(() => {
+      if (!active) sheetCalls.abort("sheet hidden");
+    }, [active]);
     const paper = useRef<HTMLDivElement>(null);
     useImperativeHandle(ref, () => ({
       undo() {},
@@ -201,21 +223,35 @@ vi.mock("./canvas/DrawingCanvas", () => ({
           },
         );
       },
-      timelapse: () => ({ steps: [], start: FIRST_LAYERS }),
-      steps: () => sheetCalls.steps,
-      finishStroke() {
-        if (!sheetCalls.live) return;
-        sheetCalls.live = false;
-        sheetCalls.stroke();
+      timelapse: () => {
+        sheetCalls.finalRead("timelapse");
+        return { steps: sheetCalls.steps, start: FIRST_LAYERS };
       },
+      steps: () => {
+        sheetCalls.finalRead("steps");
+        return sheetCalls.steps;
+      },
+      finishInk() {
+        if (sheetCalls.live) {
+          sheetCalls.live = false;
+          sheetCalls.stroke();
+        }
+        return sheetCalls.finish();
+      },
+      abortPendingFill: sheetCalls.abort,
+      closeInput: sheetCalls.closeInput,
       composite() {
+        sheetCalls.finalRead("composite");
         if (sheetCalls.compositeError) throw sheetCalls.compositeError;
         const canvas = document.createElement("canvas");
         [canvas.width, canvas.height] = [FRAME.w, FRAME.h];
         sheetCalls.composites.push(canvas);
         return canvas;
       },
-      frame: () => FRAME,
+      frame: () => {
+        sheetCalls.finalRead("frame");
+        return FRAME;
+      },
       sheetRect: () => paper.current?.getBoundingClientRect() ?? null,
       swallow(pointerId: number) {
         sheetCalls.swallowed.push(pointerId);
@@ -268,7 +304,10 @@ const privy = vi.hoisted(() => ({ retryPrivySignIn: vi.fn() }));
 vi.mock("../identity/privy", () => privy);
 vi.mock("../tickets/ReserveTicketCheckout", () => ({ ReserveTicketCheckout: () => null }));
 vi.mock("./tools/ColorSheet", () => ({
-  ColorSheet: ({ open }: { open: boolean }) => (open ? <div className="color-sheet" /> : null),
+  ColorSheet: ({ open, onPick }: { open: boolean; onPick: (hex: string) => void }) => {
+    sheetCalls.color = onPick;
+    return open ? <div className="color-sheet" /> : null;
+  },
 }));
 vi.mock("./tools/SizeRail", () => ({
   SizeRail: ({ onHold }: { onHold: (held: boolean) => void }) => {
@@ -354,6 +393,10 @@ afterEach(() => {
   sheetCalls.compositeError = null;
   sheetCalls.swallowed = [];
   sheetCalls.live = false;
+  sheetCalls.finish.mockReset().mockResolvedValue();
+  sheetCalls.finalRead.mockReset();
+  sheetCalls.abort.mockReset();
+  sheetCalls.closeInput.mockReset();
   sheetCalls.settings = null;
   sheetCalls.label = undefined;
   timerCalls.hints = 0;
@@ -470,7 +513,10 @@ const keptAtTimeUp: KeptSession = {
 const chip = () => document.querySelector(".seal-chip")?.textContent ?? "";
 /** A tap on the seal check, for `countedAfter`, which runs it in act itself. */
 const clickSealKey = () => document.querySelector<HTMLButtonElement>(".seal-key")?.click();
-const tapSealKey = () => act(clickSealKey);
+const tapSealKey = async () => {
+  act(clickSealKey);
+  await settle();
+};
 /** The seal sheet while it's up; a closed one slides away first, which happy-dom never finishes. */
 const sealSheet = () => document.querySelector<HTMLElement>(".seal-sheet:not(.is-leaving)");
 const nsfwSwitch = () => sealSheet()?.querySelector<HTMLInputElement>(SWITCH);
@@ -595,7 +641,7 @@ describe("the drawing screen after a reload", () => {
 /** Halfway through its time. */
 const KEPT_MS = sessionMs(false) / 2;
 /** A sticker in progress kept halfway through its time, with one stroke on it. */
-const keptHalfway: KeptSession = {
+const keptHalfway: Extract<KeptSession, { status: "found" }> = {
   status: "found",
   generation: "saved-generation",
   ticket: 7,
@@ -722,7 +768,7 @@ describe("the seal sheet", () => {
     async (on) => {
       const seal = await openDrawing();
       expect(document.querySelector(".seal-key")?.getAttribute("aria-haspopup")).toBe("dialog");
-      tapSealKey();
+      await tapSealKey();
       expect(sealSheet()).not.toBeNull();
       expect(nsfwSwitch()?.checked).toBe(false);
       await settle(1000);
@@ -750,7 +796,7 @@ describe("the seal sheet", () => {
     );
     reopen(keptHalfway, {}, TEST_ME, { seal });
     await settle();
-    tapSealKey();
+    await tapSealKey();
     sealOnSheet();
     await settle(1000);
     expect(seal).toHaveBeenCalledOnce();
@@ -760,7 +806,7 @@ describe("the seal sheet", () => {
 
     await settle(1000);
     expect(chip()).toContain(strings.stickerCreation.seal.failed.signInExpired.en);
-    tapSealKey();
+    await tapSealKey();
     expect(privy.retryPrivySignIn).toHaveBeenCalledExactlyOnceWith(
       new URL("/draw", location.href).href,
       expect.any(Function),
@@ -788,14 +834,14 @@ describe("the seal sheet", () => {
       });
     reopen(keptHalfway, {}, TEST_ME, { seal });
     await settle();
-    tapSealKey();
+    await tapSealKey();
     sealOnSheet();
     await settle(1000);
     expect(chip()).toContain(strings.stickerCreation.seal.failed.notOnChain.en);
     // The server may hold the seal, so a reload still knows it went out.
     expect(sealWentOut(TEST_ME.id, 7)).toBe(true);
 
-    tapSealKey();
+    await tapSealKey();
     await settle(1000);
     // The retry sends the request it held rather than cutting the sheet again.
     expect(sealing.cut).toHaveBeenCalledOnce();
@@ -807,20 +853,20 @@ describe("the seal sheet", () => {
 
   it("closes at Not yet with the drawing and the 18+ choice kept, on the phone too", async () => {
     const seal = await openDrawing();
-    tapSealKey();
+    await tapSealKey();
     act(() => nsfwSwitch()?.click());
     act(() => sheetButton(words.notYet.en)?.click());
     expect(sealSheet()).toBeNull();
     expect(keptRecord()).toMatchObject({ ticket: 7, nsfw: true });
 
-    tapSealKey();
+    await tapSealKey();
     expect(nsfwSwitch()?.checked).toBe(true);
     expect(seal).not.toHaveBeenCalled();
   });
 
   it("cuts the sticker from one composite of the sheet, and lets it go", async () => {
     const seal = await openDrawing();
-    tapSealKey();
+    await tapSealKey();
     // The preview reads one of its own as the seal sheet opens.
     sheetCalls.composites = [];
     sealOnSheet();
@@ -831,14 +877,14 @@ describe("the seal sheet", () => {
 
   it("comes back on for a kept drawing marked 18+, and starts off on a new sheet", async () => {
     await openDrawing({ ...keptHalfway, nsfw: true });
-    tapSealKey();
+    await tapSealKey();
     expect(nsfwSwitch()?.checked).toBe(true);
     act(() => sheetButton(words.notYet.en)?.click());
 
     act(() => drawingScreen.current?.startNewSticker());
     await settle();
     act(() => sheetCalls.stroke());
-    tapSealKey();
+    await tapSealKey();
     expect(nsfwSwitch()?.checked).toBe(false);
   });
 
@@ -938,6 +984,7 @@ describe("the drawing screen's clock", () => {
     expect(sheetCalls.settings?.fillReference).toBe("visible");
     expect(keptRecord()).toMatchObject({ tools: { fillReference: "visible" } });
     act(() => buttonSaying("Brush")?.click());
+    await settle();
     expect(document.querySelector('[role="radiogroup"][aria-label="Fill reference"]')).toBeNull();
     act(() => buttonSaying("Fill")?.click());
     expect(document.querySelector<HTMLInputElement>('input[value="visible"]')?.checked).toBe(true);
@@ -954,8 +1001,10 @@ describe("the drawing screen's clock", () => {
     expect(sheetCalls.settings?.fillReference).toBe("visible");
     expect(document.querySelector<HTMLInputElement>('input[value="visible"]')?.checked).toBe(true);
     act(openPanel("color"));
+    await settle();
     expect(document.querySelector('[role="radiogroup"][aria-label="Fill reference"]')).toBeNull();
     act(putToolsDown);
+    await settle();
     expect(
       document.querySelector('[role="radiogroup"][aria-label="Fill reference"]'),
     ).not.toBeNull();
@@ -1529,7 +1578,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     expect(beginKey()?.getAttribute("aria-label")).toBe(BEGIN_LABEL);
     act(() => beginKey()?.click());
     await settle(1000);
-    tapSealKey();
+    await tapSealKey();
     sealOnSheet();
     await settle(1000);
     expect(seal).toHaveBeenCalledOnce();
@@ -1633,7 +1682,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
 
   it("shows a begun sheet's pair on its seal sheet, whose sticker wears the Kyoto Seika Practice Mode foil, and pink once marked 18+", async () => {
     await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: BEGUN });
-    tapSealKey();
+    await tapSealKey();
     const pair = sealSheet()?.querySelector(".subject-pair")?.textContent;
     expect(pair).toContain(WIND.ja);
     expect(pair).toContain(REUNION.ja);
@@ -1975,7 +2024,7 @@ it.each(["initial", "late"])(
     expect(sheet).toBe("fresh");
     expect(sheetCalls.settings?.locked).toBe(true);
     expect(spendTicket).not.toHaveBeenCalled();
-    tapSealKey();
+    await tapSealKey();
     sealOnSheet();
     await settle();
     expect(seal).not.toHaveBeenCalled();
@@ -1989,7 +2038,7 @@ it.each(["initial", "late"])(
     ).toMatchObject({ ticket: 9 });
     expect(sheetCalls.settings?.locked).toBe(false);
     act(() => sheetCalls.stroke());
-    tapSealKey();
+    await tapSealKey();
     await settle(1000);
     sealOnSheet();
     await settle(1000);
@@ -2154,3 +2203,470 @@ it.each([true, false])(
     expect(buttonSaying("Download saved drawing")).toBeUndefined();
   },
 );
+
+describe("finishing Fill on the drawing screen", () => {
+  const pendingFill = { acceptedPending: true, transitionPending: false, settling: false };
+  function pending() {
+    let resolve = () => {};
+    let reject = (_error: unknown) => {};
+    const promise = new Promise<void>((done, failed) => {
+      resolve = done;
+      reject = failed;
+    });
+    const finish = { promise, resolve, reject };
+    sheetCalls.finish.mockReturnValue(finish.promise);
+    act(() => sheetCalls.fillState(pendingFill));
+    return finish;
+  }
+  async function openBlank() {
+    reopen({ ...keptHalfway, steps: [], elapsedMs: 0 });
+    await settle();
+  }
+
+  it("offers Seal for accepted pending Fill, waits for ink, and rejects an empty result", async () => {
+    await openBlank();
+    expect(document.querySelector(".seal-key.is-shown")).toBeNull();
+    const finish = pending();
+    expect(document.querySelector(".seal-key.is-shown")).not.toBeNull();
+    act(clickSealKey);
+    expect(sealSheet()).toBeNull();
+    expect(sheetCalls.composites).toHaveLength(0);
+    finish.resolve();
+    await settle();
+    expect(sealSheet()).toBeNull();
+    expect(sheetCalls.composites).toHaveLength(0);
+  });
+
+  it("rechecks completed first Fill before opening Seal and shares duplicate taps", async () => {
+    await openBlank();
+    const finish = pending();
+    act(() => {
+      clickSealKey();
+      clickSealKey();
+    });
+    expect(sheetCalls.finish).toHaveBeenCalledTimes(1);
+    act(() => sheetCalls.stroke());
+    expect(sealSheet()).toBeNull();
+    finish.resolve();
+    await settle();
+    expect(sealSheet()).not.toBeNull();
+  });
+
+  it.each(["panel", "pause"] as const)(
+    "holds the ordinary clock immediately for %s, then releases its hold on failure",
+    async (action) => {
+      reopen(keptHalfway);
+      await settle();
+      act(tapTimer);
+      await settle();
+      const finish = pending();
+      act(action === "panel" ? openPanel("color") : tapTimer);
+      expect(document.querySelector(".color-sheet")).toBeNull();
+      expect(sheetCalls.settings?.paused).toBe(false);
+      expect(await countedAfter(() => {})).toBe(0);
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      finish.reject(new Error("worker stopped"));
+      await settle();
+      expect(document.querySelector(".color-sheet")).toBeNull();
+      expect(await countedAfter(() => {})).toBeGreaterThan(0);
+      expect(error).toHaveBeenCalled();
+      error.mockRestore();
+    },
+  );
+
+  it("retains the selected tool, blocks competing controls and shortcuts, and shows delayed status", async () => {
+    reopen(keptHalfway);
+    await settle();
+    act(() => buttonSaying("Fill")?.click());
+    const finish = pending();
+    act(() => buttonSaying("Brush")?.click());
+    expect(buttonSaying("Fill")?.getAttribute("aria-pressed")).toBe("true");
+    expect(document.querySelector(".seal-chip")?.textContent).not.toContain("Finishing fill…");
+    await settle(149);
+    expect(document.querySelector(".seal-chip")?.textContent).not.toContain("Finishing fill…");
+    await settle(1);
+    expect(document.querySelector(".seal-chip")?.textContent).toContain("Finishing fill…");
+    await act(() => i18next.changeLanguage("ja"));
+    expect(chip()).toContain("塗りつぶしを処理中…");
+    await act(() => i18next.changeLanguage("en"));
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "e" }));
+    });
+    finish.resolve();
+    await settle();
+    expect(buttonSaying("Brush")?.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("retains Fill failure through history and late commits in either language", async () => {
+    reopen(keptHalfway);
+    await settle();
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const finish = pending();
+    act(clickSealKey);
+    finish.reject(new Error("worker stopped"));
+    await settle();
+    act(() => sheetCalls.history({ hasInk: true, canUndo: true, canRedo: false }));
+    act(() => sheetCalls.stroke());
+    expect(document.querySelector(".seal-chip")?.textContent).toContain(
+      "Fill stopped before it finished. Completed areas are still here.",
+    );
+    await act(() => i18next.changeLanguage("ja"));
+    expect(document.querySelector(".seal-chip")?.textContent).toContain(
+      "塗りつぶしを完了できませんでした。塗り終わった部分は残っています。",
+    );
+    await act(() => i18next.changeLanguage("en"));
+    error.mockRestore();
+  });
+
+  it("closes input at time-up before awaiting the first Fill and stays locked through its commit", async () => {
+    reopen({ ...keptHalfway, steps: [], elapsedMs: sessionMs(false) - 100 });
+    await settle();
+    act(tapTimer);
+    await settle();
+    const finish = pending();
+    await settle(200);
+    expect(sheetCalls.closeInput).toHaveBeenCalledOnce();
+    expect(sheetCalls.settings?.locked).toBe(true);
+    expect(sealSheet()).toBeNull();
+    act(() => sheetCalls.stroke());
+    expect(sheetCalls.settings?.locked).toBe(true);
+    await settle(1000);
+    expect(sheetCalls.settings?.sessionMs()).toBe(sessionMs(false));
+    finish.resolve();
+    await settle();
+    expect(sealSheet()?.textContent).toContain(strings.stickerCreation.sealSheet.timeUp.en);
+    expect(sheetCalls.settings?.locked).toBe(true);
+  });
+
+  it.each(["pagehide", "visibilitychange"])(
+    "aborts %s work synchronously before keeping committed steps and invalidates a pending panel",
+    async (event) => {
+      reopen(keptHalfway);
+      await settle();
+      const finish = pending();
+      act(openPanel("color"));
+      const order: string[] = [];
+      sheetCalls.abort.mockImplementation(() => order.push("abort"));
+      const save = vi.spyOn(SessionKeeper.prototype, "save").mockImplementation(() => {
+        order.push("save");
+      });
+      const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+      act(() => {
+        (event === "pagehide" ? window : document).dispatchEvent(new Event(event));
+      });
+      visibility.mockRestore();
+      expect(order.slice(0, 2)).toEqual(["abort", "save"]);
+      expect(save).toHaveBeenLastCalledWith(sheetCalls.steps, expect.any(Number), FRAME);
+      finish.resolve();
+      await settle();
+      expect(document.querySelector(".color-sheet")).toBeNull();
+      save.mockRestore();
+    },
+  );
+
+  it("cancels the transition and pending worker on unmount", async () => {
+    reopen(keptHalfway);
+    await settle();
+    const finish = pending();
+    act(openPanel("color"));
+    view?.unmount();
+    view = undefined;
+    expect(sheetCalls.abort).toHaveBeenCalledWith("drawing screen unmounted");
+    finish.resolve();
+    await settle();
+  });
+  it("waits for final ink before reading steps, frame, timelapse, and composite for sealing", async () => {
+    sealing.cut.mockResolvedValue(cutSticker());
+    const seal = vi.fn<ApiClient["seal"]>(() => new Promise(() => {}));
+    reopen(keptHalfway, {}, TEST_ME, { seal });
+    await settle();
+    await tapSealKey();
+    const finish = pending();
+    const save = vi.spyOn(SessionKeeper.prototype, "save");
+    sheetCalls.finalRead.mockClear();
+    sheetCalls.composites = [];
+    sealOnSheet();
+    expect(sheetCalls.finalRead).not.toHaveBeenCalled();
+    const steps: Step[] = [
+      { tool: "fill", layer: 1, color: "#ff0000", x: 12, y: 14, gap: 0, T: 12, reference: "layer" },
+    ];
+    sheetCalls.steps = steps;
+    finish.resolve();
+    await settle(1000);
+    expect(sheetCalls.composites).toHaveLength(1);
+    expect(save).toHaveBeenCalledWith(steps, expect.any(Number), FRAME);
+    expect(seal).toHaveBeenCalledOnce();
+    save.mockRestore();
+  });
+
+  it("never reads final ink or submits a seal when finishing fails", async () => {
+    const seal = vi.fn<ApiClient["seal"]>();
+    reopen(keptHalfway, {}, TEST_ME, { seal });
+    await settle();
+    await tapSealKey();
+    const finish = pending();
+    sheetCalls.finalRead.mockClear();
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    sealOnSheet();
+    finish.reject(new FillError("worker stopped"));
+    await settle();
+    expect(sheetCalls.finalRead).not.toHaveBeenCalled();
+    expect(seal).not.toHaveBeenCalled();
+    expect(chip()).toContain(strings.stickerCreation.fillReference.failed.en);
+    error.mockRestore();
+  });
+
+  it.each(["color", "reference"] as const)("keeps the old %s until completion", async (choice) => {
+    reopen(keptHalfway);
+    await settle();
+    act(() => buttonSaying("Fill")?.click());
+    const oldColor = sheetCalls.settings?.color;
+    const finish = pending();
+    act(() => {
+      if (choice === "color") sheetCalls.color("#ff0000");
+      else document.querySelector<HTMLInputElement>('input[value="visible"]')?.click();
+    });
+    expect(sheetCalls.settings?.color).toBe(oldColor);
+    expect(sheetCalls.settings?.fillReference).toBe("layer");
+    expect(document.querySelector(".drawing-controls")?.hasAttribute("disabled")).toBe(true);
+    const selected = sheetCalls.selected.length;
+    act(() => document.querySelector<HTMLButtonElement>(".layer-add")?.click());
+    expect(sheetCalls.selected).toHaveLength(selected);
+    expect(sheetCalls.steps).toEqual([]);
+    finish.resolve();
+    await settle();
+    if (choice === "color") expect(sheetCalls.settings?.color).toBe("#ff0000");
+    else expect(sheetCalls.settings?.fillReference).toBe("visible");
+  });
+
+  it("reports a distinct unexpected action while a transition is pending", async () => {
+    reopen(keptHalfway);
+    await settle();
+    const finish = pending();
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    act(() => {
+      sheetCalls.color("#ff0000");
+      sheetCalls.color("#00ff00");
+    });
+    expect(error).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ message: "A fill transition is already pending" }),
+    );
+    finish.resolve();
+    await settle();
+    expect(sheetCalls.settings?.color).toBe("#ff0000");
+    error.mockRestore();
+  });
+
+  it.each([false, true])(
+    "time-up replaces a pending control without extra drawing time (Kyoto Seika: %s)",
+    async (kyotoSeika) => {
+      const length = sessionMs(kyotoSeika);
+      reopen(
+        {
+          ...keptHalfway,
+          elapsedMs: length - 100,
+          kyotoSeika: kyotoSeika
+            ? {
+                subjects: [WIND, REUNION],
+                picked: [0, 1],
+                rolls: 0,
+                begun: true,
+              }
+            : null,
+        },
+        {},
+        { ...TEST_ME, kyotoSeikaPractice: kyotoSeika },
+      );
+      await settle();
+      act(tapTimer);
+      await settle();
+      const finish = pending();
+      const oldColor = sheetCalls.settings?.color;
+      act(() => {
+        if (kyotoSeika) openPanel("color")();
+        else sheetCalls.color("#ff0000");
+      });
+      await settle(300);
+      expect(sheetCalls.closeInput).toHaveBeenCalledOnce();
+      expect(sheetCalls.settings?.locked).toBe(true);
+      expect(sheetCalls.abort).not.toHaveBeenCalled();
+      finish.resolve();
+      await settle(1000);
+      expect(sheetCalls.settings?.color).toBe(oldColor);
+      expect(document.querySelector(".color-sheet")).toBeNull();
+      expect(sealSheet()?.textContent).toContain(
+        kyotoSeika
+          ? strings.stickerCreation.sealSheet.pencilsDown.en
+          : strings.stickerCreation.sealSheet.timeUp.en,
+      );
+      expect(sheetCalls.settings?.sessionMs()).toBe(length);
+      expect(keptRecord()?.elapsedMs).toBe(length);
+    },
+  );
+
+  it("keeps time-up locked after failure and lets an explicit retry review the retained drawing", async () => {
+    reopen({ ...keptHalfway, elapsedMs: sessionMs(false) - 100 });
+    await settle();
+    act(tapTimer);
+    await settle();
+    const finish = pending();
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await settle(200);
+    finish.reject(new FillError("worker stopped"));
+    await settle();
+    expect(sheetCalls.settings?.locked).toBe(true);
+    expect(sealSheet()).toBeNull();
+    act(() => sheetCalls.stroke());
+    expect(sheetCalls.settings?.locked).toBe(true);
+    expect(chip()).toContain(strings.stickerCreation.fillReference.failed.en);
+    sheetCalls.finish.mockResolvedValue();
+    await tapSealKey();
+    expect(sealSheet()).not.toBeNull();
+    error.mockRestore();
+  });
+
+  it("keeps worker FillError after routine history and obsolete state notifications", async () => {
+    reopen(keptHalfway);
+    await settle();
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    act(() => sheetCalls.inkFailed(new FillError("worker stopped")));
+    act(() => {
+      sheetCalls.history({ hasInk: true, canUndo: true, canRedo: false });
+      sheetCalls.fillState({ acceptedPending: false, transitionPending: false, settling: false });
+    });
+    expect(chip()).toContain(strings.stickerCreation.fillReference.failed.en);
+    error.mockRestore();
+  });
+  it("offers recovery after the first Fill fails at time-up with no completed ink", async () => {
+    reopen({ ...keptHalfway, steps: [], elapsedMs: sessionMs(false) - 100 });
+    await settle();
+    act(tapTimer);
+    await settle();
+    const finish = pending();
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await settle(200);
+    finish.reject(new FillError("worker stopped"));
+    await settle();
+    act(() =>
+      sheetCalls.fillState({ acceptedPending: false, transitionPending: false, settling: false }),
+    );
+    expect(document.querySelector(".seal-key.is-shown")).not.toBeNull();
+    sheetCalls.finish.mockResolvedValue();
+    await tapSealKey();
+    expect(chip()).toContain(strings.stickerCreation.seal.emptyAtTimeUp.en);
+    error.mockRestore();
+  });
+
+  it("retries a failed seal after the clock reached its cutoff in this visit", async () => {
+    const seal = vi.fn<ApiClient["seal"]>(() => new Promise(() => {}));
+    reopen({ ...keptHalfway, elapsedMs: sessionMs(false) - 100 }, {}, TEST_ME, { seal });
+    await settle();
+    act(tapTimer);
+    await settle(200);
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    sealOnSheet();
+    await settle(1000);
+    expect(seal).not.toHaveBeenCalled();
+    sealing.cut.mockResolvedValue(cutSticker());
+    await tapSealKey();
+    await settle(1000);
+    expect(seal).toHaveBeenCalledOnce();
+    error.mockRestore();
+  });
+
+  it.each([
+    ["pagehide", false],
+    ["pagehide", true],
+    ["visibilitychange", false],
+    ["visibilitychange", true],
+    ["cover", false],
+    ["cover", true],
+  ] as const)("resolves cutoff after %s cancels Fill (completed ink: %s)", async (event, inked) => {
+    const steps = inked ? keptHalfway.steps : [];
+    reopen({ ...keptHalfway, steps, elapsedMs: sessionMs(false) - 100 }, {}, TEST_ME, {
+      spendTicket: () => new Promise(() => {}),
+    });
+    await settle();
+    sheetCalls.steps = [...steps];
+    act(tapTimer);
+    await settle();
+    const finish = pending();
+    const oldColor = sheetCalls.settings?.color;
+    act(() => sheetCalls.color("#ff0000"));
+    await settle(200);
+    expect(sheetCalls.settings?.locked).toBe(true);
+    expect(sealSheet()).toBeNull();
+    const save = vi.spyOn(SessionKeeper.prototype, "save");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const order: string[] = [];
+    sheetCalls.abort.mockImplementation(() => {
+      order.push("abort");
+      sheetCalls.fillState({ acceptedPending: false, transitionPending: false, settling: false });
+      finish.reject(new FillError("Fill stopped: sheet hidden"));
+    });
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    act(() => {
+      if (event === "cover") view?.rerender(screenAsApp(false));
+      else (event === "pagehide" ? window : document).dispatchEvent(new Event(event));
+    });
+    expect(order).toContain("abort");
+    expect(sheetCalls.abort.mock.invocationCallOrder[0]).toBeLessThan(
+      save.mock.invocationCallOrder[0],
+    );
+    expect(save).toHaveBeenCalledWith(steps, sessionMs(false), FRAME);
+    visibility.mockReturnValue("visible");
+    act(() => {
+      if (event === "cover") view?.rerender(screenAsApp(true));
+      else document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await settle();
+    expect(error).not.toHaveBeenCalled();
+    if (inked) {
+      expect(sealSheet()?.textContent).toContain(strings.stickerCreation.sealSheet.timeUp.en);
+      expect(sheetCalls.settings?.locked).toBe(true);
+      expect(sheetCalls.settings?.sessionMs()).toBe(sessionMs(false));
+      expect(sheetCalls.settings?.color).toBe(oldColor);
+    } else {
+      expect(chip()).toContain(strings.stickerCreation.seal.emptyAtTimeUp.en);
+      expect(sheetCalls.settings?.sessionMs()).toBe(0);
+      expect(document.querySelector(".drawing-controls")?.hasAttribute("disabled")).toBe(false);
+    }
+    visibility.mockRestore();
+    save.mockRestore();
+    error.mockRestore();
+  });
+
+  it.each(["reset", "unmount"])(
+    "does not revive obsolete cutoff recovery after %s",
+    async (action) => {
+      reopen({ ...keptHalfway, steps: [], elapsedMs: sessionMs(false) - 100 }, {}, TEST_ME, {
+        spendTicket: () => new Promise(() => {}),
+      });
+      await settle();
+      act(tapTimer);
+      await settle();
+      const finish = pending();
+      await settle(200);
+      const save = vi.spyOn(SessionKeeper.prototype, "save");
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      if (action === "reset") act(() => drawingScreen.current?.startNewSticker());
+      else {
+        view?.unmount();
+        view = undefined;
+      }
+      save.mockClear();
+      finish.resolve();
+      await settle();
+      expect(save).not.toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
+      expect(sealSheet()).toBeNull();
+      if (action === "reset") {
+        expect(sheetCalls.settings?.sessionMs()).toBe(0);
+        expect(chip()).not.toContain(strings.stickerCreation.seal.emptyAtTimeUp.en);
+      }
+      save.mockRestore();
+      error.mockRestore();
+    },
+  );
+});

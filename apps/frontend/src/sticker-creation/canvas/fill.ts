@@ -8,14 +8,14 @@ export interface Pixels {
 }
 
 /** Which sides of the pixels were cut from a bigger image, so a region may go on past them. */
-interface Cut {
+export interface Cut {
   left: boolean;
   top: boolean;
   right: boolean;
   bottom: boolean;
 }
 
-type Rgb = readonly [number, number, number];
+export type Rgb = readonly [number, number, number];
 
 /** The extremes of the pixels a flood took in, inclusive. */
 interface Box {
@@ -57,7 +57,7 @@ const FAR = 255;
 const ROOM = 1.5;
 
 /** Marks in a flood's `region`. The region's own pixels: */
-const IN = 1;
+export const IN = 1;
 /** Paper that goes to other open paper, so it stays as it is: */
 const OUT = 2;
 /** Paper near a cut side, which open paper past that side may be nearer: */
@@ -69,10 +69,37 @@ const FLOODING = 5;
 /** Other open paper too shallow to be a region, which goes to the nearest: */
 const POCKET = 6;
 /** Pixels outside the region the fill tucked under: */
-const TUCKED = 7;
+export const TUCKED = 7;
 
 const rgbDistance = (data: Uint8ClampedArray, i: number, [r, g, b]: Rgb) =>
   Math.abs(data[i] - r) + Math.abs(data[i + 1] - g) + Math.abs(data[i + 2] - b);
+
+export interface FillTarget {
+  empty: boolean;
+  rgb: Rgb;
+}
+
+/** Captures a valid seed's reference color before the gesture changes any pixels. */
+export function fillTarget(pixels: Pixels, x: number, y: number): FillTarget {
+  const i = (y * pixels.width + x) * 4;
+  const { data } = pixels;
+  return { empty: data[i + 3] < EMPTY_ALPHA, rgb: [data[i], data[i + 1], data[i + 2]] };
+}
+
+const targetDistance = (a: Rgb, b: Rgb) =>
+  Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+
+/** Seed eligibility stays relative to the gesture's first target, avoiding color drift. */
+export function matchesFillTarget(start: FillTarget, candidate: FillTarget): boolean {
+  return (
+    start.empty === candidate.empty &&
+    (start.empty || targetDistance(start.rgb, candidate.rgb) < REGION_TOLERANCE)
+  );
+}
+
+export function isFillNoOp(candidate: FillTarget, paint: Rgb): boolean {
+  return !candidate.empty && targetDistance(candidate.rgb, paint) < SAME_COLOR;
+}
 
 /** A fill's region and tuck on the pixels shown, in their coordinates. */
 export interface FoundFill {
@@ -116,10 +143,9 @@ export function findFill(
 ): FoundFill | "past" | null {
   const { width: w, height: h, data } = shown;
   if (sx < 0 || sy < 0 || sx >= w || sy >= h) return null;
-  const seed = (sy * w + sx) * 4;
-  const target: Rgb = [data[seed], data[seed + 1], data[seed + 2]];
-  const empty = data[seed + 3] < EMPTY_ALPHA;
-  if (!empty && rgbDistance(data, seed, fill) < SAME_COLOR) return null;
+  const candidate = fillTarget(shown, sx, sy);
+  const { rgb: target, empty } = candidate;
+  if (isFillNoOp(candidate, fill)) return null;
 
   // Half the widest opening closed, in thirds of a pixel. A fill on a color closes none, so a stroke
   // thinner than the gap still recolors whole.
@@ -206,7 +232,7 @@ export function findFill(
  * Writes a found fill onto `target`, against the target's own pixels, where `target` and `shown`
  * cover the pixels the fill was found on. On one layer, `target` is `shown`. On a `locked` layer
  * the fill's color goes source-atop, region and tuck alike, so every pixel keeps its alpha. Returns
- * whether it wrote a pixel, which a locked layer's clear pixels never take.
+ * whether any destination RGBA byte changed, which a locked layer's clear pixels never do.
  */
 export function writeFill(
   target: Pixels,
@@ -229,6 +255,10 @@ export function writeFill(
       const mark = marks[y * box.w + x];
       if (mark === 0) continue;
       const i = ((box.y + y) * target.width + box.x + x) * 4;
+      const r = t[i];
+      const g = t[i + 1];
+      const b = t[i + 2];
+      const alpha = t[i + 3];
       if (locked) {
         // An opaque color laid source-atop takes the pixel's alpha, so a clear pixel takes nothing.
         if (t[i + 3] === 0) continue;
@@ -255,7 +285,8 @@ export function writeFill(
         t[i + 2] = t[i + 2] * a + fb * (1 - a);
         t[i + 3] = 255;
       }
-      wrote = true;
+      // Compare stored bytes, including Uint8ClampedArray's rounding of edge blends.
+      if (t[i] !== r || t[i + 1] !== g || t[i + 2] !== b || t[i + 3] !== alpha) wrote = true;
     }
   }
   return wrote;
@@ -640,6 +671,40 @@ interface SheetFlood<P extends Pixels> {
 /** How many squares a sheet fill reads, each twice as wide as the last, before the whole sheet. */
 const SQUARE_READS = 3;
 
+/** Shared read order keeps gesture fills and ordinary fills on the same search algorithm. */
+export function* fillReadAreas(
+  sheet: { width: number; height: number },
+  sx: number,
+  sy: number,
+  near: number,
+): Iterable<{ at: Rect; cut?: Cut }> {
+  const { width, height } = sheet;
+  if (sx < 0 || sy < 0 || sx >= width || sy >= height) return;
+  for (let n = 0, side = near; n < SQUARE_READS; n++, side *= 2) {
+    const half = Math.floor(side / 2);
+    const x = Math.max(0, sx - half);
+    const y = Math.max(0, sy - half);
+    const at = {
+      x,
+      y,
+      w: Math.min(width, sx + half + 1) - x,
+      h: Math.min(height, sy + half + 1) - y,
+    };
+    // A wider square holding half the sheet costs about what the whole does, and may still fall short.
+    if (n > 0 && at.w * at.h * 2 >= width * height) break;
+    yield {
+      at,
+      cut: {
+        left: at.x > 0,
+        top: at.y > 0,
+        right: at.x + at.w < width,
+        bottom: at.y + at.h < height,
+      },
+    };
+  }
+  yield { at: { x: 0, y: 0, w: width, h: height } };
+}
+
 /**
  * Finds a fill on a sheet from (sx, sy), closing openings up to `gap` across, reading what's shown
  * through `readShown`: a square about `near` px on a side around the seed, then squares twice as wide
@@ -655,34 +720,12 @@ export function findOnSheet<P extends Pixels>(
   gap: number,
   near: number,
 ): SheetFind<P> | null {
-  const { width, height } = sheet;
-  if (sx < 0 || sy < 0 || sx >= width || sy >= height) return null;
-  for (let n = 0, side = near; n < SQUARE_READS; n++, side *= 2) {
-    const half = Math.floor(side / 2);
-    const x = Math.max(0, sx - half);
-    const y = Math.max(0, sy - half);
-    const around = {
-      x,
-      y,
-      w: Math.min(width, sx + half + 1) - x,
-      h: Math.min(height, sy + half + 1) - y,
-    };
-    const cut = {
-      left: around.x > 0,
-      top: around.y > 0,
-      right: around.x + around.w < width,
-      bottom: around.y + around.h < height,
-    };
-    // A wider square holding half the sheet costs about what the whole does, and may still fall short.
-    if (n > 0 && around.w * around.h * 2 >= width * height) break;
-    const shown = readShown(around);
-    const found = findFill(shown, sx - around.x, sy - around.y, fill, gap, cut);
-    if (found !== "past") return found && { shown, at: around, found };
+  for (const { at, cut } of fillReadAreas(sheet, sx, sy, near)) {
+    const shown = readShown(at);
+    const found = findFill(shown, sx - at.x, sy - at.y, fill, gap, cut);
+    if (found !== "past") return found && { shown, at, found };
   }
-  const whole = { x: 0, y: 0, w: width, h: height };
-  const shown = readShown(whole);
-  const found = findFill(shown, sx, sy, fill, gap);
-  return found && { shown, at: whole, found };
+  return null;
 }
 
 /**
@@ -712,6 +755,24 @@ export interface WrittenFill {
   spans: Uint32Array;
   /** count, then RGBA packed in a uint32, over the spans' pixels in order. */
   colors: Uint32Array;
+}
+
+/** Global interior ranges exclude the edge coverage, which remains eligible for another seed. */
+export function fillInteriorSpans({ box, marks }: FoundFill, at: Rect): Uint32Array {
+  const spans: number[] = [];
+  for (let y = 0; y < box.h; y++) {
+    let x = 0;
+    while (x < box.w) {
+      if (marks[y * box.w + x] !== IN) {
+        x++;
+        continue;
+      }
+      const x0 = x;
+      while (x < box.w && marks[y * box.w + x] === IN) x++;
+      spans.push(at.y + box.y + y, at.x + box.x + x0, at.x + box.x + x);
+    }
+  }
+  return Uint32Array.from(spans);
 }
 
 /**

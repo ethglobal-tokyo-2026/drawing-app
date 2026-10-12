@@ -46,6 +46,7 @@ const settingsFor = (response: PenPressure, fingersDraw: boolean): InkSettings =
 /** The strip shows no hover ring, keeps nothing, and has no pause to report. */
 const ignore = () => {};
 const EVENTS: InkEvents = {
+  onFillState: ignore,
   onHistory: ignore,
   onLayers: ignore,
   onCommit: ignore,

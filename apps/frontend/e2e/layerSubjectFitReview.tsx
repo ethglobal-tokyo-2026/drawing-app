@@ -28,13 +28,15 @@ const root = document.getElementById("root");
 if (!root) throw new Error("The subject fit fixture has no root");
 createRoot(root).render(
   <div className="drawing-screen" data-hand={query.get("hand") ?? "right"}>
-    <HistoryButtons
-      canUndo={false}
-      canRedo={false}
-      undoRef={null}
-      onUndo={() => {}}
-      onRedo={() => {}}
-    />
+    <fieldset className="drawing-controls">
+      <HistoryButtons
+        canUndo={false}
+        canRedo={false}
+        undoRef={null}
+        onUndo={() => {}}
+        onRedo={() => {}}
+      />
+    </fieldset>
     <MyBoardTile onOpen={() => {}} />
     <SealKey shown problem={null} onTap={() => {}} />
     <CornerPrint subjects={[first, second]} />

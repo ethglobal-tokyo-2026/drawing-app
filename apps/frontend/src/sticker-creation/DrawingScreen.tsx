@@ -41,7 +41,7 @@ import { QuietLink } from "../ui/QuietLink";
 import { releaseCanvas } from "../ui/releaseCanvas";
 import { sizePx } from "./canvas/brush";
 import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas";
-import type { HistoryState, InputMode } from "./canvas/inkEngine";
+import type { FillWorkState, HistoryState, InputMode } from "./canvas/inkEngine";
 import { penDrew, useDrawingHand, useInputMode, usePenPressure } from "./drawingSettings";
 import { isFirstVisit } from "./drawVisits";
 import { isOp, type FillReference, type Op, type Tool } from "./canvas/ops";
@@ -81,9 +81,11 @@ import {
   type SessionEvent,
 } from "./session/session";
 import { usePickUpKeptSession, type PickedUp } from "./session/usePickUpKeptSession";
-import { useSessionClock } from "./session/useSessionClock";
+import { useSessionClock, type ScreenHolds } from "./session/useSessionClock";
 import { TimerDot, type TimerDotHandle } from "./TimerDot";
 import { ClearBar } from "./tools/ClearBar";
+import { FillError } from "./canvas/fill-worker/errors";
+import { createFillCompletion, type FillCompletion } from "./tools/fillCompletion";
 import { FillReferenceBar } from "./tools/FillReferenceBar";
 import { ColorSheet } from "./tools/ColorSheet";
 import { HistoryButtons } from "./tools/HistoryButtons";
@@ -219,6 +221,21 @@ export function DrawingScreen({
   const [hiddenNudge, setHiddenNudge] = useState(0);
   const [layerAnnouncement, setLayerAnnouncement] = useState("");
   const [inkProblem, setInkProblem] = useState<string | null>(null);
+  const [fillProblem, setFillProblem] = useState(false);
+  const [fillWork, setFillWork] = useState<FillWorkState>({
+    acceptedPending: false,
+    transitionPending: false,
+    settling: false,
+  });
+  const [transitionPending, setTransitionPending] = useState(false);
+  const pendingTransition = useRef(false);
+  const [requestedTransition, setRequestedTransition] = useState<string | null>(null);
+  const [settlingFill, setSettlingFill] = useState(false);
+  const [timeUpPending, setTimeUpPending] = useState(false);
+  const cutoff = useRef<number | null>(null);
+  const timeUpWork = useRef<Promise<void> | null>(null);
+  const drawingGeneration = useRef(0);
+  const controlsPending = transitionPending || fillWork.transitionPending || timeUpPending;
   const [paused, setPaused] = useState(false);
   const [sizing, setSizing] = useState(false);
   // How many CSS px a sheet unit spans on screen: the size rail's ghost shows the brush at it.
@@ -291,7 +308,8 @@ export function DrawingScreen({
     );
   };
   const drag = useLayerDrag(layerList, {
-    enabled: active && (session.phase === "primed" || session.phase === "drawing"),
+    enabled:
+      active && !controlsPending && (session.phase === "primed" || session.phase === "drawing"),
     order: layers.state.layers.map((layer) => layer.id),
     onMove: moveLayer,
     onLift: setReordering,
@@ -328,6 +346,75 @@ export function DrawingScreen({
   // The handlers 0:00 runs use the clock, so it reaches them through a ref they fill in.
   const atTimeUp = useRef(() => {});
   const clock = useSessionClock(() => atTimeUp.current(), sessionMs(me.kyotoSeikaPractice));
+  const temporaryHold = useRef<keyof ScreenHolds | null>(null);
+  const screenHolds = useRef<ScreenHolds>({
+    paused: false,
+    away: false,
+    seal: false,
+    color: false,
+    smoothing: false,
+    clear: false,
+    layerOptions: false,
+    opacity: false,
+    reorder: false,
+    size: false,
+  });
+  const completion = useRef<FillCompletion | null>(null);
+  const cancelTransitions = useCallback(() => {
+    drawingGeneration.current++;
+    completion.current?.cancel();
+    timeUpWork.current = null;
+  }, []);
+  useLayoutEffect(() => {
+    const sheet = canvas.current;
+    const next = createFillCompletion(
+      () => canvas.current?.finishInk() ?? Promise.resolve(),
+      (pending) => {
+        pendingTransition.current = pending;
+        setTransitionPending(pending);
+        if (!pending) {
+          temporaryHold.current = null;
+          setRequestedTransition(null);
+        }
+      },
+      setSettlingFill,
+      (error) => {
+        console.error("Fill transition failed; completed areas remain on the sheet", error);
+        clock.setHolds(screenHolds.current);
+        setFillProblem(true);
+      },
+    );
+    completion.current = next;
+    return () => {
+      cancelTransitions();
+      completion.current = null;
+      sheet?.abortPendingFill("drawing screen unmounted");
+    };
+  }, [clock, cancelTransitions]);
+  function changeAfterFill(key: string, change: () => void, hold?: keyof ScreenHolds) {
+    if (cutoff.current !== null) return;
+    if (hold && !pendingTransition.current) {
+      temporaryHold.current = hold;
+      clock.setHolds({ ...screenHolds.current, [hold]: true });
+    }
+    const apply = () => {
+      change();
+      setFillProblem(false);
+    };
+    // Without pending Fill, the engine's synchronous settings path settles brush ink.
+    if (
+      tool !== "fill" &&
+      !fillWork.acceptedPending &&
+      !fillWork.transitionPending &&
+      !pendingTransition.current
+    ) {
+      apply();
+      temporaryHold.current = null;
+      return;
+    }
+    setRequestedTransition((current) => current ?? key);
+    void completion.current?.run(key, apply);
+  }
   /** Puts the sheet on ticket use `id`, with the clock it was spent with, whatever the switch says later. */
   function takeTicket(id: number, kyotoSeika: boolean) {
     ticket.current = { id, kyotoSeika };
@@ -376,6 +463,10 @@ export function DrawingScreen({
         clock.resume();
         return;
       case "reset-sheet": {
+        cancelTransitions();
+        cutoff.current = null;
+        setTimeUpPending(false);
+        setFillProblem(false);
         canvas.current?.reset();
         // The next ticket is spent in the mode the person has on now.
         clock.reset(sessionMs(me.kyotoSeikaPractice));
@@ -437,11 +528,16 @@ export function DrawingScreen({
    * composite, so nothing on the sheet after it reaches the sticker or its timelapse.
    */
   async function cutFromSheet(timeUsed: number) {
-    canvas.current?.finishStroke();
+    try {
+      await canvas.current?.finishInk();
+    } catch (error) {
+      setFillProblem(true);
+      throw error;
+    }
     const drawn = canvas.current?.timelapse() ?? null;
     const frame = canvas.current?.frame() ?? null;
     // The drawing kept on this device holds what the sticker is cut from, the stroke just ended too.
-    keeper.save(canvas.current?.steps() ?? [], clock.elapsed, frame);
+    keeper.save(canvas.current?.steps() ?? [], cutoff.current ?? clock.elapsed, frame);
     const marked = nsfw.current;
     // The pair Begin locked in, each subject as the sticker keeps it.
     const pair = kyotoSeikaSheet.pair;
@@ -669,20 +765,18 @@ export function DrawingScreen({
     if (kind === "daily" || (kind === "reserve" && reserve)) start(kind, { asked: false });
   };
 
-  useImperativeHandle(ref, () => ({ startNewSticker, closePanels: () => setPanel(null) }));
-
   /** Keeps the session on this device while it's in progress, so a reload doesn't lose it. */
   function keepProgress() {
     if (recoveryLocked.current) return;
     const { phase } = latest.current;
     if (phase === "primed" || phase === "drawing" || phase === "seal-sheet" || phase === "time-up")
-      keeper.save(canvas.current?.steps() ?? [], clock.elapsed, canvas.current?.frame() ?? null);
+      keeper.save(
+        canvas.current?.steps() ?? [],
+        cutoff.current ?? clock.elapsed,
+        canvas.current?.frame() ?? null,
+      );
   }
-  // 0:00 puts the pencils down: a stroke being drawn ends where it stands, the time's-up sheet rises,
-  // and the drawing is kept at its full time, so a reload brings the sheet back. A sheet with nothing
-  // on it has nothing to seal: it's spent, and the fresh one says so.
-  function putPencilsDown() {
-    canvas.current?.finishStroke();
+  function resolveTimeUp() {
     if (latest.current.phase === "drawing" && !hasInk.current) {
       send({ type: "reset" });
       setSealProblem({ message: t(($) => $.stickerCreation.seal.emptyAtTimeUp) });
@@ -691,15 +785,63 @@ export function DrawingScreen({
     send({ type: "time-up" });
     keepProgress();
   }
+  /** Suspension has canceled all unfinished ink, so the committed prefix is final at the cutoff. */
+  function resolveSuspendedTimeUp() {
+    const phase = latest.current.phase;
+    if (cutoff.current !== null && (phase === "drawing" || phase === "seal-sheet")) resolveTimeUp();
+  }
+  // 0:00 puts the pencils down: a stroke being drawn ends where it stands, the time's-up sheet rises,
+  // and the drawing is kept at its full time, so a reload brings the sheet back. A sheet with nothing
+  // on it has nothing to seal: it's spent, and the fresh one says so.
+  function putPencilsDown() {
+    if (timeUpWork.current) return;
+    cutoff.current ??= clock.elapsed;
+    setTimeUpPending(true);
+    canvas.current?.closeInput();
+    completion.current?.cancel();
+    const generation = drawingGeneration.current;
+    timeUpWork.current = (canvas.current?.finishInk() ?? Promise.resolve())
+      .then(
+        () => {
+          if (generation !== drawingGeneration.current) return;
+          setFillProblem(false);
+          resolveTimeUp();
+        },
+        (error: unknown) => {
+          if (generation !== drawingGeneration.current) return;
+          console.error("Fill could not finish at time-up; input remains closed", error);
+          setFillProblem(true);
+          keepProgress();
+        },
+      )
+      .finally(() => {
+        if (generation === drawingGeneration.current) timeUpWork.current = null;
+      });
+  }
   useEffect(() => {
     atTimeUp.current = putPencilsDown;
   });
-  const keepOnHide = useEffectEvent(keepProgress);
+  const keepOnCover = useEffectEvent(() => {
+    // DrawingCanvas's child layout effect has already suspended and canceled unfinished ink.
+    cancelTransitions();
+    keepProgress();
+    resolveSuspendedTimeUp();
+  });
+  useLayoutEffect(() => {
+    if (!active) keepOnCover();
+  }, [active]);
+  const keepOnHide = useEffectEvent((reason: string) => {
+    cancelTransitions();
+    canvas.current?.abortPendingFill(reason);
+    // Unload cannot await IndexedDB: keep the committed prefix now and retain per-commit saves.
+    keepProgress();
+    resolveSuspendedTimeUp();
+  });
   useEffect(() => {
     const onVisibility = () => {
-      if (document.visibilityState === "hidden") keepOnHide();
+      if (document.visibilityState === "hidden") keepOnHide("page hidden");
     };
-    const onPageHide = () => keepOnHide();
+    const onPageHide = () => keepOnHide("pagehide");
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onPageHide);
     return () => {
@@ -713,6 +855,7 @@ export function DrawingScreen({
     // Nothing drawn and no time counted: Start spent the ticket and the clock still waits. In Kyoto
     // Seika Practice Mode only Begin starts it: a sheet whose pair is dealt again waits at its deal,
     // drawing and all.
+    cancelTransitions();
     const part = found.kyotoSeika;
     const drawn = part ? part.begun : found.steps.some(isOp) || found.elapsedMs > 0;
     takeTicket(found.ticket, part !== null);
@@ -874,7 +1017,8 @@ export function DrawingScreen({
       setPickedUp(null);
       setStartsNote(true);
     } else if (!pausable && !paused) timer.current?.showClockRuns();
-    else setPaused((p) => !p);
+    else
+      changeAfterFill(`pause:${!paused}`, () => setPaused(!paused), !paused ? "paused" : undefined);
   };
 
   // Every hold stops the clock: the person's pause, the board or the upright cover over the screen,
@@ -882,7 +1026,7 @@ export function DrawingScreen({
   const sealSheet = session.phase === "seal-sheet";
   const sideways = useSideways();
   useEffect(() => {
-    clock.setHolds({
+    const holds = {
       paused,
       away: !active || sideways,
       seal: pausable && sealSheet,
@@ -893,7 +1037,9 @@ export function DrawingScreen({
       opacity: pausable && opacityHeld,
       reorder: pausable && reordering,
       size: pausable && sizing,
-    });
+    };
+    screenHolds.current = holds;
+    clock.setHolds(temporaryHold.current ? { ...holds, [temporaryHold.current]: true } : holds);
   }, [
     clock,
     paused,
@@ -905,6 +1051,7 @@ export function DrawingScreen({
     opacityHeld,
     reordering,
     pausable,
+    transitionPending,
   ]);
 
   // Out of tickets: the card comes up as Draw opens on a fresh sheet, and stays until the person picks
@@ -958,6 +1105,7 @@ export function DrawingScreen({
   // Until Start, and while a kept session loads, the sheet takes no ink; nor under the seal sheet, nor
   // once it's sealing.
   const locked =
+    timeUpPending ||
     restoring ||
     recovery !== null ||
     sealUnsettled ||
@@ -995,14 +1143,23 @@ export function DrawingScreen({
 
   const sizeKey = tool === "eraser" ? "eraser" : "brush";
   const setSize = (value: number) => setSizes((s) => ({ ...s, [sizeKey]: value }));
-  const pickTool = (next: Tool) => {
-    setTool(next);
-    setPanel(null);
-  };
-  const pickColor = (hex: string) => {
-    setColor(hex);
-    if (tool === "eraser") setTool("brush");
-  };
+  const pickPanel = (next: Panel) =>
+    changeAfterFill(
+      `panel:${next}`,
+      () => setPanel(next),
+      pausable && next ? (next === "layer" ? "layerOptions" : next) : undefined,
+    );
+  const pickTool = (next: Tool) =>
+    changeAfterFill(`tool:${next}`, () => {
+      setTool(next);
+      setPanel(null);
+    });
+  const pickColor = (hex: string) =>
+    changeAfterFill(`color:${hex}`, () => {
+      setColor(hex);
+      if (tool === "eraser") setTool("brush");
+    });
+  useImperativeHandle(ref, () => ({ startNewSticker, closePanels: () => pickPanel(null) }));
   // The clock, the ticket and the tools carry on, and undo brings the drawing back, so focus goes there.
   const clearSheet = () => {
     undoTile.current?.focus({ preventScroll: true });
@@ -1012,19 +1169,29 @@ export function DrawingScreen({
   };
 
   useShortcuts({
-    enabled: !locked && !dealt,
-    undo: () => canvas.current?.undo(),
-    redo: () => canvas.current?.redo(),
-    setTool: pickTool,
-    stepSize: (direction) => setSize(clamp01(sizes[sizeKey] + direction * SIZE_STEP)),
-    closePanel: () => setPanel(null),
+    enabled: !locked && !dealt && !controlsPending,
+    undo: () => {
+      if (!pendingTransition.current) canvas.current?.undo();
+    },
+    redo: () => {
+      if (!pendingTransition.current) canvas.current?.redo();
+    },
+    setTool: (next) => {
+      if (!pendingTransition.current) pickTool(next);
+    },
+    stepSize: (direction) => {
+      if (!pendingTransition.current) setSize(clamp01(sizes[sizeKey] + direction * SIZE_STEP));
+    },
+    closePanel: () => {
+      if (!pendingTransition.current) pickPanel(null);
+    },
   });
 
   // A press on the sheet closes any open panel and draws nothing: it's swallowed before the ink
   // engine hears it land. A press anywhere else but the panel or its tile closes the bars, and the
   // color sheet where it's a popover, since a bottom sheet covers what's around it.
   const closePanelOutside = (e: ReactPointerEvent) => {
-    if (panel === null || !(e.target instanceof Element)) return;
+    if (controlsPending || panel === null || !(e.target instanceof Element)) return;
     if (e.target.closest(".ink-sheet")) {
       canvas.current?.swallow(e.pointerId);
       setPanel(null);
@@ -1109,6 +1276,7 @@ export function DrawingScreen({
           penPressure,
           sessionMs: () => clock.elapsed,
         }}
+        onFillState={setFillWork}
         onHistory={(next) => {
           hasInk.current = next.hasInk;
           if (inkProblem) setInkProblem(null);
@@ -1129,6 +1297,10 @@ export function DrawingScreen({
         onBlockedHidden={() => setHiddenNudge((n) => n + 1)}
         onInkFailed={(error) => {
           console.error("The drawing could not be updated", error);
+          if (error instanceof FillError) {
+            setFillProblem(true);
+            return;
+          }
           setInkProblem(
             error instanceof StabilizationError
               ? t(($) => $.stickerCreation.layers.stabilizationFailed)
@@ -1150,190 +1322,232 @@ export function DrawingScreen({
         onPen={penDrew}
         onFit={setSheetScale}
       />
-      <div className="drawing-top">
-        <TimerDot
-          ref={timer}
-          clock={clock}
-          paused={paused}
-          note={active ? timerNote : null}
-          waitsFor={dealt ? "begin" : "stroke"}
-          pausable={pausable}
-          onToggle={onTimerTap}
-        />
-        <ToolStrip
-          tool={tool}
-          panel={panel}
-          canClear={layers.currentInked}
-          colorSheetId={colorSheetId}
-          smoothingBarId={smoothingBarId}
-          clearBarId={clearBarId}
-          onTool={pickTool}
-          onPanel={setPanel}
-          inputMode={inputMode}
-          onInputMode={setSheetInputMode}
-        />
-      </div>
-      {active &&
-        tool === "fill" &&
-        panel === null &&
-        (session.phase === "primed" || session.phase === "drawing") &&
-        !ceremony &&
-        !dealLeaving &&
-        !recovery && <FillReferenceBar value={fillReference} onChange={setFillReference} />}
-      {/* A deal on its way out finishes leaving even under the board, so it never plays again. */}
-      {((active && dealt && !recovery) || dealLeaving) && (
-        <KyotoSeikaDeal
-          screen={root}
-          list={kyotoSeikaSheet.list}
-          seed={kyotoSeikaSheet.seed}
-          deal={kyotoSeikaSheet.deal}
-          minutes={clock.length / 60_000}
-          begin={begin}
-          onRoll={kyotoSeikaSheet.roll}
-          onPick={kyotoSeikaSheet.pick}
-          onBegin={() =>
-            send({
-              type: "begin",
-              hasPair: kyotoSeikaSheet.deal !== null && pickedPair(kyotoSeikaSheet.deal) !== null,
-            })
+      <fieldset
+        className="drawing-controls"
+        disabled={controlsPending}
+        inert={controlsPending}
+        onClickCapture={(event) => {
+          if (controlsPending) {
+            event.preventDefault();
+            event.stopPropagation();
           }
-          leaving={dealLeaving}
-          onLeft={() => setDealLeaving(false)}
-        />
-      )}
-      <ColorSheet
-        id={colorSheetId}
-        open={panel === "color"}
-        layer={root}
-        color={color}
-        recent={recent}
-        onPick={pickColor}
-        onPreview={(hex) => root.current?.style.setProperty("--draw-color", hex)}
-        onClose={() => setPanel(null)}
-      />
-      <SmoothingBar
-        id={smoothingBarId}
-        open={panel === "smoothing"}
-        value={smoothing}
-        onChange={setSmoothing}
-        mode={smoothingMode}
-        onModeChange={setSmoothingMode}
-        postCorrection={postCorrection}
-        onPostChange={setPostCorrection}
-      />
-      <ClearBar
-        id={clearBarId}
-        open={panel === "clear"}
-        onClear={clearSheet}
-        onClose={() => setPanel(null)}
-      />
-      <SizeRail
-        value={sizes[sizeKey]}
-        eraser={tool === "eraser"}
-        active={sizing}
-        scale={sheetScale}
-        onChange={setSize}
-        onHold={setSizing}
-      />
-      <div className={`drawing-layer-column ${penHover.hovering ? "is-pen-hovered" : ""}`}>
-        <LayerColumn
-          chips={chips}
-          current={layers.current}
-          canAdd={chips.length < MAX_LAYERS}
-          thumbnails={thumbnails}
-          optionsOpen={panel === "layer"}
-          edge={edge}
-          onAdd={() => canvas.current?.addLayer()}
-          onSelect={(id) => {
-            setPanel(null);
-            canvas.current?.selectLayer(id);
-          }}
-          onToggleOptions={() => setPanel((open) => (open === "layer" ? null : "layer"))}
-          onCloseOptions={() => setPanel((open) => (open === "layer" ? null : open))}
-          listRef={layerList}
-          options={
-            <LayerOptionsBar
-              id={layers.current}
-              locked={currentLayer.locked}
-              clipped={currentLayer.clipped}
-              clipBase={clipBase}
-              opacity={currentLayer.opacity}
-              count={chips.length}
-              canMoveBack={currentIndex > 0}
-              canMoveForward={currentIndex < chips.length - 1}
-              canDelete={chips.length > 1}
-              mergeTarget={mergeDownTarget(layers.state, layers.current)}
-              onPreviewOpacity={(value) => canvas.current?.previewOpacity(value)}
-              onCommitOpacity={(value) => canvas.current?.setOpacity(value)}
-              onHoldOpacity={setOpacityHeld}
-              onClose={() => {
-                layerList.current
-                  ?.querySelector<HTMLElement>(`[data-layer-chip="${layers.current}"]`)
-                  ?.focus({ preventScroll: true });
-                setPanel(null);
-              }}
-              onMerge={() => {
-                const target = mergeDownTarget(layers.state, layers.current);
-                if (!("into" in target)) return;
-                canvas.current?.mergeDown();
-                // A failed allocation leaves the source selected. Only the engine's confirmed
-                // destination closes its menu; the ref follows onLayers before React renders.
-                if (lastCurrentLayer.current !== target.into) return;
-                layerList.current
-                  ?.querySelector<HTMLElement>(`[data-layer-chip="${target.into}"]`)
-                  ?.focus({ preventScroll: true });
-                setPanel(null);
-              }}
-              onLock={(on) => canvas.current?.setLocked(on)}
-              onClip={(on) => canvas.current?.setClipped(on)}
-              onMoveBack={() => moveLayer(layers.current, currentIndex - 1)}
-              onMoveForward={() => moveLayer(layers.current, currentIndex + 1)}
-              onDelete={() => {
-                undoTile.current?.focus({ preventScroll: true });
-                canvas.current?.deleteLayer();
-                setPanel(null);
-              }}
-            />
+        }}
+        onPointerDownCapture={(event) => {
+          if (controlsPending) {
+            event.preventDefault();
+            event.stopPropagation();
           }
-        />
-      </div>
-      {currentLayer.opacity === 0 && panel !== "layer" && !locked && (
-        <div className="layer-hidden-recovery">
-          <p role="status" key={hiddenNudge}>
-            {t(($) => $.stickerCreation.layers.hiddenRecovery)}
-          </p>
-          <div>
-            <button type="button" onClick={() => setPanel("layer")}>
-              {t(($) => $.stickerCreation.layers.openOptions)}
-            </button>
-            <button type="button" onClick={() => canvas.current?.setOpacity(100)}>
-              {t(($) => $.stickerCreation.layers.showLayer)}
-            </button>
-          </div>
+        }}
+        onKeyDownCapture={(event) => {
+          if (controlsPending) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }}
+      >
+        <div className="drawing-top">
+          <TimerDot
+            ref={timer}
+            clock={clock}
+            paused={paused}
+            note={active ? timerNote : null}
+            waitsFor={dealt ? "begin" : "stroke"}
+            pausable={pausable}
+            onToggle={onTimerTap}
+          />
+          <ToolStrip
+            tool={tool}
+            panel={panel}
+            canClear={layers.currentInked}
+            colorSheetId={colorSheetId}
+            smoothingBarId={smoothingBarId}
+            clearBarId={clearBarId}
+            onTool={pickTool}
+            onPanel={pickPanel}
+            inputMode={inputMode}
+            onInputMode={(mode) => changeAfterFill(`input:${mode}`, () => setSheetInputMode(mode))}
+          />
         </div>
-      )}
-      <span className="visually-hidden" role="status" aria-live="polite">
-        {layerAnnouncement}
-      </span>
-      <HistoryButtons
-        canUndo={history.canUndo}
-        canRedo={history.canRedo}
-        undoRef={undoTile}
-        onUndo={() => canvas.current?.undo()}
-        onRedo={() => canvas.current?.redo()}
-      />
+        {active &&
+          tool === "fill" &&
+          panel === null &&
+          (session.phase === "primed" || session.phase === "drawing") &&
+          !ceremony &&
+          !dealLeaving &&
+          !recovery && (
+            <FillReferenceBar
+              value={fillReference}
+              onChange={(value) =>
+                changeAfterFill(`reference:${value}`, () => setFillReference(value))
+              }
+            />
+          )}
+        {/* A deal on its way out finishes leaving even under the board, so it never plays again. */}
+        {((active && dealt && !recovery) || dealLeaving) && (
+          <KyotoSeikaDeal
+            screen={root}
+            list={kyotoSeikaSheet.list}
+            seed={kyotoSeikaSheet.seed}
+            deal={kyotoSeikaSheet.deal}
+            minutes={clock.length / 60_000}
+            begin={begin}
+            onRoll={kyotoSeikaSheet.roll}
+            onPick={kyotoSeikaSheet.pick}
+            onBegin={() =>
+              send({
+                type: "begin",
+                hasPair: kyotoSeikaSheet.deal !== null && pickedPair(kyotoSeikaSheet.deal) !== null,
+              })
+            }
+            leaving={dealLeaving}
+            onLeft={() => setDealLeaving(false)}
+          />
+        )}
+        <ColorSheet
+          id={colorSheetId}
+          open={panel === "color"}
+          layer={root}
+          color={color}
+          recent={recent}
+          onPick={pickColor}
+          onPreview={(hex) => root.current?.style.setProperty("--draw-color", hex)}
+          onClose={() => pickPanel(null)}
+        />
+        <SmoothingBar
+          id={smoothingBarId}
+          open={panel === "smoothing"}
+          value={smoothing}
+          onChange={setSmoothing}
+          mode={smoothingMode}
+          onModeChange={setSmoothingMode}
+          postCorrection={postCorrection}
+          onPostChange={setPostCorrection}
+        />
+        <ClearBar
+          id={clearBarId}
+          open={panel === "clear"}
+          onClear={clearSheet}
+          onClose={() => pickPanel(null)}
+        />
+        <SizeRail
+          value={sizes[sizeKey]}
+          eraser={tool === "eraser"}
+          active={sizing}
+          scale={sheetScale}
+          onChange={setSize}
+          onHold={setSizing}
+        />
+        <div className={`drawing-layer-column ${penHover.hovering ? "is-pen-hovered" : ""}`}>
+          <LayerColumn
+            chips={chips}
+            current={layers.current}
+            canAdd={chips.length < MAX_LAYERS}
+            thumbnails={thumbnails}
+            optionsOpen={panel === "layer"}
+            edge={edge}
+            onAdd={() => canvas.current?.addLayer()}
+            onSelect={(id) => {
+              setPanel(null);
+              canvas.current?.selectLayer(id);
+            }}
+            onToggleOptions={() => pickPanel(panel === "layer" ? null : "layer")}
+            onCloseOptions={() => {
+              if (panel === "layer") pickPanel(null);
+            }}
+            listRef={layerList}
+            options={
+              <LayerOptionsBar
+                id={layers.current}
+                locked={currentLayer.locked}
+                clipped={currentLayer.clipped}
+                clipBase={clipBase}
+                opacity={currentLayer.opacity}
+                count={chips.length}
+                canMoveBack={currentIndex > 0}
+                canMoveForward={currentIndex < chips.length - 1}
+                canDelete={chips.length > 1}
+                mergeTarget={mergeDownTarget(layers.state, layers.current)}
+                onPreviewOpacity={(value) => canvas.current?.previewOpacity(value)}
+                onCommitOpacity={(value) => canvas.current?.setOpacity(value)}
+                onHoldOpacity={setOpacityHeld}
+                onClose={() => {
+                  layerList.current
+                    ?.querySelector<HTMLElement>(`[data-layer-chip="${layers.current}"]`)
+                    ?.focus({ preventScroll: true });
+                  setPanel(null);
+                }}
+                onMerge={() => {
+                  const target = mergeDownTarget(layers.state, layers.current);
+                  if (!("into" in target)) return;
+                  canvas.current?.mergeDown();
+                  // A failed allocation leaves the source selected. Only the engine's confirmed
+                  // destination closes its menu; the ref follows onLayers before React renders.
+                  if (lastCurrentLayer.current !== target.into) return;
+                  layerList.current
+                    ?.querySelector<HTMLElement>(`[data-layer-chip="${target.into}"]`)
+                    ?.focus({ preventScroll: true });
+                  setPanel(null);
+                }}
+                onLock={(on) => canvas.current?.setLocked(on)}
+                onClip={(on) => canvas.current?.setClipped(on)}
+                onMoveBack={() => moveLayer(layers.current, currentIndex - 1)}
+                onMoveForward={() => moveLayer(layers.current, currentIndex + 1)}
+                onDelete={() => {
+                  undoTile.current?.focus({ preventScroll: true });
+                  canvas.current?.deleteLayer();
+                  setPanel(null);
+                }}
+              />
+            }
+          />
+        </div>
+        {currentLayer.opacity === 0 && panel !== "layer" && !locked && (
+          <div className="layer-hidden-recovery">
+            <p role="status" key={hiddenNudge}>
+              {t(($) => $.stickerCreation.layers.hiddenRecovery)}
+            </p>
+            <div>
+              <button type="button" onClick={() => setPanel("layer")}>
+                {t(($) => $.stickerCreation.layers.openOptions)}
+              </button>
+              <button type="button" onClick={() => canvas.current?.setOpacity(100)}>
+                {t(($) => $.stickerCreation.layers.showLayer)}
+              </button>
+            </div>
+          </div>
+        )}
+        <span className="visually-hidden" role="status" aria-live="polite">
+          {layerAnnouncement}
+        </span>
+        <HistoryButtons
+          canUndo={history.canUndo}
+          canRedo={history.canRedo}
+          undoRef={undoTile}
+          onUndo={() => canvas.current?.undo()}
+          onRedo={() => canvas.current?.redo()}
+        />
+      </fieldset>
       <MyBoardTile onOpen={onMyBoardTile} />
       {lockedPair && <CornerPrint subjects={lockedPair} />}
       {!recovery && (
         <SealKey
           // The seal sheet's Seal is the screen's one key while it's up.
-          shown={retrying || (history.hasInk && !sealing && !sealSheet && !timeUp)}
+          disabled={controlsPending && requestedTransition !== "seal-tap" && !timeUpPending}
+          shown={
+            retrying ||
+            (timeUpPending && fillProblem) ||
+            ((history.hasInk || fillWork.acceptedPending) && !sealing && !sealSheet && !timeUp)
+          }
           problem={
+            (fillProblem ? t(($) => $.stickerCreation.fillReference.failed) : null) ??
+            (settlingFill || fillWork.settling
+              ? t(($) => $.stickerCreation.fillReference.finishing)
+              : null) ??
             inkProblem ??
             sealProblem?.message ??
             (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)
           }
-          detail={inkProblem ? null : sealProblem?.detail}
+          detail={fillProblem || inkProblem ? null : sealProblem?.detail}
           onTap={() => {
             setSealProblem(null);
             if (sealProblem && reconnectOnTap.current) {
@@ -1349,7 +1563,19 @@ export function DrawingScreen({
               );
               return;
             }
-            send({ type: "seal-tap", hasInk: history.hasInk });
+            if (cutoff.current !== null && latest.current.phase === "drawing") {
+              putPencilsDown();
+              return;
+            }
+            if (pausable && !pendingTransition.current) {
+              temporaryHold.current = "seal";
+              clock.setHolds({ ...screenHolds.current, seal: true });
+            }
+            setRequestedTransition((current) => current ?? "seal-tap");
+            void completion.current?.run("seal-tap", () => {
+              setFillProblem(false);
+              send({ type: "seal-tap", hasInk: hasInk.current });
+            });
           }}
         />
       )}

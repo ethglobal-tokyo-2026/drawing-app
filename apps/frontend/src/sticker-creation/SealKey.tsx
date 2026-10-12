@@ -8,6 +8,7 @@ import "./SealKey.css";
 interface Props {
   /** There's ink to seal. */
   shown: boolean;
+  disabled?: boolean;
   /** What went wrong with the last seal, until the next tap. */
   problem: string | null;
   /** The words behind the problem, shown under it for a report with Copy, as every error line does. */
@@ -19,7 +20,7 @@ interface Props {
  * The seal check: the drawing screen's one key, a round one. It springs in once there's ink, and a
  * tap opens the seal sheet. A chip over it says what went wrong with the last seal.
  */
-export function SealKey({ shown, problem, detail, onTap }: Props) {
+export function SealKey({ shown, disabled = false, problem, detail, onTap }: Props) {
   const { t } = useTranslation();
   const chipDetail = problem ? (detail ?? null) : null;
   // The chip keeps what it said while it fades out.
@@ -33,6 +34,7 @@ export function SealKey({ shown, problem, detail, onTap }: Props) {
         {said.detail && <ErrorDetail text={said.detail} />}
       </div>
       <Key
+        disabled={disabled}
         size="round"
         className={`seal-key ${shown ? "is-shown" : ""}`}
         style={{ "--size": "58px" }}

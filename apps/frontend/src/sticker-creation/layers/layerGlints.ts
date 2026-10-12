@@ -1,8 +1,76 @@
 import { clamp } from "../../ui/easing";
 
+const PROFILES = {
+  tiny: { sizes: [12, 8, 6], travel: 0.22, time: 0.62 },
+  small: { sizes: [18, 12, 8, 6], travel: 0.48, time: 0.82 },
+  broad: { sizes: [24, 16, 10, 7, 6], travel: 0.8, time: 1 },
+};
+type InkTier = keyof typeof PROFILES;
+
 interface Point {
   x: number;
   y: number;
+}
+interface InkPixel extends Point {
+  px: number;
+  py: number;
+}
+interface InkEdge extends InkPixel {
+  tier: InkTier;
+}
+
+/** Nearby disconnected ink must not enlarge a dot's burst; diagonal hairlines stay connected. */
+function localInkTier(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number,
+  scaleX: number,
+  scaleY: number,
+  point: InkPixel,
+): InkTier {
+  const rx = Math.ceil(48 * scaleX),
+    ry = Math.ceil(48 * scaleY);
+  const x0 = Math.max(0, point.px - rx),
+    x1 = Math.min(width - 1, point.px + rx);
+  const y0 = Math.max(0, point.py - ry),
+    y1 = Math.min(height - 1, point.py + ry);
+  const w = x1 - x0 + 1,
+    h = y1 - y0 + 1;
+  const seen = new Uint8Array(w * h),
+    queue = new Uint32Array(w * h);
+  const start = (point.py - y0) * w + point.px - x0;
+  queue[0] = start;
+  seen[start] = 1;
+  let read = 0,
+    write = 1,
+    minX = point.px,
+    maxX = minX,
+    minY = point.py,
+    maxY = minY,
+    span = 0;
+  while (read < write) {
+    const at = queue[read++],
+      x = (at % w) + x0,
+      y = Math.floor(at / w) + y0;
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+    span = Math.max((maxX - minX + 1) / scaleX, (maxY - minY + 1) / scaleY);
+    // The broad tier is final, so large fills need no complete flood traversal.
+    if (span > 48) return "broad";
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx,
+          ny = y + dy;
+        if (nx < x0 || nx > x1 || ny < y0 || ny > y1) continue;
+        const next = (ny - y0) * w + nx - x0;
+        if (seen[next]) continue;
+        seen[next] = 1;
+        if (pixels[(ny * width + nx) * 4 + 3]) queue[write++] = next;
+      }
+  }
+  return span <= 12 ? "tiny" : "small";
 }
 
 /** A bounded spatial reservoir keeps short hairlines eligible beside a large filled shape. */
@@ -13,8 +81,8 @@ export function pickInkEdges(
   scaleX: number,
   scaleY: number,
   random: () => number = Math.random,
-): Point[] {
-  const buckets: Point[][] = Array.from({ length: 256 }, () => []);
+): InkEdge[] {
+  const buckets: InkPixel[][] = Array.from({ length: 256 }, () => []);
   const seen = new Uint32Array(256);
   const alpha = (x: number, y: number) =>
     x < 0 || y < 0 || x >= width || y >= height ? 0 : pixels[(y * width + x) * 4 + 3];
@@ -30,15 +98,26 @@ export function pickInkEdges(
         Math.min(15, Math.floor((x / width) * 16));
       const count = ++seen[cell];
       const slot = count <= 2 ? count - 1 : Math.floor(random() * count);
-      if (slot < 2) buckets[cell][slot] = { x: (x + 0.5) / scaleX, y: (y + 0.5) / scaleY };
+      if (slot < 2)
+        buckets[cell][slot] = { x: (x + 0.5) / scaleX, y: (y + 0.5) / scaleY, px: x, py: y };
     }
   const candidates = buckets.flat();
-  const chosen: Point[] = [];
-  while (candidates.length && chosen.length < 4) {
-    const point = candidates.splice(Math.floor(random() * candidates.length), 1)[0];
-    if (chosen.every((p) => Math.hypot(p.x - point.x, p.y - point.y) >= 64)) chosen.push(point);
+  if (!candidates.length) return [];
+  const chosen = [candidates.splice(Math.floor(random() * candidates.length), 1)[0]];
+  while (candidates.length && chosen.length < 6) {
+    const distances = candidates.map((p) =>
+      Math.min(...chosen.map((q) => Math.hypot(p.x - q.x, p.y - q.y))),
+    );
+    const farthest = Math.max(...distances);
+    if (farthest < 64) break;
+    const eligible = distances.flatMap((d, i) => (d >= Math.max(64, farthest * 0.9) ? [i] : []));
+    const index = eligible[Math.floor(random() * eligible.length)];
+    chosen.push(candidates.splice(index, 1)[0]);
   }
-  return chosen;
+  return chosen.map((point) => ({
+    ...point,
+    tier: localInkTier(pixels, width, height, scaleX, scaleY, point),
+  }));
 }
 
 /** One reflected flight; a second impact finishes the star rather than making it jitter at an edge. */
@@ -93,29 +172,37 @@ export function glintPath(
   satellite: number,
   width: number,
   height: number,
+  tier: InkTier,
 ) {
-  const size = Math.min(
-    satellite === 0 ? [42, 38, 40, 36][group % 4] : satellite === 1 ? 20 : 12,
-    Math.min(width, height) * 0.42,
-  );
-  const margin = size * 0.7 + 3;
+  const profile = PROFILES[tier];
+  const size = Math.min(profile.sizes[satellite], Math.min(width, height) * 0.42);
+  const margin = Math.min(size * 0.7 + 3, Math.min(width, height) / 2);
+  const travel = profile.travel,
+    time = profile.time / 1.35;
   const direction = group % 2 === 0 ? 1 : -1;
-  const x = clamp(point.x + (satellite ? direction * 16 : 0), margin, width - margin);
-  const y = clamp(
-    point.y + (satellite === 1 ? -14 : satellite === 2 ? 8 : 0),
+  const x = clamp(
+    point.x + direction * [0, 16, 16, -12, -16][satellite] * travel,
     margin,
-    height - margin,
+    width - margin,
   );
-  const duration = [0.78, 0.82, 0.72][satellite];
+  const y = clamp(point.y + [0, -14, 8, 6, -10][satellite] * travel, margin, height - margin);
+  const duration = [0.78, 0.82, 0.72, 0.68, 0.7][satellite] * time;
   const horizontal = flight(
     x,
-    direction * [160, 230, 185][satellite],
+    (direction * [160, 230, 185, -120, -200][satellite] * travel) / time,
     0,
     margin,
     width - margin,
     duration,
   );
-  const vertical = flight(y, [-175, -225, -125][satellite], 930, margin, height - margin, duration);
+  const vertical = flight(
+    y,
+    ([-175, -225, -125, -190, -140][satellite] * travel) / time,
+    (930 * travel) / (time * time),
+    margin,
+    height - margin,
+    duration,
+  );
   const seconds = Math.min(horizontal.end, vertical.end, duration);
   const frames = Array.from({ length: 21 }, (_, i) => {
     const t = i / 20;
@@ -141,6 +228,25 @@ export function glintPath(
     margin,
     frames,
     duration: seconds * 1000,
-    delay: group * 12 + [0, 26 + group * 9, 54 + group * 6][satellite],
+    delay: (group * 7 + [0, 24, 48, 72, 40][satellite]) * time * 0.75,
   };
+}
+
+/** A balanced shuffled palette lets every particle size wear either color. */
+export function glintGroup(
+  point: InkEdge,
+  group: number,
+  width: number,
+  height: number,
+  random: () => number = Math.random,
+) {
+  const colors = PROFILES[point.tier].sizes.map((_, i) => (i + group) % 2 === 0);
+  for (let i = colors.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [colors[i], colors[j]] = [colors[j], colors[i]];
+  }
+  return colors.map((pink, satellite) => ({
+    ...glintPath(point, group, satellite, width, height, point.tier),
+    pink,
+  }));
 }

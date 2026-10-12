@@ -6,6 +6,7 @@ import { STRIDE, type FillReference, type LayerId, type Op, type Step } from "..
 import type { SheetFrame } from "../canvas/sheetFrame";
 import type { PostCorrectionSettings } from "../canvas/post-correction/settings";
 import type { SmoothingMode } from "../canvas/stabilizer";
+import { validateFillUndo } from "../layers/fillUndo";
 import { FIRST_LAYER, LayerStepError, stateAt } from "../layers/layerState";
 
 /*
@@ -810,6 +811,7 @@ async function readDrawing(
 /** Every step must fit the layers before it: the engine replays them without checking. */
 function checkLayers(steps: readonly Step[]): void {
   try {
+    validateFillUndo(steps);
     stateAt(steps, steps.length);
   } catch (error) {
     if (!(error instanceof LayerStepError)) throw error;
@@ -840,6 +842,7 @@ const isLayerId = (v: unknown): v is LayerId => isCount(v) && v >= FIRST_LAYER;
 function readStep(v: unknown): Step | undefined {
   if (typeof v !== "object" || v === null || !("tool" in v)) return undefined;
   const { tool } = v;
+  if ("undoWithPrevious" in v && (tool !== "fill" || v.undoWithPrevious !== true)) return undefined;
   // Steps kept before layers named no layer, and their clears no time. T 0 is harmless: a
   // single-layer drawing's timelapse starts after its last clear.
   const beforeLayers = !("layer" in v);
@@ -882,7 +885,17 @@ function readOp(v: object, tool: Op["tool"], layer: LayerId, T: number): Op | un
     if (!("gap" in v) || !isFiniteNumber(v.gap) || v.gap < 0) return undefined;
     if (!("reference" in v) || (v.reference !== "layer" && v.reference !== "visible"))
       return undefined;
-    return { tool, layer, x: v.x, y: v.y, color, gap: v.gap, reference: v.reference, T };
+    return {
+      tool,
+      layer,
+      x: v.x,
+      y: v.y,
+      color,
+      gap: v.gap,
+      reference: v.reference,
+      T,
+      ...("undoWithPrevious" in v ? { undoWithPrevious: true as const } : {}),
+    };
   }
   if (!("pts" in v) || !Array.isArray(v.pts)) return undefined;
   const pts: unknown[] = v.pts;
