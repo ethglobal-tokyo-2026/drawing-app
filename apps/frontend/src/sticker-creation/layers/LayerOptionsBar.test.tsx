@@ -5,7 +5,7 @@ import { i18next } from "../../i18n/i18n";
 import { LayerOptionsBar } from "./LayerOptionsBar";
 import { testHost } from "./testHost";
 
-const { render, find, click, press } = testHost();
+const { render, find, findAll, click, press } = testHost();
 const handlers = {
   onLock: vi.fn(),
   onClip: vi.fn(),
@@ -17,6 +17,7 @@ const handlers = {
   onPreviewOpacity: vi.fn(),
   onCommitOpacity: vi.fn(),
   onHoldOpacity: vi.fn(),
+  onShow: vi.fn(),
 };
 const renderBar = (props: Partial<ComponentProps<typeof LayerOptionsBar>> = {}) =>
   render(
@@ -41,6 +42,23 @@ beforeEach(() => {
 });
 
 describe("compact layer options", () => {
+  it("focuses opacity after the drawing controls finish a pending transition", () => {
+    renderBar({ pending: true });
+    expect(document.activeElement).not.toBe(find("input"));
+    renderBar({ pending: false });
+    expect(document.activeElement).toBe(find("input"));
+  });
+  it("keeps hidden-layer recovery available without a live announcement and removes it above 0%", () => {
+    renderBar({ opacity: 0 });
+    expect(find(".layer-hidden-options").textContent).toContain("0% opacity");
+    expect(findAll('[role="status"]')).toHaveLength(0);
+    const show = find<HTMLButtonElement>(".layer-hidden-options button");
+    act(() => show.focus());
+    click(show);
+    expect(handlers.onShow).toHaveBeenCalledExactlyOnceWith(true);
+    renderBar({ opacity: 100 });
+    expect(findAll(".layer-hidden-options")).toHaveLength(0);
+  });
   it("focuses opacity on opening, then keeps keyboard changes on that control", () => {
     renderBar();
     const slider = find("input");

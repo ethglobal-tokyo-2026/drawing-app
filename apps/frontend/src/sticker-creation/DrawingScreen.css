@@ -48,43 +48,6 @@
   max-height: 100%;
 }
 
-.layer-hidden-recovery {
-  position: absolute;
-  z-index: 4;
-  left: var(--far-left) 58px;
-  right: var(--far-right) 58px;
-  bottom: 144px;
-  width: min(276px, calc(100% - 78px));
-  padding: 10px;
-  background: var(--liner-lift);
-  box-shadow: var(--shadow-lift);
-  border-radius: var(--r-label);
-  font-size: 13px;
-  line-height: 1.4;
-}
-.layer-hidden-recovery p {
-  margin: 0 0 8px;
-}
-.layer-hidden-recovery > div {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.layer-hidden-recovery button {
-  min-height: 44px;
-  padding: 8px;
-  border: 0;
-  border-radius: var(--r-label);
-  background: var(--ink);
-  color: var(--canvas);
-  font-size: 13px;
-  font-weight: 650;
-}
-.layer-hidden-recovery button + button {
-  background: var(--liner-deep);
-  color: var(--ink);
-}
-
 .drawing-screen :focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
@@ -315,8 +278,8 @@
     top: calc(var(--rail-top) + var(--rail-h) + 32px);
     bottom: auto;
     height: var(--layer-h);
-    left: var(--far-left) calc((var(--edge-w) - 50px) / 2);
-    right: var(--far-right) calc((var(--edge-w) - 50px) / 2);
+    left: var(--far-left) calc((var(--edge-w) - 44px) / 2);
+    right: var(--far-right) calc((var(--edge-w) - 44px) / 2);
   }
 
   .drawing-controls > .history-buttons {

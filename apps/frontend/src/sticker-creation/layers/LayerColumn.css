@@ -6,6 +6,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+  width: 44px;
   max-height: 100%;
   pointer-events: none;
 }
@@ -18,7 +19,7 @@
 .layer-add.label-btn {
   flex: none;
   width: 44px;
-  margin-inline: 3px;
+  border-inline: 4px solid transparent;
   padding: 0;
   pointer-events: auto;
 }
@@ -96,8 +97,8 @@
   align-items: flex-start;
   flex: none;
   gap: 4px;
-  width: 50px;
-  padding: 4px 7px;
+  width: 44px;
+  padding: 4px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-padding-block: 4px;
@@ -120,8 +121,8 @@
   position: relative;
   flex: none;
   display: block;
-  width: 30px;
-  height: 38px;
+  width: 36px;
+  height: 46px;
   padding: 0;
   border: 0;
   border-radius: var(--r-paper);
@@ -134,7 +135,7 @@
 .layer-chip::after {
   content: "";
   position: absolute;
-  inset: -3px -7px;
+  inset: 0 -4px;
 }
 
 /* Over its neighbors, so a chip that touches it can't cover its ring. */
@@ -236,7 +237,8 @@
 
 /* Out beside the current chip, toward the sheet; the column keeps either paper inside the screen. */
 .layer-options,
-.layer-options-hint {
+.layer-options-hint,
+.layer-recovery-paper {
   --fly: -6px;
   position: absolute;
   top: 0;
@@ -246,7 +248,7 @@
   animation: layer-options-in var(--t-pop) var(--ease-out);
 }
 
-.layer-column[data-edge="right"] :is(.layer-options, .layer-options-hint) {
+.layer-column[data-edge="right"] :is(.layer-options, .layer-options-hint, .layer-recovery-paper) {
   --fly: 6px;
   left: auto;
   right: calc(100% + 8px);
@@ -290,5 +292,47 @@
   from {
     opacity: 0;
     translate: var(--fly) 0;
+  }
+}
+
+.layer-recovery-paper {
+  width: 276px;
+  padding: 10px;
+  background: var(--liner-lift);
+  box-shadow: var(--shadow-lift);
+  border-radius: var(--r-label);
+  font-size: 13px;
+  line-height: 1.4;
+  transition: opacity 150ms var(--ease-out);
+}
+.layer-recovery-paper[data-leaving] {
+  opacity: 0;
+}
+:is(.layer-hidden-recovery, .layer-hidden-options) p {
+  margin: 0 0 8px;
+}
+:is(.layer-hidden-recovery, .layer-hidden-options) > div {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+:is(.layer-hidden-recovery, .layer-hidden-options) button {
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--r-label);
+  background: var(--ink);
+  color: var(--canvas);
+  font-size: 13px;
+  font-weight: 650;
+}
+.layer-hidden-recovery button + button {
+  background: var(--liner-deep);
+  color: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .layer-recovery-paper {
+    animation: none;
+    transition: none;
   }
 }

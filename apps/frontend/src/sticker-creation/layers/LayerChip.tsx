@@ -6,8 +6,8 @@ import { drawThumbnail } from "./layerThumbnails";
 import type { LayerChipView, ThumbnailSource } from "./layerView";
 
 /** A chip's size, CSS px, as LayerColumn.css sets it. */
-export const CHIP_WIDTH = 30;
-export const CHIP_HEIGHT = 38;
+export const CHIP_WIDTH = 36;
+export const CHIP_HEIGHT = 46;
 /** A faded layer's thumbnail fades with it, but no further, so a faint sketch still reads. */
 const FADED_FLOOR = 0.5;
 /** A hidden layer's thumbnail, dimmer than any faded one. */

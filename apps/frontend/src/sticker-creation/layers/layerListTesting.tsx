@@ -7,9 +7,9 @@ declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
 }
 
-/** A chip is 30 by 38 and the chips sit on a 42px pitch, as in the column. */
-export const CHIP = { width: 30, height: 38 };
-export const PITCH = 42;
+/** A chip is 36 by 46 and the chips sit on a 50px pitch, as in the column. */
+export const CHIP = { width: 36, height: 46 };
+export const PITCH = 50;
 /** Where the list's top is, client px. */
 const LIST_TOP = 100;
 
