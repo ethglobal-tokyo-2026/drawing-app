@@ -61,7 +61,7 @@ export const tickets = {
         en: "You have {{count}} daily tickets left.",
         ja: "無償チケットは<wbr/>残り{{count}}枚です。",
       },
-      /** Start card, daily ticket variant: the quiet line under the count, about the drawing timer; "3‑minute" is joined by a non-breaking hyphen (U+2011), so it never breaks at the hyphen */
+      /** Start card, daily ticket variant: the quiet line under the count, about the drawing timer; the minute count is joined by a non-breaking hyphen (U+2011), so it never breaks at the hyphen */
       timer: {
         en: "Your {{minutes}}‑minute timer starts with your first stroke.",
         ja: "最初のひと筆で<wbr/>{{minutes}}分のタイマーが<wbr/>始まります。",

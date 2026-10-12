@@ -376,6 +376,7 @@ export async function nearTimeUp(page: Page, remainingMs: number) {
   await page.evaluate(
     async ({ userId, remainingMs }) => {
       const { loadKeptSession } = await import("../src/sticker-creation/session/keptSession.ts");
+      const { sessionMs } = await import("../src/sticker-creation/session/session.ts");
       const found = await loadKeptSession(userId);
       if (found.status !== "found") throw new Error(`Cannot prepare time-up from ${found.status}`);
       const key = `draw.session.${userId}`;
@@ -387,7 +388,7 @@ export async function nearTimeUp(page: Page, remainingMs: number) {
         key,
         JSON.stringify({
           ...record,
-          elapsedMs: (found.kyotoSeika ? 1800000 : 180000) - remainingMs,
+          elapsedMs: sessionMs(found.kyotoSeika !== null) - remainingMs,
         }),
       );
     },

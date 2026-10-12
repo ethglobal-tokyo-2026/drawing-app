@@ -1543,7 +1543,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     expect(seal.mock.calls[0]?.[0].kyotoSeikaSubjects).toEqual([pick(WIND), pick(REUNION)]);
   });
 
-  it("puts a drawing whose pair a later build can't read back at its deal, on its 30-minute clock, and seals it with the pair picked from the deal", async () => {
+  it("puts a drawing whose pair a later build can't read back at its deal, on its full clock, and seals it with the pair picked from the deal", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     sealing.cut.mockResolvedValue(cutSticker());
     loads();
@@ -1585,21 +1585,21 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     expect(seal.mock.calls[0]?.[0].kyotoSeikaSubjects).toEqual(picked.map((s) => s && pick(s)));
   });
 
-  it("runs a begun sheet's clock on, as the real test's: no tool in hand holds it, and a tap on the timer only says why", async () => {
+  it("holds a begun sheet's clock for tools during recording, while a timer tap still only explains its rule", async () => {
     await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: BEGUN });
     // A reload's pause still lets go at a tap.
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
     for (const [index, takeTool] of TOOLS_IN_HAND.entries()) {
-      expect(await countedAfter(takeTool)).toBeGreaterThan(0);
+      expect(await countedAfter(takeTool)).toBe(0);
       expect(sheetCalls.settings?.panelOpen).toBe(index < 3);
-      await countedAfter(putToolsDown);
+      expect(await countedAfter(putToolsDown)).toBeGreaterThan(0);
       expect(sheetCalls.settings?.panelOpen).toBe(false);
     }
     expect(await countedAfter(tapTimer)).toBeGreaterThan(0);
     expect(timerCalls.clockRuns).toBe(1);
   });
 
-  it("keeps a begun sheet's clock running while the opacity thumb is held", async () => {
+  it("holds a begun sheet's clock while the opacity thumb is held during recording", async () => {
     await openKyotoSeikaSheet({ ...keptHalfway, ticket: 9, kyotoSeika: BEGUN });
     act(() =>
       sheetCalls.layers({
@@ -1627,6 +1627,12 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
             bubbles: true,
           }),
         );
+      }),
+    ).toBe(0);
+    expect(
+      await countedAfter(() => {
+        thumb?.dispatchEvent(new PointerEvent("pointerup", { pointerId: 25, bubbles: true }));
+        document.querySelector<HTMLButtonElement>('[aria-label="Close layer options"]')?.click();
       }),
     ).toBeGreaterThan(0);
   });
@@ -1663,7 +1669,7 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     expect(document.activeElement).toBe(nsfwSwitch());
   });
 
-  it("puts a tool in hand down at 0:00, since a begun sheet's tools never hold its clock", async () => {
+  it("keeps a begun sheet's remaining time while a tool is open, then calls time after it closes", async () => {
     await openKyotoSeikaSheet({
       ...keptHalfway,
       ticket: 9,
@@ -1673,6 +1679,10 @@ describe("a sheet in Kyoto Seika Manga Expression Practice Mode", () => {
     act(tapTimer);
     act(openPanel("color"));
     expect(document.querySelector(".color-sheet")).not.toBeNull();
+    await settle(3000);
+    expect(sealSheet()).toBeNull();
+    expect(document.querySelector(".color-sheet")).not.toBeNull();
+    act(putToolsDown);
     await settle(3000);
     expect(sealSheet()?.querySelector("h2")?.textContent).toBe(
       strings.stickerCreation.sealSheet.pencilsDown.en,
@@ -2252,10 +2262,23 @@ describe("finishing Fill on the drawing screen", () => {
     expect(sealSheet()).not.toBeNull();
   });
 
-  it.each(["panel", "pause"] as const)(
-    "holds the ordinary clock immediately for %s, then releases its hold on failure",
-    async (action) => {
-      reopen(keptHalfway);
+  it.each([
+    { action: "panel", kyotoSeika: false },
+    { action: "pause", kyotoSeika: false },
+    { action: "panel", kyotoSeika: true },
+  ] as const)(
+    "holds the clock immediately for $action, then releases its hold on failure (Kyoto Seika: $kyotoSeika)",
+    async ({ action, kyotoSeika }) => {
+      reopen(
+        {
+          ...keptHalfway,
+          kyotoSeika: kyotoSeika
+            ? { subjects: [WIND, REUNION], picked: [0, 1], rolls: 0, begun: true }
+            : null,
+        },
+        {},
+        { ...TEST_ME, kyotoSeikaPractice: kyotoSeika },
+      );
       await settle();
       act(tapTimer);
       await settle();
@@ -2483,10 +2506,7 @@ describe("finishing Fill on the drawing screen", () => {
       await settle();
       const finish = pending();
       const oldColor = sheetCalls.settings?.color;
-      act(() => {
-        if (kyotoSeika) openPanel("color")();
-        else sheetCalls.color("#ff0000");
-      });
+      act(() => sheetCalls.color("#ff0000"));
       await settle(300);
       expect(sheetCalls.closeInput).toHaveBeenCalledOnce();
       expect(sheetCalls.settings?.locked).toBe(true);

@@ -101,6 +101,8 @@ import "./DrawingScreen.css";
 
 /** Where the size rail starts for each tool, remembered per tool from then on. */
 const FIRST_SIZES = { brush: 0.34, eraser: 0.52 };
+/** Temporary tool-menu pauses for recording with the five-minute Kyoto Seika Practice Mode clock. */
+const KYOTO_SEIKA_TOOLS_PAUSE_CLOCK = true;
 
 /** The timer's note while a reload's picked-up session has word to give. */
 const PICKED_UP_NOTES = {
@@ -1006,12 +1008,12 @@ export function DrawingScreen({
   // Undo can take the sheet back to blank under an open clear bar, which then has nothing to clear.
   if (panel === "clear" && !layers.currentInked) setPanel(null);
 
-  // As in the real test, a begun sheet in Kyoto Seika Practice Mode never pauses: neither a tap nor a
-  // tool in hand holds its clock, only an interruption: a hidden page, the board over it, a reload.
+  // A begun sheet in Kyoto Seika Practice Mode still disallows manual and seal-sheet pauses.
   const pausable = !kyotoSeikaSheet.begun;
+  const toolsPausable = pausable || KYOTO_SEIKA_TOOLS_PAUSE_CLOCK;
 
   // Before the first stroke there's nothing to pause: a tap on the timer says when it starts. A clock
-  // that never pauses says why, though a reload's pause still lets go at a tap.
+  // without manual pauses says why, though a reload's pause still lets go at a tap.
   const onTimerTap = () => {
     if (clock.getView().waiting) {
       setPickedUp(null);
@@ -1021,8 +1023,8 @@ export function DrawingScreen({
       changeAfterFill(`pause:${!paused}`, () => setPaused(!paused), !paused ? "paused" : undefined);
   };
 
-  // Every hold stops the clock: the person's pause, the board or the upright cover over the screen,
-  // the seal sheet, a tool in hand.
+  // Apply the sheet's permitted holds: a manual pause, the board or upright cover, the seal sheet,
+  // or a tool in hand.
   const sealSheet = session.phase === "seal-sheet";
   const sideways = useSideways();
   useEffect(() => {
@@ -1030,13 +1032,13 @@ export function DrawingScreen({
       paused,
       away: !active || sideways,
       seal: pausable && sealSheet,
-      color: pausable && panel === "color",
-      smoothing: pausable && panel === "smoothing",
-      clear: pausable && panel === "clear",
-      layerOptions: pausable && panel === "layer",
-      opacity: pausable && opacityHeld,
-      reorder: pausable && reordering,
-      size: pausable && sizing,
+      color: toolsPausable && panel === "color",
+      smoothing: toolsPausable && panel === "smoothing",
+      clear: toolsPausable && panel === "clear",
+      layerOptions: toolsPausable && panel === "layer",
+      opacity: toolsPausable && opacityHeld,
+      reorder: toolsPausable && reordering,
+      size: toolsPausable && sizing,
     };
     screenHolds.current = holds;
     clock.setHolds(temporaryHold.current ? { ...holds, [temporaryHold.current]: true } : holds);
@@ -1051,6 +1053,7 @@ export function DrawingScreen({
     opacityHeld,
     reordering,
     pausable,
+    toolsPausable,
     transitionPending,
   ]);
 
@@ -1147,7 +1150,7 @@ export function DrawingScreen({
     changeAfterFill(
       `panel:${next}`,
       () => setPanel(next),
-      pausable && next ? (next === "layer" ? "layerOptions" : next) : undefined,
+      toolsPausable && next ? (next === "layer" ? "layerOptions" : next) : undefined,
     );
   const pickTool = (next: Tool) =>
     changeAfterFill(`tool:${next}`, () => {

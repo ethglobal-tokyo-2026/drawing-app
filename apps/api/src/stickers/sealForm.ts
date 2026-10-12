@@ -1,4 +1,4 @@
-import { KYOTO_SEIKA_TIME_USED_S, stickers, ticketUses } from "@drawing-app/db";
+import { MAX_STORED_TIME_USED_S, stickers, ticketUses } from "@drawing-app/db";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { MAX_STICKER_IMAGE_SIDE } from "./imageSides.ts";
@@ -19,8 +19,8 @@ export const MAX_SEAL_BYTES = 32 * 1024 * 1024;
 const OUTLINE_PATH = /^M[-\d. LZ]*Z$/;
 
 const stickerColumns = createInsertSchema(stickers, {
-  // The longest clock; the seal holds each sticker to its own ticket's.
-  timeUsed: (schema) => schema.min(0).max(KYOTO_SEIKA_TIME_USED_S),
+  // Old requests can retry an existing seal; new stickers must fit their ticket's current clock.
+  timeUsed: (schema) => schema.min(0).max(MAX_STORED_TIME_USED_S),
   width: (schema) => schema.min(1).max(MAX_STICKER_IMAGE_SIDE),
   height: (schema) => schema.min(1).max(MAX_STICKER_IMAGE_SIDE),
   drawnWidth: (schema) => schema.positive().max(MAX_DRAWN_SIDE),

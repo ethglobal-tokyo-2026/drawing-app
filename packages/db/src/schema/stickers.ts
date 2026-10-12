@@ -3,7 +3,7 @@ import { blob, check, index, integer, real, sqliteTable, text } from "drizzle-or
 import { isBytes32, literal, timestamps } from "./columns.ts";
 // Type-only, so loading the schema never loads zod.
 import type { KyotoSeikaSubject } from "./kyotoSeikaSubject.ts";
-import { KYOTO_SEIKA_TIME_USED_S } from "./limits.ts";
+import { MAX_STORED_TIME_USED_S } from "./limits.ts";
 import { users } from "./users.ts";
 
 /**
@@ -94,10 +94,10 @@ export const stickers = sqliteTable(
     index("stickers_cdn_purge_due")
       .on(t.cdnPurgeDueAt)
       .where(sql`${t.cdnPurgeDueAt} is not null`),
-    // The longest clock; the seal route holds each sticker to its own ticket's.
+    // Includes historical clocks; the seal route holds new stickers to the current ticket's clock.
     check(
       "stickers_time_used",
-      sql`${t.timeUsed} between 0 and ${literal(KYOTO_SEIKA_TIME_USED_S)}`,
+      sql`${t.timeUsed} between 0 and ${literal(MAX_STORED_TIME_USED_S)}`,
     ),
     check(
       "stickers_kyoto_seika_subjects",

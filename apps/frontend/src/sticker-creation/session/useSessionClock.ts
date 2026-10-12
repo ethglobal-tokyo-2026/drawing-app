@@ -12,8 +12,8 @@ export const HIDDEN_RESUME_MS = 420;
 export const LATE_MS = 10_000;
 /**
  * The clock warns, once each, as it counts down through these many seconds left: first the proctor's
- * time calls, in whole minutes, which only Kyoto Seika Manga Expression Practice Mode's clock is long
- * enough to reach, then the last two, which every clock reaches.
+ * time calls, in whole minutes, for sessions long enough to reach them, then the last two, which
+ * every clock reaches.
  */
 export const WARN_AT_SECONDS = [10 * 60, 5 * 60, 30, 10] as const;
 

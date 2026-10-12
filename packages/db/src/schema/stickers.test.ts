@@ -8,7 +8,6 @@ import {
   TEST_KYOTO_SEIKA_SUBJECTS,
   type TestDb,
 } from "../testDb.ts";
-import { KYOTO_SEIKA_TIME_USED_S } from "./limits.ts";
 
 let db: TestDb;
 let sqlite: Awaited<ReturnType<typeof createTestDb>>["sqlite"];
@@ -19,11 +18,11 @@ beforeEach(async () => {
 });
 
 describe("stickers", () => {
-  it("keeps time used within the longest drawing clock", () => {
-    expect(() => insertSticker(db, artist, { timeUsed: KYOTO_SEIKA_TIME_USED_S })).not.toThrow();
-    expect(
-      refusal(() => insertSticker(db, artist, { timeUsed: KYOTO_SEIKA_TIME_USED_S + 1 })),
-    ).toMatch(/stickers_time_used/);
+  it("keeps historical thirty-minute stickers and refuses time beyond the stored bound", () => {
+    expect(() => insertSticker(db, artist, { timeUsed: 1800 })).not.toThrow();
+    expect(refusal(() => insertSticker(db, artist, { timeUsed: 1801 }))).toMatch(
+      /stickers_time_used/,
+    );
   });
 
   it("holds a sticker's Kyoto Seika Subjects as a pair", () => {

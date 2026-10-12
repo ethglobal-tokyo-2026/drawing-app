@@ -57,16 +57,18 @@ const shownLabel = (host: HTMLElement) => host.querySelector(".timer-hint.is-on"
 
 describe("the timer dot", () => {
   it("grows to the wide dot while the clock reads 10:00 or more", () => {
-    const { advance, host } = renderDot({ length: sessionMs(true) });
+    const length = (WIDE_FROM_SECONDS + 1) * 1000;
+    const { advance, host } = renderDot({ length });
     expect(dot(host).classList).toContain("is-wide");
-    advance(sessionMs(true) - WIDE_FROM_SECONDS * 1000 + 1000);
+    advance(length - WIDE_FROM_SECONDS * 1000 + 1000);
     expect(dot(host).classList).not.toContain("is-wide");
   });
 
   it("shows the proctor's time call on its label, and reads it out", () => {
-    const { advance, host } = renderDot({ length: sessionMs(true) });
     const [firstCall] = WARN_AT_SECONDS;
-    advance(sessionMs(true) - firstCall * 1000);
+    const length = (firstCall + 1) * 1000;
+    const { advance, host } = renderDot({ length });
+    advance(length - firstCall * 1000);
     const call = strings.stickerCreation.timer.note.minutesLeft.en.replace(
       "{{minutes}}",
       String(firstCall / 60),
@@ -81,7 +83,7 @@ describe("the timer dot", () => {
     expect(announced(host)).not.toContain(asWarning);
   });
 
-  it("names a clock that never pauses as the timer, and says why when it's tapped", () => {
+  it("names a clock without manual pausing as the timer, and says why when it's tapped", () => {
     const { host, timer } = renderDot({ length: sessionMs(true), pausable: false });
     expect(dot(host).getAttribute("aria-label")).toBe(strings.stickerCreation.timer.label.en);
     act(() => timer.current?.showClockRuns());

@@ -187,7 +187,7 @@ describe("SessionClock", () => {
       advance(length, 250);
       return calls;
     };
-    const long = heard(sessionMs(true));
+    const long = heard(30 * 60_000);
     // The proctor's calls are in whole minutes, before the last seconds' warnings.
     expect(long.filter((s) => s >= 60)).not.toEqual([]);
     expect(long).toEqual(WARN_AT_SECONDS);

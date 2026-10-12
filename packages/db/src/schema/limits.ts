@@ -2,7 +2,9 @@
 // imports would ship in the app.
 
 /** The drawing clock's length, in seconds. */
-export const MAX_TIME_USED_S = 3 * 60;
+export const MAX_TIME_USED_S = 5 * 60;
+/** The stored time bound, including stickers sealed on earlier thirty-minute clocks. */
+export const MAX_STORED_TIME_USED_S = 30 * 60;
 /** How long after Packaging a gift can be received: the escrow's expiry. */
 export const GIFT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 /** Counted hits in one gratitude combo, at most. */
@@ -33,7 +35,7 @@ export const DAILY_TICKETS_PER_DAY = 3;
 /** Daily tickets per ticket day while Kyoto Seika Manga Expression Practice Mode is on. */
 export const KYOTO_SEIKA_DAILY_TICKETS_PER_DAY = 10;
 /** The drawing clock on a ticket spent in Kyoto Seika Manga Expression Practice Mode, in seconds. */
-export const KYOTO_SEIKA_TIME_USED_S = 30 * 60;
+export const KYOTO_SEIKA_TIME_USED_S = 5 * 60;
 /**
  * The longest a sticker's long side gets in the phone's layout, whatever its shape, as a share of
  * the board's unit: about the phone board's field's height, so a tall sticker can fill it. The app

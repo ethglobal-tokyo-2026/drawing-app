@@ -223,7 +223,8 @@ test("empty Kyoto Seika time-up retains its pair on reload", async ({ page }) =>
       density: expect.any(Number),
     }),
   );
-  for (let ms = 0; ms < 1800000; ms += 5000) await page.clock.fastForward(5000);
+  for (let ms = 0; ms < KYOTO_SEIKA_TIME_USED_S * 1000; ms += 5000)
+    await page.clock.fastForward(5000);
   for (const reload of [false, true]) {
     if (reload) {
       await page.reload();
@@ -259,6 +260,7 @@ test("empty Kyoto Seika time-up retains its pair on reload", async ({ page }) =>
 test("Kyoto Seika Practice Mode: switched on in Settings, dealt, picked, timed and sealed with its pair", async ({
   page,
 }) => {
+  await page.clock.install();
   await signIn(page, "kyoto", language);
   const settings = await openSettings(page, language);
   const mode = settings.getByRole("switch", {
@@ -339,7 +341,7 @@ test("Kyoto Seika Practice Mode: switched on in Settings, dealt, picked, timed a
     .click();
   expect(await dealt(page)).toEqual(kept);
 
-  // Begin starts the full clock at once, and a tool sheet doesn't stop it.
+  // Begin starts the full clock at once; tool sheets pause it during recording.
   await begin.click();
   await expect.poll(() => secondsLeft(page)).toBeGreaterThan(KYOTO_SEIKA_TIME_USED_S - 60);
   await page
@@ -349,9 +351,12 @@ test("Kyoto Seika Practice Mode: switched on in Settings, dealt, picked, timed a
     name: say(stickerCreation.colorSheet.title, language),
   });
   await expect(colorSheet).toBeVisible();
-  const atOpen = await secondsLeft(page);
+  const clockFace = page.locator(".timer-time");
+  const atOpen = await clockFace.textContent();
   expect(atOpen).not.toBeNull();
-  await expect.poll(() => secondsLeft(page)).toBeLessThan(atOpen ?? 0);
+  await expect.poll(() => secondsLeft(page)).toBeNull();
+  await page.clock.fastForward(2000);
+  await expect(clockFace).toHaveText(atOpen ?? "");
   await expect(colorSheet).toBeVisible();
   await colorSheet
     .getByRole("button", {
@@ -361,6 +366,10 @@ test("Kyoto Seika Practice Mode: switched on in Settings, dealt, picked, timed a
     })
     .click();
   await expect(colorSheet).toBeHidden();
+  await expect.poll(() => secondsLeft(page)).not.toBeNull();
+  const atClose = await secondsLeft(page);
+  await page.clock.fastForward(2000);
+  await expect.poll(() => secondsLeft(page)).toBeLessThan(atClose ?? 0);
 
   // The begun canvas carries the picked pair in the order picked, and so does the sealed sticker's
   // detail.

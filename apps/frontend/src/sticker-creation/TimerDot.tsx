@@ -15,7 +15,7 @@ import { NUDGE, NUDGE_MS } from "./nudge";
 import type { Hold, SessionClock } from "./session/useSessionClock";
 import "./TimerDot.css";
 
-/** How long the paused hint stays after a stroke meets a paused sheet, as does a tap's word on a clock that never pauses. */
+/** How long the paused hint or the explanation of why a tap cannot pause the clock stays visible. */
 const HINT_MS = 2600;
 /** A time warning stays in its live region this long, then the region empties so no stale one is read later. */
 const WARNING_MS = 6000;
@@ -48,7 +48,7 @@ const clockText = (seconds: number) =>
 export interface TimerDotHandle {
   /** A stroke met a paused sheet, or one waiting for Begin: point at what goes on, and nudge a paused dot. */
   showHint: () => void;
-  /** A tap met a clock that never pauses: the label says why, for a moment. */
+  /** A tap cannot pause this clock: the label says why, for a moment. */
   showClockRuns: () => void;
   focus: () => void;
 }
@@ -62,14 +62,14 @@ interface Props {
   note: string | null;
   /** What starts a waiting clock: the first stroke, or Begin on a sheet in Kyoto Seika Practice Mode. */
   waitsFor: "stroke" | "begin";
-  /** A tap pauses the running clock; a begun sheet in Kyoto Seika Practice Mode's never pauses. */
+  /** Whether a tap pauses the running clock; disabled on a begun sheet in Kyoto Seika Practice Mode. */
   pausable: boolean;
   onToggle: () => void;
 }
 
 /**
  * The timer: a Seal Yellow dot slapped on at the world's tilt, with puffy numerals in fixed cells.
- * Once the first stroke starts it, tapping it pauses, unless its clock never pauses. Every hold wears
+ * Once the first stroke starts it, tapping it pauses when manual pausing is allowed. Every hold wears
  * the same white PAUSED tag, the page being hidden also lifts a corner, and the last ten seconds turn
  * Tomato. A white label under it points up at it: the paused hint, or the drawing screen's note.
  */
@@ -82,7 +82,7 @@ export function TimerDot({ ref, clock, paused, note, waitsFor, pausable, onToggl
   const body = useRef<HTMLSpanElement>(null);
   const face = useRef<HTMLSpanElement>(null);
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  // What the label says for a moment: the paused hint, or why a clock that never pauses runs on.
+  // What the label says for a moment: the paused hint, or why a tap cannot pause this clock.
   const [flash, setFlash] = useState<"hint" | "clockRuns" | null>(null);
   const describedBy = useId();
 

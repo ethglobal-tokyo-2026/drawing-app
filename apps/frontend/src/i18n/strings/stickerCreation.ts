@@ -68,7 +68,7 @@ export const stickerCreation = {
   },
   /** The timer dot, and the white label under it. */
   timer: {
-    /** Drawing screen, top left: the timer dot's name for screen readers before the first stroke starts the clock, and on a begun sheet in Kyoto Seika Practice Mode, whose clock never pauses */
+    /** Drawing screen, top left: the timer dot's name for screen readers before the first stroke starts the clock, and on a begun sheet in Kyoto Seika Practice Mode, whose clock cannot be paused manually */
     label: { en: "Timer", ja: "タイマー" },
     /** Drawing screen, top left: the timer dot's name for screen readers while the clock runs; a tap pauses it */
     pause: { en: "Pause timer", ja: "タイマーを一時停止" },
@@ -145,10 +145,10 @@ export const stickerCreation = {
       startsWhenYouPressBegin: { en: "Starts when you press Begin", ja: "はじめを押すとスタート" },
       /** Drawing screen, top left, a sheet in Kyoto Seika Practice Mode: the white label under the timer for a few seconds at 10 and at 5 minutes left, as a proctor calls the time; also announced */
       minutesLeft: { en: "{{minutes}} minutes left", ja: "残り{{minutes}}分" },
-      /** Drawing screen, top left, a sheet in Kyoto Seika Practice Mode once begun: the white label under the timer for a few seconds when it's tapped, since its clock never pauses; also announced */
+      /** Drawing screen, top left, a sheet in Kyoto Seika Practice Mode once begun: the white label under the timer for a few seconds when it's tapped, since a tap cannot pause its clock; also announced */
       clockRuns: {
-        en: "The clock runs, as in the real test",
-        ja: "本番と同じく、時計は止まりません",
+        en: "Tapping the timer doesn't pause it",
+        ja: "タップではタイマーを一時停止できません",
       },
       /** Drawing screen, top left: the white label under the timer when a reload brings back your drawing in progress, paused, until the clock runs again; also announced */
       pickedUp: { en: "Picked up where you left off", ja: "続きから再開しました" },

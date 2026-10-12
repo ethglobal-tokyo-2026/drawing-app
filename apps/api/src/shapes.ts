@@ -1,12 +1,12 @@
 import {
   gifts,
   gratitude,
-  KYOTO_SEIKA_TIME_USED_S,
   MAX_HITS,
   MAX_LARGE_SCALE,
   MAX_PEAK_MULT,
   MAX_PEAK_TIER,
   MAX_SCALE,
+  MAX_STORED_TIME_USED_S,
   stickerPlacements,
   stickers,
   suiTransactions,
@@ -205,7 +205,7 @@ const stickerImagesSchema = stickerPngsSchema.extend({
 export type StickerImages = z.infer<typeof stickerImagesSchema>;
 
 const stickerRow = createSelectSchema(stickers, {
-  timeUsed: (schema) => schema.min(0).max(KYOTO_SEIKA_TIME_USED_S),
+  timeUsed: (schema) => schema.min(0).max(MAX_STORED_TIME_USED_S),
   width: (schema) => schema.positive(),
   height: (schema) => schema.positive(),
   drawnWidth: (schema) => schema.positive(),

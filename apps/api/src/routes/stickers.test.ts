@@ -112,6 +112,59 @@ const timelapseOf = (stickerId: string) =>
   test.db.select().from(stickerTimelapses).where(eq(stickerTimelapses.stickerId, stickerId)).get();
 
 describe("POST /api/stickers", () => {
+  it.each([false, true])(
+    "seals a five-minute drawing and refuses extra time (Kyoto Seika Practice Mode: %s)",
+    async (kyotoSeikaPractice) => {
+      const artistId = insertUser(test.db);
+      const ticketUseId = insertTicketUse(test.db, artistId, { kyotoSeikaPractice });
+      const parts = sealParts(ticketUseId, {
+        timeUsed: "300",
+        ...(kyotoSeikaPractice
+          ? { kyotoSeikaSubjects: JSON.stringify(TEST_KYOTO_SEIKA_SUBJECTS) }
+          : {}),
+      });
+      const extraTime = await postSeal(artistId, sealFormData({ ...parts, timeUsed: "301" }));
+      expect(extraTime.status).toBe(400);
+      const refused = await refusalOf(extraTime);
+      expect(refused).toMatchObject({ status: 400, error: "invalid_request" });
+      expect(refused.detail).toContain("timeUsed");
+      expect(allStickers()).toEqual([]);
+      const { sticker } = await bodyOf(
+        await postSeal(artistId, sealFormData(parts)),
+        sealResponseSchema,
+        201,
+      );
+      expect(sticker.timeUsed).toBe(300);
+    },
+  );
+
+  it("returns an already sealed thirty-minute sticker when its old request is retried", async () => {
+    const artistId = insertUser(test.db);
+    const stickerId = insertSealedSticker(test.db, artistId, {
+      timeUsed: 1800,
+      kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS,
+    });
+    const ticketUseId = insertTicketUse(test.db, artistId, {
+      stickerId,
+      kyotoSeikaPractice: true,
+    });
+    const { sticker } = await bodyOf(
+      await postSeal(
+        artistId,
+        sealFormData(
+          sealParts(ticketUseId, {
+            timeUsed: "1800",
+            kyotoSeikaSubjects: JSON.stringify(TEST_KYOTO_SEIKA_SUBJECTS),
+          }),
+        ),
+      ),
+      sealResponseSchema,
+    );
+    expect(sticker).toMatchObject({ id: stickerId, timeUsed: 1800 });
+    expect(allStickers()).toHaveLength(1);
+    expect(test.images.saved.size).toBe(0);
+  });
+
   it("stores the three images under the PNG's hash, spends the ticket, and shows the sticker as NEW", async () => {
     const artistId = insertUser(test.db);
     const { ticketUseId, sticker, stickerPlacement } = await seal(artistId);
@@ -508,6 +561,16 @@ describe("POST /api/stickers on a ticket spent in Kyoto Seika Manga Expression P
 });
 
 describe("GET /api/stickers/:stickerId", () => {
+  it("keeps a historical thirty-minute sticker readable after the drawing clock changes", async () => {
+    const artistId = insertUser(test.db);
+    const stickerId = insertSealedSticker(test.db, artistId, {
+      timeUsed: 1800,
+      kyotoSeikaSubjects: TEST_KYOTO_SEIKA_SUBJECTS,
+    });
+    const detail = await bodyOf(await getSticker(artistId, stickerId), stickerDetailSchema);
+    expect(detail.sticker).toMatchObject({ id: stickerId, timeUsed: 1800 });
+  });
+
   it("shows who holds it now, its Original Artist, and its received gifts newest first", async () => {
     const artistId = insertUser(test.db);
     const firstReceiverId = insertUser(test.db);

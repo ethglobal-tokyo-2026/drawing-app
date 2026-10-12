@@ -1,4 +1,4 @@
-import { MAX_LAYERS } from "@drawing-app/api/client";
+import { MAX_LAYERS, MAX_TIME_USED_S } from "@drawing-app/api/client";
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
@@ -376,7 +376,7 @@ for (const invisible of ["erased", "hidden", "clipped"] as const) {
       }),
     );
     await expect(button(page, creation.timer.pause)).toBeVisible();
-    for (let ms = 0; ms < 180000; ms += 5000) await page.clock.fastForward(5000);
+    for (let ms = 0; ms < MAX_TIME_USED_S * 1000; ms += 5000) await page.clock.fastForward(5000);
     for (const reload of [false, true]) {
       if (reload) {
         await page.reload();

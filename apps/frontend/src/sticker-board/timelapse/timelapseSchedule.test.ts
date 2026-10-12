@@ -15,7 +15,6 @@ import {
   setLock,
   setOpacity,
 } from "../../sticker-creation/layers/testLayerSteps";
-import { KYOTO_SEIKA_TIME_USED_S } from "@drawing-app/api/client";
 import {
   KYOTO_SEIKA_MAX_LENGTH_MS,
   MAX_FILL_REVEAL_MS,
@@ -215,19 +214,18 @@ describe("a timelapse's schedule", () => {
   it.each([
     ["a regular sticker", false, MAX_LENGTH_MS],
     ["a sticker drawn in Kyoto Seika Practice Mode", true, KYOTO_SEIKA_MAX_LENGTH_MS],
-  ])("plays the longest drawing of %s in at most its length", (_, kyotoSeika, length) => {
-    const drawnMs = KYOTO_SEIKA_TIME_USED_S * 1000;
-    expect(
-      schedule([stroke(0, steady(drawnMs, MAX_POINT_STEP_MS))], false, kyotoSeika).length,
-    ).toBeCloseTo(length, 6);
-  });
+  ])(
+    "plays a historical thirty-minute drawing of %s in at most its length",
+    (_, kyotoSeika, length) => {
+      const drawnMs = 30 * 60_000;
+      expect(
+        schedule([stroke(0, steady(drawnMs, MAX_POINT_STEP_MS))], false, kyotoSeika).length,
+      ).toBeCloseTo(length, 6);
+    },
+  );
 
   it("keeps fills' reveals within MAX_FILL_REVEAL_MS in the longer timelapse of a sticker drawn in Kyoto Seika Practice Mode", () => {
-    const s = schedule(
-      [stroke(0, steady(KYOTO_SEIKA_TIME_USED_S * 1000, MAX_POINT_STEP_MS)), fill(2e6)],
-      false,
-      true,
-    );
+    const s = schedule([stroke(0, steady(30 * 60_000, MAX_POINT_STEP_MS)), fill(2e6)], false, true);
     expect(fills(s)[0].end - fills(s)[0].start).toBeLessThanOrEqual(MAX_FILL_REVEAL_MS);
   });
 });
