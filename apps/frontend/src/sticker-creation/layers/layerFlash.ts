@@ -2,7 +2,7 @@ import { GLINT_SVG, svgDataUrl } from "../../gratitude/heartArt";
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { blankCanvas } from "../canvas/context2d";
 import type { Rect } from "../sealing/stickerPasses";
-import { glintPath, pickInkEdges } from "./layerGlints";
+import { GLINTS_PER_GROUP, glintPath, pickInkEdges } from "./layerGlints";
 import "./layerFlash.css";
 
 export const FLASH_MS = 280;
@@ -256,7 +256,7 @@ export function flashLayer(parts: FlashParts): LayerFlash | null {
       glints.setAttribute("aria-hidden", "true");
       const groupHost = glints;
       sparks.forEach((spark, group) => {
-        for (let satellite = 0; satellite < 3; satellite++) {
+        for (let satellite = 0; satellite < GLINTS_PER_GROUP; satellite++) {
           const path = glintPath(spark, group, satellite, cssWidth, cssHeight);
           const glint = document.createElement("span");
           glint.className = "layer-flash__glint";

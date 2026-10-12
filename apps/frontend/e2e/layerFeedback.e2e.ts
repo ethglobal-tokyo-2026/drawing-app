@@ -134,7 +134,7 @@ for (const device of ["phone", "tablet"] as const) {
         expect(initial.lightPixels).toBeGreaterThan(0);
         expect(initial.darkEdge).toBeGreaterThan(0);
         expect(initial.lightEdge).toBeGreaterThan(0);
-        expect(initial.glints).toBe(reduced ? 0 : 12);
+        expect(initial.glints).toBe(reduced ? 0 : 16);
         if (reduced) expect(initial.animations).toBe(0);
         await mkdir(evidence, { recursive: true });
         const name = `${info.project.name}-${device}-${scheme}-${reduced ? "reduced" : "normal"}`;

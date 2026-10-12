@@ -1,5 +1,7 @@
 import { clamp } from "../../ui/easing";
 
+export const GLINTS_PER_GROUP = 4;
+
 interface Point {
   x: number;
   y: number;
@@ -95,27 +97,30 @@ export function glintPath(
   height: number,
 ) {
   const size = Math.min(
-    satellite === 0 ? [42, 38, 40, 36][group % 4] : satellite === 1 ? 20 : 12,
+    satellite === 0 ? [30, 28, 29, 26][group % 4] : [0, 16, 10, 7][satellite],
     Math.min(width, height) * 0.42,
   );
   const margin = size * 0.7 + 3;
   const direction = group % 2 === 0 ? 1 : -1;
-  const x = clamp(point.x + (satellite ? direction * 16 : 0), margin, width - margin);
-  const y = clamp(
-    point.y + (satellite === 1 ? -14 : satellite === 2 ? 8 : 0),
-    margin,
-    height - margin,
-  );
-  const duration = [0.78, 0.82, 0.72][satellite];
+  const x = clamp(point.x + direction * [0, 16, 16, -12][satellite], margin, width - margin);
+  const y = clamp(point.y + [0, -14, 8, 6][satellite], margin, height - margin);
+  const duration = [0.78, 0.82, 0.72, 0.68][satellite];
   const horizontal = flight(
     x,
-    direction * [160, 230, 185][satellite],
+    direction * [160, 230, 185, -120][satellite],
     0,
     margin,
     width - margin,
     duration,
   );
-  const vertical = flight(y, [-175, -225, -125][satellite], 930, margin, height - margin, duration);
+  const vertical = flight(
+    y,
+    [-175, -225, -125, -190][satellite],
+    930,
+    margin,
+    height - margin,
+    duration,
+  );
   const seconds = Math.min(horizontal.end, vertical.end, duration);
   const frames = Array.from({ length: 21 }, (_, i) => {
     const t = i / 20;
@@ -141,6 +146,6 @@ export function glintPath(
     margin,
     frames,
     duration: seconds * 1000,
-    delay: group * 12 + [0, 26 + group * 9, 54 + group * 6][satellite],
+    delay: group * 12 + [0, 26 + group * 9, 54 + group * 6, 82 + group * 3][satellite],
   };
 }
