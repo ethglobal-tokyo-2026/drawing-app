@@ -60,7 +60,18 @@ const slider = (page: Page) =>
 /** The sheet after its opening motion, with its first layer ready to take a mark. */
 async function openSheet(page: Page) {
   await signIn(page, "layers", language);
+  const spent = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === "/api/tickets/spend",
+  );
   await button(page, { en: drawKeyName(language, DAILY_TICKETS_PER_DAY) }).click();
+  const response = await spent;
+  expect(response.status()).toBe(201);
+  await response.finished();
+  await expect(
+    page.getByText(say(creation.timer.note.startsWhenYouDraw, language)).first(),
+  ).toBeVisible();
   await canvas(page, language).hover();
   await expect(chip(page, 1)).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".drawing-screen")).not.toHaveClass(
