@@ -10,11 +10,9 @@ export const line = {
       en: "Still opening. It’s taking longer than usual.",
       ja: "まだひらいています。<wbr/>いつもより<wbr/>時間が<wbr/>かかっています。",
     },
-    /** LINE sign-in screen, in a browser outside LINE before LINE Login: the heading */
-    title: { en: "Your sticker board", ja: "あなたのシールボード" },
-    /** LINE sign-in screen, in a browser outside LINE before LINE Login: the line under the heading */
-    lead: { en: "It opens with your LINE account.", ja: "LINEアカウントで<wbr/>ひらきます。" },
-    /** LINE sign-in screen, in a browser outside LINE that LINE Login came back to though another browser started it: the line under the heading, in place of the usual one */
+    /** LINE sign-in screen, in a browser outside LINE before LINE Login: the Latin Croquis wordmark in both languages */
+    title: { en: "Croquis", ja: "Croquis" },
+    /** LINE sign-in screen, in a browser outside LINE that LINE Login came back to though another browser started it: recovery instructions between the app name and login button */
     strayAnswer: {
       en: "LINE’s login didn’t finish in this browser. Log in again here.",
       ja: "LINEの<wbr/>ログインが、<wbr/>このブラウザでは<wbr/>完了しませんでした。<wbr/>ここで<wbr/>もう一度<wbr/>ログインしてください。",

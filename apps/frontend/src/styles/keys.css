@@ -137,6 +137,13 @@
   --deep: var(--blue-deep);
 }
 
+/* LINE supplies its sign-in colors; the key keeps Croquis's shape, depth, type, and press. */
+.key--line {
+  --face: #06c755;
+  --deep: color-mix(in srgb, #06c755, #000 30%);
+  color: #fff;
+}
+
 .key--lg {
   --r: 18px;
   min-height: calc(68px + var(--lip));
@@ -287,10 +294,20 @@
     background-color: var(--face-shade);
   }
 
+  .key--line:hover::before {
+    background-color: color-mix(in srgb, var(--face), #000 10%);
+  }
+
   .label-btn--quiet:hover {
     color: var(--ink);
     text-decoration-color: var(--ink);
   }
+}
+
+/* LINE's pressed shade follows the shared press, including its CSS-only fallback. */
+.key--line[data-press-state="down"]::before,
+html:not([data-press-ready]) .key--line:not(:disabled):active::before {
+  background-color: color-mix(in srgb, var(--face), #000 30%);
 }
 
 /* Label stock travels only 2px, so while it's held its face also takes a little shade. */

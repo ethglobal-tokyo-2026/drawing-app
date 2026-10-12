@@ -8,6 +8,7 @@ import { inLanguage } from "../ui/testing";
 // LINE as each test needs it to behave.
 const liff = vi.hoisted(() => ({
   init: vi.fn<() => Promise<void>>(),
+  login: vi.fn(),
   isLoggedIn: vi.fn(() => true),
   isInClient: vi.fn(() => true),
   getDecodedIDToken: vi.fn<() => { sub?: string; name?: string; picture?: string } | null>(
@@ -74,17 +75,20 @@ describe("LineGate", () => {
     liff.isLoggedIn.mockReturnValueOnce(false);
     await openApp();
     await settle();
+    expect(host.querySelector("h1")?.textContent).toBe("Croquis");
+    expect(host.querySelector(".line-gate__lead")).toBeNull();
     expect(host.textContent).toContain("Log in with LINE");
+    await act(async () => host.querySelector("button")?.click());
+    expect(liff.login).toHaveBeenCalledWith({ redirectUri: location.href });
   });
 
-  it("says so in place of its lead when LINE's login answers in a browser that didn't start it", async () => {
-    const lead = i18next.t(($) => $.line.gate.lead);
+  it("adds recovery instructions when LINE's login answers in a browser that didn't start it", async () => {
     const strayAnswer = i18next.t(($) => $.line.gate.strayAnswer);
     liff.init.mockResolvedValue();
     liff.isLoggedIn.mockReturnValueOnce(false);
     await openApp();
     await settle();
-    expect(host.textContent).toContain(lead);
+    expect(host.querySelector(".line-gate__lead")).toBeNull();
     expect(host.textContent).not.toContain(strayAnswer);
 
     history.replaceState(null, "", "/?code=x&liffClientId=y");
@@ -92,7 +96,7 @@ describe("LineGate", () => {
     await openApp();
     await settle();
     expect(host.textContent).toContain(strayAnswer);
-    expect(host.textContent).not.toContain(lead);
+    expect(host.querySelector("h1")?.textContent).toBe("Croquis");
     expect(host.textContent).toContain("Log in with LINE");
     history.replaceState(null, "", "/");
   });
@@ -104,6 +108,7 @@ describe("LineGate", () => {
     await settle();
     // After openApp, whose fresh import of the gate starts i18next again in English.
     await inLanguage("ja");
+    expect(host.querySelector("h1")?.textContent).toBe("Croquis");
     expect(host.textContent).toContain("LINEでログイン");
   });
 

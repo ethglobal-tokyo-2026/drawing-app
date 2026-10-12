@@ -49,8 +49,8 @@ export function GateNotice({
   detail,
   children,
 }: {
-  title: string;
-  lead: string;
+  title: ReactNode;
+  lead?: string;
   detail?: string;
   children: ReactNode;
 }) {
@@ -61,7 +61,7 @@ export function GateNotice({
       <h1 ref={heading} tabIndex={-1} className="title-label">
         {title}
       </h1>
-      <p className="line-gate__lead keep-phrases">{lead}</p>
+      {lead && <p className="line-gate__lead keep-phrases">{lead}</p>}
       {children}
       {detail && (
         <div className="line-gate__details">

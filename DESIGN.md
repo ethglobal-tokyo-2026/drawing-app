@@ -352,7 +352,7 @@ Hairlines are Ink alpha: 14% for a rule, 26% for a strong one. Soft text is Ink 
 
 **The Other Hand Rule.** Holo foil marks a sticker drawn by someone other than the board's owner, only on sticker boards and sheets, and never as a rarity grade. Pink foil (NSFW) and the Kyoto Seika Practice Mode foil mark how a sticker was made, so they show whoever drew it, your own included; pink wins.
 
-**The Platform Green Rule.** The world has no green. LINE's green appears only inside mocked LINE UI.
+**The Platform Green Rule.** The world has no green. LINE's green appears only on its official sign-in button and inside mocked LINE UI.
 
 ## Typography
 
@@ -516,6 +516,7 @@ Every icon is Phosphor, through one registry (`apps/frontend/src/icons`): bold a
 
 ### LINE surfaces
 
+- **Sign-in:** the Croquis wordmark and a pencil placeholder for the app logo sit above a LINE-green key on the bare backing paper. It uses the shared key's rounded Ink outline, deep lip, puffy type and press, with LINE's unmodified white logo, divider and clear space. LINE's green face, white label and interaction shades are the brand exception to the app's color rules. No account-explanation line. The key uses official LINE branding within Croquis's construction; it is not a reproduction of LINE's flat template. Source: https://developers.line.biz/en/docs/line-login/login-button/
 - **Chat menu:** the Official account's chat menu is drawn as the board's foot, from the app's own tokens, key and label stock.
 - **Mocked platform screens:** the LINE chat, the Gift Message, consent and share screens and iOS banners use the platform's own type, greys and green, and never the world's materials.
 
@@ -534,7 +535,7 @@ Every icon is Phosphor, through one registry (`apps/frontend/src/icons`): bold a
 
 ### Don't:
 
-- **Don't** put white text on a coded field, or green anywhere outside mocked LINE UI.
+- **Don't** put white text on a coded field, or green anywhere outside the official LINE sign-in button and mocked LINE UI.
 - **Don't** put gloss, a highlight line or a sheen on any control.
 - **Don't** restyle a key's or label's face or base, or add your own pressed transform.
 - **Don't** put holo foil on the board owner's own stickers or off a board, or use any foil as a rarity grade.
