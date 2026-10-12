@@ -1,0 +1,19 @@
+{
+  "scope": "Static evidence and document verification only; no CSP execution or attachment.",
+  "originalSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "functionCount": 31,
+  "originalFunctionBytesChecked": 7988,
+  "literalRangesChecked": 7,
+  "vtableSlotsChecked": 9,
+  "documentsChecked": [
+    "docs/research/clip-studio-paint-stabilization/spikes/post-bezier/README.md",
+    "docs/superpowers/specs/2026-10-11-csp-bezier-post-correction.md",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-bezier/analysis/advance-cleanup.md",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-bezier/analysis/candidate-acceptance.md",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-bezier/analysis/integration.md",
+    "docs/research/clip-studio-paint-stabilization/spikes/post-bezier/analysis/orchestration.md"
+  ],
+  "localLinksChecked": 37,
+  "specificationSha256": "ba39f9ec4f2cdb0c41e03cc896db56001114978a855fb9f3bc323fafadccb73c",
+  "status": "pass"
+}

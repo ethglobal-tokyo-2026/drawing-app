@@ -1,0 +1,73 @@
+{
+  "originalSha256": "6c5a7c601db135171355802ee05e6f49b440a642060b0886f46833e9d02510cd",
+  "scope": "Literal bytes and scalar interpretations from static analysis only.",
+  "memory": [
+    {
+      "address": "0x1042ecb78",
+      "bytesHex": "9a9999999999b93f",
+      "bytesSha256": "45d2b662d9d490ae9b932759c910b26b9a874065de620f4ac0a3a23a65e40b8c",
+      "storageBits": ["3fb999999999999a"],
+      "binary64Values": [0.1]
+    },
+    {
+      "address": "0x1042e3688",
+      "bytesHex": "3a8c30e28e7945be",
+      "bytesSha256": "a17fd26cac4a4c0a589bbaaa5f729d6c3697c906c29725571f28ade011657800",
+      "storageBits": ["be45798ee2308c3a"],
+      "binary64Values": [-1e-8]
+    },
+    {
+      "address": "0x1042e3690",
+      "bytesHex": "3a8c30e28e79453e",
+      "bytesSha256": "e972f4b445c8285197ecdc3f8831870d6eec67c062060c2aca46408dd58aefca",
+      "storageBits": ["3e45798ee2308c3a"],
+      "binary64Values": [1e-8]
+    },
+    {
+      "address": "0x104303ce0",
+      "bytesHex": "0100000000000000ffffffffffffffff",
+      "bytesSha256": "db0550d553e2a146e34164d19cd55f006c38d700d8f9a4e3ba2c889a1d7c26b2",
+      "storageBits": ["0000000000000001", "ffffffffffffffff"],
+      "signed64Values": [1, -1]
+    },
+    {
+      "address": "0x104322140",
+      "bytesHex": "9a9999999999993f",
+      "bytesSha256": "743d526cd0e45eed73e8f0b2308a404561eada75bd4f213c1af94057eef75450",
+      "storageBits": ["3f9999999999999a"],
+      "binary64Values": [0.025]
+    },
+    {
+      "address": "0x104302fd8",
+      "bytesHex": "9a9999999999c93f",
+      "bytesSha256": "ec361add5afbcdb8b62bf8daef0ed186d18714095ea66df0b460266669a7c753",
+      "storageBits": ["3fc999999999999a"],
+      "binary64Values": [0.2]
+    },
+    {
+      "address": "0x10454deb0",
+      "bytesHex": "7b14ae47e17a743f",
+      "bytesSha256": "2ea434dcc0f1e9d4c0b1682b83e4e4b965414ff3d685c4020d28396fdb927238",
+      "storageBits": ["3f747ae147ae147b"],
+      "binary64Values": [0.005]
+    }
+  ],
+  "coordinateSetterImmediateBinary64": [
+    {
+      "bits": "412e848000000000",
+      "value": 1000000.0
+    },
+    {
+      "bits": "3fe0055e000063b9",
+      "value": 0.5006551742582054
+    },
+    {
+      "bits": "bfe0055e000063b9",
+      "value": -0.5006551742582054
+    },
+    {
+      "bits": "3eb0c6f7a0b5ed8d",
+      "value": 1e-6
+    }
+  ]
+}
