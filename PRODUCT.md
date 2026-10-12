@@ -83,6 +83,7 @@ You can hand someone a physical drawing, but nothing makes a digital drawing sca
 - Posts: a feed of text posts with stickers, links and embeds, and posting after a seal or a gift.
 - Giving to a random artist.
 - Sharing your sticker board as a link or a QR code.
+- **Destroying an unwanted sticker (hypothetical):** a sticker could be destroyed with a fire animation; its detail would retain its final owner and Original Artist credit, and it could no longer be given or traded. This idea has no implementation plan.
 - Terms of Use and a Privacy Policy: the pages the app links to are placeholders.
 
 ### Open questions
@@ -90,6 +91,7 @@ You can hand someone a physical drawing, but nothing makes a digital drawing sca
 - **Offered Gratitude:** when an offer is accepted, whether the Gratitude moves to the owner or is used up, and whether spending it lowers the offerer's rank.
 - **LIFF app or LINE MINI App channel:** Croquis runs as a LIFF app on a LINE Login channel because its LINE developer account can't create a MINI App channel; a Japanese account may be able to. The code is the same either way.
 - **Take the original:** whether a sticker's owner can take its original image file, which destroys the sticker, and how, since LINE's browser can't download files.
+- **Destroying an unwanted sticker:** whether the holder alone or the Original Artist can do it; whether Sui destroys the NFT or keeps it marked; effects on the sticker board, sticker tray, Transfer Trail, Gratitude, gifts in flight, Explore and leaderboards; and the confirmation, animation and interface wording.
 
 ## Brand Commitments
 
