@@ -371,7 +371,9 @@ test("real ink has a readable dual contour and a gentle white pulse at every sel
   }
 });
 
-test("a full sheet has an inset dual contour while a clear hole stays clear", async ({ page }) => {
+test("occupied sheet edges keep their inset contour around clear holes and notches", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.emulateMedia({ reducedMotion: "reduce" });
   const rows = await page.evaluate(async () => {
@@ -386,9 +388,22 @@ test("a full sheet has an inset dual contour while a clear hole stays clear", as
     const g = layer.getContext("2d");
     if (!g) throw new Error("No full sheet context");
     const rows = [];
-    for (const hole of [false, true]) {
-      g.fillRect(0, 0, 160, 160);
-      if (hole) g.clearRect(40, 0, 20, 20);
+    for (const shape of [
+      "full",
+      "interior hole",
+      "notch",
+      "inset hole",
+      "top edge",
+      "island",
+    ] as const) {
+      g.clearRect(0, 0, 160, 160);
+      if (shape === "island") g.fillRect(4, 4, 152, 152);
+      else if (shape === "top edge") g.fillRect(40, 0, 80, 156);
+      else g.fillRect(0, 0, 160, 160);
+      if (shape === "interior hole") g.clearRect(40, 40, 20, 20);
+      if (shape === "notch") g.clearRect(40, 0, 20, 20);
+      if (shape === "inset hole") g.clearRect(40, 2, 20, 20);
+      const before = layer.toDataURL();
       const feedback = flashLayer({
         layer,
         above,
@@ -400,12 +415,37 @@ test("a full sheet has an inset dual contour while a clear hole stays clear", as
       const outline = sheet.querySelector<HTMLCanvasElement>(".layer-flash__outline");
       const og = outline?.getContext("2d");
       if (!feedback || !outline || !og) throw new Error("No full sheet contour");
+      let fullAppearanceUnchanged = true;
+      if (shape === "full") {
+        const expected = document.createElement("canvas");
+        expected.width = expected.height = 160;
+        const eg = expected.getContext("2d");
+        if (!eg) throw new Error("No full sheet appearance reference context");
+        // The approved full-sheet inset: white at 6.25 px, dark at 7.5 px, both 1.25 px wide.
+        for (const [at, color] of [
+          [6.25, "#ffffff"],
+          [7.5, "#1c1824"],
+        ] as const) {
+          eg.fillStyle = color;
+          eg.fillRect(at, at, 160 - at * 2, 1.25);
+          eg.fillRect(at, 160 - at - 1.25, 160 - at * 2, 1.25);
+          eg.fillRect(at, at, 1.25, 160 - at * 2);
+          eg.fillRect(160 - at - 1.25, at, 1.25, 160 - at * 2);
+        }
+        const actual = og.getImageData(0, 0, 160, 160).data;
+        const reference = eg.getImageData(0, 0, 160, 160).data;
+        fullAppearanceUnchanged = actual.every((value, i) => value === reference[i]);
+      }
       rows.push({
-        hole,
+        shape,
+        fullAppearanceUnchanged,
         insetWhite: [...og.getImageData(80, 6, 1, 1).data],
         insetDark: [...og.getImageData(80, 8, 1, 1).data],
-        clearHole: og.getImageData(50, 6, 1, 1).data[3],
+        insetClear: [6, 8].map((y) => og.getImageData(50, y, 1, 1).data[3]),
+        bottomInset: [151, 153].map((y) => og.getImageData(80, y, 1, 1).data[3]),
+        interiorHole: og.getImageData(50, 50, 1, 1).data[3],
         center: og.getImageData(80, 80, 1, 1).data[3],
+        unchanged: before === layer.toDataURL(),
         peak: Number(outline.style.opacity),
         animations: sheet.getAnimations({ subtree: true }).length,
       });
@@ -414,11 +454,20 @@ test("a full sheet has an inset dual contour while a clear hole stays clear", as
     sheet.remove();
     return rows;
   });
-  expect(rows[0].insetWhite.slice(0, 3)).toEqual([255, 255, 255]);
-  expect(rows[0].insetWhite[3]).toBeGreaterThan(100);
-  expect(rows[0].insetDark[0]).toBeLessThan(60);
-  expect(rows[0].insetDark[3]).toBeGreaterThan(100);
-  expect(rows[1].clearHole).toBe(0);
+  for (const row of rows.slice(0, 5)) {
+    expect(row.insetWhite.slice(0, 3), row.shape).toEqual([255, 255, 255]);
+    expect(row.insetWhite[3], row.shape).toBeGreaterThan(100);
+    expect(row.insetDark[0], row.shape).toBeLessThan(60);
+    expect(row.insetDark[3], row.shape).toBeGreaterThan(100);
+  }
+  expect(rows[0].fullAppearanceUnchanged).toBe(true);
+  expect(rows[1].interiorHole).toBe(0);
+  for (const row of rows.slice(2, 4)) expect(row.insetClear, row.shape).toEqual([0, 0]);
+  expect(rows[4].bottomInset).toEqual([0, 0]);
+  // The inset sample lies inside this island's ink, beyond its ordinary exterior contour.
+  expect(rows[5].insetWhite[3]).toBe(0);
+  expect(rows[5].insetDark[3]).toBe(0);
+  expect(rows.every((r) => r.unchanged)).toBe(true);
   expect(rows.every((r) => r.center === 0 && r.peak === 0.95 && r.animations === 0)).toBe(true);
 });
 

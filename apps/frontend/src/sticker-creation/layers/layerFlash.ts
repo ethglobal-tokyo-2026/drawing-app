@@ -49,25 +49,43 @@ function inkOutline(
   const { g } = made;
   g.globalCompositeOperation = "source-over";
   g.drawImage(inner.canvas, 0, 0);
-  releaseCanvas(inner.canvas);
   g.globalCompositeOperation = "destination-out";
   g.drawImage(ink, 0, 0);
-  if (full) {
-    // A filled sheet has no exterior contour inside its crop. An inset rule shows its extent.
-    g.globalCompositeOperation = "source-over";
-    const inset = edge * 5;
-    for (const [offset, color] of [
-      [0, LIGHT],
-      [edge, INK],
-    ] as const) {
-      const at = inset + offset;
+  // Project only occupied crop edges onto the inset, then cut it to the ink at that position.
+  // Interior holes keep the sheet's extent visible; islands and erased notches gain no border.
+  g.globalCompositeOperation = "source-over";
+  const inset = edge * 5;
+  for (const [offset, color] of [
+    [0, LIGHT],
+    [edge, INK],
+  ] as const) {
+    const at = inset + offset;
+    const w = ink.width - at * 2;
+    const h = ink.height - at * 2;
+    if (w <= 0 || h <= 0) continue;
+    if (full) {
+      // Keep the filled sheet's authored rectangle antialiasing, without resampling its edges.
       g.fillStyle = color;
-      g.fillRect(at, at, ink.width - at * 2, edge);
-      g.fillRect(at, ink.height - at - edge, ink.width - at * 2, edge);
-      g.fillRect(at, at, edge, ink.height - at * 2);
-      g.fillRect(ink.width - at - edge, at, edge, ink.height - at * 2);
+      g.fillRect(at, at, w, edge);
+      g.fillRect(at, ink.height - at - edge, w, edge);
+      g.fillRect(at, at, edge, h);
+      g.fillRect(ink.width - at - edge, at, edge, h);
+      continue;
     }
+    inner.g.clearRect(0, 0, ink.width, ink.height);
+    inner.g.globalCompositeOperation = "source-over";
+    inner.g.drawImage(ink, at, 0, w, 1, at, at, w, edge);
+    inner.g.drawImage(ink, at, ink.height - 1, w, 1, at, ink.height - at - edge, w, edge);
+    inner.g.drawImage(ink, 0, at, 1, h, at, at, edge, h);
+    inner.g.drawImage(ink, ink.width - 1, at, 1, h, ink.width - at - edge, at, edge, h);
+    inner.g.globalCompositeOperation = "destination-in";
+    inner.g.drawImage(ink, 0, 0);
+    inner.g.globalCompositeOperation = "source-in";
+    inner.g.fillStyle = color;
+    inner.g.fillRect(0, 0, ink.width, ink.height);
+    g.drawImage(inner.canvas, 0, 0);
   }
+  releaseCanvas(inner.canvas);
   return made;
 }
 

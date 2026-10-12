@@ -145,7 +145,10 @@
           g.fill();
         } else {
           g.fillRect(0, 0, w, h);
-          if ($("shape").value === "hole") g.clearRect(40, 0, 20, 20);
+          if ($("shape").value === "hole") {
+            g.clearRect(40, 0, 20, 20);
+            g.clearRect(w * 0.32, h * 0.3, 40, 40);
+          }
         }
       }
       const ag = above.getContext("2d");
