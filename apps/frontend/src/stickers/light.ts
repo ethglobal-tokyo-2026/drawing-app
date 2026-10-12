@@ -17,10 +17,11 @@ import { sheenIn, sweepSheen } from "./resinSheen";
  */
 
 /**
- * What follows the light as it moves: the resin's specular, and each foil's bands and glint. Set on them
+ * What follows the light as it moves: the resin's reflection and specular, and each foil's bands and glint. Set on them
  * rather than the resin or foil they're in, a move restyles only them, not the masked layers around them.
  */
-const MOVING = ".live-resin__spec > b, .sticker-foil__sheen, .sticker-foil__glint";
+const MOVING =
+  ".live-resin__plane > b, .live-resin__height > b, .live-resin__spec > b, .sticker-foil__sheen, .sticker-foil__glint";
 /**
  * Each crease, which takes the light only once it rests: restyling every crease's layers on each write
  * drops frames while the light moves, and its fade glides it there after.

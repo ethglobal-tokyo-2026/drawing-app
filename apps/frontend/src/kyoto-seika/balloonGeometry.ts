@@ -858,8 +858,8 @@ const PAIR_FITS: Record<PairSize, PairFit> = { peek: PEEK_FIT, detail: DETAIL_FI
 export const PAIR_MAX_W: Record<PairSize, number> = { peek: 300, detail: 280 };
 /** A peek's trail, finer than the deal's: its bubbles' radii, largest by its cloud, in px. */
 const PEEK_TRAIL = [5, 3.6, 2.5] as const;
-/** How far the two clouds' outlines cross where they meet, in px. */
-const PAIR_KISS_PX = 7;
+/** The white space between the two clouds' ink, in px. */
+const PAIR_GAP_PX = 6;
 /** How far the second cloud sits above the first, as a share of its half height: a pair, not a row. */
 const PAIR_RISE = 0.45;
 /** English capitals' width, in ems, their tracking included; and English lines' height, in ems. */
@@ -879,12 +879,12 @@ interface PairBalloon extends Omit<PlacedBalloon, "reach" | "stack"> {
 
 export interface PairLayout {
   balloons: readonly [PairBalloon, PairBalloon];
-  /** The trail, largest bubble by its cloud, toward the sticker. */
-  trail: readonly Bead[];
-  /** Its whole reach, clouds and trail, from (0, 0). */
+  /** One trail per cloud, largest bubble by that cloud, toward the sticker. */
+  trails: readonly [readonly Bead[], readonly Bead[]];
+  /** Its whole reach, clouds and both trails, from (0, 0). */
   w: number;
   h: number;
-  /** The trail's tip: the far edge of its smallest bubble. */
+  /** The tip nearest the sticker: the far edge of that trail's smallest bubble. */
   tip: Pt;
   /** The clouds' reach alone. */
   clouds: Box;
@@ -956,8 +956,8 @@ const wordSeed = (text: string, salt: number) =>
   mixSeed(salt, ...Array.from({ length: text.length }, (_, i) => text.charCodeAt(i))) % 99_991;
 
 /**
- * Two subjects' clouds side by side, the second a little higher, their outlines crossing where they
- * meet, and a trail from the cloud on `toward`'s side running `toward` (a direction) to the sticker.
+ * Two separate subjects' clouds side by side, the second a little higher, each with its own trail
+ * running `toward` (a direction) to the sticker.
  * Each word area fits its word: English breaks into lines, and shrinks only when one word is wider
  * than the widest word area.
  */
@@ -977,11 +977,13 @@ export function pairLayout(
       tilt: i === 0 ? -2 : 2.5,
       seed: wordSeed(pair[i].text, i),
     }));
-    const [a, b] = specs;
+    const [, b] = specs;
     const across = unit({ x: 1, y: -PAIR_RISE * (halfH(b) / halfW(b)) });
-    const apart = reachToward(a, across) + reachToward(b, mul(across, -1)) - PAIR_KISS_PX;
-    const centers = [{ x: 0, y: 0 }, mul(across, apart)];
     const whites = specs.map(cloudWhite);
+    const reach = (i: number, way: Pt) =>
+      Math.max(...whites[i].map((p) => dot(rotate(p, specs[i].tilt), way)));
+    const apart = reach(0, across) + reach(1, mul(across, -1)) + PAIR_GAP_PX + INK_REACH_PX;
+    const centers = [{ x: 0, y: 0 }, mul(across, apart)];
     const reaches = whites.map((white, i) =>
       grow(boxOf(white.map((p) => add(rotate(p, specs[i].tilt), centers[i]))), INK_REACH_PX),
     );
@@ -989,7 +991,7 @@ export function pairLayout(
   };
   // Too wide, the words set smaller, the lobes and the white round them staying as they are.
   let laid = clustered(1);
-  for (let scale = 1, tries = 0; tries < 3; tries++) {
+  for (let scale = 1, tries = 0; tries < 6; tries++) {
     const width = laid.clouds.maxX - laid.clouds.minX;
     if (width <= PAIR_MAX_W[size]) break;
     scale *= (PAIR_MAX_W[size] - 2) / width;
@@ -997,21 +999,53 @@ export function pairLayout(
   }
   const { lettered, specs, centers, whites, clouds } = laid;
 
-  // The trail leaves the cloud on the sticker's side.
-  const from = toward.x > 0 ? 1 : 0;
   const way = unit(toward);
   const radii = size === "peek" ? PEEK_TRAIL : TRAIL.radii;
-  let d = reachToward(specs[from], way) - 2;
-  const trail = radii.map((r, i) => {
-    d += r + (i === 0 ? 4 : 3);
-    const bead = { ...add(centers[from], mul(way, d)), r };
-    d += r;
-    return bead;
+  const trailFrom = (from: number) => {
+    const other = 1 - from;
+    const own = whites[from].map((p) => add(rotate(p, specs[from].tilt), centers[from]));
+    const neighbor = whites[other].map((p) => add(rotate(p, specs[other].tilt), centers[other]));
+    const distanceTo = (bead: Bead, poly: readonly Pt[]) =>
+      Math.min(
+        ...poly.map((p, i) => {
+          const edge = sub(poly[(i + 1) % poly.length], p);
+          const t = clamp(dot(sub(bead, p), edge) / (dot(edge, edge) || 1), 0, 1);
+          return len(sub(bead, add(p, mul(edge, t))));
+        }),
+      );
+    const beadsAlong = (direction: Pt) => {
+      let d = reachToward(specs[from], direction) - 2;
+      return radii.map((r, i) => {
+        d += r + (i === 0 ? 4 : 3);
+        const bead = { ...add(centers[from], mul(direction, d)), r };
+        d += r;
+        return bead;
+      });
+    };
+    // An inward trail can run into the neighboring cloud. Turn it toward the vertical until its
+    // bubbles clear the neighbor's ink, still on the sticker's side.
+    for (const lean of [1, 0.65, 0.3]) {
+      const beads = beadsAlong(unit({ x: toward.x * lean, y: toward.y }));
+      if (
+        distanceTo(beads[0], own) < distanceTo(beads[0], neighbor) &&
+        beads.every(
+          (bead) => !inside(bead, neighbor) && distanceTo(bead, neighbor) > bead.r + BEAD_CLEAR_PX,
+        )
+      )
+        return beads;
+    }
+    return beadsAlong({ x: 0, y: Math.sign(toward.y) || 1 });
+  };
+  const trails = [trailFrom(0), trailFrom(1)] as const;
+  const tips = trails.map((trail) => {
+    const last = trail[trail.length - 1];
+    return add(last, mul(unit(sub(last, trail[trail.length - 2])), last.r));
   });
-  const last = trail[trail.length - 1];
+  const tip = dot(tips[0], way) > dot(tips[1], way) ? tips[0] : tips[1];
   const beadReach = (t: Bead) => grow({ minX: t.x, minY: t.y, maxX: t.x, maxY: t.y }, t.r + 2);
-  const all = union([clouds, ...trail.map(beadReach)]);
+  const all = union([clouds, ...trails.flatMap((trail) => trail.map(beadReach))]);
   const by = { x: -all.minX, y: -all.minY };
+  const shiftedTrail = (trail: readonly Bead[]) => trail.map((t) => ({ ...add(t, by), r: t.r }));
   const placed = (i: number): PairBalloon => ({
     spec: specs[i],
     center: add(centers[i], by),
@@ -1023,10 +1057,10 @@ export function pairLayout(
   });
   return {
     balloons: [placed(0), placed(1)],
-    trail: trail.map((t) => ({ ...add(t, by), r: t.r })),
+    trails: [shiftedTrail(trails[0]), shiftedTrail(trails[1])],
     w: all.maxX - all.minX,
     h: all.maxY - all.minY,
-    tip: add(add(last, mul(way, last.r)), by),
+    tip: add(tip, by),
     clouds: shift(clouds, by),
   };
 }

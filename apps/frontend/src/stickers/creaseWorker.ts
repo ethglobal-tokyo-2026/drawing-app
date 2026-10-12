@@ -62,7 +62,7 @@ export interface CreaseTimings {
   total: number;
 }
 
-/** A baked crease, its base and its rise lit from each side; null when nothing underneath shows a step. */
+/** A baked crease, its rise lit from each side, and its surface height; null when nothing rises. */
 export type CreaseReply =
   | {
       ok: true;
@@ -172,6 +172,7 @@ async function bake(board: string, job: CreaseJob): Promise<CreaseReply> {
     const t3 = performance.now();
     const crease = pixels && {
       base: await pngOf(canvas, pixels.base),
+      height: await pngOf(canvas, pixels.height),
       topLeft: await pngOf(canvas, pixels.topLeft),
       bottomRight: await pngOf(canvas, pixels.bottomRight),
       topRight: await pngOf(canvas, pixels.topRight),

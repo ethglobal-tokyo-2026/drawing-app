@@ -288,6 +288,31 @@ describe("the shared light", () => {
     expect(later.parts.map(lightOn)).toEqual([lightAt(), lightAt()]);
   });
 
+  it("moves a laminate's flat and raised reflections with the same light", () => {
+    const host = resin.closest<HTMLElement>(".live-resin");
+    if (!host) throw new Error("A live resin holds its specular");
+    const reflections = ["live-resin__plane", "live-resin__height"].map((className) => {
+      const layer = document.createElement("i");
+      layer.className = className;
+      const reflection = document.createElement("b");
+      layer.append(reflection);
+      host.append(layer);
+      return reflection;
+    });
+    uninstall = installLight(root);
+    showScreen();
+    pointAt(window.innerWidth, 0);
+    vi.advanceTimersByTime(100);
+    expect(reflections.map(lightOn)).toEqual([lightAt(), lightAt()]);
+
+    const later = document.createElement("i");
+    later.className = "live-resin__height";
+    const raised = document.createElement("b");
+    later.append(raised);
+    lightUp(later);
+    expect(lightOn(raised)).toEqual(lightAt());
+  });
+
   it("lights a crease only once the light rests, where it rests", () => {
     const crease = document.createElement("span");
     crease.className = "sticker-crease";

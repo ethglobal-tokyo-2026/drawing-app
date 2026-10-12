@@ -123,6 +123,7 @@ const bySide = <T>(of: (side: CreaseSide) => T): Record<CreaseSide, T> => ({
 /** A value for each of a crease's images. */
 const byImage = <T>(of: (image: CreaseImage) => T): Record<CreaseImage, T> => ({
   base: of("base"),
+  height: of("height"),
   ...bySide(of),
 });
 

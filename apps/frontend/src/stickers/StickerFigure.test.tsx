@@ -40,3 +40,29 @@ describe("StickerFigure's foil", () => {
     expect(foilOf({})).toEqual([]);
   });
 });
+
+describe("StickerFigure's laminate", () => {
+  it("passes a raised surface's height to the live reflection, not the crease's directional images", () => {
+    rendered = renderInHost(
+      <StickerFigure
+        urls={testStickerUrls("s")}
+        width={100}
+        height={100}
+        crease={{
+          base: "base.png",
+          height: "height.png",
+          topLeft: "top-left.png",
+          bottomRight: "bottom-right.png",
+          topRight: "top-right.png",
+          bottomLeft: "bottom-left.png",
+        }}
+      />,
+    );
+    const height = rendered.host.querySelector<HTMLElement>(".live-resin__height");
+    expect(height).not.toBeNull();
+    expect(
+      height?.closest<HTMLElement>(".live-resin")?.style.getPropertyValue("--height"),
+    ).toContain("height.png");
+    expect(rendered.host.querySelectorAll(".sticker-crease > i")).toHaveLength(5);
+  });
+});

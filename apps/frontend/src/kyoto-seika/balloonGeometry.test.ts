@@ -265,17 +265,76 @@ describe("a pair's thought clouds", () => {
     }
   });
 
-  it("runs its trail from the cloud on the sticker's side, its tip farthest that way", () => {
+  it("gives each cloud its own clear trail toward the sticker and includes both in its bounds", () => {
+    const segmentDistance = (p: Pt, a: Pt, b: Pt) => {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const t = Math.max(
+        0,
+        Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1)),
+      );
+      return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
+    };
     for (const toward of [
-      { x: -0.6, y: 0.8 },
-      { x: 0.6, y: -0.8 },
+      { x: -0.62, y: 0.78 },
+      { x: 0.62, y: 0.78 },
+      { x: -0.62, y: -0.78 },
+      { x: 0.62, y: -0.78 },
+      { x: -0.6, y: -0.8 },
     ]) {
-      const { balloons, trail, tip } = pairLayout(LONGEST, "peek", toward);
-      const [near, far] = toward.x > 0 ? [balloons[1], balloons[0]] : [balloons[0], balloons[1]];
-      const from = (p: Pt) => Math.hypot(trail[0].x - p.x, trail[0].y - p.y);
-      expect(from(near.center)).toBeLessThan(from(far.center));
-      const along = (p: Pt) => p.x * toward.x + p.y * toward.y;
-      for (const bead of trail) expect(along(tip)).toBeGreaterThan(along(bead));
+      for (const size of ["peek", "detail"] as const) {
+        for (const pair of [
+          LONGEST,
+          [
+            { text: "風", reading: "かぜ", english: false },
+            { text: "再会", reading: "さいかい", english: false },
+          ] as const,
+          [
+            { text: "トンネル", reading: "", english: false },
+            { text: "昔", reading: "むかし", english: false },
+          ] as const,
+        ]) {
+          const wordAtSize = (word: ThoughtWord) => ({
+            ...word,
+            reading: size === "peek" ? "" : word.reading,
+          });
+          const { balloons, trails, tip, w, h } = pairLayout(
+            [wordAtSize(pair[0]), wordAtSize(pair[1])],
+            size,
+            toward,
+          );
+          expect(trails).toHaveLength(2);
+          const along = (p: Pt) => p.x * toward.x + p.y * toward.y;
+          trails.forEach((trail, i) => {
+            expect(trail).toHaveLength(3);
+            const fromCloud = (index: number) => {
+              const outline = balloons[index].white.map((p) => toScreen(balloons[index], p));
+              return Math.min(
+                ...outline.map((p, n) =>
+                  segmentDistance(trail[0], p, outline[(n + 1) % outline.length]),
+                ),
+              );
+            };
+            expect(fromCloud(i)).toBeLessThan(fromCloud(1 - i));
+            for (const [n, bead] of trail.entries()) {
+              expect(bead.x - bead.r).toBeGreaterThanOrEqual(0);
+              expect(bead.y - bead.r).toBeGreaterThanOrEqual(0);
+              expect(bead.x + bead.r).toBeLessThanOrEqual(w);
+              expect(bead.y + bead.r).toBeLessThanOrEqual(h);
+              expect(along(tip)).toBeGreaterThan(along(bead));
+              if (n > 0) expect(along(bead)).toBeGreaterThan(along(trail[n - 1]));
+              for (const cloud of balloons) {
+                const outline = cloud.white.map((p) => toScreen(cloud, p));
+                expect(inside(bead, outline)).toBe(false);
+                for (const [n, p] of outline.entries())
+                  expect(
+                    segmentDistance(bead, p, outline[(n + 1) % outline.length]),
+                  ).toBeGreaterThan(bead.r + 3);
+              }
+            }
+          });
+        }
+      }
     }
   });
 });

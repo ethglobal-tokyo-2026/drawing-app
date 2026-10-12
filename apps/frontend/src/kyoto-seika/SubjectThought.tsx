@@ -25,7 +25,7 @@ interface Props {
 
 /**
  * The subjects a sticker drawn in Kyoto Seika Practice Mode was dealt, in the deal's thought clouds
- * with a trail of bubbles back to it. Hidden from screen readers, which hear the pair in the sticker's
+ * each with a trail of bubbles back to it. Hidden from screen readers, which hear the pair in the sticker's
  * name or the detail's line instead.
  */
 export function SubjectThought({ subjects, size, toward, reduced, at, onDone }: Props) {
@@ -131,11 +131,14 @@ export function SubjectThought({ subjects, size, toward, reduced, at, onDone }: 
       style={style}
       aria-hidden="true"
     >
-      <ThoughtTrail
-        trail={layout.trail}
-        reduced={reduced}
-        {...(peek && { pace: { ms: PEEK.beadMs, staggerMs: PEEK.beadStaggerMs } })}
-      />
+      {layout.trails.map((trail, i) => (
+        <ThoughtTrail
+          key={i}
+          trail={trail}
+          reduced={reduced}
+          {...(peek && { pace: { ms: PEEK.beadMs, staggerMs: PEEK.beadStaggerMs } })}
+        />
+      ))}
       {layout.balloons.map((placed, i) => {
         const { spec } = placed;
         const subject = subjects[i];

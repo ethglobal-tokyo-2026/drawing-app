@@ -12,8 +12,8 @@ import "./nsfw-mark.css";
 import "./sticker-figure.css";
 
 /**
- * A sticker's crease, baked: its base, which always shows, and its rise lit from each side, which the
- * one light blends between.
+ * A sticker's crease, baked: its base and rise lit from each side, which the one light blends between,
+ * and its surface height, which shifts the laminate reflection.
  */
 export type Crease = Record<CreaseImage, string>;
 
@@ -116,7 +116,7 @@ export const StickerFigure = memo(function StickerFigure({
           </b>
         </span>
       )}
-      <LiveResin />
+      <LiveResin height={crease?.height} />
       <span className="sticker-figure__sweep" aria-hidden="true">
         <i />
       </span>

@@ -51,6 +51,33 @@ function tones(crease: Uint8ClampedArray, x0: number, x1: number, y0: number, y1
 }
 
 describe("crease", () => {
+  it("keeps a flat raised sticker's height for its laminate reflection, without inventing a crease", () => {
+    const own = field((x) => (x < 90 ? 1 : 0));
+    const pixels = creasePixels({
+      width: W,
+      height: H,
+      surface: stackedSurface([everywhere], W, H, 1),
+      own,
+      scale: 1,
+      lights: CREASE_SIDES,
+    });
+    expect(pixels).not.toBeNull();
+    const center = ((H / 2) * W + W / 2) * 4 + 3;
+    expect(pixels?.height[center]).toBeGreaterThan(0);
+    expect(pixels?.height[((H / 2) * W + 100) * 4 + 3]).toBe(0);
+    const twiceAsHigh = creasePixels({
+      width: W,
+      height: H,
+      surface: stackedSurface([everywhere, everywhere], W, H, 1),
+      own,
+      scale: 1,
+      lights: CREASE_SIDES,
+    });
+    expect(twiceAsHigh?.height[center]).toBeGreaterThan(pixels?.height[center] ?? 0);
+    for (const image of ["base", "topLeft", "bottomRight", "topRight", "bottomLeft"] as const)
+      expect(pixels?.[image][center]).toBe(0);
+  });
+
   it("bridges a gap narrower than the ramp between stickers beneath, and dips into a wide one", () => {
     /** How far the draped surface falls in the middle of a gap `gap` px wide in a plateau. */
     const dipAcross = (gap: number) => {
@@ -74,7 +101,9 @@ describe("crease", () => {
         lights: CREASE_SIDES,
       });
       let most = 0;
-      for (const crease of pixels ? Object.values(pixels) : []) {
+      for (const image of ["base", "topLeft", "bottomRight", "topRight", "bottomLeft"] as const) {
+        const crease = pixels?.[image];
+        if (!crease) continue;
         for (let q = 3; q < crease.length; q += 4) most = Math.max(most, crease[q]);
       }
       return most;
