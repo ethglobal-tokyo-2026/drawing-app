@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 
 const evidence = fileURLToPath(
-  new URL("../../../data/verification/layer-selection-delight-2026-10-11/", import.meta.url),
+  new URL("../../../data/verification/layer-flash-2026-10-12/", import.meta.url),
 );
 
 declare global {
@@ -79,7 +79,6 @@ for (const device of ["phone", "tablet"] as const) {
             layer,
             above,
             inked: { x: 30, y: 30, w: 500, h: 390 },
-            below: document.createElement("canvas"),
             opacity: 100,
             sheet,
             onEnd: () => completed++,
@@ -130,7 +129,7 @@ for (const device of ["phone", "tablet"] as const) {
             animations: sheet.getAnimations({ subtree: true }).length,
           };
         }, scheme === "dark");
-        expect(initial.darkPixels).toBeGreaterThan(0);
+        expect(initial.darkPixels).toBe(0);
         expect(initial.lightPixels).toBeGreaterThan(0);
         expect(initial.darkEdge).toBeGreaterThan(0);
         expect(initial.lightEdge).toBeGreaterThan(0);
@@ -275,6 +274,154 @@ test("effective clipped ink and every display interruption release real browser 
   }
 });
 
+test("real ink has a readable dual contour and a gentle white pulse at every selected opacity", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const rows = await page.evaluate(async () => {
+    const { flashLayer } = await import("../src/sticker-creation/layers/layerFlash.ts");
+    const sheet = document.createElement("div");
+    sheet.style.cssText = "position:relative;width:160px;height:160px";
+    document.body.append(sheet);
+    const layer = document.createElement("canvas");
+    const above = document.createElement("canvas");
+    layer.width = layer.height = above.width = above.height = 160;
+    const g = layer.getContext("2d"),
+      ag = above.getContext("2d");
+    if (!g || !ag) throw new Error("No contour acceptance canvas context");
+    const rows = [];
+    for (const [color, opacity, alpha] of [
+      ["#ffffff", 1, 1],
+      ["#000000", 1, 1],
+      ["#ff4f9a", 74, 1],
+      ["#ff4f9a", 80, 1],
+      ["#ff4f9a", 100, 0.25],
+    ] as const) {
+      g.clearRect(0, 0, 160, 160);
+      g.globalAlpha = alpha;
+      g.fillStyle = color;
+      g.fillRect(30, 30, 100, 100);
+      g.globalAlpha = 1;
+      ag.clearRect(0, 0, 160, 160);
+      ag.fillStyle = "#ffffff";
+      ag.fillRect(80, 0, 80, 160);
+      const before = [layer.toDataURL(), above.toDataURL()];
+      const feedback = flashLayer({
+        layer,
+        above,
+        opacity,
+        inked: { x: 30, y: 30, w: 100, h: 100 },
+        sheet,
+        onEnd() {},
+      });
+      if (!feedback) throw new Error("No contour acceptance feedback");
+      const pulse = sheet.querySelector<HTMLCanvasElement>(".layer-flash__pulse");
+      const outline = sheet.querySelector<HTMLCanvasElement>(".layer-flash__outline");
+      const pg = pulse?.getContext("2d"),
+        og = outline?.getContext("2d");
+      if (!pulse || !outline || !pg || !og)
+        throw new Error("No contour acceptance feedback contexts");
+      for (const animation of sheet.getAnimations({ subtree: true })) {
+        animation.pause();
+        animation.currentTime = 100;
+      }
+      const data = og.getImageData(0, 0, 160, 160).data;
+      const edges = { exposedDark: 0, exposedWhite: 0, coveredDark: 0, coveredWhite: 0 };
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] < 200) continue;
+        const covered = (i / 4) % 160 >= 80;
+        if (data[i] < 60) edges[covered ? "coveredDark" : "exposedDark"]++;
+        if (data[i] > 240) edges[covered ? "coveredWhite" : "exposedWhite"]++;
+      }
+      const canvases = [
+        ...sheet.querySelectorAll<HTMLCanvasElement>("canvas[class*='layer-flash']"),
+      ];
+      const row = {
+        color,
+        opacity,
+        alpha,
+        edges,
+        pulse: [...pg.getImageData(60, 80, 1, 1).data],
+        coveredPulse: pg.getImageData(100, 80, 1, 1).data[3],
+        interiorContour: og.getImageData(80, 80, 1, 1).data[3],
+        pulsePeak: Number(getComputedStyle(pulse).opacity),
+        contourPeak: Number(getComputedStyle(outline).opacity),
+        unchanged: before[0] === layer.toDataURL() && before[1] === above.toDataURL(),
+        released: false,
+      };
+      feedback.cancel();
+      row.released = canvases.every((c) => c.width === 0 && c.height === 0);
+      rows.push(row);
+    }
+    sheet.remove();
+    return rows;
+  });
+  for (const row of rows) {
+    for (const count of Object.values(row.edges))
+      expect(count, `${row.color} ${row.opacity}% contour`).toBeGreaterThan(0);
+    expect(row.pulse.slice(0, 3)).toEqual([255, 255, 255]);
+    expect(row.pulse[3]).toBeCloseTo(row.alpha === 0.25 ? 64 : 255, 0);
+    expect(row.coveredPulse).toBe(0);
+    expect(row.interiorContour).toBe(0);
+    expect(row.pulsePeak).toBeCloseTo((0.14 * row.opacity) / 100, 5);
+    expect(row.contourPeak).toBeCloseTo(0.95, 5);
+    expect(row.unchanged).toBe(true);
+    expect(row.released).toBe(true);
+  }
+});
+
+test("a full sheet has an inset dual contour while a clear hole stays clear", async ({ page }) => {
+  await page.goto("/");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const rows = await page.evaluate(async () => {
+    const { flashLayer } = await import("../src/sticker-creation/layers/layerFlash.ts");
+    const sheet = document.createElement("div");
+    sheet.style.cssText = "position:relative;width:160px;height:160px";
+    document.body.append(sheet);
+    const layer = document.createElement("canvas"),
+      above = document.createElement("canvas");
+    layer.width = layer.height = 160;
+    above.width = above.height = 0;
+    const g = layer.getContext("2d");
+    if (!g) throw new Error("No full sheet context");
+    const rows = [];
+    for (const hole of [false, true]) {
+      g.fillRect(0, 0, 160, 160);
+      if (hole) g.clearRect(40, 0, 20, 20);
+      const feedback = flashLayer({
+        layer,
+        above,
+        opacity: 1,
+        inked: { x: 0, y: 0, w: 160, h: 160 },
+        sheet,
+        onEnd() {},
+      });
+      const outline = sheet.querySelector<HTMLCanvasElement>(".layer-flash__outline");
+      const og = outline?.getContext("2d");
+      if (!feedback || !outline || !og) throw new Error("No full sheet contour");
+      rows.push({
+        hole,
+        insetWhite: [...og.getImageData(80, 6, 1, 1).data],
+        insetDark: [...og.getImageData(80, 8, 1, 1).data],
+        clearHole: og.getImageData(50, 6, 1, 1).data[3],
+        center: og.getImageData(80, 80, 1, 1).data[3],
+        peak: Number(outline.style.opacity),
+        animations: sheet.getAnimations({ subtree: true }).length,
+      });
+      feedback.cancel();
+    }
+    sheet.remove();
+    return rows;
+  });
+  expect(rows[0].insetWhite.slice(0, 3)).toEqual([255, 255, 255]);
+  expect(rows[0].insetWhite[3]).toBeGreaterThan(100);
+  expect(rows[0].insetDark[0]).toBeLessThan(60);
+  expect(rows[0].insetDark[3]).toBeGreaterThan(100);
+  expect(rows[1].clearHole).toBe(0);
+  expect(rows.every((r) => r.center === 0 && r.peak === 0.95 && r.animations === 0)).toBe(true);
+});
+
 test("tiny real raster marks stay small beside a broad fill", async ({ page }) => {
   await page.goto("/");
   await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -304,7 +451,6 @@ test("tiny real raster marks stay small beside a broad fill", async ({ page }) =
         flash = flashLayer({
           layer,
           above: empty,
-          below: empty,
           opacity: 100,
           inked: { x: 80, y: 80, w: broad ? 620 : 4, h: broad ? 400 : 4 },
           sheet,
@@ -357,13 +503,24 @@ test("every device-pixel hairline phase keeps visible selection feedback", async
         const feedback = flashLayer({
           layer,
           above: empty,
-          below: empty,
           opacity: 100,
           inked: { x: 90 + phase, y: 60, w: 1, h: 180 },
           sheet,
           onEnd() {},
         });
-        if (!feedback || !sheet.querySelector(".layer-flash__pulse"))
+        const outline = sheet.querySelector<HTMLCanvasElement>(".layer-flash__outline");
+        const data = outline
+          ?.getContext("2d")
+          ?.getImageData(0, 0, outline.width, outline.height).data;
+        let dark = 0,
+          white = 0;
+        if (data)
+          for (let i = 0; i < data.length; i += 4) {
+            if (!data[i + 3]) continue;
+            if (data[i] < 60) dark++;
+            if (data[i] > 240) white++;
+          }
+        if (!feedback || !sheet.querySelector(".layer-flash__pulse") || !dark || !white)
           failures.push(`${alpha}:${phase}`);
         feedback?.cancel();
       }
@@ -392,12 +549,9 @@ test("a nearly full layer never marks clear holes as selected ink", async ({ pag
     g.fillRect(0, 0, 374, 828);
     g.clearRect(40, 0, 20, 20);
     ag.fillRect(40, 0, 20, 20);
-    const empty = document.createElement("canvas");
-    empty.width = empty.height = 0;
     const feedback = flashLayer({
       layer,
       above,
-      below: empty,
       opacity: 100,
       inked: { x: 0, y: 0, w: 374, h: 828 },
       sheet,
@@ -436,7 +590,6 @@ test("changing reduced motion cancels browser playback immediately", async ({ pa
       layer,
       above,
       inked: { x: 20, y: 20, w: 100, h: 100 },
-      below: document.createElement("canvas"),
       opacity: 100,
       sheet: document.body,
       onEnd: () => {

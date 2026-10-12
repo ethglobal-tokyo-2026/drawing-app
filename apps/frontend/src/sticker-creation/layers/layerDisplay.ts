@@ -394,7 +394,6 @@ export class LayerDisplay implements SheetDisplay {
       layer: canvas,
       inked: { x: box.x * d, y: box.y * d, w: box.w * d, h: box.h * d },
       above: this.above.canvas,
-      below: this.below.canvas,
       opacity: (layer.opacity * (base?.opacity ?? 100)) / 100,
       sheet: this.host,
       onEnd: () => {

@@ -43,6 +43,11 @@
     #status {
       min-height: 24px;
     }
+    header label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
   </style>
   <header>
     <label
@@ -58,14 +63,25 @@
         <option value="black">Black fill</option>
         <option value="pink">Pink fill</option>
         <option value="white">White fill</option>
+        <option value="dot">Isolated dot</option>
+        <option value="thin">Thin stroke</option>
+      </select></label
+    ><label
+      >Shape
+      <select id="shape">
+        <option value="oval">Oval</option>
+        <option value="full">Full sheet</option>
+        <option value="hole">Full sheet with clear hole</option>
       </select></label
     ><label
       >Opacity
       <select id="opacity">
         <option value="100">100%</option>
         <option value="74">74%</option>
+        <option value="80">80%</option>
         <option value="1">1%</option>
       </select></label
+    ><label><input id="cover" type="checkbox" checked />Covering ink</label
     ><button id="replay">Replay selection</button><button id="pop">Freeze pop</button
     ><button id="fall">Freeze falling</button><button id="measure">Measure five selections</button
     ><button id="cancel">Cancel feedback</button>
@@ -117,18 +133,29 @@
           g.bezierCurveTo(w * 0.3, y - 25, w * 0.66, y + 25, w - 40, y);
           g.stroke();
         }
+      } else if (mode === "dot" || mode === "thin") {
+        g.fillStyle = "#000";
+        if (mode === "dot") g.fillRect(w / 2, h / 2, 2, 2);
+        else g.fillRect(w / 2, h * 0.25, 0.5, h * 0.5);
       } else {
         g.fillStyle = mode === "black" ? "#000" : mode === "white" ? "#fff" : "#ff4f9a";
-        g.beginPath();
-        g.ellipse(w / 2, h / 2, w * 0.35, h * 0.27, 0, 0, Math.PI * 2);
-        g.fill();
+        if ($("shape").value === "oval") {
+          g.beginPath();
+          g.ellipse(w / 2, h / 2, w * 0.35, h * 0.27, 0, 0, Math.PI * 2);
+          g.fill();
+        } else {
+          g.fillRect(0, 0, w, h);
+          if ($("shape").value === "hole") g.clearRect(40, 0, 20, 20);
+        }
       }
       const ag = above.getContext("2d");
       ag.scale(d, d);
-      ag.fillStyle = "#1c1824";
-      ag.fillRect(w * 0.66, h * 0.22, w * 0.22, h * 0.2);
-      ag.fillStyle = "#fff";
-      ag.fillRect(w * 0.66, h * 0.5, w * 0.22, h * 0.2);
+      if ($("cover").checked) {
+        ag.fillStyle = "#1c1824";
+        ag.fillRect(w * 0.66, h * 0.22, w * 0.22, h * 0.2);
+        ag.fillStyle = "#fff";
+        ag.fillRect(w * 0.66, h * 0.5, w * 0.22, h * 0.2);
+      }
       current.style.opacity = Number($("opacity").value) / 100;
       $("status").textContent = "Ready";
     }
@@ -138,7 +165,6 @@
         layer,
         inked: { x: 0, y: 0, w: layer.width, h: layer.height },
         above,
-        below,
         opacity: Number($("opacity").value),
         sheet,
         onEnd() {
@@ -146,7 +172,8 @@
         },
       });
     }
-    for (const id of ["size", "ink", "opacity"]) $(id).addEventListener("change", render);
+    for (const id of ["size", "ink", "shape", "opacity", "cover"])
+      $(id).addEventListener("change", render);
     $("replay").onclick = () => {
       play();
       $("status").textContent = "Playing";
@@ -239,6 +266,8 @@
               size: $("size").value,
               ink: $("ink").value,
               opacity: $("opacity").value,
+              shape: $("shape").value,
+              coveringInk: $("cover").checked,
               density: 2,
               rows,
             },
