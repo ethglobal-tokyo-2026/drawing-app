@@ -47,7 +47,7 @@ interface ScreenFrames {
   slow: number;
 }
 
-/** The frames that began in a stretch of time, such as the 5s after the board was complete. */
+/** The frames that began in a stretch of time, such as the seconds after the board was complete. */
 export interface FrameWindow {
   label: string;
   /** When it starts, on the performance.now() clock, and how long it lasts. */
@@ -391,7 +391,7 @@ export function notePerformance(kind: string, detail: string): void {
 
 /**
  * While recording, the frames that begin in the `ms` from `from` are summed up apart, under `label`,
- * such as the 5s after the board was complete.
+ * such as the seconds after the board was complete.
  */
 export function watchFrames(label: string, from: number, ms: number): void {
   if (!stopRecording) return;

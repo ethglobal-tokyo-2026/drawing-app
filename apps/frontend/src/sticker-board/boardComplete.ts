@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { noteBootMilestone } from "../performance/bootMilestones";
+import {
+  afterBoardCompleteLabel,
+  FRAMES_AFTER_BOARD_COMPLETE_MS,
+  noteBootMilestone,
+} from "../performance/bootMilestones";
 import { watchFrames } from "../performance/performanceRecorder";
 import { onTheBoard, type BoardStickerView } from "./boardSticker";
 
@@ -14,8 +18,6 @@ import { onTheBoard, type BoardStickerView } from "./boardSticker";
 export const QUIET_MS = 1000;
 /** A board still assembling this long after it first showed counts as complete, so nothing waits for ever. */
 export const GIVE_UP_MS = 10_000;
-/** How much of the board's first motion the performance report sums up. */
-const FRAMES_AFTER_MS = 5000;
 
 let completeAt: number | null = null;
 const waiting = new Set<() => void>();
@@ -27,11 +29,7 @@ export function markBoardComplete(): void {
   completeAt = performance.now();
   clearTimeout(givingUp);
   noteBootMilestone("board complete", undefined, completeAt);
-  watchFrames(
-    `the ${FRAMES_AFTER_MS / 1000}s after the board was complete`,
-    completeAt,
-    FRAMES_AFTER_MS,
-  );
+  watchFrames(afterBoardCompleteLabel(), completeAt, FRAMES_AFTER_BOARD_COMPLETE_MS);
   for (const done of waiting) done();
   waiting.clear();
   // The board holds its images now.

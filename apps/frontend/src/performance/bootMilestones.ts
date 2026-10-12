@@ -1,4 +1,5 @@
 import liff from "@line/liff";
+import { i18next } from "../i18n/i18n";
 import { notePerformance } from "./performanceRecorder";
 
 /**
@@ -25,6 +26,15 @@ export interface BootMilestone {
   /** A few words more, such as how many stickers. */
   detail?: string;
 }
+
+/** How much of the board's first motion, from "board complete", the performance report sums up. */
+export const FRAMES_AFTER_BOARD_COMPLETE_MS = 5000;
+
+/** The stretch the report watches from "board complete", by the name it reports it under. */
+export const afterBoardCompleteLabel = () =>
+  i18next.t(($) => $.stickerBoard.developer.performance.lines.window.afterBoardComplete, {
+    seconds: `${FRAMES_AFTER_BOARD_COMPLETE_MS / 1000}s`,
+  });
 
 const reached = new Map<BootStep, BootMilestone>();
 

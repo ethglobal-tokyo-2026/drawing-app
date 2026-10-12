@@ -1,6 +1,10 @@
 import { describe, expect, it, onTestFinished } from "vitest";
 import { i18next } from "../i18n/i18n";
-import type { BootMilestone } from "./bootMilestones";
+import {
+  afterBoardCompleteLabel,
+  FRAMES_AFTER_BOARD_COMPLETE_MS,
+  type BootMilestone,
+} from "./bootMilestones";
 import type {
   FrameWindow,
   PerformanceSummary,
@@ -36,14 +40,16 @@ const start: BootMilestone[] = [
 ];
 /** 300 frames from 2451ms: all 16ms, but for a 50ms one 0.4s in. */
 const afterTheBoard: FrameWindow = {
-  label: "the 5s after the board was complete",
+  label: afterBoardCompleteLabel(),
   from: 2451,
-  ms: 5000,
+  ms: FRAMES_AFTER_BOARD_COMPLETE_MS,
   frames: 300,
   slow: 1,
   worst: { ms: 50, at: 2851 },
   intervals: Array.from({ length: 300 }, (_, i) => (i === 24 ? 50 : 16)),
 };
+/** The board's watched stretch, as it opens a line of the report. */
+const AFTER_THE_BOARD = `${afterTheBoard.label.charAt(0).toUpperCase()}${afterTheBoard.label.slice(1)}`;
 const slowFrame: SlowFrame = {
   start: 65_200,
   end: 65_384,
@@ -208,7 +214,7 @@ describe("the performance report", () => {
     expect(report({ windows: [afterTheBoard] }, [slowFrame], start)).toContain(
       [
         i18next.t(($) => $.stickerBoard.developer.performance.lines.window.frames, {
-          label: "The 5s after the board was complete",
+          label: AFTER_THE_BOARD,
           frames: "300",
           seconds: "4.8s",
         }),
@@ -233,7 +239,8 @@ describe("the performance report", () => {
 
   it("says when the board's first seconds weren't recorded", () => {
     const notRecorded = i18next.t(
-      ($) => $.stickerBoard.developer.performance.lines.window.boardNotRecorded,
+      ($) => $.stickerBoard.developer.performance.lines.window.notRecorded,
+      { label: AFTER_THE_BOARD },
     );
     expect(report({}, [slowFrame], start)).toContain(notRecorded);
     expect(report({}, [slowFrame], [])).not.toContain(notRecorded);

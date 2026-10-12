@@ -340,9 +340,9 @@ export const stickerBoard = {
           worst: { en: "worst {{worst}} at {{at}}" },
           typical: { en: "typical {{typical}} ({{fps}})" },
           percentile95: { en: "95th percentile {{interval}}" },
-          boardNotRecorded: {
-            en: "The 5s after the board was complete: not recorded, as the recorder was off then",
-          },
+          notRecorded: { en: "{{label}}: not recorded, as the recorder was off then" },
+          /** The stretch watched once the board is complete. */
+          afterBoardComplete: { en: "the {{seconds}} after the board was complete" },
         },
         recorded: { en: "{{span}} recorded · {{frames}} frames · {{slow}} slow ({{share}})" },
         worst: { en: "Worst {{worst}} at {{at}} on {{screen}}" },

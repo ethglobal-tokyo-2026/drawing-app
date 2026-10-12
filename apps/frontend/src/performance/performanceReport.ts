@@ -1,5 +1,5 @@
 import { i18next } from "../i18n/i18n";
-import type { BootMilestone } from "./bootMilestones";
+import { afterBoardCompleteLabel, type BootMilestone } from "./bootMilestones";
 import type {
   FrameWindow,
   PerformanceSummary,
@@ -195,10 +195,13 @@ function percentile(values: readonly number[], part: number): number {
   return sorted[Math.max(0, Math.ceil(part * sorted.length) - 1)] ?? 0;
 }
 
+/** A watched stretch's label, opening a line. */
+const opening = (label: string) => `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
+
 /** A watched stretch's frames: how many, the slow ones, the worst, the pace and the long tail. */
 function windowLine(w: FrameWindow): string {
   const shown = w.intervals.reduce((sum, interval) => sum + interval, 0);
-  const label = `${w.label.charAt(0).toUpperCase()}${w.label.slice(1)}`;
+  const label = opening(w.label);
   if (w.frames === 0)
     return i18next.t(($) => $.stickerBoard.developer.performance.lines.window.noFrames, { label });
   const typical = percentile(w.intervals, 0.5);
@@ -234,7 +237,11 @@ function windowLine(w: FrameWindow): string {
 function windowLines(summary: PerformanceSummary, start: readonly BootMilestone[]): string[] {
   if (summary.windows.length > 0) return [...summary.windows.map(windowLine), ""];
   if (!start.some((m) => m.step === "board complete")) return [];
-  return [i18next.t(($) => $.stickerBoard.developer.performance.lines.window.boardNotRecorded), ""];
+  const label = opening(afterBoardCompleteLabel());
+  return [
+    i18next.t(($) => $.stickerBoard.developer.performance.lines.window.notRecorded, { label }),
+    "",
+  ];
 }
 
 /**
