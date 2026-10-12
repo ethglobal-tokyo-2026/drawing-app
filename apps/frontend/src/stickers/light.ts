@@ -22,6 +22,8 @@ import { sheenIn, sweepSheen } from "./resinSheen";
  */
 const MOVING =
   ".live-resin__plane > b, .live-resin__height > b, .live-resin__spec > b, .sticker-foil__sheen, .sticker-foil__glint";
+/** Only these highlights can continue a replay toward each new light position. */
+export const movesWithLight = (target: Element): boolean => target.matches(MOVING);
 /**
  * Each crease, which takes the light only once it rests: restyling every crease's layers on each write
  * drops frames while the light moves, and its fade glides it there after.
@@ -104,6 +106,67 @@ function setLight(els: NodeListOf<HTMLElement> | HTMLElement[], light: Light | n
   return els.length;
 }
 
+/**
+ * Highlights' glides a reorder cut short and replayed (KeepAnimations), by the property each moves.
+ * A transition can't start under a replay, so each light move glides them on from where they show.
+ */
+const replays = new Map<Animation, string>();
+
+/** Hands the light a replayed glide; one on a highlight the light moves glides on with its moves. */
+export function glideOnWithLight(replay: Animation, property: string) {
+  const target = replay.effect instanceof KeyframeEffect ? replay.effect.target : null;
+  if (!target || !movesWithLight(target)) return;
+  replays.set(replay, property);
+  const drop = () => replays.delete(replay);
+  replay.finished.then(drop, drop);
+}
+
+/** Ends a board's replays before its highlights leave the page, even if another screen holds the light. */
+export function stopLightGlides(root: Element) {
+  for (const replay of replays.keys()) {
+    const target = replay.effect instanceof KeyframeEffect ? replay.effect.target : null;
+    if (!target || !root.contains(target)) continue;
+    replay.cancel();
+    replays.delete(replay);
+  }
+}
+
+/** A CSS property's name as a keyframe names it. */
+const keyframeName = (property: string) =>
+  property.startsWith("--")
+    ? property
+    : property.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+
+/**
+ * Before the light moves, starts each replay over from where it shows, at its own pace, toward an end
+ * left open: wherever the light's new value puts it. Every shown value is read before any restarts,
+ * so it's one style recalc. With the light cleared, they end.
+ */
+function glideOnReplays(win: Window, moving: boolean) {
+  if (replays.size === 0) return;
+  const shown = [...replays].map(([replay, property]) => {
+    const effect = replay.effect instanceof KeyframeEffect ? replay.effect : null;
+    const target = effect?.target;
+    const value =
+      moving && target?.isConnected
+        ? win.getComputedStyle(target, effect?.pseudoElement).getPropertyValue(property)
+        : "";
+    return { replay, property, effect, value };
+  });
+  replays.clear();
+  for (const { replay, property, effect, value } of shown) {
+    replay.cancel();
+    if (!effect?.target || !value) continue;
+    const { duration, easing } = effect.getTiming();
+    const next = effect.target.animate([{ [keyframeName(property)]: value, offset: 0 }], {
+      duration,
+      easing,
+      pseudoElement: effect.pseudoElement ?? undefined,
+    });
+    glideOnWithLight(next, property);
+  }
+}
+
 /** Sets the light on what reads it in `el`, newly shown, so it matches the rest at once. */
 export function lightUp(el: HTMLElement) {
   const within = (selector: string) =>
@@ -157,6 +220,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     win.clearTimeout(settle);
     if (light) settle = win.setTimeout(settleCreases, CREASE_SETTLE_MS);
     else settleCreases();
+    glideOnReplays(win, light !== null);
     return setLight(root.querySelectorAll<HTMLElement>(MOVING), light);
   };
 
@@ -256,7 +320,10 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   reduced.addEventListener("change", onMotionSetting);
   return () => {
     own.off();
-    if (light === own) light = null;
+    if (light === own) {
+      light = null;
+      glideOnReplays(win, false);
+    }
     reduced.removeEventListener("change", onMotionSetting);
     win.cancelAnimationFrame(frame);
     win.clearTimeout(settle);

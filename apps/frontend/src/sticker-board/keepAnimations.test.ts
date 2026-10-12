@@ -1,6 +1,13 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from "vitest";
-import { readClocks, restoreClocks, type Clocked } from "./keepAnimations";
+import { describe, expect, it, vi } from "vitest";
+import {
+  readClocks,
+  readGlides,
+  replayGlides,
+  restoreClocks,
+  type Clocked,
+  type Gliding,
+} from "./keepAnimations";
 
 /** A CSS animation on `target`, pending until its clock says otherwise. */
 const animation = (
@@ -56,5 +63,60 @@ describe("keeping animations through a reorder", () => {
     for (const fresh of [elsewhere, otherPseudo, otherName]) {
       expect(fresh.clock).toMatchObject({ startTime: null, currentTime: 0 });
     }
+  });
+});
+
+/** A highlight's glide from 0 to 100px, `currentTime` into its 280ms, on an element still on the page. */
+const glide = (pseudo: string | null = null, currentTime = 120) => {
+  const replay = new Animation();
+  const target = { isConnected: true, animate: vi.fn(() => replay) };
+  const gliding: Gliding = {
+    transition: {},
+    property: "translate",
+    currentTime,
+    target,
+    effect: {
+      pseudoElement: pseudo,
+      getKeyframes: () => [
+        { offset: 0, computedOffset: 0, easing: "linear", composite: "auto", translate: "0px" },
+        { offset: 1, computedOffset: 1, easing: "linear", composite: "auto", translate: "100px" },
+      ],
+      getTiming: () => ({ duration: 280, easing: "ease-out", delay: 0, fill: "backwards" }),
+    },
+  };
+  return { gliding, target, replay };
+};
+
+describe("keeping glides through a reorder", () => {
+  it("replays a glide the re-insert cut short from where it was, on its element or its pseudo-element", () => {
+    const [own, before] = [glide(null, 120), glide("::before", 200)];
+    const glides = readGlides([own.gliding, before.gliding]);
+    // Cut short by the re-insert: neither runs any more.
+    const replays = replayGlides(glides, new Set());
+
+    expect(replays.map((r) => r.property)).toEqual(["translate", "translate"]);
+    for (const [{ target, replay }, pseudo, at] of [
+      [own, undefined, 120],
+      [before, "::before", 200],
+    ] as const) {
+      expect(target.animate).toHaveBeenCalledExactlyOnceWith(
+        [
+          { offset: 0, easing: "linear", composite: "auto", translate: "0px" },
+          { offset: 1, easing: "linear", composite: "auto", translate: "100px" },
+        ],
+        { duration: 280, easing: "ease-out", delay: 0, pseudoElement: pseudo },
+      );
+      expect(replay.currentTime).toBe(at);
+    }
+  });
+
+  it("leaves a glide that kept running, and one on an element no longer on the page", () => {
+    const [kept, gone] = [glide(), glide()];
+    gone.target.isConnected = false;
+    const glides = readGlides([kept.gliding, gone.gliding]);
+
+    expect(replayGlides(glides, new Set([kept.gliding.transition]))).toEqual([]);
+    expect(kept.target.animate).not.toHaveBeenCalled();
+    expect(gone.target.animate).not.toHaveBeenCalled();
   });
 });
