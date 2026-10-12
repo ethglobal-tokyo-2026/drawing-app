@@ -301,8 +301,10 @@ test("restoring opacity replaces an empty preview with ready ink", async ({ page
   await button(page, stickerBoard.board.continueDrawing).click();
   await expect(page.locator(".ink-sheet")).toBeVisible();
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBe(0);
+  await options(page, 2);
   await button(page, copy.showLayer).click();
   await expect.poll(() => inkedPixels(page, ".ink-sheet")).toBeGreaterThan(0);
+  await chip(page, 2).click();
   await openSealSheet(page, language);
   await expect(page.locator(".seal-preview__ink")).toBeVisible();
   await expect(page.getByRole("switch", { name: creation.sealSheet.nsfwLabel.en })).toBeVisible();
