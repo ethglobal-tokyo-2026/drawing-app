@@ -315,6 +315,8 @@ export function useCrease(id: string): Crease | undefined {
 
 /** The mounted boards' stores, by the board id their batches carry back in the worker's replies. */
 const stores = new Map<string, CreaseStore>();
+/** Mounted boards that still show creases and may need another bake. */
+const showing = new Set<string>();
 let worker: Worker | null = null;
 /** Whether a worker can paint here, checked once, the first time it's asked. */
 let workerPaints: boolean | null = null;
@@ -365,7 +367,9 @@ function creaseWorker(): Worker | null {
   const started = new Worker(new URL("../stickers/creaseWorker.ts", import.meta.url), {
     type: "module",
   });
-  started.onmessage = (event: MessageEvent<CreaseReply>) => heard(event.data);
+  started.onmessage = (event: MessageEvent<CreaseReply>) => {
+    if (worker === started) heard(event.data);
+  };
   // A script that didn't load reports a bare event, with no message: a page open since before a
   // deploy asks for the old build's worker, which the deploy removed.
   started.onerror = (event) =>
@@ -382,7 +386,7 @@ function creaseWorker(): Worker | null {
 
 /** Tells the worker, if it's running, that a board wants nothing baked, so it drops the board's batch. */
 function bakeNothingFor(board: string) {
-  const message: CreaseBatch = { board, batch: ++batches, jobs: [] };
+  const message: CreaseBatch = { board, batch: ++batches, jobs: [], start: false };
   worker?.postMessage(message);
 }
 
@@ -435,6 +439,17 @@ export function useCreases<S extends CreaseSticker>({
     };
   }, [board, store]);
 
+  useEffect(() => {
+    if (shown) showing.add(board);
+    return () => {
+      showing.delete(board);
+      if (!showing.size && worker) {
+        worker.terminate();
+        worker = null;
+      }
+    };
+  }, [board, shown]);
+
   const bake = useEffectEvent(() => {
     const jobs =
       shown && field && unit
@@ -451,11 +466,23 @@ export function useCreases<S extends CreaseSticker>({
       bakeNothingFor(board);
       return undefined;
     }
+    // Tell an existing worker about changed keys now. A quick A → B → A before the settle timer
+    // must invalidate A's old answer, while a still-wanted pending A keeps its bake.
+    try {
+      worker?.postMessage({
+        board,
+        batch: ++batches,
+        jobs: todo,
+        start: false,
+      } satisfies CreaseBatch);
+    } catch (error) {
+      console.error(`The crease worker could not record ${todo.length} wanted stickers`, error);
+    }
     const timer = window.setTimeout(() => {
       // A bake of the last batch may have landed while the board held still.
       const left = store.stillToBake(todo);
       if (!left.length) return;
-      const message: CreaseBatch = { board, batch: ++batches, jobs: left };
+      const message: CreaseBatch = { board, batch: ++batches, jobs: left, start: true };
       // Creases are decoration: a worker that can't start leaves the board without them, and says so.
       try {
         creaseWorker()?.postMessage(message);

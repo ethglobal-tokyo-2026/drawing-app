@@ -1,20 +1,23 @@
-Sticker crease: end-of-feature reviews, 2026-10-09. Kept until the fixes are live and measured on ad0ll's phone.
+Sticker crease follow-ups, reassessed October 12, 2026.
 
-On main (350ef728), behind the developer slip's "Show creases on this device", off by default:
-- the reviews' fixes: creases take the light only once it rests (settle); a base image keeps the
-  shoulder and foot under any light; turned stickers' affine rounding; worker safeguards (paint check,
-  timeouts, failed bakes recorded, a dead worker replaced); empty batches stop a gone board's bakes;
-  no re-press of a crease already shown; a 64-mask cache; tests and comments (code-review.txt F1–F8)
-- the performance recorder sends its report to the server log while it's on; read phone reports with
-    curl -s 'https://stickeroo.art/api/logs?lines=5000' | rg '"event":"performance.report"'
+The feature is deployed and remains behind the developer slip's "Show creases on this device",
+off by default. The thought trails and overlap-height gloss shipped in c1a6368e.
 
-Live since main e4999efa was deployed, 2026-10-10 13:31 UTC. The live bundle has the upload call,
-settle, the worker's base image and bake timeout, and the developer slip.
+The current follow-up changes:
+- terminate the shared worker when no board shows creases, releasing its decoded mask cache;
+- share still-wanted pending jobs across batches and skip completed jobs without retaining their blobs;
+- tell the worker about changed keys immediately, before the 90 ms settle delay, so a quick
+  change and return cannot leave a sticker waiting for a result the worker thinks it already posted;
+- keep each crease in its own composited surface so WebKit does not repaint the overlapping board
+  when the directional opacity fades end. The light, tones, fades, and device switch stay the same.
 
-Open:
-- measure on ad0ll's phone with the recorder once live (performance.txt has this Mac's numbers)
-- WebKit's long frame as the crease fades end (performance.txt): two layers per crease is the next step
-- critique.txt finding 1 (soften the line: RAMP, ROUND, tones) is ad0ll's call; they approved 0.7
-- not done from code-review.txt: the worker skipping a job it already posted (F3 option), terminating
-  the worker when no board is left (F5 option); DEPTH-4 kept by decision
-Delete this folder once those are settled.
+Physical iPhone measurement remains open. The connected phone was found, but Safari refused its
+WebDriver session because Web Inspector was disabled. Both Web Inspector and Remote Automation
+must be enabled under Settings > Apps > Safari > Advanced, with the phone unlocked.
+A desktop WebKit result does not establish actual phone performance.
+
+Current measurements, probe source, screenshots, and the original 32-sticker fixture are retained
+locally in data/verification/sticker-crease-2026-10-12/. The fixture's old databases must be copied
+for investigation and do not migrate directly through current drawn_width requirements.
+The superseded review screenshots, experimental patches, and full reviews remain in Git history.
+Delete this status record once the physical measurement is settled.

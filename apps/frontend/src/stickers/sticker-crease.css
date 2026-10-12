@@ -21,6 +21,8 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* Keep WebKit's crease fade from stalling when the light settles. */
+  transform: translateZ(0);
   animation: sticker-crease-in 360ms var(--ease-out) both;
 }
 

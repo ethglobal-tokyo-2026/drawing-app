@@ -4,6 +4,7 @@
  * replaces whatever of the last one hasn't started.
  */
 import { releaseCanvas } from "../ui/releaseCanvas";
+import { createCreaseBatchHandler } from "./creaseBatch";
 import { creasePixels, stackedSurface, type CreaseImage, type CreaseSide } from "./crease";
 import { maskCache } from "./maskCache";
 
@@ -78,6 +79,8 @@ export interface CreaseBatch {
   /** The board it's for: a newer batch replaces only that board's. */
   board: string;
   batch: number;
+  /** Record the wanted keys now, but let the board settle before starting a new bake. */
+  start: boolean;
   jobs: CreaseJob[];
 }
 
@@ -210,32 +213,9 @@ async function within<T>(work: Promise<T>, ms: number): Promise<T> {
   }
 }
 
-/** Each board's latest batch. */
-const current = new Map<string, number>();
+const receiveBatch = createCreaseBatchHandler(
+  (board, job) => within(bake(board, job), BAKE_TIMEOUT_MS),
+  (reply) => self.postMessage(reply),
+);
 
-self.onmessage = (event) => {
-  const { board, batch, jobs } = event.data;
-  // An empty batch says the board wants nothing more, or has gone: its last batch's rest is dropped.
-  if (!jobs.length) {
-    current.delete(board);
-    return;
-  }
-  current.set(board, batch);
-  void (async () => {
-    for (const job of jobs) {
-      // A newer batch for this board has its whole stack again; this one's rest is stale.
-      if (current.get(board) !== batch) return;
-      try {
-        self.postMessage(await within(bake(board, job), BAKE_TIMEOUT_MS));
-      } catch (error) {
-        self.postMessage({
-          ok: false,
-          board,
-          id: job.id,
-          key: job.key,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-  })();
-};
+self.onmessage = (event) => receiveBatch(event.data);
