@@ -33,7 +33,7 @@ export interface DieCut {
   bounds: Bounds;
   /** The cut line, closed, through cell centers. */
   contour: Point[];
-  /** Cut as a rounded square, because the ink fills the sheet or runs off it. */
+  /** Cut as a rounded square, because the ink fills the sheet. */
   square: boolean;
 }
 
@@ -417,13 +417,7 @@ export function dieCut(ink: Pixels, borderPx: number): DieCut | null {
   }
   if (!count) return null;
 
-  const edges = [
-    ink0.y0 - pad <= 1,
-    ink0.y1 - pad >= ih - 2,
-    ink0.x0 - pad <= 1,
-    ink0.x1 - pad >= iw - 2,
-  ].filter(Boolean).length;
-  const square = count / (iw * ih) > FULL_BLEED || edges >= 3;
+  const square = count / (iw * ih) > FULL_BLEED;
   const inside = (m: Uint8Array) =>
     distanceTo(
       m.map((v) => 1 - v),
