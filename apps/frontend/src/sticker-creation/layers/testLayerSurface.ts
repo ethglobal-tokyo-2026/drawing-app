@@ -108,16 +108,20 @@ export class TestLayerSurface implements LayerSurface<TestHold> {
     write: () => void,
     retain?: readonly LayerId[],
   ): void {
-    const ids = typeof layer === "number" ? [layer] : layer;
-    const originals = new Map(ids.map((id) => [id, this.pixelsOf(id)]));
+    const ids = typeof layer === "number" ? [layer] : [...new Set(layer)];
+    const originals = new Map(ids.map((id) => [id, this.pixels.get(id)]));
+    for (const id of ids) this.pixels.delete(id);
     const kept = new Set(retain ?? ids);
     let succeeded = false;
     try {
       write();
       succeeded = true;
     } finally {
-      for (const [id, pixels] of originals)
-        if (!succeeded || !kept.has(id)) this.pixels.set(id, pixels);
+      for (const [id, pixels] of originals) {
+        if (succeeded && kept.has(id)) continue;
+        this.pixels.delete(id);
+        if (pixels) this.pixels.set(id, pixels);
+      }
     }
   }
 

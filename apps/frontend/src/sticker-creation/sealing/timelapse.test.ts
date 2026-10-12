@@ -2,8 +2,8 @@ import { MAX_TIMELAPSE_BYTES, type TimelapseV4 } from "@drawing-app/api/client";
 import { storedFromV1 } from "@drawing-app/api/testing/timelapses";
 import { describe, expect, it, vi } from "vitest";
 import { seededRandom } from "../../ui/seededRandom";
-import { FILL_GAP } from "../canvas/fill";
-import type { Op, Step } from "../canvas/ops";
+import { FILL_GAP, floodFill, type Pixels } from "../canvas/fill";
+import type { FillOp, Op, Step } from "../canvas/ops";
 import { FIRST_LAYERS, type LayerState } from "../layers/layerState";
 import { decodeTimelapse, encodeTimelapse, gzipTimelapse } from "./timelapse";
 
@@ -265,4 +265,44 @@ describe("the timelapse", () => {
     expect(await gzipTimelapse(huge, report)).toBeNull();
     expect(report).toHaveBeenCalledWith(expect.stringContaining("over the server's limit"));
   });
+});
+
+it("encodes grouped fills as ordinary v4 tuples and replays chained colors in order", () => {
+  // Adjacent regions differ pairwise within tolerance, but the endpoints are outside it.
+  const steps: FillOp[] = [
+    { tool: "fill", reference: "layer", layer: 1, color: "#00ff00", T: 0, x: 0.5, y: 0.5, gap: 0 },
+    {
+      tool: "fill",
+      reference: "layer",
+      layer: 1,
+      color: "#00ff00",
+      T: 1,
+      x: 2.5,
+      y: 0.5,
+      gap: 0,
+      undoWithPrevious: true,
+    },
+  ];
+  const encoded = encodeTimelapse({ ...input, steps, frame: { w: 3, h: 1, density: 1 } });
+  expect(encoded.v).toBe(4);
+  expect(encoded.ops).toEqual([
+    ["fill", 1, "#00ff00", 0, 0.5, 0.5, 0, "layer"],
+    ["fill", 1, "#00ff00", 1, 2.5, 0.5, 0, "layer"],
+  ]);
+  const decoded = decodeTimelapse(encoded).steps;
+  expect(decoded).toEqual(steps.map(({ undoWithPrevious: _group, ...op }) => op));
+  const paint = (ops: readonly Step[]) => {
+    const image: Pixels = {
+      width: 3,
+      height: 1,
+      data: new Uint8ClampedArray([255, 90, 54, 255, 255, 110, 80, 255, 255, 130, 106, 255]),
+    };
+    for (const op of ops) {
+      if (op.tool !== "fill") throw new Error("Expected a fill");
+      floodFill(image, Math.floor(op.x), Math.floor(op.y), [0, 255, 0], op.gap);
+    }
+    return [...image.data];
+  };
+  expect(paint(steps)).toEqual([0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255]);
+  expect(paint(decoded)).toEqual(paint(steps));
 });

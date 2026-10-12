@@ -1,5 +1,7 @@
 import { releaseCanvas } from "../../ui/releaseCanvas";
 import { blankCanvas } from "../canvas/context2d";
+import type { Pixels } from "../canvas/fill";
+import { FillError } from "../canvas/fill-worker/errors";
 import { STRIDE, type LayerId, type StrokeOp } from "../canvas/ops";
 import { paintedRadius, paintStroke } from "../canvas/paintStroke";
 import type { Rect } from "../sealing/stickerPasses";
@@ -137,6 +139,8 @@ export class LayerDisplay implements SheetDisplay {
   /** The current layer's canvas, mounted under wet; null while the layer has none. */
   private mounted: HTMLCanvasElement | null = null;
   private stroke: WetStroke | null = null;
+  /** Wet replaces the complete current layer while a prepared Fill awaits acceptance. */
+  private fillPreview = false;
   /** The current layer's flash while it plays. */
   private flashing: LayerFlash | null = null;
   /** The tail as a stroke from the last settled point: one op, refilled each frame. */
@@ -149,11 +153,13 @@ export class LayerDisplay implements SheetDisplay {
   };
 
   /**
-   * Each layer's canvas, but wet for the current layer during a stroke: the layers clipped to it
-   * are cut to wet then, which holds the layer as shown, over a copy of it.
+   * Each layer's canvas, but wet for the current layer during a stroke or Fill preview: layers
+   * clipped to it follow its current pixels there.
    */
   private readonly shownCanvasOf = (id: LayerId): HTMLCanvasElement | null =>
-    id === this.current && this.stroke ? this.wet.canvas : this.ink.layerCanvas(id);
+    id === this.current && (this.stroke || this.fillPreview)
+      ? this.wet.canvas
+      : this.ink.layerCanvas(id);
 
   constructor(host: HTMLElement, ink: LayerInk) {
     this.host = host;
@@ -171,6 +177,7 @@ export class LayerDisplay implements SheetDisplay {
 
   resize(): void {
     this.stopFlash();
+    this.clearFillPreview();
     // A covered sheet releases its canvases; returning mounts them before the ink is shown again.
     this.host.append(this.below.canvas, this.group, this.above.canvas);
     this.group.append(this.wet.canvas);
@@ -192,6 +199,7 @@ export class LayerDisplay implements SheetDisplay {
       throw new Error(`Layer ${current} isn't among the sheet's layers (${held})`);
     }
     this.stopFlash();
+    this.clearFillPreview();
     this.state = state;
     this.current = current;
     const layer = state.layers[at];
@@ -249,6 +257,46 @@ export class LayerDisplay implements SheetDisplay {
     if (this.clipping) this.redrawClipping(box);
   }
 
+  previewFill(layer: LayerId, at: Rect, pixels: Pixels): void {
+    if (layer !== this.current)
+      throw new Error(
+        `A Fill on layer ${layer} can't preview while layer ${this.current} is current`,
+      );
+    const { data } = pixels;
+    if (!(data.buffer instanceof ArrayBuffer))
+      throw new FillError("Fill preview has no transferable buffer");
+    const image = new ImageData(
+      new Uint8ClampedArray(data.buffer, data.byteOffset, data.length),
+      pixels.width,
+      pixels.height,
+    );
+    this.stopFlash();
+    this.endStroke();
+    this.showCurrent();
+    this.fillPreview = true;
+    const { g } = this.wet;
+    g.save();
+    try {
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, this.ink.width, this.ink.height);
+      if (this.mounted) g.drawImage(this.mounted, 0, 0);
+      g.putImageData(image, at.x, at.y);
+    } finally {
+      g.restore();
+    }
+    this.hideCovered();
+    // Replacing a preview can change ink outside its new patch.
+    this.redrawClipping({ x: 0, y: 0, w: this.ink.width, h: this.ink.height });
+  }
+
+  clearFillPreview(): void {
+    if (!this.fillPreview) return;
+    this.fillPreview = false;
+    clearAll(this.wet);
+    this.hideCovered();
+    this.redrawClipping({ x: 0, y: 0, w: this.ink.width, h: this.ink.height });
+  }
+
   /** Starts afresh, as if the stroke before it, if any, had ended. */
   beginStroke(op: StrokeOp): void {
     if (op.layer !== this.current) {
@@ -257,6 +305,7 @@ export class LayerDisplay implements SheetDisplay {
       );
     }
     this.stopFlash();
+    this.clearFillPreview();
     this.endStroke();
     this.showCurrent();
     const { locked } = this.state.layers[indexOf(this.state, op.layer)];
@@ -339,7 +388,7 @@ export class LayerDisplay implements SheetDisplay {
     const box = this.ink.inkBox(this.current);
     // A stroke owns the frames it paints in; a hidden or inkless layer has nothing to light.
     // The view holds only ink visible through the base, so a clipped layer lights only what it shows.
-    if (this.stroke || !canvas || !box || isHidden(layer)) return;
+    if (this.stroke || this.fillPreview || !canvas || !box || isHidden(layer)) return;
     const d = this.ink.density;
     this.flashing = flashLayer({
       layer: canvas,
@@ -356,6 +405,7 @@ export class LayerDisplay implements SheetDisplay {
 
   release(): void {
     this.stopFlash();
+    this.clearFillPreview();
     this.endStroke();
     this.closeView();
     for (const { canvas } of [this.below, this.wet, this.above]) releaseCanvas(canvas);
@@ -413,7 +463,7 @@ export class LayerDisplay implements SheetDisplay {
       canvas.height = height;
     }
     const ids = layers.map((layer) => layer.id);
-    this.ink.compositeInto(g, state, ids, { x: 0, y: 0, w: width, h: height });
+    this.ink.compositeInto(g, state, ids, { x: 0, y: 0, w: width, h: height }, this.shownCanvasOf);
   }
 
   /** Redraws what clipping shows of the current layer within `rect`, device px. */
@@ -453,7 +503,8 @@ export class LayerDisplay implements SheetDisplay {
   /** Draws the current layer as shown on the view within `rect`, cut to `baseCanvas`. */
   private cutView(baseCanvas: HTMLCanvasElement, { x, y, w, h }: Rect): void {
     // Over a copy, wet holds the whole layer as shown.
-    const layer = this.stroke?.copied ? null : this.ink.layerCanvas(this.current);
+    const layer =
+      this.stroke?.copied || this.fillPreview ? null : this.ink.layerCanvas(this.current);
     const { g } = this.view;
     g.save();
     // destination-in clears what it covers outside the image it draws: the clip keeps it in the rect.
@@ -462,7 +513,7 @@ export class LayerDisplay implements SheetDisplay {
     g.clip();
     g.clearRect(x, y, w, h);
     if (layer) g.drawImage(layer, x, y, w, h, x, y, w, h);
-    if (this.stroke) g.drawImage(this.wet.canvas, x, y, w, h, x, y, w, h);
+    if (this.stroke || this.fillPreview) g.drawImage(this.wet.canvas, x, y, w, h, x, y, w, h);
     g.globalCompositeOperation = "destination-in";
     g.drawImage(baseCanvas, x, y, w, h, x, y, w, h);
     g.restore();
@@ -472,7 +523,9 @@ export class LayerDisplay implements SheetDisplay {
   private hideCovered(): void {
     const viewed = this.viewBase !== null;
     this.wet.canvas.style.visibility = viewed ? "hidden" : "";
-    if (this.mounted) this.mounted.style.visibility = viewed || this.stroke?.copied ? "hidden" : "";
+    if (this.mounted)
+      this.mounted.style.visibility =
+        viewed || this.stroke?.copied || this.fillPreview ? "hidden" : "";
   }
 
   /**

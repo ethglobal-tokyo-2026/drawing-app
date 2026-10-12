@@ -4,7 +4,15 @@ import {
 } from "@drawing-app/api/client";
 import { expect, test, type Page } from "@playwright/test";
 import { strings } from "../src/i18n/strings/index.ts";
-import { drawKeyName, openSettings, say, signIn, signedInUserId, tapKey } from "./helpers.ts";
+import {
+  canvas,
+  drawKeyName,
+  openSettings,
+  say,
+  signIn,
+  signedInUserId,
+  tapKey,
+} from "./helpers.ts";
 
 const { kyotoSeika, stickerBoard, stickerCreation } = strings;
 const language = "en";
@@ -59,7 +67,7 @@ async function expectCornerPrintClearOfLayers(page: Page) {
 
 test("a left drawing hand mirrors the layer column, slider and options toward the sheet", async ({
   page,
-}) => {
+}, testInfo) => {
   await signIn(page, "left-layers", language);
   const settings = await openSettings(page, language);
   await settings
@@ -76,6 +84,20 @@ test("a left drawing hand mirrors the layer column, slider and options toward th
 
   const screen = page.locator(".drawing-screen");
   await expect(screen).toHaveAttribute("data-hand", "left");
+  await canvas(page, language).hover();
+  await expect(page.locator(".tool-strip")).toBeVisible();
+  const [timerBox, toolsBox] = await Promise.all([
+    timer(page).boundingBox(),
+    page.locator(".tool-strip").boundingBox(),
+  ]);
+  if (!timerBox || !toolsBox) throw new Error("The timer or tools have no box");
+  expect
+    .soft(timerBox.x, "Left-hand tools stay left of the timer")
+    .toBeGreaterThanOrEqual(toolsBox.x + toolsBox.width);
+  await testInfo.attach("left-hand-top-row", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  });
   const column = page.locator(".drawing-layer-column .layer-column");
   await expect(column).toHaveAttribute("data-edge", "right");
   const columnBox = await column.boundingBox();
@@ -170,8 +192,11 @@ test("a begun Kyoto Seika clock continues through layer options, opacity and reo
   await expectCornerPrintClearOfLayers(page);
 });
 
-test("the left-hand layer column scrolls above the Kyoto Seika corner print", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 753 });
+test("the left-hand layer column scrolls above the Kyoto Seika corner print", async ({
+  page,
+}, testInfo) => {
+  // A narrow phone puts longer subjects above the foot controls, where the list must stop.
+  await page.setViewportSize({ width: 320, height: 753 });
   await signIn(page, "left-kyoto-layers", language);
   const on = await page.request.post("/api/me/kyoto-seika-practice", {
     headers: { "x-croquis-user-id": await signedInUserId(page) },
@@ -188,9 +213,22 @@ test("the left-hand layer column scrolls above the Kyoto Seika corner print", as
   await tapKey(
     page.getByRole("button", { name: drawKeyName(language, KYOTO_SEIKA_DAILY_TICKETS_PER_DAY) }),
   );
+  const deal = page.locator(".kyoto-seika-deal");
+  await expect(deal).toBeVisible();
+  const origin = await deal.evaluate((element) => ({
+    x: Number.parseFloat(getComputedStyle(element).transformOrigin),
+    width: element.clientWidth,
+  }));
+  expect
+    .soft(origin.x, "A left-hand deal leaves toward the subjects on the right")
+    .toBeGreaterThan(origin.width / 2);
   const subjects = page.getByRole("group", { name: say(kyotoSeika.balloons.label, language) });
   await subjects.locator("[aria-pressed]").nth(0).click();
   await subjects.locator("[aria-pressed]").nth(1).click();
+  await testInfo.attach("left-hand-kyoto-seika-deal", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  });
   await page
     .getByRole("button", {
       name: say(kyotoSeika.begin.label, language, { minutes: KYOTO_SEIKA_TIME_USED_S / 60 }),
@@ -199,5 +237,10 @@ test("the left-hand layer column scrolls above the Kyoto Seika corner print", as
   const add = page.getByRole("button", { name: say(stickerCreation.layers.add, language) });
   for (let number = 2; number <= 10; number++) await add.click();
   await expect(chip(page, 10)).toBeVisible();
+  await expect(page.locator(".corner-print")).toHaveClass(/is-long/);
+  await testInfo.attach("left-hand-kyoto-seika-layers", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  });
   await expectCornerPrintClearOfLayers(page);
 });

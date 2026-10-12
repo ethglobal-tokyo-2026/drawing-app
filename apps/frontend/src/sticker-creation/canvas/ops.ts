@@ -24,6 +24,8 @@ export interface StrokeOp {
 
 /** A fill seeded at a point in sheet units, `T` ms into the session, painted on `layer`. */
 export interface FillOp {
+  /** This written region belongs to the preceding fill's Undo action. */
+  undoWithPrevious?: true;
   reference: FillReference;
   tool: "fill";
   layer: LayerId;

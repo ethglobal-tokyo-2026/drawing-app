@@ -18,10 +18,13 @@ import type { SheetDisplay } from "../layers/sheetDisplay";
 import { previewWidth, StrokeBuilder, type PenPressure } from "./brush";
 import { CanvasUnavailableError } from "./canvasUnavailable";
 import { FILL_GAP } from "./fill";
-import { isPalm, TapRecognizer, type TapGesture } from "./gestures";
+import { isPalm, TapRecognizer, YOUNG_MS, YOUNG_PX, type TapGesture } from "./gestures";
+import { FillGestureController } from "./fillGesture";
+import { FillWorkerService } from "./fill-worker/service";
+import { FillError } from "./fill-worker/errors";
+import type { FillSample } from "./fillPath";
 import {
   isOp,
-  type FillOp,
   type FillReference,
   type LayerId,
   type Op,
@@ -40,8 +43,6 @@ import {
   type SmoothingMode,
 } from "./stabilizer";
 
-/** A fill takes a tap: a pointer that lifts within this many CSS px of where it landed. */
-export const FILL_TAP_SLOP = 10;
 /** A touch on a paused sheet that drags this many CSS px gets the paused hint before it lifts. */
 const BLOCKED_DRAG = 8;
 /** When the browser takes a pointer mid-stroke, the stroke stays if it had gone this many units. */
@@ -92,6 +93,20 @@ export interface InkSettings {
   sessionMs: () => number;
 }
 
+function fillSelection(settings: InkSettings) {
+  const { tool, color, fillReference, inputMode } = settings;
+  return { tool, color, fillReference, inputMode };
+}
+
+function sameFillSelection(a: InkSettings, b: InkSettings): boolean {
+  return (
+    a.tool === b.tool &&
+    a.color === b.color &&
+    a.fillReference === b.fillReference &&
+    a.inputMode === b.inputMode
+  );
+}
+
 /** What undo and redo can do, and whether there's ink on the sheet. */
 export interface HistoryState {
   canUndo: boolean;
@@ -107,7 +122,14 @@ export interface HoverRing {
   diameter: number;
 }
 
+export interface FillWorkState {
+  acceptedPending: boolean;
+  transitionPending: boolean;
+  settling: boolean;
+}
+
 export interface InkEvents extends LayerEvents {
+  onFillState: (state: FillWorkState) => void;
   onHistory: (state: HistoryState) => void;
   /** A stroke or fill landed. */
   onCommit: (op: Op) => void;
@@ -191,8 +213,17 @@ type PointerRole = { pointerType: string } &
   /** It draws the stroke in progress. */
   (
     | { kind: "stroke" }
-    /** It fills where it landed, in sheet units, if it lifts close by. */
-    | { kind: "fill"; x: number; y: number; cx: number; cy: number }
+    /** Its path fills matching regions in its captured sheet frame. */
+    | {
+        kind: "fill";
+        cx: number;
+        cy: number;
+        t0: number;
+        moved: number;
+        frame: SheetFrame;
+        accepted: boolean;
+        timer: ReturnType<typeof setTimeout> | null;
+      }
     /** A touch that met a blocker: its hint waits a beat in case a second finger makes a tap. */
     | { kind: "blocked"; by: Blocker; cx: number; cy: number }
     /** A touch held for the tap recognizer alone. */
@@ -246,6 +277,14 @@ export class InkEngine implements LayerControls {
   private readonly events: InkEvents;
   private readonly frames: FrameSource;
   private readonly correction: Pick<PostCorrectionService, "correct" | "dispose">;
+  private readonly fills: FillGestureController;
+  private completion: Promise<void> | null = null;
+  private pendingSettings: InkSettings | null = null;
+  private transitionGeneration = 0;
+  private actionTime: number | null = null;
+  private fillSettling = false;
+  private fillDrain = false;
+  private settlingTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingCorrection: PendingCorrection | null = null;
   private readonly taps = new TapRecognizer();
   /** The layer strokes and fills land on. */
@@ -291,6 +330,7 @@ export class InkEngine implements LayerControls {
     events: InkEvents,
     frames: FrameSource = browserFrames,
     correction: Pick<PostCorrectionService, "correct" | "dispose"> = new PostCorrectionService(),
+    fillWorker: Pick<FillWorkerService, "prepare" | "dispose"> = new FillWorkerService(),
   ) {
     this.ink = ink;
     this.display = display;
@@ -299,6 +339,25 @@ export class InkEngine implements LayerControls {
     this.frames = frames;
     this.correction = correction;
     this.history = new LayerHistory(ink);
+    this.fills = new FillGestureController(ink, fillWorker, frames, {
+      state: () => this.history.state,
+      reserve: (copies) => this.history.reserveCanvases(copies),
+      retryCanvas: (op, write) =>
+        timeOurWork(INK_WORK.fill, () => this.withRoom(op, write, true)[0]),
+      preview: (layer, at, pixels) => this.display.previewFill(layer, at, pixels),
+      clearPreview: () => this.display.clearFillPreview(),
+      commit: (op) => {
+        this.frameRule = "fixed";
+        timeOurWork(INK_WORK.commit, () => this.history.commit(op));
+        this.landed(op);
+      },
+      show: (_layer, changed) => {
+        this.display.showCurrent();
+        this.display.inkChanged(changed);
+      },
+      fail: (error) => this.fillFailed(error),
+      changed: () => this.fillStateChanged(),
+    });
   }
 
   get settings(): InkSettings {
@@ -310,14 +369,61 @@ export class InkEngine implements LayerControls {
     const wasAvailable = !this.latest.locked && !this.latest.paused && !this.latest.panelOpen;
     const unavailable = next.locked || next.paused || next.panelOpen;
     const locking = next.locked && !this.latest.locked;
-    this.latest = next;
+    const fillSettingsChanged = !sameFillSelection(next, this.latest);
+    if (fillSettingsChanged && (this.fills.busy || this.completion || this.pendingSettings)) {
+      // Availability and unrelated settings stay current while the captured selection waits.
+      this.latest = { ...next, ...fillSelection(this.latest) };
+      if (this.pendingSettings) {
+        if (!sameFillSelection(next, this.pendingSettings))
+          this.fillFailed(
+            new FillError("Cannot change settings while another drawing transition is pending"),
+          );
+      } else if (this.completion) {
+        this.fillFailed(
+          new FillError("Cannot change settings while another drawing transition is pending"),
+        );
+      } else {
+        const pending = { ...next };
+        const generation = this.transitionGeneration;
+        this.pendingSettings = pending;
+        void this.finishInk()
+          .then(() => {
+            if (generation !== this.transitionGeneration || this.pendingSettings !== pending)
+              return;
+            this.pendingSettings = null;
+            this.latest = { ...this.latest, ...fillSelection(pending) };
+          })
+          .catch((error: unknown) => {
+            if (this.pendingSettings === pending) this.pendingSettings = null;
+            // The controller reports Fill failures; unexpected completion failures still surface.
+            if (!(error instanceof FillError)) this.fillFailed(error);
+          });
+      }
+    } else this.latest = next;
     if (wasAvailable && unavailable) {
       this.endStroke(false);
+      if (this.fills.busy)
+        void this.finishInk().catch(() => {
+          /* The controller reports the retained drawing and failure. */
+        });
       this.taps.clear();
       this.swallowWhere(() => true);
     }
-    if (locking && !this.suspended && !this.needsReplay)
-      this.withRoom("restoring layer opacity", () => this.display.previewOpacity(null));
+    if (locking && !this.suspended && !this.needsReplay) {
+      const restore = () =>
+        this.withRoom("restoring layer opacity", () => this.display.previewOpacity(null));
+      if (this.completion) {
+        const generation = this.transitionGeneration;
+        void this.completion
+          .then(() => {
+            if (generation === this.transitionGeneration) restore();
+          })
+          .catch((error: unknown) => {
+            // A failed Fill has already been reported; unexpected display errors still surface.
+            if (!(error instanceof FillError)) this.fillFailed(error);
+          });
+      } else restore();
+    }
   }
 
   /** Listens for pointers on the sheet; returns the detach. */
@@ -413,13 +519,25 @@ export class InkEngine implements LayerControls {
     const closesPanel = this.closing === id;
     this.closing = null;
     if (s.locked || !this.sheet || (pointerType === "mouse" && e.button !== 0)) return;
+    if (this.completion) {
+      this.pointers.set(id, swallowed(pointerType));
+      this.startSettling();
+      return;
+    }
     // Pointer ids come back: one still here lifted where the sheet couldn't hear, its stroke where it stood.
     if (this.pointers.get(id)?.kind === "stroke") this.endStroke(false);
+    const previous = this.pointers.get(id);
+    if (previous?.kind === "fill") this.cancelFill(id, previous, "pointer ID reused before lift");
     this.pointers.delete(id);
     if (pointerType === "touch") {
       if (this.fingersGone) this.forgetTouches();
       if (this.live?.pointerType === "pen") return;
       const stroke = this.live?.pointerType === "touch" ? this.live : null;
+      const fill = [...this.pointers.entries()].find(
+        ([, role]) => role.kind === "fill" && role.pointerType === "touch",
+      );
+      const liveFill = fill?.[1].kind === "fill" ? fill[1] : null;
+      if (fill && liveFill) this.acceptFill(fill[0], liveFill, e.timeStamp);
       // The tap recognizer judges fingers on the glass, so the stroke's reach goes to it in CSS px.
       const result = this.taps.down(
         id,
@@ -428,16 +546,24 @@ export class InkEngine implements LayerControls {
         e.timeStamp,
         stroke
           ? { age: e.timeStamp - stroke.t0, moved: stroke.moved * this.origin.scale }
-          : undefined,
+          : liveFill
+            ? { age: e.timeStamp - liveFill.t0, moved: liveFill.moved }
+            : undefined,
         this.palmContact(e),
       );
       this.pointers.set(id, { pointerType, kind: "tap" });
       if (result === "cancel-stroke") this.endStroke(true);
       // Fingers down as a tap begins neither fill nor hint.
       if (result === "cancel-stroke" || result === "gesture")
-        this.swallowWhere((role) => role.kind === "fill" || role.kind === "blocked");
+        for (const [other, role] of this.pointers) {
+          if (role.kind === "fill") this.cancelFill(other, role, "multi-finger tap");
+          if (role.kind === "fill" || role.kind === "blocked")
+            this.pointers.set(other, swallowed(role.pointerType));
+        }
       if (result !== "draw") return;
     } else if (pointerType === "pen") {
+      // Discover Pencil-only input immediately so its persisted echo cannot close this gesture.
+      if (this.latest.inputMode === null) this.latest = { ...this.latest, inputMode: "pencilOnly" };
       this.events.onPen();
       // A pen is one contact, so landing while its stroke is live, it lifted where the sheet couldn't hear.
       if (this.live?.pointerType === "pen") this.endStroke(false);
@@ -445,6 +571,7 @@ export class InkEngine implements LayerControls {
       // Fingers down as a pen lands are the hand resting: no tap, fill or hint of theirs counts.
       this.taps.clear();
       for (const [other, role] of this.pointers) {
+        if (role.kind === "fill") this.cancelFill(other, role, "Pencil replaced touch");
         if (role.pointerType === "pen") this.pointers.delete(other);
         else this.pointers.set(other, swallowed(role.pointerType));
       }
@@ -470,9 +597,37 @@ export class InkEngine implements LayerControls {
     this.origin = this.place();
     this.finishPendingCorrection();
     const [x, y] = this.toSheet(e);
-    if (s.tool === "fill")
-      this.pointers.set(id, { pointerType, kind: "fill", x, y, cx: e.clientX, cy: e.clientY });
-    else this.beginStroke(e, x, y);
+    if (s.tool === "fill") {
+      const role: Extract<PointerRole, { kind: "fill" }> = {
+        pointerType,
+        kind: "fill",
+        cx: e.clientX,
+        cy: e.clientY,
+        t0: e.timeStamp,
+        moved: 0,
+        frame: { ...this.sheet },
+        accepted: pointerType !== "touch",
+        timer: null,
+      };
+      this.pointers.set(id, role);
+      this.fills.begin(
+        id,
+        pointerType,
+        {
+          layer: this.current,
+          reference: s.fillReference,
+          color: s.color,
+          gap: FILL_GAP,
+          frame: role.frame,
+        },
+        this.fillSample(e, role.frame),
+      );
+      if (pointerType === "touch")
+        role.timer = setTimeout(() => {
+          role.timer = null;
+          if (this.pointers.get(id) === role) this.acceptFill(id, role, role.t0 + YOUNG_MS);
+        }, YOUNG_MS);
+    } else this.beginStroke(e, x, y);
   }
 
   move(e: PointerInput): void {
@@ -490,9 +645,25 @@ export class InkEngine implements LayerControls {
       // A fingertip that spreads into a palm as it settles never meant its stroke or its fill.
       if (palm && (role.kind === "stroke" || role.kind === "fill")) {
         if (role.kind === "stroke") this.endStroke(true);
+        else this.cancelFill(id, role, "palm contact");
         this.pointers.set(id, swallowed(role.pointerType));
         return;
       }
+    }
+    if (role.kind === "fill") {
+      const points = e.getCoalescedEvents?.();
+      const samples = points?.length ? [...points, e] : [e];
+      for (const sample of samples)
+        role.moved = Math.max(
+          role.moved,
+          Math.hypot(sample.clientX - role.cx, sample.clientY - role.cy),
+        );
+      this.acceptFill(id, role, e.timeStamp);
+      this.fills.append(
+        id,
+        samples.map((sample) => this.fillSample(sample, role.frame)),
+      );
+      return;
     }
     if (role.kind === "blocked") {
       if (Math.hypot(e.clientX - role.cx, e.clientY - role.cy) <= BLOCKED_DRAG) return;
@@ -544,6 +715,7 @@ export class InkEngine implements LayerControls {
    * layer it brings back current.
    */
   undo(): void {
+    if (this.deferFill("undo", () => this.undo())) return;
     if (this.settings.locked || this.suspended || (this.needsReplay && !this.resume())) return;
     this.endStroke(true);
     const step = this.withRoom("undo", () =>
@@ -566,6 +738,7 @@ export class InkEngine implements LayerControls {
 
   /** An add redone makes its layer current; a delete redone takes the current layer as a delete does. */
   redo(): void {
+    if (this.deferFill("redo", () => this.redo())) return;
     if (this.settings.locked || this.suspended || (this.needsReplay && !this.resume())) return;
     this.endStroke(true);
     const before = this.history.state;
@@ -588,17 +761,24 @@ export class InkEngine implements LayerControls {
   }
 
   addLayer(): void {
+    if (this.deferFill("adding a layer", () => this.addLayer())) return;
     if (!this.beginChange()) return;
     const { state } = this.history;
     if (state.layers.length >= MAX_LAYERS) return;
     const layer = state.nextId;
     const at = indexOf(state, this.current) + 1;
-    this.history.perform({ tool: "add", layer, at, T: this.settings.sessionMs() });
+    this.history.perform({
+      tool: "add",
+      layer,
+      at,
+      T: this.actionTime ?? this.settings.sessionMs(),
+    });
     this.current = layer;
     this.changed();
   }
 
   selectLayer(id: LayerId): void {
+    if (this.deferFill("selecting a layer", () => this.selectLayer(id))) return;
     if (!this.beginChange()) return;
     // A chip shown a moment before an undo took its layer selects nothing.
     if (id === this.current || indexOf(this.history.state, id) < 0) return;
@@ -608,13 +788,18 @@ export class InkEngine implements LayerControls {
   }
 
   deleteLayer(): void {
+    if (this.deferFill("deleting a layer", () => this.deleteLayer())) return;
     if (!this.beginChange()) return;
     const { state } = this.history;
     if (state.layers.length === 1) return;
     const next = successorOf(state, this.current);
     if (
       !this.withRoom("deleting a layer", () =>
-        this.history.perform({ tool: "delete", layer: this.current, T: this.settings.sessionMs() }),
+        this.history.perform({
+          tool: "delete",
+          layer: this.current,
+          T: this.actionTime ?? this.settings.sessionMs(),
+        }),
       )
     )
       return;
@@ -623,6 +808,7 @@ export class InkEngine implements LayerControls {
   }
 
   mergeDown(): void {
+    if (this.deferFill("merging layers", () => this.mergeDown())) return;
     if (!this.beginChange()) return;
     const target = mergeDownTarget(this.history.state, this.current);
     if ("reason" in target) return;
@@ -633,7 +819,7 @@ export class InkEngine implements LayerControls {
           tool: "merge",
           layer: source,
           into: target.into,
-          T: this.settings.sessionMs(),
+          T: this.actionTime ?? this.settings.sessionMs(),
         }),
       )
     )
@@ -644,11 +830,17 @@ export class InkEngine implements LayerControls {
   }
 
   moveLayer(id: LayerId, to: number): void {
+    if (this.deferFill("moving a layer", () => this.moveLayer(id, to))) return;
     if (!this.beginChange()) return;
     const from = indexOf(this.history.state, id);
     // A chip dropped back where it was moves nothing, nor does one whose layer an undo just took.
     if (from < 0 || from === to) return;
-    this.history.perform({ tool: "move", layer: id, to, T: this.settings.sessionMs() });
+    this.history.perform({
+      tool: "move",
+      layer: id,
+      to,
+      T: this.actionTime ?? this.settings.sessionMs(),
+    });
     this.current = id;
     this.changed();
     this.withRoom("flashing the selected layer", () => this.display.flash());
@@ -656,10 +848,15 @@ export class InkEngine implements LayerControls {
 
   /** Sets the current layer's ink aside; undo brings it back. */
   clearLayer(): void {
+    if (this.deferFill("clearing a layer", () => this.clearLayer())) return;
     if (!this.beginChange() || !this.history.inked.has(this.current)) return;
     if (
       !this.withRoom("clearing a layer", () =>
-        this.history.perform({ tool: "clear", layer: this.current, T: this.settings.sessionMs() }),
+        this.history.perform({
+          tool: "clear",
+          layer: this.current,
+          T: this.actionTime ?? this.settings.sessionMs(),
+        }),
       )
     )
       return;
@@ -668,17 +865,19 @@ export class InkEngine implements LayerControls {
   }
 
   previewOpacity(opacity: number | null): void {
+    if (this.deferFill("previewing opacity", () => this.previewOpacity(opacity))) return;
     if (!this.beginChange()) return;
     this.withRoom("previewing layer opacity", () => this.display.previewOpacity(opacity));
   }
 
   setOpacity(opacity: number): void {
+    if (this.deferFill("changing opacity", () => this.setOpacity(opacity))) return;
     if (!this.beginChange()) return;
     if (opacity === this.currentLayer().opacity) {
       this.withRoom("restoring layer opacity", () => this.display.previewOpacity(null));
       return;
     }
-    const T = this.settings.sessionMs();
+    const T = this.actionTime ?? this.settings.sessionMs();
     this.history.performOpacity({ tool: "opacity", layer: this.current, opacity, T });
     this.changed();
   }
@@ -706,9 +905,98 @@ export class InkEngine implements LayerControls {
     return { canvas, box: { x, y, w: Math.max(0, right - x), h: Math.max(0, bottom - y) } };
   };
 
-  /** Ends a stroke in progress as if the pointer lifted, as time running out does. */
-  finishStroke(): void {
+  /** Time-up closes input before React renders, without discarding accepted Fill. */
+  closeInput(): void {
+    this.settings = { ...this.settings, locked: true };
+  }
+
+  /** Closes input immediately, then resolves after all accepted Fill regions have settled. */
+  finishInk(): Promise<void> {
+    if (this.completion) return this.completion;
     this.endStroke(false);
+    for (const role of this.pointers.values())
+      if (role.kind === "fill" && role.timer !== null) clearTimeout(role.timer);
+    this.swallowWhere((role) => role.kind === "fill");
+    this.taps.clear();
+    const generation = this.transitionGeneration;
+    const finished = this.fills.finish();
+    this.completion = finished.finally(() => {
+      if (generation !== this.transitionGeneration) return;
+      this.completion = null;
+      this.fillStateChanged();
+    });
+    this.fillStateChanged();
+    this.startSettling();
+    return this.completion;
+  }
+
+  private deferFill(action: string, change: () => void): boolean {
+    if (this.completion) {
+      this.fillFailed(
+        new FillError(`Cannot finish ${action} while another drawing transition is pending`),
+      );
+      return true;
+    }
+    if (!this.fills.busy) return false;
+    const T = this.settings.sessionMs();
+    const generation = this.transitionGeneration;
+    void this.finishInk()
+      .then(() => {
+        if (generation !== this.transitionGeneration) return;
+        this.actionTime = T;
+        try {
+          change();
+        } finally {
+          this.actionTime = null;
+        }
+      })
+      .catch((error: unknown) => {
+        // Fill failures already have their persistent notice; a later mutation can fail separately.
+        if (!(error instanceof FillError)) this.fillFailed(error);
+      });
+    return true;
+  }
+
+  private fillFailed(error: unknown): void {
+    console.error("Fill could not finish; completed regions remain in the drawing", error);
+    this.events.onInkFailed(error);
+  }
+
+  private startSettling(): void {
+    if (this.settlingTimer !== null || this.fillSettling) return;
+    this.settlingTimer = setTimeout(() => {
+      this.settlingTimer = null;
+      if (this.completion || (this.fillDrain && this.fills.busy)) {
+        this.fillSettling = true;
+        this.fillStateChanged();
+      }
+    }, 150);
+  }
+
+  private fillStateChanged(): void {
+    if (!this.fills.busy) this.fillDrain = false;
+    if (!this.completion && !this.fillDrain) {
+      if (this.settlingTimer !== null) clearTimeout(this.settlingTimer);
+      this.settlingTimer = null;
+      this.fillSettling = false;
+    }
+    this.events.onFillState({
+      acceptedPending: this.fills.acceptedPending,
+      transitionPending: this.completion !== null,
+      settling: this.fillSettling,
+    });
+  }
+
+  /** Cancels obsolete Fill generations synchronously, preserving committed regions. */
+  abortPendingFill(reason: string): void {
+    this.transitionGeneration++;
+    this.pendingSettings = null;
+    this.completion = null;
+    for (const role of this.pointers.values())
+      if (role.kind === "fill" && role.timer !== null) clearTimeout(role.timer);
+    this.swallowWhere((role) => role.kind === "fill");
+    this.fills.abort(reason);
+    this.fillStateChanged();
   }
 
   /** The pointer left the paper: a hovering pen's ring goes. */
@@ -761,6 +1049,8 @@ export class InkEngine implements LayerControls {
    */
   fit(area: SheetArea, devicePixelRatio: number): void {
     if (this.frameRule === "fixed") return;
+    const captured = { ...area };
+    if (this.deferFill("resizing the sheet", () => this.fit(captured, devicePixelRatio))) return;
     if (this.frameRule === "follows") {
       this.useFrame(frameFor(area, devicePixelRatio));
       return;
@@ -786,6 +1076,7 @@ export class InkEngine implements LayerControls {
    * frame, so a save can't keep the last sheet's with it; with no steps, the frame follows the area.
    */
   load(steps: readonly Step[], frame: SheetFrame | null, current: LayerId | null): void {
+    this.abortPendingFill("sheet replaced");
     this.endStroke(true);
     this.pointers.clear();
     this.taps.clear();
@@ -816,6 +1107,8 @@ export class InkEngine implements LayerControls {
 
   /** The sheet is going: its canvases and undo checkpoints are freed now rather than when they're collected. */
   dispose(): void {
+    this.abortPendingFill("sheet disposed");
+    this.fills.dispose();
     this.endStroke(true);
     this.correction.dispose();
     this.releaseSurfaces();
@@ -824,6 +1117,7 @@ export class InkEngine implements LayerControls {
   /** Covered by another screen, retain the recording and selection while freeing every canvas. */
   suspend(): void {
     if (this.suspended) return;
+    this.abortPendingFill("sheet hidden");
     this.endStroke(false);
     this.hideHover();
     this.pointers.clear();
@@ -864,7 +1158,10 @@ export class InkEngine implements LayerControls {
     this.taps.clear();
     if (this.live?.pointerType === "touch") this.endStroke(false);
     for (const [id, role] of this.pointers)
-      if (role.pointerType === "touch") this.pointers.delete(id);
+      if (role.pointerType === "touch") {
+        if (role.kind === "fill") this.cancelFill(id, role, "touch lift was lost");
+        this.pointers.delete(id);
+      }
   }
 
   /** The pointers whose roles `which` picks draw, fill and hint nothing more until they lift. */
@@ -873,7 +1170,7 @@ export class InkEngine implements LayerControls {
       if (which(role)) this.pointers.set(id, swallowed(role.pointerType));
   }
 
-  /** A fill tap is down. */
+  /** A Fill input contact is still down; released gestures may continue draining. */
   private filling(): boolean {
     for (const role of this.pointers.values()) if (role.kind === "fill") return true;
     return false;
@@ -908,12 +1205,18 @@ export class InkEngine implements LayerControls {
 
   /** Turns lock or clip on the current layer on or off as one step, when it changes it. */
   private setFlag(tool: "lock" | "clip", on: boolean): void {
+    if (this.deferFill(`changing layer ${tool}`, () => this.setFlag(tool, on))) return;
     if (!this.beginChange()) return;
     const layer = this.currentLayer();
     if ((tool === "lock" ? layer.locked : layer.clipped) === on) return;
     // Nothing is below the bottom layer to clip to, so its Clip tile takes no change.
     if (tool === "clip" && indexOf(this.history.state, this.current) === 0) return;
-    this.history.perform({ tool, layer: this.current, on, T: this.settings.sessionMs() });
+    this.history.perform({
+      tool,
+      layer: this.current,
+      on,
+      T: this.actionTime ?? this.settings.sessionMs(),
+    });
     this.changed();
   }
 
@@ -1074,8 +1377,13 @@ export class InkEngine implements LayerControls {
     if (role.kind === "blocked") {
       if (!cancelled) this.blocked(role.by);
     } else if (role.kind === "fill") {
-      if (!cancelled && Math.hypot(e.clientX - role.cx, e.clientY - role.cy) < FILL_TAP_SLOP)
-        this.applyFill(role.x, role.y);
+      if (role.timer !== null) clearTimeout(role.timer);
+      if (cancelled) this.fills.cancel(id, "browser cancelled input");
+      else {
+        this.fills.release(id, this.fillSample(e, role.frame));
+        this.fillDrain = this.fills.busy;
+        if (this.fillDrain) this.startSettling();
+      }
     } else if (role.kind === "stroke" && this.live) {
       const { live } = this;
       if (!cancelled) {
@@ -1396,30 +1704,32 @@ export class InkEngine implements LayerControls {
     this.events.onInkFailed(error);
   }
 
-  private applyFill(x: number, y: number): void {
-    const op: FillOp = {
-      tool: "fill",
-      reference: this.settings.fillReference,
-      layer: this.current,
-      x,
-      y,
-      color: this.settings.color,
-      gap: FILL_GAP,
+  private fillSample(e: PointerInput, frame: SheetFrame): FillSample {
+    const paper = this.locate();
+    const scale = paper.width / frame.w;
+    return {
+      x: ((e.clientX - paper.left) / scale) * frame.density,
+      y: ((e.clientY - paper.top) / scale) * frame.density,
       T: this.settings.sessionMs(),
     };
-    const flooded = timeOurWork(INK_WORK.fill, () =>
-      this.withRoom(op, () => this.ink.flood(op, this.history.state)),
-    );
-    // Dropped for want of a canvas, or it changed nothing.
-    const changed = flooded?.[0];
-    if (!changed) return;
-    this.frameRule = "fixed";
-    timeOurWork(INK_WORK.commit, () => this.history.commit(op));
-    this.landed(op);
-    this.withRoom("showing the completed fill", () => {
-      this.display.showCurrent();
-      this.display.inkChanged(changed);
-    });
+  }
+
+  private acceptFill(id: number, role: Extract<PointerRole, { kind: "fill" }>, time: number): void {
+    if (role.accepted || (time - role.t0 < YOUNG_MS && role.moved < YOUNG_PX)) return;
+    role.accepted = true;
+    if (role.timer !== null) clearTimeout(role.timer);
+    role.timer = null;
+    this.fills.acceptTouch(id);
+  }
+
+  private cancelFill(
+    id: number,
+    role: Extract<PointerRole, { kind: "fill" }>,
+    reason: string,
+  ): void {
+    if (role.timer !== null) clearTimeout(role.timer);
+    role.timer = null;
+    this.fills.cancel(id, reason);
   }
 
   /** An op landed on its layer: its chip draws again. */

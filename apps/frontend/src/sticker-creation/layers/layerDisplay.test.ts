@@ -21,6 +21,7 @@ import { ReducedMotion } from "../../ui/testing";
 import { hexToRgb } from "../canvas/color";
 import { blankCanvas } from "../canvas/context2d";
 import * as canvas2d from "../canvas/context2d";
+import { prepareFillPatch } from "../canvas/fill-worker/core";
 import { STRIDE, type LayerId, type StrokeOp } from "../canvas/ops";
 import { paintStroke } from "../canvas/paintStroke";
 import type { SheetFrame } from "../canvas/sheetFrame";
@@ -30,7 +31,7 @@ import { FLASH_MS, GLINT_TAIL_MS, flashLayer } from "./layerFlash";
 import * as layerGlints from "./layerGlints";
 import { LayerInk } from "./layerInk";
 import { FULL_OPACITY, type Layer, type LayerState } from "./layerState";
-import { brush, clearLayer, eraser } from "./testLayerSteps";
+import { brush, clearLayer, eraser, fill } from "./testLayerSteps";
 
 vi.mock("../canvas/context2d", () => import("../canvas/testContext2d"));
 
@@ -140,6 +141,26 @@ const blank = (canvas: HTMLCanvasElement) => pixelsOf(canvas).every((v) => v ===
 const sizeOf = (canvas: HTMLCanvasElement) => [canvas.width, canvas.height];
 const count = ({ pts }: StrokeOp) => pts.length / STRIDE;
 
+/** Composites the mounted display, including visibility and the current group's opacity. */
+function displayedPixels({ host, group }: ReturnType<typeof sheet>): number[] {
+  const { canvas, g } = blankCanvas(SIDE, SIDE);
+  for (const element of host.children) {
+    if (element === group) {
+      if (group.style.visibility === "hidden") continue;
+      const shown = blankCanvas(SIDE, SIDE);
+      for (const current of group.children) {
+        if (current instanceof HTMLCanvasElement && current.style.visibility !== "hidden")
+          shown.g.drawImage(current, 0, 0);
+      }
+      g.globalAlpha = Number(group.style.opacity);
+      g.drawImage(shown.canvas, 0, 0);
+      g.globalAlpha = 1;
+    } else if (element instanceof HTMLCanvasElement && element.width > 0)
+      g.drawImage(element, 0, 0);
+  }
+  return pixelsOf(canvas);
+}
+
 beforeAll(() => paintPaths(true));
 afterAll(() => paintPaths(false));
 afterEach(() => {
@@ -147,6 +168,135 @@ afterEach(() => {
 });
 
 describe("the sheet's display", () => {
+  describe("a prepared Fill preview", () => {
+    const fixtures = [
+      { name: "a blank layer", state: ONE, current: 1, selected: false },
+      {
+        name: "partial opacity",
+        state: stateOf(layer(1, { opacity: 45 })),
+        current: 1,
+        selected: true,
+      },
+      {
+        name: "transparency lock",
+        state: stateOf(layer(1, { locked: true })),
+        current: 1,
+        selected: true,
+      },
+      {
+        name: "a selected clipped layer",
+        state: stateOf(layer(1, { opacity: 60 }), layer(2, { clipped: true, opacity: 50 })),
+        current: 2,
+        selected: true,
+      },
+      {
+        name: "a base with ink clipped above",
+        state: stateOf(
+          layer(1, { opacity: 50 }),
+          layer(2, { clipped: true, opacity: 60 }),
+          layer(3),
+        ),
+        current: 1,
+        selected: true,
+      },
+      {
+        name: "a blank base with ink clipped above",
+        state: stateOf(layer(1), layer(2, { clipped: true })),
+        current: 1,
+        selected: false,
+      },
+    ];
+
+    function preparedFixture(fixture: (typeof fixtures)[number]) {
+      const parts = sheet();
+      const { ink, display } = parts;
+      if (fixture.current === 2) inkRegion(ink, 1, LEFT, RED);
+      if (fixture.selected) inkRegion(ink, fixture.current, LEFT, [255, 0, 0, 180]);
+      if (fixture.current === 1 && fixture.state.layers.length > 1) inkRegion(ink, 2, WHOLE, BLUE);
+      if (fixture.state.layers.length > 2) inkRegion(ink, 3, LEFT, GREEN);
+      display.show(fixture.state, fixture.current);
+      const seedOnInk = fixture.current === 2 || fixture.state.layers[0].locked;
+      const op = {
+        ...fill(fixture.current),
+        reference: "layer" as const,
+        color: "#00ff00",
+        x: seedOnInk ? 5 : 15,
+        y: 10,
+      };
+      const at = { x: 8, y: 8, w: 24, h: 24 };
+      const result = prepareFillPatch({
+        at,
+        ...ink.readFillPatch(op, fixture.state, at),
+        sx: op.x * FRAME.density - at.x,
+        sy: op.y * FRAME.density - at.y,
+        color: [0, 255, 0],
+        gap: 0,
+      });
+      if (result.kind !== "found") throw new Error(`No prepared Fill for ${fixture.name}`);
+      return { ...parts, op, at, result };
+    }
+
+    it.each(fixtures)(
+      "shows $name exactly as acceptance, leaving raw ink untouched until acceptance",
+      (fixture) => {
+        const parts = preparedFixture(fixture);
+        const { ink, display, wet, op, at, result } = parts;
+        const current = ink.layerCanvas(fixture.current);
+        const before = current ? pixelsOf(current) : null;
+        const originalDisplay = displayedPixels(parts);
+        const hold = ink.hold(fixture.current);
+        const copies = ink.copiesHeld;
+        const acquire = vi.spyOn(ink, "hold");
+        const canvases = [...parts.host.querySelectorAll("canvas")];
+        display.previewFill(fixture.current, at, result.pixels);
+        expect([...parts.host.querySelectorAll("canvas")]).toEqual(canvases);
+        expect(ink.layerCanvas(fixture.current)).toBe(current);
+        expect(current ? pixelsOf(current) : null).toEqual(before);
+        expect(ink.copiesHeld).toBe(copies);
+        expect(acquire).not.toHaveBeenCalled();
+        expect(current?.style.visibility ?? "hidden").toBe("hidden");
+        const preview = displayedPixels(parts);
+        // Outside the patch, retaining the existing alpha catches overlays of raw and wet ink.
+        expect(pixel(wet, OFF_LEFT)).toEqual(fixture.selected ? [255, 0, 0, 180] : CLEAR);
+        expect(preview).not.toEqual(originalDisplay);
+
+        display.clearFillPreview();
+        expect(displayedPixels(parts)).toEqual(originalDisplay);
+        expect(blank(wet)).toBe(true);
+        expect(ink.copiesHeld).toBe(copies);
+        expect(acquire).not.toHaveBeenCalled();
+
+        display.previewFill(fixture.current, at, result.pixels);
+        ink.applyPreparedFill(op, at, result);
+        display.showCurrent();
+        expect(displayedPixels(parts)).toEqual(preview);
+        display.clearFillPreview();
+        expect(displayedPixels(parts)).toEqual(preview);
+        ink.release(hold);
+        acquire.mockRestore();
+      },
+    );
+
+    it.each(["resize", "release"] as const)(
+      "clears Fill preview state on %s before showing the sheet again",
+      (lifecycle) => {
+        const fixture = fixtures[1];
+        const parts = preparedFixture(fixture);
+        const originalDisplay = displayedPixels(parts);
+        const canvases = [...parts.host.querySelectorAll("canvas")];
+        parts.display.previewFill(fixture.current, parts.at, parts.result.pixels);
+        parts.display[lifecycle]();
+        expect(parts.ink.layerCanvas(fixture.current)?.style.visibility).toBe("");
+        // The canvas fake observes released dimensions on access; browsers clear them immediately.
+        for (const canvas of canvases) context(canvas).getImageData(0, 0, 1, 1);
+        parts.display.resize();
+        parts.display.show(fixture.state, fixture.current);
+        expect(displayedPixels(parts)).toEqual(originalDisplay);
+        expect(blank(parts.wet)).toBe(true);
+      },
+    );
+  });
+
   it("composites the layers under the current one into below and those over it into above, each at its opacity, and fades the current one's group by its own", () => {
     const { ink, display, below, group, above } = sheet();
     const state = stateOf(

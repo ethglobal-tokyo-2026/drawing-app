@@ -27,7 +27,7 @@
 
 /* The layer column continues down the edge after the size rail. Its list scrolls before the foot
    tiles, while the options bar reaches toward the sheet. */
-.drawing-screen > .drawing-layer-column {
+.drawing-controls > .drawing-layer-column {
   position: absolute;
   top: calc(80px + var(--phone-rail-h) + 32px);
   bottom: 92px;
@@ -229,7 +229,7 @@
 /* What a switch can't turn keeps a Left rule: a row's order and both its insets, a drawing's
    direction, transform origins and text alignment. Each control keeps its own reading order: undo
    still comes before redo. */
-.drawing-screen[data-hand="left"] > .drawing-top {
+.drawing-screen[data-hand="left"] > .drawing-controls > .drawing-top {
   left: var(--tools-inset);
   right: var(--timer-inset);
   flex-direction: row-reverse;
@@ -260,12 +260,12 @@
 
 /* The note stays in its corner; the list scrolls above its actual height on a Kyoto Seika sheet. */
 @media (max-width: 599px) {
-  .drawing-screen[data-kyoto-pair] > .drawing-layer-column {
+  .drawing-screen[data-kyoto-pair] > .drawing-controls > .drawing-layer-column {
     bottom: var(--corner-print-clearance, 92px);
   }
 }
 
-.drawing-screen[data-hand="left"] > .kyoto-seika-deal {
+.drawing-screen[data-hand="left"] > .drawing-controls > .kyoto-seika-deal {
   transform-origin: calc(100% - 40px) calc(100% - 270px);
 }
 
@@ -289,7 +289,7 @@
     --tools-inset: 8px;
   }
 
-  .drawing-screen > .drawing-top {
+  .drawing-controls > .drawing-top {
     top: 8px;
   }
 
@@ -303,7 +303,7 @@
   }
 
   /* The readout stays centered below the rail on tablets too. */
-  .drawing-screen > .size-rail {
+  .drawing-controls > .size-rail {
     --thumb-foot: 18px;
     left: var(--far-left) calc((var(--edge-w) - 40px) / 2);
     right: var(--far-right) calc((var(--edge-w) - 40px) / 2);
@@ -311,7 +311,7 @@
     height: var(--rail-h);
   }
 
-  .drawing-screen > .drawing-layer-column {
+  .drawing-controls > .drawing-layer-column {
     top: calc(var(--rail-top) + var(--rail-h) + 32px);
     bottom: auto;
     height: var(--layer-h);
@@ -319,7 +319,7 @@
     right: var(--far-right) calc((var(--edge-w) - 50px) / 2);
   }
 
-  .drawing-screen > .history-buttons {
+  .drawing-controls > .history-buttons {
     flex-direction: column;
     left: var(--far-left) calc((var(--edge-w) - var(--foot-tile)) / 2);
     right: var(--far-right) calc((var(--edge-w) - var(--foot-tile)) / 2);
@@ -373,4 +373,9 @@
     transition-duration: 1ms !important;
     transition-delay: 0s !important;
   }
+}
+
+/* Preserve the existing control layout while disabling every competing input together. */
+.drawing-controls {
+  display: contents;
 }

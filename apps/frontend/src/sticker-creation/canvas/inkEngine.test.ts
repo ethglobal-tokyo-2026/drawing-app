@@ -11,10 +11,10 @@ import { CanvasUnavailableError } from "./canvasUnavailable";
 import { PALM_CONTACT_PX, YOUNG_MS } from "./gestures";
 import {
   CANCEL_KEEPS,
-  FILL_TAP_SLOP,
   INK_WORK,
   InkEngine,
   type HoverRing,
+  type FillWorkState,
   type InkSettings,
   type PointerInput,
 } from "./inkEngine";
@@ -32,6 +32,10 @@ import { StrokeBuilder } from "./brush";
 import { PostCorrectionError } from "./post-correction/errors";
 import { FIRST_POST_CORRECTION } from "./post-correction/settings";
 import type { PostCorrectionInput, PostCorrectionService } from "./post-correction/service";
+import { prepareFillPatch } from "./fill-worker/core";
+import type { FillWorkerService } from "./fill-worker/service";
+import type { FillPatchInput, FillPatchResult } from "./fill-worker/protocol";
+import { FillError } from "./fill-worker/errors";
 
 vi.mock("./context2d", () => import("./testContext2d"));
 
@@ -46,6 +50,7 @@ vi.mock("../../performance/performanceRecorder", () => ({
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
   forgetContexts();
 });
 
@@ -80,6 +85,12 @@ class RecordingDisplay implements SheetDisplay {
   inkChanged(box: Rect) {
     this.calls.push("inkChanged");
     this.changed.push(box);
+  }
+  previewFill() {
+    this.calls.push("previewFill");
+  }
+  clearFillPreview() {
+    this.calls.push("clearFillPreview");
   }
   beginStroke(op: StrokeOp) {
     this.calls.push("beginStroke");
@@ -149,6 +160,10 @@ const SETTINGS: InkSettings = {
 function setup(
   settings: Partial<InkSettings> = {},
   correction?: Pick<PostCorrectionService, "correct" | "dispose">,
+  fillWorker: Pick<FillWorkerService, "prepare" | "dispose"> = {
+    prepare: (input) => Promise.resolve(prepareFillPatch(input)),
+    dispose: () => {},
+  },
 ) {
   const ink = new LayerInk();
   const display = new RecordingDisplay();
@@ -161,6 +176,7 @@ function setup(
     onLayers: vi.fn<(view: LayerView) => void>(),
     onPen: vi.fn(),
     onHover: vi.fn<(ring: HoverRing | null) => void>(),
+    onFillState: vi.fn<(state: FillWorkState) => void>(),
   };
   let frame: ((time: number) => void) | null = null;
   /** The latest time an input was stamped with: a frame runs at it unless told otherwise. */
@@ -178,6 +194,7 @@ function setup(
       },
     },
     correction,
+    fillWorker,
   );
   engine.fit(AREA, 1);
   const at = (
@@ -252,6 +269,13 @@ function setup(
   };
   const committed = () => events.onCommit.mock.calls.map(([op]) => op);
   const hasPendingFrame = () => frame !== null;
+  const drainFill = async () => {
+    for (let i = 0; i < 40; i++) {
+      runFrame();
+      await Promise.resolve();
+      await Promise.resolve();
+    }
+  };
   return {
     engine,
     ink,
@@ -264,6 +288,7 @@ function setup(
     tap,
     committed,
     hasPendingFrame,
+    drainFill,
   };
 }
 
@@ -280,6 +305,508 @@ function paperAt(frame: SheetFrame, left: number, top: number, scale: number) {
   paper.getBoundingClientRect = () => new DOMRect(left, top, frame.w * scale, frame.h * scale);
   return paper;
 }
+
+function controlledFill() {
+  const pending: {
+    input: FillPatchInput;
+    resolve: (result: FillPatchResult) => void;
+    reject: (error: Error) => void;
+    signal: AbortSignal;
+  }[] = [];
+  const service: Pick<FillWorkerService, "prepare" | "dispose"> = {
+    prepare: (input, _deadline, signal) =>
+      new Promise((resolve, reject) => {
+        pending.push({ input, resolve, reject, signal });
+      }),
+    dispose: () => {},
+  };
+  async function answer() {
+    const next = pending.shift();
+    if (!next) throw new Error("No worker request");
+    next.resolve(prepareFillPatch(next.input));
+    await Promise.resolve();
+    await Promise.resolve();
+  }
+  return { pending, service, answer };
+}
+
+describe("Fill input ordering", () => {
+  it.each([false, true])(
+    "first Pencil discovery keeps blank Fill available for explicit completion (transparent pixels locked: %s)",
+    async (locked) => {
+      const worker = controlledFill();
+      const run = setup({ tool: "fill", inputMode: null }, undefined, worker.service);
+      if (locked) run.engine.setLocked(true);
+      run.engine.down(run.at("pen", 1, 40, 40, 0));
+      run.runFrame();
+      expect(run.engine.settings.inputMode).toBe("pencilOnly");
+      // DrawingScreen publishes the persisted default after onPen returns.
+      run.engine.settings = { ...run.engine.settings, inputMode: "pencilOnly" };
+      expect(run.events.onFillState).toHaveBeenLastCalledWith({
+        acceptedPending: true,
+        transitionPending: false,
+        settling: false,
+      });
+      const finished = run.engine.finishInk();
+      expect(run.engine.finishInk()).toBe(finished);
+      for (let i = 0; i < 16; i++) {
+        if (worker.pending.length) await worker.answer();
+        run.runFrame();
+        await Promise.resolve();
+      }
+      await finished;
+      expect(run.committed()).toHaveLength(locked ? 0 : 1);
+      expect(run.events.onInkFailed).not.toHaveBeenCalled();
+    },
+  );
+
+  it("continues the first Pencil Fill across regions after discovery and immediately excludes finger and palm paint", async () => {
+    const worker = controlledFill();
+    const run = setup(
+      { tool: "fill", inputMode: null, color: "#ff0000" },
+      undefined,
+      worker.service,
+    );
+    run.engine.load([KEPT], { w: 40, h: 20, density: 1 }, 1);
+    const canvas = run.ink.layerCanvas(1);
+    const context = canvas && contextOf(canvas);
+    if (!context) throw new Error("Missing selected layer");
+    const boundary = new ImageData(1, 20);
+    for (let i = 0; i < boundary.data.length; i += 4) boundary.data.set([0, 0, 0, 255], i);
+    context.putImageData(boundary, 20, 0);
+    run.engine.down(run.at("pen", 1, 5, 10, 0));
+    run.runFrame();
+    run.engine.settings = { ...run.engine.settings, inputMode: "pencilOnly" };
+    run.engine.move(run.at("pen", 1, 30, 10, 20));
+    run.engine.up(run.at("pen", 1, 30, 10, 30));
+    run.engine.down(run.at("touch", 2, 20, 10, 40));
+    run.engine.up(run.at("touch", 2, 20, 10, 50));
+    run.engine.down(palmSized(run.at("touch", 3, 20, 10, 60)));
+    run.engine.up(palmSized(run.at("touch", 3, 20, 10, 70)));
+    for (let i = 0; i < 20; i++) {
+      if (worker.pending.length) await worker.answer();
+      run.runFrame();
+      await Promise.resolve();
+    }
+    expect(run.committed()).toMatchObject([
+      { tool: "fill", color: "#ff0000", reference: "layer" },
+      { tool: "fill", color: "#ff0000", reference: "layer", undoWithPrevious: true },
+    ]);
+    expect(context.getImageData(20, 10, 1, 1).data).toEqual(new Uint8ClampedArray([0, 0, 0, 255]));
+    expect(run.events.onInkFailed).not.toHaveBeenCalled();
+  });
+
+  it("keeps time-up input closed after accepted Fill completes", async () => {
+    const worker = controlledFill();
+    const run = setup({ tool: "fill" }, undefined, worker.service);
+    run.engine.down(run.at("mouse", 1, 40, 40, 0));
+    run.runFrame();
+    run.engine.closeInput();
+    const finish = run.engine.finishInk();
+    expect(run.engine.settings.locked).toBe(true);
+    run.engine.move(run.at("mouse", 1, 80, 80, 10));
+    run.engine.down(run.at("mouse", 2, 90, 90, 10));
+    for (let i = 0; i < 20; i++) {
+      if (worker.pending.length) await worker.answer();
+      run.runFrame();
+      await Promise.resolve();
+    }
+    await finish;
+    expect(run.committed()).toHaveLength(1);
+    expect(run.engine.settings.locked).toBe(true);
+    run.engine.down(run.at("mouse", 3, 100, 100, 20));
+    await run.drainFill();
+    expect(worker.pending).toHaveLength(0);
+    expect(run.committed()).toHaveLength(1);
+  });
+
+  it("page cancellation aborts the pending generation synchronously and rejects stale worker results", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const worker = controlledFill();
+    const run = setup({ tool: "fill" }, undefined, worker.service);
+    run.engine.down(run.at("mouse", 1, 40, 40, 0));
+    run.runFrame();
+    const request = worker.pending[0];
+    const finish = run.engine.finishInk();
+    const rejected = expect(finish).rejects.toThrow("pagehide");
+    run.engine.abortPendingFill("pagehide");
+    expect(request.signal.aborted).toBe(true);
+    expect(run.engine.steps).toEqual([]);
+    expect(info).toHaveBeenCalledWith(
+      "Fill input cancelled",
+      expect.objectContaining({ reason: "pagehide", affectedGestures: 1 }),
+    );
+    await worker.answer();
+    run.engine.move(run.at("mouse", 1, 80, 80, 10));
+    run.engine.up(run.at("mouse", 1, 80, 80, 20));
+    await run.drainFill();
+    await rejected;
+    expect(run.committed()).toEqual([]);
+    info.mockRestore();
+  });
+
+  it("restores layer opacity only after locking has finished pending Fill", async () => {
+    const worker = controlledFill();
+    const run = setup({ tool: "fill" }, undefined, worker.service);
+    run.engine.down(run.at("mouse", 1, 40, 40, 0));
+    run.runFrame();
+    run.display.calls.length = 0;
+    run.engine.settings = { ...run.engine.settings, locked: true };
+    expect(run.display.calls).not.toContain("previewOpacity:null");
+    for (let i = 0; i < 8; i++) {
+      if (worker.pending.length) await worker.answer();
+      run.runFrame();
+      await Promise.resolve();
+    }
+    expect(run.display.calls).toContain("previewOpacity:null");
+    expect(run.committed()).toHaveLength(1);
+  });
+  it("rejects a failed drain's layer edit, keeps its accepted prefix, and permits a later explicit retry", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const worker = controlledFill();
+    const run = setup({ tool: "fill", color: "#ff0000" }, undefined, worker.service);
+    run.engine.load([KEPT], { w: 40, h: 20, density: 1 }, 1);
+    const canvas = run.ink.layerCanvas(1);
+    const context = canvas && contextOf(canvas);
+    if (!context) throw new Error("Missing selected layer");
+    const boundary = new ImageData(1, 20);
+    for (let i = 0; i < boundary.data.length; i += 4) boundary.data.set([0, 0, 0, 255], i);
+    context.putImageData(boundary, 20, 0);
+    run.engine.down(run.at("mouse", 1, 5, 10, 0));
+    run.engine.up(run.at("mouse", 1, 5, 10, 20));
+    run.engine.down(run.at("mouse", 1, 30, 10, 30));
+    run.engine.up(run.at("mouse", 1, 30, 10, 50));
+    run.engine.setOpacity(40);
+    for (let i = 0; i < 8 && run.committed().length === 0; i++) {
+      run.runFrame();
+      if (worker.pending.length) await worker.answer();
+    }
+    run.runFrame();
+    const failed = worker.pending.shift();
+    if (!failed) throw new Error("Missing second Fill request");
+    failed.reject(new FillError("Worker crashed"));
+    await run.drainFill();
+    expect(run.engine.steps.map((op) => op.tool)).toEqual(["brush", "fill"]);
+    expect(run.events.onInkFailed).toHaveBeenCalledOnce();
+    run.engine.setOpacity(40);
+    expect(run.engine.steps.map((op) => op.tool)).toEqual(["brush", "fill", "opacity"]);
+  });
+
+  it("ignores a pending worker result after sheet reset", async () => {
+    const worker = controlledFill();
+    const run = setup({ tool: "fill" }, undefined, worker.service);
+    run.engine.down(run.at("mouse", 1, 40, 40, 0));
+    run.runFrame();
+    const signal = worker.pending[0].signal;
+    run.engine.reset();
+    expect(signal.aborted).toBe(true);
+    await worker.answer();
+    await run.drainFill();
+    expect(run.engine.steps).toEqual([]);
+    expect(run.ink.layerCanvas(1)).toBeNull();
+    expect(run.committed()).toEqual([]);
+  });
+  it("keeps redo while touch previews, and restores prior ink for a three-finger tap", async () => {
+    const run = setup({ tool: "fill" });
+    run.engine.load([KEPT], run.engine.frame, 1);
+    run.engine.undo();
+    run.engine.down(run.at("touch", 1, 40, 40, 0));
+    await run.drainFill();
+    expect(run.display.calls).toContain("previewFill");
+    expect(run.events.onHistory).toHaveBeenLastCalledWith(state(false, true));
+    run.engine.down(run.at("touch", 2, 100, 40, 50));
+    run.engine.down(run.at("touch", 3, 160, 40, 60));
+    for (let id = 1; id <= 3; id++) run.engine.up(run.at("touch", id, 40 + (id - 1) * 60, 40, 100));
+    expect(run.engine.steps).toEqual([KEPT]);
+    expect(run.committed()).toEqual([]);
+  });
+
+  it("accepts a stationary single finger after the existing young-contact threshold", async () => {
+    vi.useFakeTimers();
+    const run = setup({ tool: "fill" });
+    run.engine.down(run.at("touch", 1, 40, 40, 0));
+    await run.drainFill();
+    expect(run.committed()).toEqual([]);
+    await vi.advanceTimersByTimeAsync(259);
+    await run.drainFill();
+    expect(run.committed()).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1);
+    await run.drainFill();
+    expect(run.committed()).toHaveLength(1);
+    run.engine.dispose();
+    vi.useRealTimers();
+  });
+
+  it("Pencil only excludes Fill touch input and palm contacts before worker dispatch", async () => {
+    const worker = controlledFill();
+    const run = setup({ tool: "fill", inputMode: "pencilOnly" }, undefined, worker.service);
+    run.engine.down(run.at("touch", 1, 40, 40, 0));
+    run.engine.up(run.at("touch", 1, 40, 40, 50));
+    run.engine.down(palmSized(run.at("touch", 2, 80, 80, 100)));
+    await run.drainFill();
+    expect(worker.pending).toEqual([]);
+    expect(run.committed()).toEqual([]);
+    run.engine.dispose();
+  });
+  it("closes Fill input when tool settings change and blocks a competing brush until it drains", async () => {
+    const worker = controlledFill();
+    const run = setup({ tool: "fill", color: "#ff0000" }, undefined, worker.service);
+    run.engine.down(run.at("mouse", 1, 40, 40, 0));
+    run.engine.up(run.at("mouse", 1, 40, 40, 10));
+    run.runFrame();
+    run.engine.settings = {
+      ...run.engine.settings,
+      tool: "brush",
+      color: "#0000ff",
+      fillReference: "visible",
+      inputMode: "pencilOnly",
+    };
+    expect(run.engine.settings).toMatchObject({ tool: "fill", color: "#ff0000" });
+    run.stroke("mouse", 2, [10, 10], [60, 10], 20);
+    expect(run.committed()).toEqual([]);
+    for (let i = 0; i < 8; i++) {
+      if (worker.pending.length) await worker.answer();
+      run.runFrame();
+      await Promise.resolve();
+    }
+    expect(run.committed()).toMatchObject([{ tool: "fill", color: "#ff0000" }]);
+    expect(run.engine.settings).toMatchObject({
+      tool: "brush",
+      color: "#0000ff",
+      fillReference: "visible",
+      inputMode: "pencilOnly",
+    });
+  });
+  it.each([
+    { tool: "brush" },
+    { color: "#0000ff" },
+    { fillReference: "visible" },
+    { inputMode: "pencilOnly" },
+  ] satisfies Partial<InkSettings>[])(
+    "retains the current Fill selection when preparation for a settings change fails: %j",
+    async (choice) => {
+      const worker = controlledFill();
+      const run = setup(
+        { tool: "fill", color: "#ff0000", fillReference: "layer" },
+        undefined,
+        worker.service,
+      );
+      const before = run.engine.settings;
+      run.engine.down(run.at("mouse", 1, 40, 40, 0));
+      run.runFrame();
+      run.engine.settings = { ...before, ...choice };
+      worker.pending[0].reject(new Error("worker failed"));
+      await run.drainFill();
+      expect(run.engine.settings).toEqual(before);
+      expect(run.events.onInkFailed).toHaveBeenCalledOnce();
+      expect(run.committed()).toEqual([]);
+    },
+  );
+  it("reuses equal staged selections and rejects a different choice during Fill completion", async () => {
+    const worker = controlledFill();
+    const run = setup({ tool: "fill", color: "#ff0000" }, undefined, worker.service);
+    run.engine.down(run.at("mouse", 1, 40, 40, 0));
+    run.runFrame();
+    const requested = { ...run.engine.settings, tool: "brush" as const, color: "#0000ff" };
+    run.engine.settings = requested;
+    run.engine.settings = { ...requested };
+    expect(run.events.onInkFailed).not.toHaveBeenCalled();
+    run.engine.settings = { ...requested, color: "#00ff00" };
+    expect(run.events.onInkFailed).toHaveBeenCalledOnce();
+    expect(run.engine.settings).toMatchObject({ tool: "fill", color: "#ff0000" });
+    for (let i = 0; i < 8; i++) {
+      if (worker.pending.length) await worker.answer();
+      await run.drainFill();
+    }
+    expect(run.engine.settings).toMatchObject({ tool: "brush", color: "#0000ff" });
+  });
+  it("locks input immediately during a staged selection and preserves the cutoff after completion", async () => {
+    const worker = controlledFill();
+    const run = setup({ tool: "fill", color: "#ff0000" }, undefined, worker.service);
+    run.engine.down(run.at("mouse", 1, 40, 40, 0));
+    run.runFrame();
+    run.engine.settings = { ...run.engine.settings, tool: "brush", color: "#0000ff" };
+    run.engine.settings = { ...run.engine.settings, locked: true };
+    expect(run.engine.settings).toMatchObject({ tool: "fill", color: "#ff0000", locked: true });
+    for (let i = 0; i < 8; i++) {
+      if (worker.pending.length) await worker.answer();
+      await run.drainFill();
+    }
+    expect(run.engine.settings).toMatchObject({ tool: "brush", color: "#0000ff", locked: true });
+    run.stroke("mouse", 2, [10, 10], [60, 10], 20);
+    expect(run.committed()).toMatchObject([{ tool: "fill", color: "#ff0000" }]);
+    expect(run.events.onInkFailed).not.toHaveBeenCalled();
+  });
+  it("does not publish an obsolete selection after replacing the sheet and staging another choice", async () => {
+    const worker = controlledFill();
+    const run = setup({ tool: "fill", color: "#ff0000" }, undefined, worker.service);
+    run.engine.down(run.at("mouse", 1, 40, 40, 0));
+    run.runFrame();
+    run.engine.settings = { ...run.engine.settings, tool: "brush", color: "#0000ff" };
+    run.engine.load([], run.engine.frame, 0);
+    run.engine.settings = { ...run.engine.settings, tool: "fill", color: "#00ff00" };
+    run.engine.down(run.at("mouse", 2, 40, 40, 20));
+    run.runFrame();
+    run.engine.settings = { ...run.engine.settings, tool: "eraser" };
+    await worker.answer();
+    await run.drainFill();
+    expect(run.engine.settings).toMatchObject({ tool: "fill", color: "#00ff00" });
+    for (let i = 0; i < 8; i++) {
+      if (worker.pending.length) await worker.answer();
+      await run.drainFill();
+    }
+    expect(run.engine.settings).toMatchObject({ tool: "eraser", color: "#00ff00" });
+  });
+  it.each(["mouse", "pen"])(
+    "accepts %s on press before the first region returns",
+    async (pointer) => {
+      const worker = controlledFill();
+      const run = setup({ tool: "fill" }, undefined, worker.service);
+      run.engine.down(run.at(pointer, 1, 40, 40, 0));
+      expect(run.events.onFillState).toHaveBeenLastCalledWith({
+        acceptedPending: true,
+        transitionPending: false,
+        settling: false,
+      });
+      run.runFrame();
+      expect(worker.pending).toHaveLength(1);
+      expect(run.committed()).toEqual([]);
+      run.engine.dispose();
+    },
+  );
+
+  it("cancels young touch preview without a new history action, then undoes prior ink", async () => {
+    const run = setup({ tool: "fill" });
+    run.engine.load([KEPT], run.engine.frame, 1);
+    run.engine.down(run.at("touch", 1, 40, 40, 0));
+    await run.drainFill();
+    expect(run.display.calls).toContain("previewFill");
+    expect(run.committed()).toEqual([]);
+    run.engine.down(run.at("touch", 2, 90, 40, 100));
+    expect(run.display.calls.at(-1)).toBe("clearFillPreview");
+    run.engine.up(run.at("touch", 1, 40, 40, 150));
+    run.engine.up(run.at("touch", 2, 90, 40, 150));
+    expect(run.engine.steps).toEqual([]);
+    expect(run.events.onHistory).toHaveBeenLastCalledWith(state(false, true));
+  });
+
+  it.each([
+    { moved: 27, age: 100 },
+    { moved: 0, age: 261 },
+  ])("accepts touch before a late second contact at $moved px/$age ms", async ({ moved, age }) => {
+    const worker = controlledFill();
+    const run = setup({ tool: "fill" }, undefined, worker.service);
+    run.engine.down(run.at("touch", 1, 40, 40, 0));
+    if (moved) run.engine.move(run.at("touch", 1, 40 + moved, 40, 90));
+    run.runFrame();
+    run.engine.down(run.at("touch", 2, 100, 40, age));
+    expect(run.events.onFillState).toHaveBeenLastCalledWith({
+      acceptedPending: true,
+      transitionPending: false,
+      settling: false,
+    });
+    run.engine.up(run.at("touch", 1, 40 + moved, 40, age + 20));
+    run.engine.up(run.at("touch", 2, 100, 40, age + 20));
+    for (let i = 0; i < 8; i++) {
+      if (worker.pending.length) await worker.answer();
+      run.runFrame();
+    }
+    expect(run.engine.steps).toHaveLength(1);
+    expect(run.committed()).toHaveLength(1);
+  });
+
+  it("orders an earlier released Fill before a young two-finger Undo", async () => {
+    const worker = controlledFill();
+    const run = setup({ tool: "fill" }, undefined, worker.service);
+    run.engine.down(run.at("mouse", 1, 40, 40, 0));
+    run.engine.up(run.at("mouse", 1, 40, 40, 20));
+    run.runFrame();
+    run.tap(2, 100);
+    expect(run.engine.steps).toEqual([]);
+    for (let i = 0; i < 8; i++) {
+      if (worker.pending.length) await worker.answer();
+      run.runFrame();
+      await Promise.resolve();
+    }
+    expect(run.committed()).toHaveLength(1);
+    expect(run.engine.steps).toEqual([]);
+    expect(run.events.onHistory).toHaveBeenLastCalledWith(state(false, true));
+  });
+
+  it("blocks competing layer controls and new input while explicit completion drains", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const worker = controlledFill();
+    const run = setup({ tool: "fill" }, undefined, worker.service);
+    run.engine.down(run.at("mouse", 1, 40, 40, 0));
+    run.runFrame();
+    const finished = run.engine.finishInk();
+    expect(run.engine.finishInk()).toBe(finished);
+    expect(run.events.onFillState).toHaveBeenLastCalledWith({
+      acceptedPending: true,
+      transitionPending: true,
+      settling: false,
+    });
+    run.engine.addLayer();
+    run.engine.undo();
+    run.engine.down(run.at("mouse", 2, 80, 40, 10));
+    run.engine.up(run.at("mouse", 2, 80, 40, 20));
+    for (let i = 0; i < 8; i++) {
+      if (worker.pending.length) await worker.answer();
+      run.runFrame();
+      await Promise.resolve();
+    }
+    await finished;
+    expect(run.engine.steps.map((op) => op.tool)).toEqual(["fill"]);
+    expect(run.committed()).toHaveLength(1);
+    expect(run.events.onInkFailed).toHaveBeenCalledTimes(2);
+  });
+
+  it("waits for Fill before a layer edit and captures its value and session time when requested", async () => {
+    let sessionMs = 10;
+    const worker = controlledFill();
+    const run = setup({ tool: "fill", sessionMs: () => sessionMs }, undefined, worker.service);
+    run.engine.down(run.at("mouse", 1, 40, 40, 0));
+    run.runFrame();
+    sessionMs = 20;
+    run.engine.setOpacity(40);
+    expect(run.events.onLayers.mock.calls.at(-1)?.[0].state.layers[0].opacity).toBe(100);
+    sessionMs = 200;
+    for (let i = 0; i < 8; i++) {
+      if (worker.pending.length) await worker.answer();
+      run.runFrame();
+      await Promise.resolve();
+    }
+    expect(run.engine.steps).toMatchObject([
+      { tool: "fill", T: 10 },
+      { tool: "opacity", opacity: 40, T: 20 },
+    ]);
+  });
+
+  it("settles after the feedback threshold and clears feedback when completion ends", async () => {
+    vi.useFakeTimers();
+    const worker = controlledFill();
+    const run = setup({ tool: "fill" }, undefined, worker.service);
+    run.engine.down(run.at("mouse", 1, 40, 40, 0));
+    run.runFrame();
+    const finished = run.engine.finishInk();
+    await vi.advanceTimersByTimeAsync(149);
+    expect(run.events.onFillState.mock.calls.at(-1)?.[0].settling).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(run.events.onFillState.mock.calls.at(-1)?.[0].settling).toBe(true);
+    for (let i = 0; i < 8; i++) {
+      if (worker.pending.length) await worker.answer();
+      run.runFrame();
+      await Promise.resolve();
+    }
+    await finished;
+    expect(run.events.onFillState).toHaveBeenLastCalledWith({
+      acceptedPending: false,
+      transitionPending: false,
+      settling: false,
+    });
+    vi.useRealTimers();
+  });
+});
 
 const lastPoint = (op: Op) => {
   if (op.tool === "fill") throw new Error("Expected a stroke, got a fill");
@@ -489,7 +1016,7 @@ describe("InkEngine post-correction", () => {
     const original = requests[0]?.input.renderedPoints;
     if (action === "layer") engine.addLayer();
     else if (action === "undo") engine.undo();
-    else if (action === "finish") engine.finishStroke();
+    else if (action === "finish") void engine.finishInk();
     else if (action === "steps") expect(engine.steps).toHaveLength(1);
     else if (action === "timelapse") expect(engine.timelapse().steps).toHaveLength(1);
     else if (action === "composite") engine.composite();
@@ -1151,10 +1678,11 @@ describe("InkEngine", () => {
     detach();
   });
 
-  it("names its painting, fills, replays and commits for the performance recorder", () => {
-    const { engine, stroke } = setup({ tool: "fill" });
+  it("names its painting, fills, replays and commits for the performance recorder", async () => {
+    const { engine, stroke, drainFill } = setup({ tool: "fill" });
     timed.length = 0;
     stroke("touch", 1, [40, 40], [42, 40]);
+    await drainFill();
     engine.settings = { ...engine.settings, tool: "brush" };
     stroke("pen", 2, [0, 0], [100, 0], 1000);
     engine.undo();
@@ -1193,11 +1721,15 @@ describe("InkEngine", () => {
 
   it.each(["layer", "visible"] as const)(
     "records %s reference when committing a Fill",
-    (reference) => {
-      const { engine, at, committed } = setup({ tool: "fill", fillReference: reference });
+    async (reference) => {
+      const { engine, at, committed, drainFill } = setup({
+        tool: "fill",
+        fillReference: reference,
+      });
       const detach = engine.attach(paperAt(framed(engine), 0, 0, 1));
       engine.down(at("touch", 1, 40, 40, 0));
       engine.up(at("touch", 1, 40, 40, 50));
+      await drainFill();
       detach();
       expect(committed()).toMatchObject([{ tool: "fill", reference }]);
       engine.settings = {
@@ -1208,30 +1740,31 @@ describe("InkEngine", () => {
     },
   );
 
-  it("fills on a tap, not on a drag, by how far the finger went on screen whatever the sheet's scale", () => {
+  it("fills on touch lift including a drag, in the captured sheet frame at every display scale", async () => {
     for (const scale of [1, 2.5]) {
-      const { engine, at, committed } = setup({ tool: "fill" });
+      const { engine, at, committed, drainFill } = setup({ tool: "fill" });
       const detach = engine.attach(paperAt(framed(engine), 0, 0, scale));
       /** A finger landing at 40, 40 on screen and lifting `drift` CSS px to its right. */
       const tapAt = (id: number, drift: number, t: number) => {
         engine.down(at("touch", id, 40, 40, t));
         engine.up(at("touch", id, 40 + drift, 40, t + 50));
       };
-      tapAt(1, FILL_TAP_SLOP - 1, 0);
-      tapAt(2, FILL_TAP_SLOP, 1000);
+      tapAt(1, 80, 0);
+      await drainFill();
       detach();
-      expect(committed()).toEqual([
-        expect.objectContaining({ tool: "fill", x: 40 / scale, y: 40 / scale }),
-      ]);
+      expect(
+        committed().map((op) => (op.tool === "fill" ? [Math.floor(op.x), Math.floor(op.y)] : null)),
+      ).toEqual([[40 / scale, 40 / scale]]);
     }
   });
 
-  it("tells the display where a fill changed the current layer's ink", () => {
-    const { engine, ink, display, at } = setup({ tool: "fill" });
-    const flood = vi.spyOn(ink, "flood");
+  it("tells the display where a fill changed the current layer's ink", async () => {
+    const { engine, ink, display, at, drainFill } = setup({ tool: "fill" });
+    const flood = vi.spyOn(ink, "applyPreparedFill");
     const detach = engine.attach(paperAt(framed(engine), 0, 0, 1));
     engine.down(at("touch", 1, 40, 40, 0));
     engine.up(at("touch", 1, 40, 40, 50));
+    await drainFill();
     detach();
     const [filled] = flood.mock.results;
     expect(filled.value).not.toBeNull();
@@ -1424,8 +1957,8 @@ describe("InkEngine", () => {
     expect(committed().map((op) => op.layer)).toEqual([front]);
   });
 
-  it("ends a stroke in progress where it stands as the sheet locks, and drops a fill tap still down", () => {
-    const { engine, at, runFrame, committed } = setup();
+  it("ends a stroke where it stands as the sheet locks, and drains a Fill still down", async () => {
+    const { engine, at, runFrame, committed, drainFill } = setup();
     engine.down(at("touch", 1, 0, 0, 0));
     engine.move(at("touch", 1, 50, 0, 16));
     runFrame();
@@ -1441,7 +1974,8 @@ describe("InkEngine", () => {
     engine.down(at("touch", 2, 40, 40, 1000));
     engine.settings = { ...engine.settings, locked: true };
     engine.up(at("touch", 2, 40, 40, 1050));
-    expect(committed()).toHaveLength(1);
+    await drainFill();
+    expect(committed()).toHaveLength(2);
   });
 
   for (const flag of ["locked", "paused", "panelOpen"] as const) {
@@ -1472,16 +2006,17 @@ describe("InkEngine", () => {
     }
   }
 
-  it("drops a fill tap held when input becomes unavailable", () => {
+  it("accepts and drains Fill held when input becomes unavailable", async () => {
     for (const flag of ["locked", "paused", "panelOpen"] as const) {
-      const { engine, at, committed, events } = setup({ tool: "fill" });
+      const { engine, at, committed, events, drainFill } = setup({ tool: "fill" });
       events.onHistory.mockClear();
       engine.down(at("touch", 1, 40, 40, 0));
       engine.settings = { ...engine.settings, [flag]: true };
       engine.up(at("touch", 1, 40, 40, 100));
-      expect(committed()).toEqual([]);
-      expect(engine.steps).toEqual([]);
-      expect(events.onHistory).not.toHaveBeenCalled();
+      await drainFill();
+      expect(committed()).toHaveLength(1);
+      expect(engine.steps).toHaveLength(1);
+      expect(events.onHistory).toHaveBeenCalled();
     }
   });
 
@@ -1584,17 +2119,24 @@ describe("InkEngine", () => {
     }
   });
 
-  it("gives a resting finger's fill tap way to a pen landing, and fills nothing where a palm settles", () => {
-    const { engine, at, committed } = setup({ tool: "fill", inputMode: "pencilAndFinger" });
+  it("gives a resting finger's fill tap way to a pen landing, and fills nothing where a palm settles", async () => {
+    const { engine, at, committed, drainFill } = setup({
+      tool: "fill",
+      inputMode: "pencilAndFinger",
+    });
     engine.down(at("touch", 1, 300, 600, 0));
     engine.down(at("pen", 2, 100, 100, 50));
     engine.up(at("pen", 2, 100, 100, 100));
     engine.up(at("touch", 1, 300, 600, 200));
+    await drainFill();
     // A fingertip that spreads into a palm as it settles never meant its fill.
     engine.down(at("touch", 3, 200, 200, 1000));
     engine.move(palmSized(at("touch", 3, 201, 200, 1016)));
     engine.up(palmSized(at("touch", 3, 201, 200, 1032)));
-    expect(committed()).toEqual([expect.objectContaining({ tool: "fill", x: 100, y: 100 })]);
+    await drainFill();
+    expect(
+      committed().map((op) => (op.tool === "fill" ? [Math.floor(op.x), Math.floor(op.y)] : null)),
+    ).toEqual([[100, 100]]);
   });
 
   it("draws a stroke at Raw the same whatever the display's frame rate", () => {

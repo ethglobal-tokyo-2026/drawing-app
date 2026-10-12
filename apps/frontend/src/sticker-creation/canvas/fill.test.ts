@@ -3,6 +3,13 @@ import { seededRandom } from "../../ui/seededRandom";
 import type { Rect } from "../sealing/stickerPasses";
 import {
   findFill,
+  fillTarget,
+  matchesFillTarget,
+  isFillNoOp,
+  fillReadAreas,
+  fillInteriorSpans,
+  IN,
+  TUCKED,
   findOnSheet,
   floodFill,
   floodSheet,
@@ -13,10 +20,10 @@ import {
   writeFill,
   type FoundFill,
   type Pixels,
+  type Cut,
 } from "./fill";
 
 type Rgba = [number, number, number, number];
-type Cut = Record<"left" | "top" | "right" | "bottom", boolean>;
 
 const INK: Rgba = [28, 24, 36, 255];
 const RED = [255, 0, 0] as const;
@@ -479,6 +486,111 @@ describe("a fill on a locked layer", () => {
       expect(target.data).toEqual(image(expected).data);
     },
   );
+});
+
+describe("drag fill matching and interior coverage", () => {
+  it("classifies alpha at the paper boundary and compares against the first target", () => {
+    const pixels: Pixels = {
+      width: 2,
+      height: 1,
+      data: new Uint8ClampedArray([100, 100, 100, 127, 100, 100, 100, 128]),
+    };
+    expect(fillTarget(pixels, 0, 0)).toEqual({ empty: true, rgb: [100, 100, 100] });
+    expect(fillTarget(pixels, 1, 0)).toEqual({ empty: false, rgb: [100, 100, 100] });
+    expect(matchesFillTarget(fillTarget(pixels, 0, 0), fillTarget(pixels, 1, 0))).toBe(false);
+    expect(
+      matchesFillTarget({ empty: true, rgb: [0, 0, 0] }, { empty: true, rgb: [255, 255, 255] }),
+    ).toBe(true);
+    const first = { empty: false, rgb: [100, 100, 100] as const };
+    expect(matchesFillTarget(first, { empty: false, rgb: [171, 100, 100] })).toBe(true);
+    expect(matchesFillTarget(first, { empty: false, rgb: [172, 100, 100] })).toBe(false);
+    expect(matchesFillTarget(first, { empty: false, rgb: [160, 100, 100] })).toBe(true);
+    expect(matchesFillTarget(first, { empty: false, rgb: [220, 100, 100] })).toBe(false);
+  });
+
+  it("keeps the accepted seed's own flood tolerance", () => {
+    const pixels: Pixels = {
+      width: 3,
+      height: 1,
+      data: new Uint8ClampedArray([100, 100, 100, 255, 160, 100, 100, 255, 220, 100, 100, 255]),
+    };
+    expect(matchesFillTarget(fillTarget(pixels, 0, 0), fillTarget(pixels, 1, 0))).toBe(true);
+    const found = mustFind(pixels, 1, 0, 0);
+    expect([...found.marks]).toEqual([IN, IN, IN]);
+  });
+
+  it("skips only opaque seeds whose paint distance is below eight", () => {
+    expect(isFillNoOp({ empty: false, rgb: [100, 100, 100] }, [107, 100, 100])).toBe(true);
+    expect(isFillNoOp({ empty: false, rgb: [100, 100, 100] }, [108, 100, 100])).toBe(false);
+    expect(isFillNoOp({ empty: true, rgb: [100, 100, 100] }, [100, 100, 100])).toBe(false);
+  });
+
+  it("returns global interior spans without edge coverage", () => {
+    expect(
+      fillInteriorSpans(
+        {
+          box: { x: 2, y: 3, w: 5, h: 2 },
+          paper: true,
+          marks: new Uint8Array([TUCKED, IN, IN, 0, IN, IN, TUCKED, IN, IN, TUCKED]),
+        },
+        { x: 10, y: 20, w: 30, h: 40 },
+      ),
+    ).toEqual(new Uint32Array([23, 13, 15, 23, 16, 17, 24, 12, 13, 24, 14, 16]));
+  });
+
+  it("shares progressive reads with their cut sides and final full sheet", () => {
+    expect([...fillReadAreas({ width: 100, height: 100 }, 0, 0, 4)]).toEqual([
+      {
+        at: { x: 0, y: 0, w: 3, h: 3 },
+        cut: { left: false, top: false, right: true, bottom: true },
+      },
+      {
+        at: { x: 0, y: 0, w: 5, h: 5 },
+        cut: { left: false, top: false, right: true, bottom: true },
+      },
+      {
+        at: { x: 0, y: 0, w: 9, h: 9 },
+        cut: { left: false, top: false, right: true, bottom: true },
+      },
+      { at: { x: 0, y: 0, w: 100, h: 100 } },
+    ]);
+    expect([...fillReadAreas({ width: 10, height: 10 }, 5, 5, 4)].map(({ at }) => at)).toEqual([
+      { x: 3, y: 3, w: 5, h: 5 },
+      { x: 0, y: 0, w: 10, h: 10 },
+    ]);
+    expect([...fillReadAreas({ width: 10, height: 10 }, -1, 0, 4)]).toEqual([]);
+  });
+
+  it.each([false, true])(
+    "reports identical destination bytes as unchanged, locked %s",
+    (locked) => {
+      const pixels = image(["R"]);
+      const found: FoundFill = {
+        box: { x: 0, y: 0, w: 1, h: 1 },
+        marks: new Uint8Array([IN]),
+        paper: false,
+      };
+      expect(writeFill(pixels, pixels, found, RED, locked)).toBe(false);
+      expect([...pixels.data]).toEqual([255, 0, 0, 255]);
+    },
+  );
+
+  it("compares clamped blended edge bytes and reports alpha changes", () => {
+    const pixels: Pixels = {
+      width: 1,
+      height: 1,
+      data: new Uint8ClampedArray([100, 100, 100, 255]),
+    };
+    const found: FoundFill = {
+      box: { x: 0, y: 0, w: 1, h: 1 },
+      marks: new Uint8Array([TUCKED]),
+      paper: true,
+    };
+    expect(writeFill(pixels, pixels, found, [150, 150, 150])).toBe(false);
+    pixels.data[3] = 191;
+    expect(writeFill(pixels, pixels, found, [150, 150, 150])).toBe(true);
+    expect([...pixels.data]).toEqual([113, 113, 113, 255]);
+  });
 });
 
 describe("recordFill and replayFill", () => {

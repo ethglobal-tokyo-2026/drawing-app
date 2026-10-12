@@ -45,8 +45,12 @@ export interface DrawingCanvasHandle extends LayerControls {
   timelapse: () => { steps: readonly Step[]; start: LayerState };
   /** Every step, oldest first, layer changes included: what the drawing kept on the device holds. */
   steps: () => readonly Step[];
-  /** Ends a stroke in progress as if the pointer lifted. */
-  finishStroke: () => void;
+  /** Completes all accepted ink before reading final sheet data. */
+  finishInk: () => Promise<void>;
+  /** Closes input synchronously at the clock cutoff, preserving accepted ink. */
+  closeInput: () => void;
+  /** Invalidates pending Fill before keeping the committed prefix on page suspension. */
+  abortPendingFill: (reason: string) => void;
   /** A new canvas of what the sheet shows, transparent where nothing is drawn; the caller releases it. */
   composite: () => HTMLCanvasElement | null;
   /**
@@ -61,7 +65,8 @@ export interface DrawingCanvasHandle extends LayerControls {
 }
 
 // The hover ring is the paper's own, so its event stays here.
-interface Props extends Omit<InkEvents, "onHover"> {
+interface Props extends Omit<InkEvents, "onHover" | "onFillState"> {
+  onFillState?: InkEvents["onFillState"];
   ref?: Ref<DrawingCanvasHandle>;
   settings: InkSettings;
   /** The drawing screen shows, not covered by another screen. */
@@ -94,6 +99,9 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
   const onLayers = useEffectEvent(events.onLayers);
   const onBlockedHidden = useEffectEvent(events.onBlockedHidden);
   const onInkFailed = useEffectEvent(events.onInkFailed);
+  const onFillState = useEffectEvent((state: Parameters<InkEvents["onFillState"]>[0]) =>
+    events.onFillState?.(state),
+  );
   const onCommit = useEffectEvent(events.onCommit);
   const onBlocked = useEffectEvent(events.onBlocked);
   const onPen = useEffectEvent(events.onPen);
@@ -111,6 +119,7 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
       onLayers: (view) => onLayers(view),
       onBlockedHidden: () => onBlockedHidden(),
       onInkFailed: (error) => onInkFailed(error),
+      onFillState: (state) => onFillState(state),
       onCommit: (op) => onCommit(op),
       onBlocked: () => onBlocked(),
       onPen: () => onPen(),
@@ -197,7 +206,9 @@ export function DrawingCanvas({ ref, settings, active, under, label, ...events }
       },
       timelapse: () => ink.current?.engine.timelapse() ?? { steps: [], start: FIRST_LAYERS },
       steps: () => ink.current?.engine.steps ?? [],
-      finishStroke: () => ink.current?.engine.finishStroke(),
+      finishInk: () => ink.current?.engine.finishInk() ?? Promise.resolve(),
+      closeInput: () => ink.current?.engine.closeInput(),
+      abortPendingFill: (reason) => ink.current?.engine.abortPendingFill(reason),
       composite: () => ink.current?.engine.composite() ?? null,
       frame: () => ink.current?.engine.frame ?? null,
       sheetRect: () => sheetRef.current?.getBoundingClientRect() ?? null,

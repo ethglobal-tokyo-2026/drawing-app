@@ -1,4 +1,4 @@
-import { DAILY_TICKETS_PER_DAY, MAX_LAYERS } from "@drawing-app/api/client";
+import { MAX_LAYERS } from "@drawing-app/api/client";
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
@@ -6,28 +6,22 @@ import { strings } from "../src/i18n/strings/index.ts";
 import { LIFT_HOLD_MS } from "../src/sticker-creation/layers/useLayerDrag.ts";
 import { eraseTestLine, readKeptHistory } from "./emptySeal.ts";
 import {
-  canvas,
-  drawKeyName,
-  openDetail,
-  openSealSheet,
-  say,
-  sealOnSheet,
-  signIn,
-  ticketSnapshot,
-} from "./helpers.ts";
-import {
-  along,
-  at,
-  FINGERTIP,
-  hand,
-  inkAt,
-  inkedPixels,
-  inkShows,
-  middle,
-  pencil,
-  penStroke,
-  type At,
-} from "./pen.ts";
+  add,
+  boundary,
+  button,
+  chip,
+  color,
+  fillAt,
+  line,
+  openSheet,
+  options,
+  sheetBox,
+  shownColor,
+  slider,
+  undo,
+} from "./fillHelpers.ts";
+import { canvas, openDetail, openSealSheet, say, sealOnSheet, ticketSnapshot } from "./helpers.ts";
+import { along, at, FINGERTIP, hand, inkAt, inkedPixels, inkShows, middle } from "./pen.ts";
 
 const language = "en";
 const evidence = fileURLToPath(
@@ -49,113 +43,6 @@ declare global {
 }
 const { stickerCreation: creation, stickerBoard, ui } = strings;
 const copy = creation.layers;
-const chip = (page: Page, id: number) => page.locator(`[data-layer-chip="${id}"]`);
-const button = (page: Page, name: { en: string; ja?: string }) =>
-  page.getByRole("button", { name: say(name, language), exact: true });
-const add = (page: Page) => button(page, copy.add);
-const undo = (page: Page) => button(page, creation.history.undo);
-const slider = (page: Page) =>
-  page.getByRole("slider", { name: say(creation.opacitySlider.label, language) });
-
-/** The sheet after its opening motion, with its first layer ready to take a mark. */
-async function openSheet(page: Page) {
-  await signIn(page, "layers", language);
-  await button(page, { en: drawKeyName(language, DAILY_TICKETS_PER_DAY) }).click();
-  await canvas(page, language).hover();
-  await expect(chip(page, 1)).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator(".drawing-screen")).not.toHaveClass(
-    /is-dealt|is-deal-leaving|is-retrying/,
-  );
-}
-
-async function sheetBox(page: Page) {
-  const box = await canvas(page, language).boundingBox();
-  if (!box) throw new Error("The drawing sheet is not visible");
-  return box;
-}
-
-/** A horizontal mark well inside the sheet, clear of every layer control. */
-async function line(page: Page, down: number, from = 0.3, to = 0.7) {
-  const points = along(await sheetBox(page), down, from, to, 12);
-  await penStroke(page, await pencil(page), points, () => 0.5, 8);
-  await page.evaluate(() => new Promise(requestAnimationFrame));
-  return middle(points);
-}
-
-/** A closed blue boundary with a clear inside and outside for independent Fill probes. */
-async function boundary(page: Page) {
-  const box = await sheetBox(page);
-  const points = [
-    ...along(box, 0.3, 0.3, 0.7, 12),
-    ...Array.from({ length: 13 }, (_, i) => at(box, 0.7, 0.3 + (0.4 * i) / 12)),
-    ...along(box, 0.7, 0.7, 0.3, 12),
-    ...Array.from({ length: 13 }, (_, i) => at(box, 0.3, 0.7 - (0.4 * i) / 12)),
-  ];
-  await penStroke(page, await pencil(page), points, () => 0.5, 8);
-  await inkShows(page, at(box, 0.5, 0.3));
-  return box;
-}
-
-async function fillAt(page: Page, point: At) {
-  const pen = await pencil(page);
-  await pen.down(point, 0.5);
-  await pen.up(point);
-}
-
-async function color(page: Page, name: "blue" | "red") {
-  const colorButton = button(page, creation.tools.color);
-  await colorButton.click();
-  await expect(colorButton).toHaveAttribute("aria-expanded", "true");
-  const sheet = page.getByRole("dialog", { name: say(creation.colorSheet.title, language) });
-  await expect(sheet).toBeVisible();
-  await sheet
-    .getByRole("radiogroup", { name: say(creation.colorSheet.swatches, language) })
-    .getByRole("radio", { name: say(creation.colorSheet.swatchNames[name], language), exact: true })
-    .click();
-  await page.keyboard.press("Escape");
-  await expect(sheet).toBeHidden();
-}
-
-/** The shown color at one point, compositing the visible canvases with their group's opacity. */
-async function shownColor(page: Page, point: At) {
-  return page.evaluate(({ x, y }) => {
-    const sample = document.createElement("canvas");
-    sample.width = sample.height = 1;
-    try {
-      const g = sample.getContext("2d", { willReadFrequently: true });
-      if (!g) throw new Error("No context for the ink color sample");
-      for (const ink of document.querySelectorAll<HTMLCanvasElement>(".ink-sheet .ink-canvas")) {
-        const box = ink.getBoundingClientRect();
-        if (
-          !ink.width ||
-          !ink.height ||
-          !box.width ||
-          !box.height ||
-          getComputedStyle(ink).visibility !== "visible"
-        )
-          continue;
-        let opacity = 1;
-        for (let el: Element | null = ink; el; el = el.parentElement)
-          opacity *= Number(getComputedStyle(el).opacity);
-        g.globalAlpha = opacity;
-        g.drawImage(
-          ink,
-          ((x - box.left) * ink.width) / box.width,
-          ((y - box.top) * ink.height) / box.height,
-          1,
-          1,
-          0,
-          0,
-          1,
-          1,
-        );
-      }
-      return [...g.getImageData(0, 0, 1, 1).data];
-    } finally {
-      sample.width = sample.height = 0;
-    }
-  }, point);
-}
 
 /** Two separated marks, on different layers: each can disappear without hiding the other. */
 async function twoLayers(page: Page) {
@@ -170,13 +57,6 @@ async function twoLayers(page: Page) {
   const upper = await line(page, 0.65);
   await inkShows(page, lower, upper);
   return { lower, upper };
-}
-
-/** Opens the selected layer's options; selecting another chip takes one separate tap. */
-async function options(page: Page, id: number) {
-  if ((await chip(page, id).getAttribute("aria-selected")) !== "true") await chip(page, id).click();
-  if ((await chip(page, id).getAttribute("aria-expanded")) !== "true") await chip(page, id).click();
-  await expect(button(page, copy.delete)).toBeVisible();
 }
 
 test("clear and delete affect the current layer, and undo restores its ink and selection", async ({

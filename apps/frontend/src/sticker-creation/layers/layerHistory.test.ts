@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { seededRandom } from "../../ui/seededRandom";
 import { isOp, type LayerId, type LayerStep, type Op, type Step } from "../canvas/ops";
 import { CHECKPOINT_COST, planCheckpoints } from "./checkpoints";
@@ -414,6 +414,215 @@ describe("LayerHistory", () => {
     expect(() => run.history.commit({ ...brush(2), color: run.nextTag() })).toThrow(LayerStepError);
     expect(() => run.history.load([deleteLayer(1)])).toThrow(LayerStepError);
     expect(run.history.steps).toHaveLength(1);
+    expectConsistent(run);
+  });
+});
+
+describe("durable drag Fill", () => {
+  const group = (): Op[] => [
+    fill(1),
+    { ...fill(1), x: 1, undoWithPrevious: true },
+    { ...fill(1), x: 2, undoWithPrevious: true },
+  ];
+
+  it.each([1, 2])(
+    "reserves %s canvas allocations from the current allowance before retrying a grouped Redo",
+    (reserved) => {
+      let budget = 6;
+      const run = setup(() => budget);
+      for (let i = 0; i <= budget; i++) run.draw(fill(1));
+      const fills = group();
+      fills.forEach(run.draw);
+      run.history.undo();
+      expect(run.surface.copiesHeld).toBe(budget);
+      const steps = [...run.history.steps];
+      const state = run.history.state;
+      const pixels = run.surface.pixelsOf(1);
+      const heldBefore = run.surface.holdsKept;
+      run.surface.resetCounts();
+      budget = 4;
+
+      run.history.reserveCanvases(reserved);
+
+      expect(run.surface.copiesHeld).toBe(budget - reserved);
+      expect(run.surface.holdsKept).toBeLessThan(heldBefore);
+      expect(run.surface.holdsKept).toBeGreaterThan(0);
+      expect(run.surface.applied).toEqual([]);
+      expect(run.surface.restored).toEqual([]);
+      expect(run.history.steps).toEqual(steps);
+      expect(run.history.state).toBe(state);
+      expect(run.history.canUndo).toBe(true);
+      expect(run.history.canRedo).toBe(true);
+      expect(run.surface.pixelsOf(1)).toBe(pixels);
+      expectConsistent(run);
+
+      const holdsAfter = run.surface.taken.map((hold) => hold.releasedAt);
+      const apply = run.surface.apply.bind(run.surface);
+      const failure = vi.spyOn(run.surface, "apply").mockImplementation((step, before) => {
+        if (step === fills[1]) throw new Error("Second fill canvas refused");
+        apply(step, before);
+      });
+      expect(() => run.history.redo()).toThrow("Second fill canvas refused");
+      expect(run.history.steps).toEqual(steps);
+      expect(run.history.canRedo).toBe(true);
+      expect(run.surface.pixelsOf(1)).toBe(pixels);
+      expect(run.surface.taken.map((hold) => hold.releasedAt)).toEqual(holdsAfter);
+      expectConsistent(run);
+      failure.mockRestore();
+      expect(run.history.redo()).toBe(fills[2]);
+      expect(run.history.steps).toEqual([...steps, ...fills]);
+      expectConsistent(run);
+      expect(run.history.undo()).toBe(fills[2]);
+      expect(run.history.steps).toEqual(steps);
+      expect(run.surface.pixelsOf(1)).toEqual(pixels);
+      expectConsistent(run);
+    },
+  );
+
+  it("releases shared holds when reserved canvases leave no copy allowance", () => {
+    const run = setup(() => 1);
+    run.draw(fill(1));
+    run.draw(fill(1));
+    const shared = run.surface.taken.filter(
+      (hold) => hold.releasedAt === null && hold.pixels === run.surface.pixelsOf(1),
+    );
+    expect(shared.length).toBeGreaterThan(0);
+    expect(run.surface.copiesHeld).toBe(1);
+    const steps = [...run.history.steps];
+    const pixels = run.surface.pixelsOf(1);
+
+    run.history.reserveCanvases(2);
+
+    expect(run.surface.copiesHeld).toBe(0);
+    expect(run.surface.holdsKept).toBe(0);
+    expect(shared.every((hold) => hold.releasedAt !== null)).toBe(true);
+    expect(run.history.steps).toEqual(steps);
+    expect(run.surface.pixelsOf(1)).toBe(pixels);
+    run.surface.resetCounts();
+    run.stroke(1);
+    expect(run.surface.copies).toBe(0);
+    expectConsistent(run);
+    run.history.undo();
+    expect(run.history.steps).toEqual(steps);
+    expect(run.surface.pixelsOf(1)).toEqual(pixels);
+    expectConsistent(run);
+  });
+
+  it.each([0, 1, 12])("undoes and redoes every fill together with copy budget %s", (budget) => {
+    const run = setup(() => budget);
+    run.stroke(1);
+    const beforeCount = run.history.steps.length;
+    const fills = group();
+    fills.forEach(run.draw);
+    expect(run.history.steps).toHaveLength(beforeCount + 3);
+    expect(run.history.undo()).toBe(fills[2]);
+    expect(run.history.steps).toHaveLength(beforeCount);
+    expectConsistent(run);
+    expect(run.history.redo()).toBe(fills[2]);
+    expect(run.history.steps).toHaveLength(beforeCount + 3);
+    expectConsistent(run);
+  });
+
+  it("keeps two drags separate and branches after a grouped Undo", () => {
+    const run = setup(() => 12);
+    group().forEach(run.draw);
+    group().forEach(run.draw);
+    run.history.undo();
+    expect(run.history.steps).toHaveLength(3);
+    run.history.undo();
+    expect(run.history.steps).toHaveLength(0);
+    run.history.redo();
+    run.stroke(1);
+    expect(run.history.canRedo).toBe(false);
+    expectConsistent(run);
+  });
+
+  it("starts a separate action when a matching fill has no continuation flag", () => {
+    const run = setup(() => 12);
+    const previous = fill();
+    const first = fill();
+    run.draw(previous);
+    run.draw(first);
+    expect(run.history.undo()).toBe(first);
+    expect(run.history.steps).toEqual([previous]);
+    expectConsistent(run);
+    run.history.undo();
+    expect(run.history.canUndo).toBe(false);
+    expectConsistent(run);
+  });
+
+  it("preserves groups through load and invalidation with checkpoint eviction", () => {
+    const run = setup(() => 1);
+    run.stroke(1);
+    group().forEach(run.draw);
+    const saved = structuredClone(run.history.steps);
+    run.history.load(saved);
+    run.history.undo();
+    expect(run.history.steps).toHaveLength(1);
+    run.surface.wipe();
+    run.history.invalidate();
+    run.history.redo();
+    expect(run.history.steps).toEqual(saved);
+    expectConsistent(run);
+    run.history.dropCheckpoints();
+    run.history.undo();
+    expect(run.history.steps).toHaveLength(1);
+    expectConsistent(run);
+  });
+
+  it.each([brush(1), setOpacity(1, 50)])(
+    "refuses joining across $tool before changing history",
+    (between) => {
+      const run = setup(() => 12);
+      run.draw(fill(1));
+      if (isOp(between)) run.draw(between);
+      else run.history.perform(between);
+      const before = [...run.history.steps];
+      expect(() => run.history.commit({ ...fill(1), undoWithPrevious: true })).toThrow(
+        LayerStepError,
+      );
+      expect(run.history.steps).toEqual(before);
+      expectConsistent(run);
+    },
+  );
+
+  it("refuses an invalid loaded group before replacing the current sheet", () => {
+    const run = setup(() => 12);
+    run.stroke(1);
+    const before = [...run.history.steps];
+    expect(() => run.history.load([{ ...fill(1), undoWithPrevious: true }])).toThrow(
+      LayerStepError,
+    );
+    expect(run.history.steps).toEqual(before);
+    expectConsistent(run);
+  });
+
+  it("keeps history, pixels and holds after the second grouped Redo fill fails", () => {
+    const run = setup(() => 12);
+    // A checkpoint at the current head and checkpoints inside the action must survive refusal.
+    for (let i = 0; i < CHECKPOINT_COST; i++) run.stroke(1);
+    const fills = group();
+    fills.forEach(run.draw);
+    run.history.undo();
+    const beforeRedoSteps = [...run.history.steps];
+    const beforeRedoPixels = run.surface.pixelsOf(1);
+    const beforeHolds = run.surface.taken.map((hold) => hold.releasedAt);
+    const beforeCopiesHeld = run.surface.copiesHeld;
+    const apply = run.surface.apply.bind(run.surface);
+    const failure = vi.spyOn(run.surface, "apply").mockImplementation((step, state) => {
+      if (step === fills[1]) throw new Error("Second fill canvas refused");
+      apply(step, state);
+    });
+    expect(() => run.history.redo()).toThrow("Second fill canvas refused");
+    expect(run.history.steps).toEqual(beforeRedoSteps);
+    expect(run.history.canRedo).toBe(true);
+    expect(run.surface.pixelsOf(1)).toEqual(beforeRedoPixels);
+    expect(run.surface.taken.map((hold) => hold.releasedAt)).toEqual(beforeHolds);
+    expect(run.surface.copiesHeld).toBe(beforeCopiesHeld);
+    expectConsistent(run);
+    failure.mockRestore();
+    run.history.redo();
+    expect(run.history.steps).toHaveLength(beforeRedoSteps.length + 3);
     expectConsistent(run);
   });
 });
