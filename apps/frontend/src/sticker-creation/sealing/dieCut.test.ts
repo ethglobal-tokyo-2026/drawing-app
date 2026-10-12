@@ -279,12 +279,20 @@ describe("dieCut", () => {
   });
 
   it.each<[string, Pixels]>([
-    ["covers most of the sheet", sheet(100, 100, rect(10, 10, 90, 90))],
     [
-      "touches three edges",
+      "connected strokes",
       sheet(120, 100, union(rect(0, 20, 2, 99), rect(0, 97, 119, 99), rect(117, 20, 119, 99))),
     ],
-  ])("cuts a rounded square when the ink %s", (_, ink) => {
+    ["separate marks", sheet(120, 100, union(disk(0, 50, 2), disk(119, 50, 2), disk(60, 99, 2)))],
+  ])("follows %s at the sheet edges", (_, ink) => {
+    const cut = cutOf(ink);
+    expect(cut.mask[cell(cut, 60, 65)]).toBe(0);
+    expect(onePiece(cut)).toBe(true);
+    expect(holdsAllInk(cut, ink)).toBe(true);
+  });
+
+  it("cuts a rounded square when the ink covers most of the sheet", () => {
+    const ink = sheet(100, 100, rect(10, 10, 90, 90));
     const cut = cutOf(ink);
     expect(cut.square).toBe(true);
     expect(holdsAllInk(cut, ink)).toBe(true);
