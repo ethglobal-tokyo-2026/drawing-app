@@ -655,6 +655,11 @@ export const stickerBoard = {
     putBack: { en: "Put this sheet back in the tray", ja: "このシートをシールトレイに戻す" },
     /** Your sticker board: the alert above Draw when the sticker tray couldn't do something, one line for each. */
     problem: {
+      /** Your sticker board's alert: the Zipper's artwork failed, but its pull still opens the tray; {{reason}} explains the failure */
+      zipper: {
+        en: "Couldn’t draw the Zipper. Its pull still opens the tray; try it again to restore the artwork: {{reason}}",
+        ja: "ファスナーを表示できませんでした。引き手でトレイはひらけます。もう一度操作すると再表示を試みます：{{reason}}",
+      },
       /** Your sticker board's alert: a sticker couldn't be stuck on from its sheet, so it stays there; {{stickers}} is its number, such as "No.0147", and {{reason}} why */
       place: {
         en: "Couldn’t stick {{stickers}} on the board, so it stays in its sheet: {{reason}}",

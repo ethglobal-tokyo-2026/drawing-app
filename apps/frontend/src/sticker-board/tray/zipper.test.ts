@@ -2,6 +2,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COL, GMAX, TRACK_INSETS, chainAtFor } from "./trayModel";
 import { createZipper, RELEASE, releaseOpens, type Zipper } from "./zipper";
+import { context2d } from "../../sticker-creation/canvas/context2d";
+
+vi.mock("../../sticker-creation/canvas/context2d", async () => {
+  const { fakeContext2d } = await import("../timelapse/testCanvas");
+  return { context2d: vi.fn(fakeContext2d) };
+});
 
 let host: HTMLDivElement;
 let zip: Zipper;
@@ -45,6 +51,7 @@ const stamped = (type: string, clientY: number, timeStamp: number) => {
 };
 
 beforeEach(() => {
+  vi.mocked(context2d).mockClear();
   vi.useFakeTimers({
     toFake: [
       "requestAnimationFrame",
@@ -65,10 +72,65 @@ afterEach(() => {
   zip.destroy();
   host.remove();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
 describe("the Zipper", () => {
+  it("keeps the tray operable after canvas refusal and retries its artwork on the next opening", async () => {
+    zip.destroy();
+    const failure = new Error("Canvas allocation refused");
+    const errors: unknown[] = [];
+    const report = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(context2d).mockImplementationOnce(() => {
+      throw failure;
+    });
+    zip = createZipper(host, { ...OPTIONS, onArtError: (error) => errors.push(error) });
+    expect(errors).toEqual([failure]);
+    expect(report).toHaveBeenCalledWith(expect.stringContaining("Zipper"), failure);
+    expect(zip.el.querySelector<HTMLCanvasElement>(".zip__row--a")?.hidden).toBe(true);
+    expect((await openSettled()).open).toBe(true);
+    expect(errors).toEqual([failure, null]);
+    expect(zip.el.querySelector<HTMLCanvasElement>(".zip__row--a")?.hidden).toBe(false);
+  });
+
+  it("releases the artwork's canvas memory when the tray is destroyed", () => {
+    const canvases = vi.mocked(context2d).mock.calls.map(([canvas]) => canvas);
+    expect(canvases.some((canvas) => canvas.width > 0)).toBe(true);
+    zip.destroy();
+    expect(canvases.every((canvas) => canvas.width === 0 && canvas.height === 0)).toBe(true);
+  });
+
+  it("repaints a still chain when its theme or screen pixel ratio changes", () => {
+    zip.destroy();
+    const queries = new Map<string, MediaQueryList>();
+    const matchMedia = window.matchMedia.bind(window);
+    vi.spyOn(window, "matchMedia").mockImplementation((query) => {
+      const found = matchMedia(query);
+      queries.set(query, found);
+      return found;
+    });
+    zip = createZipper(host, OPTIONS);
+    const chain = zip.el.querySelector<HTMLCanvasElement>(".zip__row--a");
+    if (!chain) throw new Error("The Zipper's chain is missing");
+    const at = zip.slider.style.transform;
+    const frames = vi.fn();
+    zip.on("frame", frames);
+    queries.get("(prefers-color-scheme: dark)")?.dispatchEvent(new Event("change"));
+    expect(frames).toHaveBeenCalledTimes(1);
+    const resolution = queries.get(`(resolution: ${window.devicePixelRatio}dppx)`);
+    vi.stubGlobal("devicePixelRatio", 2);
+    resolution?.dispatchEvent(new Event("change"));
+    expect(chain.width).toBe(COL * 2);
+    expect(chain.height).toBe(677 * 2);
+    expect(frames).toHaveBeenCalledTimes(2);
+    expect(zip.slider.style.transform).toBe(at);
+    zip.destroy();
+    queries.get("(prefers-color-scheme: dark)")?.dispatchEvent(new Event("change"));
+    expect(chain.width).toBe(0);
+    expect(frames).toHaveBeenCalledTimes(2);
+  });
+
   it("runs open to the far stop, then shut back to rest, and sleeps once still", async () => {
     const opened = await openSettled();
     expect(opened.open).toBe(true);

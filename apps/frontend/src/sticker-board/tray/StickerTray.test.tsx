@@ -27,6 +27,13 @@ import { NUDGE_AFTER } from "./trayNudge";
 import { trayProblemWords, type TrayProblem } from "./trayProblem";
 import { countVisit, visitsSoFar } from "./trayVisits";
 import { inLanguage, stubResizeObservers } from "../../ui/testing";
+import { fakeContext2d } from "../timelapse/testCanvas";
+import { context2d } from "../../sticker-creation/canvas/context2d";
+
+vi.mock("../../sticker-creation/canvas/context2d", async () => {
+  const { fakeContext2d } = await import("../timelapse/testCanvas");
+  return { context2d: vi.fn(fakeContext2d) };
+});
 
 let host: HTMLDivElement;
 let board: HTMLDivElement;
@@ -64,6 +71,7 @@ const render = (
   side: Partial<TrayBoard> = {},
   onSeen: (ids: readonly string[]) => void = () => {},
   onProblem: (problem: TrayProblem) => void = () => {},
+  onProblemGone: (problem: TrayProblem) => void = () => {},
 ) =>
   act(() =>
     root.render(
@@ -75,7 +83,7 @@ const render = (
         api={{ ...api, ...side }}
         onSeen={onSeen}
         onProblem={onProblem}
-        onProblemGone={() => {}}
+        onProblemGone={onProblemGone}
       />,
     ),
   );
@@ -1261,7 +1269,13 @@ describe("StickerTray", () => {
     it("runs the slider down to the bottom stop, however few the sheets", async () => {
       await openOn(776, 1);
       const [, sliderY = NaN] = numbersIn(board.querySelector(".zip__slider"));
-      const [, stopY = NaN] = numbersIn(board.querySelector(".zip__stop--bottom"));
+      const chain = board.querySelector<HTMLCanvasElement>(".zip__row--a");
+      if (!chain) throw new Error("The Zipper's drawn chain is missing");
+      // The final part painted on the moving row is the far stop, in device pixels.
+      const transform = fakeContext2d(chain)
+        .calls.filter(([name]) => name === "setTransform")
+        .at(-1);
+      const stopY = Number(transform?.[6]) / Number(transform?.[4]);
       // The slider's length, as its body is drawn.
       const [, , , length = NaN] = (
         board.querySelector(".zip__body")?.getAttribute("viewBox") ?? ""
@@ -1341,6 +1355,21 @@ describe("StickerTray", () => {
     chooseTab("gifts");
     expect(tab("gifts")?.getAttribute("aria-pressed")).toBe("true");
     expect(tab("all")?.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("clears an old artwork failure when a language change rebuilds a working Zipper", async () => {
+    const failure = new Error("Canvas allocation refused");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(context2d).mockImplementationOnce(() => {
+      throw failure;
+    });
+    const problems: TrayProblem[] = [];
+    const gone = vi.fn();
+    render(manyStickers(1), {}, undefined, (p) => problems.push(p), gone);
+    expect(problems).toEqual([{ kind: "zipper", nos: [], error: failure }]);
+    await inLanguage("ja");
+    expect(board.querySelector<HTMLCanvasElement>(".zip__row--a")?.hidden).toBe(false);
+    expect(gone).toHaveBeenCalledWith(problems[0]);
   });
 
   it("renames its Zipper and folder tabs when the app's language changes, keeping what it has shown", async () => {

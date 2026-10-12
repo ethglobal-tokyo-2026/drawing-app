@@ -191,6 +191,9 @@ export class FakeContext {
       points.push(...this.place(corners[i], corners[i + 1]));
     this.path.push({ points, rect: true });
   }
+  arcTo(...args: number[]): void {
+    this.record("arcTo", args);
+  }
   /** Closes the subpath; the next starts where it began, as in a browser. */
   closePath(): void {
     this.record("closePath", []);
@@ -198,8 +201,8 @@ export class FakeContext {
     if (last) this.path.push({ points: last.points.slice(0, 2), rect: false });
   }
   /** Paints the path, nonzero, once `paintPaths` is on. */
-  fill(): void {
-    this.record("fill", []);
+  fill(...args: unknown[]): void {
+    this.record("fill", args);
     if (!pathsPaint) return;
     const operator = this.operator();
     const color = pixelOf(this.fillStyle);

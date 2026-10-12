@@ -3,8 +3,8 @@ import { i18next } from "../../i18n/i18n";
 
 /** Something the sticker tray couldn't do, which the board says in its alert. */
 export interface TrayProblem {
-  /** Sticking a sticker on, reading a cut line, or saving what the open tray showed. */
-  kind: "place" | "cut" | "seen";
+  /** Placing a sticker, reading its cut line, saving what the tray showed, or drawing the Zipper. */
+  kind: "place" | "cut" | "seen" | "zipper";
   /** The stickers' numbers. */
   nos: readonly number[];
   /** Why, for the kinds whose sentence ends on it: kept as it failed, so its words follow the app's language. */

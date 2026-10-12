@@ -50,6 +50,13 @@ import { myStickerBoardChanged } from "./useMyStickerBoard";
 import { placedAt } from "./testBoardSticker";
 import { STEP_SAVE_IDLE_MS } from "./useBoardGestures";
 
+// happy-dom has no canvas context; the board's Zipper uses the recording stand-in.
+vi.mock("../sticker-creation/canvas/context2d", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../sticker-creation/canvas/context2d")>();
+  const { fakeContext2d } = await import("./timelapse/testCanvas");
+  return { ...original, context2d: fakeContext2d };
+});
+
 // The board's chat menu and Privy reach LINE's SDK; nothing here needs it to answer.
 vi.mock("@line/liff", () => ({ default: { isApiAvailable: () => false } }));
 // The stat board mounts once the board is idle; its developer slip's LINE details read LIFF's context.
@@ -939,6 +946,7 @@ describe("StickerBoard saving where a sticker sits", () => {
         }),
     );
     const view = await openBoard(emptyApi({ ...server.api, saveStickerPlacement: save }));
+    await act(() => vi.dynamicImportSettled());
     selectByKeys(view.host, a.stickerId)("ArrowLeft");
     act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
     const moved = keptPhone();

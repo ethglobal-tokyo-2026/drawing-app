@@ -12,6 +12,20 @@ import { capturePointer } from "../../ui/capturePointer";
 import { clamp, lerp } from "../../ui/easing";
 import { REDUCED_MOTION } from "../../ui/useReducedMotion";
 import { elementMaker, timeoutsIn, windowOf } from "./trayDom";
+import {
+  createChainArt,
+  FAR_STOP,
+  PITCH,
+  pullFace,
+  sliderBody,
+  sliverPlaces,
+  SLIVER,
+  STOP,
+  TOOTH,
+  toothPlaces,
+  type ToothPlaces,
+  type SliverPlaces,
+} from "./zipperArt";
 import "./zipper.css";
 
 type ZipperState = "rest" | "drag" | "run" | "hint";
@@ -28,6 +42,8 @@ export interface ZipperOptions {
    * stop; below that, the parted rows lie back together down to the slider.
    */
   mouthShort?: number;
+  /** Artwork failure, or null when a later use of the pull restores it. */
+  onArtError?: (error: unknown) => void;
 }
 
 /** The Zipper's live shape, in the host's pixels. */
@@ -96,8 +112,6 @@ export interface Zipper {
   destroy: () => void;
 }
 
-/** Tooth to tooth along one row. */
-const PITCH = 12;
 /**
  * A released slider runs the rest of the way past this share of the travel, or when released faster
  * than `flick` toward open or shut, in travels per second.
@@ -116,13 +130,8 @@ export function releaseOpens(progress: number, velocity: number, wasOpen: boolea
 
 /* ---------------------------------------------------------------- the part, in px along the track */
 
-/** A tooth's thickness. */
-const TOOTH = 5.8;
 /** The slider body's length. */
 const SLIDER = 34;
-/** A top stop's length; the bottom stop spans both tapes and is a little longer. */
-const STOP = 6;
-const FAR_STOP = 6.5;
 /** Each top stop sits on its own tape, this far from the chain's center line. Both are sewn into the
  * seam at the mouth's top corner, just under them, so neither moves as it opens. */
 const STOP_SIDE = 4.5;
@@ -142,8 +151,8 @@ const MIN_TRACK = 80;
  * the slider's shoulders and the top corner, and over the slider's first `run` px. */
 const LIE = { gap: 7, run: 12 };
 /** The lining: a sliver every `step` px, `half` px either side of its place, shown once the mouth is
- * `minGap` wide; it tucks under the left lip and the right row, and its CSS box is `width` px wide. */
-const LINING = { step: 4, half: 2.5, minGap: 2.5, underLip: 3, underChain: 2, width: 100 };
+ * `minGap` wide; it tucks under the left lip and the right row. */
+const LINING = { step: 4, half: SLIVER / 2, minGap: 2.5, underLip: 3, underChain: 2 };
 /** The left row's curve is sampled this often along the track, up to a fixed table. */
 const SAMPLE_STEP = 2.5;
 const MAX_SAMPLES = 512;
@@ -243,8 +252,6 @@ const MOTION_MIN = 0.7;
 /** Where the browser reports acceleration only with gravity, a slow average stands in for gravity. */
 const GRAVITY_SMOOTHING = 0.9;
 
-const SVG_NS = "http://www.w3.org/2000/svg";
-
 let uid = 0;
 /** An ease from nothing to the full span that starts at slope `m0`, in spans, and arrives flat: a gentle
  * start makes the V at the slider, a steep one the tight corner of a mouth spread flat. */
@@ -259,179 +266,6 @@ function spring(x: number, v: number, target: number, s: Spring, dt: number): [n
 }
 const f2 = (v: number) => v.toFixed(2);
 const f3 = (v: number) => v.toFixed(3);
-
-/* ---------------------------------------------------------------- the molded parts */
-
-function svg(
-  doc: Document,
-  tag: string,
-  attrs: Record<string, string | number>,
-  ...kids: Node[]
-): SVGElement {
-  const el = doc.createElementNS(SVG_NS, tag);
-  for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, String(value));
-  el.append(...kids);
-  return el;
-}
-
-/** A gradient in the part's own units, its stops reading the Zipper's color variables. */
-function gradient(
-  doc: Document,
-  id: string,
-  [x1, y1, x2, y2]: readonly [number, number, number, number],
-  stops: readonly (readonly [number, string])[],
-): SVGElement {
-  return svg(
-    doc,
-    "linearGradient",
-    { id, gradientUnits: "userSpaceOnUse", x1, y1, x2, y2 },
-    ...stops.map(([offset, color]) =>
-      svg(doc, "stop", { offset, style: `stop-color:var(${color})` }),
-    ),
-  );
-}
-
-/** The slider: its throat, where the joined chain leaves, points down toward the far end, and its
- * shoulders, where the parted rows leave, point up. Matte painted metal, lit from the top left. */
-function sliderBody(doc: Document, id: number): SVGElement {
-  const face = `zb${id}`;
-  const grip = `zg${id}`;
-  const metal: readonly (readonly [number, string])[] = [
-    [0, "--zip-body-lit"],
-    [0.42, "--zip-body"],
-    [1, "--zip-body-deep"],
-  ];
-  const bridge: readonly (readonly [number, string])[] = [
-    [0, "--zip-body-lit"],
-    [0.5, "--zip-body"],
-    [1, "--zip-body-deep"],
-  ];
-  return svg(
-    doc,
-    "svg",
-    { class: "zip__body", viewBox: "-12 -17 24 34", "aria-hidden": "true", focusable: "false" },
-    svg(
-      doc,
-      "defs",
-      {},
-      gradient(doc, face, [-12, -17, 12, 17], metal),
-      gradient(doc, grip, [-4, -7, 4, 13], bridge),
-    ),
-    svg(doc, "path", {
-      d: "M-5.5 17H5.5Q8 17 8.4 14.5L11.8 -7Q12.3 -10.5 10.4 -13.4L8.4 -16.2Q7.2 -17.6 5.6 -16.6L0 -10.6L-5.6 -16.6Q-7.2 -17.6 -8.4 -16.2L-10.4 -13.4Q-12.3 -10.5 -11.8 -7L-8.4 14.5Q-8 17 -5.5 17Z",
-      fill: `url(#${face})`,
-      style: "stroke:var(--zip-body-rim)",
-      "stroke-width": ".7",
-    }),
-    svg(doc, "path", {
-      d: "M-11.1 -6.4L-7.9 14.1M-10.9 -9.4Q-11.5 -12.4 -9.5 -14.6L-8.5 -15.8",
-      fill: "none",
-      stroke: "rgba(255,255,255,.85)",
-      "stroke-width": ".8",
-      "stroke-linecap": "round",
-    }),
-    svg(doc, "path", {
-      d: "M10.9 -7.2L7.6 13.6M-5 16.4H5",
-      fill: "none",
-      stroke: "rgba(28,24,36,.18)",
-      "stroke-width": "1",
-      "stroke-linecap": "round",
-    }),
-    svg(doc, "path", {
-      d: "M-2.2 -11.6L0 -13.9L2.2 -11.6",
-      fill: "none",
-      stroke: "rgba(28,24,36,.22)",
-      "stroke-width": ".7",
-    }),
-    svg(doc, "path", {
-      d: "M-5.7 -0.2h1.3v4.4h-1.3zM4.4 -0.2h1.3v4.4h-1.3z",
-      fill: "rgba(28,24,36,.34)",
-    }),
-    svg(doc, "rect", {
-      x: "-4.3",
-      y: "-6.6",
-      width: "8.6",
-      height: "19.6",
-      rx: "3.9",
-      fill: `url(#${grip})`,
-      style: "stroke:var(--zip-body-rim)",
-      "stroke-width": ".6",
-    }),
-    svg(doc, "path", {
-      d: "M-3.1 -4.8Q-3.1 -5.6 -1.9 -5.6H1.7",
-      fill: "none",
-      stroke: "rgba(255,255,255,.9)",
-      "stroke-width": ".7",
-      "stroke-linecap": "round",
-    }),
-  );
-}
-
-/** The pull hangs from its hinge toward the far end: a paddle with a window the tape shows through, a
- * molded lip, and the ring round the bridge. The back is the same part seen from behind once it flops
- * over, so its light is authored reversed. */
-function pullFace(doc: Document, id: number, side: "front" | "back"): SVGElement {
-  const back = side === "back";
-  const paddle = `zt${side}${id}`;
-  const ring = `zr${side}${id}`;
-  const leftEdge = "M-5 6.4L-7.9 32.6";
-  const rightEdge = "M5 6.4L7.9 32.6Q8.4 46.4 0 46.6";
-  const plastic = (mid: number): readonly (readonly [number, string])[] => [
-    [0, "--zip-slider-lit"],
-    [mid, "--zip-slider"],
-    [1, "--zip-slider-deep"],
-  ];
-  return svg(
-    doc,
-    "svg",
-    {
-      class: `zip__tab zip__tab--${side}`,
-      viewBox: "-11 -5 22 55",
-      "aria-hidden": "true",
-      focusable: "false",
-    },
-    svg(
-      doc,
-      "defs",
-      {},
-      gradient(doc, paddle, back ? [11, 50, -11, -5] : [-11, -5, 11, 50], plastic(0.48)),
-      gradient(doc, ring, back ? [0, 4.2, 0, -3.4] : [0, -3.4, 0, 4.2], plastic(0.5)),
-    ),
-    svg(doc, "path", {
-      "fill-rule": "evenodd",
-      d: "M-5.2 4H5.2Q6.4 4 6.7 5.6L9.6 33Q10.4 48.5 0 48.5Q-10.4 48.5 -9.6 33L-6.7 5.6Q-6.4 4 -5.2 4ZM-3 38.4A3 3 0 0 0 3 38.4V31.2A3 3 0 0 0 -3 31.2Z",
-      fill: `url(#${paddle})`,
-      style: "stroke:var(--zip-slider-rim)",
-      "stroke-width": ".7",
-    }),
-    svg(doc, "path", {
-      d: back ? rightEdge : leftEdge,
-      fill: "none",
-      stroke: "rgba(255,255,255,.55)",
-      "stroke-width": ".8",
-      "stroke-linecap": "round",
-    }),
-    svg(doc, "path", {
-      d: back ? leftEdge : rightEdge,
-      fill: "none",
-      stroke: "rgba(90,8,46,.22)",
-      "stroke-width": ".8",
-      "stroke-linecap": "round",
-    }),
-    svg(doc, "path", {
-      d: "M-3 31.2A3 3 0 0 1 3 31.2",
-      fill: "none",
-      stroke: `rgba(90,8,46,${back ? ".1" : ".28"})`,
-      "stroke-width": ".7",
-    }),
-    svg(doc, "path", {
-      d: "M-5.6 4.2H5.6Q7.6 4.2 7.6 2.2V-1.4Q7.6 -3.4 5.6 -3.4H-5.6Q-7.6 -3.4 -7.6 -1.4V2.2Q-7.6 4.2 -5.6 4.2Z",
-      fill: `url(#${ring})`,
-      style: "stroke:var(--zip-slider-rim)",
-      "stroke-width": ".6",
-    }),
-  );
-}
 
 /** The mouth's curve at one moment: see `fillShape`. */
 interface MouthShape {
@@ -494,25 +328,6 @@ export function mouthRange(
 
 /** The share of its width the mouth must stand at to show through, by how spread flat it is. */
 export const showsFrom = (spread: number) => lerp(SHOWS_FROM.shut, SHOWS_FROM.spread, spread);
-
-/** One tooth and its slice of tape, anchored where the chain's center line runs when shut. */
-interface Segment {
-  el: HTMLElement;
-  tape: HTMLElement;
-  a: number;
-  /** Its transform sewn in the shut chain, which only `sew` moves. */
-  home: string;
-  /** The transforms last written, so an unchanged part isn't written again. */
-  t: string;
-  ts: string;
-}
-
-interface Sliver {
-  el: HTMLElement;
-  a: number;
-  t: string;
-  on: boolean;
-}
 
 interface Grab {
   id: number;
@@ -590,13 +405,11 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     }
   }
 
-  const lining = make("div", "zip__layer zip__lining");
+  // Every listener the Zipper adds goes when it's destroyed.
+  const listening = new AbortController();
+  const { signal } = listening;
+
   const slot = make("div", "zip__slot");
-  const rowB = make("div", "zip__layer zip__row zip__row--b");
-  const rowA = make("div", "zip__layer zip__row zip__row--a");
-  const stopA = make("i", "zip__stop zip__stop--top");
-  const stopB = make("i", "zip__stop zip__stop--top");
-  const stopFar = make("i", "zip__stop zip__stop--bottom");
   const tabShadow = make("i", "zip__tabshadow");
   const shadowPart = make("span", "zip__part zip__shadowpart", tabShadow);
   const flop = make("span", "zip__flop", pullFace(doc, id, "front"), pullFace(doc, id, "back"));
@@ -616,18 +429,21 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     i18next.t(($) => $.stickerBoard.tray.zipper),
   );
   // The slider leads, so Tab goes from it into what the open mouth shows; the layers stack by z-index.
-  const root = make(
-    "div",
-    "zip",
-    slider,
-    lining,
-    slot,
-    rowB,
-    rowA,
-    make("div", "zip__layer zip__stops", stopA, stopB, stopFar),
-  );
-  root.style.setProperty("--zip-pitch", `${PITCH}px`);
+  const root = make("div", "zip", slider, slot);
   host.append(root);
+  // Repainted for a new color scheme or pixel ratio, the chain is drawn again where it is.
+  const art = createChainArt(
+    root,
+    win,
+    signal,
+    () => {
+      if (!L) return;
+      sew();
+      render();
+    },
+    o.onArtError,
+  );
+  root.append(art.lining, art.rowB, art.rowA);
 
   /* ---------------------------------------------------------------- geometry */
   let W = 0;
@@ -638,16 +454,22 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   let S0 = 0;
   let S1 = 0;
   let travel = 1;
-  let teethA: Segment[] = [];
-  let teethB: Segment[] = [];
-  let slivers: Sliver[] = [];
+  /** Each left tooth's place on the track, and where each is drawn this frame. */
+  let teethA: number[] = [];
+  let placesA: ToothPlaces = toothPlaces(0);
+  let teethB: number[] = [];
+  let placesB: ToothPlaces = toothPlaces(0);
+  let slivers: number[] = [];
+  let liningPlaces: SliverPlaces = sliverPlaces(0);
+  const stops = {
+    top: [
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+    ],
+    far: { x: 0, y: 0 },
+  };
   const yOf = (a: number) => o.insets[0] + a;
 
-  function segment(row: "a" | "b", a: number): Segment {
-    const tape = make("i", "zip__tape");
-    const el = make("i", `zip__seg zip__seg--${row}`, tape, make("i", "zip__tooth"));
-    return { el, tape, a, home: "", t: "", ts: "" };
-  }
   /** Lays the track out for the host's size: its teeth, its lining and the slider's travel. */
   function build(): boolean {
     W = host.clientWidth;
@@ -656,19 +478,18 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     L = Math.max(MIN_TRACK, H - o.insets[0] - Math.max(o.insets[1], HANG));
     const aMin = STOP + STOP_GAP;
     const aMax = L - STOP - STOP_GAP;
-    const wantA: number[] = [];
-    const wantB: number[] = [];
-    for (let a = aMin + TOOTH / 2; a <= aMax - TOOTH / 2; a += PITCH) wantA.push(a);
-    for (let a = aMin + TOOTH / 2 + PITCH / 2; a <= aMax - TOOTH / 2; a += PITCH) wantB.push(a);
-    teethA = wantA.map((a) => segment("a", a));
-    teethB = wantB.map((a) => segment("b", a));
-    rowA.replaceChildren(...teethA.map((s) => s.el));
-    rowB.replaceChildren(...teethB.map((s) => s.el));
+    teethB = [];
+    teethA = [];
+    for (let a = aMin + TOOTH / 2; a <= aMax - TOOTH / 2; a += PITCH) teethA.push(a);
+    for (let a = aMin + TOOTH / 2 + PITCH / 2; a <= aMax - TOOTH / 2; a += PITCH) teethB.push(a);
+    placesA = toothPlaces(teethA.length);
+    placesB = toothPlaces(teethB.length);
+    art.fit(W, H);
     slivers = [];
     for (let a = LINING.step / 2; a < L; a += LINING.step) {
-      slivers.push({ el: make("i", "zip__sliver"), a, t: "", on: false });
+      slivers.push(a);
     }
-    lining.replaceChildren(...slivers.map((s) => s.el));
+    liningPlaces = sliverPlaces(slivers.length);
     S0 = STOP + SLIDER / 2;
     S1 = Math.max(S0 + 1, L - FAR_STOP - SLIDER / 2);
     travel = S1 - S0;
@@ -678,14 +499,17 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   /** Sews the teeth and the stops on along the chain line, which `reshape` moves without a new track. */
   function sew() {
     chainX = o.chainAt;
-    for (const s of [...teethA, ...teethB]) s.home = `translate(${f2(chainX)}px,${f2(yOf(s.a))}px)`;
     // The right row stays sewn to the tray, so it's placed only here.
-    for (const s of teethB) put(s, s.home);
+    for (let i = 0; i < teethB.length; i++) {
+      placesB.x[i] = chainX;
+      placesB.y[i] = yOf(teethB[i]);
+    }
+    art.drawRowB(placesB);
     // The stops are sewn on and never move.
-    const topY = f2(yOf(STOP / 2));
-    stopA.style.transform = `translate(${f2(chainX - STOP_SIDE)}px,${topY}px)`;
-    stopB.style.transform = `translate(${f2(chainX + STOP_SIDE)}px,${topY}px)`;
-    stopFar.style.transform = `translate(${f2(chainX)}px,${f2(yOf(L - FAR_STOP / 2))}px)`;
+    const topY = yOf(STOP / 2);
+    Object.assign(stops.top[0], { x: chainX - STOP_SIDE, y: topY });
+    Object.assign(stops.top[1], { x: chainX + STOP_SIDE, y: topY });
+    Object.assign(stops.far, { x: chainX, y: yOf(L - FAR_STOP / 2) });
     // Teeth sewn on anew haven't been drawn there.
     drawn.S = NaN;
   }
@@ -945,14 +769,15 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   }
   /** Where the last `at` stopped in the table, so the next one looks on from there. */
   let cursor = 1;
-  const point = { a: 0, c: 0, ang: 0 };
+  const point = { a: 0, c: 0, turn: 0 };
   /**
-   * The point on the curve `s` px from the slider's shoulders, and the way the curve runs there, in one
-   * object each call reuses. After a `sample`, each call's `s` must be no less than the last one's.
+   * The point on the curve `s` px from the slider's shoulders, and the way the curve turns there in
+   * radians, in one object each call reuses. After a `sample`, each call's `s` must be no less than the
+   * last one's.
    */
-  function at(s: number): { a: number; c: number; ang: number } {
+  function at(s: number): { a: number; c: number; turn: number } {
     const n = table.n;
-    if (n < 2) return Object.assign(point, { a: shape.sM, c: 0, ang: 0 });
+    if (n < 2) return Object.assign(point, { a: shape.sM, c: 0, turn: 0 });
     let i = cursor;
     while (i < n - 1 && table.s[i] < s) i++;
     cursor = i;
@@ -963,19 +788,9 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     const dc = table.c[i - 1] - table.c[i];
     point.a = lerp(table.a[i - 1], table.a[i], k);
     point.c = lerp(table.c[i - 1], table.c[i], k);
-    point.ang = -Math.atan2(dc, da) * (180 / Math.PI);
+    point.turn = -Math.atan2(dc, da);
     return point;
   }
-  const put = (part: { el: HTMLElement; t: string }, t: string) => {
-    if (part.t === t) return;
-    part.el.style.transform = t;
-    part.t = t;
-  };
-  const putTape = (s: Segment, t: string) => {
-    if (s.ts === t) return;
-    s.tape.style.transform = t;
-    s.ts = t;
-  };
 
   /** What the chain was last drawn from. The pull swings on for seconds after each run while the rest
    * holds still, and redrawing the chain for it would change nothing. */
@@ -1024,43 +839,34 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
     // Row a: parted teeth run along the curve, spaced by their place on the tape. They're placed from
     // the slider back, so each finds its point on the curve where the last one did.
     for (let j = teethA.length - 1; j >= 0; j--) {
-      const s = teethA[j];
-      if (total > 0 && s.a < shape.sM) {
-        const q = at((shape.sM - s.a) * stretch);
-        put(s, `translate(${f2(chainX + q.c)}px,${f2(yOf(q.a))}px) rotate(${f2(q.ang)}deg)`);
-        putTape(s, stretch > 1.002 ? `scaleY(${f3(stretch)})` : "");
-      } else {
-        put(s, s.home);
-        putTape(s, "");
-      }
+      const a = teethA[j];
+      const parted = total > 0 && a < shape.sM;
+      const q = parted ? at((shape.sM - a) * stretch) : null;
+      placesA.x[j] = chainX + (q ? q.c : 0);
+      placesA.y[j] = yOf(q ? q.a : a);
+      placesA.turn[j] = q ? q.turn : 0;
+      placesA.stretch[j] = q && stretch > 1.002 ? stretch : 1;
     }
+    art.drawRowA(placesA, stops);
     // The lining between the rows. Each sliver reaches the lip's outermost point within its height, so on
     // a steep bend it runs a little under the tape, which covers it, instead of leaving a notch.
-    for (const sl of slivers) {
-      const lo = sl.a - LINING.half;
-      const hi = Math.min(sl.a + LINING.half, shape.sM);
+    liningPlaces.n = 0;
+    for (const a of slivers) {
+      const lo = a - LINING.half;
+      const hi = Math.min(a + LINING.half, shape.sM);
       const gLo = gap(lo);
       const gHi = gap(hi);
-      const gMid = gap(sl.a);
-      if (Math.min(gLo, gHi, gMid) < LINING.minGap) {
-        if (sl.on) {
-          sl.el.style.opacity = "0";
-          sl.on = false;
-        }
-        continue;
-      }
-      if (!sl.on) {
-        sl.el.style.opacity = "1";
-        sl.on = true;
-      }
+      const gMid = gap(a);
+      if (Math.min(gLo, gHi, gMid) < LINING.minGap) continue;
       const g = Math.max(gLo, gHi, gMid);
       const left = -g - LINING.underLip;
       const right = LINING.underChain;
-      put(
-        sl,
-        `translate(${f2(chainX + left)}px,${f2(yOf(sl.a))}px) scaleX(${f3((right - left) / LINING.width)})`,
-      );
+      const i = liningPlaces.n++;
+      liningPlaces.left[i] = chainX + left;
+      liningPlaces.right[i] = chainX + right;
+      liningPlaces.y[i] = yOf(a);
     }
+    art.drawLining(liningPlaces);
     slider.style.transform = `translate(${f2(chainX)}px,${f2(yOf(shape.S))}px)`;
     emit("frame", geometry());
   }
@@ -1098,6 +904,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
   /* ---------------------------------------------------------------- acts */
   function run(open: boolean): Promise<boolean> {
     if (destroyed) return Promise.resolve(st.open);
+    if (art.retry()) sew();
     const changed = open !== st.open;
     st.open = open;
     slider.setAttribute("aria-expanded", String(open));
@@ -1242,9 +1049,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper 
       void run(false);
     }
   };
-  // Every listener the Zipper adds goes when it's destroyed.
-  const listening = new AbortController();
-  const { signal } = listening;
   slider.addEventListener("pointerdown", onDown, { signal });
   slider.addEventListener("pointermove", onMove, { signal });
   slider.addEventListener("pointerup", onUp, { signal });

@@ -184,7 +184,17 @@ export function createTrayEngine(
   placeTop();
   board.append(root);
 
-  const zip = createZipper(col, { chainAt: chainAtFor(1), insets: TRACK_INSETS, maxGap: GMAX });
+  let artworkProblem: TrayProblem | null = null;
+  const zip = createZipper(col, {
+    chainAt: chainAtFor(1),
+    insets: TRACK_INSETS,
+    maxGap: GMAX,
+    onArtError(error) {
+      if (artworkProblem) problemGone(artworkProblem);
+      artworkProblem = error === null ? null : { kind: "zipper", nos: [], error };
+      if (artworkProblem) problem(artworkProblem);
+    },
+  });
   /** The tray's fixed words, in the app's language. */
   const words = {
     sheets: i18next.t(($) => $.stickerBoard.tray.sheets),
@@ -590,6 +600,10 @@ export function createTrayEngine(
       resizes.disconnect();
       listening.abort();
       zip.destroy();
+      if (artworkProblem) {
+        problemGone(artworkProblem);
+        artworkProblem = null;
+      }
       root.remove();
     },
   };
