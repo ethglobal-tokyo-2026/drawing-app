@@ -765,10 +765,22 @@ test("Fill defaults to this layer, and visible reference respects a lower bounda
   await fillAt(page, inside);
   await expect.poll(() => shownColor(page, inside)).toEqual([232, 72, 79, 255]);
   await expect.poll(() => inkAt(page, outside)).toBe(0);
+  await expect
+    .poll(async () => {
+      const kept = await readKeptHistory(page);
+      return { count: kept.count, last: kept.steps.at(-1) };
+    })
+    .toMatchObject({
+      count: 3,
+      last: { tool: "fill", layer: 2, reference: "visible", color: "#E8484F" },
+    });
+  const filled = await readKeptHistory(page);
   await undo(page).click();
   await expect.poll(() => inkAt(page, inside)).toBe(0);
+  await expect.poll(async () => (await readKeptHistory(page)).count).toBe(2);
   await button(page, creation.history.redo).click();
   await expect.poll(() => shownColor(page, inside)).toEqual([232, 72, 79, 255]);
+  await expect.poll(() => readKeptHistory(page)).toEqual(filled);
   await page.reload();
   await button(page, stickerBoard.board.continueDrawing).click();
   await button(page, creation.tools.fill).click();
