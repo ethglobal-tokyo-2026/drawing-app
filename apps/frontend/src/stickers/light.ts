@@ -53,8 +53,6 @@ export const movesWithLight = (target: Element): boolean => target.matches(MOVIN
 const CREASES = ".sticker-crease";
 /** How long the light holds still before the creases take it. */
 export const CREASE_SETTLE_MS = 250;
-/** The light is written at most this often; the highlights' transitions glide between writes. */
-const BEAT_MS = 45;
 /** A move shorter than this, on the -1 to 1 scale, isn't written, so the hand's tremor keeps still. */
 const STEP = 0.02;
 /** The same finite glide ignores an angular tremor smaller than a quarter degree. */
@@ -242,7 +240,6 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   /** Where the light was last written, or null before it first moves. */
   let lit: LightPose = { ...kept.pose };
   let frame = 0;
-  let lastWrite = -Infinity;
   let lastFrame = win.performance.now();
   let settle = 0;
 
@@ -309,18 +306,9 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     }
     publishedPose = { ...lit };
     kept.pose = publishedPose;
-    // The coating has no CSS transition: publish each display frame during finite smoothing.
-    // Foil and crease style writes retain their existing throttle and transitions.
+    // The coating and foil share each display frame's already-smoothed pose.
     for (const listener of subscribers) listener(currentLight());
-    const settled =
-      mode !== "fallback-wave" &&
-      lit.x === x &&
-      lit.y === y &&
-      lit.rotationDegrees === rotationDegrees;
-    if (now - lastWrite >= BEAT_MS || settled) {
-      lastWrite = now;
-      writeLight();
-    }
+    writeLight();
     if (
       mode === "fallback-wave" ||
       lit.x !== x ||
@@ -361,7 +349,6 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     y = lit.y;
     rotationDegrees = lit.rotationDegrees;
     lastFrame = win.performance.now();
-    lastWrite = lightNow ? lastFrame : -Infinity;
     if (cancelReplays) glideOnReplays(win, false);
   };
 
@@ -391,7 +378,6 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     mode = next;
     if (mode === "fallback-wave") {
       fallbackStarted = win.performance.now();
-      lastWrite = -Infinity;
       lastFrame = win.performance.now();
       frame = win.requestAnimationFrame(write);
     }
@@ -426,7 +412,6 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
       pause(false);
       kept.origin = { alpha, beta: e.beta, gamma: e.gamma, screenAngle, pose: { ...lit } };
       if (mode === "device-tilt" && !lightNow) {
-        lastWrite = win.performance.now();
         writeLight();
       }
       return;

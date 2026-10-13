@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import { StickerFigure, type Crease } from "../src/stickers/StickerFigure";
 import { creasePixels, CREASE_SIDES, type CreaseImage } from "../src/stickers/crease";
 import { acquireLight, currentLight, installLight } from "../src/stickers/light";
-import { refreshLaminate } from "../src/stickers/laminateRenderer";
+import { refreshLaminate, whenLaminateSettled } from "../src/stickers/laminateRenderer";
 import "../src/styles/tokens.css";
 
 const side = 240;
@@ -64,9 +64,33 @@ window.addEventListener("pagehide", () => {
 const element = document.getElementById("root");
 if (!element) throw new Error("The crease reveal fixture root is missing");
 const root = createRoot(element);
-let crease: Crease | undefined;
+let crease: Crease | undefined = new URLSearchParams(location.search).has("baseline")
+  ? images
+  : undefined;
 let shownPrint = print;
 let generation = 0;
+let mountGeneration = 0;
+let covered = false;
+const placementIntents = new Set<string>();
+const startedNormals: string[] = [];
+const nextCrease = (): Crease => {
+  ++generation;
+  const url = (name: CreaseImage) => `/e2e/crease-reveal-${name}.png?bake=${generation}`;
+  return {
+    base: url("base"),
+    topLeft: url("topLeft"),
+    bottomRight: url("bottomRight"),
+    topRight: url("topRight"),
+    bottomLeft: url("bottomLeft"),
+    normal: url("normal"),
+  };
+};
+const canRevealCrease = (normal: string) => placementIntents.has(normal);
+const startCreaseReveal = (normal: string) => {
+  if (!placementIntents.delete(normal)) return false;
+  startedNormals.push(normal);
+  return true;
+};
 const render = () =>
   root.render(
     <div
@@ -75,11 +99,15 @@ const render = () =>
       style={{ position: "relative", width, height }}
     >
       <StickerFigure
+        key={mountGeneration}
         urls={{ png: shownPrint, mask }}
         width={width}
         height={height}
         stuck
         crease={crease}
+        canRevealCrease={canRevealCrease}
+        startCreaseReveal={startCreaseReveal}
+        laminateActive={!covered}
       />
     </div>,
   );
@@ -88,6 +116,13 @@ declare global {
     creaseRevealFixture: {
       imageData: Crease;
       drop: () => number;
+      hydrate: () => number;
+      remount: () => void;
+      reread: () => void;
+      cover: () => void;
+      expose: () => void;
+      startedNormals: string[];
+      whenSettled: () => Promise<void>;
       lift: () => void;
       replacePrint: (url: string) => void;
       refresh: () => void;
@@ -98,21 +133,48 @@ declare global {
 }
 window.creaseRevealFixture = {
   imageData: images,
+  startedNormals,
+  whenSettled: async () => {
+    const canvas = document.querySelector("[data-reveal] canvas.sticker-laminate");
+    const image = document.querySelector("[data-reveal] .sticker-figure__img");
+    if (!(canvas instanceof HTMLCanvasElement) || !(image instanceof HTMLImageElement))
+      throw new Error("The current fixture image and laminate are missing");
+    await image.decode();
+    const signal = AbortSignal.timeout(10_000);
+    await whenLaminateSettled(canvas, { normal: crease?.normal }, signal);
+    if (signal.aborted) throw new Error("The fixture's current normal snapshot did not settle");
+    if (!canvas.isConnected || canvas.dataset.state !== "ready" || canvas.dataset.error)
+      throw new Error("The fixture's current normal snapshot is not ready");
+  },
   drop: () => {
-    ++generation;
-    const url = (name: CreaseImage) => `/e2e/crease-reveal-${name}.png?bake=${generation}`;
-    crease = {
-      base: url("base"),
-      topLeft: url("topLeft"),
-      bottomRight: url("bottomRight"),
-      topRight: url("topRight"),
-      bottomLeft: url("bottomLeft"),
-      normal: url("normal"),
-    };
+    placementIntents.clear();
+    crease = nextCrease();
+    placementIntents.add(crease.normal);
     render();
     return generation;
   },
+  hydrate: () => {
+    placementIntents.clear();
+    crease = nextCrease();
+    render();
+    return generation;
+  },
+  remount: () => {
+    ++mountGeneration;
+    render();
+  },
+  reread: render,
+  cover: () => {
+    placementIntents.clear();
+    covered = true;
+    render();
+  },
+  expose: () => {
+    covered = false;
+    render();
+  },
   lift: () => {
+    placementIntents.clear();
     crease = undefined;
     render();
   },

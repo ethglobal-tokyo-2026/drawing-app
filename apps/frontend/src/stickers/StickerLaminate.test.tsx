@@ -45,7 +45,12 @@ it("preserves a live gesture's displayed turn when its crease texture changes be
       turn: 0,
       finish: "gloss",
       active: anyActiveCallback,
+      canRevealCrease: anyActiveCallback,
+      startCreaseReveal: anyActiveCallback,
     });
+    const options = vi.mocked(mountLaminate).mock.calls[0]?.[1];
+    expect(options?.canRevealCrease?.("normal.png")).toBe(false);
+    expect(options?.startCreaseReveal?.("normal.png")).toBe(false);
     // The board gesture changes the surface before its saved placement reaches React.
     turnLaminate(canvas, 67);
     act(() =>

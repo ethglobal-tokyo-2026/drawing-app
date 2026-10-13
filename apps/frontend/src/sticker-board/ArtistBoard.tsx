@@ -42,6 +42,7 @@ import { onTheBoard, shownIn, toBoardSticker, type BoardStickerView } from "./bo
 import { laidOutForVisitor } from "./largeLayout";
 import { boxOf, fieldOf, kept, stickerBox, type Box, type Field } from "./placement";
 import { PlacedSticker } from "./PlacedSticker";
+import { useStickerStack } from "./useStickerStack";
 import { stickerElIn } from "./placedStickerEl";
 import { AddressDialog } from "./stat-board/AddressDialog";
 import { AddressPapers } from "./stat-board/AddressPapers";
@@ -167,6 +168,7 @@ export function ArtistBoard({ person, onBack }: Props) {
   /** The sticker last focused, which Tab comes back to. */
   const [tabStop, setTabStop] = useState<string | null>(null);
   const [viewing, setViewing] = useState<BoardStickerView | null>(null);
+  const laminateActive = !turned && !viewing;
   const [giving, setGiving] = useState(false);
   const subjectsPeek = useSubjectsPeek();
   /** Their foil stickers' artist chips have played on this app open, or a sticker was selected. */
@@ -203,8 +205,12 @@ export function ArtistBoard({ person, onBack }: Props) {
   const field = useMemo(() => size && visitField(size.W, size.H), [size]);
   // Screen readers and the arrow keys take the stickers in reading order, which is the DOM's too.
   const order = field ? orderOn(stickers, field) : [];
-  const byId = new Map(stickers.map((s, i) => [s.id, { sticker: s, stack: i }]));
+  const byId = new Map(stickers.map((s) => [s.id, s]));
   const inOrder = order.flatMap((id) => byId.get(id) ?? []);
+  useStickerStack(
+    stage,
+    new Map(stickers.map((s, i) => [s.id, s.id === selected ? stickers.length : i])),
+  );
   const tabbable = [tabStop, selected].find((id) => id && order.includes(id)) ?? order[0];
   const byOther = (s: BoardStickerView) => s.artist.id !== person.id;
   const creases = useCreases({
@@ -415,13 +421,12 @@ export function ArtistBoard({ person, onBack }: Props) {
         <CreasesContext value={creases}>
           {field &&
             size &&
-            inOrder.map(({ sticker: s, stack }, i) => (
+            inOrder.map((s, i) => (
               <Fragment key={s.id}>
                 <PlacedSticker
                   sticker={s}
                   field={field}
                   unit={size.U}
-                  stack={s.id === selected ? stickers.length : stack}
                   selected={s.id === selected}
                   knobBelow={false}
                   landing={false}
@@ -433,6 +438,7 @@ export function ArtistBoard({ person, onBack }: Props) {
                   hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
                   foil={byOther(s)}
                   veiled={veiledFor(s, optedIn)}
+                  laminateActive={laminateActive}
                   by={byOther(s) ? handleOf(s.artist) : undefined}
                 />
                 {/* Right after its sticker, so Tab reaches it next. */}

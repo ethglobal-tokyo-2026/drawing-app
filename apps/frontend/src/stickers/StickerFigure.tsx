@@ -46,6 +46,10 @@ interface Props {
   reveal?: boolean;
   /** Where it lies over other stickers' edges: the baked crease, its lit side following the one light. */
   crease?: Crease;
+  /** Only a crease accepted for an explicit placement may press in. */
+  canRevealCrease?: (normal: string) => boolean;
+  /** Consumes that placement once its real laminate snapshot is ready. */
+  startCreaseReveal?: (normal: string) => boolean;
   /** Coming-soon Shop previews compare roughness; sealed stickers default to gloss. */
   laminate?: LaminateFinish;
   /** Whether this surface is exposed; covering it pauses its laminate snapshots. */
@@ -74,6 +78,8 @@ export const StickerFigure = memo(function StickerFigure({
   stuck = false,
   reveal = false,
   crease,
+  canRevealCrease,
+  startCreaseReveal,
   laminate = "gloss",
   laminateActive = true,
   className,
@@ -144,6 +150,8 @@ export const StickerFigure = memo(function StickerFigure({
         finish={laminate}
         active={laminateActive}
         onCreaseProgress={showCrease}
+        canRevealCrease={canRevealCrease}
+        startCreaseReveal={startCreaseReveal}
       />
       {nsfw && <span className="sticker-figure__gloss" aria-hidden="true" />}
       {/* A rebaked crease waits for its matching laminate before both press in together. */}

@@ -1,12 +1,15 @@
 // @vitest-environment happy-dom
 import { act, type ComponentProps } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderInHost } from "../ui/testing";
 import { StickerFigure } from "./StickerFigure";
 import { testStickerUrls } from "./testStickerUrls";
 
 let rendered: ReturnType<typeof renderInHost> | undefined;
-afterEach(() => rendered?.unmount());
+afterEach(() => {
+  rendered?.unmount();
+  vi.restoreAllMocks();
+});
 
 /** The classes of the foil a figure given `props` wears; none without a foil. */
 function foilOf(props: Partial<ComponentProps<typeof StickerFigure>>): string[] {
@@ -43,6 +46,12 @@ describe("StickerFigure's foil", () => {
 
 describe("StickerFigure's laminate", () => {
   it("keeps the printed sticker and crease visible if its material renderer is unavailable", async () => {
+    // Material admission waits for exposure; both the canvas and its stable wrapper need a size.
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(100);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(100);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(20, 20, 100, 100),
+    );
     rendered = renderInHost(
       <StickerFigure
         urls={testStickerUrls("s")}

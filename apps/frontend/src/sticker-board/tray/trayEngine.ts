@@ -8,7 +8,6 @@
  * Everything is in board pixels, in the board's stacking context.
  */
 import { i18next } from "../../i18n/i18n";
-import { whenBoardQuiet } from "../boardComplete";
 import { clamp, lerp } from "../../ui/easing";
 import { LARGE_SCREEN } from "../../ui/largeScreen";
 import { REDUCED_MOTION } from "../../ui/useReducedMotion";
@@ -587,7 +586,6 @@ export function createTrayEngine(
       redraw();
     });
   scheduleTug(TUG.first);
-  void whenBoardQuiet().then(loadImages);
 
   return {
     get isOpen() {

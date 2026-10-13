@@ -46,6 +46,8 @@ void main() {
   float fresnel=(perpendicular*perpendicular+parallel*parallel)*.5;
   vec3 reflected=normalize(2.*dot(view,n)*n-view);
   vec3 result=clamp(vec3(linear(base.r),linear(base.g),linear(base.b))*.9*(1.-fresnel)+fresnel*environment(reflected),0.,1.);
-  gl_FragColor=vec4(display(result.r),display(result.g),display(result.b),texture2D(cutImage,uv).a);
+  // Native canvas snapshots use premultiplied display colors; the optical math above stays linear.
+  float cutAlpha=texture2D(cutImage,uv).a;
+  gl_FragColor=vec4(vec3(display(result.r),display(result.g),display(result.b))*cutAlpha,cutAlpha);
 }
 `;

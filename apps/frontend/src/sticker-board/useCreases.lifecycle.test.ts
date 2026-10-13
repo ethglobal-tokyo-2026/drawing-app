@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testStickerUrls } from "../stickers/testStickerUrls";
 import type { CreaseBatch, CreaseReply } from "../stickers/creaseWorker";
 import { fieldOf, PHONE_BOARD, unitOf } from "./placement";
-import { useCreases } from "./useCreases";
+import { useCreases, type CreaseStore } from "./useCreases";
 
 const field = fieldOf(PHONE_BOARD.W, PHONE_BOARD.H);
 const unit = unitOf("phone", PHONE_BOARD.W);
@@ -20,6 +20,7 @@ const foilOf = () => null;
 
 class PaintWorker {
   static instances: PaintWorker[] = [];
+  static nextPostFailure: string | null = null;
   terminate = vi.fn();
   postMessage = vi.fn<(batch: CreaseBatch) => void>();
   onmessage: ((event: MessageEvent) => void) | null = null;
@@ -27,16 +28,23 @@ class PaintWorker {
   onmessageerror: (() => void) | null = null;
   constructor() {
     PaintWorker.instances.push(this);
+    const failure = PaintWorker.nextPostFailure;
+    PaintWorker.nextPostFailure = null;
+    if (failure)
+      this.postMessage.mockImplementationOnce(() => {
+        throw new Error(failure);
+      });
   }
 }
 
-function Probe({ shift = 0 }: { shift?: number }) {
+function Probe({ shift = 0, onStore }: { shift?: number; onStore?: (store: CreaseStore) => void }) {
   const placed = stickers.map((sticker, i) =>
     i === 0
       ? { ...sticker, placement: { ...sticker.placement, x: sticker.placement.x + shift } }
       : sticker,
   );
-  useCreases({ stickers: placed, field, unit, foilOf });
+  const store = useCreases({ stickers: placed, field, unit, foilOf });
+  onStore?.(store);
   return null;
 }
 
@@ -63,6 +71,7 @@ const settle = () => {
 beforeEach(() => {
   vi.useFakeTimers();
   PaintWorker.instances = [];
+  PaintWorker.nextPostFailure = null;
   vi.stubGlobal("Worker", PaintWorker);
   vi.stubGlobal(
     "OffscreenCanvas",
@@ -87,6 +96,40 @@ afterEach(() => {
 });
 
 describe("shared crease worker lifetime", () => {
+  it("settles reported jobs immediately when posting the initial bake fails", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    PaintWorker.nextPostFailure = "posting stopped";
+    const stores: CreaseStore[] = [];
+    act(() => root.render(createElement(Probe, { onStore: (store) => stores.push(store) })));
+    let settled = false;
+    void stores[0].whenSettled().then(() => (settled = true));
+    settle();
+    await Promise.resolve();
+    expect(settled).toBe(true);
+    expect(error.mock.calls.flat().join(" ")).toContain("top");
+    expect(error.mock.calls.flat().join(" ")).toContain("posting stopped");
+    error.mockRestore();
+  });
+
+  it("settles wanted jobs immediately when the worker crashes", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const stores: CreaseStore[] = [];
+    act(() => root.render(createElement(Probe, { onStore: (store) => stores.push(store) })));
+    settle();
+    let settled = false;
+    void stores[0].whenSettled().then(() => (settled = true));
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    const worker = PaintWorker.instances[0];
+    act(() => worker.onerror?.(new ErrorEvent("error", { message: "painting stopped" })));
+    await Promise.resolve();
+    expect(settled).toBe(true);
+    expect(worker.terminate).toHaveBeenCalledOnce();
+    expect(error.mock.calls.flat().join(" ")).toContain("top");
+    expect(error.mock.calls.flat().join(" ")).toContain("painting stopped");
+    error.mockRestore();
+  });
+
   it("bakes despite a disabled preference left by an earlier version", () => {
     localStorage.setItem("board.creases", "off");
     show(true, false);

@@ -8,7 +8,7 @@ import { StickerFigure } from "../stickers/StickerFigure";
 import type { BoardSticker } from "./boardSticker";
 import { stickerBox, type Field } from "./placement";
 import type { InHand } from "./useBoardGestures";
-import { useCrease } from "./useCreases";
+import { useCrease, useCreaseReveal } from "./useCreases";
 import { outlineShape } from "./tray/sheetPacking";
 
 interface Props {
@@ -16,8 +16,6 @@ interface Props {
   field: Field;
   /** What its size is a share of (see `unitOf`). */
   unit: number;
-  /** Its place in the stack, from the bottom. */
-  stack: number;
   selected: boolean;
   /** Whether its rotate knob hangs below it, where above it couldn't be reached. */
   knobBelow: boolean;
@@ -54,7 +52,6 @@ export const PlacedSticker = memo(function PlacedSticker({
   sticker,
   field,
   unit,
-  stack,
   selected,
   knobBelow,
   inHand,
@@ -72,6 +69,7 @@ export const PlacedSticker = memo(function PlacedSticker({
 }: Props) {
   const { t } = useTranslation();
   const crease = useCrease(sticker.id);
+  const { canRevealCrease, startCreaseReveal } = useCreaseReveal(sticker.id);
   const lift = useRef<HTMLDivElement>(null);
   const box = stickerBox(field, unit, sticker.placement, sticker);
   const hitCut = useMemo(() => {
@@ -139,7 +137,6 @@ export const PlacedSticker = memo(function PlacedSticker({
         width: box.w,
         height: box.h,
         transform: box.transform,
-        zIndex: 10 + stack,
         "--sticker-hit-cut": hitCut,
       }}
     >
@@ -158,6 +155,8 @@ export const PlacedSticker = memo(function PlacedSticker({
           // A landing sticker's stick animation shows it arrive; it isn't held back as well.
           reveal={!landing}
           crease={crease}
+          canRevealCrease={canRevealCrease}
+          startCreaseReveal={startCreaseReveal}
         />
       </div>
       {/* A clear frame, four corners to resize and a knob on a stem to turn. */}

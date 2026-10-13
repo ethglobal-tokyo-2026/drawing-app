@@ -19,6 +19,8 @@ export function StickerLaminate({
   finish = "gloss",
   active = true,
   onCreaseProgress,
+  canRevealCrease,
+  startCreaseReveal,
 }: {
   print: string;
   cut: string;
@@ -29,12 +31,20 @@ export function StickerLaminate({
   active?: boolean;
   /** Paint follows the same ready normal and diagonal progress as the reflected bend. */
   onCreaseProgress?: (normal: string, progress: number) => void;
+  /** Whether the accepted normal belongs to an explicit placement awaiting its reveal. */
+  canRevealCrease?: (normal: string) => boolean;
+  /** Consumes that placement after the first valid real snapshot copy. */
+  startCreaseReveal?: (normal: string) => boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const heldTurn = useRef(turn);
   const heldActive = useRef(active);
   const heldMaterial = useRef({ print, cut, normal, finish });
   const heldCreaseProgress = useRef(onCreaseProgress);
+  const heldCreaseEligibility = useRef({ canRevealCrease, startCreaseReveal });
+  useLayoutEffect(() => {
+    heldCreaseEligibility.current = { canRevealCrease, startCreaseReveal };
+  }, [canRevealCrease, startCreaseReveal]);
   useLayoutEffect(() => {
     heldCreaseProgress.current = onCreaseProgress;
   }, [onCreaseProgress]);
@@ -54,6 +64,10 @@ export function StickerLaminate({
       turn: heldTurn.current,
       finish: heldMaterial.current.finish,
       active: () => heldActive.current,
+      canRevealCrease: (normal: string) =>
+        heldCreaseEligibility.current.canRevealCrease?.(normal) ?? false,
+      startCreaseReveal: (normal: string) =>
+        heldCreaseEligibility.current.startCreaseReveal?.(normal) ?? false,
       ...(heldCreaseProgress.current && {
         onCreaseProgress: (normal: string, progress: number) =>
           heldCreaseProgress.current?.(normal, progress),

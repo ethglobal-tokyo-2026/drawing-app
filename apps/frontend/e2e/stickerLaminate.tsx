@@ -66,6 +66,7 @@ declare global {
   interface Window {
     laminateFixture: {
       getPose: typeof currentLight;
+      subscribeLight: typeof subscribeLight;
       tilt: (beta: number, gamma: number, alpha?: number) => void;
       flight: (x: number, y: number) => void;
       update: (options: Partial<typeof replacement>) => void;
@@ -76,6 +77,7 @@ declare global {
 }
 window.laminateFixture = {
   getPose: currentLight,
+  subscribeLight,
   costs,
   rampHeight: [...drape(field, 240, 240, 1)],
   update: (options) => {

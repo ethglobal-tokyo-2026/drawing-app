@@ -10,7 +10,8 @@ import type { GiftSender } from "../giving/giftSender";
 import { PREPARING_SLOW_MS } from "../giving/giveFlow";
 import { i18next } from "../i18n/i18n";
 import { formatNo, spokenDuration } from "../stickers/format";
-import { onLargeScreen } from "../ui/testing";
+import * as laminate from "../stickers/laminateRenderer";
+import { onLargeScreen, ReducedMotion } from "../ui/testing";
 import { forgetGreetings } from "./artistChipGreeting";
 import { ArtistBoard } from "./ArtistBoard";
 import { fieldOf, LARGE_LANDING_GROWTH, PHONE_BOARD, unitOf } from "./placement";
@@ -134,10 +135,14 @@ describe("ArtistBoard's keys", () => {
 
   it("puts a selected sticker's toolbar right after it, and Escape gives focus back", async () => {
     const host = await visit(three());
-    const [first] = stickersIn(host);
+    const [first, ...others] = stickersIn(host);
+    const originalStack = stickersIn(host).map((sticker) => sticker.style.zIndex);
+    expect(originalStack.toSorted()).toEqual(["10", "11", "12"]);
     focus(first);
     press(first, "Enter");
     expect(first.getAttribute("aria-pressed")).toBe("true");
+    expect(first.style.zIndex).toBe("13");
+    expect(others.map((sticker) => sticker.style.zIndex)).toEqual(originalStack.slice(1));
     const toolbar = first.nextElementSibling;
     expect(toolbar?.getAttribute("role")).toBe("toolbar");
     expect(toolbar?.getAttribute("aria-label")).toMatch(/^No\./);
@@ -155,6 +160,7 @@ describe("ArtistBoard's keys", () => {
     press(first, "Escape");
     expect(host.querySelector(".sticker-toolbar")).toBeNull();
     expect(document.activeElement).toBe(first);
+    expect(stickersIn(host).map((sticker) => sticker.style.zIndex)).toEqual(originalStack);
   });
 
   it("gives focus back to the sticker View opened from", async () => {
@@ -186,6 +192,54 @@ describe("ArtistBoard's keys", () => {
     act(() => host.querySelector<HTMLElement>(".board-stage")?.click());
     expect(host.querySelector(".sticker-toolbar")).toBeNull();
   });
+});
+
+describe("ArtistBoard's covered laminate", () => {
+  it.each(["detail", "stat board"] as const)(
+    "pauses its retained material under the %s and refreshes once when exposed",
+    async (cover) => {
+      const motion = new ReducedMotion(true);
+      const matchMedia = window.matchMedia.bind(window);
+      vi.spyOn(window, "matchMedia").mockImplementation((query) =>
+        query === motion.media ? motion : matchMedia(query),
+      );
+      // Keep the real component lifecycle; happy-dom cannot paint WebGL snapshots.
+      const mounted = vi.spyOn(laminate, "mountLaminate");
+      const refreshed = vi.spyOn(laminate, "refreshLaminate");
+      const host = await visit(three());
+      const owners = mounted.mock.calls.filter(([canvas]) => canvas.closest(".placed-sticker"));
+      expect(owners).toHaveLength(3);
+      expect(owners.map(([, options]) => options.active?.())).toEqual([true, true, true]);
+      const refreshesOf = (canvas: HTMLCanvasElement) =>
+        refreshed.mock.calls.filter(([target]) => target === canvas).length;
+
+      if (cover === "detail") {
+        const first = stickersIn(host)[0];
+        press(first, "Enter");
+        const view = first.nextElementSibling?.querySelector("button");
+        if (!view) throw new Error("The selected sticker has no View button");
+        act(() => view.click());
+        expect(host.querySelector(".visit-view")).not.toBeNull();
+      } else {
+        act(() => host.querySelector<HTMLButtonElement>(".board-who")?.click());
+      }
+
+      expect(owners.map(([, options]) => options.active?.())).toEqual([false, false, false]);
+      const heldRefreshes = owners.map(([canvas]) => refreshesOf(canvas));
+      if (cover === "detail") press(document.body, "Escape");
+      else act(() => host.querySelector<HTMLButtonElement>(".stat-board__flip-back")?.click());
+
+      expect(owners.map(([, options]) => options.active?.())).toEqual([true, true, true]);
+      expect(owners.map(([canvas]) => refreshesOf(canvas))).toEqual(
+        heldRefreshes.map((count) => count + 1),
+      );
+      expect(owners.map(([canvas]) => canvas)).toEqual([
+        ...host.querySelectorAll(".placed-sticker canvas.sticker-laminate"),
+      ]);
+      for (const [canvas] of owners)
+        expect(mounted.mock.calls.filter(([target]) => target === canvas)).toHaveLength(1);
+    },
+  );
 });
 
 describe("ArtistBoard's Give key", () => {

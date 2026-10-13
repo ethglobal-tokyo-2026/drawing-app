@@ -131,8 +131,6 @@
   );
   translate: calc(var(--lx, -0.6) * 21.3% + var(--ly, -0.6) * 8.85%)
     calc(var(--lx, -0.6) * 8.84% + var(--ly, -0.6) * 3.67%);
-  /* Bridge the shared light's publication beat without adding another long response. */
-  transition: translate 45ms linear;
 }
 
 /* The glare dims the tone without wiping it, so the band reads all round. */
@@ -214,7 +212,6 @@
     var(--band-1) 96px
   );
   translate: calc(var(--foil-slide) * 87px) calc(var(--foil-slide) * 40.6px);
-  transition: translate 45ms linear;
 }
 
 /* The diffraction grating: fine diagonal hairlines, lit and shaded, pressed into the foil. They hold
@@ -243,7 +240,13 @@
   position: absolute;
   inset: -50%;
   rotate: calc((var(--foil-turn, 0) + var(--light-rotation, 0)) * -1deg);
-  transition: rotate 45ms linear;
+}
+
+/* Keep the moving glint in compositor layers instead of repainting the masked foil around it. */
+.sticker-foil__glint,
+.sticker-foil__glint::before,
+.sticker-foil--kyoto-seika .sticker-foil__glint::after {
+  will-change: transform;
 }
 
 .sticker-foil__glint::before {
@@ -260,7 +263,6 @@
   /* From the middle to the band's edge as the light goes from 0 to ±1: half the band's size over the
      glint's, which is 60% of the band's. */
   translate: calc(var(--lx, -0.6) * 83%) calc(var(--ly, -0.6) * 83%);
-  transition: translate 45ms linear;
 }
 
 /* The image a foil sits under shows only inside its cut. Past the cut is the band, the sticker's edge

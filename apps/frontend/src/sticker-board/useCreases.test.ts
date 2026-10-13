@@ -201,6 +201,232 @@ describe("CreaseStore", () => {
     timings: { decode: 0, draw: 0, shade: 0, encode: 0, total: 0 },
   });
 
+  describe("placement-only crease reveal", () => {
+    const changed = () => jobsFor([sticker("lower", { x: 0.42 }), sticker("top", { x: 0.6 })])[0];
+    const normalOf = (store: CreaseStore, id: string) => {
+      const normal = store.creaseOf(id)?.normal;
+      if (!normal) throw new Error(`The accepted bake for ${id} has no normal`);
+      return normal;
+    };
+
+    it.each([0, 7])("never reveals the first accepted plan at generation %s", (generation) => {
+      const store = new CreaseStore();
+      store.want([job], generation);
+      store.land(bake(job));
+      const normal = normalOf(store, job.id);
+      expect(store.canReveal(job.id, normal)).toBe(false);
+      expect(store.startReveal(job.id, normal)).toBe(false);
+    });
+
+    it("doesn't reveal a delayed hydration bake after the same plan is read again", () => {
+      const store = new CreaseStore();
+      store.want([job]);
+      store.want([job]);
+      store.land(bake(job));
+      const normal = normalOf(store, job.id);
+      expect(store.canReveal(job.id, normal)).toBe(false);
+      expect(store.startReveal(job.id, normal)).toBe(false);
+    });
+
+    it("doesn't grant a changed viewport or another changed plan without a placement", () => {
+      const store = new CreaseStore();
+      store.want([job]);
+      store.land(bake(job));
+      const resized = creaseJobs(
+        [sticker("lower", { x: 0.4 }), sticker("top", { x: 0.6 })],
+        fieldOf(PHONE_BOARD.W * 1.25, PHONE_BOARD.H * 1.25),
+        unit * 1.25,
+        () => null,
+        SCALE,
+      )[0];
+      expect(resized.key).not.toBe(job.key);
+      store.want([resized]);
+      store.land(bake(resized));
+      expect(store.canReveal(resized.id, normalOf(store, resized.id))).toBe(false);
+      const moved = changed();
+      store.want([moved]);
+      store.land(bake(moved));
+      expect(store.canReveal(moved.id, normalOf(store, moved.id))).toBe(false);
+    });
+
+    it("reveals a genuine changed placement once, only for its accepted normal", () => {
+      const store = new CreaseStore();
+      store.want([job]);
+      store.land(bake(job));
+      const oldNormal = normalOf(store, job.id);
+      const moved = changed();
+      expect(moved.key).not.toBe(job.key);
+      store.want([moved], 1);
+      expect(store.canReveal(job.id, oldNormal)).toBe(false);
+      expect(store.startReveal(job.id, oldNormal)).toBe(false);
+      store.land(bake(moved));
+      const normal = normalOf(store, moved.id);
+      expect(store.canReveal(moved.id, normal)).toBe(true);
+      expect(store.startReveal(moved.id, oldNormal)).toBe(false);
+      expect(store.canReveal(moved.id, normal)).toBe(true);
+      expect(store.startReveal(moved.id, normal)).toBe(true);
+      expect(store.canReveal(moved.id, normal)).toBe(false);
+      expect(store.startReveal(moved.id, normal)).toBe(false);
+      store.want([moved], 2);
+      expect(store.canReveal(moved.id, normal)).toBe(false);
+    });
+
+    it("keeps a pending placement grant when the same key is planned again", () => {
+      const store = new CreaseStore();
+      store.want([job]);
+      const moved = changed();
+      store.want([moved], 1);
+      store.want([moved], 1);
+      store.land(bake(moved));
+      expect(store.startReveal(moved.id, normalOf(store, moved.id))).toBe(true);
+    });
+
+    it("doesn't grant an unrelated still-pending hydration job when a placement changes", () => {
+      const plan = (x: number) =>
+        jobsFor([
+          sticker("lower-a", { x: 0.2, y: 0.25, s: 0.15 }),
+          sticker("top-a", { x, y: 0.25, s: 0.15 }),
+          sticker("lower-b", { x: 0.7, y: 0.75, s: 0.15 }),
+          sticker("top-b", { x: 0.8, y: 0.75, s: 0.15 }),
+        ]);
+      const store = new CreaseStore();
+      const first = plan(0.3);
+      const moved = plan(0.32);
+      const unrelated = moved.find((entry) => entry.id === "top-b");
+      const placed = moved.find((entry) => entry.id === "top-a");
+      if (!unrelated || !placed) throw new Error("Both separate sticker overlaps need jobs");
+      expect(first.find((entry) => entry.id === unrelated.id)?.key).toBe(unrelated.key);
+      expect(first.find((entry) => entry.id === placed.id)?.key).not.toBe(placed.key);
+      store.want(first);
+      store.want(moved, 1);
+      for (const entry of moved) store.land(bake(entry));
+      expect(store.startReveal(unrelated.id, normalOf(store, unrelated.id))).toBe(false);
+      expect(store.startReveal(placed.id, normalOf(store, placed.id))).toBe(true);
+    });
+
+    it.each(["superseded", "removed", "failed", "empty"] as const)(
+      "discards a placement grant when its wanted bake is %s",
+      (answer) => {
+        const store = new CreaseStore();
+        store.want([job]);
+        const moved = changed();
+        store.want([moved], 1);
+        if (answer === "superseded") store.want([job], 1);
+        else if (answer === "removed") store.want([], 1);
+        else if (answer === "failed") store.fail(moved);
+        else store.land(bake(moved, false));
+        store.land(bake(moved));
+        const normal = store.creaseOf(moved.id)?.normal ?? "a discarded normal";
+        expect(store.canReveal(moved.id, normal)).toBe(false);
+        expect(store.startReveal(moved.id, normal)).toBe(false);
+      },
+    );
+
+    it("clears a canceled board's grant and doesn't replay it after remount", () => {
+      const store = new CreaseStore();
+      store.want([job]);
+      const moved = changed();
+      store.want([moved], 1);
+      store.land(bake(moved));
+      const oldNormal = normalOf(store, moved.id);
+      store.clear();
+      expect(store.startReveal(moved.id, oldNormal)).toBe(false);
+      store.want([moved], 1);
+      store.land(bake(moved));
+      expect(store.startReveal(moved.id, normalOf(store, moved.id))).toBe(false);
+    });
+
+    it.each(["pending", "ready"] as const)(
+      "covering the board cancels a %s placement reveal before re-exposure",
+      (state) => {
+        const store = new CreaseStore();
+        store.want([job]);
+        const moved = changed();
+        store.want([moved], 1);
+        if (state === "ready") store.land(bake(moved));
+        store.clearRevealIntents();
+        store.want([moved], 1);
+        store.land(bake(moved));
+        expect(store.canReveal(moved.id, normalOf(store, moved.id))).toBe(false);
+        expect(store.startReveal(moved.id, normalOf(store, moved.id))).toBe(false);
+      },
+    );
+
+    it("doesn't grant a changed placement while covered or replay it on re-exposure", () => {
+      const store = new CreaseStore();
+      store.want([job]);
+      const moved = changed();
+      store.want([moved], 1, false);
+      store.land(bake(moved));
+      const normal = normalOf(store, moved.id);
+      expect(store.canReveal(moved.id, normal)).toBe(false);
+      store.want([moved], 1, true);
+      expect(store.startReveal(moved.id, normal)).toBe(false);
+    });
+  });
+
+  it("doesn't settle initial assembly before the board has planned its crease jobs", async () => {
+    const store = new CreaseStore();
+    let settled = false;
+    void store.whenSettled().then(() => (settled = true));
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    store.want([]);
+    await Promise.resolve();
+    expect(settled).toBe(true);
+  });
+
+  it.each(["crease", "no crease", "failure"] as const)(
+    "waits for the requested baseline bake to answer with %s",
+    async (answer) => {
+      const store = new CreaseStore();
+      store.want([job]);
+      let settled = false;
+      void store.whenSettled().then(() => (settled = true));
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      store.land({ ...bake(job), key: "another stack" });
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      if (answer === "failure") store.fail(job);
+      else store.land(bake(job, answer === "crease"));
+      await Promise.resolve();
+      expect(settled).toBe(true);
+    },
+  );
+
+  it("releases a canceled assembly wait without waiting for a bake", async () => {
+    const store = new CreaseStore();
+    store.want([job]);
+    const canceled = new AbortController();
+    const waiting = store.whenSettled(canceled.signal);
+    canceled.abort();
+    await expect(waiting).resolves.toBeUndefined();
+  });
+
+  it("releases an assembly wait when its board leaves", async () => {
+    const store = new CreaseStore();
+    store.want([job]);
+    const waiting = store.whenSettled();
+    store.clear();
+    await expect(waiting).resolves.toBeUndefined();
+  });
+
+  it("fails only pending wanted keys when the worker stops, preserving completed crease images", async () => {
+    const store = new CreaseStore();
+    const pending = { ...job, id: "pending", key: "pending stack" };
+    store.want([job, pending]);
+    store.land(bake(job));
+    const shown = store.creaseOf(job.id);
+    let settled = false;
+    void store.whenSettled().then(() => (settled = true));
+    expect(store.failPending()).toEqual([pending.id]);
+    await Promise.resolve();
+    expect(settled).toBe(true);
+    expect(store.creaseOf(job.id)).toBe(shown);
+    expect(store.want([job, pending])).toEqual([]);
+  });
+
   it("shows a crease for the stack it was baked for, and drops it the moment the stack changes", () => {
     const store = new CreaseStore();
     const changed = vi.fn();

@@ -1,5 +1,9 @@
 import { currentLight, subscribeLight } from "./light";
-import { notePerformance, timeOurWork } from "../performance/performanceRecorder";
+import {
+  isPerformanceRecorderOn,
+  notePerformance,
+  timeOurWork,
+} from "../performance/performanceRecorder";
 import { laminateFragment, laminateVertex } from "./laminateShader";
 import { releaseCanvas } from "../ui/releaseCanvas";
 import { REDUCED_MOTION } from "../ui/useReducedMotion";
@@ -21,6 +25,10 @@ export interface LaminateSurface {
   active?: () => boolean;
   /** The matching painted crease advances only after its laminate snapshot is ready. */
   onCreaseProgress?: (normal: string, progress: number) => void;
+  /** A placement permits preparing this normal's finite reveal without consuming it. */
+  canRevealCrease?: (normal: string) => boolean;
+  /** The first successful retained snapshot consumes this placement's reveal once. */
+  startCreaseReveal?: (normal: string) => boolean;
 }
 
 /** One GPU context computes the coating; each visible sticker keeps its own 2D snapshot. */
@@ -67,7 +75,7 @@ class LaminateRenderer {
     const gl = this.canvas.getContext("webgl", {
       alpha: true,
       antialias: false,
-      premultipliedAlpha: false,
+      premultipliedAlpha: true,
     });
     if (!gl) throw new Error("WebGL is unavailable");
     this.gl = gl;
@@ -302,15 +310,10 @@ class LaminateRenderer {
       for (const surface of surfaces) surface.finishCreaseReveal();
       return;
     }
-    // Read geometry together before snapshots change, avoiding a layout read after each write.
-    const jobs = surfaces.flatMap((surface) => {
+    // Exposed owners reserve their geometry before assets arrive; partial requests only select draws.
+    // Read the complete scene before allocation and snapshots change, avoiding interleaved layout.
+    const jobs = [...this.surfaces].flatMap((surface) => {
       const { canvas } = surface;
-      if (
-        !surface.textures ||
-        (!surface.hasSnapshot && surface.pendingNormal) ||
-        (surface.revealing && surface.pendingPrintCut)
-      )
-        return [];
       if (!canvas.isConnected || (surface.options.active && !surface.options.active())) {
         surface.finishCreaseReveal();
         return [];
@@ -345,6 +348,7 @@ class LaminateRenderer {
       return surface.revealing ? [{ ...job, target: null, creaseProgress: 0 }, job] : [job];
     });
     type Tile = (typeof jobs)[number];
+    const batches: Tile[][] = [];
     const limit = this.atlasLimit;
     let tiles: Tile[] = [],
       x = 0,
@@ -352,14 +356,12 @@ class LaminateRenderer {
       row = 0;
     const flush = () => {
       if (!tiles.length) return;
-      try {
-        this.drawTiles(tiles);
-      } catch (error) {
-        for (const tile of tiles) tile.surface.failed(String(error));
-      }
+      batches.push(tiles);
       tiles = [];
       x = y = row = 0;
     };
+    // Put tall tiles first so short stickers do not leave gaps beside later rows.
+    jobs.sort((a, b) => b.h - a.h || b.w - a.w);
     for (const job of jobs) {
       if (x + job.w > limit) {
         x = 0;
@@ -374,6 +376,38 @@ class LaminateRenderer {
       row = Math.max(row, job.h);
     }
     flush();
+    const requested = new Set(surfaces);
+    const draws = batches
+      .map((batch) =>
+        batch.filter(
+          ({ surface }) =>
+            requested.has(surface) &&
+            surface.textures &&
+            (surface.hasSnapshot || !surface.pendingNormal) &&
+            !(surface.revealing && surface.pendingPrintCut),
+        ),
+      )
+      .filter((batch) => batch.length);
+    if (!draws.length) return;
+    const width = Math.max(...jobs.map((tile) => tile.x + tile.w));
+    const height = Math.max(...jobs.map((tile) => tile.y + tile.h));
+    try {
+      // Scene changes may shrink storage; turns and texture arrivals keep the complete scene size.
+      if (this.canvas.width !== width) this.canvas.width = width;
+      if (this.canvas.height !== height) this.canvas.height = height;
+      if (this.atlas.width !== width) this.atlas.width = width;
+      if (this.atlas.height !== height) this.atlas.height = height;
+    } catch (error) {
+      for (const batch of draws) for (const { surface } of batch) surface.failed(String(error));
+      return;
+    }
+    for (const batch of draws) {
+      try {
+        this.drawTiles(batch);
+      } catch (error) {
+        for (const { surface } of batch) surface.failed(String(error));
+      }
+    }
   }
 
   drawTiles(
@@ -391,11 +425,10 @@ class LaminateRenderer {
       y: number;
     }[],
   ) {
+    const recording = isPerformanceRecorderOn();
+    const submittedAt = recording ? performance.now() : 0;
     const width = Math.max(...tiles.map((tile) => tile.x + tile.w));
     const height = Math.max(...tiles.map((tile) => tile.y + tile.h));
-    // A single-surface load or turn must not shrink the next shared batch's allocation.
-    if (this.canvas.width < width) this.canvas.width = width;
-    if (this.canvas.height < height) this.canvas.height = height;
     const gl = this.gl;
     if (gl.drawingBufferWidth < width || gl.drawingBufferHeight < height)
       throw new Error("The laminate GPU drawing buffer is smaller than its requested batch");
@@ -463,14 +496,21 @@ class LaminateRenderer {
       gl.uniform1f(this.uniforms.get("creaseReveal") ?? null, tile.creaseProgress);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
-    if (this.atlas.width < width) this.atlas.width = width;
-    if (this.atlas.height < height) this.atlas.height = height;
-    const atlas = this.atlas.getContext("2d");
-    if (!atlas) throw new Error("The laminate atlas 2D context is unavailable");
-    atlas.globalCompositeOperation = "copy";
-    // One GPU-to-2D copy for this bounded batch, then ordinary 2D region copies.
-    atlas.drawImage(this.canvas, 0, 0, width, height, 0, 0, width, height);
+    const submittedMs = recording ? performance.now() - submittedAt : 0;
+    const snapshotStartedAt = recording ? performance.now() : 0;
+    const atlasContext = this.atlas.getContext("2d");
+    if (!atlasContext) throw new Error("The laminate batch snapshot 2D context is unavailable");
+    // Replace the used region, including transparent cuts; retained crops never read outside it.
+    atlasContext.clearRect(0, 0, width, height);
+    atlasContext.globalCompositeOperation = "source-over";
+    atlasContext.drawImage(this.canvas, 0, 0, width, height, 0, 0, width, height);
+    const snapshotMs = recording ? performance.now() - snapshotStartedAt : 0;
+    let firstCopyMs = 0;
+    let remainingCopiesMs = 0;
+    let copied = 0;
+    // One GPU-source copy follows every batch; retained stickers then crop the complete 2D stage.
     for (const { surface, x, y, w, h, target } of tiles) {
+      const copyStartedAt = recording ? performance.now() : 0;
       const canvas = target ?? surface.flatSnapshot();
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
@@ -480,16 +520,44 @@ class LaminateRenderer {
       if (!context) throw new Error("The sticker snapshot 2D context is unavailable");
       context.globalCompositeOperation = "copy";
       context.drawImage(this.atlas, x, y, w, h, 0, 0, w, h);
+      if (recording) {
+        const elapsed = performance.now() - copyStartedAt;
+        if (copied === 0) firstCopyMs = elapsed;
+        else remainingCopiesMs += elapsed;
+      }
+      copied++;
       if (canvas === surface.canvas) {
+        const previousNormal = surface.snapshotNormal;
         surface.hasSnapshot = true;
+        surface.snapshotNormal = surface.normalUrl;
+        surface.snapshotPending = false;
+        surface.renderFailed = false;
         if (canvas.dataset.state !== "ready") canvas.dataset.state = "ready";
+        const reveal = surface.reveal;
+        const normal = surface.normalUrl;
+        // A completed normal consumes its placement even when no animation can be prepared.
+        const started =
+          normal !== undefined &&
+          normal === surface.options.normal &&
+          previousNormal !== normal &&
+          surface.options.startCreaseReveal?.(normal) === true;
+        if (reveal && !reveal.admitted) {
+          if (started) reveal.admitted = true;
+          else surface.finishCreaseReveal(normal === surface.options.normal);
+        }
         if (surface.revealing) {
           surface.container.dataset.creaseReveal = "";
           surface.showCreaseProgress(surface.reveal?.progress ?? 0);
           this.reveal(surface);
         } else surface.showCreaseProgress(1);
+        surface.settleWaiters();
       }
     }
+    if (recording)
+      notePerformance(
+        "laminate-batch",
+        `${tiles.length} ${tiles.length === 1 ? "tile" : "tiles"}; GL ${this.canvas.width}x${this.canvas.height}; used ${width}x${height}; submit ${submittedMs.toFixed(1)}ms; snapshot ${snapshotMs.toFixed(1)}ms; first copy ${firstCopyMs.toFixed(1)}ms; remaining copies ${remainingCopiesMs.toFixed(1)}ms`,
+      );
   }
 
   destroy() {
@@ -534,14 +602,29 @@ class MountedSurface {
   gpu: LaminateRenderer | null = null;
   textures: WebGLTexture[] | null = null;
   hasSnapshot = false;
+  snapshotNormal?: string;
+  snapshotPending = false;
+  renderFailed = false;
+  initializationAttempted = false;
+  materialUpdating = false;
+  readonly waiters = new Set<{
+    expected?: { normal?: string };
+    finish: () => void;
+  }>();
   printCut: { print: string; cut: string; textures: [WebGLTexture, WebGLTexture] } | null = null;
   pendingPrintCut: { print: string; cut: string; gpu: LaminateRenderer } | null = null;
   printCutError: string | null = null;
   normalError: string | null = null;
+  normalFailure: { url: string } | null = null;
   normalUrl?: string;
   normalTexture: WebGLTexture | null = null;
   pendingNormal: { url: string; gpu: LaminateRenderer } | null = null;
-  reveal: { normal: string; started: number | null; progress: number } | null = null;
+  reveal: {
+    normal: string;
+    admitted: boolean;
+    started: number | null;
+    progress: number;
+  } | null = null;
   completedNormal?: string;
   flat: HTMLCanvasElement | null = null;
   flatFrame: HTMLSpanElement | null = null;
@@ -560,13 +643,30 @@ class MountedSurface {
     if (!this.live) return;
     this.textures = null;
     this.hasSnapshot = false;
+    this.snapshotNormal = undefined;
+    this.snapshotPending = false;
+    this.renderFailed = false;
+    this.initializationAttempted = false;
+    this.gpu = null;
     this.printCut = null;
     this.pendingPrintCut = null;
     this.printCutError = this.normalError = null;
+    this.normalFailure = null;
     delete this.canvas.dataset.error;
     this.normalUrl = undefined;
     this.normalTexture = null;
     this.pendingNormal = null;
+    this.initialize();
+  }
+  /** Only first exposure admits decoding and uploads; covering a ready surface keeps its resources. */
+  initialize() {
+    if (this.initializationAttempted || !this.live || document.hidden || !this.canvas.isConnected)
+      return;
+    if (this.options.active && !this.options.active()) return;
+    const box = this.container.getBoundingClientRect();
+    if (box.bottom < 0 || box.top > innerHeight || box.right < 0 || box.left > innerWidth) return;
+    if (!this.container.clientWidth || !this.container.clientHeight) return;
+    this.initializationAttempted = true;
     try {
       this.gpu = renderer ??= new LaminateRenderer();
       this.gpu.surfaces.add(this);
@@ -580,10 +680,12 @@ class MountedSurface {
   }
   failed(why: string) {
     this.finishCreaseReveal();
+    this.renderFailed = true;
     this.canvas.dataset.state = "failed";
     this.canvas.dataset.error = why;
     console.error(`Rendering sticker laminate for ${this.options.print} failed: ${why}`);
     notePerformance("laminate", why);
+    this.settleWaiters();
   }
   loadError(kind: "printCut" | "normal", why: string | null) {
     if (kind === "printCut") this.printCutError = why;
@@ -593,13 +695,62 @@ class MountedSurface {
     else delete this.canvas.dataset.error;
     if (why) {
       const completesReadyReveal =
-        kind === "printCut" && this.revealing && this.normalUrl === this.options.normal;
-      this.finishCreaseReveal();
+        kind === "printCut" &&
+        this.revealing &&
+        this.textures !== null &&
+        this.normalUrl === this.options.normal;
+      // A retained print can complete the bend next frame; its paint waits for that actual copy.
+      this.finishCreaseReveal(!completesReadyReveal);
       console.error(`Rendering sticker laminate for ${this.options.print} failed: ${why}`);
       notePerformance("laminate", why);
       // A failed print upgrade can unblock a ready normal over the retained print and cut.
       if (completesReadyReveal) this.draw();
     }
+    this.settleWaiters();
+  }
+  /** A retained bitmap is settled only after its current requested material has reached it. */
+  settled(expected?: { normal?: string }) {
+    if (this.materialUpdating) return false;
+    if (expected) {
+      if (
+        this.hasSnapshot &&
+        (this.snapshotNormal === expected.normal ||
+          (this.normalFailure !== null && this.normalFailure.url === expected.normal))
+      )
+        return true;
+      return (
+        this.options.normal === expected.normal &&
+        (this.renderFailed || (!this.pendingPrintCut && this.printCutError !== null))
+      );
+    }
+    // A failed first print cannot produce a snapshot; its pending normal must not hold the failure.
+    if (
+      this.renderFailed ||
+      (!this.hasSnapshot && !this.pendingPrintCut && this.printCutError !== null)
+    )
+      return true;
+    return (
+      !this.pendingPrintCut && !this.pendingNormal && !this.snapshotPending && this.hasSnapshot
+    );
+  }
+  whenSettled(expected?: { normal?: string }, signal?: AbortSignal): Promise<void> {
+    if (!this.live || signal?.aborted || this.settled(expected)) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      const waiter = {
+        expected,
+        finish: () => {
+          this.waiters.delete(waiter);
+          signal?.removeEventListener("abort", waiter.finish);
+          resolve();
+        },
+      };
+      this.waiters.add(waiter);
+      signal?.addEventListener("abort", waiter.finish, { once: true });
+    });
+  }
+  settleWaiters() {
+    for (const waiter of this.waiters)
+      if (!this.live || this.settled(waiter.expected)) waiter.finish();
   }
   /** A sharp print replaces its cut with it, while the previous complete sticker remains visible. */
   replacePrintCut(print: string, cut: string) {
@@ -622,6 +773,7 @@ class MountedSurface {
       return;
     }
     const pending = { print, cut, gpu };
+    this.renderFailed = false;
     this.pendingPrintCut = pending;
     Promise.all([gpu.acquire(print), gpu.acquire(cut)]).then(
       ([printTexture, cutTexture]) => {
@@ -631,6 +783,7 @@ class MountedSurface {
         const old = this.printCut;
         this.printCut = { print, cut, textures: [printTexture, cutTexture] };
         this.textures = [printTexture, cutTexture, this.normalTexture ?? gpu.flat];
+        this.snapshotPending = true;
         if (old) {
           gpu.release(old.print);
           gpu.release(old.cut);
@@ -667,6 +820,7 @@ class MountedSurface {
       old.gpu.release(old.url);
     }
     if (this.normalUrl === url) {
+      this.normalFailure = null;
       this.loadError("normal", null);
       this.showCreaseProgress(this.reveal?.progress ?? 1);
       if (!this.hasSnapshot) this.draw();
@@ -677,13 +831,18 @@ class MountedSurface {
       const old = this.normalUrl;
       this.normalUrl = undefined;
       this.normalTexture = gpu.flat;
+      this.normalFailure = null;
       if (this.textures) this.textures[2] = gpu.flat;
+      this.snapshotPending = true;
+      this.renderFailed = false;
       if (old) gpu.release(old);
       this.loadError("normal", null);
       this.draw();
       return;
     }
     const pending = { url, gpu };
+    this.renderFailed = false;
+    this.normalFailure = null;
     this.pendingNormal = pending;
     gpu.acquire(url).then(
       (texture) => {
@@ -693,7 +852,9 @@ class MountedSurface {
         const old = this.normalUrl;
         this.normalUrl = url;
         this.normalTexture = texture;
+        this.normalFailure = null;
         if (this.textures) this.textures[2] = texture;
+        this.snapshotPending = true;
         if (old) gpu.release(old);
         this.loadError("normal", null);
         gpu.stopReveal(this);
@@ -702,8 +863,9 @@ class MountedSurface {
           this.container !== this.canvas &&
           !gpu.reduced.matches &&
           CSS.supports("mix-blend-mode", "plus-lighter") &&
-          this.completedNormal !== url
-            ? { normal: url, started: null, progress: 0 }
+          this.completedNormal !== url &&
+          this.options.canRevealCrease?.(url) === true
+            ? { normal: url, admitted: false, started: null, progress: 0 }
             : null;
         this.draw();
       },
@@ -712,6 +874,7 @@ class MountedSurface {
         if (!this.live || this.gpu !== gpu || gpu.disposed || this.pendingNormal !== pending)
           return;
         this.pendingNormal = null;
+        this.normalFailure = { url };
         gpu.release(url);
         const why = `Replacing crease normal ${url} failed: ${String(error)}`;
         // Keep the ready laminate visible; its last normal remains valid after a failed rebake.
@@ -721,6 +884,7 @@ class MountedSurface {
     );
   }
   draw() {
+    this.initialize();
     if (!this.textures) return;
     this.gpu?.refresh(this);
   }
@@ -765,7 +929,7 @@ class MountedSurface {
     }
   }
   /** Hidden, retired, or failed material leaves no unfinished paint mask or ongoing frames. */
-  finishCreaseReveal() {
+  finishCreaseReveal(showPaint = true) {
     const normal = this.options.normal;
     this.reveal = null;
     this.gpu?.stopReveal(this);
@@ -778,13 +942,14 @@ class MountedSurface {
     }
     if (normal) {
       this.completedNormal = normal;
-      this.options.onCreaseProgress?.(normal, 1);
+      if (showPaint) this.options.onCreaseProgress?.(normal, 1);
     }
   }
   release() {
     if (!this.live) return;
     this.live = false;
     this.finishCreaseReveal();
+    this.settleWaiters();
     const gpu = this.gpu;
     this.gpu = null;
     this.textures = null;
@@ -855,12 +1020,23 @@ export function updateLaminate(
   const surface = mounted.get(canvas);
   if (!surface) return;
   const finishChanged = surface.options.finish !== options.finish;
-  Object.assign(surface.options, options);
-  // A later bake still shows its paint when this mounted GPU surface could not recover.
-  if (!surface.gpu || surface.gpu.disposed || surface.gpu.lost) surface.finishCreaseReveal();
-  surface.replacePrintCut(options.print, options.cut);
-  surface.replaceNormal(options.normal);
-  if (finishChanged) surface.draw();
+  surface.materialUpdating = true;
+  try {
+    Object.assign(surface.options, options);
+    // Deferred admission has no GPU yet; only a failure releases the matching fallback paint.
+    if (surface.renderFailed || surface.gpu?.disposed || surface.gpu?.lost)
+      surface.finishCreaseReveal();
+    surface.replacePrintCut(options.print, options.cut);
+    surface.replaceNormal(options.normal);
+    if (finishChanged) {
+      surface.snapshotPending = true;
+      surface.renderFailed = false;
+    }
+    if (finishChanged || !surface.gpu) surface.draw();
+  } finally {
+    surface.materialUpdating = false;
+    surface.settleWaiters();
+  }
 }
 
 /** Board gestures and finite flights change the surface geometry under the held light. */
@@ -869,8 +1045,8 @@ export function turnLaminate(canvas: HTMLCanvasElement, turn: number, tiltX = 0,
   if (
     !surface ||
     (surface.options.turn === turn &&
-      surface.options.tiltX === tiltX &&
-      surface.options.tiltY === tiltY)
+      (surface.options.tiltX ?? 0) === tiltX &&
+      (surface.options.tiltY ?? 0) === tiltY)
   )
     return;
   Object.assign(surface.options, { turn, tiltX, tiltY });
@@ -880,5 +1056,14 @@ export function turnLaminate(canvas: HTMLCanvasElement, turn: number, tiltX = 0,
 /** An exposed tray face samples the held pose after spending time inside the closed tray. */
 export function refreshLaminate(canvas: HTMLCanvasElement) {
   const surface = mounted.get(canvas);
-  if (surface) surface.gpu?.refresh(surface);
+  surface?.draw();
+}
+
+/** Waits for current material, or a baseline normal on retained print; never starts a covered surface. */
+export function whenLaminateSettled(
+  canvas: HTMLCanvasElement,
+  expected?: { normal?: string },
+  signal?: AbortSignal,
+): Promise<void> {
+  return mounted.get(canvas)?.whenSettled(expected, signal) ?? Promise.resolve();
 }

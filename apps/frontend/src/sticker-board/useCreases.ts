@@ -5,6 +5,7 @@ import {
   useEffect,
   useEffectEvent,
   useId,
+  useLayoutEffect,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -210,12 +211,64 @@ export class CreaseStore {
    */
   readonly #baked = new Map<string, Baked>();
   readonly #watchers = new Map<string, Set<() => void>>();
+  readonly #assemblyWaiters = new Set<() => void>();
+  /** Only a changed stack committed by placement can reveal its accepted crease once. */
+  readonly #revealKeys = new Map<string, string>();
+  #placementGeneration = 0;
+  #planned = false;
   /** The key each sticker's crease must match to show: the board's stack now. */
   #wanted = new Map<string, string>();
 
   /** A sticker's crease, once it's baked. */
   creaseOf(id: string): Crease | undefined {
     return this.#baked.get(id)?.crease;
+  }
+
+  /** Whether this accepted normal belongs to an unconsumed explicit placement. */
+  canReveal(id: string, normal: string): boolean {
+    const baked = this.#baked.get(id);
+    return !!(
+      baked?.crease?.normal === normal &&
+      baked.key === this.#wanted.get(id) &&
+      baked.key === this.#revealKeys.get(id)
+    );
+  }
+
+  /** Consumes a matching placement only after its actual laminate snapshot is ready. */
+  startReveal(id: string, normal: string): boolean {
+    if (!this.canReveal(id, normal)) return false;
+    this.#revealKeys.delete(id);
+    return true;
+  }
+
+  /** A covered board cannot replay an unstarted placement when it is exposed again. */
+  clearRevealIntents() {
+    this.#revealKeys.clear();
+  }
+
+  /** The current baseline's jobs have answered, including an empty plan or a failed bake. */
+  whenSettled(signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted || this.#settled()) return Promise.resolve();
+    return new Promise((resolve) => {
+      const finish = () => {
+        this.#assemblyWaiters.delete(finish);
+        signal?.removeEventListener("abort", finish);
+        resolve();
+      };
+      this.#assemblyWaiters.add(finish);
+      signal?.addEventListener("abort", finish, { once: true });
+    });
+  }
+
+  #settled() {
+    return (
+      this.#planned && [...this.#wanted].every(([id, key]) => this.#baked.get(id)?.key === key)
+    );
+  }
+
+  #settleAssembly() {
+    if (this.#assemblyWaiters.size && this.#settled())
+      for (const finish of this.#assemblyWaiters) finish();
   }
 
   /** Calls `onChange` when that sticker's crease changes; returns what stops it. */
@@ -233,11 +286,22 @@ export class CreaseStore {
    * Takes the jobs the board's stack calls for now. A crease baked for another stack goes at once, so
    * none outlives what it was baked for. Returns the jobs not yet baked.
    */
-  want(jobs: readonly CreaseJob[]): CreaseJob[] {
+  want(jobs: readonly CreaseJob[], placementGeneration = 0, allowReveal = true): CreaseJob[] {
+    // The first plan is hydration, even when an owner remounts with a retained generation.
+    const placed = allowReveal && this.#planned && placementGeneration > this.#placementGeneration;
+    if (!allowReveal) this.clearRevealIntents();
+    const changed = placed ? jobs.filter((job) => this.#wanted.get(job.id) !== job.key) : [];
+    this.#placementGeneration = Math.max(this.#placementGeneration, placementGeneration);
+    this.#planned = true;
     this.#wanted = new Map(jobs.map((j) => [j.id, j.key]));
+    for (const [id, key] of this.#revealKeys) {
+      if (this.#wanted.get(id) !== key) this.#revealKeys.delete(id);
+    }
     for (const [id, baked] of this.#baked) {
       if (this.#wanted.get(id) !== baked.key) this.#put(id, null);
     }
+    for (const { id, key } of changed) this.#revealKeys.set(id, key);
+    this.#settleAssembly();
     return this.stillToBake(jobs);
   }
 
@@ -266,17 +330,30 @@ export class CreaseStore {
     this.#put(id, { key });
   }
 
+  /** Records only unanswered wanted jobs as failed; completed creases keep their images. */
+  failPending(): string[] {
+    const pending = [...this.#wanted].filter(([id, key]) => this.#baked.get(id)?.key !== key);
+    for (const [id, key] of pending) this.fail({ id, key });
+    return pending.map(([id]) => id);
+  }
+
   /** Lets go of every crease, as the board goes. */
   clear() {
     this.#wanted = new Map();
+    this.#revealKeys.clear();
+    this.#placementGeneration = 0;
+    this.#planned = false;
     for (const id of [...this.#baked.keys()]) this.#put(id, null);
+    for (const finish of this.#assemblyWaiters) finish();
   }
 
   #put(id: string, baked: Baked | null) {
     const old = this.#baked.get(id);
+    if (!baked?.crease) this.#revealKeys.delete(id);
     if (old?.crease) for (const url of Object.values(old.crease)) URL.revokeObjectURL(url);
     if (baked) this.#baked.set(id, baked);
     else this.#baked.delete(id);
+    this.#settleAssembly();
     // A sticker with no crease before or after has nothing to redraw.
     if (!old?.crease && !baked?.crease) return;
     for (const onChange of this.#watchers.get(id) ?? []) onChange();
@@ -297,6 +374,20 @@ export function useCrease(id: string): Crease | undefined {
   );
   const creaseOf = useCallback(() => store?.creaseOf(id), [store, id]);
   return useSyncExternalStore(watch, creaseOf);
+}
+
+/** Stable snapshot eligibility checks; figures outside a board never reveal a hydrated crease. */
+export function useCreaseReveal(id: string) {
+  const store = useContext(CreasesContext);
+  const canRevealCrease = useCallback(
+    (normal: string) => store?.canReveal(id, normal) ?? false,
+    [store, id],
+  );
+  const startCreaseReveal = useCallback(
+    (normal: string) => store?.startReveal(id, normal) ?? false,
+    [store, id],
+  );
+  return { canRevealCrease, startCreaseReveal };
 }
 
 /** The mounted boards' stores, by the board id their batches carry back in the worker's replies. */
@@ -334,7 +425,12 @@ function heard(reply: CreaseReply) {
 
 /** Lets go of a worker that failed, so the next batch starts a fresh one. */
 function dropWorker(failed: Worker, why: string) {
-  sayCreaseFailed(why);
+  // A released worker's late event cannot fail its replacement's pending stickers.
+  if (worker !== failed) return;
+  const affected = [...stores.values()].flatMap((store) => store.failPending());
+  sayCreaseFailed(
+    `${why}${affected.length ? `; stickers ${affected.join(", ")} show no crease` : ""}`,
+  );
   failed.terminate();
   if (worker === failed) worker = null;
 }
@@ -385,6 +481,8 @@ export function useCreases<S extends CreaseSticker>({
   unit,
   foilOf,
   held,
+  placementGeneration = 0,
+  revealActive = true,
 }: {
   /** On the board, bottom to top. */
   stickers: readonly S[];
@@ -394,12 +492,21 @@ export function useCreases<S extends CreaseSticker>({
   foilOf: (s: S) => FoilTone | null;
   /** The sticker in hand, which has no crease and lies under none. */
   held?: string;
+  /** Advances only with an explicit placement commit, never hydration or viewport changes. */
+  placementGeneration?: number;
+  /** Covering the board cancels its unstarted placement reveals. */
+  revealActive?: boolean;
 }): CreaseStore {
   const board = useId();
   const [store] = useState(() => new CreaseStore());
+  useLayoutEffect(() => {
+    if (!revealActive) store.clearRevealIntents();
+  }, [store, revealActive]);
   const scale = Math.min(MAX_SCALE, window.devicePixelRatio || 1);
   const signature = [
     held,
+    placementGeneration,
+    revealActive,
     field && `${field.left},${field.top},${field.w},${field.h}`,
     unit,
     scale,
@@ -433,7 +540,7 @@ export function useCreases<S extends CreaseSticker>({
             scale,
           )
         : [];
-    const todo = store.want(jobs);
+    const todo = store.want(jobs, placementGeneration, revealActive);
     if (!todo.length) {
       bakeNothingFor(board);
       return undefined;
@@ -456,13 +563,24 @@ export function useCreases<S extends CreaseSticker>({
       if (!left.length) return;
       const message: CreaseBatch = { board, batch: ++batches, jobs: left, start: true };
       // Creases are decoration: a worker that can't start leaves the board without them, and says so.
+      let painter: Worker | null = null;
       try {
-        creaseWorker()?.postMessage(message);
+        painter = creaseWorker();
+        if (!painter) {
+          for (const job of left) store.fail(job);
+          sayCreaseFailed(
+            `A worker can't paint, so stickers ${left.map((job) => job.id).join(", ")} show no crease`,
+          );
+          return;
+        }
+        painter.postMessage(message);
       } catch (error) {
-        console.error(
-          `The crease worker didn't start, so ${left.length} stickers show no crease`,
-          error,
-        );
+        const why = `Posting the crease jobs for stickers ${left.map((job) => job.id).join(", ")} failed: ${String(error)}`;
+        if (painter) dropWorker(painter, why);
+        else {
+          for (const job of left) store.fail(job);
+          sayCreaseFailed(why);
+        }
       }
     }, SETTLE_MS);
     return () => window.clearTimeout(timer);

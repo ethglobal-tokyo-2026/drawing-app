@@ -1229,18 +1229,31 @@ describe("StickerTray", () => {
       expect(masked()).toContain("-mask.png");
     });
 
-    it("or once the board has assembled and had its quiet second, the tray still shut", async () => {
-      vi.useFakeTimers({ toFake: ["setTimeout"] });
-      try {
-        render(manyStickers(8));
-        markBoardComplete();
-        expect(imageCount()).toBe(0);
-        await vi.advanceTimersByTimeAsync(QUIET_MS + 10);
-        expect(imageCount()).toBeGreaterThan(0);
-      } finally {
-        vi.useRealTimers();
-      }
-    });
+    it.each(["imperative", "keyboard", "Zipper click"] as const)(
+      "keeps a closed tray's images and material owners absent after board assembly, then loads on %s opening",
+      async (opening) => {
+        vi.useFakeTimers({ toFake: ["setTimeout"] });
+        try {
+          render(manyStickers(8));
+          markBoardComplete();
+          expect(imageCount()).toBe(0);
+          await vi.advanceTimersByTimeAsync(QUIET_MS + 10);
+          expect(imageCount()).toBe(0);
+          expect(board.querySelectorAll(".tray__fit > canvas.sticker-laminate")).toHaveLength(0);
+          expect(masked()).toBe("");
+          if (opening === "imperative") await openTray();
+          else if (opening === "keyboard") press(board.querySelector(".zip__slider"), "ArrowDown");
+          else act(() => board.querySelector<HTMLButtonElement>(".zip__slider")?.click());
+          expect(imageCount()).toBeGreaterThan(0);
+          expect(board.querySelectorAll(".tray__fit > canvas.sticker-laminate")).toHaveLength(
+            imageCount(),
+          );
+          expect(masked()).toContain("-mask.png");
+        } finally {
+          vi.useRealTimers();
+        }
+      },
+    );
   });
 
   describe("says in its one polite status line", () => {

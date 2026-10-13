@@ -17,6 +17,14 @@
  * orientations. It keeps pixel measurements and screenshots in data/ipad-safari/laminate/ and
  * limits setup, checks, and cleanup to 180 seconds. Synthetic tilt checks Safari rendering and
  * light input handling; it does not establish that a physical iPad delivers sensor readings.
+ * IPAD_STICKER_DRAG_ONLY=1 instead records native touch on 15 overlapping large stickers. It
+ * exports the existing performance recorder, each input phase, and successful screenshots in
+ * data/ipad-safari/sticker-drag/ under the same 180-second limit. Simulator frame timing does
+ * not establish physical iPad sensor delivery or ProMotion rendering.
+ * IPAD_STICKER_TRACE=1 adds an eight-second Time Profiler capture. A simulator booted by this run
+ * includes its Safari, workers, graphics, and compositor processes; a shared booted simulator
+ * requires one identifiable new Safari content process. The explicit simulator target excludes
+ * the Mac's unrelated apps. Instrumented timings are for attribution, not frame qualification.
  */
 import { type ChildProcess, execFile, spawn, type SpawnOptions } from "node:child_process";
 import { once } from "node:events";
@@ -35,8 +43,11 @@ const root = fileURLToPath(new URL("../../../", import.meta.url));
 const out = `${root}data/ipad-safari`;
 const IPAD = process.env.IPAD ?? "iPad Air 11-inch (M4)";
 const laminateOnly = process.env.IPAD_LAMINATE_ONLY === "1";
+const stickerDragOnly = process.env.IPAD_STICKER_DRAG_ONLY === "1";
+const boundedDiagnostic = laminateOnly || stickerDragOnly;
+const diagnosticName = stickerDragOnly ? "sticker drag" : "laminate";
 const diagnosticStarted = Date.now();
-const diagnosticEnd = laminateOnly ? diagnosticStarted + 180_000 : Infinity;
+const diagnosticEnd = boundedDiagnostic ? diagnosticStarted + 180_000 : Infinity;
 let cleaningUp = false;
 const { app, explore, shop, stickerBoard, stickerCreation } = strings;
 
@@ -47,13 +58,15 @@ const log = (line: string) =>
 /** Reserve 25 seconds for the existing session, server, and simulator cleanup. */
 const timeoutFor = (ms: number) => {
   const remaining = diagnosticEnd - (cleaningUp ? 0 : 25_000) - Date.now();
-  if (remaining <= 0) throw new Error("The iPad laminate diagnostic reached its 180-second limit");
-  return Math.max(1, Math.min(ms, remaining, cleaningUp && laminateOnly ? 5_000 : Infinity));
+  if (remaining <= 0)
+    throw new Error(`The iPad ${diagnosticName} diagnostic reached its 180-second limit`);
+  return Math.max(1, Math.min(ms, remaining, cleaningUp && boundedDiagnostic ? 5_000 : Infinity));
 };
 const sleep = async (ms: number) => {
   const bounded = timeoutFor(ms);
   await new Promise((resolve) => setTimeout(resolve, bounded));
-  if (bounded < ms) throw new Error("The iPad laminate diagnostic exhausted its check time");
+  if (bounded < ms)
+    throw new Error(`The iPad ${diagnosticName} diagnostic exhausted its check time`);
 };
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -159,6 +172,7 @@ async function start(name: string, command: string, args: string[], options: Spa
   child.stderr?.on("data", append);
   children.push(child);
   await once(child, "spawn", { signal: AbortSignal.timeout(timeout) });
+  return child;
 }
 
 const httpsUp = (url: string, ca: Buffer) =>
@@ -226,7 +240,7 @@ export default createIpadSafariServerConfig({ https });
   await start("safaridriver", "safaridriver", [
     "-p",
     String(driverPort),
-    ...(laminateOnly ? ["--diagnose"] : []),
+    ...(boundedDiagnostic ? ["--diagnose"] : []),
   ]);
   log("waiting for API, HTTPS Vite, and safaridriver");
   const driver = `http://127.0.0.1:${driverPort}`;
@@ -365,6 +379,7 @@ const isPoint = (value: unknown): value is Point =>
 
 async function test({
   udid,
+  booted,
   simulator: device,
   appOrigin,
   driver,
@@ -373,6 +388,25 @@ async function test({
   let failures = 0;
   let passes = 0;
   let probeStarted = false;
+  const nativeTraceRequested = stickerDragOnly && process.env.IPAD_STICKER_TRACE === "1";
+  const safariContentPids = async () => {
+    const listed = await run("ps", ["-axo", "pid=,ppid=,args="], { timeout: timeoutFor(5_000) });
+    const rows = listed.stdout.split("\n").flatMap((line) => {
+      const match = /^\s*(\d+)\s+(\d+)\s+(.*)$/.exec(line);
+      return match ? [{ pid: Number(match[1]), parent: Number(match[2]), command: match[3] }] : [];
+    });
+    const owner = rows.find(
+      (row) => row.command.startsWith("launchd_sim ") && row.command.includes(udid),
+    );
+    if (!owner) throw new Error("The selected simulator's process owner could not be identified");
+    return rows
+      .filter(
+        (row) => row.parent === owner.pid && row.command.includes("/WebContentExtension.appex/"),
+      )
+      .map((row) => row.pid);
+  };
+  const priorContentPids =
+    nativeTraceRequested && booted ? new Set(await safariContentPids()) : new Set<number>();
   const wd = async (method: string, path: string, body?: unknown): Promise<unknown> => {
     const res = await fetch(`${driver}/session${session ? `/${session}` : ""}${path}`, {
       method,
@@ -869,6 +903,334 @@ ${LIB}
     }
   };
 
+  /** Native touch and the app's recorder share the fixture's measured input phases. */
+  const stickerDragChecks = async () => {
+    const dir = `${out}/sticker-drag`;
+    mkdirSync(dir, { recursive: true });
+    const evidence: Record<string, unknown> = {
+      simulator: udid,
+      startedAt: new Date().toISOString(),
+      input: "native Safari WebDriver touch",
+      limitation: "Simulator timing does not qualify physical sensor delivery or ProMotion",
+    };
+    const save = () => writeFileSync(`${dir}/results.json`, JSON.stringify(evidence, null, 2));
+    let traceDone: Promise<unknown> | undefined;
+    const nativeTraceErrors: string[] = [];
+    const failNativeTrace = (error: unknown) => {
+      const message = messageOf(error);
+      nativeTraceErrors.push(message);
+      evidence.nativeTraceErrors = nativeTraceErrors;
+      if (nativeTraceErrors.length === 1) failures++;
+      log(`FAIL focused native Time Profiler: ${message}`);
+    };
+    const pointer = async (actions: Record<string, unknown>[]) => {
+      await wd("POST", "/actions", {
+        actions: [
+          {
+            type: "pointer",
+            id: "sticker-drag-touch",
+            parameters: { pointerType: "touch" },
+            actions,
+          },
+        ],
+      });
+    };
+    try {
+      await check(
+        "large sticker board: settled cuts, creases, and performance recorder",
+        async () => {
+          await wd("POST", "/url", { url: `${appOrigin}/e2e/stickerBoardDrag.html?recorder=on` });
+          evidence.setup = await page(`
+          await waitFor("large sticker board fixture", () => {
+            const error = document.querySelector("[data-asset-error]")?.dataset.assetError;
+            if (error) throw new Error(error);
+            return document.querySelectorAll(".placed-sticker").length === 15
+              && window.stickerBoardDragFixture;
+          }, 25000);
+          const fixture = window.stickerBoardDragFixture;
+          await fixture.whenMaterialsSettled();
+          if (!fixture.recorderOn()) throw new Error("The existing performance recorder is not running");
+          const ready = document.querySelectorAll(".placed-sticker canvas[data-state=ready]").length;
+          const creases = document.querySelectorAll(".sticker-crease").length;
+          if (ready !== 15 || !creases) throw new Error("The board did not settle all 15 laminates and overlap creases");
+          window.__ipadDragErrors = [];
+          window.addEventListener("error", (event) => window.__ipadDragErrors.push(event.message));
+          window.addEventListener("unhandledrejection", (event) =>
+            window.__ipadDragErrors.push(String(event.reason)));
+          const originalError = console.error;
+          console.error = (...values) => {
+            window.__ipadDragErrors.push(values.map(String).join(" "));
+            originalError.apply(console, values);
+          };
+          fixture.setPhase("idle");
+          return { ready, creases, viewport: [innerWidth, innerHeight], dpr: devicePixelRatio,
+            userAgent: navigator.userAgent, supportedPerformanceEntries: PerformanceObserver.supportedEntryTypes,
+            surfaces: [...document.querySelectorAll(".placed-sticker canvas.sticker-laminate")]
+              .map((canvas) => ({ width: canvas.width, height: canvas.height, state: canvas.dataset.state })) };
+        `);
+          save();
+          return JSON.stringify(evidence.setup);
+        },
+      );
+      if (!isRecord(evidence.setup)) return;
+      await check(
+        "large sticker board: native first movement, sustained drag, and release",
+        async () => {
+          const target = await page(`
+          for (let index = 0; index < 5; index++) {
+            const id = "large-drag-" + index;
+            const sticker = document.querySelector('[data-sticker-id="' + id + '"]');
+            const box = sticker?.getBoundingClientRect();
+            if (!box) continue;
+            for (let y = Math.max(15, box.top + 15); y < Math.min(innerHeight - 15, box.bottom - 15); y += 15)
+              for (let x = Math.max(15, box.left + 15); x < Math.min(innerWidth - 100, box.right - 15); x += 15)
+                if (document.elementFromPoint(x, y)?.closest(".placed-sticker") === sticker)
+                  return { id, x: Math.round(x), y: Math.round(y) };
+          }
+          throw new Error("No large central sticker has an exposed native touch target");
+        `);
+          if (
+            !isRecord(target) ||
+            !isPoint(target) ||
+            !("id" in target) ||
+            typeof target.id !== "string"
+          )
+            throw new Error("The native drag target is incomplete");
+          const id = target.id;
+          evidence.target = target;
+          if (nativeTraceRequested) {
+            try {
+              // Only a device this run booted may include all of its cooperating render processes.
+              // A shared simulator retains the narrow Safari content process requirement.
+              let pid: number | undefined;
+              if (booted) {
+                const candidates = (await safariContentPids()).filter(
+                  (candidate) => !priorContentPids.has(candidate),
+                );
+                if (candidates.length !== 1)
+                  throw new Error(
+                    `A focused native trace on a shared simulator requires one new Safari content process; found ${JSON.stringify(candidates)}`,
+                  );
+                pid = candidates[0];
+              }
+              const path = `${dir}/first-drag-${Date.now()}.trace`;
+              const notification = `dev.croquis.sticker-drag.trace.${process.pid}.${Date.now()}`;
+              const subscriber = await start("sticker-drag-trace-start", "/usr/bin/notifyutil", [
+                "-1",
+                notification,
+              ]);
+              const ready = once(subscriber, "close", {
+                signal: AbortSignal.timeout(timeoutFor(15_000)),
+              })
+                .then(([code]: unknown[]) => ({ code }))
+                .catch((error: unknown) => ({ error: messageOf(error) }));
+              evidence.nativeTrace = {
+                path,
+                simulator: udid,
+                pid: pid ?? null,
+                scope: booted
+                  ? "one Safari content process"
+                  : "all processes on the simulator booted by this run",
+                durationSeconds: 8,
+                template: "Time Profiler",
+                startNotification: notification,
+              };
+              const child = await start("sticker-drag-time-profiler", "xcrun", [
+                "xctrace",
+                "record",
+                "--template",
+                "Time Profiler",
+                "--device",
+                udid,
+                ...(booted ? ["--attach", String(pid)] : ["--all-processes"]),
+                "--notify-tracing-started",
+                notification,
+                "--time-limit",
+                "8s",
+                "--output",
+                path,
+              ]);
+              // The deadline covers up to 15 seconds to start, 8 to record, and 60 to finalize;
+              // timeoutFor still reserves cleanup under the overall 180-second diagnostic limit.
+              traceDone = once(child, "close", { signal: AbortSignal.timeout(timeoutFor(83_000)) })
+                .then(async ([code]) => {
+                  if (code !== 0) throw new Error(`Native Time Profiler exited ${String(code)}`);
+                  const tableOfContents = `${path}.toc.xml`;
+                  await run(
+                    "xcrun",
+                    ["xctrace", "export", "--input", path, "--toc", "--output", tableOfContents],
+                    {
+                      timeout: timeoutFor(15_000),
+                      maxBuffer: 64 << 20,
+                    },
+                  );
+                  evidence.nativeTraceTableOfContents = tableOfContents;
+                })
+                .catch(failNativeTrace);
+              const notificationResult = await ready;
+              if ("error" in notificationResult)
+                throw new Error(
+                  `The native trace start notification failed: ${notificationResult.error}`,
+                );
+              if (notificationResult.code !== 0)
+                throw new Error(
+                  `The native trace notification subscriber exited ${String(notificationResult.code)}: ${readFileSync(`${out}/sticker-drag-trace-start.log`, "utf8")}`,
+                );
+              if (child.exitCode !== null)
+                throw new Error(
+                  `Time Profiler ended before the gesture: ${readFileSync(`${out}/sticker-drag-time-profiler.log`, "utf8")}`,
+                );
+            } catch (error) {
+              failNativeTrace(error);
+            }
+          }
+          await page(`
+            const fixture = window.stickerBoardDragFixture;
+            let pressed = false, firstMoveAt = null;
+            document.addEventListener("pointerdown", (event) => {
+              if (event.pointerType !== "touch") return;
+              pressed = true; firstMoveAt = null; fixture.setPhase("pointerdown");
+            }, true);
+            document.addEventListener("pointermove", (event) => {
+              if (!pressed || event.pointerType !== "touch") return;
+              firstMoveAt ??= performance.now();
+              fixture.setPhase(performance.now() - firstMoveAt > 200 ? "drag" : "first-move");
+              queueMicrotask(() => {
+                const held = document.querySelector(".board-stage")?.dataset.held;
+                if (held) window.__ipadHeldSticker = held;
+              });
+            }, true);
+            document.addEventListener("pointerup", (event) => {
+              if (event.pointerType !== "touch") return;
+              pressed = false; fixture.setPhase("release");
+            }, true);
+            document.addEventListener("pointercancel", (event) => {
+              if (event.pointerType === "touch") window.__ipadDragErrors.push("The native touch was canceled");
+            }, true);
+          `);
+          // Safari ends a contact between separate action requests. One finite touch batch keeps
+          // the finger down, with measured holds around the initial contact and slop crossing.
+          await pointer([
+            { type: "pointerMove", duration: 0, origin: "viewport", x: target.x, y: target.y },
+            { type: "pointerDown", button: 0 },
+            { type: "pause", duration: 200 },
+            {
+              type: "pointerMove",
+              duration: 16,
+              origin: "viewport",
+              x: target.x + 18,
+              y: target.y,
+            },
+            { type: "pause", duration: 250 },
+            ...Array.from({ length: 20 }, (_, index) => ({
+              type: "pointerMove",
+              duration: 16,
+              origin: "viewport",
+              x: target.x + 18 + (index + 1) * 3,
+              y: target.y,
+            })),
+            { type: "pointerUp", button: 0 },
+          ]);
+          await wd("DELETE", "/actions");
+          await page(
+            `await waitFor("the selected sticker's toolbar after release", () =>
+          document.querySelector(".board-stage")?.dataset.held === ""
+            && document.querySelector(".sticker-toolbar"));
+            if (window.__ipadHeldSticker !== args[0]) throw new Error("The native movement did not hold the target sticker");
+            await waitFor("release observation frames", () =>
+              window.stickerBoardDragFixture.frames.filter((frame) => frame.phase === "release").length >= 60, 10000);`,
+            id,
+          );
+          evidence.phases = await page(`
+          const fixture = window.stickerBoardDragFixture;
+          fixture.setPhase("idle");
+          const percentile = (values) => values.length
+            ? values.toSorted((a, b) => a - b)[Math.floor(values.length * .95)] : null;
+          return { frames: fixture.frames, events: fixture.events, mutations: fixture.mutations,
+            missingSnapshots: fixture.missingSnapshots, errors: window.__ipadDragErrors,
+            summary: ["asset-preparation", "startup", "pointerdown", "first-move", "drag", "release"].map((phase) => {
+              const frames = fixture.frames.filter((frame) => frame.phase === phase).map((frame) => frame.interval);
+              const inputs = fixture.events.filter((event) => event.phase === phase).map((event) => event.duration);
+              return { phase, frameCount: frames.length, p95FrameMs: percentile(frames),
+                maximumFrameMs: frames.length ? Math.max(...frames) : null, inputCount: inputs.length,
+                p95InputMs: percentile(inputs), maximumInputMs: inputs.length ? Math.max(...inputs) : null };
+            }) };
+        `);
+          evidence.recording = await page(
+            "return window.stickerBoardDragFixture.finishRecorder();",
+          );
+          writeFileSync(
+            `${dir}/selected-after-drag.page.png`,
+            Buffer.from(String(await wd("GET", "/screenshot")), "base64"),
+          );
+          await simctl("io", udid, "screenshot", `${dir}/selected-after-drag.device.png`);
+          save();
+          const measured = evidence.phases;
+          if (
+            !isRecord(measured) ||
+            !Array.isArray(measured.missingSnapshots) ||
+            !Array.isArray(measured.errors)
+          )
+            throw new Error("The native drag phase recording is incomplete");
+          if (measured.missingSnapshots.length || measured.errors.length)
+            throw new Error(
+              `The native drag lost laminate snapshots or reported errors: ${JSON.stringify(measured)}`,
+            );
+          return JSON.stringify(measured.summary);
+        },
+      );
+    } finally {
+      await wd("DELETE", "/actions").catch((error: unknown) => {
+        failures++;
+        log(`releasing native sticker drag touch failed: ${messageOf(error)}`);
+      });
+      try {
+        const exported = await page(
+          `const fixture = window.stickerBoardDragFixture;
+          if (!fixture) return { unavailable: "The large sticker board fixture is absent", url: location.href,
+            assetError: document.querySelector("[data-asset-error]")?.dataset.assetError ?? null };
+          const finalState = { frames: fixture.frames, events: fixture.events, mutations: fixture.mutations,
+            missingSnapshots: fixture.missingSnapshots, errors: window.__ipadDragErrors ?? [],
+            assetError: document.querySelector("[data-asset-error]")?.dataset.assetError ?? null,
+            held: document.querySelector(".board-stage")?.dataset.held ?? null,
+            selected: document.querySelector(".board-stage")?.dataset.selected ?? null };
+          let recording = null, recordingError = null;
+          if (args[0]) {
+            try { recording = fixture.finishRecorder(); }
+            catch (error) { recordingError = String(error?.stack ?? error); }
+          }
+          return { finalState, recording, recordingError };
+        `,
+          !evidence.recording,
+        );
+        if (!isRecord(exported)) {
+          evidence.exportUnavailable = { error: "The native diagnostic export returned no result" };
+          failures++;
+          log("FAIL native sticker drag export: The native diagnostic export returned no result");
+        } else if (typeof exported.unavailable === "string") {
+          evidence.exportUnavailable = exported;
+          failures++;
+          log(`FAIL native sticker drag export: ${JSON.stringify(exported)}`);
+        } else {
+          evidence.finalState = exported.finalState;
+          if (!evidence.recording && exported.recording) evidence.recording = exported.recording;
+          if (typeof exported.recordingError === "string") {
+            evidence.recordingError = exported.recordingError;
+            failures++;
+            log(`FAIL native sticker drag recorder export: ${exported.recordingError}`);
+          }
+        }
+      } catch (error) {
+        evidence.exportUnavailable = { error: messageOf(error) };
+        failures++;
+        log(`FAIL native sticker drag export: ${messageOf(error)}`);
+      }
+      if (traceDone) await traceDone;
+      save();
+      log(`native sticker drag measurements and recorder ${dir}/results.json`);
+    }
+  };
+
   await check("a WebDriver session on the iPad's Safari", async () => {
     const created = await wd("POST", "", {
       capabilities: {
@@ -911,6 +1273,13 @@ ${LIB}
     return count;
   };
   try {
+    if (stickerDragOnly) {
+      await stickerDragChecks();
+      log(
+        `${passes} passed, ${failures} failed; iPad simulator Safari, native touch and app performance recorder`,
+      );
+      return failures;
+    }
     if (laminateOnly) {
       await laminateChecks();
       log(`${passes} passed, ${failures} failed; iPad simulator Safari, synthetic input`);
@@ -1044,7 +1413,7 @@ ${LIB}
       });
     }
   } finally {
-    if (laminateOnly) {
+    if (boundedDiagnostic) {
       cleaningUp = true;
       await device.orient("portrait").catch((error: unknown) => {
         failures++;
@@ -1074,7 +1443,7 @@ try {
   process.exitCode = failures > 0 || process.exitCode === 1 ? 1 : 0;
 } catch (error) {
   log(
-    `FAIL ${laminateOnly ? "iPad Safari laminate diagnostic" : "bringing up the iPad and servers"}: ${messageOf(error)}`,
+    `FAIL ${boundedDiagnostic ? `iPad Safari ${diagnosticName} diagnostic` : "bringing up the iPad and servers"}: ${messageOf(error)}`,
   );
   process.exitCode = 1;
 } finally {
@@ -1090,8 +1459,8 @@ try {
       process.exitCode = 1;
     });
   }
-  if (laminateOnly)
+  if (boundedDiagnostic)
     log(
-      `laminate diagnostic and cleanup took ${Date.now() - diagnosticStarted} ms (180-second limit)`,
+      `${diagnosticName} diagnostic and cleanup took ${Date.now() - diagnosticStarted} ms (180-second limit)`,
     );
 }

@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { checkStickerFrameBudget } from "./stickerPerformance.ts";
-
-const milliseconds = (value: number) => Math.round(value * 1000) / 1000;
+import {
+  checkStickerFrameBudget,
+  displayMilliseconds as milliseconds,
+  stickerDisplayBudget,
+} from "./stickerPerformance.ts";
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -17,7 +19,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("simultaneous observer callbacks and re-exposure share one GPU snapshot transfer", async ({
+test("simultaneous observer callbacks and re-exposure share one material batch and one copy per sticker", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -52,7 +54,7 @@ test("simultaneous observer callbacks and re-exposure share one GPU snapshot tra
         );
       }
     };
-    const gpu = new WeakSet<HTMLCanvasElement>();
+    const gpu = new Set<HTMLCanvasElement>();
     const getContext: unknown = Reflect.get(HTMLCanvasElement.prototype, "getContext");
     if (typeof getContext !== "function") throw new Error("The canvas context method is missing");
     Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
@@ -63,7 +65,26 @@ test("simultaneous observer callbacks and re-exposure share one GPU snapshot tra
         return context;
       },
     });
-    Reflect.set(window, "laminateGpuCopies", 0);
+    const observations = { batches: 0, draws: 0, copies: new Map<HTMLCanvasElement, number>() };
+    Reflect.set(window, "laminateCopyObservations", observations);
+    const clear: unknown = Reflect.get(WebGLRenderingContext.prototype, "clear");
+    const drawArrays: unknown = Reflect.get(WebGLRenderingContext.prototype, "drawArrays");
+    if (typeof clear !== "function" || typeof drawArrays !== "function")
+      throw new Error("The GPU drawing methods are missing");
+    Object.defineProperty(WebGLRenderingContext.prototype, "clear", {
+      configurable: true,
+      value: function (this: WebGLRenderingContext, ...args: unknown[]) {
+        observations.batches++;
+        Reflect.apply(clear, this, args);
+      },
+    });
+    Object.defineProperty(WebGLRenderingContext.prototype, "drawArrays", {
+      configurable: true,
+      value: function (this: WebGLRenderingContext, ...args: unknown[]) {
+        observations.draws++;
+        Reflect.apply(drawArrays, this, args);
+      },
+    });
     const drawImage: unknown = Reflect.get(CanvasRenderingContext2D.prototype, "drawImage");
     if (typeof drawImage !== "function") throw new Error("The canvas image method is missing");
     Object.defineProperty(CanvasRenderingContext2D.prototype, "drawImage", {
@@ -73,11 +94,8 @@ test("simultaneous observer callbacks and re-exposure share one GPU snapshot tra
         source: CanvasImageSource,
         ...args: number[]
       ) {
-        if (source instanceof HTMLCanvasElement && gpu.has(source)) {
-          const copies: unknown = Reflect.get(window, "laminateGpuCopies");
-          if (typeof copies !== "number") throw new Error("The laminate copy counter is missing");
-          Reflect.set(window, "laminateGpuCopies", copies + 1);
-        }
+        if (this.canvas.classList.contains("sticker-laminate"))
+          observations.copies.set(this.canvas, (observations.copies.get(this.canvas) ?? 0) + 1);
         Reflect.apply(drawImage, this, [source, ...args]);
       },
     });
@@ -90,7 +108,14 @@ test("simultaneous observer callbacks and re-exposure share one GPU snapshot tra
   await page.waitForTimeout(200);
   const copies = await page.evaluate(async () => {
     const { refreshLaminate } = await import("../src/stickers/laminateRenderer.ts");
-    Reflect.set(window, "laminateGpuCopies", 0);
+    const observations: unknown = Reflect.get(window, "laminateCopyObservations");
+    if (!observations || typeof observations !== "object")
+      throw new Error("The laminate copy observations are missing");
+    const copies: unknown = Reflect.get(observations, "copies");
+    if (!(copies instanceof Map)) throw new Error("The per-sticker copy counts are missing");
+    Reflect.set(observations, "batches", 0);
+    Reflect.set(observations, "draws", 0);
+    copies.clear();
     for (const canvas of document.querySelectorAll<HTMLCanvasElement>("canvas.sticker-laminate"))
       refreshLaminate(canvas);
     const observers: unknown = Reflect.get(window, "laminateObserverCallbacks");
@@ -102,14 +127,21 @@ test("simultaneous observer callbacks and re-exposure share one GPU snapshot tra
     }
     document.dispatchEvent(new Event("visibilitychange"));
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    const copies: unknown = Reflect.get(window, "laminateGpuCopies");
-    if (typeof copies !== "number") throw new Error("The laminate copy counter is missing");
-    return copies;
+    const batches: unknown = Reflect.get(observations, "batches");
+    const draws: unknown = Reflect.get(observations, "draws");
+    if (typeof batches !== "number" || typeof draws !== "number")
+      throw new Error("The material batch counts are missing");
+    return {
+      batches,
+      draws,
+      copies: [...copies.values()],
+    };
   });
-  expect(
-    copies,
-    "Re-exposure must batch the GPU transfer rather than copying each sticker separately",
-  ).toBe(1);
+  expect(copies.batches, "Repeated observer requests must coalesce into one shared GL batch").toBe(
+    1,
+  );
+  expect(copies.draws).toBe(8);
+  expect(copies.copies).toEqual(Array<number>(8).fill(1));
 });
 
 test("a single sticker turn does not shrink and reallocate the shared material buffers", async ({
@@ -220,13 +252,41 @@ test("a single sticker turn does not shrink and reallocate the shared material b
   });
   expect(
     await snapshot(),
-    "An individual redraw must copy the same pixels from the retained taller atlas",
+    "An individual redraw must copy the same pixels from the retained taller GL buffer",
   ).toBe(before);
 });
 
 test("a board of stickers retains complete paper during a sustained small tilt", async ({
   page,
 }, info) => {
+  await page.addInitScript(() => {
+    const observations = { batches: 0, draws: 0, copies: new Map<HTMLCanvasElement, number>() };
+    Reflect.set(window, "laminateCadenceObservations", observations);
+    for (const [method, counter] of [
+      ["clear", "batches"],
+      ["drawArrays", "draws"],
+    ] as const) {
+      const draw: unknown = Reflect.get(WebGLRenderingContext.prototype, method);
+      if (typeof draw !== "function") throw new Error(`The GPU ${method} method is missing`);
+      Object.defineProperty(WebGLRenderingContext.prototype, method, {
+        configurable: true,
+        value: function (this: WebGLRenderingContext, ...args: unknown[]) {
+          observations[counter]++;
+          Reflect.apply(draw, this, args);
+        },
+      });
+    }
+    const drawImage: unknown = Reflect.get(CanvasRenderingContext2D.prototype, "drawImage");
+    if (typeof drawImage !== "function") throw new Error("The canvas image method is missing");
+    Object.defineProperty(CanvasRenderingContext2D.prototype, "drawImage", {
+      configurable: true,
+      value: function (this: CanvasRenderingContext2D, ...args: unknown[]) {
+        if (this.canvas.classList.contains("sticker-laminate"))
+          observations.copies.set(this.canvas, (observations.copies.get(this.canvas) ?? 0) + 1);
+        Reflect.apply(drawImage, this, args);
+      },
+    });
+  });
   await page.setViewportSize({ width: 820, height: 1180 });
   await page.goto("/e2e/stickerLaminate.html?count=24&side=120");
   await expect
@@ -240,8 +300,55 @@ test("a board of stickers retains complete paper during a sustained small tilt",
     if (!(paper instanceof HTMLCanvasElement)) throw new Error("The paper snapshot is missing");
     const context = paper.getContext("2d");
     if (!context) throw new Error("The paper snapshot context is unavailable");
+    const observations: unknown = Reflect.get(window, "laminateCadenceObservations");
+    if (!observations || typeof observations !== "object")
+      throw new Error("The laminate cadence observations are missing");
+    const copyCounts: unknown = Reflect.get(observations, "copies");
+    if (!(copyCounts instanceof Map)) throw new Error("The laminate copy counts are missing");
+    const eligible = [
+      ...document.querySelectorAll<HTMLCanvasElement>("canvas.sticker-laminate[data-state=ready]"),
+    ].filter((canvas) => {
+      const box = canvas.getBoundingClientRect();
+      return (
+        canvas.clientWidth > 0 &&
+        canvas.clientHeight > 0 &&
+        box.bottom >= 0 &&
+        box.top <= innerHeight &&
+        box.right >= 0 &&
+        box.left <= innerWidth
+      );
+    });
+    const counters = () => {
+      const batches: unknown = Reflect.get(observations, "batches"),
+        draws: unknown = Reflect.get(observations, "draws");
+      if (typeof batches !== "number" || typeof draws !== "number")
+        throw new Error("The laminate batch counts are missing");
+      return {
+        batches,
+        draws,
+        copies: eligible.map((canvas) => {
+          const count: unknown = copyCounts.get(canvas) ?? 0;
+          if (typeof count !== "number") throw new Error("A laminate copy count is invalid");
+          return count;
+        }),
+      };
+    };
+    let previous = counters();
+    const publications: { batches: number; draws: number; copies: number[] }[] = [];
+    // Registered after the renderer, this observes the completed work for each shared publication.
+    const unsubscribe = fixture.subscribeLight(() => {
+      const current = counters();
+      publications.push({
+        batches: current.batches - previous.batches,
+        draws: current.draws - previous.draws,
+        copies: current.copies.map((count, index) => count - previous.copies[index]),
+      });
+      previous = current;
+    });
     fixture.costs.length = 0;
     const intervals: number[] = [];
+    const framePublications: number[] = [];
+    let sampledPublications = 0;
     let lastTime = performance.now(),
       missingPaper = 0,
       changedFrames = 0;
@@ -250,8 +357,15 @@ test("a board of stickers retains complete paper during a sustained small tilt",
       const now = await new Promise<number>((resolve) => requestAnimationFrame(resolve));
       intervals.push(now - lastTime);
       lastTime = now;
+      framePublications.push(publications.length - sampledPublications);
+      sampledPublications = publications.length;
       const pose = fixture.getPose();
-      if (pose.x !== lastPose.x || pose.y !== lastPose.y) changedFrames++;
+      if (
+        pose.x !== lastPose.x ||
+        pose.y !== lastPose.y ||
+        pose.rotationDegrees !== lastPose.rotationDegrees
+      )
+        changedFrames++;
       lastPose = pose;
       const column = context.getImageData(
         Math.floor(paper.width / 2),
@@ -263,9 +377,19 @@ test("a board of stickers retains complete paper during a sustained small tilt",
         if (column[channel] !== 255) missingPaper++;
       fixture.tilt(40 + 5 * Math.cos(frame / 24), 8 * Math.sin(frame / 24));
     }
+    unsubscribe();
     const costs = [...fixture.costs];
     fixture.tilt(40, 0);
-    return { intervals, costs, missingPaper, changedFrames, displayedFrames: 180 };
+    return {
+      intervals,
+      costs,
+      missingPaper,
+      changedFrames,
+      displayedFrames: 180,
+      eligible: eligible.length,
+      publications,
+      framePublications,
+    };
   });
   const summarize = (samples: number[]) => {
     const sorted = [...samples].sort((a, b) => a - b);
@@ -279,6 +403,15 @@ test("a board of stickers retains complete paper during a sustained small tilt",
     engine: info.project.name,
     displayedFrames: result.displayedFrames,
     changedFrames: result.changedFrames,
+    publishedFrames: result.publications.length,
+    eligibleStickers: result.eligible,
+    publicationMismatches: result.publications.flatMap((publication, index) =>
+      publication.batches !== 1 ||
+      publication.draws !== result.eligible ||
+      publication.copies.some((count) => count !== 1)
+        ? [{ index, ...publication }]
+        : [],
+    ),
     missingPaper: result.missingPaper,
     renderer: summarize(result.costs),
     display: summarize(result.intervals.slice(1)),
@@ -289,10 +422,18 @@ test("a board of stickers retains complete paper during a sustained small tilt",
   });
   console.log("Laminate frame measurements", JSON.stringify(report));
   expect(result.missingPaper, "Paper must stay opaque during repeated sensor updates").toBe(0);
+  expect(result.eligible).toBe(27);
   expect(
-    result.changedFrames,
-    "The coating should follow display frames rather than a CSS throttle",
-  ).toBeGreaterThanOrEqual(135);
+    result.publications.length,
+    "The sustained tilt must publish changed light poses",
+  ).toBeGreaterThan(0);
+  expect(
+    result.framePublications.every((count) => count <= 1),
+    "The shared light must publish at most once per displayed frame",
+  ).toBe(true);
+  // Tiny targets may correctly stay below the hand-tremor threshold. Every pose that is published
+  // must still render in that publication, without an additional CSS or renderer frame throttle.
+  expect(report.publicationMismatches).toEqual([]);
   await page.waitForTimeout(1000);
   const held = await page.evaluate(() => window.laminateFixture.getPose());
   await page.waitForTimeout(200);
@@ -365,7 +506,7 @@ for (const [presentation, count, side] of [
     await page.waitForTimeout(800);
     // Reading GPU-backed pixels every frame introduces a synchronous readback. Coverage is checked
     // separately above; this budget measures the actual displayed motion without that probe.
-    const measurements = await page.evaluate(async () => {
+    const measurements = await page.evaluate(async (displayBudget) => {
       const baseline: number[] = [];
       let steady = performance.now();
       for (let frame = 0; frame < 45; frame++) {
@@ -381,9 +522,9 @@ for (const [presentation, count, side] of [
         throw new Error(
           `Sticker performance qualification refused: hardware GPU unavailable (${String(renderer)})`,
         );
-      if (Math.round(baselineP95 * 1000) / 1000 > 33.4)
+      if (Math.round(baselineP95 * 1000) / 1000 > displayBudget.p95Ms)
         throw new Error(
-          `Sticker performance qualification refused: idle display p95 is ${baselineP95}ms, above 33.4ms`,
+          `Sticker performance qualification refused: idle display p95 is ${baselineP95}ms, above ${displayBudget.p95Ms}ms`,
         );
       window.laminateFixture.costs.length = 0;
       const work: unknown = Reflect.get(window, "laminateWork");
@@ -407,7 +548,7 @@ for (const [presentation, count, side] of [
       window.laminateFixture.tilt(40, 0, 123);
       const gpu: unknown = Reflect.get(window, "laminateGpuRenderer");
       return { intervals: samples.slice(1), baseline: baseline.slice(1), costs, gpu, work };
-    });
+    }, stickerDisplayBudget);
     const { intervals } = measurements;
     const sorted = intervals.toSorted((a, b) => a - b);
     const report = {
@@ -434,11 +575,11 @@ for (const [presentation, count, side] of [
     console.log("Sticker display frame budget", JSON.stringify(report));
     expect(
       report.p95Ms,
-      "At least 95% of display frames must meet a 30fps minimum",
-    ).toBeLessThanOrEqual(33.4);
+      "At least 95% of display frames must meet a 60fps minimum",
+    ).toBeLessThanOrEqual(stickerDisplayBudget.p95Ms);
     expect(
       report.maximumMs,
-      "Rotation must not stall the display for more than 100ms",
-    ).toBeLessThanOrEqual(100);
+      "Rotation must not stall the display for more than 50ms",
+    ).toBeLessThanOrEqual(stickerDisplayBudget.maximumMs);
   });
 }

@@ -5,6 +5,151 @@ import type { CreaseImage } from "../src/stickers/crease";
 
 test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
 
+declare global {
+  interface Window {
+    creaseRevealWork: {
+      revealChanges: number;
+      flatSnapshots: number;
+      materialCopies: number;
+    };
+  }
+}
+
+async function observeCreaseWork(page: Page) {
+  await page.addInitScript(() => {
+    const work = { revealChanges: 0, flatSnapshots: 0, materialCopies: 0 };
+    window.creaseRevealWork = work;
+    new MutationObserver((records) => {
+      for (const record of records) {
+        if (record.type === "attributes") work.revealChanges++;
+        for (const node of record.addedNodes) {
+          if (!(node instanceof Element)) continue;
+          if (node.matches(".sticker-laminate-flat")) work.flatSnapshots++;
+          work.flatSnapshots += node.querySelectorAll(".sticker-laminate-flat").length;
+        }
+      }
+    }).observe(document, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["data-crease-reveal"],
+    });
+    const drawImage: unknown = Reflect.get(CanvasRenderingContext2D.prototype, "drawImage");
+    if (typeof drawImage !== "function") throw new Error("The canvas image method is missing");
+    Object.defineProperty(CanvasRenderingContext2D.prototype, "drawImage", {
+      configurable: true,
+      value: function (this: CanvasRenderingContext2D, ...args: unknown[]) {
+        if (
+          this.canvas.classList.contains("sticker-laminate") ||
+          this.canvas.classList.contains("sticker-laminate-flat")
+        )
+          work.materialCopies++;
+        Reflect.apply(drawImage, this, args);
+      },
+    });
+  });
+}
+
+const resetCreaseWork = (page: Page) =>
+  page.evaluate(() => {
+    window.creaseRevealWork.revealChanges = 0;
+    window.creaseRevealWork.flatSnapshots = 0;
+    window.creaseRevealWork.materialCopies = 0;
+  });
+
+async function expectSettledCrease(page: Page) {
+  await page.clock.runFor(300);
+  const settled = await page.evaluate(() => ({
+    work: { ...window.creaseRevealWork },
+    pose: window.creaseRevealFixture.pose(),
+  }));
+  expect(settled.work.revealChanges, "No timed reveal may start without placement intent").toBe(0);
+  expect(settled.work.flatSnapshots, "Baseline creases need no temporary flat material").toBe(0);
+  await expect(page.locator("[data-reveal] [data-crease-reveal]")).toHaveCount(0);
+  await expect(page.locator("[data-reveal] canvas.sticker-laminate-flat")).toHaveCount(0);
+  const paperIsComplete = await page
+    .locator("[data-reveal] canvas.sticker-laminate")
+    .evaluate((canvas) => {
+      if (!(canvas instanceof HTMLCanvasElement)) throw new Error("The laminate canvas is missing");
+      if (!canvas.width || !canvas.height)
+        throw new Error("The settled laminate snapshot has no pixels");
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("The material pixel context is missing");
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      for (let alpha = 3; alpha < pixels.length; alpha += 4)
+        if (pixels[alpha] !== 255) return false;
+      return true;
+    });
+  expect(paperIsComplete, "A settled baseline retains all opaque paper").toBe(true);
+  await page.clock.runFor(500);
+  const held = await page.evaluate(() => ({
+    work: { ...window.creaseRevealWork },
+    pose: window.creaseRevealFixture.pose(),
+  }));
+  expect(held.work).toEqual(settled.work);
+  expect(held.pose).toEqual(settled.pose);
+}
+
+async function awaitCurrentNormalSnapshot(page: Page) {
+  // A remount creates new image and material owners; pixel agreement starts at their actual readiness.
+  // Reveal-marker history remains observed throughout this wait, including any unintended sweep.
+  await page.clock.runFor(16);
+  let settled = false;
+  let failure: unknown;
+  const readiness = page
+    .evaluate(() => window.creaseRevealFixture.whenSettled())
+    .then(
+      () => {
+        settled = true;
+      },
+      (error: unknown) => {
+        failure = error;
+        settled = true;
+      },
+    );
+  await expect
+    .poll(async () => {
+      await page.clock.runFor(16);
+      return settled;
+    })
+    .toBe(true);
+  await readiness;
+  if (failure) throw failure;
+  // The held side-light opacity transition uses the browser's animation clock, not the fake RAF.
+  // Its actual finish is the baseline for settled pixel agreement; reveal history stays observed.
+  settled = false;
+  failure = undefined;
+  const sideOpacity = page.locator("[data-reveal] .sticker-crease").evaluate(async (crease) => {
+    const transitions = [...crease.querySelectorAll("i[data-side]")].flatMap((side) => {
+      void getComputedStyle(side).opacity;
+      return side
+        .getAnimations()
+        .filter(
+          (animation) =>
+            animation instanceof CSSTransition && animation.transitionProperty === "opacity",
+        );
+    });
+    await Promise.all(transitions.map((animation) => animation.finished));
+  });
+  const opacityReadiness = sideOpacity.then(
+    () => {
+      settled = true;
+    },
+    (error: unknown) => {
+      failure = error;
+      settled = true;
+    },
+  );
+  await expect
+    .poll(() => settled, {
+      timeout: 5000,
+      message: "The remounted crease's finite side-light opacity transitions must finish",
+    })
+    .toBe(true);
+  await opacityReadiness;
+  if (failure) throw failure;
+}
+
 async function coatPixels(page: Page) {
   const crease = page.locator("[data-reveal] .sticker-crease");
   const previous = await crease.evaluateAll((elements) =>
@@ -86,12 +231,13 @@ async function openFixture(page: Page, query = "") {
 
 async function routeImages(page: Page, images: Crease, delay?: CreaseImage) {
   const pending: Route[] = [];
+  let released = false;
   const names = ["base", "normal", "topLeft", "bottomRight", "topRight", "bottomLeft"] as const;
   await page.route("**/e2e/crease-reveal-*.png?*", (route) => {
     const path = new URL(route.request().url()).pathname;
     const name = names.find((name) => path.endsWith(`crease-reveal-${name}.png`));
     if (!name) throw new Error(`Unknown crease fixture image ${path}`);
-    if (name === delay) {
+    if (name === delay && !released) {
       pending.push(route);
       return;
     }
@@ -104,6 +250,7 @@ async function routeImages(page: Page, images: Crease, delay?: CreaseImage) {
     pending,
     release: () => {
       if (!delay) throw new Error("The fixture has no delayed crease image");
+      released = true;
       const body = Buffer.from(images[delay].split(",")[1], "base64");
       return Promise.all(pending.map((route) => route.fulfill({ contentType: "image/png", body })));
     },
@@ -199,22 +346,166 @@ async function observeImmediateFinish(page: Page, flat: { paint: number[]; coat:
       for (const box of [upper, lower]) {
         expect(
           difference(sample.coat, sample.paint, box),
-          "Reduced motion must show the complete painted crease",
+          "An immediate finish must show the complete painted crease",
         ).toBeGreaterThan(2);
         expect(
           difference(flat.coat, sample.coat, box),
-          "Reduced motion must have no partial reflection diagonal",
+          "An immediate finish must have no partial reflection diagonal",
         ).toBeGreaterThan(1);
       }
       final = sample;
       break;
     }
   }
-  expect(final, "The ready crease must finish in reduced motion").toBeDefined();
+  expect(final, "The ready crease must appear complete without a timed reveal").toBeDefined();
   await page.clock.runFor(1000);
   expect(await figurePixels(page)).toEqual(final?.paint);
   expect(await coatPixels(page)).toEqual(final?.coat);
 }
+
+test("a fresh baseline crease hydrates without a timed reveal or repeated settled copies", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await observeCreaseWork(page);
+  const { errors } = await openFixture(page, "?baseline=1");
+  const paint = await figurePixels(page),
+    coat = await coatPixels(page);
+  for (const box of [upper, lower]) expect(difference(coat, paint, box)).toBeGreaterThan(2);
+  await freezeFrames(page);
+  await expectSettledCrease(page);
+  expect(await page.evaluate(() => window.creaseRevealFixture.startedNormals)).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test("delayed hydration shows the complete crease without granting placement intent", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await observeCreaseWork(page);
+  const { flat, images, errors } = await openFixture(page);
+  const { pending, release } = await routeImages(page, images, "normal");
+  await page.evaluate(() => window.creaseRevealFixture.hydrate());
+  await expect.poll(() => pending.length).toBeGreaterThan(0);
+  await page.waitForTimeout(600);
+  expect(await figurePixels(page)).toEqual(flat.paint);
+  expect(await coatPixels(page)).toEqual(flat.coat);
+  await freezeFrames(page);
+  await release();
+  await observeImmediateFinish(page, flat);
+  await expectSettledCrease(page);
+  expect(await page.evaluate(() => window.creaseRevealFixture.startedNormals)).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test("remounting a placed crease cannot replay its consumed placement intent", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await observeCreaseWork(page);
+  const { flat, images, errors } = await openFixture(page);
+  await routeImages(page, images);
+  await freezeFrames(page);
+  await page.evaluate(() => window.creaseRevealFixture.drop());
+  await observeDiagonal(page, flat);
+  const final = await finishedPixels(page, flat);
+  const started = await page.evaluate(() => [...window.creaseRevealFixture.startedNormals]);
+  expect(started).toHaveLength(1);
+  await resetCreaseWork(page);
+  await page.evaluate(() => window.creaseRevealFixture.remount());
+  await awaitCurrentNormalSnapshot(page);
+  await observeImmediateFinish(page, flat);
+  expect(await figurePixels(page)).toEqual(final.paint);
+  expect(await coatPixels(page)).toEqual(final.coat);
+  await expectSettledCrease(page);
+  expect(await page.evaluate(() => window.creaseRevealFixture.startedNormals)).toEqual(started);
+  expect(errors).toEqual([]);
+});
+
+test("a crease completed in reduced motion cannot replay after normal motion and remount", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await observeCreaseWork(page);
+  const { flat, images, errors } = await openFixture(page);
+  await routeImages(page, images);
+  await freezeFrames(page);
+  await page.evaluate(() => window.creaseRevealFixture.drop());
+  await observeImmediateFinish(page, flat);
+  const final = { paint: await figurePixels(page), coat: await coatPixels(page) };
+  const started = await page.evaluate(() => [...window.creaseRevealFixture.startedNormals]);
+  expect(started, "The first complete normal snapshot consumes placement intent").toHaveLength(1);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await resetCreaseWork(page);
+  await page.evaluate(() => window.creaseRevealFixture.remount());
+  await awaitCurrentNormalSnapshot(page);
+  await observeImmediateFinish(page, flat);
+  expect(await figurePixels(page)).toEqual(final.paint);
+  expect(await coatPixels(page)).toEqual(final.coat);
+  await expectSettledCrease(page);
+  expect(await page.evaluate(() => window.creaseRevealFixture.startedNormals)).toEqual(started);
+  expect(errors).toEqual([]);
+});
+
+test("rereading and refreshing a held crease consumes its placement intent only once", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await observeCreaseWork(page);
+  const { flat, images, errors } = await openFixture(page);
+  await routeImages(page, images);
+  await freezeFrames(page);
+  await page.evaluate(() => window.creaseRevealFixture.drop());
+  await expect
+    .poll(async () => {
+      await page.clock.runFor(16);
+      return page.evaluate(() => window.creaseRevealFixture.startedNormals.length);
+    })
+    .toBe(1);
+  // Repeated requests before the next clock tick must not admit the same placement again.
+  await page.evaluate(() => {
+    for (let request = 0; request < 8; request++) window.creaseRevealFixture.refresh();
+  });
+  await page.clock.runFor(16);
+  expect(await page.evaluate(() => window.creaseRevealFixture.startedNormals)).toHaveLength(1);
+  const final = await finishedPixels(page, flat);
+  const pose = await page.evaluate(() => window.creaseRevealFixture.pose());
+  await resetCreaseWork(page);
+  await page.evaluate(() => {
+    window.creaseRevealFixture.reread();
+    window.creaseRevealFixture.refresh();
+  });
+  await page.clock.runFor(32);
+  expect(await figurePixels(page)).toEqual(final.paint);
+  expect(await coatPixels(page)).toEqual(final.coat);
+  await expectSettledCrease(page);
+  expect(await page.evaluate(() => window.creaseRevealFixture.pose())).toEqual(pose);
+  expect(await page.evaluate(() => window.creaseRevealFixture.startedNormals)).toHaveLength(1);
+  expect(errors).toEqual([]);
+});
+
+test("covering before the first snapshot cancels placement intent through re-exposure and remount", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await observeCreaseWork(page);
+  const { flat, images, errors } = await openFixture(page);
+  const { pending, release } = await routeImages(page, images, "normal");
+  await freezeFrames(page);
+  await page.evaluate(() => window.creaseRevealFixture.drop());
+  await expect.poll(() => pending.length).toBeGreaterThan(0);
+  await page.evaluate(() => window.creaseRevealFixture.cover());
+  await release();
+  await page.clock.runFor(300);
+  expect(await page.evaluate(() => window.creaseRevealFixture.startedNormals)).toEqual([]);
+  await page.evaluate(() => window.creaseRevealFixture.expose());
+  await observeImmediateFinish(page, flat);
+  await expectSettledCrease(page);
+  await page.evaluate(() => window.creaseRevealFixture.remount());
+  await awaitCurrentNormalSnapshot(page);
+  await observeImmediateFinish(page, flat);
+  await expectSettledCrease(page);
+  expect(await page.evaluate(() => window.creaseRevealFixture.startedNormals)).toEqual([]);
+  expect(errors).toEqual([]);
+});
 
 for (const reducedMotion of ["no-preference", "reduce"] as const) {
   test(`crease paint stays flat until its delayed laminate normal is ready, ${reducedMotion}`, async ({

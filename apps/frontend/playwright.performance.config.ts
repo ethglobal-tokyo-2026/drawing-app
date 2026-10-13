@@ -6,7 +6,9 @@ import original from "./playwright.config.ts";
 export default defineConfig({
   ...original,
   workers: 1,
-  use: { ...original.use, headless: false },
+  // DOM snapshots and continuous trace screenshots distort first-interaction timing.
+  // The drag fixture offers an explicit Chrome timeline capture when attribution is needed.
+  use: { ...original.use, headless: false, trace: "off" },
   projects: original.projects?.map((project) =>
     project.name === "chromium"
       ? {

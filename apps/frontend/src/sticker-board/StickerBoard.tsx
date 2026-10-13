@@ -71,6 +71,7 @@ import {
 } from "./boardSticker";
 import { KeepAnimations } from "./keepAnimations";
 import { PlacedSticker } from "./PlacedSticker";
+import { useStickerStack } from "./useStickerStack";
 import { stickerElIn } from "./placedStickerEl";
 import {
   FIRST_SPOT,
@@ -392,6 +393,7 @@ export function StickerBoard({
   /** The sticker landing as this visit opened. `landingId` clears once it sticks; its chip plays on. */
   const [arrivedId] = useState(landingId);
   const [selected, setSelected] = useState<string | null>(null);
+  const [placementGeneration, setPlacementGeneration] = useState(0);
   const subjectsPeek = useSubjectsPeek();
   /** The sticker the detail shows, among your stickers or among the ones you gave. */
   const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
@@ -522,13 +524,13 @@ export function StickerBoard({
     // The account store logs and retains failures for the retry alert, including while this tab is absent.
     void saves.saveDerived(derivedLayout).catch(() => {});
   }, [saves, derivedLayout]);
-  // The first open's board completes once the fresh board's stickers have all decoded; one from the
-  // phone's storage starts them decoding. A board that didn't load has nothing more coming, so what
-  // waited for it goes ahead.
+  // Start decodes and the assembly deadline before geometry exists. An empty fresh board has no
+  // material to wait for; other fresh boards complete through the exposed-material effect below.
   useEffect(() => {
     if (!adopted) return;
-    followBoardAssembly(assemblyOf(shownIn(layout, adopted.stickers)), {
-      fresh: !adopted.fromPhone,
+    const assembling = assemblyOf(shownIn(layout, adopted.stickers));
+    return followBoardAssembly(assembling, {
+      fresh: !adopted.fromPhone && assembling.length === 0,
     });
   }, [adopted, layout]);
   useEffect(() => {
@@ -776,7 +778,10 @@ export function StickerBoard({
       const sticker = stickers?.find((s) => s.id === id);
       if (!stickers || !sticker) return;
       const moved = { ...placement, z: zOnTop(stickers, id) };
-      setPlacement(id, moved);
+      flushSync(() => {
+        setPlacement(id, moved);
+        setPlacementGeneration((generation) => generation + 1);
+      });
       save(sticker, spotsIn(layout, moved));
     },
     onRemove: removeFromBoard,
@@ -816,7 +821,10 @@ export function StickerBoard({
           );
       const placement: Placement = roundSpot({ on: true, ...spot, z: zOnTop(stickers, id) });
       // Drawn at once, so the tray can hand the sticker over where it lands.
-      flushSync(() => setPlacement(id, placement));
+      flushSync(() => {
+        setPlacement(id, placement);
+        setPlacementGeneration((generation) => generation + 1);
+      });
       save(sticker, spotsIn(layout, placement));
       const el = stickerEl(id);
       // Dropped, it presses flat; a tapped sticker's landing is the tray's to play.
@@ -869,6 +877,7 @@ export function StickerBoard({
     (a, b) => a.placement.z - b.placement.z || a.createdAt - b.createdAt,
   );
   const stack = new Map(bottomUp.map((s, i) => [s.id, i]));
+  useStickerStack(stage, stack);
   const creases = useCreases({
     stickers: bottomUp,
     field,
@@ -876,7 +885,28 @@ export function StickerBoard({
     foilOf: (s) =>
       boardFoil({ nsfw: s.nsfw, kyotoSeika: s.kyotoSeikaSubjects !== null, byOther: byOther(s) }),
     held: hold?.id,
+    placementGeneration,
+    revealActive: laminateActive,
   });
+  // The initial crease plan runs before this effect. Deferred work waits for the exposed material,
+  // while a cached board only starts its image decodes and the existing deadline remains bounded.
+  useEffect(() => {
+    const root = stage.current;
+    if (!adopted || !field || !root) return;
+    return followBoardAssembly(
+      assemblyOf(shownIn(layout, adopted.stickers), (s) =>
+        boardFoil({
+          nsfw: s.nsfw,
+          kyotoSeika: s.kyotoSeikaSubjects !== null,
+          byOther: s.artist.id !== adopted.owner.id,
+        }),
+      ),
+      {
+        fresh: !adopted.fromPhone,
+        materials: { root, creases, active: laminateActive },
+      },
+    );
+  }, [adopted, layout, field, creases, laminateActive]);
   // Screen readers and the arrow keys take the stickers in reading order, which is the DOM's too.
   const order = field ? orderOn(onBoard, field) : [];
   const onBoardById = new Map(onBoard.map((s) => [s.id, s]));
@@ -1015,7 +1045,6 @@ export function StickerBoard({
                     sticker={s}
                     field={field}
                     unit={size.U}
-                    stack={stack.get(s.id) ?? 0}
                     selected={s.id === selected}
                     knobBelow={s.id === selected && knobBelow}
                     inHand={hold?.id === s.id ? hold.kind : undefined}

@@ -248,7 +248,7 @@ describe("the shared light", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("publishes moving laminate at display cadence while keeping foil style writes throttled", () => {
+  it("publishes laminate and foil from the same pose on every moving display frame", () => {
     screenAt(0);
     uninstall = installLight(root);
     showScreen();
@@ -270,10 +270,9 @@ describe("the shared light", () => {
         expect(frames[i].at - frames[i - 1].at).toBeLessThanOrEqual(20);
         expect(frames[i].x).toBeGreaterThan(frames[i - 1].x);
       }
-      expect(cssWrites.length).toBeGreaterThan(1);
-      expect(cssWrites.length).toBeLessThan(frames.length);
+      expect(cssWrites.length).toBe(frames.length);
       for (let i = 1; i < cssWrites.length; i++)
-        expect(cssWrites[i] - cssWrites[i - 1]).toBeGreaterThanOrEqual(45);
+        expect(cssWrites[i] - cssWrites[i - 1]).toBeLessThanOrEqual(20);
       expect(Number(lightAt()[0])).toBeGreaterThan(-0.6);
       vi.advanceTimersByTime(2000);
       const held = currentLight();
@@ -551,16 +550,16 @@ describe("the shared light", () => {
     ]);
   });
 
-  it("combines tilts that come close together into one write toward the latest position", () => {
+  it("combines sensor readings within one display frame toward the latest position", () => {
     uninstall = installLight(root);
     showScreen();
     tiltTo(0, 40);
     vi.advanceTimersByTime(16);
     const writes = vi.spyOn(film.style, "setProperty");
     tiltTo(32, 40);
-    vi.advanceTimersByTime(16);
     tiltTo(-32, 40);
-    vi.advanceTimersByTime(32);
+    expect(writes.mock.calls.filter(([name]) => name === "--lx")).toHaveLength(0);
+    vi.advanceTimersByTime(16);
     expect(writes.mock.calls.filter(([name]) => name === "--lx")).toHaveLength(1);
     expect(Number(lightAt()[0])).toBeLessThan(0);
     vi.advanceTimersByTime(10 * GLIDE_MS);

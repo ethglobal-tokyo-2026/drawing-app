@@ -59,6 +59,47 @@ import { myStickerBoardChanged } from "./useMyStickerBoard";
 import { placedAt } from "./testBoardSticker";
 import { STEP_SAVE_IDLE_MS } from "./useBoardGestures";
 
+const stickerRenders = vi.hoisted(() => ({
+  placed: new Map<string, number>(),
+  figure: new Map<string, number>(),
+}));
+
+// Observe the actual component bodies while preserving their memo boundaries and hooks.
+vi.mock("./PlacedSticker", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./PlacedSticker")>();
+  const { memo, isValidElement } = await import("react");
+  const component: unknown = Reflect.get(original.PlacedSticker, "type");
+  if (typeof component !== "function") throw new Error("PlacedSticker is not memoized");
+  return {
+    ...original,
+    PlacedSticker: memo((props: ComponentProps<typeof original.PlacedSticker>) => {
+      const id = props.sticker.id;
+      stickerRenders.placed.set(id, (stickerRenders.placed.get(id) ?? 0) + 1);
+      const rendered: unknown = Reflect.apply(component, undefined, [props]);
+      if (!isValidElement(rendered))
+        throw new Error("PlacedSticker did not render a React element");
+      return rendered;
+    }),
+  };
+});
+vi.mock("../stickers/StickerFigure", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../stickers/StickerFigure")>();
+  const { memo, isValidElement } = await import("react");
+  const component: unknown = Reflect.get(original.StickerFigure, "type");
+  if (typeof component !== "function") throw new Error("StickerFigure is not memoized");
+  return {
+    ...original,
+    StickerFigure: memo((props: ComponentProps<typeof original.StickerFigure>) => {
+      const print = props.urls.png;
+      stickerRenders.figure.set(print, (stickerRenders.figure.get(print) ?? 0) + 1);
+      const rendered: unknown = Reflect.apply(component, undefined, [props]);
+      if (!isValidElement(rendered))
+        throw new Error("StickerFigure did not render a React element");
+      return rendered;
+    }),
+  };
+});
+
 // happy-dom has no canvas context; the board's Zipper uses the recording stand-in.
 vi.mock("../sticker-creation/canvas/context2d", async (importOriginal) => {
   const original = await importOriginal<typeof import("../sticker-creation/canvas/context2d")>();
@@ -114,6 +155,8 @@ afterEach(async () => {
 });
 
 beforeEach(() => {
+  stickerRenders.placed.clear();
+  stickerRenders.figure.clear();
   localStorage.clear();
   sessionStorage.clear();
   forgetNoticedHere();
@@ -256,6 +299,46 @@ function selectByKeys(host: HTMLElement, stickerId: string) {
   press("Enter");
   return press;
 }
+
+describe("StickerBoard's normalized stack", () => {
+  it("raises a disjoint sticker without rendering the other stickers again", async () => {
+    onAPhone();
+    stubResizeObservers();
+    const rows = [0.14, 0.37, 0.63, 0.86].map((x, index) =>
+      boardSticker({
+        sticker: sticker({ artist: TEST_OWNER, ownerId: TEST_ME.id }),
+        placement: { ...placedAt(x, 0.4), scale: 0.05, z: 1_000_000 + index },
+      }),
+    );
+    const { host } = await openBoard(boardApi(rows));
+    const nodes = rows.map((row) => {
+      const node = host.querySelector<HTMLElement>(`[data-sticker-id="${row.stickerId}"]`);
+      if (!node) throw new Error(`Sticker ${row.stickerId} is absent`);
+      return node;
+    });
+    const placedBefore = new Map(stickerRenders.placed);
+    const figuresBefore = new Map(stickerRenders.figure);
+    const labelsBefore = nodes.map((node) => node.getAttribute("aria-label"));
+    expect(nodes.map((node) => node.style.zIndex)).toEqual(["10", "11", "12", "13"]);
+
+    selectByKeys(host, rows[0].stickerId);
+    await act(async () => {});
+
+    expect(nodes.map((node) => node.style.zIndex)).toEqual(["13", "10", "11", "12"]);
+    expect(nodes[0].getAttribute("aria-pressed")).toBe("true");
+    expect(nodes[0].getAttribute("aria-label")).toBe(labelsBefore[0]);
+    for (let index = 1; index < rows.length; index++) {
+      const row = rows[index];
+      expect(nodes[index].getAttribute("aria-pressed")).toBe("false");
+      expect(nodes[index].getAttribute("aria-label")).toBe(labelsBefore[index]);
+      expect(
+        stickerRenders.placed.get(row.stickerId),
+        "A stack change must not render a disjoint sticker's wrapper",
+      ).toBe(placedBefore.get(row.stickerId));
+    }
+    expect(stickerRenders.figure).toEqual(figuresBefore);
+  });
+});
 
 describe("StickerBoard with the board kept on this phone", () => {
   it("draws the last board at once, with no loading shapes, then swaps in the fresh board", async () => {
