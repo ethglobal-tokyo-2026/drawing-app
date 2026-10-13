@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { canOpenPicker, sendInLineChat, type LiffPicker, type PickerMessage } from "./friendPicker";
+import {
+  canOpenPicker,
+  PickerSendError,
+  sendInLineChat,
+  type LiffPicker,
+  type PickerMessage,
+} from "./friendPicker";
 
 const message: PickerMessage = { type: "text", text: "hi" };
 
@@ -23,7 +29,18 @@ function fakeLine({
 
 const liffError = (code: string) => Object.assign(new Error("subwindow closed"), { code });
 
+async function pickerFailure(line: LiffPicker): Promise<PickerSendError> {
+  try {
+    await sendInLineChat(line, [message]);
+  } catch (error) {
+    if (error instanceof PickerSendError) return error;
+    throw error;
+  }
+  throw new Error("The LINE send unexpectedly succeeded");
+}
+
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -104,6 +121,111 @@ describe("LINE's picker", () => {
       cause,
     });
     await expect(sending).rejects.toThrow(/EXCEPTION_IN_SUBWINDOW.*subwindow closed/);
+  });
+
+  it("keeps LINE's original error fields and nested cause in copied details", async () => {
+    const original = new Error("connection refused");
+    Object.defineProperty(original, "stack", {
+      value: "TypeError: connection refused\n    at fetch",
+    });
+    const cause = Object.assign(new Error("", { cause: original }), {
+      code: "EXCEPTION_IN_SUBWINDOW",
+      toJSON: () => {
+        throw new Error("Original LINE errors must not be serialized directly");
+      },
+    });
+    Object.defineProperty(cause, "stack", { value: "Error\n    at shareTargetPicker" });
+    const line = fakeLine({ picker: () => Promise.reject(cause) });
+    const sending = sendInLineChat(line, [message]);
+    await expect(sending).rejects.toBeInstanceOf(PickerSendError);
+    await expect(sending).rejects.toMatchObject({
+      message: "LINE’s friend picker failed: EXCEPTION_IN_SUBWINDOW: (empty message)",
+      mayHaveSent: true,
+      cause,
+      detail: [
+        "LINE’s friend picker failed: EXCEPTION_IN_SUBWINDOW: (empty message)",
+        "",
+        '{\n  "name": "Error",\n  "code": "EXCEPTION_IN_SUBWINDOW",\n  "message": "",',
+        '  "stack": "Error\\n    at shareTargetPicker",',
+        '  "cause": {',
+        '    "name": "Error",',
+        '    "message": "connection refused",',
+        '    "stack": "TypeError: connection refused\\n    at fetch"',
+        "  }",
+        "}",
+      ].join("\n"),
+    });
+  });
+
+  it("reports a cyclic LINE error cause without losing the picker failure", async () => {
+    const cause = liffError("EXCEPTION_IN_SUBWINDOW");
+    Object.assign(cause, { cause });
+    const line = fakeLine({ picker: () => Promise.reject(cause) });
+    const error = await pickerFailure(line);
+    expect(error.detail).toContain('"cause": "(circular cause)"');
+    expect(error.cause).toBe(cause);
+  });
+
+  it("keeps plain SDK cause objects and arrays in copied details", async () => {
+    const original = { reason: "Launch failed", attempts: [{ result: "Launch failed" }] };
+    const cause = new Error("subwindow closed", { cause: original });
+    const line = fakeLine({ picker: () => Promise.reject(cause) });
+    const error = await pickerFailure(line);
+    expect(error.detail).toContain('"reason": "Launch failed"');
+    expect(error.detail).toContain('"attempts": [\n      {\n        "result": "Launch failed"');
+    expect(error.cause).toBe(cause);
+    expect(error.mayHaveSent).toBe(true);
+  });
+
+  it("copies a native Error stack even when its descriptor is an accessor", async () => {
+    const cause = liffError("EXCEPTION_IN_SUBWINDOW");
+    const stack = cause.stack;
+    const line = fakeLine({ picker: () => Promise.reject(cause) });
+    const error = await pickerFailure(line);
+    expect(error.detail).toContain(`"stack": ${JSON.stringify(stack)}`);
+  });
+
+  it("marks cause accessors without invoking them or changing the send failure", async () => {
+    let read = false;
+    const original = Object.defineProperty({}, "message", {
+      enumerable: true,
+      get: () => {
+        read = true;
+        throw new Error("cause message unavailable");
+      },
+    });
+    const cause = liffError("EXCEPTION_IN_SUBWINDOW");
+    Object.assign(cause, { cause: original });
+    const line = fakeLine({ picker: () => Promise.reject(cause) });
+    const error = await pickerFailure(line);
+    expect(read).toBe(false);
+    expect(error.detail).toContain('"message": "(accessor; value not read)"');
+    expect(error.cause).toBe(cause);
+    expect(error.mayHaveSent).toBe(true);
+  });
+
+  it("retains the send failure when the original cause cannot be inspected", async () => {
+    const formattingError = new Error("cause properties unavailable");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const original = new Proxy(
+      {},
+      {
+        ownKeys: () => {
+          throw formattingError;
+        },
+      },
+    );
+    const cause = liffError("EXCEPTION_IN_SUBWINDOW");
+    Object.assign(cause, { cause: original });
+    const line = fakeLine({ picker: () => Promise.reject(cause) });
+    const error = await pickerFailure(line);
+    expect(error.detail).toContain("(LINE error detail formatting failed)");
+    expect(error.cause).toBe(cause);
+    expect(error.mayHaveSent).toBe(true);
+    expect(logged).toHaveBeenCalledWith(
+      "LINE’s friend picker error details could not be formatted",
+      formattingError,
+    );
   });
 
   it("rejects before opening when offline, since LIFF needs LINE first", async () => {

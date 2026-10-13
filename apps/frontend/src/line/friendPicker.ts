@@ -1,5 +1,5 @@
 import type liff from "@line/liff";
-import { describeLiffError } from "./liff";
+import { describeLiffError, liffErrorDetail } from "./liff";
 
 /** A message LINE's share target picker accepts. */
 export type PickerMessage = Parameters<typeof liff.shareTargetPicker>[0][number];
@@ -16,11 +16,20 @@ export type PickerOutcome = "sent" | "cancelled";
 /** A send failure, including whether LINE may already have sent the messages. */
 export class PickerSendError extends Error {
   readonly mayHaveSent: boolean;
+  readonly detail: string;
 
   constructor(message: string, mayHaveSent: boolean, options?: ErrorOptions) {
     super(message, options);
     this.name = "PickerSendError";
     this.mayHaveSent = mayHaveSent;
+    try {
+      this.detail =
+        options?.cause !== undefined ? `${message}\n\n${liffErrorDetail(options.cause)}` : message;
+    } catch (error) {
+      // A diagnostic failure must not change whether LINE may already have sent the message.
+      this.detail = `${message}\n\n(LINE error detail formatting failed)`;
+      console.error("LINE’s friend picker error details could not be formatted", error);
+    }
   }
 }
 

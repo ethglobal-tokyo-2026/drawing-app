@@ -119,7 +119,7 @@ const describe = (error: unknown): Problem =>
       : error instanceof PickerSendError
         ? {
             message: i18next.t(($) => $.giving.lineSendError.pickerFailed),
-            detail: error.message,
+            detail: error.detail,
           }
         : problemOf(error);
 

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyApi, renderWithApi, shownText, TEST_ME } from "../api/testing";
 import { boardSticker, gift, MARKUP_LIKE_NAME } from "../api/testFixtures";
 import { giving } from "../i18n/strings/giving";
+import { sendInLineChat } from "../line/friendPicker";
 import { refusingStorage } from "../ui/testing";
 import { formatDay, formatDuration, formatNo } from "../stickers/format";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
@@ -334,6 +335,43 @@ describe("Giving", () => {
     await wait(0);
     expect(title()).toBe("Closed and sent");
     expect(giftOf("s-late")).toBe("sent");
+  });
+
+  it("copies the original LINE failure details when its message is empty", async () => {
+    const cause = Object.assign(new Error("", { cause: new Error("picker launch failed") }), {
+      code: "EXCEPTION_IN_SUBWINDOW",
+    });
+    cause.stack = "Error\n    at openPicker (sdk.js:1:2)";
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue();
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const send = vi.spyOn(sender, "send").mockImplementationOnce((message) =>
+      sendInLineChat(
+        {
+          isApiAvailable: () => true,
+          isInClient: () => false,
+          getLineVersion: () => null,
+          shareTargetPicker: () => Promise.reject(cause),
+        },
+        [message],
+      ),
+    );
+    try {
+      open("s-empty-line-error");
+      await wait(1150);
+      expect(title()).toBe("LINE send error");
+      await act(async () => tap("Copy"));
+      expect(writeText).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("(empty message)"));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("sdk.js:1:2"));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("picker launch failed"));
+      expect(giftOf("s-empty-line-error")).toBe("packed");
+    } finally {
+      send.mockRestore();
+      log.mockRestore();
+    }
   });
 
   it("keeps focus on the key and says the new step when the picker is cancelled", async () => {

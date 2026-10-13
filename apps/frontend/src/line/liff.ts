@@ -175,8 +175,65 @@ async function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
 export function describeLiffError(error: unknown): string {
   if (!(error instanceof Error)) return String(error);
   const code = "code" in error && typeof error.code === "string" ? error.code : "";
-  const message = error.message || error.name;
+  const message = error.message || "(empty message)";
   return code ? `${code}: ${message}` : message;
+}
+
+/** The SDK's original error fields, for copied details without changing an empty message. */
+export function liffErrorDetail(error: unknown): string {
+  const seen = new Set<object>();
+  const descriptorValue = (descriptor: PropertyDescriptor): unknown =>
+    "value" in descriptor ? report(descriptor.value) : "(accessor; value not read)";
+  const report = (value: unknown): unknown => {
+    if (value === undefined) return "(undefined)";
+    if (value === null || typeof value !== "object") {
+      if (typeof value === "function") return "(function; not called)";
+      return typeof value === "bigint" || typeof value === "symbol" ? String(value) : value;
+    }
+    if (seen.has(value)) return "(circular cause)";
+    seen.add(value);
+    if (value instanceof Error) {
+      const fields: Record<string, unknown> = {};
+      for (const key of ["name", "code", "message", "stack", "cause"]) {
+        if (key === "stack") {
+          // V8's native Error.stack is an accessor, so read it without risking the report.
+          try {
+            const stack = value.stack;
+            if (stack !== undefined) fields.stack = stack;
+          } catch {
+            fields.stack = "(stack could not be read)";
+          }
+          continue;
+        }
+        let owner: object | null = value;
+        while (owner) {
+          const descriptor = Object.getOwnPropertyDescriptor(owner, key);
+          if (descriptor) {
+            fields[key] = descriptorValue(descriptor);
+            break;
+          }
+          const prototype: unknown = Object.getPrototypeOf(owner);
+          owner = typeof prototype === "object" ? prototype : null;
+        }
+      }
+      return fields;
+    }
+    if (Array.isArray(value)) {
+      const length: unknown = Object.getOwnPropertyDescriptor(value, "length")?.value;
+      if (typeof length !== "number") throw new Error("LINE cause array length is unavailable");
+      return Array.from({ length }, (_, index) => {
+        const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+        return descriptor ? descriptorValue(descriptor) : null;
+      });
+    }
+    // Copy SDK cause data without invoking accessors or its toJSON method.
+    return Object.fromEntries(
+      Object.entries(Object.getOwnPropertyDescriptors(value)).map(
+        ([key, descriptor]): [string, unknown] => [key, descriptorValue(descriptor)],
+      ),
+    );
+  };
+  return JSON.stringify(report(error), null, 2);
 }
 
 const hasMock = (l: object): l is { $mock: LiffMockApi } => "$mock" in l;

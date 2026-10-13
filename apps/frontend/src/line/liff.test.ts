@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { createDevLineVerifier } from "@drawing-app/api/dev-sign-in";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockPerson } from "./liff";
+import { describeLiffError, mockPerson } from "./liff";
 
 /** A fresh tab's sessionStorage. */
 const newTab = () => {
@@ -35,6 +35,16 @@ async function openPage({ loggedIn }: { loggedIn: boolean }) {
 
 /** What each of LIFF's logins asked LINE Login for. */
 const logins = () => line.login.mock.calls.map(([config]) => config);
+
+describe("LIFF error descriptions", () => {
+  it.each([
+    { message: "", summary: "EXCEPTION_IN_SUBWINDOW: (empty message)" },
+    { message: "Error", summary: "EXCEPTION_IN_SUBWINDOW: Error" },
+  ])("distinguishes an empty message from LINE's literal '$message'", ({ message, summary }) => {
+    const error = Object.assign(new Error(message), { code: "EXCEPTION_IN_SUBWINDOW" });
+    expect(describeLiffError(error)).toBe(summary);
+  });
+});
 
 /** A storage refusal with the other marker operations still available. */
 function refuseStorage(operation: "getItem" | "setItem" | "removeItem", error: Error) {
