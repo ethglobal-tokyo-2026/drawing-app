@@ -72,12 +72,13 @@ export interface RotationOrigin {
   pose: LightPose;
 }
 
-/** Device rotations relative to the first reading, before displayed-axis easing or clamping. */
+/** Fixed-reference tilt; the material consumers apply its twist and displayed screen turn once. */
 export function relativeTiltPose(
   alpha: number,
   beta: number,
   gamma: number,
   origin: RotationOrigin,
+  screenAngle = origin.screenAngle,
 ): LightPose {
   const a = alpha * RAD,
     b = beta * RAD,
@@ -129,7 +130,7 @@ export function relativeTiltPose(
       origin.pose.y +
         easeToEdge(quiet(up * Math.cos(angle) - across * Math.sin(angle)) / TILT_RANGE),
     ),
-    rotationDegrees: origin.pose.rotationDegrees - quiet(twist),
+    rotationDegrees: origin.pose.rotationDegrees - quiet(twist) + screenAngle - origin.screenAngle,
   };
 }
 

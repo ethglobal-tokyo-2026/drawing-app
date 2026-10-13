@@ -162,6 +162,61 @@ afterEach(() => {
 });
 
 describe("the shared light", () => {
+  it("restores the reference after the reported direction changes captured on iPad", () => {
+    // Consecutive readings around the direction changes in the October 13 iPad report.
+    // The original acquisition was not retained; acquire the first sample here and add a return.
+    const readings = [
+      [90, 8.723049980578125, 5.249239614053194, 8.339420639645562],
+      [0, 8.421645327042885, 6.6965109773356355, 8.63661831165818],
+      [0, 356.19771239662595, 54.35496155877835, 11.075429321838536],
+      [90, 356.33701522983637, 54.11037737283471, 11.009159243068556],
+      [90, 250.01871502971437, -41.168456436411745, -1.7825381754617498],
+      [270, 249.89439278707968, -41.609994762136836, -1.9436789870680669],
+    ] as const;
+    const [angle, alpha, beta, gamma] = readings[0];
+    screenAt(angle);
+    uninstall = installLight(root);
+    showScreen();
+    tiltTo(gamma, beta, alpha);
+    const first = currentLight();
+    for (const [direction, heading, forward, sideways] of readings.slice(1)) {
+      screenAt(direction);
+      tiltTo(sideways, forward, heading);
+      vi.advanceTimersByTime(2000);
+    }
+    screenAt(angle);
+    tiltTo(gamma, beta, alpha);
+    vi.advanceTimersByTime(2000);
+    expect(currentLight().x).toBeCloseTo(first.x, 10);
+    expect(currentLight().y).toBeCloseTo(first.y, 10);
+    const turn = ((currentLight().rotationDegrees - first.rotationDegrees) * Math.PI) / 180;
+    expect(Math.sin(turn)).toBeCloseTo(0, 10);
+    expect(Math.cos(turn)).toBeCloseTo(1, 10);
+  });
+
+  it("returns to the same reflection after repeated portrait and landscape round trips", () => {
+    screenAt(0);
+    uninstall = installLight(root);
+    showScreen();
+    tiltTo(0, 40, 123);
+    tiltTo(8, 44, 126);
+    vi.advanceTimersByTime(2000);
+    const first = currentLight();
+    for (let repeat = 0; repeat < 3; repeat++) {
+      screenAt(90);
+      tiltTo(16, 48, 130);
+      vi.advanceTimersByTime(2000);
+      tiltTo(-12, 36, 120);
+      vi.advanceTimersByTime(2000);
+      screenAt(0);
+      tiltTo(8, 44, 126);
+      vi.advanceTimersByTime(2000);
+      expect(currentLight().x).toBeCloseTo(first.x, 10);
+      expect(currentLight().y).toBeCloseTo(first.y, 10);
+      expect(currentLight().rotationDegrees).toBeCloseTo(first.rotationDegrees, 10);
+    }
+  });
+
   it("acquires a delayed heading without rotating an already-held reflection", () => {
     screenAt(0);
     uninstall = installLight(root);
@@ -224,7 +279,7 @@ describe("the shared light", () => {
     }
   });
 
-  it("keeps angular state through acquisition, screen-axis rebasing, and controller reinstall", () => {
+  it("keeps the physical angular reference through screen rotation and controller reinstall", () => {
     screenAt(0);
     uninstall = installLight(root);
     showScreen();
@@ -239,9 +294,13 @@ describe("the shared light", () => {
     screenAt(90);
     tiltTo(0, 0, 47);
     vi.advanceTimersByTime(2000);
-    expect(currentLight()).toEqual(before);
+    expect(currentLight()).toEqual({ ...before, rotationDegrees: 80 });
     uninstall();
     uninstall = installLight(root);
+    tiltTo(0, 0, 47);
+    vi.advanceTimersByTime(2000);
+    expect(currentLight()).toEqual({ ...before, rotationDegrees: 80 });
+    screenAt(0);
     tiltTo(0, 0, 47);
     vi.advanceTimersByTime(2000);
     expect(currentLight()).toEqual(before);
@@ -416,12 +475,12 @@ describe("the shared light", () => {
   );
 
   it.each([
-    [90, [-40, 0], [-45, 0]],
-    [180, [0, -40], [0, -45]],
-    [270, [40, 0], [45, 0]],
+    [90, 90],
+    [180, -180],
+    [270, -90],
   ] as const)(
-    "holds the reflection when the displayed axes turn to %s degrees",
-    (angle, origin, next) => {
+    "passes the screen turn once to the material consumers at %s degrees",
+    (angle, rotation) => {
       screenAt(0);
       uninstall = installLight(root);
       showScreen();
@@ -431,12 +490,18 @@ describe("the shared light", () => {
       vi.advanceTimersByTime(2000);
       const before = currentLight();
       screenAt(angle);
-      tiltTo(origin[0], origin[1]);
+      tiltTo(8, 40);
       vi.advanceTimersByTime(2000);
-      expect(currentLight()).toEqual(before);
-      tiltTo(next[0], next[1]);
+      expect(currentLight().x).toBeCloseTo(before.x, 10);
+      expect(currentLight().y).toBeCloseTo(before.y, 10);
+      expect(currentLight().rotationDegrees).toBeCloseTo(rotation, 10);
+      screenAt(0);
+      tiltTo(8, 40);
       vi.advanceTimersByTime(2000);
-      expect(currentLight().y - before.y).toBeGreaterThan(0.02);
+      expect(currentLight().x).toBeCloseTo(before.x, 10);
+      expect(currentLight().y).toBeCloseTo(before.y, 10);
+      expect(Math.sin((currentLight().rotationDegrees * Math.PI) / 180)).toBeCloseTo(0, 10);
+      expect(Math.cos((currentLight().rotationDegrees * Math.PI) / 180)).toBeCloseTo(1, 10);
       vi.advanceTimersByTime(22000);
       expect(vi.getTimerCount()).toBe(0);
     },

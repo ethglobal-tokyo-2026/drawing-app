@@ -407,8 +407,8 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
         "orientation",
         `alpha=${e.alpha}, beta=${e.beta}, gamma=${e.gamma}, screen=${screenAngle}; heading=${alpha}`,
       );
-    if (!kept.origin || kept.origin.screenAngle !== screenAngle || acquiredHeading) {
-      // Sensor/heading acquisition and screen rotation keep the displayed coating, without a jump.
+    if (!kept.origin || acquiredHeading) {
+      // Acquire the sensor reference once. Layout rotation changes displayed axes, never this origin.
       pause(false);
       kept.origin = { alpha, beta: e.beta, gamma: e.gamma, screenAngle, pose: { ...lit } };
       if (mode === "device-tilt" && !lightNow) {
@@ -416,7 +416,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
       }
       return;
     }
-    const to = relativeTiltPose(alpha, e.beta, e.gamma, kept.origin);
+    const to = relativeTiltPose(alpha, e.beta, e.gamma, kept.origin, screenAngle);
     aim(to);
   };
 
