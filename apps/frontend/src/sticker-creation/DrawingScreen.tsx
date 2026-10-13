@@ -1182,6 +1182,8 @@ export function DrawingScreen({
   const pickColor = (hex: string) =>
     changeAfterFill(`color:${hex}`, () => {
       setColor(hex);
+      // Keep a new color at the pick; existing swatches stay put so arrow keys can traverse Recent.
+      setRecent((r) => (r.includes(hex) ? r : withRecent(r, hex)));
       if (tool === "eraser") setTool("brush");
     });
   useImperativeHandle(ref, () => ({ startNewSticker, closePanels: () => pickPanel(null) }));

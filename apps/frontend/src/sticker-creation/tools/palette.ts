@@ -96,7 +96,7 @@ export const FIRST_RECENT = ["#3B3F8F", "#1C1824", "#FF5A36", "#FFB547", "#7CC6F
 /** The Recent row holds this many colors. */
 const RECENT_MAX = 8;
 
-/** The Recent row after a finished brush stroke in `color`: newest first, no repeats. */
+/** The Recent row after keeping `color`: newest first, no repeats. */
 export function withRecent(recent: string[], color: string): string[] {
   if (recent[0] === color) return recent;
   return [color, ...recent.filter((c) => c !== color)].slice(0, RECENT_MAX);
