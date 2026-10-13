@@ -1,11 +1,12 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type Ref } from "react";
 import { logOut } from "../../api/logOut";
 import { useMe } from "../../api/meContext";
+import { useSessionEnvelope, selectionOf } from "../../api/sessionContext";
 import { useApiQuery } from "../../api/useApiQuery";
 import { useTranslation } from "../../i18n/react";
 import { SignOut } from "../../icons";
 import { retryPrivySignIn, usePrivyStatus, type PrivyStatus } from "../../identity/privy";
-import { PrivyAccount } from "../../identity/PrivyAccount";
+import { PrivyAccount } from "../../identity/PrivyAccountDetails";
 import { useIdentity } from "../../identity/useIdentity";
 import { LineDetails } from "../../line/LineDetails";
 import { SendTestMessage } from "../../line/SendTestMessage";
@@ -22,7 +23,7 @@ import { GratitudeDemoControls } from "./GratitudeDemoControls";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
 import { SettingsNote } from "./SettingsNote";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./StatCork";
-import { SwitchPersonControls } from "./SwitchPersonControls";
+import { LivePersonSwitchControls, SwitchPersonControls } from "./SwitchPersonControls";
 import { statFigures } from "./statFigures";
 
 // The developer slip: the dev server shows it unless `.env` says "off"; a build only when it's "on".
@@ -56,6 +57,7 @@ export const StatBoard = memo(function StatBoard({
   const { t } = useTranslation();
   const me = useIdentity();
   const account = useMe();
+  const session = useSessionEnvelope();
   const stats = useApiQuery("user-stats/me", (api) => api.userStats());
   // The board stays mounted between turns, so each turn reloads the counts: gratitude, a gift received
   // or a seal may have come in since. The last counts show until the new ones land.
@@ -104,12 +106,12 @@ export const StatBoard = memo(function StatBoard({
           size="sm"
           icon={<SignOut />}
           className="stat-board__logout"
-          onClick={() => void logOut(account.id)}
+          onClick={() => void logOut(selectionOf(session))}
         >
           {t(($) => $.stickerBoard.statBoard.logOut)}
         </LabelButton>
       ),
-    [me.inClient, account.id, t],
+    [me.inClient, session, t],
   );
   const papers = useMemo(
     () => (
@@ -117,6 +119,7 @@ export const StatBoard = memo(function StatBoard({
         {/* Settings first, since it's the paper people come back to. */}
         <SettingsNote />
         <AddressPapers sui={sui} lifted={lifted} paperRef={suiPaper} onOpen={openAddress} />
+        <LivePersonSwitchControls />
         {DEV_SLIP && (
           <DeveloperSlip>
             <SwitchPersonControls />

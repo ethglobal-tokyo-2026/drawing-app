@@ -1,3 +1,14 @@
+import { beforeAccountRelease, retryAccountRelease } from "../api/sessionLoss";
+import { ApiError } from "../api/apiClient";
+import { acceptSession, currentSelection, suspendSession } from "../api/sessionContext";
+import { sessionEnvelope } from "../api/sessionTestFixtures";
+import { TEST_ME } from "../api/testing";
+const account = {
+  userId: TEST_ME.id,
+  selectionVersion: null,
+  expectedSubject: "U-you",
+  expectedSuiAddress: null,
+};
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // LINE's tokens as each test needs them.
@@ -31,6 +42,7 @@ const failureReason = () => {
 };
 
 beforeEach(() => {
+  acceptSession(sessionEnvelope(TEST_ME));
   vi.spyOn(console, "error").mockImplementation(() => {});
   reconnectLine.mockReset().mockResolvedValue(undefined);
   // Each test starts from a fresh sign-in, with no JWT kept from the last one.
@@ -45,11 +57,15 @@ afterEach(() => {
 describe("trading LIFF's access token for a Privy JWT", () => {
   it("hands Privy the auth server's JWT for LIFF's access token", async () => {
     lineToken();
-    const fetch = server(200, { jwt: "privy.jwt", expiresAt: nowS() + 300 });
+    const fetch = server(200, {
+      jwt: "privy.jwt",
+      subject: account.expectedSubject,
+      expiresAt: nowS() + 300,
+    });
     vi.stubGlobal("fetch", fetch);
-    expect(await fetchPrivyJwt()).toBe("privy.jwt");
+    expect(await fetchPrivyJwt(account)).toBe("privy.jwt");
     expect(fetch).toHaveBeenCalledWith(
-      "/v1/auth/privy-jwt",
+      "/api/session/privy-jwt",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ accessToken: "line-access-token" }),
@@ -60,8 +76,11 @@ describe("trading LIFF's access token for a Privy JWT", () => {
   // LIFF stays logged in for hours after its hour-long ID token lapses, inside LINE and out.
   it("signs in after LINE's ID token has expired, without reconnecting LINE", async () => {
     lineToken(-10);
-    vi.stubGlobal("fetch", server(200, { jwt: "privy.jwt", expiresAt: nowS() + 300 }));
-    expect(await fetchPrivyJwt()).toBe("privy.jwt");
+    vi.stubGlobal(
+      "fetch",
+      server(200, { jwt: "privy.jwt", subject: account.expectedSubject, expiresAt: nowS() + 300 }),
+    );
+    expect(await fetchPrivyJwt(account)).toBe("privy.jwt");
     expect(privyStatus()).toEqual({ state: "signing-in" });
     expect(reconnectLine).not.toHaveBeenCalled();
   });
@@ -69,10 +88,14 @@ describe("trading LIFF's access token for a Privy JWT", () => {
   // Privy re-authenticates whenever it gets a different JWT, and it asks again on every re-sync.
   it("reuses a JWT until it nears expiry", async () => {
     lineToken();
-    const fetch = server(200, { jwt: "privy.jwt", expiresAt: nowS() + 300 });
+    const fetch = server(200, {
+      jwt: "privy.jwt",
+      subject: account.expectedSubject,
+      expiresAt: nowS() + 300,
+    });
     vi.stubGlobal("fetch", fetch);
-    await fetchPrivyJwt();
-    expect(await fetchPrivyJwt()).toBe("privy.jwt");
+    await fetchPrivyJwt(account);
+    expect(await fetchPrivyJwt(account)).toBe("privy.jwt");
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -81,11 +104,11 @@ describe("trading LIFF's access token for a Privy JWT", () => {
     lineToken();
     const fetch = server(503, {});
     vi.stubGlobal("fetch", fetch);
-    await fetchPrivyJwt();
-    expect(await fetchPrivyJwt()).toBeUndefined();
+    await fetchPrivyJwt(account);
+    expect(await fetchPrivyJwt(account)).toBeUndefined();
     expect(fetch).toHaveBeenCalledTimes(1);
     retryPrivySignIn();
-    await fetchPrivyJwt();
+    await fetchPrivyJwt(account);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(reconnectLine).not.toHaveBeenCalled();
   });
@@ -93,31 +116,37 @@ describe("trading LIFF's access token for a Privy JWT", () => {
   it("stays signed in while a lapsed JWT is renewed in the background", async () => {
     lineToken();
     // Kept, but within the expiry margin, so the next ask goes to the auth server.
-    vi.stubGlobal("fetch", server(200, { jwt: "privy.jwt", expiresAt: nowS() + 30 }));
-    await fetchPrivyJwt();
+    vi.stubGlobal(
+      "fetch",
+      server(200, { jwt: "privy.jwt", subject: account.expectedSubject, expiresAt: nowS() + 30 }),
+    );
+    await fetchPrivyJwt(account);
     setPrivyStatus({ state: "signed-in", userId: "did:privy:1" });
-    const renewed = fetchPrivyJwt();
+    const renewed = fetchPrivyJwt(account);
     expect(privyStatus()).toEqual({ state: "signed-in", userId: "did:privy:1" });
     expect(await renewed).toBe("privy.jwt");
   });
 
   // Privy logs the person out when this throws, so failures resolve and say why.
-  it("resolves to nothing when the auth server refuses, and keeps its reason", async () => {
-    lineToken();
-    vi.stubGlobal("fetch", server(401, { error: "line_auth_failed" }));
-    expect(await fetchPrivyJwt()).toBeUndefined();
-    expect(failureReason()).toMatch(/401.*line_auth_failed/);
-    expect(privyStatus()).toMatchObject({ reconnectLine: true });
-  });
+  it.each(["line_token_expired", "line_token_invalid"])(
+    "keeps the rejected LINE reason %s",
+    async (error) => {
+      lineToken();
+      vi.stubGlobal("fetch", server(401, { error }));
+      expect(await fetchPrivyJwt(account)).toBeUndefined();
+      expect(failureReason()).toContain(`401 ${error}`);
+      expect(privyStatus()).toMatchObject({ reconnectLine: true });
+    },
+  );
 
   it("allows an ordinary retry when the auth server can't be reached", async () => {
     lineToken();
     const fetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
     vi.stubGlobal("fetch", fetch);
-    expect(await fetchPrivyJwt()).toBeUndefined();
-    expect(failureReason()).toContain("Failed to fetch");
+    expect(await fetchPrivyJwt(account)).toBeUndefined();
+    expect(failureReason()).toContain("0 network");
     retryPrivySignIn();
-    await fetchPrivyJwt();
+    await fetchPrivyJwt(account);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(reconnectLine).not.toHaveBeenCalled();
   });
@@ -128,11 +157,11 @@ describe("trading LIFF's access token for a Privy JWT", () => {
     lineToken();
     const fetch = server(503, { error: "auth_unavailable" });
     vi.stubGlobal("fetch", fetch);
-    await fetchPrivyJwt();
+    await fetchPrivyJwt(account);
     expect(privyStatus()).toMatchObject({ state: "failed", reconnectLine: false });
     resetPrivySignIn();
     expect(privyStatus()).toEqual({ state: "signing-in" });
-    await fetchPrivyJwt();
+    await fetchPrivyJwt(account);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(reload).not.toHaveBeenCalled();
   });
@@ -146,30 +175,40 @@ describe("trading LIFF's access token for a Privy JWT", () => {
     lineToken();
     const fetch = server(status, { error });
     vi.stubGlobal("fetch", fetch);
-    expect(await fetchPrivyJwt()).toBeUndefined();
+    expect(await fetchPrivyJwt(account)).toBeUndefined();
     expect(privyStatus()).toMatchObject({ state: "failed", reconnectLine: false });
     expect(failureReason()).toContain(`${status} ${error}`);
 
     fetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ jwt: "privy.jwt", expiresAt: nowS() + 300 })),
+      new Response(
+        JSON.stringify({
+          jwt: "privy.jwt",
+          subject: account.expectedSubject,
+          expiresAt: nowS() + 300,
+        }),
+      ),
     );
     retryPrivySignIn();
-    expect(await fetchPrivyJwt()).toBe("privy.jwt");
+    expect(await fetchPrivyJwt(account)).toBe("privy.jwt");
     expect(reconnectLine).not.toHaveBeenCalled();
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it("reconnects LINE on explicit retry when LIFF holds no access token", async () => {
-    const fetch = server(200, { jwt: "privy.jwt", expiresAt: nowS() + 300 });
+    const fetch = server(200, {
+      jwt: "privy.jwt",
+      subject: account.expectedSubject,
+      expiresAt: nowS() + 300,
+    });
     vi.stubGlobal("fetch", fetch);
     liff.getAccessToken.mockReturnValue(null);
-    expect(await fetchPrivyJwt()).toBeUndefined();
+    expect(await fetchPrivyJwt(account)).toBeUndefined();
     expect(privyStatus()).toMatchObject({ state: "failed", reconnectLine: true });
     expect(reconnectLine).not.toHaveBeenCalled();
 
     retryPrivySignIn();
     retryPrivySignIn();
-    expect(await fetchPrivyJwt()).toBeUndefined();
+    expect(await fetchPrivyJwt(account)).toBeUndefined();
     expect(reconnectLine).toHaveBeenCalledOnce();
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -184,7 +223,7 @@ describe("trading LIFF's access token for a Privy JWT", () => {
       }),
     );
     liff.getAccessToken.mockReturnValue(null);
-    await fetchPrivyJwt();
+    await fetchPrivyJwt(account);
     retryPrivySignIn();
     setPrivyStatus({ state: "failed", reason: "Provider stopped", reloadRequired: true });
 
@@ -201,7 +240,7 @@ describe("trading LIFF's access token for a Privy JWT", () => {
       }),
     );
     liff.getAccessToken.mockReturnValue(null);
-    await fetchPrivyJwt();
+    await fetchPrivyJwt(account);
     retryPrivySignIn();
     setPrivyStatus({ state: "failed", reason: "Provider stopped", reloadRequired: true });
 
@@ -210,26 +249,29 @@ describe("trading LIFF's access token for a Privy JWT", () => {
     expect(privyStatus()).toMatchObject({ state: "failed", reloadRequired: true });
   });
 
-  it("reconnects LINE after an auth rejection without repeating the exchange", async () => {
-    lineToken();
-    const fetch = server(401, { error: "line_auth_failed" });
-    vi.stubGlobal("fetch", fetch);
-    await fetchPrivyJwt();
-    expect(await fetchPrivyJwt()).toBeUndefined();
-    expect(reconnectLine).not.toHaveBeenCalled();
+  it.each(["line_token_expired", "line_token_invalid"])(
+    "reconnects LINE after %s without repeating the exchange",
+    async (error) => {
+      lineToken();
+      const fetch = server(401, { error });
+      vi.stubGlobal("fetch", fetch);
+      await fetchPrivyJwt(account);
+      expect(await fetchPrivyJwt(account)).toBeUndefined();
+      expect(reconnectLine).not.toHaveBeenCalled();
 
-    retryPrivySignIn();
-    expect(await fetchPrivyJwt()).toBeUndefined();
+      retryPrivySignIn();
+      expect(await fetchPrivyJwt(account)).toBeUndefined();
 
-    expect(reconnectLine).toHaveBeenCalledOnce();
-    expect(fetch).toHaveBeenCalledOnce();
-  });
+      expect(reconnectLine).toHaveBeenCalledOnce();
+      expect(fetch).toHaveBeenCalledOnce();
+    },
+  );
 
   it("keeps a failed LINE reconnect recoverable without logging SDK error values", async () => {
     liff.getAccessToken.mockReturnValue(null);
     const failure = new Error("SDK error containing credential details");
     reconnectLine.mockRejectedValueOnce(failure);
-    await fetchPrivyJwt();
+    await fetchPrivyJwt(account);
 
     // The screen that asked hears it too, so it can say so where the person tapped.
     const onFailed = vi.fn();
@@ -249,8 +291,46 @@ describe("trading LIFF's access token for a Privy JWT", () => {
 
     retryPrivySignIn();
     expect(reconnectLine).toHaveBeenCalledTimes(2);
-    expect(await fetchPrivyJwt()).toBeUndefined();
+    expect(await fetchPrivyJwt(account)).toBeUndefined();
   });
+});
+
+it("ignores an old reconnect rejection and preserves the restored session's pending retry", async () => {
+  let rejectOld!: (error: Error) => void;
+  let finishNew!: () => void;
+  reconnectLine.mockReturnValueOnce(
+    new Promise<void>((_, reject) => {
+      rejectOld = reject;
+    }),
+  );
+  reconnectLine.mockReturnValueOnce(
+    new Promise<void>((resolve) => {
+      finishNew = resolve;
+    }),
+  );
+  setPrivyStatus({ state: "failed", reason: "Expired", reconnectLine: true });
+  const oldFailed = vi.fn();
+  retryPrivySignIn(undefined, oldFailed);
+  suspendSession();
+  acceptSession(sessionEnvelope(TEST_ME));
+  const restoredFailure = {
+    state: "failed",
+    reason: "New reconnect needed",
+    reconnectLine: true,
+  } as const;
+  setPrivyStatus(restoredFailure);
+  retryPrivySignIn();
+  expect(reconnectLine).toHaveBeenCalledTimes(2);
+  rejectOld(new Error("Old LINE request failed"));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(privyStatus()).toEqual(restoredFailure);
+  expect(oldFailed).not.toHaveBeenCalled();
+  retryPrivySignIn();
+  expect(reconnectLine).toHaveBeenCalledTimes(2);
+  finishNew();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  retryPrivySignIn();
+  expect(reconnectLine).toHaveBeenCalledTimes(3);
 });
 
 describe("under LIFF Mock", () => {
@@ -315,7 +395,124 @@ describe("Privy's errors after the JWT is accepted", () => {
     vi.advanceTimersByTime(1000);
     expect(privy.privyStatus()).toEqual({
       state: "failed",
-      reason: "Privy refused the sign-in: Invalid JWT",
+      reason: "Privy could not sign in to the selected account. Try again.",
     });
   });
 });
+
+it("discards a JWT from an earlier version of the same selected account", async () => {
+  lineToken();
+  let finish!: (response: Response) => void;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve;
+        }),
+    ),
+  );
+  const pending = fetchPrivyJwt(account);
+  suspendSession();
+  acceptSession(sessionEnvelope(TEST_ME, { selectionVersion: "new-version" }));
+  finish(
+    new Response(
+      JSON.stringify({ jwt: "old", subject: account.expectedSubject, expiresAt: nowS() + 300 }),
+    ),
+  );
+  expect(await pending).toBeUndefined();
+});
+it("refuses an exchange for a different subject", async () => {
+  lineToken();
+  vi.stubGlobal(
+    "fetch",
+    server(200, { jwt: "wrong", subject: "someone-else", expiresAt: nowS() + 300 }),
+  );
+  expect(await fetchPrivyJwt(account)).toBeUndefined();
+  expect(privyStatus().state).toBe("failed");
+});
+
+it("reports a genuine reconnect failure after a deferred preservation retry", async () => {
+  let preserved = false;
+  const stop = beforeAccountRelease({
+    userId: TEST_ME.id,
+    preservationError: () =>
+      preserved ? null : new ApiError(0, { error: "person_switch_placement_preservation_failed" }),
+    retryPreservation: () => {
+      preserved = true;
+    },
+    blocked: () => suspendSession(),
+  });
+  try {
+    reconnectLine.mockRejectedValueOnce(new Error("private-provider-credentials"));
+    setPrivyStatus({ state: "failed", reason: "LINE expired", reconnectLine: true });
+    const onFailed = vi.fn();
+    retryPrivySignIn("/waiting-gift", onFailed);
+    expect(reconnectLine).not.toHaveBeenCalled();
+    expect(currentSelection()).toBeNull();
+    retryAccountRelease(TEST_ME.id, () => {
+      throw new Error("Deferred recovery was lost");
+    });
+    await vi.waitFor(() =>
+      expect(onFailed).toHaveBeenCalledWith(
+        expect.objectContaining({ code: "line_reconnect_failed" }),
+      ),
+    );
+    expect(privyStatus()).toMatchObject({
+      state: "failed",
+      reason: "LINE could not reconnect; try again",
+      reconnectLine: true,
+    });
+    expect(vi.mocked(console.error).mock.calls.flat().join(" ")).not.toContain(
+      "private-provider-credentials",
+    );
+  } finally {
+    stop();
+  }
+});
+
+it.each(["reload", "reconnect"])(
+  "discards deferred %s recovery when a newer selection is accepted",
+  (recovery) => {
+    const reload = vi.fn();
+    vi.stubGlobal("location", { reload });
+    let preserved = false;
+    const stop = beforeAccountRelease({
+      userId: TEST_ME.id,
+      preservationError: () =>
+        preserved
+          ? null
+          : new ApiError(0, { error: "person_switch_placement_preservation_failed" }),
+      retryPreservation: () => {
+        preserved = true;
+      },
+      blocked: () => suspendSession(),
+    });
+    try {
+      setPrivyStatus({
+        state: "failed",
+        reason: "Recover old account",
+        reconnectLine: recovery === "reconnect",
+        reloadRequired: recovery === "reload",
+      });
+      retryPrivySignIn();
+      expect(reconnectLine).not.toHaveBeenCalled();
+      expect(reload).not.toHaveBeenCalled();
+      acceptSession(sessionEnvelope(TEST_ME, { selectionVersion: "new-version" }));
+      const newer = {
+        state: "failed",
+        reason: "Recover new account",
+        reconnectLine: true,
+      } as const;
+      setPrivyStatus(newer);
+      retryAccountRelease(TEST_ME.id, () => {
+        throw new Error("Deferred recovery was lost");
+      });
+      expect(reconnectLine).not.toHaveBeenCalled();
+      expect(reload).not.toHaveBeenCalled();
+      expect(privyStatus()).toEqual(newer);
+    } finally {
+      stop();
+    }
+  },
+);

@@ -1,4 +1,10 @@
-import type { Me, StickerBoard, Tickets } from "@drawing-app/api/client";
+import type {
+  AccountSelection,
+  SessionEnvelope,
+  StickerBoard,
+  Tickets,
+} from "@drawing-app/api/client";
+import { selectionOf, selectionKey } from "./sessionContext";
 import { ApiError, type ApiClient } from "./apiClient";
 import type { SessionApi } from "./httpApi";
 
@@ -11,18 +17,18 @@ const FRESH_MS = 5_000;
 /** The session the cookie already holds, asked for as the app started, and what SessionGate makes of it. */
 export interface EarlySession {
   /** You, as the cookie signs you in; null without a live session. A failed check rejects. */
-  me: Promise<Me | null>;
+  me: Promise<SessionEnvelope | null>;
   /** LINE's user is the cookie's, so the first screen may use the early answers, once each. */
-  accept: (me: Me) => void;
+  accept: (me: SessionEnvelope) => void;
   /** LINE's user isn't the cookie's, or there's no session: the early answers go unread. */
   drop: () => void;
 }
 
 export interface EarlyOpening extends EarlySession {
   /** Your board as the cookie's session saw it, once, while it's accepted and fresh. */
-  takeBoard: (expectedUserId: string) => Promise<StickerBoard> | undefined;
+  takeBoard: (selection: AccountSelection) => Promise<StickerBoard> | undefined;
   /** Your tickets, likewise. */
-  takeTickets: (expectedUserId: string) => Promise<Tickets> | undefined;
+  takeTickets: (selection: AccountSelection) => Promise<Tickets> | undefined;
 }
 
 /** A failure noted, so an early answer nobody takes doesn't log an unhandled rejection. */
@@ -39,15 +45,15 @@ const quiet = <T>(answer: Promise<T>) => {
  */
 export function openEarly(
   session: SessionApi,
-  apiFor: (expectedUserId: string) => ApiClient,
+  apiFor: (selection: AccountSelection) => ApiClient,
   { board: withBoard, now = Date.now }: { board: boolean; now?: () => number },
 ): EarlyOpening {
-  let sourceUserId: string | undefined;
+  let sourceKey: string | undefined;
   const me = quiet(
     session.me().then(
       (answer) => {
-        sourceUserId = answer.me.id;
-        return answer.me;
+        sourceKey = selectionKey(selectionOf(answer));
+        return answer;
       },
       (error: unknown) => {
         if (error instanceof ApiError && error.status === 401 && error.code === "signed_out") {
@@ -58,7 +64,7 @@ export function openEarly(
       },
     ),
   );
-  const account = me.then((you) => (you ? apiFor(you.id) : null));
+  const account = me.then((you) => (you ? apiFor(selectionOf(you)) : null));
   let board = withBoard
     ? quiet(
         account.then((api) => {
@@ -73,16 +79,17 @@ export function openEarly(
       return api.tickets();
     }),
   );
-  let accepted: { id: string; at: number } | null = null;
+  let accepted: { id: string; key: string; at: number } | null = null;
   let dropped = false;
 
-  const fresh = (expectedUserId: string) =>
-    accepted?.id === expectedUserId && now() - accepted.at < FRESH_MS;
+  const fresh = (selection: AccountSelection) =>
+    accepted?.key === selectionKey(selection) && now() - accepted.at < FRESH_MS;
 
   return {
     me,
     accept: (you) => {
-      if (!dropped && sourceUserId === you.id) accepted ??= { id: you.id, at: now() };
+      if (!dropped && sourceKey === selectionKey(selectionOf(you)))
+        accepted ??= { id: you.me.id, key: selectionKey(selectionOf(you)), at: now() };
     },
     drop: () => {
       dropped = true;
@@ -90,8 +97,8 @@ export function openEarly(
       board = undefined;
       tickets = undefined;
     },
-    takeBoard: (expectedUserId) => {
-      if (!fresh(expectedUserId)) return undefined;
+    takeBoard: (selection) => {
+      if (!fresh(selection)) return undefined;
       const answer = board;
       board = undefined;
       const ownerId = accepted?.id;
@@ -100,8 +107,8 @@ export function openEarly(
         b.owner.id === ownerId ? b : Promise.reject(new Error("The early board is someone else's")),
       );
     },
-    takeTickets: (expectedUserId) => {
-      if (!fresh(expectedUserId)) return undefined;
+    takeTickets: (selection) => {
+      if (!fresh(selection)) return undefined;
       const answer = tickets;
       tickets = undefined;
       return answer;
@@ -117,7 +124,7 @@ let opening: EarlyOpening | null = null;
  */
 export function startEarlySession(
   session: SessionApi,
-  apiFor: (expectedUserId: string) => ApiClient,
+  apiFor: (selection: AccountSelection) => ApiClient,
   { opensOnBoard, search }: { opensOnBoard: boolean; search: string },
 ) {
   if (opening || new URLSearchParams(search).has("liff.state")) return;
@@ -133,17 +140,17 @@ export const earlySession = (): EarlySession | null => opening;
  */
 export function withEarlyAnswers(
   api: ApiClient,
-  expectedUserId: string,
+  selection: AccountSelection,
   early: () => EarlyOpening | null = () => opening,
 ): ApiClient {
   return {
     ...api,
     stickerBoard: (userId = "me") => {
-      const answer = userId === "me" ? early()?.takeBoard(expectedUserId) : undefined;
+      const answer = userId === "me" ? early()?.takeBoard(selection) : undefined;
       return answer ? answer.catch(() => api.stickerBoard(userId)) : api.stickerBoard(userId);
     },
     tickets: () => {
-      const answer = early()?.takeTickets(expectedUserId);
+      const answer = early()?.takeTickets(selection);
       return answer ? answer.catch(() => api.tickets()) : api.tickets();
     },
   };

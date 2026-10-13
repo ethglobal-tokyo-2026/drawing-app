@@ -1,4 +1,6 @@
 // @vitest-environment happy-dom
+import { requestSessionRestore, suspendSession } from "./sessionContext";
+import { sessionEnvelope, accountSelection } from "./sessionTestFixtures";
 import { act, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
@@ -9,7 +11,7 @@ import { startInLineLanguage } from "../i18n/pageLanguage";
 import { STILL_OPENING_MS } from "../line/GateParts";
 import type { LineClaims } from "../line/liff";
 import { ApiError } from "./apiClient";
-import type { Me } from "@drawing-app/api/client";
+import type { Me, SessionEnvelope } from "@drawing-app/api/client";
 import { openEarly, type EarlySession } from "./earlySession";
 import type { SessionApi } from "./httpApi";
 import { useMe, useSetMe } from "./meContext";
@@ -116,16 +118,18 @@ function render(
 }
 
 const session = (overrides: Partial<SessionApi>): SessionApi => ({
-  signIn: () => Promise.resolve({ me }),
+  signIn: () => Promise.resolve(sessionEnvelope(me)),
   me: () => Promise.reject(new ApiError(401, { error: "signed_out" })),
   setHandle: () => Promise.reject(new Error("not expected")),
   signOut: () => Promise.resolve(),
+  selectPerson: () => Promise.reject(new Error("not expected")),
+  privyJwt: () => Promise.reject(new Error("not expected")),
   ...overrides,
 });
 
 /** The session the cookie held as the app started: `you`, or none. */
 const earlyAs = (you: Me | null) => ({
-  me: Promise.resolve(you),
+  me: Promise.resolve(you ? sessionEnvelope(you) : null),
   accept: vi.fn<EarlySession["accept"]>(),
   drop: vi.fn<EarlySession["drop"]>(),
 });
@@ -135,8 +139,8 @@ function pendingSignIn(answer: Me) {
   let finish = () => {};
   const signIn = vi.fn(
     () =>
-      new Promise<{ me: Me }>((resolve) => {
-        finish = () => resolve({ me: answer });
+      new Promise<SessionEnvelope>((resolve) => {
+        finish = () => resolve(sessionEnvelope(answer));
       }),
   );
   return { signIn, finish: () => finish() };
@@ -160,7 +164,7 @@ describe("SessionGate", () => {
       warn: [["The account changed; reload to open the current session", accountChanged]],
     });
     const signIn = vi.fn<SessionApi["signIn"]>();
-    const host = render(session({ me: () => Promise.resolve({ me }), signIn }));
+    const host = render(session({ me: () => Promise.resolve(sessionEnvelope(me)), signIn }));
     await settle();
     act(() => reportSessionLost(accountChanged, me.id));
     await settle();
@@ -172,9 +176,14 @@ describe("SessionGate", () => {
   it("ignores Alice's late session errors after mounting Bob", async () => {
     expectDiagnostics({ warn: [] });
     const bob = { ...me, id: "bob", handle: "bob", lineUserId: "line-bob" };
-    const host = render(session({ me: () => Promise.resolve({ me: bob }) }), undefined, undefined, {
-      claims: { sub: "line-bob", name: "Alice" },
-    });
+    const host = render(
+      session({ me: () => Promise.resolve(sessionEnvelope(bob)) }),
+      undefined,
+      undefined,
+      {
+        claims: { sub: "line-bob", name: "Alice" },
+      },
+    );
     await settle();
     for (const error of [
       new ApiError(401, { error: "signed_out" }),
@@ -187,7 +196,7 @@ describe("SessionGate", () => {
   });
 
   it("resumes the matching server session without reading or exchanging an old LINE token", async () => {
-    const resume = vi.fn<SessionApi["me"]>().mockResolvedValue({ me });
+    const resume = vi.fn<SessionApi["me"]>().mockResolvedValue(sessionEnvelope(me));
     const signIn = vi.fn<SessionApi["signIn"]>();
     const accessToken = vi.fn(() => "expired-token");
     const host = render(session({ me: resume, signIn }), accessToken);
@@ -211,7 +220,7 @@ describe("SessionGate", () => {
         localStorage.clear();
         startInLineLanguage("en");
       });
-      const signIn = vi.fn(() => Promise.resolve({ me }));
+      const signIn = vi.fn(() => Promise.resolve(sessionEnvelope(me)));
       const host = render(session({ signIn }));
       expect(host.textContent).not.toContain("Board");
       await settle();
@@ -230,7 +239,7 @@ describe("SessionGate", () => {
       keepChosenLanguage(device);
       await inLanguage(device);
       onTestFinished(() => localStorage.clear());
-      const signIn = () => Promise.resolve({ me: { ...me, language: account } });
+      const signIn = () => Promise.resolve(sessionEnvelope({ ...me, language: account }));
       const host = render(session({ signIn }));
       await settle();
       expect(host.querySelector("p")?.lang).toBe(account);
@@ -246,7 +255,7 @@ describe("SessionGate", () => {
     const signIn = vi
       .fn<SessionApi["signIn"]>()
       .mockRejectedValueOnce(refusal)
-      .mockResolvedValueOnce({ me });
+      .mockResolvedValueOnce(sessionEnvelope(me));
     const host = render(session({ signIn }), () => "token", reconnect);
     await settle();
     expect(host.textContent).toContain("Couldn’t sign you in");
@@ -282,7 +291,7 @@ describe("SessionGate", () => {
     const resume = vi
       .fn<SessionApi["me"]>()
       .mockRejectedValueOnce(new ApiError(0, { error: "network" }))
-      .mockResolvedValueOnce({ me });
+      .mockResolvedValueOnce(sessionEnvelope(me));
     const signIn = vi.fn<SessionApi["signIn"]>();
     const reconnect = vi.fn<() => Promise<void>>().mockResolvedValue();
     const host = render(session({ me: resume, signIn }), () => "token", reconnect);
@@ -321,7 +330,9 @@ describe("SessionGate", () => {
     const host = render(
       session({
         me: () =>
-          Promise.resolve({ me: { ...me, handle: null, needsHandle: true, language: "ja" } }),
+          Promise.resolve(
+            sessionEnvelope({ ...me, handle: null, needsHandle: true, language: "ja" }),
+          ),
       }),
     );
     await settle();
@@ -331,7 +342,7 @@ describe("SessionGate", () => {
   });
 
   it("says why it can't sign in when LINE can't give a token, and never asks the server", async () => {
-    const signIn = vi.fn(() => Promise.resolve({ me }));
+    const signIn = vi.fn(() => Promise.resolve(sessionEnvelope(me)));
     const host = render(session({ signIn }), () => {
       throw new Error("LIFF has no access token for this login");
     });
@@ -345,10 +356,10 @@ describe("SessionGate", () => {
     const setHandle = vi
       .fn<SessionApi["setHandle"]>()
       .mockRejectedValueOnce(new ApiError(409, { error: "handle_taken" }))
-      .mockResolvedValueOnce({ me: { ...me, handle: "alice2" } });
+      .mockResolvedValueOnce(sessionEnvelope({ ...me, handle: "alice2" }));
     const host = render(
       session({
-        signIn: () => Promise.resolve({ me: { ...me, handle: null, needsHandle: true } }),
+        signIn: () => Promise.resolve(sessionEnvelope({ ...me, handle: null, needsHandle: true })),
         setHandle,
       }),
     );
@@ -359,7 +370,7 @@ describe("SessionGate", () => {
     type(input, "@alice");
     submit(host);
     await settle();
-    expect(setHandle).toHaveBeenLastCalledWith("alice", me.id);
+    expect(setHandle).toHaveBeenLastCalledWith("alice", accountSelection(me.id));
     expect(host.textContent).toContain("@alice is taken");
     expect(host.textContent).not.toContain("Board");
 
@@ -373,9 +384,9 @@ describe("SessionGate", () => {
     const host = render(
       session({
         signIn: () =>
-          Promise.resolve({
-            me: { ...me, handle: null, needsHandle: true, lineDisplayName: "Ali@ce" },
-          }),
+          Promise.resolve(
+            sessionEnvelope({ ...me, handle: null, needsHandle: true, lineDisplayName: "Ali@ce" }),
+          ),
       }),
     );
     await settle();
@@ -391,7 +402,7 @@ describe("SessionGate", () => {
     );
     const host = render(
       session({
-        signIn: () => Promise.resolve({ me: { ...me, handle: null, needsHandle: true } }),
+        signIn: () => Promise.resolve(sessionEnvelope({ ...me, handle: null, needsHandle: true })),
         setHandle,
       }),
     );
@@ -409,7 +420,7 @@ describe("SessionGate", () => {
     submit(host);
     await settle();
     expect(setHandle).toHaveBeenCalledOnce();
-    finish({ me: { ...me, handle: "alice2" } });
+    finish(sessionEnvelope({ ...me, handle: "alice2" }));
     await settle();
     expect(host.textContent).toContain("Board of @alice2");
   });
@@ -420,7 +431,7 @@ describe("SessionGate with the cookie from the last visit", () => {
     const resume = vi
       .fn<SessionApi["me"]>()
       .mockRejectedValueOnce(new ApiError(0, { error: "network" }))
-      .mockResolvedValueOnce({ me });
+      .mockResolvedValueOnce(sessionEnvelope(me));
     const signIn = vi
       .fn<SessionApi["signIn"]>()
       .mockRejectedValue(new ApiError(401, { error: "line_token_expired" }));
@@ -442,13 +453,13 @@ describe("SessionGate with the cookie from the last visit", () => {
   });
 
   it("opens as the cookie's person when LINE's user is theirs, without signing in again", async () => {
-    const signIn = vi.fn(() => Promise.resolve({ me }));
+    const signIn = vi.fn(() => Promise.resolve(sessionEnvelope(me)));
     const early = earlyAs(me);
     const host = render(session({ signIn }), undefined, undefined, { early });
     await settle();
     expect(host.textContent).toContain("Board of @alice");
     expect(signIn).not.toHaveBeenCalled();
-    expect(early.accept).toHaveBeenCalledWith(me);
+    expect(early.accept).toHaveBeenCalledWith(sessionEnvelope(me));
     expect(early.drop).not.toHaveBeenCalled();
   });
 
@@ -470,7 +481,7 @@ describe("SessionGate with the cookie from the last visit", () => {
   });
 
   it("signs in with LINE when the cookie holds no session", async () => {
-    const signIn = vi.fn(() => Promise.resolve({ me }));
+    const signIn = vi.fn(() => Promise.resolve(sessionEnvelope(me)));
     const early = earlyAs(null);
     const host = render(session({ signIn }), undefined, undefined, { early });
     await settle();
@@ -504,7 +515,7 @@ describe("SessionGate with the cookie from the last visit", () => {
     const { signIn, finish } = pendingSignIn({ ...unfinished, lineDisplayName: "Alice B" });
     const setHandle = vi
       .fn<SessionApi["setHandle"]>()
-      .mockResolvedValue({ me: { ...me, handle: "alice2" } });
+      .mockResolvedValue(sessionEnvelope({ ...me, handle: "alice2" }));
     const host = render(session({ signIn, setHandle }), undefined, undefined, {
       early: earlyAs(unfinished),
       claims: { ...ALICE_CLAIMS, name: "Alice B" },
@@ -545,8 +556,8 @@ describe("SessionGate when a request finds the session gone", () => {
   it("keeps Reload visible after duplicate expiry notifications without checking Me or reconnecting", async () => {
     const gone = new ApiError(401, { error: "signed_out" });
     expectDiagnostics({ warn: [["The session ended; reload to continue", gone]] });
-    const resume = vi.fn<SessionApi["me"]>().mockResolvedValue({ me });
-    const signIn = vi.fn<SessionApi["signIn"]>().mockResolvedValue({ me });
+    const resume = vi.fn<SessionApi["me"]>().mockResolvedValue(sessionEnvelope(me));
+    const signIn = vi.fn<SessionApi["signIn"]>().mockResolvedValue(sessionEnvelope(me));
     const reconnect = vi.fn<() => Promise<void>>().mockResolvedValue();
     const host = render(session({ me: resume, signIn }), undefined, reconnect);
     await settle();
@@ -589,7 +600,10 @@ describe("SessionGate when a request finds the session gone", () => {
       ),
     });
     await settle();
-    expect(signIn).toHaveBeenCalledExactlyOnceWith({ accessToken: "token", language: "en" }, me.id);
+    expect(signIn).toHaveBeenCalledExactlyOnceWith(
+      { accessToken: "token", language: "en" },
+      accountSelection(me.id),
+    );
     act(() => host.querySelector("button")?.click());
     act(() => reportSessionLost(gone, me.id));
     await settle();
@@ -626,4 +640,61 @@ describe("SessionGate's waiting and failure screens", () => {
       "GET /api/me got no answer",
     );
   });
+});
+
+it("accepts selected Hana when LIFF matches authenticated BIGWHEEL", async () => {
+  const hana = {
+    ...me,
+    id: "hana",
+    lineUserId: "dev-video-hana",
+    lineDisplayName: "Hana",
+    handle: "hana",
+  };
+  const envelope = sessionEnvelope(hana, {
+    authenticated: me,
+    selectionVersion: "selected-hana",
+    expectedPrivySubject: "dev-video-hana",
+    personSwitchMode: "verify",
+  });
+  const signIn = vi.fn<SessionApi["signIn"]>();
+  const host = render(session({ me: () => Promise.resolve(envelope), signIn }));
+  await settle();
+  expect(host.textContent).toContain("Board of @hana");
+  expect(signIn).not.toHaveBeenCalled();
+});
+it("rejects selected Hana when LIFF does not match the authenticated principal", async () => {
+  const envelope = sessionEnvelope(
+    { ...me, id: "hana", handle: "hana" },
+    { authenticated: { ...me, lineUserId: "different-principal" } },
+  );
+  const host = render(session({ me: () => Promise.resolve(envelope) }));
+  await settle();
+  expect(host.textContent).not.toContain("Board of @hana");
+});
+
+it("restores a validated same-version session without dropping local save failures", async () => {
+  let mounts = 0;
+  function PendingSave() {
+    const [failure, setFailure] = useState(() => {
+      mounts += 1;
+      return "unsaved position";
+    });
+    return <button onClick={() => setFailure("save failed; position retained")}>{failure}</button>;
+  }
+  const envelope = sessionEnvelope(me);
+  const host = render(session({ me: () => Promise.resolve(envelope) }), undefined, undefined, {
+    app: <PendingSave />,
+  });
+  await settle();
+  act(() => host.querySelector("button")?.click());
+  act(() => {
+    suspendSession();
+    requestSessionRestore({ ...envelope });
+  });
+  await settle();
+  expect(host.textContent).toContain("save failed; position retained");
+  expect(mounts).toBe(1);
+  expect(() => requestSessionRestore({ ...envelope, selectionVersion: "different" })).toThrow(
+    "session_account_changed",
+  );
 });

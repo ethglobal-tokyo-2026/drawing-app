@@ -12,6 +12,28 @@ const wrappable = (code: string) => code.replaceAll("_", `_${ZERO_WIDTH_SPACE}`)
 /** What an error says to people, in the app's language. A code the catalog lacks is named in it. */
 export const errorMessage = (error: ApiError): string => {
   const { code } = error;
+  if (code === "person_switch_busy" && error.pendingOwnership) {
+    const pending = error.pendingOwnership;
+    const operation =
+      pending.kind === "deposit" || pending.kind === "delivery"
+        ? "giving"
+        : pending.kind === "claim"
+          ? "receiving"
+          : pending.kind === "take_out"
+            ? "takingOut"
+            : pending.kind === "return"
+              ? "returning"
+              : pending.kind === "mint"
+                ? "sealing"
+                : "buyingTickets";
+    return i18next.t(($) => $.personSwitch.ownershipPending, {
+      operation: i18next.t(($) => $.personSwitch.operations[operation]),
+      sticker:
+        pending.stickerNo === null
+          ? ""
+          : i18next.t(($) => $.personSwitch.affectedSticker, { no: pending.stickerNo }),
+    });
+  }
   return isKnown(code)
     ? i18next.t(($) => $.errors[code])
     : i18next.t(($) => $.errors.unknown, { code: wrappable(code) });

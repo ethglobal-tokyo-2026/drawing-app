@@ -1,4 +1,11 @@
-import type { AppType, ErrorBody, Me } from "@drawing-app/api/client";
+import type {
+  AccountSelection,
+  AppType,
+  ErrorBody,
+  Me,
+  SessionEnvelope,
+  PrivyJwtResult,
+} from "@drawing-app/api/client";
 import { hc, type InferRequestType } from "hono/client";
 import { messageOf } from "../i18n/errorMessage";
 import { ApiError, type ApiClient, type GiftOpening } from "./apiClient";
@@ -27,7 +34,8 @@ const urlOf = (input: RequestInfo | URL) =>
  * The typed client over the REST API on this origin, so the session cookie goes along. A request
  * that gets no answer, or none in time, is an ApiError with status 0.
  */
-export function createServerClient(fetchImpl: typeof fetch = fetch, expectedUserId?: string) {
+export function createServerClient(fetchImpl: typeof fetch = fetch, selection?: AccountSelection) {
+  const expected = selection ? { ...selection } : undefined;
   return hc<AppType>("/", {
     fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
       const diagnostic = startNftRequest(
@@ -37,7 +45,10 @@ export function createServerClient(fetchImpl: typeof fetch = fetch, expectedUser
       try {
         const headers = new Headers(input instanceof Request ? input.headers : undefined);
         new Headers(init?.headers).forEach((value, key) => headers.set(key, value));
-        if (expectedUserId !== undefined) headers.set("x-croquis-user-id", expectedUserId);
+        if (expected?.selectionVersion === null) headers.delete("x-croquis-selection-version");
+        Object.entries(selectionHeaders(expected)).forEach(([key, value]) =>
+          headers.set(key, value),
+        );
         const response = await fetchImpl(input, {
           ...init,
           headers,
@@ -68,6 +79,16 @@ export function createServerClient(fetchImpl: typeof fetch = fetch, expectedUser
       }
     },
   }).api;
+}
+
+function selectionHeaders(selection?: AccountSelection): Record<string, string> {
+  if (!selection) return {};
+  return {
+    "x-croquis-user-id": selection.userId,
+    ...(selection.selectionVersion === null
+      ? {}
+      : { "x-croquis-selection-version": selection.selectionVersion }),
+  };
 }
 
 type ServerClient = ReturnType<typeof createServerClient>;
@@ -121,49 +142,71 @@ export interface SessionApi {
   /** POST /api/session: LINE's ID token, and LINE's language, which a new account starts in. */
   signIn: (
     request: InferRequestType<ServerClient["session"]["$post"]>["json"],
-    expectedUserId?: string,
-  ) => Promise<{ me: Me }>;
+    expected?: AccountSelection,
+  ) => Promise<SessionEnvelope>;
   /** GET /api/me; only resume a session belonging to this LINE user when supplied. */
-  me: (lineUserId?: string, expectedUserId?: string) => Promise<{ me: Me }>;
+  me: (lineUserId?: string, expected?: AccountSelection) => Promise<SessionEnvelope>;
   /** POST /api/me/handle */
-  setHandle: (handle: string, expectedUserId: string) => Promise<{ me: Me }>;
+  setHandle: (handle: string, selection: AccountSelection) => Promise<{ me: Me }>;
   /** DELETE /api/session: ends the session, so the cookie is gone. */
-  signOut: (expectedUserId: string) => Promise<void>;
+  signOut: (selection: AccountSelection) => Promise<void>;
+  selectPerson: (userId: string, selection: AccountSelection) => Promise<SessionEnvelope>;
+  privyJwt: (
+    accessToken: string,
+    selection: AccountSelection,
+    signal: AbortSignal,
+  ) => Promise<PrivyJwtResult>;
 }
 
 export function createSessionApi(api: ServerClient = createServerClient()): SessionApi {
   return {
-    signIn: async (request, expectedUserId) => {
+    selectPerson: async (userId, selection) => {
+      const response = await api.session.person.$post(
+        { json: { userId } },
+        { headers: selectionHeaders(selection) },
+      );
+      if (!response.ok) throw await refusal(response, "POST /api/session/person");
+      return response.json();
+    },
+    privyJwt: async (accessToken, selection, signal) => {
+      const response = await api.session["privy-jwt"].$post(
+        { json: { accessToken } },
+        { headers: selectionHeaders(selection), init: { signal } },
+      );
+      if (!response.ok) throw await refusal(response, "POST /api/session/privy-jwt");
+      return response.json();
+    },
+    signIn: async (request, expected) => {
       const response = await api.session.$post(
         { json: request },
         {
-          headers: expectedUserId === undefined ? {} : { "x-croquis-user-id": expectedUserId },
+          headers: selectionHeaders(expected),
         },
       );
       if (!response.ok) throw await refusal(response, "POST /api/session");
       return response.json();
     },
-    signOut: async (expectedUserId) => {
+    signOut: async (selection) => {
       const response = await api.session.$delete(undefined, {
-        headers: { "x-croquis-user-id": expectedUserId },
+        headers: selectionHeaders(selection),
       });
       if (!response.ok) throw await refusal(response, "DELETE /api/session");
     },
-    me: async (lineUserId, expectedUserId) => {
+    me: async (lineUserId, expected) => {
       const response = await api.me.$get(
         { header: lineUserId ? { "x-line-user-id": lineUserId } : {} },
         {
           init: { cache: "no-store" },
-          headers: expectedUserId === undefined ? {} : { "x-croquis-user-id": expectedUserId },
+          headers: selectionHeaders(expected),
         },
       );
       if (!response.ok) throw await refusal(response, "GET /api/me");
       return response.json();
     },
-    setHandle: async (handle, expectedUserId) => {
+    setHandle: async (handle, selection) => {
       const response = await api.me.handle.$post(
         { json: { handle } },
-        { headers: { "x-croquis-user-id": expectedUserId } },
+        { headers: selectionHeaders(selection) },
       );
       if (!response.ok) throw await refusal(response, "POST /api/me/handle");
       return response.json();
@@ -341,6 +384,19 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       );
       if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/deposit`);
       return (await response.json()).gift;
+    },
+    deliverPersonGift: async (giftId, attemptId) => {
+      const response = await api.gifts[":giftId"]["deliver-person"].$post({
+        ...gift(giftId),
+        json: { attemptId },
+      });
+      if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/deliver-person`);
+      return (await response.json()).gift;
+    },
+    giftDelivery: async (giftId) => {
+      const response = await api.gifts[":giftId"].delivery.$get(gift(giftId));
+      if (!response.ok) throw await refusal(response, `GET /api/gifts/${giftId}/delivery`);
+      return response.json();
     },
     beginMessageAttempt: async (giftId, attemptId) => {
       const response = await api.gifts[":giftId"]["message-attempt"].$post({

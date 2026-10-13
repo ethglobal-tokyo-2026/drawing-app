@@ -19,16 +19,16 @@ function signInError({ details }: AuthError): Error {
   );
 }
 
-/** line-auth's LINE verifier, the auth server's too, with failures as sign-in reads them. */
+/** The shared LINE verifier, with failures as sign-in and protected issuance read them. */
 export function createLineVerifier(
   channelId: string,
   fetchImpl: typeof fetch = fetch,
 ): LineVerifier {
   const verify = createLineAccessTokenVerifier({ channelId, fetchImpl });
   return {
-    verifyAccessToken: async (accessToken) => {
+    verifyAccessToken: async (accessToken, signal) => {
       try {
-        return await verify(accessToken);
+        return await verify(accessToken, signal);
       } catch (error) {
         throw error instanceof AuthError ? signInError(error) : error;
       }

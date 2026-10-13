@@ -161,7 +161,12 @@ export function midnightMoves(ids: ChatMenuIds) {
 }
 
 /** Why nothing was linked: no Messaging API channel, dev sign-in, or no menu for the language. */
-const chatMenuOffReasons = ["not_configured", "dev_sign_in", "no_menu"] as const;
+const chatMenuOffReasons = [
+  "person_unavailable",
+  "not_configured",
+  "dev_sign_in",
+  "no_menu",
+] as const;
 
 /** POST /api/line-menu's answer: the chat menu LINE shows you now. */
 export const chatMenuLinkSchema = z.discriminatedUnion("status", [

@@ -119,6 +119,7 @@ export const line = {
       /** Why the server linked nothing. */
       off: {
         not_configured: { en: "Off: the server has no Messaging API channel" },
+        person_unavailable: { en: "Unavailable for this person" },
         dev_sign_in: { en: "Off under dev sign-in" },
         no_menu: { en: "Off: no chat menu in this language yet" },
       },

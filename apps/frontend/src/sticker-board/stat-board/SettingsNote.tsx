@@ -16,6 +16,7 @@ import { forgetKeptBoard } from "../lastBoard";
 import { ChoiceRow } from "./ChoiceRow";
 import { DrawingSettings } from "./DrawingSettings";
 import { useSettingSaves, type Failure, type Setting, type Shown } from "./settingSaves";
+import { usePersonSwitch } from "../../api/PersonSwitchProvider";
 import { statsClearPeek } from "./settingsPeek";
 import "./settings-note.css";
 
@@ -89,12 +90,14 @@ export function SettingsNote() {
   const note = useRef<HTMLElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
   const { statuses, save } = useSettingSaves();
+  const { pending } = usePersonSwitch();
   // Null until "?" is first tapped: only then does the help sheet's code load. It stays mounted after.
   const [helpOpen, setHelpOpen] = useState<boolean | null>(null);
   const { refresh: refreshTickets } = useTickets();
   const reveal = usePeek(note, title);
 
   const choose = (choice: Language) =>
+    !pending &&
     save(
       "language",
       { language: choice },
@@ -114,6 +117,7 @@ export function SettingsNote() {
     );
 
   const switchNsfw = (nsfwOptIn: boolean) =>
+    !pending &&
     save(
       "nsfw",
       { nsfwOptIn },
@@ -126,6 +130,7 @@ export function SettingsNote() {
     );
 
   const switchKyotoSeika = (kyotoSeikaPractice: boolean) =>
+    !pending &&
     save(
       "kyotoSeika",
       { kyotoSeikaPractice },
@@ -184,7 +189,7 @@ export function SettingsNote() {
             // A language's own name is in that language, for screen readers too.
             langOf={(choice) => choice}
             onChoose={choose}
-            busy={saving("language")}
+            busy={pending || saving("language")}
           />
           {problem("language")}
         </div>
@@ -193,7 +198,7 @@ export function SettingsNote() {
             <span>{t(($) => $.stickerBoard.settings.nsfw.show)}</span>
             <Switch
               checked={shown.nsfwOptIn}
-              aria-disabled={saving("nsfw") || undefined}
+              aria-disabled={pending || saving("nsfw") || undefined}
               onChange={switchNsfw}
             />
           </label>
@@ -231,7 +236,7 @@ export function SettingsNote() {
               id={`${id}-kyoto-seika`}
               checked={shown.kyotoSeikaPractice}
               aria-label={t(($) => $.stickerBoard.settings.kyotoSeika.spokenName)}
-              aria-disabled={saving("kyotoSeika") || undefined}
+              aria-disabled={pending || saving("kyotoSeika") || undefined}
               onChange={switchKyotoSeika}
             />
           </div>

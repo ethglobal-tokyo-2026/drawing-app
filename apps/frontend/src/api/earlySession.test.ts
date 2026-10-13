@@ -1,3 +1,4 @@
+import { sessionEnvelope, accountSelection } from "./sessionTestFixtures";
 import type { Me, StickerBoard } from "@drawing-app/api/client";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "./apiClient";
@@ -14,9 +15,13 @@ const board = (ownerId: string): StickerBoard => ({
 const cookieFor = (you: Me | null): SessionApi => ({
   signIn: () => Promise.reject(new Error("not expected")),
   me: () =>
-    you ? Promise.resolve({ me: you }) : Promise.reject(new ApiError(401, { error: "signed_out" })),
+    you
+      ? Promise.resolve(sessionEnvelope(you))
+      : Promise.reject(new ApiError(401, { error: "signed_out" })),
   setHandle: () => Promise.reject(new Error("not expected")),
   signOut: () => Promise.resolve(),
+  selectPerson: () => Promise.reject(new Error("not expected")),
+  privyJwt: () => Promise.reject(new Error("not expected")),
 });
 
 /** An early opening on a clock the test moves, with its server asked through spies. */
@@ -41,20 +46,20 @@ describe("the early session", () => {
     const { early } = opening();
     await early.me;
     await early.me;
-    early.accept(TEST_ME);
-    expect(early.takeBoard("bob")).toBeUndefined();
-    expect(early.takeTickets("bob")).toBeUndefined();
-    await expect(early.takeTickets(TEST_ME.id)).resolves.toEqual(FRESH_TICKETS);
+    early.accept(sessionEnvelope(TEST_ME));
+    expect(early.takeBoard(accountSelection("bob"))).toBeUndefined();
+    expect(early.takeTickets(accountSelection("bob"))).toBeUndefined();
+    await expect(early.takeTickets(accountSelection(TEST_ME.id))).resolves.toEqual(FRESH_TICKETS);
     const wrong = opening().early;
     await wrong.me;
-    wrong.accept({ ...TEST_ME, id: "bob" });
-    expect(wrong.takeTickets("bob")).toBeUndefined();
+    wrong.accept(sessionEnvelope({ ...TEST_ME, id: "bob" }));
+    expect(wrong.takeTickets(accountSelection("bob"))).toBeUndefined();
   });
   it("asks Me first, then the account’s tickets and board", async () => {
     const { early, server } = opening();
     expect(server.stickerBoard).not.toHaveBeenCalled();
     expect(server.tickets).not.toHaveBeenCalled();
-    await expect(early.me).resolves.toEqual(TEST_ME);
+    await expect(early.me).resolves.toEqual(sessionEnvelope(TEST_ME));
     await Promise.resolve();
     expect(server.stickerBoard).toHaveBeenCalledOnce();
     expect(server.tickets).toHaveBeenCalledOnce();
@@ -77,43 +82,43 @@ describe("the early session", () => {
 
   it("gives nothing before SessionGate accepts it", () => {
     const { early } = opening();
-    expect(early.takeBoard(TEST_ME.id)).toBeUndefined();
-    expect(early.takeTickets(TEST_ME.id)).toBeUndefined();
+    expect(early.takeBoard(accountSelection(TEST_ME.id))).toBeUndefined();
+    expect(early.takeTickets(accountSelection(TEST_ME.id))).toBeUndefined();
   });
 
   it("gives each accepted answer once", async () => {
     const { early } = opening();
     await early.me;
-    early.accept(TEST_ME);
-    await expect(early.takeBoard(TEST_ME.id)).resolves.toEqual(board(TEST_ME.id));
-    await expect(early.takeTickets(TEST_ME.id)).resolves.toEqual(FRESH_TICKETS);
-    expect(early.takeBoard(TEST_ME.id)).toBeUndefined();
-    expect(early.takeTickets(TEST_ME.id)).toBeUndefined();
+    early.accept(sessionEnvelope(TEST_ME));
+    await expect(early.takeBoard(accountSelection(TEST_ME.id))).resolves.toEqual(board(TEST_ME.id));
+    await expect(early.takeTickets(accountSelection(TEST_ME.id))).resolves.toEqual(FRESH_TICKETS);
+    expect(early.takeBoard(accountSelection(TEST_ME.id))).toBeUndefined();
+    expect(early.takeTickets(accountSelection(TEST_ME.id))).toBeUndefined();
   });
 
   it("gives nothing once it's stale", async () => {
     const { early, later } = opening();
     await early.me;
-    early.accept(TEST_ME);
+    early.accept(sessionEnvelope(TEST_ME));
     later(5_000);
-    expect(early.takeBoard(TEST_ME.id)).toBeUndefined();
-    expect(early.takeTickets(TEST_ME.id)).toBeUndefined();
+    expect(early.takeBoard(accountSelection(TEST_ME.id))).toBeUndefined();
+    expect(early.takeTickets(accountSelection(TEST_ME.id))).toBeUndefined();
   });
 
   it("gives nothing once dropped, even if accepted after", async () => {
     const { early } = opening();
     early.drop();
     await early.me;
-    early.accept(TEST_ME);
-    expect(early.takeBoard(TEST_ME.id)).toBeUndefined();
-    expect(early.takeTickets(TEST_ME.id)).toBeUndefined();
+    early.accept(sessionEnvelope(TEST_ME));
+    expect(early.takeBoard(accountSelection(TEST_ME.id))).toBeUndefined();
+    expect(early.takeTickets(accountSelection(TEST_ME.id))).toBeUndefined();
   });
 
   it("refuses a board that isn't the accepted person's", async () => {
     const { early } = opening();
     await early.me;
-    early.accept({ ...TEST_ME, id: "someone-else" });
-    expect(early.takeBoard("someone-else")).toBeUndefined();
+    early.accept(sessionEnvelope({ ...TEST_ME, id: "someone-else" }));
+    expect(early.takeBoard(accountSelection("someone-else"))).toBeUndefined();
   });
 });
 
@@ -121,8 +126,8 @@ describe("the client with early answers", () => {
   it("answers your first board and tickets from the early session, and asks the server after", async () => {
     const { early, server } = opening();
     await early.me;
-    early.accept(TEST_ME);
-    const client = withEarlyAnswers(server, TEST_ME.id, () => early);
+    early.accept(sessionEnvelope(TEST_ME));
+    const client = withEarlyAnswers(server, accountSelection(TEST_ME.id), () => early);
     await client.stickerBoard();
     await client.tickets();
     expect(server.stickerBoard).toHaveBeenCalledOnce();
@@ -136,8 +141,8 @@ describe("the client with early answers", () => {
   it("asks the server for someone else's board, and for a board that isn't yours", async () => {
     const { early, server } = opening();
     await early.me;
-    early.accept({ ...TEST_ME, id: "someone-else" });
-    const client = withEarlyAnswers(server, TEST_ME.id, () => early);
+    early.accept(sessionEnvelope({ ...TEST_ME, id: "someone-else" }));
+    const client = withEarlyAnswers(server, accountSelection(TEST_ME.id), () => early);
     await client.stickerBoard("u2");
     expect(server.stickerBoard).toHaveBeenCalledWith("u2");
     await expect(client.stickerBoard()).resolves.toEqual(board(TEST_ME.id));
@@ -153,15 +158,23 @@ describe("the client with early answers", () => {
     });
     const early = openEarly(cookieFor(TEST_ME), () => server, { board: true });
     await early.me;
-    early.accept(TEST_ME);
-    const client = withEarlyAnswers(server, TEST_ME.id, () => early);
+    early.accept(sessionEnvelope(TEST_ME));
+    const client = withEarlyAnswers(server, accountSelection(TEST_ME.id), () => early);
     await expect(client.stickerBoard()).resolves.toEqual(board(TEST_ME.id));
     expect(server.stickerBoard).toHaveBeenCalledTimes(2);
   });
 
   it("asks the server when there's no early session", async () => {
     const server = emptyApi({ tickets: vi.fn(() => Promise.resolve(FRESH_TICKETS)) });
-    await withEarlyAnswers(server, TEST_ME.id, () => null).tickets();
+    await withEarlyAnswers(server, accountSelection(TEST_ME.id), () => null).tickets();
     expect(server.tickets).toHaveBeenCalledOnce();
   });
+});
+
+it("does not reuse early boards or tickets for a later version of the same account", async () => {
+  const { early } = opening();
+  await early.me;
+  early.accept(sessionEnvelope(TEST_ME));
+  expect(early.takeBoard(accountSelection(TEST_ME.id, "new"))).toBeUndefined();
+  expect(early.takeTickets(accountSelection(TEST_ME.id, "new"))).toBeUndefined();
 });

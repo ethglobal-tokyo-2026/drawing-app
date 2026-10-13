@@ -78,6 +78,10 @@ export const gifts = sqliteTable(
      */
     pushedToGiverAt: integer("pushed_to_giver_at", { mode: "timestamp_ms" }),
     ...timestamps(),
+    /** Chosen by Packaging; token-first recipient attribution never changes delivery. */
+    delivery: text("delivery", { enum: ["line", "person"] })
+      .notNull()
+      .default("line"),
   },
   (t) => [
     // One gift per sticker at a time: while it's in the bag or sent, and while the escrow still holds
@@ -132,5 +136,6 @@ export const gifts = sqliteTable(
     check("gifts_not_for_self", sql`${t.forUserId} is null or ${t.forUserId} <> ${t.giverId}`),
     check("gifts_expiry", sql`${t.expiresAt} > ${t.createdAt}`),
     check("gifts_pushed", sql`${t.pushedToGiverAt} is null or ${t.receivedAt} is not null`),
+    check("gifts_delivery", oneOf(t.delivery, ["line", "person"])),
   ],
 );

@@ -1,30 +1,65 @@
+import { usePrivy } from "@privy-io/react-auth";
 import { useCreateWallet } from "@privy-io/react-auth/extended-chains";
-import { useEffect } from "react";
-import { messageOf } from "../i18n/errorMessage";
-import { usePrivyStatus } from "./privy";
+import { useEffect, useRef } from "react";
+import { currentSelection, isAccountSelectionCurrent, selectionKey } from "../api/sessionContext";
+import { i18next } from "../i18n/i18n";
+import { privySuiWallet, usePrivyStatus } from "./privy";
+import { matchesPrivyAccount, matchesPrivySubject, usePrivyAccount } from "./privyAccount";
 import { setSuiWalletFailure, useSuiWalletAttempt } from "./suiWallet";
 
-// The attempt last asked for, so a refusal waits for a fresh try instead of repeating with each sign-in.
-let askedFor: number | null = null;
-
-/**
- * Makes the person's Sui wallet once Privy has signed them in, since Privy's make-a-wallet-at-sign-in
- * setting covers only Ethereum and Solana. After a refusal, it asks again only when something that
- * needs the wallet asks for its fresh try (askForSuiWalletAgain).
- */
+/** Makes only the selected subject's missing Sui wallet; a failed attempt waits for an explicit retry. */
 export function MakeSuiWallet() {
-  const privy = usePrivyStatus();
+  const account = usePrivyAccount();
+  const { ready, authenticated, user } = usePrivy();
+  const status = usePrivyStatus();
   const attempt = useSuiWalletAttempt();
-  const { createWallet } = useCreateWallet();
-  const needed = privy.state === "signed-in" && !privy.suiWallet;
+  const askedFor = useRef<string | null>(null);
+  const mounted = useRef(true);
   useEffect(() => {
-    if (!needed || askedFor === attempt) return;
-    askedFor = attempt;
-    // Privy then refreshes the user, which brings the new address to the status.
-    createWallet({ chainType: "sui" }).catch((error: unknown) => {
-      console.error("Privy couldn't make the Sui wallet", error);
-      setSuiWalletFailure(messageOf(error));
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const { createWallet } = useCreateWallet();
+  useEffect(() => {
+    const key = `${selectionKey(account)}:${attempt}`;
+    if (
+      !ready ||
+      !authenticated ||
+      !matchesPrivySubject(user, account.expectedSubject) ||
+      privySuiWallet(user) ||
+      status.state === "failed" ||
+      !isAccountSelectionCurrent(account) ||
+      askedFor.current === key
+    )
+      return;
+    askedFor.current = key;
+    const lifetime = currentSelection();
+    const current = () =>
+      lifetime === currentSelection() &&
+      mounted.current &&
+      isAccountSelectionCurrent(account) &&
+      askedFor.current === key;
+    let timer: ReturnType<typeof setTimeout>;
+    // Match the existing cold wallet-readiness deadline in waitForPrivy.
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Privy Sui wallet creation timed out")), 30_000);
     });
-  }, [needed, attempt, createWallet]);
+    void Promise.race([createWallet({ chainType: "sui" }), deadline])
+      .then((result) => {
+        if (current() && !matchesPrivyAccount(result.user, account)) {
+          setSuiWalletFailure(i18next.t(($) => $.identity.selection.walletMismatch));
+        }
+      })
+      .catch((error: unknown) => {
+        if (!current()) return;
+        console.error("Privy couldn't make the selected Sui wallet", {
+          errorName: error instanceof Error ? error.name : "UnknownError",
+        });
+        setSuiWalletFailure(i18next.t(($) => $.identity.selection.walletFailed));
+      })
+      .finally(() => clearTimeout(timer));
+  }, [account, ready, authenticated, user, status.state, attempt, createWallet]);
   return null;
 }

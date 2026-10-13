@@ -17,6 +17,7 @@ import { forgetsSoFar, keepBoard, keptBoardFor, readKeptBoardAgain } from "../la
 import "../../kyoto-seika/KyotoSeikaHelp";
 import { SettingsNote } from "./SettingsNote";
 import { statsClearPeek } from "./settingsPeek";
+import * as personSwitch from "../../api/PersonSwitchProvider";
 
 /** A language choice's name, as the note shows it in the app's language now. */
 const named = (language: Language) =>
@@ -49,6 +50,22 @@ const render = (setLanguageChoice: ApiClient["setLanguageChoice"]) =>
 
 const saving = () =>
   vi.fn<ApiClient["setLanguageChoice"]>((language) => Promise.resolve({ ...TEST_ME, language }));
+
+it("disables account setting changes while a person switch is pending", async () => {
+  vi.spyOn(personSwitch, "usePersonSwitch").mockReturnValue({
+    pending: true,
+    error: null,
+    request: async () => {},
+  });
+  const setNsfwOptIn = vi.fn<ApiClient["setNsfwOptIn"]>().mockResolvedValue(TEST_ME);
+  const setLanguageChoice = saving();
+  const host = renderNote({ setNsfwOptIn, setLanguageChoice });
+  await choose(host, named("ja"));
+  await flip(host);
+  expect(setNsfwOptIn).not.toHaveBeenCalled();
+  expect(setLanguageChoice).not.toHaveBeenCalled();
+  expect(switchOf(host).getAttribute("aria-disabled")).toBe("true");
+});
 
 /** The language's choices, a radio group. */
 const languages = (host: HTMLElement) => {

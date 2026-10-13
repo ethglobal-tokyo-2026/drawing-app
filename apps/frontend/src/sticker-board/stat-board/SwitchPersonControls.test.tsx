@@ -7,6 +7,10 @@ import { stickerBoard } from "../../i18n/strings/stickerBoard";
 import { mockPerson } from "../../line/liff";
 import { buttonNamed, renderInHost, type HostView } from "../../ui/testing";
 import { SwitchPersonControls } from "./SwitchPersonControls";
+import { LivePersonSwitchControls } from "./SwitchPersonControls";
+import { SessionEnvelopeContext } from "../../api/sessionContext";
+import { TEST_ME, TEST_OWNER } from "../../api/testing";
+import type { SessionEnvelope } from "@drawing-app/api/client";
 
 // LIFF Mock signs the tab in here even where a real-LINE .env switches it off.
 vi.mock("../../line/liff", async (importOriginal) => ({
@@ -39,6 +43,36 @@ afterEach(() => {
 });
 
 describe("SwitchPersonControls", () => {
+  it("exposes live selections only from server authorization and preserves BIGWHEEL", () => {
+    const session: SessionEnvelope = {
+      me: { ...TEST_ME, id: "hana" },
+      authenticated: { ...TEST_ME, id: "bigwheel" },
+      allowedSelections: [
+        { ...TEST_OWNER, id: "bigwheel", lineDisplayName: "BIGWHEEL" },
+        { ...TEST_OWNER, id: "hana", lineDisplayName: "Hana" },
+      ],
+      selectionVersion: "second",
+      expectedPrivySubject: "hana",
+      expectedSuiAddress: null,
+      personSwitchMode: "live",
+    };
+    view.rerender(
+      <SessionEnvelopeContext
+        value={{ ...session, personSwitchMode: "off", allowedSelections: [] }}
+      >
+        <LivePersonSwitchControls />
+      </SessionEnvelopeContext>,
+    );
+    expect(view.host.querySelector("button")).toBeNull();
+    view.rerender(
+      <SessionEnvelopeContext value={session}>
+        <LivePersonSwitchControls />
+      </SessionEnvelopeContext>,
+    );
+    expect(view.host.querySelector("button")?.textContent).toContain("BIGWHEEL");
+    expect(view.host.textContent).not.toContain("demo");
+  });
+
   it("offers each of the demo's people but the one signed in", () => {
     render("alice, Bob ,carol", "bob");
     expect(buttons().map((b) => b.textContent)).toEqual([switchTo("Alice"), switchTo("Carol")]);

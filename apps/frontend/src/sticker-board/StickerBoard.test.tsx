@@ -14,6 +14,9 @@ import { boardSticker, gift, people, sticker, trailEntry } from "../api/testFixt
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { ApiProvider } from "../api/ApiProvider";
+import { SessionEnvelopeContext } from "../api/sessionContext";
+import { sessionEnvelope } from "../api/sessionTestFixtures";
+import * as personSwitch from "../api/PersonSwitchProvider";
 import { MeContext } from "../api/meContext";
 import { TicketsProvider } from "../tickets/TicketsProvider";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
@@ -65,14 +68,35 @@ vi.mock("../line/LineDetails", () => ({ LineDetails: () => null }));
 // Giving itself isn't tested here: it closes, sent or not, at a tap, from a board that can give.
 vi.mock("../giving/useGiftSender", () => ({ useGiftSender: () => ({}) }));
 vi.mock("../giving/Giving", () => ({
-  Giving: ({ onClose }: { onClose: (sent: boolean) => void }) => (
+  Giving: ({
+    onClose,
+    forUserId,
+    onSwitchRecipient,
+  }: {
+    onClose: (sent: boolean) => void;
+    forUserId?: string;
+    onSwitchRecipient?: (userId: string, giftId: string) => void;
+  }) => (
     <>
-      <button type="button" className="test-gift-sent" onClick={() => onClose(true)}>
+      <button
+        type="button"
+        className="test-gift-sent"
+        data-for-user-id={forUserId}
+        onClick={() => onClose(true)}
+      >
         Sent
       </button>
       <button type="button" className="test-gift-unsent" onClick={() => onClose(false)}>
         Not sent
       </button>
+      {onSwitchRecipient && (
+        <button
+          className="test-gift-recipient"
+          onClick={() => onSwitchRecipient("recipient", "gift-42")}
+        >
+          Recipient
+        </button>
+      )}
     </>
   ),
 }));
@@ -102,6 +126,7 @@ afterEach(async () => {
 
 beforeEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
   forgetNoticedHere();
   readKeptBoardAgain();
   forgetBoardComplete();
@@ -347,6 +372,8 @@ describe("StickerBoard's check for gratitude to send", () => {
   });
 
   it("says so beside a spot that didn't save", async () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(651);
     vi.spyOn(console, "error").mockImplementation(() => {});
     // Received: the board gives it a spot, which doesn't save.
     const a = boardSticker({ placement: null });
@@ -479,6 +506,8 @@ describe("StickerBoard's gifts for you", () => {
   });
 
   it("shows incoming-gift, ticket, and placement failures together", async () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(651);
     vi.spyOn(console, "error").mockImplementation(() => {});
     const tickets = vi.fn<ApiClient["tickets"]>().mockRejectedValue(offline());
     const giftsForYou = vi.fn<ApiClient["giftsForYou"]>().mockRejectedValue(offline());
@@ -1291,6 +1320,60 @@ describe("StickerBoard after Giving", () => {
     act(() => give?.click());
     await act(() => vi.dynamicImportSettled());
   };
+
+  it("passes the confirmed recipient and gift to the explicit person switch request", async () => {
+    const request = vi.fn().mockResolvedValue(undefined);
+    const hook = vi
+      .spyOn(personSwitch, "usePersonSwitch")
+      .mockReturnValue({ pending: false, error: null, request });
+    onTestFinished(() => hook.mockRestore());
+    const a = boardSticker({ placement: placedAt(0.3) });
+    const view = await openBoard(
+      emptyApi({ stickerBoard: async () => ({ owner: TEST_OWNER, boardStickers: [a] }) }),
+    );
+    await openGiving(view.host, a.stickerId);
+    const recipient = document.querySelector<HTMLButtonElement>(".test-gift-recipient");
+    expect(recipient).not.toBeNull();
+    await act(async () => recipient?.click());
+    expect(request).toHaveBeenCalledExactlyOnceWith("recipient", {
+      recipientUserId: "recipient",
+      giftId: "gift-42",
+    });
+  });
+
+  it("targets BIGWHEEL when Giving opens from Hana's own sticker board", async () => {
+    const hana = {
+      ...TEST_ME,
+      id: "hana",
+      handle: "hana",
+      lineUserId: "dev-video-hana",
+      lineDisplayName: "Hana",
+    };
+    const bigwheel = { ...TEST_ME, id: "bigwheel", handle: "BIGWHEEL" };
+    const a = boardSticker({ sticker: sticker({ ownerId: hana.id }), placement: placedAt(0.3) });
+    const api = emptyApi({ stickerBoard: async () => ({ owner: hana, boardStickers: [a] }) });
+    const view = renderWithApi(
+      <SessionEnvelopeContext
+        value={sessionEnvelope(hana, {
+          authenticated: bigwheel,
+          allowedSelections: [bigwheel, hana],
+          personSwitchMode: "live",
+          selectionVersion: "selection",
+        })}
+      >
+        <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />
+      </SessionEnvelopeContext>,
+      api,
+      hana,
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    await act(async () => {});
+    await openGiving(view.host, a.stickerId);
+    expect(document.querySelector(".test-gift-sent")?.getAttribute("data-for-user-id")).toBe(
+      bigwheel.id,
+    );
+  });
 
   it("loads again when Giving closes unsent, since its gift may have been packed or taken out", async () => {
     const a = boardSticker({ placement: placedAt(0.3) });

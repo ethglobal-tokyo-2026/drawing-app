@@ -1,4 +1,4 @@
-import { users, type Db } from "@drawing-app/db";
+import { personSwitchSessions, users, type Db } from "@drawing-app/db";
 import { MAX_ACCESS_TOKEN_LENGTH } from "@drawing-app/line-auth/line";
 import { and, eq, isNull } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -15,7 +15,8 @@ import { apiError, validate } from "../errors.ts";
 import { unseenGratitudeCount } from "../gratitude/feed.ts";
 import { HANDLE_MAX_LENGTH } from "../session/handleLimit.ts";
 import { handleFromLineName, isHandleTaken, parseHandle } from "../session/handles.ts";
-import { clearSessionCookie, setSessionCookie, type AppEnv } from "../session.ts";
+import { clearSessionCookie, resolveSession, setSessionCookie, type AppEnv } from "../session.ts";
+import { canSelectPerson, sessionEnvelope } from "../session/personSwitch.ts";
 import { toMe } from "../shapes.ts";
 import { newStickerCount } from "../stickerBoards/board.ts";
 
@@ -110,7 +111,28 @@ export const sessionRoutes = (deps: AppDeps) =>
           : apiError(c, 401, "line_token_invalid", "LINE refused the access token");
       }
       const expected = c.req.header("x-croquis-user-id");
-      if (expected !== undefined && liveUser(deps.db, expected)?.lineUserId !== profile.sub) {
+      const retained = await resolveSession(c, deps);
+      const version = c.req.header("x-croquis-selection-version");
+      const beforeVerification = c.var.session;
+      if (
+        beforeVerification &&
+        (!retained ||
+          retained.sessionId !== beforeVerification.sessionId ||
+          retained.selectedUserId !== beforeVerification.selectedUserId ||
+          retained.selectionVersion !== beforeVerification.selectionVersion)
+      ) {
+        return apiError(c, 409, "session_account_changed");
+      }
+      if (
+        expected !== undefined &&
+        (!retained || liveUser(deps.db, retained.authenticatedUserId)?.lineUserId !== profile.sub)
+      ) {
+        return apiError(c, 409, "session_account_changed");
+      }
+      if (
+        (expected !== undefined && expected !== retained?.selectedUserId) ||
+        (version !== undefined && version !== retained?.selectionVersion)
+      ) {
         return apiError(c, 409, "session_account_changed");
       }
       const lineProfile = {
@@ -145,24 +167,38 @@ export const sessionRoutes = (deps: AppDeps) =>
         { behavior: "immediate" },
       );
       // A background refresh can finish after another tab signs in. It must never replace that cookie.
-      if (expected === undefined) await setSessionCookie(c, deps, user.id);
-      return c.json({ me: meOf(deps.db, user) }, 200);
+      if (retained?.authenticatedUserId === user.id) {
+        return c.json(sessionEnvelope(deps, retained), 200);
+      }
+      const authenticated = await setSessionCookie(c, deps, user.id);
+      const session = {
+        ...authenticated,
+        selectedUserId: user.id,
+        selectionVersion: canSelectPerson(deps.personSwitch, user.id)
+          ? authenticated.sessionId
+          : null,
+      };
+      return c.json(sessionEnvelope(deps, session), 200);
     })
     // Logging out of LINE ends the session too, so a browser handed to someone else holds none.
     .delete("/session", (c) => {
+      deps.db
+        .delete(personSwitchSessions)
+        .where(eq(personSwitchSessions.sessionId, c.var.session.sessionId))
+        .run();
       clearSessionCookie(c);
       return c.body(null, 204);
     })
     .get("/me", validate("header", meHeaders), (c) => {
       c.header("Cache-Control", "no-store");
-      const user = liveUser(deps.db, c.var.userId);
+      const user = liveUser(deps.db, c.var.session.authenticatedUserId);
       if (!user) return apiError(c, 401, "signed_out");
       // The signed cookie authenticates; LIFF's account only restricts which session can be reused.
       const lineUserId = c.req.valid("header")["x-line-user-id"];
       if (lineUserId !== undefined && user.lineUserId !== lineUserId) {
         return apiError(c, 401, "signed_out");
       }
-      return meAnswer(c, deps.db, user);
+      return c.json(sessionEnvelope(deps, c.var.session), 200);
     })
     .post("/me/handle", validate("json", handleBody), (c) => {
       const handle = parseHandle(c.req.valid("json").handle);

@@ -1,4 +1,5 @@
 import { createHash, createPrivateKey, createPublicKey, sign, type JsonWebKey } from "node:crypto";
+import type { PrivyJwtResult } from "./internalAssertion.ts";
 
 /** How long an issued Privy JWT stays valid. */
 export const PRIVY_JWT_LIFETIME_S = 300;
@@ -14,7 +15,6 @@ export function privySubject(channelId: string, lineUserId: string): string {
 }
 
 interface LinePrivyJwtIssuerOptions {
-  verifyLineAccessToken: (accessToken: string) => Promise<{ sub: string }>;
   channelId: string;
   issuer: string;
   audience: string;
@@ -24,16 +24,11 @@ interface LinePrivyJwtIssuerOptions {
 }
 
 export interface LinePrivyJwtIssuer {
-  issue: (lineAccessToken: string) => Promise<{
-    jwt: string;
-    subject: string;
-    expiresAt: number;
-  }>;
+  issueAuthorized: (lineUserId: string, expiresAt: number) => Promise<PrivyJwtResult>;
   jwks: { keys: JsonWebKey[] };
 }
 
 export function createLinePrivyJwtIssuer({
-  verifyLineAccessToken,
   channelId,
   issuer,
   audience,
@@ -56,18 +51,18 @@ export function createLinePrivyJwtIssuer({
     keys: [{ ...publicJwk, kid: keyId, alg: "ES256", use: "sig" }],
   };
 
-  async function issue(lineAccessToken: string) {
-    const { sub } = await verifyLineAccessToken(lineAccessToken);
-    if (!sub) throw new Error("LINE verification returned no user");
-    const subject = privySubject(channelId, sub);
+  async function issueAuthorized(lineUserId: string, expiresAt: number) {
     const issuedAt = now();
+    if (!lineUserId || !Number.isSafeInteger(expiresAt) || expiresAt <= issuedAt)
+      throw new Error("Privy authorization expired or invalid");
+    const subject = privySubject(channelId, lineUserId);
     const header = { alg: "ES256", typ: "JWT", kid: keyId };
     const payload = {
       iss: issuer,
       aud: audience,
       sub: subject,
       iat: issuedAt,
-      exp: issuedAt + PRIVY_JWT_LIFETIME_S,
+      exp: Math.min(expiresAt, issuedAt + PRIVY_JWT_LIFETIME_S),
     };
     const signingInput = `${encode(header)}.${encode(payload)}`;
     const signature = sign("sha256", Buffer.from(signingInput), {
@@ -81,5 +76,5 @@ export function createLinePrivyJwtIssuer({
     };
   }
 
-  return { issue, jwks };
+  return { issueAuthorized, jwks };
 }

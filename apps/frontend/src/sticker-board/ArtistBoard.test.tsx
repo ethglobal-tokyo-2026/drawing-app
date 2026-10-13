@@ -211,6 +211,7 @@ describe("ArtistBoard's Give key", () => {
         forUserId: forUserId ?? null,
         giftClaimToken: `0x${"ab".repeat(32)}`,
         messageAttempt: null,
+        delivery: "line" as const,
         deposit: null,
       }),
     beginMessageAttempt: (giftId: string) =>

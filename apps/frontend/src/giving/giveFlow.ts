@@ -52,6 +52,8 @@ type GiveFlowStep =
 export type GiveFlowState = GiveFlowStep & {
   storageError?: Problem;
   packedForUserId?: string | null;
+  giftId?: string;
+  delivery?: "line" | "person";
 };
 
 export interface GiveFlowOptions {
@@ -156,6 +158,8 @@ export function createGiveFlow({
   let state: GiveFlowState = { step: "packed" };
   let attempt: Attempt | null = null;
   let packedForUserId: string | null | undefined;
+  let packedGiftId: string | undefined;
+  let delivery: "line" | "person" | undefined;
   /** The picker the flow waits on, until LINE answers or the flow stops waiting. */
   let waiting: { a: Attempt; giftId: string } | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -177,6 +181,9 @@ export function createGiveFlow({
     const storageError = backend.storageError?.();
     state = {
       ...next,
+      ...(packedGiftId &&
+        (delivery === "person" || next.step === "sent") && { giftId: packedGiftId }),
+      ...(delivery && (delivery === "person" || next.step === "sent") && { delivery }),
       ...(packedForUserId !== undefined && { packedForUserId }),
       ...(storageError && { storageError: describe(storageError) }),
     };
@@ -249,6 +256,8 @@ export function createGiveFlow({
   const showMessageOut = (a: Attempt, error: GiftMessageOutError) => {
     if (attempt !== a) return;
     a.messageAttemptId = error.attemptId;
+    packedGiftId = error.giftId;
+    delivery = error.delivery;
     clearTimer();
     set(
       error.outcome === "sent"
@@ -269,7 +278,11 @@ export function createGiveFlow({
   const packedGift = async (a: Attempt): Promise<PackedGift | null> => {
     try {
       const packed = await a.gift;
-      if (attempt === a) packedForUserId = packed.forUserId;
+      if (attempt === a) {
+        packedForUserId = packed.forUserId;
+        packedGiftId = packed.giftId;
+        delivery = packed.delivery;
+      }
       return packed;
     } catch (error) {
       if (attempt === a && error instanceof GiftPackagingError) packedForUserId = error.forUserId;
@@ -424,6 +437,8 @@ export function createGiveFlow({
     }
     if (disposed || !a.open || attempt !== a) return;
     set({ step: "ready", ...feedback });
+    // Private delivery has no LINE popup; the acknowledged gift continues through the same sender.
+    if (packed.delivery === "person") openPicker();
   };
 
   const openPicker = () => {
@@ -436,8 +451,8 @@ export function createGiveFlow({
     a.pickerStarted = true;
     let outcome: Promise<GiftSendOutcome>;
     try {
-      // No preparation or asynchronous work may precede LINE's synchronous popup creation on this press.
-      outcome = sender.send(packed.message);
+      // LINE's popup opens synchronously on this press, after the attempt was acknowledged.
+      outcome = sender.send(packed.message, packed.delivery);
     } catch (error) {
       void answered(a, packed.giftId, { failed: error });
       return;

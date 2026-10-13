@@ -8,6 +8,7 @@ import { identity } from "./identity";
 import { kyotoSeika } from "./kyotoSeika";
 import { line } from "./line";
 import { pages } from "./pages";
+import { personSwitch } from "./personSwitch";
 import { receiving } from "./receiving";
 import { shop } from "./shop";
 import { stickerBoard } from "./stickerBoard";
@@ -28,6 +29,7 @@ export const strings = {
   kyotoSeika,
   line,
   pages,
+  personSwitch,
   receiving,
   shop,
   stickerBoard,

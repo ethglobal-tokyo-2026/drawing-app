@@ -131,6 +131,8 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
     buyTickets: unanswered("buyTickets"),
     packageGift: unanswered("packageGift"),
     reportDeposit: unanswered("reportDeposit"),
+    deliverPersonGift: unanswered("deliverPersonGift"),
+    giftDelivery: () => Promise.resolve({ delivery: "line" }),
     beginMessageAttempt: unanswered("beginMessageAttempt"),
     reportShared: unanswered("reportShared"),
     startTakeOut: unanswered("startTakeOut"),

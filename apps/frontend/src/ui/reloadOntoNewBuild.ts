@@ -1,3 +1,5 @@
+import { requestAccountRelease } from "../api/sessionLoss";
+
 /** The build this tab last reloaded away from. */
 const RELOADED_FROM = "draw.reloadedFrom";
 let reloading = false;
@@ -11,11 +13,18 @@ let reloading = false;
  */
 export function reloadOntoNewBuild(preloadError: Event, build: string): void {
   if (sessionStorage.getItem(RELOADED_FROM) === build) return;
-  sessionStorage.setItem(RELOADED_FROM, build);
-  reloading = true;
-  preloadError.preventDefault();
-  location.reload();
+  const released = requestAccountRelease(undefined, () => {
+    sessionStorage.setItem(RELOADED_FROM, build);
+    reloading = true;
+    preloadError.preventDefault();
+    location.reload();
+  });
+  // Keep the owner mounted while the preservation error supplies safe retry instead of a failed import.
+  if (!released) {
+    reloading = true;
+    preloadError.preventDefault();
+  }
 }
 
-/** The page is on its way to the new build, so what didn't load needn't say so. */
+/** The new build reload has started or waits for preservation; its failed screen needs no separate Reload note. */
 export const reloadingOntoNewBuild = () => reloading;

@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { accountSelection } from "../api/sessionTestFixtures";
 import { expect, it, vi, afterEach, onTestFinished } from "vitest";
 import { insertUser } from "../../../../packages/db/src/testDb.ts";
 import { gratitude } from "../../../../packages/db/src/schema/gratitude.ts";
@@ -54,7 +55,7 @@ it.each([false, true])(
       session.signIn({ accessToken: devAccessToken({ sub: name, name }), language: "en" });
     try {
       const { me: alice } = await signIn("Alice");
-      const api = createHttpApi(createServerClient(browserFetch, alice.id));
+      const api = createHttpApi(createServerClient(browserFetch, accountSelection(alice.id)));
       const giver = insertUser(test.db);
       const stickerId = test.sealSticker(giver);
       const packaged = packagedGiftSchema.parse(
@@ -100,7 +101,7 @@ it.each([false, true])(
         expect(kept.get(`draw.gratitude.pending.${alice.id}`)).toBe(original);
         expect(readGratitudeRefusals(alice.id)).toEqual(originalRefusals);
         expect(test.db.select().from(gratitude).all()).toEqual([]);
-        await expect(session.me("Alice", alice.id)).rejects.toMatchObject({
+        await expect(session.me("Alice", accountSelection(alice.id))).rejects.toMatchObject({
           status: 409,
           code: "session_account_changed",
         });
@@ -146,10 +147,10 @@ it("binds early tickets to Me even when another tab replaces the cookie before t
       (id) => createHttpApi(createServerClient(browserFetch, id)),
       { board: false },
     );
-    expect(await opening.me).toEqual(alice);
-    opening.accept(alice);
-    expect(opening.takeTickets("Bob")).toBeUndefined();
-    await expect(opening.takeTickets(alice.id)).rejects.toMatchObject({
+    expect(await opening.me).toEqual(meAnswer);
+    opening.accept(meAnswer);
+    expect(opening.takeTickets(accountSelection("Bob"))).toBeUndefined();
+    await expect(opening.takeTickets(accountSelection(alice.id))).rejects.toMatchObject({
       status: 409,
       code: "session_account_changed",
     });

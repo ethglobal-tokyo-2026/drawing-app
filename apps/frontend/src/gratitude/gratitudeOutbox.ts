@@ -156,6 +156,8 @@ export function isGratitudeWaiting(userId: string, giftId: string): boolean {
 
 /** Keys with a request out, so a resend doesn't repeat a send still waiting on its answer. */
 const sending = new Set<string>();
+/** A new account-scoped mount retries after an aborted former sender releases its duplicate guard. */
+const abortedSendListeners = new Set<(userId: string) => void>();
 
 /** `onDevice`: whether the outbox holds the combo, so a send that doesn't get through leaves it to send again. */
 async function send(
@@ -201,6 +203,7 @@ async function send(
     return { state: "kept" };
   } finally {
     sending.delete(key);
+    if (signal?.aborted) abortedSendListeners.forEach((listener) => listener(userId));
   }
 }
 
@@ -312,10 +315,15 @@ export function resendGratitudeWhenReachable(api: Recorder, userId: string): () 
   const onVisibility = () => {
     if (document.visibilityState === "visible") resend();
   };
+  const onAbortedSend = (senderId: string) => {
+    if (senderId === userId) resend();
+  };
+  abortedSendListeners.add(onAbortedSend);
   resend();
   window.addEventListener("online", resend);
   document.addEventListener("visibilitychange", onVisibility);
   return () => {
+    abortedSendListeners.delete(onAbortedSend);
     controller.abort();
     window.removeEventListener("online", resend);
     document.removeEventListener("visibilitychange", onVisibility);

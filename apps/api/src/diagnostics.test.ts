@@ -126,3 +126,41 @@ describe("NFT diagnostics", () => {
     expect(logs.raw[0]).not.toContain("must-stay-private");
   });
 });
+
+it("projects person authorization fields and drops credentials and assertions", () => {
+  const fields = {
+    authenticatedUserId: "actor",
+    selectedUserId: "selected",
+    selectionVersion: "version",
+    outcome: "authorized",
+    accessToken: "private-access-token",
+    jwt: "private-jwt",
+    cookie: "private-cookie",
+    assertion: { selectedLineUserId: "private-line-user" },
+    providerErrorBody: "private-provider-body",
+  };
+  logInfo("privy.authorization", fields);
+  expect(logs.entries[0]).toMatchObject({
+    event: "privy.authorization",
+    authenticatedUserId: "actor",
+    selectedUserId: "selected",
+    selectionVersion: "version",
+    outcome: "authorized",
+  });
+  expect(Object.keys(logs.entries[0]).sort()).toEqual([
+    "authenticatedUserId",
+    "event",
+    "outcome",
+    "selectedUserId",
+    "selectionVersion",
+    "timestamp",
+  ]);
+  for (const value of [
+    "private-access-token",
+    "private-jwt",
+    "private-cookie",
+    "private-line-user",
+    "private-provider-body",
+  ])
+    expect(logs.raw.join()).not.toContain(value);
+});

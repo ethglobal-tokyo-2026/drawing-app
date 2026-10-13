@@ -3,7 +3,7 @@ import {
   type StickerBoard as ApiStickerBoard,
   type StickerPlacement,
 } from "@drawing-app/api/client";
-import { apiError, type ApiClient, type ApiError } from "../api/apiClient";
+import { ApiError, apiError, type ApiClient } from "../api/apiClient";
 import { toApiPlacement, toApiSpots, toRecordPlacement } from "../api/views";
 import type { BoardSticker } from "./boardSticker";
 import type { LargeSpot } from "./largeLayout";
@@ -16,7 +16,40 @@ interface BoardPlacementFailure {
 export interface BoardPlacementState {
   version: number;
   unsaved: ReadonlyMap<string, BoardPlacementFailure>;
+  preservationError: ApiError | null;
 }
+type JournalStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+type KeptPositions = { id: string; no?: number; phone?: Placement; large?: Placement };
+const isPosition = (value: unknown): value is Placement => {
+  if (!value || typeof value !== "object" || !("on" in value) || typeof value.on !== "boolean")
+    return false;
+  const finite = (number: unknown) => typeof number === "number" && Number.isFinite(number);
+  return (
+    "x" in value &&
+    finite(value.x) &&
+    "y" in value &&
+    finite(value.y) &&
+    "r" in value &&
+    finite(value.r) &&
+    "s" in value &&
+    finite(value.s) &&
+    "z" in value &&
+    finite(value.z)
+  );
+};
+const isKeptPositions = (value: unknown): value is KeptPositions[] =>
+  Array.isArray(value) &&
+  value.every(
+    (item: unknown) =>
+      item !== null &&
+      typeof item === "object" &&
+      "id" in item &&
+      typeof item.id === "string" &&
+      (!("no" in item) || typeof item.no === "number") &&
+      (!("phone" in item) || isPosition(item.phone)) &&
+      (!("large" in item) || isPosition(item.large)) &&
+      ("phone" in item || "large" in item),
+  );
 interface Revision {
   revision: number;
   spot: Placement;
@@ -47,18 +80,117 @@ interface DerivedBatch {
 export class BoardPlacementSaves {
   private entries = new Map<string, Entry>();
   private listeners = new Set<() => void>();
-  private snapshot: BoardPlacementState = { version: 0, unsaved: new Map() };
+  private snapshot: BoardPlacementState = {
+    version: 0,
+    unsaved: new Map(),
+    preservationError: null,
+  };
   private clock = 0;
   private active = false;
+  private writePauses = 0;
   private checkpoints = new WeakMap<ApiStickerBoard, Checkpoint>();
   private batches: DerivedBatch[] = [];
   private derived = new WeakMap<readonly LargeSpot[], Promise<StickerPlacement[]>>();
   private api: ApiClient;
   private accountId: string;
+  private journal: JournalStorage | null = null;
+  private journalUnreadable = false;
+  private preservationError: ApiError | null = null;
 
-  constructor(api: ApiClient, accountId: string) {
+  constructor(api: ApiClient, accountId: string, storage?: JournalStorage) {
     this.api = api;
     this.accountId = accountId;
+    try {
+      // Each tab keeps its own unfinished positions under their original person's ID across Reload.
+      this.journal = storage ?? (typeof sessionStorage === "undefined" ? null : sessionStorage);
+      this.restoreJournal();
+    } catch (error) {
+      this.journalUnreadable = true;
+      this.journalFailed("read", error);
+    }
+    this.changed(false);
+  }
+
+  private journalKey() {
+    return `croquis.board-placement-saves.${this.accountId}`;
+  }
+
+  private journalFailed(operation: "read" | "write", error: unknown) {
+    const affected = [...this.entries].flatMap(([id, entry]) => {
+      const layouts = (["phone", "large"] as const).filter(
+        (layout) => entry.latest[layout] && !entry.latest[layout]?.acknowledged,
+      );
+      return layouts.length ? [`sticker ${entry.no ?? id} (${layouts.join(", ")})`] : [];
+    });
+    this.preservationError = new ApiError(0, {
+      error: "person_switch_placement_preservation_failed",
+      detail: `Could not ${operation} unfinished sticker positions for ${this.accountId}${affected.length ? `: ${affected.join("; ")}` : ""}. ${error instanceof Error ? error.message : String(error)}`,
+    });
+    console.error("Unfinished sticker positions could not be preserved", this.preservationError);
+  }
+
+  private restoreJournal() {
+    const raw = this.journal?.getItem(this.journalKey());
+    if (!raw) return;
+    const kept: unknown = JSON.parse(raw);
+    if (!isKeptPositions(kept))
+      throw new Error("Unfinished sticker positions are not valid placement entries.");
+    for (const item of kept) {
+      const entry = this.entry(item.id);
+      entry.no = item.no;
+      for (const layout of ["phone", "large"] as const) {
+        const spot = item[layout];
+        if (spot && !entry.latest[layout])
+          entry.latest[layout] = {
+            revision: ++this.clock,
+            spot: { ...spot },
+            error: new ApiError(409, {
+              error: "person_switch_placement_unsaved",
+              detail: `sticker ${item.no ?? item.id} (${layout})`,
+            }),
+          };
+      }
+    }
+  }
+
+  private keepJournal() {
+    if (!this.journal || this.journalUnreadable) return;
+    const kept: KeptPositions[] = [];
+    for (const [id, entry] of this.entries) {
+      const item: KeptPositions = { id, ...(entry.no !== undefined && { no: entry.no }) };
+      for (const layout of ["phone", "large"] as const) {
+        const revision = entry.latest[layout];
+        if (revision && !revision.acknowledged) item[layout] = { ...revision.spot };
+      }
+      if (item.phone || item.large) kept.push(item);
+    }
+    try {
+      if (
+        kept.some(
+          (item) =>
+            (item.phone && !isPosition(item.phone)) || (item.large && !isPosition(item.large)),
+        )
+      )
+        throw new Error("Unfinished sticker positions contain non-finite or invalid values.");
+      if (kept.length) this.journal.setItem(this.journalKey(), JSON.stringify(kept));
+      else this.journal.removeItem(this.journalKey());
+      this.preservationError = null;
+    } catch (error) {
+      this.journalFailed("write", error);
+    }
+  }
+
+  /** Explicitly retries preservation after storage was blocked, without sending positions. */
+  retryPreservation(): void {
+    try {
+      this.journal ??= typeof sessionStorage === "undefined" ? null : sessionStorage;
+      this.restoreJournal();
+      this.journalUnreadable = false;
+    } catch (error) {
+      this.journalUnreadable = true;
+      this.journalFailed("read", error);
+    }
+    this.changed();
   }
 
   subscribe = (changed: () => void): (() => void) => {
@@ -68,6 +200,68 @@ export class BoardPlacementSaves {
     };
   };
   read = (): BoardPlacementState => this.snapshot;
+
+  /** Pauses new changes only. Already queued saves keep their immutable client and finish normally. */
+  pauseNewWrites(): () => void {
+    this.writePauses += 1;
+    let released = false;
+    return () => {
+      if (!released) {
+        released = true;
+        this.writePauses -= 1;
+      }
+    };
+  }
+
+  /** Waits for every queued position and derived batch, then reports any positions still unsaved. */
+  waitUntilSaved(signal: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let unsubscribe = () => {};
+      const finish = (error?: ApiError) => {
+        unsubscribe();
+        signal.removeEventListener("abort", aborted);
+        if (error) reject(error);
+        else resolve();
+      };
+      const aborted = () =>
+        finish(
+          new ApiError(0, {
+            error: "timeout",
+            detail: "Sticker positions did not finish saving before switching.",
+          }),
+        );
+      const check = () => {
+        if (signal.aborted) {
+          aborted();
+          return;
+        }
+        if (this.preservationError) {
+          finish(this.preservationError);
+          return;
+        }
+        if (
+          this.batches.length ||
+          [...this.entries.values()].some((entry) => entry.busy || entry.queued || entry.reserved)
+        )
+          return;
+        const affected = [...this.snapshot.unsaved].map(
+          ([id, failure]) =>
+            `sticker ${this.entries.get(id)?.no ?? id} (${[...failure.layouts].join(", ")})`,
+        );
+        finish(
+          affected.length
+            ? new ApiError(409, {
+                error: "person_switch_placement_unsaved",
+                detail: affected.join("; "),
+              })
+            : undefined,
+        );
+      };
+      unsubscribe = this.subscribe(check);
+      signal.addEventListener("abort", aborted, { once: true });
+      check();
+    });
+  }
 
   activate(): () => void {
     this.active = true;
@@ -89,7 +283,8 @@ export class BoardPlacementSaves {
     return entry;
   }
 
-  private changed(): void {
+  private changed(persist = true): void {
+    if (persist) this.keepJournal();
     const unsaved = new Map<string, BoardPlacementFailure>();
     for (const [id, entry] of this.entries) {
       const layouts = new Set<BoardLayout>();
@@ -103,11 +298,16 @@ export class BoardPlacementSaves {
       }
       if (error) unsaved.set(id, { error, layouts });
     }
-    this.snapshot = { version: this.snapshot.version + 1, unsaved };
+    this.snapshot = {
+      version: this.snapshot.version + 1,
+      unsaved,
+      preservationError: this.preservationError,
+    };
     for (const changed of this.listeners) changed();
   }
 
   save(sticker: Pick<BoardSticker, "id" | "no">, spots: Spots): void {
+    if (this.writePauses) throw new ApiError(409, { error: "session_account_changed" });
     const entry = this.entry(sticker.id);
     entry.no = sticker.no;
     for (const layout of layoutsIn(spots)) {
@@ -212,6 +412,8 @@ export class BoardPlacementSaves {
   }
 
   saveDerived(derived: readonly LargeSpot[]): Promise<StickerPlacement[]> {
+    if (this.writePauses)
+      return Promise.reject(new ApiError(409, { error: "session_account_changed" }));
     const previous = this.derived.get(derived);
     if (previous) return previous;
     const batches: Promise<StickerPlacement[]>[] = [];

@@ -11,6 +11,7 @@ import { forgetMyStickerBoard } from "../sticker-board/useMyStickerBoard";
 import { formatNo } from "../stickers/format";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import { forgetKeptGift, keepGift, keptGift } from "./keptGifts";
+import { reportGiftDelivery } from "./personGiftDelivery";
 import { refusedForGood } from "./sentReports";
 
 /** The sticker a gift carries. */
@@ -24,6 +25,7 @@ export interface GiftSticker {
 
 export interface PackedGift {
   giftId: string;
+  delivery: "line" | "person";
   /** The server’s recipient, including a gift addressed through LINE alone. */
   forUserId?: string | null;
   /** What LINE's picker sends. */
@@ -51,6 +53,7 @@ export class GiftMessageOutError extends GiftPackagingError {
   readonly outcome: "sent" | "maybeSent";
   readonly recordError: unknown;
   readonly attemptId: string;
+  readonly delivery: "line" | "person";
 
   constructor(
     giftId: string,
@@ -58,6 +61,7 @@ export class GiftMessageOutError extends GiftPackagingError {
     attemptId: string,
     recordError?: unknown,
     forUserId?: string | null,
+    delivery: "line" | "person" = "line",
   ) {
     super(
       giftId,
@@ -67,6 +71,7 @@ export class GiftMessageOutError extends GiftPackagingError {
     this.outcome = outcome;
     this.recordError = recordError;
     this.attemptId = attemptId;
+    this.delivery = delivery;
   }
 }
 
@@ -247,7 +252,7 @@ export function createApiGiftBackend({
     // Kept until the server hears it, so giving the sticker again reports it, not takes it out.
     keep(giftId, attemptId, "sent");
     try {
-      await retrying(() => api.reportShared(giftId, attemptId, "sent"), unanswered);
+      await retrying(() => reportGiftDelivery(api, giftId, attemptId, "sent"), unanswered);
     } catch (error) {
       // Any other refusal, signed out included, leaves the mark for the report to go again.
       if (refusedForGood(error)) settle(giftId);
@@ -259,7 +264,7 @@ export function createApiGiftBackend({
   const markCancelled = async (giftId: string, attemptId: string) => {
     // Retain the matching outcome until cancellation is acknowledged; a reload can retry it.
     keep(giftId, attemptId, "cancelled");
-    await api.reportShared(giftId, attemptId, "cancelled");
+    await reportGiftDelivery(api, giftId, attemptId, "cancelled");
     forgetKeptGift(userId, giftId);
   };
 
@@ -298,6 +303,7 @@ export function createApiGiftBackend({
           attemptId,
           undefined,
           packaged.forUserId,
+          packaged.delivery,
         );
       }
       // A local report may resolve only the server's matching attempt. An older tab cannot cancel a newer send.
@@ -313,6 +319,7 @@ export function createApiGiftBackend({
             attemptId,
             error,
             packaged.forUserId,
+            packaged.delivery,
           );
         }
         if (local.message === "cancelled") {
@@ -325,6 +332,7 @@ export function createApiGiftBackend({
             attemptId,
             undefined,
             packaged.forUserId,
+            packaged.delivery,
           );
         }
       }
@@ -338,6 +346,7 @@ export function createApiGiftBackend({
           server.id,
           undefined,
           packaged.forUserId,
+          packaged.delivery,
         );
       }
       const { gift } = packaged;
@@ -388,7 +397,12 @@ export function createApiGiftBackend({
         heroUrl,
         language: currentLanguage(),
       });
-      return { giftId: gift.id, forUserId: packaged.forUserId, message };
+      return {
+        giftId: gift.id,
+        delivery: packaged.delivery,
+        forUserId: packaged.forUserId,
+        message,
+      };
     } catch (error) {
       throw error instanceof GiftPackagingError
         ? error

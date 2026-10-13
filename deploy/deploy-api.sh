@@ -6,10 +6,13 @@
 # and it serves the sticker images under /api/images/.
 set -euo pipefail
 PREFLIGHT_ONLY=false
+RESTART_REQUIRED=false
 if [ "${1:-}" = "--preflight-only" ] && [ "$#" -eq 1 ]; then
   PREFLIGHT_ONLY=true
+elif [ "${1:-}" = "--restart" ] && [ "$#" -eq 1 ]; then
+  RESTART_REQUIRED=true
 elif [ "$#" -ne 0 ]; then
-  echo "Usage: deploy-api.sh [--preflight-only]" >&2
+  echo "Usage: deploy-api.sh [--preflight-only | --restart]" >&2
   exit 1
 fi
 
@@ -33,6 +36,7 @@ for key in SUI_STICKER_PACKAGE SUI_STICKER_REGISTRY SUI_SERVER_CONFIG SUI_GIFT_E
   }
 done
 DIR="${DEPLOY_API_DIR:-/srv/drawing-api}"
+AUTH_DIR="${DEPLOY_AUTH_DIR:-/srv/sticker-auth}"
 URL="${DEPLOY_URL:-https://stickeroo.art}"
 STAGE="$(mktemp -d)"
 REMOTE_STAGE=""
@@ -50,14 +54,21 @@ NPM_INSTALL_TIMEOUT=10m
 # Validate the chain settings in deploy/.env before replacing any running server code. The install writes the box's
 # chain.env from them alone, so it holds exactly what the API reads.
 REMOTE_STAGE="$(ssh "$TARGET" "mktemp -d /tmp/drawing-api-deploy.XXXXXXXX")"
-rsync -c "$ROOT/deploy/install-chain-env.mjs" "$TARGET:$REMOTE_STAGE/install-chain-env.mjs"
+rsync -c "$ROOT/deploy/install-chain-env.mjs" "$ROOT/deploy/install-auth-secret.mjs" "$TARGET:$REMOTE_STAGE/"
 chain_config() {
   printf 'SUI_SERVER_PRIVATE_KEY=%s\nSHINAMI_ACCESS_KEY=%s\nPRIVY_APP_ID=%s\nPRIVY_APP_SECRET=%s\nLINE_MESSAGING_CHANNEL_ID=%s\nLINE_MESSAGING_CHANNEL_SECRET=%s\nFASTLY_API_TOKEN=%s\nOPERATOR_LINE_USER_ID=%s\n' \
     "${SUI_SERVER_PRIVATE_KEY:-}" "${SHINAMI_ACCESS_KEY:-}" "${PRIVY_APP_ID:-}" "${PRIVY_APP_SECRET:-}" \
     "${LINE_MESSAGING_CHANNEL_ID:-}" "${LINE_MESSAGING_CHANNEL_SECRET:-}" "${FASTLY_API_TOKEN:-}" "${OPERATOR_LINE_USER_ID:-}"
 }
 chain_config | ssh "$TARGET" "node '$REMOTE_STAGE/install-chain-env.mjs' '$DIR/chain.env' check"
+printf 'PRIVY_JWT_INTERNAL_SECRET=%s\n' "${PRIVY_JWT_INTERNAL_SECRET:-}" | \
+  ssh "$TARGET" "node '$REMOTE_STAGE/install-auth-secret.mjs' '$DIR/privy-internal.env' '$AUTH_DIR/privy-internal.env' check"
 if [ "$PREFLIGHT_ONLY" = true ]; then exit 0; fi
+# Standalone API deploys cannot publish against an absent or differently configured issuer.
+printf 'PRIVY_JWT_INTERNAL_SECRET=%s\n' "${PRIVY_JWT_INTERNAL_SECRET:-}" | \
+  ssh "$TARGET" "node '$REMOTE_STAGE/install-auth-secret.mjs' '$DIR/privy-internal.env' '$AUTH_DIR/privy-internal.env' verify"
+ssh "$TARGET" "$BOX_CURL -fsS http://127.0.0.1:8787/.well-known/jwks.json" | grep -q '"keys"' \
+  || { echo "✗ protected issuer is unavailable; run coordinated deploy.sh" >&2; exit 1; }
 
 SQLITE_VERSION="$(cd "$ROOT/packages/db" && node -p "require('better-sqlite3/package.json').version")"
 # sharp's exports don't include its package.json, so it's read as a file.
@@ -81,6 +92,8 @@ printf '{ "private": true, "type": "module", "engines": { "node": "%s" }, "depen
   "$NODE_VERSION" "$SQLITE_VERSION" "$SHARP_VERSION" >"$STAGE/package.json"
 rsync -c "$STAGE/package.json" "$TARGET:$DIR/server/package.json"
 changed=""
+# Coordinated releases already replaced private authentication files; refresh the in-memory secret.
+if [ "$RESTART_REQUIRED" = true ]; then changed="reload coordinated authentication settings"; fi
 # installed.json is the package.json the last finished install installed, so one that failed or timed out runs again.
 if ! ssh "$TARGET" "cmp -s '$DIR/server/package.json' '$DIR/server/installed.json'"; then
   # With the pinned Node's npm, so native modules match the Node that loads them.

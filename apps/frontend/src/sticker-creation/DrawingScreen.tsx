@@ -26,6 +26,7 @@ import { pickedPair } from "../kyoto-seika/deal";
 import { KyotoSeikaDeal } from "../kyoto-seika/KyotoSeikaDeal";
 import { useKyotoSeikaSheet } from "../kyoto-seika/useKyotoSeikaSheet";
 import { useApi } from "../api/useApi";
+import { usePersonSwitchBlocker } from "../api/PersonSwitchProvider";
 import { errorDetail, errorMessage, problemOf, type Problem } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { OutOfTickets } from "../tickets/OutOfTickets";
@@ -276,6 +277,10 @@ export function DrawingScreen({
   const [overlay, setOverlay] = useState<"out" | "shop" | null>(null);
   // A ticket is being spent on the server; Start waits for it.
   const [spending, setSpending] = useState(false);
+  usePersonSwitchBlocker(
+    spending || session.phase === "sealing" || session.phase === "retry",
+    "Spending a ticket or sealing a sticker",
+  );
   // The spend needs no asking (Keep drawing, or Draw after a refill or a purchase): the ask stays down
   // while it's on its way, and comes up only if it fails.
   const [rightAway, setRightAway] = useState(false);

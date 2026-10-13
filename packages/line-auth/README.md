@@ -1,9 +1,9 @@
 # @drawing-app/line-auth
 
-The LINE → Privy auth server, and the LINE access token verifier the REST API shares with it.
+The protected Privy issuer and the LINE access token verifier used by the REST API.
 
-- `src/start-auth-server.ts` starts the auth server (`deploy/sticker-auth.service` runs it on the box). It verifies a person's LIFF access token with LINE (the verify endpoint, then the profile), and answers a short-lived ES256 JWT that Privy checks against the site's `/.well-known/jwks.json`.
-- `./line` verifies LIFF access tokens; `./line-privy-jwt` names a person's Privy subject from their LINE sign-in; `./auth-error` is the failures both report.
+- `src/start-auth-server.ts` starts the issuer (`deploy/sticker-auth.service` runs it on the box). Only `POST /_internal/privy-jwt` accepts canonical HMAC assertions from the authenticated API; `POST /api/session/privy-jwt` verifies the real LINE principal and current selection before delegating. The public anonymous exchange is retired. Privy checks ES256 signatures against the unchanged public `/.well-known/jwks.json`.
+- `./line` verifies LIFF access tokens with a shared caller deadline; `./line-privy-jwt` derives a channel-scoped subject and signs authorized identities; `./internalAssertion` authenticates the exact internal assertion. The API receives no signing key.
 
 ## Commands
 

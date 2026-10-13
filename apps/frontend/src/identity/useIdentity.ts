@@ -1,3 +1,4 @@
+import { useMe } from "../api/meContext";
 import { useLine } from "../line/liff";
 
 export interface Identity {
@@ -10,13 +11,14 @@ export interface Identity {
 /** The person LINE logged in. Screens render inside LineGate, so LINE is always ready here. */
 export function useIdentity(): Identity {
   const line = useLine();
+  const me = useMe();
   if (line.status !== "ready") {
     throw new Error(`useIdentity() needs a logged-in LINE user, but LINE is ${line.status}`);
   }
-  const name = line.profile.displayName;
+  const name = me.lineDisplayName ?? me.handle ?? "";
   return {
     displayName: name,
-    pictureUrl: line.profile.pictureUrl,
+    pictureUrl: me.linePictureUrl ?? undefined,
     inClient: line.inClient,
   };
 }

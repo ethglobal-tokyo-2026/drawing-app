@@ -45,6 +45,15 @@ export const receiving = {
    * text is for a refusal that came without the giver, so it says "the giver".
    */
   refusals: {
+    deliveryPending: {
+      /** Receiving, before private delivery is acknowledged: the refusal title */
+      title: { en: "Not delivered yet", ja: "まだ届いていません" },
+      /** Receiving, before private delivery is acknowledged: the retry explanation */
+      line: {
+        en: "The giver is still finishing this gift. Try again once it has been sent.",
+        ja: "贈る人がギフトを準備しています。送られてから、もう一度お試しください。",
+      },
+    },
     nsfwNotOptedIn: {
       /** Gift refusal screen, when the gift holds an NSFW sticker and you haven't turned on Show 18+ stickers: the title */
       title: { en: "This gift is 18+", ja: "このギフトは18+です" },

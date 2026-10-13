@@ -12,6 +12,10 @@ export interface DiagnosticFields {
   stickerId?: string;
   giftId?: string;
   userId?: string;
+  authenticatedUserId?: string;
+  selectedUserId?: string;
+  selectionVersion?: string | null;
+  outcome?: string;
   artistId?: string;
   /** A Sui transaction's kind: mint, deposit, take_out, claim, return or payment. */
   kind?: string;
@@ -174,6 +178,10 @@ const loggedFields = {
   stickerId: true,
   giftId: true,
   userId: true,
+  authenticatedUserId: true,
+  selectedUserId: true,
+  selectionVersion: true,
+  outcome: true,
   artistId: true,
   kind: true,
   status: true,
@@ -216,7 +224,7 @@ const isLoggedField = (key: string): key is keyof DiagnosticFields =>
 const fieldNames = Object.keys(loggedFields).filter(isLoggedField);
 
 function record(event: string, fields: DiagnosticFields) {
-  const selected: Record<string, string | number | boolean> = {};
+  const selected: Record<string, string | number | boolean | null> = {};
   for (const key of fieldNames) {
     const value = fields[key];
     if (value === undefined) continue;

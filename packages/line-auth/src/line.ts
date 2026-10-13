@@ -30,8 +30,12 @@ const field = (body: unknown, key: string): unknown =>
   body && typeof body === "object" && !Array.isArray(body) ? Reflect.get(body, key) : undefined;
 
 /** LINE's status and JSON answer; line_unavailable when it can't be asked or doesn't answer JSON. */
-async function askLine(fetchImpl: typeof fetch, url: string, headers?: Record<string, string>) {
-  const signal = AbortSignal.timeout(LINE_TIMEOUT_MS);
+async function askLine(
+  fetchImpl: typeof fetch,
+  url: string,
+  signal: AbortSignal,
+  headers?: Record<string, string>,
+) {
   let response: Response;
   try {
     response = await fetchImpl(url, { headers, signal });
@@ -53,7 +57,7 @@ async function askLine(fetchImpl: typeof fetch, url: string, headers?: Record<st
 }
 
 /**
- * Asks LINE who a LIFF access token names, for the REST API's sign-in and the auth server: LINE's
+ * Asks LINE who a LIFF access token names, for the REST API's sign-in and protected Privy issuance: LINE's
  * verify endpoint checks the token and says which channel it's for, and the profile names the person.
  * Rejects with AuthError: invalid_request for a token of impossible length, line_auth_failed when LINE
  * refuses the token or it's another channel's, and line_unavailable when LINE can't be asked or gives
@@ -68,7 +72,10 @@ export function createLineVerifier({
 }) {
   if (!channelId) throw new Error("LINE_CHANNEL_ID is required");
 
-  return async function verifyLineAccessToken(accessToken: string): Promise<LineProfile> {
+  return async function verifyLineAccessToken(
+    accessToken: string,
+    signal = AbortSignal.timeout(LINE_TIMEOUT_MS),
+  ): Promise<LineProfile> {
     if (
       typeof accessToken !== "string" ||
       accessToken.length < MIN_ACCESS_TOKEN_LENGTH ||
@@ -79,6 +86,7 @@ export function createLineVerifier({
     const verified = await askLine(
       fetchImpl,
       `${LINE_VERIFY_URL}?${new URLSearchParams({ access_token: accessToken })}`,
+      signal,
     );
     if (!verified.ok) {
       // LINE answers 400 for a token that's malformed, expired or revoked.
@@ -111,7 +119,7 @@ export function createLineVerifier({
     }
     if (expiresIn <= 0) throw new AuthError({ code: "line_auth_failed", reason: "token_expired" });
 
-    const profile = await askLine(fetchImpl, LINE_PROFILE_URL, {
+    const profile = await askLine(fetchImpl, LINE_PROFILE_URL, signal, {
       authorization: `Bearer ${accessToken}`,
     });
     if (profile.status === 401) {

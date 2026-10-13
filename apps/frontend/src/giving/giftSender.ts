@@ -16,14 +16,15 @@ export type GiftSendOutcome = PickerOutcome;
  * rejects unsupported sends and picker failures with an error that says why.
  */
 export interface GiftSender {
-  send: (message: GiftMessage) => Promise<GiftSendOutcome>;
+  send: (message: GiftMessage, delivery: "line" | "person") => Promise<GiftSendOutcome>;
 }
 
-/** LINE's picker; null wherever LINE reports the picker unavailable. */
-export const liffGiftSender = (line: LiffPicker): GiftSender | null =>
-  canOpenPicker(line)
+/** One sender for private delivery or LINE; null when neither is available. */
+export const liffGiftSender = (line: LiffPicker, personAvailable = false): GiftSender | null =>
+  personAvailable || canOpenPicker(line)
     ? {
-        send: async (message) => {
+        send: async (message, delivery) => {
+          if (delivery === "person") return "sent";
           const outcome = await sendInLineChat(line, [message]);
           if (liffMockActive && outcome === "sent") keepMockGiftMessage(message);
           return outcome;

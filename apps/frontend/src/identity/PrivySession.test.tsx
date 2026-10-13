@@ -1,4 +1,8 @@
 // @vitest-environment happy-dom
+import { SessionEnvelopeContext, acceptSession, suspendSession } from "../api/sessionContext";
+import { sessionEnvelope } from "../api/sessionTestFixtures";
+import { TEST_ME } from "../api/testing";
+let envelope = sessionEnvelope(TEST_ME);
 import type { User, WalletWithMetadata, useSubscribeToJwtAuthWithFlag } from "@privy-io/react-auth";
 import { act, StrictMode, useEffect, useRef, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -7,6 +11,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 type JwtAuthInput = Parameters<typeof useSubscribeToJwtAuthWithFlag>[0];
 const sdk = vi.hoisted(() => ({
   walletsReady: false,
+  ready: true,
+  logout: vi.fn<() => Promise<void>>(),
   authenticated: false,
   user: null as User | null,
   authenticate: vi.fn<(jwt: string) => Promise<User>>(),
@@ -34,6 +40,8 @@ function useJwtSubscription({
         const user = await sdk.authenticate(jwt);
         onAuthenticated?.({ user, isNewUser: false });
         previousJwt.current = jwt;
+        sdk.user = user;
+        sdk.authenticated = true;
       } catch (error) {
         onUnauthenticated?.();
         onError?.(error instanceof Error ? error : new Error(String(error)));
@@ -46,7 +54,12 @@ function useJwtSubscription({
 
 vi.mock("@privy-io/react-auth", () => ({
   PrivyProvider: ({ children }: { children: ReactNode }) => children,
-  usePrivy: () => ({ authenticated: sdk.authenticated, user: sdk.user }),
+  usePrivy: () => ({
+    ready: sdk.ready,
+    logout: sdk.logout,
+    authenticated: sdk.authenticated,
+    user: sdk.user,
+  }),
   useWallets: () => ({ ready: sdk.walletsReady }),
   useSubscribeToJwtAuthWithFlag: (input: JwtAuthInput) => useJwtSubscription(input),
 }));
@@ -64,7 +77,9 @@ const { default: PrivySession } = await import("./PrivySession");
 const person: User = {
   id: "did:privy:artist",
   createdAt: new Date("2026-01-01"),
-  linkedAccounts: [],
+  linkedAccounts: [
+    { type: "custom_auth", customUserId: "U-you", firstVerifiedAt: null, latestVerifiedAt: null },
+  ],
   mfaMethods: [],
   hasAcceptedTerms: true,
   isGuest: false,
@@ -87,7 +102,9 @@ const render = () =>
   act(async () =>
     root.render(
       <StrictMode>
-        <PrivySession />
+        <SessionEnvelopeContext value={envelope}>
+          <PrivySession />
+        </SessionEnvelopeContext>
       </StrictMode>,
     ),
   );
@@ -97,6 +114,13 @@ const walletsReady = async (ready: boolean) => {
 };
 
 beforeEach(() => {
+  envelope = sessionEnvelope(TEST_ME);
+  acceptSession(envelope);
+  sdk.ready = true;
+  sdk.logout.mockReset().mockImplementation(async () => {
+    sdk.user = null;
+    sdk.authenticated = false;
+  });
   sdk.walletsReady = false;
   sdk.authenticated = false;
   sdk.user = null;
@@ -111,6 +135,7 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount());
   host.remove();
+  suspendSession();
 });
 
 describe("LINE sign-in to Privy", () => {
@@ -121,7 +146,7 @@ describe("LINE sign-in to Privy", () => {
 
     await walletsReady(true);
     expect(sdk.authenticate).toHaveBeenCalledExactlyOnceWith("privy-jwt");
-    expect(privyStatus()).toMatchObject({ state: "signed-in", userId: person.id });
+    expect(privyStatus().state).toBe("signing-in");
   });
 
   it("finishes an in-flight sign-in across wallet readiness changes without restarting authentication", async () => {
@@ -140,7 +165,7 @@ describe("LINE sign-in to Privy", () => {
     await walletsReady(false);
     await walletsReady(true);
     expect(sdk.authenticate).toHaveBeenCalledExactlyOnceWith("privy-jwt");
-    expect(privyStatus()).toMatchObject({ state: "signed-in" });
+    expect(privyStatus().state).toBe("signing-in");
   });
 
   it("keeps a failure disabled until an explicit retry and wallet readiness", async () => {
@@ -156,22 +181,115 @@ describe("LINE sign-in to Privy", () => {
     expect(sdk.authenticate).toHaveBeenCalledOnce();
     await walletsReady(true);
     expect(sdk.authenticate).toHaveBeenCalledTimes(2);
-    expect(privyStatus()).toMatchObject({ state: "signed-in", userId: person.id });
+    expect(privyStatus().state).toBe("signing-in");
   });
 
-  it("publishes the authenticated user before the Sui wallet arrives, then its address", async () => {
+  it("waits for the selected user and Sui wallet before publishing readiness", async () => {
     await walletsReady(true);
-    expect(privyStatus()).toEqual({ state: "signed-in", userId: person.id, suiWallet: undefined });
+    expect(privyStatus()).toEqual({ state: "signing-in" });
 
     // An Ethereum wallet from before Croquis was Sui only is no Sui address.
     const sui = `0x${"34".repeat(32)}`;
     sdk.authenticated = true;
     sdk.user = {
       ...person,
-      linkedAccounts: [wallet("ethereum", `0x${"12".repeat(20)}`), wallet("sui", sui)],
+      linkedAccounts: [
+        ...person.linkedAccounts,
+        wallet("ethereum", `0x${"12".repeat(20)}`),
+        wallet("sui", sui),
+      ],
     };
     await render();
     expect(privyStatus()).toEqual({ state: "signed-in", userId: person.id, suiWallet: sui });
     expect(sdk.authenticate).toHaveBeenCalledOnce();
   });
+});
+
+it("does not accept a persisted user of another custom subject", async () => {
+  sdk.authenticated = true;
+  sdk.user = { ...person, id: "did:privy:wrong", linkedAccounts: [] };
+  await render();
+  expect(privyStatus().state).not.toBe("signed-in");
+});
+
+it("waits for persisted wrong-subject logout before authenticating the selected subject", async () => {
+  let finish!: () => void;
+  sdk.authenticated = true;
+  sdk.user = { ...person, linkedAccounts: [] };
+  sdk.logout.mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = () => {
+          sdk.user = null;
+          sdk.authenticated = false;
+          resolve();
+        };
+      }),
+  );
+  await walletsReady(true);
+  expect(sdk.logout).toHaveBeenCalledOnce();
+  expect(sdk.authenticate).not.toHaveBeenCalled();
+  await act(async () => finish());
+  await render();
+  expect(sdk.logout).toHaveBeenCalledBefore(sdk.authenticate);
+});
+it("does not publish a known-address mismatch", async () => {
+  envelope = sessionEnvelope(TEST_ME, { expectedSuiAddress: `0x${"11".repeat(32)}` });
+  acceptSession(envelope);
+  sdk.authenticated = true;
+  sdk.user = {
+    ...person,
+    linkedAccounts: [...person.linkedAccounts, wallet("sui", `0x${"22".repeat(32)}`)],
+  };
+  await render();
+  expect(privyStatus().state).toBe("failed");
+});
+it("ignores an old authentication callback after the same account changes version", async () => {
+  let finish!: (user: User) => void;
+  sdk.authenticate.mockImplementation(
+    () =>
+      new Promise<User>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await walletsReady(true);
+  act(() => {
+    suspendSession();
+    acceptSession({ ...envelope, selectionVersion: "later" });
+  });
+  await act(async () =>
+    finish({
+      ...person,
+      linkedAccounts: [...person.linkedAccounts, wallet("sui", `0x${"22".repeat(32)}`)],
+    }),
+  );
+  await render();
+  expect(privyStatus().state).not.toBe("signed-in");
+});
+
+it("keeps later SDK subject drift unavailable until reload", async () => {
+  sdk.authenticated = true;
+  sdk.user = {
+    ...person,
+    linkedAccounts: [...person.linkedAccounts, wallet("sui", `0x${"22".repeat(32)}`)],
+  };
+  await render();
+  expect(privyStatus().state).toBe("signed-in");
+  sdk.user = { ...person, linkedAccounts: [] };
+  await render();
+  expect(sdk.logout).toHaveBeenCalledOnce();
+  expect(privyStatus()).toMatchObject({ state: "failed", reloadRequired: true });
+});
+
+it("withdraws wallet readiness when the authenticated user's wallet disappears", async () => {
+  sdk.authenticated = true;
+  sdk.user = {
+    ...person,
+    linkedAccounts: [...person.linkedAccounts, wallet("sui", `0x${"22".repeat(32)}`)],
+  };
+  await render();
+  expect(privyStatus().state).toBe("signed-in");
+  sdk.user = person;
+  await render();
+  expect(privyStatus()).toEqual({ state: "signing-in" });
 });

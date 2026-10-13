@@ -1,3 +1,4 @@
+import type { PersonSwitchConfig } from "../session/sessionShapes.ts";
 import type { Db } from "@drawing-app/db";
 import type { Clock, LineChatMenu } from "../deps.ts";
 import { createLineMessaging, type LineMessaging } from "../services/lineMessaging.ts";
@@ -64,14 +65,20 @@ export function chatMenuFromEnvironment({
   clock,
   channel,
   menusFile,
+  personSwitch,
 }: {
   db: Db;
   clock: Clock;
   channel: MessagingChannel;
   menusFile: string | undefined;
+  personSwitch?: PersonSwitchConfig;
 }): ChatMenuSetup {
-  if (channel.off !== null) return { lineChatMenu: chatMenuOff(channel.off), on: null };
+  if (channel.off !== null)
+    return { lineChatMenu: chatMenuOff(channel.off, personSwitch), on: null };
   const { line } = channel;
   const ids = chatMenuIdsFrom(menusFile);
-  return { lineChatMenu: createLineChatMenu({ db, clock, line, ids }), on: { line, ids } };
+  return {
+    lineChatMenu: createLineChatMenu({ db, clock, line, ids, personSwitch }),
+    on: { line, ids },
+  };
 }

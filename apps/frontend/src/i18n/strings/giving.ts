@@ -216,6 +216,36 @@ export const giving = {
       ja: "LINEの友だち選択で送信を完了できませんでした。",
     },
   },
+  personDelivery: {
+    /** Giving's private sent screen, when server acknowledgment failed: the title without claiming delivery */
+    unconfirmedTitle: { en: "Delivery not confirmed", ja: "お届けを確認できません" },
+    /** Giving's private sent screen, when server acknowledgment failed: how to retry the kept report */
+    unconfirmedLead: {
+      en: "Croquis hasn’t confirmed delivery yet. Reopen the app to try recording it again.",
+      ja: "クロッキーでお届けをまだ確認できていません。もう一度アプリをひらくと、記録を再試行します。",
+    },
+    /** Giving's sent screen, once private delivery is acknowledged: the explanation under its title */
+    sentLead: {
+      en: "Your gift is waiting on their sticker board. They can open it once.",
+      ja: "相手のシールボードにギフトが届きました。ひらけるのは一度だけです。",
+    },
+    /** Giving's private sent screen, while acknowledgment failed: its persistent error */
+    couldntRecord: {
+      en: "Croquis couldn’t confirm delivery: {{reason}}",
+      ja: "クロッキーでお届けを確認できませんでした：{{reason}}",
+    },
+    /** Giving's private sent screen: the explicit action to switch to its recipient */
+    switchRecipient: { en: "Switch to {{name}}", ja: "{{name}}さんに切り替える" },
+    /** Giving's private sent screen: the recipient label when their handle is unavailable */
+    recipient: { en: "the recipient", ja: "受け取る人" },
+    /** Giving, while a private gift is in its bag: the explanation of its destination */
+    inTheBag: {
+      en: "Your gift will wait on their sticker board once Croquis confirms delivery.",
+      ja: "お届けを確認すると、相手のシールボードにギフトが届きます。",
+    },
+    /** Giving's open private gift bag: the button that retries delivery */
+    send: { en: "Send gift", ja: "ギフトを送る" },
+  },
   sent: {
     /** Giving, once the Gift Message went out through LINE: the title under the gift bag as it closes */
     title: { en: "Closed and sent", ja: "封をして送りました" },

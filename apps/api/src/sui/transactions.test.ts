@@ -83,7 +83,11 @@ async function sponsorDeposit({
 
 /** A claim of the test's gift, which the server sends. */
 const sponsorClaim = async () =>
-  sponsored(deps, { kind: "claim", giftId }, await chain.sui.claimKind(giftId, RECEIVER));
+  sponsored(
+    deps,
+    { kind: "claim", giftId, requestedByUserId: userId },
+    await chain.sui.claimKind(giftId, RECEIVER),
+  );
 
 /** `by`'s signature over the transaction's bytes: the giver's wallet's unless said. */
 const signatureOf = async (row: SuiTransaction, by = wallet) =>

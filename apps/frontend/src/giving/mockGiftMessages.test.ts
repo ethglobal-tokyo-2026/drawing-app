@@ -33,9 +33,9 @@ afterEach(() => sessionStorage.clear());
 
 describe("LIFF Mock's Gift Messages", () => {
   it("keeps the Gift Messages its picker sent, oldest first, and none it backed out of", async () => {
-    await liffGiftSender(picker({ status: "success" }))?.send(giftMessage("0xfirst"));
-    await liffGiftSender(picker(undefined))?.send(giftMessage("0xcancelled"));
-    await liffGiftSender(picker({ status: "success" }))?.send(giftMessage("0xsecond"));
+    await liffGiftSender(picker({ status: "success" }))?.send(giftMessage("0xfirst"), "line");
+    await liffGiftSender(picker(undefined))?.send(giftMessage("0xcancelled"), "line");
+    await liffGiftSender(picker({ status: "success" }))?.send(giftMessage("0xsecond"), "line");
     expect([takeMockGiftMessage(), takeMockGiftMessage(), takeMockGiftMessage()]).toEqual([
       "/g/0xfirst",
       "/g/0xsecond",

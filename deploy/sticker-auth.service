@@ -10,6 +10,7 @@ Type=simple
 User=bawler
 Group=bawler
 EnvironmentFile=/srv/sticker-auth/auth.env
+EnvironmentFile=/srv/sticker-auth/privy-internal.env
 ExecStart=/usr/local/lib/nodejs/node-24/bin/node /srv/sticker-auth/server/start-auth-server.js
 Restart=always
 RestartSec=3
@@ -17,7 +18,7 @@ RestartSec=3
 MemoryMax=256M
 TasksMax=64
 
-# Sandboxing: it reads its own directory and calls LINE's API.
+# Sandboxing: it reads its own directory and signs identities authorized by the API.
 # It runs as the same user as the REST API, so the API's keys and database are hidden from it.
 InaccessiblePaths=-/srv/drawing-api
 NoNewPrivileges=true

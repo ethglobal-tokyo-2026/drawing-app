@@ -1,3 +1,4 @@
+import { useSessionLifetime } from "../api/sessionContext";
 import { Component, lazy, Suspense, type ReactNode } from "react";
 import { messageOf } from "../i18n/errorMessage";
 import { liffMockActive } from "../line/liff";
@@ -37,9 +38,10 @@ class PrivyBoundary extends Component<{ children: ReactNode }, { failed: boolean
  */
 export function PrivySignIn() {
   const started = usePrivyStarted();
+  const lifetime = useSessionLifetime();
   if (liffMockActive || !started) return null;
   return (
-    <PrivyBoundary>
+    <PrivyBoundary key={lifetime}>
       <Suspense fallback={null}>
         <PrivySession />
       </Suspense>

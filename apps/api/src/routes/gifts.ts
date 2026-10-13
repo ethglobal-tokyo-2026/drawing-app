@@ -1,7 +1,11 @@
 import { Hono, type Context } from "hono";
+import { stickers } from "@drawing-app/db";
+import { eq } from "drizzle-orm";
+import { assertPersonTransferAllowed, giftOwnershipPeople } from "../session/personOwnership.ts";
 import type { AppDeps } from "../deps.ts";
 import { diagnosticStep, logInfo } from "../diagnostics.ts";
 import { refused, validate } from "../errors.ts";
+import { deliverPersonGift, giftDelivery } from "../gifts/personDelivery.ts";
 import { submitDeposit } from "../gifts/deposit.ts";
 import {
   beginMessageAttempt,
@@ -70,6 +74,12 @@ export const giftRoutes = (deps: AppDeps) =>
     .post("/", validate("json", packageBodySchema), async (c) => {
       const body = c.req.valid("json");
       const stickerId = body.stickerId;
+      const sticker = deps.db
+        .select({ artistId: stickers.artistId })
+        .from(stickers)
+        .where(eq(stickers.id, stickerId))
+        .get();
+      assertPersonTransferAllowed(deps, [c.var.userId, body.forUserId, sticker?.artistId]);
       const packaging = await diagnosticStep(
         "gift.package",
         { stickerId, userId: c.var.userId },
@@ -85,6 +95,7 @@ export const giftRoutes = (deps: AppDeps) =>
       validate("json", signedTransactionSchema),
       async (c) => {
         const giftId = c.req.valid("param").giftId;
+        assertPersonTransferAllowed(deps, giftOwnershipPeople(deps, giftId));
         const signed = c.req.valid("json");
         const deposited = await diagnosticStep(
           "gift.deposit",
@@ -101,11 +112,32 @@ export const giftRoutes = (deps: AppDeps) =>
       validate("json", messageAttemptBodySchema),
       async (c) => {
         const giftId = c.req.valid("param").giftId;
-        const started = await oneAtATime(`gift:${giftId}`, async () =>
-          beginMessageAttempt(deps, c.var.userId, giftId, c.req.valid("json").attemptId),
-        );
+        const started = await oneAtATime(`gift:${giftId}`, async () => {
+          assertPersonTransferAllowed(deps, giftOwnershipPeople(deps, giftId));
+          return beginMessageAttempt(deps, c.var.userId, giftId, c.req.valid("json").attemptId);
+        });
         if (started.refusal !== null) return refused(c, started);
         return c.json({ gift: toGift(started.gift) }, 200);
+      },
+    )
+    .get("/:giftId/delivery", validate("param", giftIdParam), (c) => {
+      const result = giftDelivery(deps, c.var.userId, c.req.valid("param").giftId);
+      if (result.refusal !== null) return refused(c, result);
+      return c.json({ delivery: result.delivery }, 200);
+    })
+    .post(
+      "/:giftId/deliver-person",
+      validate("param", giftIdParam),
+      validate("json", messageAttemptBodySchema),
+      async (c) => {
+        const delivered = await deliverPersonGift(
+          deps,
+          c.var.session,
+          c.req.valid("param").giftId,
+          c.req.valid("json").attemptId,
+        );
+        if (delivered.refusal !== null) return refused(c, delivered);
+        return c.json({ gift: toGift(delivered.gift) }, 200);
       },
     )
     .post(
@@ -114,15 +146,16 @@ export const giftRoutes = (deps: AppDeps) =>
       validate("json", sharedBodySchema),
       async (c) => {
         const { giftId } = c.req.valid("param");
-        const shared = await oneAtATime(`gift:${giftId}`, async () =>
-          reportShared(
+        const shared = await oneAtATime(`gift:${giftId}`, async () => {
+          assertPersonTransferAllowed(deps, giftOwnershipPeople(deps, giftId));
+          return reportShared(
             deps,
             c.var.userId,
             giftId,
             c.req.valid("json").attemptId,
             c.req.valid("json").outcome,
-          ),
-        );
+          );
+        });
         if (shared.refusal !== null) return refused(c, shared);
         return c.json({ gift: toGift(shared.gift) }, 200);
       },
@@ -133,6 +166,7 @@ export const giftRoutes = (deps: AppDeps) =>
       validate("json", takeOutRequestSchema),
       async (c) => {
         const giftId = c.req.valid("param").giftId;
+        assertPersonTransferAllowed(deps, giftOwnershipPeople(deps, giftId));
         const started = await diagnosticStep(
           "gift.take_out.start",
           { giftId, userId: c.var.userId },
@@ -144,12 +178,14 @@ export const giftRoutes = (deps: AppDeps) =>
         return c.json({ gift, takeOut: toSponsoredTransaction(started.takeOut) }, 200);
       },
     )
+
     .post(
       "/:giftId/take-out",
       validate("param", giftIdParam),
       validate("json", signedTakeOutSchema),
       async (c) => {
         const giftId = c.req.valid("param").giftId;
+        assertPersonTransferAllowed(deps, giftOwnershipPeople(deps, giftId));
         const signed = c.req.valid("json");
         const takenOut = await diagnosticStep(
           "gift.take_out",
