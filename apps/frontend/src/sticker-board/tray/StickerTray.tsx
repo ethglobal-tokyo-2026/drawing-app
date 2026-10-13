@@ -47,6 +47,8 @@ interface Props {
   onProblem: (problem: TrayProblem) => void;
   /** A problem it told that's no longer so, which the board stops saying. */
   onProblemGone: (problem: TrayProblem) => void;
+  /** The board face is exposed, so its tray's laminate snapshots can update. */
+  laminateActive?: boolean;
   ref?: Ref<StickerTrayHandle>;
 }
 
@@ -92,6 +94,7 @@ export const StickerTray = memo(function StickerTray({
   onSeen,
   onProblem,
   onProblemGone,
+  laminateActive = true,
   ref,
 }: Props) {
   const engine = useRef<TrayEngine | null>(null);
@@ -99,10 +102,31 @@ export const StickerTray = memo(function StickerTray({
   /** What this visit's trays have shown, so a tray rebuilt for a new language shows none of it as NEW. */
   const seen = useRef(new Set<string>());
   const optedIn = useMyNsfwOptIn();
-  const latest = useRef({ stickers, ownerId, optedIn, api, onSeen, onProblem, onProblemGone });
-  useLayoutEffect(() => {
-    latest.current = { stickers, ownerId, optedIn, api, onSeen, onProblem, onProblemGone };
+  const latest = useRef({
+    stickers,
+    ownerId,
+    optedIn,
+    api,
+    onSeen,
+    onProblem,
+    onProblemGone,
+    laminateActive,
   });
+  useLayoutEffect(() => {
+    latest.current = {
+      stickers,
+      ownerId,
+      optedIn,
+      api,
+      onSeen,
+      onProblem,
+      onProblemGone,
+      laminateActive,
+    };
+  });
+  useLayoutEffect(() => {
+    if (laminateActive) engine.current?.refreshMaterials();
+  }, [laminateActive]);
 
   // What the sheets show: a sticker moved, raised or dropped on the board leaves it as it was, so the
   // tray doesn't repack and redraw for it.
@@ -137,6 +161,7 @@ export const StickerTray = memo(function StickerTray({
       problem: (p) => latest.current.onProblem(p),
       problemGone: (p) => latest.current.onProblemGone(p),
       seen: seen.current,
+      laminateActive: () => latest.current.laminateActive,
     });
     engine.current = tray;
     return () => {

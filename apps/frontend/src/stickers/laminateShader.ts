@@ -18,19 +18,16 @@ uniform float roughness;
 vec3 rz(vec3 n,float a) { return vec3(cos(a)*n.x-sin(a)*n.y,sin(a)*n.x+cos(a)*n.y,n.z); }
 vec3 rx(vec3 n,float a) { return vec3(n.x,cos(a)*n.y-sin(a)*n.z,sin(a)*n.y+cos(a)*n.z); }
 vec3 ry(vec3 n,float a) { return vec3(cos(a)*n.x+sin(a)*n.z,n.y,-sin(a)*n.x+cos(a)*n.z); }
-float scene(vec2 p) {
-  vec2 window=1.-smoothstep(vec2(.5,.62)-.045,vec2(.5,.62)+.045,abs(p));
-  return .14+1.66*window.x*window.y;
+vec2 windowAxes(vec2 p) {
+  return 1.-smoothstep(vec2(.30,.40)-.22,vec2(.30,.40)+.22,abs(p-vec2(.14,-.24)));
 }
 float environment(vec3 r) {
   if(r.z<=0.) return .14;
   vec2 p=r.xy/r.z;
-  float value=0.;
-  for(int y=-1;y<=1;y++) for(int x=-1;x<=1;x++) {
-    float weight=(x==0?2.:1.)*(y==0?2.:1.)/16.;
-    value+=scene(p+vec2(float(x),float(y))*roughness)*weight;
-  }
-  return value;
+  // The rectangular source and 1:2:1 filter are separable: three axis samples
+  // give the same nine-tap reflection with fewer fragment calculations.
+  vec2 filtered=(windowAxes(p-roughness)+2.*windowAxes(p)+windowAxes(p+roughness))*.25;
+  return .14+3.06*filtered.x*filtered.y;
 }
 float linear(float v) { return v<=.04045?v/12.92:pow((v+.055)/1.055,2.4); }
 float display(float v) { return v<=.0031308?v*12.92:1.055*pow(v,1./2.4)-.055; }

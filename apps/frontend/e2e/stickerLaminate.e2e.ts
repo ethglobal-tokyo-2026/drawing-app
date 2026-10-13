@@ -18,6 +18,7 @@ test("the displayed full-cut coat agrees with the independent linear reference o
     await page.goto(`/e2e/stickerLaminate.html?side=${side}&height=${height}&turn=${turn}`);
     const coat = page.locator('[data-sticker="0"] canvas.sticker-laminate');
     await expect(coat).toHaveAttribute("data-state", "ready");
+    const pose = await page.evaluate(() => window.laminateFixture.getPose());
     for (const [u, v, rgb] of [
       [0.1, 0.5, [255, 255, 255]],
       [0.5, 0.55, [136, 136, 136]],
@@ -44,7 +45,7 @@ test("the displayed full-cut coat agrees with the independent linear reference o
         [rgb[0] / 255, rgb[1] / 255, rgb[2] / 255],
         coatField({
           point: screenPoint(actual.uv[0], actual.uv[1], side, height, turn),
-          normal: orientNormal([0, 0, 1], turn, { x: -0.6, y: -0.6 }),
+          normal: orientNormal([0, 0, 1], turn, pose),
           material: MATERIAL_GLOSS,
         }),
       );
@@ -81,6 +82,7 @@ test("blank paper and gray ink share a persistent laminate after iPad tilt", asy
   await page.goto("/e2e/stickerLaminate.html");
   const coat = page.locator('[data-sticker="0"] canvas.sticker-laminate');
   await expect(coat).toHaveAttribute("data-state", "ready");
+  await page.evaluate(() => window.laminateFixture.tilt(40, 0));
   const pixels = () =>
     coat.evaluate((el) => {
       if (!(el instanceof HTMLCanvasElement))

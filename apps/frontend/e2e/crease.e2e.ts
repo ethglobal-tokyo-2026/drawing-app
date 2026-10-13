@@ -62,12 +62,13 @@ test("a sticker over another shows the crease of the edge beneath, lit as the on
   // Device tilt moves the one light, and the crease's lit side follows it: with the light at the
   // screen's top left, the side it rests on; swung to the bottom right, the opposite side.
   const crease = creaseOf(page, over.id);
+  await tiltScreen(page, 40, 0);
   await tiltScreen(page, 8, -32);
   await expect(crease).toHaveCSS("--lx", "-1.000");
   await expect(crease).toHaveCSS("--ly", "-1.000");
   await expect.poll(() => opacityOf(crease, "topLeft")).toBeCloseTo(1, 1);
   await expect.poll(() => opacityOf(crease, "bottomRight")).toBe(0);
-  await tiltScreen(page, 72, 90);
+  await tiltScreen(page, 72, 32);
   await expect(crease).toHaveCSS("--ly", "1.000");
   await expect.poll(() => opacityOf(crease, "bottomRight")).toBeGreaterThan(0.3);
   await expect.poll(() => opacityOf(crease, "topLeft")).toBeLessThan(0.3);

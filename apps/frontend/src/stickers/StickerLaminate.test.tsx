@@ -3,7 +3,10 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, expect, it, vi } from "vitest";
 import { StickerLaminate } from "./StickerLaminate";
+
 import { mountLaminate, turnLaminate } from "./laminateRenderer";
+
+const anyActiveCallback: unknown = expect.any(Function);
 
 vi.mock("./laminateRenderer", () => {
   const turns = new WeakMap<HTMLCanvasElement, number>();
@@ -16,6 +19,7 @@ vi.mock("./laminateRenderer", () => {
       turns.set(canvas, turn);
     }),
     laminateTurn: (canvas: HTMLCanvasElement) => turns.get(canvas),
+    refreshLaminate: vi.fn(),
   };
 });
 
@@ -43,6 +47,7 @@ it("preserves a live gesture's displayed turn when its crease texture changes be
       normal: "normal.png",
       turn: 67,
       finish: "gloss",
+      active: anyActiveCallback,
     });
     act(() =>
       root.render(
@@ -86,6 +91,7 @@ it("turns the mounted material without replacing textures and keeps that turn on
       normal: "normal.png",
       turn: 90,
       finish: "gloss",
+      active: anyActiveCallback,
     });
   } finally {
     act(() => root.unmount());

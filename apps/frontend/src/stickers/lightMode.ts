@@ -57,6 +57,54 @@ const easeToEdge = (v: number) => {
   return 1.5 * c - 0.5 * c * c * c;
 };
 
+export interface RotationOrigin {
+  alpha: number;
+  beta: number;
+  gamma: number;
+  screenAngle: number;
+  pose: { x: number; y: number };
+}
+
+/** Device rotations relative to the first reading, before displayed-axis easing or clamping. */
+export function relativeTiltPose(
+  alpha: number,
+  beta: number,
+  gamma: number,
+  origin: RotationOrigin,
+): { x: number; y: number } {
+  const a = alpha * RAD,
+    b = beta * RAD,
+    g = gamma * RAD;
+  const a0 = origin.alpha * RAD,
+    b0 = origin.beta * RAD,
+    g0 = origin.gamma * RAD;
+  // DeviceOrientation uses Rz(alpha) * Rx(beta) * Ry(gamma). Transform its surface normal
+  // back into the reference device frame; this stays signed on either side of upright.
+  const nx = Math.cos(a) * Math.sin(g) + Math.sin(a) * Math.sin(b) * Math.cos(g);
+  const ny = Math.sin(a) * Math.sin(g) - Math.cos(a) * Math.sin(b) * Math.cos(g);
+  const nz = Math.cos(b) * Math.cos(g);
+  const ax = Math.cos(a0) * nx + Math.sin(a0) * ny;
+  const ay = -Math.sin(a0) * nx + Math.cos(a0) * ny;
+  const by = Math.cos(b0) * ay + Math.sin(b0) * nz;
+  const bz = -Math.sin(b0) * ay + Math.cos(b0) * nz;
+  const cx = Math.cos(g0) * ax - Math.sin(g0) * bz;
+  const cz = Math.sin(g0) * ax + Math.cos(g0) * bz;
+  const across = Math.atan2(cx, cz) / RAD;
+  const up = Math.atan2(-by, cz) / RAD;
+  const angle = origin.screenAngle * RAD;
+  const quiet = (v: number) => (Math.abs(v) < 1e-9 ? 0 : v);
+  return {
+    x: clamp11(
+      origin.pose.x +
+        easeToEdge(quiet(across * Math.cos(angle) + up * Math.sin(angle)) / TILT_RANGE),
+    ),
+    y: clamp11(
+      origin.pose.y +
+        easeToEdge(quiet(up * Math.cos(angle) - across * Math.sin(angle)) / TILT_RANGE),
+    ),
+  };
+}
+
 /** Rotate device gravity into displayed axes before applying the established reading range. */
 export function tiltPose(beta: number, gamma: number, screenAngle = 0): { x: number; y: number } {
   const b = beta * RAD;

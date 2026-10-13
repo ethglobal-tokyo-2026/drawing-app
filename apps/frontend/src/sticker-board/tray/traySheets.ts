@@ -48,7 +48,11 @@ const INSET = 0.025;
 /** How dark a sheet's shade is at each level back; a sheet changing level eases between them. */
 export const shadeOf = (depth: number) => clamp(depth * 0.3, 0, 0.9);
 
-export function createTraySheets(tray: Tray, trayModel: TrayModel) {
+export function createTraySheets(
+  tray: Tray,
+  trayModel: TrayModel,
+  laminateActive: () => boolean = () => true,
+) {
   const { doc, zip, make, decorative, icon, words, hint, say, stack, ui, colLeft, trayTop } = tray;
   const { newIds, matches, sheetItems, sheetMatches, topF, resetOrder } = trayModel;
   const laminates = new Map<HTMLCanvasElement, { turn: number; dispose: () => void }>();
@@ -69,7 +73,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
         cut: s.urls.mask,
         turn,
         finish: "gloss",
-        active,
+        active: () => laminateActive() && active(),
       }),
     });
   }

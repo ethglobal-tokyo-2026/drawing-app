@@ -12,16 +12,17 @@ import {
   FALLBACK_PERIOD_MS,
   lightMode,
   rotationInputForLight,
-  tiltPose,
+  relativeTiltPose,
   type LightMode,
   type RotationInput,
+  type RotationOrigin,
 } from "./lightMode";
 
 export interface LightPose {
   x: number;
   y: number;
 }
-let publishedPose: LightPose = { x: -0.6, y: -0.6 };
+let publishedPose: LightPose = { x: 0, y: 0 };
 const subscribers = new Set<(pose: LightPose) => void>();
 /** The held pose, or the common static pose before the first published input. */
 export const currentLight = (): LightPose => ({ ...publishedPose });
@@ -86,6 +87,7 @@ const documentLights = new WeakMap<
     crease: Light | null;
     seenRotation: boolean;
     fallbackPhase: number;
+    origin?: RotationOrigin;
   }
 >();
 
@@ -196,7 +198,7 @@ function sensorPolicy(doc: Document): "allowed" | "blocked" | "unknown" {
 export function installLight(root: HTMLElement, win: typeof window = window): () => void {
   const doc = root.ownerDocument;
   const kept = documentLights.get(doc) ?? {
-    pose: { x: -0.6, y: -0.6 },
+    pose: { x: 0, y: 0 },
     light: null,
     crease: null,
     seenRotation: false,
@@ -230,9 +232,10 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   let x = 0;
   let y = 0;
   /** Where the light was last written, or null before it first moves. */
-  let lit: LightPose | null = kept.light ? { ...kept.pose } : null;
+  let lit: LightPose = { ...kept.pose };
   let frame = 0;
   let lastWrite = -Infinity;
+  let lastFrame = win.performance.now();
   let settle = 0;
 
   /** Lights every crease from where the light now rests. Made once, not per write. */
@@ -258,12 +261,8 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
 
   /** Sets the light from `lit` on every highlight; returns how many. Made once, not per write. */
   const writeLit = () => {
-    if (!lit) return 0;
-    publishedPose = { ...lit };
     const count = setLightNow({ lx: written(lit.x), ly: written(lit.y) });
-    kept.pose = publishedPose;
     kept.light = lightNow;
-    for (const listener of subscribers) listener(currentLight());
     return count;
   };
 
@@ -276,25 +275,29 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   const write = (now: number) => {
     frame = 0;
     if (mode === "still" || !installed) return;
-    if (now - lastWrite < BEAT_MS) {
-      frame = win.requestAnimationFrame(write);
-      return;
-    }
-    const since = now - lastWrite;
-    lastWrite = now;
+    const since = now - lastFrame;
+    lastFrame = now;
     if (mode === "fallback-wave") {
       fallbackPublished = (fallbackElapsed + now - fallbackStarted) % FALLBACK_PERIOD_MS;
       kept.fallbackPhase = fallbackPublished;
       lit = fallbackPose(fallbackPublished / FALLBACK_PERIOD_MS);
-    } else if (!lit) lit = { x, y };
-    else {
+    } else {
       // A low-pass on the tilt, by the time since the last write; close enough, it lands.
       const k = 1 - Math.exp(-since / GLIDE_MS);
       const next = { x: lit.x + (x - lit.x) * k, y: lit.y + (y - lit.y) * k };
       const near = Math.abs(x - next.x) < STEP / 2 && Math.abs(y - next.y) < STEP / 2;
       lit = near ? { x, y } : next;
     }
-    writeLight();
+    publishedPose = { ...lit };
+    kept.pose = publishedPose;
+    // The coating has no CSS transition: publish each display frame during finite smoothing.
+    // Foil and crease style writes retain their existing throttle and transitions.
+    for (const listener of subscribers) listener(currentLight());
+    const settled = mode !== "fallback-wave" && lit.x === x && lit.y === y;
+    if (now - lastWrite >= BEAT_MS || settled) {
+      lastWrite = now;
+      writeLight();
+    }
     if (mode === "fallback-wave" || lit.x !== x || lit.y !== y)
       frame = win.requestAnimationFrame(write);
   };
@@ -306,7 +309,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     if (lit && Math.abs(x - lit.x) < STEP && Math.abs(y - lit.y) < STEP) return;
     if (!frame) {
       // Time spent holding a pose is not interpolation time toward a newly received target.
-      if (lit) lastWrite = Math.max(lastWrite, win.performance.now() - BEAT_MS);
+      lastFrame = win.performance.now();
       frame = win.requestAnimationFrame(write);
     }
   };
@@ -318,11 +321,10 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     settle = 0;
     if (mode === "fallback-wave") fallbackElapsed = fallbackPublished;
     // Drop an unfinished target. A resumed rotation source waits for a fresh reading.
-    if (lit) {
-      x = lit.x;
-      y = lit.y;
-    }
-    lastWrite = lit ? win.performance.now() : -Infinity;
+    x = lit.x;
+    y = lit.y;
+    lastFrame = win.performance.now();
+    lastWrite = lightNow ? lastFrame : -Infinity;
     if (cancelReplays) glideOnReplays(win, false);
   };
 
@@ -353,6 +355,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     if (mode === "fallback-wave") {
       fallbackStarted = win.performance.now();
       lastWrite = -Infinity;
+      lastFrame = win.performance.now();
       frame = win.requestAnimationFrame(write);
     }
   };
@@ -370,11 +373,19 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     rotation = "usable";
     refresh();
     const angle = win.screen.orientation?.angle ?? Reflect.get(win, "orientation");
-    const to = tiltPose(
-      e.beta,
-      e.gamma,
-      typeof angle === "number" && Number.isFinite(angle) ? angle : 0,
-    );
+    const screenAngle = typeof angle === "number" && Number.isFinite(angle) ? angle : 0;
+    const alpha = e.alpha !== null && Number.isFinite(e.alpha) ? e.alpha : 0;
+    if (!kept.origin || kept.origin.screenAngle !== screenAngle) {
+      // Sensor acquisition and screen rotation keep the displayed coating, without a jump.
+      pause(false);
+      kept.origin = { alpha, beta: e.beta, gamma: e.gamma, screenAngle, pose: { ...lit } };
+      if (mode === "device-tilt" && !lightNow) {
+        lastWrite = win.performance.now();
+        writeLight();
+      }
+      return;
+    }
+    const to = relativeTiltPose(alpha, e.beta, e.gamma, kept.origin);
     aim(to.x, to.y);
   };
 

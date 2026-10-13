@@ -387,6 +387,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const drawKey = useDrawFromBoard(onDraw);
   /** The sticker the Gratitude Mini-game is open for: a received gift's, or the developer slip's demo. */
   const [gratitudeFor, setGratitudeFor] = useState<GratitudeFor | null>(null);
+  // The opaque detail and Gratitude Mini-game cover the front; turning exposes the stat board.
+  const laminateActive = !turned && !gratitudeFor && !open;
   /** Received gifts whose notice closed on this visit, by receive: each close brings on the next. */
   const [noticesClosed, setNoticesClosed] = useState<ReadonlySet<string>>(() => new Set());
   /** A sticker that just reached you, and its giver, while it has no gratitude yet. */
@@ -973,6 +975,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                     hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
                     foil={byOther(s)}
                     veiled={veiledFor(s, optedIn)}
+                    laminateActive={laminateActive}
                     by={byOther(s) ? handleOf(s.artist) : undefined}
                   />
                   {/* Right after its sticker, so Tab reaches it next. */}
@@ -1039,6 +1042,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             onSeen={onTraySeen}
             onProblem={addTrayProblem}
             onProblemGone={dropTrayProblem}
+            laminateActive={laminateActive}
           />
         </Suspense>
       )}

@@ -80,6 +80,7 @@ test("a foil follows only device tilt, holding still through mouse and Apple Pen
   await ignorePointers(page, foil, still);
 
   // Device tilt swings the light across the screen, and the bands slide with it.
+  await tiltScreen(page, 40, 0);
   await tiltLight(page, foil, -32, "-1.000");
   const left = await bandPixels(page, foil);
   await tiltLight(page, foil, 32, "1.000");

@@ -65,6 +65,7 @@ test("a tilted flight reflects in the same axes as its turned sticker", async ({
   await page.goto("/e2e/stickerLaminate.html?turn=90");
   const coat = page.locator('[data-sticker="0"] canvas.sticker-laminate');
   await expect(coat).toHaveAttribute("data-state", "ready");
+  const pose = await page.evaluate(() => window.laminateFixture.getPose());
   await page.evaluate(() => window.laminateFixture.flight(30, 12));
   const points = await coat.evaluate((el) => {
     if (!(el instanceof HTMLCanvasElement)) throw new Error("The flight snapshot is not a canvas");
@@ -93,7 +94,7 @@ test("a tilted flight reflects in the same axes as its turned sticker", async ({
       print[i],
       coatField({
         point: screenPoint(points[i].uv[0], points[i].uv[1], 240, 240, 90),
-        normal: orientNormal([0, 0, 1], 90, { x: -0.6, y: -0.6 }, { x: 30, y: 12 }),
+        normal: orientNormal([0, 0, 1], 90, pose, { x: 30, y: 12 }),
         material: MATERIAL_GLOSS,
       }),
     );
@@ -112,6 +113,10 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
     "data-state",
     "ready",
   );
+  await page.evaluate(() => window.laminateFixture.tilt(40, 0));
+  await page.evaluate(() => window.laminateFixture.tilt(35, 10));
+  await page.waitForTimeout(1000);
+  const pose = await page.evaluate(() => window.laminateFixture.getPose());
   const sample = await ramp.evaluate((el) => {
     if (!(el instanceof HTMLCanvasElement)) throw new Error("The ramp snapshot is not a canvas");
     const context = el.getContext("2d");
@@ -142,7 +147,7 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
         normal: orientNormal(
           normalFromHeight(new Float32Array(sample.height), 240, 240, point.x, 100),
           0,
-          { x: -0.6, y: -0.6 },
+          pose,
         ),
         material: MATERIAL_GLOSS,
       }),
@@ -153,7 +158,10 @@ test("the draped ramp changes reflection by slope while raised plateaus stay fla
   expect(sample.points[sample.points.length - 1].color).toBe(
     sample.points[sample.points.length - 1].flat,
   );
-  expect(sample.points.some((p) => Math.abs(p.color - p.flat) > 2)).toBe(true);
+  expect(
+    sample.points.some((p) => Math.abs(p.color - p.flat) > 2),
+    JSON.stringify(sample.points),
+  ).toBe(true);
 });
 
 test("Shop matte uses the same held light and broadens the white-paper reflection", async ({
@@ -162,6 +170,7 @@ test("Shop matte uses the same held light and broadens the white-paper reflectio
   await page.goto("/e2e/stickerLaminate.html");
   const matte = page.locator("[data-matte] canvas.sticker-laminate");
   await expect(matte).toHaveAttribute("data-state", "ready");
+  const pose = await page.evaluate(() => window.laminateFixture.getPose());
   const points = await matte.evaluate((el) => {
     if (!(el instanceof HTMLCanvasElement)) throw new Error("The matte snapshot is not a canvas");
     const context = el.getContext("2d");
@@ -179,7 +188,7 @@ test("Shop matte uses the same held light and broadens the white-paper reflectio
   for (const point of points) {
     const input = {
       point: screenPoint(point.uv[0], point.uv[1], 240, 240, -4),
-      normal: orientNormal([0, 0, 1], -4, { x: -0.6, y: -0.6 }),
+      normal: orientNormal([0, 0, 1], -4, pose),
     };
     const expected = compositePrint([1, 1, 1], coatField({ ...input, material: MATERIAL_MATTE }));
     const gloss = compositePrint([1, 1, 1], coatField({ ...input, material: MATERIAL_GLOSS }));
@@ -192,6 +201,7 @@ test("Shop matte uses the same held light and broadens the white-paper reflectio
       if (!(el instanceof HTMLCanvasElement)) throw new Error("The matte snapshot is not a canvas");
       return el.toDataURL();
     });
+  await page.evaluate(() => window.laminateFixture.tilt(40, 0));
   await page.evaluate(() => window.laminateFixture.tilt(40, 28));
   await page.waitForTimeout(1200);
   const held = await image();

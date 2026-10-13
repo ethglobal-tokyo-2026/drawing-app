@@ -65,6 +65,8 @@ export interface TrayEngine {
   close: () => Promise<boolean>;
   /** Rereads the stickers, after one is sealed, placed, removed or given. */
   refresh: () => void;
+  /** Newly exposed tray surfaces take the held pose without repacking their sticker sheets. */
+  refreshMaterials: () => void;
   /** Each move of a board sticker being dragged; null when the tray doesn't hold it. */
   boardDrag: (id: string, at: Point) => TrayDrag | null;
   /**
@@ -114,6 +116,7 @@ export function createTrayEngine(
     problem,
     problemGone,
     seen = new Set<string>(),
+    laminateActive,
   }: {
     slots: () => readonly TraySticker[];
     api: TrayBoard;
@@ -128,6 +131,8 @@ export function createTrayEngine(
      * carried across a rebuilt engine.
      */
     seen?: Set<string>;
+    /** Whether the board face is exposed; each tray surface keeps its own eligibility too. */
+    laminateActive?: () => boolean;
   },
 ): TrayEngine {
   const doc = board.ownerDocument;
@@ -315,7 +320,7 @@ export function createTrayEngine(
     pouchFoot,
     boardView,
   };
-  const traySheets = createTraySheets(tray, trayModel);
+  const traySheets = createTraySheets(tray, trayModel, laminateActive);
   const { stackInset, renderStack, holdsFocus, redraw, markShown, loadImages } = traySheets;
 
   const trayPaging = createTrayPaging(tray, trayModel, traySheets);
@@ -594,6 +599,7 @@ export function createTrayEngine(
     open: () => zip.open(),
     close: () => zip.close(),
     refresh,
+    refreshMaterials: () => traySheets.refreshMaterials(),
     boardDrag,
     boardDrop,
     boardDragEnd,

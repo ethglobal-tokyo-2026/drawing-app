@@ -28,10 +28,12 @@ export const STICKER_THICKNESS = 0.35;
 export const BASE_ILLUMINATION = 0.9;
 export const ENVIRONMENT = {
   ambient: 0.14,
-  peak: 1.8,
-  halfWidth: 0.5,
-  halfHeight: 0.62,
-  edge: 0.045,
+  peak: 3.2,
+  centerX: 0.14,
+  centerY: -0.24,
+  halfWidth: 0.3,
+  halfHeight: 0.4,
+  edge: 0.22,
 };
 
 const bound = (v: number) => Math.max(0, Math.min(1, v));
@@ -142,7 +144,7 @@ const smooth = (lo: number, hi: number, value: number) => {
   return t * t * (3 - 2 * t);
 };
 
-/** A centered rectangular source in angular coordinates, surrounded by neutral low radiance. */
+/** An off-axis soft rectangular source in angular coordinates, with neutral surrounding radiance. */
 export function environment(direction: Vec3): number {
   if (direction[2] <= 0) return ENVIRONMENT.ambient;
   const u = direction[0] / direction[2],
@@ -152,14 +154,14 @@ export function environment(direction: Vec3): number {
     smooth(
       ENVIRONMENT.halfWidth - ENVIRONMENT.edge,
       ENVIRONMENT.halfWidth + ENVIRONMENT.edge,
-      Math.abs(u),
+      Math.abs(u - ENVIRONMENT.centerX),
     );
   const vertical =
     1 -
     smooth(
       ENVIRONMENT.halfHeight - ENVIRONMENT.edge,
       ENVIRONMENT.halfHeight + ENVIRONMENT.edge,
-      Math.abs(v),
+      Math.abs(v - ENVIRONMENT.centerY),
     );
   return ENVIRONMENT.ambient + (ENVIRONMENT.peak - ENVIRONMENT.ambient) * horizontal * vertical;
 }

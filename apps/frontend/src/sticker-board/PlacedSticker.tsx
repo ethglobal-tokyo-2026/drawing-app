@@ -37,6 +37,8 @@ interface Props {
   foil?: boolean;
   /** An NSFW sticker the viewer has no NSFW opt-in to see: its veiled image, blurred inside its cut. */
   veiled?: boolean;
+  /** The board face is exposed, so this sticker's laminate can take new snapshots. */
+  laminateActive?: boolean;
   /** Who drew it, as printed, when that isn't the board's owner: its label names them. */
   by?: string;
 }
@@ -64,6 +66,7 @@ export const PlacedSticker = memo(function PlacedSticker({
   hintId,
   foil = false,
   veiled = false,
+  laminateActive = true,
   by,
 }: Props) {
   const { t } = useTranslation();
@@ -136,6 +139,7 @@ export const PlacedSticker = memo(function PlacedSticker({
           nsfw={sticker.nsfw}
           kyotoSeika={sticker.kyotoSeikaSubjects !== null}
           veiled={veiled}
+          laminateActive={laminateActive}
           turn={sticker.placement.r}
           stuck
           // A landing sticker's stick animation shows it arrive; it isn't held back as well.

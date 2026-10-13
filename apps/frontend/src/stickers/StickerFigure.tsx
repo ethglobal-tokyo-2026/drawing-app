@@ -47,6 +47,8 @@ interface Props {
   crease?: Crease;
   /** Coming-soon Shop previews compare roughness; sealed stickers default to gloss. */
   laminate?: LaminateFinish;
+  /** Whether this surface is exposed; covering it pauses its laminate snapshots. */
+  laminateActive?: boolean;
   className?: string;
   ref?: Ref<HTMLSpanElement>;
 }
@@ -72,6 +74,7 @@ export const StickerFigure = memo(function StickerFigure({
   reveal = false,
   crease,
   laminate = "gloss",
+  laminateActive = true,
   className,
   ref,
 }: Props) {
@@ -116,6 +119,7 @@ export const StickerFigure = memo(function StickerFigure({
         normal={crease?.normal}
         turn={turn}
         finish={laminate}
+        active={laminateActive}
       />
       {nsfw && <span className="sticker-figure__gloss" aria-hidden="true" />}
       {/* Keyed by its images, so a rebaked crease presses in again. */}

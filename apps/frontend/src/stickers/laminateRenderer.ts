@@ -12,7 +12,7 @@ export interface LaminateSurface {
   finish: LaminateFinish;
   tiltX?: number;
   tiltY?: number;
-  /** An exposed tray face can pause its snapshots while clipped inside the closed tray. */
+  /** Covered Sticker Boards and clipped tray faces pause snapshots until exposed again. */
   active?: () => boolean;
 }
 
@@ -28,6 +28,8 @@ class LaminateRenderer {
     { users: number; texture: Promise<WebGLTexture>; abort: AbortController }
   >();
   readonly surfaces = new Set<MountedSurface>();
+  readonly refreshes = new Set<MountedSurface>();
+  refreshFrame = 0;
   readonly flat: WebGLTexture;
   readonly buffer: WebGLBuffer;
   readonly atlasLimit: number;
@@ -111,6 +113,7 @@ class LaminateRenderer {
       this.flat = this.texture(new Uint8Array([128, 128, 255, 255]));
       this.stopLight = subscribeLight(() =>
         timeOurWork("laminate", () => {
+          this.cancelRefresh();
           this.draw([...this.surfaces]);
         }),
       );
@@ -229,6 +232,25 @@ class LaminateRenderer {
     );
   }
 
+  /** Re-exposure requests made in one commit share a batch after eligibility refs update. */
+  refresh(surface: MountedSurface) {
+    if (this.disposed || this.lost) return;
+    this.refreshes.add(surface);
+    if (this.refreshFrame) return;
+    this.refreshFrame = requestAnimationFrame(() => {
+      this.refreshFrame = 0;
+      const surfaces = [...this.refreshes];
+      this.refreshes.clear();
+      this.draw(surfaces);
+    });
+  }
+
+  cancelRefresh() {
+    cancelAnimationFrame(this.refreshFrame);
+    this.refreshFrame = 0;
+    this.refreshes.clear();
+  }
+
   draw(surfaces: MountedSurface[]) {
     if (this.disposed || this.lost || document.hidden) return;
     // Read geometry together before snapshots change, avoiding a layout read after each write.
@@ -304,20 +326,24 @@ class LaminateRenderer {
   ) {
     const width = Math.max(...tiles.map((tile) => tile.x + tile.w));
     const height = Math.max(...tiles.map((tile) => tile.y + tile.h));
-    if (this.canvas.width !== width || this.canvas.height !== height) {
-      this.canvas.width = width;
-      this.canvas.height = height;
-    }
+    // A single-surface load or turn must not shrink the next shared batch's allocation.
+    if (this.canvas.width < width) this.canvas.width = width;
+    if (this.canvas.height < height) this.canvas.height = height;
     const gl = this.gl;
+    if (gl.drawingBufferWidth < width || gl.drawingBufferHeight < height)
+      throw new Error("The laminate GPU drawing buffer is smaller than its requested batch");
     gl.useProgram(this.program);
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(0, gl.drawingBufferHeight - height, width, height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.disable(gl.SCISSOR_TEST);
     const pose = currentLight();
     gl.uniform2f(this.uniforms.get("pose") ?? null, pose.x, pose.y);
     for (const tile of tiles) {
       const { options, textures } = tile.surface;
       if (!textures) continue;
-      gl.viewport(tile.x, height - tile.y - tile.h, tile.w, tile.h);
+      gl.viewport(tile.x, gl.drawingBufferHeight - tile.y - tile.h, tile.w, tile.h);
       for (let i = 0; i < 3; i++) {
         gl.activeTexture(gl.TEXTURE0 + i);
         gl.bindTexture(gl.TEXTURE_2D, textures[i]);
@@ -336,15 +362,13 @@ class LaminateRenderer {
       );
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
-    if (this.atlas.width !== width || this.atlas.height !== height) {
-      this.atlas.width = width;
-      this.atlas.height = height;
-    }
+    if (this.atlas.width < width) this.atlas.width = width;
+    if (this.atlas.height < height) this.atlas.height = height;
     const atlas = this.atlas.getContext("2d");
     if (!atlas) throw new Error("The laminate atlas 2D context is unavailable");
     atlas.clearRect(0, 0, width, height);
     // One GPU-to-2D copy for this bounded batch, then ordinary 2D region copies.
-    atlas.drawImage(this.canvas, 0, 0);
+    atlas.drawImage(this.canvas, 0, 0, width, height, 0, 0, width, height);
     for (const {
       surface: { canvas },
       x,
@@ -367,6 +391,7 @@ class LaminateRenderer {
   destroy() {
     if (this.disposed) return;
     this.disposed = true;
+    this.cancelRefresh();
     this.stopLight();
     this.canvas.removeEventListener("webglcontextlost", this.contextLost);
     this.canvas.removeEventListener("webglcontextrestored", this.contextRestored);
@@ -456,6 +481,7 @@ class MountedSurface {
     this.textures = null;
     if (!gpu) return;
     gpu.surfaces.delete(this);
+    gpu.refreshes.delete(this);
     gpu.release(this.options.print);
     gpu.release(this.options.cut);
     if (this.options.normal) gpu.release(this.options.normal);
@@ -515,5 +541,6 @@ export function turnLaminate(canvas: HTMLCanvasElement, turn: number, tiltX = 0,
 
 /** An exposed tray face samples the held pose after spending time inside the closed tray. */
 export function refreshLaminate(canvas: HTMLCanvasElement) {
-  mounted.get(canvas)?.draw();
+  const surface = mounted.get(canvas);
+  if (surface) surface.gpu?.refresh(surface);
 }

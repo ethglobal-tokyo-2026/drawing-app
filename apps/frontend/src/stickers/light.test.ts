@@ -64,8 +64,8 @@ const lightAt = () => lightOn(film);
 /** A pointer moved to (x, y): a mouse unless it says it's a pen or a finger. */
 const pointAt = (x: number, y: number, pointerType = "mouse", type = "pointermove") =>
   window.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerType }));
-const tiltTo = (gamma: number | null, beta: number | null) =>
-  window.dispatchEvent(Object.assign(new Event("deviceorientation"), { gamma, beta }));
+const tiltTo = (gamma: number | null, beta: number | null, alpha = 0) =>
+  window.dispatchEvent(Object.assign(new Event("deviceorientation"), { alpha, gamma, beta }));
 /** Happy DOM has no ScreenOrientation; supply its complete event-target interface. */
 const screenAt = (angle: number) => {
   const orientation = Object.assign(new EventTarget(), {
@@ -162,10 +162,207 @@ afterEach(() => {
 });
 
 describe("the shared light", () => {
+  it("publishes moving laminate at display cadence while keeping foil style writes throttled", () => {
+    screenAt(0);
+    uninstall = installLight(root);
+    showScreen();
+    tiltTo(0, 40);
+    vi.advanceTimersByTime(1000);
+    const frames: { at: number; x: number; y: number }[] = [];
+    const cssWrites: number[] = [];
+    const setProperty = film.style.setProperty.bind(film.style);
+    vi.spyOn(film.style, "setProperty").mockImplementation((name, value, priority) => {
+      if (name === "--lx") cssWrites.push(performance.now());
+      setProperty(name, value, priority);
+    });
+    const stop = subscribeLight((pose) => frames.push({ at: performance.now(), ...pose }));
+    try {
+      tiltTo(8, 40);
+      vi.advanceTimersByTime(256);
+      expect(frames.length).toBeGreaterThanOrEqual(12);
+      for (let i = 1; i < frames.length; i++) {
+        expect(frames[i].at - frames[i - 1].at).toBeLessThanOrEqual(20);
+        expect(frames[i].x).toBeGreaterThan(frames[i - 1].x);
+      }
+      expect(cssWrites.length).toBeGreaterThan(1);
+      expect(cssWrites.length).toBeLessThan(frames.length);
+      for (let i = 1; i < cssWrites.length; i++)
+        expect(cssWrites[i] - cssWrites[i - 1]).toBeGreaterThanOrEqual(45);
+      expect(Number(lightAt()[0])).toBeGreaterThan(-0.6);
+      vi.advanceTimersByTime(2000);
+      const held = currentLight();
+      const count = frames.length;
+      vi.advanceTimersByTime(22000);
+      expect(currentLight()).toEqual(held);
+      expect(frames).toHaveLength(count);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      stop();
+    }
+  });
+
+  it.each([
+    ["flat portrait", 0, 0, 0],
+    ["reading portrait", 0, 0, 40],
+    ["upright portrait", 0, 0, 80],
+    ["past upright portrait", 0, 0, 95],
+    ["flat landscape", 90, 0, 0],
+    ["upright landscape", 90, -80, 0],
+    ["upright reversed landscape", 270, 80, 0],
+  ] as const)(
+    "keeps the displayed laminate when the first reading arrives in %s",
+    (_name, angle, gamma, beta) => {
+      screenAt(angle);
+      uninstall = installLight(root);
+      showScreen();
+      const before = currentLight();
+      tiltTo(gamma, beta);
+      vi.advanceTimersByTime(2000);
+      expect(currentLight()).toEqual(before);
+      vi.advanceTimersByTime(22000);
+      expect(currentLight()).toEqual(before);
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
+  it.each([
+    {
+      name: "flat portrait",
+      angle: 0,
+      origin: [0, 0],
+      pitch: [
+        [0, 5],
+        [0, -5],
+      ],
+      roll: [
+        [5, 0],
+        [-5, 0],
+      ],
+    },
+    {
+      name: "upright portrait",
+      angle: 0,
+      origin: [0, 80],
+      pitch: [
+        [0, 85],
+        [0, 75],
+      ],
+      roll: [
+        [5, 80],
+        [-5, 80],
+      ],
+    },
+    {
+      name: "past upright portrait",
+      angle: 0,
+      origin: [0, 95],
+      pitch: [
+        [0, 100],
+        [0, 90],
+      ],
+      roll: [
+        [5, 95],
+        [-5, 95],
+      ],
+    },
+    {
+      name: "flat landscape",
+      angle: 90,
+      origin: [0, 0],
+      pitch: [
+        [-5, 0],
+        [5, 0],
+      ],
+      roll: [
+        [0, 5],
+        [0, -5],
+      ],
+    },
+    {
+      name: "upright landscape",
+      angle: 90,
+      origin: [-80, 0],
+      pitch: [
+        [-85, 0],
+        [-75, 0],
+      ],
+      roll: [
+        [-80, 5],
+        [-80, -5],
+      ],
+    },
+    {
+      name: "upright reversed landscape",
+      angle: 270,
+      origin: [80, 0],
+      pitch: [
+        [85, 0],
+        [75, 0],
+      ],
+      roll: [
+        [80, -5],
+        [80, 5],
+      ],
+    },
+  ] as const)(
+    "responds to five-degree pitch and roll in both directions from $name",
+    ({ angle, origin, pitch, roll }) => {
+      screenAt(angle);
+      uninstall = installLight(root);
+      showScreen();
+      tiltTo(origin[0], origin[1]);
+      vi.advanceTimersByTime(2000);
+      const originPose = currentLight();
+      for (const [axis, readings] of [
+        ["y", pitch],
+        ["x", roll],
+      ] as const) {
+        tiltTo(readings[0][0], readings[0][1]);
+        vi.advanceTimersByTime(2000);
+        expect(currentLight()[axis] - originPose[axis]).toBeGreaterThan(0.02);
+        tiltTo(readings[1][0], readings[1][1]);
+        vi.advanceTimersByTime(2000);
+        expect(currentLight()[axis] - originPose[axis]).toBeLessThan(-0.02);
+        tiltTo(origin[0], origin[1]);
+        vi.advanceTimersByTime(2000);
+        expect(currentLight()).toEqual(originPose);
+      }
+    },
+  );
+
+  it.each([
+    [90, [-40, 0], [-45, 0]],
+    [180, [0, -40], [0, -45]],
+    [270, [40, 0], [45, 0]],
+  ] as const)(
+    "holds the reflection when the displayed axes turn to %s degrees",
+    (angle, origin, next) => {
+      screenAt(0);
+      uninstall = installLight(root);
+      showScreen();
+      tiltTo(0, 40);
+      vi.advanceTimersByTime(1000);
+      tiltTo(8, 40);
+      vi.advanceTimersByTime(2000);
+      const before = currentLight();
+      screenAt(angle);
+      tiltTo(origin[0], origin[1]);
+      vi.advanceTimersByTime(2000);
+      expect(currentLight()).toEqual(before);
+      tiltTo(next[0], next[1]);
+      vi.advanceTimersByTime(2000);
+      expect(currentLight().y - before.y).toBeGreaterThan(0.02);
+      vi.advanceTimersByTime(22000);
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
   it("continues a reordered preview film from its displayed position when the light moves again", () => {
     if (!film.parentElement) throw new Error("The highlight needs its film layer");
     uninstall = installLight(root);
     showScreen();
+    tiltTo(0, 40);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     let previous = film.animate([{ translate: "0px" }, { translate: "100px" }], {
       duration: 280,
       easing: "ease-out",
@@ -240,6 +437,8 @@ describe("the shared light", () => {
       ["", ""],
     ]);
 
+    tiltTo(0, 40);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     tiltTo(32, 40);
     vi.advanceTimersByTime(10 * GLIDE_MS);
     expect(lightAt()).toEqual(["1.000", "0.000"]);
@@ -285,11 +484,15 @@ describe("the shared light", () => {
   it("lights a phone held upright and leaning sideways the same, whichever way the sensor writes it", () => {
     uninstall = installLight(root);
     showScreen();
-    // Near upright the sensor can write one tilt two ways: gamma flips as beta passes 90°.
-    tiltTo(89.9, 80);
+    tiltTo(0, 90, 0);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
+    // At beta 90°, alpha + gamma defines this orientation, so both complete readings are equal.
+    tiltTo(5, 90, 0);
     vi.advanceTimersByTime(10 * GLIDE_MS);
     const before = lightAt();
-    tiltTo(-89.9, 100);
+    expect(Number(before[0])).toBeGreaterThan(0.02);
+    expect(Number(before[0])).toBeLessThan(1);
+    tiltTo(-5, 90, 10);
     vi.advanceTimersByTime(10 * GLIDE_MS);
     expect(lightAt()).toEqual(before);
   });
@@ -311,8 +514,10 @@ describe("the shared light", () => {
   it("keeps still for the hand's tremor", () => {
     uninstall = installLight(root);
     showScreen();
+    tiltTo(0, 40);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     tiltTo(16, 40);
-    vi.advanceTimersByTime(100);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     const writes = vi.spyOn(film.style, "setProperty");
     tiltTo(16.2, 40.2);
     vi.advanceTimersByTime(100);
@@ -322,8 +527,10 @@ describe("the shared light", () => {
   it("starts a film shown after the light moved where the light already is", () => {
     uninstall = installLight(root);
     showScreen();
+    tiltTo(0, 40);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     tiltTo(32, 40);
-    vi.advanceTimersByTime(100);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     // As preview film does when it mounts.
     const detail = addFilm();
     lightUp(detail);
@@ -358,8 +565,10 @@ describe("the shared light", () => {
     );
     uninstall = installLight(root);
     showScreen();
+    tiltTo(0, 40);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     tiltTo(32, 40);
-    vi.advanceTimersByTime(16);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     expect(lightAt()).toEqual(["1.000", "0.000"]);
   });
 
@@ -377,8 +586,10 @@ describe("the shared light", () => {
     const closeDetail = showScreen();
     closeDetail();
     expect(tiltListeners.size).toBe(1);
+    tiltTo(0, 40);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     tiltTo(32, 40);
-    vi.advanceTimersByTime(16);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     expect(lightAt()).toEqual(["1.000", "0.000"]);
 
     closeBoard();
@@ -393,8 +604,10 @@ describe("the shared light", () => {
     document.body.append(foil);
     uninstall = installLight(root);
     showScreen();
+    tiltTo(0, 40);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     tiltTo(32, 40);
-    vi.advanceTimersByTime(16);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     expect(lightAt()).toEqual(["1.000", "0.000"]);
     expect(parts.map(lightOn)).toEqual([lightAt(), lightAt()]);
     expect(lightOn(foil)).toEqual(["", ""]);
@@ -411,6 +624,8 @@ describe("the shared light", () => {
     document.body.append(crease);
     uninstall = installLight(root);
     showScreen();
+    tiltTo(0, 40);
+    vi.advanceTimersByTime(16);
     // A device that keeps tilting, never resting as long as a crease waits.
     for (const gamma of [-32, -16, 0, 16, 32]) {
       tiltTo(gamma, 8);
@@ -433,14 +648,16 @@ describe("the shared light", () => {
     expect(lightAt()).toEqual(["", ""]);
   });
 
-  it.each([90, 270, 180])("maps device gravity into displayed axes at %s degrees", (angle) => {
+  it.each([90, 270, 180])("maps device tilt into displayed axes at %s degrees", (angle) => {
     screenAt(angle);
     uninstall = installLight(root);
     showScreen();
+    tiltTo(0, 0);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     const [gamma, beta] = angle === 90 ? [0, 32] : angle === 270 ? [0, -32] : [-32, 0];
     tiltTo(gamma, beta);
-    vi.advanceTimersByTime(100);
-    expect(lightAt()).toEqual(["1.000", "-1.000"]);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
+    expect(lightAt()).toEqual(["1.000", "0.000"]);
   });
 
   it.each([90, 270])("keeps the reading pose centered in landscape at %s degrees", (angle) => {
@@ -490,8 +707,10 @@ describe("the shared light", () => {
   it("resumes rotation at the held pose until a fresh reading and initializes later material there", () => {
     uninstall = installLight(root);
     const close = showScreen();
+    tiltTo(0, 40);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     tiltTo(32, 40);
-    vi.advanceTimersByTime(300);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     close();
     vi.advanceTimersByTime(1000);
     showScreen();
@@ -583,11 +802,15 @@ describe("the shared light", () => {
     uninstall = installLight(root);
     showScreen();
     vi.advanceTimersByTime(3500);
+    const before = currentLight();
+    const styles = lightAt();
     tiltTo(32, 40);
     vi.advanceTimersByTime(2000);
-    expect(lightAt()).toEqual(["1.000", "0.000"]);
+    expect(currentLight()).toEqual(before);
+    expect(lightAt()).toEqual(styles);
     vi.advanceTimersByTime(22000);
-    expect(lightAt()).toEqual(["1.000", "0.000"]);
+    expect(currentLight()).toEqual(before);
+    expect(lightAt()).toEqual(styles);
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -613,8 +836,10 @@ describe("the shared light", () => {
     noRotationDesktop();
     uninstall = installLight(root);
     const close = showScreen();
+    tiltTo(0, 40);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     tiltTo(32, 40);
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     close();
     uninstall();
     uninstall = installLight(root);
@@ -639,7 +864,7 @@ describe("the shared light", () => {
     expect(lightAt()).toEqual(["", ""]);
     expect(vi.getTimerCount()).toBe(0);
     tiltTo(-32, 40);
-    vi.advanceTimersByTime(100);
+    vi.advanceTimersByTime(10 * GLIDE_MS);
     expect(lightAt()).toEqual(["-1.000", "0.000"]);
   });
 
@@ -647,6 +872,7 @@ describe("the shared light", () => {
     usePermission(permissionStore("granted", true));
     uninstall = installLight(root);
     showScreen();
+    tiltTo(0, 40);
     tiltTo(32, 40);
     vi.advanceTimersByTime(1200);
     tiltTo(-32, 40);
