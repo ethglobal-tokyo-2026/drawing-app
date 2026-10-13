@@ -17,13 +17,12 @@ import { toPerson } from "../api/views";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { formatCount, formatTimeOfDay, formatWeekday } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
-import { At, GratitudeIcon, StreakIcon, X } from "../icons";
+import { ArrowRight, At, GratitudeIcon, HandPointing, StreakIcon, X } from "../icons";
 import { formatHandle } from "../stickers/format";
 import { useNsfwOptInKey } from "../stickers/nsfw";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { EASE_OUT } from "../ui/easing";
 import { ErrorLine } from "../ui/ErrorLine";
-import { useLargeScreen } from "../ui/largeScreen";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { useReducedMotion } from "../ui/useReducedMotion";
@@ -43,6 +42,8 @@ import "./ExploreScreen.css";
 interface Props {
   onOpenArtist: (person: Person) => void;
   onOpenMyBoard: () => void;
+  /** An artist's board covers Explore while its loaded pages stay mounted. */
+  covered: boolean;
 }
 
 /** Search waits for a pause in typing before it asks the server. */
@@ -123,9 +124,14 @@ function PersonRow({
         {lead}
         <span className="row-names">
           <b style={{ "--handle-w": textWidth(handle) }}>{name ?? breakable(handle)}</b>
-          <span>{isMe ? t(($) => $.explore.you) : toPerson(person).name}</span>
+          <span className="row-names__detail">
+            <span className={isMe ? "artist-row__you" : undefined}>
+              {isMe ? t(($) => $.explore.you) : toPerson(person).name}
+            </span>
+            {trail && <ArrowRight className="artist-row__arrow" size={12} aria-hidden />}
+          </span>
         </span>
-        {trail}
+        {trail ?? <ArrowRight className="artist-row__arrow" size={18} aria-hidden />}
       </button>
       <span id={boardId} hidden>
         {boardLabel(person, meId, t)}
@@ -134,24 +140,14 @@ function PersonRow({
   );
 }
 
-/** A row's figure; `compact` sets it a size down, for three boards side by side. */
-function Figure({
-  board,
-  value,
-  compact,
-}: {
-  board: Leaderboard;
-  value: number;
-  compact?: boolean;
-}) {
+/** A row's figure; the complete Gratitude amount sizes itself to the row's available room. */
+function Figure({ board, value }: { board: Leaderboard; value: number }) {
   const { t } = useTranslation();
-  const mark = compact ? 14 : 17;
-  if (board === "bestCombo")
-    return <HitCounter hits={value} size={compact ? 20 : 23} className="figure" />;
+  if (board === "bestCombo") return <HitCounter hits={value} size={23} className="figure" />;
   if (board === "longestStreak")
     return (
       <span className="figure figure--streak">
-        <StreakIcon size={mark} />
+        <StreakIcon size={17} />
         <span aria-hidden="true">
           <Trans
             i18nKey={($) => $.explore.figure.streak}
@@ -164,12 +160,13 @@ function Figure({
         </span>
       </span>
     );
+  const amount = formatCount(value);
   return (
-    <span className="figure figure--gratitude">
-      <GratitudeIcon size={mark} />
+    <span className="figure figure--gratitude" style={{ "--figure-length": amount.length }}>
+      <GratitudeIcon size={17} />
       <Trans
         i18nKey={($) => $.explore.figure.gratitude}
-        values={{ amount: formatCount(value) }}
+        values={{ amount }}
         components={{ hidden: <span className="visually-hidden" /> }}
       />
     </span>
@@ -186,6 +183,7 @@ function SlidingTabs<T extends string>({
   onChange,
   label,
   labelOf,
+  markOf,
   id,
   className,
   disabled = false,
@@ -195,6 +193,7 @@ function SlidingTabs<T extends string>({
   onChange: (tab: T) => void;
   label: string;
   labelOf: (tab: T) => string;
+  markOf?: (tab: T) => ReactNode;
   /** Starts the tabs' ids and names their panel, `${id}-panel`. */
   id: string;
   className: string;
@@ -237,10 +236,12 @@ function SlidingTabs<T extends string>({
           aria-controls={`${id}-panel`}
           tabIndex={tab === value ? 0 : -1}
           className={tab === value ? "selected" : ""}
+          data-tab={tab}
           data-press
           disabled={disabled}
           onClick={() => onChange(tab)}
         >
+          {markOf?.(tab)}
           {labelOf(tab)}
         </button>
       ))}
@@ -262,7 +263,14 @@ function useRowDeal(first: Leaderboard) {
   const fading = useRef<{ to: Leaderboard; fade: Animation } | null>(null);
   const deal = useRef(false);
 
-  useEffect(() => () => fading.current?.fade.cancel(), []);
+  useEffect(
+    () => () => {
+      const pending = fading.current;
+      fading.current = null;
+      pending?.fade.cancel();
+    },
+    [],
+  );
 
   const dealRows = (to: Leaderboard) => {
     deal.current = true;
@@ -288,25 +296,24 @@ function useRowDeal(first: Leaderboard) {
       fill: "forwards",
     });
     fading.current = { to, fade };
-    const next = () => fading.current?.to ?? to;
-    fade.finished.then(
-      () => dealRows(next()),
-      // Cancelled: the list went out of sight mid-fade, so the rows it was heading for go in now.
-      () => {
-        const rows = next();
-        fading.current = null;
-        dealRows(rows);
-      },
-    );
+    const settleFade = () => {
+      const pending = fading.current;
+      if (pending?.fade !== fade) return;
+      // The list may have left the screen. Release its fade before updating the selected rows,
+      // so a later metric starts a new transition even when no list is currently attached.
+      fading.current = null;
+      fade.cancel();
+      dealRows(pending.to);
+    };
+    // Cancellation is an interrupted transition: show the latest selection just as on completion.
+    fade.finished.then(settleFade, settleFade);
   };
 
   useLayoutEffect(() => {
     const rows = list.current;
-    if (!deal.current || !rows) return;
+    if (!deal.current) return;
     deal.current = false;
-    // The new rows are in, so the faded list can show again under them.
-    fading.current?.fade.cancel();
-    fading.current = null;
+    if (!rows) return;
     if (reduced) {
       rows.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ROWS_FADE_MS });
       return;
@@ -337,19 +344,17 @@ function LeaderboardRows({
   meId,
   open,
   listRef,
-  compact,
 }: {
   board: Leaderboard;
   rows: LeaderboardRow[];
   meId: string;
   open: Open;
   listRef?: Ref<HTMLOListElement>;
-  compact?: boolean;
 }) {
   const { t } = useTranslation();
   const ranks = competitionRanks(rows.map((row) => row.value));
   return (
-    <ol ref={listRef} className="leaderboard">
+    <ol ref={listRef} className="leaderboard" data-board={board}>
       {rows.length === 0 && (
         <li className="leaderboard-empty">{t(($) => $.explore.thisWeek.empty[board])}</li>
       )}
@@ -361,11 +366,13 @@ function LeaderboardRows({
           open={open}
           lead={
             <>
-              <span className="rank">{ranks[i]}</span>
-              <Avatar person={row.person} size={compact ? 30 : 40} />
+              <span className="rank" data-rank={ranks[i]}>
+                {ranks[i]}
+              </span>
+              <Avatar person={row.person} size={40} />
             </>
           }
-          trail={<Figure board={board} value={row.value} compact={compact} />}
+          trail={<Figure board={board} value={row.value} />}
         />
       ))}
     </ol>
@@ -393,67 +400,69 @@ interface WeekProps {
   leaderboards: Explore["leaderboards"];
   meId: string;
   open: Open;
+  board: Leaderboard;
+  shown: Leaderboard;
+  onSelect: (board: Leaderboard) => void;
+  listRef: Ref<HTMLOListElement>;
+  showTitle: boolean;
 }
 
-/** A phone's This week: tabs pick one board at a time. */
-function ThisWeekTabs({ leaderboards, meId, open }: WeekProps) {
-  const { t } = useTranslation();
-  const { board, shown, select, list } = useRowDeal("mostGratitude");
+/** The metric's own mark: a heart, the hit counter's speed lines, or the streak's flame. */
+function LeaderboardMark({ board }: { board: Leaderboard }) {
+  if (board === "mostGratitude")
+    return <GratitudeIcon className="leaderboard-mark" size={18} aria-hidden />;
+  if (board === "longestStreak")
+    return <StreakIcon className="leaderboard-mark" size={18} aria-hidden />;
   return (
-    <section className={`${REVEAL} explore-section this-week`}>
-      <h2 className="visually-hidden">{t(($) => $.explore.thisWeek.title)}</h2>
-      <SlidingTabs
-        tabs={LEADERBOARDS}
-        value={board}
-        onChange={select}
-        label={t(($) => $.explore.thisWeek.leaderboards)}
-        labelOf={(b) => t(($) => $.explore.leaderboards[b])}
-        id="leaderboard"
-        className="leaderboard-tabs"
-      />
-      <div role="tabpanel" id="leaderboard-panel" aria-labelledby={`leaderboard-${board}`}>
-        <LeaderboardRows
-          board={shown}
-          rows={leaderboards[shown]}
-          meId={meId}
-          open={open}
-          listRef={list}
-        />
-      </div>
-      {shown !== "longestStreak" && <WeekResets weekStart={leaderboards.weekStart} />}
-    </section>
+    <span className="leaderboard-mark leaderboard-mark--combo" aria-hidden>
+      <span className="hit-counter__lines">
+        <i />
+        <i />
+        <i />
+      </span>
+    </span>
   );
 }
 
-/**
- * A large screen's This week: all three boards at once, each under its name, with no tabs. Side by
- * side (`compact`) their rows step down a size to keep handles on one line.
- */
-function ThisWeekAll({ leaderboards, meId, open, compact }: WeekProps & { compact: boolean }) {
+/** Metric index tabs and their ranking share one paper, on a phone or beside the pile on an iPad. */
+function ThisWeek({
+  leaderboards,
+  meId,
+  open,
+  board,
+  shown,
+  onSelect,
+  listRef,
+  showTitle,
+}: WeekProps) {
   const { t } = useTranslation();
-  const id = useId();
   return (
-    <section
-      className={`${REVEAL} explore-section this-week this-week--all${compact ? " this-week--compact" : ""}`}
-    >
-      <h2 className="visually-hidden">{t(($) => $.explore.thisWeek.title)}</h2>
-      <div className="leaderboard-boards">
-        {LEADERBOARDS.map((board) => (
-          <section key={board} className="leaderboard-board" aria-labelledby={`${id}-${board}`}>
-            <h3 className="leaderboard-title" data-board={board} id={`${id}-${board}`}>
-              {t(($) => $.explore.leaderboards[board])}
-            </h3>
-            <LeaderboardRows
-              board={board}
-              rows={leaderboards[board]}
-              meId={meId}
-              open={open}
-              compact={compact}
-            />
-            {board !== "longestStreak" && <WeekResets weekStart={leaderboards.weekStart} />}
-          </section>
-        ))}
+    <section className={`${REVEAL} explore-section this-week`}>
+      {showTitle && (
+        <h2 className="title-label week-title">{t(($) => $.explore.thisWeek.title)}</h2>
+      )}
+      <div className="leaderboard-paper">
+        <SlidingTabs
+          tabs={LEADERBOARDS}
+          value={board}
+          onChange={onSelect}
+          label={t(($) => $.explore.thisWeek.leaderboards)}
+          labelOf={(b) => t(($) => $.explore.leaderboards[b])}
+          markOf={(b) => <LeaderboardMark board={b} />}
+          id="leaderboard"
+          className="leaderboard-tabs"
+        />
+        <div role="tabpanel" id="leaderboard-panel" aria-labelledby={`leaderboard-${board}`}>
+          <LeaderboardRows
+            board={shown}
+            rows={leaderboards[shown]}
+            meId={meId}
+            open={open}
+            listRef={listRef}
+          />
+        </div>
       </div>
+      {shown !== "longestStreak" && <WeekResets weekStart={leaderboards.weekStart} />}
     </section>
   );
 }
@@ -484,42 +493,38 @@ function LoadingStatus() {
   );
 }
 
-/** This week in outline while it loads: the tabs on a phone, all three boards on a large screen. */
-function ThisWeekLoading({ all }: { all: boolean }) {
+/** This week in outline while it loads, with the same selected metric and paper in every layout. */
+function ThisWeekLoading({ board, showTitle }: { board: Leaderboard; showTitle: boolean }) {
   const { t } = useTranslation();
-  if (all)
-    return (
-      <section className="explore-section this-week this-week--all" aria-hidden="true">
-        <div className="leaderboard-boards">
-          {LEADERBOARDS.map((board) => (
-            <div key={board} className="leaderboard-board">
-              <span className="leaderboard-title" data-board={board}>
-                {t(($) => $.explore.leaderboards[board])}
-              </span>
-              <ol className="leaderboard">
-                <PersonRowsLoading rows={3} ranked />
-              </ol>
-            </div>
-          ))}
-        </div>
-      </section>
-    );
   return (
     <section className="explore-section this-week" aria-hidden="true">
-      <div
-        className="sliding-tabs leaderboard-tabs"
-        style={{ "--i": 0, "--n": 3 } as CSSProperties}
-      >
-        <span className="sliding-tabs__label" />
-        {LEADERBOARDS.map((b, i) => (
-          <button key={b} type="button" className={i === 0 ? "selected" : ""} disabled>
-            {t(($) => $.explore.leaderboards[b])}
-          </button>
-        ))}
+      {showTitle && (
+        <h2 className="title-label week-title">{t(($) => $.explore.thisWeek.title)}</h2>
+      )}
+      <div className="leaderboard-paper">
+        <div
+          className="sliding-tabs leaderboard-tabs"
+          data-selected={board}
+          style={{ "--i": LEADERBOARDS.indexOf(board), "--n": 3 } as CSSProperties}
+        >
+          <span className="sliding-tabs__label" />
+          {LEADERBOARDS.map((b) => (
+            <button
+              key={b}
+              type="button"
+              data-tab={b}
+              className={b === board ? "selected" : ""}
+              disabled
+            >
+              <LeaderboardMark board={b} />
+              {t(($) => $.explore.leaderboards[b])}
+            </button>
+          ))}
+        </div>
+        <ol className="leaderboard" data-board={board}>
+          <PersonRowsLoading rows={3} ranked />
+        </ol>
       </div>
-      <ol className="leaderboard">
-        <PersonRowsLoading rows={3} ranked />
-      </ol>
     </section>
   );
 }
@@ -537,6 +542,17 @@ function PileLoading() {
       </div>
       <LoadingHeap />
     </div>
+  );
+}
+
+/** A quiet invitation to lift a sticker and find its Original Artist. */
+function PileIntro() {
+  const { t } = useTranslation();
+  return (
+    <p className="pile-intro">
+      <HandPointing size={18} weight="bold" aria-hidden />
+      <span className="keep-phrases">{t(($) => $.explore.pile.invitation)}</span>
+    </p>
   );
 }
 
@@ -683,6 +699,7 @@ function Stickers({
         }}
         meId={meId}
         onLift={(pile) => setLiftedId(pile.sticker.id)}
+        visible={visible && lifted < 0}
       />
       {lifted >= 0 && (
         <LiftedSticker
@@ -701,7 +718,7 @@ function Stickers({
   );
 }
 
-export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
+export function ExploreScreen({ onOpenArtist, onOpenMyBoard, covered }: Props) {
   const { t } = useTranslation();
   const me = useMe();
   const [query, setQuery] = useState("");
@@ -716,6 +733,8 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
     return () => clearTimeout(id);
   }, [q]);
   const [view, setView] = useState<View>("stickers");
+  // The metric belongs to Explore, so switching views, searching, or turning an iPad keeps it.
+  const { board, shown, select, list } = useRowDeal("mostGratitude");
   // The pile's images are picked by your NSFW opt-in: a change loads it from its first page again,
   // and the old pages go with <Stickers>, which the loading state unmounts.
   const resetKey = useNsfwOptInKey("explore");
@@ -729,26 +748,25 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
     visible: showsPile && q === "",
     resetKey,
   });
-  const large = useLargeScreen();
 
   // Beside each other both show; otherwise the switch picks one.
   const showsWeek = columns === 2 || view === "thisWeek";
   const week = !showsWeek ? null : explore.state === "ready" ? (
-    large ? (
-      <ThisWeekAll
-        leaderboards={explore.data.leaderboards}
-        meId={me.id}
-        open={open}
-        compact={columns === 1}
-      />
-    ) : (
-      <ThisWeekTabs leaderboards={explore.data.leaderboards} meId={me.id} open={open} />
-    )
+    <ThisWeek
+      leaderboards={explore.data.leaderboards}
+      meId={me.id}
+      open={open}
+      board={board}
+      shown={shown}
+      onSelect={select}
+      listRef={list}
+      showTitle={columns === 2}
+    />
   ) : explore.state === "loading" ? (
-    <ThisWeekLoading all={large} />
+    <ThisWeekLoading board={board} showTitle={columns === 2} />
   ) : null;
   const pile = !showsPile ? null : explore.state === "ready" ? (
-    <Stickers explore={explore.data} meId={me.id} open={open} visible={q === ""} />
+    <Stickers explore={explore.data} meId={me.id} open={open} visible={!covered && q === ""} />
   ) : explore.state === "loading" ? (
     <PileLoading />
   ) : null;
@@ -830,6 +848,7 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
         ) : (
           <>
             {columns === 1 && week}
+            {showsPile && <PileIntro />}
             {pile}
           </>
         )}

@@ -22,8 +22,8 @@ export const explore = {
       },
       /** Explore tab, after a search that matches no one: the paragraph under the heading, on checking the spelling or inviting a LINE friend with a sticker */
       lead: {
-        en: "Handles are exact, so check the spelling with them. If they’re your LINE friend, give them a sticker from your board in a LINE chat: receiving it brings them in.",
-        ja: "ユーザー名はつづりが正確でないと見つかりません。本人に確認してください。LINEの友だちなら、シールボードからトークでシールを贈りましょう。受け取れば、その友だちもクロッキーに参加できます。",
+        en: "Try part of their handle, or check the spelling with them. If they’re your LINE friend, give them a sticker from your board in a LINE chat: receiving it brings them in.",
+        ja: "ユーザー名の一部でさがすか、つづりを本人に確認してください。LINEの友だちなら、シールボードからトークでシールを贈りましょう。受け取れば、その友だちもクロッキーに参加できます。",
       },
     },
   },
@@ -49,6 +49,11 @@ export const explore = {
   },
   /** The sticker pile: each day's stickers heaped on its own perforated floor. */
   pile: {
+    /** Explore tab, above the sticker pile: the tap that opens its Original Artist and the hold that picks it up */
+    invitation: {
+      en: "Tap to meet the artist. Hold to flick a sticker.",
+      ja: "タップで描いた人へ。<wbr/>長押しでシールを投げてみよう。",
+    },
     /** Explore tab, Stickers view: screen readers' heading for today's heap */
     today: { en: "Today", ja: "今日" },
     /** Explore tab, Stickers view: screen readers' heading for yesterday's heap; older days are their date, in the app's language */
@@ -62,8 +67,6 @@ export const explore = {
       en: "{{number}} by {{artist}}, {{ago}}, given to {{receiver}}",
       ja: "{{artist}}の{{number}}、{{ago}}、{{receiver}}さんに贈られました",
     },
-    /** Explore tab, Stickers view: the aqua tag under a given sticker's name tag; <handle/> is who it went to */
-    to: { en: "to <handle/>", ja: "<handle/>さんへ" },
     /** Explore tab, Stickers view: the line under a faint sticker outline on today's floor while no one has sealed a sticker today */
     empty: {
       en: "The first sticker sealed today lands here.",
@@ -106,7 +109,7 @@ export const explore = {
     },
   },
   thisWeek: {
-    /** Explore tab, This week view: screen readers' heading for the leaderboards */
+    /** Explore tab, beside the sticker pile on a large screen: the printed heading above the leaderboard tabs */
     title: { en: "This week", ja: "今週" },
     /** Explore tab, This week view: fine print under the Most gratitude and Best combo leaderboards, when they start over; {{day}} and {{time}} are that moment in the person's own time zone, such as "Monday" and "12:00 AM" */
     resets: { en: "Resets {{day}} {{time}}", ja: "{{day}}{{time}}にリセット" },

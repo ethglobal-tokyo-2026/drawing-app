@@ -55,6 +55,12 @@ import {
 } from "./lastBoard";
 import { unitOf } from "./placement";
 import { StickerBoard } from "./StickerBoard";
+// Load background screens during collection so cold transforms do not time out UI interactions.
+import "./StickerDetail";
+import "./stat-board/StatBoard";
+import "./tray/StickerTray";
+import "./ThoughtLayer";
+import "../gratitude/GratitudeMiniGame";
 import { myStickerBoardChanged } from "./useMyStickerBoard";
 import { placedAt } from "./testBoardSticker";
 import { STEP_SAVE_IDLE_MS } from "./useBoardGestures";

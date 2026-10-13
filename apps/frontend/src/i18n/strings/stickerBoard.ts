@@ -96,7 +96,7 @@ export const stickerBoard = {
     },
     /** Stat board: the Flip back button, which turns the board back over to its stickers */
     flipBack: { en: "Flip back", ja: "表に戻す" },
-    /** Your stat board, opened outside LINE's app: the button after Flip back, at the top left, that logs out of LINE */
+    /** Your stat board, opened outside LINE's app: the button at the top right that logs out of LINE */
     logOut: { en: "Log out of LINE", ja: "LINEからログアウト" },
   },
   /** A Sui address as a QR code on the cork, yours or someone else's, and the dialog that holds it up. */

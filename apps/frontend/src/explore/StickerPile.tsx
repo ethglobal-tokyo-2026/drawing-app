@@ -15,6 +15,7 @@ import { toPerson, toSticker } from "../api/views";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { currentLanguage } from "../i18n/i18n";
 import { useTranslation } from "../i18n/react";
+import { GiveIcon } from "../icons";
 import { hash, type Shape } from "../sticker-board/tray/sheetPacking";
 import { knownShape } from "../sticker-board/tray/stickerShape";
 import { formatNo, handleOf } from "../stickers/format";
@@ -38,6 +39,7 @@ import {
   type TagGroup,
 } from "./pileLayout";
 import { arrivalsOf, lastSeen, markSeen } from "./pileVisits";
+import { usePilePlay } from "./usePilePlay";
 import "./sticker-pile.css";
 
 /** Room between a day's perforation and the top of its heap, in pile units. */
@@ -69,6 +71,8 @@ interface Props {
   onReachEnd: () => void;
   meId: string;
   onLift: (pile: PileSticker) => void;
+  /** Hidden search results and lifted previews leave the heap still. */
+  visible: boolean;
 }
 
 interface Laid {
@@ -90,22 +94,8 @@ interface LaidDay {
 
 const nameOf = (person: Person) => handleOf(toPerson(person));
 
-/**
- * The "to @x" tag's whole label, from its template's words round <handle/>, so the layout measures
- * all of it: "to @ken", or "@kenさんへ".
- */
-function toLabel(template: string, handle: string) {
-  const [before, after = ""] = template.split("<handle/>");
-  return `${before}${handle}${after}`;
-}
-
-/** Each day's heap, laid out once per payload and language. */
-function layDays(
-  days: readonly PileDay[],
-  today: number,
-  toTemplate: string,
-  units: number,
-): LaidDay[] {
+/** Each day's heap, laid out once per payload and available width. */
+function layDays(days: readonly PileDay[], today: number, units: number): LaidDay[] {
   // Today's floor shows even before anyone seals.
   const withToday = days[0]?.day === today ? days : [{ day: today, stickers: [] }, ...days];
   return withToday.map(({ day, stickers }) => {
@@ -120,7 +110,7 @@ function layDays(
       }) ?? { w: sticker.width, h: sticker.height, poly: [] };
       const name = nameOf(sticker.artist);
       const givenTo = pile.givenTo && nameOf(pile.givenTo);
-      const tags = tagGroup(name, givenTo === null ? null : toLabel(toTemplate, givenTo));
+      const tags = tagGroup(name, givenTo);
       return { id: sticker.id, shape, tag: tags, tags, pile, name, givenTo };
     });
     const layer = pileStickers(items, { seed: dayKey(day), width: units });
@@ -214,6 +204,7 @@ function NameTags({ laid, fresh }: { laid: Laid; fresh: boolean }) {
       </span>
       {to && (
         <span className="pile-tag pile-tag--to" style={tagStyle(to)}>
+          <GiveIcon size={13} weight="fill" />
           <TagLines tag={to} />
         </span>
       )}
@@ -249,29 +240,31 @@ function PileSticker({
       data-falling={falling ?? undefined}
     >
       <button type="button" className="pile-sticker__button" aria-label={label} onClick={onLift}>
-        <span className="pile-sticker__drop">
-          <span className="pile-sticker__art">
-            {falling && (
+        <span className="pile-sticker__play">
+          <span className="pile-sticker__drop">
+            <span className="pile-sticker__art">
+              {falling && (
+                <img
+                  className={`pile-sticker__air${nsfw}`}
+                  src={sticker.images.webp.sticker}
+                  alt=""
+                  draggable={false}
+                />
+              )}
               <img
-                className={`pile-sticker__air${nsfw}`}
+                ref={revealOnLoad}
+                className={`pile-sticker__image reveal-img${nsfw}`}
                 src={sticker.images.webp.sticker}
                 alt=""
                 draggable={false}
+                loading={falling ? "eager" : "lazy"}
+                decoding="async"
               />
-            )}
-            <img
-              ref={revealOnLoad}
-              className={`pile-sticker__image reveal-img${nsfw}`}
-              src={sticker.images.webp.sticker}
-              alt=""
-              draggable={false}
-              loading={falling ? "eager" : "lazy"}
-              decoding="async"
-            />
-            <span className="pile-sticker__hit" style={{ clipPath: clipOf(laid.shape) }} />
-            <span className="pile-sticker__ring" style={cutBox(laid.shape)} />
+              <span className="pile-sticker__hit" style={{ clipPath: clipOf(laid.shape) }} />
+              <span className="pile-sticker__ring" style={cutBox(laid.shape)} />
+            </span>
+            <NameTags laid={laid} fresh={fresh} />
           </span>
-          <NameTags laid={laid} fresh={fresh} />
         </span>
       </button>
     </li>
@@ -494,19 +487,16 @@ function PileEndFloor({ end, floor }: { end: PileEnd; floor: RefObject<HTMLDivEl
  * every sticker wearing a name tag. Today's newest fall in on a first look, and after that only
  * what's new since the last one. Older days come a page at a time as the pile's end comes near.
  */
-export function StickerPile({ days, today, end, onReachEnd, meId, onLift }: Props) {
+export function StickerPile({ days, today, end, onReachEnd, meId, onLift, visible }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const root = useRef<HTMLDivElement>(null);
   const floor = useRef<HTMLDivElement>(null);
   const [now] = useState(() => Date.now());
-  const toTemplate = t(($) => $.explore.pile.to);
   /** The pile's width in units, from pileFit. */
   const [units, setUnits] = useState(PILE_WIDTH);
-  const laidDays = useMemo(
-    () => layDays(days, today, toTemplate, units),
-    [days, today, toTemplate, units],
-  );
+  const laidDays = useMemo(() => layDays(days, today, units), [days, today, units]);
+  usePilePlay(root, { active: visible, layout: laidDays });
   // Read once as the pile opens: the last look, what's new since, and what falls.
   const [seen] = useState(() => lastSeen(meId));
   const [arrivals] = useState(() => arrivalsOf(days, today, seen));

@@ -113,7 +113,7 @@ const labelsOf = (host: HTMLElement, selector: string) =>
 async function openExplore(explore: Explore, api: Partial<ApiClient> = {}) {
   const everyone: Person[] = Object.values(people);
   view = renderWithApi(
-    <ExploreScreen onOpenArtist={() => {}} onOpenMyBoard={() => {}} />,
+    <ExploreScreen onOpenArtist={() => {}} onOpenMyBoard={() => {}} covered={false} />,
     emptyApi({
       explore: () => Promise.resolve(explore),
       searchUsers: (handle) => Promise.resolve(everyone.filter((p) => p.handle?.includes(handle))),
@@ -162,10 +162,12 @@ describe("ExploreScreen's sticker pile", () => {
   it("tags a given sticker with who it went to, in aqua", async () => {
     const given = sticker({ sealedAt: minutesAgo(30), artist: people.mika });
     const host = await openExplore(exploreWith([{ sticker: given, givenTo: people.ken }]));
-    expect(textsOf(host, ".pile-tag--to")).toEqual(["to @ken"]);
+    expect(textsOf(host, ".pile-tag--to")).toEqual(["@ken"]);
     expect(labelsOf(host, ".pile-sticker__button")).toEqual([
       `No.0${given.number} by @mika, 30 min ago, given to @ken`,
     ]);
+    await inLanguage("ja");
+    expect(textsOf(host, ".pile-tag--to")).toEqual(["@ken"]);
   });
 
   it("says just now for anything under a minute ago, in English and Japanese", async () => {
@@ -181,7 +183,7 @@ describe("ExploreScreen's sticker pile", () => {
     const odd = { ...people.bob, handle: "<i>{{bob}}</i>" };
     const drawn = sticker({ sealedAt: minutesAgo(5), artist: odd });
     const host = await openExplore(exploreWith([{ sticker: drawn, givenTo: odd }]));
-    expect(textsOf(host, ".pile-tag__name")).toEqual(["@<i>{{bob}}</i>", "to @<i>{{bob}}</i>"]);
+    expect(textsOf(host, ".pile-tag__name")).toEqual(["@<i>{{bob}}</i>", "@<i>{{bob}}</i>"]);
     expect(labelsOf(host, ".pile-sticker__button")[0]).toContain("by @<i>{{bob}}</i>,");
   });
 
@@ -337,7 +339,7 @@ describe("ExploreScreen's This week", () => {
     });
     expect(textsOf(host, ".figure small")).toEqual(["days", "day"]);
     expect(tab(host, "Streak").getAttribute("aria-selected")).toBe("true");
-    // The streak's own mark: its fire before each figure, and its tangerine on the tabs' label.
+    // The streak's own mark: its fire before each figure and on its category tab.
     expect(host.querySelectorAll(".figure--streak svg")).toHaveLength(2);
     expect(host.querySelector(".leaderboard-tabs")?.getAttribute("data-selected")).toBe(
       "longestStreak",
@@ -421,6 +423,84 @@ describe("ExploreScreen's This week", () => {
     expect(tab(host, "This week").getAttribute("aria-selected")).toBe("true");
     expect(host.querySelector(".leaderboard")).not.toBeNull();
   });
+
+  it("moves between ranking categories with the keyboard and shows only the selected ranking", async () => {
+    const host = await openBoard("Most gratitude", {
+      mostGratitude: [{ person: people.mika, value: 1234 }],
+      bestCombo: [{ person: people.ken, value: 64 }],
+      longestStreak: [{ person: people.bob, value: 3 }],
+    });
+    const press = async (name: string, key: string, selected: string, artist: string) => {
+      act(() => {
+        tab(host, name).dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+      });
+      await wait(500);
+      expect(tab(host, selected).getAttribute("aria-selected")).toBe("true");
+      expect(document.activeElement).toBe(tab(host, selected));
+      expect(host.querySelectorAll(".leaderboard")).toHaveLength(1);
+      expect(textsOf(host, ".leaderboard .row-names b")).toEqual([artist]);
+    };
+
+    await press("Most gratitude", "ArrowRight", "Best combo", "@ken");
+    await press("Best combo", "End", "Streak", "@bob");
+    await press("Streak", "Home", "Most gratitude", "@mika");
+    await press("Most gratitude", "ArrowLeft", "Streak", "@bob");
+  });
+
+  it("remembers the selected ranking after returning from Stickers and searching for an artist", async () => {
+    const host = await openBoard("Best combo", {
+      mostGratitude: [{ person: people.mika, value: 1234 }],
+      bestCombo: [{ person: people.ken, value: 64 }],
+    });
+    act(() => tab(host, "Stickers").click());
+    act(() => tab(host, "This week").click());
+    await wait(500);
+    expect(tab(host, "Best combo").getAttribute("aria-selected")).toBe("true");
+    expect(textsOf(host, ".leaderboard .row-names b")).toEqual(["@ken"]);
+
+    await searchFor(host, "mi");
+    expect(textsOf(host, ".search-results .row-names b")).toEqual(["@mika"]);
+    await searchFor(host, "");
+    expect(tab(host, "Best combo").getAttribute("aria-selected")).toBe("true");
+    expect(textsOf(host, ".leaderboard .row-names b")).toEqual(["@ken"]);
+  });
+
+  it("can change ranking again after its previous fade finishes while Stickers is open", async () => {
+    const animate = vi.spyOn(Element.prototype, "animate");
+    onTestFinished(() => animate.mockRestore());
+    const host = await openExplore(
+      exploreWith([], {
+        mostGratitude: [{ person: people.mika, value: 1234 }],
+        bestCombo: [{ person: people.ken, value: 64 }],
+        longestStreak: [{ person: people.bob, value: 3 }],
+      }),
+    );
+    act(() => tab(host, "This week").click());
+    expect(textsOf(host, ".leaderboard .row-names b")).toEqual(["@mika"]);
+
+    act(() => tab(host, "Best combo").click());
+    const fade = animate.mock.results.at(-1);
+    if (fade?.type !== "return") throw new Error("the ranking's fade did not start");
+    act(() => tab(host, "Stickers").click());
+    expect(host.querySelectorAll(".leaderboard")).toHaveLength(0);
+    // happy-dom ends animations on real timers; finish the fade while its list is detached.
+    act(() => fade.value.finish());
+    await wait(0);
+
+    act(() => tab(host, "This week").click());
+    expect(tab(host, "Best combo").getAttribute("aria-selected")).toBe("true");
+    expect(textsOf(host, ".leaderboard .row-names b")).toEqual(["@ken"]);
+
+    const beforeStreak = animate.mock.results.length;
+    act(() => tab(host, "Streak").click());
+    act(() => {
+      for (const played of animate.mock.results.slice(beforeStreak))
+        if (played.type === "return") played.value.finish();
+    });
+    await wait(0);
+    expect(tab(host, "Streak").getAttribute("aria-selected")).toBe("true");
+    expect(textsOf(host, ".leaderboard .row-names b")).toEqual(["@bob"]);
+  });
 });
 
 /** A promise and the function that answers it, for a request still in flight. */
@@ -433,7 +513,10 @@ function inFlight<T>() {
 const EXPLORE: Explore = exploreWith(unGiven(sticker({ sealedAt: minutesAgo(3) })));
 
 function show(client: Parameters<typeof renderWithApi>[1]) {
-  view = renderWithApi(<ExploreScreen onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} />, client);
+  view = renderWithApi(
+    <ExploreScreen onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} covered={false} />,
+    client,
+  );
   return view.host;
 }
 
@@ -599,7 +682,7 @@ describe("ExploreScreen's search", () => {
       .mockResolvedValueOnce(exploreWith(unGiven(old), {}, CURSOR))
       .mockResolvedValueOnce(exploreWith(unGiven(replacement)));
     view = renderWithApi(
-      <ExploreScreen onOpenArtist={() => {}} onOpenMyBoard={() => {}} />,
+      <ExploreScreen onOpenArtist={() => {}} onOpenMyBoard={() => {}} covered={false} />,
       emptyApi({
         explore,
         explorePile: () => Promise.resolve({ stickers: unGiven(older), before: null }),
@@ -690,7 +773,7 @@ describe("ExploreScreen on an iPad", () => {
     longestStreak: [{ person: people.bob, value: 3 }],
   };
 
-  /** Explore on today's sticker and every board, with an older page loaded: its pile as laid out. */
+  /** Explore on today's sticker and the weekly rankings, with an older page loaded: its pile as laid out. */
   async function withOlderPage() {
     const older = { stickers: unGiven(sticker({ sealedAt: minutesAgo(50 * 60) })), before: null };
     const explorePile = vi.fn<ApiClient["explorePile"]>(() => Promise.resolve(older));
@@ -703,42 +786,48 @@ describe("ExploreScreen on an iPad", () => {
   const childClasses = (host: HTMLElement) =>
     [...(host.querySelector(".explore")?.children ?? [])].map((child) => child.className);
 
-  /** Each board This week shows: its name, then the handles on it. */
-  const boardsShown = (root: Element | null) =>
-    [...(root?.querySelectorAll(".leaderboard-board") ?? [])].map((board) => [
-      board.querySelector(".leaderboard-title")?.textContent,
-      ...[...board.querySelectorAll(".row-names b")].map((name) => name.textContent),
-    ]);
-
   it("splits sideways: the search across the top, then the pile, then This week, in reading order", async () => {
     onIpad(SIDEWAYS);
     const { host } = await withOlderPage();
     expect(host.querySelector(".view-switch")).toBeNull();
     expect(childClasses(host)).toEqual(["explore-search", "explore-view", "explore-week"]);
-    expect(boardsShown(host.querySelector(".explore-week"))).toHaveLength(3);
+    expect(host.querySelectorAll(".explore-week .leaderboard")).toHaveLength(1);
+    expect(tab(host, "Most gratitude").getAttribute("aria-selected")).toBe("true");
+    expect(textsOf(host, ".explore-week .leaderboard .row-names b")).toEqual(["@mika"]);
   });
 
-  it("shows This week's three boards at once upright, each under its name, with no tabs", async () => {
+  it("shows one selected ranking upright and changes it through the category tabs", async () => {
+    reduceMotion();
     onIpad(UPRIGHT);
     const host = await openExplore(exploreWith([], BOARDS));
     act(() => tab(host, "This week").click());
-    expect(boardsShown(host)).toEqual([
-      ["Most gratitude", "@mika"],
-      ["Best combo", "@ken"],
-      ["Streak", "@bob"],
-    ]);
-    expect(host.querySelector(".leaderboard-tabs")).toBeNull();
+    expect(host.querySelectorAll(".leaderboard")).toHaveLength(1);
+    expect(tab(host, "Most gratitude").getAttribute("aria-selected")).toBe("true");
+    expect(textsOf(host, ".leaderboard .row-names b")).toEqual(["@mika"]);
+
+    act(() => tab(host, "Best combo").click());
+    await wait(500);
+    expect(tab(host, "Best combo").getAttribute("aria-selected")).toBe("true");
+    expect(host.querySelectorAll(".leaderboard")).toHaveLength(1);
+    expect(textsOf(host, ".leaderboard .row-names b")).toEqual(["@ken"]);
   });
 
-  it("puts a search's results in the pile's column, with This week beside them and the pile's pages kept", async () => {
+  it("keeps the selected ranking beside search results and preserves the pile's pages", async () => {
+    reduceMotion();
     onIpad(SIDEWAYS);
     const { host, explorePile, layers } = await withOlderPage();
+    act(() => tab(host, "Streak").click());
+    await wait(500);
     await searchFor(host, "mi");
     expect(textsOf(host, ".explore-results .row-names b")).toEqual(["@mika"]);
     expect(host.querySelector<HTMLElement>(".explore-view")?.hidden).toBe(true);
-    expect(host.querySelector(".explore-week .this-week")).not.toBeNull();
+    expect(tab(host, "Streak").getAttribute("aria-selected")).toBe("true");
+    expect(host.querySelectorAll(".explore-week .leaderboard")).toHaveLength(1);
+    expect(textsOf(host, ".explore-week .leaderboard .row-names b")).toEqual(["@bob"]);
 
     await searchFor(host, "");
+    expect(tab(host, "Streak").getAttribute("aria-selected")).toBe("true");
+    expect(textsOf(host, ".explore-week .leaderboard .row-names b")).toEqual(["@bob"]);
     expect(host.querySelector<HTMLElement>(".explore-view")?.hidden).toBe(false);
     expect(layersOf(host)).toEqual(layers);
     expect(explorePile).toHaveBeenCalledTimes(1);
@@ -788,5 +877,28 @@ describe("ExploreScreen on an iPad", () => {
     expect(host.querySelector(".explore-week")).not.toBeNull();
     expect(layersOf(host)).toEqual(layers);
     expect(explorePile).toHaveBeenCalledTimes(1);
+  });
+
+  it("remembers the selected ranking when turning between the split view and the upright view", async () => {
+    reduceMotion();
+    const ipad = onIpad(SIDEWAYS);
+    const host = await openExplore(exploreWith([], BOARDS));
+    act(() => tab(host, "Best combo").click());
+    await wait(500);
+    expect(textsOf(host, ".explore-week .leaderboard .row-names b")).toEqual(["@ken"]);
+
+    ipad.turn();
+    act(() => tab(host, "This week").click());
+    await wait(500);
+    expect(host.querySelector(".explore-week")).toBeNull();
+    expect(tab(host, "Best combo").getAttribute("aria-selected")).toBe("true");
+    expect(host.querySelectorAll(".leaderboard")).toHaveLength(1);
+    expect(textsOf(host, ".explore-view .leaderboard .row-names b")).toEqual(["@ken"]);
+
+    ipad.turn();
+    await wait(500);
+    expect(tab(host, "Best combo").getAttribute("aria-selected")).toBe("true");
+    expect(host.querySelectorAll(".leaderboard")).toHaveLength(1);
+    expect(textsOf(host, ".explore-week .leaderboard .row-names b")).toEqual(["@ken"]);
   });
 });

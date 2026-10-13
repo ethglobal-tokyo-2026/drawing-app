@@ -32,6 +32,8 @@ import { reloadOntoNewBuild } from "../ui/reloadOntoNewBuild";
 
 vi.mock("../line/liff", async (original) => ({
   ...(await original<typeof import("../line/liff")>()),
+  // Session recovery uses dev navigation independently of local LINE settings.
+  liffMockActive: true,
   lineUserId: () => "U-you",
 }));
 const session: SessionEnvelope = {

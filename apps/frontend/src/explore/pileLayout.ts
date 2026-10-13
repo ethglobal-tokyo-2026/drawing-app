@@ -34,15 +34,13 @@ export const TAG_H = 17;
 export const TAG_LINE = 12;
 /** The widest a tag's line of text gets; a longer name runs onto another line, never cut short. */
 export const TAG_LINE_MAX = 112;
-/** The "to @x" tag sits this far right of the name tag above it, */
+/** The recipient's tag sits this far right of the artist's tag above it, */
 const TO_TAG_INDENT = 10;
 /** and this far below its foot. */
 const TO_TAG_GAP = 2;
 
 /** A name tag's width round its text: its padding, the photo and its gap. */
 const TAG_CHROME = 26;
-/** The "to @x" tag has no photo. */
-const TO_TAG_CHROME = 14;
 /** The widest a tag gets. */
 export const TAG_MAX_W = TAG_CHROME + TAG_LINE_MAX;
 /** How far a tag reaches left of its sticker's cut. */
@@ -155,7 +153,7 @@ export interface Tag {
   h: number;
 }
 
-/** A sticker's tag group: the name tag, and under it the "to @x" tag when the sticker was given. */
+/** A sticker's artist tag, and its recipient's handle under it when it was given. */
 export interface TagGroup {
   name: Tag;
   to: Tag | null;
@@ -171,13 +169,12 @@ function tagOf(text: string, chrome: number, x: number, y: number): Tag {
 }
 
 /**
- * A sticker's tags, each measured round its whole label: the name tag round `name`, and when the
- * sticker was given, the "to @x" tag round `to`, such as "to @ken" or "@kenさんへ".
+ * Both tags show bare handles. The artist's photo and recipient's gift mark take the same room.
  */
 export function tagGroup(name: string, to: string | null): TagGroup {
   const nameTag = tagOf(name, TAG_CHROME, 0, 0);
   if (to === null) return { name: nameTag, to: null, w: nameTag.w, h: nameTag.h };
-  const toTag = tagOf(to, TO_TAG_CHROME, TO_TAG_INDENT, nameTag.h + TO_TAG_GAP);
+  const toTag = tagOf(to, TAG_CHROME, TO_TAG_INDENT, nameTag.h + TO_TAG_GAP);
   return {
     name: nameTag,
     to: toTag,

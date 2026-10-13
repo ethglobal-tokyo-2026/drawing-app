@@ -48,9 +48,6 @@ const HANDLES = [
   "yuzuriha_long",
 ];
 
-/** "to @x" in English, and "@xさんへ" in Japanese, as the aqua tag reads. */
-const toLabel = (i: number, handle: string) => (i % 2 ? `to @${handle}` : `@${handle}さんへ`);
-
 function itemsOf(count: number, seed = 1, givenEvery = 5): PileItem[] {
   const rnd = seededRandom(seed);
   return Array.from({ length: count }, (_, i) => ({
@@ -58,7 +55,7 @@ function itemsOf(count: number, seed = 1, givenEvery = 5): PileItem[] {
     shape: blob(rnd),
     tag: tagGroup(
       `@${HANDLES[i % HANDLES.length]}`,
-      i % givenEvery === 3 ? toLabel(i, HANDLES[(i * 7) % HANDLES.length]) : null,
+      i % givenEvery === 3 ? `@${HANDLES[(i * 7) % HANDLES.length]}` : null,
     ),
   }));
 }
@@ -202,19 +199,12 @@ describe("tagGroup", () => {
     expect(tagGroup(`@${"m".repeat(32)}`, null).w).toBeLessThanOrEqual(TAG_MAX_W);
   });
 
-  it("measures the aqua tag round its whole label, not just the handle", () => {
-    const to = (label: string) => tagGroup("@Crit-rich", label).to?.w ?? 0;
-    expect(to("to @Kenji")).toBeGreaterThan(to("@Kenji"));
-    expect(to("@Kenjiさんへ")).toBeGreaterThan(to("to @Kenji"));
-    expect(tagGroup("@Crit-rich", "to @Kenji").to?.lines).toEqual(["to @Kenji"]);
-  });
-
   it("gives Japanese names the room of full-width letters", () => {
     expect(tagGroup("@さくら", null).w).toBeGreaterThan(tagGroup("@abc", null).w);
   });
 
   it("stacks the tag of a given sticker under its name tag", () => {
-    const group = tagGroup("@mika", "to @ken");
+    const group = tagGroup("@mika", "@ken");
     expect(group.h).toBeGreaterThan(tagGroup("@mika", null).h);
     expect(group.to?.y).toBeGreaterThanOrEqual(group.name.h);
   });

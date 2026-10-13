@@ -127,6 +127,25 @@
   outline: none;
 }
 
+/* Pickup moves artwork, tags, and their hit regions as one, above the fall's own wrapper. */
+.pile-sticker__play {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 85%;
+}
+
+.pile-sticker[data-playing] {
+  z-index: 100000;
+}
+
+.pile-sticker[data-playing="held"] .pile-sticker__image {
+  filter: drop-shadow(2px 5px 4px rgba(28, 24, 36, 0.18));
+}
+
+.pile-sticker[data-playing="held"] :is(.pile-sticker__hit, .pile-tags) {
+  cursor: grabbing;
+}
+
 /* What falls: the sticker and its tags, together. */
 .pile-sticker__drop {
   position: absolute;
@@ -170,6 +189,7 @@
   inset: 0;
   pointer-events: auto;
   cursor: pointer;
+  touch-action: pan-y pinch-zoom;
 }
 
 /* The house focus ring, round the cut. */
@@ -195,6 +215,33 @@
   opacity: 1;
 }
 
+/* A pointer lifts the visible sticker and labels while their hit areas stay still. */
+@media (hover: hover) and (pointer: fine) {
+  .pile-sticker__image.reveal-img,
+  .pile-tag {
+    transition:
+      opacity 240ms var(--ease-out),
+      translate 180ms var(--ease-out);
+  }
+
+  .pile-sticker:not([data-falling], [data-playing]):has(.pile-sticker__hit:hover, .pile-tags:hover)
+    :is(.pile-sticker__image, .pile-tag) {
+    translate: 0 -4px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
+  .pile-sticker__image.reveal-img,
+  .pile-tag {
+    transition: none;
+  }
+
+  .pile-sticker:not([data-falling], [data-playing]):has(.pile-sticker__hit:hover, .pile-tags:hover)
+    :is(.pile-sticker__image, .pile-tag) {
+    translate: none;
+  }
+}
+
 /* Waiting for its image, out of sight, before it falls. */
 .pile-sticker[data-falling="waiting"] .pile-sticker__drop {
   opacity: 0;
@@ -213,6 +260,7 @@
   rotate: var(--tr);
   pointer-events: auto;
   cursor: pointer;
+  touch-action: pan-y pinch-zoom;
 }
 
 /* Liner Lift label stock, thin and flat on the sticker so the stickers lead: no cast, a hairline
@@ -243,6 +291,12 @@
   height: calc(13px * var(--k));
 }
 
+.pile-tag > svg {
+  flex: none;
+  width: calc(13px * var(--k));
+  height: calc(13px * var(--k));
+}
+
 /* No picture: a plain dot in its place, never a letter too small to read. */
 .pile-tag__dot {
   flex: none;
@@ -268,7 +322,6 @@
 
 /* Soft aqua, giving at rest volume: who a given sticker went to. */
 .pile-tag--to {
-  padding: 0 calc(7px * var(--k));
   background: var(--aqua-soft);
   box-shadow: 0 0 0 0.5px var(--rule-strong);
 }

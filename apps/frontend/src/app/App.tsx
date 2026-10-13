@@ -263,6 +263,7 @@ export default function App() {
                   <ExploreScreen
                     onOpenArtist={setVisiting}
                     onOpenMyBoard={() => setView("board")}
+                    covered={visiting !== undefined}
                   />
                 </Suspense>
               </div>

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import type { GiftPreview, TicketShop } from "@drawing-app/api/client";
 import { act } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { gift, people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { SEARCH_AFTER_MS } from "../explore/ExploreScreen";
@@ -11,6 +11,7 @@ import { strings } from "../i18n/strings";
 import { PULL } from "../receiving/pullTab";
 import { forgetBoardComplete } from "../sticker-board/boardComplete";
 import { readKeptBoardAgain } from "../sticker-board/lastBoard";
+import * as light from "../stickers/light";
 import { onTouchScreen } from "../ui/testing";
 import App from "./App";
 
@@ -199,6 +200,112 @@ it("keeps Explore's search while another tab shows, asks nothing for it then, an
   await settle();
   expect(explore).toHaveBeenCalledTimes(2);
   expect(searchUsers).toHaveBeenCalledTimes(2);
+});
+
+it("pauses the pile's tilt under an artist's board and resumes it with the loaded pages intact", async () => {
+  history.replaceState(null, "", "/explore");
+  onTouchScreen({ landscape: true, large: true });
+  vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (iPad)");
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1024);
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(768);
+  onTestFinished(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+  // happy-dom has no viewport intersections; put the older page within reach as Explore opens.
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class extends IntersectionObserver {
+      private readonly notify: IntersectionObserverCallback;
+      constructor(notify: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        super(notify, options);
+        this.notify = notify;
+      }
+      observe(target: Element) {
+        super.observe(target);
+        const rect = target.getBoundingClientRect();
+        this.notify(
+          [
+            {
+              target,
+              isIntersecting: true,
+              intersectionRatio: 1,
+              boundingClientRect: rect,
+              intersectionRect: rect,
+              rootBounds: null,
+              time: 0,
+            },
+          ],
+          this,
+        );
+      }
+    },
+  );
+  let pose = { x: 0, y: 0, rotationDegrees: 0 };
+  const listeners = new Set<(pose: light.LightPose) => void>();
+  vi.spyOn(light, "currentLight").mockImplementation(() => ({ ...pose }));
+  vi.spyOn(light, "subscribeLight").mockImplementation((listener) => {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  });
+  const publish = (x: number, y: number) =>
+    act(() => {
+      pose = { x, y, rotationDegrees: 0 };
+      for (const listener of listeners) listener(pose);
+    });
+  const today = sticker({ sealedAt: "2026-09-26T11:00:00.000Z" });
+  const older = sticker({ sealedAt: "2026-09-25T11:00:00.000Z" });
+  const view = renderWithApi(
+    <App />,
+    emptyApi({
+      explore: async () => ({
+        pile: { stickers: [{ sticker: today, givenTo: null }], before: "older" },
+        leaderboards: {
+          weekStart: "2026-09-20T15:00:00.000Z",
+          mostGratitude: [{ person: people.mika, value: 1234 }],
+          bestCombo: [],
+          longestStreak: [],
+        },
+      }),
+      explorePile: async () => ({ stickers: [{ sticker: older, givenTo: null }], before: null }),
+      stickerBoard: async () => ({ owner: people.mika, boardStickers: [] }),
+      userStats: async () => ({
+        since: "2026-09-01T00:00:00.000Z",
+        made: 0,
+        received: 0,
+        given: 0,
+        gratitude: { direct: 0, residual: 0, total: 0 },
+        bests: { bestCombo: 0, mostGratitudeInADay: 0, longestStreak: 0 },
+        streak: 0,
+      }),
+      suiAddress: async () => null,
+      ticketShop,
+    }),
+  );
+  unmount = view.unmount;
+  await act(() => vi.dynamicImportSettled());
+  await settle();
+  const pile = view.host.querySelector<HTMLElement>(".sticker-pile");
+  const heap = pile?.querySelector<HTMLElement>(".pile-day__heap");
+  const olderNode = pile?.querySelector(`[data-pile-id="${older.id}"]`);
+  if (!pile || !heap || !olderNode) throw new Error("Explore did not load its older pile page");
+  publish(1, 1);
+  expect(heap.style.translate).toBe("6px 4px");
+
+  act(() => view.host.querySelector<HTMLButtonElement>(".explore-week .artist-row")?.click());
+  await act(() => vi.dynamicImportSettled());
+  await settle();
+  expect(view.host.querySelector(".artist-board")).not.toBeNull();
+  publish(-1, -1);
+  expect(heap.style.translate).toBe("0px 0px");
+
+  tapTab(view.host, "explore");
+  await settle();
+  expect(view.host.querySelector(".artist-board")).toBeNull();
+  expect(view.host.querySelector(".sticker-pile")).toBe(pile);
+  expect(pile.querySelector(`[data-pile-id="${older.id}"]`)).toBe(olderNode);
+  publish(-1, -1);
+  expect(heap.style.translate).toBe("-6px -4px");
 });
 
 describe("the upright cover", () => {

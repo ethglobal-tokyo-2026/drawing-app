@@ -10,7 +10,7 @@
   z-index: 25;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 16px;
   padding: 16px 16px 28px;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -20,6 +20,7 @@
 /* The search is the text field (styles/text-field.css); it keeps its height in Explore's column. */
 .artist-search {
   flex: none;
+  height: 50px;
 }
 
 .artist-search input::-webkit-search-cancel-button {
@@ -93,7 +94,7 @@
   outline-offset: 3px;
 }
 
-/* Explore's own hue for the view; pink for the leaderboards, and the streak's tangerine for Streak. */
+/* The connected view switch carries Explore's aqua; metric tabs carry their own printed marks. */
 .view-switch .sliding-tabs__label {
   background: var(--aqua);
 }
@@ -105,28 +106,63 @@
   font-size: 15px;
 }
 
+.leaderboard-paper {
+  border-radius: var(--r-paper);
+  background: var(--liner-lift);
+  box-shadow: var(--shadow-label);
+}
+
+.leaderboard-tabs {
+  padding: 4px 4px 0;
+  border-radius: var(--r-paper) var(--r-paper) 0 0;
+}
+
 .leaderboard-tabs .sliding-tabs__label {
-  background: var(--pink);
+  bottom: 0;
+  border-radius: var(--r-label) var(--r-label) 0 0;
+  background: var(--liner-lift);
+  box-shadow: none;
 }
 
-/* Tangerine is a second face over the pink, which fades in as the label slides to Streak. */
-.leaderboard-tabs .sliding-tabs__label::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--tangerine);
-  opacity: 0;
-  transition: opacity 260ms var(--ease-out);
+.leaderboard-tabs button {
+  --hit: 0px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 58px;
+  border-radius: var(--r-label) var(--r-label) 0 0;
 }
 
-.leaderboard-tabs[data-selected="longestStreak"] .sliding-tabs__label::after {
-  opacity: 1;
+.leaderboard-tabs button[data-tab="bestCombo"] {
+  font-style: italic;
+}
+
+.leaderboard-mark {
+  flex: none;
+  color: var(--pink);
+}
+
+[data-tab="longestStreak"] .leaderboard-mark {
+  color: var(--tangerine);
+}
+
+.leaderboard-mark--combo {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  font-size: 27px;
+  transform: skewX(-11deg);
+}
+
+.leaderboard-mark--combo .hit-counter__lines {
+  margin: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sliding-tabs__label,
-  .leaderboard-tabs .sliding-tabs__label::after {
+  .sliding-tabs__label {
     transition: none;
   }
 
@@ -137,6 +173,27 @@
 
 /* ---------- This week ---------- */
 
+.pile-intro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  color: var(--graphite);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.pile-intro > svg {
+  flex: none;
+  color: var(--ink);
+  rotate: -12deg;
+}
+
+.week-title {
+  margin: 0;
+  font-size: 22px;
+}
+
 .week-resets {
   margin: -4px 0 0;
   text-align: right;
@@ -145,14 +202,16 @@
 /* ---------- The pile while it loads ---------- */
 
 .leaderboard {
+  --leaderboard-color: var(--pink);
   margin: 0;
-  padding: 0;
+  padding: 4px 0;
   list-style: none;
   overflow: hidden;
-  border: 1px solid var(--rule);
-  border-radius: 10px;
-  background: var(--liner-lift);
-  box-shadow: var(--shadow-label);
+  border-radius: var(--r-paper);
+}
+
+.leaderboard[data-board="longestStreak"] {
+  --leaderboard-color: var(--tangerine);
 }
 
 /* Leaderboard and search rows press 1px like a tile and open that artist's board. */
@@ -174,11 +233,37 @@
 
 .artist-row {
   display: flex;
+  flex-wrap: wrap;
+  container-type: inline-size;
   align-items: center;
   gap: 12px;
+  row-gap: 8px;
   width: 100%;
-  min-height: 63px;
-  padding: 6px 16px 6px 14px;
+  min-height: 68px;
+  padding: 8px 16px 8px 14px;
+}
+
+/* An arrow on search results makes their sticker board destination visible. */
+.artist-row__arrow {
+  flex: none;
+  color: var(--graphite);
+  transition: transform 160ms var(--ease-out);
+}
+
+.artist-row:focus-visible .artist-row__arrow {
+  color: var(--ink);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .artist-row:hover .row-names b {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .artist-row:hover .artist-row__arrow {
+    color: var(--ink);
+    transform: translateX(2px);
+  }
 }
 
 /* A leaderboard nobody is on yet says so at the rows' inset, as a supporting note. */
@@ -193,12 +278,19 @@
   border-top: 1px solid var(--rule);
 }
 
-.leaderboard li.me {
+.row-names .artist-row__you {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: var(--r-paper);
   background: var(--pink-soft);
+  color: var(--ink);
 }
 
 .rank {
-  width: 24px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
   flex: none;
   text-align: center;
   color: var(--graphite);
@@ -206,10 +298,30 @@
   font-weight: 700;
 }
 
-/* Graphite is too pale on Pink Soft, so what's small on your row is Ink, as its rank is. */
+/* A small printed stamp for the leading rank, including every artist tied at that rank. */
+.rank[data-rank="1"] {
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--leaderboard-color) 30%, var(--liner-lift));
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 900;
+  rotate: var(--tilt);
+}
+
+.leaderboard[data-board="bestCombo"] .rank[data-rank="1"] {
+  border-radius: var(--r-paper);
+  rotate: none;
+  transform: skewX(-11deg);
+}
+
+.leaderboard li:has(.rank[data-rank="1"]) .artist-row {
+  min-height: 78px;
+}
+
+/* Your rank and You marker remain clear without coloring the whole row. */
 .leaderboard li.me .rank,
-.leaderboard li.me .row-names span,
-.leaderboard li.me .figure small {
+.leaderboard li.me .row-names .artist-row__you {
   color: var(--ink);
 }
 
@@ -219,8 +331,8 @@
 
 /* Its width sizes a long handle. */
 .row-names {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 100px;
+  min-width: min(100px, 100%);
   display: flex;
   flex-direction: column;
   container-type: inline-size;
@@ -248,12 +360,30 @@
   font-size: 13px;
 }
 
+/* A quiet arrow stays beside the secondary name on touch, too. */
+.row-names .row-names__detail {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.row-names__detail > span {
+  min-width: 0;
+}
+
 .figure {
   flex: none;
+  margin-left: auto;
   font-size: 23px;
   font-weight: 900;
   line-height: 0.95;
   font-stretch: var(--w-figure);
+}
+
+/* Long amounts move to the next flex line before the name can become a column of letters. The
+   figure's size also reserves room for the heart and row insets, keeping even large totals whole. */
+.figure--gratitude {
+  font-size: clamp(14px, calc((100cqi - 52px) / var(--figure-length, 1) * 1.35), 23px);
 }
 
 /* The streak's figure: its fire in the streak's tangerine, then the days in Ink. Gratitude's: its
@@ -388,66 +518,9 @@
     margin-inline: auto;
   }
 
-  /* All three boards side by side take the room they need. */
-  .explore-view > .this-week--all {
-    max-width: 1040px;
+  .explore-view > .pile-intro {
+    margin-inline: 0;
   }
-}
-
-/* A large screen's This week: all three boards at once, side by side in one column and stacked in
-   two, each under its name stuck on as its tab's label is. */
-.leaderboard-boards {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
-}
-
-.leaderboard-board {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-}
-
-.leaderboard-title {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  height: 30px;
-  margin: 0;
-  padding: 0 12px;
-  border-radius: var(--r-label);
-  background: var(--pink);
-  box-shadow: var(--shadow-label);
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.leaderboard-title[data-board="longestStreak"] {
-  background: var(--tangerine);
-}
-
-/* Three boards side by side are narrow, so their rows step down a size and tighten. */
-.this-week--compact .artist-row {
-  gap: 6px;
-  min-height: 54px;
-  padding-inline: 8px;
-}
-
-.this-week--compact .rank {
-  width: 14px;
-  font-size: 13px;
-}
-
-.this-week--compact .figure {
-  font-size: 20px;
-}
-
-.this-week--compact .row-names span {
-  font-size: 11px;
 }
 
 /* Two columns, as an iPad's split view: the search runs across the top, the pile (or a search's
@@ -504,12 +577,15 @@
   margin: 0;
 }
 
-.explore[data-columns="2"] .leaderboard-boards {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 22px;
-}
-
 /* In its column the pile no longer runs under the screen's side padding. */
 .explore[data-columns="2"] .sticker-pile {
   margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artist-row__arrow,
+  .artist-row:hover .artist-row__arrow {
+    transition: none;
+    transform: none;
+  }
 }
