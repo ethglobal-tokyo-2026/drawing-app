@@ -5,6 +5,7 @@ import { phone } from "./e2e/phone.ts";
 import { E2E_API_PORT, E2E_APP_PORT } from "./e2e/ports.ts";
 
 const appOrigin = `http://localhost:${E2E_APP_PORT}`;
+const braveExecutable = process.env.BRAVE_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir: "e2e",
@@ -31,6 +32,19 @@ export default defineConfig({
       testIgnore: "**/forcedDark.e2e.ts",
       use: { ...phone, browserName: "webkit" },
     },
+    // An installed Brave can exercise its normal privacy protections without changing the defaults.
+    ...(braveExecutable
+      ? [
+          {
+            name: "brave",
+            use: {
+              ...phone,
+              browserName: "chromium" as const,
+              launchOptions: { executablePath: braveExecutable },
+            },
+          },
+        ]
+      : []),
   ],
   // Each server is exec'd rather than run through pnpm, whose children leave Playwright's process
   // group and outlive the run.

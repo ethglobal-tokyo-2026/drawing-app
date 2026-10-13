@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { decodeScreenshot, screenshotPixel } from "./screenshotPixels.ts";
 
 const evidence = fileURLToPath(
   new URL("../../../data/verification/layer-flash-2026-10-12/", import.meta.url),
@@ -285,6 +286,11 @@ test("real ink has a readable dual contour and a gentle white pulse at every sel
     const sheet = document.createElement("div");
     sheet.style.cssText = "position:relative;width:160px;height:160px";
     document.body.append(sheet);
+    const samples = document.createElement("div");
+    samples.dataset.pulseSamples = "";
+    samples.style.cssText =
+      "position:fixed;left:0;top:0;width:160px;background:#000;z-index:2147483647";
+    document.body.append(samples);
     const layer = document.createElement("canvas");
     const above = document.createElement("canvas");
     layer.width = layer.height = above.width = above.height = 160;
@@ -341,12 +347,21 @@ test("real ink has a readable dual contour and a gentle white pulse at every sel
       const canvases = [
         ...sheet.querySelectorAll<HTMLCanvasElement>("canvas[class*='layer-flash']"),
       ];
+      // Retain the real painted pulse at full opacity so its color is independent of its animation.
+      const painted = document.createElement("canvas");
+      painted.width = pulse.width;
+      painted.height = pulse.height;
+      painted.style.cssText = "display:block;width:160px;height:160px";
+      const paintedContext = painted.getContext("2d");
+      if (!paintedContext) throw new Error("No painted pulse sample context");
+      paintedContext.drawImage(pulse, 0, 0);
+      samples.append(painted);
       const row = {
         color,
         opacity,
         alpha,
         edges,
-        pulse: [...pg.getImageData(60, 80, 1, 1).data],
+        pulseAlpha: pg.getImageData(60, 80, 1, 1).data[3],
         coveredPulse: pg.getImageData(100, 80, 1, 1).data[3],
         interiorContour: og.getImageData(
           Math.floor((80 - left) * density),
@@ -366,11 +381,15 @@ test("real ink has a readable dual contour and a gentle white pulse at every sel
     sheet.remove();
     return rows;
   });
-  for (const row of rows) {
+  const pixels = await decodeScreenshot(
+    await page.locator("[data-pulse-samples]").screenshot({ scale: "css" }),
+  );
+  for (const [index, row] of rows.entries()) {
     for (const count of Object.values(row.edges))
       expect(count, `${row.color} ${row.opacity}% contour`).toBeGreaterThan(0);
-    expect(row.pulse.slice(0, 3)).toEqual([255, 255, 255]);
-    expect(row.pulse[3]).toBeCloseTo(row.alpha === 0.25 ? 64 : 255, 0);
+    const alpha = row.alpha === 0.25 ? 64 : 255;
+    expect(screenshotPixel(pixels, 60, index * 160 + 80)).toEqual([alpha, alpha, alpha, 255]);
+    expect(row.pulseAlpha).toBeCloseTo(alpha, 0);
     expect(row.coveredPulse).toBe(0);
     expect(row.interiorContour).toBe(0);
     expect(row.pulsePeak).toBeCloseTo((0.14 * row.opacity) / 100, 5);
@@ -378,6 +397,10 @@ test("real ink has a readable dual contour and a gentle white pulse at every sel
     expect(row.unchanged).toBe(true);
     expect(row.released).toBe(true);
   }
+  await page.locator("[data-pulse-samples]").evaluate((samples) => {
+    for (const canvas of samples.querySelectorAll("canvas")) canvas.width = canvas.height = 0;
+    samples.remove();
+  });
 });
 
 test("occupied sheet edges keep their inset contour around clear holes and notches", async ({
@@ -390,6 +413,11 @@ test("occupied sheet edges keep their inset contour around clear holes and notch
     const sheet = document.createElement("div");
     sheet.style.cssText = "position:relative;width:160px;height:160px";
     document.body.append(sheet);
+    const samples = document.createElement("div");
+    samples.dataset.contourSamples = "";
+    samples.style.cssText =
+      "position:fixed;left:0;top:0;width:320px;display:grid;grid-template-columns:160px 160px;background:#000;z-index:2147483647";
+    document.body.append(samples);
     const layer = document.createElement("canvas"),
       above = document.createElement("canvas");
     layer.width = layer.height = 160;
@@ -397,6 +425,7 @@ test("occupied sheet edges keep their inset contour around clear holes and notch
     const g = layer.getContext("2d");
     if (!g) throw new Error("No full sheet context");
     const rows = [];
+    let reference: HTMLCanvasElement | undefined;
     for (const shape of [
       "full",
       "interior hole",
@@ -424,7 +453,14 @@ test("occupied sheet edges keep their inset contour around clear holes and notch
       const outline = sheet.querySelector<HTMLCanvasElement>(".layer-flash__outline");
       const og = outline?.getContext("2d");
       if (!feedback || !outline || !og) throw new Error("No full sheet contour");
-      let fullAppearanceUnchanged = true;
+      const painted = document.createElement("canvas");
+      painted.width = outline.width;
+      painted.height = outline.height;
+      painted.style.cssText = "display:block;width:160px;height:160px";
+      const paintedContext = painted.getContext("2d");
+      if (!paintedContext) throw new Error("No painted contour sample context");
+      paintedContext.drawImage(outline, 0, 0);
+      samples.append(painted);
       if (shape === "full") {
         const expected = document.createElement("canvas");
         expected.width = expected.height = 160;
@@ -441,13 +477,11 @@ test("occupied sheet edges keep their inset contour around clear holes and notch
           eg.fillRect(at, at, 1.25, 160 - at * 2);
           eg.fillRect(160 - at - 1.25, at, 1.25, 160 - at * 2);
         }
-        const actual = og.getImageData(0, 0, 160, 160).data;
-        const reference = eg.getImageData(0, 0, 160, 160).data;
-        fullAppearanceUnchanged = actual.every((value, i) => value === reference[i]);
+        expected.style.cssText = "display:block;width:160px;height:160px";
+        reference = expected;
       }
       rows.push({
         shape,
-        fullAppearanceUnchanged,
         insetWhite: [...og.getImageData(80, 6, 1, 1).data],
         insetDark: [...og.getImageData(80, 8, 1, 1).data],
         insetClear: [6, 8].map((y) => og.getImageData(50, y, 1, 1).data[3]),
@@ -460,16 +494,40 @@ test("occupied sheet edges keep their inset contour around clear holes and notch
       });
       feedback.cancel();
     }
+    if (!reference) throw new Error("No full sheet painted reference");
+    samples.append(reference);
     sheet.remove();
     return rows;
   });
-  for (const row of rows.slice(0, 5)) {
-    expect(row.insetWhite.slice(0, 3), row.shape).toEqual([255, 255, 255]);
+  const pixels = await decodeScreenshot(
+    await page.locator("[data-contour-samples]").screenshot({ scale: "css" }),
+  );
+  const referenceTop = Math.ceil(rows.length / 2) * 160;
+  const whiteReference = screenshotPixel(pixels, 80, referenceTop + 6);
+  const checkWhiteCoverage = (color: number[], shape: string) => {
+    expect(color, shape).toEqual([color[0], color[0], color[0], 255]);
+    // Native and byte rasterization can round the inset's three-quarter pixel coverage differently.
+    expect(Math.abs(color[0] - 0.75 * 255), shape).toBeLessThanOrEqual(1);
+  };
+  checkWhiteCoverage(whiteReference, "full sheet reference");
+  for (const [index, row] of rows.slice(0, 5).entries()) {
+    checkWhiteCoverage(
+      screenshotPixel(pixels, (index % 2) * 160 + 80, Math.floor(index / 2) * 160 + 6),
+      row.shape,
+    );
     expect(row.insetWhite[3], row.shape).toBeGreaterThan(100);
     expect(row.insetDark[0], row.shape).toBeLessThan(60);
     expect(row.insetDark[3], row.shape).toBeGreaterThan(100);
   }
-  expect(rows[0].fullAppearanceUnchanged).toBe(true);
+  let fullAppearanceUnchanged = true;
+  for (let y = 0; y < 160; y++)
+    for (let x = 0; x < 160; x++) {
+      const actual = screenshotPixel(pixels, x, y);
+      const reference = screenshotPixel(pixels, x, referenceTop + y);
+      if (actual.some((value, channel) => value !== reference[channel]))
+        fullAppearanceUnchanged = false;
+    }
+  expect(fullAppearanceUnchanged).toBe(true);
   expect(rows[1].interiorHole).toBe(0);
   for (const row of rows.slice(2, 4)) expect(row.insetClear, row.shape).toEqual([0, 0]);
   expect(rows[4].bottomInset).toEqual([0, 0]);
@@ -478,6 +536,10 @@ test("occupied sheet edges keep their inset contour around clear holes and notch
   expect(rows[5].insetDark[3]).toBe(0);
   expect(rows.every((r) => r.unchanged)).toBe(true);
   expect(rows.every((r) => r.center === 0 && r.peak === 0.95 && r.animations === 0)).toBe(true);
+  await page.locator("[data-contour-samples]").evaluate((samples) => {
+    for (const canvas of samples.querySelectorAll("canvas")) canvas.width = canvas.height = 0;
+    samples.remove();
+  });
 });
 
 test("tiny real raster marks stay small beside a broad fill", async ({ page }) => {

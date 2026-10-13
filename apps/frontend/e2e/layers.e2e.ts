@@ -22,7 +22,18 @@ import {
   undo,
 } from "./fillHelpers.ts";
 import { canvas, openDetail, openSealSheet, say, sealOnSheet, ticketSnapshot } from "./helpers.ts";
-import { along, at, FINGERTIP, hand, inkAt, inkedPixels, inkShows, middle } from "./pen.ts";
+import {
+  along,
+  at,
+  type At,
+  FINGERTIP,
+  hand,
+  inkAt,
+  inkedPixels,
+  inkShows,
+  middle,
+} from "./pen.ts";
+import { decodeScreenshot, screenshotPixel } from "./screenshotPixels.ts";
 
 const language = "en";
 const evidence = fileURLToPath(
@@ -878,6 +889,13 @@ test("Clip enabled over an empty base keeps new ink recoverable", async ({ page 
 });
 
 test("clipping masks outside ink on screen and in the seal preview", async ({ page }) => {
+  const sheetColor = async (point: At) => {
+    const png = await page.screenshot({
+      scale: "css",
+      clip: { x: Math.floor(point.x), y: Math.floor(point.y), width: 1, height: 1 },
+    });
+    return screenshotPixel(await decodeScreenshot(png), 0, 0);
+  };
   await openSheet(page);
   await color(page, "blue");
   await expect(async () => {
@@ -890,15 +908,16 @@ test("clipping masks outside ink on screen and in the seal preview", async ({ pa
   const outside = await line(page, 0.7);
   const box = await sheetBox(page);
   const center = at(box, 0.5, 0.5);
-  await expect.poll(() => shownColor(page, center)).toEqual([232, 72, 79, 255]);
+  await expect.poll(() => sheetColor(center)).toEqual([232, 72, 79, 255]);
   await inkShows(page, outside);
   await options(page, 2);
   await layerSwitch(page, copy.clip).click();
   await expect(layerSwitch(page, copy.clip)).toBeChecked();
   await chip(page, 2).click();
   await expect.poll(() => inkAt(page, outside)).toBe(0);
-  await expect.poll(() => shownColor(page, center)).toEqual([232, 72, 79, 255]);
-  await expect.poll(() => shownColor(page, at(box, 0.35, 0.5))).toEqual([47, 107, 255, 255]);
+  await expect.poll(() => sheetColor(outside)).toEqual([255, 255, 255, 255]);
+  await expect.poll(() => sheetColor(center)).toEqual([232, 72, 79, 255]);
+  await expect.poll(() => sheetColor(at(box, 0.35, 0.5))).toEqual([47, 107, 255, 255]);
   await openSealSheet(page, language);
   const preview = page.locator(".seal-preview__ink");
   await expect

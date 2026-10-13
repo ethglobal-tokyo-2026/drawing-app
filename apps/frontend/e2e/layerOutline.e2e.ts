@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { decodeScreenshot, screenshotPixel } from "./screenshotPixels.ts";
 
 test("cropped outlines follow the rounded sheet boundary at fractional sizes", async ({
   browser,
@@ -81,53 +82,40 @@ test("cropped outlines follow the rounded sheet boundary at fractional sizes", a
       document.body.append(reference);
     }
   });
-  const rendered = await page.screenshot({ scale: "device" });
-  const samples = await page.evaluate(async (png) => {
-    const picture = new Image();
-    picture.src = `data:image/png;base64,${png}`;
-    await picture.decode();
-    const pixels = document.createElement("canvas");
-    pixels.width = picture.width;
-    pixels.height = picture.height;
-    const g = pixels.getContext("2d");
-    if (!g) throw new Error("No screenshot context");
-    g.drawImage(picture, 0, 0);
-    const at = (x: number, y: number) => [
-      ...g.getImageData(Math.floor((x + 0.5) * 3), Math.floor((y + 0.5) * 3), 1, 1).data,
-    ];
-    return [
-      [
-        [98, 68],
-        [98, 69],
-        [99, 68],
-      ],
-      [
-        [97, 0],
-        [97, 1],
-        [98, 0],
-        [98, 1],
-        [99, 0],
-      ],
-      [
-        [0, 0],
-        [1, 0],
-        [0, 1],
-        [199, 159],
-        [200, 160],
-        [200 - 1 / 3, 80],
-        [80, 160 - 1 / 3],
-      ],
-    ].flatMap((points, i) =>
-      points.map(([x, y]) => ({
-        at: [i, x, y],
-        actual: at(20 + x, 20 + i * 190 + y),
-        expected: at(340 + x, 20 + i * 190 + y),
-      })),
-    );
-  }, rendered.toString("base64"));
-  expect(samples.find(({ at }) => at[0] === 1 && at[1] === 98 && at[2] === 0)?.expected).toEqual([
-    255, 255, 255, 255,
-  ]);
+  const pixels = await decodeScreenshot(await page.screenshot({ scale: "device" }));
+  const at = (x: number, y: number) => screenshotPixel(pixels, (x + 0.5) * 3, (y + 0.5) * 3);
+  const samples = [
+    [
+      [98, 68],
+      [98, 69],
+      [99, 68],
+    ],
+    [
+      [97, 0],
+      [97, 1],
+      [98, 0],
+      [98, 1],
+      [99, 0],
+    ],
+    [
+      [0, 0],
+      [1, 0],
+      [0, 1],
+      [199, 159],
+      [200, 160],
+      [200 - 1 / 3, 80],
+      [80, 160 - 1 / 3],
+    ],
+  ].flatMap((points, i) =>
+    points.map(([x, y]) => ({
+      at: [i, x, y],
+      actual: at(20 + x, 20 + i * 190 + y),
+      expected: at(340 + x, 20 + i * 190 + y),
+    })),
+  );
+  const brightEdge = samples.find(({ at }) => at[0] === 1 && at[1] === 98 && at[2] === 0);
+  if (!brightEdge) throw new Error("Missing the bright fractional sheet-edge reference");
+  expect(Math.min(...brightEdge.expected.slice(0, 3))).toBeGreaterThan(240);
   for (const sample of samples) {
     expect(sample.expected[3]).toBe(255);
     expect(
