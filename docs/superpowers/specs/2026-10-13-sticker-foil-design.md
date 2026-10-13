@@ -1,6 +1,6 @@
 # Sticker foil design
 
-Status: proposed for written-spec review. Research: [sticker foil](../../research/sticker-foil/README.md). Product implementation has not started.
+Status: design review delegated to the implementer; implementation authorized. Research: [sticker foil](../../research/sticker-foil/README.md).
 
 ## Outcome
 
