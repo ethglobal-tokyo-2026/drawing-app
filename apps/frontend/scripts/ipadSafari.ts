@@ -964,12 +964,47 @@ ${LIB}
       });
       if (!opened) continue;
       if (screen.name === "stat board") {
-        await check("choice rows are segmented radio groups, with no native picker", async () => {
+        await check("Language and Drawing hand use segmented radio groups", async () => {
           const rows = await page(
-            `return { selects: document.querySelectorAll("select").length, rows: [...document.querySelectorAll("[role=radiogroup]")].map((g) => nameOf(g) + ": " + g.querySelectorAll("[role=radio]").length) };`,
+            `return args[0].map(([label, selector]) => {
+              const row = document.querySelector(selector);
+              const group = row?.querySelector("[role=radiogroup]");
+              return { label, present: !!row, selects: row?.querySelectorAll("select").length ?? 0,
+                groups: row?.querySelectorAll("[role=radiogroup]").length ?? 0,
+                role: group?.getAttribute("role"), name: group ? nameOf(group) : null,
+                radios: group?.querySelectorAll("[role=radio]").length ?? 0,
+                checked: group?.querySelectorAll('[role=radio][aria-checked="true"]').length ?? 0 };
+            });`,
+            [
+              [
+                stickerBoard.settings.language.title.en,
+                '.settings-note [data-setting="language"] .settings-choice',
+              ],
+              [
+                stickerBoard.settings.drawing.hand.label.en,
+                '.settings-note [data-setting="drawing"] > .settings-choice',
+              ],
+            ],
           );
-          if (!isRecord(rows) || rows.selects !== 0) {
-            throw new Error(`a native select is on the stat board: ${JSON.stringify(rows)}`);
+          // Other mounted screens may intentionally have selects; only these two rows promise radios.
+          if (
+            !Array.isArray(rows) ||
+            rows.length !== 2 ||
+            rows.some(
+              (row) =>
+                !isRecord(row) ||
+                row.present !== true ||
+                row.selects !== 0 ||
+                row.groups !== 1 ||
+                row.role !== "radiogroup" ||
+                row.name !== row.label ||
+                row.radios !== 2 ||
+                row.checked !== 1,
+            )
+          ) {
+            throw new Error(
+              `Language or Drawing hand is not a segmented radio group: ${JSON.stringify(rows)}`,
+            );
           }
           const { hand } = stickerBoard.settings.drawing;
           const left = await touchRadio(hand.label.en, hand.left.en);
@@ -979,7 +1014,7 @@ ${LIB}
               `touching ${hand.label.en}'s choices checked ${String(left)}, then ${String(right)}`,
             );
           }
-          return `${JSON.stringify(rows.rows)}; a touch checks Left, then Right`;
+          return `${JSON.stringify(rows)}; a touch checks Left, then Right`;
         });
       }
       if (screen.name === "drawing screen") {
