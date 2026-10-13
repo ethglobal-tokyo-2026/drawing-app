@@ -24,7 +24,7 @@ function pixelsOver(layers: Float32Array[], scale = 1) {
   const pixels = creasePixels({
     width: W,
     height: H,
-    surface: stackedSurface(layers, W, H, scale),
+    surface: stackedSurface(layers, W, H),
     own: everywhere,
     scale,
     lights: CREASE_SIDES,
@@ -110,7 +110,7 @@ describe("crease", () => {
     const pixels = creasePixels({
       width: W,
       height: H,
-      surface: stackedSurface([everywhere], W, H, 1),
+      surface: stackedSurface([everywhere], W, H),
       own,
       scale: 1,
       lights: CREASE_SIDES,
@@ -130,7 +130,7 @@ describe("crease", () => {
     const twiceAsHigh = creasePixels({
       width: W,
       height: H,
-      surface: stackedSurface([everywhere, everywhere], W, H, 1),
+      surface: stackedSurface([everywhere, everywhere], W, H),
       own,
       scale: 1,
       lights: CREASE_SIDES,
@@ -157,7 +157,7 @@ describe("crease", () => {
     (reverse) => {
       const supports = [field((x) => Number(x < 60)), field((x) => Number(x >= 60))];
       if (reverse) supports.reverse();
-      const surface = stackedSurface(supports, W, H, 1);
+      const surface = stackedSurface(supports, W, H);
       expect(Math.min(...surface)).toBe(1);
       expect(Math.max(...surface)).toBe(1);
       const pixels = pixelsOver(supports);
@@ -214,7 +214,7 @@ describe("crease", () => {
 
   it("keeps a small supported sticker a full layer higher with a real crease at its edge", () => {
     const small = field((x, y) => Number(x >= 55 && x < 65 && y >= 25 && y < 35));
-    const surface = stackedSurface([everywhere, small], W, H, 1);
+    const surface = stackedSurface([everywhere, small], W, H);
     expect(surface[30 * W + 60]).toBe(2);
     expect(surface[30 * W + 40]).toBe(1);
     const pixels = pixelsOver([everywhere, small]);
@@ -223,27 +223,44 @@ describe("crease", () => {
   });
 
   it("shows an edge directly beneath, and none of an edge buried under another sticker", () => {
-    /** The crease's most opaque pixel, lit from every side; 0 when it shows nothing. */
-    const peak = (layers: Float32Array[]) => {
-      const pixels = creasePixels({
-        width: W,
-        height: H,
-        surface: stackedSurface(layers, W, H, 1),
-        own: everywhere,
-        scale: 1,
-        lights: CREASE_SIDES,
-      });
-      let most = 0;
-      for (const image of ["base", "topLeft", "bottomRight", "topRight", "bottomLeft"] as const) {
-        const crease = pixels?.[image];
-        if (!crease) continue;
-        for (let q = 3; q < crease.length; q += 4) most = Math.max(most, crease[q]);
+    const step = field((x) => Number(x < W / 2));
+    const exposed = pixelsOver([step]);
+    expect(peakTone(exposed)).toBeGreaterThan(0);
+    expect(bends(exposed)).toBe(true);
+    const covered = pixelsOver([step, everywhere]);
+    expect(peakTone(covered)).toBe(0);
+    expect(bends(covered)).toBe(false);
+  });
+
+  it("keeps lightly overlapping neighboring supports level while their outer edge still creases", () => {
+    const supports = [field((x) => Number(x < 66)), field((x) => Number(x >= 54 && x < 114))];
+    for (const below of [[], [everywhere]])
+      for (const neighbors of [supports, [...supports].reverse()]) {
+        const pixels = pixelsOver([...below, ...neighbors]);
+        expect(peakTone(pixels, 42, 78)).toBe(0);
+        expect(bends(pixels, 42, 78)).toBe(false);
+        expect(peakTone(pixels, 102, 118)).toBeGreaterThan(0);
+        expect(bends(pixels, 102, 118)).toBe(true);
       }
-      return most;
-    };
-    const step = field((x) => (x < W / 2 ? 1 : 0));
-    expect(peak([step])).toBeGreaterThan(0);
-    expect(peak([step, everywhere])).toBe(0);
+  });
+
+  it("keeps a finite covering sticker flat inside while its exposed edge still creases", () => {
+    const step = field((x) => Number(x < 60));
+    const cover = field((x, y) => Number(x >= 30 && x < 90 && y >= 10 && y < 50));
+    const surface = stackedSurface([step, cover], W, H);
+    expect(surface[30 * W + 45]).toBe(1.5);
+    expect(surface[30 * W + 75]).toBe(1.5);
+    const pixels = pixelsOver([step, cover]);
+    for (let y = 20; y < 40; y++) {
+      for (let x = 42; x < 78; x++) {
+        const q = (y * W + x) * 4;
+        expect([...pixels.normal.slice(q, q + 3)]).toEqual([128, 128, 255]);
+        for (const image of ["base", "topLeft", "bottomRight", "topRight", "bottomLeft"] as const)
+          expect(pixels[image][q + 3]).toBe(0);
+      }
+    }
+    expect(peakTone(pixels, 80, 100)).toBeGreaterThan(0);
+    expect(bends(pixels, 80, 100)).toBe(true);
   });
 
   it("lights the side of a step that faces the light and shades the far side, and swaps them for the opposite light", () => {

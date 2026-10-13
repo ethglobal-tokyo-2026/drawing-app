@@ -167,7 +167,7 @@ async function bake(board: string, job: CreaseJob): Promise<CreaseReply> {
     const pixels = creasePixels({
       width: job.width,
       height: job.height,
-      surface: stackedSurface(layers, job.width, job.height, job.scale),
+      surface: stackedSurface(layers, job.width, job.height),
       own: ownAlpha,
       scale: job.scale,
       lights: job.lights,

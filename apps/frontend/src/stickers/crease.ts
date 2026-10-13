@@ -36,11 +36,11 @@ export const CREASE_SIDES: Record<CreaseSide, readonly [number, number]> = {
 /** How far a sticker's ramp reaches beside a step one sticker high, in CSS px. */
 export const RAMP = 4;
 
+/** Height changes below a quarter of a sticker do not bend or shade its laminate. */
+const MIN_CREASE_HEIGHT = 0.25;
+
 /** How much the ramp's corners are rounded off, as a blur, in CSS px. */
 const ROUND = 1;
-
-/** The spread of the mean height a sticker settles at over what's beneath it, in CSS px. */
-const LEVEL = 14;
 
 /**
  * Each part's tone where one sticker's step beneath peaks, the rest shaded in proportion. STRENGTH
@@ -244,14 +244,13 @@ export function drape(
 
 /**
  * The surface under a sticker, from the silhouettes beneath it, bottom to top, each 0 to 1. Each
- * sticker's top settles at its thickness over the mean height inside its own silhouette. The
- * coverage-normalized mean keeps nearby stickers from lifting it unless they actually overlap.
+ * sticker's top is one flat plane at its thickness over the mean height inside its silhouette.
+ * A covered edge cannot bend that plane; nearby stickers lift it only where they actually overlap.
  */
 export function stackedSurface(
   layers: readonly Float32Array[],
   width: number,
   height: number,
-  scale: number,
 ): Float32Array {
   const surface = new Float32Array(width * height);
   layers.forEach((layer, n) => {
@@ -259,14 +258,18 @@ export function stackedSurface(
       surface.set(layer);
       return;
     }
-    const level = new Float32Array(surface.length);
-    for (let i = 0; i < surface.length; i++) level[i] = surface[i] * layer[i];
-    const coverage = Float32Array.from(layer);
-    blur(level, width, height, LEVEL * scale);
-    blur(coverage, width, height, LEVEL * scale);
+    let support = 0;
+    let coverage = 0;
+    for (let i = 0; i < surface.length; i++) {
+      support += surface[i] * layer[i];
+      coverage += layer[i];
+    }
+    // Overlapping boxes can still have disjoint silhouettes in this sticker's frame.
+    if (coverage === 0) return;
+    const level = 1 + support / coverage;
     for (let i = 0; i < surface.length; i++) {
       const m = layer[i];
-      if (m > 0) surface[i] += m * (1 + level[i] / coverage[i] - surface[i]);
+      if (m > 0) surface[i] += m * (level - surface[i]);
     }
   });
   return surface;
@@ -338,6 +341,15 @@ export function creasePixels({
   lights,
 }: CreaseInput): CreasePixels | null {
   const field = drape(surface, width, height, scale);
+  // Include both plateaus of a complete ramp, with its rounded ends, when measuring its height.
+  const reach = Math.max(1, Math.ceil((RAMP + 4 * ROUND) * scale));
+  const scratch = new Float32Array(field.length);
+  const highest = new Float32Array(field.length);
+  const lowest = new Float32Array(field.length);
+  extremumPass(field, scratch, width, height, reach, true, true);
+  extremumPass(scratch, highest, width, height, reach, false, true);
+  extremumPass(field, scratch, width, height, reach, true, false);
+  extremumPass(scratch, lowest, width, height, reach, false, false);
   const unitStep = stepResponse(scale);
   const image = () => new Uint8ClampedArray(width * height * 4);
   const base = image();
@@ -363,9 +375,12 @@ export function creasePixels({
     for (let x = 1; x < width - 1; x++) {
       const i = y * width + x;
       const o = own[i];
-      // Differentiate the floating-point drape before cut coverage and visual crease tone.
-      const dx = ((field[i + 1] - field[i - 1]) * scale * STICKER_THICKNESS) / 2;
-      const dy = ((field[i + width] - field[i - width]) * scale * STICKER_THICKNESS) / 2;
+      const bends = highest[i] - lowest[i] >= MIN_CREASE_HEIGHT;
+      // Paint and reflection share the height minimum; cut coverage cannot create curvature.
+      const dx = bends ? ((field[i + 1] - field[i - 1]) * scale * STICKER_THICKNESS) / 2 : 0;
+      const dy = bends
+        ? ((field[i + width] - field[i - width]) * scale * STICKER_THICKNESS) / 2
+        : 0;
       const length = Math.hypot(dx, dy, 1);
       const q = i * 4;
       normal[q] = Math.round(128 - (127 * dx) / length);
@@ -376,6 +391,7 @@ export function creasePixels({
       const h = field[i];
       // A flat raised plane still supplies normal data without inventing a visible crease.
       if (h > 0.004 && Math.round((h / (h + 1)) * o * 255) > 0) any = true;
+      if (!bends) continue;
       const gx = (field[i + 1] - field[i - 1]) / 2 / unitStep.slope;
       const gy = (field[i + width] - field[i - width]) / 2 / unitStep.slope;
       const bend =
