@@ -211,8 +211,7 @@ type ClientErrorCode =
   | "person_switch_ownership_pending"
   | "person_switch_placement_unsaved"
   | "person_switch_placement_preservation_failed"
-  | "person_switch_settings_unsaved"
-  | "person_switch_destination_failed";
+  | "person_switch_settings_unsaved";
 export type ErrorCode = ApiErrorCode | ClientErrorCode;
 
 /** A refused or failed request: the HTTP status and the API's error body. Status 0 is no answer. */

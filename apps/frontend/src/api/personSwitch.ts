@@ -1,7 +1,6 @@
 import type { AccountSelection, SessionEnvelope } from "@drawing-app/api/client";
 import { ApiError, apiError } from "./apiClient";
 
-export type PersonSwitchDestination = { recipientUserId: string; giftId: string };
 export interface PersonSwitchNotice extends AccountSelection {
   authenticatedUserId: string;
   phase: "suspended" | "selected";
@@ -19,10 +18,8 @@ export interface PersonSwitchOptions {
   restore: (session: SessionEnvelope) => void;
   navigate: (path: string) => void;
   notice: (notice: PersonSwitchNotice) => void;
-  storage: Storage;
 }
 
-const DESTINATION_KEY = "croquis.person-switch.destination";
 /** Matches the ordinary API request deadline, including work that has no HTTP request of its own. */
 const REQUEST_TIMEOUT_MS = 15_000;
 const changed = () => new ApiError(409, { error: "session_account_changed" });
@@ -56,7 +53,6 @@ async function bounded<T>(run: (signal: AbortSignal) => Promise<T>): Promise<T> 
 /** Pauses this device, drains saves, and lets the server choose the next person before reloading. */
 export async function requestPersonSwitch(
   targetUserId: string,
-  destination: PersonSwitchDestination | undefined,
   options: PersonSwitchOptions,
 ): Promise<void> {
   const { session } = options;
@@ -67,28 +63,12 @@ export async function requestPersonSwitch(
   )
     throw new ApiError(403, { error: "person_switch_forbidden" });
   if (!linePrincipal || !principalMatches(session, options)) throw changed();
-  if (destination && destination.recipientUserId !== targetUserId) throw changed();
   const blocked = options.blockers();
   if (blocked.length)
     throw new ApiError(409, {
       error: "person_switch_ownership_pending",
       detail: blocked.join("; "),
     });
-  if (destination) {
-    try {
-      options.storage.setItem(
-        DESTINATION_KEY,
-        JSON.stringify({
-          authenticatedUserId: session.authenticated.id,
-          recipientUserId: destination.recipientUserId,
-          giftId: destination.giftId,
-        }),
-      );
-    } catch (error) {
-      console.error("The recipient gift destination could not be kept before switching", error);
-      throw new ApiError(0, { error: "person_switch_destination_failed" });
-    }
-  }
   const selection = { userId: session.me.id, selectionVersion: session.selectionVersion };
   options.suspend();
   let selectionRequested = false;
@@ -150,50 +130,6 @@ export async function requestPersonSwitch(
     }
     throw failure;
   }
-}
-
-/** Reads IDs only. A destination waits for the same LINE principal and its intended recipient. */
-export function readPersonSwitchDestination(
-  storage: Storage,
-  authenticatedUserId: string,
-  recipientUserId: string,
-): PersonSwitchDestination | null {
-  const raw = storage.getItem(DESTINATION_KEY);
-  if (!raw) return null;
-  let value: unknown;
-  try {
-    value = JSON.parse(raw);
-  } catch {
-    throw new ApiError(0, { error: "person_switch_destination_failed" });
-  }
-  if (
-    !value ||
-    typeof value !== "object" ||
-    !("authenticatedUserId" in value) ||
-    !("recipientUserId" in value) ||
-    !("giftId" in value) ||
-    typeof value.authenticatedUserId !== "string" ||
-    typeof value.recipientUserId !== "string" ||
-    typeof value.giftId !== "string"
-  )
-    throw new ApiError(0, { error: "person_switch_destination_failed" });
-  if (
-    value.authenticatedUserId !== authenticatedUserId ||
-    value.recipientUserId !== recipientUserId
-  )
-    return null;
-  return { recipientUserId: value.recipientUserId, giftId: value.giftId };
-}
-
-/** Removes a queued destination only once that precise gift has opened for its recipient. */
-export function consumePersonSwitchDestination(
-  storage: Storage,
-  authenticatedUserId: string,
-  recipientUserId: string,
-  giftId: string,
-): void {
-  if (readPersonSwitchDestination(storage, authenticatedUserId, recipientUserId)?.giftId === giftId)
-    storage.removeItem(DESTINATION_KEY);
 }
 
 /** Other tabs stop signing and writing. They require authoritative bootstrap on Reload. */

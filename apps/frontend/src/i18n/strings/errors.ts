@@ -263,11 +263,6 @@ export const errors = {
     en: "Some settings haven’t saved or applied on this device. Resolve the affected settings before switching.",
     ja: "保存できていない設定、またはこの端末で適用できていない設定があります。該当する設定を確認してから切り替えてください。",
   },
-  /** Private person controls or recipient reload: the exact recipient gift destination could not be kept or read. */
-  person_switch_destination_failed: {
-    en: "This device couldn’t keep or read the recipient’s gift. Try again before switching.",
-    ja: "この端末で受け取る人のギフトを保存または読み取れませんでした。切り替える前に、もう一度お試しください。",
-  },
   /** Sticker detail: loading where it's been (GET /api/stickers/:stickerId), in “Couldn’t load where it’s been…”, or Giving: packing it (POST /api/gifts), in “couldn’t be packed”, through problemOf */
   sticker_not_found: {
     en: "Couldn’t find this sticker. Go back to your board and try again.",

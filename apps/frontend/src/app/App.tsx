@@ -3,7 +3,6 @@ import {
   Activity,
   Suspense,
   useEffect,
-  useContext,
   useLayoutEffect,
   useRef,
   useState,
@@ -12,11 +11,6 @@ import {
 import { flushSync } from "react-dom";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
-import { ApiError, apiError } from "../api/apiClient";
-import { SessionEnvelopeContext } from "../api/sessionContext";
-import { consumePersonSwitchDestination, readPersonSwitchDestination } from "../api/personSwitch";
-import { problemOf } from "../i18n/errorMessage";
-import { ErrorLine } from "../ui/ErrorLine";
 import { reportKeptSends } from "../giving/sentReports";
 import { resendGratitudeWhenReachable } from "../gratitude/gratitudeOutbox";
 import { useTranslation } from "../i18n/react";
@@ -104,11 +98,6 @@ export default function App() {
   const { t } = useTranslation();
   const api = useApi();
   const me = useMe();
-  const session = useContext(SessionEnvelopeContext);
-  const authenticatedUserId = session?.authenticated.id;
-  const [destinationError, setDestinationError] = useState<ApiError | null>(null);
-  const [destinationAttempt, setDestinationAttempt] = useState(0);
-  const [destinationPending, setDestinationPending] = useState(!!authenticatedUserId);
   const [pendingReceivedNotice, setPendingReceivedNotice] = useState<ReceivedGift | undefined>(
     undefined,
   );
@@ -128,55 +117,6 @@ export default function App() {
   const [giftOpening, setGiftOpening] = useState<GiftFrom | undefined>(() =>
     opened.giftClaimToken ? { giftClaimToken: opened.giftClaimToken } : undefined,
   );
-  // A private selection's queued gift survives Reload as IDs, then uses the recipient's normal list.
-  useEffect(() => {
-    if (!authenticatedUserId) return;
-    let current = true;
-    const openDestination = async () => {
-      setDestinationPending(true);
-      try {
-        const destination = readPersonSwitchDestination(sessionStorage, authenticatedUserId, me.id);
-        if (!destination) return;
-        const waiting = await api.giftsForYou();
-        if (!current) return;
-        const gift = waiting.gifts.find((item) => item.gift.id === destination.giftId);
-        if (!gift)
-          throw new ApiError(404, {
-            error: "gift_not_found",
-            detail: `Recipient gift ${destination.giftId} is not waiting for ${me.id}.`,
-          });
-        setGiftOpening({ gift });
-        setDestinationError(null);
-      } catch (failure) {
-        if (!current) return;
-        const error = apiError(failure);
-        console.error("Opening the recipient gift after switching failed", error);
-        setDestinationError(error);
-      } finally {
-        if (current) setDestinationPending(false);
-      }
-    };
-    void openDestination();
-    return () => {
-      current = false;
-    };
-  }, [api, authenticatedUserId, me.id, destinationAttempt]);
-
-  const destinationOpened = () => {
-    if (!authenticatedUserId || !giftOpening || !("gift" in giftOpening)) return;
-    try {
-      consumePersonSwitchDestination(
-        sessionStorage,
-        authenticatedUserId,
-        me.id,
-        giftOpening.gift.gift.id,
-      );
-    } catch (failure) {
-      const error = apiError(failure);
-      console.error("The opened recipient gift destination could not be removed", error);
-      setDestinationError(error);
-    }
-  };
   // Set from the seal until the next sticker starts, when Draw starts a new one.
   const [sealedId, setSealedId] = useState<string>();
   // The sticker that last arrived, sealed or received; the board lands it with a "stick" animation.
@@ -300,7 +240,7 @@ export default function App() {
               key={boardLoads}
               freshId={freshId}
               giftClosures={giftClosures}
-              receiving={destinationPending || giftOpening !== undefined}
+              receiving={giftOpening !== undefined}
               pendingReceivedNotice={pendingReceivedNotice}
               onReceivedNoticeChange={setPendingReceivedNotice}
               onDraw={openDrawing}
@@ -360,7 +300,6 @@ export default function App() {
           <Suspense fallback={<div style={GIFT_LOADING} />}>
             <ReceiveGiftDialog
               from={giftOpening}
-              onOpened={destinationOpened}
               onClose={(receivedId) => {
                 setGiftOpening(undefined);
                 setGiftClosures((n) => n + 1);
@@ -373,14 +312,6 @@ export default function App() {
         )}
       </div>
       {sideways && <UprightCover />}
-      {destinationError && (
-        <ErrorLine
-          detail={problemOf(destinationError).detail}
-          onRetry={() => setDestinationAttempt((attempt) => attempt + 1)}
-        >
-          {problemOf(destinationError).message}
-        </ErrorLine>
-      )}
     </>
   );
 }

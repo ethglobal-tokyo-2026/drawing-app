@@ -15,7 +15,6 @@ import { useMyNsfwOptIn, veiledFor, withoutNsfwDrawings } from "../stickers/nsfw
 import { flushSync } from "react-dom";
 import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
-import { usePersonSwitch } from "../api/PersonSwitchProvider";
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, type PersonView, type StickerView } from "../api/views";
 import { GiftReceivedNotice } from "../giving/GiftReceivedNotice";
@@ -427,7 +426,6 @@ export function StickerBoard({
   const [chipsDone, setChipsDone] = useState(false);
   const me = useIdentity();
   const giftSender = useGiftSender();
-  const { request: requestPersonSwitch } = usePersonSwitch();
   const reduced = useReducedMotion();
   const hints = useId();
   const idle = usePreloadAfterBoard(OPENED_FROM_BOARD);
@@ -1195,9 +1193,6 @@ export function StickerBoard({
             liffId={LIFF_ID}
             forUserId={hanaGiftRecipient?.id}
             toHandle={hanaGiftRecipient?.handle ?? undefined}
-            onSwitchRecipient={(userId, giftId) =>
-              void requestPersonSwitch(userId, { recipientUserId: userId, giftId })
-            }
             returnFocus={() =>
               stickerEl(giving.id) ?? face?.querySelector<HTMLElement>(".zip__slider") ?? null
             }

@@ -5,11 +5,7 @@ import { BoardPlacementSaves } from "../sticker-board/boardPlacementSaves";
 import { emptyApi, TEST_ME, TEST_OWNER } from "./testing";
 import { ApiError } from "./apiClient";
 import { boardSticker } from "./testFixtures";
-import {
-  requestPersonSwitch,
-  readPersonSwitchDestination,
-  receivePersonSwitchNotice,
-} from "./personSwitch";
+import { requestPersonSwitch, receivePersonSwitchNotice } from "./personSwitch";
 
 const operator = "d5984df6-db28-44f2-801c-2f2f5b565463";
 const hana = "bef03287-50ee-4e51-aaef-a9dc1303b854";
@@ -51,7 +47,6 @@ function setup() {
     restore,
     navigate,
     notice,
-    storage: sessionStorage,
   };
   return { ...options, options };
 }
@@ -75,7 +70,7 @@ describe("requestPersonSwitch", () => {
       { id: "sticker-a", no: 42 },
       { phone: { on: true, x: 0.5, y: 0.5, r: 0, s: 0.3, z: 1 } },
     );
-    const switching = requestPersonSwitch(hana, undefined, {
+    const switching = requestPersonSwitch(hana, {
       ...test.options,
       settle: (signal) => saves.waitUntilSaved(signal),
     });
@@ -91,18 +86,14 @@ describe("requestPersonSwitch", () => {
     expect(test.navigate).toHaveBeenCalledWith("/");
   });
 
-  it("keeps the destination and recovers the authoritative profile after a lost response", async () => {
+  it("recovers the authoritative profile after a lost response", async () => {
     const test = setup();
     test.api.selectPerson.mockRejectedValue(new ApiError(0, { error: "network" }));
     test.api.me.mockResolvedValue(envelope(hana, "second"));
     localStorage.setItem(`draft:${operator}`, "original draft");
     localStorage.setItem(`outbox:${operator}`, "original outbox");
-    await requestPersonSwitch(hana, { recipientUserId: hana, giftId: "gift-42" }, test.options);
+    await requestPersonSwitch(hana, test.options);
     expect(test.api.me).toHaveBeenCalledExactlyOnceWith("U-bigwheel");
-    expect(readPersonSwitchDestination(sessionStorage, operator, hana)).toEqual({
-      recipientUserId: hana,
-      giftId: "gift-42",
-    });
     expect(test.navigate).toHaveBeenCalledWith("/");
     expect(localStorage.getItem(`draft:${operator}`)).toBe("original draft");
     expect(localStorage.getItem(`outbox:${operator}`)).toBe("original outbox");
@@ -115,7 +106,7 @@ describe("requestPersonSwitch", () => {
       const test = setup();
       const failure = new ApiError(409, { error: code, detail: "sticker 42 (phone)" });
       await expect(
-        requestPersonSwitch(hana, undefined, {
+        requestPersonSwitch(hana, {
           ...test.options,
           settle: async () => {
             throw failure;
@@ -131,7 +122,7 @@ describe("requestPersonSwitch", () => {
   it("stops selection when settlement exceeds the ordinary request deadline", async () => {
     vi.useFakeTimers();
     const test = setup();
-    const switching = requestPersonSwitch(hana, undefined, {
+    const switching = requestPersonSwitch(hana, {
       ...test.options,
       settle: () => new Promise(() => {}),
     });
@@ -145,7 +136,7 @@ describe("requestPersonSwitch", () => {
   it("blocks switching during an ownership operation before suspending or selecting", async () => {
     const test = setup();
     await expect(
-      requestPersonSwitch(hana, undefined, { ...test.options, blockers: () => ["sticker 42"] }),
+      requestPersonSwitch(hana, { ...test.options, blockers: () => ["sticker 42"] }),
     ).rejects.toMatchObject({ code: "person_switch_ownership_pending", detail: "sticker 42" });
     expect(test.suspend).not.toHaveBeenCalled();
     expect(test.api.selectPerson).not.toHaveBeenCalled();
@@ -154,13 +145,13 @@ describe("requestPersonSwitch", () => {
   it("requires server capability and the unchanged LINE principal", async () => {
     const test = setup();
     await expect(
-      requestPersonSwitch(hana, undefined, {
+      requestPersonSwitch(hana, {
         ...test.options,
         session: { ...envelope(), personSwitchMode: "off" },
       }),
     ).rejects.toMatchObject({ code: "person_switch_forbidden" });
     await expect(
-      requestPersonSwitch(hana, undefined, {
+      requestPersonSwitch(hana, {
         ...test.options,
         principal: () => "another-LINE-user",
       }),
@@ -172,7 +163,7 @@ describe("requestPersonSwitch", () => {
     const test = setup();
     test.api.me.mockResolvedValue(envelope(hana, "third"));
     await expect(
-      requestPersonSwitch(hana, undefined, {
+      requestPersonSwitch(hana, {
         ...test.options,
         settle: async () => {
           throw new Error("offline");
@@ -193,7 +184,7 @@ describe("requestPersonSwitch", () => {
     const diagnostic = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
       await expect(
-        requestPersonSwitch(hana, undefined, {
+        requestPersonSwitch(hana, {
           ...test.options,
           settle: async () => {
             throw preservation;

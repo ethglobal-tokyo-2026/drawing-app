@@ -20,10 +20,6 @@ export const personSwitch = {
     /** Private person transition: unfinished reserve ticket purchase. */
     buyingTickets: { en: "buying reserve tickets", ja: "有償チケットの購入" },
   },
-  /** Private person controls on your stat board: section heading for server-authorized selections. */
-  title: { en: "Use Croquis as", ja: "クロッキーを使う人" },
-  /** Private person controls on your stat board: explicitly select the named person. */
-  switchTo: { en: "Switch to {{name}}", ja: "{{name}}に切り替える" },
   /** Private person transition: shown while device saves settle and the next person is selected. */
   pending: {
     en: "Saving your changes before switching…",

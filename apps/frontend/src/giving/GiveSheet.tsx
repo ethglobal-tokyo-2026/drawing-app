@@ -1,7 +1,6 @@
 import { GiveIcon } from "../icons";
 import { Suspense, useState } from "react";
 import { useMe } from "../api/meContext";
-import { usePersonSwitch } from "../api/PersonSwitchProvider";
 import { Trans, useTranslation } from "../i18n/react";
 import { LIFF_ID } from "../line/liff";
 import { formatHandle, formatNo } from "../stickers/format";
@@ -50,7 +49,6 @@ export function GiveSheet({ to, toId, toNsfwOptIn, onClose, returnFocus }: Props
   const [giving, setGiving] = useState<KeptSticker | null>(null);
   const pickedSticker = stickers?.find((s) => s.id === picked);
   const me = useMe();
-  const { request: requestPersonSwitch } = usePersonSwitch();
   const sender = useGiftSender();
   const large = useLargeScreen();
 
@@ -64,9 +62,6 @@ export function GiveSheet({ to, toId, toNsfwOptIn, onClose, returnFocus }: Props
           liffId={LIFF_ID}
           forUserId={toId}
           toHandle={to}
-          onSwitchRecipient={(userId, giftId) =>
-            void requestPersonSwitch(userId, { recipientUserId: userId, giftId })
-          }
           onClose={(sent) => (sent ? onClose() : setGiving(null))}
           returnFocus={returnFocus}
         />

@@ -137,10 +137,42 @@ async function selectionButton(page: Page, name: string) {
     .getByRole("button", { name: say(app.tabs.myBoard, language), exact: true })
     .click();
   await openSettings(page, language);
-  return page.getByRole("button", {
-    name: say(personSwitch.switchTo, language, { name }),
+  const selection = page.getByRole("button", {
+    name: say(stickerBoard.developer.personSwitch.switchTo, language, { name }),
     exact: true,
   });
+  // Role locators include inert descendants; prove the browser keeps this control out of reach.
+  await expect
+    .poll(() => selection.evaluate((button) => button.closest(".dev-slip")?.hasAttribute("inert")))
+    .toBe(true);
+  await expect
+    .poll(() => page.locator(".dev-slip").evaluate((slip) => slip.getBoundingClientRect().height))
+    .toBe(0);
+  expect(
+    await selection.evaluate((button) => {
+      button.focus();
+      return document.activeElement === button;
+    }),
+  ).toBe(false);
+  await expect(selection.click({ trial: true, timeout: 500 })).rejects.toThrow(/Timeout/);
+  const reveal = page.getByRole("button", {
+    name: say(stickerBoard.developer.label, language),
+    exact: true,
+  });
+  await reveal.focus();
+  await page.keyboard.press("Tab");
+  expect(await selection.evaluate((button) => document.activeElement === button)).toBe(false);
+  await reveal.press("Enter");
+  const slip = page.getByRole("region", {
+    name: say(stickerBoard.developer.label, language),
+    exact: true,
+  });
+  const button = slip.getByRole("button", {
+    name: say(stickerBoard.developer.personSwitch.switchTo, language, { name }),
+    exact: true,
+  });
+  await expect(button).toBeVisible();
+  return button;
 }
 async function switchTo(page: Page, id: string, name: string, showsBoard = true) {
   const oldDocument = await page.evaluate(() => performance.timeOrigin);
@@ -177,6 +209,7 @@ async function givePrivately(page: Page, no: string, handle: string) {
   await sheet.getByRole("button", { name: say(giving.give, language, { no }) }).click();
   const sent = page.getByRole("dialog", { name: say(giving.sent.title, language) });
   await expect(sent).toContainText(say(giving.personDelivery.sentLead, language));
+  await expect(sent.getByRole("button", { name: /^Switch to / })).toHaveCount(0);
   return sent;
 }
 async function closeReceivedNotice(page: Page, receiver: string) {
@@ -296,27 +329,14 @@ test("same_tab_sticker_round_trip", async ({ page }) => {
   await outward.receipt.getByRole("button", { name: say(ui.backToBoard, language) }).click();
   await moveSticker(page, no);
   const back = await givePrivately(page, no, "@BIGWHEEL");
-  await back
-    .getByRole("button", {
-      name: say(giving.personDelivery.switchRecipient, language, { name: "@BIGWHEEL" }),
-      exact: true,
-    })
-    .click();
-  await expectActor(page, E2E_BIGWHEEL_ID);
+  await back.getByRole("button", { name: say(ui.backToBoard, language) }).click();
+  await switchTo(page, E2E_BIGWHEEL_ID, "Bigwheel");
   expect(await page.evaluate((key) => localStorage.getItem(key), outboxKey)).toBe(hanaOutbox);
-  await expect(
-    page.getByRole("dialog", { name: say(receiving.title, language, { name: "@Hana" }) }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("dialog", {
-      name: say(giving.receivedNotice.title, language, { name: "@Hana" }),
-    }),
-  ).toHaveCount(0);
+  await closeReceivedNotice(page, "@Hana");
   await page.unroute("**/api/gratitude");
-  await unpackageAndAccept(page, language, "@Hana");
+  await waiting(page, "@Hana");
   const returned = await playCombo(page, language, "@Hana", GAME_CONFIG.burst);
   await returned.receipt.getByRole("button", { name: say(ui.backToBoard, language) }).click();
-  await closeReceivedNotice(page, "@Hana");
   // Receiving a sticker again puts it in the tray while retaining both arrangements.
   await expect(boardSticker(page, language, no)).toHaveCount(0);
   expect(stickerSnapshot(no).placements).toEqual(
@@ -630,9 +650,12 @@ test("ordinary_user_cannot_select_hana", async ({ page }) => {
   expect(ordinary.personSwitchMode).toBe("off");
   expect(ordinary.allowedSelections).toEqual([]);
   await openSettings(page, language);
-  await expect(page.getByRole("heading", { name: say(personSwitch.title, language) })).toHaveCount(
-    0,
-  );
+  await page
+    .getByRole("button", { name: say(stickerBoard.developer.label, language), exact: true })
+    .press("Enter");
+  await expect(
+    page.getByRole("heading", { name: say(stickerBoard.developer.personSwitch.title, language) }),
+  ).toHaveCount(0);
   const denied = await page.request.post("/api/session/person", {
     headers: actorHeaders(ordinary),
     data: { userId: E2E_HANA_ID },

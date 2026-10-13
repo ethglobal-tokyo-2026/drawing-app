@@ -300,6 +300,10 @@ export const stickerBoard = {
   developer: {
     label: { en: "Developer tools" },
     title: { en: "LINE and Privy" },
+    personSwitch: {
+      title: { en: "Use Croquis as" },
+      switchTo: { en: "Switch to {{name}}" },
+    },
     privy: {
       signedIn: { en: "Signed in to Privy" },
       signingIn: { en: "Signing in to Privy…" },
