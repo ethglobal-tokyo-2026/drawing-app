@@ -174,7 +174,7 @@ const media = (motion: MediaQueryList, large = false) => {
  * `finishAll` ends them, so a page turn can be caught partway. `asked` keeps every animation with the
  * element and keyframes it was asked for.
  */
-const holdAnimations = () => {
+const holdAnimations = (running = false) => {
   let reduce = true;
   const motion = window.matchMedia("all");
   Object.defineProperty(motion, "matches", { get: () => reduce });
@@ -190,6 +190,7 @@ const holdAnimations = () => {
     frames: Keyframe[] | PropertyIndexedKeyframes | null,
   ) {
     const a = new Animation();
+    if (running) a.play();
     held.push(a);
     asked.push({ el: this, frames, a });
     return a;
@@ -586,7 +587,11 @@ describe("StickerTray", () => {
     await openTray();
     const tapped = hereOn();
     tap(tapped, 100, 200);
-    expect(place).toHaveBeenCalledExactlyOnceWith(tapped?.getAttribute("data-id"), undefined);
+    expect(place).toHaveBeenCalledExactlyOnceWith(
+      tapped?.getAttribute("data-id"),
+      undefined,
+      expect.any(Promise),
+    );
   });
 
   it("keeps a pulled-out sheet over the board through board taps until its return button is used", async () => {
@@ -872,6 +877,38 @@ describe("StickerTray", () => {
     expect((coating?.width ?? -1) * (coating?.height ?? -1)).toBe(0);
   });
 
+  it.each(["finished", "canceled", "teardown"] as const)(
+    "hands a tapped sticker over with no hidden board element after its flight is %s",
+    async (ending) => {
+      const motion = holdAnimations(true);
+      const onBoard = document.createElement("div");
+      board.append(onBoard);
+      const handoffs: { opacity: string; flyers: number }[] = [];
+      render([sticker("a", 1, false)], {
+        place: (_id, _at, flight) => {
+          void flight?.then(() => {
+            handoffs.push({ opacity: onBoard.style.opacity, flyers: flyers().length });
+          });
+          return Promise.resolve(onBoard);
+        },
+      });
+      await openTray();
+      motion.animate();
+      press(hereOn(), "Enter");
+      await act(async () => {});
+      expect(onBoard.style.opacity).toBe("0");
+      expect(handoffs).toEqual([]);
+      const flight = motion.asked.find(({ el }) => el.classList.contains("tray__flyer"));
+      if (!flight) throw new Error("The tapped sticker needs a held flyer flight");
+      if (ending === "teardown") {
+        act(() => root.unmount());
+        await act(async () => {});
+      } else if (ending === "canceled") await act(async () => flight.a.cancel());
+      else await motion.finishAll();
+      expect(handoffs).toEqual([{ opacity: "", flyers: 0 }]);
+    },
+  );
+
   it("releases the laminate after a sticker flies back from the board to its sheet", async () => {
     const motion = holdAnimations();
     const remove = () => render([sticker("a", 1, false)]);
@@ -917,7 +954,7 @@ describe("StickerTray", () => {
     const slot = hereOn(pulled);
     press(slot, "Enter");
     await act(async () => {});
-    expect(place).toHaveBeenCalledExactlyOnceWith(slot?.dataset.id, undefined);
+    expect(place).toHaveBeenCalledExactlyOnceWith(slot?.dataset.id, undefined, expect.any(Promise));
     expect(pulled?.closest('[aria-hidden="true"]')).toBeNull();
   });
 

@@ -394,6 +394,8 @@ export function StickerBoard({
   const [arrivedId] = useState(landingId);
   const [selected, setSelected] = useState<string | null>(null);
   const [placementGeneration, setPlacementGeneration] = useState(0);
+  /** Tapped stickers whose flyers haven't handed them over to their visible board elements. */
+  const [flyingFromTray, setFlyingFromTray] = useState<ReadonlySet<string>>(() => new Set());
   const subjectsPeek = useSubjectsPeek();
   /** The sticker the detail shows, among your stickers or among the ones you gave. */
   const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
@@ -808,7 +810,7 @@ export function StickerBoard({
       const s = stickers?.find((x) => x.id === id);
       return s && size ? sizeOf(size.U, s.placement.s, s) : { w: 0, h: 0 };
     },
-    place: (id, at) => {
+    place: (id, at, flight) => {
       const sticker = stickers?.find((s) => s.id === id);
       if (!stickers || !sticker || !field) return Promise.resolve(null);
       const spot = at
@@ -823,8 +825,25 @@ export function StickerBoard({
       // Drawn at once, so the tray can hand the sticker over where it lands.
       flushSync(() => {
         setPlacement(id, placement);
-        setPlacementGeneration((generation) => generation + 1);
+        if (flight) setFlyingFromTray((flying) => new Set([...flying, id]));
+        else setPlacementGeneration((generation) => generation + 1);
       });
+      if (flight) {
+        const handOver = () => {
+          flushSync(() => {
+            setFlyingFromTray((flying) => {
+              const left = new Set(flying);
+              left.delete(id);
+              return left;
+            });
+            setPlacementGeneration((generation) => generation + 1);
+          });
+        };
+        void flight.then(handOver, (error: unknown) => {
+          console.error(`The sticker tray flight for ${id} failed before its handoff`, error);
+          handOver();
+        });
+      }
       save(sticker, spotsIn(layout, placement));
       const el = stickerEl(id);
       // Dropped, it presses flat; a tapped sticker's landing is the tray's to play.
@@ -864,7 +883,7 @@ export function StickerBoard({
   const [traySide] = useState<TrayBoard>(() => ({
     stickerRect: (id) => trayNow.current.board.stickerRect(id),
     sizeFor: (id) => trayNow.current.board.sizeFor(id),
-    place: (id, at) => trayNow.current.board.place(id, at),
+    place: (...args) => trayNow.current.board.place(...args),
     remove: (id) => trayNow.current.board.remove(id),
     pulse: (id) => trayNow.current.board.pulse(id),
     openGiven: (id) => trayNow.current.board.openGiven(id),
@@ -879,7 +898,7 @@ export function StickerBoard({
   const stack = new Map(bottomUp.map((s, i) => [s.id, i]));
   useStickerStack(stage, stack);
   const creases = useCreases({
-    stickers: bottomUp,
+    stickers: bottomUp.filter((s) => !flyingFromTray.has(s.id)),
     field,
     unit: size?.U ?? null,
     foilOf: (s) =>

@@ -915,7 +915,8 @@ class MountedSurface {
     const time = this.gpu?.reduced.matches
       ? 1
       : Math.min(1, (now - reveal.started) / CREASE_REVEAL_MS);
-    reveal.progress = 1 - (1 - time) ** 3;
+    // Even diagonal travel keeps a small crease's visible change spread across the short press.
+    reveal.progress = time;
     if (time === 1) {
       this.finishCreaseReveal();
     }

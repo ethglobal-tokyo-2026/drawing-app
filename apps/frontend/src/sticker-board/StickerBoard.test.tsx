@@ -58,6 +58,7 @@ import { StickerBoard } from "./StickerBoard";
 import { myStickerBoardChanged } from "./useMyStickerBoard";
 import { placedAt } from "./testBoardSticker";
 import { STEP_SAVE_IDLE_MS } from "./useBoardGestures";
+import { CreaseStore } from "./useCreases";
 
 const stickerRenders = vi.hoisted(() => ({
   placed: new Map<string, number>(),
@@ -1089,6 +1090,75 @@ describe("StickerBoard after a gift", () => {
 });
 
 describe("StickerBoard's sticker tray", () => {
+  it("waits for a tapped sticker's visible flyer handoff before planning its crease", async () => {
+    onAPhone();
+    stubResizeObservers();
+    const motion = new ReducedMotion(true);
+    const matchMedia = window.matchMedia.bind(window);
+    vi.spyOn(window, "matchMedia").mockImplementation((query) =>
+      query === motion.media ? motion : matchMedia(query),
+    );
+    let finishFlight = () => {};
+    vi.spyOn(Element.prototype, "animate").mockImplementation(function (this: Element) {
+      const animation = new Animation();
+      if (this.matches(".tray__flyer")) {
+        Object.defineProperty(animation, "finished", {
+          value: new Promise<void>((resolve) => {
+            finishFlight = resolve;
+          }),
+        });
+      } else animation.finish();
+      return animation;
+    });
+    const plans = vi.spyOn(CreaseStore.prototype, "want");
+    const lower = boardSticker({ placement: { ...placedAt(0.5), scale: 2 } });
+    const tapped = boardSticker({ placement: { ...placedAt(0.5), onBoard: false } });
+    const { host } = await openBoard(boardApi([lower, tapped]));
+    await act(() => vi.dynamicImportSettled());
+    const slot = host.querySelector<HTMLElement>(`.tray__slot[data-id="${tapped.stickerId}"]`);
+    expect(slot).not.toBeNull();
+    act(() => motion.change(false));
+    act(() => {
+      slot?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    await act(async () => {});
+    const placed = host.querySelector<HTMLElement>(`[data-sticker-id="${tapped.stickerId}"]`);
+    expect(placed?.style.opacity).toBe("0");
+    expect(host.querySelector(".tray__flyer")).not.toBeNull();
+    expect(plans.mock.calls.at(-1)?.[0].some((job) => job.id === tapped.stickerId)).toBe(false);
+
+    await act(async () => finishFlight());
+    expect(placed?.style.opacity).toBe("");
+    expect(host.querySelector(".tray__flyer")).toBeNull();
+    const job = plans.mock.calls.at(-1)?.[0].find((entry) => entry.id === tapped.stickerId);
+    const store = plans.mock.contexts.at(-1);
+    if (!job || !(store instanceof CreaseStore))
+      throw new Error("The visible tapped sticker needs its crease plan");
+    const image = new Blob(["test painted crease"], { type: "image/png" });
+    act(() =>
+      store.land({
+        ok: true,
+        board: "tray-handoff-test",
+        id: job.id,
+        key: job.key,
+        crease: {
+          base: image,
+          normal: image,
+          topLeft: image,
+          bottomRight: image,
+          topRight: image,
+          bottomLeft: image,
+        },
+        timings: { decode: 0, draw: 0, shade: 0, encode: 0, total: 0 },
+      }),
+    );
+    const normal = store.creaseOf(job.id)?.normal;
+    if (!normal) throw new Error("The handoff's accepted bake needs a normal");
+    expect(store.canReveal(job.id, normal)).toBe(true);
+    expect(store.startReveal(job.id, normal)).toBe(true);
+    expect(store.startReveal(job.id, normal)).toBe(false);
+  });
+
   it("moves focus to a sticker on the board when its hole's Show it is pressed", async () => {
     const a = boardSticker({ placement: placedAt(0.3) });
     const view = await openBoard(boardApi([a]));

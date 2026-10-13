@@ -412,52 +412,60 @@ export function createTrayPeel(
     turnFlyer(flyer);
     if (!ui.pulled) zip.relax(CRACK);
     ui.shown.add(id);
-    let onBoard: HTMLElement;
+    let handOver = () => {};
+    const flight = new Promise<void>((resolve) => {
+      handOver = resolve;
+    });
+    let onBoard: HTMLElement | undefined;
     try {
-      onBoard = placedOrThrow(await api.place(id));
-    } catch (error) {
-      reportPlace(s, error);
-      removeFlyer(flyer);
-      pressIn(id);
-      if (!ui.pulled) holdOpen(HOLD_OPEN.tapped);
-      return;
-    }
-    if (ui.destroyed) return;
-    const to = api.stickerRect(id) ?? { x: Wb() * 0.4, y: Hb() * 0.5, r: 0 };
-    onBoard.style.opacity = "0";
-    if (!reduced())
-      await ended(
-        animateFlyer(
-          flyer,
+      try {
+        onBoard = placedOrThrow(await api.place(id, undefined, flight));
+      } catch (error) {
+        reportPlace(s, error);
+        pressIn(id);
+        if (!ui.pulled) holdOpen(HOLD_OPEN.tapped);
+        return;
+      }
+      if (ui.destroyed) return;
+      const to = api.stickerRect(id) ?? { x: Wb() * 0.4, y: Hb() * 0.5, r: 0 };
+      onBoard.style.opacity = "0";
+      if (!reduced())
+        await ended(
+          animateFlyer(
+            flyer,
+            [
+              { transform: flyerAt(r.x, r.y, size, r.w / size.w, r.r) },
+              {
+                transform: flyerAt(
+                  lerp(r.x, to.x, 0.45),
+                  Math.min(r.y, to.y) - 40,
+                  size,
+                  1.1,
+                  to.r - 6,
+                ),
+                offset: 0.55,
+              },
+              { transform: flyerAt(to.x, to.y, size, 1.04, to.r) },
+            ],
+            { duration: 460, easing: EASE_PEEL, fill: "forwards" },
+          ),
+        );
+      onBoard.style.opacity = "";
+      if (!reduced())
+        onBoard.animate(
           [
-            { transform: flyerAt(r.x, r.y, size, r.w / size.w, r.r) },
-            {
-              transform: flyerAt(
-                lerp(r.x, to.x, 0.45),
-                Math.min(r.y, to.y) - 40,
-                size,
-                1.1,
-                to.r - 6,
-              ),
-              offset: 0.55,
-            },
-            { transform: flyerAt(to.x, to.y, size, 1.04, to.r) },
+            { transform: `${onBoard.style.transform} scale(1.06)` },
+            { transform: onBoard.style.transform },
           ],
-          { duration: 460, easing: EASE_PEEL, fill: "forwards" },
-        ),
-      );
-    removeFlyer(flyer);
-    onBoard.style.opacity = "";
-    if (!reduced())
-      onBoard.animate(
-        [
-          { transform: `${onBoard.style.transform} scale(1.06)` },
-          { transform: onBoard.style.transform },
-        ],
-        { duration: 220, easing: EASE_PEEL },
-      );
-    sayStuckOn(s);
-    if (!ui.pulled) holdOpen(HOLD_OPEN.tapped);
+          { duration: 220, easing: EASE_PEEL },
+        );
+      sayStuckOn(s);
+      if (!ui.pulled) holdOpen(HOLD_OPEN.tapped);
+    } finally {
+      removeFlyer(flyer);
+      if (onBoard) onBoard.style.opacity = "";
+      handOver();
+    }
   }
   /**
    * A used sticker silhouette: its sticker is out on the board; show it there, from behind the tray

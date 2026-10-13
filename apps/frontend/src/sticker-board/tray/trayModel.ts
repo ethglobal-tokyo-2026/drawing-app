@@ -75,9 +75,14 @@ export interface TrayBoard {
   sizeFor: (id: string) => Size;
   /**
    * Sticks a sticker on at `at`, or at a free spot; resolves with its element once it's drawn, or null
-   * when the board couldn't take it.
+   * when the board couldn't take it. A tapped sticker's flight holds its crease until the flyer hands
+   * it over to its visible board element.
    */
-  place: (id: string, at?: { x: number; y: number; r: number }) => Promise<HTMLElement | null>;
+  place: (
+    id: string,
+    at?: { x: number; y: number; r: number },
+    flight?: Promise<void>,
+  ) => Promise<HTMLElement | null>;
   /** A sticker went back into its used sticker silhouette. */
   remove: (id: string) => void;
   /** Shows where a sticker is on the board, and moves focus to it. */

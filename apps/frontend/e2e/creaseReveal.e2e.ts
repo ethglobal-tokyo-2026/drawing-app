@@ -537,6 +537,36 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
   });
 }
 
+test("the diagonal keeps separate crease regions visibly staged over successive frames", async ({
+  page,
+}) => {
+  const { flat, images, errors } = await openFixture(page);
+  await routeImages(page, images);
+  await freezeFrames(page);
+  await page.evaluate(() => window.creaseRevealFixture.drop());
+  let started = false;
+  for (let frame = 0; frame < 30; frame++) {
+    await page.clock.runFor(16);
+    started = await page
+      .locator("[data-reveal] .sticker-crease-reveal")
+      .evaluate((crease) => crease.hasAttribute("data-crease-reveal"));
+    if (started) break;
+  }
+  expect(started, "The placed crease must start its sweep").toBe(true);
+  // Six display frames should show the leading crease without already reaching the trailing one.
+  await page.clock.runFor(96);
+  const paint = await figurePixels(page);
+  const coat = await coatPixels(page);
+  expect(
+    difference(flat.paint, paint, upper),
+    "The leading crease must already be visible",
+  ).toBeGreaterThan(2);
+  expect(difference(flat.paint, paint, lower), "The trailing crease must still be flat").toBe(0);
+  expect(difference(flat.coat, coat, lower), "The trailing reflection must still be flat").toBe(0);
+  await finishedPixels(page, flat);
+  expect(errors).toEqual([]);
+});
+
 for (const { width, height } of [
   { width: 240, height: 240 },
   { width: 240, height: 360 },
